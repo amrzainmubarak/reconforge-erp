@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.4.0
+
+ReconForge ERP v0.4.0 focuses on ERP mapping foundations for export-based Odoo and SAP workflows.
+
+- Added rule-pack schema reference covering `pack.yml`, `rules.yml`, `mapping.yml`, `risk_model.yml`, supported operators, severity, confidence, risk impact, evidence fields, examples, and validation commands.
+- Expanded the Odoo inventory valuation control pack with practical export mapping guidance, field candidates, join keys, quality checks, stronger rules, expected exceptions, and sample commands.
+- Expanded the SAP MB51/FAGLL03 control pack with practical MB51 and FAGLL03/FBL3N export mapping guidance, field candidates, join keys, quality checks, stronger rules, expected exceptions, and sample commands.
+- Updated Odoo and SAP export guides with field-level mapping notes and local workflow commands.
+- Added strategic planning docs for repository assessment, competitor intelligence, category leadership, product roadmap, adoption engine, commercial strategy, trust/security, and thought-leadership content.
+- Added structure tests for v0.4.0 schema docs and ERP mapping profiles.
+- Added README positioning for export-based ERP mapping profiles and no-cloud-upload core workflows.
+
 ## v0.3.0
 
 ReconForge ERP v0.3.0 expands the project into a stronger pre-1.0 platform release.

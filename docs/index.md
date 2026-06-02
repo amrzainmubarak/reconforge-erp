@@ -10,6 +10,7 @@ ReconForge ERP is an open-source, local-first ERP reconciliation and audit intel
 - [Configuration](configuration.md)
 - [Reconciliation methodology](reconciliation-methodology.md)
 - [Controls and audit](controls-and-audit.md)
+- [Rule-pack schema reference](rule-pack-schema-reference.md)
 
 ## Product and Architecture
 
@@ -19,6 +20,18 @@ ReconForge ERP is an open-source, local-first ERP reconciliation and audit intel
 - [Market intelligence](market-intelligence.md)
 - [Architecture](architecture.md)
 - [Commercial strategy](commercial-strategy.md)
+
+## Strategy
+
+- [Repository assessment](strategy/repository-assessment.md)
+- [Competitor intelligence](strategy/competitor-intelligence.md)
+- [Category leadership plan](strategy/category-leadership-plan.md)
+- [Product roadmap](strategy/product-roadmap.md)
+- [v0.4.0 execution plan](strategy/v0.4.0-execution-plan.md)
+- [Adoption engine](strategy/adoption-engine.md)
+- [Commercial strategy](strategy/commercial-strategy.md)
+- [Trust and security](strategy/trust-and-security.md)
+- [Thought leadership pack](strategy/thought-leadership-pack.md)
 
 ## ERP Export Guides
 

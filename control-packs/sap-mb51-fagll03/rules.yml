@@ -1,21 +1,91 @@
 rules:
   - rule_id: SAP-001
-    rule_name: Empty GL reference key risk
+    rule_name: GL line missing reference and source document
     severity: high
     entity_type: gl_entry
     source_file: gl_entries.csv
-    condition: {operator: missing, field: reference}
-    message: SAP GL export line lacks a reference key for MB51 matching.
-    recommended_action: Include assignment, reference, material document, or header text in the SAP export layout.
-    risk_impact: 75
-    evidence_fields: [entry_id, reference, source_document, amount, work_order]
+    condition:
+      operator: and
+      conditions:
+        - operator: missing
+          field: reference
+        - operator: missing
+          field: source_document
+    message: SAP GL export line lacks both reference and source-document fields for MB51 matching.
+    recommended_action: Include assignment, reference, document number, material document, or header text in the SAP export layout.
+    risk_impact: 80
+    confidence: 0.9
+    evidence_fields: [entry_id, date, account_code, reference, source_document, amount, cost_center, work_order]
   - rule_id: SAP-002
-    rule_name: GL amount outside tolerance marker
+    rule_name: MB51 movement missing material
+    severity: high
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: missing
+      field: product_code
+    message: MB51 material movement is missing the material number mapped to product_code.
+    recommended_action: Add material number to the MB51 export layout or correct the product_code mapping.
+    risk_impact: 74
+    confidence: 0.95
+    evidence_fields: [move_id, date, source_document, product_code, movement_type, total_cost]
+  - rule_id: SAP-003
+    rule_name: MB51 movement type missing
+    severity: medium
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: missing
+      field: movement_type
+    message: MB51 material movement is missing movement type.
+    recommended_action: Include SAP movement type in the MB51 export layout and rerun review.
+    risk_impact: 55
+    confidence: 0.95
+    evidence_fields: [move_id, date, source_document, product_code, movement_type, total_cost]
+  - rule_id: SAP-004
+    rule_name: Material movement product missing from material master
+    severity: high
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: cross_file_missing
+      source_key: product_code
+      target_file: products.csv
+      target_key: product_code
+    message: MB51 movement references a material that is not present in the mapped material master export.
+    recommended_action: Confirm the material master export covers all moved materials and that material number is mapped consistently.
+    risk_impact: 72
+    confidence: 0.85
+    evidence_fields: [move_id, source_document, product_code, product_name, movement_type, total_cost]
+  - rule_id: SAP-005
+    rule_name: High-value SAP material movement
+    severity: medium
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: greater_or_equal
+      field: total_cost
+      value: 1000
+    message: High-value SAP material movement should be traced to GL and source-document evidence.
+    recommended_action: Compare MB51 material document value to FAGLL03/FBL3N line item value and document the match or exception.
+    risk_impact: 62
+    confidence: 0.85
+    evidence_fields: [move_id, date, source_document, product_code, movement_type, total_cost, warehouse]
+  - rule_id: SAP-006
+    rule_name: High-value GL line missing cost object
     severity: medium
     entity_type: gl_entry
     source_file: gl_entries.csv
-    condition: {operator: greater_than, field: amount, value: 1000}
-    message: High-value SAP GL line should be traced to material movement evidence.
-    recommended_action: Compare MB51 material document value to FAGLL03/FBL3N line item value.
-    risk_impact: 55
-    evidence_fields: [entry_id, reference, amount, cost_center, work_order]
+    condition:
+      operator: and
+      conditions:
+        - operator: missing
+          field: cost_center
+        - operator: greater_or_equal
+          field: amount
+          value: 1000
+    message: High-value SAP GL line has no cost center or mapped cost object.
+    recommended_action: Include cost center, order, WBS, or receiver cost object in the GL export layout and review posting ownership.
+    risk_impact: 58
+    confidence: 0.8
+    evidence_fields: [entry_id, date, account_code, reference, amount, cost_center, work_order]

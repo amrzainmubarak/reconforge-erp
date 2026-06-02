@@ -1,7 +1,120 @@
-odoo_sources:
-  stock_moves.csv: stock.move or stock.valuation.layer
-  gl_entries.csv: account.move.line
-  products.csv: product.product and product.category
-key_fields:
-  source_document: origin, reference, picking_id, valuation description
-  amount: account.move.line balance or debit/credit amount
+profile_id: odoo-inventory-valuation
+source_system: odoo
+version: 0.4.0
+description: Export-based mapping profile for Odoo inventory valuation, stock movement, product, work-order, invoice, and account move line review.
+export_workflow:
+  mode: export_based
+  cloud_upload_required: false
+  direct_api_connector: false
+  notes:
+    - Export Odoo records to CSV or XLSX and map them into ReconForge canonical files before running controls.
+    - Use the same accounting period and company scope across stock, valuation, and accounting exports.
+canonical_datasets:
+  stock_moves.csv:
+    source_objects:
+      - stock.move
+      - stock.move.line
+      - stock.valuation.layer
+    purpose: Inventory movements and valuation layer amounts used for stock-to-GL review.
+  gl_entries.csv:
+    source_objects:
+      - account.move.line
+    purpose: Posted accounting lines for inventory, WIP, expense, variance, and clearing accounts.
+  products.csv:
+    source_objects:
+      - product.product
+      - product.template
+      - product.category
+    purpose: Product master and valuation account configuration.
+  work_orders.csv:
+    source_objects:
+      - maintenance.request
+      - mrp.production
+      - repair.order
+      - field.service.order
+      - custom workshop model
+    purpose: Optional operational order references for WIP and issue traceability.
+  invoices.csv:
+    source_objects:
+      - account.move
+    purpose: Optional customer invoice references for billed work-order review.
+  purchase_orders.csv:
+    source_objects:
+      - purchase.order
+      - purchase.order.line
+    purpose: Optional purchase linkage for direct fitting and received-not-invoiced controls.
+field_mappings:
+  stock_moves.csv:
+    move_id: [id, stock_move_id, stock_move_line_id, valuation_layer_id]
+    date: [date, create_date, accounting_date, scheduled_date]
+    source_document: [origin, reference, picking_id, picking_name, description, stock_valuation_layer_description]
+    work_order: [analytic_account_id, repair_id, production_id, maintenance_request_id, x_work_order]
+    product_code: [product_id/default_code, default_code, product_internal_reference, product_code]
+    product_name: [product_id/name, product_name, display_name]
+    category: [categ_id/name, product_category, category]
+    quantity: [quantity_done, product_uom_qty, quantity, svl_quantity]
+    unit_cost: [unit_cost, standard_price, remaining_value_per_unit]
+    total_cost: [value, stock_value, valuation_amount, total_cost]
+    warehouse: [warehouse_id/name, location_id/warehouse_id, location_name]
+    movement_type: [picking_type_id/code, usage, move_type, operation_type, movement_type]
+    customer_code: [partner_id/ref, partner_id, customer_reference]
+    equipment_serial: [lot_id/name, serial_number, equipment_serial]
+    created_by: [create_uid/name, write_uid/name, user_id/name]
+  gl_entries.csv:
+    entry_id: [id, move_line_id, account_move_line_id]
+    date: [date, accounting_date, move_id/date]
+    journal: [journal_id/code, journal_id/name, journal]
+    account_code: [account_id/code, account_code]
+    account_name: [account_id/name, account_name]
+    reference: [ref, name, move_id/name, payment_reference]
+    source_document: [move_id/ref, move_id/name, stock_move_id, picking_id, origin]
+    debit: [debit]
+    credit: [credit]
+    amount: [balance, amount_currency, signed_amount]
+    cost_center: [analytic_account_id/name, analytic_distribution, cost_center]
+    work_order: [analytic_account_id/code, repair_id, production_id, x_work_order]
+    created_by: [create_uid/name, user_id/name]
+  products.csv:
+    product_code: [default_code, product_internal_reference, id]
+    product_name: [name, display_name]
+    category: [categ_id/name, category]
+    standard_cost: [standard_price, cost, standard_cost]
+    stock_account: [property_stock_valuation_account_id/code, categ_id/property_stock_valuation_account_id/code]
+    expense_account: [property_account_expense_id/code, categ_id/property_account_expense_categ_id/code]
+  work_orders.csv:
+    work_order: [name, repair_id/name, production_id/name, maintenance_request_id/name, x_work_order]
+    customer_code: [partner_id/ref, partner_id/id, customer_reference]
+    customer_name: [partner_id/name, customer_name]
+    equipment_serial: [equipment_id/serial_no, lot_id/name, serial_number]
+    status: [stage_id/name, state, status]
+    opened_date: [request_date, create_date, date_start]
+    closed_date: [close_date, date_finished, date_done]
+    service_type: [maintenance_type, repair_type, service_type]
+    responsible_engineer: [user_id/name, technician_user_id/name]
+    workshop: [team_id/name, location_id/name, workshop]
+    estimated_cost: [planned_cost, estimated_cost]
+    actual_cost: [actual_cost, total_cost]
+  invoices.csv:
+    invoice_number: [name, invoice_number, move_id/name]
+    work_order: [invoice_origin, repair_id/name, production_id/name, x_work_order]
+    customer_code: [partner_id/ref, partner_id/id]
+    invoice_date: [invoice_date, date]
+    invoice_amount: [amount_total, amount_untaxed_signed, signed_total]
+    status: [payment_state, state]
+join_keys:
+  stock_to_gl:
+    stock_side: [source_document, product_code, date, total_cost]
+    gl_side: [source_document, reference, date, amount]
+  stock_to_product:
+    stock_side: [product_code]
+    product_side: [product_code]
+  work_order_trace:
+    stock_side: [work_order]
+    work_order_side: [work_order]
+    invoice_side: [work_order]
+quality_checks:
+  - Confirm all exports use the same Odoo company and accounting period.
+  - Confirm stock valuation layer values use a consistent sign convention.
+  - Confirm product internal references are populated before using them as product_code.
+  - Confirm account.move.line exports include reference or source document fields.
+  - Confirm custom work-order fields are mapped consistently across stock, invoice, and GL exports.

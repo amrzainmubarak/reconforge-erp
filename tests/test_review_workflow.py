@@ -21,7 +21,7 @@ from reconforge.review.state import (
     save_review_state,
     update_review_status,
 )
-from reconforge.studio.app import create_studio_app
+from reconforge.studio.app import _table, create_studio_app
 
 runner = CliRunner()
 
@@ -170,3 +170,9 @@ def test_studio_filters_render_and_status_filter_works(tmp_path: Path) -> None:
 def test_studio_empty_filter_result_message(tmp_path: Path) -> None:
     html = _render_studio_exceptions(tmp_path, search="no-such-exception-text")
     assert "No exceptions match the current filters." in html
+
+
+def test_studio_table_escapes_dataframe_values() -> None:
+    html = _table(pd.DataFrame([{"exception_type": "<script>alert(1)</script>", "risk_score": 90}]))
+    assert "<script>alert(1)</script>" not in html
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html

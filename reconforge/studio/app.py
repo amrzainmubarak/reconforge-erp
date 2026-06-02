@@ -84,11 +84,24 @@ def _table(frame: pd.DataFrame, limit: int = 50) -> str:
     if frame.empty:
         return "<p>No records found.</p>"
     visible = frame.head(limit)
-    header = "".join(f"<th>{column}</th>" for column in visible.columns)
+    header = "".join(f"<th>{escape(str(column))}</th>" for column in visible.columns)
     rows = []
     for _, row in visible.iterrows():
-        rows.append("<tr>" + "".join(f"<td>{row[column]}</td>" for column in visible.columns) + "</tr>")
+        rows.append("<tr>" + "".join(f"<td>{_html_cell(row[column])}</td>" for column in visible.columns) + "</tr>")
     return f"<table><thead><tr>{header}</tr></thead><tbody>{''.join(rows)}</tbody></table>"
+
+
+def _html_cell(value: object) -> str:
+    if value is None:
+        return ""
+    text = str(value)
+    if text.strip().lower() in {"nan", "nat", "none", "<na>"}:
+        return ""
+    return escape(text)
+
+
+def _search_text(row: pd.Series) -> str:
+    return " ".join(_html_cell(value) for value in row.to_list()).lower()
 
 
 def _options(values: list[str], selected: str = "") -> str:
@@ -131,7 +144,7 @@ def _filter_exceptions(
     if source_file and "source_file" in filtered.columns:
         filtered = filtered[filtered["source_file"].astype(str).str.lower().eq(source_file.lower())]
     if search:
-        haystack = filtered.astype(str).agg(" ".join, axis=1).str.lower()
+        haystack = filtered.apply(_search_text, axis=1)
         filtered = filtered[haystack.str.contains(search.lower(), regex=False)]
     if min_amount > 0:
         filtered = filtered[_amount_series(filtered) >= min_amount]

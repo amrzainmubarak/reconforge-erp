@@ -1,10 +1,10 @@
 # ReconForge ERP
 
 ```text
-┌─────────────────────────────────────────────┐
-│                ReconForge ERP               │
-│  Open ERP Reconciliation & Audit Intelligence│
-└─────────────────────────────────────────────┘
+          ┌──────────────────────────────────────────────┐          
+          │                 ReconForge ERP               │          
+          │ Open ERP Reconciliation & Audit Intelligence │           
+          └──────────────────────────────────────────────┘          
 ```
 
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)

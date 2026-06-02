@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import importlib
 import time
 from pathlib import Path
+from types import ModuleType
 
 try:
-    import resource
+    _resource: ModuleType | None = importlib.import_module("resource")
 except ImportError:  # pragma: no cover - Windows fallback
-    resource = None  # type: ignore[assignment]
+    _resource = None
 
 from reconforge.benchmark.metrics import BenchmarkMetrics, build_metrics
 from reconforge.benchmark.report import write_benchmark_reports
@@ -17,9 +19,13 @@ from reconforge.engines.registry import get_engine
 
 
 def _memory_mb() -> float:
-    if resource is None:
+    if _resource is None:
         return 0.0
-    usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    getrusage = getattr(_resource, "getrusage", None)
+    rusage_self = getattr(_resource, "RUSAGE_SELF", None)
+    if getrusage is None or rusage_self is None:
+        return 0.0
+    usage = getrusage(rusage_self).ru_maxrss
     return usage / 1024 if usage > 10_000 else usage
 
 

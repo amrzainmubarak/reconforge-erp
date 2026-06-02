@@ -7,7 +7,7 @@ from typing import Any
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, Response
 
 from reconforge.config import load_config
 from reconforge.io.readers import read_required_datasets
@@ -15,7 +15,12 @@ from reconforge.reconciliation.stock_gl import reconcile_stock_gl
 from reconforge.reconciliation.workorders import reconcile_workorders
 from reconforge.reports.wip_aging import generate_wip_aging
 from reconforge.schemas import DatasetName
+from reconforge.utils.safe_paths import safe_resolve_child
 from reconforge.validators import issues_to_frame, validate_input_directory
+
+DOWNLOAD_SUFFIXES = {".html", ".xlsx", ".csv", ".json", ".md", ".txt", ".yml", ".yaml"}
+DOC_SUFFIXES = {".md"}
+TEXT_DOWNLOAD_SUFFIXES = DOWNLOAD_SUFFIXES - {".xlsx"}
 
 
 def _layout(title: str, body: str) -> str:
@@ -79,6 +84,16 @@ def _table(frame: pd.DataFrame, limit: int = 50) -> str:
     for _, row in visible.iterrows():
         rows.append("<tr>" + "".join(f"<td>{row[column]}</td>" for column in visible.columns) + "</tr>")
     return f"<table><thead><tr>{header}</tr></thead><tbody>{''.join(rows)}</tbody></table>"
+
+
+def _download_response(path: Path, media_type: str) -> Response:
+    if path.suffix.lower() in TEXT_DOWNLOAD_SUFFIXES:
+        return Response(
+            content=path.read_text(encoding="utf-8"),
+            media_type=media_type,
+            headers={"Content-Disposition": f'attachment; filename="{path.name}"'},
+        )
+    return FileResponse(path, media_type=media_type, filename=path.name)
 
 
 def _load_reconciliation(input_dir: Path) -> dict[str, Any]:
@@ -198,7 +213,7 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
 
     @app.get("/downloads", response_class=HTMLResponse)
     def downloads() -> str:
-        files = sorted(path for path in output_path.glob("*") if path.is_file())
+        files = sorted(path for path in output_path.glob("*") if path.is_file() and path.suffix.lower() in DOWNLOAD_SUFFIXES)
         links = "".join(f'<li><a href="/download/{path.name}">{path.name}</a></li>' for path in files)
         return _layout("Downloads", f"<h2>Downloads</h2><ul>{links}</ul>")
 
@@ -209,23 +224,33 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
 
     @app.get("/download/{filename}")
     def download(filename: str) -> Response:
-        path = output_path / filename
+        try:
+            path = safe_resolve_child(output_path, filename, allowed_suffixes=DOWNLOAD_SUFFIXES)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid filename") from None
         if not path.exists() or not path.is_file():
             raise HTTPException(status_code=404, detail="File not found")
-        return Response(path.read_bytes(), media_type="application/octet-stream")
+        return _download_response(path, "application/octet-stream")
 
     @app.get("/download/evidence/{case_id}/{filename}")
     def download_evidence(case_id: str, filename: str) -> Response:
-        path = output_path / "evidence" / case_id / filename
+        try:
+            case_dir = safe_resolve_child(output_path / "evidence", case_id)
+            path = safe_resolve_child(case_dir, filename, allowed_suffixes=DOWNLOAD_SUFFIXES)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid filename") from None
         if not path.exists() or not path.is_file():
             raise HTTPException(status_code=404, detail="Evidence file not found")
-        return Response(path.read_bytes(), media_type="text/plain")
+        return _download_response(path, "text/plain")
 
     @app.get("/download-doc/{filename}")
     def download_doc(filename: str) -> Response:
-        path = Path("docs") / filename
+        try:
+            path = safe_resolve_child(Path("docs"), filename, allowed_suffixes=DOC_SUFFIXES)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid filename") from None
         if not path.exists() or not path.is_file():
             raise HTTPException(status_code=404, detail="Doc not found")
-        return Response(path.read_bytes(), media_type="text/markdown")
+        return _download_response(path, "text/markdown")
 
     return app

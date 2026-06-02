@@ -5,14 +5,32 @@ from __future__ import annotations
 from datetime import date, timedelta
 from pathlib import Path
 from random import Random
+from typing import TypeVar
 
 import pandas as pd
 
 from reconforge.generator.scenarios import pick_profile, pick_scenario
 
+T = TypeVar("T")
+
 
 def _money(value: float) -> float:
     return round(value, 2)
+
+
+def _choice(random: Random, values: list[T]) -> T:
+    # Deterministic synthetic data only; not used for secrets or cryptography.
+    return random.choice(values)  # nosec B311
+
+
+def _randint(random: Random, start: int, end: int) -> int:
+    # Deterministic synthetic data only; not used for secrets or cryptography.
+    return random.randint(start, end)  # nosec B311
+
+
+def _uniform(random: Random, start: float, end: float) -> float:
+    # Deterministic synthetic data only; not used for secrets or cryptography.
+    return random.uniform(start, end)  # nosec B311
 
 
 def generate_synthetic_dataset(
@@ -27,7 +45,8 @@ def generate_synthetic_dataset(
 ) -> list[Path]:
     """Generate a realistic ERP-shaped synthetic dataset."""
 
-    random = Random(seed)
+    # Deterministic synthetic data only; not used for secrets or cryptography.
+    random = Random(seed)  # nosec B311
     target = Path(output_dir)
     target.mkdir(parents=True, exist_ok=True)
     profile = pick_profile(industry)
@@ -39,13 +58,13 @@ def generate_synthetic_dataset(
 
     products = []
     for index in range(1, product_count + 1):
-        category = random.choice(profile.categories)
+        category = _choice(random, profile.categories)
         products.append(
             {
                 "product_code": f"PRD-{index:04d}",
                 "product_name": f"{category} Part {index:04d}",
                 "category": category,
-                "standard_cost": _money(random.uniform(15, 950)),
+                "standard_cost": _money(_uniform(random, 15, 950)),
                 "stock_account": "1400",
                 "expense_account": "5100",
             },
@@ -55,35 +74,35 @@ def generate_synthetic_dataset(
         {
             "customer_code": f"CUST-{index:04d}",
             "customer_name": f"Synthetic Customer {index:04d}",
-            "segment": random.choice(["Fleet", "Dealer", "Industrial", "Manufacturing"]),
-            "region": random.choice(["Cairo", "Alexandria", "Riyadh", "Dubai", "Casablanca"]),
+            "segment": _choice(random, ["Fleet", "Dealer", "Industrial", "Manufacturing"]),
+            "region": _choice(random, ["Cairo", "Alexandria", "Riyadh", "Dubai", "Casablanca"]),
         }
         for index in range(1, customer_count + 1)
     ]
 
     work_orders = []
     for index in range(1, work_order_count + 1):
-        customer = random.choice(customers)
-        opened = base_date + timedelta(days=random.randint(0, 120))
-        status = random.choice(["Open", "In Progress", "Closed", "Pending Invoice"])
+        customer = _choice(random, customers)
+        opened = base_date + timedelta(days=_randint(random, 0, 120))
+        status = _choice(random, ["Open", "In Progress", "Closed", "Pending Invoice"])
         if index % 19 == 0:
-            opened = base_date - timedelta(days=random.randint(95, 180))
+            opened = base_date - timedelta(days=_randint(random, 95, 180))
             status = "Open"
-        closed = opened + timedelta(days=random.randint(1, 12)) if status == "Closed" else ""
-        actual_cost = _money(random.uniform(40, 2500))
+        closed = opened + timedelta(days=_randint(random, 1, 12)) if status == "Closed" else ""
+        actual_cost = _money(_uniform(random, 40, 2500))
         work_orders.append(
             {
                 "work_order": f"WO-{index:05d}",
                 "customer_code": customer["customer_code"],
                 "customer_name": customer["customer_name"],
-                "equipment_serial": f"EQ-{random.randint(1, customer_count * 3):05d}",
+                "equipment_serial": f"EQ-{_randint(random, 1, customer_count * 3):05d}",
                 "status": status,
                 "opened_date": opened.isoformat(),
                 "closed_date": closed.isoformat() if isinstance(closed, date) else "",
-                "service_type": random.choice(profile.service_types),
-                "responsible_engineer": f"Engineer {random.randint(1, 25):02d}",
-                "workshop": random.choice(profile.workshops),
-                "estimated_cost": _money(actual_cost * random.uniform(0.8, 1.2)),
+                "service_type": _choice(random, profile.service_types),
+                "responsible_engineer": f"Engineer {_randint(random, 1, 25):02d}",
+                "workshop": _choice(random, profile.workshops),
+                "estimated_cost": _money(actual_cost * _uniform(random, 0.8, 1.2)),
                 "actual_cost": actual_cost,
             },
         )
@@ -98,12 +117,12 @@ def generate_synthetic_dataset(
 
     for index in range(1, rows + 1):
         scenario = pick_scenario(random, exception_rate, critical_rate)
-        work_order = random.choice(work_orders)
-        product = random.choice(products)
-        quantity = random.randint(1, 4)
+        work_order = _choice(random, work_orders)
+        product = _choice(random, products)
+        quantity = _randint(random, 1, 4)
         unit_cost = float(str(product["standard_cost"]))
         total_cost = _money(quantity * unit_cost)
-        move_date = base_date + timedelta(days=random.randint(0, 150))
+        move_date = base_date + timedelta(days=_randint(random, 0, 150))
         source_document = f"STK-SYN-{index:06d}"
         movement_type = "ISSUE"
         warehouse = "MAIN"
@@ -114,8 +133,8 @@ def generate_synthetic_dataset(
             purchase_orders.append(
                 {
                     "po_number": source_document,
-                    "supplier_code": f"SUP-{random.randint(1, 30):04d}",
-                    "supplier_name": f"Synthetic Supplier {random.randint(1, 30):04d}",
+                    "supplier_code": f"SUP-{_randint(random, 1, 30):04d}",
+                    "supplier_name": f"Synthetic Supplier {_randint(random, 1, 30):04d}",
                     "po_date": (move_date - timedelta(days=1)).isoformat(),
                     "product_code": product["product_code"],
                     "quantity": quantity,
@@ -141,7 +160,7 @@ def generate_synthetic_dataset(
                 "movement_type": movement_type,
                 "customer_code": work_order["customer_code"],
                 "equipment_serial": work_order["equipment_serial"],
-                "created_by": f"user_{random.randint(1, 8):02d}",
+                "created_by": f"user_{_randint(random, 1, 8):02d}",
                 "currency": currency,
             },
         )
@@ -156,7 +175,7 @@ def generate_synthetic_dataset(
         if scenario == "fuzzy_match":
             gl_reference = f"AUTO/{source_document}"
         elif scenario == "value_mismatch":
-            gl_amount = _money(total_cost * random.uniform(0.8, 1.25))
+            gl_amount = _money(total_cost * _uniform(random, 0.8, 1.25))
         elif scenario == "date_mismatch":
             gl_date = move_date + timedelta(days=8)
         gl_entries.append(
@@ -173,7 +192,7 @@ def generate_synthetic_dataset(
                 "amount": gl_amount,
                 "cost_center": "WORKSHOP",
                 "work_order": work_order["work_order"],
-                "created_by": f"acct_{random.randint(1, 5):02d}",
+                "created_by": f"acct_{_randint(random, 1, 5):02d}",
                 "currency": currency,
             },
         )
@@ -186,19 +205,19 @@ def generate_synthetic_dataset(
                     "product_code": product["product_code"],
                     "returned_quantity": quantity,
                     "return_date": (move_date + timedelta(days=1)).isoformat(),
-                    "received_by": f"stores_{random.randint(1, 4):02d}",
+                    "received_by": f"stores_{_randint(random, 1, 4):02d}",
                     "condition": "Worn",
                 },
             )
 
     extra_gl = max(1, exception_target - missing_stock_gl_count)
     for index in range(1, extra_gl + 1):
-        work_order = random.choice(work_orders)
-        amount = _money(random.uniform(25, 700))
+        work_order = _choice(random, work_orders)
+        amount = _money(_uniform(random, 25, 700))
         gl_entries.append(
             {
                 "entry_id": f"GE-EXTRA-{index:06d}",
-                "date": (base_date + timedelta(days=random.randint(0, 150))).isoformat(),
+                "date": (base_date + timedelta(days=_randint(random, 0, 150))).isoformat(),
                 "journal": "MAN",
                 "account_code": "5100",
                 "account_name": "Spare parts expense",
@@ -221,14 +240,14 @@ def generate_synthetic_dataset(
                 "invoice_number": f"INV-SYN-{index:06d}",
                 "work_order": work_order["work_order"],
                 "customer_code": work_order["customer_code"],
-                "invoice_date": (base_date + timedelta(days=random.randint(15, 170))).isoformat(),
-                "invoice_amount": _money(float(str(work_order["actual_cost"])) * random.uniform(1.05, 1.35)),
+                "invoice_date": (base_date + timedelta(days=_randint(random, 15, 170))).isoformat(),
+                "invoice_amount": _money(float(str(work_order["actual_cost"])) * _uniform(random, 1.05, 1.35)),
                 "status": status,
             },
         )
 
     if not purchase_orders:
-        product = random.choice(products)
+        product = _choice(random, products)
         purchase_orders.append(
             {
                 "po_number": "PO-SYN-BASE",

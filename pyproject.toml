@@ -63,7 +63,7 @@ include = ["reconforge*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+addopts = "-q --capture=sys"
 
 [tool.ruff]
 line-length = 120

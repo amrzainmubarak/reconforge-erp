@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from random import Random
+from typing import TypeVar
+
+T = TypeVar("T")
 
 
 @dataclass(frozen=True)
@@ -62,6 +65,16 @@ SCENARIOS = [
 ]
 
 
+def _choice(random: Random, values: list[T]) -> T:
+    # Deterministic synthetic data only; not used for secrets or cryptography.
+    return random.choice(values)  # nosec B311
+
+
+def _random_float(random: Random) -> float:
+    # Deterministic synthetic data only; not used for secrets or cryptography.
+    return random.random()  # nosec B311
+
+
 def pick_profile(industry: str) -> IndustryProfile:
     """Return an industry profile."""
 
@@ -71,9 +84,9 @@ def pick_profile(industry: str) -> IndustryProfile:
 def pick_scenario(random: Random, exception_rate: float, critical_rate: float) -> str:
     """Pick a synthetic reconciliation scenario."""
 
-    roll = random.random()
+    roll = _random_float(random)
     if roll > exception_rate:
-        return "fuzzy_match" if random.random() < 0.15 else "exact_match"
-    if random.random() < critical_rate:
-        return random.choice(["missing_gl", "direct_fit", "missing_old_part"])
-    return random.choice(["missing_stock", "value_mismatch", "date_mismatch"])
+        return "fuzzy_match" if _random_float(random) < 0.15 else "exact_match"
+    if _random_float(random) < critical_rate:
+        return _choice(random, ["missing_gl", "direct_fit", "missing_old_part"])
+    return _choice(random, ["missing_stock", "value_mismatch", "date_mismatch"])

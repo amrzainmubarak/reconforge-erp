@@ -53,7 +53,8 @@ class AnonymizationMap:
     values: dict[tuple[str, str], str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        self._random = Random(self.seed)
+        # Deterministic masking noise only; not used for secrets or cryptography.
+        self._random = Random(self.seed)  # nosec B311
 
     def mask(self, field: str, value: object) -> str:
         text = str(value).strip()
@@ -76,4 +77,4 @@ class AnonymizationMap:
         """Return a deterministic amount masking factor."""
 
         bounded = max(0.0, min(100.0, amount_noise_percent)) / 100
-        return round(self._random.uniform(1 - bounded, 1 + bounded), 4)
+        return round(self._random.uniform(1 - bounded, 1 + bounded), 4)  # nosec B311

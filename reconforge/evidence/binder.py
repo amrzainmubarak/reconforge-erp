@@ -47,6 +47,10 @@ def _first_nonempty(row: pd.Series, names: list[str]) -> str | None:
     return None
 
 
+def _string_keyed_record(row: pd.Series) -> dict[str, Any]:
+    return {str(key): value for key, value in row.to_dict().items()}
+
+
 def _match_candidates(input_dir: Path, row: pd.Series) -> list[dict[str, Any]]:
     matched = _read_csv_if_exists(input_dir / "stock_gl_matched_transactions.csv")
     if matched.empty:
@@ -97,7 +101,7 @@ def _case_from_row(input_dir: Path, row: pd.Series, index: int) -> EvidenceCase:
         affected_customer=_first_nonempty(row, ["customer_code", "customer_code_stock"]),
         affected_equipment=_first_nonempty(row, ["equipment_serial", "equipment_serial_stock"]),
         source_files=[source_file],
-        source_record=row.to_dict(),
+        source_record=_string_keyed_record(row),
         match_candidates=_match_candidates(input_dir, row),
         triggered_rules=_rule_results(input_dir, row),
         business_impact=business_impact(exception_type),

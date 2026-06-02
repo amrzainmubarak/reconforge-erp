@@ -7,12 +7,11 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse
 
-from reconforge.utils.safe_paths import safe_resolve_child
+from reconforge.utils.safe_paths import build_download_registry, get_registered_download
 
 DOWNLOAD_SUFFIXES = {".html", ".xlsx", ".csv", ".json", ".md", ".txt", ".yml", ".yaml"}
-TEXT_DOWNLOAD_SUFFIXES = DOWNLOAD_SUFFIXES - {".xlsx"}
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -22,24 +21,15 @@ def _load_json(path: Path) -> dict[str, Any]:
         return json.load(handle)
 
 
-def _report_links(output_dir: Path) -> list[str]:
-    return sorted(file.name for file in output_dir.iterdir() if file.is_file() and file.suffix.lower() in DOWNLOAD_SUFFIXES)
-
-
-def _download_response(path: Path, media_type: str) -> Response:
-    if path.suffix.lower() in TEXT_DOWNLOAD_SUFFIXES:
-        return Response(
-            content=path.read_text(encoding="utf-8"),
-            media_type=media_type,
-            headers={"Content-Disposition": f'attachment; filename="{path.name}"'},
-        )
-    return FileResponse(path, media_type=media_type, filename=path.name)
+def _report_links(registry: dict[str, Path]) -> list[str]:
+    return sorted(registry)
 
 
 def create_app(output_dir: Path | str) -> FastAPI:
     """Create a local FastAPI app serving generated reports."""
 
     base_path = Path(output_dir)
+    report_registry = build_download_registry(base_path, allowed_suffixes=DOWNLOAD_SUFFIXES)
     app = FastAPI(title="ReconForge ERP Dashboard", version="0.3.0")
 
     @app.get("/", response_class=HTMLResponse)
@@ -47,7 +37,7 @@ def create_app(output_dir: Path | str) -> FastAPI:
         dashboard_path = base_path / "dashboard.html"
         if dashboard_path.exists():
             html = dashboard_path.read_text(encoding="utf-8")
-            links = "".join(f'<li><a href="/reports/{name}">{name}</a></li>' for name in _report_links(base_path))
+            links = "".join(f'<li><a href="/reports/{name}">{name}</a></li>' for name in _report_links(report_registry))
             return html.replace("</main>", f'<section class="report"><h2>Downloadable Reports</h2><ul>{links}</ul></section></main>')
 
         payload = _load_json(base_path / "management_pack.json")
@@ -56,7 +46,7 @@ def create_app(output_dir: Path | str) -> FastAPI:
             f"<section class='card'><span>{item.get('metric')}</span><strong>{item.get('value')}</strong></section>"
             for item in executive
         )
-        links = "".join(f'<li><a href="/reports/{name}">{name}</a></li>' for name in _report_links(base_path))
+        links = "".join(f'<li><a href="/reports/{name}">{name}</a></li>' for name in _report_links(report_registry))
         return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -84,13 +74,13 @@ def create_app(output_dir: Path | str) -> FastAPI:
         return _load_json(base_path / "management_pack.json")
 
     @app.get("/reports/{filename}")
-    def report(filename: str) -> Response:
+    def report(filename: str) -> FileResponse:
         try:
-            path = safe_resolve_child(base_path, filename, allowed_suffixes=DOWNLOAD_SUFFIXES)
+            path = get_registered_download(report_registry, filename)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid filename") from None
-        if not path.exists() or not path.is_file():
-            raise HTTPException(status_code=404, detail="Report not found")
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="Report not found") from None
         media_types = {
             ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             ".csv": "text/csv",
@@ -101,6 +91,10 @@ def create_app(output_dir: Path | str) -> FastAPI:
             ".yml": "application/x-yaml",
             ".yaml": "application/x-yaml",
         }
-        return _download_response(path, media_types.get(path.suffix.lower(), "application/octet-stream"))
+        return FileResponse(
+            path,
+            media_type=media_types.get(path.suffix.lower(), "application/octet-stream"),
+            filename=path.name,
+        )
 
     return app

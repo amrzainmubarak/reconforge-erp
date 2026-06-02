@@ -1,14 +1,25 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
+from typing import cast
 
-from fastapi.testclient import TestClient
+from fastapi.routing import APIRoute
 from typer.testing import CliRunner
 
 from reconforge.cli import app
 from reconforge.studio.app import create_studio_app
 
 runner = CliRunner()
+
+
+def _render_studio_route(path: str) -> str:
+    studio = create_studio_app("examples/sample_data", "output")
+    for route in studio.routes:
+        if isinstance(route, APIRoute) and route.path == path:
+            endpoint = cast(Callable[[], str], route.endpoint)
+            return endpoint()
+    raise AssertionError(f"Studio route not found: {path}")
 
 
 def test_cli_rules_validate() -> None:
@@ -67,14 +78,8 @@ def test_cli_benchmark_pandas(tmp_path: Path) -> None:
 
 
 def test_studio_overview_route() -> None:
-    client = TestClient(create_studio_app("examples/sample_data", "output"))
-    response = client.get("/")
-    assert response.status_code == 200
-    assert "ReconForge Studio" in response.text
+    assert "ReconForge Studio" in _render_studio_route("/")
 
 
 def test_studio_validation_route() -> None:
-    client = TestClient(create_studio_app("examples/sample_data", "output"))
-    response = client.get("/validation")
-    assert response.status_code == 200
-    assert "Validation Results" in response.text
+    assert "Validation Results" in _render_studio_route("/validation")

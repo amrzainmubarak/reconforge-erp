@@ -1,54 +1,143 @@
 # ReconForge ERP
 
-```text
-                                                            ┌──────────────────────────────────────────────┐                                                           
-                                                            │                 ReconForge ERP               │                                                           
-                                                            │ Open ERP Reconciliation & Audit Intelligence │                                                           
-                                                            └──────────────────────────────────────────────┘                                                           
+<p align="center">
+  <img src="docs/assets/reconforge-hero.png" alt="ReconForge ERP - Open-source ERP reconciliation and audit intelligence" width="1000">
+</p>
+
+<p align="center">
+  <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-blue">
+  <img alt="Tests: pytest" src="https://img.shields.io/badge/tests-pytest-blue">
+  <img alt="Lint: ruff" src="https://img.shields.io/badge/lint-ruff-blue">
+  <img alt="Types: mypy" src="https://img.shields.io/badge/types-mypy-blue">
+  <img alt="Security: CodeQL and Bandit" src="https://img.shields.io/badge/security-CodeQL%20%2B%20Bandit-2f855a">
+  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
+</p>
+
+<p align="center">
+  <a href="#visual-preview">Visual Preview</a> ·
+  <a href="#quick-start">Quick Start</a> ·
+  <a href="#cli-examples">CLI Examples</a> ·
+  <a href="#control-packs">Control Packs</a> ·
+  <a href="#documentation">Documentation</a>
+</p>
+
+**ReconForge ERP is an open-source ERP reconciliation and audit intelligence platform for local-first stock-to-GL matching, work-order controls, WIP review, Odoo/SAP-style exports, and audit-ready reporting.**
+
+It gives finance, inventory, workshop, ERP, and audit teams a repeatable way to inspect export-based operational controls without uploading sensitive ERP data to a third-party service.
+
+## What It Does
+
+- Reconciles stock movements against GL postings with configurable matching strategies.
+- Reviews work orders, WIP, invoices, purchase flows, old-part returns, and workshop control gaps.
+- Runs YAML control packs for audit rules, risk scoring, exception explanations, and evidence preparation.
+- Produces local artifacts: Excel management packs, HTML reports, Markdown summaries, CSV/JSON exports, and evidence binder folders.
+
+## Why It Matters
+
+ERP systems hold the source transactions, but month-end reconciliation often still happens in spreadsheets. ReconForge ERP makes those checks repeatable, inspectable, local, and audit-friendly for teams that need operational controls without a heavy enterprise close platform.
+
+## Core Capabilities
+
+| Area | What ReconForge ERP provides |
+| --- | --- |
+| Reconciliation | Stock-to-GL matching, amount/date variance checks, unmatched stock and unmatched GL review |
+| Workshop controls | Work-order cost review, WIP aging, direct purchase fitting risk, old-part return checks |
+| Audit intelligence | Risk scores, risk levels, suggested audit notes, control explanations, evidence binders |
+| Rule packs | 15 domain control packs with YAML rules, mappings, expected exceptions, and risk models |
+| Reporting | Excel management pack, executive HTML report, static dashboard, Markdown, CSV, and JSON outputs |
+| Data safety | Local-first processing, anonymized demo data support, no API key required for core workflows |
+
+## Visual Preview
+
+The screenshots below are generated from real local ReconForge outputs in this repository, not mockups or stock images.
+
+### Dashboard
+
+![ReconForge ERP dashboard preview](docs/assets/dashboard-preview.png)
+
+Captured from `output/dashboard.html`, showing executive metrics, top exceptions, and WIP aging.
+
+### Executive HTML Report
+
+![ReconForge ERP executive HTML report preview](docs/assets/executive-report-preview.png)
+
+Captured from `output/executive_report.html`, generated from the same local management-pack workflow.
+
+### Evidence Binder
+
+![ReconForge ERP evidence binder preview](docs/assets/evidence-binder-preview.png)
+
+Captured from `output/evidence/index.html`, listing high and critical exception cases.
+
+### Management Pack Workbook
+
+![ReconForge ERP management pack workbook preview](docs/assets/management-pack-preview.png)
+
+Rendered from the real `output/management_pack.xlsx` workbook contents.
+
+## Quick Start
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+
+reconforge doctor
+reconforge validate examples/sample_data
+reconforge report management-pack --input examples/sample_data --config config/reconforge.yml --output output
 ```
 
-![Python](https://img.shields.io/badge/python-3.11%2B-blue)
-![Tests](https://img.shields.io/badge/tests-pytest-blue)
-![Lint](https://img.shields.io/badge/lint-ruff-blue)
-![Types](https://img.shields.io/badge/types-mypy-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+Open the generated local artifacts:
 
-**Open-source ERP reconciliation and audit intelligence for stock-to-GL matching, work orders, WIP, Odoo/SAP exports, and local-first control reporting.**
+- `output/management_pack.xlsx`
+- `output/executive_report.html`
+- `output/dashboard.html`
+- `output/summary.md`
 
-ReconForge ERP is the open-source audit layer missing between inventory operations and financial accounting. It helps finance, inventory, workshop, audit, and ERP teams reconcile stock movements, GL postings, work orders, WIP, invoices, purchase flows, old-part returns, and operational controls from Odoo, SAP-style exports, and generic ERP CSV/Excel data.
+## CLI Examples
 
-## Maturity Note
+```bash
+reconforge reconcile stock-gl --input examples/sample_data --config config/reconforge.yml --output output
+reconforge reconcile stock-gl --input examples/sample_data --config config/reconforge.yml --output output --matching-strategy audit-safe
+reconforge reconcile workorders --input examples/sample_data --config config/reconforge.yml --output output
 
-ReconForge ERP is early-stage. It is designed for local-first ERP reconciliation and audit workflows and currently focuses on export-based workflows for Odoo, SAP-style reports, and generic ERP datasets. v0.3.0 is a serious pre-1.0 platform release, not a claim of broad production adoption.
+reconforge rules validate --pack control-packs/audit-basic
+reconforge rules list --pack control-packs/audit-basic
+reconforge rules explain --pack control-packs/audit-basic --rule AB-001
+reconforge rules run --input examples/sample_data --pack control-packs/audit-basic --output output/rules
 
-## Why Existing Workflows Fail
+reconforge report management-pack --input examples/sample_data --config config/reconforge.yml --output output
+reconforge report evidence-binder --input output --output output/evidence
+reconforge explain exception --input output/management_pack.json --exception-id EXC-0001
 
-ERP systems hold the source transactions, but month-end reconciliation often happens in spreadsheets. Enterprise close platforms are mature, but many companies cannot justify the cost, implementation effort, or cloud-upload model for operational stock/WIP controls. ReconForge ERP makes these checks repeatable, inspectable, local, and audit-friendly.
+reconforge anonymize --input examples/sample_data --output examples/anonymized_data --profile public-demo --amount-noise-percent 5
+reconforge generate synthetic --rows 1000 --industry workshop --currency SAR --output benchmarks/small_1k
+reconforge benchmark --input benchmarks/small_1k --engine pandas --output output/benchmark
+reconforge studio --input examples/sample_data --output output
+```
+
+## Report Outputs
+
+| Output | Purpose |
+| --- | --- |
+| `management_pack.xlsx` | Executive pack, reconciliation summary, risk matrix, exceptions, WIP, audit log, and configuration |
+| `executive_report.html` | Local executive HTML report |
+| `dashboard.html` | Static local dashboard |
+| `output/evidence/` | Audit case folders for High and Critical exceptions |
+| `output/rules/` | Rule engine CSV/JSON outputs |
+| `output/benchmark/` | Runtime and match-rate benchmark outputs |
 
 ## Who It Is For
 
 - Finance controllers and accountants.
 - Internal and external auditors.
 - ERP consultants and implementation partners.
-- Odoo implementers and SAP users.
-- Inventory, stores, and spare-parts managers.
-- Workshop, fleet, dealership, service, and manufacturing teams.
+- Odoo implementers and SAP users working from exports.
+- Inventory, stores, spare-parts, workshop, fleet, dealership, service, and manufacturing teams.
 
-## Core Features
+## Maturity Note
 
-- Typer CLI for validation, reconciliation, rules, reports, evidence, anonymization, generation, benchmark, dashboard, and Studio.
-- Stock-to-GL matching with standard, strict, aggressive, and audit-safe strategies.
-- Work-order controls for spare parts, WIP, invoices, direct purchase fitting, old-part returns, and cancelled PO linkage.
-- Advanced YAML rule engine with row-level and cross-file operators.
-- Fifteen domain control packs.
-- Risk intelligence engine with score, level, explanation, escalation, and suggested audit note.
-- Audit evidence binder with case folders, review forms, HTML index, and Excel register.
-- Data anonymizer with referential integrity and safe-sharing profiles.
-- Synthetic data lab for workshop, manufacturing, fleet, dealership, and service examples.
-- Benchmark engine with Pandas, optional DuckDB, and HTML/JSON/CSV/Markdown outputs.
-- ReconForge Studio local web interface.
-- Plugin/connector foundation for future Odoo, SAP, ERPNext, NetSuite, and Dynamics adapters.
-- AI-ready offline explanation layer; no API key required for core functionality.
+ReconForge ERP is early-stage. It is designed for local-first ERP reconciliation and audit workflows and currently focuses on export-based workflows for Odoo, SAP-style reports, and generic ERP datasets. v0.3.0 is a serious pre-1.0 platform release, not a claim of broad production adoption.
 
 ## Architecture
 
@@ -66,54 +155,6 @@ flowchart LR
 ```
 
 See [docs/architecture.md](docs/architecture.md) for system, pipeline, rule engine, evidence, control pack, local deployment, and future open-core diagrams.
-
-## Quick Start
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-
-reconforge doctor
-reconforge validate examples/sample_data
-reconforge report management-pack --input examples/sample_data --config config/reconforge.yml --output output
-```
-
-Open:
-
-- `output/management_pack.xlsx`
-- `output/executive_report.html`
-- `output/dashboard.html`
-- `output/summary.md`
-
-## Demo Workflow
-
-```bash
-reconforge reconcile stock-gl --input examples/sample_data --config config/reconforge.yml --output output
-reconforge reconcile stock-gl --input examples/sample_data --config config/reconforge.yml --output output --matching-strategy audit-safe
-reconforge reconcile workorders --input examples/sample_data --config config/reconforge.yml --output output
-reconforge rules validate --pack control-packs/audit-basic
-reconforge rules list --pack control-packs/audit-basic
-reconforge rules explain --pack control-packs/audit-basic --rule AB-001
-reconforge rules run --input examples/sample_data --pack control-packs/audit-basic --output output/rules
-reconforge report evidence-binder --input output --output output/evidence
-reconforge anonymize --input examples/sample_data --output examples/anonymized_data --profile public-demo --amount-noise-percent 5
-reconforge generate synthetic --rows 1000 --industry workshop --currency SAR --output benchmarks/small_1k
-reconforge benchmark --input benchmarks/small_1k --engine pandas --output output/benchmark
-reconforge explain exception --input output/management_pack.json --exception-id EXC-0001
-reconforge studio --input examples/sample_data --output output
-```
-
-## Report Preview
-
-| Output | Purpose |
-| --- | --- |
-| `management_pack.xlsx` | Executive pack, reconciliation summary, risk matrix, exceptions, WIP, audit log, configuration |
-| `executive_report.html` | Local executive HTML report |
-| `dashboard.html` | Static local dashboard |
-| `output/evidence/` | Audit case folders for High/Critical exceptions |
-| `output/rules/` | Rule engine CSV/JSON outputs |
-| `output/benchmark/` | Runtime and match-rate benchmark outputs |
 
 ## Control Packs
 
@@ -135,11 +176,11 @@ ReconForge ERP ships 15 control packs:
 - `high-risk-transactions`
 - `fraud-red-flags`
 
-Each pack includes metadata, rules, mapping guidance, risk model, README, expected exceptions, and sample command.
+Each pack includes metadata, rules, mapping guidance, risk model, README, expected exceptions, and a sample command.
 
 ## Evidence Binder
 
-For High/Critical exceptions:
+For High and Critical exceptions, the binder creates review-ready case folders:
 
 ```text
 output/evidence/EXC-0001/
@@ -152,29 +193,40 @@ output/evidence/EXC-0001/
 └── audit_trail.json
 ```
 
-The binder also writes `index.html` and `evidence_register.xlsx`.
+The binder also writes `index.html`, `evidence_index.json`, and `evidence_register.xlsx`.
 
-## Security and Local-First
+## Security And Quality
 
-ReconForge ERP processes local files by default. It does not upload ERP exports, does not require paid APIs, and does not require AI services. Use the anonymizer before sharing data. See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md), and [docs/data-privacy.md](docs/data-privacy.md).
+ReconForge ERP processes local files by default. It does not upload ERP exports, does not require paid APIs, and does not require AI services for core functionality. Use the anonymizer before sharing data.
 
-## Documentation Map
+Quality and security checks are part of the repository workflow:
 
-- [Market intelligence](docs/market-intelligence.md)
-- [Category strategy](docs/category-strategy.md)
+- CI runs Ruff, mypy, pytest, CLI smoke checks, and package build.
+- CodeQL analyzes Python on pull requests and scheduled runs.
+- Security workflow runs Bandit and `pip-audit`.
+- Path-serving routes use registry-based download allowlists instead of constructing filesystem paths from route parameters.
+
+See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md), and [docs/data-privacy.md](docs/data-privacy.md).
+
+## Documentation
+
+- [Getting started](docs/getting-started.md)
 - [Architecture](docs/architecture.md)
+- [Reconciliation methodology](docs/reconciliation-methodology.md)
+- [Controls and audit](docs/controls-and-audit.md)
 - [Risk scoring](docs/risk-scoring.md)
+- [Report samples](docs/report-samples.md)
+- [ReconForge Studio](docs/reconforge-studio.md)
 - [Anonymization](docs/anonymization.md)
 - [Synthetic data](docs/synthetic-data.md)
 - [Benchmarking](docs/benchmark.md)
-- [ReconForge Studio](docs/reconforge-studio.md)
 - [Plugin development](docs/plugin-development.md)
 - [AI assistant architecture](docs/ai-assistant.md)
+- [Odoo export guide](docs/odoo-export-guide.md)
+- [SAP export guide](docs/sap-export-guide.md)
 - [Plain-English guide](docs/plain-english-guide.md)
 - [Arabic guide](docs/ar/guide.md)
 - [Playbooks](docs/playbooks/)
-- [Commercial strategy](docs/commercial-strategy.md)
-- [OpenAI OSS application pack](docs/openai-oss-application.md)
 
 ## Docker
 
@@ -189,6 +241,7 @@ docker run --rm -v $(pwd)/output:/app/output reconforge-erp reconforge doctor
 ruff check .
 mypy reconforge
 pytest
+bandit -q -r reconforge
 ```
 
 ## Roadmap

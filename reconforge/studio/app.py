@@ -104,12 +104,22 @@ def _search_text(row: pd.Series) -> str:
     return " ".join(_html_cell(value) for value in row.to_list()).lower()
 
 
-def _options(values: list[str], selected: str = "") -> str:
+def _options(values: list[str]) -> str:
     items = ["<option value=''></option>"]
     for value in values:
-        is_selected = " selected" if value == selected else ""
-        items.append(f"<option value='{escape(value)}'{is_selected}>{escape(value)}</option>")
+        items.append(f"<option value='{escape(value)}'>{escape(value)}</option>")
     return "".join(items)
+
+
+def _allowed_choice(value: str, allowed: list[str]) -> str:
+    for item in allowed:
+        if value.lower() == item.lower():
+            return item
+    return ""
+
+
+def _bounded_search(value: str) -> str:
+    return value.strip()[:120]
 
 
 def _amount_series(frame: pd.DataFrame) -> pd.Series:
@@ -162,14 +172,6 @@ def _filter_exceptions(
 
 def _filter_form(
     frame: pd.DataFrame,
-    *,
-    severity: str,
-    exception_type: str,
-    status: str,
-    source_file: str,
-    search: str,
-    min_amount: float,
-    sort: str,
 ) -> str:
     severity_values = sorted(
         {
@@ -184,13 +186,13 @@ def _filter_form(
     source_values = sorted(set(frame.get("source_file", pd.Series(dtype=str)).astype(str).str.strip()) - {""})
     return f"""
 <form class="filters" method="get" action="/exceptions">
-  <label>Severity / risk level<select name="severity">{_options(severity_values, severity)}</select></label>
-  <label>Exception type<select name="exception_type">{_options(exception_values, exception_type)}</select></label>
-  <label>Review status<select name="status">{_options(list(ALLOWED_STATUSES), status)}</select></label>
-  <label>Source file<select name="source_file">{_options(source_values, source_file)}</select></label>
-  <label>Search<input name="search" value="{escape(search)}"></label>
-  <label>Minimum amount<input name="min_amount" type="number" step="0.01" value="{min_amount:g}"></label>
-  <label>Sort<select name="sort">{_options(["risk_score", "amount_impact", "updated_at"], sort)}</select></label>
+  <label>Severity / risk level<select name="severity">{_options(severity_values)}</select></label>
+  <label>Exception type<select name="exception_type">{_options(exception_values)}</select></label>
+  <label>Review status<select name="status">{_options(list(ALLOWED_STATUSES))}</select></label>
+  <label>Source file<select name="source_file">{_options(source_values)}</select></label>
+  <label>Search<input name="search"></label>
+  <label>Minimum amount<input name="min_amount" type="number" step="0.01" value="0"></label>
+  <label>Sort<select name="sort">{_options(["risk_score", "amount_impact", "updated_at"])}</select></label>
   <button type="submit">Apply</button>
 </form>
 """
@@ -293,26 +295,28 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
             rec["exceptions"],
             load_review_state(output_path / "review_state.json"),
         )
+        severity_values = sorted(
+            {
+                value
+                for column in ("severity", "risk_level")
+                if column in exceptions_frame.columns
+                for value in exceptions_frame[column].astype(str).str.strip()
+                if value
+            },
+        )
+        exception_values = sorted(set(exceptions_frame.get("exception_type", pd.Series(dtype=str)).astype(str).str.strip()) - {""})
+        source_values = sorted(set(exceptions_frame.get("source_file", pd.Series(dtype=str)).astype(str).str.strip()) - {""})
         filtered = _filter_exceptions(
             exceptions_frame,
-            severity=severity,
-            exception_type=exception_type,
-            status=status,
-            source_file=source_file,
-            search=search,
+            severity=_allowed_choice(severity, severity_values),
+            exception_type=_allowed_choice(exception_type, exception_values),
+            status=_allowed_choice(status, list(ALLOWED_STATUSES)),
+            source_file=_allowed_choice(source_file, source_values),
+            search=_bounded_search(search),
             min_amount=min_amount,
-            sort=sort,
+            sort=_allowed_choice(sort, ["risk_score", "amount_impact", "updated_at"]) or "risk_score",
         )
-        form = _filter_form(
-            exceptions_frame,
-            severity=severity,
-            exception_type=exception_type,
-            status=status,
-            source_file=source_file,
-            search=search,
-            min_amount=min_amount,
-            sort=sort,
-        )
+        form = _filter_form(exceptions_frame)
         message = "<p>No exceptions match the current filters.</p>" if filtered.empty else ""
         return _layout("Exceptions", "<h2>Exception Review</h2>" + form + message + _table(filtered, limit=100))
 

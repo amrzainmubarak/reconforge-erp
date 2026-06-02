@@ -29,6 +29,15 @@ from reconforge.reconciliation.workorders import reconcile_workorders
 from reconforge.reconciliation.workorders import result_frames as workorder_result_frames
 from reconforge.reports.management_pack import generate_management_pack
 from reconforge.reports.wip_aging import aging_summary, generate_wip_aging
+from reconforge.review.state import (
+    ALLOWED_STATUSES,
+    collect_exception_frame,
+    export_review_register,
+    load_review_state,
+    merge_review_state_with_exceptions,
+    save_review_state,
+    update_review_status,
+)
 from reconforge.rules.engine import run_rule_pack, write_rule_results
 from reconforge.rules.explain import explain_rule
 from reconforge.rules.loader import load_rule_pack
@@ -43,11 +52,13 @@ report_app = typer.Typer(help="Generate audit and management reports.")
 rules_app = typer.Typer(help="Validate, list, and run control-pack rules.")
 generate_app = typer.Typer(help="Generate synthetic ERP datasets.")
 explain_app = typer.Typer(help="Explain exceptions and controls deterministically.")
+review_app = typer.Typer(help="Review exceptions with local JSON state.")
 app.add_typer(reconcile_app, name="reconcile")
 app.add_typer(report_app, name="report")
 app.add_typer(rules_app, name="rules")
 app.add_typer(generate_app, name="generate")
 app.add_typer(explain_app, name="explain")
+app.add_typer(review_app, name="review")
 
 
 def _version_callback(value: bool) -> None:
@@ -426,6 +437,82 @@ def explain_exception_command(
     except (OSError, ValueError) as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
+
+
+@review_app.command("list")
+def review_list_command(
+    input_path: Annotated[Path, typer.Option("--input", help="Generated ReconForge output directory.")] = Path("output"),
+) -> None:
+    """List local exceptions with review status."""
+
+    state_path = input_path / "review_state.json"
+    exceptions = collect_exception_frame(input_path)
+    merged = merge_review_state_with_exceptions(exceptions, load_review_state(state_path))
+    if merged.empty:
+        console.print("[yellow]No generated exceptions found.[/yellow]")
+        return
+    columns = [
+        "exception_id",
+        "status",
+        "reviewer",
+        "updated_at",
+        "severity",
+        "exception_type",
+        "amount_impact",
+        "source_file",
+    ]
+    visible = merged[[column for column in columns if column in merged.columns]]
+    _print_frame("Exception Review State", visible, max_rows=100)
+    if "status" in merged.columns:
+        counts = merged["status"].astype(str).value_counts().to_dict()
+        summary = " | ".join(f"{status}: {count}" for status, count in counts.items())
+        console.print(f"[dim]Review statuses:[/dim] {summary}")
+
+
+@review_app.command("set-status")
+def review_set_status_command(
+    exception_id: Annotated[str, typer.Option("--exception-id", help="Exception ID to update.")],
+    status: Annotated[str, typer.Option("--status", help=f"Status: {', '.join(ALLOWED_STATUSES)}")],
+    input_path: Annotated[Path, typer.Option("--input", help="Generated ReconForge output directory.")] = Path("output"),
+    reviewer: Annotated[str, typer.Option("--reviewer", help="Reviewer name or initials.")] = "",
+    note: Annotated[str, typer.Option("--note", help="Reviewer note.")] = "",
+    decision_reason: Annotated[str, typer.Option("--decision-reason", help="Decision reason.")] = "",
+    accepted_risk_reason: Annotated[str, typer.Option("--accepted-risk-reason", help="Accepted-risk reason.")] = "",
+    escalation_owner: Annotated[str, typer.Option("--escalation-owner", help="Escalation owner.")] = "",
+) -> None:
+    """Set local review status for one exception."""
+
+    state_path = input_path / "review_state.json"
+    state = load_review_state(state_path)
+    try:
+        entry = update_review_status(
+            exception_id,
+            status,
+            state,
+            reviewer=reviewer,
+            note=note,
+            decision_reason=decision_reason,
+            accepted_risk_reason=accepted_risk_reason,
+            escalation_owner=escalation_owner,
+        )
+    except ValueError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    save_review_state(state_path, state)
+    console.print(
+        f"[green]Review updated:[/green] {entry['exception_id']} | {entry['status']} | {state_path}",
+    )
+
+
+@review_app.command("export")
+def review_export_command(
+    input_path: Annotated[Path, typer.Option("--input", help="Generated ReconForge output directory.")] = Path("output"),
+    output_path: Annotated[Path, typer.Option("--output", help="Review register workbook path.")] = Path("output/review_register.xlsx"),
+) -> None:
+    """Export exception review state as an Excel register."""
+
+    path = export_review_register(input_path, output_path)
+    console.print(f"[green]Review register written:[/green] {path}")
 
 
 @app.command("dashboard")

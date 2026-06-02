@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.5.0
+
+ReconForge ERP v0.5.0 adds the local exception review workflow foundation.
+
+- Added file-based review state in `output/review_state.json` with allowed statuses: New, Under Review, Resolved, Accepted Risk, and Escalated.
+- Added `reconforge review list`, `reconforge review set-status`, and `reconforge review export` CLI commands.
+- Added optional `output/review_register.xlsx` export for audit-ready review status.
+- Integrated review status, reviewer notes, and update metadata into evidence binder index, register, summaries, review forms, and audit trail JSON when review state exists.
+- Added Studio exception filters for severity/risk level, exception type, review status, source file, search text, minimum amount, and sorting.
+- Added review workflow documentation and tests for state handling, CLI commands, Studio filters, and evidence register integration.
+
 ## v0.4.0
 
 ReconForge ERP v0.4.0 focuses on ERP mapping foundations for export-based Odoo and SAP workflows.

@@ -12,6 +12,7 @@ from reconforge.evidence.models import EvidenceArtifact, EvidenceCase
 from reconforge.evidence.templates import business_impact, recommended_action, responsible_department
 from reconforge.evidence.writer import write_evidence_case
 from reconforge.io.writers import write_json
+from reconforge.review.state import load_review_state
 
 
 def _read_csv_if_exists(path: Path) -> pd.DataFrame:
@@ -124,10 +125,37 @@ def collect_evidence_cases(input_dir: Path | str) -> list[EvidenceCase]:
     return cases
 
 
+def _apply_review_state(cases: list[EvidenceCase], input_dir: Path) -> list[EvidenceCase]:
+    state = load_review_state(input_dir / "review_state.json")
+    if not state:
+        return cases
+    updated_cases: list[EvidenceCase] = []
+    for case in cases:
+        entry = state.get(case.exception_id)
+        if entry is None:
+            updated_cases.append(case)
+            continue
+        updated_cases.append(
+            case.model_copy(
+                update={
+                    "review_status": entry.get("status", "New"),
+                    "reviewer": entry.get("reviewer", ""),
+                    "review_note": entry.get("note", ""),
+                    "review_updated_at": entry.get("updated_at", ""),
+                    "decision_reason": entry.get("decision_reason", ""),
+                    "accepted_risk_reason": entry.get("accepted_risk_reason", ""),
+                    "escalation_owner": entry.get("escalation_owner", ""),
+                },
+            ),
+        )
+    return updated_cases
+
+
 def generate_evidence_binder(input_dir: Path | str, output_dir: Path | str) -> list[EvidenceArtifact]:
     """Generate enterprise-style audit evidence folders."""
 
-    cases = collect_evidence_cases(input_dir)
+    input_path = Path(input_dir)
+    cases = _apply_review_state(collect_evidence_cases(input_path), input_path)
     target = Path(output_dir)
     target.mkdir(parents=True, exist_ok=True)
     artifacts = [write_evidence_case(case, target) for case in cases]

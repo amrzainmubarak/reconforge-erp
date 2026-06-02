@@ -27,6 +27,13 @@ class EvidenceCase(BaseModel):
     business_impact: str
     recommended_action: str
     responsible_department: str
+    review_status: str = "New"
+    reviewer: str = ""
+    review_note: str = ""
+    review_updated_at: str = ""
+    decision_reason: str = ""
+    accepted_risk_reason: str = ""
+    escalation_owner: str = ""
     generated_at: str = Field(default_factory=lambda: datetime.utcnow().replace(microsecond=0).isoformat() + "Z")
 
 

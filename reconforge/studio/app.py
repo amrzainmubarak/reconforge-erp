@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from html import escape
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,7 @@ from reconforge.io.readers import read_required_datasets
 from reconforge.reconciliation.stock_gl import reconcile_stock_gl
 from reconforge.reconciliation.workorders import reconcile_workorders
 from reconforge.reports.wip_aging import generate_wip_aging
+from reconforge.review.state import ALLOWED_STATUSES, load_review_state, merge_review_state_with_exceptions
 from reconforge.schemas import DatasetName
 from reconforge.utils.safe_paths import build_download_registry, get_registered_download, is_safe_download_key
 from reconforge.validators import issues_to_frame, validate_input_directory
@@ -60,6 +62,10 @@ def _layout(title: str, body: str) -> str:
     .badge {{ border-radius: 999px; padding: 3px 8px; font-size: 12px; background: #e8eef5; }}
     .high, .critical {{ background: #fee4e2; color: #912018; }}
     .medium {{ background: #fff4cc; color: #7a4d00; }}
+    .filters {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; align-items: end; margin: 0 0 14px; }}
+    .filters label {{ display: grid; gap: 4px; font-size: 12px; color: #475467; }}
+    .filters input, .filters select {{ min-height: 34px; border: 1px solid #ccd6e0; border-radius: 6px; padding: 6px 8px; background: #fff; }}
+    .filters button {{ min-height: 34px; border: 0; border-radius: 6px; padding: 6px 10px; background: #16324f; color: #fff; }}
     table {{ width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #dce3ea; }}
     th, td {{ padding: 9px 10px; border-bottom: 1px solid #edf1f5; text-align: left; font-size: 13px; }}
     th {{ background: #e8eef5; }}
@@ -78,11 +84,118 @@ def _table(frame: pd.DataFrame, limit: int = 50) -> str:
     if frame.empty:
         return "<p>No records found.</p>"
     visible = frame.head(limit)
-    header = "".join(f"<th>{column}</th>" for column in visible.columns)
+    header = "".join(f"<th>{escape(str(column))}</th>" for column in visible.columns)
     rows = []
     for _, row in visible.iterrows():
-        rows.append("<tr>" + "".join(f"<td>{row[column]}</td>" for column in visible.columns) + "</tr>")
+        rows.append("<tr>" + "".join(f"<td>{_html_cell(row[column])}</td>" for column in visible.columns) + "</tr>")
     return f"<table><thead><tr>{header}</tr></thead><tbody>{''.join(rows)}</tbody></table>"
+
+
+def _html_cell(value: object) -> str:
+    if value is None:
+        return ""
+    text = str(value)
+    if text.strip().lower() in {"nan", "nat", "none", "<na>"}:
+        return ""
+    return escape(text)
+
+
+def _search_text(row: pd.Series) -> str:
+    return " ".join(_html_cell(value) for value in row.to_list()).lower()
+
+
+def _options(values: list[str]) -> str:
+    items = ["<option value=''></option>"]
+    for value in values:
+        items.append(f"<option value='{escape(value)}'>{escape(value)}</option>")
+    return "".join(items)
+
+
+def _allowed_choice(value: str, allowed: list[str]) -> str:
+    for item in allowed:
+        if value.lower() == item.lower():
+            return item
+    return ""
+
+
+def _bounded_search(value: str) -> str:
+    return value.strip()[:120]
+
+
+def _amount_series(frame: pd.DataFrame) -> pd.Series:
+    if "amount_impact" in frame.columns:
+        return pd.to_numeric(frame["amount_impact"], errors="coerce").fillna(0)
+    return pd.Series([0.0] * len(frame), index=frame.index)
+
+
+def _filter_exceptions(
+    frame: pd.DataFrame,
+    *,
+    severity: str = "",
+    exception_type: str = "",
+    status: str = "",
+    source_file: str = "",
+    search: str = "",
+    min_amount: float = 0.0,
+    sort: str = "risk_score",
+) -> pd.DataFrame:
+    filtered = frame.copy()
+    if severity:
+        severity_values = pd.Series([""] * len(filtered), index=filtered.index)
+        if "severity" in filtered.columns:
+            severity_values = severity_values.mask(filtered["severity"].astype(str).str.strip().ne(""), filtered["severity"].astype(str))
+        if "risk_level" in filtered.columns:
+            severity_values = severity_values.mask(severity_values.str.strip().eq(""), filtered["risk_level"].astype(str))
+        filtered = filtered[severity_values.str.lower().eq(severity.lower())]
+    if exception_type and "exception_type" in filtered.columns:
+        filtered = filtered[filtered["exception_type"].astype(str).str.lower().eq(exception_type.lower())]
+    if status and "status" in filtered.columns:
+        filtered = filtered[filtered["status"].astype(str).str.lower().eq(status.lower())]
+    if source_file and "source_file" in filtered.columns:
+        filtered = filtered[filtered["source_file"].astype(str).str.lower().eq(source_file.lower())]
+    if search:
+        haystack = filtered.apply(_search_text, axis=1)
+        filtered = filtered[haystack.str.contains(search.lower(), regex=False)]
+    if min_amount > 0:
+        filtered = filtered[_amount_series(filtered) >= min_amount]
+    if sort == "amount_impact":
+        filtered = filtered.assign(_sort_amount=_amount_series(filtered)).sort_values("_sort_amount", ascending=False).drop(columns=["_sort_amount"])
+    elif sort == "updated_at" and "updated_at" in filtered.columns:
+        filtered = filtered.sort_values("updated_at", ascending=False)
+    elif "risk_score" in filtered.columns:
+        filtered = filtered.assign(_sort_risk=pd.to_numeric(filtered["risk_score"], errors="coerce").fillna(0)).sort_values(
+            "_sort_risk",
+            ascending=False,
+        ).drop(columns=["_sort_risk"])
+    return filtered
+
+
+def _filter_form(
+    frame: pd.DataFrame,
+) -> str:
+    severity_values = sorted(
+        {
+            value
+            for column in ("severity", "risk_level")
+            if column in frame.columns
+            for value in frame[column].astype(str).str.strip()
+            if value
+        },
+    )
+    exception_values = sorted(set(frame.get("exception_type", pd.Series(dtype=str)).astype(str).str.strip()) - {""})
+    source_values = sorted(set(frame.get("source_file", pd.Series(dtype=str)).astype(str).str.strip()) - {""})
+    return f"""
+<form class="filters" method="get" action="/exceptions">
+  <label>Severity / risk level<select name="severity">{_options(severity_values)}</select></label>
+  <label>Exception type<select name="exception_type">{_options(exception_values)}</select></label>
+  <label>Review status<select name="status">{_options(list(ALLOWED_STATUSES))}</select></label>
+  <label>Source file<select name="source_file">{_options(source_values)}</select></label>
+  <label>Search<input name="search"></label>
+  <label>Minimum amount<input name="min_amount" type="number" step="0.01" value="0"></label>
+  <label>Sort<select name="sort">{_options(["risk_score", "amount_impact", "updated_at"])}</select></label>
+  <button type="submit">Apply</button>
+</form>
+"""
 
 
 def _single_segment_download_key(value: str) -> str:
@@ -130,7 +243,7 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
     output_registry = build_download_registry(output_path, allowed_suffixes=DOWNLOAD_SUFFIXES)
     evidence_registry = build_download_registry(output_path / "evidence", allowed_suffixes=DOWNLOAD_SUFFIXES, recursive=True)
     docs_registry = build_download_registry(Path("docs"), allowed_suffixes=DOC_SUFFIXES)
-    app = FastAPI(title="ReconForge Studio", version="0.2.0")
+    app = FastAPI(title="ReconForge Studio", version="0.5.0")
 
     @app.get("/", response_class=HTMLResponse)
     def overview() -> str:
@@ -168,12 +281,44 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
         )
 
     @app.get("/exceptions", response_class=HTMLResponse)
-    def exceptions() -> str:
+    def exceptions(
+        severity: str = "",
+        exception_type: str = "",
+        status: str = "",
+        source_file: str = "",
+        search: str = "",
+        min_amount: float = 0.0,
+        sort: str = "risk_score",
+    ) -> str:
         rec = _load_reconciliation(input_path)
-        exceptions_frame = rec["exceptions"]
-        if "risk_score" in exceptions_frame.columns:
-            exceptions_frame = exceptions_frame.sort_values("risk_score", ascending=False)
-        return _layout("Exceptions", "<h2>Exception Review</h2>" + _table(exceptions_frame, limit=100))
+        exceptions_frame = merge_review_state_with_exceptions(
+            rec["exceptions"],
+            load_review_state(output_path / "review_state.json"),
+        )
+        severity_values = sorted(
+            {
+                value
+                for column in ("severity", "risk_level")
+                if column in exceptions_frame.columns
+                for value in exceptions_frame[column].astype(str).str.strip()
+                if value
+            },
+        )
+        exception_values = sorted(set(exceptions_frame.get("exception_type", pd.Series(dtype=str)).astype(str).str.strip()) - {""})
+        source_values = sorted(set(exceptions_frame.get("source_file", pd.Series(dtype=str)).astype(str).str.strip()) - {""})
+        filtered = _filter_exceptions(
+            exceptions_frame,
+            severity=_allowed_choice(severity, severity_values),
+            exception_type=_allowed_choice(exception_type, exception_values),
+            status=_allowed_choice(status, list(ALLOWED_STATUSES)),
+            source_file=_allowed_choice(source_file, source_values),
+            search=_bounded_search(search),
+            min_amount=min_amount,
+            sort=_allowed_choice(sort, ["risk_score", "amount_impact", "updated_at"]) or "risk_score",
+        )
+        form = _filter_form(exceptions_frame)
+        message = "<p>No exceptions match the current filters.</p>" if filtered.empty else ""
+        return _layout("Exceptions", "<h2>Exception Review</h2>" + form + message + _table(filtered, limit=100))
 
     @app.get("/rule-results", response_class=HTMLResponse)
     def rule_results() -> str:

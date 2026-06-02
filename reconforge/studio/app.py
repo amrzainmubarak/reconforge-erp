@@ -7,7 +7,7 @@ from typing import Any
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse
 
 from reconforge.config import load_config
 from reconforge.io.readers import read_required_datasets
@@ -15,12 +15,11 @@ from reconforge.reconciliation.stock_gl import reconcile_stock_gl
 from reconforge.reconciliation.workorders import reconcile_workorders
 from reconforge.reports.wip_aging import generate_wip_aging
 from reconforge.schemas import DatasetName
-from reconforge.utils.safe_paths import safe_resolve_child
+from reconforge.utils.safe_paths import build_download_registry, get_registered_download, is_safe_download_key
 from reconforge.validators import issues_to_frame, validate_input_directory
 
 DOWNLOAD_SUFFIXES = {".html", ".xlsx", ".csv", ".json", ".md", ".txt", ".yml", ".yaml"}
 DOC_SUFFIXES = {".md"}
-TEXT_DOWNLOAD_SUFFIXES = DOWNLOAD_SUFFIXES - {".xlsx"}
 
 
 def _layout(title: str, body: str) -> str:
@@ -86,14 +85,14 @@ def _table(frame: pd.DataFrame, limit: int = 50) -> str:
     return f"<table><thead><tr>{header}</tr></thead><tbody>{''.join(rows)}</tbody></table>"
 
 
-def _download_response(path: Path, media_type: str) -> Response:
-    if path.suffix.lower() in TEXT_DOWNLOAD_SUFFIXES:
-        return Response(
-            content=path.read_text(encoding="utf-8"),
-            media_type=media_type,
-            headers={"Content-Disposition": f'attachment; filename="{path.name}"'},
-        )
-    return FileResponse(path, media_type=media_type, filename=path.name)
+def _single_segment_download_key(value: str) -> str:
+    if "/" in value or not is_safe_download_key(value):
+        raise ValueError("Unsafe download key segment")
+    return value
+
+
+def _evidence_download_key(case_id: str, filename: str) -> str:
+    return f"{_single_segment_download_key(case_id)}/{_single_segment_download_key(filename)}"
 
 
 def _load_reconciliation(input_dir: Path) -> dict[str, Any]:
@@ -128,6 +127,9 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
 
     input_path = Path(input_dir)
     output_path = Path(output_dir)
+    output_registry = build_download_registry(output_path, allowed_suffixes=DOWNLOAD_SUFFIXES)
+    evidence_registry = build_download_registry(output_path / "evidence", allowed_suffixes=DOWNLOAD_SUFFIXES, recursive=True)
+    docs_registry = build_download_registry(Path("docs"), allowed_suffixes=DOC_SUFFIXES)
     app = FastAPI(title="ReconForge Studio", version="0.2.0")
 
     @app.get("/", response_class=HTMLResponse)
@@ -207,50 +209,51 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
 
     @app.get("/evidence", response_class=HTMLResponse)
     def evidence() -> str:
-        evidence_dir = output_path / "evidence"
-        rows = [{"case": path.name, "summary": f"/download/evidence/{path.name}/summary.md"} for path in sorted(evidence_dir.glob("EXC-*"))]
+        rows = [
+            {"case": key.split("/", 1)[0], "summary": f"/download/evidence/{key}"}
+            for key in sorted(evidence_registry)
+            if key.endswith("/summary.md") and len(key.split("/")) == 2
+        ]
         return _layout("Evidence", "<h2>Evidence Binder</h2>" + _table(pd.DataFrame(rows)))
 
     @app.get("/downloads", response_class=HTMLResponse)
     def downloads() -> str:
-        files = sorted(path for path in output_path.glob("*") if path.is_file() and path.suffix.lower() in DOWNLOAD_SUFFIXES)
-        links = "".join(f'<li><a href="/download/{path.name}">{path.name}</a></li>' for path in files)
+        links = "".join(f'<li><a href="/download/{key}">{key}</a></li>' for key in sorted(output_registry))
         return _layout("Downloads", f"<h2>Downloads</h2><ul>{links}</ul>")
 
     @app.get("/docs", response_class=HTMLResponse)
     def docs() -> str:
-        links = "".join(f'<li><a href="/download-doc/{path.name}">{path.name}</a></li>' for path in sorted(Path("docs").glob("*.md")))
+        links = "".join(f'<li><a href="/download-doc/{key}">{key}</a></li>' for key in sorted(docs_registry))
         return _layout("Docs", f"<h2>Documentation</h2><ul>{links}</ul>")
 
     @app.get("/download/{filename}")
-    def download(filename: str) -> Response:
+    def download(filename: str) -> FileResponse:
         try:
-            path = safe_resolve_child(output_path, filename, allowed_suffixes=DOWNLOAD_SUFFIXES)
+            path = get_registered_download(output_registry, filename)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid filename") from None
-        if not path.exists() or not path.is_file():
-            raise HTTPException(status_code=404, detail="File not found")
-        return _download_response(path, "application/octet-stream")
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="File not found") from None
+        return FileResponse(path, media_type="application/octet-stream", filename=path.name)
 
     @app.get("/download/evidence/{case_id}/{filename}")
-    def download_evidence(case_id: str, filename: str) -> Response:
+    def download_evidence(case_id: str, filename: str) -> FileResponse:
         try:
-            case_dir = safe_resolve_child(output_path / "evidence", case_id)
-            path = safe_resolve_child(case_dir, filename, allowed_suffixes=DOWNLOAD_SUFFIXES)
+            path = get_registered_download(evidence_registry, _evidence_download_key(case_id, filename))
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid filename") from None
-        if not path.exists() or not path.is_file():
-            raise HTTPException(status_code=404, detail="Evidence file not found")
-        return _download_response(path, "text/plain")
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="Evidence file not found") from None
+        return FileResponse(path, media_type="text/plain", filename=path.name)
 
     @app.get("/download-doc/{filename}")
-    def download_doc(filename: str) -> Response:
+    def download_doc(filename: str) -> FileResponse:
         try:
-            path = safe_resolve_child(Path("docs"), filename, allowed_suffixes=DOC_SUFFIXES)
+            path = get_registered_download(docs_registry, filename)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid filename") from None
-        if not path.exists() or not path.is_file():
-            raise HTTPException(status_code=404, detail="Doc not found")
-        return _download_response(path, "text/markdown")
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="Doc not found") from None
+        return FileResponse(path, media_type="text/markdown", filename=path.name)
 
     return app

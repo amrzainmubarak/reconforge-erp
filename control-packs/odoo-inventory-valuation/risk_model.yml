@@ -1,7 +1,16 @@
 risk_weights:
-  missing_gl_entry: 75
-  valuation_mismatch: 70
-  missing_product_account: 68
+  missing_source_document: 78
+  missing_product_account: 75
+  missing_expense_account: 70
+  product_master_gap: 72
+  valuation_sign_mismatch: 55
+  high_value_valuation: 60
 escalation:
+  critical: Finance Controller
   high: Odoo Finance Lead
   medium: Functional Consultant
+  low: Data Steward
+review_guidance:
+  - Confirm all mapped exports cover the same Odoo company and accounting period.
+  - Treat missing source-document fields as mapping or traceability issues until reviewed.
+  - Document whether sign mismatches are true Odoo flow issues or export sign convention differences.

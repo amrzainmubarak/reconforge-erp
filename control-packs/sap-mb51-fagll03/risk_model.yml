@@ -1,8 +1,16 @@
 risk_weights:
-  missing_material_reference: 75
-  gl_without_material_movement: 72
-  amount_mismatch: 70
-  date_mismatch: 55
+  missing_reference_and_source_document: 80
+  missing_material: 74
+  missing_movement_type: 55
+  material_master_gap: 72
+  high_value_material_movement: 62
+  high_value_gl_without_cost_object: 58
 escalation:
-  high: SAP Finance Lead
-  medium: Inventory Accountant
+  critical: Finance Controller
+  high: SAP FI/MM Lead
+  medium: Cost Accounting Owner
+  low: Data Steward
+review_guidance:
+  - Confirm MB51 and FAGLL03/FBL3N exports cover the same company code, period, and account scope.
+  - Treat blank reference or assignment fields as layout issues until source evidence is reviewed.
+  - Document whether unmatched values are timing differences, mapping issues, or true posting exceptions.

@@ -116,6 +116,14 @@ reconforge benchmark --input benchmarks/small_1k --engine pandas --output output
 reconforge studio --input examples/sample_data --output output
 ```
 
+## ERP Mapping Profiles
+
+ReconForge ERP includes export-based mapping profiles for Odoo inventory valuation and SAP MB51/FAGLL03 workflows. These profiles help users map local CSV/XLSX exports into the canonical ReconForge files before running stock-to-GL reconciliation, rules, reports, and evidence binder workflows.
+
+- `control-packs/odoo-inventory-valuation` covers Odoo stock moves, stock valuation layers, account move lines, products, work-order references, and invoices where available.
+- `control-packs/sap-mb51-fagll03` covers SAP MB51 material documents and FAGLL03/FBL3N G/L line item exports.
+- Core workflows are local-first and do not require cloud upload or direct ERP connectors.
+
 ## Report Outputs
 
 | Output | Purpose |
@@ -137,7 +145,7 @@ reconforge studio --input examples/sample_data --output output
 
 ## Maturity Note
 
-ReconForge ERP is early-stage. It is designed for local-first ERP reconciliation and audit workflows and currently focuses on export-based workflows for Odoo, SAP-style reports, and generic ERP datasets. v0.3.0 is a serious pre-1.0 platform release, not a claim of broad production adoption.
+ReconForge ERP is early-stage. It is designed for local-first ERP reconciliation and audit workflows and currently focuses on export-based mapping profiles for Odoo, SAP-style reports, and generic ERP datasets. v0.4.0 is a serious pre-1.0 platform release, not a claim of broad adoption.
 
 ## Architecture
 
@@ -214,6 +222,7 @@ See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md)
 - [Architecture](docs/architecture.md)
 - [Reconciliation methodology](docs/reconciliation-methodology.md)
 - [Controls and audit](docs/controls-and-audit.md)
+- [Rule-pack schema reference](docs/rule-pack-schema-reference.md)
 - [Risk scoring](docs/risk-scoring.md)
 - [Report samples](docs/report-samples.md)
 - [ReconForge Studio](docs/reconforge-studio.md)

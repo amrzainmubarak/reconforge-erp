@@ -30,7 +30,7 @@ def create_app(output_dir: Path | str) -> FastAPI:
 
     base_path = Path(output_dir)
     report_registry = build_download_registry(base_path, allowed_suffixes=DOWNLOAD_SUFFIXES)
-    app = FastAPI(title="ReconForge ERP Dashboard", version="0.3.0")
+    app = FastAPI(title="ReconForge ERP Dashboard", version="0.4.0")
 
     @app.get("/", response_class=HTMLResponse)
     def index() -> str:

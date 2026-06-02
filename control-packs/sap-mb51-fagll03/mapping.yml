@@ -1,7 +1,104 @@
-sap_sources:
-  stock_moves.csv: MB51 material document list
-  gl_entries.csv: FAGLL03 or FBL3N G/L line items
-important_fields:
-  source_document: material document, reference document, assignment
-  reference: reference key, assignment, document header text
-  cost_center: cost center or receiver cost object
+profile_id: sap-mb51-fagll03
+source_system: sap
+version: 0.4.0
+description: Export-based mapping profile for SAP MB51 material documents and FAGLL03/FBL3N G/L line item reconciliation.
+export_workflow:
+  mode: export_based
+  cloud_upload_required: false
+  direct_api_connector: false
+  notes:
+    - Export MB51 and FAGLL03/FBL3N layouts to CSV or XLSX and map them into ReconForge canonical files.
+    - Keep company code, plant/storage location scope, GL account set, and posting period consistent across exports.
+canonical_datasets:
+  stock_moves.csv:
+    source_reports:
+      - MB51
+    purpose: Material document movements used for stock-to-GL and source-document traceability.
+  gl_entries.csv:
+    source_reports:
+      - FAGLL03
+      - FBL3N
+    purpose: G/L line items for inventory, WIP, variance, expense, and clearing accounts.
+  products.csv:
+    source_reports:
+      - material master export
+    purpose: Optional material master reference for material/product validation.
+  work_orders.csv:
+    source_reports:
+      - PM order list
+      - CS service order list
+      - production order list
+      - internal order list
+    purpose: Optional work-order or cost-object traceability.
+  purchase_orders.csv:
+    source_reports:
+      - ME2N
+      - PO history
+    purpose: Optional purchase-to-pay and received-not-invoiced review.
+field_mappings:
+  stock_moves.csv:
+    move_id: [material_document_item, material_document, mat_doc_item, mblnr_zeile]
+    date: [posting_date, budat, document_date]
+    source_document: [material_document, reference_document, ref_doc_no, assignment, xblnr, awkey]
+    work_order: [order, order_number, aufnr, network, wbs_element]
+    product_code: [material, material_number, matnr]
+    product_name: [material_description, short_text, maktx]
+    category: [material_group, matkl, valuation_class]
+    quantity: [quantity, menge, entry_quantity]
+    unit_cost: [unit_price, moving_average_price, standard_price]
+    total_cost: [amount, value, dmbtr, local_currency_amount]
+    warehouse: [plant, storage_location, werks, lgort]
+    movement_type: [movement_type, bwart]
+    customer_code: [customer, sold_to_party, kunnr]
+    equipment_serial: [serial_number, equipment, asset, equnr]
+    created_by: [user_name, created_by, usnam]
+  gl_entries.csv:
+    entry_id: [document_line, document_number_item, belnr_buzei]
+    date: [posting_date, budat]
+    journal: [document_type, blart, ledger, journal]
+    account_code: [gl_account, account, hkont, saknr]
+    account_name: [gl_account_name, account_description, txt50]
+    reference: [reference, assignment, xblnr, zuonr, document_header_text, bktxt]
+    source_document: [document_number, belnr, reference_document, awkey, material_document]
+    debit: [debit_amount, debit, soll]
+    credit: [credit_amount, credit, haben]
+    amount: [amount_in_local_currency, local_currency_amount, dmbtr, signed_amount]
+    cost_center: [cost_center, kostl, profit_center, prctr]
+    work_order: [order, aufnr, network, wbs_element]
+    created_by: [user_name, usnam, created_by]
+  products.csv:
+    product_code: [material, material_number, matnr]
+    product_name: [material_description, maktx]
+    category: [material_group, valuation_class, matkl, bklas]
+    standard_cost: [standard_price, moving_average_price, stprs, verpr]
+    stock_account: [inventory_account, stock_account, gl_account]
+    expense_account: [consumption_account, expense_account, variance_account]
+  work_orders.csv:
+    work_order: [order, order_number, aufnr]
+    customer_code: [customer, kunnr]
+    customer_name: [customer_name, name1]
+    equipment_serial: [equipment, serial_number, equnr]
+    status: [system_status, user_status, status]
+    opened_date: [created_on, start_date]
+    closed_date: [technical_completion_date, close_date]
+    service_type: [order_type, auart]
+    responsible_engineer: [responsible_person, planner_group]
+    workshop: [work_center, plant]
+    estimated_cost: [planned_cost]
+    actual_cost: [actual_cost]
+join_keys:
+  mb51_to_gl:
+    stock_side: [source_document, product_code, date, total_cost]
+    gl_side: [source_document, reference, date, amount]
+  material_master:
+    stock_side: [product_code]
+    product_side: [product_code]
+  cost_object_trace:
+    stock_side: [work_order, cost_center]
+    gl_side: [work_order, cost_center]
+quality_checks:
+  - Confirm MB51 and FAGLL03/FBL3N exports cover the same company code and posting period.
+  - Confirm relevant movement types are included in MB51.
+  - Confirm relevant inventory, WIP, variance, expense, or clearing accounts are included in GL exports.
+  - Confirm amount sign convention before comparing stock values to GL line amounts.
+  - Confirm SAP layout includes reference, assignment, document number, material, movement type, and cost object fields where available.

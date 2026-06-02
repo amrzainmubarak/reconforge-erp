@@ -1,45 +1,105 @@
 rules:
   - rule_id: ODOO-IV-001
-    rule_name: Product missing stock account
+    rule_name: Product missing stock valuation account
     severity: high
     entity_type: product
     source_file: products.csv
-    condition: {operator: missing, field: stock_account}
-    message: Product has no stock account mapping.
-    recommended_action: Configure stock valuation account or category account before period close.
-    risk_impact: 70
+    condition:
+      operator: missing
+      field: stock_account
+    message: Product has no stock valuation account mapping.
+    recommended_action: Configure the product or product category stock valuation account before period close.
+    risk_impact: 75
+    confidence: 0.95
     evidence_fields: [product_code, product_name, category, stock_account]
   - rule_id: ODOO-IV-002
     rule_name: Product missing expense account
     severity: high
     entity_type: product
     source_file: products.csv
-    condition: {operator: missing, field: expense_account}
-    message: Product has no expense account mapping.
-    recommended_action: Configure expense account to support stock issue postings.
+    condition:
+      operator: missing
+      field: expense_account
+    message: Product has no expense account mapping for stock issue or consumption postings.
+    recommended_action: Configure the expense account on the product or category and rerun reconciliation.
     risk_impact: 70
+    confidence: 0.95
     evidence_fields: [product_code, product_name, category, expense_account]
   - rule_id: ODOO-IV-003
-    rule_name: Negative quantity with positive value
+    rule_name: Inventory movement with no source document
+    severity: high
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: missing
+      field: source_document
+    message: Odoo stock movement has no source document for accounting traceability.
+    recommended_action: Trace the picking, origin, valuation layer description, or journal item reference and update the mapping.
+    risk_impact: 78
+    confidence: 0.9
+    evidence_fields: [move_id, date, source_document, work_order, product_code, total_cost]
+  - rule_id: ODOO-IV-004
+    rule_name: Stock movement product missing from product master
+    severity: high
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: cross_file_missing
+      source_key: product_code
+      target_file: products.csv
+      target_key: product_code
+    message: Stock movement references a product code that is not present in the mapped product master export.
+    recommended_action: Confirm the product export covers all moved products and that internal references are mapped consistently.
+    risk_impact: 72
+    confidence: 0.9
+    evidence_fields: [move_id, source_document, product_code, product_name, total_cost]
+  - rule_id: ODOO-IV-005
+    rule_name: Negative quantity with positive valuation
     severity: medium
     entity_type: stock_move
     source_file: stock_moves.csv
     condition:
       operator: and
       conditions:
-        - {operator: less_than, field: quantity, value: 0}
-        - {operator: greater_than, field: total_cost, value: 0}
-    message: Movement has negative quantity and positive value.
-    recommended_action: Review Odoo sign convention, return flow, and valuation layer export.
+        - operator: less_than
+          field: quantity
+          value: 0
+        - operator: greater_than
+          field: total_cost
+          value: 0
+    message: Movement has negative quantity and positive valuation amount.
+    recommended_action: Review Odoo sign convention, return flow, and stock valuation layer export mapping.
     risk_impact: 55
+    confidence: 0.8
     evidence_fields: [move_id, source_document, product_code, quantity, total_cost]
-  - rule_id: ODOO-IV-004
-    rule_name: Inventory movement with no source document
+  - rule_id: ODOO-IV-006
+    rule_name: Accounting line missing source document
     severity: high
+    entity_type: gl_entry
+    source_file: gl_entries.csv
+    condition:
+      operator: and
+      conditions:
+        - operator: missing
+          field: source_document
+        - operator: missing
+          field: reference
+    message: Odoo account move line lacks both source document and reference fields for stock-to-GL matching.
+    recommended_action: Include journal item reference, move reference, valuation description, picking, or origin in the account.move.line export.
+    risk_impact: 76
+    confidence: 0.9
+    evidence_fields: [entry_id, date, account_code, reference, source_document, amount]
+  - rule_id: ODOO-IV-007
+    rule_name: High-value stock valuation movement
+    severity: medium
     entity_type: stock_move
     source_file: stock_moves.csv
-    condition: {operator: missing, field: source_document}
-    message: Odoo stock movement has no source document.
-    recommended_action: Trace picking, origin, valuation layer, or account move reference.
-    risk_impact: 75
-    evidence_fields: [move_id, source_document, work_order, product_code, total_cost]
+    condition:
+      operator: greater_or_equal
+      field: total_cost
+      value: 1000
+    message: High-value Odoo stock valuation movement should be traced to source and GL evidence.
+    recommended_action: Confirm picking/origin, valuation layer, product account, and matching account.move.line evidence.
+    risk_impact: 60
+    confidence: 0.85
+    evidence_fields: [move_id, date, source_document, product_code, quantity, total_cost]

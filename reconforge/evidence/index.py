@@ -25,6 +25,13 @@ def evidence_register_frame(cases: list[EvidenceCase]) -> pd.DataFrame:
                 "affected_customer": case.affected_customer,
                 "responsible_department": case.responsible_department,
                 "recommended_action": case.recommended_action,
+                "status": case.review_status,
+                "reviewer": case.reviewer,
+                "note": case.review_note,
+                "updated_at": case.review_updated_at,
+                "decision_reason": case.decision_reason,
+                "accepted_risk_reason": case.accepted_risk_reason,
+                "escalation_owner": case.escalation_owner,
                 "generated_at": case.generated_at,
             }
             for case in cases
@@ -54,6 +61,7 @@ def write_evidence_index_html(cases: list[EvidenceCase], output_dir: Path | str)
             f"<td>{escape(case.exception_type)}</td>"
             f"<td>{escape(case.severity)}</td>"
             f"<td>{case.risk_score}</td>"
+            f"<td>{escape(case.review_status)}</td>"
             f"<td>{escape(case.affected_work_order or '')}</td>"
             f"<td>{escape(case.responsible_department)}</td>"
             "</tr>",
@@ -75,7 +83,7 @@ def write_evidence_index_html(cases: list[EvidenceCase], output_dir: Path | str)
   <h1>ReconForge Evidence Binder</h1>
   <p>High and Critical exception evidence folders generated locally.</p>
   <table>
-    <thead><tr><th>Case</th><th>Type</th><th>Severity</th><th>Risk</th><th>Work Order</th><th>Owner</th></tr></thead>
+    <thead><tr><th>Case</th><th>Type</th><th>Severity</th><th>Risk</th><th>Status</th><th>Work Order</th><th>Owner</th></tr></thead>
     <tbody>{''.join(rows)}</tbody>
   </table>
 </body>

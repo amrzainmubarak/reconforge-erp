@@ -124,6 +124,10 @@ ReconForge ERP includes export-based mapping profiles for Odoo inventory valuati
 - `control-packs/sap-mb51-fagll03` covers SAP MB51 material documents and FAGLL03/FBL3N G/L line item exports.
 - Core workflows are local-first and do not require cloud upload or direct ERP connectors.
 
+## Local Review Workflow
+
+ReconForge can track exception review state in `output/review_state.json` without a database or cloud service. Use `reconforge review list`, `reconforge review set-status`, and `reconforge review export` to assign local statuses, reviewer notes, decision reasons, escalation owners, and an Excel review register.
+
 ## Report Outputs
 
 | Output | Purpose |
@@ -132,6 +136,8 @@ ReconForge ERP includes export-based mapping profiles for Odoo inventory valuati
 | `executive_report.html` | Local executive HTML report |
 | `dashboard.html` | Static local dashboard |
 | `output/evidence/` | Audit case folders for High and Critical exceptions |
+| `output/review_state.json` | Local exception review status, reviewer notes, and decision metadata |
+| `output/review_register.xlsx` | Optional review register exported from local review state |
 | `output/rules/` | Rule engine CSV/JSON outputs |
 | `output/benchmark/` | Runtime and match-rate benchmark outputs |
 
@@ -145,7 +151,7 @@ ReconForge ERP includes export-based mapping profiles for Odoo inventory valuati
 
 ## Maturity Note
 
-ReconForge ERP is early-stage. It is designed for local-first ERP reconciliation and audit workflows and currently focuses on export-based mapping profiles for Odoo, SAP-style reports, and generic ERP datasets. v0.4.0 is a serious pre-1.0 platform release, not a claim of broad adoption.
+ReconForge ERP is early-stage. It is designed for local-first ERP reconciliation and audit workflows and currently focuses on export-based mapping profiles, local exception review, evidence generation, and generic ERP datasets. v0.5.0 is a serious pre-1.0 platform release, not a claim of broad adoption.
 
 ## Architecture
 
@@ -223,6 +229,7 @@ See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md)
 - [Reconciliation methodology](docs/reconciliation-methodology.md)
 - [Controls and audit](docs/controls-and-audit.md)
 - [Rule-pack schema reference](docs/rule-pack-schema-reference.md)
+- [Review workflow](docs/review-workflow.md)
 - [Risk scoring](docs/risk-scoring.md)
 - [Report samples](docs/report-samples.md)
 - [ReconForge Studio](docs/reconforge-studio.md)

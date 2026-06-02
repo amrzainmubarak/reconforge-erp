@@ -41,6 +41,7 @@ ReconForge ERP is an open-source, local-first ERP reconciliation and audit intel
 ## Features
 
 - [ReconForge Studio](reconforge-studio.md)
+- [Review workflow](review-workflow.md)
 - [Risk scoring](risk-scoring.md)
 - [Anonymization](anonymization.md)
 - [Synthetic data](synthetic-data.md)

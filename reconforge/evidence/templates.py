@@ -72,6 +72,10 @@ def summary_markdown(case: EvidenceCase) -> str:
 | Customer | {case.affected_customer or ""} |
 | Equipment | {case.affected_equipment or ""} |
 | Responsible Department | {case.responsible_department} |
+| Review Status | {case.review_status} |
+| Reviewer | {case.reviewer} |
+| Review Updated At | {case.review_updated_at} |
+| Review Note | {case.review_note} |
 
 ## Business Impact
 
@@ -144,6 +148,18 @@ def review_form_markdown(case: EvidenceCase) -> str:
 
 6. Who should review it?
    - {case.responsible_department}
+
+## Current Local Review State
+
+| Field | Value |
+| --- | --- |
+| Status | {case.review_status} |
+| Reviewer | {case.reviewer} |
+| Updated at | {case.review_updated_at} |
+| Note | {case.review_note} |
+| Decision reason | {case.decision_reason} |
+| Accepted risk reason | {case.accepted_risk_reason} |
+| Escalation owner | {case.escalation_owner} |
 
 ## Reviewer Completion
 

@@ -7,7 +7,12 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, Response
+
+from reconforge.utils.safe_paths import safe_resolve_child
+
+DOWNLOAD_SUFFIXES = {".html", ".xlsx", ".csv", ".json", ".md", ".txt", ".yml", ".yaml"}
+TEXT_DOWNLOAD_SUFFIXES = DOWNLOAD_SUFFIXES - {".xlsx"}
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -18,15 +23,24 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def _report_links(output_dir: Path) -> list[str]:
-    extensions = {".xlsx", ".csv", ".json", ".md", ".html"}
-    return sorted(file.name for file in output_dir.iterdir() if file.is_file() and file.suffix.lower() in extensions)
+    return sorted(file.name for file in output_dir.iterdir() if file.is_file() and file.suffix.lower() in DOWNLOAD_SUFFIXES)
+
+
+def _download_response(path: Path, media_type: str) -> Response:
+    if path.suffix.lower() in TEXT_DOWNLOAD_SUFFIXES:
+        return Response(
+            content=path.read_text(encoding="utf-8"),
+            media_type=media_type,
+            headers={"Content-Disposition": f'attachment; filename="{path.name}"'},
+        )
+    return FileResponse(path, media_type=media_type, filename=path.name)
 
 
 def create_app(output_dir: Path | str) -> FastAPI:
     """Create a local FastAPI app serving generated reports."""
 
     base_path = Path(output_dir)
-    app = FastAPI(title="ReconForge ERP Dashboard", version="0.1.0")
+    app = FastAPI(title="ReconForge ERP Dashboard", version="0.3.0")
 
     @app.get("/", response_class=HTMLResponse)
     def index() -> str:
@@ -71,9 +85,10 @@ def create_app(output_dir: Path | str) -> FastAPI:
 
     @app.get("/reports/{filename}")
     def report(filename: str) -> Response:
-        if "/" in filename or "\\" in filename:
-            raise HTTPException(status_code=400, detail="Invalid filename")
-        path = base_path / filename
+        try:
+            path = safe_resolve_child(base_path, filename, allowed_suffixes=DOWNLOAD_SUFFIXES)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid filename") from None
         if not path.exists() or not path.is_file():
             raise HTTPException(status_code=404, detail="Report not found")
         media_types = {
@@ -82,11 +97,10 @@ def create_app(output_dir: Path | str) -> FastAPI:
             ".json": "application/json",
             ".md": "text/markdown",
             ".html": "text/html",
+            ".txt": "text/plain",
+            ".yml": "application/x-yaml",
+            ".yaml": "application/x-yaml",
         }
-        return Response(
-            content=path.read_bytes(),
-            media_type=media_types.get(path.suffix.lower(), "application/octet-stream"),
-            headers={"Content-Disposition": f'attachment; filename="{path.name}"'},
-        )
+        return _download_response(path, media_types.get(path.suffix.lower(), "application/octet-stream"))
 
     return app

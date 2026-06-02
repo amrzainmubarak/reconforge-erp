@@ -33,7 +33,7 @@ ReconForge ERP v0.2.0 upgrades the project into a broader local-first ERP reconc
 - Added security workflow, CodeQL workflow, Dependabot, and pre-commit configuration.
 - Updated README, Dockerfile, Makefile, CI, security, contributing, and roadmap materials.
 
-## v0.3.0
+## v0.1.0
 
 Initial open-source release of ReconForge ERP.
 

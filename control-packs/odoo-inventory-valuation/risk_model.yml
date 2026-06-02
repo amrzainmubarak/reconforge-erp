@@ -1,0 +1,7 @@
+risk_weights:
+  missing_gl_entry: 75
+  valuation_mismatch: 70
+  missing_product_account: 68
+escalation:
+  high: Odoo Finance Lead
+  medium: Functional Consultant

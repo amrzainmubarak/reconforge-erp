@@ -1,0 +1,6 @@
+pack_id: inventory-valuation
+name: Inventory Valuation Controls
+version: 0.3.0
+description: Controls for stock valuation accounts, source documents, and valuation sign risks.
+owner: ReconForge ERP Maintainers
+tags: [inventory, valuation, stock, gl]

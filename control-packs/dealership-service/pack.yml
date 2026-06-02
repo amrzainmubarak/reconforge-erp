@@ -1,0 +1,6 @@
+pack_id: dealership-service
+name: Dealership Service Controls
+version: 0.2.0
+description: Controls for dealership service jobs, invoicing, warranty review, parts issues, and old-part returns.
+owner: ReconForge ERP Maintainers
+tags: [dealership, service, workshop, warranty]

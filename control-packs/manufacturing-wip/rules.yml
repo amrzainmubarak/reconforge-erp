@@ -1,0 +1,25 @@
+rules:
+  - rule_id: MWIP-001
+    rule_name: Work order cost variance over tolerance
+    severity: medium
+    entity_type: work_order
+    source_file: work_orders.csv
+    condition:
+      operator: and
+      conditions:
+        - {operator: greater_than, field: actual_cost, value: 0}
+        - {operator: greater_than, field: estimated_cost, value: 0}
+    message: Work order has estimated and actual costs requiring variance review.
+    recommended_action: Compare actual cost to estimate and review production variance.
+    risk_impact: 45
+    evidence_fields: [work_order, estimated_cost, actual_cost, status]
+  - rule_id: MWIP-002
+    rule_name: Material issued with missing production order
+    severity: high
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition: {operator: missing, field: work_order}
+    message: Material issue lacks production or work-order reference.
+    recommended_action: Correct production order linkage before WIP review.
+    risk_impact: 70
+    evidence_fields: [move_id, source_document, work_order, product_code, total_cost]

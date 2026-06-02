@@ -1,0 +1,6 @@
+pack_id: fleet-maintenance
+name: Fleet Maintenance Controls
+version: 0.2.0
+description: Controls for high-cost vehicle repairs, old WIP, and missing invoices in fleet maintenance operations.
+owner: ReconForge ERP Maintainers
+tags: [fleet, maintenance, wip]

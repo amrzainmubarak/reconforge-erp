@@ -1,0 +1,7 @@
+odoo_sources:
+  stock_moves.csv: stock.move or stock.valuation.layer
+  gl_entries.csv: account.move.line
+  products.csv: product.product and product.category
+key_fields:
+  source_document: origin, reference, picking_id, valuation description
+  amount: account.move.line balance or debit/credit amount

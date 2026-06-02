@@ -1,0 +1,5 @@
+required_files: [stock_moves.csv, gl_entries.csv]
+canonical_fields:
+  stock_date: stock_moves.date
+  stock_value: stock_moves.total_cost
+  gl_journal: gl_entries.journal

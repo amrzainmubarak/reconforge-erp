@@ -1,0 +1,9 @@
+customer_code,customer_name,segment,region
+CUST-001,Acme Fleet Services,Fleet,Cairo
+CUST-002,Delta Logistics,Logistics,Alexandria
+CUST-003,Metro Utilities,Utilities,Giza
+CUST-004,North Coast Rentals,Rental,North Coast
+CUST-005,Canal Transport,Transport,Ismailia
+CUST-006,Harbor Equipment,Industrial,Suez
+CUST-007,Urban Transit,Public Transport,Cairo
+CUST-008,Eastern Delivery,Logistics,Sharkia

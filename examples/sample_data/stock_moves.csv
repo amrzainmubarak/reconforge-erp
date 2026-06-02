@@ -1,0 +1,13 @@
+move_id,date,source_document,work_order,product_code,product_name,category,quantity,unit_cost,total_cost,warehouse,movement_type,customer_code,equipment_serial,created_by
+SM-0001,2026-01-05,STK-ISS-1001,WO-1001,BRK-PAD-001,Front brake pad set,Brakes,2,75.00,150.00,MAIN,ISSUE,CUST-001,VH-7788,store_clerk_a
+SM-0002,2026-01-06,STK-ISS-1002,WO-1002,OIL-FLTR-002,Oil filter cartridge,Filters,1,22.00,22.00,MAIN,ISSUE,CUST-002,VH-8821,store_clerk_a
+SM-0003,2026-01-10,STK-ISS-1003,WO-1003,BAT-STD-003,Standard battery,Batteries,1,180.00,180.00,MAIN,ISSUE,CUST-003,VH-9912,store_clerk_b
+SM-0004,2026-01-11,STK-ISS-1004,WO-1004,ALT-ASM-004,Alternator assembly,Electrical,1,240.00,240.00,MAIN,ISSUE,CUST-004,VH-1004,store_clerk_b
+SM-0005,2026-01-15,STK-ISS-1005,WO-1005,AIR-FLTR-005,Air filter,Filters,1,35.00,35.00,MAIN,ISSUE,CUST-005,VH-3305,store_clerk_c
+SM-0006,2026-01-18,PO-9004,WO-1006,TURBO-006,Turbocharger assembly,Engine,1,900.00,900.00,DIRECT,DIRECT_FIT,CUST-006,VH-4520,purchasing_user
+SM-0007,2026-01-21,STK-ISS-1007,WO-1007,CLT-KIT-007,Clutch kit,Transmission,1,360.00,360.00,MAIN,ISSUE,CUST-007,VH-7012,store_clerk_c
+SM-0008,2026-01-25,STK-ISS-1008,,LIGHT-008,Headlamp bulb,Electrical,2,22.50,45.00,MAIN,ISSUE,CUST-008,VH-8008,store_clerk_d
+SM-0009,2026-02-02,PO-9006,WO-1008,SENSOR-009,Oxygen sensor,Electrical,1,85.00,85.00,MAIN,ISSUE,CUST-008,VH-1008,store_clerk_d
+SM-0010,2026-02-05,STK-ISS-1010,WO-9999,INVALID-999,Unmapped field part,Misc,1,50.00,50.00,MAIN,ISSUE,CUST-999,VH-4040,store_clerk_e
+SM-0011,2026-02-06,STK-ISS-1001,WO-1001,BRK-PAD-001,Front brake pad set,Brakes,2,75.00,150.00,MAIN,ISSUE,CUST-001,VH-7788,store_clerk_a
+SM-0012,2026-04-02,STK-ISS-1012,WO-1010,HOSE-010,Hydraulic hose,Hydraulics,3,30.00,999.00,MAIN,ISSUE,CUST-999,VH-1010,store_clerk_e

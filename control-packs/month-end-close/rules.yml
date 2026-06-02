@@ -1,0 +1,34 @@
+rules:
+  - rule_id: MEC-001
+    rule_name: Old open WIP
+    severity: high
+    entity_type: work_order
+    source_file: work_orders.csv
+    condition:
+      operator: and
+      conditions:
+        - operator: not_equals
+          field: status
+          value: Closed
+        - operator: aging_bucket
+          field: opened_date
+          bucket_days: 90
+    message: Work order remains open beyond 90 days.
+    business_impact: Old WIP may be stale, unbilled, or unrecoverable.
+    recommended_action: Confirm closure plan, billing status, and provisioning need.
+    risk_impact: 76
+    evidence_fields: [work_order, status, opened_date, actual_cost]
+  - rule_id: MEC-002
+    rule_name: Manual GL entry during close
+    severity: medium
+    entity_type: gl_entry
+    source_file: gl_entries.csv
+    condition:
+      operator: equals
+      field: journal
+      value: MAN
+    message: Manual GL journal requires close-period review.
+    business_impact: Manual postings may bypass subledger traceability.
+    recommended_action: Confirm approval, source evidence, and reversal need.
+    risk_impact: 60
+    evidence_fields: [entry_id, journal, reference, amount, work_order]

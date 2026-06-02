@@ -1,0 +1,8 @@
+risk_weights:
+  missing_material_reference: 75
+  gl_without_material_movement: 72
+  amount_mismatch: 70
+  date_mismatch: 55
+escalation:
+  high: SAP Finance Lead
+  medium: Inventory Accountant

@@ -1,0 +1,4 @@
+required_files: [work_orders.csv, gl_entries.csv]
+canonical_fields:
+  opened_date: work_orders.opened_date
+  journal: gl_entries.journal

@@ -1,0 +1,6 @@
+risk_weights:
+  old_wip: 76
+  manual_journal: 60
+escalation:
+  high: Finance Controller
+  medium: Accounting Manager

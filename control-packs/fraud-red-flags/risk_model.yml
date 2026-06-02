@@ -1,0 +1,6 @@
+risk_weights:
+  duplicate_gl_reference: 70
+  unsupported_manual_journal: 88
+escalation:
+  critical: Internal Audit Director
+  high: Finance Controller

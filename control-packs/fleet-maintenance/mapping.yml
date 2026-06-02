@@ -1,0 +1,4 @@
+required_files: [work_orders.csv, stock_moves.csv, invoices.csv]
+fleet_fields:
+  equipment_serial: vehicle or asset identifier
+  service_type: repair category

@@ -1,0 +1,9 @@
+datasets:
+  stock_moves.csv:
+    key_fields: [move_id, source_document, work_order, product_code]
+    value_fields: [quantity, unit_cost, total_cost]
+  gl_entries.csv:
+    key_fields: [entry_id, reference, work_order, account_code]
+    value_fields: [debit, credit, amount]
+notes:
+  - This pack is intentionally ERP-neutral and validates export quality before deeper reconciliation.

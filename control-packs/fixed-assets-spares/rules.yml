@@ -1,0 +1,28 @@
+rules:
+  - rule_id: FAS-001
+    rule_name: High value spare part issue
+    severity: high
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: greater_or_equal
+      field: total_cost
+      value: 1000
+    message: High-value spare issue may require capitalization or asset review.
+    business_impact: High-value spares can be incorrectly expensed instead of capitalized or attached to asset records.
+    recommended_action: Confirm capitalization policy, asset/equipment reference, and approval evidence.
+    risk_impact: 72
+    evidence_fields: [move_id, source_document, work_order, product_code, equipment_serial, total_cost]
+  - rule_id: FAS-002
+    rule_name: Spare issue missing equipment serial
+    severity: medium
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: missing
+      field: equipment_serial
+    message: Spare issue is missing equipment or asset serial reference.
+    business_impact: Missing asset reference weakens traceability of spare-parts consumption.
+    recommended_action: Link the issue to the maintained asset or document approved non-asset consumption.
+    risk_impact: 50
+    evidence_fields: [move_id, source_document, work_order, product_code, equipment_serial]

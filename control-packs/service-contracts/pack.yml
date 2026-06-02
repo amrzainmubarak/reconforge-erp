@@ -1,0 +1,6 @@
+pack_id: service-contracts
+name: Service Contracts Controls
+version: 0.3.0
+description: Controls for service-contract jobs, billing completeness, and recurring service cost risks.
+owner: ReconForge ERP Maintainers
+tags: [service, contracts, billing, work-orders]

@@ -1,0 +1,7 @@
+risk_weights:
+  missing_stock_account: 70
+  missing_source_document: 74
+  sign_inconsistency: 58
+escalation:
+  high: Finance Controller
+  medium: Inventory Accountant

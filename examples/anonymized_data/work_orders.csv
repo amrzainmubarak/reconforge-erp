@@ -1,0 +1,11 @@
+work_order,customer_code,customer_name,equipment_serial,status,opened_date,closed_date,service_type,responsible_engineer,workshop,estimated_cost,actual_cost
+WO-ANON-0001,CUST-ANON-0001,Customer 0001,EQ-ANON-0001,Closed,2026-01-27,2026-02-06,Brake service,Engineer 0001,Main Workshop,214.42,145.78
+WO-ANON-0002,CUST-ANON-0002,Customer 0002,EQ-ANON-0002,Closed,2026-02-03,2026-02-07,Preventive maintenance,Engineer 0002,Main Workshop,76.24,21.38
+WO-ANON-0003,CUST-ANON-0003,Customer 0003,EQ-ANON-0003,Closed,2026-02-06,2026-02-11,Battery replacement,Engineer 0003,Electrical Bay,209.66,174.94
+WO-ANON-0004,CUST-ANON-0004,Customer 0004,EQ-ANON-0004,In Progress,2026-02-04,,Charging fault,Engineer 0004,Electrical Bay,285.9,233.26
+WO-ANON-0010,CUST-ANON-0005,Customer 0005,EQ-ANON-0005,Open,2025-10-01,,Long-running inspection,Engineer 0005,Main Workshop,571.8,34.02
+WO-ANON-0008,CUST-ANON-0006,Customer 0006,EQ-ANON-0006,Closed,2026-02-09,2026-02-17,Turbo replacement,Engineer 0006,Heavy Equipment Bay,1143.6,874.71
+WO-ANON-0005,CUST-ANON-0007,Customer 0007,EQ-ANON-0007,Closed,2026-02-14,2026-02-21,Clutch replacement,Engineer 0007,Transmission Bay,476.5,349.88
+WO-ANON-0007,CUST-ANON-0008,Customer 0008,EQ-ANON-0009,Open,2026-03-03,,Emission sensor fault,Engineer 0008,Main Workshop,142.95,82.61
+WO-ANON-0006,CUST-ANON-0004,Customer 0004,EQ-ANON-0012,Open,2025-08-31,,Unallocated manual journal review,Engineer 0004,Electrical Bay,381.2,121.49
+WO-ANON-0009,CUST-ANON-0009,Customer 0009,EQ-ANON-0011,Open,2025-10-31,,Hydraulic leak,Engineer 0005,Heavy Equipment Bay,238.25,87.47

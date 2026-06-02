@@ -1,0 +1,6 @@
+pack_id: purchase-to-pay
+name: Purchase to Pay Controls
+version: 0.3.0
+description: Controls for purchase order status, direct-fit risk, and work-order linkage.
+owner: ReconForge ERP Maintainers
+tags: [purchase-to-pay, procurement, stores, audit]

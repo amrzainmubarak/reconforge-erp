@@ -1,0 +1,6 @@
+risk_weights:
+  high_value: 72
+  backdated: 60
+escalation:
+  high: Finance Controller
+  medium: Inventory Accountant

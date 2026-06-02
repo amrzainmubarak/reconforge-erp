@@ -1,0 +1,4 @@
+required_files: [stock_moves.csv]
+canonical_fields:
+  warehouse: stock_moves.warehouse
+  source_document: stock_moves.source_document

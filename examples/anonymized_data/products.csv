@@ -1,0 +1,11 @@
+product_code,product_name,category,standard_cost,stock_account,expense_account
+BRK-PAD-001,Front brake pad set,Brakes,76.77,1400,5100
+OIL-FLTR-002,Oil filter cartridge,Filters,22.52,1400,5100
+BAT-STD-003,Standard battery,Batteries,184.25,1400,5100
+ALT-ASM-004,Alternator assembly,Electrical,245.66,1400,5100
+AIR-FLTR-005,Air filter,Filters,35.83,1400,5100
+TURBO-006,Turbocharger assembly,Engine,921.24,1400,5100
+CLT-KIT-007,Clutch kit,Transmission,368.5,1400,5100
+LIGHT-008,Headlamp bulb,Electrical,23.03,1400,5100
+SENSOR-009,Oxygen sensor,Electrical,87.01,1400,5100
+HOSE-010,Hydraulic hose,Hydraulics,30.71,1400,5100

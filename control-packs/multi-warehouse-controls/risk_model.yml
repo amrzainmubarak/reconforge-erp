@@ -1,0 +1,6 @@
+risk_weights:
+  missing_warehouse: 70
+  duplicate_source: 58
+escalation:
+  high: Inventory Controller
+  medium: Warehouse Supervisor

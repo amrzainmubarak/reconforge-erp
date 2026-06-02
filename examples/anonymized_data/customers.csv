@@ -1,0 +1,9 @@
+customer_code,customer_name,segment,region
+CUST-ANON-0001,Customer 0001,Fleet,Cairo
+CUST-ANON-0002,Customer 0002,Logistics,Alexandria
+CUST-ANON-0003,Customer 0003,Utilities,Giza
+CUST-ANON-0004,Customer 0004,Rental,North Coast
+CUST-ANON-0005,Customer 0005,Transport,Ismailia
+CUST-ANON-0006,Customer 0006,Industrial,Suez
+CUST-ANON-0007,Customer 0007,Public Transport,Cairo
+CUST-ANON-0008,Customer 0008,Logistics,Sharkia

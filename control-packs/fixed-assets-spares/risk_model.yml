@@ -1,0 +1,6 @@
+risk_weights:
+  high_value_spare: 72
+  missing_asset_reference: 50
+escalation:
+  high: Fixed Asset Accountant
+  medium: Stores Manager

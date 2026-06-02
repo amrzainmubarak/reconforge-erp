@@ -1,0 +1,6 @@
+risk_weights:
+  cancelled_po_linkage: 86
+  high_value_po: 52
+escalation:
+  critical: Procurement Manager and Finance Controller
+  medium: Purchasing Supervisor

@@ -1,0 +1,6 @@
+pack_id: month-end-close
+name: Month-End Close Controls
+version: 0.3.0
+description: Controls for period-close readiness across WIP, manual journals, and billing completeness.
+owner: ReconForge ERP Maintainers
+tags: [close, wip, finance, audit]

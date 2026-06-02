@@ -1,0 +1,8 @@
+risk_weights:
+  closed_not_invoiced: 72
+  warranty_billing: 60
+  parts_after_invoice: 65
+  old_part_missing: 70
+escalation:
+  high: Service Manager
+  medium: Warranty Administrator

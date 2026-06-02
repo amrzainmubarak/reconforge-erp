@@ -1,0 +1,7 @@
+risk_weights:
+  old_wip: 76
+  material_without_order: 70
+  cost_variance: 68
+escalation:
+  high: Manufacturing Controller
+  medium: Production Manager

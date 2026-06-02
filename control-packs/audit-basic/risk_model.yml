@@ -1,0 +1,9 @@
+risk_weights:
+  missing_source_document: 70
+  missing_work_order: 75
+  duplicate_reference: 55
+  missing_gl_account: 70
+escalation:
+  high: Finance Controller
+  medium: Process Owner
+  low: Data Steward

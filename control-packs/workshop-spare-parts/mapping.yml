@@ -1,0 +1,4 @@
+required_files: [stock_moves.csv, work_orders.csv, purchase_orders.csv, old_parts_returns.csv, invoices.csv]
+policy_fields:
+  old_part_categories: [Batteries, Brakes, Electrical, Engine, Transmission]
+  direct_fit_movement_types: [DIRECT_FIT, PURCHASE_FIT]

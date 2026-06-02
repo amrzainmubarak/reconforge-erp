@@ -1,0 +1,55 @@
+amount_tolerance: 2.0
+date_tolerance_days: 3
+aging_buckets:
+  - label: "0-30"
+    min_days: 0
+    max_days: 30
+  - label: "31-60"
+    min_days: 31
+    max_days: 60
+  - label: "61-90"
+    min_days: 61
+    max_days: 90
+  - label: "90+"
+    min_days: 91
+    max_days:
+required_old_part_categories:
+  - Batteries
+  - Brakes
+  - Electrical
+  - Engine
+  - Transmission
+account_mapping:
+  stock_account: "1400"
+  spare_parts_expense: "5100"
+  work_in_progress: "1500"
+  inventory_variance: "5200"
+movement_type_mapping:
+  issue:
+    - ISSUE
+    - CONSUME
+    - STOCK_ISSUE
+  receipt:
+    - RECEIPT
+    - GRN
+    - STOCK_RECEIPT
+  direct_fit:
+    - DIRECT_FIT
+    - PURCHASE_FIT
+  return:
+    - RETURN
+    - OLD_PART_RETURN
+risk_scoring_weights:
+  amount_mismatch: 25
+  missing_gl_entry: 45
+  missing_stock_movement: 45
+  wip_over_90_days: 55
+  direct_purchase_fit: 65
+  missing_old_part_return: 55
+  duplicate_reference: 35
+  closed_work_order_without_invoice: 50
+  cancelled_po_linked_to_movement: 60
+  invalid_master_reference: 35
+output_currency: USD
+company_name: ReconForge Demo Company
+report_title: ERP Stock, GL, WIP, and Workshop Reconciliation

@@ -1,0 +1,8 @@
+risk_weights:
+  missing_work_order: 75
+  missing_old_part_return: 70
+  direct_purchase_fit: 78
+  closed_job_pending_stock: 65
+escalation:
+  high: Workshop Manager
+  critical: Finance Controller

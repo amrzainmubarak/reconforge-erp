@@ -1,0 +1,6 @@
+risk_weights:
+  missing_invoice: 72
+  high_contract_cost: 55
+escalation:
+  high: Finance Controller
+  medium: Service Manager

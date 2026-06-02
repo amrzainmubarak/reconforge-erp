@@ -1,0 +1,5 @@
+required_files: [work_orders.csv, invoices.csv]
+canonical_fields:
+  work_order: work_orders.work_order
+  invoice_work_order: invoices.work_order
+  actual_cost: work_orders.actual_cost

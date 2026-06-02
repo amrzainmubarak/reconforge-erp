@@ -1,0 +1,9 @@
+pack_id: audit-basic
+name: Audit Basic Controls
+version: 0.2.0
+description: Baseline ERP export controls for missing references, duplicate-risk signals, and invalid accounting fields.
+owner: ReconForge ERP Maintainers
+tags:
+  - audit
+  - baseline
+  - data-quality

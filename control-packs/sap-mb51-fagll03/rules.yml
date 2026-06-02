@@ -1,0 +1,21 @@
+rules:
+  - rule_id: SAP-001
+    rule_name: Empty GL reference key risk
+    severity: high
+    entity_type: gl_entry
+    source_file: gl_entries.csv
+    condition: {operator: missing, field: reference}
+    message: SAP GL export line lacks a reference key for MB51 matching.
+    recommended_action: Include assignment, reference, material document, or header text in the SAP export layout.
+    risk_impact: 75
+    evidence_fields: [entry_id, reference, source_document, amount, work_order]
+  - rule_id: SAP-002
+    rule_name: GL amount outside tolerance marker
+    severity: medium
+    entity_type: gl_entry
+    source_file: gl_entries.csv
+    condition: {operator: greater_than, field: amount, value: 1000}
+    message: High-value SAP GL line should be traced to material movement evidence.
+    recommended_action: Compare MB51 material document value to FAGLL03/FBL3N line item value.
+    risk_impact: 55
+    evidence_fields: [entry_id, reference, amount, cost_center, work_order]

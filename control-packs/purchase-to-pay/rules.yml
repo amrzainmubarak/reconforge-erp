@@ -1,0 +1,33 @@
+rules:
+  - rule_id: P2P-001
+    rule_name: Cancelled PO linked to work order
+    severity: critical
+    entity_type: purchase_order
+    source_file: purchase_orders.csv
+    condition:
+      operator: and
+      conditions:
+        - operator: equals
+          field: status
+          value: Cancelled
+        - operator: exists
+          field: linked_work_order
+    message: Cancelled purchase order remains linked to a work order.
+    business_impact: Cancelled procurement documents may still support stock, cost, or payment activity.
+    recommended_action: Confirm reversal, reinstatement, or approved replacement document.
+    risk_impact: 86
+    evidence_fields: [po_number, status, linked_work_order, product_code, total_price]
+  - rule_id: P2P-002
+    rule_name: High value approved PO
+    severity: medium
+    entity_type: purchase_order
+    source_file: purchase_orders.csv
+    condition:
+      operator: greater_or_equal
+      field: total_price
+      value: 1000
+    message: Purchase order value exceeds review threshold.
+    business_impact: High purchase values require approval and receipt evidence.
+    recommended_action: Confirm approval, supplier invoice, receipt, and work-order need.
+    risk_impact: 52
+    evidence_fields: [po_number, supplier_code, status, total_price, linked_work_order]

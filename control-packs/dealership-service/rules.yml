@@ -1,0 +1,21 @@
+rules:
+  - rule_id: DS-001
+    rule_name: Job closed but invoice draft
+    severity: high
+    entity_type: invoice
+    source_file: invoices.csv
+    condition: {operator: equals, field: status, value: Draft}
+    message: Invoice remains draft and may delay revenue recognition or customer billing.
+    recommended_action: Confirm billing hold reason and expected invoice posting date.
+    risk_impact: 70
+    evidence_fields: [invoice_number, work_order, customer_code, invoice_amount, status]
+  - rule_id: DS-002
+    rule_name: Missing old part return category
+    severity: medium
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition: {operator: in_list, field: category, value: [Batteries, Brakes, Electrical, Engine, Transmission]}
+    message: Dealership service part may require old-part return evidence.
+    recommended_action: Confirm core return, warranty retention, or customer disposal approval.
+    risk_impact: 55
+    evidence_fields: [move_id, work_order, product_code, category, quantity]

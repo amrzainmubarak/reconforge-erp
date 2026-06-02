@@ -1,0 +1,107 @@
+rules:
+  - rule_id: AB-001
+    rule_name: Missing stock source document
+    severity: high
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: missing
+      field: source_document
+    message: Stock movement is missing the source document needed for GL traceability.
+    recommended_action: Obtain or reconstruct the source document before audit review.
+    risk_impact: 70
+    evidence_fields: [move_id, source_document, work_order, product_code, total_cost]
+  - rule_id: AB-002
+    rule_name: Missing work order on stock issue
+    severity: high
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: and
+      conditions:
+        - operator: missing
+          field: work_order
+        - operator: in_list
+          field: movement_type
+          value: [ISSUE, DIRECT_FIT, STOCK_ISSUE]
+    message: Stock issue does not reference a work order.
+    recommended_action: Link the movement to a valid work order or document approved non-work-order consumption.
+    risk_impact: 75
+    evidence_fields: [move_id, source_document, movement_type, work_order, product_code, total_cost]
+  - rule_id: AB-003
+    rule_name: Missing product code
+    severity: medium
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: missing
+      field: product_code
+    message: Stock movement is missing product code.
+    recommended_action: Correct the item master reference and rerun reconciliation.
+    risk_impact: 45
+    evidence_fields: [move_id, source_document, work_order, product_code]
+  - rule_id: AB-004
+    rule_name: Invalid stock amount
+    severity: medium
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: less_than
+      field: total_cost
+      value: 0
+    message: Stock movement has a negative total cost.
+    recommended_action: Review sign conventions and inventory valuation posting.
+    risk_impact: 50
+    evidence_fields: [move_id, source_document, product_code, total_cost]
+  - rule_id: AB-005
+    rule_name: Missing GL account code
+    severity: high
+    entity_type: gl_entry
+    source_file: gl_entries.csv
+    condition:
+      operator: missing
+      field: account_code
+    message: GL entry is missing account code.
+    recommended_action: Correct the accounting export or source journal line before review.
+    risk_impact: 70
+    evidence_fields: [entry_id, reference, account_code, amount, work_order]
+  - rule_id: AB-006
+    rule_name: High value stock issue
+    severity: medium
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: greater_or_equal
+      field: total_cost
+      value: 500
+    message: Stock issue value exceeds review threshold.
+    recommended_action: Confirm approval, work-order linkage, and GL posting evidence.
+    risk_impact: 55
+    evidence_fields: [move_id, source_document, work_order, product_code, total_cost]
+  - rule_id: AB-007
+    rule_name: Missing GL reference
+    severity: high
+    entity_type: gl_entry
+    source_file: gl_entries.csv
+    condition:
+      operator: missing
+      field: reference
+    message: GL entry lacks a reference key.
+    recommended_action: Add source-document reference or document why the posting is manual.
+    risk_impact: 70
+    evidence_fields: [entry_id, reference, amount, account_code, work_order]
+  - rule_id: AB-008
+    rule_name: Source document pattern risk
+    severity: low
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: not
+      conditions:
+        - operator: regex_match
+          field: source_document
+          value: "^(STK|PO)-"
+    message: Source document does not follow expected stock or purchase prefix pattern.
+    recommended_action: Review whether the source-document convention is valid for this ERP export.
+    risk_impact: 25
+    evidence_fields: [move_id, source_document, work_order]

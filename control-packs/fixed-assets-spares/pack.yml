@@ -1,0 +1,6 @@
+pack_id: fixed-assets-spares
+name: Fixed Assets Spares Controls
+version: 0.3.0
+description: Controls for capital-spares, high-value parts, and asset/equipment traceability.
+owner: ReconForge ERP Maintainers
+tags: [fixed-assets, spares, capitalization, equipment]

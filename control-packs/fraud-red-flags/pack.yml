@@ -1,0 +1,6 @@
+pack_id: fraud-red-flags
+name: Fraud Red Flags
+version: 0.3.0
+description: Red-flag controls for duplicate references, unsupported manual journals, and missing source evidence.
+owner: ReconForge ERP Maintainers
+tags: [fraud, red-flags, audit, internal-controls]

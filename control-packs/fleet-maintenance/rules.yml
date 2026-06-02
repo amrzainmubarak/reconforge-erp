@@ -1,0 +1,21 @@
+rules:
+  - rule_id: FM-001
+    rule_name: High cost against equipment
+    severity: high
+    entity_type: work_order
+    source_file: work_orders.csv
+    condition: {operator: greater_or_equal, field: actual_cost, value: 750}
+    message: Work order cost exceeds fleet review threshold.
+    recommended_action: Confirm approval, repair history, warranty status, and invoice treatment.
+    risk_impact: 70
+    evidence_fields: [work_order, customer_code, equipment_serial, actual_cost, status]
+  - rule_id: FM-002
+    rule_name: Missing equipment serial
+    severity: medium
+    entity_type: work_order
+    source_file: work_orders.csv
+    condition: {operator: missing, field: equipment_serial}
+    message: Fleet work order lacks vehicle or equipment serial.
+    recommended_action: Correct equipment reference to support repeated-repair analysis.
+    risk_impact: 50
+    evidence_fields: [work_order, customer_code, equipment_serial, actual_cost]

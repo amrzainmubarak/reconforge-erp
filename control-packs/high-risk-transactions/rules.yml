@@ -1,0 +1,29 @@
+rules:
+  - rule_id: HRT-001
+    rule_name: High value stock movement
+    severity: high
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: greater_or_equal
+      field: total_cost
+      value: 750
+    message: Stock movement exceeds high-risk transaction threshold.
+    business_impact: High-value stock activity needs stronger approval and GL traceability.
+    recommended_action: Confirm authorization, work-order linkage, and GL posting.
+    risk_impact: 72
+    evidence_fields: [move_id, source_document, work_order, product_code, total_cost]
+  - rule_id: HRT-002
+    rule_name: Backdated stock movement
+    severity: medium
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: before_date
+      field: date
+      value: "2026-01-01"
+    message: Stock movement date precedes expected review period.
+    business_impact: Backdated transactions can distort close cut-off.
+    recommended_action: Confirm posting period, approval, and cut-off treatment.
+    risk_impact: 60
+    evidence_fields: [move_id, date, source_document, work_order, total_cost]

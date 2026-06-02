@@ -1,0 +1,8 @@
+risk_weights:
+  repeated_repair: 58
+  high_equipment_cost: 70
+  old_wip: 75
+  missing_invoice: 66
+escalation:
+  high: Fleet Maintenance Manager
+  medium: Workshop Supervisor

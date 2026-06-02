@@ -1,0 +1,6 @@
+pack_id: odoo-inventory-valuation
+name: Odoo Inventory Valuation Controls
+version: 0.2.0
+description: Controls for Odoo stock moves, valuation layers, products, and account move lines mapped to ReconForge schema.
+owner: ReconForge ERP Maintainers
+tags: [odoo, inventory, valuation]

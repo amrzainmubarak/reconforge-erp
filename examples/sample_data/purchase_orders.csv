@@ -1,0 +1,8 @@
+po_number,supplier_code,supplier_name,po_date,product_code,quantity,unit_price,total_price,status,linked_work_order
+PO-9001,SUP-001,Parts Hub,2025-12-20,BRK-PAD-001,10,70.00,700.00,Received,
+PO-9002,SUP-002,Filter Supply Co,2025-12-21,OIL-FLTR-002,20,18.00,360.00,Received,
+PO-9003,SUP-003,PowerCell,2026-01-02,BAT-STD-003,5,165.00,825.00,Received,
+PO-9004,SUP-004,Direct Turbo Parts,2026-01-17,TURBO-006,1,900.00,900.00,Approved,WO-1006
+PO-9005,SUP-005,Transmission Depot,2026-01-14,CLT-KIT-007,2,340.00,680.00,Received,
+PO-9006,SUP-006,SensorWorks,2026-01-30,SENSOR-009,1,85.00,85.00,Cancelled,WO-1008
+PO-9007,SUP-007,Hydraulic Supply,2026-03-20,HOSE-010,3,30.00,90.00,Received,WO-1010

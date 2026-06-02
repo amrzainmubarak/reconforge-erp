@@ -1,0 +1,6 @@
+pack_id: high-risk-transactions
+name: High Risk Transactions
+version: 0.3.0
+description: Controls for high-value, manual, backdated, and weak-reference transactions.
+owner: ReconForge ERP Maintainers
+tags: [high-risk, audit, manual-journals, exceptions]

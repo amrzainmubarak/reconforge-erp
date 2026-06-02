@@ -1,0 +1,6 @@
+pack_id: multi-warehouse-controls
+name: Multi-Warehouse Controls
+version: 0.3.0
+description: Controls for warehouse attribution, direct warehouse movement risk, and duplicate source documents.
+owner: ReconForge ERP Maintainers
+tags: [warehouse, inventory, transfers, controls]

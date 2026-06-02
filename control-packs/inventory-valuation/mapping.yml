@@ -1,0 +1,5 @@
+required_files: [products.csv, stock_moves.csv]
+canonical_fields:
+  product_code: products.product_code
+  stock_account: products.stock_account
+  movement_value: stock_moves.total_cost

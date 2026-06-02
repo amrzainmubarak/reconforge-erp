@@ -1,0 +1,32 @@
+rules:
+  - rule_id: FRF-001
+    rule_name: Duplicate GL reference
+    severity: high
+    entity_type: gl_entry
+    source_file: gl_entries.csv
+    condition:
+      operator: duplicate
+      field: reference
+    message: GL reference appears more than once.
+    business_impact: Duplicate GL references may indicate duplicate posting, split entry, or weak document control.
+    recommended_action: Confirm whether duplicate reference is valid and supported by source evidence.
+    risk_impact: 70
+    evidence_fields: [entry_id, reference, amount, work_order, created_by]
+  - rule_id: FRF-002
+    rule_name: Manual journal with missing reference
+    severity: critical
+    entity_type: gl_entry
+    source_file: gl_entries.csv
+    condition:
+      operator: and
+      conditions:
+        - operator: equals
+          field: journal
+          value: MAN
+        - operator: missing
+          field: reference
+    message: Manual journal lacks source reference.
+    business_impact: Unsupported manual postings create fraud and audit evidence risk.
+    recommended_action: Obtain approval and source evidence or reverse/reclassify the posting.
+    risk_impact: 88
+    evidence_fields: [entry_id, journal, reference, amount, created_by]

@@ -1,0 +1,6 @@
+pack_id: sap-mb51-fagll03
+name: SAP MB51 vs FAGLL03 Controls
+version: 0.2.0
+description: Export-based controls for SAP material document and G/L line item reconciliation.
+owner: ReconForge ERP Maintainers
+tags: [sap, mb51, fagll03, inventory, gl]

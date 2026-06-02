@@ -1,0 +1,4 @@
+return_id,work_order,product_code,returned_quantity,return_date,received_by,condition
+RET-0001,WO-1001,BRK-PAD-001,2,2026-01-06,stores_supervisor,Worn
+RET-0002,WO-1003,BAT-STD-003,1,2026-01-11,stores_supervisor,Core returned
+RET-0003,WO-1004,ALT-ASM-004,1,2026-01-13,stores_supervisor,Repairable core

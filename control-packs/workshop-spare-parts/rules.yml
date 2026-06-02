@@ -1,0 +1,35 @@
+rules:
+  - rule_id: WSP-001
+    rule_name: Spare part issued without work order
+    severity: high
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: and
+      conditions:
+        - {operator: missing, field: work_order}
+        - {operator: in_list, field: movement_type, value: [ISSUE, DIRECT_FIT]}
+    message: Spare part issue lacks a work-order reference.
+    recommended_action: Link issue to a valid work order or approve non-work-order consumption.
+    risk_impact: 75
+    evidence_fields: [move_id, source_document, work_order, product_code, total_cost]
+  - rule_id: WSP-002
+    rule_name: Direct purchase fitted without store receipt
+    severity: critical
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition: {operator: equals, field: movement_type, value: DIRECT_FIT}
+    message: Direct purchase-and-fit movement bypasses normal stores process.
+    recommended_action: Attach PO approval, receipt evidence, fitment confirmation, and finance approval.
+    risk_impact: 85
+    evidence_fields: [move_id, source_document, work_order, product_code, total_cost, warehouse]
+  - rule_id: WSP-003
+    rule_name: Old-part category issued
+    severity: medium
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition: {operator: in_list, field: category, value: [Batteries, Brakes, Electrical, Engine, Transmission]}
+    message: Part category normally requires returned old-part evidence.
+    recommended_action: Match to old_parts_returns.csv or document approved exception.
+    risk_impact: 55
+    evidence_fields: [move_id, source_document, work_order, product_code, category, quantity]

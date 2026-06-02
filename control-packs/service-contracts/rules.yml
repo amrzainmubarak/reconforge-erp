@@ -1,0 +1,40 @@
+rules:
+  - rule_id: SC-001
+    rule_name: Closed service job missing invoice
+    severity: high
+    entity_type: work_order
+    source_file: work_orders.csv
+    condition:
+      operator: and
+      conditions:
+        - operator: equals
+          field: status
+          value: Closed
+        - operator: cross_file_missing
+          source_key: work_order
+          target_file: invoices.csv
+          target_key: work_order
+    message: Closed service work order has no matching invoice.
+    business_impact: Completed service work may not be billed or recognized correctly.
+    recommended_action: Confirm billing status, invoice hold reason, or approved non-billable treatment.
+    risk_impact: 72
+    evidence_fields: [work_order, customer_code, status, actual_cost]
+  - rule_id: SC-002
+    rule_name: Contract-like job with high actual cost
+    severity: medium
+    entity_type: work_order
+    source_file: work_orders.csv
+    condition:
+      operator: and
+      conditions:
+        - operator: contains
+          field: service_type
+          value: service
+        - operator: greater_or_equal
+          field: actual_cost
+          value: 1000
+    message: Contract service job has high cost requiring billing or contract coverage review.
+    business_impact: High service costs may exceed contract entitlement or margin expectations.
+    recommended_action: Compare job cost with contract coverage and customer billing policy.
+    risk_impact: 55
+    evidence_fields: [work_order, service_type, customer_code, actual_cost]

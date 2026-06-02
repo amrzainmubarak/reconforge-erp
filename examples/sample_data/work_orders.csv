@@ -1,0 +1,11 @@
+work_order,customer_code,customer_name,equipment_serial,status,opened_date,closed_date,service_type,responsible_engineer,workshop,estimated_cost,actual_cost
+WO-1001,CUST-001,Acme Fleet Services,VH-7788,Closed,2025-12-28,2026-01-07,Brake service,Eng. Laila Hassan,Main Workshop,225.00,150.00
+WO-1002,CUST-002,Delta Logistics,VH-8821,Closed,2026-01-04,2026-01-08,Preventive maintenance,Eng. Omar Nabil,Main Workshop,80.00,22.00
+WO-1003,CUST-003,Metro Utilities,VH-9912,Closed,2026-01-07,2026-01-12,Battery replacement,Eng. Mina Adel,Electrical Bay,220.00,180.00
+WO-1004,CUST-004,North Coast Rentals,VH-1004,In Progress,2026-01-05,,Charging fault,Eng. Salma Reda,Electrical Bay,300.00,240.00
+WO-1005,CUST-005,Canal Transport,VH-3305,Open,2025-09-01,,Long-running inspection,Eng. Karim Fouad,Main Workshop,600.00,35.00
+WO-1006,CUST-006,Harbor Equipment,VH-4520,Closed,2026-01-10,2026-01-18,Turbo replacement,Eng. Hany Youssef,Heavy Equipment Bay,1200.00,900.00
+WO-1007,CUST-007,Urban Transit,VH-7012,Closed,2026-01-15,2026-01-22,Clutch replacement,Eng. Dina Mourad,Transmission Bay,500.00,360.00
+WO-1008,CUST-008,Eastern Delivery,VH-1008,Open,2026-02-01,,Emission sensor fault,Eng. Samir Atef,Main Workshop,150.00,85.00
+WO-1009,CUST-004,North Coast Rentals,VH-9009,Open,2025-08-01,,Unallocated manual journal review,Eng. Salma Reda,Electrical Bay,400.00,125.00
+WO-1010,CUST-999,Unmapped Customer,VH-1010,Open,2025-10-01,,Hydraulic leak,Eng. Karim Fouad,Heavy Equipment Bay,250.00,90.00

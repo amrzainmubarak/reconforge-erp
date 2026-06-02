@@ -1,0 +1,6 @@
+pack_id: workshop-spare-parts
+name: Workshop Spare Parts Controls
+version: 0.2.0
+description: Controls for spare-parts consumption, old-part returns, direct purchase fitting, and workshop closure risks.
+owner: ReconForge ERP Maintainers
+tags: [workshop, spare-parts, stores, audit]

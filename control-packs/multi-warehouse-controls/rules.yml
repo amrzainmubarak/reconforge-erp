@@ -1,0 +1,27 @@
+rules:
+  - rule_id: MWH-001
+    rule_name: Missing warehouse
+    severity: high
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: missing
+      field: warehouse
+    message: Stock movement is missing warehouse attribution.
+    business_impact: Missing warehouse weakens stock ownership and location accountability.
+    recommended_action: Correct warehouse/location before reconciliation sign-off.
+    risk_impact: 70
+    evidence_fields: [move_id, source_document, warehouse, product_code, total_cost]
+  - rule_id: MWH-002
+    rule_name: Duplicate source document
+    severity: medium
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: duplicate
+      field: source_document
+    message: Source document appears more than once in stock movements.
+    business_impact: Duplicate source documents can indicate split issues, duplicate postings, or weak reference design.
+    recommended_action: Confirm whether the duplicate is a valid split or should be corrected.
+    risk_impact: 58
+    evidence_fields: [move_id, source_document, warehouse, work_order, total_cost]

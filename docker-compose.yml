@@ -1,0 +1,16 @@
+services:
+  reconforge:
+    build: .
+    image: reconforge-erp:latest
+    command: ["reconforge", "report", "management-pack", "--input", "examples/sample_data", "--config", "config/reconforge.yml", "--output", "output"]
+    volumes:
+      - ./output:/app/output
+
+  dashboard:
+    build: .
+    image: reconforge-erp:latest
+    command: ["reconforge", "dashboard", "--input", "output", "--host", "0.0.0.0", "--port", "8501"]
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./output:/app/output

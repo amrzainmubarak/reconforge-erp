@@ -1,0 +1,6 @@
+pack_id: manufacturing-wip
+name: Manufacturing WIP Controls
+version: 0.2.0
+description: Controls for production WIP aging, material issue traceability, and cost variance thresholds.
+owner: ReconForge ERP Maintainers
+tags: [manufacturing, wip, production]

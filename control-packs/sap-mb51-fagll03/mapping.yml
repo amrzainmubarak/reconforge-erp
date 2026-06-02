@@ -1,0 +1,7 @@
+sap_sources:
+  stock_moves.csv: MB51 material document list
+  gl_entries.csv: FAGLL03 or FBL3N G/L line items
+important_fields:
+  source_document: material document, reference document, assignment
+  reference: reference key, assignment, document header text
+  cost_center: cost center or receiver cost object

@@ -1,0 +1,4 @@
+required_files: [stock_moves.csv, work_orders.csv]
+canonical_fields:
+  equipment_serial: stock_moves.equipment_serial
+  total_cost: stock_moves.total_cost

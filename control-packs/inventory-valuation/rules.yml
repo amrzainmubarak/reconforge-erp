@@ -1,0 +1,46 @@
+rules:
+  - rule_id: IV-001
+    rule_name: Product missing stock account
+    severity: high
+    entity_type: product
+    source_file: products.csv
+    condition:
+      operator: missing
+      field: stock_account
+    message: Product is missing stock account mapping.
+    business_impact: Inventory valuation may post to incorrect or incomplete GL accounts.
+    recommended_action: Correct product/category stock account mapping.
+    risk_impact: 70
+    evidence_fields: [product_code, product_name, category, stock_account]
+  - rule_id: IV-002
+    rule_name: Inventory movement missing source document
+    severity: high
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: missing
+      field: source_document
+    message: Stock movement lacks a source document.
+    business_impact: Stock valuation cannot be traced to an approved operational document.
+    recommended_action: Obtain source document or document approved adjustment.
+    risk_impact: 74
+    evidence_fields: [move_id, source_document, product_code, total_cost]
+  - rule_id: IV-003
+    rule_name: Negative quantity with positive value
+    severity: medium
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: and
+      conditions:
+        - operator: less_than
+          field: quantity
+          value: 0
+        - operator: greater_than
+          field: total_cost
+          value: 0
+    message: Stock movement has sign inconsistency between quantity and value.
+    business_impact: Sign errors can distort stock valuation and expense recognition.
+    recommended_action: Review movement type and valuation sign convention.
+    risk_impact: 58
+    evidence_fields: [move_id, movement_type, quantity, total_cost]

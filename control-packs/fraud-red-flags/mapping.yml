@@ -1,0 +1,5 @@
+required_files: [gl_entries.csv, stock_moves.csv]
+canonical_fields:
+  gl_reference: gl_entries.reference
+  stock_source: stock_moves.source_document
+  journal: gl_entries.journal

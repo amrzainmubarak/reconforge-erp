@@ -1,0 +1,6 @@
+invoice_number,work_order,customer_code,invoice_date,invoice_amount,status
+INV-1001,WO-1001,CUST-001,2026-01-08,310.00,Posted
+INV-1002,WO-1002,CUST-002,2026-01-09,95.00,Posted
+INV-1003,WO-1003,CUST-003,2026-01-13,260.00,Posted
+INV-1004,WO-1004,CUST-004,2026-01-20,0.00,Draft
+INV-1007,WO-1007,CUST-007,2026-01-25,0.00,Draft

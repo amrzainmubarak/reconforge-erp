@@ -1,0 +1,5 @@
+required_files: [purchase_orders.csv, work_orders.csv]
+canonical_fields:
+  purchase_order: purchase_orders.po_number
+  linked_work_order: purchase_orders.linked_work_order
+  work_order: work_orders.work_order

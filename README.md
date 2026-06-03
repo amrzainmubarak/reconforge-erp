@@ -284,7 +284,7 @@ Quality and security checks are part of the repository workflow:
 - CI runs Ruff, mypy, pytest, CLI smoke checks, and package build.
 - CodeQL analyzes Python on pull requests and scheduled runs.
 - Security workflow runs Bandit and `pip-audit`.
-- OpenSSF Scorecard runs on schedule/manual dispatch as a repository security maturity check, not a guarantee.
+- OpenSSF Scorecard runs on `main`/`master` pushes, schedule, and manual dispatch as a repository security maturity check, not a guarantee.
 - SBOM workflow generates a CycloneDX Python dependency artifact on release tags/manual dispatch.
 - Path-serving routes use registry-based download allowlists instead of constructing filesystem paths from route parameters.
 

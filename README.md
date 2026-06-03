@@ -16,6 +16,7 @@
 <p align="center">
   <a href="#visual-preview">Visual Preview</a> ·
   <a href="#quick-start">Quick Start</a> ·
+  <a href="#10-minute-demo">10-Minute Demo</a> ·
   <a href="#cli-examples">CLI Examples</a> ·
   <a href="#control-packs">Control Packs</a> ·
   <a href="#documentation">Documentation</a>
@@ -30,6 +31,8 @@ It gives finance, inventory, workshop, ERP, and audit teams a repeatable way to 
 - Reconciles stock movements against GL postings with configurable matching strategies.
 - Reviews work orders, WIP, invoices, purchase flows, old-part returns, and workshop control gaps.
 - Runs YAML control packs for audit rules, risk scoring, exception explanations, and evidence preparation.
+- Helps inspect Odoo/SAP-style export mappings before users edit YAML profiles.
+- Tracks local exception review status and compares generated outputs across periods.
 - Produces local artifacts: Excel management packs, HTML reports, Markdown summaries, CSV/JSON exports, and evidence binder folders.
 
 ## Why It Matters
@@ -45,6 +48,10 @@ ERP systems hold the source transactions, but month-end reconciliation often sti
 | Audit intelligence | Risk scores, risk levels, suggested audit notes, control explanations, evidence binders |
 | Rule packs | 15 domain control packs with YAML rules, mappings, expected exceptions, and risk models |
 | Reporting | Excel management pack, executive HTML report, static dashboard, Markdown, CSV, and JSON outputs |
+| Mapping | Odoo/SAP export mapping validation and local header inspection reports |
+| Review workflow | Studio review actions, local review state, review register export, status filtering |
+| Period comparison | New, recurring, resolved, escalated, and accepted-risk exception comparison |
+| Handoff | Local client handoff pack with privacy note and manifest |
 | Data safety | Local-first processing, anonymized demo data support, no API key required for core workflows |
 
 ## Visual Preview
@@ -94,13 +101,42 @@ Open the generated local artifacts:
 - `output/dashboard.html`
 - `output/summary.md`
 
+## 10-Minute Demo
+
+Run the complete first-time-user workflow:
+
+```bash
+reconforge demo run --output output/demo
+```
+
+Then open:
+
+- `output/demo/executive_report.html`
+- `output/demo/management_pack.xlsx`
+- `output/demo/review_register.xlsx`
+- `output/demo/evidence/index.html`
+- `output/demo/client_pack/handoff_summary.md`
+
+Start Studio and update review status locally:
+
+```bash
+reconforge studio --input examples/sample_data --output output/demo
+```
+
+In Studio, open **Exceptions**, update an exception such as `EXC-0001`, filter by review status, then export or review `output/demo/review_register.xlsx`.
+
 ## CLI Examples
 
 ```bash
+reconforge demo run --output output/demo
+
 reconforge reconcile stock-gl --input examples/sample_data --config config/reconforge.yml --output output
 reconforge reconcile stock-gl --input examples/sample_data --config config/reconforge.yml --output output --matching-strategy audit-safe
 reconforge reconcile workorders --input examples/sample_data --config config/reconforge.yml --output output
 
+reconforge mappings validate --pack control-packs/odoo-inventory-valuation
+reconforge mappings validate --pack control-packs/sap-mb51-fagll03
+reconforge mappings wizard --input examples/sample_data --pack control-packs/odoo-inventory-valuation --output output/mapping_wizard
 reconforge rules validate --pack control-packs/audit-basic
 reconforge rules list --pack control-packs/audit-basic
 reconforge rules explain --pack control-packs/audit-basic --rule AB-001
@@ -108,6 +144,8 @@ reconforge rules run --input examples/sample_data --pack control-packs/audit-bas
 
 reconforge report management-pack --input examples/sample_data --config config/reconforge.yml --output output
 reconforge report evidence-binder --input output --output output/evidence
+reconforge report client-pack --input output --output output/client_pack
+reconforge compare periods --inputs output/demo output/demo --output output/period_comparison
 reconforge explain exception --input output/management_pack.json --exception-id EXC-0001
 
 reconforge anonymize --input examples/sample_data --output examples/anonymized_data --profile public-demo --amount-noise-percent 5
@@ -123,23 +161,35 @@ ReconForge ERP includes export-based mapping profiles for Odoo inventory valuati
 - `control-packs/odoo-inventory-valuation` covers Odoo stock moves, stock valuation layers, account move lines, products, work-order references, and invoices where available.
 - `control-packs/sap-mb51-fagll03` covers SAP MB51 material documents and FAGLL03/FBL3N G/L line item exports.
 - Core workflows are local-first and do not require cloud upload or direct ERP connectors.
+- Use `reconforge mappings wizard` to inspect CSV/XLSX headers and generate `mapping_report.md` plus `mapping_report.json`.
 
 ## Local Review Workflow
 
-ReconForge can track exception review state in `output/review_state.json` without a database or cloud service. Use `reconforge review list`, `reconforge review set-status`, and `reconforge review export` to assign local statuses, reviewer notes, decision reasons, escalation owners, and an Excel review register.
+ReconForge can track exception review state in `output/review_state.json` without a database or cloud service. Use Studio or `reconforge review list`, `reconforge review set-status`, and `reconforge review export` to assign local statuses, reviewer notes, decision reasons, escalation owners, and an Excel review register.
+
+## Multi-Period Comparison
+
+Compare generated output folders to identify new, recurring, resolved, escalated, and accepted-risk items:
+
+```bash
+reconforge compare periods --inputs output/jan output/feb --output output/period_comparison
+```
+
+The command writes Excel, HTML, JSON, and Markdown outputs. It does not infer savings.
 
 ## Report Outputs
 
 | Output | Purpose |
 | --- | --- |
 | `management_pack.xlsx` | Executive pack, reconciliation summary, risk matrix, exceptions, WIP, audit log, and configuration |
-| `executive_report.html` | Local executive HTML report |
+| `executive_report.html` | Local executive HTML report with Control Value Summary |
 | `dashboard.html` | Static local dashboard |
 | `output/evidence/` | Audit case folders for High and Critical exceptions |
 | `output/review_state.json` | Local exception review status, reviewer notes, and decision metadata |
 | `output/review_register.xlsx` | Optional review register exported from local review state |
 | `output/rules/` | Rule engine CSV/JSON outputs |
 | `output/benchmark/` | Runtime and match-rate benchmark outputs |
+| `output/client_pack/` | Local handoff folder with summary, next steps, privacy note, and manifest |
 
 ## Who It Is For
 
@@ -151,7 +201,7 @@ ReconForge can track exception review state in `output/review_state.json` withou
 
 ## Maturity Note
 
-ReconForge ERP is early-stage. It is designed for local-first ERP reconciliation and audit workflows and currently focuses on export-based mapping profiles, local exception review, evidence generation, and generic ERP datasets. v0.5.0 is a serious pre-1.0 platform release, not a claim of broad adoption.
+ReconForge ERP is early-stage. It is designed for local-first ERP reconciliation and audit workflows and currently focuses on export-based mapping profiles, local exception review, evidence generation, multi-period output comparison, and generic ERP datasets. The current version remains v0.6.0 while product-ready pilot toolkit work is staged under Unreleased notes until all release gates are complete.
 
 ## Architecture
 
@@ -225,14 +275,23 @@ See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md)
 ## Documentation
 
 - [Getting started](docs/getting-started.md)
+- [10-minute demo scenarios](docs/demo-scenarios.md)
 - [Architecture](docs/architecture.md)
 - [Reconciliation methodology](docs/reconciliation-methodology.md)
 - [Controls and audit](docs/controls-and-audit.md)
 - [Rule-pack schema reference](docs/rule-pack-schema-reference.md)
 - [Review workflow](docs/review-workflow.md)
+- [ReconForge Studio](docs/reconforge-studio.md)
+- [Mapping wizard](docs/mapping-wizard.md)
+- [Multi-period comparison](docs/multi-period-comparison.md)
+- [Client handoff pack](docs/client-handoff-pack.md)
+- [Docker deployment](docs/docker-deployment.md)
+- [Security whitepaper](docs/security-whitepaper.md)
+- [Synthetic case study](docs/case-studies/workshop-spare-parts-health-check.md)
+- [Pricing and services](docs/commercial/pricing-and-services.md)
+- [Demo video script](docs/demo-video-script.md)
 - [Risk scoring](docs/risk-scoring.md)
 - [Report samples](docs/report-samples.md)
-- [ReconForge Studio](docs/reconforge-studio.md)
 - [Anonymization](docs/anonymization.md)
 - [Synthetic data](docs/synthetic-data.md)
 - [Benchmarking](docs/benchmark.md)
@@ -248,21 +307,22 @@ See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md)
 
 ```bash
 docker build -t reconforge-erp .
-docker run --rm -v $(pwd)/output:/app/output reconforge-erp reconforge doctor
+docker run --rm -v ${PWD}/output:/app/output reconforge-erp reconforge doctor
+docker run --rm -v ${PWD}/output:/app/output reconforge-erp reconforge demo run --output output/demo
 ```
 
 ## Quality Checks
 
 ```bash
-ruff check .
-mypy reconforge
-pytest
-bandit -q -r reconforge
+python -m ruff check .
+python -m mypy reconforge
+python -m pytest
+python -m bandit -q -r reconforge
 ```
 
 ## Roadmap
 
-Near-term work: Odoo/SAP mapping profiles, exception review lifecycle, recurring-period comparison, richer Studio filters, ERPNext/NetSuite/Dynamics CSV adapters, and self-hosted review workflow experiments.
+Near-term work: authenticated self-hosted review mode, stronger output redaction controls, richer period trend charts, ERPNext/NetSuite/Dynamics export profiles, and Docker build verification in CI.
 
 ## Contributing
 

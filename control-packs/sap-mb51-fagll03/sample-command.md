@@ -15,6 +15,7 @@ reconforge reconcile stock-gl --input examples/sample_data --config config/recon
 Validate and run the SAP MB51/FAGLL03 control pack:
 
 ```bash
+reconforge mappings validate --pack control-packs/sap-mb51-fagll03
 reconforge rules validate --pack control-packs/sap-mb51-fagll03
 reconforge rules list --pack control-packs/sap-mb51-fagll03
 reconforge rules run --input examples/sample_data --pack control-packs/sap-mb51-fagll03 --output output/rules-sap

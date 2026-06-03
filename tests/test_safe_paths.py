@@ -100,6 +100,20 @@ def test_dashboard_download_route_still_serves_report(tmp_path: Path) -> None:
     assert response.text.replace("\r\n", "\n") == "a,b\n1,2\n"
 
 
+def test_dashboard_report_links_url_quote_reserved_filename_characters(tmp_path: Path) -> None:
+    (tmp_path / "dashboard.html").write_text("<html><body><main></main></body></html>", encoding="utf-8")
+    (tmp_path / "report & summary.md").write_text("# Summary\n", encoding="utf-8")
+    client = TestClient(create_app(tmp_path))
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert 'href="/reports/report%20%26%20summary.md"' in response.text
+    assert "report &amp; summary.md" in response.text
+    assert 'href="/reports/report &amp; summary.md"' not in response.text
+    assert client.get("/reports/report%20%26%20summary.md").status_code == 200
+
+
 def test_dashboard_download_route_rejects_backslash(tmp_path: Path) -> None:
     app = create_app(tmp_path)
     report = _endpoint(app, "/reports/{filename}")
@@ -158,6 +172,26 @@ def test_studio_report_download_route_still_serves_file(tmp_path: Path) -> None:
 
     assert response.status_code == 200
     assert "# Summary" in response.text
+
+
+def test_studio_download_links_url_quote_reserved_filename_characters(tmp_path: Path) -> None:
+    (tmp_path / "review & summary.md").write_text("# Summary\n", encoding="utf-8")
+    evidence_dir = tmp_path / "evidence" / "EXC & 001"
+    evidence_dir.mkdir(parents=True)
+    (evidence_dir / "summary.md").write_text("# Evidence\n", encoding="utf-8")
+    client = TestClient(create_studio_app("examples/sample_data", tmp_path))
+
+    downloads_response = client.get("/downloads")
+    evidence_response = client.get("/evidence")
+
+    assert downloads_response.status_code == 200
+    assert 'href="/download/review%20%26%20summary.md"' in downloads_response.text
+    assert "review &amp; summary.md" in downloads_response.text
+    assert evidence_response.status_code == 200
+    assert 'href="/download/evidence/EXC%20%26%20001/summary.md"' in evidence_response.text
+    assert "EXC &amp; 001/summary.md" in evidence_response.text
+    assert client.get("/download/review%20%26%20summary.md").status_code == 200
+    assert client.get("/download/evidence/EXC%20%26%20001/summary.md").status_code == 200
 
 
 def test_studio_evidence_download_route_still_serves_file(tmp_path: Path) -> None:

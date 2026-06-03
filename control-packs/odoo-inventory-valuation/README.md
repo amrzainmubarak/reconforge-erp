@@ -52,6 +52,7 @@ See `mapping.yml` for field-level candidates.
 ```bash
 reconforge validate examples/sample_data
 reconforge reconcile stock-gl --input examples/sample_data --config config/reconforge.yml --output output/odoo-stock-gl
+reconforge mappings validate --pack control-packs/odoo-inventory-valuation
 reconforge rules validate --pack control-packs/odoo-inventory-valuation
 reconforge rules list --pack control-packs/odoo-inventory-valuation
 reconforge rules run --input examples/sample_data --pack control-packs/odoo-inventory-valuation --output output/rules-odoo

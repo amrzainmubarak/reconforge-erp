@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
@@ -8,6 +9,7 @@ from typing import Any, cast
 import pandas as pd
 import pytest
 from fastapi.routing import APIRoute
+from fastapi.testclient import TestClient
 from openpyxl import load_workbook
 from typer.testing import CliRunner
 
@@ -57,6 +59,12 @@ def _render_studio_exceptions(output_dir: Path, **kwargs: Any) -> str:
             endpoint = cast(Callable[..., str], route.endpoint)
             return endpoint(**kwargs)
     raise AssertionError("Studio exceptions route not found")
+
+
+def _csrf_token(html: str) -> str:
+    match = re.search(r'name="csrf_token" value="([^"]+)"', html)
+    assert match is not None
+    return match.group(1)
 
 
 def test_review_state_load_save_and_default_status(tmp_path: Path) -> None:
@@ -165,6 +173,72 @@ def test_studio_filters_render_and_status_filter_works(tmp_path: Path) -> None:
     html = _render_studio_exceptions(tmp_path, status="Escalated")
     assert "Review status" in html
     assert "Escalated" in html
+
+
+def test_studio_valid_status_update_persists_to_review_state(tmp_path: Path) -> None:
+    client = TestClient(create_studio_app("examples/sample_data", tmp_path))
+    token = _csrf_token(client.get("/exceptions").text)
+    response = client.post(
+        "/exceptions/update-review",
+        data={
+            "csrf_token": token,
+            "exception_id": "EXC-0001",
+            "status": "Under Review",
+            "reviewer": "Controller",
+            "note": "Checking source evidence",
+        },
+    )
+    assert response.status_code == 200
+    assert "Review updated for EXC-0001 as Under Review." in response.text
+    state = load_review_state(tmp_path / "review_state.json")
+    assert state["EXC-0001"]["status"] == "Under Review"
+    assert state["EXC-0001"]["reviewer"] == "Controller"
+
+
+def test_studio_invalid_status_rejected(tmp_path: Path) -> None:
+    client = TestClient(create_studio_app("examples/sample_data", tmp_path))
+    token = _csrf_token(client.get("/exceptions").text)
+    response = client.post(
+        "/exceptions/update-review",
+        data={"csrf_token": token, "exception_id": "EXC-0001", "status": "Done"},
+    )
+    assert response.status_code == 200
+    assert "Invalid review status" in response.text
+    assert "Expected one of: New, Under Review, Resolved, Accepted Risk, Escalated." in response.text
+    assert "Done" not in response.text
+    assert not (tmp_path / "review_state.json").exists()
+
+
+def test_studio_review_update_escapes_reviewer_and_note(tmp_path: Path) -> None:
+    client = TestClient(create_studio_app("examples/sample_data", tmp_path))
+    token = _csrf_token(client.get("/exceptions").text)
+    response = client.post(
+        "/exceptions/update-review",
+        data={
+            "csrf_token": token,
+            "exception_id": "EXC-0001",
+            "status": "Under Review",
+            "reviewer": "<script>alert(1)</script>",
+            "note": "<b>needs review</b>",
+        },
+    )
+    assert "<script>alert(1)</script>" not in response.text
+    assert "<b>needs review</b>" not in response.text
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in response.text
+    assert "&lt;b&gt;needs review&lt;/b&gt;" in response.text
+
+
+def test_studio_filters_reflect_updated_status(tmp_path: Path) -> None:
+    client = TestClient(create_studio_app("examples/sample_data", tmp_path))
+    token = _csrf_token(client.get("/exceptions").text)
+    client.post(
+        "/exceptions/update-review",
+        data={"csrf_token": token, "exception_id": "EXC-0001", "status": "Accepted Risk", "accepted_risk_reason": "Timing difference documented"},
+    )
+    filtered = client.get("/exceptions", params={"status": "Accepted Risk"}).text
+    assert "Accepted Risk" in filtered
+    assert "Timing difference documented" in filtered
+    assert "No exceptions match the current filters." not in filtered
 
 
 def test_studio_empty_filter_result_message(tmp_path: Path) -> None:

@@ -22,11 +22,15 @@ from reconforge.generator.synthetic import generate_synthetic_dataset
 from reconforge.io.excel import audit_metadata, write_excel_workbook
 from reconforge.io.readers import read_required_datasets
 from reconforge.io.writers import ensure_output_dir, frame_to_records, write_json, write_report_frames
+from reconforge.mappings.inspector import inspect_mapping_inputs
+from reconforge.mappings.validator import validate_mapping_pack
+from reconforge.periods import compare_period_outputs
 from reconforge.reconciliation.matching import MatchingStrategy
 from reconforge.reconciliation.stock_gl import reconcile_stock_gl
 from reconforge.reconciliation.stock_gl import result_frames as stock_gl_result_frames
 from reconforge.reconciliation.workorders import reconcile_workorders
 from reconforge.reconciliation.workorders import result_frames as workorder_result_frames
+from reconforge.reports.client_pack import generate_client_pack
 from reconforge.reports.management_pack import generate_management_pack
 from reconforge.reports.wip_aging import aging_summary, generate_wip_aging
 from reconforge.review.state import (
@@ -50,15 +54,21 @@ app = typer.Typer(help="ReconForge ERP reconciliation intelligence CLI.")
 reconcile_app = typer.Typer(help="Run reconciliation controls.")
 report_app = typer.Typer(help="Generate audit and management reports.")
 rules_app = typer.Typer(help="Validate, list, and run control-pack rules.")
+mappings_app = typer.Typer(help="Validate ERP mapping profiles.")
 generate_app = typer.Typer(help="Generate synthetic ERP datasets.")
 explain_app = typer.Typer(help="Explain exceptions and controls deterministically.")
 review_app = typer.Typer(help="Review exceptions with local JSON state.")
+demo_app = typer.Typer(help="Run first-time-user demo workflows.")
+compare_app = typer.Typer(help="Compare generated exception outputs across periods.")
 app.add_typer(reconcile_app, name="reconcile")
 app.add_typer(report_app, name="report")
 app.add_typer(rules_app, name="rules")
+app.add_typer(mappings_app, name="mappings")
 app.add_typer(generate_app, name="generate")
 app.add_typer(explain_app, name="explain")
 app.add_typer(review_app, name="review")
+app.add_typer(demo_app, name="demo")
+app.add_typer(compare_app, name="compare")
 
 
 def _version_callback(value: bool) -> None:
@@ -295,6 +305,23 @@ def evidence_binder_command(
         _print_frame("Evidence Cases", pd.DataFrame([artifact.model_dump() for artifact in artifacts]))
 
 
+@report_app.command("client-pack")
+def client_pack_command(
+    input_path: Annotated[Path, typer.Option("--input", help="Generated ReconForge output directory.")] = Path("output"),
+    output_path: Annotated[Path, typer.Option("--output", help="Client handoff pack directory.")] = Path("output/client_pack"),
+) -> None:
+    """Create a local consultant/client handoff folder from generated outputs."""
+
+    try:
+        artifacts = generate_client_pack(input_path, output_path)
+    except FileNotFoundError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Client handoff pack:[/green] {artifacts.output_dir}")
+    console.print(f"Included files: {len(artifacts.included_files)} | Missing optional files: {len(artifacts.missing_optional_files)}")
+    _print_success_paths(artifacts.included_files)
+
+
 @rules_app.command("validate")
 def rules_validate_command(
     pack_path: Annotated[Path, typer.Option("--pack", help="Control pack directory.")],
@@ -303,6 +330,67 @@ def rules_validate_command(
 
     pack = load_rule_pack(pack_path)
     console.print(f"[green]Control pack valid:[/green] {pack.metadata.pack_id} ({len(pack.rules)} rules)")
+
+
+@mappings_app.command("validate")
+def mappings_validate_command(
+    pack_path: Annotated[Path, typer.Option("--pack", help="ERP mapping control-pack directory.")],
+) -> None:
+    """Validate an ERP mapping profile and its control-pack files."""
+
+    result = validate_mapping_pack(pack_path)
+    table = Table(title=f"Mapping Profile Validation: {result.pack_path}")
+    table.add_column("Check")
+    table.add_column("Status")
+    table.add_column("Detail")
+    for check in result.checks:
+        style = "green" if check.passed else "red"
+        table.add_row(check.name, f"[{style}]{check.status}[/{style}]", check.detail)
+    console.print(table)
+    passed = sum(1 for check in result.checks if check.passed)
+    failed = len(result.checks) - passed
+    summary_style = "green" if result.passed else "red"
+    console.print(f"[{summary_style}]Summary: {passed} passed, {failed} failed[/{summary_style}]")
+    if not result.passed:
+        raise typer.Exit(code=1)
+
+
+def _run_mapping_inspection(input_path: Path, pack_path: Path, output_path: Path) -> None:
+    try:
+        result = inspect_mapping_inputs(input_path, pack_path, output_path)
+    except (OSError, ValueError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    summary = result.summary
+    table = Table(title=f"Mapping Inspection: {result.profile_id}")
+    table.add_column("Metric")
+    table.add_column("Value")
+    for key, value in summary.items():
+        table.add_row(key.replace("_", " "), str(value))
+    console.print(table)
+    _print_success_paths([result.report_markdown_path, result.report_json_path])
+
+
+@mappings_app.command("inspect")
+def mappings_inspect_command(
+    input_path: Annotated[Path, typer.Option("--input", help="Folder containing local CSV/XLSX ERP exports.")],
+    pack_path: Annotated[Path, typer.Option("--pack", help="ERP mapping control-pack directory.")],
+    output_path: Annotated[Path, typer.Option("--output", help="Mapping inspection report directory.")] = Path("output/mapping_wizard"),
+) -> None:
+    """Inspect local export headers against an ERP mapping profile."""
+
+    _run_mapping_inspection(input_path, pack_path, output_path)
+
+
+@mappings_app.command("wizard")
+def mappings_wizard_command(
+    input_path: Annotated[Path, typer.Option("--input", help="Folder containing local CSV/XLSX ERP exports.")],
+    pack_path: Annotated[Path, typer.Option("--pack", help="ERP mapping control-pack directory.")],
+    output_path: Annotated[Path, typer.Option("--output", help="Mapping inspection report directory.")] = Path("output/mapping_wizard"),
+) -> None:
+    """Generate a draft local mapping report for ERP exports."""
+
+    _run_mapping_inspection(input_path, pack_path, output_path)
 
 
 @rules_app.command("list")
@@ -513,6 +601,139 @@ def review_export_command(
 
     path = export_review_register(input_path, output_path)
     console.print(f"[green]Review register written:[/green] {path}")
+
+
+@compare_app.command("periods", context_settings={"allow_extra_args": True})
+def compare_periods_command(
+    ctx: typer.Context,
+    inputs: Annotated[list[Path], typer.Option("--inputs", help="Generated output folders to compare, in period order.")],
+    output_path: Annotated[Path, typer.Option("--output", help="Period comparison output directory.")] = Path("output/period_comparison"),
+) -> None:
+    """Compare exception outputs from two or more generated periods."""
+
+    period_inputs = [*inputs, *(Path(value) for value in ctx.args)]
+    try:
+        artifacts = compare_period_outputs(period_inputs, output_path)
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Period comparison:[/green] {output_path}")
+    _print_success_paths([artifacts.workbook_path, artifacts.html_path, artifacts.json_path, artifacts.markdown_path])
+
+
+@demo_app.command("run")
+def demo_run_command(
+    output_path: Annotated[Path, typer.Option("--output", help="Demo output directory.")] = Path("output/demo"),
+    input_path: Annotated[Path, typer.Option("--input", help="Sample ERP export directory.")] = Path("examples/sample_data"),
+    config_path: Annotated[Path, typer.Option("--config", help="ReconForge YAML config.")] = Path("config/reconforge.yml"),
+    rules_pack: Annotated[Path, typer.Option("--rules-pack", help="Control pack to run during the demo.")] = Path("control-packs/audit-basic"),
+) -> None:
+    """Run the local 10-minute sample workflow end to end."""
+
+    issues = validate_input_directory(input_path)
+    issue_frame = issues_to_frame(issues)
+    error_count = int(issue_frame["severity"].astype(str).eq("error").sum()) if not issue_frame.empty else 0
+    if error_count:
+        _print_frame("Demo Data Validation Issues", issue_frame)
+        console.print("[red]Demo stopped because sample data has validation errors.[/red]")
+        raise typer.Exit(code=1)
+
+    config = load_config(_config_option(config_path))
+    datasets = read_required_datasets(
+        input_path,
+        [
+            DatasetName.STOCK_MOVES,
+            DatasetName.GL_ENTRIES,
+            DatasetName.WORK_ORDERS,
+            DatasetName.PURCHASE_ORDERS,
+            DatasetName.OLD_PARTS_RETURNS,
+            DatasetName.INVOICES,
+        ],
+    )
+    output_dir = ensure_output_dir(output_path)
+    stock_result = reconcile_stock_gl(datasets[DatasetName.STOCK_MOVES], datasets[DatasetName.GL_ENTRIES], config)
+    workorder_result = reconcile_workorders(
+        datasets[DatasetName.STOCK_MOVES],
+        datasets[DatasetName.WORK_ORDERS],
+        datasets[DatasetName.PURCHASE_ORDERS],
+        datasets[DatasetName.OLD_PARTS_RETURNS],
+        datasets[DatasetName.INVOICES],
+        config,
+    )
+    wip = generate_wip_aging(datasets[DatasetName.WORK_ORDERS], config)
+
+    stock_frames = stock_gl_result_frames(stock_result)
+    workorder_frames = workorder_result_frames(workorder_result)
+    write_report_frames(stock_frames, output_dir, "stock_gl")
+    write_report_frames(workorder_frames, output_dir, "workorders")
+    stock_workbook = write_excel_workbook(
+        stock_frames,
+        output_dir / "stock_gl_reconciliation.xlsx",
+        metadata=audit_metadata(config.company_name, "Stock to GL Reconciliation", config.output_currency),
+    )
+    workorder_workbook = write_excel_workbook(
+        workorder_frames,
+        output_dir / "workorder_reconciliation.xlsx",
+        metadata=audit_metadata(config.company_name, "Work Order Reconciliation", config.output_currency),
+    )
+
+    rule_paths = write_rule_results(run_rule_pack(input_path, rules_pack), output_dir / "rules")
+    artifacts = generate_management_pack(input_path, output_dir, config, stock_result, workorder_result, wip)
+
+    state_path = output_dir / "review_state.json"
+    state = load_review_state(state_path)
+    exceptions = collect_exception_frame(output_dir)
+    if not exceptions.empty:
+        exception_id = str(exceptions.iloc[0]["exception_id"])
+        update_review_status(
+            exception_id,
+            "Under Review",
+            state,
+            reviewer="Demo Reviewer",
+            note="Initial sample review started from the one-command demo.",
+            decision_reason="Validate source posting and operational evidence.",
+        )
+    save_review_state(state_path, state)
+    register_path = export_review_register(output_dir, output_dir / "review_register.xlsx")
+    evidence_artifacts = generate_evidence_binder(output_dir, output_dir / "evidence")
+    client_pack_artifacts = generate_client_pack(output_dir, output_dir / "client_pack")
+
+    paths = [
+        artifacts.excel_path,
+        output_dir / "executive_report.html",
+        output_dir / "dashboard.html",
+        artifacts.markdown_path,
+        state_path,
+        register_path,
+        output_dir / "evidence",
+        client_pack_artifacts.output_dir,
+        stock_workbook,
+        workorder_workbook,
+        *rule_paths,
+    ]
+    _print_frame(
+        "Demo Workflow",
+        pd.DataFrame(
+            [
+                {"step": "validated_sample_data", "result": f"{len(issue_frame)} validation issues, {error_count} errors"},
+                {"step": "stock_to_gl_exceptions", "result": len(stock_result.all_exceptions)},
+                {"step": "workorder_exceptions", "result": len(workorder_result.all_exceptions)},
+                {"step": "rules_triggered", "result": len(rule_paths)},
+                {"step": "evidence_cases", "result": len(evidence_artifacts)},
+                {"step": "review_state_entries", "result": len(state)},
+            ],
+        ),
+        max_rows=20,
+    )
+    _print_success_paths(paths)
+    console.print("\n[bold]Next steps[/bold]")
+    console.print(f"1. Open dashboard: {output_dir / 'dashboard.html'}")
+    console.print(f"2. Open executive report: {output_dir / 'executive_report.html'}")
+    console.print(f"3. Open management pack: {output_dir / 'management_pack.xlsx'}")
+    console.print(f"4. Open evidence binder: {output_dir / 'evidence' / 'index.html'}")
+    console.print(f"5. Review client handoff pack: {client_pack_artifacts.output_dir}")
+    console.print(f"6. Run Studio: reconforge studio --input {input_path} --output {output_dir}")
+    console.print(f"7. Review or export the register: {register_path}")
 
 
 @app.command("dashboard")

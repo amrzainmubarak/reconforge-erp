@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from html import escape
 from pathlib import Path
+from secrets import token_urlsafe
 from typing import Any
+from urllib.parse import parse_qs
 
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
 
 from reconforge.config import load_config
@@ -15,7 +17,13 @@ from reconforge.io.readers import read_required_datasets
 from reconforge.reconciliation.stock_gl import reconcile_stock_gl
 from reconforge.reconciliation.workorders import reconcile_workorders
 from reconforge.reports.wip_aging import generate_wip_aging
-from reconforge.review.state import ALLOWED_STATUSES, load_review_state, merge_review_state_with_exceptions
+from reconforge.review.state import (
+    ALLOWED_STATUSES,
+    load_review_state,
+    merge_review_state_with_exceptions,
+    save_review_state,
+    update_review_status,
+)
 from reconforge.schemas import DatasetName
 from reconforge.utils.safe_paths import build_download_registry, get_registered_download, is_safe_download_key
 from reconforge.validators import issues_to_frame, validate_input_directory
@@ -46,7 +54,7 @@ def _layout(title: str, body: str) -> str:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{title}</title>
+  <title>{escape(title)}</title>
   <style>
     body {{ margin: 0; font-family: Inter, Segoe UI, Arial, sans-serif; background: #f5f7fa; color: #182230; }}
     header {{ background: #16324f; color: #fff; padding: 22px 32px; }}
@@ -63,9 +71,15 @@ def _layout(title: str, body: str) -> str:
     .high, .critical {{ background: #fee4e2; color: #912018; }}
     .medium {{ background: #fff4cc; color: #7a4d00; }}
     .filters {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; align-items: end; margin: 0 0 14px; }}
-    .filters label {{ display: grid; gap: 4px; font-size: 12px; color: #475467; }}
-    .filters input, .filters select {{ min-height: 34px; border: 1px solid #ccd6e0; border-radius: 6px; padding: 6px 8px; background: #fff; }}
-    .filters button {{ min-height: 34px; border: 0; border-radius: 6px; padding: 6px 10px; background: #16324f; color: #fff; }}
+    .review-action {{ background: #fff; border: 1px solid #dce3ea; border-radius: 8px; padding: 14px; margin: 0 0 16px; }}
+    .review-action summary {{ cursor: pointer; font-weight: 700; color: #16324f; }}
+    .review-form {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; align-items: end; margin-top: 12px; }}
+    .filters label, .review-form label {{ display: grid; gap: 4px; font-size: 12px; color: #475467; }}
+    .filters input, .filters select, .review-form input, .review-form select {{ min-height: 34px; border: 1px solid #ccd6e0; border-radius: 6px; padding: 6px 8px; background: #fff; }}
+    .filters button, .review-form button {{ min-height: 34px; border: 0; border-radius: 6px; padding: 6px 10px; background: #16324f; color: #fff; }}
+    .message {{ padding: 10px 12px; border-radius: 6px; margin: 0 0 14px; border: 1px solid; }}
+    .success {{ background: #ecfdf3; color: #067647; border-color: #abefc6; }}
+    .error {{ background: #fef3f2; color: #b42318; border-color: #fecdca; }}
     table {{ width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #dce3ea; }}
     th, td {{ padding: 9px 10px; border-bottom: 1px solid #edf1f5; text-align: left; font-size: 13px; }}
     th {{ background: #e8eef5; }}
@@ -109,6 +123,38 @@ def _options(values: list[str]) -> str:
     for value in values:
         items.append(f"<option value='{escape(value)}'>{escape(value)}</option>")
     return "".join(items)
+
+
+def _review_update_form(csrf_token: str) -> str:
+    statuses = "".join(f"<option value='{escape(status)}'>{escape(status)}</option>" for status in ALLOWED_STATUSES)
+    return f"""
+<details class="review-action" open>
+  <summary>Update Review Status</summary>
+  <form class="review-form" method="post" action="/exceptions/update-review">
+    <input type="hidden" name="csrf_token" value="{escape(csrf_token)}">
+    <label>Exception ID<input name="exception_id" required maxlength="80" placeholder="EXC-0001"></label>
+    <label>Status<select name="status" required>{statuses}</select></label>
+    <label>Reviewer<input name="reviewer" maxlength="120"></label>
+    <label>Note<input name="note" maxlength="500"></label>
+    <label>Decision reason<input name="decision_reason" maxlength="500"></label>
+    <label>Accepted-risk reason<input name="accepted_risk_reason" maxlength="500"></label>
+    <label>Escalation owner<input name="escalation_owner" maxlength="120"></label>
+    <button type="submit">Save Review Update</button>
+  </form>
+</details>
+"""
+
+
+def _message_html(message: str, message_type: str) -> str:
+    if not message:
+        return ""
+    css_class = "success" if message_type == "success" else "error"
+    return f'<div class="message {css_class}">{escape(message)}</div>'
+
+
+def _form_value(payload: dict[str, list[str]], key: str, *, max_length: int = 500) -> str:
+    values = payload.get(key, [""])
+    return values[0].strip()[:max_length] if values else ""
 
 
 def _allowed_choice(value: str, allowed: list[str]) -> str:
@@ -240,10 +286,61 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
 
     input_path = Path(input_dir)
     output_path = Path(output_dir)
+    csrf_token = token_urlsafe(24)
     output_registry = build_download_registry(output_path, allowed_suffixes=DOWNLOAD_SUFFIXES)
     evidence_registry = build_download_registry(output_path / "evidence", allowed_suffixes=DOWNLOAD_SUFFIXES, recursive=True)
     docs_registry = build_download_registry(Path("docs"), allowed_suffixes=DOC_SUFFIXES)
-    app = FastAPI(title="ReconForge Studio", version="0.5.0")
+    app = FastAPI(title="ReconForge Studio", version="0.6.0")
+
+    def _render_exceptions_page(
+        *,
+        severity: str = "",
+        exception_type: str = "",
+        status: str = "",
+        source_file: str = "",
+        search: str = "",
+        min_amount: float = 0.0,
+        sort: str = "risk_score",
+        message: str = "",
+        message_type: str = "success",
+    ) -> str:
+        rec = _load_reconciliation(input_path)
+        exceptions_frame = merge_review_state_with_exceptions(
+            rec["exceptions"],
+            load_review_state(output_path / "review_state.json"),
+        )
+        severity_values = sorted(
+            {
+                value
+                for column in ("severity", "risk_level")
+                if column in exceptions_frame.columns
+                for value in exceptions_frame[column].astype(str).str.strip()
+                if value
+            },
+        )
+        exception_values = sorted(set(exceptions_frame.get("exception_type", pd.Series(dtype=str)).astype(str).str.strip()) - {""})
+        source_values = sorted(set(exceptions_frame.get("source_file", pd.Series(dtype=str)).astype(str).str.strip()) - {""})
+        filtered = _filter_exceptions(
+            exceptions_frame,
+            severity=_allowed_choice(severity, severity_values),
+            exception_type=_allowed_choice(exception_type, exception_values),
+            status=_allowed_choice(status, list(ALLOWED_STATUSES)),
+            source_file=_allowed_choice(source_file, source_values),
+            search=_bounded_search(search),
+            min_amount=min_amount,
+            sort=_allowed_choice(sort, ["risk_score", "amount_impact", "updated_at"]) or "risk_score",
+        )
+        form = _filter_form(exceptions_frame)
+        empty_message = "<p>No exceptions match the current filters.</p>" if filtered.empty else ""
+        body = (
+            "<h2>Exception Review</h2>"
+            + _message_html(message, message_type)
+            + _review_update_form(csrf_token)
+            + form
+            + empty_message
+            + _table(filtered, limit=100)
+        )
+        return _layout("Exceptions", body)
 
     @app.get("/", response_class=HTMLResponse)
     def overview() -> str:
@@ -251,7 +348,7 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
         exceptions = rec["exceptions"]
         cards = "".join(
             [
-                f'<section class="card"><span>Input Folder</span><strong>{input_path}</strong></section>',
+                f'<section class="card"><span>Input Folder</span><strong>{escape(str(input_path))}</strong></section>',
                 f'<section class="card"><span>Total Exceptions</span><strong>{len(exceptions)}</strong></section>',
                 f'<section class="card"><span>Critical Risks</span><strong>{exceptions.get("risk_level", pd.Series(dtype=str)).astype(str).eq("Critical").sum()}</strong></section>',
                 f'<section class="card"><span>Open WIP</span><strong>{len(rec["wip"])}</strong></section>',
@@ -290,35 +387,43 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
         min_amount: float = 0.0,
         sort: str = "risk_score",
     ) -> str:
-        rec = _load_reconciliation(input_path)
-        exceptions_frame = merge_review_state_with_exceptions(
-            rec["exceptions"],
-            load_review_state(output_path / "review_state.json"),
-        )
-        severity_values = sorted(
-            {
-                value
-                for column in ("severity", "risk_level")
-                if column in exceptions_frame.columns
-                for value in exceptions_frame[column].astype(str).str.strip()
-                if value
-            },
-        )
-        exception_values = sorted(set(exceptions_frame.get("exception_type", pd.Series(dtype=str)).astype(str).str.strip()) - {""})
-        source_values = sorted(set(exceptions_frame.get("source_file", pd.Series(dtype=str)).astype(str).str.strip()) - {""})
-        filtered = _filter_exceptions(
-            exceptions_frame,
-            severity=_allowed_choice(severity, severity_values),
-            exception_type=_allowed_choice(exception_type, exception_values),
-            status=_allowed_choice(status, list(ALLOWED_STATUSES)),
-            source_file=_allowed_choice(source_file, source_values),
-            search=_bounded_search(search),
+        return _render_exceptions_page(
+            severity=severity,
+            exception_type=exception_type,
+            status=status,
+            source_file=source_file,
+            search=search,
             min_amount=min_amount,
-            sort=_allowed_choice(sort, ["risk_score", "amount_impact", "updated_at"]) or "risk_score",
+            sort=sort,
         )
-        form = _filter_form(exceptions_frame)
-        message = "<p>No exceptions match the current filters.</p>" if filtered.empty else ""
-        return _layout("Exceptions", "<h2>Exception Review</h2>" + form + message + _table(filtered, limit=100))
+
+    @app.post("/exceptions/update-review", response_class=HTMLResponse)
+    async def update_exception_review(request: Request) -> str:
+        form = parse_qs((await request.body()).decode("utf-8", errors="replace"), keep_blank_values=True)
+        if _form_value(form, "csrf_token", max_length=200) != csrf_token:
+            return _render_exceptions_page(message="Review update rejected. Refresh Studio and try again.", message_type="error")
+        state_path = output_path / "review_state.json"
+        state = load_review_state(state_path)
+        exception_id = _form_value(form, "exception_id", max_length=80)
+        status_value = _form_value(form, "status", max_length=40)
+        try:
+            entry = update_review_status(
+                exception_id,
+                status_value,
+                state,
+                reviewer=_form_value(form, "reviewer", max_length=120),
+                note=_form_value(form, "note", max_length=500),
+                decision_reason=_form_value(form, "decision_reason", max_length=500),
+                accepted_risk_reason=_form_value(form, "accepted_risk_reason", max_length=500),
+                escalation_owner=_form_value(form, "escalation_owner", max_length=120),
+            )
+        except ValueError as exc:
+            return _render_exceptions_page(message=str(exc), message_type="error")
+        save_review_state(state_path, state)
+        return _render_exceptions_page(
+            status=entry["status"],
+            message=f"Review updated for {entry['exception_id']} as {entry['status']}.",
+        )
 
     @app.get("/rule-results", response_class=HTMLResponse)
     def rule_results() -> str:
@@ -363,12 +468,12 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
 
     @app.get("/downloads", response_class=HTMLResponse)
     def downloads() -> str:
-        links = "".join(f'<li><a href="/download/{key}">{key}</a></li>' for key in sorted(output_registry))
+        links = "".join(f'<li><a href="/download/{escape(key)}">{escape(key)}</a></li>' for key in sorted(output_registry))
         return _layout("Downloads", f"<h2>Downloads</h2><ul>{links}</ul>")
 
     @app.get("/docs", response_class=HTMLResponse)
     def docs() -> str:
-        links = "".join(f'<li><a href="/download-doc/{key}">{key}</a></li>' for key in sorted(docs_registry))
+        links = "".join(f'<li><a href="/download-doc/{escape(key)}">{escape(key)}</a></li>' for key in sorted(docs_registry))
         return _layout("Docs", f"<h2>Documentation</h2><ul>{links}</ul>")
 
     @app.get("/download/{filename}")

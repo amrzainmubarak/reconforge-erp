@@ -380,6 +380,13 @@ Validate a pack:
 reconforge rules validate --pack control-packs/audit-basic
 ```
 
+Validate an ERP mapping profile:
+
+```bash
+reconforge mappings validate --pack control-packs/odoo-inventory-valuation
+reconforge mappings validate --pack control-packs/sap-mb51-fagll03
+```
+
 List rules:
 
 ```bash

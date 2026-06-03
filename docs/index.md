@@ -11,6 +11,8 @@ ReconForge ERP is an open-source, local-first ERP reconciliation and audit intel
 - [Reconciliation methodology](reconciliation-methodology.md)
 - [Controls and audit](controls-and-audit.md)
 - [Rule-pack schema reference](rule-pack-schema-reference.md)
+- [Demo scenarios](demo-scenarios.md)
+- [Docker deployment](docker-deployment.md)
 
 ## Product and Architecture
 
@@ -20,10 +22,17 @@ ReconForge ERP is an open-source, local-first ERP reconciliation and audit intel
 - [Market intelligence](market-intelligence.md)
 - [Architecture](architecture.md)
 - [Commercial strategy](commercial-strategy.md)
+- [Client handoff pack](client-handoff-pack.md)
+- [Security whitepaper](security-whitepaper.md)
+- [Synthetic workshop case study](case-studies/workshop-spare-parts-health-check.md)
+- [Pricing and services](commercial/pricing-and-services.md)
+- [Demo video script](demo-video-script.md)
 
 ## Strategy
 
 - [Repository assessment](strategy/repository-assessment.md)
+- [Product readiness audit](strategy/product-readiness-audit.md)
+- [Productization assessment](strategy/productization-assessment.md)
 - [Competitor intelligence](strategy/competitor-intelligence.md)
 - [Category leadership plan](strategy/category-leadership-plan.md)
 - [Product roadmap](strategy/product-roadmap.md)
@@ -42,6 +51,8 @@ ReconForge ERP is an open-source, local-first ERP reconciliation and audit intel
 
 - [ReconForge Studio](reconforge-studio.md)
 - [Review workflow](review-workflow.md)
+- [Mapping wizard](mapping-wizard.md)
+- [Multi-period comparison](multi-period-comparison.md)
 - [Risk scoring](risk-scoring.md)
 - [Anonymization](anonymization.md)
 - [Synthetic data](synthetic-data.md)

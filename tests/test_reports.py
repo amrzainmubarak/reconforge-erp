@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import date
 from pathlib import Path
 
+import pandas as pd
+
 from reconforge.config import ReconForgeConfig
 from reconforge.io.writers import frame_to_records
 from reconforge.reconciliation.stock_gl import reconcile_stock_gl
@@ -36,9 +38,18 @@ def test_markdown_summary_written(tmp_path: Path, sample_datasets: dict[DatasetN
 def test_html_dashboard_written(tmp_path: Path, sample_datasets: dict[DatasetName, object], config: ReconForgeConfig) -> None:
     stock_result = reconcile_stock_gl(sample_datasets[DatasetName.STOCK_MOVES], sample_datasets[DatasetName.GL_ENTRIES], config)
     wip = generate_wip_aging(sample_datasets[DatasetName.WORK_ORDERS], config, as_of=date(2026, 6, 2))
-    path = write_html_dashboard(tmp_path / "dashboard.html", config, {"exception_count": 3}, stock_result.all_exceptions, wip)
+    path = write_html_dashboard(
+        tmp_path / "dashboard.html",
+        config,
+        {"exception_count": 3},
+        stock_result.all_exceptions,
+        wip,
+        control_value_summary=pd.DataFrame([{"metric": "total_exceptions", "value": 3}]),
+    )
     assert path.exists()
-    assert "Top Exceptions" in path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8")
+    assert "Top Exceptions" in text
+    assert "Control Value Summary" in text
 
 
 def test_management_pack_smoke(tmp_path: Path, sample_datasets: dict[DatasetName, object], config: ReconForgeConfig) -> None:
@@ -57,3 +68,4 @@ def test_management_pack_smoke(tmp_path: Path, sample_datasets: dict[DatasetName
     assert artifacts.json_path.exists()
     assert artifacts.markdown_path.exists()
     assert artifacts.html_path.exists()
+    assert "Control Value Summary" in artifacts.html_path.read_text(encoding="utf-8")

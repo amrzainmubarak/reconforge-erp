@@ -27,12 +27,43 @@ def _table(frame: pd.DataFrame, columns: list[str], limit: int = 10) -> str:
     return f"<table><thead><tr>{header}</tr></thead><tbody>{body}</tbody></table>"
 
 
+def _value_summary_section(
+    control_value_summary: pd.DataFrame | None,
+    top_control_themes: pd.DataFrame | None,
+    recommended_actions: pd.DataFrame | None,
+) -> str:
+    if control_value_summary is None or control_value_summary.empty:
+        return ""
+    cards = "".join(
+        _card(str(row["metric"]).replace("_", " ").title(), str(row["value"]))
+        for _, row in control_value_summary.head(8).iterrows()
+        if "metric" in control_value_summary.columns and "value" in control_value_summary.columns
+    )
+    themes_frame = top_control_themes if top_control_themes is not None else pd.DataFrame()
+    actions_frame = recommended_actions if recommended_actions is not None else pd.DataFrame()
+    themes = _table(themes_frame, ["control_theme", "exception_count", "amount_impact"], limit=5)
+    actions = _table(actions_frame, ["priority", "owner", "action", "trigger_count"], limit=5)
+    return f"""
+    <section class="report">
+      <h2>Control Value Summary</h2>
+      <div class="cards">{cards}</div>
+      <h3>Top Control Themes</h3>
+      {themes}
+      <h3>Recommended Next Actions</h3>
+      {actions}
+    </section>
+"""
+
+
 def write_html_dashboard(
     output_path: Path | str,
     config: ReconForgeConfig,
     summary: dict[str, float | int | str],
     exceptions: pd.DataFrame,
     wip_aging: pd.DataFrame,
+    control_value_summary: pd.DataFrame | None = None,
+    top_control_themes: pd.DataFrame | None = None,
+    recommended_actions: pd.DataFrame | None = None,
 ) -> Path:
     """Write a self-contained HTML dashboard report."""
 
@@ -47,6 +78,7 @@ def write_html_dashboard(
         wip_aging,
         ["work_order", "customer_name", "equipment_serial", "workshop", "aging_days", "aging_bucket", "actual_cost", "risk_level"],
     )
+    value_summary = _value_summary_section(control_value_summary, top_control_themes, recommended_actions)
     html = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -79,6 +111,7 @@ def write_html_dashboard(
   </header>
   <main>
     <div class="cards">{cards}</div>
+    {value_summary}
     <section class="report">
       <h2>Top Exceptions</h2>
       {exception_table}

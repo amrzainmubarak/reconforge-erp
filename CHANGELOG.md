@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased
+
+ReconForge ERP's next release is intended to be the Product-Ready Pilot Toolkit. It focuses on first-time-user credibility, consultant handoff, local review, export mapping usability, multi-period comparison, and honest pilot documentation.
+
+- Added `reconforge mappings inspect` and `reconforge mappings wizard` to inspect CSV/XLSX headers against Odoo/SAP-style mapping profiles and generate Markdown/JSON mapping reports.
+- Added `reconforge compare periods` for local multi-period exception comparison across generated output folders.
+- Hardened `reconforge report client-pack` with evidence folder copying, missing-artifact handling, a privacy note, next steps, and `files_manifest.json`.
+- Extended `reconforge demo run` to create a local client pack and print clearer next steps for dashboard, executive report, management pack, evidence binder, Studio, and review register.
+- Added product readiness audit, mapping wizard guide, multi-period comparison guide, Docker deployment checklist, synthetic case study, security whitepaper, pricing/service model, and demo video script.
+- Updated README onboarding and documentation links for the 10-minute demo, Studio review workflow, mapping wizard, multi-period comparison, client handoff pack, Docker deployment, case study, and security whitepaper.
+- Added tests for mapping inspection, malformed/empty mapping inputs, multi-period comparison, review-state comparison categories, and client-pack manifest behavior.
+- Version metadata remains at `0.6.0` until all release gates, including Docker runtime verification, are completed.
+
+## v0.6.0
+
+ReconForge ERP v0.6.0 focuses on productization and enterprise usability while staying local-first and file-based.
+
+- Added Studio review status update actions that write to `output/review_state.json`.
+- Added safe local POST handling, status validation, escaped rendering, and tests for Studio review updates.
+- Added `reconforge mappings validate` for ERP mapping profile validation.
+- Added `reconforge demo run` for a deterministic first-time-user workflow with reports, evidence, review state, and review register export.
+- Added Control Value Summary sections to HTML and Excel reports.
+- Added `reconforge report client-pack` for local consultant/client handoff folders.
+- Added productization assessment, demo scenarios, client handoff docs, and practical 10-minute demo onboarding.
+- Updated version metadata to `0.6.0`.
+
 ## v0.5.0
 
 ReconForge ERP v0.5.0 adds the local exception review workflow foundation.

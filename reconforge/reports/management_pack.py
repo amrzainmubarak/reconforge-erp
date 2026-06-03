@@ -18,6 +18,7 @@ from reconforge.reconciliation.workorders import result_frames as workorder_fram
 from reconforge.reports.html import write_html_dashboard
 from reconforge.reports.markdown import write_markdown_summary
 from reconforge.reports.wip_aging import aging_summary
+from reconforge.review.state import load_review_state, merge_review_state_with_exceptions
 from reconforge.validators import issues_to_frame, validate_input_directory
 
 
@@ -65,6 +66,73 @@ def _risk_scoring(stock_result: StockGLReconciliationResult, workorder_result: W
     if combined.empty or "risk_level" not in combined.columns:
         return pd.DataFrame(columns=["risk_level", "exception_count"])
     return combined.groupby("risk_level", as_index=False).agg(exception_count=("risk_level", "count"))
+
+
+def _amount_impact_series(frame: pd.DataFrame) -> pd.Series:
+    if frame.empty:
+        return pd.Series(dtype=float)
+    amount = pd.Series([0.0] * len(frame), index=frame.index)
+    for field in ("amount_impact", "total_cost", "amount", "total_price", "actual_cost", "estimated_cost", "invoice_amount"):
+        if field not in frame.columns:
+            continue
+        values = pd.to_numeric(frame[field], errors="coerce").fillna(0).abs()
+        amount = amount.mask(amount.eq(0), values)
+    return amount
+
+
+def _severity_series(frame: pd.DataFrame) -> pd.Series:
+    if frame.empty:
+        return pd.Series(dtype=str)
+    severity = pd.Series([""] * len(frame), index=frame.index)
+    for field in ("risk_level", "severity"):
+        if field in frame.columns:
+            severity = severity.mask(severity.str.strip().eq(""), frame[field].astype(str))
+    return severity.str.lower()
+
+
+def _top_control_themes(combined: pd.DataFrame) -> pd.DataFrame:
+    if combined.empty:
+        return pd.DataFrame(columns=["control_theme", "exception_count", "amount_impact"])
+    theme_column = "exception_type" if "exception_type" in combined.columns else "rule_name" if "rule_name" in combined.columns else ""
+    if not theme_column:
+        return pd.DataFrame(columns=["control_theme", "exception_count", "amount_impact"])
+    themed = combined.assign(
+        control_theme=combined[theme_column].astype(str),
+        amount_impact=_amount_impact_series(combined),
+    )
+    return (
+        themed.groupby("control_theme", as_index=False)
+        .agg(exception_count=("control_theme", "count"), amount_impact=("amount_impact", "sum"))
+        .sort_values(["exception_count", "amount_impact"], ascending=False)
+        .head(5)
+    )
+
+
+def _control_value_summary(combined: pd.DataFrame, wip_aging: pd.DataFrame, output_dir: Path) -> pd.DataFrame:
+    total_exceptions = len(combined)
+    merged = merge_review_state_with_exceptions(combined, load_review_state(output_dir / "review_state.json"))
+    status = merged.get("status", pd.Series(["New"] * len(merged))).astype(str)
+    high_critical = int(_severity_series(combined).isin({"high", "critical"}).sum())
+    unresolved = int((~status.isin({"Resolved", "Accepted Risk"})).sum()) if total_exceptions else 0
+    accepted_risk = int(status.eq("Accepted Risk").sum())
+    escalated = int(status.eq("Escalated").sum())
+    reviewed = int(status.ne("New").sum())
+    review_completion_rate = round((reviewed / total_exceptions) * 100, 2) if total_exceptions else 0.0
+    estimated_value_impact = round(float(_amount_impact_series(combined).sum()), 2) if total_exceptions else 0.0
+    wip_source = wip_aging.get("actual_cost", wip_aging.get("estimated_cost", pd.Series([0] * len(wip_aging))))
+    wip_exposure = round(float(pd.to_numeric(wip_source, errors="coerce").fillna(0).sum()), 2) if not wip_aging.empty else 0.0
+    return pd.DataFrame(
+        [
+            {"metric": "total_exceptions", "value": total_exceptions, "meaning": "All detected reconciliation and operational exceptions."},
+            {"metric": "high_or_critical_exceptions", "value": high_critical, "meaning": "Exceptions requiring priority finance, audit, or operations review."},
+            {"metric": "unresolved_exceptions", "value": unresolved, "meaning": "Exceptions not yet resolved or formally accepted as risk."},
+            {"metric": "accepted_risk_count", "value": accepted_risk, "meaning": "Exceptions explicitly accepted with documented rationale."},
+            {"metric": "escalated_count", "value": escalated, "meaning": "Exceptions assigned for escalation."},
+            {"metric": "estimated_value_impact", "value": estimated_value_impact, "meaning": "Simple sum of available exception amount fields; not a savings claim."},
+            {"metric": "wip_exposure", "value": wip_exposure, "meaning": "Available WIP cost exposure from open work-order aging data."},
+            {"metric": "review_completion_rate_pct", "value": review_completion_rate, "meaning": "Percent of exceptions with a status other than New."},
+        ],
+    )
 
 
 def _risk_matrix(combined: pd.DataFrame) -> pd.DataFrame:
@@ -148,6 +216,8 @@ def generate_management_pack(
     wip_summary = aging_summary(wip_aging)
     audit_log = _audit_log(config, input_path)
     combined_exceptions = pd.concat([stock_result.all_exceptions, workorder_result.all_exceptions], ignore_index=True, sort=False)
+    control_value_summary = _control_value_summary(combined_exceptions, wip_aging, output_dir)
+    top_control_themes = _top_control_themes(combined_exceptions)
     high_risk = (
         combined_exceptions[
             pd.to_numeric(combined_exceptions.get("risk_score", pd.Series([0] * len(combined_exceptions))), errors="coerce").fillna(0).ge(61)
@@ -159,6 +229,7 @@ def generate_management_pack(
 
     sheets = {
         "Executive Summary": executive_summary,
+        "Control Value Summary": control_value_summary,
         "KPI Dashboard": executive_summary,
         "Reconciliation Summary": stock_result.summary,
         "Stock vs GL Mismatch": stock_result.all_exceptions,
@@ -173,6 +244,7 @@ def generate_management_pack(
         "WIP Aging Summary": wip_summary,
         "Risk Scoring": risk_scoring,
         "Risk Matrix": _risk_matrix(combined_exceptions),
+        "Top Control Themes": top_control_themes,
         "Control Effectiveness": _control_effectiveness(stock_result, workorder_result),
         "Recommended Actions": recommended_actions,
         "Audit Log": audit_log,
@@ -197,6 +269,8 @@ def generate_management_pack(
 
     payload: dict[str, Any] = {
         "executive_summary": frame_to_records(executive_summary),
+        "control_value_summary": frame_to_records(control_value_summary),
+        "top_control_themes": frame_to_records(top_control_themes),
         "risk_scoring": frame_to_records(risk_scoring),
         "stock_gl_summary": frame_to_records(stock_result.summary),
         "workorder_summary": frame_to_records(workorder_result.summary),
@@ -227,6 +301,9 @@ def generate_management_pack(
         management_summary_dict(executive_summary),
         combined_exceptions.sort_values("risk_score", ascending=False) if not combined_exceptions.empty and "risk_score" in combined_exceptions.columns else combined_exceptions,
         wip_aging,
+        control_value_summary=control_value_summary,
+        top_control_themes=top_control_themes,
+        recommended_actions=recommended_actions,
     )
     write_html_dashboard(
         output_dir / "executive_report.html",
@@ -234,6 +311,9 @@ def generate_management_pack(
         management_summary_dict(executive_summary),
         combined_exceptions.sort_values("risk_score", ascending=False) if not combined_exceptions.empty and "risk_score" in combined_exceptions.columns else combined_exceptions,
         wip_aging,
+        control_value_summary=control_value_summary,
+        top_control_themes=top_control_themes,
+        recommended_actions=recommended_actions,
     )
 
     return ManagementPackArtifacts(

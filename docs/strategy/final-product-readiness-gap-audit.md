@@ -58,4 +58,4 @@ Date: 2026-06-03
 
 ## Release Recommendation
 
-Keep this work under an unreleased v0.6.x hardening line until Docker runtime verification passes in CI or a documented local Docker environment. A v0.6.1 pilot-readiness release is reasonable after tests, Docker CI, and documentation checks pass. Do not bump to v0.7.0 until Docker runtime verification and at least one structured pilot rehearsal are complete.
+ReconForge ERP v0.6.1 — Pilot Readiness Hardening is a reasonable pilot-readiness release after the Python quality gates and release-hygiene checks pass. Do not bump to v0.7.0 until Docker runtime verification, authentication/deployment hardening, and at least one structured pilot rehearsal are complete.

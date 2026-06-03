@@ -2,6 +2,8 @@
 
 ReconForge ERP is an open-source, local-first ERP reconciliation and audit intelligence platform for stock movements, GL postings, work orders, WIP, spare-parts, purchase flows, invoices, and operational controls.
 
+Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains early-stage, export-based, and conservative about Docker runtime verification, enterprise readiness, and audit/compliance claims.
+
 ## Start Here
 
 - [Getting started](getting-started.md)

@@ -302,7 +302,7 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
     output_registry = build_download_registry(output_path, allowed_suffixes=DOWNLOAD_SUFFIXES)
     evidence_registry = build_download_registry(output_path / "evidence", allowed_suffixes=DOWNLOAD_SUFFIXES, recursive=True)
     docs_registry = build_download_registry(Path("docs"), allowed_suffixes=DOC_SUFFIXES)
-    app = FastAPI(title="ReconForge Studio", version="0.6.0")
+    app = FastAPI(title="ReconForge Studio", version="0.6.1")
 
     def _render_exceptions_page(
         *,

@@ -1,19 +1,19 @@
 # Changelog
 
-## Unreleased
+## v0.6.1 — Pilot Readiness Hardening
 
-ReconForge ERP's next release is intended to be the Product-Ready Pilot Toolkit. It focuses on first-time-user credibility, consultant handoff, local review, export mapping usability, multi-period comparison, and honest pilot documentation.
+ReconForge ERP v0.6.1 focuses on post-productization hardening for credible local pilots, consultant demos, and cautious commercial evaluation while staying local-first, file-based, and export-oriented.
 
-- Added `reconforge mappings inspect` and `reconforge mappings wizard` to inspect CSV/XLSX headers against Odoo/SAP-style mapping profiles and generate Markdown/JSON mapping reports.
-- Added `reconforge compare periods` for local multi-period exception comparison across generated output folders.
-- Hardened `reconforge report client-pack` with evidence folder copying, missing-artifact handling, a privacy note, next steps, and `files_manifest.json`.
-- Extended `reconforge demo run` to create a local client pack and print clearer next steps for dashboard, executive report, management pack, evidence binder, Studio, and review register.
-- Added product readiness audit, mapping wizard guide, multi-period comparison guide, Docker deployment checklist, synthetic case study, security whitepaper, pricing/service model, and demo video script.
-- Updated README onboarding and documentation links for the 10-minute demo, Studio review workflow, mapping wizard, multi-period comparison, client handoff pack, Docker deployment, case study, and security whitepaper.
-- Added tests for mapping inspection, malformed/empty mapping inputs, multi-period comparison, review-state comparison categories, and client-pack manifest behavior.
-- Added client-pack redaction/exclusion flags, optional manifest checksums, evidence SHA-256 integrity manifests, period trend summaries, and additional export-based ERPNext, Dynamics, and NetSuite profiles.
-- Added Docker build CI workflow, Docker verification report, redaction and evidence-integrity docs, compliance disclaimer, pilot proposal template, onboarding checklist, synthetic Odoo/SAP case studies, demo recording checklist, and static landing page foundation.
-- Version metadata remains at `0.6.0` until all release gates, including Docker runtime verification, are completed.
+- Added client-pack redaction and exclusion controls, including `--redact-names`, `--redact-amounts`, `--exclude-raw-records`, `--summary-only`, `--exclude-evidence`, and optional manifest checksums.
+- Added SHA-256 integrity manifests for evidence binders and optional checksum entries for client-pack manifests. These are checksums, not legal digital signatures.
+- Added period trend reporting with new, recurring, resolved, high/critical, review-completion, accepted-risk, escalated, and top recurring theme outputs.
+- Added export-based ERPNext, Microsoft Dynamics, and NetSuite profiles without direct connector claims.
+- Added a Docker build workflow and Docker verification documentation while keeping Docker runtime verification explicitly unclaimed unless build/run commands pass in a live Docker environment.
+- Added a compliance disclaimer, redaction controls guide, evidence-integrity guide, and updated security/commercial documentation.
+- Added pilot proposal and client onboarding checklist documents for consultant-led evaluations.
+- Added synthetic Odoo and SAP pilot case studies with clear no-customer, no-savings, and no-audit-opinion boundaries.
+- Added a demo recording checklist, expanded demo video package, and static landing page foundation.
+- Updated version metadata to `0.6.1`.
 
 ## v0.6.0
 

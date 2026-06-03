@@ -34,4 +34,4 @@ These commands should be run from Docker Desktop, Linux Docker Engine, or CI bef
 
 ## Release Recommendation
 
-Do not describe Docker deployment as locally verified from this environment. It is reasonable to say Docker build verification is covered by CI once the new workflow passes.
+For ReconForge ERP v0.6.1, do not describe Docker runtime as locally verified from this environment. It is reasonable to say a Docker build workflow exists; runtime verification still requires Docker Desktop, Docker Engine, or CI evidence showing the documented build and run commands pass.

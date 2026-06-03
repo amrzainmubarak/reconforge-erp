@@ -209,7 +209,7 @@ The command writes Excel, HTML, JSON, and Markdown outputs. It does not infer sa
 
 ## Maturity Note
 
-ReconForge ERP is early-stage. It is designed for local-first ERP reconciliation and audit workflows and currently focuses on export-based mapping profiles, local exception review, evidence generation, multi-period output comparison, and generic ERP datasets. The current version remains v0.6.0 while product-ready pilot toolkit work is staged under Unreleased notes until all release gates are complete.
+ReconForge ERP is early-stage, local-first, and export-based. The current release is **v0.6.1 — Pilot Readiness Hardening**, focused on safer client handoff, evidence integrity, export-profile coverage, demo readiness, and conservative pilot documentation. Docker build workflow support exists, but Docker runtime verification remains a roadmap/release-gate item unless the documented build and run commands pass in a live Docker environment.
 
 ## Architecture
 

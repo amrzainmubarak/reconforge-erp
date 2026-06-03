@@ -100,4 +100,4 @@ Record the Docker version, operating system, and command output in the release n
 
 ## Current Verification Status
 
-See [Docker Verification Report](strategy/docker-verification-report.md). The local WSL environment used for the latest hardening pass could not reach the Docker daemon, so runtime verification is not claimed from that environment.
+See [Docker Verification Report](strategy/docker-verification-report.md). ReconForge ERP v0.6.1 includes Docker build workflow support and deployment documentation, but Docker runtime verification is not claimed unless Docker Desktop or Docker Engine is running and the documented build/run commands pass.

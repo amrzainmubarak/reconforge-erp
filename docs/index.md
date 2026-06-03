@@ -84,6 +84,7 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Report samples](report-samples.md)
 - [Maintainer guide](maintainer-guide.md)
 - [Release process](maintainers/release-process.md)
+- [Repository settings](maintainers/repository-settings.md)
 - [Triage guide](maintainers/triage-guide.md)
 - [Recommended labels](maintainers/labels.md)
 - [Suggested issues](maintainers/suggested-issues.md)

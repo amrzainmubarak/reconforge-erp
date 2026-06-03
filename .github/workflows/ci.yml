@@ -5,6 +5,9 @@ on:
     branches: ["main", "master"]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -13,16 +16,21 @@ jobs:
         python-version: ["3.11", "3.12"]
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
-      - name: Install package
-        run: python -m pip install -e ".[dev]"
+      - name: Install locked dependencies
+        run: python -m pip install --require-hashes -r requirements-dev.lock
+
+      - name: Install local package
+        run: python -m pip install --no-deps --no-build-isolation -e .
 
       - name: Ruff
         run: ruff check .
@@ -40,4 +48,4 @@ jobs:
           reconforge rules validate --pack control-packs/audit-basic
 
       - name: Build package
-        run: python -m build
+        run: python -m build --no-isolation

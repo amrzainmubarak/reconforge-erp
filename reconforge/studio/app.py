@@ -421,9 +421,9 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
                 escalation_owner=_form_value(form, "escalation_owner", max_length=120),
             )
         except ValueError as exc:
-            logger.exception("Failed to update review status")
+            logger.warning("Rejected review status update: %s", exc)
             return _render_exceptions_page(
-                message="Unable to update review status. Please verify your input.",
+                message=str(exc),
                 message_type="error",
             )
         save_review_state(state_path, state)

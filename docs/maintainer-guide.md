@@ -37,6 +37,8 @@ reconforge report management-pack --input examples/sample_data --config config/r
 
 Review [repository settings](maintainers/repository-settings.md) after workflow, branch protection, security policy, or Scorecard changes. Some settings, including required reviews and default workflow token permissions, must be enforced in GitHub rather than in tracked source files.
 
+Use [Scorecard alert triage](maintainers/scorecard-alert-triage.md) to separate source-file fixes from GitHub settings, project-history, and OpenSSF Best Practices badge actions.
+
 ## Data Governance
 
 Never commit live ERP data. Keep sample data synthetic and useful enough to exercise the control logic.

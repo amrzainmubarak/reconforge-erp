@@ -85,6 +85,7 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Maintainer guide](maintainer-guide.md)
 - [Release process](maintainers/release-process.md)
 - [Repository settings](maintainers/repository-settings.md)
+- [Scorecard alert triage](maintainers/scorecard-alert-triage.md)
 - [Triage guide](maintainers/triage-guide.md)
 - [Recommended labels](maintainers/labels.md)
 - [Suggested issues](maintainers/suggested-issues.md)

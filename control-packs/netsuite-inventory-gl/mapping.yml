@@ -1,0 +1,70 @@
+profile_id: netsuite-inventory-gl
+source_system: netsuite
+version: 0.6.1
+description: Export-based mapping profile for NetSuite saved-search or report exports. It does not provide a direct NetSuite connector.
+export_workflow:
+  mode: export_based
+  cloud_upload_required: false
+  direct_api_connector: false
+  notes:
+    - Export NetSuite saved searches or reports to CSV/XLSX and map them into ReconForge canonical files.
+    - Keep subsidiary, location, account, and accounting period scope consistent.
+canonical_datasets:
+  stock_moves.csv:
+    source_reports: [Inventory Activity saved search, Inventory Detail report]
+    purpose: Inventory movements and values used for stock-to-GL review.
+  gl_entries.csv:
+    source_reports: [Transaction Accounting Lines saved search, GL Impact export]
+    purpose: Posted accounting rows for inventory, WIP, variance, expense, and clearing accounts.
+  products.csv:
+    source_reports: [Item saved search]
+    purpose: Item master and account configuration review.
+field_mappings:
+  stock_moves.csv:
+    move_id: [internal_id, transaction_id, line_id]
+    date: [date, transaction_date, posting_period_date]
+    source_document: [document_number, transaction_number, created_from, reference]
+    work_order: [work_order, project, job, manufacturing_order]
+    product_code: [item_name_number, item_id, sku]
+    product_name: [item_display_name, item_name, description]
+    category: [item_type, class, item_category]
+    quantity: [quantity, quantity_on_transaction]
+    unit_cost: [unit_cost, average_cost, rate]
+    total_cost: [amount, inventory_value, value]
+    warehouse: [location, inventory_location, bin]
+    movement_type: [transaction_type, type, inventory_activity_type]
+    customer_code: [customer, entity, customer_id]
+    equipment_serial: [serial_lot_number, asset, equipment]
+    created_by: [created_by, user, employee]
+  gl_entries.csv:
+    entry_id: [line_id, internal_id, transaction_line_id]
+    date: [date, transaction_date, posting_date]
+    journal: [transaction_type, journal, posting_period]
+    account_code: [account_number, account, gl_account]
+    account_name: [account_name, account]
+    reference: [document_number, transaction_number, memo, reference]
+    source_document: [document_number, created_from, transaction_number]
+    debit: [debit, debit_amount]
+    credit: [credit, credit_amount]
+    amount: [amount, signed_amount, net_amount]
+    cost_center: [department, class, cost_center]
+    work_order: [work_order, project, job]
+    created_by: [created_by, user, employee]
+  products.csv:
+    product_code: [item_name_number, item_id, sku]
+    product_name: [item_display_name, item_name, description]
+    category: [item_type, class, item_category]
+    standard_cost: [average_cost, standard_cost, purchase_price]
+    stock_account: [asset_account, inventory_account]
+    expense_account: [expense_account, cogs_account]
+join_keys:
+  stock_to_gl:
+    stock_side: [source_document, product_code, date, total_cost]
+    gl_side: [source_document, reference, date, amount]
+  stock_to_product:
+    stock_side: [product_code]
+    product_side: [product_code]
+quality_checks:
+  - Confirm subsidiary, location, account, and accounting period scope across exports.
+  - Confirm saved-search columns include transaction number, item, amount, account, and posting date.
+  - Confirm sign convention for inventory activity and GL impact rows.

@@ -1,0 +1,60 @@
+rules:
+  - rule_id: ERPNEXT-SG-001
+    rule_name: Stock ledger row missing voucher
+    severity: high
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: missing
+      field: source_document
+    message: ERPNext stock ledger row lacks a voucher or source document for GL traceability.
+    recommended_action: Include voucher number, voucher type, or related stock entry in the mapped export.
+    risk_impact: 76
+    confidence: 0.9
+    evidence_fields: [move_id, date, source_document, product_code, warehouse, total_cost]
+  - rule_id: ERPNEXT-SG-002
+    rule_name: GL row missing voucher reference
+    severity: high
+    entity_type: gl_entry
+    source_file: gl_entries.csv
+    condition:
+      operator: and
+      conditions:
+        - operator: missing
+          field: reference
+        - operator: missing
+          field: source_document
+    message: ERPNext GL row lacks both reference and source document fields.
+    recommended_action: Include voucher number, against voucher, remarks, or stock entry reference in the GL export.
+    risk_impact: 78
+    confidence: 0.9
+    evidence_fields: [entry_id, date, account_code, reference, source_document, amount]
+  - rule_id: ERPNEXT-SG-003
+    rule_name: Stock movement item missing from item master
+    severity: high
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: cross_file_missing
+      source_key: product_code
+      target_file: products.csv
+      target_key: product_code
+    message: Stock movement references an item missing from the mapped item master.
+    recommended_action: Confirm the item export covers all moved items and that item_code is mapped consistently.
+    risk_impact: 72
+    confidence: 0.85
+    evidence_fields: [move_id, source_document, product_code, product_name, total_cost]
+  - rule_id: ERPNEXT-SG-004
+    rule_name: High-value stock ledger movement
+    severity: medium
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: greater_or_equal
+      field: total_cost
+      value: 1000
+    message: High-value ERPNext stock movement should be reviewed against GL and source evidence.
+    recommended_action: Trace the voucher, item, warehouse, and related GL row before close review.
+    risk_impact: 60
+    confidence: 0.85
+    evidence_fields: [move_id, date, source_document, product_code, quantity, total_cost]

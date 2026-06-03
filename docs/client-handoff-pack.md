@@ -8,6 +8,18 @@ The client handoff pack is a local folder for consultants, internal audit teams,
 reconforge report client-pack --input output/demo --output output/demo/client_pack
 ```
 
+Redacted handoff example:
+
+```bash
+reconforge report client-pack --input output/demo --output output/client_pack_redacted --redact-names --redact-amounts --exclude-raw-records --include-manifest-checksums
+```
+
+Summary-only example:
+
+```bash
+reconforge report client-pack --input output/demo --output output/client_pack_summary --summary-only
+```
+
 ## Included Files
 
 When available, the command copies:
@@ -20,6 +32,7 @@ When available, the command copies:
 - `evidence/index.html`
 - `evidence/evidence_register.xlsx`
 - `evidence/evidence_index.json`
+- `evidence/evidence_manifest.json`
 - generated evidence case files under `evidence/`
 
 It also writes:
@@ -29,7 +42,20 @@ It also writes:
 - `data_privacy_note.md`
 - `files_manifest.json`
 
-Missing optional files are listed in the summary and manifest. Hidden files and system folders are not included.
+Missing optional files and excluded files are listed in the summary and manifest. Hidden files and system folders are not included.
+
+## Redaction and Sharing Controls
+
+Available options:
+
+- `--redact-names`
+- `--redact-amounts`
+- `--exclude-raw-records`
+- `--summary-only`
+- `--exclude-evidence`
+- `--include-manifest-checksums`
+
+Redaction is applied only to files copied into the client pack. The source output folder is not modified. Binary workbooks are excluded when redaction is requested because text-level redaction cannot safely rewrite every workbook cell.
 
 ## Recommended Use
 
@@ -45,3 +71,5 @@ Missing optional files are listed in the summary and manifest. Hidden files and 
 The pack is a file-based handoff folder. It does not add authentication, a database, approvals, or cloud storage. Treat it as a structured local output for review meetings, audit preparation, and consultant handover.
 
 Evidence case folders can contain generated source-record extracts. Review the manifest and privacy note before external sharing.
+
+See [Redaction controls](redaction-controls.md) and [Evidence integrity](evidence-integrity.md).

@@ -11,6 +11,16 @@ This document is a preliminary future service model for ReconForge ERP. It is no
 - Clients must validate outputs, mappings, assumptions, and exceptions.
 - ReconForge core workflows are export-based unless a future connector is explicitly implemented.
 
+## Buyer Personas
+
+| Persona | Typical Need | Buying Concern |
+| --- | --- | --- |
+| Finance controller | Month-end stock, WIP, and GL exception visibility | Trustworthy outputs without a long implementation. |
+| Internal audit director | Evidence trail and recurring control issue visibility | Clear scope, privacy handling, and no unsupported audit claims. |
+| ERP consultant | Repeatable export-based diagnostic toolkit | Fast mapping workflow and client-ready handoff materials. |
+| Operations manager | Work-order, spare-parts, and old-part return follow-up | Practical actions and accountable owners. |
+| Founder/consultant | Commercial service packaging | Credible proposal, demo, and delivery boundaries. |
+
 ## 1. ERP Reconciliation Health Check
 
 - Target customer: finance controllers, internal audit teams, workshop/fleet operators, and ERP consultants needing a focused local review.
@@ -35,9 +45,9 @@ This document is a preliminary future service model for ReconForge ERP. It is no
 - Included: local processing, comparison, recurring findings summary, review call.
 - Not included: guaranteed issue resolution, audit sign-off, ERP configuration changes.
 
-## 3. Odoo/SAP Export Mapping Setup
+## 3. ERP Export Mapping Setup
 
-- Target customer: Odoo implementers, SAP users, ERP consultants, and finance teams adapting exports.
+- Target customer: Odoo, SAP, ERPNext, Dynamics, NetSuite, and generic CSV users adapting exports.
 - Deliverables: mapping inspection report, export template checklist, validated mapping pack notes, sample run.
 - Timeline: 3 to 10 business days depending on export complexity.
 - Required data: sample CSV/XLSX exports, ERP layout descriptions, period/company scope.
@@ -82,6 +92,35 @@ This document is a preliminary future service model for ReconForge ERP. It is no
 - Pricing hypothesis: preliminary USD 2,000 to 15,000 depending on rules, data sources, and testing depth.
 - Included: rule design, implementation, local validation, documentation.
 - Not included: legal/audit opinion, live ERP changes, guarantee of all possible exception detection.
+
+## Pilot Offer
+
+- Objective: prove whether local export-based reconciliation creates usable exceptions and evidence for one scoped process.
+- Suggested scope: one entity, one period, one primary reconciliation workflow, one review workshop.
+- Deliverables: mapping report, management pack, executive report, evidence binder, review register, client pack, limitations note.
+- Pricing hypothesis: preliminary USD 2,500 to 7,500.
+- Acceptance criteria: agreed exports validate or limitations are documented; outputs are reviewed with stakeholders; next actions are assigned.
+
+## Monthly Service Offer
+
+- Objective: repeat the same local export workflow and compare exceptions across periods.
+- Deliverables: monthly pack, trend comparison, recurring themes, review register, handoff call.
+- Pricing hypothesis: preliminary USD 1,500 to 6,000 per month.
+- Boundary: no guaranteed issue resolution or financial savings claim.
+
+## Implementation Offer
+
+- Objective: establish a repeatable local process for a client team.
+- Deliverables: export checklist, mapping notes, runbook, local deployment checklist, training session, first period output.
+- Pricing hypothesis: preliminary USD 5,000 to 20,000 depending on scope.
+- Boundary: no hosted SaaS, direct connector, or ERP configuration change unless separately contracted.
+
+## Legal And Risk Disclaimers
+
+- ReconForge does not provide legal, tax, regulatory, accounting, or audit advice.
+- ReconForge outputs must be reviewed by qualified personnel.
+- No savings, fraud detection, compliance certification, or audit opinion is guaranteed.
+- Pricing hypotheses are preliminary and should be validated through real discovery and scoped proposals.
 
 ## Packaging Notes
 

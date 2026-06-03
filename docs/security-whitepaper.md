@@ -26,6 +26,17 @@ Users remain responsible for any sharing they perform outside ReconForge, such a
 
 ReconForge reads CSV/XLSX files from paths supplied by the user. Input validation checks required fields, references, and basic data quality. The mapping wizard reads lightweight header samples and handles malformed CSVs by reporting errors rather than modifying files.
 
+## 4.1 Data Classification Guidance
+
+Before a pilot, classify exports and outputs at least as:
+
+- public demo or synthetic
+- internal business data
+- confidential ERP data
+- restricted personal, customer, supplier, employee, equipment, or financial data
+
+Client packs and evidence binders should be treated as confidential until reviewed and approved for sharing.
+
 ## 5. YAML Rule Safety Model
 
 Control packs are YAML configuration, not arbitrary executable Python. Rules are loaded into pydantic models and evaluated through supported operators. Mapping validation checks required pack files, YAML structure, rule IDs, severities, supported operators, and schema conformance.
@@ -41,6 +52,8 @@ Dashboard and Studio download routes use registry-based allowlists. The app buil
 Static HTML reports and Studio pages escape rendered values before inserting them into HTML. Studio review fields such as reviewer and note are escaped when displayed. Tests cover table escaping and review-action escaping.
 
 Known limitation: generated HTML files are static local artifacts. Users should still treat generated output as sensitive and open it in trusted contexts.
+
+Studio review-status errors use static user-facing messages for invalid status values. Raw exception internals and raw user input are not rendered into the invalid-status response.
 
 ## 8. Path Traversal Protections
 
@@ -75,6 +88,19 @@ Evidence folders may include source-record extracts, match candidates, triggered
 
 Client handoff packs include a privacy note and manifest. Teams must review evidence before external sharing.
 
+Evidence binders now write `evidence_manifest.json` with SHA-256 checksums. This is an integrity aid, not a legal digital signature.
+
+Client packs support redaction and exclusion options:
+
+- `--redact-names`
+- `--redact-amounts`
+- `--exclude-raw-records`
+- `--summary-only`
+- `--exclude-evidence`
+- `--include-manifest-checksums`
+
+Redaction applies only to copied client-pack files. Binary workbooks are excluded when redaction is requested because text-level redaction cannot safely rewrite every workbook cell.
+
 ## 13. Docker Deployment Considerations
 
 The Dockerfile packages the local CLI and repository assets. Docker does not add authentication, encryption, or approval workflows. Mounted host directories remain governed by host permissions.
@@ -85,6 +111,8 @@ Recommended practice:
 - avoid broad home-directory mounts
 - keep generated outputs in controlled local paths
 - review evidence before sharing
+
+Docker runtime verification was not completed in the latest local WSL environment because the Docker daemon was unavailable. See `docs/strategy/docker-verification-report.md`.
 
 ## 14. Threat Model
 
@@ -116,20 +144,22 @@ Out of scope for the current local-first version:
 - No third-party security certification.
 - No formal data retention policy beyond local files.
 - No automatic PII classification in outputs.
+- No workbook-level redaction when redaction is requested; binary workbooks are excluded from redacted client packs.
+- No legal digital signature for evidence bundles; only checksums are currently implemented.
 
 ## 16. Security Roadmap
 
 Near-term:
 
-- stronger client-pack exclusion controls
-- optional output redaction checklist
-- Docker build verification in CI if lightweight
+- authenticated local workspace mode
+- workbook-level redaction strategy or clearer safe-export alternatives
+- Docker runtime verification across supported local environments
 - dependency audit workflow hardening
 - clearer secure deployment defaults
+- SBOM and signed release artifact investigation
 
 Longer-term:
 
-- authenticated local workspace mode
 - signed evidence bundles
 - role-aware review workflow
 - optional encrypted local state

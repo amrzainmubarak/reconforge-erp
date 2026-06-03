@@ -19,6 +19,7 @@ Optional follow-up commands:
 reconforge mappings wizard --input examples/sample_data --pack control-packs/odoo-inventory-valuation --output output/mapping_wizard
 reconforge compare periods --inputs output/demo output/demo --output output/period_comparison
 reconforge report client-pack --input output/demo --output output/client_pack
+reconforge report client-pack --input output/demo --output output/client_pack_redacted --redact-names --redact-amounts --exclude-raw-records --include-manifest-checksums
 ```
 
 ## Files To Open
@@ -30,6 +31,7 @@ reconforge report client-pack --input output/demo --output output/client_pack
 - `output/demo/evidence/index.html`
 - `output/demo/review_register.xlsx`
 - `output/demo/client_pack/files_manifest.json`
+- `output/client_pack_redacted/files_manifest.json`
 - `output/mapping_wizard/mapping_report.md`
 - `output/period_comparison/period_comparison.html`
 
@@ -89,6 +91,7 @@ reconforge studio --input examples/sample_data --output output/demo
 
 ```bash
 reconforge report client-pack --input output/demo --output output/client_pack
+reconforge report client-pack --input output/demo --output output/client_pack_redacted --redact-names --redact-amounts --exclude-raw-records --include-manifest-checksums
 ```
 
 Narration close:
@@ -180,6 +183,7 @@ Open `output/period_comparison/period_comparison.html`.
 
 ```bash
 reconforge report client-pack --input output/demo --output output/client_pack
+reconforge report client-pack --input output/demo --output output/client_pack_redacted --redact-names --redact-amounts --exclude-raw-records --include-manifest-checksums
 ```
 
 Open:
@@ -187,6 +191,7 @@ Open:
 - `output/client_pack/handoff_summary.md`
 - `output/client_pack/data_privacy_note.md`
 - `output/client_pack/files_manifest.json`
+- `output/client_pack_redacted/files_manifest.json`
 
 ## Screen-by-Screen Shot List
 
@@ -204,6 +209,7 @@ Open:
 - Mapping report.
 - Period comparison report.
 - Client pack manifest and privacy note.
+- Redacted client pack manifest with checksum entries.
 
 ## Key Business Messages
 
@@ -214,6 +220,7 @@ Open:
 - Mapping helper for Odoo/SAP-style export adaptation.
 - Multi-period view of recurring and resolved issues.
 - Client handoff folder for consulting delivery.
+- Redaction controls and integrity manifests for safer handoff review.
 
 ## What Not To Claim
 
@@ -224,3 +231,50 @@ Open:
 - Do not claim an audit opinion.
 - Do not claim hosted enterprise security controls.
 - Do not imply evidence folders are safe to share without review.
+
+## Common Questions And Answers
+
+**Does ReconForge connect directly to ERP systems?**
+No. The current workflow is export-based using local CSV/XLSX files.
+
+**Is this an audit opinion?**
+No. ReconForge supports exception review and evidence organization. Qualified personnel must validate conclusions.
+
+**Can it run without cloud upload?**
+Yes. Core workflows run locally by default.
+
+**Can I share the outputs with a client?**
+Only after reviewing privacy, redaction, and sharing permissions. Use client-pack redaction controls for safer handoff rehearsals.
+
+**Does it prove financial savings?**
+No. Savings or value impact must be validated by the client and should not be claimed from sample data.
+
+## Short Pitches
+
+English:
+
+"ReconForge ERP helps finance, audit, and ERP teams turn local ERP exports into reconciliation reports, review registers, evidence binders, period trends, and client-ready handoff packs without default cloud upload or unsupported connector claims."
+
+Arabic:
+
+"ReconForge ERP يساعد فرق المالية والمراجعة ومستشاري ERP على تحويل ملفات التصدير المحلية إلى تقارير مطابقة، سجل مراجعة، ملف أدلة، ومقارنات بين الفترات، بدون رفع افتراضي للسحابة وبدون ادعاء وجود ربط مباشر مع أنظمة ERP."
+
+## LinkedIn Launch Post Draft
+
+ReconForge ERP now has a stronger pilot-readiness foundation: one-command local demo, Studio review actions, mapping validation/wizard, multi-period comparison with trends, client handoff packs with redaction controls, evidence integrity manifests, Docker build CI, export-based ERP profiles, synthetic case studies, and cautious commercial documentation.
+
+It remains local-first and export-based. No fake customer claims, no savings guarantees, no audit opinion, and no direct ERP connector claim.
+
+Repository: `[GitHub link]`
+
+## YouTube Description Draft
+
+This demo shows ReconForge ERP running a local export-based reconciliation workflow from sample data. It generates a management pack, executive report, dashboard, evidence binder, review register, Studio review update, period comparison, and client handoff pack.
+
+ReconForge does not upload ERP data by default, does not provide a direct ERP connector in this workflow, and does not issue an audit opinion. Sample data is synthetic.
+
+## GitHub Discussion Announcement Draft
+
+This release-hardening pass adds pilot-readiness foundations for ReconForge ERP: client-pack redaction controls, evidence checksum manifests, trend reporting, additional export-based ERP profiles, Docker CI build workflow, synthetic case studies, compliance disclaimers, proposal/onboarding templates, demo recording materials, and a lightweight static landing page.
+
+Feedback wanted: Docker runtime results, export-profile field examples, Studio UX issues, documentation clarity, and safe redaction expectations.

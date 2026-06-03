@@ -1,0 +1,6 @@
+pack_id: netsuite-inventory-gl
+name: NetSuite Inventory vs GL Controls
+version: 0.6.1
+description: Export-based controls for NetSuite inventory activity, item, and transaction accounting CSV/XLSX exports mapped to ReconForge.
+owner: ReconForge ERP Maintainers
+tags: [netsuite, inventory, gl, export-based]

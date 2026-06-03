@@ -1,0 +1,19 @@
+name: Docker
+
+on:
+  pull_request:
+  push:
+    branches: ["main", "master"]
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Build image
+        run: docker build -t reconforge-erp .
+
+      - name: Container doctor
+        run: docker run --rm -v "$PWD/output:/app/output" reconforge-erp reconforge doctor

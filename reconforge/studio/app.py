@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from html import escape
 from pathlib import Path
 from secrets import token_urlsafe
@@ -30,6 +31,8 @@ from reconforge.validators import issues_to_frame, validate_input_directory
 
 DOWNLOAD_SUFFIXES = {".html", ".xlsx", ".csv", ".json", ".md", ".txt", ".yml", ".yaml"}
 DOC_SUFFIXES = {".md"}
+
+logger = logging.getLogger(__name__)
 
 
 def _layout(title: str, body: str) -> str:
@@ -418,7 +421,11 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
                 escalation_owner=_form_value(form, "escalation_owner", max_length=120),
             )
         except ValueError as exc:
-            return _render_exceptions_page(message=str(exc), message_type="error")
+            logger.exception("Failed to update review status")
+            return _render_exceptions_page(
+                message="Unable to update review status. Please verify your input.",
+                message_type="error",
+            )
         save_review_state(state_path, state)
         return _render_exceptions_page(
             status=entry["status"],

@@ -15,7 +15,7 @@ ReconForge ERP is local-first. The default workflow reads local CSV/XLSX exports
 
 - Accidental commit of live ERP exports.
 - Sensitive values in generated reports.
-- Unsafe connector file handling.
+- Unsafe export-adapter file handling.
 - Dependency vulnerabilities.
 - Over-trusting AI-generated text.
 
@@ -26,6 +26,8 @@ ReconForge ERP is local-first. The default workflow reads local CSV/XLSX exports
 - CI with Ruff, Mypy, Pytest.
 - Security workflow for Bandit and pip-audit.
 - CodeQL workflow.
+- OpenSSF Scorecard workflow.
+- CycloneDX SBOM workflow.
 - Dependabot.
 
 ## User Responsibilities

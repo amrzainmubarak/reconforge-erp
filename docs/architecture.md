@@ -25,8 +25,8 @@ flowchart TB
     Anon[Anonymizer] --> Ingestion
     Synthetic[Synthetic Data Generator] --> Ingestion
     Benchmark[Benchmark Engine] --> Reconcile
-    Plugins[Plugin System] --> Connectors[Connector Interface]
-    Connectors --> Mapper
+    Plugins[Plugin System] --> Adapters[Export Adapter Interface]
+    Adapters --> Mapper
     Security[Security Layer] --> Ingestion
     Observability[Observability / Logging] --> API
     AI[Future AI Assistant Layer] --> Exceptions
@@ -144,7 +144,7 @@ flowchart TB
 | Schema registry | Canonical ERP file schemas |
 | File ingestion | CSV/XLSX reading and normalization |
 | Data profiler | Row counts, validation, quality warnings |
-| Mapping engine | Future ERP-to-canonical mapping |
+| Mapping engine | ERP export-to-canonical mapping |
 | Reconciliation engine | Stock/GL, work orders, WIP |
 | Matching engine | Strategies, confidence, explanations |
 | Rule engine | YAML controls and cross-file checks |
@@ -155,7 +155,7 @@ flowchart TB
 | Anonymizer | Safe sharing with referential integrity |
 | Synthetic generator | Demo and benchmark datasets |
 | Benchmark engine | Runtime and output metrics |
-| Plugin system | Future connector interface |
+| Plugin system | Export adapter/profile interface |
 | Security layer | Local-first processing and safe sharing guidance |
 | Observability/logging | Future run logs and diagnostics |
 | Future AI assistant | Optional explanation layer, never required for core reconciliation |

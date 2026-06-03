@@ -2,7 +2,7 @@
 name: ERP mapping profile
 about: Propose or improve an export-based ERP mapping profile
 title: "[Mapping]: "
-labels: "area:mapping"
+labels: "erp-profile"
 assignees: ""
 ---
 
@@ -38,3 +38,7 @@ Which canonical files should this map to?
 ## Acceptance Criteria
 
 How should maintainers know the mapping profile works?
+
+## Claim Boundaries
+
+This request is for export-based profiles only. Do not claim direct ERP connectors, official vendor certification, or live ERP sync.

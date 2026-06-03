@@ -16,6 +16,7 @@
 <p align="center">
   <a href="#visual-preview">Visual Preview</a> ·
   <a href="#quick-start">Quick Start</a> ·
+  <a href="#project-status">Project Status</a> ·
   <a href="#10-minute-demo">10-Minute Demo</a> ·
   <a href="#cli-examples">CLI Examples</a> ·
   <a href="#control-packs">Control Packs</a> ·
@@ -38,6 +39,14 @@ It gives finance, inventory, workshop, ERP, and audit teams a repeatable way to 
 ## Why It Matters
 
 ERP systems hold the source transactions, but month-end reconciliation often still happens in spreadsheets. ReconForge ERP makes those checks repeatable, inspectable, local, and audit-friendly for teams that need operational controls without a heavy enterprise close platform.
+
+## Project Status
+
+- Current release: **v0.6.1 - Pilot Readiness Hardening**.
+- Pilot-ready open-source toolkit, but still early-stage.
+- Local-first and export-based; core workflows do not require cloud upload or paid APIs.
+- No direct ERP connectors are claimed.
+- Docker build workflow support exists. Docker runtime verification remains a roadmap/release-gate item unless the documented build and run commands pass in a live Docker environment.
 
 ## Core Capabilities
 
@@ -207,10 +216,6 @@ The command writes Excel, HTML, JSON, and Markdown outputs. It does not infer sa
 - Odoo implementers and SAP users working from exports.
 - Inventory, stores, spare-parts, workshop, fleet, dealership, service, and manufacturing teams.
 
-## Maturity Note
-
-ReconForge ERP is early-stage, local-first, and export-based. The current release is **v0.6.1 — Pilot Readiness Hardening**, focused on safer client handoff, evidence integrity, export-profile coverage, demo readiness, and conservative pilot documentation. Docker build workflow support exists, but Docker runtime verification remains a roadmap/release-gate item unless the documented build and run commands pass in a live Docker environment.
-
 ## Architecture
 
 ```mermaid
@@ -279,6 +284,8 @@ Quality and security checks are part of the repository workflow:
 - CI runs Ruff, mypy, pytest, CLI smoke checks, and package build.
 - CodeQL analyzes Python on pull requests and scheduled runs.
 - Security workflow runs Bandit and `pip-audit`.
+- OpenSSF Scorecard runs on schedule/manual dispatch as a repository security maturity check, not a guarantee.
+- SBOM workflow generates a CycloneDX Python dependency artifact on release tags/manual dispatch.
 - Path-serving routes use registry-based download allowlists instead of constructing filesystem paths from route parameters.
 
 See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md), [docs/security-whitepaper.md](docs/security-whitepaper.md), [docs/redaction-controls.md](docs/redaction-controls.md), [docs/evidence-integrity.md](docs/evidence-integrity.md), [docs/data-privacy.md](docs/data-privacy.md), and [docs/compliance-disclaimer.md](docs/compliance-disclaimer.md).
@@ -303,6 +310,8 @@ See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md)
 - [Docker verification report](docs/strategy/docker-verification-report.md)
 - [Security whitepaper](docs/security-whitepaper.md)
 - [Compliance disclaimer](docs/compliance-disclaimer.md)
+- [OSS ecosystem importance](docs/strategy/oss-ecosystem-importance.md)
+- [Demo output pack](docs/demo-output-pack.md)
 - [Synthetic case study](docs/case-studies/workshop-spare-parts-health-check.md)
 - [Odoo synthetic case study](docs/case-studies/odoo-stock-valuation-pilot.md)
 - [SAP synthetic case study](docs/case-studies/sap-export-reconciliation-pilot.md)
@@ -318,6 +327,10 @@ See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md)
 - [Benchmarking](docs/benchmark.md)
 - [Plugin development](docs/plugin-development.md)
 - [AI assistant architecture](docs/ai-assistant.md)
+- [AI maintainer instructions](AGENTS.md)
+- [Release process](docs/maintainers/release-process.md)
+- [Suggested issues](docs/maintainers/suggested-issues.md)
+- [Discussions starter kit](docs/maintainers/discussions-starter-kit.md)
 - [Odoo export guide](docs/odoo-export-guide.md)
 - [SAP export guide](docs/sap-export-guide.md)
 - [Plain-English guide](docs/plain-english-guide.md)
@@ -343,11 +356,11 @@ python -m bandit -q -r reconforge
 
 ## Roadmap
 
-Near-term work: authenticated self-hosted review mode, workbook-level redaction strategy, Docker runtime verification, structured pilot feedback, release artifact signing/SBOM, and deeper ERP export examples.
+Near-term work: authenticated self-hosted review mode, workbook-level redaction strategy, Docker runtime verification, structured pilot feedback, release artifact signing, dependency update policy, and deeper ERP export examples.
 
 ## Contributing
 
-Contributions are welcome from engineers, ERP consultants, accountants, auditors, and operations teams. Useful contributions include rule packs, mapping templates, anonymized scenarios, tests, documentation, and report improvements. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributions are welcome from engineers, ERP consultants, accountants, auditors, and operations teams. Useful contributions include rule packs, export profiles, anonymized scenarios, tests, documentation, and report improvements. See [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md), [docs/maintainers/release-process.md](docs/maintainers/release-process.md), and [docs/maintainers/suggested-issues.md](docs/maintainers/suggested-issues.md).
 
 ## License
 

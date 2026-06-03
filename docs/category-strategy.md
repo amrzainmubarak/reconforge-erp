@@ -77,7 +77,7 @@ ReconForge should not collect customer data. Instead, it can build a moat throug
 
 ### 12 Months
 
-- Add read-only connector SDK examples.
+- Add export-profile SDK examples or guided export adapters.
 - Launch self-hosted review workflow pilot.
 - Add ERPNext/NetSuite/Dynamics CSV profiles.
 - Build community pack review process.
@@ -93,7 +93,7 @@ ReconForge should not collect customer data. Instead, it can build a moat throug
 ## Risks That Could Kill The Project
 
 - Becoming too broad.
-- Shipping fragile connectors too early.
+- Overpromising live connectors too early.
 - Failing to protect sensitive data.
 - Looking like a spreadsheet wrapper.
 - Neglecting tests and documentation.

@@ -87,16 +87,16 @@ ReconForge ERP can remain a useful open-source core while supporting commercial 
 
 ## 12-Month Roadmap
 
-- Native Odoo connector or guided export assistant.
+- Guided Odoo export assistant and stronger export-profile validation.
 - SAP export mapping profiles for MB51, FAGLL03, FBL3N, and PM/CS work orders.
 - Exception review workflow in ReconForge Studio.
 - Multi-company and multi-period comparison.
-- Connector SDK for ERPNext, NetSuite, and custom ERP systems.
+- Export profile contract for ERPNext, NetSuite, and custom ERP systems.
 - Optional packaged desktop distribution for non-technical users.
 
 ## Open-Core Commercial Model
 
-The open-source core should remain capable: CLI, validation, reconciliation, rule packs, anonymizer, synthetic data, benchmark, reports, and evidence binder. Commercial additions can focus on collaboration, governance, enterprise deployment, reviewer workflows, connector management, scheduled jobs, and support.
+The open-source core should remain capable: CLI, validation, reconciliation, rule packs, anonymizer, synthetic data, benchmark, reports, and evidence binder. Commercial additions can focus on collaboration, governance, enterprise deployment, reviewer workflows, export-profile management, scheduled jobs, and support.
 
 ## Consulting Services Model
 

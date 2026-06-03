@@ -10,6 +10,7 @@
   <img alt="Lint: ruff" src="https://img.shields.io/badge/lint-ruff-blue">
   <img alt="Types: mypy" src="https://img.shields.io/badge/types-mypy-blue">
   <img alt="Security: CodeQL and Bandit" src="https://img.shields.io/badge/security-CodeQL%20%2B%20Bandit-2f855a">
+  <a href="https://www.bestpractices.dev/projects/13089"><img alt="OpenSSF Best Practices" src="https://www.bestpractices.dev/projects/13089/badge"></a>
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
 </p>
 

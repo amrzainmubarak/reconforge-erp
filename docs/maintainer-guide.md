@@ -33,6 +33,10 @@ python -m build
 reconforge report management-pack --input examples/sample_data --config config/reconforge.yml --output output
 ```
 
+## Repository Settings
+
+Review [repository settings](maintainers/repository-settings.md) after workflow, branch protection, security policy, or Scorecard changes. Some settings, including required reviews and default workflow token permissions, must be enforced in GitHub rather than in tracked source files.
+
 ## Data Governance
 
 Never commit live ERP data. Keep sample data synthetic and useful enough to exercise the control logic.

@@ -40,14 +40,26 @@ reconforge anonymize --input live_exports --output anonymized_exports --mask-amo
 
 ## Vulnerability Reports
 
-Report security issues privately to the maintainer or repository owner. Include:
+Report security issues privately through GitHub private vulnerability reporting:
+
+https://github.com/amrzainmubarak/reconforge-erp/security/advisories/new
+
+If private vulnerability reporting is unavailable, contact the repository owner privately through GitHub before sharing details. Do not open a public issue for an unpatched vulnerability.
+
+Maintainer response targets:
+
+- Acknowledge a vulnerability disclosure within 7 days when feasible.
+- Provide a first status update or remediation plan within 30 days when feasible.
+- Coordinate public disclosure only after a fix, mitigation, or documented non-applicability decision is ready.
+
+Include:
 
 - Affected command or module.
 - Reproduction steps using synthetic or anonymized data.
 - Impact and expected behavior.
 - Any relevant dependency version.
 
-Do not publish exploit details or sensitive sample data in public issues.
+Do not publish exploit details or sensitive sample data in public issues, pull requests, or discussions.
 
 ## Dependency and Workflow Posture
 

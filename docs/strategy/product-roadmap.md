@@ -1,6 +1,6 @@
 # Product Roadmap
 
-This roadmap keeps the core local-first, deterministic, export-based, and audit-friendly. Versions are planning targets, not adoption claims.
+This roadmap keeps the core local-first, deterministic, export-based, and audit-friendly. Versions are planning targets, not adoption claims. Post-v0.6.1 note: some ERP export profile expansion items originally drafted as future roadmap work landed in v0.6.1 — Pilot Readiness Hardening, so current release status should be read from the changelog and release readiness report.
 
 ## v0.4.0 - ERP Mapping Foundation
 

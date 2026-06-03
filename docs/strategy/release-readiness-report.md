@@ -4,9 +4,9 @@ Date: 2026-06-03
 
 ## Recommended Version Decision
 
-Recommendation: keep as Unreleased under v0.6.x for now, or release as v0.6.1 only after CI confirms the Docker build workflow and the full Python quality gates pass.
+ReconForge ERP v0.6.1 — Pilot Readiness Hardening has been released. Keep v0.7.0 blocked until Docker runtime verification, authentication decisions, stronger deployment hardening, and structured pilot validation are complete.
 
-Do not release v0.7.0 yet. Docker runtime verification was not completed locally, and enterprise-grade controls such as authentication, role-based access, formal support boundaries, and pilot validation remain open.
+Docker runtime verification was not completed locally, and enterprise-grade controls such as authentication, role-based access, formal support boundaries, and validated production deployment remain open.
 
 ## Release Gate Status
 
@@ -16,7 +16,7 @@ Do not release v0.7.0 yet. Docker runtime verification was not completed locally
 | Mypy | Passed | `python3 -m mypy reconforge` passed. |
 | Pytest | Passed | `python3 -m pytest` passed: 150 tests, 1 existing FastAPI TestClient deprecation warning. |
 | Bandit | Passed | `python3 -m bandit -q -r reconforge` passed. |
-| `reconforge doctor` | Passed | `PYTHONPATH=. reconforge doctor` passed for local package version 0.6.0. |
+| `reconforge doctor` | Passed | `PYTHONPATH=. reconforge doctor` passed for local package version 0.6.1 after post-release version alignment. |
 | Docker build | Not locally verified | Docker daemon unavailable in this environment. CI workflow added. |
 | Redaction controls | Passed tests | Text/CSV/JSON/HTML redaction only; binary workbooks excluded when redaction requested. |
 | Evidence checksums | Passed tests | SHA-256 integrity manifests, not legal signatures. |
@@ -33,4 +33,4 @@ Do not release v0.7.0 yet. Docker runtime verification was not completed locally
 
 ## Decision Rationale
 
-The project is credible for consultant demos and controlled company pilots, especially with synthetic/sample data and local export workflows. It is not yet enterprise production software and should not be marketed as such.
+The project is credible for consultant demos and controlled company pilots, especially with synthetic/sample data and local export workflows. It is not yet enterprise production software and should not be marketed as such. v0.6.1 should be treated as a pilot-readiness hardening release, not an enterprise-readiness claim.

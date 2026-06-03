@@ -1,6 +1,8 @@
 # Productization Assessment
 
-ReconForge ERP has a strong technical foundation, but a real buyer will judge it by how quickly a finance, audit, ERP, or operations user can get from exported data to a reviewed exception register. v0.6.0 should reduce setup friction, make outputs easier to interpret, and make local review actions visible without overstating maturity.
+Historical note: this assessment was written as v0.6.0 productization planning material. ReconForge ERP is now released as v0.6.1 — Pilot Readiness Hardening, so use the release readiness and final product readiness gap audit documents for current release status.
+
+At the time of this assessment, ReconForge ERP had a strong technical foundation, but a real buyer would judge it by how quickly a finance, audit, ERP, or operations user could get from exported data to a reviewed exception register. The v0.6.0 planning goal was to reduce setup friction, make outputs easier to interpret, and make local review actions visible without overstating maturity.
 
 ## 1. What Is Already Strong
 
@@ -108,4 +110,4 @@ ReconForge ERP has a strong technical foundation, but a real buyer will judge it
 12. Add demo workflow tests.
 13. Add client handoff pack command.
 14. Add client handoff docs.
-15. Align version and changelog to v0.6.0.
+15. Align version and changelog to v0.6.0 for that release.

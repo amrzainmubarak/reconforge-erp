@@ -184,7 +184,7 @@ reconforge report client-pack --input output/demo --output output/client_pack
 
 Open:
 
-- `output/client_pack/summary.md`
+- `output/client_pack/handoff_summary.md`
 - `output/client_pack/data_privacy_note.md`
 - `output/client_pack/files_manifest.json`
 

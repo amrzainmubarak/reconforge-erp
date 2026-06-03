@@ -40,11 +40,11 @@ def _is_hidden_or_system(path: Path) -> bool:
     return any(part.startswith(".") or part in {"__pycache__"} for part in path.parts)
 
 
-def _copy_optional_file(source_root: Path, output_root: Path, relative_name: str) -> Path | None:
+def _copy_optional_file(source_root: Path, output_root: Path, relative_name: str, target_relative_name: str | None = None) -> Path | None:
     source = source_root / relative_name
     if not source.exists() or not source.is_file() or _is_hidden_or_system(Path(relative_name)):
         return None
-    target = output_root / relative_name
+    target = output_root / (target_relative_name or relative_name)
     target.parent.mkdir(parents=True, exist_ok=True)
     copy2(source, target)
     return target
@@ -69,7 +69,7 @@ def _copy_evidence_folder(source_root: Path, output_root: Path) -> list[Path]:
 
 
 def _write_pack_text(output_dir: Path, input_path: Path, included: list[Path], missing: list[str]) -> tuple[Path, Path, Path]:
-    summary_path = output_dir / "summary.md"
+    summary_path = output_dir / "handoff_summary.md"
     summary_path.write_text(
         "\n".join(
             [
@@ -156,7 +156,8 @@ def generate_client_pack(input_path: Path | str, output_path: Path | str) -> Cli
     included: list[Path] = []
     missing: list[str] = []
     for relative_name, _description in OPTIONAL_ARTIFACTS:
-        copied = _copy_optional_file(source_root, output_dir, relative_name)
+        target_relative_name = "source_summary.md" if relative_name == "summary.md" else None
+        copied = _copy_optional_file(source_root, output_dir, relative_name, target_relative_name)
         if copied is None:
             missing.append(relative_name)
         else:

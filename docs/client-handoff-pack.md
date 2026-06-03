@@ -16,7 +16,7 @@ When available, the command copies:
 - `management_pack.xlsx`
 - `review_register.xlsx`
 - `dashboard.html`
-- `summary.md`
+- `source_summary.md` when the source output contains `summary.md`
 - `evidence/index.html`
 - `evidence/evidence_register.xlsx`
 - `evidence/evidence_index.json`
@@ -24,7 +24,7 @@ When available, the command copies:
 
 It also writes:
 
-- `summary.md`
+- `handoff_summary.md`
 - `next_steps.md`
 - `data_privacy_note.md`
 - `files_manifest.json`

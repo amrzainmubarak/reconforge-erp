@@ -115,7 +115,7 @@ Then open:
 - `output/demo/management_pack.xlsx`
 - `output/demo/review_register.xlsx`
 - `output/demo/evidence/index.html`
-- `output/demo/client_pack/summary.md`
+- `output/demo/client_pack/handoff_summary.md`
 
 Start Studio and update review status locally:
 

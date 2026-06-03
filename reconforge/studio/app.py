@@ -7,7 +7,7 @@ from html import escape
 from pathlib import Path
 from secrets import token_urlsafe
 from typing import Any
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, quote
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Request
@@ -33,6 +33,7 @@ DOWNLOAD_SUFFIXES = {".html", ".xlsx", ".csv", ".json", ".md", ".txt", ".yml", "
 DOC_SUFFIXES = {".md"}
 
 logger = logging.getLogger(__name__)
+INVALID_REVIEW_STATUS_MESSAGE = f"Invalid review status. Expected one of: {', '.join(ALLOWED_STATUSES)}."
 
 
 def _layout(title: str, body: str) -> str:
@@ -153,6 +154,14 @@ def _message_html(message: str, message_type: str) -> str:
         return ""
     css_class = "success" if message_type == "success" else "error"
     return f'<div class="message {css_class}">{escape(message)}</div>'
+
+
+def _href(path_prefix: str, key: str) -> str:
+    return f"{path_prefix}/{quote(key, safe='')}"
+
+
+def _evidence_href(case_id: str, filename: str) -> str:
+    return f"/download/evidence/{quote(case_id, safe='')}/{quote(filename, safe='')}"
 
 
 def _form_value(payload: dict[str, list[str]], key: str, *, max_length: int = 500) -> str:
@@ -409,6 +418,12 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
         state = load_review_state(state_path)
         exception_id = _form_value(form, "exception_id", max_length=80)
         status_value = _form_value(form, "status", max_length=40)
+        if not _allowed_choice(status_value, list(ALLOWED_STATUSES)):
+            logger.warning("Rejected review status update with invalid status")
+            return _render_exceptions_page(
+                message=INVALID_REVIEW_STATUS_MESSAGE,
+                message_type="error",
+            )
         try:
             entry = update_review_status(
                 exception_id,
@@ -420,10 +435,10 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
                 accepted_risk_reason=_form_value(form, "accepted_risk_reason", max_length=500),
                 escalation_owner=_form_value(form, "escalation_owner", max_length=120),
             )
-        except ValueError as exc:
-            logger.warning("Rejected review status update: %s", exc)
+        except ValueError:
+            logger.warning("Rejected review status update with invalid input")
             return _render_exceptions_page(
-                message=str(exc),
+                message="Unable to update review status. Please verify your input.",
                 message_type="error",
             )
         save_review_state(state_path, state)
@@ -466,21 +481,22 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
 
     @app.get("/evidence", response_class=HTMLResponse)
     def evidence() -> str:
-        rows = [
-            {"case": key.split("/", 1)[0], "summary": f"/download/evidence/{key}"}
-            for key in sorted(evidence_registry)
-            if key.endswith("/summary.md") and len(key.split("/")) == 2
-        ]
-        return _layout("Evidence", "<h2>Evidence Binder</h2>" + _table(pd.DataFrame(rows)))
+        links = []
+        for key in sorted(evidence_registry):
+            parts = key.split("/")
+            if len(parts) != 2 or not key.endswith("/summary.md"):
+                continue
+            links.append(f'<li><a href="{_evidence_href(parts[0], parts[1])}">{escape(key)}</a></li>')
+        return _layout("Evidence", f"<h2>Evidence Binder</h2><ul>{''.join(links)}</ul>")
 
     @app.get("/downloads", response_class=HTMLResponse)
     def downloads() -> str:
-        links = "".join(f'<li><a href="/download/{escape(key)}">{escape(key)}</a></li>' for key in sorted(output_registry))
+        links = "".join(f'<li><a href="{_href("/download", key)}">{escape(key)}</a></li>' for key in sorted(output_registry))
         return _layout("Downloads", f"<h2>Downloads</h2><ul>{links}</ul>")
 
     @app.get("/docs", response_class=HTMLResponse)
     def docs() -> str:
-        links = "".join(f'<li><a href="/download-doc/{escape(key)}">{escape(key)}</a></li>' for key in sorted(docs_registry))
+        links = "".join(f'<li><a href="{_href("/download-doc", key)}">{escape(key)}</a></li>' for key in sorted(docs_registry))
         return _layout("Docs", f"<h2>Documentation</h2><ul>{links}</ul>")
 
     @app.get("/download/{filename}")

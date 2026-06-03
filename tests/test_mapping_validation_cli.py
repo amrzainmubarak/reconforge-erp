@@ -3,10 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 from shutil import copytree
 
+import pytest
 import yaml
 from typer.testing import CliRunner
 
 from reconforge.cli import app
+from reconforge.mappings.validator import validate_mapping_pack
 
 runner = CliRunner()
 
@@ -28,6 +30,18 @@ def test_mappings_validate_valid_sap_pack() -> None:
     result = runner.invoke(app, ["mappings", "validate", "--pack", "control-packs/sap-mb51-fagll03"])
     assert result.exit_code == 0
     assert "0 failed" in result.output
+
+
+def test_mappings_validate_sample_command_paths_from_non_repo_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    repo_root = Path.cwd().resolve()
+    pack = repo_root / "control-packs" / "odoo-inventory-valuation"
+    monkeypatch.chdir(tmp_path)
+
+    result = validate_mapping_pack(pack)
+
+    assert result.passed
+    sample_command_check = next(check for check in result.checks if check.name == "sample command paths")
+    assert sample_command_check.passed
 
 
 def test_mappings_validate_missing_mapping_yml(tmp_path: Path) -> None:

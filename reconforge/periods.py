@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from html import escape
@@ -14,6 +15,32 @@ import pandas as pd
 from reconforge.io.excel import write_excel_workbook
 from reconforge.io.writers import ensure_output_dir, frame_to_records, json_default
 from reconforge.review.state import collect_exception_frame, load_review_state, merge_review_state_with_exceptions
+
+SYNTHETIC_EXCEPTION_ID_PATTERN = re.compile(r"^EXC-\d+$", re.IGNORECASE)
+RULE_FIELDS = ["rule_id", "control_id", "control", "check", "rule_name"]
+DOCUMENT_FIELDS = [
+    "reference",
+    "source_document",
+    "document_id",
+    "work_order",
+    "move_id",
+    "entry_id",
+    "po_number",
+    "invoice_number",
+    "return_id",
+]
+ITEM_FIELDS = [
+    "product_code",
+    "product_name",
+    "customer_code",
+    "customer_name",
+    "equipment_serial",
+    "category",
+    "warehouse",
+    "account_code",
+    "cost_center",
+]
+DATE_FIELDS = ["date", "posting_date", "opened_date", "closed_date", "po_date", "invoice_date", "return_date"]
 
 
 @dataclass(frozen=True)
@@ -31,15 +58,6 @@ def _clean(value: object) -> str:
     return "" if text.lower() in {"nan", "nat", "none", "null", "<na>"} else text
 
 
-def _first_available(row: pd.Series, names: list[str]) -> str:
-    for name in names:
-        if name in row.index:
-            value = _clean(row.get(name, ""))
-            if value:
-                return value
-    return ""
-
-
 def _amount_value(row: pd.Series) -> str:
     for name in ["amount_impact", "amount", "total_cost", "actual_cost", "estimated_cost", "invoice_amount", "total_price"]:
         value = row.get(name)
@@ -52,17 +70,34 @@ def _amount_value(row: pd.Series) -> str:
     return "0.00"
 
 
+def _is_synthetic_exception_id(exception_id: str) -> bool:
+    return bool(SYNTHETIC_EXCEPTION_ID_PATTERN.fullmatch(exception_id))
+
+
+def _fingerprint_part(row: pd.Series, names: list[str]) -> str:
+    values = []
+    for name in names:
+        if name in row.index:
+            value = _clean(row.get(name, ""))
+            if value:
+                values.append(f"{name}={value.lower()}")
+    return ";".join(values)
+
+
 def _exception_key(row: pd.Series) -> str:
     exception_id = _clean(row.get("exception_id", ""))
-    if exception_id:
+    if exception_id and not _is_synthetic_exception_id(exception_id):
         return f"id:{exception_id}"
     parts = [
-        _first_available(row, ["source_file"]),
-        _first_available(row, ["exception_type", "rule_name", "control_id"]),
-        _first_available(row, ["reference", "source_document", "work_order", "move_id", "entry_id", "po_number", "product_code"]),
-        _amount_value(row),
+        _fingerprint_part(row, ["source_file"]),
+        _fingerprint_part(row, ["exception_type"]),
+        _fingerprint_part(row, RULE_FIELDS),
+        _fingerprint_part(row, DOCUMENT_FIELDS),
+        _fingerprint_part(row, ITEM_FIELDS),
+        f"amount={_amount_value(row)}",
+        _fingerprint_part(row, DATE_FIELDS),
     ]
-    return "fallback:" + "|".join(part.lower() for part in parts)
+    return "fingerprint:" + "|".join(part for part in parts if part)
 
 
 def _load_period(period_path: Path, period_index: int) -> pd.DataFrame:

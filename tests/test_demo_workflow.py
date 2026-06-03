@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -29,6 +30,7 @@ def test_client_pack_command_copies_available_outputs(tmp_path: Path) -> None:
     (source / "executive_report.html").write_text("<html>report</html>", encoding="utf-8")
     (source / "management_pack.xlsx").write_bytes(b"placeholder workbook")
     (source / "review_register.xlsx").write_bytes(b"placeholder register")
+    (source / "summary.md").write_text("# Original summary\n", encoding="utf-8")
     (source / "evidence").mkdir()
     (source / "evidence" / "index.html").write_text("<html>evidence</html>", encoding="utf-8")
     target = tmp_path / "client_pack"
@@ -40,10 +42,16 @@ def test_client_pack_command_copies_available_outputs(tmp_path: Path) -> None:
     assert (target / "management_pack.xlsx").exists()
     assert (target / "review_register.xlsx").exists()
     assert (target / "evidence" / "index.html").exists()
-    assert (target / "summary.md").exists()
+    assert (target / "source_summary.md").read_text(encoding="utf-8") == "# Original summary\n"
+    assert (target / "handoff_summary.md").exists()
+    assert not (target / "summary.md").exists()
     assert (target / "next_steps.md").exists()
     assert (target / "data_privacy_note.md").exists()
     assert (target / "files_manifest.json").exists()
+    manifest = json.loads((target / "files_manifest.json").read_text(encoding="utf-8"))
+    manifest_paths = {item["path"] for item in manifest["included_files"]}
+    assert "source_summary.md" in manifest_paths
+    assert "handoff_summary.md" in manifest_paths
 
 
 def test_client_pack_handles_missing_optional_outputs(tmp_path: Path) -> None:
@@ -54,6 +62,6 @@ def test_client_pack_handles_missing_optional_outputs(tmp_path: Path) -> None:
     result = runner.invoke(app, ["report", "client-pack", "--input", str(source), "--output", str(target)])
 
     assert result.exit_code == 0
-    assert (target / "summary.md").exists()
+    assert (target / "handoff_summary.md").exists()
     assert (target / "data_privacy_note.md").exists()
     assert (target / "files_manifest.json").exists()

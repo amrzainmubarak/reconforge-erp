@@ -204,6 +204,8 @@ def test_studio_invalid_status_rejected(tmp_path: Path) -> None:
     )
     assert response.status_code == 200
     assert "Invalid review status" in response.text
+    assert "Expected one of: New, Under Review, Resolved, Accepted Risk, Escalated." in response.text
+    assert "Done" not in response.text
     assert not (tmp_path / "review_state.json").exists()
 
 

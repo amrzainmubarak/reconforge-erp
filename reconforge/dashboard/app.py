@@ -6,6 +6,7 @@ import json
 from html import escape
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
@@ -26,6 +27,10 @@ def _report_links(registry: dict[str, Path]) -> list[str]:
     return sorted(registry)
 
 
+def _report_href(name: str) -> str:
+    return f"/reports/{quote(name, safe='')}"
+
+
 def create_app(output_dir: Path | str) -> FastAPI:
     """Create a local FastAPI app serving generated reports."""
 
@@ -38,7 +43,7 @@ def create_app(output_dir: Path | str) -> FastAPI:
         dashboard_path = base_path / "dashboard.html"
         if dashboard_path.exists():
             html = dashboard_path.read_text(encoding="utf-8")
-            links = "".join(f'<li><a href="/reports/{escape(name)}">{escape(name)}</a></li>' for name in _report_links(report_registry))
+            links = "".join(f'<li><a href="{_report_href(name)}">{escape(name)}</a></li>' for name in _report_links(report_registry))
             return html.replace("</main>", f'<section class="report"><h2>Downloadable Reports</h2><ul>{links}</ul></section></main>')
 
         payload = _load_json(base_path / "management_pack.json")
@@ -47,7 +52,7 @@ def create_app(output_dir: Path | str) -> FastAPI:
             f"<section class='card'><span>{escape(str(item.get('metric', '')))}</span><strong>{escape(str(item.get('value', '')))}</strong></section>"
             for item in executive
         )
-        links = "".join(f'<li><a href="/reports/{escape(name)}">{escape(name)}</a></li>' for name in _report_links(report_registry))
+        links = "".join(f'<li><a href="{_report_href(name)}">{escape(name)}</a></li>' for name in _report_links(report_registry))
         return f"""<!doctype html>
 <html lang="en">
 <head>

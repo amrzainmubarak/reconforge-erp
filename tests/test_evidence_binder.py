@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 
 from reconforge.evidence.binder import generate_evidence_binder
+from reconforge.evidence.index import write_evidence_index_html
+from reconforge.evidence.models import EvidenceCase
 from reconforge.io.writers import write_report_frames
 from reconforge.reconciliation.stock_gl import reconcile_stock_gl
 from reconforge.reconciliation.stock_gl import result_frames as stock_frames
@@ -61,3 +63,23 @@ def test_audit_trail_json_validity(tmp_path: Path, sample_datasets: dict[Dataset
     artifact = generate_evidence_binder(output, tmp_path / "evidence")[0]
     payload = json.loads((artifact.folder / "audit_trail.json").read_text(encoding="utf-8"))
     assert payload["exception_id"].startswith("EXC-")
+
+
+def test_evidence_index_url_quotes_case_links(tmp_path: Path) -> None:
+    path = write_evidence_index_html(
+        [
+            EvidenceCase(
+                exception_id="EXC & 001",
+                exception_type="stock_without_gl",
+                severity="High",
+                risk_score=80,
+                business_impact="Review needed.",
+                recommended_action="Check source records.",
+                responsible_department="Finance",
+            ),
+        ],
+        tmp_path,
+    )
+    html = path.read_text(encoding="utf-8")
+    assert "href='EXC%20%26%20001/summary.md'" in html
+    assert "EXC &amp; 001" in html

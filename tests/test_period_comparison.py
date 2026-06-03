@@ -47,6 +47,54 @@ def test_compare_periods_detects_new_recurring_and_resolved(tmp_path: Path) -> N
     assert (output / "period_comparison.md").exists()
 
 
+def test_compare_periods_matches_reordered_synthetic_exception_ids_by_fingerprint(tmp_path: Path) -> None:
+    jan = tmp_path / "jan"
+    feb = tmp_path / "feb"
+    _write_period(
+        jan,
+        [
+            {"exception_type": "stock_without_gl", "source_document": "SO-1", "product_code": "P-1", "date": "2026-01-31", "total_cost": 100},
+            {"exception_type": "gl_without_stock", "reference": "JE-2", "account_code": "5000", "date": "2026-01-31", "amount": 250},
+        ],
+    )
+    _write_period(
+        feb,
+        [
+            {"exception_type": "gl_without_stock", "reference": "JE-2", "account_code": "5000", "date": "2026-01-31", "amount": 250},
+            {"exception_type": "stock_without_gl", "source_document": "SO-1", "product_code": "P-1", "date": "2026-01-31", "total_cost": 100},
+        ],
+    )
+    output = tmp_path / "compare"
+    result = runner.invoke(app, ["compare", "periods", "--inputs", str(jan), str(feb), "--output", str(output)])
+    assert result.exit_code == 0
+    payload = json.loads((output / "period_comparison.json").read_text(encoding="utf-8"))
+    summary = {row["metric"]: row["value"] for row in payload["summary"]}
+    assert summary["recurring_exceptions"] == 2
+    assert summary["new_exceptions"] == 0
+    assert summary["resolved_exceptions"] == 0
+
+
+def test_compare_periods_does_not_match_same_row_position_exception_id_by_itself(tmp_path: Path) -> None:
+    jan = tmp_path / "jan"
+    feb = tmp_path / "feb"
+    _write_period(
+        jan,
+        [{"exception_id": "EXC-0001", "exception_type": "stock_without_gl", "source_document": "SO-OLD", "product_code": "P-1", "total_cost": 100}],
+    )
+    _write_period(
+        feb,
+        [{"exception_id": "EXC-0001", "exception_type": "stock_without_gl", "source_document": "SO-NEW", "product_code": "P-2", "total_cost": 200}],
+    )
+    output = tmp_path / "compare"
+    result = runner.invoke(app, ["compare", "periods", "--inputs", str(jan), str(feb), "--output", str(output)])
+    assert result.exit_code == 0
+    payload = json.loads((output / "period_comparison.json").read_text(encoding="utf-8"))
+    summary = {row["metric"]: row["value"] for row in payload["summary"]}
+    assert summary["recurring_exceptions"] == 0
+    assert summary["new_exceptions"] == 1
+    assert summary["resolved_exceptions"] == 1
+
+
 def test_compare_periods_includes_review_state_categories(tmp_path: Path) -> None:
     jan = tmp_path / "jan"
     feb = tmp_path / "feb"

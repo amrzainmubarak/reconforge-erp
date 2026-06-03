@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from html import escape
 from pathlib import Path
+from urllib.parse import quote
 
 import pandas as pd
 
@@ -57,7 +58,7 @@ def write_evidence_index_html(cases: list[EvidenceCase], output_dir: Path | str)
     for case in cases:
         rows.append(
             "<tr>"
-            f"<td><a href='{escape(case.exception_id)}/summary.md'>{escape(case.exception_id)}</a></td>"
+            f"<td><a href='{quote(case.exception_id, safe='')}/summary.md'>{escape(case.exception_id)}</a></td>"
             f"<td>{escape(case.exception_type)}</td>"
             f"<td>{escape(case.severity)}</td>"
             f"<td>{case.risk_score}</td>"

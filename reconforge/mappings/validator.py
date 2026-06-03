@@ -258,13 +258,17 @@ def _check_sample_commands(pack_path: Path, checks: list[MappingValidationCheck]
     sample_path = pack_path / "sample-command.md"
     if not sample_path.exists():
         return
+    repo_root = _infer_repo_root(pack_path)
+    if repo_root is None:
+        _add_check(checks, "sample command paths", True, "Sample command path checks skipped; repository root could not be inferred safely.")
+        return
     text = sample_path.read_text(encoding="utf-8")
     missing_paths = []
     for match in PATH_REFERENCE_PATTERN.findall(text):
         reference = match.rstrip("`.,)")
         if reference.startswith("output/"):
             continue
-        if not Path(reference).exists():
+        if not (repo_root / reference).exists():
             missing_paths.append(reference)
     _add_check(
         checks,
@@ -274,6 +278,18 @@ def _check_sample_commands(pack_path: Path, checks: list[MappingValidationCheck]
         if not missing_paths
         else f"Referenced paths do not exist: {', '.join(sorted(set(missing_paths)))}",
     )
+
+
+def _infer_repo_root(pack_path: Path) -> Path | None:
+    resolved = pack_path.resolve()
+    for parent in [resolved, *resolved.parents]:
+        if (parent / "control-packs").is_dir() and (parent / "examples").is_dir():
+            return parent
+    if resolved.parent.name == "control-packs":
+        candidate = resolved.parent.parent
+        if (candidate / "examples").is_dir():
+            return candidate
+    return None
 
 
 def validate_mapping_pack(pack_path: Path | str) -> MappingValidationResult:

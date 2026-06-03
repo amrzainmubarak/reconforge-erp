@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
+from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
 import pandas as pd
 
+from reconforge import __version__
 from reconforge.evidence.index import write_evidence_index_html, write_evidence_register
 from reconforge.evidence.models import EvidenceArtifact, EvidenceCase
 from reconforge.evidence.templates import business_impact, recommended_action, responsible_department
@@ -151,6 +154,46 @@ def _apply_review_state(cases: list[EvidenceCase], input_dir: Path) -> list[Evid
     return updated_cases
 
 
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def write_evidence_integrity_manifest(output_dir: Path | str, input_dir: Path | str) -> Path:
+    """Write a SHA-256 integrity manifest for generated evidence artifacts."""
+
+    target = Path(output_dir)
+    manifest_path = target / "evidence_manifest.json"
+    files = []
+    for path in sorted(target.rglob("*")):
+        if not path.is_file() or path == manifest_path or path.name.startswith("."):
+            continue
+        files.append(
+            {
+                "path": path.relative_to(target).as_posix(),
+                "size_bytes": path.stat().st_size,
+                "sha256": _sha256(path),
+            },
+        )
+    write_json(
+        {
+            "generated_at": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+            "tool_version": __version__,
+            "source_output_folder": str(input_dir),
+            "evidence_output_folder": str(target),
+            "privacy_note": "Evidence files may contain generated extracts from local ERP outputs. Review before sharing.",
+            "integrity_model": "SHA-256 checksums only; this is not a legal digital signature.",
+            "files": files,
+        },
+        target,
+        "evidence_manifest",
+    )
+    return manifest_path
+
+
 def generate_evidence_binder(input_dir: Path | str, output_dir: Path | str) -> list[EvidenceArtifact]:
     """Generate enterprise-style audit evidence folders."""
 
@@ -169,4 +212,5 @@ def generate_evidence_binder(input_dir: Path | str, output_dir: Path | str) -> l
         target,
         "evidence_index",
     )
+    write_evidence_integrity_manifest(target, input_path)
     return artifacts

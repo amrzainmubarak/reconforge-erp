@@ -309,16 +309,33 @@ def evidence_binder_command(
 def client_pack_command(
     input_path: Annotated[Path, typer.Option("--input", help="Generated ReconForge output directory.")] = Path("output"),
     output_path: Annotated[Path, typer.Option("--output", help="Client handoff pack directory.")] = Path("output/client_pack"),
+    redact_names: Annotated[bool, typer.Option("--redact-names", help="Redact customer, supplier, employee, reviewer, and equipment identifiers where practical.")] = False,
+    redact_amounts: Annotated[bool, typer.Option("--redact-amounts", help="Bucket or redact monetary values where practical.")] = False,
+    exclude_raw_records: Annotated[bool, typer.Option("--exclude-raw-records", help="Exclude source-record evidence extracts from the pack.")] = False,
+    summary_only: Annotated[bool, typer.Option("--summary-only", help="Create only generated handoff notes plus the source summary when available.")] = False,
+    exclude_evidence: Annotated[bool, typer.Option("--exclude-evidence", help="Exclude the evidence folder from the client pack.")] = False,
+    include_manifest_checksums: Annotated[bool, typer.Option("--include-manifest-checksums", help="Add SHA-256 checksums for included client-pack files.")] = False,
 ) -> None:
     """Create a local consultant/client handoff folder from generated outputs."""
 
     try:
-        artifacts = generate_client_pack(input_path, output_path)
-    except FileNotFoundError as exc:
+        artifacts = generate_client_pack(
+            input_path,
+            output_path,
+            redact_names=redact_names,
+            redact_amounts=redact_amounts,
+            exclude_raw_records=exclude_raw_records,
+            summary_only=summary_only,
+            exclude_evidence=exclude_evidence,
+            include_manifest_checksums=include_manifest_checksums,
+        )
+    except (FileNotFoundError, ValueError) as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
     console.print(f"[green]Client handoff pack:[/green] {artifacts.output_dir}")
-    console.print(f"Included files: {len(artifacts.included_files)} | Missing optional files: {len(artifacts.missing_optional_files)}")
+    console.print(
+        f"Included files: {len(artifacts.included_files)} | Missing optional files: {len(artifacts.missing_optional_files)} | Excluded files: {len(artifacts.excluded_files)}",
+    )
     _print_success_paths(artifacts.included_files)
 
 

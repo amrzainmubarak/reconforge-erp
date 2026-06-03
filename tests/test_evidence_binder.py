@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -63,6 +64,21 @@ def test_audit_trail_json_validity(tmp_path: Path, sample_datasets: dict[Dataset
     artifact = generate_evidence_binder(output, tmp_path / "evidence")[0]
     payload = json.loads((artifact.folder / "audit_trail.json").read_text(encoding="utf-8"))
     assert payload["exception_id"].startswith("EXC-")
+
+
+def test_evidence_integrity_manifest_hashes_generated_files(tmp_path: Path, sample_datasets: dict[DatasetName, object]) -> None:
+    output = _write_reconciliation_outputs(tmp_path / "output", sample_datasets)
+    generate_evidence_binder(output, tmp_path / "evidence")
+    manifest_path = tmp_path / "evidence" / "evidence_manifest.json"
+
+    assert manifest_path.exists()
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert payload["integrity_model"].startswith("SHA-256")
+    manifest_entries = {entry["path"]: entry for entry in payload["files"]}
+    assert "evidence_manifest.json" not in manifest_entries
+    index_entry = manifest_entries["index.html"]
+    digest = hashlib.sha256((tmp_path / "evidence" / "index.html").read_bytes()).hexdigest()
+    assert index_entry["sha256"] == digest
 
 
 def test_evidence_index_url_quotes_case_links(tmp_path: Path) -> None:

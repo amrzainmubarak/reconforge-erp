@@ -131,7 +131,9 @@ def _summary_frame(
     resolved_keys: set[str],
     escalated_keys: set[str],
     accepted_risk_keys: set[str],
+    trend: pd.DataFrame,
 ) -> pd.DataFrame:
+    current_trend = trend.iloc[-1].to_dict() if not trend.empty else {}
     return pd.DataFrame(
         [
             {"metric": "periods_compared", "value": len(periods), "meaning": "Number of local output folders compared."},
@@ -141,6 +143,16 @@ def _summary_frame(
             {"metric": "resolved_exceptions", "value": len(resolved_keys), "meaning": "Earlier-period exceptions not present in the current period."},
             {"metric": "escalated_exceptions", "value": len(escalated_keys), "meaning": "Current-period exceptions marked Escalated in review state."},
             {"metric": "accepted_risk_items", "value": len(accepted_risk_keys), "meaning": "Current-period exceptions marked Accepted Risk in review state."},
+            {
+                "metric": "current_high_or_critical",
+                "value": current_trend.get("high_or_critical_count", 0),
+                "meaning": "High or Critical exceptions in the final input period.",
+            },
+            {
+                "metric": "current_review_completion_percent",
+                "value": current_trend.get("review_completion_percent", 0),
+                "meaning": "Share of final-period exceptions with a status beyond New.",
+            },
         ],
     )
 
@@ -163,6 +175,88 @@ def _period_counts(frames: list[pd.DataFrame]) -> pd.DataFrame:
             },
         )
     return pd.DataFrame(rows)
+
+
+def _reviewed_count(frame: pd.DataFrame) -> int:
+    if frame.empty or "status" not in frame.columns:
+        return 0
+    statuses = frame["status"].astype(str).str.strip().str.lower()
+    return int((statuses.ne("") & statuses.ne("new")).sum())
+
+
+def _trend_frame(frames: list[pd.DataFrame]) -> pd.DataFrame:
+    rows: list[dict[str, Any]] = []
+    previous_keys: set[str] = set()
+    for frame in frames:
+        if frame.empty:
+            period = ""
+            period_path = ""
+            current_keys: set[str] = set()
+            severity = pd.Series(dtype=str)
+            statuses = pd.Series(dtype=str)
+        else:
+            period = _clean(frame["period"].iloc[0])
+            period_path = _clean(frame["period_path"].iloc[0])
+            current_keys = set(frame["comparison_key"].astype(str))
+            severity = frame.get("risk_level", frame.get("severity", pd.Series([""] * len(frame)))).astype(str).str.lower()
+            statuses = frame.get("status", pd.Series([""] * len(frame))).astype(str).str.lower()
+        reviewed = _reviewed_count(frame)
+        exception_count = len(frame)
+        rows.append(
+            {
+                "period": period,
+                "period_path": period_path,
+                "exception_count": exception_count,
+                "unique_exception_count": len(current_keys),
+                "new_count": len(current_keys - previous_keys),
+                "recurring_count": len(current_keys & previous_keys),
+                "resolved_since_previous_count": len(previous_keys - current_keys),
+                "high_or_critical_count": int(severity.isin({"high", "critical"}).sum()),
+                "reviewed_count": reviewed,
+                "review_completion_percent": round((reviewed / exception_count) * 100, 2) if exception_count else 0,
+                "accepted_risk_count": int(statuses.eq("accepted risk").sum()),
+                "escalated_count": int(statuses.eq("escalated").sum()),
+            },
+        )
+        previous_keys = current_keys
+    return pd.DataFrame(rows)
+
+
+def _top_recurring_themes(frame: pd.DataFrame, recurring_keys: set[str]) -> pd.DataFrame:
+    if frame.empty or not recurring_keys:
+        return pd.DataFrame(columns=["theme", "count"])
+    subset = frame[frame["comparison_key"].isin(recurring_keys)].copy()
+    if subset.empty:
+        return pd.DataFrame(columns=["theme", "count"])
+    for column in ["exception_type", "rule_name", "source_file"]:
+        if column in subset.columns:
+            values = subset[column].astype(str).map(_clean)
+            values = values[values.ne("")]
+            if not values.empty:
+                counts = values.value_counts().head(10)
+                return pd.DataFrame({"theme": counts.index.tolist(), "count": counts.tolist()})
+    return pd.DataFrame(columns=["theme", "count"])
+
+
+def _trend_chart_html(trend: pd.DataFrame) -> str:
+    if trend.empty:
+        return "<p>No trend data found.</p>"
+    max_count = int(trend[["new_count", "recurring_count", "resolved_since_previous_count"]].max().max()) or 1
+    rows = []
+    for _, row in trend.iterrows():
+        bars = []
+        for key, label, color in [
+            ("new_count", "New", "#2563eb"),
+            ("recurring_count", "Recurring", "#b45309"),
+            ("resolved_since_previous_count", "Resolved", "#047857"),
+        ]:
+            value = int(row.get(key, 0))
+            width = max(4, int((value / max_count) * 100)) if value else 0
+            bars.append(
+                f"<div class='bar-row'><span>{escape(label)}</span><div class='bar-track'><div class='bar' style='width:{width}%;background:{color}'></div></div><strong>{value}</strong></div>",
+            )
+        rows.append(f"<article class='trend-card'><h3>{escape(_clean(row.get('period', '')))}</h3>{''.join(bars)}</article>")
+    return "<div class='trend-grid'>" + "".join(rows) + "</div>"
 
 
 def _html_table(frame: pd.DataFrame, limit: int = 25) -> str:
@@ -195,11 +289,13 @@ def _html_table(frame: pd.DataFrame, limit: int = 25) -> str:
     return f"<table><thead><tr>{header}</tr></thead><tbody>{''.join(rows)}</tbody></table>"
 
 
-def _write_html(path: Path, summary: pd.DataFrame, sections: dict[str, pd.DataFrame]) -> None:
+def _write_html(path: Path, summary: pd.DataFrame, trend: pd.DataFrame, top_themes: pd.DataFrame, sections: dict[str, pd.DataFrame]) -> None:
     cards = "".join(
         f"<section class='card'><span>{escape(str(row['metric']).replace('_', ' ').title())}</span><strong>{escape(str(row['value']))}</strong></section>"
         for _, row in summary.iterrows()
     )
+    trend_html = f"<section><h2>Trend Summary</h2>{_trend_chart_html(trend)}{_html_table(trend)}</section>"
+    themes_html = f"<section><h2>Top Recurring Themes</h2>{_html_table(top_themes)}</section>"
     section_html = "".join(f"<section><h2>{escape(title)}</h2>{_html_table(frame)}</section>" for title, frame in sections.items())
     path.write_text(
         f"""<!doctype html>
@@ -220,11 +316,17 @@ def _write_html(path: Path, summary: pd.DataFrame, sections: dict[str, pd.DataFr
     table {{ border-collapse: collapse; width: 100%; background: #fff; border: 1px solid #dce3ea; }}
     th, td {{ padding: 9px 10px; border-bottom: 1px solid #edf1f5; text-align: left; font-size: 13px; }}
     th {{ background: #e8eef5; color: #17324d; }}
+    .trend-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 18px; }}
+    .trend-card {{ background: #fff; border: 1px solid #dce3ea; border-radius: 8px; padding: 14px; }}
+    .trend-card h3 {{ margin: 0 0 10px; }}
+    .bar-row {{ display: grid; grid-template-columns: 76px 1fr 36px; gap: 8px; align-items: center; margin: 8px 0; font-size: 12px; }}
+    .bar-track {{ height: 10px; background: #edf1f5; border-radius: 999px; overflow: hidden; }}
+    .bar {{ height: 10px; border-radius: 999px; }}
   </style>
 </head>
 <body>
   <header><h1>ReconForge Period Comparison</h1><p>Local comparison of generated exception outputs. No savings are inferred.</p></header>
-  <main><div class="cards">{cards}</div>{section_html}</main>
+  <main><div class="cards">{cards}</div>{trend_html}{themes_html}{section_html}</main>
 </body>
 </html>
 """,
@@ -232,7 +334,7 @@ def _write_html(path: Path, summary: pd.DataFrame, sections: dict[str, pd.DataFr
     )
 
 
-def _write_markdown(path: Path, summary: pd.DataFrame, sections: dict[str, pd.DataFrame], periods: list[Path]) -> None:
+def _write_markdown(path: Path, summary: pd.DataFrame, trend: pd.DataFrame, top_themes: pd.DataFrame, sections: dict[str, pd.DataFrame], periods: list[Path]) -> None:
     lines = [
         "# ReconForge Period Comparison",
         "",
@@ -242,7 +344,20 @@ def _write_markdown(path: Path, summary: pd.DataFrame, sections: dict[str, pd.Da
         "## Summary",
         "",
         *[f"- {row['metric']}: {row['value']} ({row['meaning']})" for _, row in summary.iterrows()],
+        "",
+        "## Trend Summary",
+        "",
     ]
+    for _, row in trend.iterrows():
+        lines.append(
+            f"- `{row.get('period', '')}`: new {row.get('new_count', 0)}, recurring {row.get('recurring_count', 0)}, resolved since previous {row.get('resolved_since_previous_count', 0)}, high/critical {row.get('high_or_critical_count', 0)}, reviewed {row.get('review_completion_percent', 0)}%",
+        )
+    lines.extend(["", "## Top Recurring Themes", ""])
+    if top_themes.empty:
+        lines.append("No recurring themes found.")
+    else:
+        for _, row in top_themes.iterrows():
+            lines.append(f"- {row['theme']}: {row['count']}")
     for title, frame in sections.items():
         lines.extend(["", f"## {title}", ""])
         if frame.empty:
@@ -283,6 +398,8 @@ def compare_period_outputs(period_paths: Sequence[Path | str], output_path: Path
     resolved_frame = _representative_rows(prior, resolved_keys, "resolved", "prior")
     escalated_frame = _representative_rows(current, escalated_keys, "escalated", "current")
     accepted_risk_frame = _representative_rows(current, accepted_risk_keys, "accepted_risk", "current")
+    trend = _trend_frame(frames)
+    top_themes = _top_recurring_themes(current, recurring_keys)
     summary = _summary_frame(
         periods=periods,
         frames=frames,
@@ -291,11 +408,14 @@ def compare_period_outputs(period_paths: Sequence[Path | str], output_path: Path
         resolved_keys=resolved_keys,
         escalated_keys=escalated_keys,
         accepted_risk_keys=accepted_risk_keys,
+        trend=trend,
     )
     counts = _period_counts(frames)
     sheets = {
         "Summary": summary,
         "Period Counts": counts,
+        "Trend Summary": trend,
+        "Top Recurring Themes": top_themes,
         "New Exceptions": new_frame,
         "Recurring Exceptions": recurring_frame,
         "Resolved Exceptions": resolved_frame,
@@ -308,6 +428,20 @@ def compare_period_outputs(period_paths: Sequence[Path | str], output_path: Path
         "periods": [str(path) for path in periods],
         "summary": frame_to_records(summary),
         "period_counts": frame_to_records(counts),
+        "trend": {
+            "periods": frame_to_records(trend),
+            "chart_data": {
+                "labels": trend["period"].tolist() if "period" in trend.columns else [],
+                "new": trend["new_count"].tolist() if "new_count" in trend.columns else [],
+                "recurring": trend["recurring_count"].tolist() if "recurring_count" in trend.columns else [],
+                "resolved": trend["resolved_since_previous_count"].tolist() if "resolved_since_previous_count" in trend.columns else [],
+                "high_or_critical": trend["high_or_critical_count"].tolist() if "high_or_critical_count" in trend.columns else [],
+                "review_completion_percent": trend["review_completion_percent"].tolist() if "review_completion_percent" in trend.columns else [],
+                "accepted_risk": trend["accepted_risk_count"].tolist() if "accepted_risk_count" in trend.columns else [],
+                "escalated": trend["escalated_count"].tolist() if "escalated_count" in trend.columns else [],
+            },
+            "top_recurring_themes": frame_to_records(top_themes),
+        },
         "new_exceptions": frame_to_records(new_frame),
         "recurring_exceptions": frame_to_records(recurring_frame),
         "resolved_exceptions": frame_to_records(resolved_frame),
@@ -321,6 +455,8 @@ def compare_period_outputs(period_paths: Sequence[Path | str], output_path: Path
     _write_html(
         html_path,
         summary,
+        trend,
+        top_themes,
         {
             "New Exceptions": new_frame,
             "Recurring Exceptions": recurring_frame,
@@ -332,6 +468,8 @@ def compare_period_outputs(period_paths: Sequence[Path | str], output_path: Path
     _write_markdown(
         markdown_path,
         summary,
+        trend,
+        top_themes,
         {
             "New Exceptions": new_frame,
             "Recurring Exceptions": recurring_frame,

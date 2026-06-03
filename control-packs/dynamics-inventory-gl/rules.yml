@@ -1,0 +1,60 @@
+rules:
+  - rule_id: DYN-IG-001
+    rule_name: Inventory transaction missing voucher
+    severity: high
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: missing
+      field: source_document
+    message: Dynamics inventory transaction lacks a voucher or source document for GL traceability.
+    recommended_action: Include voucher, packing slip, receipt, or source document fields in the export.
+    risk_impact: 76
+    confidence: 0.9
+    evidence_fields: [move_id, date, source_document, product_code, warehouse, total_cost]
+  - rule_id: DYN-IG-002
+    rule_name: GL row missing voucher reference
+    severity: high
+    entity_type: gl_entry
+    source_file: gl_entries.csv
+    condition:
+      operator: and
+      conditions:
+        - operator: missing
+          field: reference
+        - operator: missing
+          field: source_document
+    message: Dynamics GL row lacks reference and source-document values.
+    recommended_action: Add voucher, document number, subledger voucher, or transaction text to the export layout.
+    risk_impact: 78
+    confidence: 0.9
+    evidence_fields: [entry_id, date, account_code, reference, source_document, amount]
+  - rule_id: DYN-IG-003
+    rule_name: Inventory item missing from released product master
+    severity: high
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: cross_file_missing
+      source_key: product_code
+      target_file: products.csv
+      target_key: product_code
+    message: Inventory transaction references an item absent from the mapped released-product export.
+    recommended_action: Confirm item-number mapping and product export coverage.
+    risk_impact: 72
+    confidence: 0.85
+    evidence_fields: [move_id, source_document, product_code, product_name, total_cost]
+  - rule_id: DYN-IG-004
+    rule_name: High-value inventory transaction
+    severity: medium
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: greater_or_equal
+      field: total_cost
+      value: 1000
+    message: High-value Dynamics inventory transaction should be traced to voucher and GL evidence.
+    recommended_action: Confirm the transaction voucher, item, warehouse, and ledger posting before close review.
+    risk_impact: 60
+    confidence: 0.85
+    evidence_fields: [move_id, date, source_document, product_code, quantity, total_cost]

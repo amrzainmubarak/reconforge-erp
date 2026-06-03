@@ -46,13 +46,13 @@ ERP systems hold the source transactions, but month-end reconciliation often sti
 | Reconciliation | Stock-to-GL matching, amount/date variance checks, unmatched stock and unmatched GL review |
 | Workshop controls | Work-order cost review, WIP aging, direct purchase fitting risk, old-part return checks |
 | Audit intelligence | Risk scores, risk levels, suggested audit notes, control explanations, evidence binders |
-| Rule packs | 15 domain control packs with YAML rules, mappings, expected exceptions, and risk models |
+| Rule packs | 18 domain control packs with YAML rules, mappings, expected exceptions, and risk models |
 | Reporting | Excel management pack, executive HTML report, static dashboard, Markdown, CSV, and JSON outputs |
-| Mapping | Odoo/SAP export mapping validation and local header inspection reports |
-| Review workflow | Studio review actions, local review state, review register export, status filtering |
-| Period comparison | New, recurring, resolved, escalated, and accepted-risk exception comparison |
-| Handoff | Local client handoff pack with privacy note and manifest |
-| Data safety | Local-first processing, anonymized demo data support, no API key required for core workflows |
+| Mapping | Odoo, SAP, ERPNext, Dynamics, and NetSuite export mapping validation plus local header inspection reports |
+| Review workflow | Studio review actions, local review state, review register export, and status filtering |
+| Period comparison | New, recurring, resolved, escalated, accepted-risk, and trend comparison |
+| Handoff | Local client handoff pack with privacy note, redaction controls, and optional checksums |
+| Data safety | Local-first processing, anonymized demo data support, evidence integrity manifests, and no API key required for core workflows |
 
 ## Visual Preview
 
@@ -136,6 +136,9 @@ reconforge reconcile workorders --input examples/sample_data --config config/rec
 
 reconforge mappings validate --pack control-packs/odoo-inventory-valuation
 reconforge mappings validate --pack control-packs/sap-mb51-fagll03
+reconforge mappings validate --pack control-packs/erpnext-stock-gl
+reconforge mappings validate --pack control-packs/dynamics-inventory-gl
+reconforge mappings validate --pack control-packs/netsuite-inventory-gl
 reconforge mappings wizard --input examples/sample_data --pack control-packs/odoo-inventory-valuation --output output/mapping_wizard
 reconforge rules validate --pack control-packs/audit-basic
 reconforge rules list --pack control-packs/audit-basic
@@ -145,6 +148,7 @@ reconforge rules run --input examples/sample_data --pack control-packs/audit-bas
 reconforge report management-pack --input examples/sample_data --config config/reconforge.yml --output output
 reconforge report evidence-binder --input output --output output/evidence
 reconforge report client-pack --input output --output output/client_pack
+reconforge report client-pack --input output --output output/client_pack_redacted --redact-names --redact-amounts --exclude-raw-records --include-manifest-checksums
 reconforge compare periods --inputs output/demo output/demo --output output/period_comparison
 reconforge explain exception --input output/management_pack.json --exception-id EXC-0001
 
@@ -156,10 +160,13 @@ reconforge studio --input examples/sample_data --output output
 
 ## ERP Mapping Profiles
 
-ReconForge ERP includes export-based mapping profiles for Odoo inventory valuation and SAP MB51/FAGLL03 workflows. These profiles help users map local CSV/XLSX exports into the canonical ReconForge files before running stock-to-GL reconciliation, rules, reports, and evidence binder workflows.
+ReconForge ERP includes export-based mapping profiles for Odoo inventory valuation, SAP MB51/FAGLL03, ERPNext, Microsoft Dynamics, and NetSuite workflows. These profiles help users map local CSV/XLSX exports into the canonical ReconForge files before running stock-to-GL reconciliation, rules, reports, and evidence binder workflows.
 
 - `control-packs/odoo-inventory-valuation` covers Odoo stock moves, stock valuation layers, account move lines, products, work-order references, and invoices where available.
 - `control-packs/sap-mb51-fagll03` covers SAP MB51 material documents and FAGLL03/FBL3N G/L line item exports.
+- `control-packs/erpnext-stock-gl` covers ERPNext stock ledger, GL entry, and item exports.
+- `control-packs/dynamics-inventory-gl` covers Microsoft Dynamics inventory transactions, voucher/GL rows, and released products.
+- `control-packs/netsuite-inventory-gl` covers NetSuite inventory activity, GL impact/accounting lines, and item saved searches.
 - Core workflows are local-first and do not require cloud upload or direct ERP connectors.
 - Use `reconforge mappings wizard` to inspect CSV/XLSX headers and generate `mapping_report.md` plus `mapping_report.json`.
 
@@ -185,11 +192,12 @@ The command writes Excel, HTML, JSON, and Markdown outputs. It does not infer sa
 | `executive_report.html` | Local executive HTML report with Control Value Summary |
 | `dashboard.html` | Static local dashboard |
 | `output/evidence/` | Audit case folders for High and Critical exceptions |
+| `output/evidence/evidence_manifest.json` | SHA-256 integrity manifest for generated evidence artifacts |
 | `output/review_state.json` | Local exception review status, reviewer notes, and decision metadata |
 | `output/review_register.xlsx` | Optional review register exported from local review state |
 | `output/rules/` | Rule engine CSV/JSON outputs |
 | `output/benchmark/` | Runtime and match-rate benchmark outputs |
-| `output/client_pack/` | Local handoff folder with summary, next steps, privacy note, and manifest |
+| `output/client_pack/` | Local handoff folder with summary, next steps, privacy note, redaction settings, and manifest |
 
 ## Who It Is For
 
@@ -222,11 +230,14 @@ See [docs/architecture.md](docs/architecture.md) for system, pipeline, rule engi
 
 ## Control Packs
 
-ReconForge ERP ships 15 control packs:
+ReconForge ERP ships 18 control packs:
 
 - `audit-basic`
 - `odoo-inventory-valuation`
 - `sap-mb51-fagll03`
+- `erpnext-stock-gl`
+- `dynamics-inventory-gl`
+- `netsuite-inventory-gl`
 - `workshop-spare-parts`
 - `fleet-maintenance`
 - `manufacturing-wip`
@@ -257,7 +268,7 @@ output/evidence/EXC-0001/
 └── audit_trail.json
 ```
 
-The binder also writes `index.html`, `evidence_index.json`, and `evidence_register.xlsx`.
+The binder also writes `index.html`, `evidence_index.json`, `evidence_register.xlsx`, and `evidence_manifest.json`.
 
 ## Security And Quality
 
@@ -270,7 +281,7 @@ Quality and security checks are part of the repository workflow:
 - Security workflow runs Bandit and `pip-audit`.
 - Path-serving routes use registry-based download allowlists instead of constructing filesystem paths from route parameters.
 
-See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md), and [docs/data-privacy.md](docs/data-privacy.md).
+See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md), [docs/security-whitepaper.md](docs/security-whitepaper.md), [docs/redaction-controls.md](docs/redaction-controls.md), [docs/evidence-integrity.md](docs/evidence-integrity.md), [docs/data-privacy.md](docs/data-privacy.md), and [docs/compliance-disclaimer.md](docs/compliance-disclaimer.md).
 
 ## Documentation
 
@@ -283,13 +294,23 @@ See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md)
 - [Review workflow](docs/review-workflow.md)
 - [ReconForge Studio](docs/reconforge-studio.md)
 - [Mapping wizard](docs/mapping-wizard.md)
+- [ERP export profiles](docs/erp-export-profiles.md)
 - [Multi-period comparison](docs/multi-period-comparison.md)
 - [Client handoff pack](docs/client-handoff-pack.md)
+- [Redaction controls](docs/redaction-controls.md)
+- [Evidence integrity](docs/evidence-integrity.md)
 - [Docker deployment](docs/docker-deployment.md)
+- [Docker verification report](docs/strategy/docker-verification-report.md)
 - [Security whitepaper](docs/security-whitepaper.md)
+- [Compliance disclaimer](docs/compliance-disclaimer.md)
 - [Synthetic case study](docs/case-studies/workshop-spare-parts-health-check.md)
+- [Odoo synthetic case study](docs/case-studies/odoo-stock-valuation-pilot.md)
+- [SAP synthetic case study](docs/case-studies/sap-export-reconciliation-pilot.md)
 - [Pricing and services](docs/commercial/pricing-and-services.md)
+- [Pilot proposal template](docs/commercial/pilot-proposal-template.md)
+- [Client onboarding checklist](docs/commercial/client-onboarding-checklist.md)
 - [Demo video script](docs/demo-video-script.md)
+- [Demo recording checklist](docs/demo-recording-checklist.md)
 - [Risk scoring](docs/risk-scoring.md)
 - [Report samples](docs/report-samples.md)
 - [Anonymization](docs/anonymization.md)
@@ -322,7 +343,7 @@ python -m bandit -q -r reconforge
 
 ## Roadmap
 
-Near-term work: authenticated self-hosted review mode, stronger output redaction controls, richer period trend charts, ERPNext/NetSuite/Dynamics export profiles, and Docker build verification in CI.
+Near-term work: authenticated self-hosted review mode, workbook-level redaction strategy, Docker runtime verification, structured pilot feedback, release artifact signing/SBOM, and deeper ERP export examples.
 
 ## Contributing
 

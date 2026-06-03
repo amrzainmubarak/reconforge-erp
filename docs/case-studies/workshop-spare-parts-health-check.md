@@ -48,6 +48,12 @@ The team creates a client handoff pack:
 reconforge report client-pack --input output/demo --output output/client_pack
 ```
 
+For an externally shareable rehearsal pack, use conservative sharing controls:
+
+```bash
+reconforge report client-pack --input output/demo --output output/client_pack_redacted --redact-names --redact-amounts --exclude-raw-records --include-manifest-checksums
+```
+
 ## Outputs Generated
 
 - `management_pack.xlsx`
@@ -58,6 +64,29 @@ reconforge report client-pack --input output/demo --output output/client_pack
 - `review_register.xlsx`
 - `evidence/`
 - `client_pack/`
+- optional `files_manifest.json` with SHA-256 checksums when requested
+
+## How To Reproduce With Sample Data
+
+1. Clone the repository.
+2. Install ReconForge locally.
+3. Run `reconforge demo run --output output/demo`.
+4. Open `output/demo/executive_report.html`.
+5. Open `output/demo/evidence/index.html`.
+6. Start Studio with `reconforge studio --input examples/sample_data --output output/demo`.
+7. Generate a client pack with redaction controls if the pack will be shared outside the immediate review team.
+
+## What The Case Study Proves
+
+- The local sample workflow can generate reconciliation reports, review state, evidence, and a handoff pack.
+- Studio review statuses can be updated locally.
+- The evidence pack can be organized with integrity manifests.
+
+## What The Case Study Does Not Prove
+
+- It does not prove live ERP integration.
+- It does not prove production readiness for regulated environments.
+- It does not prove savings or audit outcomes.
 
 ## Sample Findings
 

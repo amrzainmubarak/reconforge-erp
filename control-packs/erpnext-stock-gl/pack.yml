@@ -1,0 +1,6 @@
+pack_id: erpnext-stock-gl
+name: ERPNext Stock Ledger vs GL Controls
+version: 0.6.1
+description: Export-based controls for ERPNext stock ledger, item, warehouse, and general ledger CSV/XLSX exports mapped to the ReconForge schema.
+owner: ReconForge ERP Maintainers
+tags: [erpnext, inventory, gl, export-based]

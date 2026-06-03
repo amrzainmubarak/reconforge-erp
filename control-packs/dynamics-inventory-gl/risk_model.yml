@@ -1,0 +1,13 @@
+risk_weights:
+  missing_inventory_voucher: 76
+  missing_gl_reference: 78
+  product_master_gap: 72
+  high_value_inventory_transaction: 60
+escalation:
+  critical: Finance Controller
+  high: Dynamics Finance Lead
+  medium: Inventory Controller
+  low: Data Steward
+review_guidance:
+  - Treat missing voucher references as export-layout or traceability issues until reviewed.
+  - Keep legal entity and period scope aligned before classifying exceptions.

@@ -11,6 +11,8 @@ ReconForge ERP's next release is intended to be the Product-Ready Pilot Toolkit.
 - Added product readiness audit, mapping wizard guide, multi-period comparison guide, Docker deployment checklist, synthetic case study, security whitepaper, pricing/service model, and demo video script.
 - Updated README onboarding and documentation links for the 10-minute demo, Studio review workflow, mapping wizard, multi-period comparison, client handoff pack, Docker deployment, case study, and security whitepaper.
 - Added tests for mapping inspection, malformed/empty mapping inputs, multi-period comparison, review-state comparison categories, and client-pack manifest behavior.
+- Added client-pack redaction/exclusion flags, optional manifest checksums, evidence SHA-256 integrity manifests, period trend summaries, and additional export-based ERPNext, Dynamics, and NetSuite profiles.
+- Added Docker build CI workflow, Docker verification report, redaction and evidence-integrity docs, compliance disclaimer, pilot proposal template, onboarding checklist, synthetic Odoo/SAP case studies, demo recording checklist, and static landing page foundation.
 - Version metadata remains at `0.6.0` until all release gates, including Docker runtime verification, are completed.
 
 ## v0.6.0

@@ -1,0 +1,6 @@
+pack_id: dynamics-inventory-gl
+name: Microsoft Dynamics Inventory vs GL Controls
+version: 0.6.1
+description: Export-based controls for Microsoft Dynamics inventory transaction and general ledger CSV/XLSX exports mapped to ReconForge.
+owner: ReconForge ERP Maintainers
+tags: [dynamics, inventory, gl, export-based]

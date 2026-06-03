@@ -1,0 +1,70 @@
+profile_id: erpnext-stock-gl
+source_system: erpnext
+version: 0.6.1
+description: Export-based mapping profile for ERPNext stock ledger and general ledger review. It does not provide a direct ERPNext connector.
+export_workflow:
+  mode: export_based
+  cloud_upload_required: false
+  direct_api_connector: false
+  notes:
+    - Export ERPNext reports or list views to CSV/XLSX and map them into ReconForge canonical files.
+    - Keep company, warehouse scope, item scope, and accounting period consistent across exports.
+canonical_datasets:
+  stock_moves.csv:
+    source_reports: [Stock Ledger, Stock Ledger Entry export]
+    purpose: Inventory movements and valuation amounts used for stock-to-GL review.
+  gl_entries.csv:
+    source_reports: [General Ledger, GL Entry export]
+    purpose: Posted ledger rows for stock, WIP, expense, variance, and clearing accounts.
+  products.csv:
+    source_reports: [Item export, Item Group export]
+    purpose: Item master and account configuration review.
+field_mappings:
+  stock_moves.csv:
+    move_id: [name, voucher_no, stock_ledger_entry, sle_id]
+    date: [posting_date, posting_datetime, date]
+    source_document: [voucher_no, voucher_type, reference_document, batch_no]
+    work_order: [work_order, production_order, project, job_card]
+    product_code: [item_code, item]
+    product_name: [item_name, description]
+    category: [item_group, stock_category]
+    quantity: [actual_qty, qty_after_transaction, quantity]
+    unit_cost: [valuation_rate, incoming_rate, basic_rate]
+    total_cost: [stock_value_difference, stock_value, amount]
+    warehouse: [warehouse, source_warehouse, target_warehouse]
+    movement_type: [voucher_type, purpose, stock_entry_type]
+    customer_code: [customer, party, party_code]
+    equipment_serial: [serial_no, asset, equipment_serial]
+    created_by: [owner, modified_by, user]
+  gl_entries.csv:
+    entry_id: [name, gl_entry, voucher_no]
+    date: [posting_date, date]
+    journal: [voucher_type, account_currency, finance_book]
+    account_code: [account, account_number]
+    account_name: [account_name, account]
+    reference: [voucher_no, against_voucher, remarks]
+    source_document: [voucher_no, against_voucher, stock_entry, purchase_receipt]
+    debit: [debit, debit_in_account_currency]
+    credit: [credit, credit_in_account_currency]
+    amount: [balance, debit_credit_difference, signed_amount]
+    cost_center: [cost_center, project, department]
+    work_order: [work_order, project, production_order]
+    created_by: [owner, modified_by, user]
+  products.csv:
+    product_code: [item_code, item]
+    product_name: [item_name, description]
+    category: [item_group, stock_category]
+    standard_cost: [valuation_rate, standard_rate, last_purchase_rate]
+    stock_account: [stock_account, default_warehouse_account]
+    expense_account: [expense_account, default_expense_account]
+join_keys:
+  stock_to_gl:
+    stock_side: [source_document, product_code, date, total_cost]
+    gl_side: [source_document, reference, date, amount]
+  stock_to_product:
+    stock_side: [product_code]
+    product_side: [product_code]
+quality_checks:
+  - Confirm stock and GL exports use the same ERPNext company, fiscal period, and warehouse/account scope.
+  - Confirm stock value sign convention before comparing movements to GL amounts.
+  - Confirm voucher numbers are exported consistently across stock ledger and GL rows.

@@ -13,6 +13,7 @@ ReconForge ERP is an open-source, local-first ERP reconciliation and audit intel
 - [Rule-pack schema reference](rule-pack-schema-reference.md)
 - [Demo scenarios](demo-scenarios.md)
 - [Docker deployment](docker-deployment.md)
+- [Docker verification report](strategy/docker-verification-report.md)
 
 ## Product and Architecture
 
@@ -23,15 +24,25 @@ ReconForge ERP is an open-source, local-first ERP reconciliation and audit intel
 - [Architecture](architecture.md)
 - [Commercial strategy](commercial-strategy.md)
 - [Client handoff pack](client-handoff-pack.md)
+- [Redaction controls](redaction-controls.md)
+- [Evidence integrity](evidence-integrity.md)
 - [Security whitepaper](security-whitepaper.md)
+- [Compliance disclaimer](compliance-disclaimer.md)
 - [Synthetic workshop case study](case-studies/workshop-spare-parts-health-check.md)
+- [Synthetic Odoo stock valuation pilot](case-studies/odoo-stock-valuation-pilot.md)
+- [Synthetic SAP export reconciliation pilot](case-studies/sap-export-reconciliation-pilot.md)
 - [Pricing and services](commercial/pricing-and-services.md)
+- [Pilot proposal template](commercial/pilot-proposal-template.md)
+- [Client onboarding checklist](commercial/client-onboarding-checklist.md)
 - [Demo video script](demo-video-script.md)
+- [Demo recording checklist](demo-recording-checklist.md)
 
 ## Strategy
 
 - [Repository assessment](strategy/repository-assessment.md)
 - [Product readiness audit](strategy/product-readiness-audit.md)
+- [Final product readiness gap audit](strategy/final-product-readiness-gap-audit.md)
+- [Release readiness report](strategy/release-readiness-report.md)
 - [Productization assessment](strategy/productization-assessment.md)
 - [Competitor intelligence](strategy/competitor-intelligence.md)
 - [Category leadership plan](strategy/category-leadership-plan.md)
@@ -44,6 +55,7 @@ ReconForge ERP is an open-source, local-first ERP reconciliation and audit intel
 
 ## ERP Export Guides
 
+- [ERP export profiles](erp-export-profiles.md)
 - [Odoo export guide](odoo-export-guide.md)
 - [SAP export guide](sap-export-guide.md)
 

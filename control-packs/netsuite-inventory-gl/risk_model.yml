@@ -1,0 +1,13 @@
+risk_weights:
+  missing_inventory_reference: 76
+  missing_gl_reference: 78
+  item_master_gap: 72
+  high_value_inventory_activity: 60
+escalation:
+  critical: Finance Controller
+  high: NetSuite Finance Lead
+  medium: Inventory Controller
+  low: Data Steward
+review_guidance:
+  - Confirm saved searches cover the same subsidiary, location, account, and period scope.
+  - Treat missing references as export-layout or traceability issues until source evidence is reviewed.

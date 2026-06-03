@@ -1,0 +1,13 @@
+risk_weights:
+  missing_stock_voucher: 76
+  missing_gl_reference: 78
+  item_master_gap: 72
+  high_value_stock_movement: 60
+escalation:
+  critical: Finance Controller
+  high: ERPNext Finance Lead
+  medium: Inventory Controller
+  low: Data Steward
+review_guidance:
+  - Treat missing voucher references as mapping or traceability issues until source evidence is reviewed.
+  - Confirm stock ledger and GL exports are period-aligned before classifying exceptions.

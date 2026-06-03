@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
+from openpyxl import load_workbook
 from typer.testing import CliRunner
 
 from reconforge.cli import app
@@ -42,9 +43,17 @@ def test_compare_periods_detects_new_recurring_and_resolved(tmp_path: Path) -> N
     assert summary["new_exceptions"] == 1
     assert summary["recurring_exceptions"] == 1
     assert summary["resolved_exceptions"] == 1
+    assert payload["trend"]["chart_data"]["new"] == [2, 1]
+    assert payload["trend"]["chart_data"]["recurring"] == [0, 1]
+    assert "top_recurring_themes" in payload["trend"]
     assert (output / "period_comparison.xlsx").exists()
     assert (output / "period_comparison.html").exists()
     assert (output / "period_comparison.md").exists()
+    html = (output / "period_comparison.html").read_text(encoding="utf-8")
+    assert "Trend Summary" in html
+    workbook = load_workbook(output / "period_comparison.xlsx", read_only=True)
+    assert "Trend Summary" in workbook.sheetnames
+    assert "Top Recurring Themes" in workbook.sheetnames
 
 
 def test_compare_periods_matches_reordered_synthetic_exception_ids_by_fingerprint(tmp_path: Path) -> None:

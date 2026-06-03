@@ -1,0 +1,60 @@
+rules:
+  - rule_id: NS-IG-001
+    rule_name: Inventory activity missing document number
+    severity: high
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: missing
+      field: source_document
+    message: NetSuite inventory activity row lacks document number or source document.
+    recommended_action: Include transaction number, document number, or created-from reference in the saved search.
+    risk_impact: 76
+    confidence: 0.9
+    evidence_fields: [move_id, date, source_document, product_code, warehouse, total_cost]
+  - rule_id: NS-IG-002
+    rule_name: GL impact row missing reference
+    severity: high
+    entity_type: gl_entry
+    source_file: gl_entries.csv
+    condition:
+      operator: and
+      conditions:
+        - operator: missing
+          field: reference
+        - operator: missing
+          field: source_document
+    message: NetSuite GL row lacks both reference and source-document values.
+    recommended_action: Include transaction number, document number, memo, or created-from fields in the accounting-line export.
+    risk_impact: 78
+    confidence: 0.9
+    evidence_fields: [entry_id, date, account_code, reference, source_document, amount]
+  - rule_id: NS-IG-003
+    rule_name: Inventory item missing from item master
+    severity: high
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: cross_file_missing
+      source_key: product_code
+      target_file: products.csv
+      target_key: product_code
+    message: Inventory activity references an item absent from the mapped item saved search.
+    recommended_action: Confirm item identifier mapping and item saved-search coverage.
+    risk_impact: 72
+    confidence: 0.85
+    evidence_fields: [move_id, source_document, product_code, product_name, total_cost]
+  - rule_id: NS-IG-004
+    rule_name: High-value inventory activity
+    severity: medium
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: greater_or_equal
+      field: total_cost
+      value: 1000
+    message: High-value NetSuite inventory activity should be traced to GL impact and source-document evidence.
+    recommended_action: Confirm transaction number, item, location, and GL impact rows before management review.
+    risk_impact: 60
+    confidence: 0.85
+    evidence_fields: [move_id, date, source_document, product_code, quantity, total_cost]

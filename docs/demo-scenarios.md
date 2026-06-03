@@ -27,6 +27,14 @@ reconforge studio --input examples/sample_data --output output/demo
 
 The demo uses sample data and creates local artifacts only.
 
+For a reduced sharing rehearsal:
+
+```bash
+reconforge report client-pack --input output/demo --output output/client_pack_redacted --redact-names --redact-amounts --exclude-raw-records --include-manifest-checksums
+```
+
+Review `output/client_pack_redacted/files_manifest.json` and `data_privacy_note.md` before sharing any generated files outside the review team.
+
 ## 1. Stock Movement Without GL Posting
 
 - Business meaning: Inventory was issued, consumed, received, or adjusted, but ReconForge did not find a matching accounting line.

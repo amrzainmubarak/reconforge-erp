@@ -1,0 +1,70 @@
+profile_id: dynamics-inventory-gl
+source_system: microsoft-dynamics
+version: 0.6.1
+description: Export-based mapping profile for Microsoft Dynamics inventory transactions and GL entries. It does not provide a direct Dynamics connector.
+export_workflow:
+  mode: export_based
+  cloud_upload_required: false
+  direct_api_connector: false
+  notes:
+    - Export Dynamics inventory and finance rows to CSV/XLSX and map them locally.
+    - Keep legal entity, site/warehouse, ledger account, and period scope consistent.
+canonical_datasets:
+  stock_moves.csv:
+    source_reports: [Inventory transactions, Posted inventory transactions]
+    purpose: Inventory movement and value rows used for stock-to-GL review.
+  gl_entries.csv:
+    source_reports: [General ledger transactions, Voucher transactions]
+    purpose: Posted ledger rows for inventory, WIP, variance, expense, and clearing accounts.
+  products.csv:
+    source_reports: [Released products, Item master]
+    purpose: Product master and account setup review.
+field_mappings:
+  stock_moves.csv:
+    move_id: [transaction_id, invent_trans_id, voucher, record_id]
+    date: [physical_date, financial_date, posting_date, date]
+    source_document: [voucher, reference, source_document, packing_slip, receipt]
+    work_order: [production_order, project_id, service_order, work_order]
+    product_code: [item_number, item_id, product_number]
+    product_name: [product_name, item_name, description]
+    category: [item_group, product_category, inventory_group]
+    quantity: [quantity, qty, inventory_quantity]
+    unit_cost: [cost_price, unit_cost, average_cost]
+    total_cost: [cost_amount, financial_cost_amount, amount]
+    warehouse: [warehouse, site, location]
+    movement_type: [reference_category, transaction_type, movement_type]
+    customer_code: [customer_account, customer, party]
+    equipment_serial: [serial_number, asset_id, equipment]
+    created_by: [created_by, user_id, modified_by]
+  gl_entries.csv:
+    entry_id: [voucher_line, transaction_id, rec_id]
+    date: [accounting_date, posting_date, date]
+    journal: [journal, journal_name, voucher_type]
+    account_code: [main_account, ledger_account, account]
+    account_name: [account_name, main_account_name]
+    reference: [voucher, document_number, text, reference]
+    source_document: [voucher, source_document, subledger_voucher]
+    debit: [debit, debit_amount]
+    credit: [credit, credit_amount]
+    amount: [accounting_currency_amount, reporting_currency_amount, signed_amount]
+    cost_center: [financial_dimension_cost_center, cost_center, department]
+    work_order: [production_order, project_id, service_order]
+    created_by: [created_by, user_id, modified_by]
+  products.csv:
+    product_code: [item_number, item_id, product_number]
+    product_name: [product_name, item_name, search_name]
+    category: [item_group, product_category, inventory_group]
+    standard_cost: [standard_cost, cost_price, latest_cost]
+    stock_account: [inventory_account, posting_profile_inventory_account]
+    expense_account: [expense_account, consumption_account, variance_account]
+join_keys:
+  stock_to_gl:
+    stock_side: [source_document, product_code, date, total_cost]
+    gl_side: [source_document, reference, date, amount]
+  stock_to_product:
+    stock_side: [product_code]
+    product_side: [product_code]
+quality_checks:
+  - Confirm the same legal entity, fiscal period, site, warehouse, and account scope across exports.
+  - Confirm voucher and subledger voucher fields are included where available.
+  - Confirm Dynamics amount sign convention before matching inventory value to GL amount.

@@ -72,7 +72,7 @@ Use:
 - Conservative dependency additions.
 - Release notes for material dependency changes.
 
-Future improvement: generate SBOM artifacts during release.
+The SBOM workflow generates a CycloneDX artifact on release tags and manual runs. Future improvement: document an SBOM review policy for releases.
 
 ## 10. Contributor Security Checklist
 
@@ -87,7 +87,7 @@ Future improvement: generate SBOM artifacts during release.
 
 ## 11. Secure Plugin Policy
 
-Plugin and connector work must:
+Plugin and export-adapter work must:
 
 - Be read-only by default.
 - Declare network behavior.
@@ -95,7 +95,7 @@ Plugin and connector work must:
 - Map data into canonical schemas before controls run.
 - Include tests.
 - Include security notes.
-- Keep direct ERP connectors separate from export profiles.
+- Keep export profiles separate from any future credentialed live integration.
 
 ## 12. Security Review Checklist For PRs
 

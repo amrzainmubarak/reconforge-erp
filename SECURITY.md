@@ -57,7 +57,9 @@ The repository includes:
 - Pytest coverage.
 - Bandit and pip-audit security workflow.
 - CodeQL workflow for supported GitHub environments.
+- OpenSSF Scorecard workflow as a repository security maturity check.
+- CycloneDX SBOM workflow for Python dependency visibility on manual runs and release tags.
 - Dependabot configuration for Python and GitHub Actions.
 - Pre-commit hooks for formatting and basic file hygiene.
 
-Security tooling supports maintainers, but it does not replace careful review of file handling, report output, connector logic, and user-supplied data.
+Security tooling supports maintainers, but it does not replace careful review of file handling, report output, export-profile logic, and user-supplied data. Scorecard results and SBOM artifacts are visibility aids, not guarantees, certifications, or signed release attestations.

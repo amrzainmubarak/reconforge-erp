@@ -1,10 +1,10 @@
 # Plugin Development
 
-ReconForge ERP includes a connector foundation for future ERP adapters. Current adapters are local export-oriented and do not connect to live ERP systems.
+ReconForge ERP includes a plugin foundation for local export adapters. Current adapters are export-oriented and do not connect to live ERP systems.
 
-## Connector Interface
+## Export Adapter Interface
 
-Connectors implement:
+Export adapters implement:
 
 - `load_data`
 - `validate_schema`
@@ -18,14 +18,14 @@ Connectors implement:
 - `odoo_export`
 - `sap_export`
 
-## Future Connector Roadmap
+## Future Export Profile Roadmap
 
-- Odoo read-only connector.
+- Additional Odoo export helpers.
 - SAP export template adapter.
-- ERPNext connector.
+- ERPNext CSV/XLSX adapter.
 - NetSuite CSV adapter.
 - Dynamics CSV adapter.
 
 ## Design Rule
 
-Connectors should map data into the canonical ReconForge schema before reconciliation. Reconciliation logic should remain ERP-neutral.
+Adapters should map exported data into the canonical ReconForge schema before reconciliation. Reconciliation logic should remain ERP-neutral. Do not describe these adapters as direct ERP connectors unless a live credentialed integration is explicitly implemented and documented.

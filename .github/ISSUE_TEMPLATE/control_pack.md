@@ -2,7 +2,7 @@
 name: Control pack
 about: Propose a new control pack or improve an existing pack
 title: "[Control Pack]: "
-labels: "area:rules"
+labels: "rule-pack"
 assignees: ""
 ---
 
@@ -33,3 +33,7 @@ Attach only anonymized or synthetic samples. Do not attach live ERP data.
 ## Acceptance Criteria
 
 How should maintainers validate this pack?
+
+## Claim Boundaries
+
+Do not describe the pack as audit-certified, compliance-certified, customer-proven, or production-validated.

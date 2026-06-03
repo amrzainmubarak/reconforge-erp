@@ -48,7 +48,7 @@ account_mapping:
   inventory_variance: "5200"
 ```
 
-Account mappings document the intended control scope and can be extended when future connectors filter ERP exports automatically.
+Account mappings document the intended control scope and can be extended when future export adapters normalize ERP exports automatically.
 
 ## Risk Weights
 

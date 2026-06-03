@@ -1,0 +1,44 @@
+name: SBOM
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  cyclonedx-python:
+    name: Generate CycloneDX SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install package and SBOM tool
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install cyclonedx-bom
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          mkdir -p sbom
+          cyclonedx-py environment --spec-version 1.6 --output-format JSON --output-reproducible --output-file sbom/reconforge-erp.cdx.json
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: reconforge-erp-cyclonedx-sbom
+          path: sbom/reconforge-erp.cdx.json
+          if-no-files-found: error

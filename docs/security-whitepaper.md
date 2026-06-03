@@ -68,9 +68,15 @@ The repository includes quality gates for:
 - pytest
 - Bandit
 - CodeQL
+- OpenSSF Scorecard
+- CycloneDX SBOM generation
 - package build
 
 Dependency review should be performed before production use. `pip-audit` is listed in development dependencies.
+
+OpenSSF Scorecard is configured as a scheduled/manual repository security maturity check. It should be used to prioritize improvements, not as a guarantee that the repository is secure.
+
+The SBOM workflow generates a CycloneDX Python dependency artifact on release tags and manual dispatch. This improves dependency visibility, but it is not artifact signing, legal assurance, or supply-chain certification.
 
 ## 10. CodeQL And Bandit
 
@@ -155,15 +161,17 @@ Near-term:
 - workbook-level redaction strategy or clearer safe-export alternatives
 - Docker runtime verification across supported local environments
 - dependency audit workflow hardening
+- Scorecard finding review and remediation process
+- SBOM artifact review for tagged releases
 - clearer secure deployment defaults
-- SBOM and signed release artifact investigation
+- signed release artifact investigation
 
 Longer-term:
 
 - signed evidence bundles
 - role-aware review workflow
 - optional encrypted local state
-- connector-specific credential threat models if direct connectors are implemented
+- credential-handling threat models if live ERP integrations are ever implemented
 
 ## 17. Responsible Disclosure
 

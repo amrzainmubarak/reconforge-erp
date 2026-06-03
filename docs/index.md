@@ -14,6 +14,7 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Controls and audit](controls-and-audit.md)
 - [Rule-pack schema reference](rule-pack-schema-reference.md)
 - [Demo scenarios](demo-scenarios.md)
+- [Demo output pack](demo-output-pack.md)
 - [Docker deployment](docker-deployment.md)
 - [Docker verification report](strategy/docker-verification-report.md)
 
@@ -30,12 +31,15 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Evidence integrity](evidence-integrity.md)
 - [Security whitepaper](security-whitepaper.md)
 - [Compliance disclaimer](compliance-disclaimer.md)
+- [OSS ecosystem importance](strategy/oss-ecosystem-importance.md)
 - [Synthetic workshop case study](case-studies/workshop-spare-parts-health-check.md)
 - [Synthetic Odoo stock valuation pilot](case-studies/odoo-stock-valuation-pilot.md)
 - [Synthetic SAP export reconciliation pilot](case-studies/sap-export-reconciliation-pilot.md)
 - [Pricing and services](commercial/pricing-and-services.md)
 - [Pilot proposal template](commercial/pilot-proposal-template.md)
 - [Client onboarding checklist](commercial/client-onboarding-checklist.md)
+- [External feedback request](commercial/external-feedback-request.md)
+- [Feedback form questions](commercial/feedback-form-questions.md)
 - [Demo video script](demo-video-script.md)
 - [Demo recording checklist](demo-recording-checklist.md)
 
@@ -54,6 +58,8 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Commercial strategy](strategy/commercial-strategy.md)
 - [Trust and security](strategy/trust-and-security.md)
 - [Thought leadership pack](strategy/thought-leadership-pack.md)
+- [Maintainer automation roadmap](strategy/maintainer-automation-roadmap.md)
+- [OSS support application notes](strategy/oss-support-application-notes.md)
 
 ## ERP Export Guides
 
@@ -77,6 +83,11 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Benchmarking](benchmark.md)
 - [Report samples](report-samples.md)
 - [Maintainer guide](maintainer-guide.md)
+- [Release process](maintainers/release-process.md)
+- [Triage guide](maintainers/triage-guide.md)
+- [Recommended labels](maintainers/labels.md)
+- [Suggested issues](maintainers/suggested-issues.md)
+- [Discussions starter kit](maintainers/discussions-starter-kit.md)
 
 ## Role Playbooks
 

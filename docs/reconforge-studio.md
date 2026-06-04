@@ -19,9 +19,12 @@ Then open the local URL printed by the CLI. The Studio runs with FastAPI and rea
 | Validation | Validation report summary where available |
 | Reconciliation | Stock/GL and work-order result links |
 | Exceptions | Filterable exception view with local review status |
+| Close | Read-only local close checklist summary and task register when `output/close/close_checklist.json` exists |
+| Variance | Read-only local variance table when `output/variance/variance_analysis.csv` exists |
+| Control Matrix | Read-only local control matrix when `output/control_matrix/control_matrix.csv` exists |
 | WIP Aging | Aging buckets and stale work orders |
 | Control Packs | Rule engine result summaries |
-| Evidence | Links to generated evidence binder case folders |
+| Evidence | Evidence coverage metrics and links to generated evidence binder case folders |
 | Downloads | Links to generated Excel, Markdown, CSV, JSON, and HTML reports |
 | Docs | Local documentation entry points |
 
@@ -34,7 +37,7 @@ Then open the local URL printed by the CLI. The Studio runs with FastAPI and rea
 5. Filter exceptions by risk, status, type, source file, amount, work order, product, and search text.
 6. Export the review register from the CLI when the review state is ready.
 
-Studio is a review companion, not a separate data store. The authoritative outputs remain the generated files in the output directory.
+Studio is a review companion, not a separate data store. The authoritative outputs remain the generated files in the output directory. Close, variance, and control matrix pages are read-only foundations.
 
 ## Exception Filters
 

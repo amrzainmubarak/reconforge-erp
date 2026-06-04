@@ -148,6 +148,12 @@ def _apply_review_state(cases: list[EvidenceCase], input_dir: Path) -> list[Evid
                     "decision_reason": entry.get("decision_reason", ""),
                     "accepted_risk_reason": entry.get("accepted_risk_reason", ""),
                     "escalation_owner": entry.get("escalation_owner", ""),
+                    "prepared_by": entry.get("prepared_by", ""),
+                    "prepared_at": entry.get("prepared_at", ""),
+                    "reviewed_by": entry.get("reviewed_by", ""),
+                    "reviewed_at": entry.get("reviewed_at", ""),
+                    "certification_status": entry.get("certification_status", ""),
+                    "certification_note": entry.get("certification_note", ""),
                 },
             ),
         )

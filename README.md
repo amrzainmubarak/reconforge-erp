@@ -35,6 +35,7 @@ It gives finance, inventory, workshop, ERP, and audit teams a repeatable way to 
 - Runs YAML control packs for audit rules, risk scoring, exception explanations, and evidence preparation.
 - Helps inspect Odoo/SAP-style export mappings before users edit YAML profiles.
 - Tracks local exception review status and compares generated outputs across periods.
+- Adds local close checklist, variance analysis, control matrix, and preparer/reviewer workflow metadata foundations.
 - Produces local artifacts: Excel management packs, HTML reports, Markdown summaries, CSV/JSON exports, and evidence binder folders.
 
 ## Why It Matters
@@ -58,9 +59,12 @@ ERP systems hold the source transactions, but month-end reconciliation often sti
 | Audit intelligence | Risk scores, risk levels, suggested audit notes, control explanations, evidence binders |
 | Rule packs | 18 domain control packs with YAML rules, mappings, expected exceptions, and risk models |
 | Reporting | Excel management pack, executive HTML report, static dashboard, Markdown, CSV, and JSON outputs |
-| Mapping | Odoo, SAP, ERPNext, Dynamics, and NetSuite export mapping validation plus local header inspection reports |
+| Mapping | Odoo, SAP, ERPNext, Dynamics, NetSuite, and Oracle export mapping validation plus local header inspection and generic profile-template reports |
 | Review workflow | Studio review actions, local review state, review register export, and status filtering |
 | Period comparison | New, recurring, resolved, escalated, accepted-risk, and trend comparison |
+| Close workflow | Local JSON close checklist, task statuses, owners as plain text, and close report exports |
+| Variance analysis | Local current-vs-previous summary comparison with amount variance, percentage variance, and threshold flags |
+| Control matrix | Rule-pack-derived control matrix exports with owner and frequency placeholders |
 | Handoff | Local client handoff pack with privacy note, redaction controls, and optional checksums |
 | Data safety | Local-first processing, anonymized demo data support, evidence integrity manifests, and no API key required for core workflows |
 
@@ -149,7 +153,9 @@ reconforge mappings validate --pack control-packs/sap-mb51-fagll03
 reconforge mappings validate --pack control-packs/erpnext-stock-gl
 reconforge mappings validate --pack control-packs/dynamics-inventory-gl
 reconforge mappings validate --pack control-packs/netsuite-inventory-gl
+reconforge mappings validate --pack control-packs/oracle-inventory-gl
 reconforge mappings wizard --input examples/sample_data --pack control-packs/odoo-inventory-valuation --output output/mapping_wizard
+reconforge mappings profile-template --output output/profile_template
 reconforge rules validate --pack control-packs/audit-basic
 reconforge rules list --pack control-packs/audit-basic
 reconforge rules explain --pack control-packs/audit-basic --rule AB-001
@@ -160,6 +166,11 @@ reconforge report evidence-binder --input output --output output/evidence
 reconforge report client-pack --input output --output output/client_pack
 reconforge report client-pack --input output --output output/client_pack_redacted --redact-names --redact-amounts --exclude-raw-records --include-manifest-checksums
 reconforge compare periods --inputs output/demo output/demo --output output/period_comparison
+reconforge close init --output output/close
+reconforge close set-status --input output/close --task-id CLOSE-001 --status Complete --owner "Finance Controller" --note "Reviewed"
+reconforge close report --input output/close --output output/close_report
+reconforge analyze variance --current output/feb --previous output/jan --output output/variance
+reconforge controls matrix --pack control-packs/audit-basic --output output/control_matrix
 reconforge explain exception --input output/management_pack.json --exception-id EXC-0001
 
 reconforge anonymize --input examples/sample_data --output examples/anonymized_data --profile public-demo --amount-noise-percent 5
@@ -177,8 +188,10 @@ ReconForge ERP includes export-based mapping profiles for Odoo inventory valuati
 - `control-packs/erpnext-stock-gl` covers ERPNext stock ledger, GL entry, and item exports.
 - `control-packs/dynamics-inventory-gl` covers Microsoft Dynamics inventory transactions, voucher/GL rows, and released products.
 - `control-packs/netsuite-inventory-gl` covers NetSuite inventory activity, GL impact/accounting lines, and item saved searches.
+- `control-packs/oracle-inventory-gl` covers Oracle-style inventory transaction, subledger accounting, general ledger, and item master exports.
 - Core workflows are local-first and do not require cloud upload or direct ERP connectors.
 - Use `reconforge mappings wizard` to inspect CSV/XLSX headers and generate `mapping_report.md` plus `mapping_report.json`.
+- Use `reconforge mappings profile-template` to generate a local mapping template and profile authoring guide for generic CSV exports.
 
 ## Local Review Workflow
 
@@ -205,6 +218,10 @@ The command writes Excel, HTML, JSON, and Markdown outputs. It does not infer sa
 | `output/evidence/evidence_manifest.json` | SHA-256 integrity manifest for generated evidence artifacts |
 | `output/review_state.json` | Local exception review status, reviewer notes, and decision metadata |
 | `output/review_register.xlsx` | Optional review register exported from local review state |
+| `output/close/close_checklist.json` | Local close checklist task state |
+| `output/close_report/` | Close checklist HTML, Excel, CSV, JSON, and Markdown reports |
+| `output/variance/` | Local variance analysis workbook, CSV, JSON, HTML, and Markdown outputs |
+| `output/control_matrix/` | Rule-pack-derived control matrix workbook, CSV, JSON, and Markdown outputs |
 | `output/rules/` | Rule engine CSV/JSON outputs |
 | `output/benchmark/` | Runtime and match-rate benchmark outputs |
 | `output/client_pack/` | Local handoff folder with summary, next steps, privacy note, redaction settings, and manifest |
@@ -300,6 +317,10 @@ See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md)
 - [Controls and audit](docs/controls-and-audit.md)
 - [Rule-pack schema reference](docs/rule-pack-schema-reference.md)
 - [Review workflow](docs/review-workflow.md)
+- [Close workflow](docs/close-workflow.md)
+- [Variance analysis](docs/variance-analysis.md)
+- [Control matrix](docs/control-matrix.md)
+- [Reconciliation certification metadata](docs/reconciliation-certification.md)
 - [ReconForge Studio](docs/reconforge-studio.md)
 - [Mapping wizard](docs/mapping-wizard.md)
 - [ERP export profiles](docs/erp-export-profiles.md)

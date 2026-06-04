@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReconForge Mapping Profile Template",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "profile_id",
+    "source_system",
+    "version",
+    "export_workflow",
+    "canonical_datasets",
+    "field_mappings",
+    "join_keys",
+    "quality_checks"
+  ],
+  "properties": {
+    "profile_id": {"type": "string"},
+    "source_system": {"type": "string"},
+    "version": {"type": "string"},
+    "export_workflow": {
+      "type": "object",
+      "required": ["mode", "cloud_upload_required", "direct_api_connector"],
+      "properties": {
+        "mode": {"type": "string", "const": "export_based"},
+        "cloud_upload_required": {"type": "boolean", "const": false},
+        "direct_api_connector": {"type": "boolean", "const": false}
+      }
+    },
+    "canonical_datasets": {"type": "object"},
+    "field_mappings": {"type": "object"},
+    "join_keys": {"type": "object"},
+    "quality_checks": {"type": "array", "items": {"type": "string"}}
+  }
+}

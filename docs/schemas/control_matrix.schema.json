@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReconForge Control Matrix",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["pack", "summary", "controls", "workflow_boundary"],
+  "properties": {
+    "pack": {"type": "string"},
+    "summary": {"type": "array", "items": {"type": "object"}},
+    "controls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "control_id",
+          "rule_id",
+          "control_description",
+          "risk_area",
+          "severity",
+          "expected_evidence",
+          "owner_placeholder",
+          "frequency_placeholder",
+          "related_exceptions_placeholder"
+        ],
+        "properties": {
+          "control_id": {"type": "string"},
+          "rule_id": {"type": "string"},
+          "control_description": {"type": "string"},
+          "risk_area": {"type": "string"},
+          "severity": {"type": "string"},
+          "expected_evidence": {"type": "string"},
+          "owner_placeholder": {"type": "string"},
+          "frequency_placeholder": {"type": "string"},
+          "related_exceptions_placeholder": {"type": "string"}
+        }
+      }
+    },
+    "workflow_boundary": {"type": "string"}
+  }
+}

@@ -37,6 +37,7 @@ def test_additional_export_profiles_validate_and_document_limits() -> None:
         "erpnext-stock-gl",
         "dynamics-inventory-gl",
         "netsuite-inventory-gl",
+        "oracle-inventory-gl",
     ]
     required_files = {"pack.yml", "mapping.yml", "rules.yml", "risk_model.yml", "README.md", "expected-exceptions.md", "sample-command.md"}
     for profile in profiles:
@@ -100,3 +101,18 @@ def test_mappings_validate_malformed_yaml(tmp_path: Path) -> None:
     result = runner.invoke(app, ["mappings", "validate", "--pack", str(pack)])
     assert result.exit_code == 1
     assert "Malformed YAML" in result.output
+
+
+def test_mappings_profile_template_command(tmp_path: Path) -> None:
+    output = tmp_path / "profile_template"
+    result = runner.invoke(app, ["mappings", "profile-template", "--output", str(output)])
+    assert result.exit_code == 0
+    template_path = output / "mapping_template.yml"
+    guide_path = output / "profile_authoring_guide.md"
+    assert template_path.exists()
+    assert guide_path.exists()
+    payload = yaml.safe_load(template_path.read_text(encoding="utf-8"))
+    assert payload["export_workflow"]["mode"] == "export_based"
+    assert payload["export_workflow"]["direct_api_connector"] is False
+    guide = guide_path.read_text(encoding="utf-8").lower()
+    assert "does not create a direct erp connector" in guide

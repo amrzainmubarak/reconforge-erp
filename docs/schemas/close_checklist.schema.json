@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReconForge Close Checklist",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["version", "tasks"],
+  "properties": {
+    "version": {"type": "integer"},
+    "generated_at": {"type": "string"},
+    "local_first_note": {"type": "string"},
+    "workflow_boundary": {"type": "string"},
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["task_id", "task_name", "category", "owner", "due_date", "status", "note", "updated_at"],
+        "properties": {
+          "task_id": {"type": "string"},
+          "task_name": {"type": "string"},
+          "category": {"type": "string"},
+          "owner": {"type": "string"},
+          "due_date": {"type": "string"},
+          "status": {
+            "type": "string",
+            "enum": ["Not Started", "In Progress", "Blocked", "Complete", "Not Applicable"]
+          },
+          "note": {"type": "string"},
+          "updated_at": {"type": "string"}
+        }
+      }
+    }
+  }
+}

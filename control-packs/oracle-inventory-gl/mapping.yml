@@ -1,0 +1,83 @@
+profile_id: oracle-inventory-gl
+source_system: oracle
+version: "0.1.0"
+description: Export-based mapping profile for Oracle-style inventory, subledger, and general ledger CSV/XLSX exports. It does not provide a direct Oracle connector.
+export_workflow:
+  mode: export_based
+  cloud_upload_required: false
+  direct_api_connector: false
+  notes:
+    - Export inventory transaction, subledger accounting, and general ledger line reports to local CSV/XLSX files.
+    - Keep ledger, inventory organization, account, currency, and accounting period scope consistent across exports.
+canonical_datasets:
+  stock_moves.csv:
+    source_reports: [Inventory transaction export, Cost accounting distribution export]
+    purpose: Inventory movements and values used for stock-to-GL review.
+  gl_entries.csv:
+    source_reports: [General ledger journal lines export, Subledger accounting lines export]
+    purpose: Posted accounting rows for inventory, WIP, variance, expense, and clearing accounts.
+  products.csv:
+    source_reports: [Item master export]
+    purpose: Item master and account configuration review.
+field_mappings:
+  stock_moves.csv:
+    move_id: [transaction_id, inventory_transaction_id, source_line_id]
+    date: [transaction_date, accounting_date, gl_date]
+    source_document: [source_reference, transaction_number, source_document_number]
+    work_order: [work_order_number, manufacturing_order, project_number]
+    product_code: [item_number, item_code, inventory_item_id]
+    product_name: [item_description, item_name, description]
+    category: [item_category, inventory_category]
+    quantity: [transaction_quantity, primary_quantity]
+    unit_cost: [unit_cost, actual_cost, item_cost]
+    total_cost: [transaction_value, accounted_amount, costed_value]
+    warehouse: [inventory_organization, subinventory, locator]
+    movement_type: [transaction_type, transaction_action, transaction_source_type]
+    customer_code: [customer_number, sold_to_customer, party_number]
+    equipment_serial: [serial_number, asset_number, equipment_number]
+    created_by: [created_by, user_name, employee_name]
+  gl_entries.csv:
+    entry_id: [journal_line_id, ae_line_num, gl_line_id]
+    date: [accounting_date, effective_date, gl_date]
+    journal: [journal_name, journal_batch, source]
+    account_code: [account_combination, account_code, code_combination]
+    account_name: [account_description, natural_account_description]
+    reference: [journal_reference, subledger_reference, transaction_number]
+    source_document: [source_reference, transaction_number, document_number]
+    debit: [entered_dr, accounted_dr, debit]
+    credit: [entered_cr, accounted_cr, credit]
+    amount: [accounted_amount, entered_amount, net_amount]
+    cost_center: [cost_center, department, segment2]
+    work_order: [work_order_number, project_number, manufacturing_order]
+    created_by: [created_by, user_name, employee_name]
+  products.csv:
+    product_code: [item_number, item_code, inventory_item_id]
+    product_name: [item_description, item_name, description]
+    category: [item_category, inventory_category]
+    standard_cost: [standard_cost, item_cost, frozen_cost]
+    stock_account: [inventory_account, valuation_account]
+    expense_account: [expense_account, cogs_account]
+join_keys:
+  stock_to_gl:
+    stock_side: [source_document, product_code, date, total_cost]
+    gl_side: [source_document, reference, date, amount]
+  stock_to_product:
+    stock_side: [product_code]
+    product_side: [product_code]
+quality_checks:
+  - Confirm ledger, inventory organization, account, currency, and accounting period scope across exports.
+  - Confirm the GL export includes subledger or source-document references where available.
+  - Confirm debit, credit, and signed amount conventions before reconciliation.
+risk_weights:
+  missing_inventory_reference: 76
+  missing_gl_reference: 78
+  item_master_gap: 72
+  high_value_inventory_activity: 60
+escalation:
+  critical: Finance Controller
+  high: Oracle Finance Lead
+  medium: Inventory Controller
+  low: Data Steward
+review_guidance:
+  - Treat missing references as export-layout or traceability issues until source evidence is reviewed.
+  - Do not assume a direct ERP connector or vendor certification from this profile.

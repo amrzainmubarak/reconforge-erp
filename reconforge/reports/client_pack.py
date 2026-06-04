@@ -288,6 +288,8 @@ def _write_pack_text(output_dir: Path, input_path: Path, included: list[Path], m
                 f"- include_manifest_checksums: `{options.include_manifest_checksums}`",
                 "",
                 "Use this pack to review generated reports, exception review status, evidence status, and next actions with finance, audit, ERP, and operations stakeholders.",
+                "",
+                "Prepared/reviewed and certification fields, when present, are local workflow metadata only. They are not a legal sign-off, audit opinion, compliance certification, or digital signature.",
             ],
         )
         + "\n",

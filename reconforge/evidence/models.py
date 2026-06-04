@@ -34,6 +34,12 @@ class EvidenceCase(BaseModel):
     decision_reason: str = ""
     accepted_risk_reason: str = ""
     escalation_owner: str = ""
+    prepared_by: str = ""
+    prepared_at: str = ""
+    reviewed_by: str = ""
+    reviewed_at: str = ""
+    certification_status: str = ""
+    certification_note: str = ""
     generated_at: str = Field(default_factory=lambda: datetime.utcnow().replace(microsecond=0).isoformat() + "Z")
 
 

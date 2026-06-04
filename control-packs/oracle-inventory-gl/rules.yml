@@ -1,0 +1,38 @@
+rules:
+  - rule_id: ORA-IGL-001
+    rule_name: Missing Oracle inventory source document reference
+    severity: high
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: missing
+      field: source_document
+    message: Inventory movement export is missing source-document traceability for GL review.
+    recommended_action: Confirm the export layout includes source references or document the source evidence separately.
+    risk_impact: 76
+    evidence_fields: [move_id, source_document, product_code, total_cost, warehouse]
+  - rule_id: ORA-IGL-002
+    rule_name: Missing GL source reference
+    severity: high
+    entity_type: gl_entry
+    source_file: gl_entries.csv
+    condition:
+      operator: missing
+      field: reference
+    message: GL export row is missing the source reference needed for inventory traceability.
+    recommended_action: Re-export GL lines with subledger references where available or document why the reference is unavailable.
+    risk_impact: 78
+    evidence_fields: [entry_id, journal, account_code, reference, amount]
+  - rule_id: ORA-IGL-003
+    rule_name: High value inventory movement
+    severity: medium
+    entity_type: stock_move
+    source_file: stock_moves.csv
+    condition:
+      operator: greater_or_equal
+      field: total_cost
+      value: 500
+    message: Inventory movement value exceeds the local review threshold.
+    recommended_action: Confirm approval, source-document support, and GL posting evidence.
+    risk_impact: 60
+    evidence_fields: [move_id, source_document, product_code, quantity, total_cost]

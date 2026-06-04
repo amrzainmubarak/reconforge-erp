@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- Added local close checklist workflow commands: `reconforge close init`, `reconforge close list`, `reconforge close set-status`, and `reconforge close report`.
+- Added lightweight reconciliation certification metadata fields to local review state and review register exports. These fields are workflow metadata only and are not legal sign-off, audit opinions, compliance certifications, or digital signatures.
+- Added local variance analysis command: `reconforge analyze variance`.
+- Added rule-pack-derived control matrix export command: `reconforge controls matrix`.
+- Added read-only Studio pages for local close checklist, variance analysis, control matrix, and evidence coverage.
+- Added an export-based Oracle inventory/GL mapping profile without direct connector claims.
+- Added `reconforge mappings profile-template` for local generic CSV profile authoring templates.
+- Added JSON schema documentation for close checklist, certification metadata, variance report, control matrix, and profile template outputs.
+- Expanded management pack KPIs with unresolved high-risk count, recurring exception count when period comparison output exists, close checklist completion when close state exists, evidence coverage when evidence output exists, accepted risk count, and review completion signals.
+- Added strategy documents for global capability benchmarking, platform blueprint, feature gaps, differentiation, and the next release roadmap.
+- Added documentation for close workflow, variance analysis, control matrix, and reconciliation certification metadata.
+- Added focused tests for new CLI commands, malformed inputs, status validation, output files, certification metadata, and HTML/Markdown escaping behavior.
+
 ## v0.6.1 — Pilot Readiness Hardening
 
 ReconForge ERP v0.6.1 focuses on post-productization hardening for credible local pilots, consultant demos, and cautious commercial evaluation while staying local-first, file-based, and export-oriented.

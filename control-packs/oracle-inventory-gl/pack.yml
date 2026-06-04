@@ -1,0 +1,10 @@
+pack_id: oracle-inventory-gl
+name: Oracle Inventory to GL Export Controls
+version: "0.1.0"
+description: Export-based mapping and baseline controls for Oracle-style inventory and general ledger reconciliation exports.
+owner: ReconForge ERP Maintainers
+tags:
+  - oracle
+  - inventory
+  - gl
+  - export-based

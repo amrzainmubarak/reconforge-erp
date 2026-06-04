@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReconForge Variance Report",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["current", "previous", "summary", "variances", "thresholds", "analysis_boundary"],
+  "properties": {
+    "current": {"type": "string"},
+    "previous": {"type": "string"},
+    "summary": {"type": "array", "items": {"type": "object"}},
+    "variances": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["metric", "amount_variance", "percentage_variance", "threshold_flag", "explanation"],
+        "properties": {
+          "metric": {"type": "string"},
+          "previous_value": {},
+          "current_value": {},
+          "amount_variance": {"type": "number"},
+          "percentage_variance": {},
+          "threshold_flag": {"type": "boolean"},
+          "explanation": {"type": "string"}
+        }
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "properties": {
+        "amount_threshold": {"type": "number"},
+        "percent_threshold": {"type": "number"}
+      }
+    },
+    "analysis_boundary": {"type": "string"}
+  }
+}

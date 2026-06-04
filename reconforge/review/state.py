@@ -14,6 +14,14 @@ from reconforge.io.excel import write_excel_workbook
 ReviewStatus = Literal["New", "Under Review", "Resolved", "Accepted Risk", "Escalated"]
 ALLOWED_STATUSES: tuple[ReviewStatus, ...] = ("New", "Under Review", "Resolved", "Accepted Risk", "Escalated")
 DEFAULT_STATUS: ReviewStatus = "New"
+CertificationStatus = Literal["Draft", "Prepared", "Reviewed", "Accepted Risk", "Needs Follow-up"]
+ALLOWED_CERTIFICATION_STATUSES: tuple[CertificationStatus, ...] = (
+    "Draft",
+    "Prepared",
+    "Reviewed",
+    "Accepted Risk",
+    "Needs Follow-up",
+)
 
 
 ReviewEntry: TypeAlias = dict[str, str]
@@ -35,6 +43,21 @@ REVIEW_COLUMNS = [
     "decision_reason",
     "accepted_risk_reason",
     "escalation_owner",
+    "prepared_by",
+    "prepared_at",
+    "reviewed_by",
+    "reviewed_at",
+    "certification_status",
+    "certification_note",
+]
+
+CERTIFICATION_COLUMNS = [
+    "prepared_by",
+    "prepared_at",
+    "reviewed_by",
+    "reviewed_at",
+    "certification_status",
+    "certification_note",
 ]
 
 
@@ -55,6 +78,18 @@ def _coerce_status(value: object) -> ReviewStatus:
     raise ValueError(f"Invalid review status '{value}'. Expected one of: {', '.join(ALLOWED_STATUSES)}")
 
 
+def _coerce_certification_status(value: object) -> CertificationStatus:
+    text = _clean_text(value)
+    if not text:
+        return "Draft"
+    normalized = text.lower().replace("_", " ").replace("-", " ")
+    normalized = " ".join(normalized.split())
+    for status in ALLOWED_CERTIFICATION_STATUSES:
+        if normalized == status.lower():
+            return status
+    raise ValueError(f"Invalid certification status. Expected one of: {', '.join(ALLOWED_CERTIFICATION_STATUSES)}")
+
+
 def _coerce_entry(exception_id: str, payload: object) -> ReviewEntry | None:
     if not isinstance(payload, dict):
         return None
@@ -63,10 +98,28 @@ def _coerce_entry(exception_id: str, payload: object) -> ReviewEntry | None:
     except ValueError:
         status = DEFAULT_STATUS
     entry: ReviewEntry = {"exception_id": exception_id, "status": status}
-    for field in ["reviewer", "note", "updated_at", "decision_reason", "accepted_risk_reason", "escalation_owner"]:
+    for field in [
+        "reviewer",
+        "note",
+        "updated_at",
+        "decision_reason",
+        "accepted_risk_reason",
+        "escalation_owner",
+        "prepared_by",
+        "prepared_at",
+        "reviewed_by",
+        "reviewed_at",
+        "certification_note",
+    ]:
         value = payload.get(field)
         if value is not None:
             entry[field] = _clean_text(value)
+    certification_status = payload.get("certification_status")
+    if certification_status is not None:
+        try:
+            entry["certification_status"] = _coerce_certification_status(certification_status)
+        except ValueError:
+            entry["certification_status"] = "Draft"
     return entry
 
 
@@ -127,6 +180,12 @@ def update_review_status(
     decision_reason: str = "",
     accepted_risk_reason: str = "",
     escalation_owner: str = "",
+    prepared_by: str = "",
+    prepared_at: str = "",
+    reviewed_by: str = "",
+    reviewed_at: str = "",
+    certification_status: str = "",
+    certification_note: str = "",
 ) -> ReviewEntry:
     """Update one exception review entry in memory and return the updated entry."""
 
@@ -142,11 +201,22 @@ def update_review_status(
         "decision_reason": decision_reason,
         "accepted_risk_reason": accepted_risk_reason,
         "escalation_owner": escalation_owner,
+        "prepared_by": prepared_by,
+        "prepared_at": prepared_at,
+        "reviewed_by": reviewed_by,
+        "reviewed_at": reviewed_at,
+        "certification_note": certification_note,
     }
     for field, value in updates.items():
         clean_value = _clean_text(value)
         if clean_value:
             entry[field] = clean_value
+    if _clean_text(prepared_by) and not _clean_text(prepared_at):
+        entry["prepared_at"] = _now()
+    if _clean_text(reviewed_by) and not _clean_text(reviewed_at):
+        entry["reviewed_at"] = _now()
+    if _clean_text(certification_status):
+        entry["certification_status"] = _coerce_certification_status(certification_status)
     entry["updated_at"] = _now()
     state[clean_exception_id] = entry
     return entry
@@ -254,6 +324,12 @@ def review_register_frame(input_dir: Path | str, state_path: Path | str | None =
         "reviewer",
         "note",
         "updated_at",
+        "prepared_by",
+        "prepared_at",
+        "reviewed_by",
+        "reviewed_at",
+        "certification_status",
+        "certification_note",
         "severity",
         "exception_type",
         "amount_impact",

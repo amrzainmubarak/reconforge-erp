@@ -15,7 +15,17 @@ from reconforge import __version__
 from reconforge.ai.summaries import explain_exception_file
 from reconforge.anonymizer.engine import anonymize_directory
 from reconforge.benchmark.runner import run_benchmark
+from reconforge.close import (
+    ALLOWED_CLOSE_STATUSES,
+    close_summary_frame,
+    close_tasks_frame,
+    export_close_report,
+    load_close_checklist,
+    update_close_task_status,
+    write_close_checklist,
+)
 from reconforge.config import load_config, write_default_config
+from reconforge.control_matrix import export_control_matrix
 from reconforge.dashboard.app import create_app
 from reconforge.evidence.binder import generate_evidence_binder
 from reconforge.generator.synthetic import generate_synthetic_dataset
@@ -23,6 +33,7 @@ from reconforge.io.excel import audit_metadata, write_excel_workbook
 from reconforge.io.readers import read_required_datasets
 from reconforge.io.writers import ensure_output_dir, frame_to_records, write_json, write_report_frames
 from reconforge.mappings.inspector import inspect_mapping_inputs
+from reconforge.mappings.profile_template import write_profile_template
 from reconforge.mappings.validator import validate_mapping_pack
 from reconforge.periods import compare_period_outputs
 from reconforge.reconciliation.matching import MatchingStrategy
@@ -48,6 +59,7 @@ from reconforge.rules.loader import load_rule_pack
 from reconforge.schemas import DatasetName
 from reconforge.studio.app import create_studio_app
 from reconforge.validators import issues_to_frame, validate_input_directory
+from reconforge.variance import analyze_variance
 
 console = Console()
 app = typer.Typer(help="ReconForge ERP reconciliation intelligence CLI.")
@@ -60,6 +72,9 @@ explain_app = typer.Typer(help="Explain exceptions and controls deterministicall
 review_app = typer.Typer(help="Review exceptions with local JSON state.")
 demo_app = typer.Typer(help="Run first-time-user demo workflows.")
 compare_app = typer.Typer(help="Compare generated exception outputs across periods.")
+close_app = typer.Typer(help="Manage local close checklist workflow state.")
+analyze_app = typer.Typer(help="Analyze local ReconForge output folders.")
+controls_app = typer.Typer(help="Generate local control intelligence outputs.")
 app.add_typer(reconcile_app, name="reconcile")
 app.add_typer(report_app, name="report")
 app.add_typer(rules_app, name="rules")
@@ -69,6 +84,9 @@ app.add_typer(explain_app, name="explain")
 app.add_typer(review_app, name="review")
 app.add_typer(demo_app, name="demo")
 app.add_typer(compare_app, name="compare")
+app.add_typer(close_app, name="close")
+app.add_typer(analyze_app, name="analyze")
+app.add_typer(controls_app, name="controls")
 
 
 def _version_callback(value: bool) -> None:
@@ -410,6 +428,16 @@ def mappings_wizard_command(
     _run_mapping_inspection(input_path, pack_path, output_path)
 
 
+@mappings_app.command("profile-template")
+def mappings_profile_template_command(
+    output_path: Annotated[Path, typer.Option("--output", help="Profile template output directory.")] = Path("output/profile_template"),
+) -> None:
+    """Generate a local generic CSV mapping profile template."""
+
+    artifacts = write_profile_template(output_path)
+    _print_success_paths([artifacts.mapping_template_path, artifacts.guide_path])
+
+
 @rules_app.command("list")
 def rules_list_command(
     pack_path: Annotated[Path, typer.Option("--pack", help="Control pack directory.")],
@@ -584,6 +612,12 @@ def review_set_status_command(
     decision_reason: Annotated[str, typer.Option("--decision-reason", help="Decision reason.")] = "",
     accepted_risk_reason: Annotated[str, typer.Option("--accepted-risk-reason", help="Accepted-risk reason.")] = "",
     escalation_owner: Annotated[str, typer.Option("--escalation-owner", help="Escalation owner.")] = "",
+    prepared_by: Annotated[str, typer.Option("--prepared-by", help="Preparer name or role for workflow metadata.")] = "",
+    prepared_at: Annotated[str, typer.Option("--prepared-at", help="Optional prepared timestamp or date.")] = "",
+    reviewed_by: Annotated[str, typer.Option("--reviewed-by", help="Reviewer name or role for workflow metadata.")] = "",
+    reviewed_at: Annotated[str, typer.Option("--reviewed-at", help="Optional reviewed timestamp or date.")] = "",
+    certification_status: Annotated[str, typer.Option("--certification-status", help="Workflow certification status metadata.")] = "",
+    certification_note: Annotated[str, typer.Option("--certification-note", help="Workflow certification note.")] = "",
 ) -> None:
     """Set local review status for one exception."""
 
@@ -599,6 +633,12 @@ def review_set_status_command(
             decision_reason=decision_reason,
             accepted_risk_reason=accepted_risk_reason,
             escalation_owner=escalation_owner,
+            prepared_by=prepared_by,
+            prepared_at=prepared_at,
+            reviewed_by=reviewed_by,
+            reviewed_at=reviewed_at,
+            certification_status=certification_status,
+            certification_note=certification_note,
         )
     except ValueError as exc:
         console.print(f"[red]{exc}[/red]")
@@ -618,6 +658,133 @@ def review_export_command(
 
     path = export_review_register(input_path, output_path)
     console.print(f"[green]Review register written:[/green] {path}")
+
+
+@close_app.command("init")
+def close_init_command(
+    output_path: Annotated[Path, typer.Option("--output", help="Close checklist output directory.")] = Path("output/close"),
+    template_path: Annotated[Path | None, typer.Option("--template", help="Optional local JSON/YAML checklist template.")] = None,
+    force: Annotated[bool, typer.Option("--force", help="Overwrite an existing close checklist.")] = False,
+) -> None:
+    """Create a local close checklist JSON file."""
+
+    try:
+        path = write_close_checklist(output_path, template_path=template_path, force=force)
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Close checklist:[/green] {path}")
+
+
+@close_app.command("list")
+def close_list_command(
+    input_path: Annotated[Path, typer.Option("--input", help="Close checklist directory or JSON file.")] = Path("output/close"),
+) -> None:
+    """List local close checklist tasks."""
+
+    try:
+        checklist = load_close_checklist(input_path)
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    tasks = close_tasks_frame(checklist)
+    if tasks.empty:
+        console.print("[yellow]No close checklist tasks found.[/yellow]")
+        return
+    _print_frame("Close Checklist", tasks[["task_id", "status", "owner", "due_date", "category", "task_name", "note"]], max_rows=100)
+    summary = close_summary_frame(checklist)
+    completion = summary[summary["metric"].eq("completion_rate_pct")]
+    if not completion.empty:
+        console.print(f"[dim]Completion:[/dim] {completion.iloc[0]['value']}%")
+
+
+@close_app.command("set-status")
+def close_set_status_command(
+    task_id: Annotated[str, typer.Option("--task-id", help="Close checklist task ID.")],
+    status: Annotated[str, typer.Option("--status", help=f"Status: {', '.join(ALLOWED_CLOSE_STATUSES)}")],
+    input_path: Annotated[Path, typer.Option("--input", help="Close checklist directory or JSON file.")] = Path("output/close"),
+    owner: Annotated[str, typer.Option("--owner", help="Plain-text owner name or role.")] = "",
+    note: Annotated[str, typer.Option("--note", help="Local workflow note.")] = "",
+    due_date: Annotated[str, typer.Option("--due-date", help="Optional due date text.")] = "",
+) -> None:
+    """Update one local close checklist task."""
+
+    try:
+        task = update_close_task_status(input_path, task_id=task_id, status=status, owner=owner, note=note, due_date=due_date)
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Close task updated:[/green] {task['task_id']} | {task['status']}")
+
+
+@close_app.command("report")
+def close_report_command(
+    input_path: Annotated[Path, typer.Option("--input", help="Close checklist directory or JSON file.")] = Path("output/close"),
+    output_path: Annotated[Path, typer.Option("--output", help="Close report output directory.")] = Path("output/close_report"),
+) -> None:
+    """Export a local close checklist report."""
+
+    try:
+        artifacts = export_close_report(input_path, output_path)
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    _print_success_paths(
+        [
+            artifacts.html_path,
+            artifacts.workbook_path,
+            artifacts.csv_path,
+            artifacts.markdown_path,
+            artifacts.json_path,
+        ],
+    )
+
+
+@analyze_app.command("variance")
+def analyze_variance_command(
+    current_path: Annotated[Path, typer.Option("--current", help="Current generated ReconForge output folder.")],
+    previous_path: Annotated[Path, typer.Option("--previous", help="Previous generated ReconForge output folder.")],
+    output_path: Annotated[Path, typer.Option("--output", help="Variance output directory.")] = Path("output/variance"),
+    amount_threshold: Annotated[float, typer.Option("--amount-threshold", help="Absolute amount threshold for flags.")] = 0.0,
+    percent_threshold: Annotated[float, typer.Option("--percent-threshold", help="Percentage threshold for flags.")] = 10.0,
+) -> None:
+    """Compare two local summary output folders."""
+
+    try:
+        artifacts = analyze_variance(
+            current_path,
+            previous_path,
+            output_path,
+            amount_threshold=amount_threshold,
+            percent_threshold=percent_threshold,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    _print_success_paths(
+        [
+            artifacts.workbook_path,
+            artifacts.csv_path,
+            artifacts.json_path,
+            artifacts.html_path,
+            artifacts.markdown_path,
+        ],
+    )
+
+
+@controls_app.command("matrix")
+def controls_matrix_command(
+    pack_path: Annotated[Path, typer.Option("--pack", help="Control pack directory.")],
+    output_path: Annotated[Path, typer.Option("--output", help="Control matrix output directory.")] = Path("output/control_matrix"),
+) -> None:
+    """Generate a local control matrix from a rule pack."""
+
+    try:
+        artifacts = export_control_matrix(pack_path, output_path)
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    _print_success_paths([artifacts.workbook_path, artifacts.csv_path, artifacts.json_path, artifacts.markdown_path])
 
 
 @compare_app.command("periods", context_settings={"allow_extra_args": True})

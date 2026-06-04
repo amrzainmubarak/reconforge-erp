@@ -1,0 +1,14 @@
+risk_model_id: oracle-inventory-gl
+version: "0.1.0"
+scoring:
+  critical_threshold: 81
+  high_threshold: 61
+  medium_threshold: 31
+  low_threshold: 1
+weights:
+  missing_inventory_reference: 76
+  missing_gl_reference: 78
+  high_value_inventory_activity: 60
+notes:
+  - Risk scoring supports local review prioritization only.
+  - It does not provide audit assurance, compliance certification, or financial statement conclusions.

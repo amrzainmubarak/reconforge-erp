@@ -146,6 +146,83 @@ def test_review_register_export_contains_review_fields(tmp_path: Path) -> None:
     assert frame.loc[0, "status"] == "Escalated"
 
 
+def test_review_register_export_contains_certification_metadata(tmp_path: Path) -> None:
+    output = tmp_path / "output"
+    _write_exception_output(output)
+    state = load_review_state(output / "review_state.json")
+    update_review_status(
+        "EXC-0001",
+        "Resolved",
+        state,
+        prepared_by="Preparer",
+        reviewed_by="Reviewer",
+        certification_status="Reviewed",
+        certification_note="Workflow review complete",
+    )
+    save_review_state(output / "review_state.json", state)
+    frame = pd.read_excel(export_review_register(output, output / "review_register.xlsx"))
+    assert "prepared_by" in frame.columns
+    assert "reviewed_by" in frame.columns
+    assert "certification_status" in frame.columns
+    assert frame.loc[0, "prepared_by"] == "Preparer"
+    assert frame.loc[0, "reviewed_by"] == "Reviewer"
+    assert frame.loc[0, "certification_status"] == "Reviewed"
+
+
+def test_cli_review_set_status_accepts_certification_metadata(tmp_path: Path) -> None:
+    output = tmp_path / "output"
+    _write_exception_output(output)
+    result = runner.invoke(
+        app,
+        [
+            "review",
+            "set-status",
+            "--input",
+            str(output),
+            "--exception-id",
+            "EXC-0001",
+            "--status",
+            "Resolved",
+            "--prepared-by",
+            "Finance Controller",
+            "--reviewed-by",
+            "Internal Audit",
+            "--certification-status",
+            "Reviewed",
+            "--certification-note",
+            "Reviewed for workflow completeness",
+        ],
+    )
+    assert result.exit_code == 0
+    state = load_review_state(output / "review_state.json")
+    assert state["EXC-0001"]["prepared_by"] == "Finance Controller"
+    assert state["EXC-0001"]["reviewed_by"] == "Internal Audit"
+    assert state["EXC-0001"]["certification_status"] == "Reviewed"
+
+
+def test_invalid_certification_status_rejected(tmp_path: Path) -> None:
+    output = tmp_path / "output"
+    _write_exception_output(output)
+    result = runner.invoke(
+        app,
+        [
+            "review",
+            "set-status",
+            "--input",
+            str(output),
+            "--exception-id",
+            "EXC-0001",
+            "--status",
+            "Resolved",
+            "--certification-status",
+            "Audit Opinion",
+        ],
+    )
+    assert result.exit_code == 1
+    assert "Invalid certification status" in result.output
+    assert "Traceback" not in result.output
+
+
 def test_evidence_register_includes_review_status_when_state_exists(tmp_path: Path) -> None:
     output = tmp_path / "output"
     _write_exception_output(output)

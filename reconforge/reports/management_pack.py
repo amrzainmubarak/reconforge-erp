@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
+from reconforge.close import close_summary_frame, load_close_checklist
 from reconforge.config import ReconForgeConfig
 from reconforge.io.excel import add_summary_chart, audit_metadata, write_excel_workbook
 from reconforge.io.writers import frame_to_records, write_json, write_report_frames
@@ -18,7 +20,7 @@ from reconforge.reconciliation.workorders import result_frames as workorder_fram
 from reconforge.reports.html import write_html_dashboard
 from reconforge.reports.markdown import write_markdown_summary
 from reconforge.reports.wip_aging import aging_summary
-from reconforge.review.state import load_review_state, merge_review_state_with_exceptions
+from reconforge.review.state import CERTIFICATION_COLUMNS, load_review_state, merge_review_state_with_exceptions
 from reconforge.validators import issues_to_frame, validate_input_directory
 
 
@@ -108,16 +110,84 @@ def _top_control_themes(combined: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def _json_payload(path: Path) -> dict[str, Any]:
+    if not path.exists() or not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _recurring_exception_count(output_dir: Path) -> int | str:
+    for path in [output_dir / "period_comparison.json", output_dir / "period_comparison" / "period_comparison.json"]:
+        payload = _json_payload(path)
+        if not payload:
+            continue
+        recurring = payload.get("recurring_exceptions")
+        if isinstance(recurring, list):
+            return len(recurring)
+        summary = payload.get("summary")
+        if isinstance(summary, list):
+            for row in summary:
+                if isinstance(row, dict) and row.get("metric") == "recurring_exceptions":
+                    try:
+                        return int(row.get("value", 0))
+                    except (TypeError, ValueError):
+                        return "not_available"
+    return "not_available"
+
+
+def _close_completion_rate(output_dir: Path) -> float | str:
+    for path in [output_dir / "close", output_dir]:
+        try:
+            summary = close_summary_frame(load_close_checklist(path))
+        except (FileNotFoundError, ValueError):
+            continue
+        row = summary[summary["metric"].eq("completion_rate_pct")]
+        if not row.empty:
+            try:
+                return float(row.iloc[0]["value"])
+            except (TypeError, ValueError):
+                return "not_available"
+    return "not_available"
+
+
+def _evidence_coverage_pct(high_critical: int, output_dir: Path) -> float | str:
+    if high_critical == 0:
+        return 100.0
+    payload = _json_payload(output_dir / "evidence" / "evidence_index.json")
+    if not payload:
+        return "not_available"
+    case_count = payload.get("case_count")
+    if isinstance(case_count, (int, float, str)):
+        try:
+            evidence_cases = int(case_count)
+        except ValueError:
+            evidence_cases = 0
+    else:
+        cases = payload.get("cases")
+        evidence_cases = len(cases) if isinstance(cases, list) else 0
+    return round(min((evidence_cases / high_critical) * 100, 100.0), 2)
+
+
 def _control_value_summary(combined: pd.DataFrame, wip_aging: pd.DataFrame, output_dir: Path) -> pd.DataFrame:
     total_exceptions = len(combined)
     merged = merge_review_state_with_exceptions(combined, load_review_state(output_dir / "review_state.json"))
     status = merged.get("status", pd.Series(["New"] * len(merged))).astype(str)
-    high_critical = int(_severity_series(combined).isin({"high", "critical"}).sum())
+    status_lower = status.str.lower()
+    severity = _severity_series(combined)
+    high_critical_mask = severity.isin({"high", "critical"})
+    high_critical = int(high_critical_mask.sum())
     unresolved = int((~status.isin({"Resolved", "Accepted Risk"})).sum()) if total_exceptions else 0
+    unresolved_high_risk = int((high_critical_mask & ~status_lower.isin({"resolved", "accepted risk"})).sum()) if total_exceptions else 0
     accepted_risk = int(status.eq("Accepted Risk").sum())
     escalated = int(status.eq("Escalated").sum())
     reviewed = int(status.ne("New").sum())
     review_completion_rate = round((reviewed / total_exceptions) * 100, 2) if total_exceptions else 0.0
+    certification_status = merged.get("certification_status", pd.Series([""] * len(merged))).astype(str)
+    certified_count = int(certification_status.isin({"Prepared", "Reviewed", "Accepted Risk"}).sum())
     estimated_value_impact = round(float(_amount_impact_series(combined).sum()), 2) if total_exceptions else 0.0
     wip_source = wip_aging.get("actual_cost", wip_aging.get("estimated_cost", pd.Series([0] * len(wip_aging))))
     wip_exposure = round(float(pd.to_numeric(wip_source, errors="coerce").fillna(0).sum()), 2) if not wip_aging.empty else 0.0
@@ -126,11 +196,16 @@ def _control_value_summary(combined: pd.DataFrame, wip_aging: pd.DataFrame, outp
             {"metric": "total_exceptions", "value": total_exceptions, "meaning": "All detected reconciliation and operational exceptions."},
             {"metric": "high_or_critical_exceptions", "value": high_critical, "meaning": "Exceptions requiring priority finance, audit, or operations review."},
             {"metric": "unresolved_exceptions", "value": unresolved, "meaning": "Exceptions not yet resolved or formally accepted as risk."},
+            {"metric": "unresolved_high_risk_count", "value": unresolved_high_risk, "meaning": "High or Critical exceptions not yet resolved or accepted as risk."},
             {"metric": "accepted_risk_count", "value": accepted_risk, "meaning": "Exceptions explicitly accepted with documented rationale."},
             {"metric": "escalated_count", "value": escalated, "meaning": "Exceptions assigned for escalation."},
             {"metric": "estimated_value_impact", "value": estimated_value_impact, "meaning": "Simple sum of available exception amount fields; not a savings claim."},
             {"metric": "wip_exposure", "value": wip_exposure, "meaning": "Available WIP cost exposure from open work-order aging data."},
             {"metric": "review_completion_rate_pct", "value": review_completion_rate, "meaning": "Percent of exceptions with a status other than New."},
+            {"metric": "certified_review_count", "value": certified_count, "meaning": "Exceptions with workflow certification metadata. This is not a legal sign-off."},
+            {"metric": "recurring_exception_count", "value": _recurring_exception_count(output_dir), "meaning": "Recurring exceptions from a local period comparison report when available."},
+            {"metric": "close_checklist_completion_pct", "value": _close_completion_rate(output_dir), "meaning": "Local close checklist completion when a close checklist exists."},
+            {"metric": "evidence_coverage_high_critical_pct", "value": _evidence_coverage_pct(high_critical, output_dir), "meaning": "High/Critical evidence coverage when a local evidence index exists."},
         ],
     )
 
@@ -169,6 +244,24 @@ def _configuration_used(config: ReconForgeConfig) -> pd.DataFrame:
             {"parameter": "report_title", "value": config.report_title},
         ],
     )
+
+
+def _certification_register(combined: pd.DataFrame, output_dir: Path) -> pd.DataFrame:
+    merged = merge_review_state_with_exceptions(combined, load_review_state(output_dir / "review_state.json"))
+    columns = [
+        "exception_id",
+        "status",
+        "reviewer",
+        *CERTIFICATION_COLUMNS,
+        "severity",
+        "exception_type",
+        "amount_impact",
+        "source_file",
+    ]
+    for column in columns:
+        if column not in merged.columns:
+            merged[column] = ""
+    return merged[columns].copy()
 
 
 def _recommended_actions(stock_result: StockGLReconciliationResult, workorder_result: WorkorderReconciliationResult, wip_aging: pd.DataFrame) -> pd.DataFrame:
@@ -231,6 +324,7 @@ def generate_management_pack(
         "Executive Summary": executive_summary,
         "Control Value Summary": control_value_summary,
         "KPI Dashboard": executive_summary,
+        "Certification Metadata": _certification_register(combined_exceptions, output_dir),
         "Reconciliation Summary": stock_result.summary,
         "Stock vs GL Mismatch": stock_result.all_exceptions,
         "Stock Without GL": stock_result.stock_without_gl,
@@ -270,6 +364,7 @@ def generate_management_pack(
     payload: dict[str, Any] = {
         "executive_summary": frame_to_records(executive_summary),
         "control_value_summary": frame_to_records(control_value_summary),
+        "certification_metadata": frame_to_records(_certification_register(combined_exceptions, output_dir)),
         "top_control_themes": frame_to_records(top_control_themes),
         "risk_scoring": frame_to_records(risk_scoring),
         "stock_gl_summary": frame_to_records(stock_result.summary),

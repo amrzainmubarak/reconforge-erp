@@ -113,6 +113,15 @@ ReconForge supports export-based profiles, not live ERP integrations. New profil
 - Include mapping validation tests or fixture coverage when behavior changes.
 - Avoid claiming direct ERP connectivity, sync, certification, or official vendor endorsement.
 
+Use `reconforge mappings profile-template --output output/profile_template` to generate a local starter mapping template and authoring guide. Keep generated profile examples sanitized and validation-friendly, and update `docs/schemas/` when adding a stable local file contract.
+
+## How To Add Close, Certification, Variance, Or Control Matrix Features
+
+- Keep close checklist state local JSON only and use allowed statuses: Not Started, In Progress, Blocked, Complete, Not Applicable.
+- Treat prepared/reviewed and certification fields as workflow metadata only. Do not imply audit opinions, legal sign-off, compliance certification, or digital signatures.
+- Escape all generated HTML and Markdown-visible user-controlled values.
+- Add tests for malformed inputs, missing local files, status validation, and output existence.
+
 ## How To Update Documentation
 
 Documentation must stay accurate, conservative, and consistent with released behavior.

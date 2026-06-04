@@ -321,3 +321,68 @@ These are ready-to-copy GitHub issue drafts. Do not create the issues automatica
 **Labels:** `sample-data`, `documentation`, `pilot-feedback`
 
 **Difficulty:** Beginner
+
+## 21. Close Workflow: Add Period Close Readiness Score
+
+**Problem:** The local close checklist shows status counts, but controllers need a concise readiness score that combines blocked tasks, incomplete tasks, unresolved high-risk exceptions, and evidence coverage.
+
+**Proposed solution:** Add a deterministic readiness summary from local close, review, evidence, and management-pack outputs.
+
+**Acceptance criteria:**
+
+- Uses local files only.
+- Does not imply audit sign-off or legal certification.
+- Includes tests for missing optional inputs and malformed close state.
+
+**Labels:** `close-workflow`, `reporting`, `testing`
+
+**Difficulty:** Intermediate
+
+## 22. Controls: Add Local Control Testing Register
+
+**Problem:** The control matrix exports control rows, but there is no local test execution register.
+
+**Proposed solution:** Add a file-based control testing register with control ID, test status, tester, evidence reference, exception note, and updated timestamp.
+
+**Acceptance criteria:**
+
+- Uses local JSON/CSV outputs only.
+- Escapes rendered values.
+- Avoids compliance certification or audit opinion wording.
+
+**Labels:** `controls`, `grc-lite`, `audit-workflow`
+
+**Difficulty:** Intermediate
+
+## 23. ERP Profiles: Add Profile Confidence Scoring
+
+**Problem:** Mapping profiles can validate structurally, but users need a simple confidence signal for header coverage and missing fields.
+
+**Proposed solution:** Extend mapping inspection with profile confidence scoring from local export headers.
+
+**Acceptance criteria:**
+
+- Scores are explainable and deterministic.
+- Missing columns are listed plainly.
+- No direct connector or vendor certification claims are added.
+
+**Labels:** `erp-profile`, `data-quality`, `testing`
+
+**Difficulty:** Intermediate
+
+## 24. Studio: Add Editable Close Workflow After Security Review
+
+**Problem:** Studio now has a read-only close checklist page. Editing close tasks in Studio would be useful but increases local write surface.
+
+**Proposed solution:** Design and implement close task update actions after reviewing CSRF, validation, escaping, and local state behavior.
+
+**Acceptance criteria:**
+
+- Status validation matches CLI behavior.
+- User-controlled values are escaped.
+- Tests cover invalid status and malformed input.
+- Docs state there is no auth/RBAC.
+
+**Labels:** `studio`, `close-workflow`, `security`
+
+**Difficulty:** Intermediate

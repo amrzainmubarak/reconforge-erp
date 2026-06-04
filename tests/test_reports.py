@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import date
 from pathlib import Path
 
@@ -69,3 +70,10 @@ def test_management_pack_smoke(tmp_path: Path, sample_datasets: dict[DatasetName
     assert artifacts.markdown_path.exists()
     assert artifacts.html_path.exists()
     assert "Control Value Summary" in artifacts.html_path.read_text(encoding="utf-8")
+    payload = json.loads(artifacts.json_path.read_text(encoding="utf-8"))
+    metrics = {row["metric"] for row in payload["control_value_summary"]}
+    assert "unresolved_high_risk_count" in metrics
+    assert "recurring_exception_count" in metrics
+    assert "close_checklist_completion_pct" in metrics
+    assert "evidence_coverage_high_critical_pct" in metrics
+    assert "certification_metadata" in payload

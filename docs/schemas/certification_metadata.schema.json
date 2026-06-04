@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReconForge Certification Metadata",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "prepared_by": {"type": "string"},
+    "prepared_at": {"type": "string"},
+    "reviewed_by": {"type": "string"},
+    "reviewed_at": {"type": "string"},
+    "certification_status": {
+      "type": "string",
+      "enum": ["Draft", "Prepared", "Reviewed", "Accepted Risk", "Needs Follow-up"]
+    },
+    "certification_note": {"type": "string"}
+  },
+  "description": "Workflow metadata only. This schema does not define a legal signature, audit opinion, assurance conclusion, or compliance certification."
+}

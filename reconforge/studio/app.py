@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from html import escape
 from pathlib import Path
@@ -13,6 +14,7 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
 
+from reconforge.close import close_summary_frame, close_tasks_frame, load_close_checklist
 from reconforge.config import load_config
 from reconforge.io.readers import read_required_datasets
 from reconforge.reconciliation.stock_gl import reconcile_stock_gl
@@ -45,6 +47,9 @@ def _layout(title: str, body: str) -> str:
       <a href="/reconciliation">Reconciliation</a>
       <a href="/rule-results">Rule Results</a>
       <a href="/exceptions">Exceptions</a>
+      <a href="/close">Close</a>
+      <a href="/variance">Variance</a>
+      <a href="/control-matrix">Control Matrix</a>
       <a href="/risk-matrix">Risk Matrix</a>
       <a href="/wip">WIP Aging</a>
       <a href="/control-packs">Control Packs</a>
@@ -184,6 +189,45 @@ def _amount_series(frame: pd.DataFrame) -> pd.Series:
     if "amount_impact" in frame.columns:
         return pd.to_numeric(frame["amount_impact"], errors="coerce").fillna(0)
     return pd.Series([0.0] * len(frame), index=frame.index)
+
+
+def _read_generated_csv(path: Path) -> pd.DataFrame:
+    if not path.exists() or not path.is_file():
+        return pd.DataFrame()
+    try:
+        return pd.read_csv(path, keep_default_na=False)
+    except (OSError, pd.errors.ParserError, UnicodeDecodeError):
+        return pd.DataFrame()
+
+
+def _json_payload(path: Path) -> dict[str, Any]:
+    if not path.exists() or not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _evidence_coverage_cards(exceptions: pd.DataFrame, output_path: Path) -> str:
+    if exceptions.empty:
+        high_critical = 0
+    else:
+        risk_score = pd.to_numeric(exceptions.get("risk_score", pd.Series([0] * len(exceptions))), errors="coerce").fillna(0)
+        risk_level = exceptions.get("risk_level", pd.Series([""] * len(exceptions))).astype(str).str.lower()
+        high_critical = int((risk_score.ge(61) | risk_level.isin({"high", "critical"})).sum())
+    payload = _json_payload(output_path / "evidence" / "evidence_index.json")
+    case_count_value = payload.get("case_count")
+    evidence_cases = int(case_count_value) if isinstance(case_count_value, int) else len(payload.get("cases", [])) if isinstance(payload.get("cases"), list) else 0
+    coverage = round((evidence_cases / high_critical) * 100, 2) if high_critical else 100.0
+    return "".join(
+        [
+            f'<section class="card"><span>High/Critical Exceptions</span><strong>{high_critical}</strong></section>',
+            f'<section class="card"><span>Evidence Cases</span><strong>{evidence_cases}</strong></section>',
+            f'<section class="card"><span>Evidence Coverage</span><strong>{coverage}%</strong></section>',
+        ],
+    )
 
 
 def _filter_exceptions(
@@ -454,6 +498,32 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
             return _layout("Rule Results", "<h2>Rule Results</h2><p>No rule results have been generated yet.</p>")
         return _layout("Rule Results", "<h2>Rule Results</h2>" + _table(pd.read_csv(rules_path, keep_default_na=False), limit=100))
 
+    @app.get("/close", response_class=HTMLResponse)
+    def close() -> str:
+        try:
+            checklist = load_close_checklist(output_path / "close")
+        except (FileNotFoundError, ValueError):
+            return _layout("Close", "<h2>Close Checklist</h2><p>No close checklist has been generated yet.</p>")
+        summary = close_summary_frame(checklist)
+        tasks = close_tasks_frame(checklist)
+        return _layout("Close", "<h2>Close Checklist</h2>" + _table(summary) + "<h2>Tasks</h2>" + _table(tasks, limit=100))
+
+    @app.get("/variance", response_class=HTMLResponse)
+    def variance() -> str:
+        variance_path = output_path / "variance" / "variance_analysis.csv"
+        frame = _read_generated_csv(variance_path)
+        if frame.empty:
+            return _layout("Variance", "<h2>Variance Analysis</h2><p>No variance analysis has been generated yet.</p>")
+        return _layout("Variance", "<h2>Variance Analysis</h2>" + _table(frame, limit=100))
+
+    @app.get("/control-matrix", response_class=HTMLResponse)
+    def control_matrix() -> str:
+        matrix_path = output_path / "control_matrix" / "control_matrix.csv"
+        frame = _read_generated_csv(matrix_path)
+        if frame.empty:
+            return _layout("Control Matrix", "<h2>Control Matrix</h2><p>No control matrix has been generated yet.</p>")
+        return _layout("Control Matrix", "<h2>Control Matrix</h2>" + _table(frame, limit=100))
+
     @app.get("/risk-matrix", response_class=HTMLResponse)
     def risk_matrix() -> str:
         rec = _load_reconciliation(input_path)
@@ -481,13 +551,15 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
 
     @app.get("/evidence", response_class=HTMLResponse)
     def evidence() -> str:
+        rec = _load_reconciliation(input_path)
+        cards = _evidence_coverage_cards(rec["exceptions"], output_path)
         links = []
         for key in sorted(evidence_registry):
             parts = key.split("/")
             if len(parts) != 2 or not key.endswith("/summary.md"):
                 continue
             links.append(f'<li><a href="{_evidence_href(parts[0], parts[1])}">{escape(key)}</a></li>')
-        return _layout("Evidence", f"<h2>Evidence Binder</h2><ul>{''.join(links)}</ul>")
+        return _layout("Evidence", f"<h2>Evidence Binder</h2><div class='grid'>{cards}</div><ul>{''.join(links)}</ul>")
 
     @app.get("/downloads", response_class=HTMLResponse)
     def downloads() -> str:

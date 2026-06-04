@@ -33,6 +33,12 @@ def evidence_register_frame(cases: list[EvidenceCase]) -> pd.DataFrame:
                 "decision_reason": case.decision_reason,
                 "accepted_risk_reason": case.accepted_risk_reason,
                 "escalation_owner": case.escalation_owner,
+                "prepared_by": case.prepared_by,
+                "prepared_at": case.prepared_at,
+                "reviewed_by": case.reviewed_by,
+                "reviewed_at": case.reviewed_at,
+                "certification_status": case.certification_status,
+                "certification_note": case.certification_note,
                 "generated_at": case.generated_at,
             }
             for case in cases

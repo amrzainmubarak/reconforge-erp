@@ -44,6 +44,14 @@ Supported review fields are:
 - `accepted_risk_reason`
 - `escalation_owner`
 - `updated_at`
+- `prepared_by`
+- `prepared_at`
+- `reviewed_by`
+- `reviewed_at`
+- `certification_status`
+- `certification_note`
+
+Prepared/reviewed and certification fields are workflow metadata only. They are not legal sign-off, audit opinions, compliance certifications, or digital signatures. See [reconciliation certification metadata](reconciliation-certification.md).
 
 ## Commands
 

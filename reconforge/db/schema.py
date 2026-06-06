@@ -375,3 +375,21 @@ CREATE INDEX IF NOT EXISTS idx_api_sessions_user ON api_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_api_sessions_expires ON api_sessions(expires_at);
 CREATE INDEX IF NOT EXISTS idx_api_sessions_revoked ON api_sessions(revoked_at);
 """
+
+DB_BRIDGE_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS legacy_import_records (
+    id TEXT PRIMARY KEY,
+    source_type TEXT NOT NULL,
+    object_type TEXT NOT NULL,
+    object_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    source_path TEXT NOT NULL,
+    source_checksum_sha256 TEXT NOT NULL,
+    summary_json TEXT NOT NULL,
+    imported_at TEXT NOT NULL,
+    UNIQUE (source_type, object_type, object_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_legacy_import_records_source ON legacy_import_records(source_type);
+CREATE INDEX IF NOT EXISTS idx_legacy_import_records_object ON legacy_import_records(object_type, object_id);
+"""

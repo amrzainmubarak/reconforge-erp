@@ -84,6 +84,7 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Review workflow](review-workflow.md)
 - [Workflow state machine foundation](workflow-state-machine.md)
 - [Local REST API](api.md)
+- [DB import/export bridge](db-import-export.md)
 - [Close workflow](close-workflow.md)
 - [Variance analysis](variance-analysis.md)
 - [Control matrix](control-matrix.md)

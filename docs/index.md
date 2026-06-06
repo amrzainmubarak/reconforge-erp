@@ -18,6 +18,8 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Synthetic enterprise demo](synthetic-enterprise-demo.md)
 - [Pilot onboarding checklist](pilot-onboarding-checklist.md)
 - [Buyer FAQ](buyer-faq.md)
+- [Website homepage copy](website/homepage-copy.md)
+- [Website claim boundary guide](website/claim-boundary-guide.md)
 - [Docker deployment](docker-deployment.md)
 - [Docker verification report](strategy/docker-verification-report.md)
 
@@ -54,6 +56,16 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Feedback form questions](commercial/feedback-form-questions.md)
 - [Demo video script](demo-video-script.md)
 - [Demo recording checklist](demo-recording-checklist.md)
+
+## Website And Launch Copy
+
+- [Homepage copy](website/homepage-copy.md)
+- [Product page drafts](website/product-pages.md)
+- [Demo page copy](website/demo-page.md)
+- [GitHub launch post draft](website/github-launch-post.md)
+- [Release announcement draft](website/release-announcement-draft.md)
+- [Social launch snippets](website/social-launch-snippets.md)
+- [Claim boundary guide](website/claim-boundary-guide.md)
 
 ## Strategy
 
@@ -92,6 +104,7 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Security whitepaper](security-whitepaper.md)
 - [Security questionnaire](security/security-questionnaire.md)
 - [Release readiness checklist](release-readiness-checklist.md)
+- [Website claim boundary guide](website/claim-boundary-guide.md)
 - [Security data handling](security/data-handling.md)
 - [Security threat model](security/threat-model.md)
 - [Security deployment boundaries](security/deployment-boundaries.md)
@@ -134,6 +147,11 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Implementation packages](implementation-packages.md)
 - [Support playbook](support-playbook.md)
 - [Release readiness checklist](release-readiness-checklist.md)
+- [Website homepage copy](website/homepage-copy.md)
+- [Website product page drafts](website/product-pages.md)
+- [Website demo page copy](website/demo-page.md)
+- [Website launch copy package](website/github-launch-post.md)
+- [Website claim boundary guide](website/claim-boundary-guide.md)
 - [AI assistant architecture](ai-assistant.md)
 - [Plugin development](plugin-development.md)
 - [Security model](security-model.md)
@@ -178,6 +196,8 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Buyer FAQ](buyer-faq.md)
 - [Implementation packages](implementation-packages.md)
 - [Release readiness checklist](release-readiness-checklist.md)
+- [Website launch copy package](website/github-launch-post.md)
+- [Website claim boundary guide](website/claim-boundary-guide.md)
 - [OpenAI OSS application pack](openai-oss-application.md)
 - [v0.2.0 release notes](releases/v0.2.0.md)
 - [v0.3.0 release notes](releases/v0.3.0.md)

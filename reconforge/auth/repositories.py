@@ -135,6 +135,37 @@ class UserRepository:
             raise AuthRepositoryError("User not found.")
         return disabled
 
+    def update_profile(
+        self,
+        username: str,
+        *,
+        display_name: str | None = None,
+        email: str | None = None,
+        disabled: bool | None = None,
+    ) -> LocalUser:
+        user = self.get_by_username(username)
+        if user is None:
+            raise AuthRepositoryError("User not found.")
+        next_display_name = display_name if display_name is not None else user.display_name
+        next_email = email if email is not None else user.email
+        next_disabled = disabled if disabled is not None else user.disabled
+        try:
+            self.connection.execute(
+                """
+                UPDATE users
+                SET display_name = ?, email = ?, disabled = ?
+                WHERE username = ?
+                """,
+                (next_display_name, next_email, int(next_disabled), username),
+            )
+            self.connection.commit()
+        except sqlite3.DatabaseError as exc:
+            raise AuthRepositoryError("Unable to update local user.") from exc
+        updated = self.get_by_username(username)
+        if updated is None:
+            raise AuthRepositoryError("User not found.")
+        return updated
+
     def change_password(self, username: str, password_hash: PasswordHash) -> LocalUser:
         user = self.get_by_username(username)
         if user is None:

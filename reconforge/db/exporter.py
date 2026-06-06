@@ -40,6 +40,36 @@ SELECT_QUERIES = {
     "workflow_transition_events": "SELECT * FROM workflow_transition_events ORDER BY created_at, id",
     "audit_events": "SELECT * FROM audit_events ORDER BY sequence",
     "legacy_import_records": "SELECT * FROM legacy_import_records ORDER BY source_type, object_type, object_id",
+    "account_reconciliation_templates": "SELECT * FROM account_reconciliation_templates ORDER BY workspace_id, account_code",
+    "trial_balance_rows": "SELECT * FROM trial_balance_rows ORDER BY workspace_id, period_name, entity_code, account_code, source_row_number",
+    "account_reconciliation_records": "SELECT * FROM account_reconciliation_records ORDER BY workspace_id, period_name, entity_code, account_code",
+    "account_reconciliation_items": "SELECT * FROM account_reconciliation_items ORDER BY reconciliation_id, created_at, id",
+    "account_reconciliation_support": "SELECT * FROM account_reconciliation_support ORDER BY reconciliation_id, evidence_id",
+    "close_periods": "SELECT * FROM close_periods ORDER BY workspace_id, period_name",
+    "close_tasks_db": "SELECT * FROM close_tasks_db ORDER BY close_period_id, task_code",
+    "close_task_dependencies": "SELECT * FROM close_task_dependencies ORDER BY close_period_id, task_id, depends_on_task_id",
+    "approval_requests": "SELECT * FROM approval_requests ORDER BY created_at, id",
+    "certification_records": "SELECT * FROM certification_records ORDER BY object_type, object_id",
+    "evidence_registry": "SELECT * FROM evidence_registry ORDER BY workspace_id, evidence_code",
+    "evidence_requirements": "SELECT * FROM evidence_requirements ORDER BY workspace_id, object_type, object_id, requirement_code",
+    "evidence_links": "SELECT * FROM evidence_links ORDER BY object_type, object_id, evidence_id",
+    "journal_entries": "SELECT * FROM journal_entries ORDER BY workspace_id, period_name, journal_id",
+    "journal_exceptions": "SELECT * FROM journal_exceptions ORDER BY journal_entry_id, policy_code",
+    "intercompany_transactions": "SELECT * FROM intercompany_transactions ORDER BY workspace_id, period_name, transaction_id",
+    "intercompany_cases": "SELECT * FROM intercompany_cases ORDER BY workspace_id, period_name, entity_code, counterparty_code, reference",
+    "control_library": "SELECT * FROM control_library ORDER BY workspace_id, control_code",
+    "control_test_plans": "SELECT * FROM control_test_plans ORDER BY workspace_id, period_name, control_id",
+    "control_test_samples": "SELECT * FROM control_test_samples ORDER BY test_plan_id, sample_reference",
+    "control_test_results": "SELECT * FROM control_test_results ORDER BY test_plan_id, created_at, id",
+    "remediation_plans": "SELECT * FROM remediation_plans ORDER BY source_type, source_id",
+    "match_jobs": "SELECT * FROM match_jobs ORDER BY created_at, id",
+    "match_rules": "SELECT * FROM match_rules ORDER BY job_id, rule_name",
+    "match_results": "SELECT * FROM match_results ORDER BY job_id, left_id, right_id, match_type",
+    "exceptions_queue": "SELECT * FROM exceptions_queue ORDER BY status, risk_rating, created_at, id",
+    "metric_definitions": "SELECT * FROM metric_definitions ORDER BY metric_key",
+    "metric_snapshots": "SELECT * FROM metric_snapshots ORDER BY workspace_id, period_name, metric_key",
+    "ops_job_history": "SELECT * FROM ops_job_history ORDER BY started_at, id",
+    "ops_error_records": "SELECT * FROM ops_error_records ORDER BY created_at, id",
 }
 
 
@@ -209,6 +239,38 @@ def _legacy_payload(connection: sqlite3.Connection) -> dict[str, Any]:
     }
 
 
+def _finance_payload(connection: sqlite3.Connection) -> dict[str, Any]:
+    return {
+        "account_reconciliation_templates": _rows(connection, "account_reconciliation_templates"),
+        "trial_balance_rows": _rows(connection, "trial_balance_rows"),
+        "account_reconciliation_records": _rows(connection, "account_reconciliation_records"),
+        "account_reconciliation_items": _rows(connection, "account_reconciliation_items"),
+        "account_reconciliation_support": _rows(connection, "account_reconciliation_support"),
+        "close_periods": _rows(connection, "close_periods"),
+        "close_tasks": _rows(connection, "close_tasks_db"),
+        "close_task_dependencies": _rows(connection, "close_task_dependencies"),
+        "approval_requests": _rows(connection, "approval_requests"),
+        "certification_records": _rows(connection, "certification_records"),
+        "journal_entries": _rows(connection, "journal_entries"),
+        "journal_exceptions": _rows(connection, "journal_exceptions"),
+        "intercompany_transactions": _rows(connection, "intercompany_transactions"),
+        "intercompany_cases": _rows(connection, "intercompany_cases"),
+        "control_library": _rows(connection, "control_library"),
+        "control_test_plans": _rows(connection, "control_test_plans"),
+        "control_test_samples": _rows(connection, "control_test_samples"),
+        "control_test_results": _rows(connection, "control_test_results"),
+        "remediation_plans": _rows(connection, "remediation_plans"),
+        "match_jobs": _json_rows(connection, "match_jobs", json_columns={"rule_json"}),
+        "match_rules": _json_rows(connection, "match_rules", json_columns={"rule_json"}),
+        "match_results": _rows(connection, "match_results"),
+        "exceptions_queue": _rows(connection, "exceptions_queue"),
+        "metric_definitions": _rows(connection, "metric_definitions"),
+        "metric_snapshots": _rows(connection, "metric_snapshots"),
+        "ops_job_history": _rows(connection, "ops_job_history"),
+        "ops_error_records": _rows(connection, "ops_error_records"),
+    }
+
+
 def build_public_export_payloads(connection: sqlite3.Connection, *, schema_version: int) -> dict[str, dict[str, Any]]:
     """Build sanitized export payloads that exclude credential and session material."""
 
@@ -225,7 +287,13 @@ def build_public_export_payloads(connection: sqlite3.Connection, *, schema_versi
         "identity": _identity_payload(connection),
         "workflow": _workflow_payload(connection),
         "audit_events": _audit_payload(connection),
-        "evidence": {"evidence_objects": _rows(connection, "evidence_objects")},
+        "evidence": {
+            "evidence_objects": _rows(connection, "evidence_objects"),
+            "evidence_registry": _rows(connection, "evidence_registry"),
+            "evidence_requirements": _rows(connection, "evidence_requirements"),
+            "evidence_links": _rows(connection, "evidence_links"),
+        },
+        "finance_workflows": _finance_payload(connection),
         "legacy_imports": _legacy_payload(connection),
     }
 

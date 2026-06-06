@@ -17,10 +17,10 @@ def test_workflow_api_sessions_and_bridge_migrations_are_applied_and_idempotent(
     second = run_migrations(db_path)
     status = database_status(db_path)
 
-    assert first.applied_versions == [1, 2, 3, 4, 5]
-    assert first.current_version == 5
+    assert first.applied_versions == [1, 2, 3, 4, 5, 6]
+    assert first.current_version == 6
     assert second.applied_versions == []
-    assert status.current_version == 5
+    assert status.current_version == 6
     assert status.pending_versions == []
 
     connection = connect(db_path, require_exists=True)

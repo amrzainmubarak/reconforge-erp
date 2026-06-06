@@ -58,7 +58,7 @@ def test_backup_writes_manifest_checksum_and_audit_event(tmp_path: Path) -> None
     assert result.backup_path.exists()
     assert result.manifest_path.exists()
     assert manifest["artifacts"]["backup.json"]["sha256"] == checksum_file(result.backup_path)
-    assert manifest["schema_version"] == 5
+    assert manifest["schema_version"] == 6
     assert "sensitive local business data" in manifest["privacy_warning"]
     assert "credential verifier" in backup["restore_sensitive_material"]
     assert "api_sessions" in backup["excluded_tables"]

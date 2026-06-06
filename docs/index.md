@@ -71,6 +71,10 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Thought leadership pack](strategy/thought-leadership-pack.md)
 - [Maintainer automation roadmap](strategy/maintainer-automation-roadmap.md)
 - [OSS support application notes](strategy/oss-support-application-notes.md)
+- [SSO/OIDC/SAML design only](strategy/sso-oidc-saml-design.md)
+- [SCIM design only](strategy/scim-design.md)
+- [Direct ERP connector roadmap](strategy/direct-erp-connector-roadmap.md)
+- [Safe AI assistance design](strategy/ai-assistance-design.md)
 
 ## ERP Export Guides
 
@@ -85,6 +89,8 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Workflow state machine foundation](workflow-state-machine.md)
 - [Local REST API](api.md)
 - [DB import/export bridge](db-import-export.md)
+- [DB-backed finance workflows](db-finance-workflows.md)
+- [Matching, exceptions, and metrics](matching-exceptions-metrics.md)
 - [Close workflow](close-workflow.md)
 - [Variance analysis](variance-analysis.md)
 - [Control matrix](control-matrix.md)
@@ -97,6 +103,13 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [AI assistant architecture](ai-assistant.md)
 - [Plugin development](plugin-development.md)
 - [Security model](security-model.md)
+- [Security questionnaire](security/security-questionnaire.md)
+- [Security data handling](security/data-handling.md)
+- [Security threat model](security/threat-model.md)
+- [Security deployment boundaries](security/deployment-boundaries.md)
+- [Security API security](security/api-security.md)
+- [Security backup and restore](security/backup-restore.md)
+- [Security limitations](security/limitations.md)
 - [File schemas](schemas/README.md)
 - [Data privacy](data-privacy.md)
 - [Benchmarking](benchmark.md)

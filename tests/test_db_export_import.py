@@ -72,7 +72,7 @@ def test_db_export_writes_expected_files_and_excludes_credentials(tmp_path: Path
         "evidence.json",
         "legacy_imports.json",
     } <= exported_files
-    assert metadata["schema_version"] == 5
+    assert metadata["schema_version"] == 6
     assert "users" in identity
     assert "password_hash" not in exported_text
     assert "password_salt" not in exported_text

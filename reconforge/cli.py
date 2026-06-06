@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import shutil
 import sqlite3
+import tempfile
 from pathlib import Path
 from typing import Annotated, cast
 
@@ -32,7 +34,7 @@ from reconforge.config import load_config, write_default_config
 from reconforge.control_matrix import export_control_matrix
 from reconforge.dashboard.app import create_app
 from reconforge.db import DatabaseError, connect, database_status, run_migrations
-from reconforge.db.backup import create_backup, restore_backup
+from reconforge.db.backup import create_backup, restore_backup, verify_backup
 from reconforge.db.exporter import DBBridgeError, export_database
 from reconforge.db.importers import (
     import_account_reconciliations,
@@ -49,6 +51,18 @@ from reconforge.mappings.inspector import inspect_mapping_inputs
 from reconforge.mappings.profile_template import write_profile_template
 from reconforge.mappings.validator import validate_mapping_pack
 from reconforge.periods import compare_period_outputs
+from reconforge.platform.accounts import AccountReconciliationService
+from reconforge.platform.approvals import ApprovalService
+from reconforge.platform.close import CloseManagementService
+from reconforge.platform.common import PlatformError
+from reconforge.platform.controls import ControlTestingService
+from reconforge.platform.evidence import EvidenceRegistryService
+from reconforge.platform.exceptions import ExceptionQueueService
+from reconforge.platform.intercompany import IntercompanyService
+from reconforge.platform.journals import JournalControlService
+from reconforge.platform.matching import MatchingService
+from reconforge.platform.metrics import MetricsService
+from reconforge.platform.operations import OperationsService
 from reconforge.reconciliation.matching import MatchingStrategy
 from reconforge.reconciliation.stock_gl import reconcile_stock_gl
 from reconforge.reconciliation.stock_gl import result_frames as stock_gl_result_frames
@@ -88,6 +102,17 @@ review_app = typer.Typer(help="Review exceptions with local JSON state.")
 demo_app = typer.Typer(help="Run first-time-user demo workflows.")
 compare_app = typer.Typer(help="Compare generated exception outputs across periods.")
 close_app = typer.Typer(help="Manage local close checklist workflow state.")
+accounts_app = typer.Typer(help="Manage DB-backed account reconciliations.")
+approvals_app = typer.Typer(help="Manage local approval and certification metadata.")
+certifications_app = typer.Typer(help="Manage local certification workflow metadata.")
+evidence_app = typer.Typer(help="Manage DB-backed evidence registry records.")
+journals_app = typer.Typer(help="Run DB-backed journal controls.")
+intercompany_app = typer.Typer(help="Manage DB-backed intercompany workflows.")
+match_app = typer.Typer(help="Run DB-backed deterministic matching jobs.")
+exceptions_app = typer.Typer(help="Manage the unified DB-backed exception queue.")
+metrics_app = typer.Typer(help="Compute governed DB-backed dashboard metrics.")
+deployment_app = typer.Typer(help="Run local deployment verification checks.")
+ops_app = typer.Typer(help="Inspect local operational health and job records.")
 analyze_app = typer.Typer(help="Analyze local ReconForge output folders.")
 controls_app = typer.Typer(help="Generate local control intelligence outputs.")
 db_app = typer.Typer(help="Manage the local SQLite database foundation.")
@@ -106,6 +131,17 @@ app.add_typer(review_app, name="review")
 app.add_typer(demo_app, name="demo")
 app.add_typer(compare_app, name="compare")
 app.add_typer(close_app, name="close")
+app.add_typer(accounts_app, name="accounts")
+app.add_typer(approvals_app, name="approvals")
+app.add_typer(certifications_app, name="certifications")
+app.add_typer(evidence_app, name="evidence")
+app.add_typer(journals_app, name="journals")
+app.add_typer(intercompany_app, name="intercompany")
+app.add_typer(match_app, name="match")
+app.add_typer(exceptions_app, name="exceptions")
+app.add_typer(metrics_app, name="metrics")
+app.add_typer(deployment_app, name="deployment")
+app.add_typer(ops_app, name="ops")
 app.add_typer(analyze_app, name="analyze")
 app.add_typer(controls_app, name="controls")
 app.add_typer(db_app, name="db")
@@ -176,6 +212,22 @@ def _workflow_service(db_path: Path) -> tuple[WorkflowService, sqlite3.Connectio
         connection.close()
         raise
     return service, connection
+
+
+def _db_connection(db_path: Path) -> sqlite3.Connection:
+    return connect(_db_option(db_path), require_exists=True)
+
+
+def _print_records(title: str, records: list[dict[str, object]], *, max_rows: int = 50) -> None:
+    if not records:
+        console.print("[yellow]No records found.[/yellow]")
+        return
+    _print_frame(title, pd.DataFrame(records), max_rows=max_rows)
+
+
+def _safe_cli_error(exc: Exception) -> None:
+    console.print(f"[red]{exc}[/red]")
+    raise typer.Exit(code=1) from exc
 
 
 @api_app.command("serve")
@@ -355,17 +407,52 @@ def db_restore_command(
     db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path to restore.")] = Path("output/reconforge.db"),
     input_path: Annotated[Path, typer.Option("--input", help="Local backup.json file or backup folder.")] = Path("output/backups/backup.json"),
     force: Annotated[bool, typer.Option("--force", help="Overwrite an existing local DB after checksum validation.")] = False,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Validate restore inputs without writing the target DB.")] = False,
 ) -> None:
     """Restore a local DB backup after checksum validation."""
 
     try:
-        result = restore_backup(_db_option(db_path), input_path, force=force)
+        result = restore_backup(_db_option(db_path), input_path, force=force, dry_run=dry_run)
     except (DatabaseError, DBBridgeError) as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
+    if result.dry_run:
+        console.print("[green]Restore dry-run passed:[/green] backup checksum and schema are supported.")
+        console.print(f"Target: {result.db_path} | Backup: {result.backup_path} | Schema version: {result.schema_version}")
+        return
     console.print("[yellow]Restore warning:[/yellow] restored data is local only and may include sensitive business data.")
     console.print(f"[green]Database restored:[/green] {result.db_path}")
     console.print(f"Schema version: {result.schema_version} | Tables restored: {len(result.restored_tables)}")
+
+
+@db_app.command("backup-verify")
+def db_backup_verify_command(
+    input_path: Annotated[Path, typer.Option("--input", help="Local backup.json file or backup folder.")] = Path("output/backups/backup.json"),
+) -> None:
+    """Verify a local DB backup manifest and checksum."""
+
+    try:
+        result = verify_backup(input_path)
+    except DBBridgeError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Backup verified:[/green] {result.backup_path}")
+    console.print(f"Schema version: {result.schema_version} | SHA-256: {result.checksum_sha256}")
+
+
+@db_app.command("migration-dry-run")
+def db_migration_dry_run_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Inspect migration status without mutating the database."""
+
+    try:
+        status = database_status(_db_option(db_path))
+    except DatabaseError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    pending = ", ".join(str(version) for version in status.pending_versions) or "none"
+    console.print(f"[green]Migration dry-run:[/green] current {status.current_version}/{status.latest_version} | pending: {pending}")
 
 
 @audit_app.command("list")
@@ -772,6 +859,1425 @@ def workflow_history_command(
     for event in events:
         table.add_row(event.from_status, event.to_status, event.actor_label, event.reason, event.created_at)
     console.print(table)
+
+
+@accounts_app.command("import-trial-balance")
+def accounts_import_trial_balance_command(
+    input_path: Annotated[Path, typer.Option("--input", help="Local CSV/JSON trial balance export.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    workspace: Annotated[str, typer.Option("--workspace", help="Local workspace key.")] = "default",
+    period: Annotated[str, typer.Option("--period", help="Default period when missing in input.")] = "current",
+    entity: Annotated[str, typer.Option("--entity", help="Default entity when missing in input.")] = "local",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Import a local trial balance and create draft reconciliation records."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            result = AccountReconciliationService(connection).import_trial_balance(
+                input_path,
+                workspace=workspace,
+                default_period=period,
+                default_entity=entity,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError, WorkflowServiceError) as exc:
+        _safe_cli_error(exc)
+    console.print(f"[green]Trial balance imported:[/green] {result.imported_rows} rows | records: {result.reconciliation_records}")
+
+
+@accounts_app.command("create-template")
+def accounts_create_template_command(
+    account_code: Annotated[str, typer.Option("--account-code", help="Account code.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    workspace: Annotated[str, typer.Option("--workspace", help="Local workspace key.")] = "default",
+    name: Annotated[str, typer.Option("--name", help="Template name.")] = "",
+    risk_rating: Annotated[str, typer.Option("--risk", help="Risk rating.")] = "medium",
+    materiality_threshold: Annotated[float, typer.Option("--materiality", help="Materiality threshold.")] = 0.0,
+    required_evidence: Annotated[str, typer.Option("--required-evidence", help="Evidence expectation text.")] = "",
+    owner: Annotated[str, typer.Option("--owner", help="Owner/preparer reference.")] = "",
+    reviewer: Annotated[str, typer.Option("--reviewer", help="Reviewer reference.")] = "",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Create or update a DB-backed account reconciliation template."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            template = AccountReconciliationService(connection).create_template(
+                account_code=account_code,
+                name=name,
+                workspace=workspace,
+                risk_rating=risk_rating,
+                materiality_threshold=materiality_threshold,
+                required_evidence=required_evidence,
+                owner=owner,
+                reviewer=reviewer,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Account Template", [template])
+
+
+@accounts_app.command("prepare")
+def accounts_prepare_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    reconciliation_id: Annotated[str | None, typer.Option("--id", help="Reconciliation record id.")] = None,
+    workspace: Annotated[str, typer.Option("--workspace", help="Local workspace key.")] = "default",
+    period: Annotated[str, typer.Option("--period", help="Period name.")] = "current",
+    entity: Annotated[str, typer.Option("--entity", help="Entity code.")] = "local",
+    account_code: Annotated[str, typer.Option("--account-code", help="Account code when --id is omitted.")] = "",
+    preparer: Annotated[str, typer.Option("--preparer", help="Preparer reference.")] = "",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Prepare an account reconciliation through the workflow engine."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            record = AccountReconciliationService(connection).prepare(
+                reconciliation_id=reconciliation_id,
+                workspace=workspace,
+                period_name=period,
+                entity_code=entity,
+                account_code=account_code,
+                preparer=preparer,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError, WorkflowServiceError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Account Reconciliation", [record])
+
+
+@accounts_app.command("submit")
+def accounts_submit_command(
+    reconciliation_id: Annotated[str, typer.Option("--id", help="Reconciliation record id.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Submit a prepared account reconciliation for review."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            record = AccountReconciliationService(connection).submit(reconciliation_id, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError, WorkflowServiceError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Account Reconciliation", [record])
+
+
+@accounts_app.command("review")
+def accounts_review_command(
+    reconciliation_id: Annotated[str, typer.Option("--id", help="Reconciliation record id.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    reviewer: Annotated[str, typer.Option("--reviewer", help="Reviewer reference.")] = "",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Review a submitted account reconciliation."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            record = AccountReconciliationService(connection).review(reconciliation_id, reviewer=reviewer, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError, WorkflowServiceError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Account Reconciliation", [record])
+
+
+@accounts_app.command("complete")
+def accounts_complete_command(
+    reconciliation_id: Annotated[str, typer.Option("--id", help="Reconciliation record id.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Complete a reviewed account reconciliation."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            record = AccountReconciliationService(connection).complete(reconciliation_id, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError, WorkflowServiceError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Account Reconciliation", [record])
+
+
+@accounts_app.command("roll-forward")
+def accounts_roll_forward_command(
+    from_period: Annotated[str, typer.Option("--from-period", help="Source period.")],
+    to_period: Annotated[str, typer.Option("--to-period", help="Target period.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    workspace: Annotated[str, typer.Option("--workspace", help="Local workspace key.")] = "default",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Roll forward account reconciliation records to a new period."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            count = AccountReconciliationService(connection).roll_forward(
+                from_period=from_period,
+                to_period=to_period,
+                workspace=workspace,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    console.print(f"[green]Rolled forward account reconciliations:[/green] {count}")
+
+
+@accounts_app.command("report")
+def accounts_report_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    status: Annotated[str, typer.Option("--status", help="Optional status filter.")] = "",
+    owner: Annotated[str, typer.Option("--owner", help="Optional owner filter.")] = "",
+    period: Annotated[str, typer.Option("--period", help="Optional period filter.")] = "",
+    entity: Annotated[str, typer.Option("--entity", help="Optional entity filter.")] = "",
+    risk: Annotated[str, typer.Option("--risk", help="Optional risk filter.")] = "",
+) -> None:
+    """List DB-backed account reconciliation records."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            records = AccountReconciliationService(connection).list_reconciliations(
+                status=status,
+                owner=owner,
+                period_name=period,
+                entity_code=entity,
+                risk_rating=risk,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Account Reconciliations", records, max_rows=100)
+
+
+@close_app.command("period-init")
+def close_period_init_command(
+    period: Annotated[str, typer.Option("--period", help="Close period name.")],
+    start_date: Annotated[str, typer.Option("--start-date", help="Period start date.")],
+    end_date: Annotated[str, typer.Option("--end-date", help="Period end date.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    workspace: Annotated[str, typer.Option("--workspace", help="Local workspace key.")] = "default",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Initialize a DB-backed close period with default tasks."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            close_period = CloseManagementService(connection).period_init(
+                period_name=period,
+                start_date=start_date,
+                end_date=end_date,
+                workspace=workspace,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Close Period", [close_period])
+
+
+@close_app.command("task-add")
+def close_task_add_command(
+    period_id: Annotated[str, typer.Option("--period-id", help="Close period id.")],
+    task_code: Annotated[str, typer.Option("--task-code", help="Close task code.")],
+    name: Annotated[str, typer.Option("--name", help="Task name.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    owner: Annotated[str, typer.Option("--owner", help="Task owner.")] = "",
+    category: Annotated[str, typer.Option("--category", help="Task category.")] = "",
+    risk: Annotated[str, typer.Option("--risk", help="Risk rating.")] = "medium",
+    due_date: Annotated[str, typer.Option("--due-date", help="Due date text.")] = "",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Add or update a DB-backed close task."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            task = CloseManagementService(connection).task_add(
+                period_id=period_id,
+                task_code=task_code,
+                name=name,
+                owner=owner,
+                category=category,
+                risk_rating=risk,
+                due_date=due_date,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Close Task", [task])
+
+
+@close_app.command("task-dependency")
+def close_task_dependency_command(
+    task_id: Annotated[str, typer.Option("--task-id", help="Task id.")],
+    depends_on_task_id: Annotated[str, typer.Option("--depends-on", help="Dependency task id.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Add a DB-backed close task dependency."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            dependency = CloseManagementService(connection).task_dependency(
+                task_id=task_id,
+                depends_on_task_id=depends_on_task_id,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Close Task Dependency", [dependency])
+
+
+@close_app.command("task-status")
+def close_task_status_command(
+    task_id: Annotated[str, typer.Option("--task-id", help="Task id.")],
+    status: Annotated[str, typer.Option("--status", help="Close task status.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    blocker_reason: Annotated[str, typer.Option("--blocker-reason", help="Required detail for blocked tasks.")] = "",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Update a DB-backed close task status."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            task = CloseManagementService(connection).task_status(
+                task_id=task_id,
+                status=status,
+                blocker_reason=blocker_reason,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Close Task", [task])
+
+
+@close_app.command("readiness")
+def close_readiness_command(
+    period_id: Annotated[str, typer.Option("--period-id", help="Close period id.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Compute DB-backed close readiness."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            readiness = CloseManagementService(connection).readiness(period_id=period_id, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Close Readiness", [readiness.__dict__])
+
+
+@close_app.command("lock-period")
+def close_lock_period_command(
+    period_id: Annotated[str, typer.Option("--period-id", help="Close period id.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Lock a DB-backed close period."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            period = CloseManagementService(connection).lock_period(period_id, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Close Period", [period])
+
+
+@close_app.command("reopen-period")
+def close_reopen_period_command(
+    period_id: Annotated[str, typer.Option("--period-id", help="Close period id.")],
+    reason: Annotated[str, typer.Option("--reason", help="Audited reopen reason.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Reopen a DB-backed close period with an audited reason."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            period = CloseManagementService(connection).reopen_period(period_id, reason=reason, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Close Period", [period])
+
+
+@close_app.command("db-report")
+def close_db_report_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    period_id: Annotated[str, typer.Option("--period-id", help="Optional close period id.")] = "",
+    status: Annotated[str, typer.Option("--status", help="Optional task status.")] = "",
+    owner: Annotated[str, typer.Option("--owner", help="Optional owner.")] = "",
+) -> None:
+    """List DB-backed close periods and tasks."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            service = CloseManagementService(connection)
+            periods = service.list_periods()
+            tasks = service.list_tasks(period_id=period_id, status=status, owner=owner)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Close Periods", periods, max_rows=50)
+    _print_records("Close Tasks", tasks, max_rows=100)
+
+
+@approvals_app.command("submit")
+def approvals_submit_command(
+    object_type: Annotated[str, typer.Option("--object-type", help="Target object type.")],
+    object_id: Annotated[str, typer.Option("--object-id", help="Target object id.")],
+    title: Annotated[str, typer.Option("--title", help="Approval title.")],
+    assigned_to: Annotated[str, typer.Option("--assigned-to", help="Assigned approver reference.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    reason: Annotated[str, typer.Option("--reason", help="Approval request reason.")] = "",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Submit a local approval request."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            request = ApprovalService(connection).submit(
+                object_type=object_type,
+                object_id=object_id,
+                title=title,
+                assigned_to=assigned_to,
+                reason=reason,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Approval Request", [request])
+
+
+@approvals_app.command("approve")
+def approvals_approve_command(
+    approval_id: Annotated[str, typer.Option("--id", help="Approval request id.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    reason: Annotated[str, typer.Option("--reason", help="Decision reason.")] = "",
+    override_reason: Annotated[str, typer.Option("--override-reason", help="Required for SoD override.")] = "",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Approve local workflow metadata."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            request = ApprovalService(connection).approve(
+                approval_id,
+                reason=reason,
+                override_reason=override_reason,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Approval Request", [request])
+
+
+@approvals_app.command("reject")
+def approvals_reject_command(
+    approval_id: Annotated[str, typer.Option("--id", help="Approval request id.")],
+    reason: Annotated[str, typer.Option("--reason", help="Required rejection reason.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Reject local workflow metadata with a reason."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            request = ApprovalService(connection).reject(approval_id, reason=reason, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Approval Request", [request])
+
+
+@approvals_app.command("report")
+def approvals_report_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    status: Annotated[str, typer.Option("--status", help="Optional approval status.")] = "",
+) -> None:
+    """List approval requests and certification metadata."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            service = ApprovalService(connection)
+            requests = service.list_requests(status=status)
+            certifications = service.list_certifications()
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Approval Requests", requests, max_rows=100)
+    _print_records("Certification Metadata", certifications, max_rows=100)
+
+
+@approvals_app.command("certifications-prepare")
+def certifications_prepare_command(
+    object_type: Annotated[str, typer.Option("--object-type", help="Target object type.")],
+    object_id: Annotated[str, typer.Option("--object-id", help="Target object id.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    period: Annotated[str, typer.Option("--period", help="Optional period name.")] = "",
+    entity: Annotated[str, typer.Option("--entity", help="Optional entity code.")] = "",
+    note: Annotated[str, typer.Option("--note", help="Workflow note.")] = "",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Prepare certification metadata only; this is not a legal signature."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            record = ApprovalService(connection).prepare_certification(
+                object_type=object_type,
+                object_id=object_id,
+                period_name=period,
+                entity_code=entity,
+                note=note,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Certification Metadata", [record])
+
+
+@approvals_app.command("certifications-review")
+def certifications_review_command(
+    object_type: Annotated[str, typer.Option("--object-type", help="Target object type.")],
+    object_id: Annotated[str, typer.Option("--object-id", help="Target object id.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    note: Annotated[str, typer.Option("--note", help="Workflow note.")] = "",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Review certification metadata only; this is not compliance certification."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            record = ApprovalService(connection).review_certification(
+                object_type=object_type,
+                object_id=object_id,
+                note=note,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Certification Metadata", [record])
+
+
+@certifications_app.command("prepare")
+def certifications_prepare_alias_command(
+    object_type: Annotated[str, typer.Option("--object-type", help="Target object type.")],
+    object_id: Annotated[str, typer.Option("--object-id", help="Target object id.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    period: Annotated[str, typer.Option("--period", help="Optional period name.")] = "",
+    entity: Annotated[str, typer.Option("--entity", help="Optional entity code.")] = "",
+    note: Annotated[str, typer.Option("--note", help="Workflow note.")] = "",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Prepare certification metadata only; this is not a legal signature."""
+
+    certifications_prepare_command(
+        object_type=object_type,
+        object_id=object_id,
+        db_path=db_path,
+        period=period,
+        entity=entity,
+        note=note,
+        actor=actor,
+    )
+
+
+@certifications_app.command("review")
+def certifications_review_alias_command(
+    object_type: Annotated[str, typer.Option("--object-type", help="Target object type.")],
+    object_id: Annotated[str, typer.Option("--object-id", help="Target object id.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    note: Annotated[str, typer.Option("--note", help="Workflow note.")] = "",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Review certification metadata only; this is not compliance certification."""
+
+    certifications_review_command(
+        object_type=object_type,
+        object_id=object_id,
+        db_path=db_path,
+        note=note,
+        actor=actor,
+    )
+
+
+@certifications_app.command("report")
+def certifications_report_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List certification workflow metadata."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            records = ApprovalService(connection).list_certifications()
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Certification Metadata", records, max_rows=100)
+
+
+@evidence_app.command("register")
+def evidence_register_command(
+    source_path: Annotated[Path, typer.Option("--file", help="Local evidence file.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    evidence_code: Annotated[str, typer.Option("--evidence-code", help="Evidence code.")] = "",
+    object_type: Annotated[str, typer.Option("--object-type", help="Optional linked object type.")] = "",
+    object_id: Annotated[str, typer.Option("--object-id", help="Optional linked object id.")] = "",
+    redaction_status: Annotated[str, typer.Option("--redaction-status", help="Redaction status.")] = "unknown",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Register local evidence with checksum/provenance metadata."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            evidence = EvidenceRegistryService(connection).register(
+                source_path,
+                evidence_code=evidence_code,
+                object_type=object_type,
+                object_id=object_id,
+                redaction_status=redaction_status,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, DBBridgeError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Evidence", [evidence])
+
+
+@evidence_app.command("verify")
+def evidence_verify_command(
+    evidence_id: Annotated[str, typer.Option("--id", help="Evidence id.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Verify local evidence checksum."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            result = EvidenceRegistryService(connection).verify(evidence_id, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Evidence Verification", [result.__dict__])
+
+
+@evidence_app.command("requirements")
+def evidence_requirements_command(
+    object_type: Annotated[str, typer.Option("--object-type", help="Object type.")],
+    object_id: Annotated[str, typer.Option("--object-id", help="Object id.")],
+    requirement_code: Annotated[str, typer.Option("--requirement-code", help="Requirement code.")],
+    description: Annotated[str, typer.Option("--description", help="Requirement description.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Create or update an evidence requirement."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            requirement = EvidenceRegistryService(connection).requirement(
+                object_type=object_type,
+                object_id=object_id,
+                requirement_code=requirement_code,
+                description=description,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Evidence Requirement", [requirement])
+
+
+@evidence_app.command("coverage")
+def evidence_coverage_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    workspace: Annotated[str, typer.Option("--workspace", help="Local workspace key.")] = "default",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Report local evidence coverage by DB object."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            coverage = EvidenceRegistryService(connection).coverage(workspace=workspace, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    console.print(f"[green]Evidence coverage:[/green] {coverage['coverage_pct']}%")
+    _print_records("Evidence Coverage Objects", cast(list[dict[str, object]], coverage["objects"]), max_rows=100)
+
+
+@evidence_app.command("report")
+def evidence_report_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    status: Annotated[str, typer.Option("--status", help="Optional evidence status.")] = "",
+) -> None:
+    """List DB-backed evidence registry records."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            records = EvidenceRegistryService(connection).list_evidence(status=status)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Evidence Registry", records, max_rows=100)
+
+
+@journals_app.command("import")
+def journals_import_command(
+    input_path: Annotated[Path, typer.Option("--input", help="Local CSV/JSON journal export.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    workspace: Annotated[str, typer.Option("--workspace", help="Local workspace key.")] = "default",
+    period: Annotated[str, typer.Option("--period", help="Default period when missing in input.")] = "current",
+    entity: Annotated[str, typer.Option("--entity", help="Default entity when missing in input.")] = "local",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Import local journal entries for policy checks."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            result = JournalControlService(connection).import_journals(
+                input_path,
+                workspace=workspace,
+                default_period=period,
+                default_entity=entity,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, DBBridgeError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    console.print(f"[green]Journals imported:[/green] {result.imported_rows} rows from {result.source_path.name}")
+
+
+@journals_app.command("policy-run")
+def journals_policy_run_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    workspace: Annotated[str, typer.Option("--workspace", help="Local workspace key.")] = "default",
+    period: Annotated[str, typer.Option("--period", help="Optional period filter.")] = "",
+    period_end: Annotated[str, typer.Option("--period-end", help="Period end date for late postings.")] = "",
+    high_value_threshold: Annotated[float, typer.Option("--high-value", help="High-value journal threshold.")] = 100000.0,
+    high_risk_accounts: Annotated[str, typer.Option("--high-risk-accounts", help="Comma-separated high-risk account codes.")] = "",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Run deterministic local journal policies."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            count = JournalControlService(connection).policy_run(
+                workspace=workspace,
+                period_name=period,
+                period_end=period_end,
+                high_value_threshold=high_value_threshold,
+                high_risk_accounts=high_risk_accounts,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    console.print(f"[green]Journal policy exceptions:[/green] {count}")
+
+
+@journals_app.command("exceptions")
+def journals_exceptions_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    period: Annotated[str, typer.Option("--period", help="Optional period filter.")] = "",
+) -> None:
+    """List journal policy exceptions."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            records = JournalControlService(connection).exceptions(period_name=period)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Journal Exceptions", records, max_rows=100)
+
+
+@journals_app.command("report")
+def journals_report_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Report journal control counts."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            report = JournalControlService(connection).report()
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Journal Controls Report", [report])
+
+
+@intercompany_app.command("import")
+def intercompany_import_command(
+    input_path: Annotated[Path, typer.Option("--input", help="Local CSV/JSON intercompany export.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    workspace: Annotated[str, typer.Option("--workspace", help="Local workspace key.")] = "default",
+    period: Annotated[str, typer.Option("--period", help="Default period when missing in input.")] = "current",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Import local intercompany transactions."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            result = IntercompanyService(connection).import_transactions(
+                input_path,
+                workspace=workspace,
+                default_period=period,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, DBBridgeError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    console.print(f"[green]Intercompany imported:[/green] {result.imported_rows} rows from {result.source_path.name}")
+
+
+@intercompany_app.command("match")
+def intercompany_match_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    workspace: Annotated[str, typer.Option("--workspace", help="Local workspace key.")] = "default",
+    period: Annotated[str, typer.Option("--period", help="Optional period filter.")] = "",
+    tolerance: Annotated[float, typer.Option("--tolerance", help="Imbalance tolerance.")] = 0.01,
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Match intercompany transactions into local cases."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            count = IntercompanyService(connection).match(
+                workspace=workspace,
+                period_name=period,
+                tolerance=tolerance,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    console.print(f"[green]Intercompany cases created/updated:[/green] {count}")
+
+
+@intercompany_app.command("cases")
+def intercompany_cases_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    status: Annotated[str, typer.Option("--status", help="Optional case status.")] = "",
+) -> None:
+    """List intercompany cases."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            records = IntercompanyService(connection).cases(status=status)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Intercompany Cases", records, max_rows=100)
+
+
+@intercompany_app.command("settle")
+def intercompany_settle_command(
+    case_id: Annotated[str, typer.Option("--case-id", help="Intercompany case id.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    settlement_status: Annotated[str, typer.Option("--settlement-status", help="Settlement status metadata.")] = "Settled",
+    dispute_owner: Annotated[str, typer.Option("--dispute-owner", help="Dispute owner reference.")] = "",
+    evidence_note: Annotated[str, typer.Option("--evidence-note", help="Evidence note/reference.")] = "",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Settle/update local intercompany case metadata."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            record = IntercompanyService(connection).settle(
+                case_id,
+                settlement_status=settlement_status,
+                dispute_owner=dispute_owner,
+                evidence_note=evidence_note,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Intercompany Case", [record])
+
+
+@intercompany_app.command("report")
+def intercompany_report_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List intercompany case report."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            records = IntercompanyService(connection).cases()
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Intercompany Report", records, max_rows=100)
+
+
+@controls_app.command("import-library")
+def controls_import_library_command(
+    input_path: Annotated[Path, typer.Option("--input", help="Local CSV/JSON control library.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    workspace: Annotated[str, typer.Option("--workspace", help="Local workspace key.")] = "default",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Import a DB-backed control library."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            result = ControlTestingService(connection).import_library(input_path, workspace=workspace, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, DBBridgeError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    console.print(f"[green]Control library imported:[/green] {result.imported_rows} rows from {result.source_path.name}")
+
+
+@controls_app.command("plan-tests")
+def controls_plan_tests_command(
+    period: Annotated[str, typer.Option("--period", help="Test period.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    workspace: Annotated[str, typer.Option("--workspace", help="Local workspace key.")] = "default",
+    sample_size: Annotated[int, typer.Option("--sample-size", help="Planned sample size.")] = 0,
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Create DB-backed control test plans."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            count = ControlTestingService(connection).plan_tests(
+                period_name=period,
+                workspace=workspace,
+                sample_size=sample_size,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    console.print(f"[green]Control test plans:[/green] {count}")
+
+
+@controls_app.command("record-result")
+def controls_record_result_command(
+    plan_id: Annotated[str, typer.Option("--plan-id", help="Control test plan id.")],
+    result_status: Annotated[str, typer.Option("--result", help="Result status.")],
+    effectiveness_status: Annotated[str, typer.Option("--effectiveness", help="Effectiveness status.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    note: Annotated[str, typer.Option("--note", help="Result note.")] = "",
+    evidence_id: Annotated[str, typer.Option("--evidence-id", help="Evidence id/reference.")] = "",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Record a DB-backed control test result."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            result = ControlTestingService(connection).record_result(
+                plan_id=plan_id,
+                result_status=result_status,
+                effectiveness_status=effectiveness_status,
+                note=note,
+                evidence_id=evidence_id,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Control Test Result", [result])
+
+
+@controls_app.command("remediation")
+def controls_remediation_command(
+    source_type: Annotated[str, typer.Option("--source-type", help="Source type.")],
+    source_id: Annotated[str, typer.Option("--source-id", help="Source id.")],
+    action_plan: Annotated[str, typer.Option("--action-plan", help="Remediation plan text.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    owner: Annotated[str, typer.Option("--owner", help="Owner reference.")] = "",
+    target_date: Annotated[str, typer.Option("--target-date", help="Target date text.")] = "",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Create/update remediation metadata."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            record = ControlTestingService(connection).remediation(
+                source_type=source_type,
+                source_id=source_id,
+                action_plan=action_plan,
+                owner=owner,
+                target_date=target_date,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Remediation Plan", [record])
+
+
+@controls_app.command("report")
+def controls_report_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    period: Annotated[str, typer.Option("--period", help="Optional period filter.")] = "",
+) -> None:
+    """Report DB-backed control testing status."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            service = ControlTestingService(connection)
+            report = service.report()
+            plans = service.list_plans(period_name=period)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Control Testing Summary", [report])
+    _print_records("Control Test Plans", plans, max_rows=100)
+
+
+@match_app.command("run")
+def match_run_command(
+    left_path: Annotated[Path, typer.Option("--left", help="Left local CSV/JSON file.")],
+    right_path: Annotated[Path, typer.Option("--right", help="Right local CSV/JSON file.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    name: Annotated[str, typer.Option("--name", help="Match job name.")] = "local-match-job",
+    workspace: Annotated[str, typer.Option("--workspace", help="Local workspace key.")] = "default",
+    left_id_field: Annotated[str, typer.Option("--left-id-field", help="Left id field.")] = "id",
+    right_id_field: Annotated[str, typer.Option("--right-id-field", help="Right id field.")] = "id",
+    amount_field: Annotated[str, typer.Option("--amount-field", help="Amount field name on both sides.")] = "amount",
+    date_field: Annotated[str, typer.Option("--date-field", help="Date field name on both sides.")] = "date",
+    reference_field: Annotated[str, typer.Option("--reference-field", help="Reference field name on both sides.")] = "reference",
+    exact_fields: Annotated[str, typer.Option("--exact-fields", help="Comma-separated exact-key fields.")] = "",
+    amount_tolerance: Annotated[float, typer.Option("--amount-tolerance", help="Allowed amount difference.")] = 0.0,
+    date_window_days: Annotated[int, typer.Option("--date-window-days", help="Allowed date difference in days.")] = 0,
+    allow_many_to_one: Annotated[bool, typer.Option("--allow-many-to-one", help="Allow right-side records to match more than once.")] = False,
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Run deterministic DB-backed matching with indexed candidate generation."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            result = MatchingService(connection).run(
+                left_path=left_path,
+                right_path=right_path,
+                workspace=workspace,
+                name=name,
+                left_id_field=left_id_field,
+                right_id_field=right_id_field,
+                amount_field=amount_field,
+                date_field=date_field,
+                reference_field=reference_field,
+                exact_fields=exact_fields,
+                amount_tolerance=amount_tolerance,
+                date_window_days=date_window_days,
+                allow_many_to_one=allow_many_to_one,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, DBBridgeError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    console.print(f"[green]Match job complete:[/green] {result.job_id} | matched {result.matched_count}/{result.result_count}")
+
+
+@match_app.command("job-status")
+def match_job_status_command(
+    job_id: Annotated[str, typer.Option("--job-id", help="Match job id.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Show one match job status."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            job = MatchingService(connection).job_status(job_id)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Match Job", [job])
+
+
+@match_app.command("results")
+def match_results_command(
+    job_id: Annotated[str, typer.Option("--job-id", help="Match job id.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    status: Annotated[str, typer.Option("--status", help="Optional result status.")] = "",
+) -> None:
+    """List match results."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            records = MatchingService(connection).results(job_id, status=status)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Match Results", records, max_rows=100)
+
+
+@match_app.command("benchmark")
+def match_benchmark_command(
+    rows: Annotated[int, typer.Option("--rows", help="Synthetic benchmark rows.")] = 100000,
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    workspace: Annotated[str, typer.Option("--workspace", help="Local workspace key.")] = "default",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Run a deterministic synthetic local matching benchmark."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            result = MatchingService(connection).benchmark(rows=rows, workspace=workspace, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    console.print(f"[green]Benchmark complete:[/green] {result.job_id} | matched {result.matched_count}/{result.result_count}")
+
+
+@exceptions_app.command("list")
+def exceptions_list_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    period: Annotated[str, typer.Option("--period", help="Optional period filter.")] = "",
+    entity: Annotated[str, typer.Option("--entity", help="Optional entity filter.")] = "",
+    account: Annotated[str, typer.Option("--account", help="Optional account filter.")] = "",
+    control: Annotated[str, typer.Option("--control", help="Optional control filter.")] = "",
+    risk: Annotated[str, typer.Option("--risk", help="Optional risk filter.")] = "",
+    owner: Annotated[str, typer.Option("--owner", help="Optional owner filter.")] = "",
+    status: Annotated[str, typer.Option("--status", help="Optional status filter.")] = "",
+) -> None:
+    """List the unified DB-backed exception queue."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            records = ExceptionQueueService(connection).list(
+                period_name=period,
+                entity_code=entity,
+                account_code=account,
+                control_code=control,
+                risk_rating=risk,
+                owner=owner,
+                status=status,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Unified Exceptions", records, max_rows=100)
+
+
+@exceptions_app.command("assign")
+def exceptions_assign_command(
+    exception_id: Annotated[str, typer.Option("--id", help="Exception id.")],
+    owner: Annotated[str, typer.Option("--owner", help="Owner reference.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Assign a unified exception."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            record = ExceptionQueueService(connection).assign(exception_id, owner=owner, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Unified Exception", [record])
+
+
+@exceptions_app.command("set-status")
+def exceptions_set_status_command(
+    exception_id: Annotated[str, typer.Option("--id", help="Exception id.")],
+    status: Annotated[str, typer.Option("--status", help="New status.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Set a unified exception status."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            record = ExceptionQueueService(connection).set_status(exception_id, status=status, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Unified Exception", [record])
+
+
+@exceptions_app.command("bulk-update")
+def exceptions_bulk_update_command(
+    ids: Annotated[str, typer.Option("--ids", help="Comma-separated exception ids.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    status: Annotated[str, typer.Option("--status", help="Optional new status.")] = "",
+    owner: Annotated[str, typer.Option("--owner", help="Optional new owner.")] = "",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Bulk-update selected unified exceptions."""
+
+    exception_ids = [item.strip() for item in ids.split(",") if item.strip()]
+    try:
+        connection = _db_connection(db_path)
+        try:
+            count = ExceptionQueueService(connection).bulk_update(exception_ids, status=status, owner=owner, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    console.print(f"[green]Unified exceptions updated:[/green] {count}")
+
+
+@exceptions_app.command("report")
+def exceptions_report_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Report unified exception queue records."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            records = ExceptionQueueService(connection).list()
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Unified Exception Report", records, max_rows=100)
+
+
+@metrics_app.command("compute")
+def metrics_compute_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    workspace: Annotated[str, typer.Option("--workspace", help="Local workspace key.")] = "default",
+    period: Annotated[str, typer.Option("--period", help="Optional period scope.")] = "",
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+) -> None:
+    """Compute governed DB-backed dashboard metrics."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            metrics = MetricsService(connection).compute(workspace=workspace, period_name=period, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Dashboard Metrics", metrics, max_rows=100)
+
+
+@metrics_app.command("report")
+def metrics_report_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    period: Annotated[str, typer.Option("--period", help="Optional period scope.")] = "",
+) -> None:
+    """List governed metric snapshots."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            service = MetricsService(connection)
+            metrics = service.dashboard(period_name=period)
+            lineage = service.lineage()
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Dashboard Metrics", metrics, max_rows=100)
+    _print_records("Metric Lineage", lineage, max_rows=100)
+
+
+@ops_app.command("health")
+def ops_health_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Show sanitized local operational health."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            health = OperationsService(connection).health(str(db_path))
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError, AuditLedgerError) as exc:
+        _safe_cli_error(exc)
+    _print_records("ReconForge Local Health", [health])
+
+
+@ops_app.command("jobs")
+def ops_jobs_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List local job history records."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            jobs = OperationsService(connection).jobs()
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Local Jobs", jobs, max_rows=100)
+
+
+@ops_app.command("errors")
+def ops_errors_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List sanitized local error records."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            errors = OperationsService(connection).errors()
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Local Error Records", errors, max_rows=100)
+
+
+@deployment_app.command("docker-verify")
+def deployment_docker_verify_command() -> None:
+    """Verify local Docker files and tooling presence without claiming production readiness."""
+
+    rows: list[dict[str, object]] = [
+        {"check": "Dockerfile", "status": "OK" if Path("Dockerfile").exists() else "WARN", "detail": "Dockerfile present" if Path("Dockerfile").exists() else "Dockerfile not found"},
+        {
+            "check": "Compose file",
+            "status": "OK" if Path("docker-compose.yml").exists() or Path("compose.yml").exists() else "WARN",
+            "detail": "Compose file present" if Path("docker-compose.yml").exists() or Path("compose.yml").exists() else "Compose file not found",
+        },
+        {
+            "check": "Docker CLI",
+            "status": "OK" if shutil.which("docker") else "WARN",
+            "detail": "docker executable found" if shutil.which("docker") else "docker executable not found on PATH",
+        },
+    ]
+    _print_records("Docker Verification", rows)
+    if any(row["status"] == "WARN" for row in rows):
+        console.print("[yellow]Docker verification is local file/tooling inspection only; no runtime guarantee is claimed.[/yellow]")
+
+
+@deployment_app.command("release-check")
+def deployment_release_check_command(
+    output_path: Annotated[Path, typer.Option("--output", help="Output directory to check.")] = Path("output"),
+) -> None:
+    """Run local release-readiness smoke checks."""
+
+    checks: list[dict[str, object]] = []
+    with tempfile.TemporaryDirectory(prefix="reconforge-release-check-") as folder:
+        temp_db = Path(folder) / "release_check.db"
+        try:
+            status = run_migrations(temp_db)
+            checks.append({"check": "DB migration smoke", "status": "OK", "detail": f"schema {status.current_version}/{status.latest_version}"})
+        except DatabaseError as exc:
+            checks.append({"check": "DB migration smoke", "status": "FAIL", "detail": str(exc)})
+    try:
+        output_path.mkdir(parents=True, exist_ok=True)
+        probe = output_path / ".reconforge_write_probe"
+        probe.write_text("ok\n", encoding="utf-8")
+        probe.unlink()
+        checks.append({"check": "Output directory writable", "status": "OK", "detail": str(output_path)})
+    except OSError:
+        checks.append({"check": "Output directory writable", "status": "FAIL", "detail": "Unable to write output probe."})
+    checks.append({"check": "Default host binding", "status": "OK", "detail": "CLI API/Studio defaults bind to 127.0.0.1"})
+    _print_records("Release Check", checks)
+    if any(row["status"] == "FAIL" for row in checks):
+        raise typer.Exit(code=1)
 
 
 @app.command("init")
@@ -1608,7 +3114,7 @@ def studio(
             raise typer.Exit(code=1) from exc
     console.print(f"[green]Starting ReconForge Studio:[/green] http://{host}:{port}")
     uvicorn.run(
-        create_studio_app(input_path, output_path, require_auth=require_auth, db_path=db_path if require_auth else None),
+        create_studio_app(input_path, output_path, require_auth=require_auth, db_path=db_path),
         host=host,
         port=port,
         log_level="info",

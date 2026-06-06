@@ -21,7 +21,7 @@ from reconforge.api.errors import (
     unhandled_error_handler,
     validation_error_handler,
 )
-from reconforge.api.routes import audit, auth, health, roles, users, workflow
+from reconforge.api.routes import accounts, audit, auth, close, exceptions, health, metrics, roles, users, workflow
 from reconforge.db import resolve_db_path
 
 ExceptionHandler = Callable[[Request, Exception], Response | Awaitable[Response]]
@@ -56,4 +56,8 @@ def create_api_app(db_path: Path | str) -> FastAPI:
     app.include_router(roles.router, prefix="/api/v1")
     app.include_router(audit.router, prefix="/api/v1")
     app.include_router(workflow.router, prefix="/api/v1")
+    app.include_router(accounts.router, prefix="/api/v1")
+    app.include_router(close.router, prefix="/api/v1")
+    app.include_router(exceptions.router, prefix="/api/v1")
+    app.include_router(metrics.router, prefix="/api/v1")
     return app

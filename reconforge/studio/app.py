@@ -31,6 +31,12 @@ from reconforge.close import close_summary_frame, close_tasks_frame, load_close_
 from reconforge.config import load_config
 from reconforge.db import DatabaseError, connect, database_status, resolve_db_path
 from reconforge.io.readers import read_required_datasets
+from reconforge.platform.accounts import AccountReconciliationService
+from reconforge.platform.close import CloseManagementService
+from reconforge.platform.common import PlatformError
+from reconforge.platform.evidence import EvidenceRegistryService
+from reconforge.platform.exceptions import ExceptionQueueService
+from reconforge.platform.metrics import MetricsService
 from reconforge.reconciliation.stock_gl import reconcile_stock_gl
 from reconforge.reconciliation.workorders import reconcile_workorders
 from reconforge.reports.wip_aging import generate_wip_aging
@@ -69,6 +75,11 @@ def _layout(title: str, body: str, *, auth_nav: str = "") -> str:
       <a href="/wip">WIP Aging</a>
       <a href="/control-packs">Control Packs</a>
       <a href="/evidence">Evidence</a>
+      <a href="/db/accounts">DB Accounts</a>
+      <a href="/db/close">DB Close</a>
+      <a href="/db/evidence">DB Evidence</a>
+      <a href="/db/exceptions">DB Exceptions</a>
+      <a href="/db/metrics">DB Metrics</a>
       <a href="/downloads">Downloads</a>
       <a href="/docs">Docs</a>
       AUTH_NAV
@@ -403,6 +414,21 @@ def _validate_auth_database(db_path: Path | str | None) -> Path:
     return resolved
 
 
+def _optional_studio_database(db_path: Path | str | None) -> Path | None:
+    if db_path is None:
+        return None
+    try:
+        resolved = resolve_db_path(db_path)
+    except DatabaseError:
+        return None
+    if not resolved.exists():
+        return None
+    status = database_status(resolved)
+    if status.pending_versions:
+        return None
+    return resolved
+
+
 def _safe_denial_page(title: str, message: str, *, status_code: int, auth_nav: str = "") -> HTMLResponse:
     body = f"<h2>{escape(title)}</h2><p>{escape(message)}</p>"
     return HTMLResponse(_layout(title, body, auth_nav=auth_nav), status_code=status_code)
@@ -422,7 +448,7 @@ def create_studio_app(
     csrf_token = token_urlsafe(24)
     login_csrf_token = token_urlsafe(24)
     logout_csrf_token = token_urlsafe(24)
-    resolved_db_path = _validate_auth_database(db_path) if require_auth else None
+    resolved_db_path = _validate_auth_database(db_path) if require_auth else _optional_studio_database(db_path)
     output_registry = build_download_registry(output_path, allowed_suffixes=DOWNLOAD_SUFFIXES)
     evidence_registry = build_download_registry(output_path / "evidence", allowed_suffixes=DOWNLOAD_SUFFIXES, recursive=True)
     docs_registry = build_download_registry(Path("docs"), allowed_suffixes=DOC_SUFFIXES)
@@ -806,6 +832,181 @@ def create_studio_app(
                 continue
             links.append(f'<li><a href="{_evidence_href(parts[0], parts[1])}">{escape(key)}</a></li>')
         return _render("Evidence", f"<h2>Evidence Binder</h2><div class='grid'>{cards}</div><ul>{''.join(links)}</ul>")
+
+    def _db_unavailable_page(title: str) -> str:
+        return _render(title, f"<h2>{escape(title)}</h2><p>No current local DB is available for this Studio page.</p>")
+
+    def _studio_actor(request: Request) -> str:
+        user = _current_user(request)
+        return user.username if user is not None else "studio-local"
+
+    def _account_action_form() -> str:
+        return """
+<details class="review-action">
+  <summary>Account Reconciliation Action</summary>
+  <form class="review-form" method="post" action="/db/accounts/action">
+    <label>Reconciliation ID<input name="reconciliation_id" required maxlength="80"></label>
+    <label>Action<select name="action"><option>prepare</option><option>submit</option><option>review</option><option>complete</option></select></label>
+    <label>Reviewer<input name="reviewer" maxlength="120"></label>
+    <button type="submit">Apply</button>
+  </form>
+</details>
+"""
+
+    @app.get("/db/accounts", response_class=HTMLResponse)
+    def db_accounts(
+        status: str = "",
+        owner: str = "",
+        period: str = "",
+        entity: str = "",
+        risk: str = "",
+    ) -> str:
+        if resolved_db_path is None:
+            return _db_unavailable_page("DB Account Reconciliations")
+        try:
+            connection = connect(resolved_db_path, require_exists=True)
+            try:
+                records = AccountReconciliationService(connection).list_reconciliations(
+                    status=_bounded_search(status),
+                    owner=_bounded_search(owner),
+                    period_name=_bounded_search(period),
+                    entity_code=_bounded_search(entity),
+                    risk_rating=_bounded_search(risk),
+                )
+            finally:
+                connection.close()
+        except (DatabaseError, PlatformError):
+            logger.warning("Unable to render DB account reconciliation page")
+            return _render("DB Account Reconciliations", "<h2>DB Account Reconciliations</h2><p>Unable to read local account reconciliations.</p>")
+        filters = """
+<form class="filters" method="get" action="/db/accounts">
+  <label>Status<input name="status"></label>
+  <label>Owner<input name="owner"></label>
+  <label>Period<input name="period"></label>
+  <label>Entity<input name="entity"></label>
+  <label>Risk<input name="risk"></label>
+  <button type="submit">Apply</button>
+</form>
+"""
+        body = "<h2>DB Account Reconciliations</h2>" + _account_action_form() + filters + _table(pd.DataFrame(records), limit=100)
+        return _render("DB Account Reconciliations", body)
+
+    @app.post("/db/accounts/action", response_class=HTMLResponse, response_model=None)
+    async def db_accounts_action(request: Request) -> str | Response:
+        if resolved_db_path is None:
+            return _auth_denial("DB Unavailable", "No current local DB is available for account actions.", status_code=503)
+        form = parse_qs((await request.body()).decode("utf-8", errors="replace"), keep_blank_values=True)
+        reconciliation_id = _form_value(form, "reconciliation_id", max_length=100)
+        action = _form_value(form, "action", max_length=40).lower()
+        permission = {
+            "prepare": "accounts.prepare",
+            "submit": "accounts.prepare",
+            "review": "accounts.review",
+            "complete": "accounts.complete",
+        }.get(action)
+        if permission is None or not _request_has_permission(request, permission):
+            return _auth_denial("Permission Denied", "Your local role does not allow this account action.", status_code=403)
+        try:
+            connection = connect(resolved_db_path, require_exists=True)
+            try:
+                service = AccountReconciliationService(connection)
+                actor = _studio_actor(request)
+                if action == "prepare":
+                    service.prepare(reconciliation_id=reconciliation_id, actor_label=actor)
+                elif action == "submit":
+                    service.submit(reconciliation_id, actor_label=actor)
+                elif action == "review":
+                    service.review(reconciliation_id, reviewer=_form_value(form, "reviewer", max_length=120), actor_label=actor)
+                elif action == "complete":
+                    service.complete(reconciliation_id, actor_label=actor)
+            finally:
+                connection.close()
+        except (DatabaseError, PlatformError):
+            logger.warning("Rejected DB account action")
+            return _auth_denial("Action Failed", "Unable to apply the account action. Verify the status and permissions.", status_code=400)
+        return RedirectResponse("/db/accounts", status_code=303)
+
+    @app.get("/db/close", response_class=HTMLResponse)
+    def db_close() -> str:
+        if resolved_db_path is None:
+            return _db_unavailable_page("DB Close")
+        try:
+            connection = connect(resolved_db_path, require_exists=True)
+            try:
+                service = CloseManagementService(connection)
+                periods = service.list_periods()
+                tasks = service.list_tasks()
+            finally:
+                connection.close()
+        except (DatabaseError, PlatformError):
+            logger.warning("Unable to render DB close page")
+            return _render("DB Close", "<h2>DB Close</h2><p>Unable to read local close records.</p>")
+        return _render("DB Close", "<h2>DB Close</h2><h3>Periods</h3>" + _table(pd.DataFrame(periods)) + "<h3>Tasks</h3>" + _table(pd.DataFrame(tasks), limit=100))
+
+    @app.get("/db/evidence", response_class=HTMLResponse)
+    def db_evidence() -> str:
+        if resolved_db_path is None:
+            return _db_unavailable_page("DB Evidence")
+        try:
+            connection = connect(resolved_db_path, require_exists=True)
+            try:
+                service = EvidenceRegistryService(connection)
+                evidence_records = service.list_evidence()
+                coverage = service.coverage()
+            finally:
+                connection.close()
+        except (DatabaseError, PlatformError):
+            logger.warning("Unable to render DB evidence page")
+            return _render("DB Evidence", "<h2>DB Evidence</h2><p>Unable to read local evidence registry.</p>")
+        cards = (
+            f'<section class="card"><span>Coverage</span><strong>{escape(str(coverage["coverage_pct"]))}%</strong></section>'
+            f'<section class="card"><span>Requirements</span><strong>{escape(str(coverage["requirement_count"]))}</strong></section>'
+        )
+        return _render("DB Evidence", f"<h2>DB Evidence</h2><div class='grid'>{cards}</div>" + _table(pd.DataFrame(evidence_records), limit=100))
+
+    @app.get("/db/exceptions", response_class=HTMLResponse)
+    def db_exceptions(status: str = "", owner: str = "", risk: str = "") -> str:
+        if resolved_db_path is None:
+            return _db_unavailable_page("DB Exceptions")
+        try:
+            connection = connect(resolved_db_path, require_exists=True)
+            try:
+                records = ExceptionQueueService(connection).list(
+                    status=_bounded_search(status),
+                    owner=_bounded_search(owner),
+                    risk_rating=_bounded_search(risk),
+                )
+            finally:
+                connection.close()
+        except (DatabaseError, PlatformError):
+            logger.warning("Unable to render DB exceptions page")
+            return _render("DB Exceptions", "<h2>DB Exceptions</h2><p>Unable to read local exception queue.</p>")
+        filters = """
+<form class="filters" method="get" action="/db/exceptions">
+  <label>Status<input name="status"></label>
+  <label>Owner<input name="owner"></label>
+  <label>Risk<input name="risk"></label>
+  <button type="submit">Apply</button>
+</form>
+"""
+        return _render("DB Exceptions", "<h2>DB Exceptions</h2>" + filters + _table(pd.DataFrame(records), limit=100))
+
+    @app.get("/db/metrics", response_class=HTMLResponse)
+    def db_metrics() -> str:
+        if resolved_db_path is None:
+            return _db_unavailable_page("DB Metrics")
+        try:
+            connection = connect(resolved_db_path, require_exists=True)
+            try:
+                service = MetricsService(connection)
+                metrics = service.dashboard()
+                lineage = service.lineage()
+            finally:
+                connection.close()
+        except (DatabaseError, PlatformError):
+            logger.warning("Unable to render DB metrics page")
+            return _render("DB Metrics", "<h2>DB Metrics</h2><p>Unable to read local metrics.</p>")
+        return _render("DB Metrics", "<h2>DB Metrics</h2>" + _table(pd.DataFrame(metrics), limit=100) + "<h3>Lineage</h3>" + _table(pd.DataFrame(lineage), limit=100))
 
     @app.get("/downloads", response_class=HTMLResponse)
     def downloads() -> str:

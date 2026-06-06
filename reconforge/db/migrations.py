@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from reconforge.db.connection import DatabaseError, connect, resolve_db_path
-from reconforge.db.schema import AUTH_RBAC_SCHEMA_SQL, INITIAL_SCHEMA_SQL
+from reconforge.db.schema import AUTH_RBAC_SCHEMA_SQL, INITIAL_SCHEMA_SQL, WORKFLOW_STATE_MACHINE_SCHEMA_SQL
 
 
 @dataclass(frozen=True)
@@ -44,6 +44,7 @@ class DatabaseStatus:
 MIGRATIONS = [
     Migration(version=1, name="enterprise_domain_and_audit_foundation", sql=INITIAL_SCHEMA_SQL),
     Migration(version=2, name="local_users_rbac_foundation", sql=AUTH_RBAC_SCHEMA_SQL),
+    Migration(version=3, name="workflow_state_machine_foundation", sql=WORKFLOW_STATE_MACHINE_SCHEMA_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """

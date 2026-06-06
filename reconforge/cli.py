@@ -64,6 +64,7 @@ from reconforge.schemas import DatasetName
 from reconforge.studio.app import create_studio_app
 from reconforge.validators import issues_to_frame, validate_input_directory
 from reconforge.variance import analyze_variance
+from reconforge.workflow import WorkflowRepositoryError, WorkflowService, WorkflowServiceError
 
 console = Console()
 app = typer.Typer(help="ReconForge ERP reconciliation intelligence CLI.")
@@ -83,6 +84,7 @@ db_app = typer.Typer(help="Manage the local SQLite database foundation.")
 audit_app = typer.Typer(help="Inspect local append-only audit events.")
 users_app = typer.Typer(help="Manage local users for DB-backed workflows.")
 roles_app = typer.Typer(help="Inspect local RBAC roles and permissions.")
+workflow_app = typer.Typer(help="Manage local workflow state machine foundations.")
 app.add_typer(reconcile_app, name="reconcile")
 app.add_typer(report_app, name="report")
 app.add_typer(rules_app, name="rules")
@@ -99,6 +101,7 @@ app.add_typer(db_app, name="db")
 app.add_typer(audit_app, name="audit")
 app.add_typer(users_app, name="users")
 app.add_typer(roles_app, name="roles")
+app.add_typer(workflow_app, name="workflow")
 
 
 def _version_callback(value: bool) -> None:
@@ -148,6 +151,16 @@ def _auth_service(db_path: Path) -> tuple[LocalAuthService, sqlite3.Connection]:
     try:
         service = LocalAuthService(connection)
     except (DatabaseError, AuthRepositoryError, AuthServiceError):
+        connection.close()
+        raise
+    return service, connection
+
+
+def _workflow_service(db_path: Path) -> tuple[WorkflowService, sqlite3.Connection]:
+    connection = connect(_db_option(db_path), require_exists=True)
+    try:
+        service = WorkflowService(connection)
+    except (DatabaseError, AuthRepositoryError, WorkflowRepositoryError, WorkflowServiceError):
         connection.close()
         raise
     return service, connection
@@ -469,6 +482,148 @@ def roles_permissions_command(
     table.add_column("Permission")
     for permission in permissions:
         table.add_row(permission)
+    console.print(table)
+
+
+@workflow_app.command("transitions")
+def workflow_transitions_command(
+    object_type: Annotated[str, typer.Option("--object-type", help="Workflow object type.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List allowed transition templates for a workflow object type."""
+
+    try:
+        service, connection = _workflow_service(db_path)
+        try:
+            transitions = service.list_allowed_transitions(object_type=object_type)
+        finally:
+            connection.close()
+    except (DatabaseError, AuthRepositoryError, WorkflowRepositoryError, WorkflowServiceError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    if not transitions:
+        console.print("[yellow]No workflow transitions found.[/yellow]")
+        return
+    table = Table(title=f"Workflow Transitions: {object_type}")
+    table.add_column("From")
+    table.add_column("To")
+    table.add_column("Permission")
+    table.add_column("SoD")
+    table.add_column("Reason")
+    for transition in transitions:
+        table.add_row(
+            transition.from_status,
+            transition.to_status,
+            transition.required_permission or "",
+            transition.sod_rule or "",
+            "required" if transition.reason_required else "",
+        )
+    console.print(table)
+
+
+@workflow_app.command("init-object")
+def workflow_init_object_command(
+    object_type: Annotated[str, typer.Option("--object-type", help="Workflow object type.")],
+    object_id: Annotated[str, typer.Option("--object-id", help="Workflow object identifier.")],
+    status: Annotated[str, typer.Option("--status", help="Initial workflow status.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Initialize a local workflow object."""
+
+    try:
+        service, connection = _workflow_service(db_path)
+        try:
+            workflow_object = service.initialize_object(object_type=object_type, object_id=object_id, status=status)
+        finally:
+            connection.close()
+    except (DatabaseError, AuthRepositoryError, WorkflowRepositoryError, WorkflowServiceError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Workflow object initialized:[/green] {workflow_object.object_type}:{workflow_object.object_id} | {workflow_object.status}")
+
+
+@workflow_app.command("status")
+def workflow_status_command(
+    object_type: Annotated[str, typer.Option("--object-type", help="Workflow object type.")],
+    object_id: Annotated[str, typer.Option("--object-id", help="Workflow object identifier.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Show local workflow object status."""
+
+    try:
+        service, connection = _workflow_service(db_path)
+        try:
+            workflow_object = service.get_status(object_type=object_type, object_id=object_id)
+        finally:
+            connection.close()
+    except (DatabaseError, AuthRepositoryError, WorkflowRepositoryError, WorkflowServiceError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    table = Table(title="Workflow Status")
+    table.add_column("Object")
+    table.add_column("Status")
+    table.add_column("Updated")
+    table.add_row(f"{workflow_object.object_type}:{workflow_object.object_id}", workflow_object.status, workflow_object.updated_at)
+    console.print(table)
+
+
+@workflow_app.command("transition")
+def workflow_transition_command(
+    object_type: Annotated[str, typer.Option("--object-type", help="Workflow object type.")],
+    object_id: Annotated[str, typer.Option("--object-id", help="Workflow object identifier.")],
+    to_status: Annotated[str, typer.Option("--to-status", help="Target workflow status.")],
+    actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
+    reason: Annotated[str, typer.Option("--reason", help="Transition reason when required.")] = "",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Perform a local workflow transition."""
+
+    try:
+        service, connection = _workflow_service(db_path)
+        try:
+            workflow_object = service.perform_transition(
+                object_type=object_type,
+                object_id=object_id,
+                to_status=to_status,
+                actor_label=actor,
+                reason=reason,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, AuthRepositoryError, WorkflowRepositoryError, WorkflowServiceError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Workflow transitioned:[/green] {workflow_object.object_type}:{workflow_object.object_id} | {workflow_object.status}")
+
+
+@workflow_app.command("history")
+def workflow_history_command(
+    object_type: Annotated[str, typer.Option("--object-type", help="Workflow object type.")],
+    object_id: Annotated[str, typer.Option("--object-id", help="Workflow object identifier.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List local workflow transition history."""
+
+    try:
+        service, connection = _workflow_service(db_path)
+        try:
+            events = service.list_history(object_type=object_type, object_id=object_id)
+        finally:
+            connection.close()
+    except (DatabaseError, AuthRepositoryError, WorkflowRepositoryError, WorkflowServiceError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    if not events:
+        console.print("[yellow]No workflow transition history found.[/yellow]")
+        return
+    table = Table(title=f"Workflow History: {object_type}:{object_id}")
+    table.add_column("From")
+    table.add_column("To")
+    table.add_column("Actor")
+    table.add_column("Reason")
+    table.add_column("Created")
+    for event in events:
+        table.add_row(event.from_status, event.to_status, event.actor_label, event.reason, event.created_at)
     console.print(table)
 
 

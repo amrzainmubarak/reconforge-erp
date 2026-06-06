@@ -275,3 +275,87 @@ CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles(role_id);
 CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_id);
 CREATE INDEX IF NOT EXISTS idx_role_permissions_permission ON role_permissions(permission_name);
 """
+
+WORKFLOW_STATE_MACHINE_SCHEMA_SQL = """
+ALTER TABLE workflow_objects ADD COLUMN id TEXT;
+ALTER TABLE workflow_objects ADD COLUMN created_at TEXT;
+
+UPDATE workflow_objects
+SET id = 'WF-' || lower(hex(randomblob(6)))
+WHERE id IS NULL;
+
+UPDATE workflow_objects
+SET created_at = COALESCE(created_at, updated_at, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+WHERE created_at IS NULL;
+
+ALTER TABLE workflow_transitions ADD COLUMN reason_required INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE workflow_transitions ADD COLUMN active INTEGER NOT NULL DEFAULT 1;
+
+CREATE TABLE IF NOT EXISTS workflow_transition_events (
+    id TEXT PRIMARY KEY,
+    workflow_object_id TEXT NOT NULL,
+    from_status TEXT NOT NULL,
+    to_status TEXT NOT NULL,
+    actor_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+    actor_label TEXT NOT NULL,
+    reason TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_workflow_objects_id ON workflow_objects(id);
+CREATE INDEX IF NOT EXISTS idx_workflow_objects_type_object ON workflow_objects(object_type, object_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_transition_events_object ON workflow_transition_events(workflow_object_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_transition_events_actor ON workflow_transition_events(actor_user_id);
+
+INSERT OR IGNORE INTO workflow_transitions (
+    object_type, from_status, to_status, required_permission, sod_rule, reason_required, active
+)
+VALUES
+    ('generic_review', 'Draft', 'Prepared', NULL, 'prepare_review', 0, 1),
+    ('generic_review', 'Prepared', 'In Review', NULL, 'submit_approve', 0, 1),
+    ('generic_review', 'In Review', 'Reviewed', NULL, 'prepare_review', 0, 1),
+    ('generic_review', 'In Review', 'Needs Follow-up', NULL, NULL, 1, 1),
+    ('generic_review', 'Reviewed', 'Complete', NULL, 'submit_approve', 0, 1),
+    ('generic_review', 'Reviewed', 'Accepted Risk', NULL, NULL, 1, 1),
+    ('generic_review', 'Needs Follow-up', 'Reopened', NULL, NULL, 1, 1),
+    ('generic_review', 'Reopened', 'Prepared', NULL, 'prepare_review', 0, 1),
+    ('generic_review', 'Draft', 'Not Applicable', NULL, NULL, 1, 1),
+
+    ('reconciliation', 'Draft', 'Prepared', 'reconciliation.prepare', 'prepare_review', 0, 1),
+    ('reconciliation', 'Prepared', 'In Review', 'reconciliation.prepare', 'submit_approve', 0, 1),
+    ('reconciliation', 'In Review', 'Reviewed', 'reconciliation.review', 'prepare_review', 0, 1),
+    ('reconciliation', 'In Review', 'Needs Follow-up', 'reconciliation.review', NULL, 1, 1),
+    ('reconciliation', 'Reviewed', 'Complete', 'reconciliation.approve', 'submit_approve', 0, 1),
+    ('reconciliation', 'Reviewed', 'Accepted Risk', 'reconciliation.approve', NULL, 1, 1),
+    ('reconciliation', 'Needs Follow-up', 'Reopened', 'reconciliation.review', NULL, 1, 1),
+    ('reconciliation', 'Reopened', 'Prepared', 'reconciliation.prepare', 'prepare_review', 0, 1),
+    ('reconciliation', 'Draft', 'Not Applicable', 'reconciliation.prepare', NULL, 1, 1),
+
+    ('close_task', 'Draft', 'Prepared', NULL, 'prepare_review', 0, 1),
+    ('close_task', 'Prepared', 'In Review', NULL, 'submit_approve', 0, 1),
+    ('close_task', 'In Review', 'Reviewed', NULL, 'prepare_review', 0, 1),
+    ('close_task', 'In Review', 'Needs Follow-up', NULL, NULL, 1, 1),
+    ('close_task', 'Reviewed', 'Complete', NULL, 'submit_approve', 0, 1),
+    ('close_task', 'Needs Follow-up', 'Reopened', NULL, NULL, 1, 1),
+    ('close_task', 'Reopened', 'Prepared', NULL, 'prepare_review', 0, 1),
+    ('close_task', 'Draft', 'Not Applicable', NULL, NULL, 1, 1),
+
+    ('control_test', 'Draft', 'Prepared', 'controls.test', 'prepare_review', 0, 1),
+    ('control_test', 'Prepared', 'In Review', 'controls.test', 'submit_approve', 0, 1),
+    ('control_test', 'In Review', 'Reviewed', 'controls.test', 'prepare_review', 0, 1),
+    ('control_test', 'In Review', 'Needs Follow-up', 'controls.test', NULL, 1, 1),
+    ('control_test', 'Reviewed', 'Complete', 'controls.test', 'submit_approve', 0, 1),
+    ('control_test', 'Needs Follow-up', 'Reopened', 'controls.test', NULL, 1, 1),
+    ('control_test', 'Reopened', 'Prepared', 'controls.test', 'prepare_review', 0, 1),
+    ('control_test', 'Draft', 'Not Applicable', 'controls.test', NULL, 1, 1),
+
+    ('evidence_requirement', 'Draft', 'Prepared', NULL, 'prepare_review', 0, 1),
+    ('evidence_requirement', 'Prepared', 'In Review', NULL, 'submit_approve', 0, 1),
+    ('evidence_requirement', 'In Review', 'Reviewed', NULL, 'prepare_review', 0, 1),
+    ('evidence_requirement', 'In Review', 'Needs Follow-up', NULL, NULL, 1, 1),
+    ('evidence_requirement', 'Reviewed', 'Complete', NULL, 'submit_approve', 0, 1),
+    ('evidence_requirement', 'Reviewed', 'Accepted Risk', NULL, NULL, 1, 1),
+    ('evidence_requirement', 'Needs Follow-up', 'Reopened', NULL, NULL, 1, 1),
+    ('evidence_requirement', 'Reopened', 'Prepared', NULL, 'prepare_review', 0, 1),
+    ('evidence_requirement', 'Draft', 'Not Applicable', NULL, NULL, 1, 1);
+"""

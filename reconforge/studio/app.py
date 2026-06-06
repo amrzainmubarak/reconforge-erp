@@ -7,15 +7,29 @@ import logging
 from html import escape
 from pathlib import Path
 from secrets import token_urlsafe
-from typing import Any
+from typing import Any, cast
 from urllib.parse import parse_qs, quote
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from starlette.middleware.base import RequestResponseEndpoint
+from starlette.responses import Response
 
+from reconforge.api.security import (
+    SESSION_TTL_HOURS,
+    SessionError,
+    authenticate_token,
+    create_session,
+    ensure_session_schema,
+    revoke_token,
+)
+from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService
+from reconforge.auth.models import LocalUser
+from reconforge.auth.repositories import ensure_auth_schema
 from reconforge.close import close_summary_frame, close_tasks_frame, load_close_checklist
 from reconforge.config import load_config
+from reconforge.db import DatabaseError, connect, database_status, resolve_db_path
 from reconforge.io.readers import read_required_datasets
 from reconforge.reconciliation.stock_gl import reconcile_stock_gl
 from reconforge.reconciliation.workorders import reconcile_workorders
@@ -33,12 +47,13 @@ from reconforge.validators import issues_to_frame, validate_input_directory
 
 DOWNLOAD_SUFFIXES = {".html", ".xlsx", ".csv", ".json", ".md", ".txt", ".yml", ".yaml"}
 DOC_SUFFIXES = {".md"}
+STUDIO_SESSION_COOKIE = "reconforge_studio_session"
 
 logger = logging.getLogger(__name__)
 INVALID_REVIEW_STATUS_MESSAGE = f"Invalid review status. Expected one of: {', '.join(ALLOWED_STATUSES)}."
 
 
-def _layout(title: str, body: str) -> str:
+def _layout(title: str, body: str, *, auth_nav: str = "") -> str:
     nav = """
     <nav>
       <a href="/">Overview</a>
@@ -56,8 +71,9 @@ def _layout(title: str, body: str) -> str:
       <a href="/evidence">Evidence</a>
       <a href="/downloads">Downloads</a>
       <a href="/docs">Docs</a>
+      AUTH_NAV
     </nav>
-    """
+    """.replace("AUTH_NAV", auth_nav)
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -71,6 +87,8 @@ def _layout(title: str, body: str) -> str:
     nav {{ display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 32px; background: #e7edf4; border-bottom: 1px solid #d5dde8; }}
     nav a {{ color: #16324f; text-decoration: none; padding: 6px 8px; border-radius: 6px; }}
     nav a:hover {{ background: #d5dde8; }}
+    .nav-spacer {{ flex: 1 1 auto; }}
+    .nav-button {{ border: 0; border-radius: 6px; padding: 6px 8px; background: #16324f; color: #fff; cursor: pointer; }}
     main {{ max-width: 1180px; margin: 0 auto; padding: 24px; }}
     .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }}
     .card {{ background: #fff; border: 1px solid #dce3ea; border-radius: 8px; padding: 14px; }}
@@ -89,6 +107,11 @@ def _layout(title: str, body: str) -> str:
     .message {{ padding: 10px 12px; border-radius: 6px; margin: 0 0 14px; border: 1px solid; }}
     .success {{ background: #ecfdf3; color: #067647; border-color: #abefc6; }}
     .error {{ background: #fef3f2; color: #b42318; border-color: #fecdca; }}
+    .login-panel {{ max-width: 390px; background: #fff; border: 1px solid #dce3ea; border-radius: 8px; padding: 18px; }}
+    .login-form {{ display: grid; gap: 12px; }}
+    .login-form label {{ display: grid; gap: 5px; font-size: 13px; color: #475467; }}
+    .login-form input {{ min-height: 36px; border: 1px solid #ccd6e0; border-radius: 6px; padding: 6px 8px; background: #fff; }}
+    .login-form button {{ min-height: 36px; border: 0; border-radius: 6px; padding: 6px 10px; background: #16324f; color: #fff; }}
     table {{ width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #dce3ea; }}
     th, td {{ padding: 9px 10px; border-bottom: 1px solid #edf1f5; text-align: left; font-size: 13px; }}
     th {{ background: #e8eef5; }}
@@ -159,6 +182,33 @@ def _message_html(message: str, message_type: str) -> str:
         return ""
     css_class = "success" if message_type == "success" else "error"
     return f'<div class="message {css_class}">{escape(message)}</div>'
+
+
+def _login_form(csrf_token: str, *, message: str = "") -> str:
+    return f"""
+<section class="login-panel">
+  <h2>Studio Sign In</h2>
+  {_message_html(message, "error")}
+  <form class="login-form" method="post" action="/login">
+    <input type="hidden" name="csrf_token" value="{escape(csrf_token)}">
+    <label>Username<input name="username" autocomplete="username" required maxlength="120"></label>
+    <label>Password<input name="password" type="password" autocomplete="current-password" required maxlength="512"></label>
+    <button type="submit">Sign In</button>
+  </form>
+</section>
+"""
+
+
+def _logout_form(csrf_token: str) -> str:
+    return f"""
+<section class="login-panel">
+  <h2>Sign Out</h2>
+  <form class="login-form" method="post" action="/logout">
+    <input type="hidden" name="csrf_token" value="{escape(csrf_token)}">
+    <button type="submit">Sign Out</button>
+  </form>
+</section>
+"""
 
 
 def _href(path_prefix: str, key: str) -> str:
@@ -337,16 +387,128 @@ def _load_reconciliation(input_dir: Path) -> dict[str, Any]:
     return {"stock": stock, "workorders": workorders, "wip": wip, "exceptions": exceptions}
 
 
-def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
+def _validate_auth_database(db_path: Path | str | None) -> Path:
+    if db_path is None:
+        raise DatabaseError("Studio auth-required mode needs --db pointing to a migrated ReconForge database.")
+    resolved = resolve_db_path(db_path)
+    status = database_status(resolved)
+    if status.pending_versions:
+        raise DatabaseError("ReconForge database has pending migrations. Run 'reconforge db migrate' first.")
+    connection = connect(resolved, require_exists=True)
+    try:
+        ensure_auth_schema(connection)
+        ensure_session_schema(connection)
+    finally:
+        connection.close()
+    return resolved
+
+
+def _safe_denial_page(title: str, message: str, *, status_code: int, auth_nav: str = "") -> HTMLResponse:
+    body = f"<h2>{escape(title)}</h2><p>{escape(message)}</p>"
+    return HTMLResponse(_layout(title, body, auth_nav=auth_nav), status_code=status_code)
+
+
+def create_studio_app(
+    input_dir: Path | str,
+    output_dir: Path | str,
+    *,
+    require_auth: bool = False,
+    db_path: Path | str | None = None,
+) -> FastAPI:
     """Create a local ReconForge Studio app."""
 
     input_path = Path(input_dir)
     output_path = Path(output_dir)
     csrf_token = token_urlsafe(24)
+    login_csrf_token = token_urlsafe(24)
+    logout_csrf_token = token_urlsafe(24)
+    resolved_db_path = _validate_auth_database(db_path) if require_auth else None
     output_registry = build_download_registry(output_path, allowed_suffixes=DOWNLOAD_SUFFIXES)
     evidence_registry = build_download_registry(output_path / "evidence", allowed_suffixes=DOWNLOAD_SUFFIXES, recursive=True)
     docs_registry = build_download_registry(Path("docs"), allowed_suffixes=DOC_SUFFIXES)
     app = FastAPI(title="ReconForge Studio", version="0.6.1")
+    app.state.studio_require_auth = require_auth
+    app.state.studio_db_path = resolved_db_path
+
+    auth_nav = (
+        f"""
+      <span class="nav-spacer"></span>
+      <form method="post" action="/logout">
+        <input type="hidden" name="csrf_token" value="{escape(logout_csrf_token)}">
+        <button class="nav-button" type="submit">Sign Out</button>
+      </form>
+      """
+        if require_auth
+        else ""
+    )
+
+    def _render(title: str, body: str) -> str:
+        return _layout(title, body, auth_nav=auth_nav)
+
+    def _login_page(*, message: str = "", status_code: int = 200) -> HTMLResponse:
+        return HTMLResponse(_layout("Studio Sign In", _login_form(login_csrf_token, message=message)), status_code=status_code)
+
+    def _auth_denial(title: str, message: str, *, status_code: int) -> HTMLResponse:
+        return _safe_denial_page(title, message, status_code=status_code, auth_nav=auth_nav)
+
+    def _current_user(request: Request) -> LocalUser | None:
+        user = getattr(request.state, "studio_user", None)
+        return cast(LocalUser, user) if isinstance(user, LocalUser) else None
+
+    def _request_has_permission(request: Request, permission: str) -> bool:
+        if not require_auth:
+            return True
+        user = _current_user(request)
+        if user is None or resolved_db_path is None:
+            return False
+        try:
+            connection = connect(resolved_db_path, require_exists=True)
+        except DatabaseError:
+            logger.warning("Rejected Studio action because the auth database is unavailable")
+            return False
+        try:
+            return LocalAuthService(connection).user_has_permission(username=user.username, permission=permission)
+        except (DatabaseError, AuthRepositoryError, AuthServiceError):
+            logger.warning("Rejected Studio action after RBAC lookup failure")
+            return False
+        finally:
+            connection.close()
+
+    @app.middleware("http")
+    async def require_studio_auth(request: Request, call_next: RequestResponseEndpoint) -> Response:
+        if not require_auth:
+            return await call_next(request)
+        if request.url.path == "/login":
+            return await call_next(request)
+        token = request.cookies.get(STUDIO_SESSION_COOKIE, "")
+        if resolved_db_path is None:
+            return _safe_denial_page(
+                "Studio authentication unavailable",
+                "Studio auth-required mode is not configured with a local database.",
+                status_code=503,
+            )
+        try:
+            connection = connect(resolved_db_path, require_exists=True)
+        except DatabaseError:
+            logger.warning("Rejected Studio request because the auth database is unavailable")
+            return _safe_denial_page(
+                "Studio authentication unavailable",
+                "The local Studio authentication database is unavailable.",
+                status_code=503,
+            )
+        try:
+            user = authenticate_token(connection, token=token)
+        except (DatabaseError, SessionError, AuthRepositoryError):
+            logger.warning("Rejected Studio request with invalid or unavailable session")
+            user = None
+        finally:
+            connection.close()
+        if user is None:
+            if request.method.upper() == "GET":
+                return RedirectResponse("/login", status_code=303)
+            return _safe_denial_page("Authentication Required", "Sign in to ReconForge Studio and try again.", status_code=401)
+        request.state.studio_user = user
+        return await call_next(request)
 
     def _render_exceptions_page(
         *,
@@ -396,7 +558,85 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
             + empty_message
             + _table(filtered, limit=100)
         )
-        return _layout("Exceptions", body)
+        return _render("Exceptions", body)
+
+    @app.get("/login", response_class=HTMLResponse)
+    def login_page() -> HTMLResponse:
+        if not require_auth:
+            return HTMLResponse(_layout("Studio Sign In", "<h2>Studio Sign In</h2><p>Studio is running in trusted local mode.</p>"))
+        return _login_page()
+
+    @app.post("/login", response_class=HTMLResponse, response_model=None)
+    async def login(request: Request) -> Response:
+        if not require_auth:
+            return RedirectResponse("/", status_code=303)
+        form = parse_qs((await request.body()).decode("utf-8", errors="replace"), keep_blank_values=True)
+        if _form_value(form, "csrf_token", max_length=200) != login_csrf_token:
+            return _login_page(message="Sign in failed. Refresh Studio and try again.", status_code=400)
+        username = _form_value(form, "username", max_length=120)
+        password = _form_value(form, "password", max_length=512)
+        if resolved_db_path is None:
+            return _auth_denial(
+                "Studio authentication unavailable",
+                "Studio auth-required mode is not configured with a local database.",
+                status_code=503,
+            )
+        try:
+            connection = connect(resolved_db_path, require_exists=True)
+        except DatabaseError:
+            logger.warning("Rejected Studio login because the auth database is unavailable")
+            return _auth_denial(
+                "Studio authentication unavailable",
+                "The local Studio authentication database is unavailable.",
+                status_code=503,
+            )
+        try:
+            user = LocalAuthService(connection).authenticate_user(username=username, password=password)
+            if user is None:
+                logger.warning("Rejected Studio login for invalid or disabled local user")
+                return _login_page(message="Invalid username or password.", status_code=401)
+            session = create_session(connection, user=user)
+        except (DatabaseError, AuthRepositoryError, AuthServiceError, SessionError):
+            logger.warning("Rejected Studio login after authentication service failure")
+            return _login_page(message="Invalid username or password.", status_code=401)
+        finally:
+            connection.close()
+        response = RedirectResponse("/", status_code=303)
+        response.set_cookie(
+            STUDIO_SESSION_COOKIE,
+            session.token,
+            max_age=SESSION_TTL_HOURS * 60 * 60,
+            httponly=True,
+            samesite="strict",
+        )
+        return response
+
+    @app.get("/logout", response_class=HTMLResponse)
+    def logout_page() -> HTMLResponse:
+        if not require_auth:
+            return HTMLResponse(_layout("Sign Out", "<h2>Sign Out</h2><p>Studio is running in trusted local mode.</p>"))
+        return HTMLResponse(_render("Sign Out", _logout_form(logout_csrf_token)))
+
+    @app.post("/logout", response_class=HTMLResponse, response_model=None)
+    async def logout(request: Request) -> Response:
+        if not require_auth:
+            return RedirectResponse("/", status_code=303)
+        form = parse_qs((await request.body()).decode("utf-8", errors="replace"), keep_blank_values=True)
+        if _form_value(form, "csrf_token", max_length=200) != logout_csrf_token:
+            return _auth_denial("Sign Out Failed", "Refresh Studio and try again.", status_code=400)
+        token = request.cookies.get(STUDIO_SESSION_COOKIE, "")
+        if resolved_db_path is not None:
+            try:
+                connection = connect(resolved_db_path, require_exists=True)
+                try:
+                    revoke_token(connection, token=token)
+                finally:
+                    connection.close()
+            except (DatabaseError, SessionError):
+                logger.warning("Unable to revoke Studio session during logout")
+        response = RedirectResponse("/login", status_code=303)
+        response.delete_cookie(STUDIO_SESSION_COOKIE)
+        return response
 
     @app.get("/", response_class=HTMLResponse)
     def overview() -> str:
@@ -410,22 +650,22 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
                 f'<section class="card"><span>Open WIP</span><strong>{len(rec["wip"])}</strong></section>',
             ],
         )
-        return _layout("ReconForge Studio", f"<h2>Overview</h2><div class='grid'>{cards}</div>")
+        return _render("ReconForge Studio", f"<h2>Overview</h2><div class='grid'>{cards}</div>")
 
     @app.get("/health", response_class=HTMLResponse)
     def health() -> str:
         files = sorted(input_path.glob("*.csv"))
         rows = [{"file": path.name, "rows": len(pd.read_csv(path, keep_default_na=False))} for path in files]
-        return _layout("Dataset Health", "<h2>Dataset Health</h2>" + _table(pd.DataFrame(rows)))
+        return _render("Dataset Health", "<h2>Dataset Health</h2>" + _table(pd.DataFrame(rows)))
 
     @app.get("/validation", response_class=HTMLResponse)
     def validation() -> str:
-        return _layout("Validation", "<h2>Validation Results</h2>" + _table(issues_to_frame(validate_input_directory(input_path))))
+        return _render("Validation", "<h2>Validation Results</h2>" + _table(issues_to_frame(validate_input_directory(input_path))))
 
     @app.get("/reconciliation", response_class=HTMLResponse)
     def reconciliation() -> str:
         rec = _load_reconciliation(input_path)
-        return _layout(
+        return _render(
             "Reconciliation",
             "<h2>Stock vs GL</h2>"
             + _table(rec["stock"].summary)
@@ -453,8 +693,14 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
             sort=sort,
         )
 
-    @app.post("/exceptions/update-review", response_class=HTMLResponse)
-    async def update_exception_review(request: Request) -> str:
+    @app.post("/exceptions/update-review", response_class=HTMLResponse, response_model=None)
+    async def update_exception_review(request: Request) -> str | HTMLResponse:
+        if not _request_has_permission(request, "reconciliation.review"):
+            return _auth_denial(
+                "Permission Denied",
+                "Your local role does not allow updating exception review status.",
+                status_code=403,
+            )
         form = parse_qs((await request.body()).decode("utf-8", errors="replace"), keep_blank_values=True)
         if _form_value(form, "csrf_token", max_length=200) != csrf_token:
             return _render_exceptions_page(message="Review update rejected. Refresh Studio and try again.", message_type="error")
@@ -495,48 +741,48 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
     def rule_results() -> str:
         rules_path = output_path / "rules" / "rule_results.csv"
         if not rules_path.exists():
-            return _layout("Rule Results", "<h2>Rule Results</h2><p>No rule results have been generated yet.</p>")
-        return _layout("Rule Results", "<h2>Rule Results</h2>" + _table(pd.read_csv(rules_path, keep_default_na=False), limit=100))
+            return _render("Rule Results", "<h2>Rule Results</h2><p>No rule results have been generated yet.</p>")
+        return _render("Rule Results", "<h2>Rule Results</h2>" + _table(pd.read_csv(rules_path, keep_default_na=False), limit=100))
 
     @app.get("/close", response_class=HTMLResponse)
     def close() -> str:
         try:
             checklist = load_close_checklist(output_path / "close")
         except (FileNotFoundError, ValueError):
-            return _layout("Close", "<h2>Close Checklist</h2><p>No close checklist has been generated yet.</p>")
+            return _render("Close", "<h2>Close Checklist</h2><p>No close checklist has been generated yet.</p>")
         summary = close_summary_frame(checklist)
         tasks = close_tasks_frame(checklist)
-        return _layout("Close", "<h2>Close Checklist</h2>" + _table(summary) + "<h2>Tasks</h2>" + _table(tasks, limit=100))
+        return _render("Close", "<h2>Close Checklist</h2>" + _table(summary) + "<h2>Tasks</h2>" + _table(tasks, limit=100))
 
     @app.get("/variance", response_class=HTMLResponse)
     def variance() -> str:
         variance_path = output_path / "variance" / "variance_analysis.csv"
         frame = _read_generated_csv(variance_path)
         if frame.empty:
-            return _layout("Variance", "<h2>Variance Analysis</h2><p>No variance analysis has been generated yet.</p>")
-        return _layout("Variance", "<h2>Variance Analysis</h2>" + _table(frame, limit=100))
+            return _render("Variance", "<h2>Variance Analysis</h2><p>No variance analysis has been generated yet.</p>")
+        return _render("Variance", "<h2>Variance Analysis</h2>" + _table(frame, limit=100))
 
     @app.get("/control-matrix", response_class=HTMLResponse)
     def control_matrix() -> str:
         matrix_path = output_path / "control_matrix" / "control_matrix.csv"
         frame = _read_generated_csv(matrix_path)
         if frame.empty:
-            return _layout("Control Matrix", "<h2>Control Matrix</h2><p>No control matrix has been generated yet.</p>")
-        return _layout("Control Matrix", "<h2>Control Matrix</h2>" + _table(frame, limit=100))
+            return _render("Control Matrix", "<h2>Control Matrix</h2><p>No control matrix has been generated yet.</p>")
+        return _render("Control Matrix", "<h2>Control Matrix</h2>" + _table(frame, limit=100))
 
     @app.get("/risk-matrix", response_class=HTMLResponse)
     def risk_matrix() -> str:
         rec = _load_reconciliation(input_path)
         exceptions_frame = rec["exceptions"]
         if exceptions_frame.empty or "risk_level" not in exceptions_frame.columns:
-            return _layout("Risk Matrix", "<h2>Risk Matrix</h2><p>No risk data found.</p>")
+            return _render("Risk Matrix", "<h2>Risk Matrix</h2><p>No risk data found.</p>")
         group_cols = [column for column in ["risk_level", "exception_type"] if column in exceptions_frame.columns]
         matrix = exceptions_frame.groupby(group_cols, as_index=False).size().rename(columns={"size": "exception_count"})
-        return _layout("Risk Matrix", "<h2>Risk Matrix</h2>" + _table(matrix, limit=100))
+        return _render("Risk Matrix", "<h2>Risk Matrix</h2>" + _table(matrix, limit=100))
 
     @app.get("/wip", response_class=HTMLResponse)
     def wip() -> str:
-        return _layout("WIP Aging", "<h2>WIP Aging</h2>" + _table(_load_reconciliation(input_path)["wip"]))
+        return _render("WIP Aging", "<h2>WIP Aging</h2>" + _table(_load_reconciliation(input_path)["wip"]))
 
     @app.get("/control-packs", response_class=HTMLResponse)
     def control_packs() -> str:
@@ -547,7 +793,7 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
         body = "<h2>Control Packs</h2>" + _table(pd.DataFrame(pack_rows))
         if rules_path.exists():
             body += "<h2>Latest Rule Results</h2>" + _table(pd.read_csv(rules_path, keep_default_na=False))
-        return _layout("Control Packs", body)
+        return _render("Control Packs", body)
 
     @app.get("/evidence", response_class=HTMLResponse)
     def evidence() -> str:
@@ -559,17 +805,17 @@ def create_studio_app(input_dir: Path | str, output_dir: Path | str) -> FastAPI:
             if len(parts) != 2 or not key.endswith("/summary.md"):
                 continue
             links.append(f'<li><a href="{_evidence_href(parts[0], parts[1])}">{escape(key)}</a></li>')
-        return _layout("Evidence", f"<h2>Evidence Binder</h2><div class='grid'>{cards}</div><ul>{''.join(links)}</ul>")
+        return _render("Evidence", f"<h2>Evidence Binder</h2><div class='grid'>{cards}</div><ul>{''.join(links)}</ul>")
 
     @app.get("/downloads", response_class=HTMLResponse)
     def downloads() -> str:
         links = "".join(f'<li><a href="{_href("/download", key)}">{escape(key)}</a></li>' for key in sorted(output_registry))
-        return _layout("Downloads", f"<h2>Downloads</h2><ul>{links}</ul>")
+        return _render("Downloads", f"<h2>Downloads</h2><ul>{links}</ul>")
 
     @app.get("/docs", response_class=HTMLResponse)
     def docs() -> str:
         links = "".join(f'<li><a href="{_href("/download-doc", key)}">{escape(key)}</a></li>' for key in sorted(docs_registry))
-        return _layout("Docs", f"<h2>Documentation</h2><ul>{links}</ul>")
+        return _render("Docs", f"<h2>Documentation</h2><ul>{links}</ul>")
 
     @app.get("/download/{filename}")
     def download(filename: str) -> FileResponse:

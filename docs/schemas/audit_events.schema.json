@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/audit_events.schema.json",
+  "title": "ReconForge Local Audit Events",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "audit_events": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/audit_event"
+      }
+    },
+    "audit_ledger_state": {
+      "$ref": "#/$defs/audit_ledger_state"
+    }
+  },
+  "required": [
+    "schema_version",
+    "audit_events"
+  ],
+  "$defs": {
+    "audit_event": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "previous_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "event_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "actor_user_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "actor_label": {
+          "type": "string"
+        },
+        "object_type": {
+          "type": "string"
+        },
+        "object_id": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "before_hash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "after_hash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "created_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "sequence",
+        "previous_hash",
+        "event_hash",
+        "actor_label",
+        "object_type",
+        "object_id",
+        "action",
+        "metadata",
+        "created_at"
+      ]
+    },
+    "audit_ledger_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "last_sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "last_event_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "updated_at": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string",
+          "description": "Checksum aid only. This is not a legal digital signature or non-repudiation control."
+        }
+      },
+      "required": [
+        "last_sequence",
+        "last_event_hash",
+        "updated_at"
+      ]
+    }
+  }
+}

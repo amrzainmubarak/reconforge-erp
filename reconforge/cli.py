@@ -14,6 +14,7 @@ from rich.table import Table
 from reconforge import __version__
 from reconforge.ai.summaries import explain_exception_file
 from reconforge.anonymizer.engine import anonymize_directory
+from reconforge.audit import AuditLedgerError, list_audit_events, verify_audit_events
 from reconforge.benchmark.runner import run_benchmark
 from reconforge.close import (
     ALLOWED_CLOSE_STATUSES,
@@ -27,6 +28,7 @@ from reconforge.close import (
 from reconforge.config import load_config, write_default_config
 from reconforge.control_matrix import export_control_matrix
 from reconforge.dashboard.app import create_app
+from reconforge.db import DatabaseError, connect, database_status, run_migrations
 from reconforge.evidence.binder import generate_evidence_binder
 from reconforge.generator.synthetic import generate_synthetic_dataset
 from reconforge.io.excel import audit_metadata, write_excel_workbook
@@ -75,6 +77,8 @@ compare_app = typer.Typer(help="Compare generated exception outputs across perio
 close_app = typer.Typer(help="Manage local close checklist workflow state.")
 analyze_app = typer.Typer(help="Analyze local ReconForge output folders.")
 controls_app = typer.Typer(help="Generate local control intelligence outputs.")
+db_app = typer.Typer(help="Manage the local SQLite database foundation.")
+audit_app = typer.Typer(help="Inspect local append-only audit events.")
 app.add_typer(reconcile_app, name="reconcile")
 app.add_typer(report_app, name="report")
 app.add_typer(rules_app, name="rules")
@@ -87,6 +91,8 @@ app.add_typer(compare_app, name="compare")
 app.add_typer(close_app, name="close")
 app.add_typer(analyze_app, name="analyze")
 app.add_typer(controls_app, name="controls")
+app.add_typer(db_app, name="db")
+app.add_typer(audit_app, name="audit")
 
 
 def _version_callback(value: bool) -> None:
@@ -121,6 +127,134 @@ def _config_option(config_path: Path | None) -> Path | None:
 def _print_success_paths(paths: list[Path]) -> None:
     for path in paths:
         console.print(f"[green]Written:[/green] {path}")
+
+
+def _db_option(db_path: Path) -> Path:
+    return db_path
+
+
+@db_app.command("init")
+def db_init_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Initialize the local SQLite database."""
+
+    try:
+        status = run_migrations(_db_option(db_path))
+    except DatabaseError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    applied = ", ".join(str(version) for version in status.applied_versions) or "already current"
+    console.print(f"[green]Database ready:[/green] {status.path}")
+    console.print(f"Schema version: {status.current_version}/{status.latest_version} | Applied: {applied}")
+
+
+@db_app.command("migrate")
+def db_migrate_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Apply pending local SQLite migrations."""
+
+    try:
+        status = run_migrations(_db_option(db_path))
+    except DatabaseError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    applied = ", ".join(str(version) for version in status.applied_versions) or "none"
+    console.print(f"[green]Database migrated:[/green] {status.path}")
+    console.print(f"Schema version: {status.current_version}/{status.latest_version} | Applied now: {applied}")
+
+
+@db_app.command("status")
+def db_status_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Show local SQLite migration status."""
+
+    try:
+        status = database_status(_db_option(db_path))
+    except DatabaseError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    table = Table(title="ReconForge Database")
+    table.add_column("Field")
+    table.add_column("Value")
+    table.add_row("Path", str(status.path))
+    table.add_row("Current version", str(status.current_version))
+    table.add_row("Latest version", str(status.latest_version))
+    table.add_row("Applied versions", ", ".join(str(version) for version in status.applied_versions) or "none")
+    table.add_row("Pending versions", ", ".join(str(version) for version in status.pending_versions) or "none")
+    console.print(table)
+
+
+@audit_app.command("list")
+def audit_list_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    limit: Annotated[int | None, typer.Option("--limit", help="Maximum number of audit events to show.")] = None,
+) -> None:
+    """List local audit events."""
+
+    try:
+        connection = connect(_db_option(db_path), require_exists=True)
+        try:
+            events = list_audit_events(connection, limit=limit)
+        finally:
+            connection.close()
+    except (DatabaseError, AuditLedgerError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    if not events:
+        console.print("[yellow]No audit events found.[/yellow]")
+        return
+    table = Table(title="Audit Events")
+    table.add_column("Seq", justify="right")
+    table.add_column("Actor")
+    table.add_column("Object")
+    table.add_column("Action")
+    table.add_column("Created")
+    table.add_column("Hash")
+    for event in events:
+        table.add_row(
+            str(event.sequence),
+            event.actor_label,
+            f"{event.object_type}:{event.object_id}",
+            event.action,
+            event.created_at,
+            event.event_hash[:12],
+        )
+    console.print(table)
+
+
+@audit_app.command("verify")
+def audit_verify_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Verify the local audit event hash chain."""
+
+    try:
+        connection = connect(_db_option(db_path), require_exists=True)
+        try:
+            result = verify_audit_events(connection)
+        finally:
+            connection.close()
+    except (DatabaseError, AuditLedgerError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    if result.ok:
+        console.print(f"[green]Audit ledger verified:[/green] {result.checked_events} events | head {result.head_hash[:12]}")
+        return
+
+    table = Table(title="Audit Verification Issues")
+    table.add_column("Sequence")
+    table.add_column("Issue")
+    for issue in result.issues:
+        table.add_row("" if issue.sequence is None else str(issue.sequence), issue.message)
+    console.print(table)
+    console.print("[red]Audit ledger verification failed.[/red]")
+    raise typer.Exit(code=1)
 
 
 @app.command("init")

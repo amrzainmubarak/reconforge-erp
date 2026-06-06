@@ -32,6 +32,14 @@ from reconforge.config import load_config, write_default_config
 from reconforge.control_matrix import export_control_matrix
 from reconforge.dashboard.app import create_app
 from reconforge.db import DatabaseError, connect, database_status, run_migrations
+from reconforge.db.backup import create_backup, restore_backup
+from reconforge.db.exporter import DBBridgeError, export_database
+from reconforge.db.importers import (
+    import_account_reconciliations,
+    import_close_checklist,
+    import_control_tests,
+    import_review_state,
+)
 from reconforge.evidence.binder import generate_evidence_binder
 from reconforge.generator.synthetic import generate_synthetic_dataset
 from reconforge.io.excel import audit_metadata, write_excel_workbook
@@ -245,6 +253,119 @@ def db_status_command(
     table.add_row("Applied versions", ", ".join(str(version) for version in status.applied_versions) or "none")
     table.add_row("Pending versions", ", ".join(str(version) for version in status.pending_versions) or "none")
     console.print(table)
+
+
+@db_app.command("export")
+def db_export_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    output_path: Annotated[Path, typer.Option("--output", help="Local output directory for sanitized JSON export.")] = Path("output/db_export"),
+) -> None:
+    """Export sanitized local DB records to deterministic JSON files."""
+
+    try:
+        result = export_database(_db_option(db_path), output_path)
+    except (DatabaseError, DBBridgeError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Database export written:[/green] {result.output_dir}")
+    console.print(f"Schema version: {result.schema_version} | Files: {len(result.paths)}")
+    _print_success_paths(result.paths)
+
+
+@db_app.command("import-review-state")
+def db_import_review_state_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    input_path: Annotated[Path, typer.Option("--input", help="Local review_state.json file.")] = Path("output/review_state.json"),
+) -> None:
+    """Import legacy review_state.json into DB bridge references."""
+
+    try:
+        result = import_review_state(_db_option(db_path), input_path)
+    except (DatabaseError, DBBridgeError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Imported review state:[/green] {result.imported_count} records from {result.source_path.name}")
+
+
+@db_app.command("import-close")
+def db_import_close_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    input_path: Annotated[Path, typer.Option("--input", help="Local close folder or close_checklist.json file.")] = Path("output/close"),
+) -> None:
+    """Import legacy close_checklist.json task state into DB bridge references."""
+
+    try:
+        result = import_close_checklist(_db_option(db_path), input_path)
+    except (DatabaseError, DBBridgeError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Imported close checklist:[/green] {result.imported_count} records from {result.source_path.name}")
+
+
+@db_app.command("import-accounts")
+def db_import_accounts_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    input_path: Annotated[Path, typer.Option("--input", help="Local accounts folder or account_reconciliations.json file.")] = Path("output/accounts"),
+) -> None:
+    """Import legacy account_reconciliations.json summaries into DB bridge references."""
+
+    try:
+        result = import_account_reconciliations(_db_option(db_path), input_path)
+    except (DatabaseError, DBBridgeError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Imported account reconciliations:[/green] {result.imported_count} records from {result.source_path.name}")
+
+
+@db_app.command("import-control-tests")
+def db_import_control_tests_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    input_path: Annotated[Path, typer.Option("--input", help="Local control_testing folder or control_tests.json file.")] = Path("output/control_testing"),
+) -> None:
+    """Import legacy control_tests.json summaries into DB bridge references."""
+
+    try:
+        result = import_control_tests(_db_option(db_path), input_path)
+    except (DatabaseError, DBBridgeError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Imported control tests:[/green] {result.imported_count} records from {result.source_path.name}")
+
+
+@db_app.command("backup")
+def db_backup_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    output_path: Annotated[Path, typer.Option("--output", help="Local backup output directory.")] = Path("output/backups"),
+) -> None:
+    """Create a local DB backup with checksum manifest."""
+
+    try:
+        result = create_backup(_db_option(db_path), output_path)
+    except (DatabaseError, DBBridgeError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print("[yellow]Backup warning:[/yellow] local DB backups may contain sensitive business data and password hashes. Protect these files.")
+    console.print(f"[green]Database backup written:[/green] {result.output_dir}")
+    console.print(f"Schema version: {result.schema_version} | SHA-256: {result.checksum_sha256}")
+    _print_success_paths([result.backup_path, result.manifest_path])
+
+
+@db_app.command("restore")
+def db_restore_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path to restore.")] = Path("output/reconforge.db"),
+    input_path: Annotated[Path, typer.Option("--input", help="Local backup.json file or backup folder.")] = Path("output/backups/backup.json"),
+    force: Annotated[bool, typer.Option("--force", help="Overwrite an existing local DB after checksum validation.")] = False,
+) -> None:
+    """Restore a local DB backup after checksum validation."""
+
+    try:
+        result = restore_backup(_db_option(db_path), input_path, force=force)
+    except (DatabaseError, DBBridgeError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print("[yellow]Restore warning:[/yellow] restored data is local only and may include sensitive business data.")
+    console.print(f"[green]Database restored:[/green] {result.db_path}")
+    console.print(f"Schema version: {result.schema_version} | Tables restored: {len(result.restored_tables)}")
 
 
 @audit_app.command("list")

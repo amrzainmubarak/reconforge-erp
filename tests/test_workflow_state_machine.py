@@ -10,17 +10,17 @@ from reconforge.db import connect, database_status, run_migrations
 from reconforge.workflow import WorkflowService, WorkflowServiceError
 
 
-def test_workflow_migration_v3_and_api_sessions_v4_are_applied_and_idempotent(tmp_path: Path) -> None:
+def test_workflow_api_sessions_and_bridge_migrations_are_applied_and_idempotent(tmp_path: Path) -> None:
     db_path = tmp_path / "workflow.db"
 
     first = run_migrations(db_path)
     second = run_migrations(db_path)
     status = database_status(db_path)
 
-    assert first.applied_versions == [1, 2, 3, 4]
-    assert first.current_version == 4
+    assert first.applied_versions == [1, 2, 3, 4, 5]
+    assert first.current_version == 5
     assert second.applied_versions == []
-    assert status.current_version == 4
+    assert status.current_version == 5
     assert status.pending_versions == []
 
     connection = connect(db_path, require_exists=True)
@@ -39,6 +39,9 @@ def test_workflow_migration_v3_and_api_sessions_v4_are_applied_and_idempotent(tm
         sessions_table = connection.execute(
             "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'api_sessions'",
         ).fetchone()
+        bridge_table = connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'legacy_import_records'",
+        ).fetchone()
     finally:
         connection.close()
 
@@ -46,6 +49,7 @@ def test_workflow_migration_v3_and_api_sessions_v4_are_applied_and_idempotent(tm
     assert {"reason_required", "active"} <= transition_columns
     assert events_table is not None
     assert sessions_table is not None
+    assert bridge_table is not None
 
 
 def test_builtin_workflow_transitions_exist(tmp_path: Path) -> None:

@@ -17,9 +17,9 @@ def test_db_init_creates_expected_schema_and_is_idempotent(tmp_path: Path) -> No
     first = run_migrations(db_path)
     second = run_migrations(db_path)
 
-    assert first.current_version == 1
-    assert first.applied_versions == [1]
-    assert second.current_version == 1
+    assert first.current_version == 2
+    assert first.applied_versions == [1, 2]
+    assert second.current_version == 2
     assert second.applied_versions == []
 
     connection = connect(db_path, require_exists=True)
@@ -39,6 +39,7 @@ def test_db_init_creates_expected_schema_and_is_idempotent(tmp_path: Path) -> No
         "roles",
         "permissions",
         "reconciliations",
+        "role_permissions",
         "evidence_objects",
         "workflow_transitions",
         "audit_events",
@@ -52,8 +53,8 @@ def test_db_status_reports_pending_and_current_versions(tmp_path: Path) -> None:
 
     status = database_status(db_path)
 
-    assert status.current_version == 1
-    assert status.latest_version == 1
+    assert status.current_version == 2
+    assert status.latest_version == 2
     assert status.pending_versions == []
 
 

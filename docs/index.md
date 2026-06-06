@@ -30,6 +30,7 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Redaction controls](redaction-controls.md)
 - [Evidence integrity](evidence-integrity.md)
 - [Security whitepaper](security-whitepaper.md)
+- [Local users and RBAC](security/local-users-rbac.md)
 - [Compliance disclaimer](compliance-disclaimer.md)
 - [OSS ecosystem importance](strategy/oss-ecosystem-importance.md)
 - [Synthetic workshop case study](case-studies/workshop-spare-parts-health-check.md)

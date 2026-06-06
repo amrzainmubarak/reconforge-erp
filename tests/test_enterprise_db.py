@@ -17,9 +17,9 @@ def test_db_init_creates_expected_schema_and_is_idempotent(tmp_path: Path) -> No
     first = run_migrations(db_path)
     second = run_migrations(db_path)
 
-    assert first.current_version == 5
-    assert first.applied_versions == [1, 2, 3, 4, 5]
-    assert second.current_version == 5
+    assert first.current_version == 6
+    assert first.applied_versions == [1, 2, 3, 4, 5, 6]
+    assert second.current_version == 6
     assert second.applied_versions == []
 
     connection = connect(db_path, require_exists=True)
@@ -45,6 +45,11 @@ def test_db_init_creates_expected_schema_and_is_idempotent(tmp_path: Path) -> No
         "workflow_transition_events",
         "api_sessions",
         "legacy_import_records",
+        "account_reconciliation_records",
+        "close_periods",
+        "evidence_registry",
+        "exceptions_queue",
+        "metric_snapshots",
         "audit_events",
         "audit_ledger_state",
     } <= tables
@@ -56,8 +61,8 @@ def test_db_status_reports_pending_and_current_versions(tmp_path: Path) -> None:
 
     status = database_status(db_path)
 
-    assert status.current_version == 5
-    assert status.latest_version == 5
+    assert status.current_version == 6
+    assert status.latest_version == 6
     assert status.pending_versions == []
 
 

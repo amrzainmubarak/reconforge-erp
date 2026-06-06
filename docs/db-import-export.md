@@ -11,6 +11,8 @@ reconforge db import-close --db output/reconforge.db --input output/close
 reconforge db import-accounts --db output/reconforge.db --input output/accounts
 reconforge db import-control-tests --db output/reconforge.db --input output/control_testing
 reconforge db backup --db output/reconforge.db --output output/backups
+reconforge db backup-verify --input output/backups
+reconforge db restore --db output/reconforge.db --input output/backups/backup.json --dry-run
 reconforge db restore --db output/reconforge.db --input output/backups/backup.json --force
 ```
 
@@ -26,9 +28,10 @@ Run `reconforge db init` or `reconforge db migrate` first so the local schema is
 - `workflow.json`
 - `audit_events.json`
 - `evidence.json`
+- `finance_workflows.json`
 - `legacy_imports.json`
 
-The export includes schema version, domain references, users without credential material, roles, permissions, workflow objects, workflow transition history, audit events, evidence references, and imported legacy object summaries where present. It intentionally excludes password hashes, salts, API/session token hashes, raw session tokens, environment variables, and secrets.
+The export includes schema version, domain references, users without credential material, roles, permissions, workflow objects, workflow transition history, audit events, evidence references, DB-backed finance workflow records, and imported legacy object summaries where present. It intentionally excludes password hashes, salts, API/session token hashes, raw session tokens, environment variables, and secrets.
 
 ## Legacy Imports
 
@@ -50,7 +53,7 @@ This bridge does not implement the full DB-backed account reconciliation lifecyc
 - `backup.json`
 - `manifest.json`
 
-The manifest records the backup checksum, created timestamp, schema version, and privacy warning. `reconforge db restore` validates the checksum before restoring, rejects unsupported schema versions, and refuses to overwrite an existing DB unless `--force` is provided.
+The manifest records the backup checksum, created timestamp, schema version, and privacy warning. `reconforge db backup-verify` validates a backup without restoring it. `reconforge db restore --dry-run` validates restore inputs without writing the target DB. `reconforge db restore` validates the checksum before restoring, rejects unsupported schema versions, and refuses to overwrite an existing DB unless `--force` is provided.
 
 Backups may contain sensitive local business data and local password hashes needed for restore. Protect backup folders like finance control evidence. Backups never include raw session tokens or the `api_sessions` table.
 

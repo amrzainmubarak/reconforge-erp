@@ -65,6 +65,34 @@ Workflow state machine foundation:
 - `POST /api/v1/workflow/objects/{object_type}/{object_id}/transition`
 - `GET /api/v1/workflow/objects/{object_type}/{object_id}/history`
 
+Account reconciliations:
+
+- `GET /api/v1/accounts/reconciliations`
+- `POST /api/v1/accounts/reconciliations`
+- `GET /api/v1/accounts/reconciliations/{id}`
+- `POST /api/v1/accounts/reconciliations/{id}/prepare`
+- `POST /api/v1/accounts/reconciliations/{id}/submit`
+- `POST /api/v1/accounts/reconciliations/{id}/review`
+- `POST /api/v1/accounts/reconciliations/{id}/complete`
+
+Close management:
+
+- `GET /api/v1/close/periods`
+- `POST /api/v1/close/periods`
+- `GET /api/v1/close/tasks`
+- `POST /api/v1/close/tasks/{task_id}/status`
+- `GET /api/v1/close/periods/{period_id}/readiness`
+- `POST /api/v1/close/periods/{period_id}/lock`
+- `POST /api/v1/close/periods/{period_id}/reopen`
+
+Exceptions and metrics:
+
+- `GET /api/v1/exceptions`
+- `POST /api/v1/exceptions/{exception_id}/assign`
+- `POST /api/v1/exceptions/{exception_id}/status`
+- `GET /api/v1/metrics/dashboard`
+- `GET /api/v1/metrics/lineage`
+
 ## Errors
 
 API errors use a structured JSON shape:
@@ -86,4 +114,5 @@ Responses must not include raw tracebacks, password hashes, salts, raw persisted
 - API authentication is a local session foundation only.
 - API routes do not replace Studio auth and do not enable SaaS use.
 - Workflow routes operate on the DB-backed workflow state machine only; they do not migrate or enforce identity on legacy JSON workflows.
+- API coverage for journals, intercompany, evidence registry, controls, and matching remains primarily CLI/DB service first in this slice.
 - This is not production enterprise identity, public cloud readiness, SOC/ISO/SOX compliance, legal sign-off, audit opinion, or digital signature support.

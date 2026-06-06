@@ -12,6 +12,7 @@ from reconforge.db.schema import (
     API_SESSIONS_SCHEMA_SQL,
     AUTH_RBAC_SCHEMA_SQL,
     DB_BRIDGE_SCHEMA_SQL,
+    FINANCE_PLATFORM_SCHEMA_SQL,
     INITIAL_SCHEMA_SQL,
     WORKFLOW_STATE_MACHINE_SCHEMA_SQL,
 )
@@ -53,6 +54,7 @@ MIGRATIONS = [
     Migration(version=3, name="workflow_state_machine_foundation", sql=WORKFLOW_STATE_MACHINE_SCHEMA_SQL),
     Migration(version=4, name="local_api_sessions_foundation", sql=API_SESSIONS_SCHEMA_SQL),
     Migration(version=5, name="db_import_export_bridge", sql=DB_BRIDGE_SCHEMA_SQL),
+    Migration(version=6, name="finance_platform_workflow_foundations", sql=FINANCE_PLATFORM_SCHEMA_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """

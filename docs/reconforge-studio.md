@@ -35,6 +35,11 @@ Auth-required mode uses the local users, roles, and hashed session-token foundat
 | WIP Aging | Aging buckets and stale work orders |
 | Control Packs | Rule engine result summaries |
 | Evidence | Evidence coverage metrics and links to generated evidence binder case folders |
+| DB Accounts | DB-backed account reconciliation queue with filters and lifecycle actions when a local DB is configured |
+| DB Close | DB-backed close period and task queue view |
+| DB Evidence | DB-backed evidence registry and coverage view |
+| DB Exceptions | Unified DB-backed exception queue view |
+| DB Metrics | Governed DB-backed metric snapshots and lineage |
 | Downloads | Links to generated Excel, Markdown, CSV, JSON, and HTML reports |
 | Docs | Local documentation entry points |
 
@@ -47,7 +52,7 @@ Auth-required mode uses the local users, roles, and hashed session-token foundat
 5. Filter exceptions by risk, status, type, source file, amount, work order, product, and search text.
 6. Export the review register from the CLI when the review state is ready.
 
-Studio is a review companion, not a separate data store. The authoritative outputs remain the generated files in the output directory. Close, variance, and control matrix pages are read-only foundations.
+Studio is a review companion, not a separate data store. The authoritative legacy outputs remain the generated files in the output directory. DB pages read the configured local SQLite database. Close, variance, control matrix, and most DB pages are read-only foundations except for the account reconciliation action panel.
 
 ## Exception Filters
 
@@ -85,5 +90,7 @@ Rendered values are escaped before display. Invalid statuses are rejected. Exist
 ## Local Security Boundary
 
 Studio binds to `127.0.0.1` unless another host is provided. Trusted local mode remains the default for single-user local review. `--require-auth` adds local DB-backed login, logout, HTTP-only session cookies, disabled-user rejection, and an RBAC check for the review-status mutation.
+
+DB-backed Studio actions use local RBAC in auth-required mode. Trusted local mode can display DB pages when `--db` points to an existing migrated database.
 
 This is not SSO, OAuth, SAML, SCIM, production SaaS identity, legal approval, digital signature, non-repudiation, or compliance certification. Use Studio on trusted machines and trusted networks, and keep generated output folders and the local DB protected like sensitive finance control evidence.

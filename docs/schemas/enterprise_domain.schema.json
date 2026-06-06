@@ -1,0 +1,336 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/enterprise_domain.schema.json",
+  "title": "ReconForge Local Enterprise Domain Snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "workspaces": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/workspace"
+      }
+    },
+    "organizations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/organization"
+      }
+    },
+    "legal_entities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/legal_entity"
+      }
+    },
+    "periods": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/period"
+      }
+    },
+    "users": {
+      "type": "array",
+      "description": "User references only. Passwords and login are not part of the first DB/audit foundation slice.",
+      "items": {
+        "$ref": "#/$defs/user_reference"
+      }
+    },
+    "roles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/role"
+      }
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/permission"
+      }
+    },
+    "reconciliations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/reconciliation_reference"
+      }
+    },
+    "evidence_objects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence_reference"
+      }
+    }
+  },
+  "required": [
+    "schema_version"
+  ],
+  "$defs": {
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "local_first_note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "created_at",
+        "local_first_note"
+      ]
+    },
+    "organization": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "workspace_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "workspace_id",
+        "name",
+        "created_at"
+      ]
+    },
+    "legal_entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "organization_id": {
+          "type": "string"
+        },
+        "entity_code": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "organization_id",
+        "entity_code",
+        "name",
+        "currency",
+        "created_at"
+      ]
+    },
+    "period": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "workspace_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "start_date": {
+          "type": "string"
+        },
+        "end_date": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "workspace_id",
+        "name",
+        "start_date",
+        "end_date",
+        "status",
+        "created_at"
+      ]
+    },
+    "user_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "email": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "disabled": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "username",
+        "display_name",
+        "disabled",
+        "created_at"
+      ]
+    },
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "permission": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "description"
+      ]
+    },
+    "reconciliation_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "workspace_id": {
+          "type": "string"
+        },
+        "period_id": {
+          "type": "string"
+        },
+        "account_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "owner_user_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "workspace_id",
+        "period_id",
+        "type",
+        "status",
+        "created_at"
+      ]
+    },
+    "evidence_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "workspace_id": {
+          "type": "string"
+        },
+        "source_path": {
+          "type": "string"
+        },
+        "checksum_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "provenance_type": {
+          "type": "string"
+        },
+        "redaction_status": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "workspace_id",
+        "source_path",
+        "checksum_sha256",
+        "provenance_type",
+        "redaction_status",
+        "created_at"
+      ]
+    }
+  }
+}

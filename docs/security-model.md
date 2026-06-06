@@ -29,6 +29,9 @@ ReconForge ERP is local-first. The default workflow reads local CSV/XLSX exports
 - OpenSSF Scorecard workflow.
 - CycloneDX SBOM workflow.
 - Dependabot.
+- Local SQLite database foundation with schema migrations is available for new DB-backed workflows.
+- Local audit event hash chaining provides checksum integrity aids for appended audit events. It is not a legal digital signature, compliance certification, audit opinion, or non-repudiation guarantee.
+- SSO, SCIM, hosted identity, and SaaS multi-tenancy are not implemented.
 
 ## User Responsibilities
 

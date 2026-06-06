@@ -359,3 +359,19 @@ VALUES
     ('evidence_requirement', 'Reopened', 'Prepared', NULL, 'prepare_review', 0, 1),
     ('evidence_requirement', 'Draft', 'Not Applicable', NULL, NULL, 1, 1);
 """
+
+API_SESSIONS_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS api_sessions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    revoked_at TEXT,
+    last_used_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_sessions_user ON api_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_api_sessions_expires ON api_sessions(expires_at);
+CREATE INDEX IF NOT EXISTS idx_api_sessions_revoked ON api_sessions(revoked_at);
+"""

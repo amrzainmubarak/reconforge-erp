@@ -74,6 +74,33 @@ class LocalAuthService:
             raise AuthServiceError(str(exc)) from exc
         return user
 
+    def update_user(
+        self,
+        *,
+        username: str,
+        actor_label: str = "local-cli",
+        display_name: str | None = None,
+        email: str | None = None,
+        disabled: bool | None = None,
+    ) -> LocalUser:
+        try:
+            user = self.users.update_profile(username, display_name=display_name, email=email, disabled=disabled)
+            self._audit(
+                actor_label=actor_label,
+                object_type="user",
+                object_id=user.id,
+                action="user_updated",
+                metadata={
+                    "username": user.username,
+                    "display_name_changed": display_name is not None,
+                    "email_changed": email is not None,
+                    "disabled_changed": disabled is not None,
+                },
+            )
+        except AuthRepositoryError as exc:
+            raise AuthServiceError(str(exc)) from exc
+        return user
+
     def change_password(self, *, username: str, password: str, actor_label: str = "local-cli") -> LocalUser:
         try:
             user = self.users.change_password(username, hash_password(password))

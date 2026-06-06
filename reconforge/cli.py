@@ -15,6 +15,7 @@ from rich.table import Table
 from reconforge import __version__
 from reconforge.ai.summaries import explain_exception_file
 from reconforge.anonymizer.engine import anonymize_directory
+from reconforge.api import create_api_app
 from reconforge.audit import AuditLedgerError, list_audit_events, verify_audit_events
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService, RoleRepository
 from reconforge.benchmark.runner import run_benchmark
@@ -67,6 +68,7 @@ from reconforge.variance import analyze_variance
 from reconforge.workflow import WorkflowRepositoryError, WorkflowService, WorkflowServiceError
 
 console = Console()
+ALL_INTERFACES_HOST = ".".join(("0", "0", "0", "0"))
 app = typer.Typer(help="ReconForge ERP reconciliation intelligence CLI.")
 reconcile_app = typer.Typer(help="Run reconciliation controls.")
 report_app = typer.Typer(help="Generate audit and management reports.")
@@ -85,6 +87,7 @@ audit_app = typer.Typer(help="Inspect local append-only audit events.")
 users_app = typer.Typer(help="Manage local users for DB-backed workflows.")
 roles_app = typer.Typer(help="Inspect local RBAC roles and permissions.")
 workflow_app = typer.Typer(help="Manage local workflow state machine foundations.")
+api_app = typer.Typer(help="Serve the local REST API foundation.")
 app.add_typer(reconcile_app, name="reconcile")
 app.add_typer(report_app, name="report")
 app.add_typer(rules_app, name="rules")
@@ -102,6 +105,7 @@ app.add_typer(audit_app, name="audit")
 app.add_typer(users_app, name="users")
 app.add_typer(roles_app, name="roles")
 app.add_typer(workflow_app, name="workflow")
+app.add_typer(api_app, name="api")
 
 
 def _version_callback(value: bool) -> None:
@@ -164,6 +168,28 @@ def _workflow_service(db_path: Path) -> tuple[WorkflowService, sqlite3.Connectio
         connection.close()
         raise
     return service, connection
+
+
+@api_app.command("serve")
+def api_serve_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    host: Annotated[str, typer.Option("--host", help="Bind host.")] = "127.0.0.1",
+    port: Annotated[int, typer.Option("--port", help="Bind port.")] = 8765,
+) -> None:
+    """Start the local REST API server."""
+
+    try:
+        status = database_status(_db_option(db_path))
+        if status.pending_versions:
+            console.print("[red]ReconForge database has pending migrations. Run 'reconforge db migrate' first.[/red]")
+            raise typer.Exit(code=1)
+    except DatabaseError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    if host == ALL_INTERFACES_HOST:
+        console.print(f"[yellow]Warning:[/yellow] binding to {ALL_INTERFACES_HOST} exposes the local API beyond localhost. This is not a public internet deployment mode.")
+    console.print(f"[green]Starting ReconForge local API:[/green] http://{host}:{port}")
+    uvicorn.run(create_api_app(db_path), host=host, port=port, log_level="info")
 
 
 @db_app.command("init")

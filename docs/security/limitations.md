@@ -18,7 +18,7 @@ Roadmap:
 
 Not supported:
 
-- Enterprise-ready claim.
-- SOC 2, ISO, SOX, Big 4 approval, audit opinion, legal certification, digital signature, or non-repudiation claim.
+- Claim that ReconForge is ready for enterprise production use.
+- SOC 2, ISO, SOX, Big 4 approval, audit opinion, legal certification, signature, or non-repudiation claim.
 - Direct ERP connectors.
 - SaaS/cloud behavior or telemetry.

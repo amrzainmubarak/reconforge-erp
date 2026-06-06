@@ -20,5 +20,5 @@ Roadmap:
 Not supported:
 
 - External identity provider integration.
-- Production SaaS identity.
-- Legal approval signatures.
+- Hosted production identity.
+- Legal sign-off signatures.

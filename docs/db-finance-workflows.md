@@ -47,7 +47,7 @@ reconforge metrics compute --db output/reconforge.db --period 2026-05
 
 Certification metadata is workflow metadata only. It is not a legal signature, audit sign-off, audit opinion, SOX/SOC/ISO certification, or compliance conclusion.
 
-Evidence integrity is checksum/provenance support only. It is not a digital signature or non-repudiation system.
+Evidence integrity is checksum/provenance support only. It is not a signature workflow or non-repudiation control.
 
 Known limits:
 

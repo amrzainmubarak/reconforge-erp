@@ -24,7 +24,7 @@
   <a href="#documentation">Documentation</a>
 </p>
 
-**ReconForge ERP is an open-source ERP reconciliation and audit intelligence platform for local-first stock-to-GL matching, work-order controls, WIP review, Odoo/SAP-style exports, and audit-ready reporting.**
+**ReconForge ERP is an open-source ERP reconciliation and finance controls toolkit for local-first stock-to-GL matching, work-order controls, WIP review, export-based ERP profiles, and evidence-ready reporting.**
 
 It gives finance, inventory, workshop, ERP, and audit teams a repeatable way to inspect export-based operational controls without uploading sensitive ERP data to a third-party service.
 
@@ -36,6 +36,7 @@ It gives finance, inventory, workshop, ERP, and audit teams a repeatable way to 
 - Helps inspect Odoo/SAP-style export mappings before users edit YAML profiles.
 - Tracks local exception review status and compares generated outputs across periods.
 - Adds local close checklist, variance analysis, control matrix, and preparer/reviewer workflow metadata foundations.
+- Provides DB-backed foundations for broader local finance control workflows, local API/Studio use, and backup/import/export support.
 - Produces local artifacts: Excel management packs, HTML reports, Markdown summaries, CSV/JSON exports, and evidence binder folders.
 
 ## Why It Matters
@@ -45,9 +46,11 @@ ERP systems hold the source transactions, but month-end reconciliation often sti
 ## Project Status
 
 - Current release: **v0.6.1 - Pilot Readiness Hardening**.
-- Pilot-ready open-source toolkit, but still early-stage.
+- ReconForge has expanded local-first finance controls platform foundations while remaining early-stage and conservative about readiness claims.
+- Pilot-ready open-source toolkit for local evaluation and controlled pilots.
 - Local-first and export-based; core workflows do not require cloud upload or paid APIs.
 - No direct ERP connectors are claimed.
+- Local users/RBAC, REST API, Studio auth-required mode, DB-backed workflows, and backup/import/export support are foundations, not a production identity, compliance, assurance, or hosted platform claim.
 - Docker build workflow support exists. Docker runtime verification remains a roadmap/release-gate item unless the documented build and run commands pass in a live Docker environment.
 
 ## Core Capabilities
@@ -63,10 +66,29 @@ ERP systems hold the source transactions, but month-end reconciliation often sti
 | Review workflow | Studio review actions, local review state, review register export, and status filtering |
 | Period comparison | New, recurring, resolved, escalated, accepted-risk, and trend comparison |
 | Close workflow | Local JSON close checklist, task statuses, owners as plain text, and close report exports |
+| DB-backed foundations | Local account reconciliation, close, approval metadata, evidence registry, journal control, intercompany, control testing, matching, exception, metric, API, Studio, and backup foundations |
 | Variance analysis | Local current-vs-previous summary comparison with amount variance, percentage variance, and threshold flags |
 | Control matrix | Rule-pack-derived control matrix exports with owner and frequency placeholders |
 | Handoff | Local client handoff pack with privacy note, redaction controls, and optional checksums |
 | Data safety | Local-first processing, anonymized demo data support, evidence integrity manifests, and no API key required for core workflows |
+
+## DB-Backed Platform Foundations
+
+The merged foundation layer adds local SQLite-backed records and services for broader finance control workflows without changing the local-first/export-based model:
+
+| Foundation area | Current scope |
+| --- | --- |
+| Account reconciliations | Account, balance, item, lifecycle, and audit-event foundations |
+| Close management | Local close periods, tasks, dependencies, checklist state, and DB-backed workflow foundations |
+| Approvals and certification metadata | Preparer/reviewer/certification metadata as workflow support only |
+| Evidence registry | Local evidence references, lineage, checksum/provenance aids, and registry records |
+| Journal controls | Journal control records and review metadata foundations |
+| Intercompany | Local intercompany case, matching, imbalance, and settlement metadata foundations |
+| Controls testing | Control test plans, samples, findings, remediation, and evidence linkage foundations |
+| Matching | Deterministic matching job, candidate, decision, tolerance, and explainability foundations |
+| Unified exceptions | Cross-workflow exception queue, ownership, status, risk, and aging foundations |
+| Metrics | Local dashboard and lineage metric foundations |
+| Local platform services | REST API, Studio DB pages, local users/RBAC, audit events, DB import/export, and backup bridge foundations |
 
 ## Visual Preview
 
@@ -317,6 +339,11 @@ See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md)
 - [Controls and audit](docs/controls-and-audit.md)
 - [Rule-pack schema reference](docs/rule-pack-schema-reference.md)
 - [Review workflow](docs/review-workflow.md)
+- [Workflow state machine foundation](docs/workflow-state-machine.md)
+- [Local REST API](docs/api.md)
+- [DB import/export bridge](docs/db-import-export.md)
+- [DB-backed finance workflows](docs/db-finance-workflows.md)
+- [Matching, exceptions, and metrics](docs/matching-exceptions-metrics.md)
 - [Close workflow](docs/close-workflow.md)
 - [Variance analysis](docs/variance-analysis.md)
 - [Control matrix](docs/control-matrix.md)
@@ -331,6 +358,11 @@ See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md)
 - [Docker deployment](docs/docker-deployment.md)
 - [Docker verification report](docs/strategy/docker-verification-report.md)
 - [Security whitepaper](docs/security-whitepaper.md)
+- [Security model](docs/security-model.md)
+- [Local users and RBAC](docs/security/local-users-rbac.md)
+- [Local auth and RBAC](docs/security/local-auth-rbac.md)
+- [Security questionnaire](docs/security/security-questionnaire.md)
+- [Security limitations](docs/security/limitations.md)
 - [Compliance disclaimer](docs/compliance-disclaimer.md)
 - [OSS ecosystem importance](docs/strategy/oss-ecosystem-importance.md)
 - [Demo output pack](docs/demo-output-pack.md)
@@ -378,7 +410,7 @@ python -m bandit -q -r reconforge
 
 ## Roadmap
 
-Near-term work: authenticated self-hosted review mode, workbook-level redaction strategy, Docker runtime verification, structured pilot feedback, release artifact signing, dependency update policy, and deeper ERP export examples.
+Near-term work: deeper workflow depth, richer Studio actions, synthetic enterprise demo coverage, support/buyer package materials, website refresh, deployment smoke automation, observability depth, and optional future design work for real SSO/SCIM and direct ERP connectors.
 
 ## Contributing
 

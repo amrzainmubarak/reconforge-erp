@@ -18,6 +18,6 @@ Roadmap:
 
 Not supported:
 
-- Production SaaS deployment.
+- Hosted production deployment.
 - Public internet hardening guarantee.
 - Enterprise disaster-recovery guarantee.

@@ -50,8 +50,8 @@ Password prompts use hidden interactive input. Do not pass passwords through she
 ## Boundaries
 
 - SSO and SCIM are not implemented.
-- API authentication and Studio auth are not implemented in this slice.
-- RBAC primitives are available for future workflow integration, but this does not make existing JSON workflows identity-enforced.
-- Separation-of-duties checks are reusable primitives only until later workflow slices call them.
-- Audit events provide checksum integrity aids for local mutations. They are not legal digital signatures or non-repudiation controls.
+- Local API bearer sessions and Studio auth-required mode are implemented as local DB-backed foundations. They are not SSO, SAML, OAuth, SCIM, public internet identity, or SaaS authentication.
+- RBAC checks are integrated into implemented DB/API/Studio foundation paths where a local user is known, but legacy JSON workflows can still run in trusted local mode.
+- Separation-of-duties checks apply to workflow transitions and selected finance lifecycle actions; they are not legal sign-off or compliance conclusions.
+- Audit events provide checksum integrity aids for local mutations. They are not legal signatures or non-repudiation controls.
 - This is not SOC, ISO, SOX, GDPR, audit, legal, tax, or regulatory compliance.

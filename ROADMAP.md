@@ -1,60 +1,36 @@
 # Roadmap
 
-ReconForge ERP v0.2.0 expands the project into a local-first ERP reconciliation and audit intelligence platform. Future work should deepen practical ERP coverage while keeping the open-source core useful.
+ReconForge ERP is a local-first, export-based ERP reconciliation and finance controls toolkit. The roadmap should deepen implemented foundations without implying SaaS behavior, direct ERP connectivity, compliance certification, audit opinions, or production identity readiness.
 
-## Recently Added in v0.3.0
+## Completed Foundations
 
-- Advanced rule operators and rule explanations.
-- Fifteen control packs with risk models.
-- Evidence register, binder index, and review forms.
-- Risk intelligence package.
-- Matching strategies and richer match explanations.
-- AI-ready offline exception explanation.
-- Plugin/connector foundation.
-- Expanded market/category/security/privacy documentation.
+- P0 Enterprise Backbone: completed as a foundation-stage local platform layer covering the SQLite DB, audit events, local users/RBAC, workflow state machine, REST API, Studio auth-required mode, DB import/export, backup bridge, security docs, and roadmap docs.
+- Broad finance workflow foundations: completed as foundation-stage DB-backed records and services for account reconciliations, close management, approvals/certification metadata, evidence registry, journal controls, intercompany, controls testing, matching, unified exceptions, and metrics.
+- Studio DB pages and API routes: completed for the current foundation scope, including local Studio pages and implemented API routes for accounts, close, exceptions, and metrics.
+- Export-based ERP profile coverage: completed for Odoo, SAP, ERPNext, Dynamics, NetSuite, and Oracle mapping profiles without direct connector claims.
+- Pilot readiness hardening: completed for local demo, client pack, redaction, checksum manifests, Docker build workflow, and conservative security/commercial documentation.
 
-## Added in v0.2.0
+## Next Phase
 
-- YAML rule engine and reusable control packs.
-- Audit evidence binder.
-- Referential-integrity preserving anonymizer.
-- Synthetic data generator.
-- Benchmark engine with Pandas and optional DuckDB support.
-- ReconForge Studio local web interface.
-- Market, strategy, architecture, playbook, launch, and application documentation.
-- Security workflow, CodeQL workflow, Dependabot, and pre-commit configuration.
+- Deeper workflow depth for account reconciliation, close management, approvals metadata, evidence registry, journal controls, intercompany, controls testing, matching, unified exceptions, and metrics.
+- Richer Studio actions for implemented DB-backed workflows, with local RBAC checks where authenticated local users are present.
+- Synthetic enterprise demo coverage that exercises the foundation workflows using generated, non-client data.
+- Support and buyer package materials for local pilots, implementation partners, and cautious evaluation.
+- Website refresh that presents current foundations accurately and avoids replacement, compliance, or assurance claims.
+- Deployment smoke automation for Docker build/run checks before runtime verification is described as complete.
+- Observability depth for local audit events, diagnostics, operational health checks, and supportable troubleshooting.
 
-## Next 90 Days
+## Future Design Work
 
-- Odoo stock valuation and `account.move.line` mapping templates.
-- SAP MB51, FAGLL03, and FBL3N export mapping profiles.
-- Inventory valuation bridge for stock valuation layer to GL reconciliation.
-- Reviewer status fields in evidence binder outputs.
-- Better Studio exception filtering and evidence links.
-- Benchmark datasets for 10k and 100k row synthetic exports.
-
-## 6 to 12 Months
-
-- Native Odoo connector or guided export assistant.
-- ERPNext mapping profile.
-- NetSuite mapping profile.
-- Multi-company and multi-warehouse support.
-- Recurring-period exception tracking.
-- Role-based review workflow for finance, stores, workshop, and audit users.
-- Local evidence attachment model.
-
-## Longer-Term
-
-- Self-hosted Pro review workflow.
-- Optional packaged desktop distribution.
-- Connector SDK for community ERP mappings.
-- Anomaly detection for unusual issue values, repeated manual journals, and high-risk workshops.
-- Period-close control checklist integration.
+- Real SSO/OIDC/SAML and SCIM remain optional future work after design review, threat modeling, and local-first boundary review.
+- Direct ERP connectors remain future/design work only. Current profiles are export-based mapping aids, not live ERP integrations.
+- Connector SDK ideas should remain separate from core workflows unless security, credential handling, test coverage, and docs are ready.
+- Optional packaged desktop or self-hosted distribution can be explored after local workflow, deployment, and security boundaries mature.
 
 ## Product Guardrails
 
-- Keep core reconciliation local-first.
-- Avoid fake adoption claims.
-- Keep controls explainable and testable.
+- Keep core reconciliation local-first and export-based.
+- Avoid fake adoption, production readiness, compliance, legal, audit opinion, and vendor-replacement claims.
+- Keep controls explainable, deterministic, and testable.
 - Keep generated data synthetic or anonymized.
-- Prioritize inventory-to-GL, WIP, work-order, and audit evidence workflows over generic accounting breadth.
+- Prioritize practical finance control depth over broad claims.

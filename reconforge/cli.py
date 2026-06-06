@@ -42,6 +42,7 @@ from reconforge.db.importers import (
     import_control_tests,
     import_review_state,
 )
+from reconforge.enterprise_demo import EnterpriseDemoError, generate_enterprise_demo
 from reconforge.evidence.binder import generate_evidence_binder
 from reconforge.generator.synthetic import generate_synthetic_dataset
 from reconforge.io.excel import audit_metadata, write_excel_workbook
@@ -3075,6 +3076,47 @@ def demo_run_command(
     console.print(f"5. Review client handoff pack: {client_pack_artifacts.output_dir}")
     console.print(f"6. Run Studio: reconforge studio --input {input_path} --output {output_dir}")
     console.print(f"7. Review or export the register: {register_path}")
+
+
+@demo_app.command("enterprise")
+def demo_enterprise_command(
+    output_path: Annotated[Path, typer.Option("--output", help="Synthetic enterprise demo output directory.")] = Path("output/enterprise_demo"),
+    db_path: Annotated[Path | None, typer.Option("--db", help="Optional local SQLite DB path inside the demo output directory.")] = None,
+) -> None:
+    """Generate a local synthetic enterprise demo package."""
+
+    try:
+        result = generate_enterprise_demo(output_path, db_path=db_path)
+    except EnterpriseDemoError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    _print_frame(
+        "Synthetic Enterprise Demo",
+        pd.DataFrame(
+            [
+                {"artifact": "output_folder", "result": result.output_dir},
+                {"artifact": "manifest", "result": result.manifest_path.name},
+                {"artifact": "walkthrough", "result": result.walkthrough_path.name},
+                {"artifact": "demo_script", "result": result.demo_script_path.name},
+                {"artifact": "database", "result": result.db_path.name if result.db_path is not None else "not persisted"},
+                {"artifact": "synthetic_data_marker", "result": "SYNTHETIC_ENTERPRISE_DEMO_ONLY"},
+            ],
+        ),
+        max_rows=20,
+    )
+    _print_success_paths(
+        [
+            result.readme_path,
+            result.walkthrough_path,
+            result.demo_script_path,
+            result.manifest_path,
+            result.output_dir / "reports",
+            result.output_dir / "sample_evidence",
+        ],
+    )
+    console.print("[green]Synthetic enterprise demo package written.[/green]")
+    console.print("All generated data is synthetic and local-first; no external calls were made.")
 
 
 @app.command("dashboard")

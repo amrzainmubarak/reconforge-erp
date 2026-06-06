@@ -176,3 +176,102 @@ CREATE INDEX IF NOT EXISTS idx_evidence_workspace ON evidence_objects(workspace_
 CREATE INDEX IF NOT EXISTS idx_audit_events_object ON audit_events(object_type, object_id);
 CREATE INDEX IF NOT EXISTS idx_audit_events_created_at ON audit_events(created_at);
 """
+
+AUTH_RBAC_SCHEMA_SQL = """
+ALTER TABLE users ADD COLUMN password_hash TEXT;
+ALTER TABLE users ADD COLUMN password_salt TEXT;
+ALTER TABLE users ADD COLUMN password_iterations INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN password_algorithm TEXT NOT NULL DEFAULT 'pbkdf2_sha256';
+ALTER TABLE users ADD COLUMN password_changed_at TEXT;
+ALTER TABLE users ADD COLUMN failed_login_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN locked_until TEXT;
+
+CREATE TABLE IF NOT EXISTS role_permissions (
+    role_id TEXT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    permission_name TEXT NOT NULL REFERENCES permissions(name) ON DELETE CASCADE,
+    PRIMARY KEY (role_id, permission_name)
+);
+
+INSERT OR IGNORE INTO roles (id, name) VALUES
+    ('ROLE-admin', 'admin'),
+    ('ROLE-controller', 'controller'),
+    ('ROLE-preparer', 'preparer'),
+    ('ROLE-reviewer', 'reviewer'),
+    ('ROLE-auditor-readonly', 'auditor-readonly');
+
+INSERT OR IGNORE INTO permissions (name, description) VALUES
+    ('users.manage', 'Manage local users.'),
+    ('roles.manage', 'Manage local roles and assignments.'),
+    ('db.read', 'Read local database metadata.'),
+    ('audit.read', 'Read local audit events.'),
+    ('audit.verify', 'Verify local audit event checksums.'),
+    ('reconciliation.prepare', 'Prepare local reconciliation workflow objects.'),
+    ('reconciliation.review', 'Review local reconciliation workflow objects.'),
+    ('reconciliation.approve', 'Approve local reconciliation workflow objects.'),
+    ('controls.test', 'Run or update local control testing workflow objects.'),
+    ('evidence.read', 'Read local evidence references.'),
+    ('reports.read', 'Read local report outputs.');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name = 'admin';
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permission_name
+FROM roles
+JOIN (
+    SELECT 'db.read' AS permission_name
+    UNION ALL SELECT 'audit.read'
+    UNION ALL SELECT 'audit.verify'
+    UNION ALL SELECT 'reconciliation.prepare'
+    UNION ALL SELECT 'reconciliation.review'
+    UNION ALL SELECT 'reconciliation.approve'
+    UNION ALL SELECT 'controls.test'
+    UNION ALL SELECT 'evidence.read'
+    UNION ALL SELECT 'reports.read'
+) permissions
+WHERE roles.name = 'controller';
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permission_name
+FROM roles
+JOIN (
+    SELECT 'db.read' AS permission_name
+    UNION ALL SELECT 'reconciliation.prepare'
+    UNION ALL SELECT 'evidence.read'
+    UNION ALL SELECT 'reports.read'
+) permissions
+WHERE roles.name = 'preparer';
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permission_name
+FROM roles
+JOIN (
+    SELECT 'db.read' AS permission_name
+    UNION ALL SELECT 'audit.read'
+    UNION ALL SELECT 'reconciliation.review'
+    UNION ALL SELECT 'reconciliation.approve'
+    UNION ALL SELECT 'evidence.read'
+    UNION ALL SELECT 'reports.read'
+) permissions
+WHERE roles.name = 'reviewer';
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permission_name
+FROM roles
+JOIN (
+    SELECT 'db.read' AS permission_name
+    UNION ALL SELECT 'audit.read'
+    UNION ALL SELECT 'audit.verify'
+    UNION ALL SELECT 'evidence.read'
+    UNION ALL SELECT 'reports.read'
+) permissions
+WHERE roles.name = 'auditor-readonly';
+
+CREATE INDEX IF NOT EXISTS idx_user_roles_user ON user_roles(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles(role_id);
+CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_id);
+CREATE INDEX IF NOT EXISTS idx_role_permissions_permission ON role_permissions(permission_name);
+"""

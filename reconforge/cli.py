@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 from typing import Annotated, cast
 
@@ -15,6 +16,7 @@ from reconforge import __version__
 from reconforge.ai.summaries import explain_exception_file
 from reconforge.anonymizer.engine import anonymize_directory
 from reconforge.audit import AuditLedgerError, list_audit_events, verify_audit_events
+from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService, RoleRepository
 from reconforge.benchmark.runner import run_benchmark
 from reconforge.close import (
     ALLOWED_CLOSE_STATUSES,
@@ -79,6 +81,8 @@ analyze_app = typer.Typer(help="Analyze local ReconForge output folders.")
 controls_app = typer.Typer(help="Generate local control intelligence outputs.")
 db_app = typer.Typer(help="Manage the local SQLite database foundation.")
 audit_app = typer.Typer(help="Inspect local append-only audit events.")
+users_app = typer.Typer(help="Manage local users for DB-backed workflows.")
+roles_app = typer.Typer(help="Inspect local RBAC roles and permissions.")
 app.add_typer(reconcile_app, name="reconcile")
 app.add_typer(report_app, name="report")
 app.add_typer(rules_app, name="rules")
@@ -93,6 +97,8 @@ app.add_typer(analyze_app, name="analyze")
 app.add_typer(controls_app, name="controls")
 app.add_typer(db_app, name="db")
 app.add_typer(audit_app, name="audit")
+app.add_typer(users_app, name="users")
+app.add_typer(roles_app, name="roles")
 
 
 def _version_callback(value: bool) -> None:
@@ -131,6 +137,20 @@ def _print_success_paths(paths: list[Path]) -> None:
 
 def _db_option(db_path: Path) -> Path:
     return db_path
+
+
+def _prompt_password() -> str:
+    return str(typer.prompt("Password", hide_input=True, confirmation_prompt=True))
+
+
+def _auth_service(db_path: Path) -> tuple[LocalAuthService, sqlite3.Connection]:
+    connection = connect(_db_option(db_path), require_exists=True)
+    try:
+        service = LocalAuthService(connection)
+    except (DatabaseError, AuthRepositoryError, AuthServiceError):
+        connection.close()
+        raise
+    return service, connection
 
 
 @db_app.command("init")
@@ -255,6 +275,201 @@ def audit_verify_command(
     console.print(table)
     console.print("[red]Audit ledger verification failed.[/red]")
     raise typer.Exit(code=1)
+
+
+@users_app.command("init-admin")
+def users_init_admin_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    username: Annotated[str, typer.Option("--username", help="Admin username.")] = "admin",
+) -> None:
+    """Create the first local admin user."""
+
+    password = _prompt_password()
+    try:
+        service, connection = _auth_service(db_path)
+        try:
+            user = service.init_admin(username=username, password=password)
+        finally:
+            connection.close()
+    except (DatabaseError, AuthRepositoryError, AuthServiceError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Local admin created:[/green] {user.username}")
+
+
+@users_app.command("add")
+def users_add_command(
+    username: Annotated[str, typer.Option("--username", help="Username to create.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    role: Annotated[str, typer.Option("--role", help="Built-in role to assign.")] = "reviewer",
+    display_name: Annotated[str | None, typer.Option("--display-name", help="Optional display name.")] = None,
+    email: Annotated[str | None, typer.Option("--email", help="Optional email reference.")] = None,
+) -> None:
+    """Create a local user and assign one role."""
+
+    password = _prompt_password()
+    try:
+        service, connection = _auth_service(db_path)
+        try:
+            user = service.create_user(
+                username=username,
+                password=password,
+                role=role,
+                display_name=display_name,
+                email=email,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, AuthRepositoryError, AuthServiceError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Local user created:[/green] {user.username} | role: {role}")
+
+
+@users_app.command("list")
+def users_list_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List local users without credential data."""
+
+    try:
+        service, connection = _auth_service(db_path)
+        try:
+            users = service.users.list()
+            roles_by_user = {user.username: service.roles.user_roles(user.username) for user in users}
+        finally:
+            connection.close()
+    except (DatabaseError, AuthRepositoryError, AuthServiceError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    if not users:
+        console.print("[yellow]No local users found.[/yellow]")
+        return
+    table = Table(title="Local Users")
+    table.add_column("Username")
+    table.add_column("Display Name")
+    table.add_column("Disabled")
+    table.add_column("Roles")
+    table.add_column("Created")
+    for user in users:
+        table.add_row(
+            user.username,
+            user.display_name,
+            "yes" if user.disabled else "no",
+            ", ".join(roles_by_user[user.username]) or "none",
+            user.created_at,
+        )
+    console.print(table)
+
+
+@users_app.command("disable")
+def users_disable_command(
+    username: Annotated[str, typer.Option("--username", help="Username to disable.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Disable a local user."""
+
+    try:
+        service, connection = _auth_service(db_path)
+        try:
+            user = service.disable_user(username=username)
+        finally:
+            connection.close()
+    except (DatabaseError, AuthRepositoryError, AuthServiceError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Local user disabled:[/green] {user.username}")
+
+
+@users_app.command("set-role")
+def users_set_role_command(
+    username: Annotated[str, typer.Option("--username", help="Username to update.")],
+    role: Annotated[str, typer.Option("--role", help="Role to set.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Replace a local user's roles with one role."""
+
+    try:
+        service, connection = _auth_service(db_path)
+        try:
+            service.set_single_role(username=username, role=role)
+        finally:
+            connection.close()
+    except (DatabaseError, AuthRepositoryError, AuthServiceError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Local user role updated:[/green] {username} | role: {role}")
+
+
+@users_app.command("check-permission")
+def users_check_permission_command(
+    username: Annotated[str, typer.Option("--username", help="Username to check.")],
+    permission: Annotated[str, typer.Option("--permission", help="Permission name to check.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Check whether a local user has a permission."""
+
+    try:
+        service, connection = _auth_service(db_path)
+        try:
+            allowed = service.user_has_permission(username=username, permission=permission)
+        finally:
+            connection.close()
+    except (DatabaseError, AuthRepositoryError, AuthServiceError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    if allowed:
+        console.print(f"[green]Permission allowed:[/green] {username} | {permission}")
+        return
+    console.print(f"[red]Permission denied:[/red] {username} | {permission}")
+    raise typer.Exit(code=1)
+
+
+@roles_app.command("list")
+def roles_list_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List local built-in roles."""
+
+    try:
+        connection = connect(_db_option(db_path), require_exists=True)
+        try:
+            repository = RoleRepository(connection)
+            roles = repository.list_roles()
+        finally:
+            connection.close()
+    except (DatabaseError, AuthRepositoryError, AuthServiceError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    table = Table(title="Local Roles")
+    table.add_column("Role")
+    for role in roles:
+        table.add_row(role.name)
+    console.print(table)
+
+
+@roles_app.command("permissions")
+def roles_permissions_command(
+    role: Annotated[str, typer.Option("--role", help="Role to inspect.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List permissions assigned to one local role."""
+
+    try:
+        connection = connect(_db_option(db_path), require_exists=True)
+        try:
+            repository = RoleRepository(connection)
+            permissions = repository.role_permissions(role)
+        finally:
+            connection.close()
+    except (DatabaseError, AuthRepositoryError, AuthServiceError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    table = Table(title=f"Role Permissions: {role}")
+    table.add_column("Permission")
+    for permission in permissions:
+        table.add_row(permission)
+    console.print(table)
 
 
 @app.command("init")

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "template_name": "reconforge_support_intake",
+  "status": "draft_non_contractual",
+  "data_boundary": "Use synthetic, anonymized, or approved sanitized data only. Do not share live customer data in public channels.",
+  "fields": [
+    "reconforge_version_or_commit",
+    "operating_system",
+    "python_version",
+    "install_method",
+    "command_run",
+    "sanitized_input_path",
+    "sanitized_output_path",
+    "config_or_control_pack_name",
+    "expected_behavior",
+    "observed_behavior",
+    "safe_error_message",
+    "doctor_result_summary",
+    "validation_result_summary",
+    "synthetic_or_anonymized_reproduction_available",
+    "security_sensitive"
+  ],
+  "do_not_share": [
+    "passwords",
+    "api_tokens",
+    "private_keys",
+    "live_customer_data",
+    "supplier_bank_details",
+    "employee_data",
+    "payroll_data",
+    "tax_records",
+    "unredacted_gl_or_invoice_rows",
+    "live_sqlite_databases",
+    "client_packs_from real environments"
+  ]
+}

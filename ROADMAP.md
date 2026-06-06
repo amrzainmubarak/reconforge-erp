@@ -8,14 +8,12 @@ ReconForge ERP is a local-first, export-based ERP reconciliation and finance con
 - Broad finance workflow foundations: completed as foundation-stage DB-backed records and services for account reconciliations, close management, approvals/certification metadata, evidence registry, journal controls, intercompany, controls testing, matching, unified exceptions, and metrics.
 - Studio DB pages and API routes: completed for the current foundation scope, including local Studio pages and implemented API routes for accounts, close, exceptions, and metrics.
 - Export-based ERP profile coverage: completed for Odoo, SAP, ERPNext, Dynamics, NetSuite, and Oracle mapping profiles without direct connector claims.
-- Pilot readiness hardening: completed for local demo, client pack, redaction, checksum manifests, Docker build workflow, and conservative security/commercial documentation.
+- Pilot readiness hardening: completed for local demo, synthetic enterprise demo, client pack, redaction, checksum manifests, Docker build workflow, conservative security/commercial documentation, support playbook, buyer FAQ, pilot onboarding checklist, draft implementation packages, and release readiness checklist.
 
 ## Next Phase
 
 - Deeper workflow depth for account reconciliation, close management, approvals metadata, evidence registry, journal controls, intercompany, controls testing, matching, unified exceptions, and metrics.
 - Richer Studio actions for implemented DB-backed workflows, with local RBAC checks where authenticated local users are present.
-- Synthetic enterprise demo coverage that exercises the foundation workflows using generated, non-client data.
-- Support and buyer package materials for local pilots, implementation partners, and cautious evaluation.
 - Website refresh that presents current foundations accurately and avoids replacement, compliance, or assurance claims.
 - Deployment smoke automation for Docker build/run checks before runtime verification is described as complete.
 - Observability depth for local audit events, diagnostics, operational health checks, and supportable troubleshooting.

@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "template_name": "reconforge_pilot_success_criteria",
+  "status": "draft_non_contractual",
+  "scope_boundary": "Local-first, export-based pilot only. No SaaS, direct ERP connector, audit opinion, compliance certification, or ROI guarantee.",
+  "criteria": [
+    {
+      "area": "installation",
+      "example_success_signal": "Local install and doctor command complete on the agreed pilot machine."
+    },
+    {
+      "area": "demo_regeneration",
+      "example_success_signal": "Standard demo and synthetic enterprise demo regenerate without live customer data."
+    },
+    {
+      "area": "export_validation",
+      "example_success_signal": "Pilot exports validate or produce understandable mapping gaps."
+    },
+    {
+      "area": "outputs",
+      "example_success_signal": "Reports, evidence binder, review register, and client pack are generated locally."
+    },
+    {
+      "area": "review_value",
+      "example_success_signal": "Pilot users identify useful exceptions, noisy checks, missing fields, and next-step gaps."
+    },
+    {
+      "area": "data_handling",
+      "example_success_signal": "No live customer data is shared publicly; retention and deletion decisions are recorded."
+    }
+  ]
+}

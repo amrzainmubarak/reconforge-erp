@@ -378,6 +378,11 @@ See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md)
 - [OSS ecosystem importance](docs/strategy/oss-ecosystem-importance.md)
 - [Demo output pack](docs/demo-output-pack.md)
 - [Synthetic enterprise demo](docs/synthetic-enterprise-demo.md)
+- [Pilot onboarding checklist](docs/pilot-onboarding-checklist.md)
+- [Buyer FAQ](docs/buyer-faq.md)
+- [Implementation packages](docs/implementation-packages.md)
+- [Support playbook](docs/support-playbook.md)
+- [Release readiness checklist](docs/release-readiness-checklist.md)
 - [Synthetic case study](docs/case-studies/workshop-spare-parts-health-check.md)
 - [Odoo synthetic case study](docs/case-studies/odoo-stock-valuation-pilot.md)
 - [SAP synthetic case study](docs/case-studies/sap-export-reconciliation-pilot.md)
@@ -422,7 +427,7 @@ python -m bandit -q -r reconforge
 
 ## Roadmap
 
-Near-term work: deeper workflow depth, richer Studio actions, support/buyer package materials, website refresh, deployment smoke automation, observability depth, and optional future design work for real SSO/SCIM and direct ERP connectors.
+Near-term work: deeper workflow depth, richer Studio actions, website refresh, deployment smoke automation, observability depth, and optional future design work for real SSO/SCIM and direct ERP connectors.
 
 ## Contributing
 

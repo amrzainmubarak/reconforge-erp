@@ -1469,13 +1469,29 @@ def dashboard(
 def studio(
     input_path: Annotated[Path, typer.Option("--input", help="ERP input directory for Studio views.")] = Path("examples/sample_data"),
     output_path: Annotated[Path, typer.Option("--output", help="Generated output directory for downloads/evidence.")] = Path("output"),
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path for --require-auth mode.")] = Path("output/reconforge.db"),
+    require_auth: Annotated[bool, typer.Option("--require-auth", help="Require local Studio login and RBAC checks.")] = False,
     host: Annotated[str, typer.Option("--host", help="Bind host.")] = "127.0.0.1",
     port: Annotated[int, typer.Option("--port", help="Bind port.")] = 8601,
 ) -> None:
     """Start ReconForge Studio, a local review workspace."""
 
+    if require_auth:
+        try:
+            status = database_status(_db_option(db_path))
+            if status.pending_versions:
+                console.print("[red]ReconForge database has pending migrations. Run 'reconforge db migrate' first.[/red]")
+                raise typer.Exit(code=1)
+        except DatabaseError as exc:
+            console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(code=1) from exc
     console.print(f"[green]Starting ReconForge Studio:[/green] http://{host}:{port}")
-    uvicorn.run(create_studio_app(input_path, output_path), host=host, port=port, log_level="info")
+    uvicorn.run(
+        create_studio_app(input_path, output_path, require_auth=require_auth, db_path=db_path if require_auth else None),
+        host=host,
+        port=port,
+        log_level="info",
+    )
 
 
 @app.command("doctor")

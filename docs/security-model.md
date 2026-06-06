@@ -34,6 +34,7 @@ ReconForge ERP is local-first. The default workflow reads local CSV/XLSX exports
 - Local users and RBAC are available for DB-backed workflow foundations. Passwords are hashed with stdlib PBKDF2-HMAC-SHA256 and per-user salts; plaintext passwords must not be stored, logged, documented, or printed.
 - Local workflow state transitions can enforce transition rules, required reasons, RBAC checks for local users, and SoD primitives. This is not a legal approval system, audit opinion, or compliance certification.
 - Local REST API sessions store hashed tokens only, reject disabled users, and bind to `127.0.0.1` by default. The API is a local/self-hosted foundation and is not public internet deployment guidance.
+- Studio trusted local mode remains the default. Optional `reconforge studio --require-auth --db output/reconforge.db` requires a migrated local DB, local login, an HTTP-only session cookie backed by hashed session-token storage, logout/revocation, disabled-user rejection, and a local RBAC check for exception review status updates.
 - SSO, SCIM, hosted identity, and SaaS multi-tenancy are not implemented.
 - Local RBAC and API sessions are not SOC/ISO/SOX compliance, production enterprise identity, OAuth/SAML/SCIM/SSO, or SaaS authentication.
 

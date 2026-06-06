@@ -161,10 +161,20 @@ reconforge studio --input examples/sample_data --output output/demo
 
 In Studio, open **Exceptions**, update an exception such as `EXC-0001`, filter by review status, then export or review `output/demo/review_register.xlsx`.
 
+Generate a synthetic enterprise-style platform demo package:
+
+```bash
+reconforge demo enterprise --output output/enterprise_demo
+reconforge demo enterprise --output output/enterprise_demo --db output/enterprise_demo/reconforge.db
+```
+
+The enterprise demo uses synthetic data only. It includes no real customers, no fake ROI, no fake logos, no testimonials, no compliance certification, no audit opinion, and no direct ERP connector claim.
+
 ## CLI Examples
 
 ```bash
 reconforge demo run --output output/demo
+reconforge demo enterprise --output output/enterprise_demo
 
 reconforge reconcile stock-gl --input examples/sample_data --config config/reconforge.yml --output output
 reconforge reconcile stock-gl --input examples/sample_data --config config/reconforge.yml --output output --matching-strategy audit-safe
@@ -247,6 +257,7 @@ The command writes Excel, HTML, JSON, and Markdown outputs. It does not infer sa
 | `output/rules/` | Rule engine CSV/JSON outputs |
 | `output/benchmark/` | Runtime and match-rate benchmark outputs |
 | `output/client_pack/` | Local handoff folder with summary, next steps, privacy note, redaction settings, and manifest |
+| `output/enterprise_demo/` | Synthetic multi-entity platform demo package with local files, reports, manifest, walkthrough, and optional SQLite DB |
 
 ## Who It Is For
 
@@ -366,6 +377,7 @@ See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md)
 - [Compliance disclaimer](docs/compliance-disclaimer.md)
 - [OSS ecosystem importance](docs/strategy/oss-ecosystem-importance.md)
 - [Demo output pack](docs/demo-output-pack.md)
+- [Synthetic enterprise demo](docs/synthetic-enterprise-demo.md)
 - [Synthetic case study](docs/case-studies/workshop-spare-parts-health-check.md)
 - [Odoo synthetic case study](docs/case-studies/odoo-stock-valuation-pilot.md)
 - [SAP synthetic case study](docs/case-studies/sap-export-reconciliation-pilot.md)
@@ -410,7 +422,7 @@ python -m bandit -q -r reconforge
 
 ## Roadmap
 
-Near-term work: deeper workflow depth, richer Studio actions, synthetic enterprise demo coverage, support/buyer package materials, website refresh, deployment smoke automation, observability depth, and optional future design work for real SSO/SCIM and direct ERP connectors.
+Near-term work: deeper workflow depth, richer Studio actions, support/buyer package materials, website refresh, deployment smoke automation, observability depth, and optional future design work for real SSO/SCIM and direct ERP connectors.
 
 ## Contributing
 

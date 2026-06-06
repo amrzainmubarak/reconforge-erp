@@ -15,6 +15,7 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Rule-pack schema reference](rule-pack-schema-reference.md)
 - [Demo scenarios](demo-scenarios.md)
 - [Demo output pack](demo-output-pack.md)
+- [Synthetic enterprise demo](synthetic-enterprise-demo.md)
 - [Docker deployment](docker-deployment.md)
 - [Docker verification report](strategy/docker-verification-report.md)
 
@@ -119,6 +120,7 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Risk scoring](risk-scoring.md)
 - [Anonymization](anonymization.md)
 - [Synthetic data](synthetic-data.md)
+- [Synthetic enterprise demo](synthetic-enterprise-demo.md)
 - [AI assistant architecture](ai-assistant.md)
 - [Plugin development](plugin-development.md)
 - [Security model](security-model.md)

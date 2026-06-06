@@ -81,6 +81,7 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 
 - [ReconForge Studio](reconforge-studio.md)
 - [Review workflow](review-workflow.md)
+- [Workflow state machine foundation](workflow-state-machine.md)
 - [Close workflow](close-workflow.md)
 - [Variance analysis](variance-analysis.md)
 - [Control matrix](control-matrix.md)

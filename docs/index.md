@@ -1,8 +1,8 @@
 # ReconForge ERP Documentation
 
-ReconForge ERP is an open-source, local-first ERP reconciliation and audit intelligence platform for stock movements, GL postings, work orders, WIP, spare-parts, purchase flows, invoices, and operational controls.
+ReconForge ERP is an open-source, local-first ERP reconciliation and finance controls toolkit for stock movements, GL postings, work orders, WIP, spare-parts, purchase flows, invoices, and operational controls.
 
-Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains early-stage, export-based, and conservative about Docker runtime verification, enterprise readiness, and audit/compliance claims.
+Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains early-stage, export-based, and conservative about Docker runtime verification, production deployment identity, and audit/compliance claims.
 
 ## Start Here
 
@@ -31,7 +31,9 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Evidence integrity](evidence-integrity.md)
 - [Security whitepaper](security-whitepaper.md)
 - [Local users and RBAC](security/local-users-rbac.md)
+- [Local auth and RBAC](security/local-auth-rbac.md)
 - [Local REST API](api.md)
+- [DB import/export bridge](db-import-export.md)
 - [Compliance disclaimer](compliance-disclaimer.md)
 - [OSS ecosystem importance](strategy/oss-ecosystem-importance.md)
 - [Synthetic workshop case study](case-studies/workshop-spare-parts-health-check.md)
@@ -75,6 +77,23 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [SCIM design only](strategy/scim-design.md)
 - [Direct ERP connector roadmap](strategy/direct-erp-connector-roadmap.md)
 - [Safe AI assistance design](strategy/ai-assistance-design.md)
+
+## Security Package
+
+- [Security model](security-model.md)
+- [Security whitepaper](security-whitepaper.md)
+- [Security questionnaire](security/security-questionnaire.md)
+- [Security data handling](security/data-handling.md)
+- [Security threat model](security/threat-model.md)
+- [Security deployment boundaries](security/deployment-boundaries.md)
+- [Security API security](security/api-security.md)
+- [Security backup and restore](security/backup-restore.md)
+- [Security limitations](security/limitations.md)
+- [Local users and RBAC](security/local-users-rbac.md)
+- [Local auth and RBAC](security/local-auth-rbac.md)
+- [SSO/OIDC/SAML design only](strategy/sso-oidc-saml-design.md)
+- [SCIM design only](strategy/scim-design.md)
+- [Direct ERP connector roadmap](strategy/direct-erp-connector-roadmap.md)
 
 ## ERP Export Guides
 

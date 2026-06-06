@@ -35,8 +35,8 @@ class EvidenceVerification:
 class EvidenceRegistryService:
     """Local checksum/provenance evidence registry.
 
-    Evidence integrity here is a checksum aid only. It is not a digital
-    signature or non-repudiation system.
+    Evidence integrity here is a checksum aid only. It is not a signature
+    workflow or non-repudiation control.
     """
 
     def __init__(self, connection: sqlite3.Connection) -> None:

@@ -93,4 +93,4 @@ Studio binds to `127.0.0.1` unless another host is provided. Trusted local mode 
 
 DB-backed Studio actions use local RBAC in auth-required mode. Trusted local mode can display DB pages when `--db` points to an existing migrated database.
 
-This is not SSO, OAuth, SAML, SCIM, production SaaS identity, legal approval, digital signature, non-repudiation, or compliance certification. Use Studio on trusted machines and trusted networks, and keep generated output folders and the local DB protected like sensitive finance control evidence.
+This is not SSO, OAuth, SAML, SCIM, hosted identity, legal sign-off, signature workflow, non-repudiation guarantee, or compliance certification. Use Studio on trusted machines and trusted networks, and keep generated output folders and the local DB protected like sensitive finance control evidence.

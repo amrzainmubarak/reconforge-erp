@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added foundations for the local platform backbone: SQLite DB/audit, local users/RBAC, workflow state machine, REST API, Studio auth-required mode, DB import/export, backup bridge, and supporting security/roadmap documentation.
+- Added foundations for DB-backed finance workflows: account reconciliations, close management, approvals/certification metadata, evidence registry, journal controls, intercompany, controls testing, matching, unified exceptions, and metrics.
+- Added Studio DB pages and local API route foundations for accounts, close, exceptions, and metrics while keeping the workflow local-first and export-based.
 - Added local close checklist workflow commands: `reconforge close init`, `reconforge close list`, `reconforge close set-status`, and `reconforge close report`.
 - Added lightweight reconciliation certification metadata fields to local review state and review register exports. These fields are workflow metadata only and are not legal sign-off, audit opinions, compliance certifications, or digital signatures.
 - Added local variance analysis command: `reconforge analyze variance`.

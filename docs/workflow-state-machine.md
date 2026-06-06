@@ -1,8 +1,8 @@
 # Workflow State Machine Foundation
 
-ReconForge includes a local SQLite-backed workflow state machine foundation for future DB-backed workflows.
+ReconForge includes a local SQLite-backed workflow state machine foundation for DB-backed workflows.
 
-This is a reusable foundation only. It is not a full enterprise workflow engine, legal approval system, audit opinion, digital signature, SOX/SOC/ISO compliance control, SaaS workflow service, SSO/SCIM integration, API auth system, or Studio auth system.
+This is a reusable foundation only. It is not a full enterprise workflow engine, legal sign-off system, audit opinion, signature workflow, SOX/SOC/ISO compliance control, SaaS workflow service, SSO/SCIM integration, or hosted identity layer.
 
 ## What It Adds
 
@@ -50,7 +50,8 @@ reconforge workflow history --db output/reconforge.db --object-type reconciliati
 ## Boundaries
 
 - Existing JSON workflows are not migrated or forced through this state machine in this slice.
-- Account reconciliation lifecycle, close engine depth, approvals, certifications, Studio auth, API auth, SSO, and SCIM remain deferred.
+- Account reconciliation lifecycle, close engine depth, approvals, certifications, and Studio/API action coverage remain foundation-stage and are not full workflow products.
+- SSO and SCIM remain deferred.
 - Trusted local mode is allowed when no local user is resolved for an actor label.
 - Audit events provide checksum integrity aids only; they are not legal signatures or non-repudiation controls.
 - This does not create compliance certification, audit sign-off, production enterprise identity, or SaaS workflow capabilities.

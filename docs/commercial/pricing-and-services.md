@@ -1,6 +1,6 @@
 # Pricing And Services
 
-This document is a preliminary future service model for ReconForge ERP v0.6.1 — Pilot Readiness Hardening. It is not a claim of current customer adoption, revenue, guarantees, or certified audit delivery. Pricing ranges are hypotheses for positioning and should be validated through real discovery calls.
+This document is a preliminary future service model for ReconForge ERP v0.7.0 — Foundation-Stage Local Platform Readiness. It is not a claim of current customer adoption, revenue, guarantees, or certified audit delivery. Pricing ranges are hypotheses for positioning and should be validated through real discovery calls.
 
 ## Ethical Boundaries
 

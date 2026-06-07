@@ -1,16 +1,16 @@
 # Release Announcement Draft
 
-Draft announcement for ReconForge ERP v0.6.1 foundation-stage positioning. This is draft copy only; do not present it as a new release unless the release process is intentionally run and metadata is updated elsewhere.
+Draft announcement for ReconForge ERP v0.7.0 foundation-stage positioning. This is draft copy only; do not present it as a published release unless the release process is intentionally run.
 
 ## Title
 
-ReconForge ERP v0.6.1 foundation-stage update: local finance controls, synthetic enterprise demo, and buyer-readiness docs
+ReconForge ERP v0.7.0 foundation-stage update: local finance controls, synthetic enterprise demo, buyer-readiness docs, and deployment smoke notes
 
 ## Draft Announcement
 
-ReconForge ERP v0.6.1 continues the project's local-first, export-based direction for ERP reconciliation and finance controls review.
+ReconForge ERP v0.7.0 continues the project's local-first, export-based direction for ERP reconciliation and finance controls review.
 
-This foundation-stage update focuses on making local evaluation more complete and more honest. It includes broad DB-backed platform foundations, a synthetic enterprise demo package, and conservative buyer, pilot, support, and release-readiness documentation.
+This foundation-stage update focuses on making local evaluation more complete and more honest. It includes broad DB-backed platform foundations, a synthetic enterprise demo package, conservative buyer, pilot, support, and release-readiness documentation, and deployment smoke check notes.
 
 Highlights:
 
@@ -21,6 +21,7 @@ Highlights:
 - local REST API and Studio DB foundations for selected workflows
 - synthetic enterprise demo for multi-entity platform walkthroughs without live customer data
 - support playbook, pilot onboarding checklist, buyer FAQ, implementation package drafts, release readiness checklist, and expanded security questionnaire
+- deployment smoke checklist and Docker verification commands for local release review
 
 Run the demos:
 

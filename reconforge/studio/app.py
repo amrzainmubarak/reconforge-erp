@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import Response
 
+from reconforge import __version__
 from reconforge.api.security import (
     SESSION_TTL_HOURS,
     SessionError,
@@ -452,7 +453,7 @@ def create_studio_app(
     output_registry = build_download_registry(output_path, allowed_suffixes=DOWNLOAD_SUFFIXES)
     evidence_registry = build_download_registry(output_path / "evidence", allowed_suffixes=DOWNLOAD_SUFFIXES, recursive=True)
     docs_registry = build_download_registry(Path("docs"), allowed_suffixes=DOC_SUFFIXES)
-    app = FastAPI(title="ReconForge Studio", version="0.6.1")
+    app = FastAPI(title="ReconForge Studio", version=__version__)
     app.state.studio_require_auth = require_auth
     app.state.studio_db_path = resolved_db_path
 

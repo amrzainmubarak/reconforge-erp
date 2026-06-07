@@ -45,7 +45,7 @@ ERP systems hold the source transactions, but month-end reconciliation often sti
 
 ## Project Status
 
-- Current release: **v0.6.1 - Pilot Readiness Hardening**.
+- Current release: **v0.7.0 - Foundation-Stage Local Platform Readiness**.
 - ReconForge has expanded local-first finance controls platform foundations while remaining early-stage and conservative about readiness claims.
 - Pilot-ready open-source toolkit for local evaluation and controlled pilots.
 - Local-first and export-based; core workflows do not require cloud upload or paid APIs.
@@ -367,6 +367,8 @@ See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md)
 - [Redaction controls](docs/redaction-controls.md)
 - [Evidence integrity](docs/evidence-integrity.md)
 - [Docker deployment](docs/docker-deployment.md)
+- [Deployment smoke check](docs/deployment-smoke-check.md)
+- [Docker verification](docs/docker-verification.md)
 - [Docker verification report](docs/strategy/docker-verification-report.md)
 - [Security whitepaper](docs/security-whitepaper.md)
 - [Security model](docs/security-model.md)
@@ -383,6 +385,7 @@ See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md)
 - [Implementation packages](docs/implementation-packages.md)
 - [Support playbook](docs/support-playbook.md)
 - [Release readiness checklist](docs/release-readiness-checklist.md)
+- [v0.7.0 release notes](docs/releases/v0.7.0.md)
 - [Website and launch copy package](docs/website/github-launch-post.md)
 - [Claim boundary guide](docs/website/claim-boundary-guide.md)
 - [Synthetic case study](docs/case-studies/workshop-spare-parts-health-check.md)
@@ -429,7 +432,7 @@ python -m bandit -q -r reconforge
 
 ## Roadmap
 
-Near-term work: deeper workflow depth, richer Studio actions, website refresh, deployment smoke automation, observability depth, and optional future design work for real SSO/SCIM and direct ERP connectors.
+Near-term work: deeper workflow depth, richer Studio actions, website refresh, deployment smoke automation beyond the documented smoke checklist, observability depth, and optional future design work for real SSO/SCIM and direct ERP connectors.
 
 ## Contributing
 

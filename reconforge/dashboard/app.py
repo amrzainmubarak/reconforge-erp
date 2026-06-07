@@ -11,6 +11,7 @@ from urllib.parse import quote
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 
+from reconforge import __version__
 from reconforge.utils.safe_paths import build_download_registry, get_registered_download
 
 DOWNLOAD_SUFFIXES = {".html", ".xlsx", ".csv", ".json", ".md", ".txt", ".yml", ".yaml"}
@@ -36,7 +37,7 @@ def create_app(output_dir: Path | str) -> FastAPI:
 
     base_path = Path(output_dir)
     report_registry = build_download_registry(base_path, allowed_suffixes=DOWNLOAD_SUFFIXES)
-    app = FastAPI(title="ReconForge ERP Dashboard", version="0.6.1")
+    app = FastAPI(title="ReconForge ERP Dashboard", version=__version__)
 
     @app.get("/", response_class=HTMLResponse)
     def index() -> str:

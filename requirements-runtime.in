@@ -1,4 +1,4 @@
 -r requirements.txt
 
 setuptools>=77
-wheel>=0.45
+wheel>=0.47.0

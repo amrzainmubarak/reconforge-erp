@@ -11,4 +11,4 @@ pytest>=8.2
 ruff>=0.5
 setuptools>=77
 types-PyYAML>=6.0
-wheel>=0.45
+wheel>=0.47.0

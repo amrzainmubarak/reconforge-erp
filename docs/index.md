@@ -2,7 +2,7 @@
 
 ReconForge ERP is an open-source, local-first ERP reconciliation and finance controls toolkit for stock movements, GL postings, work orders, WIP, spare-parts, purchase flows, invoices, and operational controls.
 
-Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains early-stage, export-based, and conservative about Docker runtime verification, production deployment identity, and audit/compliance claims.
+Current release: **v0.7.0 — Foundation-Stage Local Platform Readiness**. The project remains early-stage, local-first, export-based, and conservative about Docker runtime verification, production deployment identity, and audit/compliance claims.
 
 ## Start Here
 
@@ -20,7 +20,10 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Buyer FAQ](buyer-faq.md)
 - [Website homepage copy](website/homepage-copy.md)
 - [Website claim boundary guide](website/claim-boundary-guide.md)
+- [v0.7.0 release notes](releases/v0.7.0.md)
+- [Deployment smoke check](deployment-smoke-check.md)
 - [Docker deployment](docker-deployment.md)
+- [Docker verification](docker-verification.md)
 - [Docker verification report](strategy/docker-verification-report.md)
 
 ## Product and Architecture
@@ -104,6 +107,8 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Security whitepaper](security-whitepaper.md)
 - [Security questionnaire](security/security-questionnaire.md)
 - [Release readiness checklist](release-readiness-checklist.md)
+- [Deployment smoke check](deployment-smoke-check.md)
+- [Docker verification](docker-verification.md)
 - [Website claim boundary guide](website/claim-boundary-guide.md)
 - [Security data handling](security/data-handling.md)
 - [Security threat model](security/threat-model.md)
@@ -147,6 +152,8 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Implementation packages](implementation-packages.md)
 - [Support playbook](support-playbook.md)
 - [Release readiness checklist](release-readiness-checklist.md)
+- [Deployment smoke check](deployment-smoke-check.md)
+- [Docker verification](docker-verification.md)
 - [Website homepage copy](website/homepage-copy.md)
 - [Website product page drafts](website/product-pages.md)
 - [Website demo page copy](website/demo-page.md)
@@ -196,9 +203,12 @@ Current release: **v0.6.1 — Pilot Readiness Hardening**. The project remains e
 - [Buyer FAQ](buyer-faq.md)
 - [Implementation packages](implementation-packages.md)
 - [Release readiness checklist](release-readiness-checklist.md)
+- [Deployment smoke check](deployment-smoke-check.md)
+- [Docker verification](docker-verification.md)
 - [Website launch copy package](website/github-launch-post.md)
 - [Website claim boundary guide](website/claim-boundary-guide.md)
 - [OpenAI OSS application pack](openai-oss-application.md)
 - [v0.2.0 release notes](releases/v0.2.0.md)
 - [v0.3.0 release notes](releases/v0.3.0.md)
+- [v0.7.0 release notes](releases/v0.7.0.md)
 - [v1.0.0 readiness note](releases/v1.0.0.md)

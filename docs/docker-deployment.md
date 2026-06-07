@@ -15,6 +15,7 @@ docker build -t reconforge-erp .
 Linux/macOS Bash:
 
 ```bash
+docker run --rm reconforge-erp reconforge doctor
 docker run --rm -v ${PWD}/output:/app/output reconforge-erp reconforge doctor
 ```
 
@@ -100,4 +101,4 @@ Record the Docker version, operating system, and command output in the release n
 
 ## Current Verification Status
 
-See [Docker Verification Report](strategy/docker-verification-report.md). ReconForge ERP v0.6.1 includes Docker build workflow support and deployment documentation, but Docker runtime verification is not claimed unless Docker Desktop or Docker Engine is running and the documented build/run commands pass.
+See [Docker verification](docker-verification.md) and the historical [Docker Verification Report](strategy/docker-verification-report.md). ReconForge ERP v0.7.0 includes Docker build workflow support and deployment documentation, but Docker runtime verification is not claimed unless Docker Desktop or Docker Engine is running and the documented build/run commands pass.

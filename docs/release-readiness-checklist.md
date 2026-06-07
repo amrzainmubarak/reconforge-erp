@@ -8,6 +8,7 @@ Use this checklist before proposing or publishing a ReconForge ERP release. Keep
 python -m ruff check .
 python -m mypy reconforge
 python -m pytest
+python -m bandit -q -r reconforge
 python -m reconforge.cli doctor
 git diff --check
 ```
@@ -38,17 +39,34 @@ Also check:
 - CLI examples still work or are clearly marked as examples.
 - No docs ask users to share live customer data in public channels.
 
+## Deployment Smoke Checks
+
+Run the local demo and platform-foundation smoke commands before publishing a foundation-stage release note:
+
+```bash
+reconforge demo run --output output/demo
+reconforge demo enterprise --output output/enterprise_demo
+reconforge db init --db output/reconforge.db
+reconforge api serve --db output/reconforge.db --host 127.0.0.1 --port 8765
+reconforge studio --input examples/sample_data --output output/demo
+reconforge studio --input examples/sample_data --output output/demo --db output/reconforge.db --require-auth
+```
+
+The API and Studio commands are local long-running server checks. Start them, confirm local startup, and stop them before continuing.
+
 ## Claim-Boundary Checks
 
 Before release, search docs, README, changelog, and release notes for unsupported claims:
 
-- enterprise-ready or production-ready claims
-- SOC, ISO, SOX, GDPR, tax, audit, or compliance certification claims
-- audit opinions, assurance conclusions, legal sign-off, or digital-signature claims
-- direct ERP connectors, live sync, credential handling, ERP writeback, or vendor certification claims
-- SaaS, hosted storage, telemetry, or cloud upload claims for core workflows
-- customer adoption, testimonials, logos, revenue, or ROI claims without documented evidence
-- vendor-replacement or feature-parity claims against enterprise close, GRC, ERP, or audit platforms
+- no enterprise-ready claim
+- no production-ready claim
+- no compliance certification claim
+- no audit opinion claim
+- no legal signature claim
+- no direct connector claim
+- no real customer, ROI, testimonial, logo, adoption, or revenue claim
+- no production SaaS claim
+- no vendor-replacement or feature-parity claim against enterprise close, GRC, ERP, or audit platforms
 
 Preferred wording:
 
@@ -67,7 +85,7 @@ Before claiming Docker runtime verification, run in a live Docker environment:
 
 ```bash
 docker build -t reconforge-erp .
-docker run --rm -v ${PWD}/output:/app/output reconforge-erp reconforge doctor
+docker run --rm reconforge-erp reconforge doctor
 docker run --rm -v ${PWD}/output:/app/output reconforge-erp reconforge demo run --output output/demo
 ```
 

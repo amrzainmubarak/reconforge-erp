@@ -118,7 +118,7 @@ Recommended practice:
 - keep generated outputs in controlled local paths
 - review evidence before sharing
 
-ReconForge ERP v0.6.1 includes Docker build workflow support and deployment documentation. Docker runtime verification is not claimed unless the documented build and run commands pass in a live Docker environment. See `docs/strategy/docker-verification-report.md`.
+ReconForge ERP v0.7.0 includes Docker build workflow support and deployment documentation. Docker runtime verification is not claimed unless the documented build and run commands pass in a live Docker environment. See `docs/docker-verification.md`.
 
 ## 14. Threat Model
 

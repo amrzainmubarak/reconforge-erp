@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+No unreleased changes yet.
+
+## v0.7.0 — Foundation-Stage Local Platform Readiness
+
+ReconForge ERP v0.7.0 is a foundation-stage release for local-first, export-based pilot evaluation. It expands self-hosted/local-capable foundations for finance controls, reconciliation workflows, synthetic demos, support readiness, and conservative launch materials without claiming hosted production service readiness, direct ERP connectors, certification, audit opinions, legal signatures, customer traction, ROI, or platform replacement.
+
 - Added foundations for the local platform backbone: SQLite DB/audit, local users/RBAC, workflow state machine, REST API, Studio auth-required mode, DB import/export, backup bridge, and supporting security/roadmap documentation.
 - Added foundations for DB-backed finance workflows: account reconciliations, close management, approvals/certification metadata, evidence registry, journal controls, intercompany, controls testing, matching, unified exceptions, and metrics.
 - Added Studio DB pages and local API route foundations for accounts, close, exceptions, and metrics while keeping the workflow local-first and export-based.
@@ -17,6 +23,11 @@
 - Added strategy documents for global capability benchmarking, platform blueprint, feature gaps, differentiation, and the next release roadmap.
 - Added documentation for close workflow, variance analysis, control matrix, and reconciliation certification metadata.
 - Added focused tests for new CLI commands, malformed inputs, status validation, output files, certification metadata, and HTML/Markdown escaping behavior.
+- Added the synthetic enterprise demo package for generated multi-entity platform-foundation walkthroughs using synthetic data only.
+- Added pilot/support/buyer readiness docs: support playbook, pilot onboarding checklist, buyer FAQ, draft implementation packages, release readiness checklist, and security questionnaire updates.
+- Added conservative website and launch copy drafts with a claim-boundary guide for local-first/export-based positioning.
+- Added release readiness and deployment smoke documentation for local CLI, API, Studio, synthetic demo, DB, and Docker verification commands.
+- Updated version metadata to `0.7.0`.
 
 ## v0.6.1 — Pilot Readiness Hardening
 

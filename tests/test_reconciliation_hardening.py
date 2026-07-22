@@ -163,3 +163,21 @@ def test_every_reconciliation_exception_has_reason_evidence_and_independent_risk
     assert result.all_exceptions["exception_reason"].astype(str).str.len().gt(0).all()
     assert result.all_exceptions["evidence_reference"].astype(str).str.len().gt(0).all()
     assert result.all_exceptions["risk_score"].notna().all()
+
+
+def test_exception_rows_include_classification_metadata() -> None:
+    stock, gl = _global_assignment_frames()
+    result = reconcile_stock_gl(stock, gl, ReconForgeConfig(amount_tolerance=2.0))
+
+    required = {
+        "exception_title",
+        "exception_explanation",
+        "suggested_action",
+        "severity",
+        "ownership",
+        "workflow_status",
+        "exception_type",
+        "exception_reason",
+        "evidence_reference",
+    }
+    assert required.issubset(result.all_exceptions.columns)

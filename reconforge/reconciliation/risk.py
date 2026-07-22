@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 
 from reconforge.config import ReconForgeConfig
 
@@ -27,20 +28,35 @@ def risk_level(score: int) -> str:
     return "Critical"
 
 
-def amount_component(amount: float, baseline: float = 1000.0) -> int:
+def amount_component(amount: object, baseline: float | Decimal = 1000.0) -> int:
     """Scale amount exposure into a small risk component."""
 
-    if amount <= 0:
+    amount_value = _to_float(amount)
+    baseline_value = _to_float(baseline)
+    if amount_value <= 0:
         return 0
-    return min(int((amount / baseline) * 20), 40)
+    return min(int((amount_value / baseline_value) * 20), 40)
+
+
+def _to_float(value: object) -> float:
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, (int, float)):
+        return float(value)
+    if value is None:
+        return 0.0
+    try:
+        return float(str(value))
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def assess_risk(
     exception_type: str,
     config: ReconForgeConfig,
     *,
-    amount: float = 0.0,
-    amount_difference: float = 0.0,
+    amount: float | Decimal = 0.0,
+    amount_difference: float | Decimal = 0.0,
     aging_days: int = 0,
 ) -> RiskAssessment:
     """Score a reconciliation exception from 0 to 100."""

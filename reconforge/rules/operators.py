@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from datetime import date
+from decimal import Decimal
 
 import pandas as pd
 
@@ -33,7 +34,7 @@ def _right_value(row: pd.Series, condition: Condition) -> object:
     return condition.value
 
 
-def _as_float(value: object) -> float | None:
+def _as_float(value: object) -> Decimal | float | None:
     try:
         return parse_amount(value)
     except InvalidAmountError:
@@ -45,7 +46,7 @@ def _numeric_pair(left: object, right: object) -> tuple[float, float] | None:
     right_number = _as_float(right)
     if left_number is None or right_number is None:
         return None
-    return left_number, right_number
+    return float(left_number), float(right_number)
 
 
 def _as_date(value: object) -> date | None:

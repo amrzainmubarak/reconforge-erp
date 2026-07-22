@@ -13,6 +13,13 @@
 3. Introduce explicit decimal-backed monetary value object for reconciliation and control scoring.
 4. Guarantee all valid-empty outputs are typed, non-crashing frames.
 
+### Progress update (current pass)
+
+- ✅ Row-order invariance test coverage now includes platform matching permutations and identifier fallback scenarios.
+- ✅ Deterministic platform matching moved to indexed candidate + min-cost assignment flow.
+- ✅ Reference normalization is integrated with matching explanation output.
+- ✅ `--allow-many-to-many` CLI control added to platform matching.
+
 ## Phase 2 — Matching architecture expansion
 
 1. Promote global optimization options across platform matching services.
@@ -21,7 +28,7 @@
 
 ## Phase 3 — Engine and persistence scale
 
-1. Validate engine parity claims between pandas and duckdb execution.
+1. ✅ Validate engine parity claims between pandas and duckdb execution using deterministic reconciliation signatures.
 2. Introduce chunking and resumable job modes for large datasets.
 3. Add migration-safe persistence changes for optional hosted/postgres support.
 

@@ -7,6 +7,7 @@ import heapq
 import json
 from dataclasses import dataclass
 from datetime import date
+from decimal import Decimal
 from difflib import SequenceMatcher
 from re import findall
 from typing import Any, Literal, cast
@@ -40,7 +41,7 @@ class MatchCandidate:
     match_id: str = ""
     stock_move_id: str = ""
     gl_entry_id: str = ""
-    amount_difference: float = 0.0
+    amount_difference: Decimal = Decimal("0")
     date_difference: int = 0
     reference_similarity: float = 0.0
     review_required: bool = False
@@ -65,7 +66,7 @@ def _string(value: object) -> str:
     return "" if text.lower() in {"nan", "nat", "none"} else text
 
 
-def _amount(value: object) -> float | None:
+def _amount(value: object) -> Decimal | None:
     try:
         return parse_amount(value)
     except InvalidAmountError:
@@ -125,7 +126,7 @@ def is_exact_match(stock_row: pd.Series, gl_row: pd.Series) -> bool:
         and gl_amount is not None
         and _string(stock_row.get("source_document")) == _string(gl_row.get("reference"))
         and _string(stock_row.get("work_order")) == _string(gl_row.get("work_order"))
-        and money_difference(stock_amount, gl_amount) <= 0.01
+        and money_difference(stock_amount, gl_amount) <= Decimal("0.01")
     )
 
 
@@ -195,7 +196,7 @@ def is_value_difference(stock_row: pd.Series, gl_row: pd.Series, config: ReconFo
         and bool(source_document)
         and source_document == normalize_reference(gl_row.get("reference"))
         and _string(stock_row.get("work_order")) == _string(gl_row.get("work_order"))
-        and money_difference(stock_amount, gl_amount) > config.amount_tolerance
+        and money_difference(stock_amount, gl_amount) > Decimal(str(config.amount_tolerance))
     )
 
 
@@ -319,6 +320,7 @@ def _candidate(
     gl_entry_id = _string(gl_row.get("entry_id"))
     stock_sort_key = _stable_row_key(stock_row, identifier="move_id", kind="stock")
     gl_sort_key = _stable_row_key(gl_row, identifier="entry_id", kind="gl")
+    amount_difference = money_difference(stock_amount, gl_amount)
     return MatchCandidate(
         match_id=_stable_match_id(stock_sort_key, gl_sort_key),
         stock_index=stock_index,
@@ -327,7 +329,7 @@ def _candidate(
         gl_entry_id=gl_entry_id,
         match_level=level,
         confidence=confidence,
-        amount_difference=round(stock_amount - gl_amount, 2),
+        amount_difference=amount_difference,
         date_difference=date_difference,
         reference_similarity=reference_similarity(stock_row.get("source_document"), gl_row.get("reference")),
         reason=reason,
@@ -353,7 +355,7 @@ def _candidate_cost(candidate: MatchCandidate) -> int:
     utility = _LEVEL_UTILITY[candidate.match_level]
     utility += int(round(candidate.confidence * 100_000))
     utility += int(round(candidate.reference_similarity * 10_000))
-    utility += max(0, 5_000 - min(int(round(abs(candidate.amount_difference) * 100)), 5_000))
+    utility += max(0, 5_000 - min(int(round(float(abs(candidate.amount_difference)) * 100)), 5_000))
     utility += max(0, 1_000 - min(abs(candidate.date_difference), 1_000))
     return _MAX_PAIR_UTILITY - utility
 

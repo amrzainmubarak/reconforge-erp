@@ -8,7 +8,6 @@ from fastapi.responses import HTMLResponse
 
 from reconforge.studio.components import _layout
 
-
 STUDIO_SESSION_COOKIE = "reconforge_studio_session"
 
 

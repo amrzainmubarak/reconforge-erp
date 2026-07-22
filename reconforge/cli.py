@@ -3546,6 +3546,14 @@ def match_run_command(
     amount_tolerance: Annotated[float, typer.Option("--amount-tolerance", help="Allowed amount difference.")] = 0.0,
     date_window_days: Annotated[int, typer.Option("--date-window-days", help="Allowed date difference in days.")] = 0,
     allow_many_to_one: Annotated[bool, typer.Option("--allow-many-to-one", help="Allow right-side records to match more than once.")] = False,
+    allow_one_to_many: Annotated[
+        bool,
+        typer.Option("--allow-one-to-many", help="Allow left-side records to match more than once."),
+    ] = False,
+    allow_many_to_many: Annotated[
+        bool,
+        typer.Option("--allow-many-to-many", help="Allow both sides of records to match multiple times."),
+    ] = False,
     actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
 ) -> None:
     """Run deterministic DB-backed matching with indexed candidate generation."""
@@ -3567,6 +3575,8 @@ def match_run_command(
                 amount_tolerance=amount_tolerance,
                 date_window_days=date_window_days,
                 allow_many_to_one=allow_many_to_one,
+                allow_one_to_many=allow_one_to_many,
+                allow_many_to_many=allow_many_to_many,
                 actor_label=actor,
             )
         finally:

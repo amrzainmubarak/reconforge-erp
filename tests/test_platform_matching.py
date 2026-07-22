@@ -13,6 +13,10 @@ def _run_match(
     right_rows: str,
     *,
     allow_many_to_one: bool = False,
+    allow_one_to_many: bool = False,
+    allow_many_to_many: bool = False,
+    left_id_field: str = "id",
+    right_id_field: str = "id",
     run_name: str = "base",
 ):
     db_path = tmp_path / f"{run_name}_operations.db"
@@ -29,7 +33,11 @@ def _run_match(
         result = service.run(
             left_path=left,
             right_path=right,
+            left_id_field=left_id_field,
+            right_id_field=right_id_field,
             allow_many_to_one=allow_many_to_one,
+            allow_one_to_many=allow_one_to_many,
+            allow_many_to_many=allow_many_to_many,
         )
         matched = [record for record in service.results(result.job_id) if record["status"] == "Matched"]
     finally:
@@ -141,3 +149,101 @@ def test_matching_allows_many_to_one_when_enabled(tmp_path: Path) -> None:
     assert many_to_one_result.matched_count == 2
     assert len(many_to_one_matched) == 2
     assert len({row["right_id"] for row in many_to_one_matched}) == 1
+
+
+def test_matching_allows_one_to_many_when_enabled(tmp_path: Path) -> None:
+    left = "id,reference,amount,date\nL-1,REF-INV,100.00,2026-01-10\n"
+    right = (
+        "id,reference,amount,date\n"
+        "R-1,REF-INV,100.00,2026-01-10\n"
+        "R-2,REF-INV,100.00,2026-01-10\n"
+    )
+
+    one_to_one_result, one_to_one_matched = _run_match(
+        tmp_path,
+        left,
+        right,
+        allow_many_to_one=False,
+        run_name="one_to_one_for_left_only",
+    )
+    one_to_many_result, one_to_many_matched = _run_match(
+        tmp_path,
+        left,
+        right,
+        allow_many_to_one=False,
+        allow_one_to_many=True,
+        run_name="one_to_many",
+    )
+
+    assert one_to_one_result.matched_count == 1
+    assert len(one_to_one_matched) == 1
+    assert one_to_many_result.matched_count == 2
+    assert len(one_to_many_matched) == 2
+    assert {row["left_id"] for row in one_to_many_matched} == {"L-1"}
+
+
+def test_matching_allows_many_to_many_when_enabled(tmp_path: Path) -> None:
+    left = "id,reference,amount,date\nL-INV-1,INV-1,100.00,2026-01-10\nL-INV-2,INV-1,100.00,2026-01-10\n"
+    right = "id,reference,amount,date\nR-A,INV-1,100.00,2026-01-10\nR-B,INV-1,100.00,2026-01-10\n"
+
+    _, matched = _run_match(
+        tmp_path,
+        left,
+        right,
+        allow_many_to_many=True,
+        run_name="many_to_many",
+    )
+
+    assert len(matched) == 4
+    assert len({row["left_id"] for row in matched}) == 2
+    assert len({row["right_id"] for row in matched}) == 2
+
+
+def test_reference_normalization_enables_cross_format_matching(tmp_path: Path) -> None:
+    left = "id,reference,amount,date\nL-1,INV-0001,100.00,2026-01-10\n"
+    right = "id,reference,amount,date\nR-1,inv001,100.00,2026-01-10\n"
+
+    _, matched = _run_match(tmp_path, left, right, run_name="normalize_ref")
+
+    assert len(matched) == 1
+    assert "normalization" in matched[0]["explanation"].lower()
+    assert matched[0]["left_id"] == "L-1"
+    assert matched[0]["right_id"] == "R-1"
+
+
+def test_stable_ids_without_explicit_id_fields_are_deterministic(tmp_path: Path) -> None:
+    left = "reference,amount,date\nINV 001,100.00,2026-01-10\nINV 002,200.00,2026-01-10\n"
+    right = "reference,amount,date\ninv001,100.00,2026-01-10\ninv002,200.00,2026-01-10\n"
+    _, matched_a = _run_match(
+        tmp_path,
+        left,
+        right,
+        left_id_field="__missing__",
+        right_id_field="__missing__",
+        run_name="stable_ids_a",
+    )
+    _, matched_b = _run_match(
+        tmp_path,
+        left,
+        right,
+        left_id_field="__missing__",
+        right_id_field="__missing__",
+        run_name="stable_ids_b",
+    )
+
+    assert all(record["left_id"] for record in matched_a)
+    assert all(record["right_id"] for record in matched_b)
+    assert {
+        (record["left_id"], record["right_id"]) for record in matched_a
+    } == {(record["left_id"], record["right_id"]) for record in matched_b}
+
+
+def test_invalid_amount_rows_do_not_match_when_amount_is_not_numeric(tmp_path: Path) -> None:
+    left = "id,reference,amount,date\nL-BAD,REF-INV,N/A?,2026-01-10\n"
+    right = "id,reference,amount,date\nR-1,REF-INV,0.00,2026-01-10\n"
+
+    result, matched = _run_match(tmp_path, left, right, run_name="invalid_amount")
+
+    assert result.result_count == 1
+    assert result.matched_count == 0
+    assert not matched

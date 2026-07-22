@@ -21,6 +21,7 @@ class EngineResult:
     stock_rows: int
     gl_rows: int
     summary: pd.DataFrame
+    reconciliation_signature: str = ""
 
 
 class ReconciliationEngine(Protocol):

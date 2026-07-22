@@ -19,6 +19,7 @@
 - Keep min-cost assignment as default for one-to-one scenarios.
 - Add explicit strategies for:
   - one-to-many and many-to-one where required,
+  - many-to-many where explicitly enabled,
   - partial/split/journal aggregation support behind configuration,
   - deterministic tie-breaking via canonical candidate keys and stable sort orders.
 - Apply identical candidate construction policy across stock-GL and platform match services.
@@ -35,3 +36,9 @@
 - Property-based tests for row-order invariance and cardinality invariants.
 - Cross-engine parity tests where multiple execution engines are present.
 - Security tests for path handling, uploads, and review authorization boundaries.
+
+## Phase 1 delivery note
+
+- Platform matching now meets row-order invariance goals for common duplicate-free identifier payloads using deterministic candidate generation + min-cost assignment.
+- CLI policy now exposes many-to-many matching as `--allow-many-to-many`.
+- Reference normalization is now part of matching scoring and candidate retrieval, with explicit explanation outputs.

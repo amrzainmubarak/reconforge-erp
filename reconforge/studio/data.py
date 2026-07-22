@@ -11,13 +11,12 @@ import pandas as pd
 from reconforge.config import load_config
 from reconforge.db import DatabaseError, connect, database_status, resolve_db_path
 from reconforge.io.readers import read_required_datasets
-from reconforge.review.state import ALLOWED_STATUSES
-from reconforge.schemas import DatasetName
 from reconforge.reconciliation.stock_gl import reconcile_stock_gl
 from reconforge.reconciliation.workorders import reconcile_workorders
 from reconforge.reports.wip_aging import generate_wip_aging
+from reconforge.review.state import ALLOWED_STATUSES
+from reconforge.schemas import DatasetName
 from reconforge.utils.safe_paths import is_safe_download_key
-
 
 DOWNLOAD_SUFFIXES = {".html", ".xlsx", ".csv", ".json", ".md", ".txt", ".yml", ".yaml"}
 DOC_SUFFIXES = {".md"}
@@ -162,8 +161,9 @@ def _filter_form(frame: pd.DataFrame) -> str:
             for column in ("severity", "risk_level")
             if column in frame.columns
             for value in frame[column].astype(str).str.strip()
-            if value
+            if value and str(value).lower() != "nan"
         },
+        key=lambda item: str(item),
     )
     exception_values = sorted(set(frame.get("exception_type", pd.Series(dtype=str)).astype(str).str.strip()) - {""})
     source_values = sorted(set(frame.get("source_file", pd.Series(dtype=str)).astype(str).str.strip()) - {""})
@@ -190,8 +190,8 @@ def _validate_auth_database(db_path: Path | str | None) -> Path:
         raise DatabaseError("ReconForge database has pending migrations. Run 'reconforge db migrate' first.")
     connection = connect(resolved, require_exists=True)
     try:
-        from reconforge.auth.repositories import ensure_auth_schema
         from reconforge.api.security import ensure_session_schema
+        from reconforge.auth.repositories import ensure_auth_schema
 
         ensure_auth_schema(connection)
         ensure_session_schema(connection)

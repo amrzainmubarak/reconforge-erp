@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 from html import escape
-from urllib.parse import quote
 from typing import Any
+from urllib.parse import quote
 
 import pandas as pd
 
@@ -189,9 +189,11 @@ def _form_value(payload: dict[str, list[str]], key: str, *, max_length: int = 50
 
 
 def _allowed_choice(value: str, allowed: list[str]) -> str:
+    normalized = str(value).strip().lower()
     for item in allowed:
-        if value.lower() == item.lower():
-            return item
+        item_text = str(item).strip().lower()
+        if normalized and item_text and normalized == item_text:
+            return str(item)
     return ""
 
 

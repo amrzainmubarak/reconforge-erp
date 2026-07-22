@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Any, cast
 
 import pandas as pd
@@ -38,12 +39,63 @@ _EXCEPTION_REASONS = {
     "data_quality": "A required financial amount is missing, malformed, or non-finite.",
 }
 
+_EXCEPTION_METADATA: dict[str, dict[str, str]] = {
+    "stock_without_gl": {
+        "title": "Stock movement without GL posting",
+        "explanation": "No GL posting was assigned to this stock movement.",
+        "suggested_action": "Verify whether the stock movement posted to a different GL period or account.",
+        "severity": "High",
+        "ownership": "Reconciliation analyst",
+        "workflow_status": "Open",
+    },
+    "gl_without_stock": {
+        "title": "GL posting without stock movement",
+        "explanation": "No stock movement matched this GL posting.",
+        "suggested_action": "Review posting source and mapping rules for missing stock activity.",
+        "severity": "High",
+        "ownership": "Accounting reviewer",
+        "workflow_status": "Open",
+    },
+    "value_difference": {
+        "title": "Material value difference",
+        "explanation": "Matched records are materially different after tolerance checks.",
+        "suggested_action": "Investigate cost/amount posting rules and verify source documents.",
+        "severity": "High",
+        "ownership": "Reconciliation analyst",
+        "workflow_status": "In Review",
+    },
+    "date_difference": {
+        "title": "Posting date mismatch",
+        "explanation": "Matched stock and GL records have an unexpected date gap.",
+        "suggested_action": "Review cutoff periods and late posting reasons.",
+        "severity": "Medium",
+        "ownership": "Controller",
+        "workflow_status": "In Review",
+    },
+    "reference_mismatch": {
+        "title": "Reference mismatch",
+        "explanation": "Normalized references do not reconcile to the same transaction family.",
+        "suggested_action": "Confirm normalization rules and update mapping when vendor references are inconsistent.",
+        "severity": "Medium",
+        "ownership": "Reconciliation analyst",
+        "workflow_status": "In Review",
+    },
+    "data_quality": {
+        "title": "Invalid financial amount",
+        "explanation": "The required amount could not be parsed as a valid finite decimal.",
+        "suggested_action": "Correct source data and rerun validation before matching.",
+        "severity": "Critical",
+        "ownership": "Data steward",
+        "workflow_status": "Open",
+    },
+}
 
-def _safe_amount(value: object) -> float:
+
+def _safe_amount(value: object) -> Decimal:
     try:
         return parse_amount(value)
     except InvalidAmountError:
-        return 0.0
+        return Decimal("0")
 
 
 def _exception_id(exception_type: str, row: pd.Series) -> str:
@@ -65,6 +117,17 @@ def _risk_columns(
     enriched = frame.copy()
     scores: list[int] = []
     levels: list[str] = []
+    metadata = _EXCEPTION_METADATA.get(
+        exception_type,
+        {
+            "title": exception_type.replace("_", " ").title(),
+            "explanation": _EXCEPTION_REASONS.get(exception_type, "Reconciliation exception"),
+            "suggested_action": "Review in workflow and document a decision.",
+            "severity": "Medium",
+            "ownership": "Reconciliation analyst",
+            "workflow_status": "Open",
+        },
+    )
     for _, row in enriched.iterrows():
         assessment = assess_risk(
             exception_type,
@@ -76,8 +139,14 @@ def _risk_columns(
         levels.append(assessment.level)
     enriched["exception_type"] = exception_type
     enriched["exception_reason"] = _EXCEPTION_REASONS[exception_type]
+    enriched["exception_title"] = metadata["title"]
+    enriched["exception_explanation"] = metadata["explanation"]
+    enriched["suggested_action"] = metadata["suggested_action"]
+    enriched["severity"] = metadata["severity"]
     enriched["risk_score"] = scores
     enriched["risk_level"] = levels
+    enriched["ownership"] = metadata["ownership"]
+    enriched["workflow_status"] = metadata["workflow_status"]
     enriched["exception_id"] = [
         _exception_id(exception_type, cast("pd.Series[Any]", row)) for _, row in enriched.iterrows()
     ]
@@ -140,9 +209,7 @@ def _build_match_rows(
         gl = cast("pd.Series[Any]", gl_entries.loc[match.gl_index])
         stock_amount = parse_amount(stock.get("total_cost"))
         gl_amount = parse_amount(gl.get("amount"))
-        value_difference = round(stock_amount - gl_amount, 2)
-        stock_date = stock.get("date")
-        gl_date = gl.get("date")
+        value_difference = (stock_amount - gl_amount).quantize(Decimal("0.01"))
         date_difference = match.date_difference
         assessment = assess_risk(
             "value_difference" if match.match_level == "Value Difference" else "matched",
@@ -284,7 +351,13 @@ def reconcile_stock_gl(
                 "exception_id",
                 "exception_type",
                 "exception_reason",
+                "exception_title",
+                "exception_explanation",
                 "evidence_reference",
+                "suggested_action",
+                "severity",
+                "ownership",
+                "workflow_status",
                 "risk_score",
                 "risk_level",
             ],

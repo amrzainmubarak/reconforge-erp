@@ -6,6 +6,7 @@ import sqlite3
 import time
 from collections import defaultdict, deque
 from threading import Lock
+from typing import cast
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials
@@ -40,6 +41,14 @@ _login_failures: dict[str, deque[float]] = defaultdict(deque)
 _login_failures_lock = Lock()
 
 
+def _failure_state(request: Request) -> tuple[dict[str, deque[float]], Lock]:
+    store = getattr(request.app.state, "login_failures", None)
+    lock = getattr(request.app.state, "login_failures_lock", None)
+    if not isinstance(store, dict) or lock is None:
+        return _login_failures, _login_failures_lock
+    return store, lock
+
+
 def _login_failure_key(request: Request, username: str) -> str:
     normalized_user = (username or "").strip().lower()
     client = request.client
@@ -51,30 +60,32 @@ def _now() -> float:
     return time.time()
 
 
-def _cleanup_and_get_attempts(key: str, now: float) -> deque[float]:
-    attempts = _login_failures[key]
+def _cleanup_and_get_attempts(attempts: deque[float], now: float) -> deque[float]:
     while attempts and attempts[0] < now - _LOGIN_ATTEMPT_WINDOW_SECONDS:
         attempts.popleft()
     return attempts
 
 
-def _is_rate_limited(key: str) -> bool:
+def _is_rate_limited_for_request(request: Request, key: str) -> bool:
     now = _now()
-    with _login_failures_lock:
-        attempts = _cleanup_and_get_attempts(key, now)
+    attempts_state, lock = _failure_state(request)
+    with lock:
+        attempts = _cleanup_and_get_attempts(attempts_state[key], now)
         return len(attempts) >= _MAX_LOGIN_ATTEMPTS
 
 
-def _record_failed_attempt(key: str) -> None:
+def _record_failed_attempt(request: Request, key: str) -> None:
     now = _now()
-    with _login_failures_lock:
-        attempts = _cleanup_and_get_attempts(key, now)
+    attempts_state, lock = _failure_state(request)
+    with lock:
+        attempts = _cleanup_and_get_attempts(attempts_state[key], now)
         attempts.append(now)
 
 
-def _clear_login_failures(key: str) -> None:
-    with _login_failures_lock:
-        _login_failures.pop(key, None)
+def _clear_login_failures(request: Request, key: str) -> None:
+    attempts_state, lock = _failure_state(request)
+    with lock:
+        attempts_state.pop(key, None)
 
 
 def _raise_rate_limited() -> None:
@@ -105,20 +116,20 @@ def login(
     """Create a local API session for valid local credentials."""
 
     key = _login_failure_key(request, payload.username)
-    if _is_rate_limited(key):
+    if _is_rate_limited_for_request(request, key):
         _raise_rate_limited()
 
     try:
         user = LocalAuthService(connection).authenticate_user(username=payload.username, password=payload.password)
         if user is None:
-            _record_failed_attempt(key)
+            _record_failed_attempt(request, key)
             _raise_invalid_credentials()
-        _clear_login_failures(key)
-        session = create_session(connection, user=user)
+        _clear_login_failures(request, key)
+        session = create_session(connection, user=cast(LocalUser, user))
     except APIError:
         raise
     except (DatabaseError, AuthRepositoryError, AuthServiceError, SessionError) as exc:
-        _record_failed_attempt(key)
+        _record_failed_attempt(request, key)
         raise APIError(status_code=401, code="invalid_credentials", message="Invalid username or password.") from exc
 
     return LoginResponse(access_token=session.token, expires_at=session.expires_at)

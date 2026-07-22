@@ -19,10 +19,17 @@
 
 ## Current gaps versus objective
 
-- Determinism and one-to-many matching behavior differ between matching implementations.
+- Determinism and one-to-many/many-to-many matching behavior are converging, but policy coverage is still incomplete for full financial modules.
 - Empty aggregation paths in some workflows are not yet hardened.
-- Decimal-backed monetary guarantees are partially implemented in parsing but still float-centric downstream.
+- Decimal-backed monetary guarantees are still inconsistent across all matching engines.
 - Persistence abstraction for hosted and tenant-safe operation is present in fragments and not consistently normalized across all modules.
+
+## Platform matching status (implemented this pass)
+
+- Platform matching now uses indexed candidate generation with min-cost assignment.
+- Reference normalization is applied for matching keys with stable normalized and raw value preservation in explanations.
+- One-to-many, many-to-one, and many-to-many behavior are policy-controlled in platform matching.
+- Deterministic matching regressions were added for row shuffles and explicit identifier fallback cases.
 
 ## Risk posture by component
 

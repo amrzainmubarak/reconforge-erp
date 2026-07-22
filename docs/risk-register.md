@@ -12,7 +12,7 @@
 
 ## R-002: Matching non-determinism across engines
 
-- **Status:** Open
+- **Status:** In Progress (platform matching flow now min-cost assignment with deterministic candidate ordering; broader cross-module parity continues)
 - **Likelihood:** Medium
 - **Impact:** High
 - **Description:** Platform matching implementation still uses greedy selection and may vary by row order under ambiguity.
@@ -39,3 +39,23 @@
 - **Owner:** Evidence module maintainer
 - **Controls:** Explicit empty-case handling and manifest generation from available files.
 - **Residual risk:** Low after this patch.
+
+## R-005: Invalid platform amount values can be interpreted as numeric zero
+
+- **Status:** Mitigated in platform matching.
+- **Likelihood:** Medium
+- **Impact:** High
+- **Description:** Rows with malformed amount fields were previously normalized to `0.0`, allowing deterministic matching to produce false matches.
+- **Owner:** Platform reconciliation maintainer
+- **Controls:** Strict amount parsing in matching candidate build and score paths; unmatched status for invalid records.
+- **Residual risk:** Low after strict parsing change; add broader dataset-type-specific validation before wider rollout.
+
+## R-006: Duplicate or structurally identical rows without explicit IDs can still challenge stable fallback IDs
+
+- **Status:** Open.
+- **Likelihood:** Low.
+- **Impact:** Medium.
+- **Description:** For identical records lacking stable identifiers, deterministic fallback suffixing still uses canonical grouping order and may require explicit source keys for audit-perfect traceability.
+- **Owner:** Platform matching maintainer.
+- **Controls:** Recommend upstream source ID mapping, or future schema migration to include source-side deterministic record keys.
+- **Residual risk:** Medium until deterministic lineage model is standardized in schema and API contracts.

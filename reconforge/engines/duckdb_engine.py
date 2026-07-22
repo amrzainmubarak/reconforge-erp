@@ -9,6 +9,7 @@ import pandas as pd
 
 from reconforge.config import ReconForgeConfig
 from reconforge.engines.base import EngineResult
+from reconforge.engines.signature import build_reconciliation_signature
 from reconforge.io.readers import coerce_dataset_types, find_dataset_file, read_table
 from reconforge.reconciliation.stock_gl import reconcile_stock_gl
 from reconforge.schemas import DatasetName
@@ -50,6 +51,10 @@ class DuckDBEngine:
             stock_rows=len(stock),
             gl_rows=len(gl),
             summary=result.summary.copy(),
+            reconciliation_signature=build_reconciliation_signature(
+                matched_transactions=result.matched_transactions,
+                all_exceptions=result.all_exceptions,
+            ),
         )
 
     @staticmethod

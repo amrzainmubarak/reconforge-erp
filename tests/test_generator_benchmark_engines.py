@@ -114,3 +114,6 @@ def test_duckdb_and_pandas_engines_make_equivalent_reconciliation_decisions(tmp_
     assert duckdb_result.matched_rows == pandas_result.matched_rows
     assert duckdb_result.exception_rows == pandas_result.exception_rows
     assert duckdb_result.summary.to_dict(orient="records") == pandas_result.summary.to_dict(orient="records")
+    assert duckdb_result.reconciliation_signature
+    assert pandas_result.reconciliation_signature
+    assert duckdb_result.reconciliation_signature == pandas_result.reconciliation_signature

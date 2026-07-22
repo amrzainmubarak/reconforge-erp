@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import uuid
+from collections import defaultdict, deque
 from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import cast
-from typing import Final
+from threading import Lock
+from typing import Final, cast
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -65,6 +66,8 @@ def create_api_app(db_path: Path | str) -> FastAPI:
         description="Local/self-hosted REST API foundation for ReconForge DB-backed workflows.",
     )
     app.state.db_path = resolved_db_path
+    app.state.login_failures = defaultdict(deque)
+    app.state.login_failures_lock = Lock()
 
     @app.middleware("http")
     async def add_request_id(request: Request, call_next: RequestResponseEndpoint) -> Response:

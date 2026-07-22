@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 
@@ -10,7 +9,7 @@ class InvalidAmountError(ValueError):
     """Raised when a financial value cannot be interpreted safely."""
 
 
-def parse_amount(value: object) -> float:
+def parse_amount(value: object) -> Decimal:
     """Parse a finite financial amount without silently substituting zero.
 
     Comma group separators and conventional accounting parentheses are
@@ -33,29 +32,30 @@ def parse_amount(value: object) -> float:
         raise InvalidAmountError("financial amount is not numeric") from exc
     if not parsed.is_finite():
         raise InvalidAmountError("financial amount must be finite")
-    amount = float(-parsed if negative else parsed)
-    if not math.isfinite(amount):
-        raise InvalidAmountError("financial amount must be finite")
-    return amount
+    return -parsed if negative else parsed
 
 
-def round_money(value: float | int | str | None, places: int = 2) -> float:
+def round_money(value: float | int | str | Decimal | None, places: int = 2) -> Decimal:
     """Round a monetary value using accounting-friendly half-up behavior."""
 
     if value is None:
-        return 0.0
-    decimal_value = Decimal(str(parse_amount(value)))
+        return Decimal("0")
+    decimal_value = parse_amount(value)
     quant = Decimal("1").scaleb(-places)
-    return float(decimal_value.quantize(quant, rounding=ROUND_HALF_UP))
+    return decimal_value.quantize(quant, rounding=ROUND_HALF_UP)
 
 
-def money_difference(left: float | int | None, right: float | int | None) -> float:
+def money_difference(left: float | int | str | Decimal | None, right: float | int | str | Decimal | None) -> Decimal:
     """Return a rounded absolute difference between two amounts."""
 
-    return abs(round_money(left or 0.0) - round_money(right or 0.0))
+    return abs(round_money(left or 0) - round_money(right or 0))
 
 
-def within_tolerance(left: float | int | None, right: float | int | None, tolerance: float) -> bool:
+def within_tolerance(
+    left: float | int | str | Decimal | None,
+    right: float | int | str | Decimal | None,
+    tolerance: float | int | str | Decimal,
+) -> bool:
     """Return true when two monetary values are within the configured tolerance."""
 
-    return money_difference(left, right) <= tolerance
+    return money_difference(left, right) <= round_money(tolerance)

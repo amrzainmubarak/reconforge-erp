@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import logging
+from html import escape
 from pathlib import Path
 from secrets import token_urlsafe
 from typing import cast
 from urllib.parse import parse_qs
-from html import escape
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Request
@@ -40,8 +40,6 @@ from reconforge.review.state import (
     save_review_state,
     update_review_status,
 )
-from reconforge.utils.safe_paths import build_download_registry, get_registered_download
-from reconforge.validators import issues_to_frame, validate_input_directory
 from reconforge.studio.components import (
     _allowed_choice,
     _bounded_search,
@@ -56,19 +54,21 @@ from reconforge.studio.components import (
     _table,
 )
 from reconforge.studio.data import (
-    DOWNLOAD_SUFFIXES,
     DOC_SUFFIXES,
+    DOWNLOAD_SUFFIXES,
     INVALID_REVIEW_STATUS_MESSAGE,
     _evidence_coverage_cards,
     _evidence_download_key,
-    _filter_form,
     _filter_exceptions,
+    _filter_form,
     _load_reconciliation,
+    _optional_studio_database,
     _read_generated_csv,
     _validate_auth_database,
-    _optional_studio_database,
 )
 from reconforge.studio.security import STUDIO_SESSION_COOKIE, _safe_denial_page
+from reconforge.utils.safe_paths import build_download_registry, get_registered_download
+from reconforge.validators import issues_to_frame, validate_input_directory
 
 logger = logging.getLogger(__name__)
 
@@ -188,18 +188,21 @@ def create_studio_app(
         message_type: str = "success",
     ) -> str:
         rec = _load_reconciliation(input_path)
+        review_state = load_review_state(output_path / "review_state.json")
         exceptions_frame = merge_review_state_with_exceptions(
             rec["exceptions"],
-            load_review_state(output_path / "review_state.json"),
+            review_state,
         )
+        selected_status = _allowed_choice(status, list(ALLOWED_STATUSES))
         severity_values = sorted(
             {
                 value
                 for column in ("severity", "risk_level")
                 if column in exceptions_frame.columns
                 for value in exceptions_frame[column].astype(str).str.strip()
-                if value
+                if value and str(value).lower() != "nan"
             },
+            key=lambda item: str(item),
         )
         exception_values = sorted(set(exceptions_frame.get("exception_type", pd.Series(dtype=str)).astype(str).str.strip()) - {""})
         source_values = sorted(set(exceptions_frame.get("source_file", pd.Series(dtype=str)).astype(str).str.strip()) - {""})
@@ -207,12 +210,38 @@ def create_studio_app(
             exceptions_frame,
             severity=_allowed_choice(severity, severity_values),
             exception_type=_allowed_choice(exception_type, exception_values),
-            status=_allowed_choice(status, list(ALLOWED_STATUSES)),
+            status=selected_status,
             source_file=_allowed_choice(source_file, source_values),
             search=_bounded_search(search),
             min_amount=min_amount,
             sort=_allowed_choice(sort, ["risk_score", "amount_impact", "updated_at"]) or "risk_score",
         )
+        if selected_status:
+            reviewed_ids = set(exceptions_frame["exception_id"].astype(str))
+            orphan_rows: list[dict[str, object]] = []
+            for exception_id, review_entry in review_state.items():
+                if str(review_entry.get("status", "")).strip() != selected_status:
+                    continue
+                if str(exception_id).strip() in reviewed_ids:
+                    continue
+                orphan_rows.append({column: "" for column in exceptions_frame.columns})
+                orphan_rows[-1]["exception_id"] = exception_id
+                for field in (
+                    "status",
+                    "reviewer",
+                    "note",
+                    "updated_at",
+                    "decision_reason",
+                    "accepted_risk_reason",
+                    "escalation_owner",
+                ):
+                    orphan_rows[-1][field] = review_entry.get(field, "")
+            if orphan_rows:
+                filtered = pd.concat(
+                    [filtered, pd.DataFrame(orphan_rows, columns=exceptions_frame.columns)],
+                    ignore_index=True,
+                    sort=False,
+                )
         form = _filter_form(exceptions_frame)
         empty_message = "<p>No exceptions match the current filters.</p>" if filtered.empty else ""
         body = (
@@ -397,9 +426,15 @@ def create_studio_app(
                 message_type="error",
             )
         save_review_state(state_path, state)
+        details: list[str] = []
+        if entry.get("reviewer"):
+            details.append(f"reviewer={entry['reviewer']}")
+        if entry.get("note"):
+            details.append(f"note={entry['note']}")
+        detail_message = f" ({'; '.join(details)})" if details else ""
         return _render_exceptions_page(
             status=entry["status"],
-            message=f"Review updated for {entry['exception_id']} as {entry['status']}.",
+            message=f"Review updated for {entry['exception_id']} as {entry['status']}.{detail_message}",
         )
 
     @app.get("/rule-results", response_class=HTMLResponse)

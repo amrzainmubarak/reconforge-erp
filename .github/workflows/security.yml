@@ -26,10 +26,12 @@ jobs:
           cache: pip
 
       - name: Install security tools
-        run: python -m pip install --require-hashes -r requirements-security.lock
+        run: |
+          python -m pip install bandit pip-audit
+          python -m pip install -e .
 
       - name: Bandit
         run: bandit -q -r reconforge
 
       - name: pip-audit
-        run: pip-audit -r requirements.txt
+        run: pip-audit

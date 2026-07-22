@@ -62,6 +62,29 @@ def test_matching_is_deterministic_after_shuffling_left_rows(tmp_path: Path) -> 
     assert len(matched_a) == 2
 
 
+def test_matching_is_deterministic_after_shuffling_right_rows(tmp_path: Path) -> None:
+    left = (
+        "id,reference,amount,date\n"
+        "L-A,REF-INV,100.00,2026-01-10\n"
+        "L-B,REF-INV,100.00,2026-01-10\n"
+    )
+    right_records = [
+        "id,reference,amount,date",
+        "R-A,REF-INV,100.00,2026-01-10",
+        "R-B,REF-INV,100.00,2026-01-10",
+    ]
+    right = "\n".join(right_records) + "\n"
+    right_shuffled = right_records[0] + "\n" + "\n".join(reversed(right_records[1:])) + "\n"
+
+    _, matched_a = _run_match(tmp_path, left, right, allow_many_to_one=False, run_name="base_right")
+    _, matched_b = _run_match(tmp_path, left, right_shuffled, allow_many_to_one=False, run_name="shuffled_right")
+
+    matched_pairs_a = {(row["left_id"], row["right_id"]) for row in matched_a}
+    matched_pairs_b = {(row["left_id"], row["right_id"]) for row in matched_b}
+    assert matched_pairs_a == matched_pairs_b
+    assert len(matched_a) == 2
+
+
 def test_matching_allows_many_to_one_when_enabled(tmp_path: Path) -> None:
     left = (
         "id,reference,amount,date\n"

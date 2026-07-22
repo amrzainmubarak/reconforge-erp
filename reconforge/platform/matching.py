@@ -266,9 +266,7 @@ class MatchingService:
             exact_fields=exact_field_list,
             amount_tolerance=amount_tolerance,
             date_window_days=date_window_days,
-            left_id_field=left_id_field,
             right_id_field=right_id_field,
-            right_records=right_records,
             right_id_prefix="R",
         )
         selected_matches = self._minimum_cost_assignment(ordered_candidates, allow_many_to_one=allow_many_to_one)
@@ -330,7 +328,11 @@ class MatchingService:
         reference_field: str,
         exact_fields: list[str],
     ) -> dict[str, dict[str, list[tuple[int, dict[str, Any]]]]:
-        indexes: dict[str, dict[str, list[dict[str, Any]]]] = {"reference": {}, "amount": {}, "exact": {}}
+        indexes: dict[str, dict[str, list[tuple[int, dict[str, Any]]]] = {
+            "reference": {},
+            "amount": {},
+            "exact": {},
+        }
         for index, record in enumerate(right_records):
             record.setdefault(right_id_field, f"R-{index}")
             reference = normalize_text(record.get(reference_field))
@@ -346,7 +348,7 @@ class MatchingService:
     def _candidates(
         self,
         left: dict[str, Any],
-        right_index: dict[str, dict[str, list[dict[str, Any]]]],
+        right_index: dict[str, dict[str, list[tuple[int, dict[str, Any]]]],
         *,
         amount_field: str,
         reference_field: str,
@@ -388,9 +390,7 @@ class MatchingService:
         exact_fields: list[str],
         amount_tolerance: float,
         date_window_days: int,
-        left_id_field: str,
         right_id_field: str,
-        right_records: list[dict[str, Any]],
         right_id_prefix: str,
     ) -> list[_MatchCandidate]:
         candidates: list[_MatchCandidate] = []

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/ledger_control_trial_balance.schema.json",
+  "title": "ReconForge Ledger-Control Trial Balance",
+  "description": "Validated local control-ledger aggregation for one organization, legal entity, and fiscal period.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "source", "workspace", "organization_code", "entity_code", "period_id", "period_name", "currency_code", "currency_minor_units", "totals", "accounts"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "local_first", "external_calls"],
+      "properties": {"kind": {"const": "local-ledger-control"}, "local_first": {"const": true}, "external_calls": {"const": false}}
+    },
+    "workspace": {"$ref": "#/$defs/text"}, "organization_code": {"$ref": "#/$defs/text"},
+    "entity_code": {"$ref": "#/$defs/text"}, "period_id": {"$ref": "#/$defs/text"},
+    "period_name": {"$ref": "#/$defs/text"}, "currency_code": {"$ref": "#/$defs/text"},
+    "currency_minor_units": {"type": "integer", "minimum": 0, "maximum": 6},
+    "totals": {"$ref": "#/$defs/totals"},
+    "accounts": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/account"}}
+  },
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "decimal": {"type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$"},
+    "totals": {
+      "type": "object", "additionalProperties": false,
+      "required": ["debit_minor", "credit_minor", "balanced", "debit", "credit"],
+      "properties": {
+        "debit_minor": {"type": "integer", "minimum": 0}, "credit_minor": {"type": "integer", "minimum": 0},
+        "balanced": {"type": "boolean"}, "debit": {"$ref": "#/$defs/decimal"}, "credit": {"$ref": "#/$defs/decimal"}
+      }
+    },
+    "account": {
+      "type": "object", "additionalProperties": false,
+      "required": ["account_code", "account_name", "account_type", "normal_balance", "debit_minor", "credit_minor", "balance_minor", "debit", "credit", "balance"],
+      "properties": {
+        "account_code": {"$ref": "#/$defs/text"}, "account_name": {"$ref": "#/$defs/text"},
+        "account_type": {"$ref": "#/$defs/text"}, "normal_balance": {"$ref": "#/$defs/text"},
+        "debit_minor": {"type": "integer", "minimum": 0}, "credit_minor": {"type": "integer", "minimum": 0},
+        "balance_minor": {"type": "integer"}, "debit": {"$ref": "#/$defs/decimal"},
+        "credit": {"$ref": "#/$defs/decimal"}, "balance": {"$ref": "#/$defs/decimal"}
+      }
+    }
+  }
+}

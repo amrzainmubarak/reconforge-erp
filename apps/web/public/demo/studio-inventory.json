@@ -1,0 +1,325 @@
+{
+  "cost_layers": [
+    {
+      "currency_code": "GBP",
+      "entity_code": "SYN-UK01",
+      "item_code": "SYN-SENSOR-001",
+      "item_name": "Synthetic sensor module",
+      "layer_id": "SYN-LAYER-UK-0017-01",
+      "layer_status": "Open",
+      "lot_serial_code": "SER-SYN-0042",
+      "original_quantity": "1",
+      "original_value": "185.00",
+      "remaining_quantity": "1",
+      "remaining_value": "185.00",
+      "uom_code": "EA",
+      "valuation_number": "VAL/SYN/0017"
+    },
+    {
+      "currency_code": "USD",
+      "entity_code": "SYN-US01",
+      "item_code": "SYN-PART-001",
+      "item_name": "Synthetic brake pad kit",
+      "layer_id": "SYN-LAYER-US-0048-01",
+      "layer_status": "Open",
+      "lot_serial_code": "LOT-SYN-2605",
+      "original_quantity": "180",
+      "original_value": "4500.00",
+      "remaining_quantity": "148",
+      "remaining_value": "3700.00",
+      "uom_code": "EA",
+      "valuation_number": "VAL/SYN/0048"
+    }
+  ],
+  "count_sessions": [
+    {
+      "adjustment_movement_number": "",
+      "count_date": "2026-05-30",
+      "count_number": "COUNT/SYN/0025",
+      "counted_line_count": 1,
+      "entity_code": "SYN-US01",
+      "line_count": 2,
+      "location_code": "STOCK",
+      "status": "Counting",
+      "variance_line_count": 0,
+      "warehouse_code": "SYN-US-MAIN"
+    },
+    {
+      "adjustment_movement_number": "ADJ/SYN/0007",
+      "count_date": "2026-05-28",
+      "count_number": "COUNT/SYN/0024",
+      "counted_line_count": 1,
+      "entity_code": "SYN-MX01",
+      "line_count": 1,
+      "location_code": "QUARANTINE",
+      "status": "Approved",
+      "variance_line_count": 1,
+      "warehouse_code": "SYN-MX-DIST"
+    }
+  ],
+  "exceptions": [
+    {
+      "control_code": "INV-EXPIRED-STOCK",
+      "description": "Synthetic positive on-hand is assigned to an expired tracked lot.",
+      "exception_id": "SYN-INV-EXC-B1B39D4F3156",
+      "item_code": "SYN-LUBE-001",
+      "location": "SYN-US-MAIN/BULK",
+      "quantity": "72.500",
+      "risk_rating": "high"
+    },
+    {
+      "control_code": "INV-NEGATIVE-STOCK",
+      "description": "Posted local movements produce a synthetic negative on-hand quantity.",
+      "exception_id": "SYN-INV-EXC-91A997B5B85C",
+      "item_code": "SYN-PART-003",
+      "location": "SYN-MX-DIST/QUARANTINE",
+      "quantity": "-3",
+      "risk_rating": "high"
+    },
+    {
+      "control_code": "INV-MISSING-ACCOUNT",
+      "description": "Synthetic active stock item has no local inventory account reference.",
+      "exception_id": "SYN-INV-EXC-1ED71D3E1535",
+      "item_code": "SYN-PART-002",
+      "location": "",
+      "quantity": "",
+      "risk_rating": "medium"
+    }
+  ],
+  "generated_at": "2026-06-01T09:00:00Z",
+  "movements": [
+    {
+      "entity_code": "SYN-MX01",
+      "from_location": "SYN-MX-DIST/QUARANTINE",
+      "line_count": 1,
+      "movement_date": "2026-05-29",
+      "movement_number": "ADJ/SYN/0007",
+      "movement_type": "Adjustment",
+      "quantity": "3",
+      "status": "Draft",
+      "to_location": ""
+    },
+    {
+      "entity_code": "SYN-UK01",
+      "from_location": "SYN-UK-SERVICE/SECURE",
+      "line_count": 1,
+      "movement_date": "2026-05-19",
+      "movement_number": "DLV/SYN/0032",
+      "movement_type": "Delivery",
+      "quantity": "1",
+      "status": "Posted",
+      "to_location": ""
+    },
+    {
+      "entity_code": "SYN-US01",
+      "from_location": "SYN-US-MAIN/STOCK",
+      "line_count": 1,
+      "movement_date": "2026-05-12",
+      "movement_number": "TRF/SYN/0019",
+      "movement_type": "Transfer",
+      "quantity": "25.500",
+      "status": "Posted",
+      "to_location": "SYN-US-MAIN/BULK"
+    },
+    {
+      "entity_code": "SYN-US01",
+      "from_location": "",
+      "line_count": 2,
+      "movement_date": "2026-05-04",
+      "movement_number": "RCV/SYN/0048",
+      "movement_type": "Receipt",
+      "quantity": "180",
+      "status": "Posted",
+      "to_location": "SYN-US-MAIN/STOCK"
+    }
+  ],
+  "notices": [
+    "Synthetic inventory-control data only",
+    "Read-only: Posted refers to the local ReconForge control ledger only",
+    "FIFO valuation, reversal, and Finance Draft rows are read-only synthetic previews; Draft does not mean validated posting",
+    "No purchasing, automatic finance validation, source-ERP posting, or ERP writeback is performed"
+  ],
+  "on_hand": [
+    {
+      "entity_code": "SYN-MX01",
+      "item_code": "SYN-PART-002",
+      "item_name": "Synthetic filter element",
+      "location_code": "PICK",
+      "lot_serial_code": "",
+      "quantity": "94",
+      "tracking_type": "None",
+      "uom_code": "EA",
+      "warehouse_code": "SYN-MX-DIST",
+      "warehouse_name": "LATAM distribution store"
+    },
+    {
+      "entity_code": "SYN-MX01",
+      "item_code": "SYN-PART-003",
+      "item_name": "Synthetic belt assembly",
+      "location_code": "QUARANTINE",
+      "lot_serial_code": "",
+      "quantity": "-3",
+      "tracking_type": "None",
+      "uom_code": "EA",
+      "warehouse_code": "SYN-MX-DIST",
+      "warehouse_name": "LATAM distribution store"
+    },
+    {
+      "entity_code": "SYN-UK01",
+      "item_code": "SYN-SENSOR-001",
+      "item_name": "Synthetic sensor module",
+      "location_code": "SECURE",
+      "lot_serial_code": "SER-SYN-0042",
+      "quantity": "1",
+      "tracking_type": "Serial",
+      "uom_code": "EA",
+      "warehouse_code": "SYN-UK-SERVICE",
+      "warehouse_name": "EMEA service store"
+    },
+    {
+      "entity_code": "SYN-US01",
+      "item_code": "SYN-LUBE-001",
+      "item_name": "Synthetic workshop lubricant",
+      "location_code": "BULK",
+      "lot_serial_code": "LOT-SYN-2604",
+      "quantity": "72.500",
+      "tracking_type": "Lot",
+      "uom_code": "L",
+      "warehouse_code": "SYN-US-MAIN",
+      "warehouse_name": "North main store"
+    },
+    {
+      "entity_code": "SYN-US01",
+      "item_code": "SYN-PART-001",
+      "item_name": "Synthetic brake pad kit",
+      "location_code": "STOCK",
+      "lot_serial_code": "LOT-SYN-2605",
+      "quantity": "148",
+      "tracking_type": "Lot",
+      "uom_code": "EA",
+      "warehouse_code": "SYN-US-MAIN",
+      "warehouse_name": "North main store"
+    }
+  ],
+  "reorder_signals": [
+    {
+      "item_code": "SYN-PART-003",
+      "item_name": "Synthetic belt assembly",
+      "lead_time_days": 12,
+      "location_code": "QUARANTINE",
+      "minimum_quantity": "5",
+      "on_hand_quantity": "-3",
+      "risk_rating": "high",
+      "signal_id": "SYN-INV-REORDER-A266563FD1CA",
+      "suggested_quantity": "21",
+      "target_quantity": "18",
+      "uom_code": "EA",
+      "warehouse_code": "SYN-MX-DIST"
+    },
+    {
+      "item_code": "SYN-PART-002",
+      "item_name": "Synthetic filter element",
+      "lead_time_days": 8,
+      "location_code": "PICK",
+      "minimum_quantity": "100",
+      "on_hand_quantity": "94",
+      "risk_rating": "medium",
+      "signal_id": "SYN-INV-REORDER-17B28838D508",
+      "suggested_quantity": "66",
+      "target_quantity": "160",
+      "uom_code": "EA",
+      "warehouse_code": "SYN-MX-DIST"
+    }
+  ],
+  "schema_version": 1,
+  "source": {
+    "external_calls": false,
+    "kind": "reconforge-enterprise-demo",
+    "local_first": true
+  },
+  "summary": {
+    "count_session_count": 2,
+    "exception_count": 3,
+    "finance_draft_count": 3,
+    "item_count": 5,
+    "location_count": 5,
+    "movement_count": 4,
+    "open_cost_layer_count": 2,
+    "posted_movement_count": 3,
+    "reorder_signal_count": 2,
+    "valuation_document_count": 2,
+    "valuation_reversal_count": 1,
+    "warehouse_count": 3
+  },
+  "synthetic_data_marker": "SYNTHETIC_ENTERPRISE_DEMO_ONLY",
+  "synthetic_data_only": true,
+  "valuation_reversals": [
+    {
+      "currency_code": "GBP",
+      "entity_code": "SYN-UK01",
+      "finance_entry_number": "IVR-IVR/SYN/0032",
+      "finance_entry_status": "Draft",
+      "layer_effect": "Restore",
+      "layer_effect_count": 1,
+      "original_movement_type": "Delivery",
+      "original_valuation_number": "VAL/SYN/0032",
+      "reversal_date": "2026-05-23",
+      "reversal_movement_number": "REV/DLV/SYN/0032",
+      "reversal_movement_type": "Receipt",
+      "reversal_number": "IVR/SYN/0032",
+      "status": "Approved",
+      "total_value": "185.00"
+    }
+  ],
+  "valuations": [
+    {
+      "costing_method": "FIFO",
+      "currency_code": "GBP",
+      "entity_code": "SYN-UK01",
+      "finance_entry_number": "IV-VAL/SYN/0032",
+      "finance_entry_status": "Draft",
+      "movement_number": "DLV/SYN/0032",
+      "movement_type": "Delivery",
+      "status": "Approved",
+      "total_value": "185.00",
+      "valuation_date": "2026-05-19",
+      "valuation_number": "VAL/SYN/0032"
+    },
+    {
+      "costing_method": "FIFO",
+      "currency_code": "USD",
+      "entity_code": "SYN-US01",
+      "finance_entry_number": "IV-VAL/SYN/0048",
+      "finance_entry_status": "Draft",
+      "movement_number": "RCV/SYN/0048",
+      "movement_type": "Receipt",
+      "status": "Approved",
+      "total_value": "4500.00",
+      "valuation_date": "2026-05-04",
+      "valuation_number": "VAL/SYN/0048"
+    }
+  ],
+  "warehouses": [
+    {
+      "entity_code": "SYN-MX01",
+      "negative_lines": 1,
+      "on_hand_lines": 2,
+      "warehouse_code": "SYN-MX-DIST",
+      "warehouse_name": "LATAM distribution store"
+    },
+    {
+      "entity_code": "SYN-UK01",
+      "negative_lines": 0,
+      "on_hand_lines": 1,
+      "warehouse_code": "SYN-UK-SERVICE",
+      "warehouse_name": "EMEA service store"
+    },
+    {
+      "entity_code": "SYN-US01",
+      "negative_lines": 0,
+      "on_hand_lines": 2,
+      "warehouse_code": "SYN-US-MAIN",
+      "warehouse_name": "North main store"
+    }
+  ]
+}

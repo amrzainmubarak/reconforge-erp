@@ -21,7 +21,24 @@ from reconforge.api.errors import (
     unhandled_error_handler,
     validation_error_handler,
 )
-from reconforge.api.routes import accounts, audit, auth, close, exceptions, health, metrics, roles, users, workflow
+from reconforge.api.routes import (
+    accounts,
+    audit,
+    auth,
+    close,
+    exceptions,
+    finance_core,
+    health,
+    inventory_core,
+    inventory_planning,
+    inventory_valuation,
+    inventory_valuation_reversal,
+    master_data,
+    metrics,
+    roles,
+    users,
+    workflow,
+)
 from reconforge.db import resolve_db_path
 
 ExceptionHandler = Callable[[Request, Exception], Response | Awaitable[Response]]
@@ -60,4 +77,10 @@ def create_api_app(db_path: Path | str) -> FastAPI:
     app.include_router(close.router, prefix="/api/v1")
     app.include_router(exceptions.router, prefix="/api/v1")
     app.include_router(metrics.router, prefix="/api/v1")
+    app.include_router(master_data.router, prefix="/api/v1")
+    app.include_router(finance_core.router, prefix="/api/v1")
+    app.include_router(inventory_core.router, prefix="/api/v1")
+    app.include_router(inventory_planning.router, prefix="/api/v1")
+    app.include_router(inventory_valuation.router, prefix="/api/v1")
+    app.include_router(inventory_valuation_reversal.router, prefix="/api/v1")
     return app

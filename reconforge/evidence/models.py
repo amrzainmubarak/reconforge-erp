@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field
+
+from reconforge.utils.time import utc_now_text
 
 
 class EvidenceCase(BaseModel):
@@ -40,7 +41,7 @@ class EvidenceCase(BaseModel):
     reviewed_at: str = ""
     certification_status: str = ""
     certification_note: str = ""
-    generated_at: str = Field(default_factory=lambda: datetime.utcnow().replace(microsecond=0).isoformat() + "Z")
+    generated_at: str = Field(default_factory=utc_now_text)
 
 
 class EvidenceArtifact(BaseModel):

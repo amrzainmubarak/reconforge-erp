@@ -87,3 +87,12 @@ check_untyped_defs = true
 warn_unused_ignores = true
 warn_return_any = false
 no_implicit_optional = true
+follow_imports_for_stubs = true
+
+[[tool.mypy.overrides]]
+module = ["numpy", "numpy.*", "pandas", "pandas.*"]
+# Current NumPy stubs use Python 3.12 type-alias syntax and Pandas 3 stubs
+# infer several DataFrame operations incompatibly under a Python 3.11 target.
+# Runtime behavior remains covered by the Python test suite; keep this type
+# gate focused on ReconForge code until the supported Python floor moves.
+follow_imports = "skip"

@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/inventory_core_snapshot.schema.json",
+  "title": "ReconForge Inventory Core Snapshot",
+  "description": "Versioned, bounded, path-free snapshot of local inventory masters and movement headers.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "source", "workspace", "summary", "units_of_measure", "items", "warehouses", "locations", "lots_and_serials", "movements"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "generated_at": {"$ref": "#/$defs/timestamp"},
+    "source": {"$ref": "#/$defs/source"},
+    "workspace": {"$ref": "#/$defs/text"},
+    "summary": {"$ref": "#/$defs/summary"},
+    "units_of_measure": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/uom"}},
+    "items": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/item"}},
+    "warehouses": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/warehouse"}},
+    "locations": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/location"}},
+    "lots_and_serials": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/lot"}},
+    "movements": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/movement"}}
+  },
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "optionalText": {"type": "string", "maxLength": 2000},
+    "nullableText": {"oneOf": [{"type": "string", "maxLength": 2000}, {"type": "null"}]},
+    "timestamp": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"},
+    "nullableTimestamp": {"oneOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]},
+    "date": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "nullableDate": {"oneOf": [{"$ref": "#/$defs/date"}, {"type": "null"}]},
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "local_first", "external_calls"],
+      "properties": {
+        "kind": {"const": "local-inventory-core"},
+        "local_first": {"const": true},
+        "external_calls": {"const": false}
+      }
+    },
+    "summary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["workspace", "units_of_measure", "items", "warehouses", "locations", "lots_and_serials", "draft_movements", "posted_movements", "voided_movements"],
+      "properties": {
+        "workspace": {"$ref": "#/$defs/text"},
+        "units_of_measure": {"type": "integer", "minimum": 0},
+        "items": {"type": "integer", "minimum": 0},
+        "warehouses": {"type": "integer", "minimum": 0},
+        "locations": {"type": "integer", "minimum": 0},
+        "lots_and_serials": {"type": "integer", "minimum": 0},
+        "draft_movements": {"type": "integer", "minimum": 0},
+        "posted_movements": {"type": "integer", "minimum": 0},
+        "voided_movements": {"type": "integer", "minimum": 0}
+      }
+    },
+    "uom": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "workspace_id", "uom_code", "name", "category", "decimal_places", "active", "created_at", "updated_at"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"}, "workspace_id": {"$ref": "#/$defs/text"},
+        "uom_code": {"$ref": "#/$defs/text"}, "name": {"$ref": "#/$defs/text"},
+        "category": {"enum": ["Count", "Weight", "Volume", "Length", "Time", "Custom"]},
+        "decimal_places": {"type": "integer", "minimum": 0, "maximum": 6},
+        "active": {"type": "boolean"}, "created_at": {"$ref": "#/$defs/timestamp"},
+        "updated_at": {"$ref": "#/$defs/timestamp"}
+      }
+    },
+    "item": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "workspace_id", "organization_id", "item_code", "name", "item_type", "tracking_mode", "uom_id", "inventory_account_id", "description", "active", "created_at", "updated_at", "organization_code", "uom_code", "decimal_places", "inventory_account_code"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"}, "workspace_id": {"$ref": "#/$defs/text"},
+        "organization_id": {"$ref": "#/$defs/nullableText"}, "item_code": {"$ref": "#/$defs/text"},
+        "name": {"$ref": "#/$defs/text"}, "item_type": {"enum": ["Stock", "Consumable", "Service"]},
+        "tracking_mode": {"enum": ["None", "Lot", "Serial"]}, "uom_id": {"$ref": "#/$defs/text"},
+        "inventory_account_id": {"$ref": "#/$defs/nullableText"}, "description": {"$ref": "#/$defs/optionalText"},
+        "active": {"type": "boolean"}, "created_at": {"$ref": "#/$defs/timestamp"},
+        "updated_at": {"$ref": "#/$defs/timestamp"}, "organization_code": {"$ref": "#/$defs/nullableText"},
+        "uom_code": {"$ref": "#/$defs/text"}, "decimal_places": {"type": "integer", "minimum": 0, "maximum": 6},
+        "inventory_account_code": {"$ref": "#/$defs/nullableText"}
+      }
+    },
+    "warehouse": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "workspace_id", "organization_id", "legal_entity_id", "warehouse_code", "name", "active", "created_at", "updated_at", "organization_code", "entity_code"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"}, "workspace_id": {"$ref": "#/$defs/text"},
+        "organization_id": {"$ref": "#/$defs/text"}, "legal_entity_id": {"$ref": "#/$defs/nullableText"},
+        "warehouse_code": {"$ref": "#/$defs/text"}, "name": {"$ref": "#/$defs/text"},
+        "active": {"type": "boolean"}, "created_at": {"$ref": "#/$defs/timestamp"},
+        "updated_at": {"$ref": "#/$defs/timestamp"}, "organization_code": {"$ref": "#/$defs/text"},
+        "entity_code": {"$ref": "#/$defs/nullableText"}
+      }
+    },
+    "location": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "warehouse_id", "parent_location_id", "location_code", "name", "location_type", "allow_negative", "active", "created_at", "updated_at", "warehouse_code", "organization_code", "parent_location_code"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"}, "warehouse_id": {"$ref": "#/$defs/text"},
+        "parent_location_id": {"$ref": "#/$defs/nullableText"}, "location_code": {"$ref": "#/$defs/text"},
+        "name": {"$ref": "#/$defs/text"},
+        "location_type": {"enum": ["Internal", "Transit", "Supplier", "Customer", "Adjustment"]},
+        "allow_negative": {"type": "boolean"}, "active": {"type": "boolean"},
+        "created_at": {"$ref": "#/$defs/timestamp"}, "updated_at": {"$ref": "#/$defs/timestamp"},
+        "warehouse_code": {"$ref": "#/$defs/text"}, "organization_code": {"$ref": "#/$defs/text"},
+        "parent_location_code": {"$ref": "#/$defs/nullableText"}
+      }
+    },
+    "lot": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "workspace_id", "organization_id", "item_id", "lot_serial_code", "tracking_type", "manufactured_on", "expires_on", "active", "created_at", "updated_at", "item_code", "organization_code"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"}, "workspace_id": {"$ref": "#/$defs/text"},
+        "organization_id": {"$ref": "#/$defs/text"}, "item_id": {"$ref": "#/$defs/text"},
+        "lot_serial_code": {"$ref": "#/$defs/text"}, "tracking_type": {"enum": ["Lot", "Serial"]},
+        "manufactured_on": {"$ref": "#/$defs/nullableDate"}, "expires_on": {"$ref": "#/$defs/nullableDate"},
+        "active": {"type": "boolean"}, "created_at": {"$ref": "#/$defs/timestamp"},
+        "updated_at": {"$ref": "#/$defs/timestamp"}, "item_code": {"$ref": "#/$defs/text"},
+        "organization_code": {"$ref": "#/$defs/text"}
+      }
+    },
+    "movement": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "workspace_id", "organization_id", "legal_entity_id", "period_id", "movement_number", "movement_type", "movement_date", "source_reference", "description", "source_type", "status", "created_by", "posted_by", "posted_at", "post_reason", "voided_by", "voided_at", "void_reason", "created_at", "updated_at", "organization_code", "entity_code", "period_name", "line_count"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"}, "workspace_id": {"$ref": "#/$defs/text"},
+        "organization_id": {"$ref": "#/$defs/text"}, "legal_entity_id": {"$ref": "#/$defs/text"},
+        "period_id": {"$ref": "#/$defs/text"}, "movement_number": {"$ref": "#/$defs/text"},
+        "movement_type": {"enum": ["Receipt", "Delivery", "Transfer", "Adjustment"]},
+        "movement_date": {"$ref": "#/$defs/date"}, "source_reference": {"$ref": "#/$defs/optionalText"},
+        "description": {"$ref": "#/$defs/text"}, "source_type": {"enum": ["Manual", "Imported", "Generated"]},
+        "status": {"enum": ["Draft", "Posted", "Voided"]}, "created_by": {"$ref": "#/$defs/text"},
+        "posted_by": {"$ref": "#/$defs/optionalText"}, "posted_at": {"$ref": "#/$defs/nullableTimestamp"},
+        "post_reason": {"$ref": "#/$defs/optionalText"}, "voided_by": {"$ref": "#/$defs/optionalText"},
+        "voided_at": {"$ref": "#/$defs/nullableTimestamp"}, "void_reason": {"$ref": "#/$defs/optionalText"},
+        "created_at": {"$ref": "#/$defs/timestamp"}, "updated_at": {"$ref": "#/$defs/timestamp"},
+        "organization_code": {"$ref": "#/$defs/text"}, "entity_code": {"$ref": "#/$defs/text"},
+        "period_name": {"$ref": "#/$defs/text"}, "line_count": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

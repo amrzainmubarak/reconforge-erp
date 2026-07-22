@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/inventory_valuation_document.schema.json",
+  "title": "ReconForge Inventory Valuation Document",
+  "description": "One governed FIFO valuation header with exact input, valuation, and cost-layer consumption evidence.",
+  "type": "object",
+  "required": ["id", "workspace_id", "organization_id", "legal_entity_id", "period_id", "movement_id", "policy_id", "valuation_number", "valuation_date", "currency_code", "status", "finance_entry_id", "created_by", "approved_by", "approved_at", "approval_reason", "cancelled_by", "cancelled_at", "cancel_reason", "created_at", "updated_at", "movement_number", "movement_type", "movement_status", "organization_code", "entity_code", "period_name", "policy_code", "costing_method", "finance_entry_number", "finance_entry_status", "total_value", "input_costs", "lines", "layer_consumptions"],
+  "properties": {
+    "id": {"$ref": "#/$defs/text"},
+    "workspace_id": {"$ref": "#/$defs/text"},
+    "organization_id": {"$ref": "#/$defs/text"},
+    "legal_entity_id": {"$ref": "#/$defs/text"},
+    "period_id": {"$ref": "#/$defs/text"},
+    "movement_id": {"$ref": "#/$defs/text"},
+    "policy_id": {"$ref": "#/$defs/text"},
+    "valuation_number": {"$ref": "#/$defs/text"},
+    "valuation_date": {"$ref": "#/$defs/date"},
+    "currency_code": {"$ref": "#/$defs/text"},
+    "status": {"enum": ["Draft", "Approved", "Cancelled"]},
+    "finance_entry_id": {"$ref": "#/$defs/nullableText"},
+    "created_by": {"$ref": "#/$defs/text"},
+    "approved_by": {"$ref": "#/$defs/optionalText"},
+    "approved_at": {"$ref": "#/$defs/nullableTimestamp"},
+    "approval_reason": {"$ref": "#/$defs/optionalText"},
+    "cancelled_by": {"$ref": "#/$defs/optionalText"},
+    "cancelled_at": {"$ref": "#/$defs/nullableTimestamp"},
+    "cancel_reason": {"$ref": "#/$defs/optionalText"},
+    "created_at": {"$ref": "#/$defs/timestamp"},
+    "updated_at": {"$ref": "#/$defs/timestamp"},
+    "movement_number": {"$ref": "#/$defs/text"},
+    "movement_type": {"enum": ["Receipt", "Delivery", "Adjustment"]},
+    "movement_status": {"enum": ["Posted"]},
+    "organization_code": {"$ref": "#/$defs/text"},
+    "entity_code": {"$ref": "#/$defs/text"},
+    "period_name": {"$ref": "#/$defs/text"},
+    "policy_code": {"$ref": "#/$defs/text"},
+    "costing_method": {"const": "FIFO"},
+    "finance_entry_number": {"$ref": "#/$defs/nullableText"},
+    "finance_entry_status": {"oneOf": [{"enum": ["Draft", "Validated", "Voided"]}, {"type": "null"}]},
+    "total_value": {"$ref": "#/$defs/amount"},
+    "input_costs": {"type": "array", "maxItems": 1000, "items": {"$ref": "#/$defs/inputCost"}},
+    "lines": {"type": "array", "maxItems": 1000, "items": {"$ref": "#/$defs/line"}},
+    "layer_consumptions": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/consumption"}}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "optionalText": {"type": "string", "maxLength": 2000},
+    "nullableText": {"oneOf": [{"$ref": "#/$defs/text"}, {"type": "null"}]},
+    "timestamp": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"},
+    "nullableTimestamp": {"oneOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]},
+    "date": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "amount": {"type": "string", "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]{1,6})?$", "maxLength": 40},
+    "quantity": {"type": "string", "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]{1,6})?$", "maxLength": 40},
+    "inputCost": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "valuation_document_id", "movement_line_id", "created_at", "line_number", "total_cost"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"}, "valuation_document_id": {"$ref": "#/$defs/text"},
+        "movement_line_id": {"$ref": "#/$defs/text"}, "created_at": {"$ref": "#/$defs/timestamp"},
+        "line_number": {"type": "integer", "minimum": 1}, "total_cost": {"$ref": "#/$defs/amount"}
+      }
+    },
+    "line": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "valuation_document_id", "movement_line_id", "line_number", "flow_direction", "item_id", "uom_id", "inventory_lot_id", "quantity_precision", "inventory_account_id", "offset_account_id", "created_at", "item_code", "uom_code", "lot_serial_code", "inventory_account_code", "offset_account_code", "quantity", "value"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"}, "valuation_document_id": {"$ref": "#/$defs/text"},
+        "movement_line_id": {"$ref": "#/$defs/text"}, "line_number": {"type": "integer", "minimum": 1},
+        "flow_direction": {"enum": ["Inbound", "Outbound"]}, "item_id": {"$ref": "#/$defs/text"},
+        "uom_id": {"$ref": "#/$defs/text"}, "inventory_lot_id": {"$ref": "#/$defs/nullableText"},
+        "quantity_precision": {"type": "integer", "minimum": 0, "maximum": 6},
+        "inventory_account_id": {"$ref": "#/$defs/text"}, "offset_account_id": {"$ref": "#/$defs/text"},
+        "created_at": {"$ref": "#/$defs/timestamp"}, "item_code": {"$ref": "#/$defs/text"},
+        "uom_code": {"$ref": "#/$defs/text"}, "lot_serial_code": {"$ref": "#/$defs/nullableText"},
+        "inventory_account_code": {"$ref": "#/$defs/text"}, "offset_account_code": {"$ref": "#/$defs/text"},
+        "quantity": {"$ref": "#/$defs/quantity"}, "value": {"$ref": "#/$defs/amount"}
+      }
+    },
+    "consumption": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "valuation_line_id", "cost_layer_id", "created_at", "line_number", "source_valuation_line_id", "quantity", "value"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"}, "valuation_line_id": {"$ref": "#/$defs/text"},
+        "cost_layer_id": {"$ref": "#/$defs/text"}, "created_at": {"$ref": "#/$defs/timestamp"},
+        "line_number": {"type": "integer", "minimum": 1}, "source_valuation_line_id": {"$ref": "#/$defs/text"},
+        "quantity": {"$ref": "#/$defs/quantity"}, "value": {"$ref": "#/$defs/amount"}
+      }
+    }
+  }
+}

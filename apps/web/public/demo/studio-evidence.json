@@ -1,0 +1,52 @@
+{
+  "evidence": [
+    {
+      "checksum_sha256": "633f7de953b6dfaba01be02eefd67d84b9540f76510fc2d40e8fb1866639bee3",
+      "evidence_code": "EVD-SYN-CLOSE",
+      "evidence_status": "Available",
+      "provenance_type": "synthetic-local-file",
+      "redaction_status": "synthetic"
+    },
+    {
+      "checksum_sha256": "d3cf96a81d5aa3a924e032cc44c1fee739dbe876b0ed5e12af25a682294ab3ce",
+      "evidence_code": "EVD-SYN-JRN",
+      "evidence_status": "Available",
+      "provenance_type": "synthetic-local-file",
+      "redaction_status": "synthetic"
+    },
+    {
+      "checksum_sha256": "d42618807a0074054456c1db12a473086f6b4ecc7c5b99e9c54d7dafa73fa65f",
+      "evidence_code": "EVD-SYN-TB",
+      "evidence_status": "Available",
+      "provenance_type": "synthetic-local-file",
+      "redaction_status": "synthetic"
+    }
+  ],
+  "generated_at": "2026-06-01T09:00:00Z",
+  "notices": [
+    "Synthetic evidence metadata only",
+    "Checksums are integrity aids and do not constitute an audit opinion or certification",
+    "Source files are not served by the modern preview"
+  ],
+  "schema_version": 1,
+  "source": {
+    "external_calls": false,
+    "kind": "reconforge-enterprise-demo",
+    "local_first": true
+  },
+  "status_distribution": [
+    {
+      "count": 3,
+      "status": "Available"
+    }
+  ],
+  "summary": {
+    "available": 3,
+    "checksum_count": 3,
+    "coverage_percent": 100.0,
+    "synthetic_redaction_count": 3,
+    "total": 3
+  },
+  "synthetic_data_marker": "SYNTHETIC_ENTERPRISE_DEMO_ONLY",
+  "synthetic_data_only": true
+}

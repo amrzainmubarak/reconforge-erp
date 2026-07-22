@@ -1,0 +1,192 @@
+{
+  "exceptions": [
+    {
+      "account_code": "",
+      "control_code": "SYN-CTRL-002",
+      "description": "Control test result is not marked effective.",
+      "entity_code": "",
+      "exception_id": "SYN-EXC-9749D4FB349D",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "high",
+      "source_type": "control_test",
+      "status": "Open"
+    },
+    {
+      "account_code": "",
+      "control_code": "",
+      "description": "Intercompany reference has unmatched or imbalanced counterparty amounts.",
+      "entity_code": "SYN-UK01",
+      "exception_id": "SYN-EXC-17D131082419",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "high",
+      "source_type": "intercompany",
+      "status": "Open"
+    },
+    {
+      "account_code": "",
+      "control_code": "",
+      "description": "Intercompany reference has unmatched or imbalanced counterparty amounts.",
+      "entity_code": "SYN-MX01",
+      "exception_id": "SYN-EXC-2131D00E30CA",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "high",
+      "source_type": "intercompany",
+      "status": "Open"
+    },
+    {
+      "account_code": "9999",
+      "control_code": "",
+      "description": "Journal amount exceeds the configured high-value threshold.",
+      "entity_code": "SYN-US01",
+      "exception_id": "SYN-EXC-D0561AAF7163",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "high",
+      "source_type": "journal",
+      "status": "Open"
+    },
+    {
+      "account_code": "9999",
+      "control_code": "",
+      "description": "Journal is missing approver evidence/reference.",
+      "entity_code": "SYN-US01",
+      "exception_id": "SYN-EXC-DB233BD4414B",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "high",
+      "source_type": "journal",
+      "status": "Open"
+    },
+    {
+      "account_code": "9999",
+      "control_code": "",
+      "description": "Journal posting date is after the configured period end.",
+      "entity_code": "SYN-US01",
+      "exception_id": "SYN-EXC-3C5A8F8FF610",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "high",
+      "source_type": "journal",
+      "status": "Open"
+    },
+    {
+      "account_code": "9999",
+      "control_code": "",
+      "description": "Journal uses a configured high-risk account.",
+      "entity_code": "SYN-US01",
+      "exception_id": "SYN-EXC-155350D824E1",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "high",
+      "source_type": "journal",
+      "status": "Open"
+    },
+    {
+      "account_code": "9999",
+      "control_code": "",
+      "description": "Journal is missing a source reference.",
+      "entity_code": "SYN-US01",
+      "exception_id": "SYN-EXC-EA6DBC084F8F",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "medium",
+      "source_type": "journal",
+      "status": "Open"
+    },
+    {
+      "account_code": "5000",
+      "control_code": "",
+      "description": "Journal was posted on a weekend date.",
+      "entity_code": "SYN-UK01",
+      "exception_id": "SYN-EXC-6240F89375F8",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "medium",
+      "source_type": "journal",
+      "status": "Open"
+    },
+    {
+      "account_code": "9999",
+      "control_code": "",
+      "description": "Manual journal entry requires documented review.",
+      "entity_code": "SYN-US01",
+      "exception_id": "SYN-EXC-2505A6F9BD19",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "medium",
+      "source_type": "journal",
+      "status": "Open"
+    },
+    {
+      "account_code": "5000",
+      "control_code": "",
+      "description": "Manual journal entry requires documented review.",
+      "entity_code": "SYN-UK01",
+      "exception_id": "SYN-EXC-F37608D4D6EA",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "medium",
+      "source_type": "journal",
+      "status": "Open"
+    },
+    {
+      "account_code": "",
+      "control_code": "",
+      "description": "Synthetic matching record did not find a right-side candidate.",
+      "entity_code": "",
+      "exception_id": "SYN-EXC-D35E8AC2AFE2",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "medium",
+      "source_type": "matching",
+      "status": "Open"
+    }
+  ],
+  "generated_at": "2026-06-01T09:00:00Z",
+  "notices": [
+    "Synthetic exception queue only",
+    "Read-only: review actions remain in the authenticated current Studio"
+  ],
+  "risk_distribution": [
+    {
+      "count": 0,
+      "risk": "critical"
+    },
+    {
+      "count": 7,
+      "risk": "high"
+    },
+    {
+      "count": 5,
+      "risk": "medium"
+    },
+    {
+      "count": 0,
+      "risk": "low"
+    }
+  ],
+  "schema_version": 1,
+  "source": {
+    "external_calls": false,
+    "kind": "reconforge-enterprise-demo",
+    "local_first": true
+  },
+  "status_distribution": [
+    {
+      "count": 12,
+      "status": "Open"
+    }
+  ],
+  "summary": {
+    "entity_count": 3,
+    "high_risk": 7,
+    "open": 12,
+    "total": 12,
+    "unassigned": 12
+  },
+  "synthetic_data_marker": "SYNTHETIC_ENTERPRISE_DEMO_ONLY",
+  "synthetic_data_only": true
+}

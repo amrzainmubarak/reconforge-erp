@@ -25,7 +25,7 @@ def test_api_health_and_version_work_without_auth(tmp_path: Path) -> None:
     assert health.json()["status"] == "ok"
     assert health.json()["version"] == __version__
     assert health.json()["database"]["reachable"] is True
-    assert health.json()["database"]["schema_version"] == 6
+    assert health.json()["database"]["schema_version"] == 12
     assert health.json()["database"]["path_summary"] == "api.db"
     assert version.status_code == 200
     assert version.json()["scope"] == "local/self-hosted foundation"

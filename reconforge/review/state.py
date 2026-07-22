@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
 from pathlib import Path
 from typing import Literal, TypeAlias, cast
 
 import pandas as pd
 
 from reconforge.io.excel import write_excel_workbook
+from reconforge.utils.time import utc_now_text
 
 ReviewStatus = Literal["New", "Under Review", "Resolved", "Accepted Risk", "Escalated"]
 ALLOWED_STATUSES: tuple[ReviewStatus, ...] = ("New", "Under Review", "Resolved", "Accepted Risk", "Escalated")
@@ -62,7 +62,7 @@ CERTIFICATION_COLUMNS = [
 
 
 def _now() -> str:
-    return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    return utc_now_text()
 
 
 def _clean_text(value: object) -> str:

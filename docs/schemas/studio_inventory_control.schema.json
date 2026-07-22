@@ -1,0 +1,213 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/studio_inventory_control.schema.json",
+  "title": "ReconForge Studio synthetic inventory control contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "synthetic_data_only", "synthetic_data_marker", "generated_at", "source", "summary", "warehouses", "on_hand", "movements", "exceptions", "count_sessions", "reorder_signals", "valuations", "valuation_reversals", "cost_layers", "notices"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "synthetic_data_only": { "const": true },
+    "synthetic_data_marker": { "const": "SYNTHETIC_ENTERPRISE_DEMO_ONLY" },
+    "generated_at": { "type": "string", "maxLength": 2000 },
+    "source": { "$ref": "#/$defs/source" },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["item_count", "warehouse_count", "location_count", "movement_count", "posted_movement_count", "exception_count", "count_session_count", "reorder_signal_count", "valuation_document_count", "valuation_reversal_count", "open_cost_layer_count", "finance_draft_count"],
+      "properties": {
+        "item_count": { "type": "integer", "minimum": 0 },
+        "warehouse_count": { "type": "integer", "minimum": 0 },
+        "location_count": { "type": "integer", "minimum": 0 },
+        "movement_count": { "type": "integer", "minimum": 0 },
+        "posted_movement_count": { "type": "integer", "minimum": 0 },
+        "exception_count": { "type": "integer", "minimum": 0 },
+        "count_session_count": { "type": "integer", "minimum": 0 },
+        "reorder_signal_count": { "type": "integer", "minimum": 0 },
+        "valuation_document_count": { "type": "integer", "minimum": 0 },
+        "valuation_reversal_count": { "type": "integer", "minimum": 0 },
+        "open_cost_layer_count": { "type": "integer", "minimum": 0 },
+        "finance_draft_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "warehouses": { "type": "array", "maxItems": 100000, "items": { "$ref": "#/$defs/warehouse" } },
+    "on_hand": { "type": "array", "maxItems": 100000, "items": { "$ref": "#/$defs/on_hand" } },
+    "movements": { "type": "array", "maxItems": 100000, "items": { "$ref": "#/$defs/movement" } },
+    "exceptions": { "type": "array", "maxItems": 100000, "items": { "$ref": "#/$defs/exception" } },
+    "count_sessions": { "type": "array", "maxItems": 100000, "items": { "$ref": "#/$defs/countSession" } },
+    "reorder_signals": { "type": "array", "maxItems": 100000, "items": { "$ref": "#/$defs/reorderSignal" } },
+    "valuations": { "type": "array", "maxItems": 100000, "items": { "$ref": "#/$defs/valuation" } },
+    "valuation_reversals": { "type": "array", "maxItems": 100000, "items": { "$ref": "#/$defs/valuationReversal" } },
+    "cost_layers": { "type": "array", "maxItems": 100000, "items": { "$ref": "#/$defs/costLayer" } },
+    "notices": { "type": "array", "maxItems": 100, "items": { "type": "string", "maxLength": 2000 } }
+  },
+  "$defs": {
+    "text": { "type": "string", "maxLength": 2000 },
+    "quantity": { "type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]{1,6})?$", "maxLength": 40 },
+    "amount": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]{1,6})?$", "maxLength": 40 },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "local_first", "external_calls"],
+      "properties": {
+        "kind": { "const": "reconforge-enterprise-demo" },
+        "local_first": { "const": true },
+        "external_calls": { "const": false }
+      }
+    },
+    "warehouse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["warehouse_code", "warehouse_name", "entity_code", "on_hand_lines", "negative_lines"],
+      "properties": {
+        "warehouse_code": { "$ref": "#/$defs/text" },
+        "warehouse_name": { "$ref": "#/$defs/text" },
+        "entity_code": { "$ref": "#/$defs/text" },
+        "on_hand_lines": { "type": "integer", "minimum": 0 },
+        "negative_lines": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "on_hand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["item_code", "item_name", "uom_code", "warehouse_code", "warehouse_name", "location_code", "entity_code", "lot_serial_code", "tracking_type", "quantity"],
+      "properties": {
+        "item_code": { "$ref": "#/$defs/text" },
+        "item_name": { "$ref": "#/$defs/text" },
+        "uom_code": { "$ref": "#/$defs/text" },
+        "warehouse_code": { "$ref": "#/$defs/text" },
+        "warehouse_name": { "$ref": "#/$defs/text" },
+        "location_code": { "$ref": "#/$defs/text" },
+        "entity_code": { "$ref": "#/$defs/text" },
+        "lot_serial_code": { "$ref": "#/$defs/text" },
+        "tracking_type": { "enum": ["None", "Lot", "Serial"] },
+        "quantity": { "$ref": "#/$defs/quantity" }
+      }
+    },
+    "movement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["movement_number", "movement_type", "status", "movement_date", "entity_code", "from_location", "to_location", "line_count", "quantity"],
+      "properties": {
+        "movement_number": { "$ref": "#/$defs/text" },
+        "movement_type": { "enum": ["Receipt", "Delivery", "Transfer", "Adjustment"] },
+        "status": { "enum": ["Draft", "Posted", "Voided"] },
+        "movement_date": { "$ref": "#/$defs/text" },
+        "entity_code": { "$ref": "#/$defs/text" },
+        "from_location": { "$ref": "#/$defs/text" },
+        "to_location": { "$ref": "#/$defs/text" },
+        "line_count": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "quantity": { "$ref": "#/$defs/quantity" }
+      }
+    },
+    "exception": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["control_code", "risk_rating", "item_code", "location", "description", "quantity", "exception_id"],
+      "properties": {
+        "control_code": { "$ref": "#/$defs/text" },
+        "risk_rating": { "enum": ["critical", "high", "medium", "low"] },
+        "item_code": { "$ref": "#/$defs/text" },
+        "location": { "$ref": "#/$defs/text" },
+        "description": { "$ref": "#/$defs/text" },
+        "quantity": { "type": "string", "pattern": "^(?:|-?(?:0|[1-9][0-9]*)(?:\\.[0-9]{1,6})?)$", "maxLength": 40 },
+        "exception_id": { "type": "string", "pattern": "^SYN-INV-EXC-[0-9A-F]{12}$" }
+      }
+    },
+    "countSession": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["count_number", "status", "count_date", "entity_code", "warehouse_code", "location_code", "line_count", "counted_line_count", "variance_line_count", "adjustment_movement_number"],
+      "properties": {
+        "count_number": { "$ref": "#/$defs/text" },
+        "status": { "enum": ["Draft", "Counting", "Submitted", "Approved", "Cancelled"] },
+        "count_date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "entity_code": { "$ref": "#/$defs/text" },
+        "warehouse_code": { "$ref": "#/$defs/text" },
+        "location_code": { "$ref": "#/$defs/text" },
+        "line_count": { "type": "integer", "minimum": 1, "maximum": 100000 },
+        "counted_line_count": { "type": "integer", "minimum": 0, "maximum": 100000 },
+        "variance_line_count": { "type": "integer", "minimum": 0, "maximum": 100000 },
+        "adjustment_movement_number": { "$ref": "#/$defs/text" }
+      }
+    },
+    "reorderSignal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["signal_id", "risk_rating", "item_code", "item_name", "uom_code", "warehouse_code", "location_code", "on_hand_quantity", "minimum_quantity", "target_quantity", "suggested_quantity", "lead_time_days"],
+      "properties": {
+        "signal_id": { "type": "string", "pattern": "^SYN-INV-REORDER-[0-9A-F]{12}$" },
+        "risk_rating": { "enum": ["high", "medium"] },
+        "item_code": { "$ref": "#/$defs/text" },
+        "item_name": { "$ref": "#/$defs/text" },
+        "uom_code": { "$ref": "#/$defs/text" },
+        "warehouse_code": { "$ref": "#/$defs/text" },
+        "location_code": { "$ref": "#/$defs/text" },
+        "on_hand_quantity": { "$ref": "#/$defs/quantity" },
+        "minimum_quantity": { "$ref": "#/$defs/quantity" },
+        "target_quantity": { "$ref": "#/$defs/quantity" },
+        "suggested_quantity": { "$ref": "#/$defs/quantity" },
+        "lead_time_days": { "type": "integer", "minimum": 0, "maximum": 3650 }
+      }
+    },
+    "valuation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["valuation_number", "movement_number", "movement_type", "status", "valuation_date", "entity_code", "costing_method", "currency_code", "finance_entry_number", "finance_entry_status", "total_value"],
+      "properties": {
+        "valuation_number": { "$ref": "#/$defs/text" },
+        "movement_number": { "$ref": "#/$defs/text" },
+        "movement_type": { "enum": ["Receipt", "Delivery", "Adjustment"] },
+        "status": { "enum": ["Draft", "Approved", "Cancelled"] },
+        "valuation_date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "entity_code": { "$ref": "#/$defs/text" },
+        "costing_method": { "const": "FIFO" },
+        "currency_code": { "$ref": "#/$defs/text" },
+        "finance_entry_number": { "$ref": "#/$defs/text" },
+        "finance_entry_status": { "enum": ["", "Draft", "Validated", "Voided"] },
+        "total_value": { "$ref": "#/$defs/amount" }
+      }
+    },
+    "valuationReversal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reversal_number", "original_valuation_number", "reversal_movement_number", "original_movement_type", "reversal_movement_type", "status", "reversal_date", "entity_code", "currency_code", "layer_effect", "finance_entry_number", "finance_entry_status", "layer_effect_count", "total_value"],
+      "properties": {
+        "reversal_number": { "$ref": "#/$defs/text" },
+        "original_valuation_number": { "$ref": "#/$defs/text" },
+        "reversal_movement_number": { "$ref": "#/$defs/text" },
+        "original_movement_type": { "enum": ["Receipt", "Delivery", "Adjustment"] },
+        "reversal_movement_type": { "enum": ["Receipt", "Delivery", "Adjustment"] },
+        "status": { "enum": ["Draft", "Approved", "Cancelled"] },
+        "reversal_date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "entity_code": { "$ref": "#/$defs/text" },
+        "currency_code": { "$ref": "#/$defs/text" },
+        "layer_effect": { "enum": ["Restore", "Remove"] },
+        "finance_entry_number": { "$ref": "#/$defs/text" },
+        "finance_entry_status": { "enum": ["", "Draft", "Validated", "Voided"] },
+        "layer_effect_count": { "type": "integer", "minimum": 1, "maximum": 100000 },
+        "total_value": { "$ref": "#/$defs/amount" }
+      }
+    },
+    "costLayer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["layer_id", "valuation_number", "item_code", "item_name", "uom_code", "lot_serial_code", "entity_code", "currency_code", "original_quantity", "remaining_quantity", "original_value", "remaining_value", "layer_status"],
+      "properties": {
+        "layer_id": { "$ref": "#/$defs/text" },
+        "valuation_number": { "$ref": "#/$defs/text" },
+        "item_code": { "$ref": "#/$defs/text" },
+        "item_name": { "$ref": "#/$defs/text" },
+        "uom_code": { "$ref": "#/$defs/text" },
+        "lot_serial_code": { "$ref": "#/$defs/text" },
+        "entity_code": { "$ref": "#/$defs/text" },
+        "currency_code": { "$ref": "#/$defs/text" },
+        "original_quantity": { "$ref": "#/$defs/quantity" },
+        "remaining_quantity": { "$ref": "#/$defs/quantity" },
+        "original_value": { "$ref": "#/$defs/amount" },
+        "remaining_value": { "$ref": "#/$defs/amount" },
+        "layer_status": { "enum": ["Open", "Closed"] }
+      }
+    }
+  }
+}

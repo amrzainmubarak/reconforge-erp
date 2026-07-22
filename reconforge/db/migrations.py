@@ -12,8 +12,14 @@ from reconforge.db.schema import (
     API_SESSIONS_SCHEMA_SQL,
     AUTH_RBAC_SCHEMA_SQL,
     DB_BRIDGE_SCHEMA_SQL,
+    FINANCE_CORE_SCHEMA_SQL,
     FINANCE_PLATFORM_SCHEMA_SQL,
     INITIAL_SCHEMA_SQL,
+    INVENTORY_CORE_SCHEMA_SQL,
+    INVENTORY_PLANNING_SCHEMA_SQL,
+    INVENTORY_VALUATION_REVERSAL_SCHEMA_SQL,
+    INVENTORY_VALUATION_SCHEMA_SQL,
+    MASTER_DATA_SCHEMA_SQL,
     WORKFLOW_STATE_MACHINE_SCHEMA_SQL,
 )
 
@@ -55,6 +61,16 @@ MIGRATIONS = [
     Migration(version=4, name="local_api_sessions_foundation", sql=API_SESSIONS_SCHEMA_SQL),
     Migration(version=5, name="db_import_export_bridge", sql=DB_BRIDGE_SCHEMA_SQL),
     Migration(version=6, name="finance_platform_workflow_foundations", sql=FINANCE_PLATFORM_SCHEMA_SQL),
+    Migration(version=7, name="organization_master_data_foundation", sql=MASTER_DATA_SCHEMA_SQL),
+    Migration(version=8, name="finance_core_ledger_control_foundation", sql=FINANCE_CORE_SCHEMA_SQL),
+    Migration(version=9, name="inventory_core_movement_foundation", sql=INVENTORY_CORE_SCHEMA_SQL),
+    Migration(version=10, name="inventory_count_and_reorder_foundation", sql=INVENTORY_PLANNING_SCHEMA_SQL),
+    Migration(version=11, name="inventory_fifo_valuation_foundation", sql=INVENTORY_VALUATION_SCHEMA_SQL),
+    Migration(
+        version=12,
+        name="inventory_fifo_valuation_reversal_foundation",
+        sql=INVENTORY_VALUATION_REVERSAL_SCHEMA_SQL,
+    ),
 ]
 
 _MIGRATION_TABLE_SQL = """
@@ -80,16 +96,22 @@ def _applied_versions(connection: sqlite3.Connection) -> list[int]:
     return [int(row["version"]) for row in rows]
 
 
-def run_migrations(db_path: Path | str) -> MigrationStatus:
-    """Create or migrate a local ReconForge SQLite database."""
+def run_migrations(db_path: Path | str, *, target_version: int | None = None) -> MigrationStatus:
+    """Create or migrate a local database, optionally stopping at a supported version."""
 
     resolved = resolve_db_path(db_path)
+    latest_version = MIGRATIONS[-1].version
+    selected_target = latest_version if target_version is None else target_version
+    if selected_target < 1 or selected_target > latest_version:
+        raise DatabaseError(f"Migration target must be between 1 and {latest_version}.")
     connection = connect(resolved, create_parent=True)
     applied_now: list[int] = []
     try:
         _ensure_migration_table(connection)
         already_applied = set(_applied_versions(connection))
         for migration in MIGRATIONS:
+            if migration.version > selected_target:
+                continue
             if migration.version in already_applied:
                 continue
             connection.executescript(migration.sql)
@@ -112,7 +134,7 @@ def run_migrations(db_path: Path | str) -> MigrationStatus:
         path=resolved,
         applied_versions=applied_now,
         current_version=current_version,
-        latest_version=MIGRATIONS[-1].version,
+        latest_version=latest_version,
     )
 
 

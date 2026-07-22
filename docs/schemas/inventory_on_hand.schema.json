@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/inventory_on_hand.schema.json",
+  "title": "ReconForge Inventory On-Hand",
+  "description": "Exact local quantities derived from Posted, non-Voided inventory movements for one organization and legal entity.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "source", "workspace", "organization_code", "entity_code", "summary", "balances"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "source": {"$ref": "#/$defs/source"},
+    "workspace": {"$ref": "#/$defs/text"},
+    "organization_code": {"$ref": "#/$defs/text"},
+    "entity_code": {"$ref": "#/$defs/text"},
+    "summary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rows", "negative_rows"],
+      "properties": {
+        "rows": {"type": "integer", "minimum": 0},
+        "negative_rows": {"type": "integer", "minimum": 0}
+      }
+    },
+    "balances": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/balance"}}
+  },
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "nullableText": {"oneOf": [{"type": "string", "minLength": 1, "maxLength": 2000}, {"type": "null"}]},
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "local_first", "external_calls"],
+      "properties": {
+        "kind": {"const": "local-inventory-ledger"},
+        "local_first": {"const": true},
+        "external_calls": {"const": false}
+      }
+    },
+    "balance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["location_id", "warehouse_code", "location_code", "allow_negative", "item_id", "item_code", "item_name", "uom_code", "inventory_lot_id", "lot_serial_code", "quantity_precision", "quantity_scaled", "quantity", "negative"],
+      "properties": {
+        "location_id": {"$ref": "#/$defs/text"},
+        "warehouse_code": {"$ref": "#/$defs/text"},
+        "location_code": {"$ref": "#/$defs/text"},
+        "allow_negative": {"type": "boolean"},
+        "item_id": {"$ref": "#/$defs/text"},
+        "item_code": {"$ref": "#/$defs/text"},
+        "item_name": {"$ref": "#/$defs/text"},
+        "uom_code": {"$ref": "#/$defs/text"},
+        "inventory_lot_id": {"$ref": "#/$defs/nullableText"},
+        "lot_serial_code": {"$ref": "#/$defs/nullableText"},
+        "quantity_precision": {"type": "integer", "minimum": 0, "maximum": 6},
+        "quantity_scaled": {"type": "integer"},
+        "quantity": {"type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$"},
+        "negative": {"type": "boolean"}
+      }
+    }
+  }
+}

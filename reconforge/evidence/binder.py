@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -16,6 +15,7 @@ from reconforge.evidence.templates import business_impact, recommended_action, r
 from reconforge.evidence.writer import write_evidence_case
 from reconforge.io.writers import write_json
 from reconforge.review.state import load_review_state
+from reconforge.utils.time import utc_now_text
 
 
 def _read_csv_if_exists(path: Path) -> pd.DataFrame:
@@ -186,7 +186,7 @@ def write_evidence_integrity_manifest(output_dir: Path | str, input_dir: Path | 
         )
     write_json(
         {
-            "generated_at": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+            "generated_at": utc_now_text(),
             "tool_version": __version__,
             "source_output_folder": str(input_dir),
             "evidence_output_folder": str(target),

@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
 
 from reconforge.config import ReconForgeConfig
+from reconforge.utils.time import utc_now_text
 
 
 def _metric(frame: pd.DataFrame, metric: str) -> int:
@@ -35,7 +35,7 @@ def write_markdown_summary(
         f"# {config.report_title}",
         "",
         f"Company: **{config.company_name}**",
-        f"Generated at: **{datetime.utcnow().replace(microsecond=0).isoformat()}Z**",
+        f"Generated at: **{utc_now_text()}**",
         f"Currency: **{config.output_currency}**",
         "",
         "## Executive Summary",

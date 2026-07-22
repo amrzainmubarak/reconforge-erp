@@ -932,3 +932,1896 @@ VALUES
     ('METDEF-exception_aging', 'exception_aging', 'Exception aging', 'Average age in days for unresolved exception queue records.', 'exceptions_queue.created_at by status', strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     ('METDEF-period_readiness', 'period_readiness', 'Period readiness', 'Close readiness score stored for the period.', 'close_periods.readiness_score', strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
 """
+
+MASTER_DATA_SCHEMA_SQL = """
+ALTER TABLE organizations ADD COLUMN organization_code TEXT NOT NULL DEFAULT '';
+ALTER TABLE organizations ADD COLUMN active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1));
+ALTER TABLE organizations ADD COLUMN updated_at TEXT NOT NULL DEFAULT '';
+
+UPDATE organizations
+SET organization_code = printf('LEGACY-%08X', rowid),
+    updated_at = created_at
+WHERE organization_code = '';
+
+ALTER TABLE legal_entities ADD COLUMN active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1));
+ALTER TABLE legal_entities ADD COLUMN updated_at TEXT NOT NULL DEFAULT '';
+
+UPDATE legal_entities SET updated_at = created_at WHERE updated_at = '';
+
+ALTER TABLE periods ADD COLUMN fiscal_year INTEGER NOT NULL DEFAULT 0 CHECK (fiscal_year >= 0);
+ALTER TABLE periods ADD COLUMN period_number INTEGER NOT NULL DEFAULT 0 CHECK (period_number >= 0);
+ALTER TABLE periods ADD COLUMN status_reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE periods ADD COLUMN updated_at TEXT NOT NULL DEFAULT '';
+
+UPDATE periods
+SET fiscal_year = CASE
+        WHEN LENGTH(start_date) >= 4 THEN CAST(SUBSTR(start_date, 1, 4) AS INTEGER)
+        ELSE 0
+    END,
+    period_number = CASE
+        WHEN LENGTH(start_date) >= 7 THEN CAST(SUBSTR(start_date, 6, 2) AS INTEGER)
+        ELSE 0
+    END,
+    updated_at = created_at
+WHERE updated_at = '';
+
+CREATE TABLE IF NOT EXISTS currencies (
+    code TEXT PRIMARY KEY CHECK (LENGTH(code) = 3 AND code = UPPER(code)),
+    name TEXT NOT NULL,
+    minor_units INTEGER NOT NULL DEFAULT 2 CHECK (minor_units BETWEEN 0 AND 6),
+    active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+INSERT OR IGNORE INTO currencies (code, name, minor_units, active, created_at, updated_at)
+VALUES
+    ('USD', 'US Dollar', 2, 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    ('EUR', 'Euro', 2, 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    ('GBP', 'Pound Sterling', 2, 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    ('EGP', 'Egyptian Pound', 2, 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    ('SAR', 'Saudi Riyal', 2, 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    ('AED', 'UAE Dirham', 2, 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));
+
+INSERT OR IGNORE INTO currencies (code, name, minor_units, active, created_at, updated_at)
+SELECT DISTINCT UPPER(TRIM(currency)), UPPER(TRIM(currency)), 2, 1,
+       strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+FROM legal_entities
+WHERE LENGTH(TRIM(currency)) = 3;
+
+CREATE TABLE IF NOT EXISTS branches (
+    id TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    legal_entity_id TEXT REFERENCES legal_entities(id) ON DELETE SET NULL,
+    branch_code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (organization_id, branch_code)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_organizations_workspace_code
+ON organizations(workspace_id, organization_code);
+CREATE INDEX IF NOT EXISTS idx_legal_entities_organization_active
+ON legal_entities(organization_id, active, entity_code);
+CREATE INDEX IF NOT EXISTS idx_branches_organization_active
+ON branches(organization_id, active, branch_code);
+CREATE INDEX IF NOT EXISTS idx_periods_workspace_status
+ON periods(workspace_id, status, start_date, end_date);
+
+INSERT OR IGNORE INTO permissions (name, description) VALUES
+    ('master_data.read', 'Read local organization, entity, branch, currency, and period references.'),
+    ('master_data.manage', 'Manage local organization, entity, branch, currency, and period references.');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name IN ('admin', 'controller')
+  AND permissions.name IN ('master_data.read', 'master_data.manage');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name IN ('preparer', 'reviewer', 'auditor-readonly')
+  AND permissions.name = 'master_data.read';
+"""
+
+FINANCE_CORE_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS charts_of_accounts (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id TEXT REFERENCES organizations(id) ON DELETE RESTRICT,
+    chart_code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (workspace_id, chart_code)
+);
+
+INSERT OR IGNORE INTO charts_of_accounts (
+    id, workspace_id, organization_id, chart_code, name, description, active, created_at, updated_at
+)
+SELECT 'COA-' || id, id, NULL, 'DEFAULT', 'Default chart of accounts',
+       'Migrated shared chart for existing workspace accounts.', 1, created_at, created_at
+FROM workspaces;
+
+ALTER TABLE accounts ADD COLUMN chart_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE accounts ADD COLUMN parent_account_id TEXT REFERENCES accounts(id) ON DELETE RESTRICT;
+ALTER TABLE accounts ADD COLUMN account_type TEXT NOT NULL DEFAULT 'Asset'
+    CHECK (account_type IN ('Asset', 'Liability', 'Equity', 'Income', 'Expense', 'Off Balance'));
+ALTER TABLE accounts ADD COLUMN normal_balance TEXT NOT NULL DEFAULT 'Debit'
+    CHECK (normal_balance IN ('Debit', 'Credit'));
+ALTER TABLE accounts ADD COLUMN allow_posting INTEGER NOT NULL DEFAULT 1 CHECK (allow_posting IN (0, 1));
+ALTER TABLE accounts ADD COLUMN allow_manual_posting INTEGER NOT NULL DEFAULT 1 CHECK (allow_manual_posting IN (0, 1));
+ALTER TABLE accounts ADD COLUMN reconciliation_required INTEGER NOT NULL DEFAULT 0
+    CHECK (reconciliation_required IN (0, 1));
+ALTER TABLE accounts ADD COLUMN active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1));
+ALTER TABLE accounts ADD COLUMN description TEXT NOT NULL DEFAULT '';
+ALTER TABLE accounts ADD COLUMN updated_at TEXT NOT NULL DEFAULT '';
+
+UPDATE accounts
+SET chart_id = 'COA-' || workspace_id,
+    updated_at = created_at
+WHERE chart_id = '';
+
+CREATE TABLE IF NOT EXISTS accounting_dimensions (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id TEXT REFERENCES organizations(id) ON DELETE RESTRICT,
+    dimension_code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    dimension_type TEXT NOT NULL DEFAULT 'Custom'
+        CHECK (dimension_type IN ('Cost Center', 'Department', 'Project', 'Custom')),
+    required_on_entries INTEGER NOT NULL DEFAULT 0 CHECK (required_on_entries IN (0, 1)),
+    active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (workspace_id, dimension_code)
+);
+
+CREATE TABLE IF NOT EXISTS accounting_dimension_values (
+    id TEXT PRIMARY KEY,
+    dimension_id TEXT NOT NULL REFERENCES accounting_dimensions(id) ON DELETE CASCADE,
+    value_code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (dimension_id, value_code)
+);
+
+CREATE TABLE IF NOT EXISTS finance_journals (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
+    chart_id TEXT NOT NULL REFERENCES charts_of_accounts(id) ON DELETE RESTRICT,
+    journal_code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    journal_type TEXT NOT NULL DEFAULT 'General'
+        CHECK (journal_type IN ('General', 'Sales', 'Purchase', 'Bank', 'Cash', 'Adjustment')),
+    currency_code TEXT NOT NULL REFERENCES currencies(code) ON DELETE RESTRICT,
+    active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (workspace_id, organization_id, journal_code)
+);
+
+CREATE TABLE IF NOT EXISTS ledger_entries (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
+    chart_id TEXT NOT NULL REFERENCES charts_of_accounts(id) ON DELETE RESTRICT,
+    legal_entity_id TEXT NOT NULL REFERENCES legal_entities(id) ON DELETE RESTRICT,
+    period_id TEXT NOT NULL REFERENCES periods(id) ON DELETE RESTRICT,
+    finance_journal_id TEXT NOT NULL REFERENCES finance_journals(id) ON DELETE RESTRICT,
+    entry_number TEXT NOT NULL,
+    posting_date TEXT NOT NULL,
+    currency_code TEXT NOT NULL REFERENCES currencies(code) ON DELETE RESTRICT,
+    description TEXT NOT NULL,
+    external_reference TEXT NOT NULL DEFAULT '',
+    source_type TEXT NOT NULL DEFAULT 'Manual'
+        CHECK (source_type IN ('Manual', 'Imported', 'Generated')),
+    status TEXT NOT NULL DEFAULT 'Draft'
+        CHECK (status IN ('Draft', 'Validated', 'Voided')),
+    created_by TEXT NOT NULL,
+    validated_by TEXT NOT NULL DEFAULT '',
+    validated_at TEXT,
+    validation_reason TEXT NOT NULL DEFAULT '',
+    voided_by TEXT NOT NULL DEFAULT '',
+    voided_at TEXT,
+    void_reason TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (workspace_id, entry_number)
+);
+
+CREATE TABLE IF NOT EXISTS ledger_lines (
+    id TEXT PRIMARY KEY,
+    entry_id TEXT NOT NULL REFERENCES ledger_entries(id) ON DELETE CASCADE,
+    line_number INTEGER NOT NULL CHECK (line_number > 0),
+    account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
+    description TEXT NOT NULL DEFAULT '',
+    debit_minor INTEGER NOT NULL DEFAULT 0 CHECK (debit_minor >= 0),
+    credit_minor INTEGER NOT NULL DEFAULT 0 CHECK (credit_minor >= 0),
+    created_at TEXT NOT NULL,
+    CHECK ((debit_minor > 0 AND credit_minor = 0) OR (credit_minor > 0 AND debit_minor = 0)),
+    UNIQUE (entry_id, line_number)
+);
+
+CREATE TABLE IF NOT EXISTS ledger_line_dimensions (
+    line_id TEXT NOT NULL REFERENCES ledger_lines(id) ON DELETE CASCADE,
+    dimension_value_id TEXT NOT NULL REFERENCES accounting_dimension_values(id) ON DELETE RESTRICT,
+    PRIMARY KEY (line_id, dimension_value_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_charts_workspace_org
+ON charts_of_accounts(workspace_id, organization_id, active, chart_code);
+CREATE INDEX IF NOT EXISTS idx_accounts_chart_parent
+ON accounts(chart_id, parent_account_id, active, account_code);
+CREATE INDEX IF NOT EXISTS idx_dimensions_workspace_org
+ON accounting_dimensions(workspace_id, organization_id, active, dimension_code);
+CREATE INDEX IF NOT EXISTS idx_finance_journals_workspace_org
+ON finance_journals(workspace_id, organization_id, active, journal_code);
+CREATE INDEX IF NOT EXISTS idx_ledger_entries_scope
+ON ledger_entries(workspace_id, organization_id, legal_entity_id, period_id, status, posting_date);
+CREATE INDEX IF NOT EXISTS idx_ledger_lines_account
+ON ledger_lines(account_id, entry_id);
+
+CREATE TRIGGER IF NOT EXISTS ledger_lines_insert_draft_only
+BEFORE INSERT ON ledger_lines
+WHEN COALESCE((SELECT status FROM ledger_entries WHERE id = NEW.entry_id), '') <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'ledger lines require a draft entry');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ledger_lines_update_draft_only
+BEFORE UPDATE ON ledger_lines
+WHEN COALESCE((SELECT status FROM ledger_entries WHERE id = OLD.entry_id), '') <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'validated ledger lines are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ledger_lines_delete_draft_only
+BEFORE DELETE ON ledger_lines
+WHEN COALESCE((SELECT status FROM ledger_entries WHERE id = OLD.entry_id), '') <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'validated ledger lines are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ledger_dimensions_insert_draft_only
+BEFORE INSERT ON ledger_line_dimensions
+WHEN COALESCE((
+    SELECT ledger_entries.status
+    FROM ledger_lines
+    JOIN ledger_entries ON ledger_entries.id = ledger_lines.entry_id
+    WHERE ledger_lines.id = NEW.line_id
+), '') <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'ledger dimensions require a draft entry');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ledger_dimensions_delete_draft_only
+BEFORE DELETE ON ledger_line_dimensions
+WHEN COALESCE((
+    SELECT ledger_entries.status
+    FROM ledger_lines
+    JOIN ledger_entries ON ledger_entries.id = ledger_lines.entry_id
+    WHERE ledger_lines.id = OLD.line_id
+), '') <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'validated ledger dimensions are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ledger_entry_status_transition
+BEFORE UPDATE OF status ON ledger_entries
+WHEN NEW.status <> OLD.status
+ AND NOT (
+    (OLD.status = 'Draft' AND NEW.status = 'Validated') OR
+    (OLD.status = 'Validated' AND NEW.status = 'Voided')
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'invalid ledger entry status transition');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ledger_entry_validate_balanced
+BEFORE UPDATE OF status ON ledger_entries
+WHEN OLD.status = 'Draft' AND NEW.status = 'Validated'
+ AND (
+    (SELECT COUNT(*) FROM ledger_lines WHERE entry_id = OLD.id) < 2 OR
+    COALESCE((SELECT SUM(debit_minor) FROM ledger_lines WHERE entry_id = OLD.id), 0) <= 0 OR
+    COALESCE((SELECT SUM(debit_minor) FROM ledger_lines WHERE entry_id = OLD.id), 0)
+        <> COALESCE((SELECT SUM(credit_minor) FROM ledger_lines WHERE entry_id = OLD.id), 0) OR
+    NEW.validated_by = '' OR NEW.validated_at IS NULL OR NEW.validation_reason = ''
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'ledger entry must contain at least two balanced non-zero lines');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ledger_entry_void_requires_metadata
+BEFORE UPDATE OF status ON ledger_entries
+WHEN OLD.status = 'Validated' AND NEW.status = 'Voided'
+ AND (NEW.voided_by = '' OR NEW.voided_at IS NULL OR NEW.void_reason = '')
+BEGIN
+    SELECT RAISE(ABORT, 'voiding a ledger entry requires actor, timestamp, and reason');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ledger_entry_header_immutable
+BEFORE UPDATE OF workspace_id, organization_id, chart_id, legal_entity_id, period_id,
+                 finance_journal_id, entry_number, posting_date, currency_code, description,
+                 external_reference, source_type, created_by, created_at
+ON ledger_entries
+WHEN OLD.status <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'validated ledger entry headers are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ledger_entry_validation_metadata_immutable
+BEFORE UPDATE OF validated_by, validated_at, validation_reason ON ledger_entries
+WHEN OLD.status <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'ledger validation metadata is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ledger_entry_void_metadata_immutable
+BEFORE UPDATE OF voided_by, voided_at, void_reason ON ledger_entries
+WHEN OLD.status = 'Voided'
+BEGIN
+    SELECT RAISE(ABORT, 'ledger void metadata is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ledger_entry_delete_draft_only
+BEFORE DELETE ON ledger_entries
+WHEN OLD.status <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'validated ledger entries cannot be deleted');
+END;
+
+INSERT OR IGNORE INTO permissions (name, description) VALUES
+    ('finance_core.read', 'Read local chart, dimension, journal, and ledger-control records.'),
+    ('finance_core.manage', 'Manage local finance masters and draft ledger-control entries.'),
+    ('finance_core.validate', 'Validate or void balanced local ledger-control entries.');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name IN ('admin', 'controller')
+  AND permissions.name IN ('finance_core.read', 'finance_core.manage', 'finance_core.validate');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name = 'preparer'
+  AND permissions.name IN ('finance_core.read', 'finance_core.manage');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name = 'reviewer'
+  AND permissions.name IN ('finance_core.read', 'finance_core.validate');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name = 'auditor-readonly'
+  AND permissions.name = 'finance_core.read';
+"""
+
+INVENTORY_CORE_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS units_of_measure (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    uom_code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'Count'
+        CHECK (category IN ('Count', 'Weight', 'Volume', 'Length', 'Time', 'Custom')),
+    decimal_places INTEGER NOT NULL DEFAULT 0 CHECK (decimal_places BETWEEN 0 AND 6),
+    active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (workspace_id, uom_code)
+);
+
+INSERT OR IGNORE INTO units_of_measure (
+    id, workspace_id, uom_code, name, category, decimal_places, active, created_at, updated_at
+)
+SELECT 'UOM-' || id, id, 'EA', 'Each', 'Count', 0, 1, created_at, created_at
+FROM workspaces;
+
+CREATE TABLE IF NOT EXISTS inventory_items (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id TEXT REFERENCES organizations(id) ON DELETE RESTRICT,
+    item_code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    item_type TEXT NOT NULL DEFAULT 'Stock'
+        CHECK (item_type IN ('Stock', 'Consumable', 'Service')),
+    tracking_mode TEXT NOT NULL DEFAULT 'None'
+        CHECK (tracking_mode IN ('None', 'Lot', 'Serial')),
+    uom_id TEXT NOT NULL REFERENCES units_of_measure(id) ON DELETE RESTRICT,
+    inventory_account_id TEXT REFERENCES accounts(id) ON DELETE RESTRICT,
+    description TEXT NOT NULL DEFAULT '',
+    active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (workspace_id, item_code)
+);
+
+CREATE TABLE IF NOT EXISTS warehouses (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
+    legal_entity_id TEXT REFERENCES legal_entities(id) ON DELETE RESTRICT,
+    warehouse_code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (workspace_id, organization_id, warehouse_code)
+);
+
+CREATE TABLE IF NOT EXISTS inventory_locations (
+    id TEXT PRIMARY KEY,
+    warehouse_id TEXT NOT NULL REFERENCES warehouses(id) ON DELETE RESTRICT,
+    parent_location_id TEXT REFERENCES inventory_locations(id) ON DELETE RESTRICT,
+    location_code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    location_type TEXT NOT NULL DEFAULT 'Internal'
+        CHECK (location_type IN ('Internal', 'Transit', 'Supplier', 'Customer', 'Adjustment')),
+    allow_negative INTEGER NOT NULL DEFAULT 0 CHECK (allow_negative IN (0, 1)),
+    active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    CHECK (parent_location_id IS NULL OR parent_location_id <> id),
+    UNIQUE (warehouse_id, location_code)
+);
+
+CREATE TABLE IF NOT EXISTS inventory_lots (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
+    item_id TEXT NOT NULL REFERENCES inventory_items(id) ON DELETE RESTRICT,
+    lot_serial_code TEXT NOT NULL,
+    tracking_type TEXT NOT NULL CHECK (tracking_type IN ('Lot', 'Serial')),
+    manufactured_on TEXT,
+    expires_on TEXT,
+    active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    CHECK (manufactured_on IS NULL OR expires_on IS NULL OR manufactured_on <= expires_on),
+    UNIQUE (item_id, organization_id, lot_serial_code)
+);
+
+CREATE TABLE IF NOT EXISTS inventory_movements (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
+    legal_entity_id TEXT NOT NULL REFERENCES legal_entities(id) ON DELETE RESTRICT,
+    period_id TEXT NOT NULL REFERENCES periods(id) ON DELETE RESTRICT,
+    movement_number TEXT NOT NULL,
+    movement_type TEXT NOT NULL
+        CHECK (movement_type IN ('Receipt', 'Delivery', 'Transfer', 'Adjustment')),
+    movement_date TEXT NOT NULL,
+    source_reference TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL,
+    source_type TEXT NOT NULL DEFAULT 'Manual'
+        CHECK (source_type IN ('Manual', 'Imported', 'Generated')),
+    status TEXT NOT NULL DEFAULT 'Draft'
+        CHECK (status IN ('Draft', 'Posted', 'Voided')),
+    created_by TEXT NOT NULL,
+    posted_by TEXT NOT NULL DEFAULT '',
+    posted_at TEXT,
+    post_reason TEXT NOT NULL DEFAULT '',
+    voided_by TEXT NOT NULL DEFAULT '',
+    voided_at TEXT,
+    void_reason TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (workspace_id, movement_number)
+);
+
+CREATE TABLE IF NOT EXISTS inventory_movement_lines (
+    id TEXT PRIMARY KEY,
+    movement_id TEXT NOT NULL REFERENCES inventory_movements(id) ON DELETE CASCADE,
+    line_number INTEGER NOT NULL CHECK (line_number > 0),
+    item_id TEXT NOT NULL REFERENCES inventory_items(id) ON DELETE RESTRICT,
+    uom_id TEXT NOT NULL REFERENCES units_of_measure(id) ON DELETE RESTRICT,
+    inventory_lot_id TEXT REFERENCES inventory_lots(id) ON DELETE RESTRICT,
+    from_location_id TEXT REFERENCES inventory_locations(id) ON DELETE RESTRICT,
+    to_location_id TEXT REFERENCES inventory_locations(id) ON DELETE RESTRICT,
+    quantity_scaled INTEGER NOT NULL CHECK (quantity_scaled > 0),
+    quantity_precision INTEGER NOT NULL CHECK (quantity_precision BETWEEN 0 AND 6),
+    description TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    CHECK (from_location_id IS NOT NULL OR to_location_id IS NOT NULL),
+    CHECK (from_location_id IS NULL OR to_location_id IS NULL OR from_location_id <> to_location_id),
+    UNIQUE (movement_id, line_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_items_scope
+ON inventory_items(workspace_id, organization_id, active, item_code);
+CREATE INDEX IF NOT EXISTS idx_warehouses_scope
+ON warehouses(workspace_id, organization_id, legal_entity_id, active, warehouse_code);
+CREATE INDEX IF NOT EXISTS idx_inventory_locations_warehouse
+ON inventory_locations(warehouse_id, parent_location_id, active, location_code);
+CREATE INDEX IF NOT EXISTS idx_inventory_lots_item
+ON inventory_lots(item_id, active, lot_serial_code);
+CREATE INDEX IF NOT EXISTS idx_inventory_movements_scope
+ON inventory_movements(workspace_id, organization_id, legal_entity_id, period_id, status, movement_date);
+CREATE INDEX IF NOT EXISTS idx_inventory_movement_lines_item
+ON inventory_movement_lines(item_id, inventory_lot_id, from_location_id, to_location_id, movement_id);
+
+CREATE TRIGGER IF NOT EXISTS inventory_movement_lines_insert_draft_only
+BEFORE INSERT ON inventory_movement_lines
+WHEN COALESCE((SELECT status FROM inventory_movements WHERE id = NEW.movement_id), '') <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'inventory movement lines require a draft movement');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_movement_lines_update_draft_only
+BEFORE UPDATE ON inventory_movement_lines
+WHEN COALESCE((SELECT status FROM inventory_movements WHERE id = OLD.movement_id), '') <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'posted inventory movement lines are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_movement_lines_delete_draft_only
+BEFORE DELETE ON inventory_movement_lines
+WHEN COALESCE((SELECT status FROM inventory_movements WHERE id = OLD.movement_id), '') <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'posted inventory movement lines are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_movement_status_transition
+BEFORE UPDATE OF status ON inventory_movements
+WHEN NEW.status <> OLD.status
+ AND NOT (
+    (OLD.status = 'Draft' AND NEW.status = 'Posted') OR
+    (OLD.status = 'Posted' AND NEW.status = 'Voided')
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'invalid inventory movement status transition');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_movement_post_integrity
+BEFORE UPDATE OF status ON inventory_movements
+WHEN OLD.status = 'Draft' AND NEW.status = 'Posted'
+ AND (
+    (SELECT COUNT(*) FROM inventory_movement_lines WHERE movement_id = OLD.id) < 1 OR
+    NEW.posted_by = '' OR NEW.posted_at IS NULL OR NEW.post_reason = '' OR
+    EXISTS (
+        SELECT 1 FROM inventory_movement_lines lines
+        WHERE lines.movement_id = OLD.id
+          AND (
+            (OLD.movement_type = 'Receipt' AND (lines.from_location_id IS NOT NULL OR lines.to_location_id IS NULL)) OR
+            (OLD.movement_type = 'Delivery' AND (lines.from_location_id IS NULL OR lines.to_location_id IS NOT NULL)) OR
+            (OLD.movement_type = 'Transfer' AND (lines.from_location_id IS NULL OR lines.to_location_id IS NULL)) OR
+            (OLD.movement_type = 'Adjustment' AND ((lines.from_location_id IS NULL) = (lines.to_location_id IS NULL)))
+          )
+    )
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'inventory movement posting requires valid lines and review metadata');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_movement_void_requires_metadata
+BEFORE UPDATE OF status ON inventory_movements
+WHEN OLD.status = 'Posted' AND NEW.status = 'Voided'
+ AND (NEW.voided_by = '' OR NEW.voided_at IS NULL OR NEW.void_reason = '')
+BEGIN
+    SELECT RAISE(ABORT, 'voiding an inventory movement requires actor, timestamp, and reason');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_movement_header_immutable
+BEFORE UPDATE OF workspace_id, organization_id, legal_entity_id, period_id, movement_number,
+                 movement_type, movement_date, source_reference, description, source_type,
+                 created_by, created_at
+ON inventory_movements
+WHEN OLD.status <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'posted inventory movement headers are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_movement_post_metadata_immutable
+BEFORE UPDATE OF posted_by, posted_at, post_reason ON inventory_movements
+WHEN OLD.status <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'inventory movement posting metadata is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_movement_void_metadata_immutable
+BEFORE UPDATE OF voided_by, voided_at, void_reason ON inventory_movements
+WHEN OLD.status = 'Voided'
+BEGIN
+    SELECT RAISE(ABORT, 'inventory movement void metadata is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_movement_delete_draft_only
+BEFORE DELETE ON inventory_movements
+WHEN OLD.status <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'posted inventory movements cannot be deleted');
+END;
+
+INSERT OR IGNORE INTO permissions (name, description) VALUES
+    ('inventory.read', 'Read local inventory masters, movements, balances, and control exceptions.'),
+    ('inventory.manage', 'Manage local inventory masters and draft movements.'),
+    ('inventory.post', 'Post or void locally reviewed inventory movements.');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name IN ('admin', 'controller')
+  AND permissions.name IN ('inventory.read', 'inventory.manage', 'inventory.post');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name = 'preparer'
+  AND permissions.name IN ('inventory.read', 'inventory.manage');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name = 'reviewer'
+  AND permissions.name IN ('inventory.read', 'inventory.post');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name = 'auditor-readonly'
+  AND permissions.name = 'inventory.read';
+"""
+
+INVENTORY_PLANNING_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS inventory_count_sessions (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
+    legal_entity_id TEXT NOT NULL REFERENCES legal_entities(id) ON DELETE RESTRICT,
+    period_id TEXT NOT NULL REFERENCES periods(id) ON DELETE RESTRICT,
+    location_id TEXT NOT NULL REFERENCES inventory_locations(id) ON DELETE RESTRICT,
+    count_number TEXT NOT NULL,
+    count_date TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'Draft'
+        CHECK (status IN ('Draft', 'Counting', 'Submitted', 'Approved', 'Cancelled')),
+    created_by TEXT NOT NULL,
+    started_by TEXT NOT NULL DEFAULT '',
+    started_at TEXT,
+    submitted_by TEXT NOT NULL DEFAULT '',
+    submitted_at TEXT,
+    submit_reason TEXT NOT NULL DEFAULT '',
+    approved_by TEXT NOT NULL DEFAULT '',
+    approved_at TEXT,
+    approval_reason TEXT NOT NULL DEFAULT '',
+    cancelled_by TEXT NOT NULL DEFAULT '',
+    cancelled_at TEXT,
+    cancel_reason TEXT NOT NULL DEFAULT '',
+    adjustment_movement_id TEXT UNIQUE REFERENCES inventory_movements(id) ON DELETE RESTRICT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (workspace_id, count_number)
+);
+
+CREATE TABLE IF NOT EXISTS inventory_count_lines (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES inventory_count_sessions(id) ON DELETE CASCADE,
+    line_number INTEGER NOT NULL CHECK (line_number > 0),
+    item_id TEXT NOT NULL REFERENCES inventory_items(id) ON DELETE RESTRICT,
+    uom_id TEXT NOT NULL REFERENCES units_of_measure(id) ON DELETE RESTRICT,
+    inventory_lot_id TEXT REFERENCES inventory_lots(id) ON DELETE RESTRICT,
+    expected_quantity_scaled INTEGER NOT NULL,
+    counted_quantity_scaled INTEGER CHECK (counted_quantity_scaled IS NULL OR counted_quantity_scaled >= 0),
+    quantity_precision INTEGER NOT NULL CHECK (quantity_precision BETWEEN 0 AND 6),
+    count_note TEXT NOT NULL DEFAULT '',
+    counted_by TEXT NOT NULL DEFAULT '',
+    counted_at TEXT,
+    created_at TEXT NOT NULL,
+    UNIQUE (session_id, line_number),
+    UNIQUE (session_id, item_id, inventory_lot_id)
+);
+
+CREATE TABLE IF NOT EXISTS inventory_reorder_rules (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
+    legal_entity_id TEXT NOT NULL REFERENCES legal_entities(id) ON DELETE RESTRICT,
+    item_id TEXT NOT NULL REFERENCES inventory_items(id) ON DELETE RESTRICT,
+    location_id TEXT NOT NULL REFERENCES inventory_locations(id) ON DELETE RESTRICT,
+    minimum_quantity_scaled INTEGER NOT NULL CHECK (minimum_quantity_scaled >= 0),
+    target_quantity_scaled INTEGER NOT NULL CHECK (target_quantity_scaled > minimum_quantity_scaled),
+    quantity_precision INTEGER NOT NULL CHECK (quantity_precision BETWEEN 0 AND 6),
+    lead_time_days INTEGER NOT NULL DEFAULT 0 CHECK (lead_time_days BETWEEN 0 AND 3650),
+    active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+    created_by TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (workspace_id, organization_id, legal_entity_id, item_id, location_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_count_sessions_scope
+ON inventory_count_sessions(workspace_id, organization_id, legal_entity_id, status, count_date);
+CREATE INDEX IF NOT EXISTS idx_inventory_count_lines_session
+ON inventory_count_lines(session_id, line_number, item_id, inventory_lot_id);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_inventory_count_lines_item_lot
+ON inventory_count_lines(session_id, item_id, COALESCE(inventory_lot_id, ''));
+CREATE INDEX IF NOT EXISTS idx_inventory_reorder_rules_scope
+ON inventory_reorder_rules(workspace_id, organization_id, legal_entity_id, active, item_id, location_id);
+
+CREATE TRIGGER IF NOT EXISTS inventory_count_insert_draft_only
+BEFORE INSERT ON inventory_count_sessions
+WHEN NEW.status <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'inventory counts must be created as Draft');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_count_status_transition
+BEFORE UPDATE OF status ON inventory_count_sessions
+WHEN NEW.status <> OLD.status
+ AND NOT (
+    (OLD.status = 'Draft' AND NEW.status IN ('Counting', 'Cancelled')) OR
+    (OLD.status = 'Counting' AND NEW.status IN ('Submitted', 'Cancelled')) OR
+    (OLD.status = 'Submitted' AND NEW.status IN ('Approved', 'Cancelled'))
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'invalid inventory count status transition');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_count_start_integrity
+BEFORE UPDATE OF status ON inventory_count_sessions
+WHEN OLD.status = 'Draft' AND NEW.status = 'Counting'
+ AND (
+    NEW.started_by = '' OR NEW.started_at IS NULL OR
+    (SELECT COUNT(*) FROM inventory_count_lines WHERE session_id = OLD.id) < 1
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'starting an inventory count requires snapshot lines and actor metadata');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_count_submit_integrity
+BEFORE UPDATE OF status ON inventory_count_sessions
+WHEN OLD.status = 'Counting' AND NEW.status = 'Submitted'
+ AND (
+    NEW.submitted_by = '' OR NEW.submitted_at IS NULL OR NEW.submit_reason = '' OR
+    EXISTS (
+        SELECT 1 FROM inventory_count_lines
+        WHERE session_id = OLD.id AND counted_quantity_scaled IS NULL
+    )
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'submitting an inventory count requires completed lines and review metadata');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_count_approve_integrity
+BEFORE UPDATE OF status ON inventory_count_sessions
+WHEN OLD.status = 'Submitted' AND NEW.status = 'Approved'
+ AND (NEW.approved_by = '' OR NEW.approved_at IS NULL OR NEW.approval_reason = '')
+BEGIN
+    SELECT RAISE(ABORT, 'approving an inventory count requires actor, timestamp, and reason');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_count_cancel_integrity
+BEFORE UPDATE OF status ON inventory_count_sessions
+WHEN NEW.status = 'Cancelled' AND OLD.status <> 'Cancelled'
+ AND (NEW.cancelled_by = '' OR NEW.cancelled_at IS NULL OR NEW.cancel_reason = '')
+BEGIN
+    SELECT RAISE(ABORT, 'cancelling an inventory count requires actor, timestamp, and reason');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_count_header_immutable
+BEFORE UPDATE OF workspace_id, organization_id, legal_entity_id, period_id, location_id,
+                 count_number, count_date, description, created_by, created_at
+ON inventory_count_sessions
+WHEN OLD.status <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'started inventory count headers are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_count_started_metadata_immutable
+BEFORE UPDATE OF started_by, started_at ON inventory_count_sessions
+WHEN OLD.status <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'inventory count start metadata is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_count_submit_metadata_immutable
+BEFORE UPDATE OF submitted_by, submitted_at, submit_reason ON inventory_count_sessions
+WHEN OLD.status IN ('Submitted', 'Approved', 'Cancelled')
+BEGIN
+    SELECT RAISE(ABORT, 'inventory count submission metadata is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_count_approval_metadata_immutable
+BEFORE UPDATE OF approved_by, approved_at, approval_reason, adjustment_movement_id
+ON inventory_count_sessions
+WHEN OLD.status IN ('Approved', 'Cancelled')
+BEGIN
+    SELECT RAISE(ABORT, 'inventory count approval metadata is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_count_cancel_metadata_immutable
+BEFORE UPDATE OF cancelled_by, cancelled_at, cancel_reason ON inventory_count_sessions
+WHEN OLD.status = 'Cancelled'
+BEGIN
+    SELECT RAISE(ABORT, 'inventory count cancellation metadata is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_count_delete_draft_only
+BEFORE DELETE ON inventory_count_sessions
+WHEN OLD.status <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'started inventory counts cannot be deleted');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_count_lines_insert_draft_only
+BEFORE INSERT ON inventory_count_lines
+WHEN COALESCE((SELECT status FROM inventory_count_sessions WHERE id = NEW.session_id), '') <> 'Draft'
+ OR NEW.counted_quantity_scaled IS NOT NULL
+ OR NEW.count_note <> ''
+ OR NEW.counted_by <> ''
+ OR NEW.counted_at IS NOT NULL
+BEGIN
+    SELECT RAISE(ABORT, 'inventory count snapshot lines require a Draft session and empty count results');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_count_line_snapshot_immutable
+BEFORE UPDATE OF session_id, line_number, item_id, uom_id, inventory_lot_id,
+                 expected_quantity_scaled, quantity_precision, created_at
+ON inventory_count_lines
+BEGIN
+    SELECT RAISE(ABORT, 'inventory count snapshot fields are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_count_lines_update_counting_only
+BEFORE UPDATE OF counted_quantity_scaled, count_note, counted_by, counted_at
+ON inventory_count_lines
+WHEN COALESCE((SELECT status FROM inventory_count_sessions WHERE id = OLD.session_id), '') <> 'Counting'
+BEGIN
+    SELECT RAISE(ABORT, 'inventory count results can be updated only while counting');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_count_lines_delete_draft_only
+BEFORE DELETE ON inventory_count_lines
+WHEN COALESCE((SELECT status FROM inventory_count_sessions WHERE id = OLD.session_id), '') <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'started inventory count lines are immutable');
+END;
+
+INSERT OR IGNORE INTO permissions (name, description) VALUES
+    ('inventory.count.manage', 'Create, count, submit, or cancel local inventory count sessions.'),
+    ('inventory.count.approve', 'Approve submitted local inventory counts and prepare draft adjustments.'),
+    ('inventory.reorder.manage', 'Manage local inventory reorder thresholds and lead-time metadata.');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name IN ('admin', 'controller')
+  AND permissions.name IN ('inventory.count.manage', 'inventory.count.approve', 'inventory.reorder.manage');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name = 'preparer'
+  AND permissions.name IN ('inventory.count.manage', 'inventory.reorder.manage');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name = 'reviewer'
+  AND permissions.name = 'inventory.count.approve';
+"""
+
+INVENTORY_VALUATION_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS inventory_valuation_policies (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
+    legal_entity_id TEXT NOT NULL REFERENCES legal_entities(id) ON DELETE RESTRICT,
+    policy_code TEXT NOT NULL,
+    costing_method TEXT NOT NULL DEFAULT 'FIFO' CHECK (costing_method = 'FIFO'),
+    currency_code TEXT NOT NULL REFERENCES currencies(code) ON DELETE RESTRICT,
+    finance_journal_id TEXT NOT NULL REFERENCES finance_journals(id) ON DELETE RESTRICT,
+    receipt_clearing_account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
+    cogs_account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
+    adjustment_account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
+    active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+    created_by TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (workspace_id, organization_id, legal_entity_id, policy_code)
+);
+
+CREATE TABLE IF NOT EXISTS inventory_valuation_documents (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
+    legal_entity_id TEXT NOT NULL REFERENCES legal_entities(id) ON DELETE RESTRICT,
+    period_id TEXT NOT NULL REFERENCES periods(id) ON DELETE RESTRICT,
+    movement_id TEXT NOT NULL REFERENCES inventory_movements(id) ON DELETE RESTRICT,
+    policy_id TEXT NOT NULL REFERENCES inventory_valuation_policies(id) ON DELETE RESTRICT,
+    valuation_number TEXT NOT NULL,
+    valuation_date TEXT NOT NULL,
+    currency_code TEXT NOT NULL REFERENCES currencies(code) ON DELETE RESTRICT,
+    status TEXT NOT NULL DEFAULT 'Draft' CHECK (status IN ('Draft', 'Approved', 'Cancelled')),
+    total_value_minor INTEGER NOT NULL DEFAULT 0 CHECK (total_value_minor >= 0),
+    finance_entry_id TEXT UNIQUE REFERENCES ledger_entries(id) ON DELETE RESTRICT,
+    created_by TEXT NOT NULL,
+    approved_by TEXT NOT NULL DEFAULT '',
+    approved_at TEXT,
+    approval_reason TEXT NOT NULL DEFAULT '',
+    cancelled_by TEXT NOT NULL DEFAULT '',
+    cancelled_at TEXT,
+    cancel_reason TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (workspace_id, valuation_number)
+);
+
+CREATE TABLE IF NOT EXISTS inventory_valuation_input_costs (
+    id TEXT PRIMARY KEY,
+    valuation_document_id TEXT NOT NULL REFERENCES inventory_valuation_documents(id) ON DELETE CASCADE,
+    movement_line_id TEXT NOT NULL REFERENCES inventory_movement_lines(id) ON DELETE RESTRICT,
+    total_cost_minor INTEGER NOT NULL CHECK (total_cost_minor > 0),
+    created_at TEXT NOT NULL,
+    UNIQUE (valuation_document_id, movement_line_id)
+);
+
+CREATE TABLE IF NOT EXISTS inventory_valuation_lines (
+    id TEXT PRIMARY KEY,
+    valuation_document_id TEXT NOT NULL REFERENCES inventory_valuation_documents(id) ON DELETE CASCADE,
+    movement_line_id TEXT NOT NULL REFERENCES inventory_movement_lines(id) ON DELETE RESTRICT,
+    line_number INTEGER NOT NULL CHECK (line_number > 0),
+    flow_direction TEXT NOT NULL CHECK (flow_direction IN ('Inbound', 'Outbound')),
+    item_id TEXT NOT NULL REFERENCES inventory_items(id) ON DELETE RESTRICT,
+    uom_id TEXT NOT NULL REFERENCES units_of_measure(id) ON DELETE RESTRICT,
+    inventory_lot_id TEXT REFERENCES inventory_lots(id) ON DELETE RESTRICT,
+    quantity_scaled INTEGER NOT NULL CHECK (quantity_scaled > 0),
+    quantity_precision INTEGER NOT NULL CHECK (quantity_precision BETWEEN 0 AND 6),
+    value_minor INTEGER NOT NULL CHECK (value_minor > 0),
+    inventory_account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
+    offset_account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
+    created_at TEXT NOT NULL,
+    UNIQUE (valuation_document_id, line_number),
+    UNIQUE (valuation_document_id, movement_line_id)
+);
+
+CREATE TABLE IF NOT EXISTS inventory_cost_layers (
+    id TEXT PRIMARY KEY,
+    source_valuation_line_id TEXT NOT NULL UNIQUE REFERENCES inventory_valuation_lines(id) ON DELETE RESTRICT,
+    legal_entity_id TEXT NOT NULL REFERENCES legal_entities(id) ON DELETE RESTRICT,
+    item_id TEXT NOT NULL REFERENCES inventory_items(id) ON DELETE RESTRICT,
+    uom_id TEXT NOT NULL REFERENCES units_of_measure(id) ON DELETE RESTRICT,
+    inventory_lot_id TEXT REFERENCES inventory_lots(id) ON DELETE RESTRICT,
+    quantity_precision INTEGER NOT NULL CHECK (quantity_precision BETWEEN 0 AND 6),
+    original_quantity_scaled INTEGER NOT NULL CHECK (original_quantity_scaled > 0),
+    remaining_quantity_scaled INTEGER NOT NULL CHECK (
+        remaining_quantity_scaled >= 0 AND remaining_quantity_scaled <= original_quantity_scaled
+    ),
+    original_value_minor INTEGER NOT NULL CHECK (original_value_minor > 0),
+    remaining_value_minor INTEGER NOT NULL CHECK (
+        remaining_value_minor >= 0 AND remaining_value_minor <= original_value_minor
+    ),
+    currency_code TEXT NOT NULL REFERENCES currencies(code) ON DELETE RESTRICT,
+    created_at TEXT NOT NULL,
+    CHECK (
+        (remaining_quantity_scaled = 0 AND remaining_value_minor = 0) OR
+        (remaining_quantity_scaled > 0 AND remaining_value_minor > 0)
+    )
+);
+
+CREATE TABLE IF NOT EXISTS inventory_layer_consumptions (
+    id TEXT PRIMARY KEY,
+    valuation_line_id TEXT NOT NULL REFERENCES inventory_valuation_lines(id) ON DELETE RESTRICT,
+    cost_layer_id TEXT NOT NULL REFERENCES inventory_cost_layers(id) ON DELETE RESTRICT,
+    quantity_scaled INTEGER NOT NULL CHECK (quantity_scaled > 0),
+    value_minor INTEGER NOT NULL CHECK (value_minor > 0),
+    created_at TEXT NOT NULL,
+    UNIQUE (valuation_line_id, cost_layer_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_valuation_policies_scope
+ON inventory_valuation_policies(workspace_id, organization_id, legal_entity_id, active, policy_code);
+CREATE INDEX IF NOT EXISTS idx_inventory_valuation_documents_scope
+ON inventory_valuation_documents(workspace_id, organization_id, legal_entity_id, status, valuation_date);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_inventory_valuation_active_movement
+ON inventory_valuation_documents(movement_id) WHERE status <> 'Cancelled';
+CREATE INDEX IF NOT EXISTS idx_inventory_cost_layers_fifo
+ON inventory_cost_layers(legal_entity_id, item_id, inventory_lot_id, created_at, id)
+WHERE remaining_quantity_scaled > 0;
+CREATE INDEX IF NOT EXISTS idx_inventory_layer_consumptions_layer
+ON inventory_layer_consumptions(cost_layer_id, valuation_line_id);
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_document_insert_draft_only
+BEFORE INSERT ON inventory_valuation_documents
+WHEN NEW.status <> 'Draft' OR NEW.total_value_minor <> 0 OR NEW.finance_entry_id IS NOT NULL
+BEGIN
+    SELECT RAISE(ABORT, 'inventory valuations must be created as empty Draft documents');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_document_status_transition
+BEFORE UPDATE OF status ON inventory_valuation_documents
+WHEN NEW.status <> OLD.status
+ AND NOT (
+    (OLD.status = 'Draft' AND NEW.status = 'Approved') OR
+    (OLD.status = 'Draft' AND NEW.status = 'Cancelled')
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'invalid inventory valuation status transition');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_document_approve_integrity
+BEFORE UPDATE OF status ON inventory_valuation_documents
+WHEN OLD.status = 'Draft' AND NEW.status = 'Approved'
+ AND (
+    NEW.approved_by = '' OR NEW.approved_at IS NULL OR NEW.approval_reason = '' OR
+    NEW.total_value_minor <= 0 OR NEW.finance_entry_id IS NULL OR
+    COALESCE((SELECT status FROM inventory_movements WHERE id = OLD.movement_id), '') <> 'Posted' OR
+    (SELECT COUNT(*) FROM inventory_valuation_lines WHERE valuation_document_id = OLD.id) < 1 OR
+    NEW.total_value_minor <> COALESCE((
+        SELECT SUM(value_minor) FROM inventory_valuation_lines WHERE valuation_document_id = OLD.id
+    ), 0) OR
+    NOT EXISTS (
+        SELECT 1 FROM ledger_entries
+        WHERE id = NEW.finance_entry_id
+          AND status IN ('Draft', 'Validated')
+          AND currency_code = NEW.currency_code
+    ) OR
+    NEW.total_value_minor <> COALESCE((
+        SELECT SUM(debit_minor) FROM ledger_lines WHERE entry_id = NEW.finance_entry_id
+    ), 0) OR
+    NEW.total_value_minor <> COALESCE((
+        SELECT SUM(credit_minor) FROM ledger_lines WHERE entry_id = NEW.finance_entry_id
+    ), 0) OR
+    EXISTS (
+        SELECT 1
+        FROM inventory_valuation_lines lines
+        WHERE lines.valuation_document_id = OLD.id
+          AND (
+            (lines.flow_direction = 'Inbound' AND NOT EXISTS (
+                SELECT 1 FROM inventory_cost_layers layers
+                WHERE layers.source_valuation_line_id = lines.id
+                  AND layers.original_quantity_scaled = lines.quantity_scaled
+                  AND layers.original_value_minor = lines.value_minor
+            )) OR
+            (lines.flow_direction = 'Outbound' AND (
+                lines.quantity_scaled <> COALESCE((
+                    SELECT SUM(consumptions.quantity_scaled)
+                    FROM inventory_layer_consumptions consumptions
+                    WHERE consumptions.valuation_line_id = lines.id
+                ), 0) OR
+                lines.value_minor <> COALESCE((
+                    SELECT SUM(consumptions.value_minor)
+                    FROM inventory_layer_consumptions consumptions
+                    WHERE consumptions.valuation_line_id = lines.id
+                ), 0)
+            ))
+          )
+    )
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'inventory valuation approval requires complete layers and a balanced finance draft');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_document_cancel_integrity
+BEFORE UPDATE OF status ON inventory_valuation_documents
+WHEN OLD.status = 'Draft' AND NEW.status = 'Cancelled'
+ AND (NEW.cancelled_by = '' OR NEW.cancelled_at IS NULL OR NEW.cancel_reason = '')
+BEGIN
+    SELECT RAISE(ABORT, 'cancelling an inventory valuation requires actor, timestamp, and reason');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_document_header_immutable
+BEFORE UPDATE OF workspace_id, organization_id, legal_entity_id, period_id, movement_id,
+                 policy_id, valuation_number, valuation_date, currency_code, created_by, created_at
+ON inventory_valuation_documents
+WHEN OLD.status <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'approved inventory valuation headers are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_document_approval_metadata_immutable
+BEFORE UPDATE OF approved_by, approved_at, approval_reason, total_value_minor, finance_entry_id
+ON inventory_valuation_documents
+WHEN OLD.status <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'inventory valuation approval metadata is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_document_delete_draft_only
+BEFORE DELETE ON inventory_valuation_documents
+WHEN OLD.status <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'approved inventory valuations cannot be deleted');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_input_costs_draft_only
+BEFORE INSERT ON inventory_valuation_input_costs
+WHEN COALESCE((
+    SELECT status FROM inventory_valuation_documents WHERE id = NEW.valuation_document_id
+), '') <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'valuation input costs require a Draft document');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_input_costs_update_draft_only
+BEFORE UPDATE ON inventory_valuation_input_costs
+WHEN COALESCE((
+    SELECT status FROM inventory_valuation_documents WHERE id = OLD.valuation_document_id
+), '') <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'approved valuation input costs are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_input_costs_delete_draft_only
+BEFORE DELETE ON inventory_valuation_input_costs
+WHEN COALESCE((
+    SELECT status FROM inventory_valuation_documents WHERE id = OLD.valuation_document_id
+), '') <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'approved valuation input costs are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_lines_insert_draft_only
+BEFORE INSERT ON inventory_valuation_lines
+WHEN COALESCE((
+    SELECT status FROM inventory_valuation_documents WHERE id = NEW.valuation_document_id
+), '') <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'valuation lines require a Draft document');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_lines_immutable
+BEFORE UPDATE ON inventory_valuation_lines
+BEGIN
+    SELECT RAISE(ABORT, 'inventory valuation lines are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_lines_delete_draft_only
+BEFORE DELETE ON inventory_valuation_lines
+WHEN COALESCE((
+    SELECT status FROM inventory_valuation_documents WHERE id = OLD.valuation_document_id
+), '') <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'approved valuation lines are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_cost_layers_identity_immutable
+BEFORE UPDATE OF source_valuation_line_id, legal_entity_id, item_id, uom_id, inventory_lot_id,
+                 quantity_precision, original_quantity_scaled, original_value_minor, currency_code, created_at
+ON inventory_cost_layers
+BEGIN
+    SELECT RAISE(ABORT, 'inventory cost-layer identity and origin are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_cost_layers_remaining_control
+BEFORE UPDATE OF remaining_quantity_scaled, remaining_value_minor ON inventory_cost_layers
+WHEN NEW.remaining_quantity_scaled > OLD.remaining_quantity_scaled
+ OR NEW.remaining_value_minor > OLD.remaining_value_minor
+ OR NEW.remaining_quantity_scaled <> OLD.original_quantity_scaled - COALESCE((
+        SELECT SUM(quantity_scaled) FROM inventory_layer_consumptions WHERE cost_layer_id = OLD.id
+    ), 0)
+ OR NEW.remaining_value_minor <> OLD.original_value_minor - COALESCE((
+        SELECT SUM(value_minor) FROM inventory_layer_consumptions WHERE cost_layer_id = OLD.id
+    ), 0)
+BEGIN
+    SELECT RAISE(ABORT, 'cost-layer balances must match immutable consumption records');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_cost_layers_delete_blocked
+BEFORE DELETE ON inventory_cost_layers
+BEGIN
+    SELECT RAISE(ABORT, 'inventory cost layers cannot be deleted');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_layer_consumptions_insert_draft_only
+BEFORE INSERT ON inventory_layer_consumptions
+WHEN COALESCE((
+    SELECT documents.status
+    FROM inventory_valuation_lines lines
+    JOIN inventory_valuation_documents documents ON documents.id = lines.valuation_document_id
+    WHERE lines.id = NEW.valuation_line_id
+), '') <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'layer consumptions require a Draft valuation document');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_layer_consumptions_immutable
+BEFORE UPDATE ON inventory_layer_consumptions
+BEGIN
+    SELECT RAISE(ABORT, 'inventory layer consumptions are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_layer_consumptions_delete_blocked
+BEFORE DELETE ON inventory_layer_consumptions
+BEGIN
+    SELECT RAISE(ABORT, 'inventory layer consumptions cannot be deleted');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_movement_void_blocked_after_valuation
+BEFORE UPDATE OF status ON inventory_movements
+WHEN OLD.status = 'Posted' AND NEW.status = 'Voided'
+ AND EXISTS (
+    SELECT 1 FROM inventory_valuation_documents
+    WHERE movement_id = OLD.id AND status = 'Approved'
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'approved inventory valuation must be reversed before voiding its movement');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_finance_lines_insert_blocked
+BEFORE INSERT ON ledger_lines
+WHEN EXISTS (
+    SELECT 1 FROM inventory_valuation_documents
+    WHERE finance_entry_id = NEW.entry_id AND status = 'Approved'
+)
+BEGIN
+    SELECT RAISE(ABORT, 'approved inventory valuation finance lines are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_finance_lines_update_blocked
+BEFORE UPDATE ON ledger_lines
+WHEN EXISTS (
+    SELECT 1 FROM inventory_valuation_documents
+    WHERE finance_entry_id = OLD.entry_id AND status = 'Approved'
+)
+BEGIN
+    SELECT RAISE(ABORT, 'approved inventory valuation finance lines are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_finance_lines_delete_blocked
+BEFORE DELETE ON ledger_lines
+WHEN EXISTS (
+    SELECT 1 FROM inventory_valuation_documents
+    WHERE finance_entry_id = OLD.entry_id AND status = 'Approved'
+)
+BEGIN
+    SELECT RAISE(ABORT, 'approved inventory valuation finance lines are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_finance_header_immutable
+BEFORE UPDATE OF workspace_id, organization_id, chart_id, legal_entity_id, period_id,
+                 finance_journal_id, entry_number, posting_date, currency_code, description,
+                 external_reference, source_type, created_by, created_at
+ON ledger_entries
+WHEN EXISTS (
+    SELECT 1 FROM inventory_valuation_documents
+    WHERE finance_entry_id = OLD.id AND status = 'Approved'
+)
+BEGIN
+    SELECT RAISE(ABORT, 'approved inventory valuation finance headers are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_finance_void_blocked
+BEFORE UPDATE OF status ON ledger_entries
+WHEN OLD.status = 'Validated' AND NEW.status = 'Voided'
+ AND EXISTS (
+    SELECT 1 FROM inventory_valuation_documents
+    WHERE finance_entry_id = OLD.id AND status = 'Approved'
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'approved inventory valuation must be reversed before voiding its finance entry');
+END;
+
+INSERT OR IGNORE INTO permissions (name, description) VALUES
+    ('inventory.valuation.manage', 'Configure FIFO policies and prepare local inventory valuation drafts.'),
+    ('inventory.valuation.approve', 'Approve FIFO valuations and generate balanced Finance Core drafts.');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name IN ('admin', 'controller')
+  AND permissions.name IN ('inventory.valuation.manage', 'inventory.valuation.approve');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name = 'preparer'
+  AND permissions.name = 'inventory.valuation.manage';
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name = 'reviewer'
+  AND permissions.name = 'inventory.valuation.approve';
+"""
+
+INVENTORY_VALUATION_REVERSAL_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS inventory_valuation_reversals (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
+    legal_entity_id TEXT NOT NULL REFERENCES legal_entities(id) ON DELETE RESTRICT,
+    period_id TEXT NOT NULL REFERENCES periods(id) ON DELETE RESTRICT,
+    original_valuation_document_id TEXT NOT NULL
+        REFERENCES inventory_valuation_documents(id) ON DELETE RESTRICT,
+    reversal_movement_id TEXT NOT NULL REFERENCES inventory_movements(id) ON DELETE RESTRICT,
+    reversal_number TEXT NOT NULL,
+    reversal_date TEXT NOT NULL,
+    currency_code TEXT NOT NULL REFERENCES currencies(code) ON DELETE RESTRICT,
+    status TEXT NOT NULL DEFAULT 'Draft' CHECK (status IN ('Draft', 'Approved', 'Cancelled')),
+    total_value_minor INTEGER NOT NULL DEFAULT 0 CHECK (total_value_minor >= 0),
+    finance_entry_id TEXT UNIQUE REFERENCES ledger_entries(id) ON DELETE RESTRICT,
+    created_by TEXT NOT NULL,
+    approved_by TEXT NOT NULL DEFAULT '',
+    approved_at TEXT,
+    approval_reason TEXT NOT NULL DEFAULT '',
+    cancelled_by TEXT NOT NULL DEFAULT '',
+    cancelled_at TEXT,
+    cancel_reason TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (workspace_id, reversal_number)
+);
+
+CREATE TABLE IF NOT EXISTS inventory_valuation_reversal_effects (
+    id TEXT PRIMARY KEY,
+    reversal_id TEXT NOT NULL REFERENCES inventory_valuation_reversals(id) ON DELETE CASCADE,
+    original_valuation_line_id TEXT NOT NULL
+        REFERENCES inventory_valuation_lines(id) ON DELETE RESTRICT,
+    original_consumption_id TEXT REFERENCES inventory_layer_consumptions(id) ON DELETE RESTRICT,
+    cost_layer_id TEXT NOT NULL REFERENCES inventory_cost_layers(id) ON DELETE RESTRICT,
+    effect_type TEXT NOT NULL CHECK (effect_type IN ('Restore', 'Remove')),
+    quantity_scaled INTEGER NOT NULL CHECK (quantity_scaled > 0),
+    value_minor INTEGER NOT NULL CHECK (value_minor > 0),
+    created_at TEXT NOT NULL,
+    CHECK (
+        (effect_type = 'Remove' AND original_consumption_id IS NULL) OR
+        (effect_type = 'Restore' AND original_consumption_id IS NOT NULL)
+    )
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_inventory_valuation_reversal_active_document
+ON inventory_valuation_reversals(original_valuation_document_id) WHERE status <> 'Cancelled';
+CREATE UNIQUE INDEX IF NOT EXISTS ux_inventory_valuation_reversal_active_movement
+ON inventory_valuation_reversals(reversal_movement_id) WHERE status <> 'Cancelled';
+CREATE INDEX IF NOT EXISTS idx_inventory_valuation_reversals_scope
+ON inventory_valuation_reversals(workspace_id, organization_id, legal_entity_id, status, reversal_date);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_inventory_valuation_reversal_remove_line
+ON inventory_valuation_reversal_effects(reversal_id, original_valuation_line_id)
+WHERE effect_type = 'Remove';
+CREATE UNIQUE INDEX IF NOT EXISTS ux_inventory_valuation_reversal_restore_consumption
+ON inventory_valuation_reversal_effects(reversal_id, original_consumption_id)
+WHERE effect_type = 'Restore';
+CREATE INDEX IF NOT EXISTS idx_inventory_valuation_reversal_effects_layer
+ON inventory_valuation_reversal_effects(cost_layer_id, reversal_id);
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_reversal_insert_draft_only
+BEFORE INSERT ON inventory_valuation_reversals
+WHEN NEW.status <> 'Draft' OR NEW.total_value_minor <> 0 OR NEW.finance_entry_id IS NOT NULL
+BEGIN
+    SELECT RAISE(ABORT, 'inventory valuation reversals must be created as empty Draft records');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_reversal_status_transition
+BEFORE UPDATE OF status ON inventory_valuation_reversals
+WHEN NEW.status <> OLD.status
+ AND NOT (
+    (OLD.status = 'Draft' AND NEW.status = 'Approved') OR
+    (OLD.status = 'Draft' AND NEW.status = 'Cancelled')
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'invalid inventory valuation reversal status transition');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_reversal_approve_integrity
+BEFORE UPDATE OF status ON inventory_valuation_reversals
+WHEN OLD.status = 'Draft' AND NEW.status = 'Approved'
+ AND (
+    NEW.approved_by = '' OR NEW.approved_at IS NULL OR NEW.approval_reason = '' OR
+    NEW.total_value_minor <= 0 OR NEW.finance_entry_id IS NULL OR
+    COALESCE((
+        SELECT status FROM inventory_valuation_documents
+        WHERE id = OLD.original_valuation_document_id
+    ), '') <> 'Approved' OR
+    EXISTS (
+        SELECT 1 FROM inventory_valuation_documents documents
+        WHERE documents.id = OLD.original_valuation_document_id
+          AND (
+            documents.workspace_id <> OLD.workspace_id OR
+            documents.organization_id <> OLD.organization_id OR
+            documents.legal_entity_id <> OLD.legal_entity_id OR
+            documents.currency_code <> OLD.currency_code
+          )
+    ) OR
+    COALESCE((
+        SELECT status FROM inventory_movements WHERE id = OLD.reversal_movement_id
+    ), '') <> 'Posted' OR
+    NOT EXISTS (
+        SELECT 1
+        FROM inventory_movements reversal_movements
+        JOIN inventory_valuation_documents original_documents
+          ON original_documents.id = OLD.original_valuation_document_id
+        JOIN inventory_movements original_movements
+          ON original_movements.id = original_documents.movement_id
+        WHERE reversal_movements.id = OLD.reversal_movement_id
+          AND (
+            (original_movements.movement_type = 'Receipt'
+             AND reversal_movements.movement_type = 'Delivery') OR
+            (original_movements.movement_type = 'Delivery'
+             AND reversal_movements.movement_type = 'Receipt') OR
+            (original_movements.movement_type = 'Adjustment'
+             AND reversal_movements.movement_type = 'Adjustment')
+          )
+    ) OR
+    EXISTS (
+        SELECT 1 FROM inventory_movements movements
+        WHERE movements.id = OLD.reversal_movement_id
+          AND (
+            movements.workspace_id <> OLD.workspace_id OR
+            movements.organization_id <> OLD.organization_id OR
+            movements.legal_entity_id <> OLD.legal_entity_id OR
+            movements.period_id <> OLD.period_id OR
+            movements.movement_date <> OLD.reversal_date
+          )
+    ) OR
+    NEW.total_value_minor <> COALESCE((
+        SELECT total_value_minor FROM inventory_valuation_documents
+        WHERE id = OLD.original_valuation_document_id
+    ), 0) OR
+    (SELECT COUNT(*) FROM inventory_valuation_reversal_effects WHERE reversal_id = OLD.id) < 1 OR
+    NEW.total_value_minor <> COALESCE((
+        SELECT SUM(value_minor) FROM inventory_valuation_reversal_effects
+        WHERE reversal_id = OLD.id
+    ), 0) OR
+    NOT EXISTS (
+        SELECT 1 FROM ledger_entries entries
+        WHERE entries.id = NEW.finance_entry_id
+          AND entries.status = 'Draft'
+          AND entries.workspace_id = OLD.workspace_id
+          AND entries.organization_id = OLD.organization_id
+          AND entries.legal_entity_id = OLD.legal_entity_id
+          AND entries.period_id = OLD.period_id
+          AND entries.posting_date = OLD.reversal_date
+          AND entries.currency_code = OLD.currency_code
+          AND entries.source_type = 'Generated'
+          AND entries.chart_id = (
+              SELECT chart_id FROM ledger_entries
+              WHERE id = (
+                  SELECT finance_entry_id FROM inventory_valuation_documents
+                  WHERE id = OLD.original_valuation_document_id
+              )
+          )
+          AND entries.finance_journal_id = (
+              SELECT finance_journal_id FROM ledger_entries
+              WHERE id = (
+                  SELECT finance_entry_id FROM inventory_valuation_documents
+                  WHERE id = OLD.original_valuation_document_id
+              )
+          )
+    ) OR
+    NEW.total_value_minor <> COALESCE((
+        SELECT SUM(debit_minor) FROM ledger_lines WHERE entry_id = NEW.finance_entry_id
+    ), 0) OR
+    NEW.total_value_minor <> COALESCE((
+        SELECT SUM(credit_minor) FROM ledger_lines WHERE entry_id = NEW.finance_entry_id
+    ), 0) OR
+    (SELECT COUNT(*) FROM ledger_lines WHERE entry_id = NEW.finance_entry_id)
+      <> (SELECT COUNT(*) FROM ledger_lines
+          WHERE entry_id = (
+              SELECT finance_entry_id FROM inventory_valuation_documents
+              WHERE id = OLD.original_valuation_document_id
+          )) OR
+    EXISTS (
+        SELECT 1
+        FROM ledger_lines original_finance_lines
+        WHERE original_finance_lines.entry_id = (
+            SELECT finance_entry_id FROM inventory_valuation_documents
+            WHERE id = OLD.original_valuation_document_id
+        )
+          AND (
+            NOT EXISTS (
+                SELECT 1 FROM ledger_lines reversal_finance_lines
+                WHERE reversal_finance_lines.entry_id = NEW.finance_entry_id
+                  AND reversal_finance_lines.line_number = original_finance_lines.line_number
+                  AND reversal_finance_lines.account_id = original_finance_lines.account_id
+                  AND reversal_finance_lines.debit_minor = original_finance_lines.credit_minor
+                  AND reversal_finance_lines.credit_minor = original_finance_lines.debit_minor
+            ) OR
+            EXISTS (
+                SELECT dimension_value_id FROM ledger_line_dimensions
+                WHERE line_id = original_finance_lines.id
+                EXCEPT
+                SELECT reversal_dimensions.dimension_value_id
+                FROM ledger_line_dimensions reversal_dimensions
+                JOIN ledger_lines reversal_dimension_lines
+                  ON reversal_dimension_lines.id = reversal_dimensions.line_id
+                WHERE reversal_dimension_lines.entry_id = NEW.finance_entry_id
+                  AND reversal_dimension_lines.line_number = original_finance_lines.line_number
+            ) OR
+            EXISTS (
+                SELECT reversal_dimensions.dimension_value_id
+                FROM ledger_line_dimensions reversal_dimensions
+                JOIN ledger_lines reversal_dimension_lines
+                  ON reversal_dimension_lines.id = reversal_dimensions.line_id
+                WHERE reversal_dimension_lines.entry_id = NEW.finance_entry_id
+                  AND reversal_dimension_lines.line_number = original_finance_lines.line_number
+                EXCEPT
+                SELECT dimension_value_id FROM ledger_line_dimensions
+                WHERE line_id = original_finance_lines.id
+            )
+          )
+    ) OR
+    EXISTS (
+        SELECT original_lines.line_number
+        FROM inventory_valuation_lines original_lines
+        JOIN inventory_valuation_documents original_documents
+          ON original_documents.id = original_lines.valuation_document_id
+        JOIN inventory_movement_lines original_movement_lines
+          ON original_movement_lines.id = original_lines.movement_line_id
+        LEFT JOIN inventory_movement_lines reversal_lines
+          ON reversal_lines.movement_id = OLD.reversal_movement_id
+         AND reversal_lines.line_number = original_lines.line_number
+         AND reversal_lines.item_id = original_movement_lines.item_id
+         AND reversal_lines.uom_id = original_movement_lines.uom_id
+         AND COALESCE(reversal_lines.inventory_lot_id, '')
+             = COALESCE(original_movement_lines.inventory_lot_id, '')
+         AND COALESCE(reversal_lines.from_location_id, '')
+             = COALESCE(original_movement_lines.to_location_id, '')
+         AND COALESCE(reversal_lines.to_location_id, '')
+             = COALESCE(original_movement_lines.from_location_id, '')
+         AND reversal_lines.quantity_scaled = original_movement_lines.quantity_scaled
+         AND reversal_lines.quantity_precision = original_movement_lines.quantity_precision
+        WHERE original_documents.id = OLD.original_valuation_document_id
+          AND reversal_lines.id IS NULL
+    ) OR
+    (SELECT COUNT(*) FROM inventory_movement_lines WHERE movement_id = OLD.reversal_movement_id)
+      <> (SELECT COUNT(*) FROM inventory_valuation_lines
+          WHERE valuation_document_id = OLD.original_valuation_document_id) OR
+    EXISTS (
+        SELECT 1
+        FROM inventory_valuation_reversal_effects effects
+        JOIN inventory_valuation_lines lines ON lines.id = effects.original_valuation_line_id
+        LEFT JOIN inventory_layer_consumptions consumptions
+          ON consumptions.id = effects.original_consumption_id
+        LEFT JOIN inventory_cost_layers layers ON layers.id = effects.cost_layer_id
+        WHERE effects.reversal_id = OLD.id
+          AND (
+            lines.valuation_document_id <> OLD.original_valuation_document_id OR
+            (effects.effect_type = 'Remove' AND (
+                lines.flow_direction <> 'Inbound' OR
+                layers.source_valuation_line_id <> lines.id OR
+                effects.quantity_scaled <> lines.quantity_scaled OR
+                effects.value_minor <> lines.value_minor
+            )) OR
+            (effects.effect_type = 'Restore' AND (
+                lines.flow_direction <> 'Outbound' OR
+                consumptions.valuation_line_id <> lines.id OR
+                consumptions.cost_layer_id <> effects.cost_layer_id OR
+                effects.quantity_scaled <> consumptions.quantity_scaled OR
+                effects.value_minor <> consumptions.value_minor
+            ))
+          )
+    ) OR
+    EXISTS (
+        SELECT 1
+        FROM inventory_cost_layers layers
+        WHERE layers.id IN (
+            SELECT effects.cost_layer_id
+            FROM inventory_valuation_reversal_effects effects
+            WHERE effects.reversal_id = OLD.id
+        )
+          AND (
+            layers.remaining_quantity_scaled <> layers.original_quantity_scaled - COALESCE((
+                SELECT SUM(consumptions.quantity_scaled)
+                FROM inventory_layer_consumptions consumptions
+                WHERE consumptions.cost_layer_id = layers.id
+            ), 0) + COALESCE((
+                SELECT SUM(CASE effects.effect_type
+                    WHEN 'Restore' THEN effects.quantity_scaled ELSE -effects.quantity_scaled END)
+                FROM inventory_valuation_reversal_effects effects
+                WHERE effects.cost_layer_id = layers.id
+            ), 0) OR
+            layers.remaining_value_minor <> layers.original_value_minor - COALESCE((
+                SELECT SUM(consumptions.value_minor)
+                FROM inventory_layer_consumptions consumptions
+                WHERE consumptions.cost_layer_id = layers.id
+            ), 0) + COALESCE((
+                SELECT SUM(CASE effects.effect_type
+                    WHEN 'Restore' THEN effects.value_minor ELSE -effects.value_minor END)
+                FROM inventory_valuation_reversal_effects effects
+                WHERE effects.cost_layer_id = layers.id
+            ), 0)
+          )
+    ) OR
+    EXISTS (
+        SELECT 1 FROM inventory_valuation_lines lines
+        WHERE lines.valuation_document_id = OLD.original_valuation_document_id
+          AND lines.flow_direction = 'Inbound'
+          AND NOT EXISTS (
+            SELECT 1 FROM inventory_valuation_reversal_effects effects
+            WHERE effects.reversal_id = OLD.id
+              AND effects.original_valuation_line_id = lines.id
+              AND effects.effect_type = 'Remove'
+          )
+    ) OR
+    EXISTS (
+        SELECT 1
+        FROM inventory_layer_consumptions consumptions
+        JOIN inventory_valuation_lines lines ON lines.id = consumptions.valuation_line_id
+        WHERE lines.valuation_document_id = OLD.original_valuation_document_id
+          AND NOT EXISTS (
+            SELECT 1 FROM inventory_valuation_reversal_effects effects
+            WHERE effects.reversal_id = OLD.id
+              AND effects.original_consumption_id = consumptions.id
+              AND effects.effect_type = 'Restore'
+          )
+    ) OR
+    EXISTS (
+        SELECT account_id, SUM(debit_minor), SUM(credit_minor)
+        FROM ledger_lines
+        WHERE entry_id = (
+            SELECT finance_entry_id FROM inventory_valuation_documents
+            WHERE id = OLD.original_valuation_document_id
+        )
+        GROUP BY account_id
+        EXCEPT
+        SELECT account_id, SUM(credit_minor), SUM(debit_minor)
+        FROM ledger_lines WHERE entry_id = NEW.finance_entry_id
+        GROUP BY account_id
+    ) OR
+    EXISTS (
+        SELECT account_id, SUM(credit_minor), SUM(debit_minor)
+        FROM ledger_lines WHERE entry_id = NEW.finance_entry_id
+        GROUP BY account_id
+        EXCEPT
+        SELECT account_id, SUM(debit_minor), SUM(credit_minor)
+        FROM ledger_lines
+        WHERE entry_id = (
+            SELECT finance_entry_id FROM inventory_valuation_documents
+            WHERE id = OLD.original_valuation_document_id
+        )
+        GROUP BY account_id
+    )
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'valuation reversal approval requires exact mirror movement, layer effects, and finance draft');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_reversal_cancel_integrity
+BEFORE UPDATE OF status ON inventory_valuation_reversals
+WHEN OLD.status = 'Draft' AND NEW.status = 'Cancelled'
+ AND (NEW.cancelled_by = '' OR NEW.cancelled_at IS NULL OR NEW.cancel_reason = '')
+BEGIN
+    SELECT RAISE(ABORT, 'cancelling a valuation reversal requires actor, timestamp, and reason');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_reversal_header_immutable
+BEFORE UPDATE OF workspace_id, organization_id, legal_entity_id, period_id,
+                 original_valuation_document_id, reversal_movement_id, reversal_number,
+                 reversal_date, currency_code, created_by, created_at
+ON inventory_valuation_reversals
+WHEN OLD.status <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'approved valuation reversal headers are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_reversal_approval_immutable
+BEFORE UPDATE OF approved_by, approved_at, approval_reason, total_value_minor, finance_entry_id
+ON inventory_valuation_reversals
+WHEN OLD.status <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'valuation reversal approval metadata is immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_reversal_delete_draft_only
+BEFORE DELETE ON inventory_valuation_reversals
+WHEN OLD.status <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'approved valuation reversals cannot be deleted');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_reversal_effect_insert_draft_only
+BEFORE INSERT ON inventory_valuation_reversal_effects
+WHEN COALESCE((
+    SELECT status FROM inventory_valuation_reversals WHERE id = NEW.reversal_id
+), '') <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'layer reversal effects require a Draft valuation reversal');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_reversal_effect_immutable
+BEFORE UPDATE ON inventory_valuation_reversal_effects
+BEGIN
+    SELECT RAISE(ABORT, 'valuation reversal layer effects are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_reversal_effect_delete_draft_only
+BEFORE DELETE ON inventory_valuation_reversal_effects
+WHEN COALESCE((
+    SELECT status FROM inventory_valuation_reversals WHERE id = OLD.reversal_id
+), '') <> 'Draft'
+BEGIN
+    SELECT RAISE(ABORT, 'approved valuation reversal layer effects are immutable');
+END;
+
+DROP TRIGGER IF EXISTS inventory_cost_layers_remaining_control;
+CREATE TRIGGER inventory_cost_layers_remaining_control
+BEFORE UPDATE OF remaining_quantity_scaled, remaining_value_minor ON inventory_cost_layers
+WHEN NEW.remaining_quantity_scaled <> OLD.original_quantity_scaled - COALESCE((
+        SELECT SUM(quantity_scaled) FROM inventory_layer_consumptions WHERE cost_layer_id = OLD.id
+    ), 0) + COALESCE((
+        SELECT SUM(CASE effect_type WHEN 'Restore' THEN quantity_scaled ELSE -quantity_scaled END)
+        FROM inventory_valuation_reversal_effects WHERE cost_layer_id = OLD.id
+    ), 0)
+ OR NEW.remaining_value_minor <> OLD.original_value_minor - COALESCE((
+        SELECT SUM(value_minor) FROM inventory_layer_consumptions WHERE cost_layer_id = OLD.id
+    ), 0) + COALESCE((
+        SELECT SUM(CASE effect_type WHEN 'Restore' THEN value_minor ELSE -value_minor END)
+        FROM inventory_valuation_reversal_effects WHERE cost_layer_id = OLD.id
+    ), 0)
+BEGIN
+    SELECT RAISE(ABORT, 'cost-layer balances must match immutable consumption and reversal records');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_reversal_movement_void_blocked
+BEFORE UPDATE OF status ON inventory_movements
+WHEN OLD.status = 'Posted' AND NEW.status = 'Voided'
+ AND EXISTS (
+    SELECT 1 FROM inventory_valuation_reversals
+    WHERE reversal_movement_id = OLD.id AND status = 'Approved'
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'approved valuation reversal movement cannot be voided');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_reversal_finance_lines_insert_blocked
+BEFORE INSERT ON ledger_lines
+WHEN EXISTS (
+    SELECT 1 FROM inventory_valuation_reversals
+    WHERE finance_entry_id = NEW.entry_id AND status = 'Approved'
+)
+BEGIN
+    SELECT RAISE(ABORT, 'approved valuation reversal finance lines are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_reversal_finance_lines_update_blocked
+BEFORE UPDATE ON ledger_lines
+WHEN EXISTS (
+    SELECT 1 FROM inventory_valuation_reversals
+    WHERE finance_entry_id = OLD.entry_id AND status = 'Approved'
+)
+BEGIN
+    SELECT RAISE(ABORT, 'approved valuation reversal finance lines are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_reversal_finance_lines_delete_blocked
+BEFORE DELETE ON ledger_lines
+WHEN EXISTS (
+    SELECT 1 FROM inventory_valuation_reversals
+    WHERE finance_entry_id = OLD.entry_id AND status = 'Approved'
+)
+BEGIN
+    SELECT RAISE(ABORT, 'approved valuation reversal finance lines are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_finance_dimensions_insert_blocked
+BEFORE INSERT ON ledger_line_dimensions
+WHEN EXISTS (
+    SELECT 1
+    FROM ledger_lines lines
+    WHERE lines.id = NEW.line_id
+      AND (
+        EXISTS (
+            SELECT 1 FROM inventory_valuation_documents
+            WHERE finance_entry_id = lines.entry_id AND status = 'Approved'
+        ) OR
+        EXISTS (
+            SELECT 1 FROM inventory_valuation_reversals
+            WHERE finance_entry_id = lines.entry_id AND status = 'Approved'
+        )
+      )
+)
+BEGIN
+    SELECT RAISE(ABORT, 'approved inventory valuation finance dimensions are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_finance_dimensions_update_blocked
+BEFORE UPDATE ON ledger_line_dimensions
+WHEN EXISTS (
+    SELECT 1
+    FROM ledger_lines lines
+    WHERE lines.id IN (OLD.line_id, NEW.line_id)
+      AND (
+        EXISTS (
+            SELECT 1 FROM inventory_valuation_documents
+            WHERE finance_entry_id = lines.entry_id AND status = 'Approved'
+        ) OR
+        EXISTS (
+            SELECT 1 FROM inventory_valuation_reversals
+            WHERE finance_entry_id = lines.entry_id AND status = 'Approved'
+        )
+      )
+)
+BEGIN
+    SELECT RAISE(ABORT, 'approved inventory valuation finance dimensions are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_valuation_finance_dimensions_delete_blocked
+BEFORE DELETE ON ledger_line_dimensions
+WHEN EXISTS (
+    SELECT 1
+    FROM ledger_lines lines
+    WHERE lines.id = OLD.line_id
+      AND (
+        EXISTS (
+            SELECT 1 FROM inventory_valuation_documents
+            WHERE finance_entry_id = lines.entry_id AND status = 'Approved'
+        ) OR
+        EXISTS (
+            SELECT 1 FROM inventory_valuation_reversals
+            WHERE finance_entry_id = lines.entry_id AND status = 'Approved'
+        )
+      )
+)
+BEGIN
+    SELECT RAISE(ABORT, 'approved inventory valuation finance dimensions are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_reversal_finance_header_immutable
+BEFORE UPDATE OF workspace_id, organization_id, chart_id, legal_entity_id, period_id,
+                 finance_journal_id, entry_number, posting_date, currency_code, description,
+                 external_reference, source_type, created_by, created_at
+ON ledger_entries
+WHEN EXISTS (
+    SELECT 1 FROM inventory_valuation_reversals
+    WHERE finance_entry_id = OLD.id AND status = 'Approved'
+)
+BEGIN
+    SELECT RAISE(ABORT, 'approved valuation reversal finance headers are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS inventory_reversal_finance_void_blocked
+BEFORE UPDATE OF status ON ledger_entries
+WHEN OLD.status = 'Validated' AND NEW.status = 'Voided'
+ AND EXISTS (
+    SELECT 1 FROM inventory_valuation_reversals
+    WHERE finance_entry_id = OLD.id AND status = 'Approved'
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'approved valuation reversal finance entry cannot be voided');
+END;
+
+INSERT OR IGNORE INTO permissions (name, description) VALUES
+    ('inventory.valuation.reverse.manage', 'Prepare or cancel Draft FIFO valuation reversals.'),
+    ('inventory.valuation.reverse.approve', 'Approve FIFO valuation reversals and generate mirror Finance Core drafts.');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name IN ('admin', 'controller')
+  AND permissions.name IN ('inventory.valuation.reverse.manage', 'inventory.valuation.reverse.approve');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name = 'preparer'
+  AND permissions.name = 'inventory.valuation.reverse.manage';
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name = 'reviewer'
+  AND permissions.name = 'inventory.valuation.reverse.approve';
+"""

@@ -1,0 +1,8 @@
+site_name: ReconForge ERP Documentation
+site_description: Local-first ERP reconciliation, finance controls, and audit intelligence documentation.
+repo_url: https://github.com/amrzainmubarak/reconforge-erp
+docs_dir: docs
+site_dir: build/docs-site
+theme:
+  name: mkdocs
+strict: true

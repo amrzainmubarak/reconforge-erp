@@ -1,0 +1,323 @@
+{
+  "close_tasks": [
+    {
+      "name": "Load synthetic trial balance exports",
+      "owner": "Synthetic Accounting Lead",
+      "period_name": "2026-05",
+      "status": "Complete",
+      "task_id": "CLOSE-SYN-001"
+    },
+    {
+      "name": "Prepare synthetic account reconciliations",
+      "owner": "Synthetic Preparer",
+      "period_name": "2026-05",
+      "status": "Complete",
+      "task_id": "CLOSE-SYN-002"
+    },
+    {
+      "name": "Review synthetic unresolved exceptions",
+      "owner": "Synthetic Reviewer",
+      "period_name": "2026-05",
+      "status": "Blocked",
+      "task_id": "CLOSE-SYN-003"
+    },
+    {
+      "name": "Verify synthetic evidence coverage",
+      "owner": "Synthetic Reviewer",
+      "period_name": "2026-05",
+      "status": "In Progress",
+      "task_id": "CLOSE-SYN-004"
+    },
+    {
+      "name": "Review synthetic close readiness",
+      "owner": "Synthetic Controller",
+      "period_name": "2026-05",
+      "status": "Not Started",
+      "task_id": "CLOSE-SYN-005"
+    }
+  ],
+  "control_domains": [
+    {
+      "domain": "close",
+      "lineage": "close_tasks_db grouped by close_periods.period_name",
+      "score": 40.0,
+      "status": "attention"
+    },
+    {
+      "domain": "evidence",
+      "lineage": "evidence_requirements joined to evidence_links",
+      "score": 100.0,
+      "status": "strong"
+    },
+    {
+      "domain": "matching",
+      "lineage": "match_results by job/status",
+      "score": 75.0,
+      "status": "watch"
+    },
+    {
+      "domain": "controls",
+      "lineage": "control_test_results.effectiveness_status",
+      "score": 66.67,
+      "status": "watch"
+    }
+  ],
+  "entities": [
+    {
+      "currency": "GBP",
+      "entity_code": "SYN-UK01",
+      "entity_name": "Synthetic EMEA Services",
+      "region": "EMEA"
+    },
+    {
+      "currency": "MXN",
+      "entity_code": "SYN-MX01",
+      "entity_name": "Synthetic LATAM Distribution",
+      "region": "LATAM"
+    },
+    {
+      "currency": "USD",
+      "entity_code": "SYN-US01",
+      "entity_name": "Synthetic North Operations",
+      "region": "North America"
+    }
+  ],
+  "entity_health": [
+    {
+      "currency": "MXN",
+      "entity_code": "SYN-MX01",
+      "entity_name": "Synthetic LATAM Distribution",
+      "high_risk_count": 1,
+      "open_exception_count": 1,
+      "region": "LATAM",
+      "status": "watch"
+    },
+    {
+      "currency": "GBP",
+      "entity_code": "SYN-UK01",
+      "entity_name": "Synthetic EMEA Services",
+      "high_risk_count": 1,
+      "open_exception_count": 3,
+      "region": "EMEA",
+      "status": "watch"
+    },
+    {
+      "currency": "USD",
+      "entity_code": "SYN-US01",
+      "entity_name": "Synthetic North Operations",
+      "high_risk_count": 4,
+      "open_exception_count": 6,
+      "region": "North America",
+      "status": "attention"
+    }
+  ],
+  "exceptions": [
+    {
+      "account_code": "",
+      "control_code": "SYN-CTRL-002",
+      "description": "Control test result is not marked effective.",
+      "entity_code": "",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "high",
+      "source_type": "control_test",
+      "status": "Open"
+    },
+    {
+      "account_code": "",
+      "control_code": "",
+      "description": "Intercompany reference has unmatched or imbalanced counterparty amounts.",
+      "entity_code": "SYN-UK01",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "high",
+      "source_type": "intercompany",
+      "status": "Open"
+    },
+    {
+      "account_code": "",
+      "control_code": "",
+      "description": "Intercompany reference has unmatched or imbalanced counterparty amounts.",
+      "entity_code": "SYN-MX01",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "high",
+      "source_type": "intercompany",
+      "status": "Open"
+    },
+    {
+      "account_code": "9999",
+      "control_code": "",
+      "description": "Journal amount exceeds the configured high-value threshold.",
+      "entity_code": "SYN-US01",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "high",
+      "source_type": "journal",
+      "status": "Open"
+    },
+    {
+      "account_code": "9999",
+      "control_code": "",
+      "description": "Journal is missing approver evidence/reference.",
+      "entity_code": "SYN-US01",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "high",
+      "source_type": "journal",
+      "status": "Open"
+    },
+    {
+      "account_code": "9999",
+      "control_code": "",
+      "description": "Journal posting date is after the configured period end.",
+      "entity_code": "SYN-US01",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "high",
+      "source_type": "journal",
+      "status": "Open"
+    },
+    {
+      "account_code": "9999",
+      "control_code": "",
+      "description": "Journal uses a configured high-risk account.",
+      "entity_code": "SYN-US01",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "high",
+      "source_type": "journal",
+      "status": "Open"
+    },
+    {
+      "account_code": "9999",
+      "control_code": "",
+      "description": "Journal is missing a source reference.",
+      "entity_code": "SYN-US01",
+      "owner": "",
+      "period_name": "2026-05",
+      "risk_rating": "medium",
+      "source_type": "journal",
+      "status": "Open"
+    }
+  ],
+  "executive_brief": {
+    "blocked_task_count": 1,
+    "completed_task_count": 2,
+    "high_risk_count": 7,
+    "open_exception_count": 12,
+    "readiness_score": 40.0,
+    "readiness_status": "attention"
+  },
+  "generated_at": "2026-06-01T09:00:00Z",
+  "metrics": [
+    {
+      "format": "percent",
+      "key": "close_completion",
+      "label": "Close completion",
+      "lineage": "close_tasks_db grouped by close_periods.period_name",
+      "tone": "positive",
+      "value": 40.0
+    },
+    {
+      "format": "count",
+      "key": "unresolved_high_risk_exceptions",
+      "label": "High-risk exceptions",
+      "lineage": "exceptions_queue filtered by status and risk_rating",
+      "tone": "critical",
+      "value": 7.0
+    },
+    {
+      "format": "percent",
+      "key": "evidence_coverage",
+      "label": "Evidence coverage",
+      "lineage": "evidence_requirements joined to evidence_links",
+      "tone": "positive",
+      "value": 100.0
+    },
+    {
+      "format": "percent",
+      "key": "match_rate",
+      "label": "Match rate",
+      "lineage": "match_results by job/status",
+      "tone": "positive",
+      "value": 75.0
+    },
+    {
+      "format": "percent",
+      "key": "control_effectiveness",
+      "label": "Control effectiveness",
+      "lineage": "control_test_results.effectiveness_status",
+      "tone": "warning",
+      "value": 66.67
+    },
+    {
+      "format": "percent",
+      "key": "period_readiness",
+      "label": "Period readiness",
+      "lineage": "close_periods.readiness_score",
+      "tone": "warning",
+      "value": 40.0
+    },
+    {
+      "format": "days",
+      "key": "review_aging",
+      "label": "Review aging",
+      "lineage": "account_reconciliation_records aging_days by status",
+      "tone": "neutral",
+      "value": 0.0
+    },
+    {
+      "format": "days",
+      "key": "exception_aging",
+      "label": "Exception aging",
+      "lineage": "exceptions_queue.created_at by status",
+      "tone": "neutral",
+      "value": 0.0
+    }
+  ],
+  "notices": [
+    "Synthetic local demo data only",
+    "Read-only experimental Studio preview",
+    "No ERP data is uploaded or sent to an external service"
+  ],
+  "risk_distribution": [
+    {
+      "count": 0,
+      "risk": "critical"
+    },
+    {
+      "count": 7,
+      "risk": "high"
+    },
+    {
+      "count": 5,
+      "risk": "medium"
+    },
+    {
+      "count": 0,
+      "risk": "low"
+    }
+  ],
+  "schema_version": 1,
+  "source": {
+    "external_calls": false,
+    "kind": "reconforge-enterprise-demo",
+    "local_first": true
+  },
+  "status_distribution": [
+    {
+      "count": 12,
+      "status": "Open"
+    }
+  ],
+  "synthetic_data_marker": "SYNTHETIC_ENTERPRISE_DEMO_ONLY",
+  "synthetic_data_only": true,
+  "workspace": {
+    "close_task_count": 5,
+    "current_period": "2026-05",
+    "entity_count": 3,
+    "evidence_count": 3,
+    "name": "Finance Controls Workspace"
+  }
+}

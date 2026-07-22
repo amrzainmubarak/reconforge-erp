@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/studio_evidence_binder.schema.json",
+  "title": "ReconForge Studio Synthetic Evidence Binder",
+  "description": "Versioned synthetic-only evidence registry for the experimental modern Studio.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "synthetic_data_only",
+    "synthetic_data_marker",
+    "generated_at",
+    "source",
+    "summary",
+    "status_distribution",
+    "evidence",
+    "notices"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "synthetic_data_only": {"const": true},
+    "synthetic_data_marker": {"const": "SYNTHETIC_ENTERPRISE_DEMO_ONLY"},
+    "generated_at": {"$ref": "#/$defs/text"},
+    "source": {"$ref": "#/$defs/source"},
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "available", "checksum_count", "synthetic_redaction_count", "coverage_percent"],
+      "properties": {
+        "total": {"$ref": "#/$defs/count"},
+        "available": {"$ref": "#/$defs/count"},
+        "checksum_count": {"$ref": "#/$defs/count"},
+        "synthetic_redaction_count": {"$ref": "#/$defs/count"},
+        "coverage_percent": {"type": "number", "minimum": 0, "maximum": 100}
+      }
+    },
+    "status_distribution": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {"$ref": "#/$defs/status_distribution_point"}
+    },
+    "evidence": {
+      "type": "array",
+      "maxItems": 100000,
+      "items": {"$ref": "#/$defs/evidence_record"}
+    },
+    "notices": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {"$ref": "#/$defs/text"}
+    }
+  },
+  "$defs": {
+    "text": {"type": "string", "maxLength": 2000},
+    "count": {"type": "integer", "minimum": 0},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "local_first", "external_calls"],
+      "properties": {
+        "kind": {"const": "reconforge-enterprise-demo"},
+        "local_first": {"const": true},
+        "external_calls": {"const": false}
+      }
+    },
+    "status_distribution_point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "count"],
+      "properties": {
+        "status": {"$ref": "#/$defs/text"},
+        "count": {"$ref": "#/$defs/count"}
+      }
+    },
+    "evidence_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_code", "provenance_type", "redaction_status", "evidence_status", "checksum_sha256"],
+      "properties": {
+        "evidence_code": {"$ref": "#/$defs/text"},
+        "provenance_type": {"$ref": "#/$defs/text"},
+        "redaction_status": {"$ref": "#/$defs/text"},
+        "evidence_status": {"$ref": "#/$defs/text"},
+        "checksum_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    }
+  }
+}

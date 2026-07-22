@@ -7,13 +7,13 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from shutil import copy2, rmtree
 from typing import Any
 
 from reconforge import __version__
 from reconforge.io.writers import json_default
+from reconforge.utils.time import utc_now_text
 
 
 @dataclass(frozen=True)
@@ -344,7 +344,7 @@ def _sha256(path: Path) -> str:
 def _write_manifest(output_dir: Path, input_path: Path, included: list[Path], missing: list[str], excluded: list[str], options: ClientPackOptions) -> Path:
     manifest_path = output_dir / "files_manifest.json"
     payload = {
-        "generated_at": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+        "generated_at": utc_now_text(),
         "tool_version": __version__,
         "source_output_folder": str(input_path),
         "local_first_note": "Generated from local ReconForge outputs; review before external sharing.",

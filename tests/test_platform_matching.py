@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from itertools import permutations
 from pathlib import Path
 
 from reconforge.db import connect, run_migrations
@@ -83,6 +84,45 @@ def test_matching_is_deterministic_after_shuffling_right_rows(tmp_path: Path) ->
     matched_pairs_b = {(row["left_id"], row["right_id"]) for row in matched_b}
     assert matched_pairs_a == matched_pairs_b
     assert len(matched_a) == 2
+
+
+def test_matching_results_are_order_invariant_across_all_permutations(tmp_path: Path) -> None:
+    left_rows = [
+        "L-A,REF-INV,100.00,2026-01-10",
+        "L-B,REF-INV,100.00,2026-01-10",
+        "L-C,REF-INV,100.00,2026-01-10",
+    ]
+    right_rows = [
+        "R-3,REF-INV,100.00,2026-01-10",
+        "R-1,REF-INV,100.00,2026-01-10",
+        "R-2,REF-INV,100.00,2026-01-10",
+    ]
+    left_payload = "id,reference,amount,date\n" + "\n".join(left_rows) + "\n"
+    right_payload = "id,reference,amount,date\n" + "\n".join(right_rows) + "\n"
+
+    expected_pairs: set[tuple[str, str]] | None = None
+    run = 0
+    for left_order in permutations(left_rows):
+        for right_order in permutations(right_rows):
+            left_data = "id,reference,amount,date\n" + "\n".join(left_order) + "\n"
+            right_data = "id,reference,amount,date\n" + "\n".join(right_order) + "\n"
+            _, matched = _run_match(
+                tmp_path,
+                left_data,
+                right_data,
+                allow_many_to_one=True,
+                run_name=f"perm_{run}",
+            )
+            current_pairs = {(row["left_id"], row["right_id"]) for row in matched}
+            if expected_pairs is None:
+                expected_pairs = current_pairs
+            else:
+                assert current_pairs == expected_pairs
+            run += 1
+
+    # Keep deterministic baseline parity assertion for at least one non-identity path.
+    _, expected_matched = _run_match(tmp_path, left_payload, right_payload, allow_many_to_one=True, run_name="baseline")
+    assert {(row["left_id"], row["right_id"]) for row in expected_matched} == set(expected_pairs or set())
 
 
 def test_matching_allows_many_to_one_when_enabled(tmp_path: Path) -> None:

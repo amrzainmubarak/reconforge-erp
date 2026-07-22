@@ -13,6 +13,6 @@ COPY control-packs ./control-packs
 COPY docs ./docs
 
 RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel \
-    && python -m pip install --no-cache-dir --no-deps --no-build-isolation -e .
+    && python -m pip install --no-cache-dir --no-build-isolation -e .
 
 CMD ["reconforge", "doctor"]

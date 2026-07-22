@@ -70,6 +70,8 @@ class DuckDBEngine:
         else:
             registered_name = f"input_{dataset.value}"
             connection.register(registered_name, read_table(path))
-            raw = connection.execute(f'SELECT * FROM "{registered_name}"').fetch_df()
-            connection.unregister(registered_name)
+            try:
+                raw = connection.table(registered_name).fetch_df()
+            finally:
+                connection.unregister(registered_name)
         return coerce_dataset_types(raw, dataset)

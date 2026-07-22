@@ -10,8 +10,8 @@ from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
 from re import findall
-from unicodedata import normalize as normalize_unicode
 from typing import Any
+from unicodedata import normalize as normalize_unicode
 
 from reconforge.domain.models import utc_now_text
 from reconforge.platform.common import (
@@ -383,7 +383,7 @@ class MatchingService:
             "amount": {},
             "exact": {},
         }
-        for index, record_id, record, stable_key, _, amount_value in ordered_right_records:
+        for index, record_id, record, _stable_key, _, amount_value in ordered_right_records:
             if amount_value is None:
                 continue
             reference = _normalize_reference(record.get(reference_field))

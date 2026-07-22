@@ -6,12 +6,19 @@ from reconforge.db import connect, run_migrations
 from reconforge.platform.matching import MatchingService
 
 
-def _run_match(tmp_path: Path, left_rows: str, right_rows: str, *, allow_many_to_one: bool = False):
-    db_path = tmp_path / "operations.db"
+def _run_match(
+    tmp_path: Path,
+    left_rows: str,
+    right_rows: str,
+    *,
+    allow_many_to_one: bool = False,
+    run_name: str = "base",
+):
+    db_path = tmp_path / f"{run_name}_operations.db"
     run_migrations(db_path)
 
-    left = tmp_path / "left.csv"
-    right = tmp_path / "right.csv"
+    left = tmp_path / f"{run_name}_left.csv"
+    right = tmp_path / f"{run_name}_right.csv"
     left.write_text(left_rows, encoding="utf-8")
     right.write_text(right_rows, encoding="utf-8")
 
@@ -35,15 +42,19 @@ def test_matching_is_deterministic_after_shuffling_left_rows(tmp_path: Path) -> 
         "L-A,REF-INV,100.00,2026-01-10",
         "L-B,REF-INV,100.00,2026-01-10",
     ]
+    left_records = [
+        "L-A,REF-INV,100.00,2026-01-10",
+        "L-B,REF-INV,100.00,2026-01-10",
+    ]
     left = "\n".join(left_rows) + "\n"
-    left_shuffled = "\n".join(reversed(left_rows)) + "\n"
+    left_shuffled = left_rows[0] + "\n" + "\n".join(reversed(left_records)) + "\n"
     right = (
         "id,reference,amount,date\n"
         "R-B,REF-INV,100.00,2026-01-10\n"
         "R-A,REF-INV,100.00,2026-01-10\n"
     )
-    _, matched_a = _run_match(tmp_path, left, right, allow_many_to_one=False)
-    _, matched_b = _run_match(tmp_path / "shuffled", left_shuffled, right, allow_many_to_one=False)
+    _, matched_a = _run_match(tmp_path, left, right, allow_many_to_one=False, run_name="base")
+    _, matched_b = _run_match(tmp_path, left_shuffled, right, allow_many_to_one=False, run_name="shuffled")
 
     matched_pairs_a = {(row["left_id"], row["right_id"]) for row in matched_a}
     matched_pairs_b = {(row["left_id"], row["right_id"]) for row in matched_b}
@@ -59,8 +70,8 @@ def test_matching_allows_many_to_one_when_enabled(tmp_path: Path) -> None:
     )
     right = "id,reference,amount,date\nR-1,REF-INV,100.00,2026-01-10\n"
 
-    one_to_one_result, one_to_one_matched = _run_match(tmp_path / "one_to_one", left, right, allow_many_to_one=False)
-    many_to_one_result, many_to_one_matched = _run_match(tmp_path / "many_to_one", left, right, allow_many_to_one=True)
+    one_to_one_result, one_to_one_matched = _run_match(tmp_path, left, right, allow_many_to_one=False, run_name="one_to_one")
+    many_to_one_result, many_to_one_matched = _run_match(tmp_path, left, right, allow_many_to_one=True, run_name="many_to_one")
 
     assert one_to_one_result.matched_count == 1
     assert len(one_to_one_matched) == 1

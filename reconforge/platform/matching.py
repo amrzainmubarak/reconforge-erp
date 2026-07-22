@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import heapq
 from dataclasses import dataclass
 from pathlib import Path
+import hashlib
 from typing import Any
 
 from reconforge.domain.models import utc_now_text
@@ -32,6 +34,44 @@ class MatchRunResult:
     job_id: str
     result_count: int
     matched_count: int
+
+
+@dataclass(frozen=True)
+class _MatchCandidate:
+    left_index: int
+    right_index: int
+    left_id: str
+    right_id: str
+    left_sort_key: str
+    right_sort_key: str
+    confidence: float
+    explanation: str
+    amount_difference: float
+    date_difference_days: int
+
+
+@dataclass
+class _FlowEdge:
+    """Residual edge used by deterministic min-cost matching."""
+
+    to: int
+    reverse: int
+    capacity: int
+    cost: int
+
+
+def _add_flow_edge(
+    graph: list[list[_FlowEdge]],
+    from_node: int,
+    to_node: int,
+    capacity: int,
+    cost: int,
+) -> _FlowEdge:
+    forward = _FlowEdge(to=to_node, reverse=len(graph[to_node]), capacity=capacity, cost=cost)
+    reverse = _FlowEdge(to=from_node, reverse=len(graph[from_node]), capacity=0, cost=-cost)
+    graph[from_node].append(forward)
+    graph[to_node].append(reverse)
+    return forward
 
 
 class MatchingService:
@@ -211,25 +251,32 @@ class MatchingService:
             reference_field=reference_field,
             exact_fields=exact_field_list,
         )
-        used_right: set[str] = set()
+
+        ordered_left = self._ordered_records(
+            left_records,
+            id_field=left_id_field,
+            prefix="L",
+        )
+        ordered_candidates = self._build_candidates(
+            ordered_left,
+            right_index,
+            amount_field=amount_field,
+            date_field=date_field,
+            reference_field=reference_field,
+            exact_fields=exact_field_list,
+            amount_tolerance=amount_tolerance,
+            date_window_days=date_window_days,
+            left_id_field=left_id_field,
+            right_id_field=right_id_field,
+            right_records=right_records,
+            right_id_prefix="R",
+        )
+        selected_matches = self._minimum_cost_assignment(ordered_candidates, allow_many_to_one=allow_many_to_one)
+        selected_by_left = {match.left_index: match for match in selected_matches}
         result_count = 0
         matched_count = 0
-        for index, left in enumerate(left_records, start=1):
-            left_id = normalize_key(left.get(left_id_field), default=f"L-{index}")
-            candidates = self._candidates(left, right_index, amount_field=amount_field, reference_field=reference_field, exact_fields=exact_field_list)
-            best = self._best_candidate(
-                left,
-                candidates,
-                right_id_field=right_id_field,
-                amount_field=amount_field,
-                date_field=date_field,
-                reference_field=reference_field,
-                exact_fields=exact_field_list,
-                amount_tolerance=amount_tolerance,
-                date_window_days=date_window_days,
-                used_right=used_right,
-                allow_many_to_one=allow_many_to_one,
-            )
+        for left_index, left, left_id, _, _ in ordered_left:
+            best = selected_by_left.get(left_index)
             if best is None:
                 self._insert_result(
                     job_id=job_id,
@@ -243,19 +290,18 @@ class MatchingService:
                     status="Unmatched",
                 )
             else:
-                right, confidence, explanation = best
-                right_id = normalize_key(right.get(right_id_field), default="")
-                used_right.add(right_id)
+                right = right_records[best.right_index]
+                right_id = best.right_id
                 amount_difference = round(to_float(left.get(amount_field)) - to_float(right.get(amount_field)), 2)
                 self._insert_result(
                     job_id=job_id,
                     left_id=left_id,
                     right_id=right_id,
                     match_type="deterministic",
-                    confidence=confidence,
-                    explanation=explanation,
+                    confidence=best.confidence,
+                    explanation=best.explanation,
                     amount_difference=amount_difference,
-                    date_difference_days=date_diff_days(left.get(date_field), right.get(date_field)),
+                    date_difference_days=best.date_difference_days,
                     status="Matched",
                 )
                 matched_count += 1
@@ -283,18 +329,18 @@ class MatchingService:
         amount_field: str,
         reference_field: str,
         exact_fields: list[str],
-    ) -> dict[str, dict[str, list[dict[str, Any]]]]:
+    ) -> dict[str, dict[str, list[tuple[int, dict[str, Any]]]]:
         indexes: dict[str, dict[str, list[dict[str, Any]]]] = {"reference": {}, "amount": {}, "exact": {}}
-        for index, record in enumerate(right_records, start=1):
+        for index, record in enumerate(right_records):
             record.setdefault(right_id_field, f"R-{index}")
             reference = normalize_text(record.get(reference_field))
             if reference:
-                indexes["reference"].setdefault(reference, []).append(record)
+                indexes["reference"].setdefault(reference, []).append((index, record))
             amount_bucket = str(round(to_float(record.get(amount_field)), 2))
-            indexes["amount"].setdefault(amount_bucket, []).append(record)
+            indexes["amount"].setdefault(amount_bucket, []).append((index, record))
             if exact_fields:
                 key = self._exact_key(record, exact_fields)
-                indexes["exact"].setdefault(key, []).append(record)
+                indexes["exact"].setdefault(key, []).append((index, record))
         return indexes
 
     def _candidates(
@@ -305,7 +351,7 @@ class MatchingService:
         amount_field: str,
         reference_field: str,
         exact_fields: list[str],
-    ) -> list[dict[str, Any]]:
+    ) -> list[tuple[int, dict[str, Any]]]:
         reference = normalize_text(left.get(reference_field))
         if reference and reference in right_index["reference"]:
             return right_index["reference"][reference]
@@ -316,42 +362,176 @@ class MatchingService:
         amount_bucket = str(round(to_float(left.get(amount_field)), 2))
         return right_index["amount"].get(amount_bucket, [])
 
-    def _best_candidate(
+    def _ordered_records(
         self,
-        left: dict[str, Any],
-        candidates: list[dict[str, Any]],
+        records: list[dict[str, Any]],
         *,
-        right_id_field: str,
+        id_field: str,
+        prefix: str,
+    ) -> list[tuple[int, dict[str, Any], str, str, int]]:
+        prepared = []
+        for index, record in enumerate(records):
+            record_id = normalize_key(record.get(id_field), default=f"{prefix}-{index}")
+            stable_key = self._record_key(record, fallback=record_id)
+            prepared.append((index, record, record_id, stable_key, 0))
+        prepared.sort(key=lambda item: (item[3], item[0]))
+        return prepared
+
+    def _build_candidates(
+        self,
+        ordered_left: list[tuple[int, dict[str, Any], str, str, int]],
+        right_index: dict[str, dict[str, list[tuple[int, dict[str, Any]]]],
+        *,
         amount_field: str,
         date_field: str,
         reference_field: str,
         exact_fields: list[str],
         amount_tolerance: float,
         date_window_days: int,
-        used_right: set[str],
-        allow_many_to_one: bool,
-    ) -> tuple[dict[str, Any], float, str] | None:
-        best: tuple[dict[str, Any], float, str] | None = None
-        for candidate in candidates:
-            right_id = normalize_key(candidate.get(right_id_field), default="")
-            if right_id in used_right and not allow_many_to_one:
-                continue
-            confidence, parts = self._score_candidate(
+        left_id_field: str,
+        right_id_field: str,
+        right_records: list[dict[str, Any]],
+        right_id_prefix: str,
+    ) -> list[_MatchCandidate]:
+        candidates: list[_MatchCandidate] = []
+        for left_index, left, left_id, left_key, _ in ordered_left:
+            for right_index, right in self._candidates(
                 left,
-                candidate,
+                right_index,
                 amount_field=amount_field,
-                date_field=date_field,
                 reference_field=reference_field,
                 exact_fields=exact_fields,
-                amount_tolerance=amount_tolerance,
-                date_window_days=date_window_days,
+            ):
+                confidence, parts, amount_difference, day_difference = self._score_candidate(
+                    left,
+                    right,
+                    amount_field=amount_field,
+                    date_field=date_field,
+                    reference_field=reference_field,
+                    exact_fields=exact_fields,
+                    amount_tolerance=amount_tolerance,
+                    date_window_days=date_window_days,
+                )
+                if confidence < 0.65:
+                    continue
+                right_id = normalize_key(right.get(right_id_field), default=f"{right_id_prefix}-{right_index}")
+                right_key = self._record_key(right, fallback=right_id)
+                candidates.append(
+                    _MatchCandidate(
+                        left_index=left_index,
+                        right_index=right_index,
+                        left_id=left_id,
+                        right_id=right_id,
+                        left_sort_key=left_key,
+                        right_sort_key=right_key,
+                        confidence=confidence,
+                        explanation="; ".join(parts),
+                        amount_difference=amount_difference,
+                        date_difference_days=day_difference,
+                    ),
+                )
+        candidates.sort(
+            key=lambda candidate: (
+                candidate.left_sort_key,
+                self._candidate_cost(candidate),
+                candidate.right_sort_key,
+                candidate.left_id,
+                candidate.right_id,
+            ),
+        )
+        return candidates
+
+    def _record_key(self, record: dict[str, Any], *, fallback: str = "") -> str:
+        payload = {
+            str(key): ("" if value is None else str(value).strip())
+            for key, value in sorted(record.items(), key=lambda item: str(item[0]))
+        }
+        payload["__fallback__"] = str(fallback)
+        return hashlib.sha256(
+            json.dumps(payload, ensure_ascii=True, separators=(",", ":"), sort_keys=True).encode("utf-8"),
+        ).hexdigest()
+
+    def _minimum_cost_assignment(
+        self, candidates: list[_MatchCandidate], *, allow_many_to_one: bool
+    ) -> list[_MatchCandidate]:
+        if not candidates:
+            return []
+        left_sort_keys = {candidate.left_index: candidate.left_sort_key for candidate in candidates}
+        right_sort_keys = {candidate.right_index: candidate.right_sort_key for candidate in candidates}
+        left_indices = sorted(left_sort_keys, key=lambda index: (left_sort_keys[index], index))
+        right_indices = sorted(right_sort_keys, key=lambda index: (right_sort_keys[index], index))
+        stock_cap = 1
+        right_cap = len(left_indices) if allow_many_to_one else 1
+
+        stock_to_graph = {index: position + 1 for position, index in enumerate(left_indices)}
+        right_offset = 1 + len(stock_to_graph)
+        right_to_graph = {index: right_offset + position for position, index in enumerate(right_indices)}
+        sink = right_offset + len(right_indices)
+
+        graph: list[list[_FlowEdge]] = [[] for _ in range(sink + 1)]
+        for index in left_indices:
+            _add_flow_edge(graph, 0, stock_to_graph[index], stock_cap, 0)
+        for index in right_indices:
+            _add_flow_edge(graph, right_to_graph[index], sink, right_cap, 0)
+
+        tracked_edges: list[tuple[_FlowEdge, _MatchCandidate]] = []
+        for candidate in sorted(
+            candidates,
+            key=lambda item: (item.left_sort_key, self._candidate_cost(item), item.right_sort_key, item.left_id, item.right_id),
+        ):
+            edge = _add_flow_edge(
+                graph,
+                stock_to_graph[candidate.left_index],
+                right_to_graph[candidate.right_index],
+                1,
+                self._candidate_cost(candidate),
             )
-            if confidence < 0.65:
-                continue
-            explanation = "; ".join(parts)
-            if best is None or confidence > best[1]:
-                best = (candidate, confidence, explanation)
-        return best
+            tracked_edges.append((edge, candidate))
+
+        node_count = len(graph)
+        potentials = [0] * node_count
+        infinity = 10**30
+        while True:
+            distances = [infinity] * node_count
+            predecessors: list[tuple[int, int] | None] = [None] * node_count
+            distances[0] = 0
+            queue: list[tuple[int, int]] = [(0, 0)]
+            while queue:
+                distance, node = heapq.heappop(queue)
+                if distance != distances[node]:
+                    continue
+                for edge_index, edge in enumerate(graph[node]):
+                    if edge.capacity <= 0:
+                        continue
+                    reduced_cost = edge.cost + potentials[node] - potentials[edge.to]
+                    candidate_distance = distance + reduced_cost
+                    if candidate_distance < distances[edge.to]:
+                        distances[edge.to] = candidate_distance
+                        predecessors[edge.to] = (node, edge_index)
+                        heapq.heappush(queue, (candidate_distance, edge.to))
+            if predecessors[sink] is None:
+                break
+            for node, distance in enumerate(distances):
+                if distance < infinity:
+                    potentials[node] += distance
+            node = sink
+            while node != 0:
+                predecessor = predecessors[node]
+                if predecessor is None:
+                    raise RuntimeError("internal assignment path is incomplete")
+                previous, edge_index = predecessor
+                edge = graph[previous][edge_index]
+                edge.capacity -= 1
+                graph[node][edge.reverse].capacity += 1
+                node = previous
+
+        return [candidate for edge, candidate in tracked_edges if edge.capacity == 0]
+
+    def _candidate_cost(self, candidate: _MatchCandidate) -> int:
+        score = int(round(candidate.confidence * 1_000_000))
+        amount_penalty = min(int(round(abs(candidate.amount_difference) * 10_000)), 2_000_000)
+        date_penalty = min(abs(candidate.date_difference_days) * 10, 5_000)
+        return (1_000_000 - score) + amount_penalty + date_penalty
 
     def _score_candidate(
         self,
@@ -364,7 +544,7 @@ class MatchingService:
         exact_fields: list[str],
         amount_tolerance: float,
         date_window_days: int,
-    ) -> tuple[float, list[str]]:
+    ) -> tuple[float, list[str], float, int]:
         score = 0.0
         parts: list[str] = []
         if normalize_text(left.get(reference_field)) and normalize_text(left.get(reference_field)) == normalize_text(right.get(reference_field)):
@@ -381,7 +561,7 @@ class MatchingService:
         if exact_fields and self._exact_key(left, exact_fields) == self._exact_key(right, exact_fields):
             score += 0.10
             parts.append("exact key fields matched")
-        return round(min(score, 1.0), 2), parts
+        return round(min(score, 1.0), 2), parts, amount_diff, day_diff
 
     def _insert_result(
         self,

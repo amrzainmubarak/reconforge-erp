@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import sqlite3
+import time
+from collections import defaultdict, deque
+from threading import Lock
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import BaseModel, ConfigDict
 
@@ -31,6 +34,57 @@ class LoginResponse(BaseModel):
     expires_at: str
 
 
+_LOGIN_ATTEMPT_WINDOW_SECONDS = 60 * 5
+_MAX_LOGIN_ATTEMPTS = 8
+_login_failures: dict[str, deque[float]] = defaultdict(deque)
+_login_failures_lock = Lock()
+
+
+def _login_failure_key(request: Request, username: str) -> str:
+    normalized_user = (username or "").strip().lower()
+    client = request.client
+    host = client.host if client is not None else "unknown"
+    return f"{host}:{normalized_user}"
+
+
+def _now() -> float:
+    return time.time()
+
+
+def _cleanup_and_get_attempts(key: str, now: float) -> deque[float]:
+    attempts = _login_failures[key]
+    while attempts and attempts[0] < now - _LOGIN_ATTEMPT_WINDOW_SECONDS:
+        attempts.popleft()
+    return attempts
+
+
+def _is_rate_limited(key: str) -> bool:
+    now = _now()
+    with _login_failures_lock:
+        attempts = _cleanup_and_get_attempts(key, now)
+        return len(attempts) >= _MAX_LOGIN_ATTEMPTS
+
+
+def _record_failed_attempt(key: str) -> None:
+    now = _now()
+    with _login_failures_lock:
+        attempts = _cleanup_and_get_attempts(key, now)
+        attempts.append(now)
+
+
+def _clear_login_failures(key: str) -> None:
+    with _login_failures_lock:
+        _login_failures.pop(key, None)
+
+
+def _raise_rate_limited() -> None:
+    raise APIError(status_code=429, code="login_rate_limited", message="Too many failed login attempts. Try again later.")
+
+
+def _raise_invalid_credentials() -> None:
+    raise APIError(status_code=401, code="invalid_credentials", message="Invalid username or password.")
+
+
 def _user_payload(user: LocalUser) -> dict[str, object]:
     return {
         "id": user.id,
@@ -43,18 +97,30 @@ def _user_payload(user: LocalUser) -> dict[str, object]:
 
 
 @router.post("/login")
-def login(payload: LoginRequest, connection: sqlite3.Connection = Depends(get_db)) -> LoginResponse:
+def login(
+    payload: LoginRequest,
+    request: Request,
+    connection: sqlite3.Connection = Depends(get_db),
+) -> LoginResponse:
     """Create a local API session for valid local credentials."""
+
+    key = _login_failure_key(request, payload.username)
+    if _is_rate_limited(key):
+        _raise_rate_limited()
 
     try:
         user = LocalAuthService(connection).authenticate_user(username=payload.username, password=payload.password)
         if user is None:
-            raise APIError(status_code=401, code="invalid_credentials", message="Invalid username or password.")
+            _record_failed_attempt(key)
+            _raise_invalid_credentials()
+        _clear_login_failures(key)
         session = create_session(connection, user=user)
     except APIError:
         raise
     except (DatabaseError, AuthRepositoryError, AuthServiceError, SessionError) as exc:
+        _record_failed_attempt(key)
         raise APIError(status_code=401, code="invalid_credentials", message="Invalid username or password.") from exc
+
     return LoginResponse(access_token=session.token, expires_at=session.expires_at)
 
 

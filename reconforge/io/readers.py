@@ -8,6 +8,7 @@ import pandas as pd
 
 from reconforge.schemas import DATE_COLUMNS, NUMERIC_COLUMNS, REQUIRED_COLUMNS, DatasetName
 from reconforge.utils.dates import parse_date_series
+from reconforge.utils.money import InvalidAmountError, parse_amount
 
 
 def dataset_filename(dataset: DatasetName, extension: str) -> str:
@@ -53,7 +54,19 @@ def coerce_dataset_types(frame: pd.DataFrame, dataset: DatasetName) -> pd.DataFr
             coerced[column] = parse_date_series(coerced[column])
     for column in NUMERIC_COLUMNS[dataset]:
         if column in coerced.columns:
-            coerced[column] = pd.to_numeric(coerced[column], errors="coerce")
+            raw_values = coerced[column].copy()
+            parsed_values: list[float | object] = []
+            invalid_values: list[str | None] = []
+            for value in raw_values:
+                try:
+                    parsed_values.append(parse_amount(value))
+                    invalid_values.append(None)
+                except InvalidAmountError:
+                    parsed_values.append(float("nan"))
+                    invalid_values.append(str(value))
+            coerced[column] = parsed_values
+            if any(value is not None for value in invalid_values):
+                coerced[f"_reconforge_raw_{column}"] = invalid_values
     for column in REQUIRED_COLUMNS[dataset]:
         if column in coerced.columns and column not in DATE_COLUMNS[dataset] and column not in NUMERIC_COLUMNS[dataset]:
             coerced[column] = coerced[column].astype(str).str.strip()

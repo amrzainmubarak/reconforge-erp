@@ -7,6 +7,7 @@ Implemented controls:
 - HTML escaping in generated Studio tables and pages.
 - Hashed local sessions and no raw token storage.
 - Audit event hash chain for DB workflow actions where practical.
+- Security headers and login throttling for API auth route.
 
 Primary assumptions:
 

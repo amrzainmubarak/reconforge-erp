@@ -38,6 +38,7 @@ class RiskScoringWeights(BaseModel):
     closed_work_order_without_invoice: int = 50
     cancelled_po_linked_to_movement: int = 60
     invalid_master_reference: int = 35
+    invalid_financial_value: int = 60
 
 
 class ReconForgeConfig(BaseModel):

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pandas as pd
+
 from reconforge.config import ReconForgeConfig
 from reconforge.reconciliation.workorders import reconcile_workorders
 from reconforge.schemas import DatasetName
@@ -52,3 +54,38 @@ def test_workorder_summary_has_all_control_categories(sample_datasets: dict[Data
         "cancelled_po_linked_to_movement",
     }
     assert expected == set(result.summary["metric"])
+
+
+def test_reconcile_workorders_returns_empty_exceptions_without_crash() -> None:
+    stock_moves = pd.DataFrame(
+        columns=[
+            "movement_type",
+            "work_order",
+            "source_document",
+            "date",
+                "total_cost",
+                "quantity",
+                "product_code",
+                "category",
+                "warehouse",
+            ],
+        )
+    work_orders = pd.DataFrame(columns=["work_order", "status", "closed_date", "actual_cost"])
+    purchase_orders = pd.DataFrame(columns=["po_number", "linked_work_order", "product_code", "status"])
+    old_parts_returns = pd.DataFrame(columns=["work_order", "product_code", "returned_quantity"])
+    invoices = pd.DataFrame(columns=["work_order", "status", "invoice_amount"])
+
+    result = reconcile_workorders(
+        stock_moves=stock_moves,
+        work_orders=work_orders,
+        purchase_orders=purchase_orders,
+        old_parts_returns=old_parts_returns,
+        invoices=invoices,
+        config=ReconForgeConfig(
+            movement_type_mapping={"issue": [], "receipt": [], "direct_fit": [], "return": []},
+            required_old_part_categories=[],
+        ),
+    )
+
+    assert result.all_exceptions.empty
+    assert {"exception_type", "risk_score", "risk_level"} <= set(result.all_exceptions.columns)

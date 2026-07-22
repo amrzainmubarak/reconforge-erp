@@ -64,6 +64,8 @@ def assess_risk(
         "invalid_master_reference": weights.invalid_master_reference,
         "parts_issued_without_work_order": weights.invalid_master_reference,
         "work_order_cost_without_invoice": weights.closed_work_order_without_invoice,
+        "data_quality": weights.invalid_financial_value,
+        "reference_mismatch": weights.invalid_master_reference,
     }
     score = base_scores.get(normalized, 25)
     score += amount_component(abs(amount))

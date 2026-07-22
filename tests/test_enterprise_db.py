@@ -82,6 +82,23 @@ def test_db_status_reports_pending_and_current_versions(tmp_path: Path) -> None:
     assert status.pending_versions == []
 
 
+def test_sqlite_connections_enable_local_concurrency_safety_pragmas(tmp_path: Path) -> None:
+    db_path = tmp_path / "pragmas.db"
+    run_migrations(db_path)
+
+    connection = connect(db_path, require_exists=True)
+    try:
+        journal_mode = str(connection.execute("PRAGMA journal_mode").fetchone()[0]).lower()
+        busy_timeout = int(connection.execute("PRAGMA busy_timeout").fetchone()[0])
+        foreign_keys = int(connection.execute("PRAGMA foreign_keys").fetchone()[0])
+    finally:
+        connection.close()
+
+    assert journal_mode == "wal"
+    assert busy_timeout >= 5_000
+    assert foreign_keys == 1
+
+
 def test_domain_repositories_create_workspace_and_period(tmp_path: Path) -> None:
     db_path = tmp_path / "domain.db"
     run_migrations(db_path)

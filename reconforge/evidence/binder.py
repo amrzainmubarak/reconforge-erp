@@ -119,7 +119,10 @@ def collect_evidence_cases(input_dir: Path | str) -> list[EvidenceCase]:
 
     base = Path(input_dir)
     frames = [_risk_filter(_read_csv_if_exists(path)) for path in _candidate_files(base)]
-    combined = pd.concat([frame for frame in frames if not frame.empty], ignore_index=True, sort=False)
+    non_empty_frames = [frame for frame in frames if not frame.empty]
+    if not non_empty_frames:
+        return []
+    combined = pd.concat(non_empty_frames, ignore_index=True, sort=False)
     if combined.empty:
         return []
     cases: list[EvidenceCase] = []

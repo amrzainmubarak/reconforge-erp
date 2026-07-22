@@ -8,6 +8,7 @@ from pathlib import Path
 
 _ALLOWED_DB_SUFFIXES = {".db", ".sqlite", ".sqlite3"}
 _WINDOWS_DRIVE_PREFIX = re.compile(r"^[A-Za-z]:")
+SQLITE_BUSY_TIMEOUT_MS = 5_000
 
 
 class DatabaseError(ValueError):
@@ -62,9 +63,12 @@ def connect(
         resolved.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        connection = sqlite3.connect(resolved)
+        connection = sqlite3.connect(resolved, timeout=SQLITE_BUSY_TIMEOUT_MS / 1_000)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
+        connection.execute(f"PRAGMA busy_timeout = {SQLITE_BUSY_TIMEOUT_MS}")
+        connection.execute("PRAGMA journal_mode = WAL")
+        connection.execute("PRAGMA synchronous = NORMAL")
     except sqlite3.Error as exc:
-        raise DatabaseError("Unable to open ReconForge database. Choose a valid local SQLite .db file.") from exc
+        raise DatabaseError("Unable to read ReconForge database. Choose a valid local SQLite .db file.") from exc
     return connection

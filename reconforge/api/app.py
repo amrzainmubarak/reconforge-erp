@@ -6,6 +6,7 @@ import uuid
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import cast
+from typing import Final
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -43,6 +44,16 @@ from reconforge.db import resolve_db_path
 
 ExceptionHandler = Callable[[Request, Exception], Response | Awaitable[Response]]
 
+SECURITY_RESPONSE_HEADERS: Final[dict[str, str]] = {
+    "Cache-Control": "no-store",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "accelerometer=(), ambient-light-sensor=(), battery=(), camera=(), geolocation=(), microphone=(), payment=(), usb=()",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-Permitted-Cross-Domain-Policies": "none",
+    "X-XSS-Protection": "0",
+}
+
 
 def create_api_app(db_path: Path | str) -> FastAPI:
     """Create the local/self-hosted ReconForge REST API app."""
@@ -60,6 +71,14 @@ def create_api_app(db_path: Path | str) -> FastAPI:
         request.state.request_id = request.headers.get("x-request-id") or uuid.uuid4().hex
         response = await call_next(request)
         response.headers["x-request-id"] = request.state.request_id
+        return response
+
+    @app.middleware("http")
+    async def add_security_headers(request: Request, call_next: RequestResponseEndpoint) -> Response:
+        response = await call_next(request)
+        for header, value in SECURITY_RESPONSE_HEADERS.items():
+            response.headers.setdefault(header, value)
+        response.headers.setdefault("Server", "reconforge-api")
         return response
 
     app.add_exception_handler(APIError, cast(ExceptionHandler, api_error_handler))

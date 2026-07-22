@@ -4,7 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from reconforge.evidence.binder import generate_evidence_binder
+from reconforge.evidence.binder import collect_evidence_cases, generate_evidence_binder
 from reconforge.evidence.index import write_evidence_index_html
 from reconforge.evidence.models import EvidenceCase
 from reconforge.io.writers import write_report_frames
@@ -99,3 +99,14 @@ def test_evidence_index_url_quotes_case_links(tmp_path: Path) -> None:
     html = path.read_text(encoding="utf-8")
     assert "href='EXC%20%26%20001/summary.md'" in html
     assert "EXC &amp; 001" in html
+
+
+def test_collect_evidence_cases_returns_empty_list_without_candidate_files(tmp_path: Path) -> None:
+    assert collect_evidence_cases(tmp_path) == []
+
+
+def test_generate_evidence_binder_handles_empty_candidate_inputs(tmp_path: Path) -> None:
+    artifacts = generate_evidence_binder(tmp_path, tmp_path / "evidence")
+    assert artifacts == []
+    assert (tmp_path / "evidence" / "index.html").exists()
+    assert (tmp_path / "evidence" / "evidence_register.xlsx").exists()

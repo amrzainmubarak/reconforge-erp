@@ -16,6 +16,7 @@ from reconforge.db.connection import DatabaseError
 from reconforge.domain.models import utc_now_text
 
 SESSION_TTL_HOURS = 8
+SESSION_LAST_USED_UPDATE_INTERVAL = timedelta(minutes=5)
 
 
 class SessionError(ValueError):
@@ -120,11 +121,23 @@ def authenticate_token(connection: sqlite3.Connection, *, token: str) -> LocalUs
         user = repository.get_by_username(username)
         if user is None or user.disabled:
             return None
-        try:
-            connection.execute("UPDATE api_sessions SET last_used_at = ? WHERE id = ?", (utc_now_text(), str(row["id"])))
-            connection.commit()
-        except sqlite3.DatabaseError as exc:
-            raise SessionError("Unable to update local API session.") from exc
+        last_used_at = _parse_utc(str(row["last_used_at"])) if row["last_used_at"] is not None else None
+        if last_used_at is None or last_used_at <= now - SESSION_LAST_USED_UPDATE_INTERVAL:
+            now_text = now.replace(microsecond=0).isoformat().replace("+00:00", "Z")
+            threshold_text = (now - SESSION_LAST_USED_UPDATE_INTERVAL).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+            try:
+                cursor = connection.execute(
+                    """
+                    UPDATE api_sessions
+                    SET last_used_at = ?
+                    WHERE id = ? AND (last_used_at IS NULL OR last_used_at <= ?)
+                    """,
+                    (now_text, str(row["id"]), threshold_text),
+                )
+                if cursor.rowcount:
+                    connection.commit()
+            except sqlite3.DatabaseError as exc:
+                raise SessionError("Unable to update local API session.") from exc
         return user
     return None
 

@@ -18,8 +18,31 @@ EXPORT_FORMAT_VERSION = 1
 SELECT_QUERIES = {
     "workspaces": "SELECT * FROM workspaces ORDER BY created_at, id",
     "organizations": "SELECT * FROM organizations ORDER BY created_at, id",
+    "currencies": "SELECT * FROM currencies ORDER BY code",
     "legal_entities": "SELECT * FROM legal_entities ORDER BY entity_code, id",
+    "branches": "SELECT * FROM branches ORDER BY organization_id, branch_code, id",
     "periods": "SELECT * FROM periods ORDER BY start_date, id",
+    "units_of_measure": "SELECT * FROM units_of_measure ORDER BY workspace_id, uom_code",
+    "inventory_items": "SELECT * FROM inventory_items ORDER BY workspace_id, item_code",
+    "warehouses": "SELECT * FROM warehouses ORDER BY workspace_id, organization_id, warehouse_code",
+    "inventory_locations": "SELECT * FROM inventory_locations ORDER BY warehouse_id, location_code",
+    "inventory_lots": "SELECT * FROM inventory_lots ORDER BY item_id, organization_id, lot_serial_code",
+    "inventory_movements": "SELECT * FROM inventory_movements ORDER BY workspace_id, movement_date, movement_number",
+    "inventory_movement_lines": "SELECT * FROM inventory_movement_lines ORDER BY movement_id, line_number",
+    "inventory_count_sessions": "SELECT * FROM inventory_count_sessions ORDER BY workspace_id, count_date, count_number",
+    "inventory_count_lines": "SELECT * FROM inventory_count_lines ORDER BY session_id, line_number",
+    "inventory_reorder_rules": "SELECT * FROM inventory_reorder_rules ORDER BY workspace_id, organization_id, legal_entity_id, item_id, location_id",
+    "inventory_valuation_policies": "SELECT * FROM inventory_valuation_policies ORDER BY workspace_id, organization_id, legal_entity_id, policy_code",
+    "inventory_valuation_documents": "SELECT * FROM inventory_valuation_documents ORDER BY workspace_id, valuation_date, valuation_number",
+    "inventory_valuation_input_costs": "SELECT * FROM inventory_valuation_input_costs ORDER BY valuation_document_id, movement_line_id",
+    "inventory_valuation_lines": "SELECT * FROM inventory_valuation_lines ORDER BY valuation_document_id, line_number",
+    "inventory_cost_layers": "SELECT * FROM inventory_cost_layers ORDER BY created_at, id",
+    "inventory_layer_consumptions": "SELECT * FROM inventory_layer_consumptions ORDER BY valuation_line_id, cost_layer_id",
+    "inventory_valuation_reversals": "SELECT * FROM inventory_valuation_reversals ORDER BY workspace_id, reversal_date, reversal_number",
+    "inventory_valuation_reversal_effects": "SELECT * FROM inventory_valuation_reversal_effects ORDER BY reversal_id, original_valuation_line_id, id",
+    "charts_of_accounts": "SELECT * FROM charts_of_accounts ORDER BY workspace_id, chart_code",
+    "accounting_dimensions": "SELECT * FROM accounting_dimensions ORDER BY workspace_id, dimension_code",
+    "accounting_dimension_values": "SELECT * FROM accounting_dimension_values ORDER BY dimension_id, value_code",
     "users_public": """
         SELECT id, username, display_name, email, disabled, created_at, password_changed_at,
                failed_login_count, locked_until
@@ -31,6 +54,10 @@ SELECT_QUERIES = {
     "user_roles": "SELECT * FROM user_roles ORDER BY user_id, role_id",
     "role_permissions": "SELECT * FROM role_permissions ORDER BY role_id, permission_name",
     "accounts": "SELECT * FROM accounts ORDER BY account_code, id",
+    "finance_journals": "SELECT * FROM finance_journals ORDER BY workspace_id, organization_id, journal_code",
+    "ledger_entries": "SELECT * FROM ledger_entries ORDER BY workspace_id, posting_date, entry_number",
+    "ledger_lines": "SELECT * FROM ledger_lines ORDER BY entry_id, line_number",
+    "ledger_line_dimensions": "SELECT * FROM ledger_line_dimensions ORDER BY line_id, dimension_value_id",
     "reconciliations": "SELECT * FROM reconciliations ORDER BY created_at, id",
     "tasks": "SELECT * FROM tasks ORDER BY created_at, id",
     "controls": "SELECT * FROM controls ORDER BY control_code, id",
@@ -195,8 +222,13 @@ def _domain_payload(connection: sqlite3.Connection) -> dict[str, Any]:
     return {
         "workspaces": _rows(connection, "workspaces"),
         "organizations": _rows(connection, "organizations"),
+        "currencies": _rows(connection, "currencies"),
         "legal_entities": _rows(connection, "legal_entities"),
+        "branches": _rows(connection, "branches"),
         "periods": _rows(connection, "periods"),
+        "charts_of_accounts": _rows(connection, "charts_of_accounts"),
+        "accounting_dimensions": _rows(connection, "accounting_dimensions"),
+        "accounting_dimension_values": _rows(connection, "accounting_dimension_values"),
         "accounts": _rows(connection, "accounts"),
         "reconciliations": _rows(connection, "reconciliations"),
         "tasks": _rows(connection, "tasks"),
@@ -241,6 +273,10 @@ def _legacy_payload(connection: sqlite3.Connection) -> dict[str, Any]:
 
 def _finance_payload(connection: sqlite3.Connection) -> dict[str, Any]:
     return {
+        "finance_journals": _rows(connection, "finance_journals"),
+        "ledger_entries": _rows(connection, "ledger_entries"),
+        "ledger_lines": _rows(connection, "ledger_lines"),
+        "ledger_line_dimensions": _rows(connection, "ledger_line_dimensions"),
         "account_reconciliation_templates": _rows(connection, "account_reconciliation_templates"),
         "trial_balance_rows": _rows(connection, "trial_balance_rows"),
         "account_reconciliation_records": _rows(connection, "account_reconciliation_records"),
@@ -271,6 +307,31 @@ def _finance_payload(connection: sqlite3.Connection) -> dict[str, Any]:
     }
 
 
+def _inventory_payload(connection: sqlite3.Connection) -> dict[str, Any]:
+    return {
+        "units_of_measure": _rows(connection, "units_of_measure"),
+        "items": _rows(connection, "inventory_items"),
+        "warehouses": _rows(connection, "warehouses"),
+        "locations": _rows(connection, "inventory_locations"),
+        "lots_and_serials": _rows(connection, "inventory_lots"),
+        "movements": _rows(connection, "inventory_movements"),
+        "movement_lines": _rows(connection, "inventory_movement_lines"),
+        "count_sessions": _rows(connection, "inventory_count_sessions"),
+        "count_lines": _rows(connection, "inventory_count_lines"),
+        "reorder_rules": _rows(connection, "inventory_reorder_rules"),
+        "valuation_policies": _rows(connection, "inventory_valuation_policies"),
+        "valuation_documents": _rows(connection, "inventory_valuation_documents"),
+        "valuation_input_costs": _rows(connection, "inventory_valuation_input_costs"),
+        "valuation_lines": _rows(connection, "inventory_valuation_lines"),
+        "cost_layers": _rows(connection, "inventory_cost_layers"),
+        "layer_consumptions": _rows(connection, "inventory_layer_consumptions"),
+        "valuation_reversals": _rows(connection, "inventory_valuation_reversals"),
+        "valuation_reversal_effects": _rows(
+            connection, "inventory_valuation_reversal_effects"
+        ),
+    }
+
+
 def build_public_export_payloads(connection: sqlite3.Connection, *, schema_version: int) -> dict[str, dict[str, Any]]:
     """Build sanitized export payloads that exclude credential and session material."""
 
@@ -294,6 +355,7 @@ def build_public_export_payloads(connection: sqlite3.Connection, *, schema_versi
             "evidence_links": _rows(connection, "evidence_links"),
         },
         "finance_workflows": _finance_payload(connection),
+        "inventory": _inventory_payload(connection),
         "legacy_imports": _legacy_payload(connection),
     }
 

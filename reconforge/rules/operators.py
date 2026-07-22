@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import re
 from datetime import date
+from decimal import Decimal
 
 import pandas as pd
 
 from reconforge.rules.models import Condition
 from reconforge.utils.dates import days_between
-from reconforge.utils.money import within_tolerance
+from reconforge.utils.money import InvalidAmountError, parse_amount, within_tolerance
 
 
 def is_missing(value: object) -> bool:
@@ -33,11 +34,19 @@ def _right_value(row: pd.Series, condition: Condition) -> object:
     return condition.value
 
 
-def _as_float(value: object) -> float:
+def _as_float(value: object) -> Decimal | float | None:
     try:
-        return float(str(value))
-    except (TypeError, ValueError):
-        return 0.0
+        return parse_amount(value)
+    except InvalidAmountError:
+        return None
+
+
+def _numeric_pair(left: object, right: object) -> tuple[float, float] | None:
+    left_number = _as_float(left)
+    right_number = _as_float(right)
+    if left_number is None or right_number is None:
+        return None
+    return float(left_number), float(right_number)
 
 
 def _as_date(value: object) -> date | None:
@@ -63,11 +72,17 @@ def evaluate_condition(
     right = _right_value(row, condition)
 
     if operator == "and":
-        return all(evaluate_condition(row, child, frame=frame, related_frames=related_frames) for child in condition.conditions)
+        return all(
+            evaluate_condition(row, child, frame=frame, related_frames=related_frames) for child in condition.conditions
+        )
     if operator == "or":
-        return any(evaluate_condition(row, child, frame=frame, related_frames=related_frames) for child in condition.conditions)
+        return any(
+            evaluate_condition(row, child, frame=frame, related_frames=related_frames) for child in condition.conditions
+        )
     if operator == "not":
-        return not any(evaluate_condition(row, child, frame=frame, related_frames=related_frames) for child in condition.conditions)
+        return not any(
+            evaluate_condition(row, child, frame=frame, related_frames=related_frames) for child in condition.conditions
+        )
 
     if operator == "exists":
         return not is_missing(left)
@@ -86,13 +101,17 @@ def evaluate_condition(
     if operator == "ends_with":
         return str(left).endswith(str(right))
     if operator == "greater_than":
-        return _as_float(left) > _as_float(right)
+        pair = _numeric_pair(left, right)
+        return pair is not None and pair[0] > pair[1]
     if operator == "less_than":
-        return _as_float(left) < _as_float(right)
+        pair = _numeric_pair(left, right)
+        return pair is not None and pair[0] < pair[1]
     if operator == "greater_or_equal":
-        return _as_float(left) >= _as_float(right)
+        pair = _numeric_pair(left, right)
+        return pair is not None and pair[0] >= pair[1]
     if operator == "less_or_equal":
-        return _as_float(left) <= _as_float(right)
+        pair = _numeric_pair(left, right)
+        return pair is not None and pair[0] <= pair[1]
     if operator == "in_list":
         values = condition.value if isinstance(condition.value, list) else []
         return str(left) in {str(value) for value in values}
@@ -100,7 +119,8 @@ def evaluate_condition(
         values = condition.value if isinstance(condition.value, list) else []
         return str(left) not in {str(value) for value in values}
     if operator == "amount_within_tolerance":
-        return within_tolerance(_as_float(left), _as_float(right), float(condition.tolerance or 0.0))
+        pair = _numeric_pair(left, right)
+        return pair is not None and within_tolerance(pair[0], pair[1], float(condition.tolerance or 0.0))
     if operator == "date_within_days":
         diff = days_between(_as_date(left), _as_date(right))
         return diff is not None and diff <= int(condition.days or 0)
@@ -115,14 +135,17 @@ def evaluate_condition(
         right_date = _as_date(right)
         return left_date is not None and right_date is not None and left_date > right_date
     if operator == "variance_above":
-        variance = abs(_as_float(left) - _as_float(right))
         threshold = condition.threshold if condition.threshold is not None else condition.value
-        return variance > _as_float(threshold)
+        pair = _numeric_pair(left, right)
+        threshold_number = _as_float(threshold)
+        return pair is not None and threshold_number is not None and abs(pair[0] - pair[1]) > threshold_number
     if operator == "aging_bucket":
         left_date = _as_date(left)
         if left_date is None:
             return False
-        return days_between(left_date, date.today()) is not None and (days_between(left_date, date.today()) or 0) >= int(
+        return days_between(left_date, date.today()) is not None and (
+            days_between(left_date, date.today()) or 0
+        ) >= int(
             condition.bucket_days or condition.days or condition.value or 0,
         )
     if operator == "duplicate":
@@ -157,12 +180,21 @@ def evaluate_condition(
         source_key = condition.source_key or "work_order"
         target_key = condition.target_key or source_key
         aggregate_field = condition.aggregate_field or condition.target_field
-        if target is None or aggregate_field is None or target_key not in target.columns or aggregate_field not in target.columns:
+        if (
+            target is None
+            or aggregate_field is None
+            or target_key not in target.columns
+            or aggregate_field not in target.columns
+        ):
             return False
         source_value = row.get(source_key)
-        total = pd.to_numeric(target[target[target_key].astype(str).eq(str(source_value))][aggregate_field], errors="coerce").fillna(0).sum()
+        raw_values = target[target[target_key].astype(str).eq(str(source_value))][aggregate_field]
+        parsed_values = [_as_float(value) for value in raw_values]
         expected = _as_float(left if condition.field else condition.value)
-        return within_tolerance(float(total), expected, float(condition.tolerance or 0.0))
+        if expected is None or any(value is None for value in parsed_values):
+            return False
+        total = sum(value for value in parsed_values if value is not None)
+        return within_tolerance(total, expected, float(condition.tolerance or 0.0))
     raise ValueError(f"Unsupported rule operator: {condition.operator}")
 
 

@@ -10,6 +10,7 @@ from reconforge.benchmark.runner import run_benchmark
 from reconforge.config import ReconForgeConfig
 from reconforge.engines.base import get_engine
 from reconforge.engines.duckdb_engine import DuckDBEngine
+from reconforge.engines.pandas_engine import PandasEngine
 from reconforge.generator.synthetic import generate_synthetic_dataset
 from reconforge.io.readers import read_required_datasets
 from reconforge.reconciliation.stock_gl import reconcile_stock_gl
@@ -84,3 +85,35 @@ def test_duckdb_graceful_missing_dependency(tmp_path: Path) -> None:
             DuckDBEngine().run(target, ReconForgeConfig())
     else:
         assert DuckDBEngine().run(target, ReconForgeConfig()).engine == "duckdb"
+
+
+@pytest.mark.skipif(importlib.util.find_spec("duckdb") is None, reason="optional DuckDB dependency is not installed")
+def test_duckdb_executes_without_delegating_to_pandas_engine(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    target = tmp_path / "synthetic"
+    generate_synthetic_dataset(40, target, seed=12)
+
+    def fail_if_called(*args: object, **kwargs: object) -> object:
+        raise AssertionError("DuckDBEngine delegated execution to PandasEngine")
+
+    monkeypatch.setattr(PandasEngine, "run", fail_if_called)
+
+    result = DuckDBEngine().run(target, ReconForgeConfig())
+
+    assert result.engine == "duckdb"
+    assert result.stock_rows == 40
+
+
+@pytest.mark.skipif(importlib.util.find_spec("duckdb") is None, reason="optional DuckDB dependency is not installed")
+def test_duckdb_and_pandas_engines_make_equivalent_reconciliation_decisions(tmp_path: Path) -> None:
+    target = tmp_path / "synthetic"
+    generate_synthetic_dataset(75, target, seed=14)
+
+    pandas_result = PandasEngine().run(target, ReconForgeConfig())
+    duckdb_result = DuckDBEngine().run(target, ReconForgeConfig())
+
+    assert duckdb_result.matched_rows == pandas_result.matched_rows
+    assert duckdb_result.exception_rows == pandas_result.exception_rows
+    assert duckdb_result.summary.to_dict(orient="records") == pandas_result.summary.to_dict(orient="records")
+    assert duckdb_result.reconciliation_signature
+    assert pandas_result.reconciliation_signature
+    assert duckdb_result.reconciliation_signature == pandas_result.reconciliation_signature

@@ -16,6 +16,7 @@
 
 <p align="center">
   <a href="#visual-preview">Visual Preview</a> ·
+  <a href="DEMO.md">Expert Showcase</a> ·
   <a href="#quick-start">Quick Start</a> ·
   <a href="#project-status">Project Status</a> ·
   <a href="#10-minute-demo">10-Minute Demo</a> ·
@@ -36,7 +37,7 @@ It gives finance, inventory, workshop, ERP, and audit teams a repeatable way to 
 - Helps inspect Odoo/SAP-style export mappings before users edit YAML profiles.
 - Tracks local exception review status and compares generated outputs across periods.
 - Adds local close checklist, variance analysis, control matrix, and preparer/reviewer workflow metadata foundations.
-- Provides DB-backed foundations for broader local finance control workflows, local API/Studio use, and backup/import/export support.
+- Provides DB-backed foundations for broader local finance and inventory-control workflows, local API/Studio use, and backup/import/export support.
 - Produces local artifacts: Excel management packs, HTML reports, Markdown summaries, CSV/JSON exports, and evidence binder folders.
 
 ## Why It Matters
@@ -51,7 +52,34 @@ ERP systems hold the source transactions, but month-end reconciliation often sti
 - Local-first and export-based; core workflows do not require cloud upload or paid APIs.
 - No direct ERP connectors are claimed.
 - Local users/RBAC, REST API, Studio auth-required mode, DB-backed workflows, and backup/import/export support are foundations, not a production identity, compliance, assurance, or hosted platform claim.
+- The new React-based Studio under `apps/web` is an experimental, read-only, synthetic-data preview. It does not replace the current Studio or imply that planned ERP transaction modules are implemented.
 - Docker build workflow support exists. Docker runtime verification remains a roadmap/release-gate item unless the documented build and run commands pass in a live Docker environment.
+
+## New Platform Direction (Experimental)
+
+ReconForge is evolving additively from a focused reconciliation toolkit toward a modular local ERP finance-controls platform. The current CLI, export workflows, local API, SQLite services, generated reports, evidence outputs, and server-rendered Studio remain supported while new capabilities are introduced in small tested slices.
+
+The modern Studio foundation includes an original responsive dashboard shell, native exception, evidence, and inventory-control pages, command palette, mobile navigation, theme/density/accessibility preferences, English/Arabic direction support, and charts/tables generated from the existing synthetic enterprise demo.
+
+| Layer | Current status |
+| --- | --- |
+| Reconciliation, rule packs, reports, evidence, review workflows | Implemented local-first workflows |
+| SQLite finance and inventory-control ledgers, API, RBAC, audit events, current Studio | Foundation-stage services |
+| Modern React Studio dashboard, exception queue, evidence binder, and inventory control center | Experimental read-only synthetic preview |
+| Inventory counts and reorder advice | Experimental local foundation; no automatic posting, purchasing, or ERP writeback |
+| FIFO inventory valuation, exact reversal, and Finance Core Draft bridge | Experimental local foundation; no automatic validation, partial/chained reversal, AVCO, landed cost, or ERP writeback |
+| Full purchasing, sales, manufacturing, projects, HR, and POS transaction modules | Planned; not released behavior |
+
+Generate the cohesive executive showcase and strict Studio bundle locally:
+
+```bash
+npm --prefix apps/web install
+make showcase-serve
+```
+
+The [showcase guide](DEMO.md) provides a five-minute presenter path, non-Make commands, generated-artifact map, and evidence for each demo claim.
+
+See the [repository audit](docs/analysis/repository-audit.md), [platform architecture](docs/architecture/platform-architecture.md), [global feature backlog](docs/product/global-feature-backlog.md), and [platform direction ADR](docs/adr/0001-platform-direction.md).
 
 ## Core Capabilities
 
@@ -60,7 +88,7 @@ ERP systems hold the source transactions, but month-end reconciliation often sti
 | Reconciliation | Stock-to-GL matching, amount/date variance checks, unmatched stock and unmatched GL review |
 | Workshop controls | Work-order cost review, WIP aging, direct purchase fitting risk, old-part return checks |
 | Audit intelligence | Risk scores, risk levels, suggested audit notes, control explanations, evidence binders |
-| Rule packs | 18 domain control packs with YAML rules, mappings, expected exceptions, and risk models |
+| Rule packs | 19 domain control packs with YAML rules, mappings, expected exceptions, and risk models |
 | Reporting | Excel management pack, executive HTML report, static dashboard, Markdown, CSV, and JSON outputs |
 | Mapping | Odoo, SAP, ERPNext, Dynamics, NetSuite, and Oracle export mapping validation plus local header inspection and generic profile-template reports |
 | Review workflow | Studio review actions, local review state, review register export, and status filtering |
@@ -89,10 +117,46 @@ The merged foundation layer adds local SQLite-backed records and services for br
 | Unified exceptions | Cross-workflow exception queue, ownership, status, risk, and aging foundations |
 | Metrics | Local dashboard and lineage metric foundations |
 | Local platform services | REST API, Studio DB pages, local users/RBAC, audit events, DB import/export, and backup bridge foundations |
+| Runtime capability registry | Deterministic module IDs, maturity/capability labels, dependency and migration validation, permissions, interfaces, contracts, and test-evidence metadata |
+| Organization master data | Workspace-scoped organization, legal-entity, branch, currency-reference, and non-overlapping fiscal-period foundations with RBAC, audit events, CLI/API, and a versioned path-free snapshot |
+| Finance core control ledger | Hierarchical chart accounts, analytic dimensions, journal definitions, exact minor-unit balanced entries, SoD validation, immutable validated lines, and trial-balance contracts; no source-ERP posting |
+| Inventory core movement ledger | Units, items, warehouse/location hierarchy, lot/serial references, exact-quantity Draft/Posted/Voided movements, derived on-hand and deterministic exceptions; no costing, fulfillment, or source-ERP writeback |
+| Inventory planning controls | Immutable location-count snapshots, exact results, independent approval, Draft variance adjustments, and deterministic reorder advice; no purchase-order creation, valuation, finance posting, or source-ERP writeback |
+| FIFO inventory valuation | Exact inbound costs, chronological FIFO layers/consumptions, immutable Approved evidence, exact whole-valuation reversal through a separately Posted mirror movement, SoD, and balanced Finance Core Draft bridges; no automatic validation, partial/chained reversal, AVCO, landed cost, manufacturing costing, or source-ERP writeback |
 
 ## Visual Preview
 
 The screenshots below are generated from real local ReconForge outputs in this repository, not mockups or stock images.
+
+### Modern Studio Foundation
+
+![ReconForge Studio experimental dashboard](docs/assets/screenshots/dashboard.png)
+
+Captured from the real `apps/web` client using versioned synthetic contracts generated by `reconforge demo showcase`. The dashboard leads with a deterministic decision brief, close-readiness signal, guided control story, domain health, and multi-entity risk concentration. This is a read-only experimental preview; existing mutation workflows remain in the current local Studio.
+
+### Modern Exception Queue
+
+![ReconForge Studio synthetic exception queue](docs/assets/screenshots/exception-queue.png)
+
+The native queue renders deterministic exception IDs and supports local search plus risk, status, and source filters. Values come from the bounded `studio-exceptions.json` contract.
+
+### Modern Evidence Binder
+
+![ReconForge Studio synthetic evidence binder](docs/assets/screenshots/evidence-binder.png)
+
+The native binder displays allowlisted evidence metadata and SHA-256 integrity aids from `studio-evidence.json`; local source paths are deliberately excluded from the browser contract.
+
+### Modern Inventory Control Center
+
+![ReconForge Studio synthetic inventory control center](docs/assets/screenshots/inventory-control.png)
+
+The native inventory page displays exact synthetic on-hand quantities, warehouses, movements, count sessions, reorder advice, FIFO valuation and reversal documents, cost layers, Finance Draft references, and deterministic control exceptions from `studio-inventory.json`. It is read-only; reorder signals create no purchasing documents, and valuation/reversal rows cannot approve workflows, validate accounting entries, or write to a source ERP.
+
+### Modern FIFO Valuation View
+
+![ReconForge Studio synthetic FIFO valuation view](docs/assets/screenshots/inventory-valuation.png)
+
+The valuation tab renders bounded synthetic FIFO and exact-reversal summaries and explicitly labels generated accounting references as Draft. It does not imply browser-side approval, automatic ledger validation, partial reversal, supplier costing, landed cost, manufacturing costing, or source-ERP posting.
 
 ### Dashboard
 
@@ -354,6 +418,9 @@ See [SECURITY.md](SECURITY.md), [docs/security-model.md](docs/security-model.md)
 - [Local REST API](docs/api.md)
 - [DB import/export bridge](docs/db-import-export.md)
 - [DB-backed finance workflows](docs/db-finance-workflows.md)
+- [Inventory core movement ledger](docs/inventory-core.md)
+- [Inventory counts and reorder signals](docs/inventory-planning.md)
+- [FIFO inventory valuation foundation](docs/inventory-valuation.md)
 - [Matching, exceptions, and metrics](docs/matching-exceptions-metrics.md)
 - [Close workflow](docs/close-workflow.md)
 - [Variance analysis](docs/variance-analysis.md)

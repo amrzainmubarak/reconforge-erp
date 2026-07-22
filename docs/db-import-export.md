@@ -29,9 +29,10 @@ Run `reconforge db init` or `reconforge db migrate` first so the local schema is
 - `audit_events.json`
 - `evidence.json`
 - `finance_workflows.json`
+- `inventory.json`
 - `legacy_imports.json`
 
-The export includes schema version, domain references, users without credential material, roles, permissions, workflow objects, workflow transition history, audit events, evidence references, DB-backed finance workflow records, and imported legacy object summaries where present. It intentionally excludes password hashes, salts, API/session token hashes, raw session tokens, environment variables, and secrets.
+The export includes schema version, domain references, users without credential material, roles, permissions, workflow objects, workflow transition history, audit events, evidence references, DB-backed finance workflow records, local inventory master/movement/count/reorder/FIFO-valuation/reversal records, and imported legacy object summaries where present. It intentionally excludes password hashes, salts, API/session token hashes, raw session tokens, environment variables, and secrets.
 
 ## Legacy Imports
 
@@ -53,7 +54,9 @@ This bridge does not implement the full DB-backed account reconciliation lifecyc
 - `backup.json`
 - `manifest.json`
 
-The manifest records the backup checksum, created timestamp, schema version, and privacy warning. `reconforge db backup-verify` validates a backup without restoring it. `reconforge db restore --dry-run` validates restore inputs without writing the target DB. `reconforge db restore` validates the checksum before restoring, rejects unsupported schema versions, and refuses to overwrite an existing DB unless `--force` is provided.
+The manifest records the backup checksum, created timestamp, schema version, and privacy warning. `reconforge db backup-verify` validates a backup without restoring it. `reconforge db restore --dry-run` validates restore inputs without writing the target DB. `reconforge db restore` validates the checksum before restoring, rejects unsupported schema versions, checks restored foreign-key relationships, and refuses to overwrite an existing DB unless `--force` is provided.
+
+Current backups include organization, legal-entity, branch, currency-reference, fiscal-period, chart/account, dimension, finance-journal, balanced ledger-control, and inventory master/movement/count/reorder/FIFO-valuation/reversal data. Migration history is regenerated from trusted local migration definitions rather than restored as backup content. A supported older backup is loaded into its source schema first and then upgraded through the current migration sequence. Validated/Voided finance, Posted/Voided movement, Counting/Submitted/Approved/Cancelled count, and Approved/Cancelled valuation/reversal states are rebuilt only after restored detail rows pass database transition triggers. Restore verifies every FIFO layer's remaining quantity/value against its immutable origin, consumptions, and approved `Restore`/`Remove` effects.
 
 Backups may contain sensitive local business data and local password hashes needed for restore. Protect backup folders like finance control evidence. Backups never include raw session tokens or the `api_sessions` table.
 

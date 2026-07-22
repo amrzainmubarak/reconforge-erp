@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 import sqlite3
 import tempfile
@@ -21,6 +22,9 @@ from reconforge.api import create_api_app
 from reconforge.audit import AuditLedgerError, list_audit_events, verify_audit_events
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService, RoleRepository
 from reconforge.benchmark.runner import run_benchmark
+from reconforge.cli_inventory_planning import inventory_planning_app
+from reconforge.cli_inventory_valuation import inventory_valuation_app
+from reconforge.cli_inventory_valuation_reversal import inventory_valuation_reversal_app
 from reconforge.close import (
     ALLOWED_CLOSE_STATUSES,
     close_summary_frame,
@@ -35,7 +39,7 @@ from reconforge.control_matrix import export_control_matrix
 from reconforge.dashboard.app import create_app
 from reconforge.db import DatabaseError, connect, database_status, run_migrations
 from reconforge.db.backup import create_backup, restore_backup, verify_backup
-from reconforge.db.exporter import DBBridgeError, export_database
+from reconforge.db.exporter import DBBridgeError, export_database, resolve_input_file
 from reconforge.db.importers import (
     import_account_reconciliations,
     import_close_checklist,
@@ -51,6 +55,14 @@ from reconforge.io.writers import ensure_output_dir, frame_to_records, write_jso
 from reconforge.mappings.inspector import inspect_mapping_inputs
 from reconforge.mappings.profile_template import write_profile_template
 from reconforge.mappings.validator import validate_mapping_pack
+from reconforge.modules import (
+    ModuleMaturity,
+    ModuleRegistryError,
+    get_module,
+    list_modules,
+    registry_payload,
+    validate_registry,
+)
 from reconforge.periods import compare_period_outputs
 from reconforge.platform.accounts import AccountReconciliationService
 from reconforge.platform.approvals import ApprovalService
@@ -59,8 +71,11 @@ from reconforge.platform.common import PlatformError
 from reconforge.platform.controls import ControlTestingService
 from reconforge.platform.evidence import EvidenceRegistryService
 from reconforge.platform.exceptions import ExceptionQueueService
+from reconforge.platform.finance_core import FinanceCoreService
 from reconforge.platform.intercompany import IntercompanyService
+from reconforge.platform.inventory_core import InventoryCoreService
 from reconforge.platform.journals import JournalControlService
+from reconforge.platform.master_data import MasterDataService
 from reconforge.platform.matching import MatchingService
 from reconforge.platform.metrics import MetricsService
 from reconforge.platform.operations import OperationsService
@@ -86,6 +101,7 @@ from reconforge.rules.explain import explain_rule
 from reconforge.rules.loader import load_rule_pack
 from reconforge.schemas import DatasetName
 from reconforge.studio.app import create_studio_app
+from reconforge.studio.demo_bridge import StudioDemoBridgeError, build_studio_demo_bundle
 from reconforge.validators import issues_to_frame, validate_input_directory
 from reconforge.variance import analyze_variance
 from reconforge.workflow import WorkflowRepositoryError, WorkflowService, WorkflowServiceError
@@ -122,6 +138,10 @@ users_app = typer.Typer(help="Manage local users for DB-backed workflows.")
 roles_app = typer.Typer(help="Inspect local RBAC roles and permissions.")
 workflow_app = typer.Typer(help="Manage local workflow state machine foundations.")
 api_app = typer.Typer(help="Serve the local REST API foundation.")
+modules_app = typer.Typer(help="Inspect deterministic local module capability metadata.")
+master_data_app = typer.Typer(help="Manage governed local organization and fiscal master data.")
+finance_core_app = typer.Typer(help="Manage local chart-of-accounts and balanced ledger-control foundations.")
+inventory_app = typer.Typer(help="Manage local inventory masters, movements, balances, and controls.")
 app.add_typer(reconcile_app, name="reconcile")
 app.add_typer(report_app, name="report")
 app.add_typer(rules_app, name="rules")
@@ -151,6 +171,13 @@ app.add_typer(users_app, name="users")
 app.add_typer(roles_app, name="roles")
 app.add_typer(workflow_app, name="workflow")
 app.add_typer(api_app, name="api")
+app.add_typer(modules_app, name="modules")
+app.add_typer(master_data_app, name="master-data")
+app.add_typer(finance_core_app, name="finance-core")
+app.add_typer(inventory_app, name="inventory")
+inventory_app.add_typer(inventory_planning_app, name="planning")
+inventory_app.add_typer(inventory_valuation_app, name="valuation")
+inventory_valuation_app.add_typer(inventory_valuation_reversal_app, name="reversal")
 
 
 def _version_callback(value: bool) -> None:
@@ -219,6 +246,91 @@ def _db_connection(db_path: Path) -> sqlite3.Connection:
     return connect(_db_option(db_path), require_exists=True)
 
 
+def _master_data_service(db_path: Path) -> tuple[MasterDataService, sqlite3.Connection]:
+    connection = _db_connection(db_path)
+    try:
+        service = MasterDataService(connection)
+    except (DatabaseError, PlatformError):
+        connection.close()
+        raise
+    return service, connection
+
+
+def _finance_core_service(db_path: Path) -> tuple[FinanceCoreService, sqlite3.Connection]:
+    connection = _db_connection(db_path)
+    try:
+        service = FinanceCoreService(connection)
+    except (DatabaseError, PlatformError):
+        connection.close()
+        raise
+    return service, connection
+
+
+def _inventory_service(db_path: Path) -> tuple[InventoryCoreService, sqlite3.Connection]:
+    connection = _db_connection(db_path)
+    try:
+        service = InventoryCoreService(connection)
+    except (DatabaseError, PlatformError):
+        connection.close()
+        raise
+    return service, connection
+
+
+def _ledger_lines_from_json(input_path: Path) -> list[dict[str, object]]:
+    try:
+        resolved = resolve_input_file(input_path)
+        if resolved.suffix.lower() != ".json":
+            raise PlatformError("Ledger lines input must be a local JSON file.")
+        payload = json.loads(resolved.read_text(encoding="utf-8"))
+    except DBBridgeError as exc:
+        raise PlatformError(str(exc)) from exc
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PlatformError("Ledger lines JSON could not be parsed.") from exc
+    raw_lines = payload.get("lines") if isinstance(payload, dict) else payload
+    if not isinstance(raw_lines, list):
+        raise PlatformError("Ledger lines JSON must be a list or an object containing a lines list.")
+    allowed = {"account_code", "description", "debit", "credit", "dimensions"}
+    records: list[dict[str, object]] = []
+    for raw_line in raw_lines:
+        if not isinstance(raw_line, dict):
+            raise PlatformError("Each ledger line in JSON must be an object.")
+        if set(raw_line) - allowed:
+            raise PlatformError("Ledger lines JSON contains unsupported fields.")
+        records.append({str(key): value for key, value in raw_line.items()})
+    return records
+
+
+def _inventory_lines_from_json(input_path: Path) -> list[dict[str, object]]:
+    try:
+        resolved = resolve_input_file(input_path)
+        if resolved.suffix.lower() != ".json":
+            raise PlatformError("Inventory movement lines input must be a local JSON file.")
+        payload = json.loads(resolved.read_text(encoding="utf-8"))
+    except DBBridgeError as exc:
+        raise PlatformError(str(exc)) from exc
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PlatformError("Inventory movement lines JSON could not be parsed.") from exc
+    raw_lines = payload.get("lines") if isinstance(payload, dict) else payload
+    if not isinstance(raw_lines, list):
+        raise PlatformError("Inventory lines JSON must be a list or an object containing a lines list.")
+    allowed = {
+        "item_code",
+        "quantity",
+        "from_location",
+        "to_location",
+        "lot_serial_code",
+        "description",
+    }
+    records: list[dict[str, object]] = []
+    for raw_line in raw_lines:
+        if not isinstance(raw_line, dict):
+            raise PlatformError("Each inventory movement line in JSON must be an object.")
+        if set(raw_line) - allowed:
+            raise PlatformError("Inventory movement lines JSON contains unsupported fields.")
+        records.append({str(key): value for key, value in raw_line.items()})
+    return records
+
+
 def _print_records(title: str, records: list[dict[str, object]], *, max_rows: int = 50) -> None:
     if not records:
         console.print("[yellow]No records found.[/yellow]")
@@ -226,9 +338,1502 @@ def _print_records(title: str, records: list[dict[str, object]], *, max_rows: in
     _print_frame(title, pd.DataFrame(records), max_rows=max_rows)
 
 
+def _print_record_detail(title: str, record: dict[str, object]) -> None:
+    """Print one record vertically so narrow terminals preserve complete values."""
+
+    table = Table(title=title, show_lines=True)
+    table.add_column("Field", style="bold", no_wrap=True)
+    table.add_column("Value", overflow="fold")
+    for field, value in record.items():
+        table.add_row(str(field), str(value))
+    console.print(table)
+
+
 def _safe_cli_error(exc: Exception) -> None:
     console.print(f"[red]{exc}[/red]")
     raise typer.Exit(code=1) from exc
+
+
+def _module_maturity(value: str | None) -> ModuleMaturity | None:
+    if value is None:
+        return None
+    normalized = value.strip().lower()
+    if normalized not in {"stable", "beta", "experimental"}:
+        raise ModuleRegistryError("Maturity must be one of: stable, beta, experimental.")
+    return cast(ModuleMaturity, normalized)
+
+
+def _module_output_format(value: str) -> str:
+    normalized = value.strip().lower()
+    if normalized not in {"table", "json"}:
+        raise ModuleRegistryError("Output format must be 'table' or 'json'.")
+    return normalized
+
+
+@modules_app.command("list")
+def modules_list(
+    output_format: Annotated[str, typer.Option("--format", help="Output format: table or json.")] = "table",
+    maturity: Annotated[str | None, typer.Option(help="Filter by stable, beta, or experimental maturity.")] = None,
+) -> None:
+    """List runtime-visible modules without activating them."""
+
+    try:
+        selected_format = _module_output_format(output_format)
+        selected_maturity = _module_maturity(maturity)
+        descriptors = list_modules(maturity=selected_maturity)
+    except ModuleRegistryError as exc:
+        _safe_cli_error(exc)
+    if selected_format == "json":
+        typer.echo(json.dumps(registry_payload(maturity=selected_maturity), indent=2, sort_keys=True))
+        return
+    table = Table(title="ReconForge Runtime Modules", show_lines=False)
+    for column in ("Module", "Maturity", "Capability", "Default", "Interfaces", "Name"):
+        table.add_column(column)
+    for descriptor in descriptors:
+        table.add_row(
+            descriptor.module_id,
+            descriptor.maturity,
+            descriptor.capability_status,
+            "yes" if descriptor.default_enabled else "no",
+            ", ".join(descriptor.interfaces),
+            descriptor.name,
+        )
+    console.print(table)
+    console.print("[dim]Planned-only work is intentionally excluded from the runtime registry.[/dim]")
+
+
+@modules_app.command("show")
+def modules_show(
+    module_id: Annotated[str, typer.Argument(help="Exact registered module ID.")],
+    output_format: Annotated[str, typer.Option("--format", help="Output format: table or json.")] = "table",
+) -> None:
+    """Show one module's contracts, dependencies, permissions, and evidence."""
+
+    try:
+        selected_format = _module_output_format(output_format)
+        descriptor = get_module(module_id)
+    except ModuleRegistryError as exc:
+        _safe_cli_error(exc)
+    payload = descriptor.model_dump(mode="json")
+    if selected_format == "json":
+        typer.echo(json.dumps(payload, indent=2, sort_keys=True))
+        return
+    table = Table(title=f"ReconForge Module: {descriptor.module_id}", show_lines=True)
+    table.add_column("Field", style="bold")
+    table.add_column("Value")
+    for field, value in payload.items():
+        rendered = ", ".join(str(item) for item in value) if isinstance(value, list) else str(value)
+        table.add_row(field, rendered or "—")
+    console.print(table)
+
+
+@modules_app.command("validate")
+def modules_validate() -> None:
+    """Validate registry identity, dependency graph, and migration references."""
+
+    issues = validate_registry()
+    if issues:
+        for issue in issues:
+            console.print(f"[red]{issue.code}[/red] {issue.module_id}: {issue.message}")
+        raise typer.Exit(code=1)
+    console.print(f"[green]Module registry is valid.[/green] {len(list_modules())} runtime modules, schema v1.")
+
+
+@master_data_app.command("summary")
+def master_data_summary_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Show bounded organization master-data counts."""
+
+    try:
+        service, connection = _master_data_service(db_path)
+        try:
+            record = service.summary(workspace=workspace, actor_label=actor).to_dict()
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Master Data Summary", record)
+
+
+@master_data_app.command("currencies")
+def master_data_currencies_command(
+    active_only: Annotated[bool, typer.Option("--active-only", help="Show active currencies only.")] = False,
+    limit: Annotated[int, typer.Option(min=1, max=100_000, help="Maximum records to return.")] = 500,
+    offset: Annotated[int, typer.Option(min=0, max=10_000_000, help="Records to skip.")] = 0,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List governed local currency references."""
+
+    try:
+        service, connection = _master_data_service(db_path)
+        try:
+            records = service.list_currencies(active_only=active_only, limit=limit, offset=offset, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Currencies", records)
+
+
+@master_data_app.command("snapshot")
+def master_data_snapshot_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Print the versioned master-data snapshot as JSON for local redirection or inspection."""
+
+    try:
+        service, connection = _master_data_service(db_path)
+        try:
+            payload = service.snapshot(workspace=workspace, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    typer.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
+@master_data_app.command("currency-upsert")
+def master_data_currency_upsert_command(
+    code: Annotated[str, typer.Option(help="Three-letter currency code.")],
+    name: Annotated[str, typer.Option(help="Currency display name.")],
+    minor_units: Annotated[int, typer.Option(help="Decimal minor units, from 0 to 6.")] = 2,
+    active: Annotated[bool, typer.Option("--active/--inactive", help="Whether the currency is active.")] = True,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Create or update one local currency reference."""
+
+    try:
+        service, connection = _master_data_service(db_path)
+        try:
+            record = service.upsert_currency(
+                code=code,
+                name=name,
+                minor_units=minor_units,
+                active=active,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Currency Saved", record)
+
+
+@master_data_app.command("organizations")
+def master_data_organizations_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    limit: Annotated[int, typer.Option(min=1, max=100_000, help="Maximum records to return.")] = 500,
+    offset: Annotated[int, typer.Option(min=0, max=10_000_000, help="Records to skip.")] = 0,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List organization references in one workspace."""
+
+    try:
+        service, connection = _master_data_service(db_path)
+        try:
+            records = service.list_organizations(workspace=workspace, limit=limit, offset=offset, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Organizations", records)
+
+
+@master_data_app.command("organization-upsert")
+def master_data_organization_upsert_command(
+    code: Annotated[str, typer.Option(help="Organization code.")],
+    name: Annotated[str, typer.Option(help="Organization display name.")],
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    active: Annotated[bool, typer.Option("--active/--inactive", help="Whether the organization is active.")] = True,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Create or update one local organization reference."""
+
+    try:
+        service, connection = _master_data_service(db_path)
+        try:
+            record = service.upsert_organization(
+                organization_code=code,
+                name=name,
+                workspace=workspace,
+                active=active,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Organization Saved", record)
+
+
+@master_data_app.command("entities")
+def master_data_entities_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    organization: Annotated[str, typer.Option(help="Optional organization-code filter.")] = "",
+    limit: Annotated[int, typer.Option(min=1, max=100_000, help="Maximum records to return.")] = 500,
+    offset: Annotated[int, typer.Option(min=0, max=10_000_000, help="Records to skip.")] = 0,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List legal-entity references in one workspace."""
+
+    try:
+        service, connection = _master_data_service(db_path)
+        try:
+            records = service.list_legal_entities(
+                workspace=workspace,
+                organization_code=organization,
+                limit=limit,
+                offset=offset,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Legal Entities", records)
+
+
+@master_data_app.command("entity-upsert")
+def master_data_entity_upsert_command(
+    organization: Annotated[str, typer.Option(help="Organization code.")],
+    code: Annotated[str, typer.Option(help="Legal-entity code.")],
+    name: Annotated[str, typer.Option(help="Legal-entity display name.")],
+    currency: Annotated[str, typer.Option(help="Registered three-letter currency code.")],
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    active: Annotated[bool, typer.Option("--active/--inactive", help="Whether the entity is active.")] = True,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Create or update one local legal-entity reference."""
+
+    try:
+        service, connection = _master_data_service(db_path)
+        try:
+            record = service.upsert_legal_entity(
+                organization_code=organization,
+                entity_code=code,
+                name=name,
+                currency_code=currency,
+                workspace=workspace,
+                active=active,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Legal Entity Saved", record)
+
+
+@master_data_app.command("branches")
+def master_data_branches_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    organization: Annotated[str, typer.Option(help="Optional organization-code filter.")] = "",
+    limit: Annotated[int, typer.Option(min=1, max=100_000, help="Maximum records to return.")] = 500,
+    offset: Annotated[int, typer.Option(min=0, max=10_000_000, help="Records to skip.")] = 0,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List branch references in one workspace."""
+
+    try:
+        service, connection = _master_data_service(db_path)
+        try:
+            records = service.list_branches(
+                workspace=workspace,
+                organization_code=organization,
+                limit=limit,
+                offset=offset,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Branches", records)
+
+
+@master_data_app.command("branch-upsert")
+def master_data_branch_upsert_command(
+    organization: Annotated[str, typer.Option(help="Organization code.")],
+    code: Annotated[str, typer.Option(help="Branch code.")],
+    name: Annotated[str, typer.Option(help="Branch display name.")],
+    entity: Annotated[str, typer.Option(help="Optional legal-entity code in the same organization.")] = "",
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    active: Annotated[bool, typer.Option("--active/--inactive", help="Whether the branch is active.")] = True,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Create or update one local branch reference."""
+
+    try:
+        service, connection = _master_data_service(db_path)
+        try:
+            record = service.upsert_branch(
+                organization_code=organization,
+                branch_code=code,
+                name=name,
+                entity_code=entity,
+                workspace=workspace,
+                active=active,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Branch Saved", record)
+
+
+@master_data_app.command("periods")
+def master_data_periods_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    limit: Annotated[int, typer.Option(min=1, max=100_000, help="Maximum records to return.")] = 500,
+    offset: Annotated[int, typer.Option(min=0, max=10_000_000, help="Records to skip.")] = 0,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List local fiscal-period metadata."""
+
+    try:
+        service, connection = _master_data_service(db_path)
+        try:
+            records = service.list_periods(workspace=workspace, limit=limit, offset=offset, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Fiscal Periods", records)
+
+
+@master_data_app.command("period-upsert")
+def master_data_period_upsert_command(
+    name: Annotated[str, typer.Option(help="Fiscal-period name.")],
+    start_date: Annotated[str, typer.Option("--start", help="ISO start date, YYYY-MM-DD.")],
+    end_date: Annotated[str, typer.Option("--end", help="ISO end date, YYYY-MM-DD.")],
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    fiscal_year: Annotated[int | None, typer.Option(help="Optional fiscal year.")] = None,
+    period_number: Annotated[int | None, typer.Option(help="Optional period number.")] = None,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Create or update one non-overlapping local fiscal period."""
+
+    try:
+        service, connection = _master_data_service(db_path)
+        try:
+            record = service.upsert_period(
+                name=name,
+                start_date=start_date,
+                end_date=end_date,
+                workspace=workspace,
+                fiscal_year=fiscal_year,
+                period_number=period_number,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Fiscal Period Saved", record)
+
+
+@master_data_app.command("period-status")
+def master_data_period_status_command(
+    period_id: Annotated[str, typer.Option("--period-id", help="Fiscal-period identifier.")],
+    status: Annotated[str, typer.Option(help="Target status: Open, Soft Closed, or Closed.")],
+    reason: Annotated[str, typer.Option(help="Reason required when reopening.")] = "",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Transition fiscal-period metadata without implying ERP posting locks."""
+
+    try:
+        service, connection = _master_data_service(db_path)
+        try:
+            record = service.set_period_status(
+                period_id,
+                status=status,
+                reason=reason,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Fiscal Period Status", record)
+
+
+@finance_core_app.command("summary")
+def finance_core_summary_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Show local finance-core record counts."""
+
+    try:
+        service, connection = _finance_core_service(db_path)
+        try:
+            record = service.summary(workspace=workspace, actor_label=actor).to_dict()
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Finance Core Summary", record)
+
+
+@finance_core_app.command("snapshot")
+def finance_core_snapshot_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Print the bounded, path-free finance-core snapshot as JSON."""
+
+    try:
+        service, connection = _finance_core_service(db_path)
+        try:
+            payload = service.snapshot(workspace=workspace, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    typer.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
+@finance_core_app.command("charts")
+def finance_core_charts_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    limit: Annotated[int, typer.Option(min=1, max=100_000, help="Maximum records to return.")] = 500,
+    offset: Annotated[int, typer.Option(min=0, max=10_000_000, help="Records to skip.")] = 0,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List local charts of accounts."""
+
+    try:
+        service, connection = _finance_core_service(db_path)
+        try:
+            records = service.list_charts(
+                workspace=workspace, limit=limit, offset=offset, actor_label=actor
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Charts of Accounts", records)
+
+
+@finance_core_app.command("chart-upsert")
+def finance_core_chart_upsert_command(
+    code: Annotated[str, typer.Option(help="Chart code.")],
+    name: Annotated[str, typer.Option(help="Chart display name.")],
+    organization: Annotated[str, typer.Option(help="Optional organization code.")] = "",
+    description: Annotated[str, typer.Option(help="Optional chart description.")] = "",
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    active: Annotated[bool, typer.Option("--active/--inactive", help="Whether the chart is active.")] = True,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Create or update one chart of accounts."""
+
+    try:
+        service, connection = _finance_core_service(db_path)
+        try:
+            record = service.upsert_chart(
+                chart_code=code,
+                name=name,
+                workspace=workspace,
+                organization_code=organization,
+                description=description,
+                active=active,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Chart of Accounts Saved", record)
+
+
+@finance_core_app.command("accounts")
+def finance_core_accounts_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    chart: Annotated[str, typer.Option(help="Optional chart-code filter.")] = "",
+    active_only: Annotated[bool, typer.Option("--active-only", help="Show active accounts only.")] = False,
+    limit: Annotated[int, typer.Option(min=1, max=100_000, help="Maximum records to return.")] = 500,
+    offset: Annotated[int, typer.Option(min=0, max=10_000_000, help="Records to skip.")] = 0,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List governed financial accounts."""
+
+    try:
+        service, connection = _finance_core_service(db_path)
+        try:
+            records = service.list_accounts(
+                workspace=workspace,
+                chart_code=chart,
+                active_only=active_only,
+                limit=limit,
+                offset=offset,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Financial Accounts", records)
+
+
+@finance_core_app.command("account-upsert")
+def finance_core_account_upsert_command(
+    code: Annotated[str, typer.Option(help="Account code.")],
+    name: Annotated[str, typer.Option(help="Account display name.")],
+    account_type: Annotated[str, typer.Option("--type", help="Asset, Liability, Equity, Income, Expense, or Off Balance.")],
+    normal_balance: Annotated[str, typer.Option(help="Debit or Credit.")],
+    chart: Annotated[str, typer.Option(help="Chart code.")] = "DEFAULT",
+    parent: Annotated[str, typer.Option(help="Optional parent account code.")] = "",
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    posting: Annotated[bool, typer.Option("--posting/--no-posting", help="Allow ledger lines.")] = True,
+    manual_posting: Annotated[
+        bool, typer.Option("--manual-posting/--no-manual-posting", help="Allow manual entry lines.")
+    ] = True,
+    reconciliation_required: Annotated[
+        bool, typer.Option("--reconciliation-required/--no-reconciliation-required")
+    ] = False,
+    active: Annotated[bool, typer.Option("--active/--inactive", help="Whether the account is active.")] = True,
+    description: Annotated[str, typer.Option(help="Optional account description.")] = "",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Create or update a governed financial account."""
+
+    try:
+        service, connection = _finance_core_service(db_path)
+        try:
+            record = service.upsert_account(
+                account_code=code,
+                name=name,
+                workspace=workspace,
+                chart_code=chart,
+                parent_account_code=parent,
+                account_type=account_type,
+                normal_balance=normal_balance,
+                allow_posting=posting,
+                allow_manual_posting=manual_posting,
+                reconciliation_required=reconciliation_required,
+                active=active,
+                description=description,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Financial Account Saved", record)
+
+
+@finance_core_app.command("dimension-upsert")
+def finance_core_dimension_upsert_command(
+    code: Annotated[str, typer.Option(help="Dimension code.")],
+    name: Annotated[str, typer.Option(help="Dimension display name.")],
+    dimension_type: Annotated[str, typer.Option("--type", help="Cost Center, Department, Project, or Custom.")] = "Custom",
+    organization: Annotated[str, typer.Option(help="Optional organization code.")] = "",
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    required: Annotated[bool, typer.Option("--required/--optional", help="Require this dimension on every line.")] = False,
+    active: Annotated[bool, typer.Option("--active/--inactive", help="Whether the dimension is active.")] = True,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Create or update an accounting dimension."""
+
+    try:
+        service, connection = _finance_core_service(db_path)
+        try:
+            record = service.upsert_dimension(
+                dimension_code=code,
+                name=name,
+                workspace=workspace,
+                organization_code=organization,
+                dimension_type=dimension_type,
+                required_on_entries=required,
+                active=active,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Accounting Dimension Saved", record)
+
+
+@finance_core_app.command("dimension-value-upsert")
+def finance_core_dimension_value_upsert_command(
+    dimension: Annotated[str, typer.Option(help="Dimension code.")],
+    code: Annotated[str, typer.Option(help="Dimension value code.")],
+    name: Annotated[str, typer.Option(help="Dimension value display name.")],
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    active: Annotated[bool, typer.Option("--active/--inactive", help="Whether the value is active.")] = True,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Create or update an accounting dimension value."""
+
+    try:
+        service, connection = _finance_core_service(db_path)
+        try:
+            record = service.upsert_dimension_value(
+                dimension_code=dimension,
+                value_code=code,
+                name=name,
+                workspace=workspace,
+                active=active,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Accounting Dimension Value Saved", record)
+
+
+@finance_core_app.command("dimensions")
+def finance_core_dimensions_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    dimension: Annotated[str, typer.Option(help="Optional dimension code for value filtering.")] = "",
+    values: Annotated[bool, typer.Option("--values", help="List dimension values instead of dimensions.")] = False,
+    limit: Annotated[int, typer.Option(min=1, max=100_000, help="Maximum records to return.")] = 500,
+    offset: Annotated[int, typer.Option(min=0, max=10_000_000, help="Records to skip.")] = 0,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List accounting dimensions or their values."""
+
+    try:
+        service, connection = _finance_core_service(db_path)
+        try:
+            if values:
+                records = service.list_dimension_values(
+                    workspace=workspace,
+                    dimension_code=dimension,
+                    limit=limit,
+                    offset=offset,
+                    actor_label=actor,
+                )
+                title = "Accounting Dimension Values"
+            else:
+                records = service.list_dimensions(
+                    workspace=workspace, limit=limit, offset=offset, actor_label=actor
+                )
+                title = "Accounting Dimensions"
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records(title, records)
+
+
+@finance_core_app.command("journal-upsert")
+def finance_core_journal_upsert_command(
+    code: Annotated[str, typer.Option(help="Journal code.")],
+    name: Annotated[str, typer.Option(help="Journal display name.")],
+    organization: Annotated[str, typer.Option(help="Organization code.")],
+    currency: Annotated[str, typer.Option(help="Registered currency code.")],
+    journal_type: Annotated[str, typer.Option("--type", help="Journal type.")] = "General",
+    chart: Annotated[str, typer.Option(help="Chart code.")] = "DEFAULT",
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    active: Annotated[bool, typer.Option("--active/--inactive", help="Whether the journal is active.")] = True,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Create or update a local finance journal definition."""
+
+    try:
+        service, connection = _finance_core_service(db_path)
+        try:
+            record = service.upsert_journal(
+                journal_code=code,
+                name=name,
+                organization_code=organization,
+                currency_code=currency,
+                workspace=workspace,
+                chart_code=chart,
+                journal_type=journal_type,
+                active=active,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Finance Journal Saved", record)
+
+
+@finance_core_app.command("journals")
+def finance_core_journals_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    organization: Annotated[str, typer.Option(help="Optional organization-code filter.")] = "",
+    limit: Annotated[int, typer.Option(min=1, max=100_000, help="Maximum records to return.")] = 500,
+    offset: Annotated[int, typer.Option(min=0, max=10_000_000, help="Records to skip.")] = 0,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List local finance journal definitions."""
+
+    try:
+        service, connection = _finance_core_service(db_path)
+        try:
+            records = service.list_journals(
+                workspace=workspace,
+                organization_code=organization,
+                limit=limit,
+                offset=offset,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Finance Journals", records)
+
+
+@finance_core_app.command("entry-create")
+def finance_core_entry_create_command(
+    number: Annotated[str, typer.Option(help="Unique local entry number.")],
+    organization: Annotated[str, typer.Option(help="Organization code.")],
+    entity: Annotated[str, typer.Option(help="Legal-entity code.")],
+    period_id: Annotated[str, typer.Option("--period-id", help="Fiscal-period identifier.")],
+    journal: Annotated[str, typer.Option(help="Finance journal code.")],
+    posting_date: Annotated[str, typer.Option("--date", help="Posting date in YYYY-MM-DD format.")],
+    description: Annotated[str, typer.Option(help="Entry description.")],
+    lines_path: Annotated[Path, typer.Option("--lines", help="Local JSON file containing balanced entry lines.")],
+    reference: Annotated[str, typer.Option(help="Optional external reference.")] = "",
+    source_type: Annotated[str, typer.Option("--source-type", help="Manual, Imported, or Generated.")] = "Manual",
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Create or replace a balanced Draft ledger-control entry from local JSON."""
+
+    try:
+        lines = _ledger_lines_from_json(lines_path)
+        service, connection = _finance_core_service(db_path)
+        try:
+            record = service.create_entry(
+                entry_number=number,
+                organization_code=organization,
+                entity_code=entity,
+                period_id=period_id,
+                journal_code=journal,
+                posting_date=posting_date,
+                description=description,
+                lines=lines,
+                workspace=workspace,
+                external_reference=reference,
+                source_type=source_type,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Ledger-Control Entry Saved", {key: value for key, value in record.items() if key != "lines"})
+
+
+@finance_core_app.command("entries")
+def finance_core_entries_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    organization: Annotated[str, typer.Option(help="Optional organization-code filter.")] = "",
+    entity: Annotated[str, typer.Option(help="Optional entity-code filter.")] = "",
+    period_id: Annotated[str, typer.Option("--period-id", help="Optional fiscal-period filter.")] = "",
+    status: Annotated[str, typer.Option(help="Optional Draft, Validated, or Voided filter.")] = "",
+    limit: Annotated[int, typer.Option(min=1, max=100_000, help="Maximum records to return.")] = 500,
+    offset: Annotated[int, typer.Option(min=0, max=10_000_000, help="Records to skip.")] = 0,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List local ledger-control entry headers."""
+
+    try:
+        service, connection = _finance_core_service(db_path)
+        try:
+            records = service.list_entries(
+                workspace=workspace,
+                organization_code=organization,
+                entity_code=entity,
+                period_id=period_id,
+                status=status,
+                limit=limit,
+                offset=offset,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Ledger-Control Entries", records)
+
+
+@finance_core_app.command("entry-show")
+def finance_core_entry_show_command(
+    entry_id: Annotated[str, typer.Option("--entry-id", help="Ledger-entry identifier.")],
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Print one ledger-control entry with its lines as JSON."""
+
+    try:
+        service, connection = _finance_core_service(db_path)
+        try:
+            record = service.get_entry(entry_id, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    typer.echo(json.dumps(record, indent=2, sort_keys=True))
+
+
+@finance_core_app.command("entry-validate")
+def finance_core_entry_validate_command(
+    entry_id: Annotated[str, typer.Option("--entry-id", help="Ledger-entry identifier.")],
+    reason: Annotated[str, typer.Option(help="Documented validation reason.")],
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Validate a balanced local entry without posting to a source ERP."""
+
+    try:
+        service, connection = _finance_core_service(db_path)
+        try:
+            record = service.validate_entry(entry_id, reason=reason, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Ledger-Control Entry Validated", {key: value for key, value in record.items() if key != "lines"})
+
+
+@finance_core_app.command("entry-void")
+def finance_core_entry_void_command(
+    entry_id: Annotated[str, typer.Option("--entry-id", help="Ledger-entry identifier.")],
+    reason: Annotated[str, typer.Option(help="Documented void reason.")],
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Void validated local control metadata while retaining immutable lines."""
+
+    try:
+        service, connection = _finance_core_service(db_path)
+        try:
+            record = service.void_entry(entry_id, reason=reason, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Ledger-Control Entry Voided", {key: value for key, value in record.items() if key != "lines"})
+
+
+@finance_core_app.command("trial-balance")
+def finance_core_trial_balance_command(
+    period_id: Annotated[str, typer.Option("--period-id", help="Fiscal-period identifier.")],
+    organization: Annotated[str, typer.Option(help="Organization code.")],
+    entity: Annotated[str, typer.Option(help="Legal-entity code.")],
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Print a validated local ledger-control trial balance as JSON."""
+
+    try:
+        service, connection = _finance_core_service(db_path)
+        try:
+            payload = service.trial_balance(
+                period_id=period_id,
+                organization_code=organization,
+                entity_code=entity,
+                workspace=workspace,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    typer.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
+@inventory_app.command("summary")
+def inventory_summary_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Show local inventory-core record counts."""
+
+    try:
+        service, connection = _inventory_service(db_path)
+        try:
+            record = service.summary(workspace=workspace, actor_label=actor).to_dict()
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Inventory Core Summary", record)
+
+
+@inventory_app.command("snapshot")
+def inventory_snapshot_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Print the bounded, path-free inventory-core snapshot as JSON."""
+
+    try:
+        service, connection = _inventory_service(db_path)
+        try:
+            payload = service.snapshot(workspace=workspace, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    typer.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
+@inventory_app.command("units")
+def inventory_units_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    limit: Annotated[int, typer.Option(min=1, max=100_000, help="Maximum records to return.")] = 500,
+    offset: Annotated[int, typer.Option(min=0, max=10_000_000, help="Records to skip.")] = 0,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List local units of measure."""
+
+    try:
+        service, connection = _inventory_service(db_path)
+        try:
+            records = service.list_uoms(
+                workspace=workspace, limit=limit, offset=offset, actor_label=actor
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Units of Measure", records)
+
+
+@inventory_app.command("unit-upsert")
+def inventory_unit_upsert_command(
+    code: Annotated[str, typer.Option(help="Unit code.")],
+    name: Annotated[str, typer.Option(help="Unit display name.")],
+    category: Annotated[str, typer.Option(help="Count, Weight, Volume, Length, Time, or Custom.")] = "Count",
+    decimal_places: Annotated[int, typer.Option("--decimals", min=0, max=6, help="Quantity decimal places.")] = 0,
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    active: Annotated[bool, typer.Option("--active/--inactive", help="Whether the unit is active.")] = True,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Create or update one exact-precision unit of measure."""
+
+    try:
+        service, connection = _inventory_service(db_path)
+        try:
+            record = service.upsert_uom(
+                uom_code=code,
+                name=name,
+                workspace=workspace,
+                category=category,
+                decimal_places=decimal_places,
+                active=active,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Unit of Measure Saved", record)
+
+
+@inventory_app.command("items")
+def inventory_items_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    organization: Annotated[str, typer.Option(help="Optional organization-code filter.")] = "",
+    active_only: Annotated[bool, typer.Option("--active-only", help="Return active items only.")] = False,
+    limit: Annotated[int, typer.Option(min=1, max=100_000, help="Maximum records to return.")] = 500,
+    offset: Annotated[int, typer.Option(min=0, max=10_000_000, help="Records to skip.")] = 0,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List local inventory items."""
+
+    try:
+        service, connection = _inventory_service(db_path)
+        try:
+            records = service.list_items(
+                workspace=workspace,
+                organization_code=organization,
+                active_only=active_only,
+                limit=limit,
+                offset=offset,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Inventory Items", records)
+
+
+@inventory_app.command("item-upsert")
+def inventory_item_upsert_command(
+    code: Annotated[str, typer.Option(help="Item code.")],
+    name: Annotated[str, typer.Option(help="Item display name.")],
+    organization: Annotated[str, typer.Option(help="Optional organization scope.")] = "",
+    unit: Annotated[str, typer.Option(help="Unit-of-measure code.")] = "EA",
+    item_type: Annotated[str, typer.Option("--type", help="Stock, Consumable, or Service.")] = "Stock",
+    tracking: Annotated[str, typer.Option(help="None, Lot, or Serial.")] = "None",
+    inventory_account: Annotated[str, typer.Option(help="Optional local inventory account code.")] = "",
+    description: Annotated[str, typer.Option(help="Optional item description.")] = "",
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    active: Annotated[bool, typer.Option("--active/--inactive", help="Whether the item is active.")] = True,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Create or update one governed inventory item."""
+
+    try:
+        service, connection = _inventory_service(db_path)
+        try:
+            record = service.upsert_item(
+                item_code=code,
+                name=name,
+                workspace=workspace,
+                organization_code=organization,
+                uom_code=unit,
+                item_type=item_type,
+                tracking_mode=tracking,
+                inventory_account_code=inventory_account,
+                description=description,
+                active=active,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Inventory Item Saved", record)
+
+
+@inventory_app.command("warehouses")
+def inventory_warehouses_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    organization: Annotated[str, typer.Option(help="Optional organization-code filter.")] = "",
+    limit: Annotated[int, typer.Option(min=1, max=100_000, help="Maximum records to return.")] = 500,
+    offset: Annotated[int, typer.Option(min=0, max=10_000_000, help="Records to skip.")] = 0,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List local warehouses."""
+
+    try:
+        service, connection = _inventory_service(db_path)
+        try:
+            records = service.list_warehouses(
+                workspace=workspace,
+                organization_code=organization,
+                limit=limit,
+                offset=offset,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Warehouses", records)
+
+
+@inventory_app.command("warehouse-upsert")
+def inventory_warehouse_upsert_command(
+    code: Annotated[str, typer.Option(help="Warehouse code.")],
+    name: Annotated[str, typer.Option(help="Warehouse display name.")],
+    organization: Annotated[str, typer.Option(help="Organization code.")],
+    entity: Annotated[str, typer.Option(help="Optional legal-entity scope.")] = "",
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    active: Annotated[bool, typer.Option("--active/--inactive", help="Whether the warehouse is active.")] = True,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Create or update one local warehouse."""
+
+    try:
+        service, connection = _inventory_service(db_path)
+        try:
+            record = service.upsert_warehouse(
+                warehouse_code=code,
+                name=name,
+                organization_code=organization,
+                workspace=workspace,
+                entity_code=entity,
+                active=active,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Warehouse Saved", record)
+
+
+@inventory_app.command("locations")
+def inventory_locations_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    organization: Annotated[str, typer.Option(help="Optional organization-code filter.")] = "",
+    warehouse: Annotated[str, typer.Option(help="Optional warehouse-code filter.")] = "",
+    limit: Annotated[int, typer.Option(min=1, max=100_000, help="Maximum records to return.")] = 500,
+    offset: Annotated[int, typer.Option(min=0, max=10_000_000, help="Records to skip.")] = 0,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List local warehouse locations."""
+
+    try:
+        service, connection = _inventory_service(db_path)
+        try:
+            records = service.list_locations(
+                workspace=workspace,
+                organization_code=organization,
+                warehouse_code=warehouse,
+                limit=limit,
+                offset=offset,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Inventory Locations", records)
+
+
+@inventory_app.command("location-upsert")
+def inventory_location_upsert_command(
+    warehouse: Annotated[str, typer.Option(help="Warehouse code.")],
+    code: Annotated[str, typer.Option(help="Location code.")],
+    name: Annotated[str, typer.Option(help="Location display name.")],
+    organization: Annotated[str, typer.Option(help="Organization code.")],
+    parent: Annotated[str, typer.Option(help="Optional parent-location code.")] = "",
+    location_type: Annotated[str, typer.Option("--type", help="Location type.")] = "Internal",
+    allow_negative: Annotated[
+        bool, typer.Option("--allow-negative/--protect-negative", help="Allow local negative on-hand stock.")
+    ] = False,
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    active: Annotated[bool, typer.Option("--active/--inactive", help="Whether the location is active.")] = True,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Create or update one hierarchical inventory location."""
+
+    try:
+        service, connection = _inventory_service(db_path)
+        try:
+            record = service.upsert_location(
+                warehouse_code=warehouse,
+                location_code=code,
+                name=name,
+                organization_code=organization,
+                workspace=workspace,
+                parent_location_code=parent,
+                location_type=location_type,
+                allow_negative=allow_negative,
+                active=active,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Inventory Location Saved", record)
+
+
+@inventory_app.command("lots")
+def inventory_lots_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    organization: Annotated[str, typer.Option(help="Optional organization-code filter.")] = "",
+    item: Annotated[str, typer.Option(help="Optional item-code filter.")] = "",
+    limit: Annotated[int, typer.Option(min=1, max=100_000, help="Maximum records to return.")] = 500,
+    offset: Annotated[int, typer.Option(min=0, max=10_000_000, help="Records to skip.")] = 0,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List local lot and serial references."""
+
+    try:
+        service, connection = _inventory_service(db_path)
+        try:
+            records = service.list_lots(
+                workspace=workspace,
+                organization_code=organization,
+                item_code=item,
+                limit=limit,
+                offset=offset,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Lots and Serials", records)
+
+
+@inventory_app.command("lot-upsert")
+def inventory_lot_upsert_command(
+    item: Annotated[str, typer.Option(help="Tracked item code.")],
+    code: Annotated[str, typer.Option(help="Lot or serial code.")],
+    organization: Annotated[str, typer.Option(help="Organization code.")],
+    manufactured_on: Annotated[str, typer.Option("--manufactured-on", help="Optional YYYY-MM-DD date.")] = "",
+    expires_on: Annotated[str, typer.Option("--expires-on", help="Optional YYYY-MM-DD date.")] = "",
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    active: Annotated[bool, typer.Option("--active/--inactive", help="Whether the reference is active.")] = True,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Create or update one governed lot or serial reference."""
+
+    try:
+        service, connection = _inventory_service(db_path)
+        try:
+            record = service.upsert_lot(
+                item_code=item,
+                lot_serial_code=code,
+                organization_code=organization,
+                workspace=workspace,
+                manufactured_on=manufactured_on,
+                expires_on=expires_on,
+                active=active,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Lot or Serial Saved", record)
+
+
+@inventory_app.command("movement-create")
+def inventory_movement_create_command(
+    number: Annotated[str, typer.Option(help="Unique local movement number.")],
+    movement_type: Annotated[str, typer.Option("--type", help="Receipt, Delivery, Transfer, or Adjustment.")],
+    organization: Annotated[str, typer.Option(help="Organization code.")],
+    entity: Annotated[str, typer.Option(help="Legal-entity code.")],
+    period_id: Annotated[str, typer.Option("--period-id", help="Fiscal-period identifier.")],
+    movement_date: Annotated[str, typer.Option("--date", help="Movement date in YYYY-MM-DD format.")],
+    description: Annotated[str, typer.Option(help="Movement description.")],
+    lines_path: Annotated[Path, typer.Option("--lines", help="Local JSON movement-lines file.")],
+    reference: Annotated[str, typer.Option(help="Optional source-document reference.")] = "",
+    source_type: Annotated[str, typer.Option("--source-type", help="Manual, Imported, or Generated.")] = "Manual",
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Create or replace a Draft local inventory movement from strict JSON."""
+
+    try:
+        lines = _inventory_lines_from_json(lines_path)
+        service, connection = _inventory_service(db_path)
+        try:
+            record = service.create_movement(
+                movement_number=number,
+                movement_type=movement_type,
+                organization_code=organization,
+                entity_code=entity,
+                period_id=period_id,
+                movement_date=movement_date,
+                description=description,
+                lines=lines,
+                workspace=workspace,
+                source_reference=reference,
+                source_type=source_type,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail(
+        "Inventory Movement Saved", {key: value for key, value in record.items() if key != "lines"}
+    )
+
+
+@inventory_app.command("movements")
+def inventory_movements_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    organization: Annotated[str, typer.Option(help="Optional organization-code filter.")] = "",
+    entity: Annotated[str, typer.Option(help="Optional entity-code filter.")] = "",
+    period_id: Annotated[str, typer.Option("--period-id", help="Optional fiscal-period filter.")] = "",
+    status: Annotated[str, typer.Option(help="Optional Draft, Posted, or Voided filter.")] = "",
+    limit: Annotated[int, typer.Option(min=1, max=100_000, help="Maximum records to return.")] = 500,
+    offset: Annotated[int, typer.Option(min=0, max=10_000_000, help="Records to skip.")] = 0,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List local inventory movement headers."""
+
+    try:
+        service, connection = _inventory_service(db_path)
+        try:
+            records = service.list_movements(
+                workspace=workspace,
+                organization_code=organization,
+                entity_code=entity,
+                period_id=period_id,
+                status=status,
+                limit=limit,
+                offset=offset,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Inventory Movements", records)
+
+
+@inventory_app.command("movement-show")
+def inventory_movement_show_command(
+    movement_id: Annotated[str, typer.Option("--movement-id", help="Inventory-movement identifier.")],
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Print one local inventory movement and its lines as JSON."""
+
+    try:
+        service, connection = _inventory_service(db_path)
+        try:
+            record = service.get_movement(movement_id, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    typer.echo(json.dumps(record, indent=2, sort_keys=True))
+
+
+@inventory_app.command("movement-post")
+def inventory_movement_post_command(
+    movement_id: Annotated[str, typer.Option("--movement-id", help="Inventory-movement identifier.")],
+    reason: Annotated[str, typer.Option(help="Documented local posting reason.")],
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Post a reviewed local movement without updating a source ERP."""
+
+    try:
+        service, connection = _inventory_service(db_path)
+        try:
+            record = service.post_movement(movement_id, reason=reason, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail(
+        "Inventory Movement Posted", {key: value for key, value in record.items() if key != "lines"}
+    )
+
+
+@inventory_app.command("movement-void")
+def inventory_movement_void_command(
+    movement_id: Annotated[str, typer.Option("--movement-id", help="Inventory-movement identifier.")],
+    reason: Annotated[str, typer.Option(help="Documented void reason.")],
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Void a Posted local movement when stock constraints remain valid."""
+
+    try:
+        service, connection = _inventory_service(db_path)
+        try:
+            record = service.void_movement(movement_id, reason=reason, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail(
+        "Inventory Movement Voided", {key: value for key, value in record.items() if key != "lines"}
+    )
+
+
+@inventory_app.command("on-hand")
+def inventory_on_hand_command(
+    organization: Annotated[str, typer.Option(help="Organization code.")],
+    entity: Annotated[str, typer.Option(help="Legal-entity code.")],
+    item: Annotated[str, typer.Option(help="Optional item-code filter.")] = "",
+    warehouse: Annotated[str, typer.Option(help="Optional warehouse-code filter.")] = "",
+    include_zero: Annotated[bool, typer.Option("--include-zero", help="Include zero-balance rows.")] = False,
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    limit: Annotated[int, typer.Option(min=1, max=100_000, help="Maximum records to return.")] = 500,
+    offset: Annotated[int, typer.Option(min=0, max=10_000_000, help="Records to skip.")] = 0,
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Print exact local on-hand quantities derived from Posted movements."""
+
+    try:
+        service, connection = _inventory_service(db_path)
+        try:
+            payload = service.on_hand(
+                organization_code=organization,
+                entity_code=entity,
+                workspace=workspace,
+                item_code=item,
+                warehouse_code=warehouse,
+                include_zero=include_zero,
+                limit=limit,
+                offset=offset,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    typer.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
+@inventory_app.command("control-exceptions")
+def inventory_control_exceptions_command(
+    organization: Annotated[str, typer.Option(help="Organization code.")],
+    entity: Annotated[str, typer.Option(help="Legal-entity code.")],
+    as_of: Annotated[str, typer.Option("--as-of", help="Optional deterministic YYYY-MM-DD control date.")] = "",
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Print deterministic local inventory-control exceptions as JSON."""
+
+    try:
+        service, connection = _inventory_service(db_path)
+        try:
+            payload = service.control_exceptions(
+                organization_code=organization,
+                entity_code=entity,
+                workspace=workspace,
+                as_of=as_of,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    typer.echo(json.dumps(payload, indent=2, sort_keys=True))
 
 
 @api_app.command("serve")
@@ -1941,6 +3546,14 @@ def match_run_command(
     amount_tolerance: Annotated[float, typer.Option("--amount-tolerance", help="Allowed amount difference.")] = 0.0,
     date_window_days: Annotated[int, typer.Option("--date-window-days", help="Allowed date difference in days.")] = 0,
     allow_many_to_one: Annotated[bool, typer.Option("--allow-many-to-one", help="Allow right-side records to match more than once.")] = False,
+    allow_one_to_many: Annotated[
+        bool,
+        typer.Option("--allow-one-to-many", help="Allow left-side records to match more than once."),
+    ] = False,
+    allow_many_to_many: Annotated[
+        bool,
+        typer.Option("--allow-many-to-many", help="Allow both sides of records to match multiple times."),
+    ] = False,
     actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
 ) -> None:
     """Run deterministic DB-backed matching with indexed candidate generation."""
@@ -1962,6 +3575,8 @@ def match_run_command(
                 amount_tolerance=amount_tolerance,
                 date_window_days=date_window_days,
                 allow_many_to_one=allow_many_to_one,
+                allow_one_to_many=allow_one_to_many,
+                allow_many_to_many=allow_many_to_many,
                 actor_label=actor,
             )
         finally:
@@ -3117,6 +4732,81 @@ def demo_enterprise_command(
     )
     console.print("[green]Synthetic enterprise demo package written.[/green]")
     console.print("All generated data is synthetic and local-first; no external calls were made.")
+
+
+@demo_app.command("studio-data")
+def demo_studio_data_command(
+    input_path: Annotated[
+        Path,
+        typer.Option("--input", help="Generated synthetic enterprise demo directory."),
+    ] = Path("output/enterprise_demo"),
+    output_path: Annotated[
+        Path,
+        typer.Option("--output", help="Overview JSON path; related Studio contracts are written beside it."),
+    ] = Path("apps/web/public/demo/studio-overview.json"),
+) -> None:
+    """Build the synthetic-only data bundle used by the modern Studio preview."""
+
+    try:
+        bundle = build_studio_demo_bundle(input_path, output_path)
+    except StudioDemoBridgeError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print("[green]Synthetic Studio data contracts:[/green]")
+    for path in bundle.paths:
+        console.print(f"- {path}")
+    console.print("The contracts contain bounded, allowlisted fields from local synthetic demo outputs only.")
+
+
+@demo_app.command("showcase")
+def demo_showcase_command(
+    output_path: Annotated[
+        Path,
+        typer.Option("--output", help="Synthetic enterprise source package directory."),
+    ] = Path("output/showcase/enterprise_demo"),
+    studio_output_path: Annotated[
+        Path,
+        typer.Option(
+            "--studio-output",
+            help="Studio overview JSON path; related contracts are written beside it.",
+        ),
+    ] = Path("apps/web/public/demo/studio-overview.json"),
+    persist_db: Annotated[
+        bool,
+        typer.Option(
+            "--persist-db/--no-db",
+            help="Persist the seeded local SQLite walkthrough database inside the demo package.",
+        ),
+    ] = False,
+) -> None:
+    """Generate the complete synthetic enterprise package and modern Studio bundle."""
+
+    db_path = output_path / "reconforge.db" if persist_db else None
+    try:
+        result = generate_enterprise_demo(output_path, db_path=db_path)
+        bundle = build_studio_demo_bundle(result.output_dir, studio_output_path)
+    except (EnterpriseDemoError, StudioDemoBridgeError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    _print_frame(
+        "ReconForge Expert Showcase",
+        pd.DataFrame(
+            [
+                {"layer": "synthetic enterprise package", "result": result.output_dir},
+                {"layer": "strict Studio contracts", "result": len(bundle.paths)},
+                {"layer": "generated records", "result": sum(result.record_counts.values())},
+                {"layer": "local database", "result": result.db_path.name if result.db_path else "not persisted"},
+                {"layer": "external calls", "result": "none"},
+            ]
+        ),
+        max_rows=10,
+    )
+    console.print("[green]Showcase ready.[/green]")
+    console.print(f"Enterprise walkthrough: {result.walkthrough_path}")
+    console.print(f"Studio overview contract: {bundle.overview_path}")
+    console.print("Run the modern UI locally: npm --prefix apps/web run dev")
+    console.print("All records are synthetic, local-first, read-only preview data.")
 
 
 @app.command("dashboard")

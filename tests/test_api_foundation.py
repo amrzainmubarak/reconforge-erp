@@ -25,10 +25,15 @@ def test_api_health_and_version_work_without_auth(tmp_path: Path) -> None:
     assert health.json()["status"] == "ok"
     assert health.json()["version"] == __version__
     assert health.json()["database"]["reachable"] is True
-    assert health.json()["database"]["schema_version"] == 6
+    assert health.json()["database"]["schema_version"] == 12
     assert health.json()["database"]["path_summary"] == "api.db"
     assert version.status_code == 200
     assert version.json()["scope"] == "local/self-hosted foundation"
+    assert health.headers["x-request-id"]
+    assert health.headers["X-Content-Type-Options"] == "nosniff"
+    assert health.headers["X-Frame-Options"] == "DENY"
+    assert health.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
+    assert health.headers["X-Permitted-Cross-Domain-Policies"] == "none"
 
 
 def test_protected_route_requires_auth_and_returns_structured_error(tmp_path: Path) -> None:

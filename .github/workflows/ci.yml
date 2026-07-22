@@ -27,10 +27,9 @@ jobs:
           cache: pip
 
       - name: Install locked dependencies
-        run: python -m pip install --require-hashes -r requirements-dev.lock
-
-      - name: Install local package
-        run: python -m pip install --no-deps --no-build-isolation -e .
+        run: |
+          python -m pip install --upgrade setuptools wheel
+          python -m pip install -e ".[dev]"
 
       - name: Ruff
         run: ruff check .

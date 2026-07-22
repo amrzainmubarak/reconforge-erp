@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from html import escape
 from pathlib import Path
 
 import pandas as pd
 
 from reconforge.config import ReconForgeConfig
+from reconforge.utils.time import utc_now_text
 
 
 def _card(title: str, value: str) -> str:
@@ -107,7 +107,7 @@ def write_html_dashboard(
 <body>
   <header>
     <h1>{escape(config.report_title)}</h1>
-    <p>{escape(config.company_name)} · Generated {datetime.utcnow().replace(microsecond=0).isoformat()}Z · Local processing only</p>
+    <p>{escape(config.company_name)} · Generated {utc_now_text()} · Local processing only</p>
   </header>
   <main>
     <div class="cards">{cards}</div>

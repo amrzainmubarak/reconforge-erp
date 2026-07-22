@@ -5,14 +5,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY pyproject.toml setup.py README.md LICENSE requirements.txt requirements-runtime.lock ./
+COPY pyproject.toml setup.py README.md LICENSE ./
 COPY reconforge ./reconforge
 COPY config ./config
 COPY examples ./examples
 COPY control-packs ./control-packs
 COPY docs ./docs
 
-RUN python -m pip install --no-cache-dir --require-hashes -r requirements-runtime.lock \
-    && python -m pip install --no-cache-dir --no-deps --no-build-isolation -e .
+RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && python -m pip install --no-cache-dir --no-build-isolation -e .
 
 CMD ["reconforge", "doctor"]

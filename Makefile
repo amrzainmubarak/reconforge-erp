@@ -1,13 +1,25 @@
-.PHONY: install test lint typecheck format security demo clean
+.PHONY: install setup docs-install doctor test test-all lint type typecheck format security demo studio-data showcase showcase-serve web-install web web-test web-build api docker docs screenshots release-check clean
 
 install:
 	python -m pip install -e ".[dev]"
 
+setup: install docs-install web-install
+
+docs-install:
+	python -m pip install -e ".[docs]"
+
+doctor:
+	python -m reconforge.cli doctor
+
 test:
 	pytest
 
+test-all: test web-test
+
 lint:
 	ruff check .
+
+type: typecheck
 
 typecheck:
 	mypy reconforge
@@ -33,6 +45,45 @@ demo:
 	reconforge generate synthetic --rows 1000 --output benchmarks/small_1k
 	reconforge benchmark --input benchmarks/small_1k --engine pandas --output output/benchmark
 	reconforge report management-pack --input examples/sample_data --config config/reconforge.yml --output output
+
+studio-data:
+	reconforge demo enterprise --output output/enterprise_demo
+	reconforge demo studio-data --input output/enterprise_demo --output apps/web/public/demo/studio-overview.json
+
+showcase:
+	python -m reconforge.cli demo showcase --output output/showcase/enterprise_demo --studio-output apps/web/public/demo/studio-overview.json
+	npm --prefix apps/web run build
+	@echo "Showcase built. Run 'make showcase-serve' to open the local preview."
+
+showcase-serve: showcase
+	npm --prefix apps/web run preview -- --host 127.0.0.1 --port 4173
+
+web-install:
+	npm --prefix apps/web install
+
+web:
+	npm --prefix apps/web run dev
+
+web-test:
+	npm --prefix apps/web run typecheck
+	npm --prefix apps/web run test:run
+
+web-build:
+	npm --prefix apps/web run build
+
+api:
+	reconforge api serve --db output/reconforge.db --host 127.0.0.1 --port 8765
+
+docker:
+	docker build -t reconforge-erp .
+
+docs:
+	python -m mkdocs build --strict
+
+screenshots:
+	npm --prefix apps/web run screenshots
+
+release-check: lint typecheck test web-test web-build security
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache build dist *.egg-info output demo_workspace benchmarks/small_1k examples/anonymized_data

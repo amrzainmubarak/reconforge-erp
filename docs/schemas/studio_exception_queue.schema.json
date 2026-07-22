@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/studio_exception_queue.schema.json",
+  "title": "ReconForge Studio Synthetic Exception Queue",
+  "description": "Versioned synthetic-only exception queue for the experimental modern Studio.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "synthetic_data_only",
+    "synthetic_data_marker",
+    "generated_at",
+    "source",
+    "summary",
+    "risk_distribution",
+    "status_distribution",
+    "exceptions",
+    "notices"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "synthetic_data_only": {"const": true},
+    "synthetic_data_marker": {"const": "SYNTHETIC_ENTERPRISE_DEMO_ONLY"},
+    "generated_at": {"$ref": "#/$defs/text"},
+    "source": {"$ref": "#/$defs/source"},
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "open", "high_risk", "unassigned", "entity_count"],
+      "properties": {
+        "total": {"$ref": "#/$defs/count"},
+        "open": {"$ref": "#/$defs/count"},
+        "high_risk": {"$ref": "#/$defs/count"},
+        "unassigned": {"$ref": "#/$defs/count"},
+        "entity_count": {"$ref": "#/$defs/count"}
+      }
+    },
+    "risk_distribution": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {"$ref": "#/$defs/risk_distribution_point"}
+    },
+    "status_distribution": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {"$ref": "#/$defs/status_distribution_point"}
+    },
+    "exceptions": {
+      "type": "array",
+      "maxItems": 100000,
+      "items": {"$ref": "#/$defs/exception"}
+    },
+    "notices": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {"$ref": "#/$defs/text"}
+    }
+  },
+  "$defs": {
+    "text": {"type": "string", "maxLength": 2000},
+    "count": {"type": "integer", "minimum": 0},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "local_first", "external_calls"],
+      "properties": {
+        "kind": {"const": "reconforge-enterprise-demo"},
+        "local_first": {"const": true},
+        "external_calls": {"const": false}
+      }
+    },
+    "risk_distribution_point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["risk", "count"],
+      "properties": {
+        "risk": {"enum": ["critical", "high", "medium", "low"]},
+        "count": {"$ref": "#/$defs/count"}
+      }
+    },
+    "status_distribution_point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "count"],
+      "properties": {
+        "status": {"$ref": "#/$defs/text"},
+        "count": {"$ref": "#/$defs/count"}
+      }
+    },
+    "exception": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exception_id",
+        "source_type",
+        "period_name",
+        "entity_code",
+        "account_code",
+        "control_code",
+        "risk_rating",
+        "owner",
+        "status",
+        "description"
+      ],
+      "properties": {
+        "exception_id": {"type": "string", "pattern": "^SYN-EXC-[0-9A-F]{12}$"},
+        "source_type": {"$ref": "#/$defs/text"},
+        "period_name": {"$ref": "#/$defs/text"},
+        "entity_code": {"$ref": "#/$defs/text"},
+        "account_code": {"$ref": "#/$defs/text"},
+        "control_code": {"$ref": "#/$defs/text"},
+        "risk_rating": {"enum": ["critical", "high", "medium", "low"]},
+        "owner": {"$ref": "#/$defs/text"},
+        "status": {"$ref": "#/$defs/text"},
+        "description": {"$ref": "#/$defs/text"}
+      }
+    }
+  }
+}

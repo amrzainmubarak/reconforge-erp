@@ -14,10 +14,21 @@ Implemented foundations:
 - Control library, test plans, test results, remediation metadata
 - Unified exception queue
 - Governed metric snapshots and metric lineage
+- Governed organization, legal-entity, branch, currency-reference, and non-overlapping fiscal-period metadata
+- Hierarchical chart-of-accounts, accounting dimensions, journal definitions, balanced local ledger-control entries, validation/void metadata, and validated trial-balance aggregation
 
 Common commands:
 
 ```bash
+reconforge master-data organization-upsert --db output/reconforge.db --code SYN --name "Synthetic Group"
+reconforge master-data entity-upsert --db output/reconforge.db --organization SYN --code US01 --name "Synthetic US" --currency USD
+reconforge master-data period-upsert --db output/reconforge.db --name 2026-05 --start 2026-05-01 --end 2026-05-31
+
+reconforge finance-core account-upsert --db output/reconforge.db --code 1010 --name "Cash at bank" --type Asset --normal-balance Debit
+reconforge finance-core journal-upsert --db output/reconforge.db --code GJ --name "General Journal" --organization SYN --currency USD
+reconforge finance-core entry-create --db output/reconforge.db --number JE/2026/0001 --organization SYN --entity US01 --period-id PER-... --journal GJ --date 2026-05-10 --description "Synthetic entry" --lines entry-lines.json
+reconforge finance-core entry-validate --db output/reconforge.db --entry-id GLE-... --reason "Independent review completed"
+
 reconforge accounts import-trial-balance --db output/reconforge.db --input output/trial_balance.csv --period 2026-05 --entity US01
 reconforge accounts create-template --db output/reconforge.db --account-code 1000 --risk high --materiality 10000
 reconforge accounts prepare --db output/reconforge.db --id AR-...

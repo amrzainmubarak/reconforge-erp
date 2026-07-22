@@ -6,7 +6,7 @@ import csv
 import json
 import sqlite3
 from collections.abc import Iterable
-from datetime import date, datetime
+from datetime import date
 from hashlib import sha256
 from pathlib import Path
 from typing import Any
@@ -17,6 +17,7 @@ from reconforge.auth.models import LocalUser
 from reconforge.db.connection import DatabaseError
 from reconforge.db.exporter import resolve_input_file
 from reconforge.domain.models import DEFAULT_LOCAL_FIRST_NOTE, utc_now_text
+from reconforge.utils.time import utc_today
 
 
 class PlatformError(ValueError):
@@ -30,6 +31,8 @@ REQUIRED_PLATFORM_TABLES = {
     "evidence_registry",
     "exceptions_queue",
     "metric_snapshots",
+    "currencies",
+    "branches",
 }
 
 
@@ -117,7 +120,7 @@ def age_days(created_at: str) -> int:
     parsed = parse_date(created_at)
     if parsed is None:
         return 0
-    return max((datetime.utcnow().date() - parsed).days, 0)
+    return max((utc_today() - parsed).days, 0)
 
 
 def date_diff_days(left: object, right: object) -> int:
@@ -174,6 +177,19 @@ def ensure_workspace(connection: sqlite3.Connection, workspace: str = "default")
             """,
             (workspace_id, name, DEFAULT_LOCAL_FIRST_NOTE, now),
         )
+        inventory_schema = connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'units_of_measure'"
+        ).fetchone()
+        if inventory_schema is not None:
+            connection.execute(
+                """
+                INSERT OR IGNORE INTO units_of_measure (
+                    id, workspace_id, uom_code, name, category, decimal_places,
+                    active, created_at, updated_at
+                ) VALUES (?, ?, 'EA', 'Each', 'Count', 0, 1, ?, ?)
+                """,
+                (f"UOM-{workspace_id}", workspace_id, now, now),
+            )
         connection.commit()
     except sqlite3.DatabaseError as exc:
         raise PlatformError("Unable to prepare local workspace reference.") from exc
@@ -188,13 +204,37 @@ def ensure_account(connection: sqlite3.Connection, *, workspace_id: str, account
     account_id = platform_id("ACC", workspace_id, code)
     now = utc_now_text()
     try:
-        connection.execute(
-            """
-            INSERT OR IGNORE INTO accounts (id, workspace_id, account_code, account_name, created_at)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (account_id, workspace_id, code, name, now),
-        )
+        account_columns = {
+            str(row["name"]) for row in connection.execute("PRAGMA table_info(accounts)").fetchall()
+        }
+        if "chart_id" in account_columns:
+            chart_id = f"COA-{workspace_id}"
+            connection.execute(
+                """
+                INSERT OR IGNORE INTO charts_of_accounts (
+                    id, workspace_id, organization_id, chart_code, name, description,
+                    active, created_at, updated_at
+                ) VALUES (?, ?, NULL, 'DEFAULT', 'Default chart of accounts',
+                          'Shared local chart for compatibility workflows.', 1, ?, ?)
+                """,
+                (chart_id, workspace_id, now, now),
+            )
+            connection.execute(
+                """
+                INSERT OR IGNORE INTO accounts (
+                    id, workspace_id, account_code, account_name, created_at, chart_id, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (account_id, workspace_id, code, name, now, chart_id, now),
+            )
+        else:
+            connection.execute(
+                """
+                INSERT OR IGNORE INTO accounts (id, workspace_id, account_code, account_name, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (account_id, workspace_id, code, name, now),
+            )
         connection.commit()
     except sqlite3.DatabaseError as exc:
         raise PlatformError("Unable to prepare local account reference.") from exc

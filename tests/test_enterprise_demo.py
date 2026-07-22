@@ -31,6 +31,7 @@ def test_enterprise_demo_command_creates_expected_local_package(tmp_path: Path) 
         "sample_controls.csv",
         "sample_account_reconciliations.json",
         "sample_close_tasks.json",
+        "sample_inventory_control.json",
         "sample_evidence_references.json",
         "sample_matching_left.csv",
         "sample_matching_right.csv",
@@ -135,6 +136,47 @@ def test_enterprise_demo_output_avoids_fake_promotional_claims(tmp_path: Path) -
     assert "no real customers" in combined
     assert "no fake roi" in combined
     assert "local-first demo" in combined
+
+
+def test_showcase_command_builds_one_cohesive_local_demo(tmp_path: Path) -> None:
+    output = tmp_path / "showcase" / "enterprise_demo"
+    studio_output = tmp_path / "web" / "demo" / "studio-overview.json"
+
+    result = runner.invoke(
+        app,
+        [
+            "demo",
+            "showcase",
+            "--output",
+            str(output),
+            "--studio-output",
+            str(studio_output),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Showcase ready" in result.output
+    assert "external calls" in result.output
+    assert "Traceback" not in result.output
+    assert (output / "demo_manifest.json").exists()
+    assert (output / "demo_walkthrough.md").exists()
+    expected_contracts = {
+        "studio-overview.json",
+        "studio-exceptions.json",
+        "studio-evidence.json",
+        "studio-inventory.json",
+    }
+    assert {path.name for path in studio_output.parent.glob("studio-*.json")} == expected_contracts
+    overview = json.loads(studio_output.read_text(encoding="utf-8"))
+    assert overview["executive_brief"]["readiness_status"] == "attention"
+    assert [record["domain"] for record in overview["control_domains"]] == [
+        "close",
+        "evidence",
+        "matching",
+        "controls",
+    ]
+    assert len(overview["entity_health"]) == 3
+    assert overview["source"]["external_calls"] is False
 
 
 def test_enterprise_demo_rejects_traversal_output_without_traceback(tmp_path: Path) -> None:

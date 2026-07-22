@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
+
+from reconforge.utils.time import utc_now_text
 
 
 class RuleResult(BaseModel):
@@ -29,7 +30,7 @@ class RuleResult(BaseModel):
     recommended_action: str
     risk_impact: int
     evidence_fields: dict[str, Any] = Field(default_factory=dict)
-    triggered_at: str = Field(default_factory=lambda: datetime.utcnow().replace(microsecond=0).isoformat() + "Z")
+    triggered_at: str = Field(default_factory=utc_now_text)
 
 
 def results_to_records(results: list[RuleResult]) -> list[dict[str, Any]]:

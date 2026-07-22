@@ -8,6 +8,16 @@ Run:
 reconforge demo enterprise --output output/enterprise_demo
 ```
 
+For the complete enterprise package plus all four modern Studio contracts in one command:
+
+```bash
+reconforge demo showcase \
+  --output output/showcase/enterprise_demo \
+  --studio-output apps/web/public/demo/studio-overview.json
+```
+
+The showcase overview adds only deterministic projections: close readiness, high-risk/open counts, blocked/completed close-task counts, control-domain scores with lineage, and entity-level exception concentration. It does not generate AI claims or infer business outcomes.
+
 Optionally persist a local SQLite demo database inside the same folder:
 
 ```bash
@@ -41,6 +51,7 @@ The command writes a local package under the requested output folder:
 - `sample_controls.csv`
 - `sample_account_reconciliations.json`
 - `sample_close_tasks.json`
+- `sample_inventory_control.json`
 - `sample_evidence_references.json`
 - `sample_matching_left.csv`
 - `sample_matching_right.csv`
@@ -68,8 +79,9 @@ The package uses synthetic examples for:
 - Deterministic matching results.
 - Unified exception queue examples.
 - Metric and dashboard data.
+- Synthetic inventory on-hand, movement, warehouse, physical-count, reorder-advice, FIFO-valuation, exact valuation-reversal, cost-layer, Finance Draft-reference, and deterministic control-display records.
 
-When `--db` is used, the command seeds the existing local SQLite platform foundations through current services. It does not add DB schema, migrations, product workflows, SaaS features, or live ERP connectivity.
+The inventory sample is a marked file fixture for the read-only modern Studio contract; this command does not import those sample rows into the inventory database ledger. Count/reorder/valuation/reversal/layer rows are synthetic display records, not evidence of purchasing, automatic adjustment posting, Finance Core validation, or ERP writeback. The bridge strictly allowlists fields and rejects inconsistent Approved valuation/reversal Finance references, inverse movement types, or FIFO layer balances. When `--db` is used, the command seeds the existing local SQLite platform foundations through current services. It does not add DB schema, migrations, SaaS features, or live ERP connectivity.
 
 ## Regeneration
 

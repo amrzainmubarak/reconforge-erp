@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/inventory_valuation_snapshot.schema.json",
+  "title": "ReconForge Inventory Valuation Snapshot",
+  "description": "Versioned, bounded, path-free FIFO valuation controls and cost-layer balances.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "source", "workspace", "summary", "policies", "documents", "open_cost_layers", "boundary_note"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "generated_at": {"$ref": "#/$defs/timestamp"},
+    "source": {"$ref": "#/$defs/source"},
+    "workspace": {"$ref": "#/$defs/text"},
+    "summary": {"$ref": "#/$defs/summary"},
+    "policies": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/policy"}},
+    "documents": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/document"}},
+    "open_cost_layers": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/layer"}},
+    "boundary_note": {"$ref": "#/$defs/text"}
+  },
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "optionalText": {"type": "string", "maxLength": 2000},
+    "nullableText": {"oneOf": [{"$ref": "#/$defs/text"}, {"type": "null"}]},
+    "timestamp": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"},
+    "nullableTimestamp": {"oneOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]},
+    "date": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "amount": {"type": "string", "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]{1,6})?$", "maxLength": 40},
+    "quantity": {"type": "string", "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]{1,6})?$", "maxLength": 40},
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "local_first", "external_calls"],
+      "properties": {
+        "kind": {"const": "local-inventory-valuation"},
+        "local_first": {"const": true},
+        "external_calls": {"const": false}
+      }
+    },
+    "summary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["workspace", "policies", "draft_documents", "approved_documents", "open_layers", "unvalued_posted_movements"],
+      "properties": {
+        "workspace": {"$ref": "#/$defs/text"},
+        "policies": {"type": "integer", "minimum": 0},
+        "draft_documents": {"type": "integer", "minimum": 0},
+        "approved_documents": {"type": "integer", "minimum": 0},
+        "open_layers": {"type": "integer", "minimum": 0},
+        "unvalued_posted_movements": {"type": "integer", "minimum": 0}
+      }
+    },
+    "policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "workspace_id", "organization_id", "legal_entity_id", "policy_code", "costing_method", "currency_code", "finance_journal_id", "receipt_clearing_account_id", "cogs_account_id", "adjustment_account_id", "active", "created_by", "created_at", "updated_at", "organization_code", "entity_code", "journal_code", "receipt_clearing_account_code", "cogs_account_code", "adjustment_account_code"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"}, "workspace_id": {"$ref": "#/$defs/text"},
+        "organization_id": {"$ref": "#/$defs/text"}, "legal_entity_id": {"$ref": "#/$defs/text"},
+        "policy_code": {"$ref": "#/$defs/text"}, "costing_method": {"const": "FIFO"},
+        "currency_code": {"$ref": "#/$defs/text"}, "finance_journal_id": {"$ref": "#/$defs/text"},
+        "receipt_clearing_account_id": {"$ref": "#/$defs/text"}, "cogs_account_id": {"$ref": "#/$defs/text"},
+        "adjustment_account_id": {"$ref": "#/$defs/text"}, "active": {"type": "boolean"},
+        "created_by": {"$ref": "#/$defs/text"}, "created_at": {"$ref": "#/$defs/timestamp"},
+        "updated_at": {"$ref": "#/$defs/timestamp"}, "organization_code": {"$ref": "#/$defs/text"},
+        "entity_code": {"$ref": "#/$defs/text"}, "journal_code": {"$ref": "#/$defs/text"},
+        "receipt_clearing_account_code": {"$ref": "#/$defs/text"}, "cogs_account_code": {"$ref": "#/$defs/text"},
+        "adjustment_account_code": {"$ref": "#/$defs/text"}
+      }
+    },
+    "document": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "workspace_id", "organization_id", "legal_entity_id", "period_id", "movement_id", "policy_id", "valuation_number", "valuation_date", "currency_code", "status", "finance_entry_id", "created_by", "approved_by", "approved_at", "approval_reason", "cancelled_by", "cancelled_at", "cancel_reason", "created_at", "updated_at", "movement_number", "movement_type", "organization_code", "entity_code", "policy_code", "finance_entry_number", "finance_entry_status", "total_value"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"}, "workspace_id": {"$ref": "#/$defs/text"},
+        "organization_id": {"$ref": "#/$defs/text"}, "legal_entity_id": {"$ref": "#/$defs/text"},
+        "period_id": {"$ref": "#/$defs/text"}, "movement_id": {"$ref": "#/$defs/text"},
+        "policy_id": {"$ref": "#/$defs/text"}, "valuation_number": {"$ref": "#/$defs/text"},
+        "valuation_date": {"$ref": "#/$defs/date"}, "currency_code": {"$ref": "#/$defs/text"},
+        "status": {"enum": ["Draft", "Approved", "Cancelled"]}, "finance_entry_id": {"$ref": "#/$defs/nullableText"},
+        "created_by": {"$ref": "#/$defs/text"}, "approved_by": {"$ref": "#/$defs/optionalText"},
+        "approved_at": {"$ref": "#/$defs/nullableTimestamp"}, "approval_reason": {"$ref": "#/$defs/optionalText"},
+        "cancelled_by": {"$ref": "#/$defs/optionalText"}, "cancelled_at": {"$ref": "#/$defs/nullableTimestamp"},
+        "cancel_reason": {"$ref": "#/$defs/optionalText"}, "created_at": {"$ref": "#/$defs/timestamp"},
+        "updated_at": {"$ref": "#/$defs/timestamp"}, "movement_number": {"$ref": "#/$defs/text"},
+        "movement_type": {"enum": ["Receipt", "Delivery", "Adjustment"]},
+        "organization_code": {"$ref": "#/$defs/text"}, "entity_code": {"$ref": "#/$defs/text"},
+        "policy_code": {"$ref": "#/$defs/text"}, "finance_entry_number": {"$ref": "#/$defs/nullableText"},
+        "finance_entry_status": {"oneOf": [{"enum": ["Draft", "Validated", "Voided"]}, {"type": "null"}]},
+        "total_value": {"$ref": "#/$defs/amount"}
+      }
+    },
+    "layer": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "source_valuation_line_id", "legal_entity_id", "item_id", "uom_id", "inventory_lot_id", "quantity_precision", "currency_code", "created_at", "item_code", "uom_code", "lot_serial_code", "entity_code", "valuation_number", "original_quantity", "remaining_quantity", "original_value", "remaining_value", "layer_status"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"}, "source_valuation_line_id": {"$ref": "#/$defs/text"},
+        "legal_entity_id": {"$ref": "#/$defs/text"}, "item_id": {"$ref": "#/$defs/text"},
+        "uom_id": {"$ref": "#/$defs/text"}, "inventory_lot_id": {"$ref": "#/$defs/nullableText"},
+        "quantity_precision": {"type": "integer", "minimum": 0, "maximum": 6},
+        "currency_code": {"$ref": "#/$defs/text"}, "created_at": {"$ref": "#/$defs/timestamp"},
+        "item_code": {"$ref": "#/$defs/text"}, "uom_code": {"$ref": "#/$defs/text"},
+        "lot_serial_code": {"$ref": "#/$defs/nullableText"}, "entity_code": {"$ref": "#/$defs/text"},
+        "valuation_number": {"$ref": "#/$defs/text"}, "original_quantity": {"$ref": "#/$defs/quantity"},
+        "remaining_quantity": {"$ref": "#/$defs/quantity"}, "original_value": {"$ref": "#/$defs/amount"},
+        "remaining_value": {"$ref": "#/$defs/amount"}, "layer_status": {"enum": ["Open", "Closed"]}
+      }
+    }
+  }
+}

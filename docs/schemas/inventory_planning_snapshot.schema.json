@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/inventory_planning_snapshot.schema.json",
+  "title": "ReconForge Inventory Planning Snapshot",
+  "description": "Versioned, bounded, path-free snapshot of local physical-count headers and reorder rules.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "source", "workspace", "summary", "count_sessions", "reorder_rules"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "generated_at": {"$ref": "#/$defs/timestamp"},
+    "source": {"$ref": "#/$defs/source"},
+    "workspace": {"$ref": "#/$defs/text"},
+    "summary": {"$ref": "#/$defs/summary"},
+    "count_sessions": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/session"}},
+    "reorder_rules": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/rule"}}
+  },
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "optionalText": {"type": "string", "maxLength": 2000},
+    "nullableText": {"oneOf": [{"type": "string", "minLength": 1, "maxLength": 2000}, {"type": "null"}]},
+    "timestamp": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"},
+    "nullableTimestamp": {"oneOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]},
+    "date": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "quantity": {"type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]{1,6})?$", "maxLength": 40},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "local_first", "external_calls"],
+      "properties": {
+        "kind": {"const": "local-inventory-planning"},
+        "local_first": {"const": true},
+        "external_calls": {"const": false}
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workspace", "count_sessions", "counting_sessions", "submitted_sessions", "approved_sessions", "reorder_rules", "active_reorder_rules"],
+      "properties": {
+        "workspace": {"$ref": "#/$defs/text"},
+        "count_sessions": {"type": "integer", "minimum": 0},
+        "counting_sessions": {"type": "integer", "minimum": 0},
+        "submitted_sessions": {"type": "integer", "minimum": 0},
+        "approved_sessions": {"type": "integer", "minimum": 0},
+        "reorder_rules": {"type": "integer", "minimum": 0},
+        "active_reorder_rules": {"type": "integer", "minimum": 0}
+      }
+    },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "workspace_id", "organization_id", "legal_entity_id", "period_id", "location_id", "count_number", "count_date", "description", "status", "created_by", "started_by", "started_at", "submitted_by", "submitted_at", "submit_reason", "approved_by", "approved_at", "approval_reason", "cancelled_by", "cancelled_at", "cancel_reason", "adjustment_movement_id", "created_at", "updated_at", "organization_code", "entity_code", "period_name", "warehouse_code", "location_code", "location_name", "adjustment_movement_number", "line_count", "counted_line_count"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"}, "workspace_id": {"$ref": "#/$defs/text"},
+        "organization_id": {"$ref": "#/$defs/text"}, "legal_entity_id": {"$ref": "#/$defs/text"},
+        "period_id": {"$ref": "#/$defs/text"}, "location_id": {"$ref": "#/$defs/text"},
+        "count_number": {"$ref": "#/$defs/text"}, "count_date": {"$ref": "#/$defs/date"},
+        "description": {"$ref": "#/$defs/text"}, "status": {"enum": ["Draft", "Counting", "Submitted", "Approved", "Cancelled"]},
+        "created_by": {"$ref": "#/$defs/text"}, "started_by": {"$ref": "#/$defs/optionalText"},
+        "started_at": {"$ref": "#/$defs/nullableTimestamp"}, "submitted_by": {"$ref": "#/$defs/optionalText"},
+        "submitted_at": {"$ref": "#/$defs/nullableTimestamp"}, "submit_reason": {"$ref": "#/$defs/optionalText"},
+        "approved_by": {"$ref": "#/$defs/optionalText"}, "approved_at": {"$ref": "#/$defs/nullableTimestamp"},
+        "approval_reason": {"$ref": "#/$defs/optionalText"}, "cancelled_by": {"$ref": "#/$defs/optionalText"},
+        "cancelled_at": {"$ref": "#/$defs/nullableTimestamp"}, "cancel_reason": {"$ref": "#/$defs/optionalText"},
+        "adjustment_movement_id": {"$ref": "#/$defs/nullableText"}, "created_at": {"$ref": "#/$defs/timestamp"},
+        "updated_at": {"$ref": "#/$defs/timestamp"}, "organization_code": {"$ref": "#/$defs/text"},
+        "entity_code": {"$ref": "#/$defs/text"}, "period_name": {"$ref": "#/$defs/text"},
+        "warehouse_code": {"$ref": "#/$defs/text"}, "location_code": {"$ref": "#/$defs/text"},
+        "location_name": {"$ref": "#/$defs/text"}, "adjustment_movement_number": {"$ref": "#/$defs/nullableText"},
+        "line_count": {"type": "integer", "minimum": 0}, "counted_line_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "workspace_id", "organization_id", "legal_entity_id", "item_id", "location_id", "minimum_quantity_scaled", "target_quantity_scaled", "quantity_precision", "lead_time_days", "active", "created_by", "created_at", "updated_at", "organization_code", "entity_code", "item_code", "item_name", "uom_code", "warehouse_code", "location_code", "on_hand_quantity_scaled", "minimum_quantity", "target_quantity", "on_hand_quantity"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"}, "workspace_id": {"$ref": "#/$defs/text"},
+        "organization_id": {"$ref": "#/$defs/text"}, "legal_entity_id": {"$ref": "#/$defs/text"},
+        "item_id": {"$ref": "#/$defs/text"}, "location_id": {"$ref": "#/$defs/text"},
+        "minimum_quantity_scaled": {"type": "integer", "minimum": 0}, "target_quantity_scaled": {"type": "integer", "minimum": 1},
+        "quantity_precision": {"type": "integer", "minimum": 0, "maximum": 6},
+        "lead_time_days": {"type": "integer", "minimum": 0, "maximum": 3650},
+        "active": {"type": "boolean"}, "created_by": {"$ref": "#/$defs/text"},
+        "created_at": {"$ref": "#/$defs/timestamp"}, "updated_at": {"$ref": "#/$defs/timestamp"},
+        "organization_code": {"$ref": "#/$defs/text"}, "entity_code": {"$ref": "#/$defs/text"},
+        "item_code": {"$ref": "#/$defs/text"}, "item_name": {"$ref": "#/$defs/text"},
+        "uom_code": {"$ref": "#/$defs/text"}, "warehouse_code": {"$ref": "#/$defs/text"},
+        "location_code": {"$ref": "#/$defs/text"}, "on_hand_quantity_scaled": {"type": "integer"},
+        "minimum_quantity": {"$ref": "#/$defs/quantity"}, "target_quantity": {"$ref": "#/$defs/quantity"},
+        "on_hand_quantity": {"$ref": "#/$defs/quantity"}
+      }
+    }
+  }
+}

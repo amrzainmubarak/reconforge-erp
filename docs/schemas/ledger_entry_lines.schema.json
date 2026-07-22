@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/ledger_entry_lines.schema.json",
+  "title": "ReconForge Ledger Entry Lines",
+  "description": "Local JSON input for a balanced finance-core draft entry. Exact balance, account, currency, and dimension rules are enforced by the service.",
+  "oneOf": [
+    {"$ref": "#/$defs/lines"},
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lines"],
+      "properties": {"lines": {"$ref": "#/$defs/lines"}}
+    }
+  ],
+  "$defs": {
+    "code": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"},
+    "amount": {"type": "string", "pattern": "^(0|[0-9]+)(\\.[0-9]+)?$", "maxLength": 64},
+    "line": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["account_code"],
+      "properties": {
+        "account_code": {"$ref": "#/$defs/code"},
+        "description": {"type": "string", "maxLength": 500},
+        "debit": {"$ref": "#/$defs/amount"},
+        "credit": {"$ref": "#/$defs/amount"},
+        "dimensions": {
+          "type": "object",
+          "maxProperties": 20,
+          "propertyNames": {"$ref": "#/$defs/code"},
+          "additionalProperties": {"$ref": "#/$defs/code"}
+        }
+      }
+    },
+    "lines": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 1000,
+      "items": {"$ref": "#/$defs/line"}
+    }
+  }
+}

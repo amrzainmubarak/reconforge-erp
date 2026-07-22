@@ -17,9 +17,9 @@ def test_db_init_creates_expected_schema_and_is_idempotent(tmp_path: Path) -> No
     first = run_migrations(db_path)
     second = run_migrations(db_path)
 
-    assert first.current_version == 6
-    assert first.applied_versions == [1, 2, 3, 4, 5, 6]
-    assert second.current_version == 6
+    assert first.current_version == 12
+    assert first.applied_versions == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    assert second.current_version == 12
     assert second.applied_versions == []
 
     connection = connect(db_path, require_exists=True)
@@ -52,6 +52,22 @@ def test_db_init_creates_expected_schema_and_is_idempotent(tmp_path: Path) -> No
         "metric_snapshots",
         "audit_events",
         "audit_ledger_state",
+        "currencies",
+        "branches",
+        "charts_of_accounts",
+        "accounting_dimensions",
+        "accounting_dimension_values",
+        "finance_journals",
+        "ledger_entries",
+        "ledger_lines",
+        "ledger_line_dimensions",
+        "units_of_measure",
+        "inventory_items",
+        "warehouses",
+        "inventory_locations",
+        "inventory_lots",
+        "inventory_movements",
+        "inventory_movement_lines",
     } <= tables
 
 
@@ -61,9 +77,26 @@ def test_db_status_reports_pending_and_current_versions(tmp_path: Path) -> None:
 
     status = database_status(db_path)
 
-    assert status.current_version == 6
-    assert status.latest_version == 6
+    assert status.current_version == 12
+    assert status.latest_version == 12
     assert status.pending_versions == []
+
+
+def test_sqlite_connections_enable_local_concurrency_safety_pragmas(tmp_path: Path) -> None:
+    db_path = tmp_path / "pragmas.db"
+    run_migrations(db_path)
+
+    connection = connect(db_path, require_exists=True)
+    try:
+        journal_mode = str(connection.execute("PRAGMA journal_mode").fetchone()[0]).lower()
+        busy_timeout = int(connection.execute("PRAGMA busy_timeout").fetchone()[0])
+        foreign_keys = int(connection.execute("PRAGMA foreign_keys").fetchone()[0])
+    finally:
+        connection.close()
+
+    assert journal_mode == "wal"
+    assert busy_timeout >= 5_000
+    assert foreign_keys == 1
 
 
 def test_domain_repositories_create_workspace_and_period(tmp_path: Path) -> None:

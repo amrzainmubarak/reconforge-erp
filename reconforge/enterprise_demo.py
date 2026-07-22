@@ -204,7 +204,9 @@ def _build_synthetic_records() -> dict[str, list[dict[str, Any]]]:
                         "entity_code": entity_code,
                         "account_code": account_code,
                         "account_name": account_name,
-                        "balance": round(base_balance * entity_factors[entity_code] * period_factors[str(period["period_name"])], 2),
+                        "balance": round(
+                            base_balance * entity_factors[entity_code] * period_factors[str(period["period_name"])], 2
+                        ),
                         "currency": currencies[entity_code],
                         "risk_rating": risk_rating,
                         "synthetic_data_marker": SYNTHETIC_DATA_MARKER,
@@ -305,6 +307,254 @@ def _build_synthetic_records() -> dict[str, list[dict[str, Any]]]:
         _close_task("CLOSE-SYN-004", "Verify synthetic evidence coverage", "In Progress", "Synthetic Reviewer"),
         _close_task("CLOSE-SYN-005", "Review synthetic close readiness", "Not Started", "Synthetic Controller"),
     ]
+    inventory = [
+        _inventory_on_hand(
+            "SYN-PART-001",
+            "Synthetic brake pad kit",
+            "EA",
+            "SYN-US-MAIN",
+            "North main store",
+            "STOCK",
+            "SYN-US01",
+            "LOT-SYN-2605",
+            "Lot",
+            "148",
+        ),
+        _inventory_on_hand(
+            "SYN-LUBE-001",
+            "Synthetic workshop lubricant",
+            "L",
+            "SYN-US-MAIN",
+            "North main store",
+            "BULK",
+            "SYN-US01",
+            "LOT-SYN-2604",
+            "Lot",
+            "72.500",
+        ),
+        _inventory_on_hand(
+            "SYN-SENSOR-001",
+            "Synthetic sensor module",
+            "EA",
+            "SYN-UK-SERVICE",
+            "EMEA service store",
+            "SECURE",
+            "SYN-UK01",
+            "SER-SYN-0042",
+            "Serial",
+            "1",
+        ),
+        _inventory_on_hand(
+            "SYN-PART-002",
+            "Synthetic filter element",
+            "EA",
+            "SYN-MX-DIST",
+            "LATAM distribution store",
+            "PICK",
+            "SYN-MX01",
+            "",
+            "None",
+            "94",
+        ),
+        _inventory_on_hand(
+            "SYN-PART-003",
+            "Synthetic belt assembly",
+            "EA",
+            "SYN-MX-DIST",
+            "LATAM distribution store",
+            "QUARANTINE",
+            "SYN-MX01",
+            "",
+            "None",
+            "-3",
+        ),
+        _inventory_movement(
+            "RCV/SYN/0048",
+            "Receipt",
+            "Posted",
+            "2026-05-04",
+            "SYN-US01",
+            "",
+            "SYN-US-MAIN/STOCK",
+            2,
+            "180",
+        ),
+        _inventory_movement(
+            "TRF/SYN/0019",
+            "Transfer",
+            "Posted",
+            "2026-05-12",
+            "SYN-US01",
+            "SYN-US-MAIN/STOCK",
+            "SYN-US-MAIN/BULK",
+            1,
+            "25.500",
+        ),
+        _inventory_movement(
+            "DLV/SYN/0032",
+            "Delivery",
+            "Posted",
+            "2026-05-19",
+            "SYN-UK01",
+            "SYN-UK-SERVICE/SECURE",
+            "",
+            1,
+            "1",
+        ),
+        _inventory_movement(
+            "ADJ/SYN/0007",
+            "Adjustment",
+            "Draft",
+            "2026-05-29",
+            "SYN-MX01",
+            "SYN-MX-DIST/QUARANTINE",
+            "",
+            1,
+            "3",
+        ),
+        _inventory_exception(
+            "INV-NEGATIVE-STOCK",
+            "high",
+            "SYN-PART-003",
+            "SYN-MX-DIST/QUARANTINE",
+            "-3",
+            "Posted local movements produce a synthetic negative on-hand quantity.",
+        ),
+        _inventory_exception(
+            "INV-EXPIRED-STOCK",
+            "high",
+            "SYN-LUBE-001",
+            "SYN-US-MAIN/BULK",
+            "72.500",
+            "Synthetic positive on-hand is assigned to an expired tracked lot.",
+        ),
+        _inventory_exception(
+            "INV-MISSING-ACCOUNT",
+            "medium",
+            "SYN-PART-002",
+            "",
+            "",
+            "Synthetic active stock item has no local inventory account reference.",
+        ),
+        _inventory_count(
+            "COUNT/SYN/0024",
+            "Approved",
+            "2026-05-28",
+            "SYN-MX01",
+            "SYN-MX-DIST",
+            "QUARANTINE",
+            1,
+            1,
+            1,
+            "ADJ/SYN/0007",
+        ),
+        _inventory_count(
+            "COUNT/SYN/0025",
+            "Counting",
+            "2026-05-30",
+            "SYN-US01",
+            "SYN-US-MAIN",
+            "STOCK",
+            2,
+            1,
+            0,
+            "",
+        ),
+        _inventory_reorder_signal(
+            "high",
+            "SYN-PART-003",
+            "Synthetic belt assembly",
+            "EA",
+            "SYN-MX-DIST",
+            "QUARANTINE",
+            "-3",
+            "5",
+            "18",
+            "21",
+            12,
+        ),
+        _inventory_reorder_signal(
+            "medium",
+            "SYN-PART-002",
+            "Synthetic filter element",
+            "EA",
+            "SYN-MX-DIST",
+            "PICK",
+            "94",
+            "100",
+            "160",
+            "66",
+            8,
+        ),
+        _inventory_valuation(
+            "VAL/SYN/0048",
+            "RCV/SYN/0048",
+            "Receipt",
+            "Approved",
+            "2026-05-04",
+            "SYN-US01",
+            "USD",
+            "4500.00",
+            "IV-VAL/SYN/0048",
+            "Draft",
+        ),
+        _inventory_valuation(
+            "VAL/SYN/0032",
+            "DLV/SYN/0032",
+            "Delivery",
+            "Approved",
+            "2026-05-19",
+            "SYN-UK01",
+            "GBP",
+            "185.00",
+            "IV-VAL/SYN/0032",
+            "Draft",
+        ),
+        _inventory_valuation_reversal(
+            "IVR/SYN/0032",
+            "VAL/SYN/0032",
+            "REV/DLV/SYN/0032",
+            "Delivery",
+            "Receipt",
+            "Approved",
+            "2026-05-23",
+            "SYN-UK01",
+            "GBP",
+            "185.00",
+            "Restore",
+            1,
+            "IVR-IVR/SYN/0032",
+            "Draft",
+        ),
+        _inventory_cost_layer(
+            "SYN-LAYER-US-0048-01",
+            "VAL/SYN/0048",
+            "SYN-PART-001",
+            "Synthetic brake pad kit",
+            "EA",
+            "LOT-SYN-2605",
+            "SYN-US01",
+            "USD",
+            "180",
+            "148",
+            "4500.00",
+            "3700.00",
+        ),
+        _inventory_cost_layer(
+            "SYN-LAYER-UK-0017-01",
+            "VAL/SYN/0017",
+            "SYN-SENSOR-001",
+            "Synthetic sensor module",
+            "EA",
+            "SER-SYN-0042",
+            "SYN-UK01",
+            "GBP",
+            "1",
+            "1",
+            "185.00",
+            "185.00",
+        ),
+    ]
     return {
         "entities": entities,
         "periods": periods,
@@ -315,6 +565,7 @@ def _build_synthetic_records() -> dict[str, list[dict[str, Any]]]:
         "matching_left": matching_left,
         "matching_right": matching_right,
         "close_tasks": close_tasks,
+        "inventory": inventory,
     }
 
 
@@ -361,6 +612,235 @@ def _close_task(task_id: str, name: str, status: str, owner: str) -> dict[str, s
     }
 
 
+def _inventory_on_hand(
+    item_code: str,
+    item_name: str,
+    uom_code: str,
+    warehouse_code: str,
+    warehouse_name: str,
+    location_code: str,
+    entity_code: str,
+    lot_serial_code: str,
+    tracking_type: str,
+    quantity: str,
+) -> dict[str, Any]:
+    return {
+        "record_type": "on_hand",
+        "item_code": item_code,
+        "item_name": item_name,
+        "uom_code": uom_code,
+        "warehouse_code": warehouse_code,
+        "warehouse_name": warehouse_name,
+        "location_code": location_code,
+        "entity_code": entity_code,
+        "lot_serial_code": lot_serial_code,
+        "tracking_type": tracking_type,
+        "quantity": quantity,
+        "synthetic_data_marker": SYNTHETIC_DATA_MARKER,
+    }
+
+
+def _inventory_movement(
+    movement_number: str,
+    movement_type: str,
+    status: str,
+    movement_date: str,
+    entity_code: str,
+    from_location: str,
+    to_location: str,
+    line_count: int,
+    quantity: str,
+) -> dict[str, Any]:
+    return {
+        "record_type": "movement",
+        "movement_number": movement_number,
+        "movement_type": movement_type,
+        "status": status,
+        "movement_date": movement_date,
+        "entity_code": entity_code,
+        "from_location": from_location,
+        "to_location": to_location,
+        "line_count": line_count,
+        "quantity": quantity,
+        "synthetic_data_marker": SYNTHETIC_DATA_MARKER,
+    }
+
+
+def _inventory_exception(
+    control_code: str,
+    risk_rating: str,
+    item_code: str,
+    location: str,
+    quantity: str,
+    description: str,
+) -> dict[str, str]:
+    return {
+        "record_type": "exception",
+        "control_code": control_code,
+        "risk_rating": risk_rating,
+        "item_code": item_code,
+        "location": location,
+        "quantity": quantity,
+        "description": description,
+        "synthetic_data_marker": SYNTHETIC_DATA_MARKER,
+    }
+
+
+def _inventory_count(
+    count_number: str,
+    status: str,
+    count_date: str,
+    entity_code: str,
+    warehouse_code: str,
+    location_code: str,
+    line_count: int,
+    counted_line_count: int,
+    variance_line_count: int,
+    adjustment_movement_number: str,
+) -> dict[str, Any]:
+    return {
+        "record_type": "count",
+        "count_number": count_number,
+        "status": status,
+        "count_date": count_date,
+        "entity_code": entity_code,
+        "warehouse_code": warehouse_code,
+        "location_code": location_code,
+        "line_count": line_count,
+        "counted_line_count": counted_line_count,
+        "variance_line_count": variance_line_count,
+        "adjustment_movement_number": adjustment_movement_number,
+        "synthetic_data_marker": SYNTHETIC_DATA_MARKER,
+    }
+
+
+def _inventory_reorder_signal(
+    risk_rating: str,
+    item_code: str,
+    item_name: str,
+    uom_code: str,
+    warehouse_code: str,
+    location_code: str,
+    on_hand_quantity: str,
+    minimum_quantity: str,
+    target_quantity: str,
+    suggested_quantity: str,
+    lead_time_days: int,
+) -> dict[str, Any]:
+    return {
+        "record_type": "reorder_signal",
+        "risk_rating": risk_rating,
+        "item_code": item_code,
+        "item_name": item_name,
+        "uom_code": uom_code,
+        "warehouse_code": warehouse_code,
+        "location_code": location_code,
+        "on_hand_quantity": on_hand_quantity,
+        "minimum_quantity": minimum_quantity,
+        "target_quantity": target_quantity,
+        "suggested_quantity": suggested_quantity,
+        "lead_time_days": lead_time_days,
+        "synthetic_data_marker": SYNTHETIC_DATA_MARKER,
+    }
+
+
+def _inventory_valuation(
+    valuation_number: str,
+    movement_number: str,
+    movement_type: str,
+    status: str,
+    valuation_date: str,
+    entity_code: str,
+    currency_code: str,
+    total_value: str,
+    finance_entry_number: str,
+    finance_entry_status: str,
+) -> dict[str, Any]:
+    return {
+        "record_type": "valuation",
+        "valuation_number": valuation_number,
+        "movement_number": movement_number,
+        "movement_type": movement_type,
+        "status": status,
+        "valuation_date": valuation_date,
+        "entity_code": entity_code,
+        "costing_method": "FIFO",
+        "currency_code": currency_code,
+        "total_value": total_value,
+        "finance_entry_number": finance_entry_number,
+        "finance_entry_status": finance_entry_status,
+        "synthetic_data_marker": SYNTHETIC_DATA_MARKER,
+    }
+
+
+def _inventory_cost_layer(
+    layer_id: str,
+    valuation_number: str,
+    item_code: str,
+    item_name: str,
+    uom_code: str,
+    lot_serial_code: str,
+    entity_code: str,
+    currency_code: str,
+    original_quantity: str,
+    remaining_quantity: str,
+    original_value: str,
+    remaining_value: str,
+) -> dict[str, Any]:
+    return {
+        "record_type": "cost_layer",
+        "layer_id": layer_id,
+        "valuation_number": valuation_number,
+        "item_code": item_code,
+        "item_name": item_name,
+        "uom_code": uom_code,
+        "lot_serial_code": lot_serial_code,
+        "entity_code": entity_code,
+        "currency_code": currency_code,
+        "original_quantity": original_quantity,
+        "remaining_quantity": remaining_quantity,
+        "original_value": original_value,
+        "remaining_value": remaining_value,
+        "synthetic_data_marker": SYNTHETIC_DATA_MARKER,
+    }
+
+
+def _inventory_valuation_reversal(
+    reversal_number: str,
+    original_valuation_number: str,
+    reversal_movement_number: str,
+    original_movement_type: str,
+    reversal_movement_type: str,
+    status: str,
+    reversal_date: str,
+    entity_code: str,
+    currency_code: str,
+    total_value: str,
+    layer_effect: str,
+    layer_effect_count: int,
+    finance_entry_number: str,
+    finance_entry_status: str,
+) -> dict[str, Any]:
+    return {
+        "record_type": "valuation_reversal",
+        "reversal_number": reversal_number,
+        "original_valuation_number": original_valuation_number,
+        "reversal_movement_number": reversal_movement_number,
+        "original_movement_type": original_movement_type,
+        "reversal_movement_type": reversal_movement_type,
+        "status": status,
+        "reversal_date": reversal_date,
+        "entity_code": entity_code,
+        "currency_code": currency_code,
+        "total_value": total_value,
+        "layer_effect": layer_effect,
+        "layer_effect_count": layer_effect_count,
+        "finance_entry_number": finance_entry_number,
+        "finance_entry_status": finance_entry_status,
+        "synthetic_data_marker": SYNTHETIC_DATA_MARKER,
+    }
+
+
 def _write_source_assets(output_dir: Path, data: dict[str, list[dict[str, Any]]]) -> list[Path]:
     paths = [
         _write_json_file(output_dir / "sample_entities.json", _records_payload(data["entities"])),
@@ -372,6 +852,7 @@ def _write_source_assets(output_dir: Path, data: dict[str, list[dict[str, Any]]]
         _write_csv_file(output_dir / "sample_matching_left.csv", data["matching_left"]),
         _write_csv_file(output_dir / "sample_matching_right.csv", data["matching_right"]),
         _write_json_file(output_dir / "sample_close_tasks.json", _records_payload(data["close_tasks"])),
+        _write_json_file(output_dir / "sample_inventory_control.json", _records_payload(data["inventory"])),
     ]
     evidence_dir = output_dir / "sample_evidence"
     evidence_dir.mkdir(parents=True, exist_ok=True)
@@ -388,7 +869,11 @@ def _write_source_assets(output_dir: Path, data: dict[str, list[dict[str, Any]]]
     ]
     paths.extend(evidence_paths)
     paths.append(_write_json_file(output_dir / "sample_evidence_references.json", _records_payload(evidence_refs)))
-    paths.append(_write_json_file(output_dir / "sample_account_reconciliations.json", _records_payload(_account_reconciliation_samples(data))))
+    paths.append(
+        _write_json_file(
+            output_dir / "sample_account_reconciliations.json", _records_payload(_account_reconciliation_samples(data))
+        )
+    )
     return paths
 
 
@@ -645,25 +1130,108 @@ def _write_report_payloads(
 ) -> list[Path]:
     reports_dir = output_dir / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
-    sanitized_accounts = [_project(row, ["period_name", "entity_code", "account_code", "account_name", "status", "balance", "risk_rating"]) for row in account_rows]
-    sanitized_close = [_project(row, ["period_name", "task_code", "name", "owner", "category", "risk_rating", "status", "blocker_reason"]) for row in close_rows]
-    sanitized_evidence = [
-        _relative_evidence_record(row, output_dir)
-        for row in evidence_rows
+    sanitized_accounts = [
+        _project(
+            row, ["period_name", "entity_code", "account_code", "account_name", "status", "balance", "risk_rating"]
+        )
+        for row in account_rows
     ]
-    sanitized_journals = [_project(row, ["policy_code", "risk_rating", "description", "status", "journal_id", "period_name", "entity_code", "account_code", "amount"]) for row in journal_rows]
-    sanitized_intercompany = [_project(row, ["period_name", "entity_code", "counterparty_code", "reference", "imbalance_amount", "currency", "status", "settlement_status"]) for row in intercompany_rows]
-    sanitized_controls = [_project(row, ["period_name", "control_code", "name", "owner", "frequency", "risk_rating", "status", "sample_size"]) for row in control_rows]
-    sanitized_matches = [_project(row, ["left_id", "right_id", "match_type", "confidence", "explanation", "amount_difference", "date_difference_days", "status"]) for row in match_rows]
-    sanitized_exceptions = [_project(row, ["source_type", "period_name", "entity_code", "account_code", "control_code", "risk_rating", "owner", "status", "description"]) for row in exception_rows]
-    sanitized_metrics = [_project(row, ["metric_key", "name", "description", "period_name", "value", "value_text", "lineage"]) for row in metric_rows]
+    sanitized_close = [
+        _project(
+            row, ["period_name", "task_code", "name", "owner", "category", "risk_rating", "status", "blocker_reason"]
+        )
+        for row in close_rows
+    ]
+    sanitized_evidence = [_relative_evidence_record(row, output_dir) for row in evidence_rows]
+    sanitized_journals = [
+        _project(
+            row,
+            [
+                "policy_code",
+                "risk_rating",
+                "description",
+                "status",
+                "journal_id",
+                "period_name",
+                "entity_code",
+                "account_code",
+                "amount",
+            ],
+        )
+        for row in journal_rows
+    ]
+    sanitized_intercompany = [
+        _project(
+            row,
+            [
+                "period_name",
+                "entity_code",
+                "counterparty_code",
+                "reference",
+                "imbalance_amount",
+                "currency",
+                "status",
+                "settlement_status",
+            ],
+        )
+        for row in intercompany_rows
+    ]
+    sanitized_controls = [
+        _project(
+            row, ["period_name", "control_code", "name", "owner", "frequency", "risk_rating", "status", "sample_size"]
+        )
+        for row in control_rows
+    ]
+    sanitized_matches = [
+        _project(
+            row,
+            [
+                "left_id",
+                "right_id",
+                "match_type",
+                "confidence",
+                "explanation",
+                "amount_difference",
+                "date_difference_days",
+                "status",
+            ],
+        )
+        for row in match_rows
+    ]
+    sanitized_exceptions = [
+        _project(
+            row,
+            [
+                "source_type",
+                "period_name",
+                "entity_code",
+                "account_code",
+                "control_code",
+                "risk_rating",
+                "owner",
+                "status",
+                "description",
+            ],
+        )
+        for row in exception_rows
+    ]
+    sanitized_metrics = [
+        _project(row, ["metric_key", "name", "description", "period_name", "value", "value_text", "lineage"])
+        for row in metric_rows
+    ]
     paths = [
         _write_json_file(reports_dir / "account_reconciliations.json", _records_payload(sanitized_accounts)),
         _write_json_file(reports_dir / "close_tasks.json", _records_payload(sanitized_close)),
         _write_json_file(reports_dir / "evidence_registry.json", _records_payload(sanitized_evidence)),
-        _write_json_file(reports_dir / "journal_controls.json", _payload({"summary": journal_report, "records": _stable_records(sanitized_journals)})),
+        _write_json_file(
+            reports_dir / "journal_controls.json",
+            _payload({"summary": journal_report, "records": _stable_records(sanitized_journals)}),
+        ),
         _write_json_file(reports_dir / "intercompany_cases.json", _records_payload(sanitized_intercompany)),
-        _write_json_file(reports_dir / "control_testing.json", _payload({"summary": control_report, "records": _stable_records(sanitized_controls)})),
+        _write_json_file(
+            reports_dir / "control_testing.json",
+            _payload({"summary": control_report, "records": _stable_records(sanitized_controls)}),
+        ),
         _write_json_file(reports_dir / "matching_results.json", _records_payload(sanitized_matches)),
         _write_json_file(reports_dir / "unified_exceptions.json", _records_payload(sanitized_exceptions)),
         _write_json_file(reports_dir / "dashboard_metrics.json", _records_payload(sanitized_metrics)),
@@ -675,7 +1243,10 @@ def _write_report_payloads(
 
 
 def _relative_evidence_record(row: dict[str, Any], output_dir: Path) -> dict[str, Any]:
-    projected = _project(row, ["evidence_code", "source_path", "checksum_sha256", "provenance_type", "redaction_status", "evidence_status"])
+    projected = _project(
+        row,
+        ["evidence_code", "source_path", "checksum_sha256", "provenance_type", "redaction_status", "evidence_status"],
+    )
     source_path = Path(str(projected.get("source_path", "")))
     try:
         projected["source_path"] = source_path.relative_to(output_dir).as_posix()
@@ -708,7 +1279,11 @@ def _write_dashboard_summary(path: Path, metrics: list[dict[str, Any]]) -> Path:
 
 
 def _write_readme(output_dir: Path, record_counts: dict[str, int], db_created: bool) -> Path:
-    db_line = "- `reconforge.db` - optional local SQLite demo database seeded from existing platform services." if db_created else "- No SQLite database was persisted. Re-run with `--db output/enterprise_demo/reconforge.db` to keep one locally."
+    db_line = (
+        "- `reconforge.db` - optional local SQLite demo database seeded from existing platform services."
+        if db_created
+        else "- No SQLite database was persisted. Re-run with `--db output/enterprise_demo/reconforge.db` to keep one locally."
+    )
     lines = [
         "# ReconForge Synthetic Enterprise Demo",
         "",
@@ -833,7 +1408,11 @@ def _write_screenshots_checklist(output_dir: Path) -> Path:
 def _write_manifest(output_dir: Path, record_counts: dict[str, int], db_path: Path | None) -> Path:
     generated_files = []
     for path in sorted(
-        (file_path for file_path in output_dir.rglob("*") if file_path.is_file() and file_path.name != "demo_manifest.json"),
+        (
+            file_path
+            for file_path in output_dir.rglob("*")
+            if file_path.is_file() and file_path.name != "demo_manifest.json"
+        ),
         key=lambda file_path: file_path.relative_to(output_dir).as_posix(),
     ):
         generated_files.append(

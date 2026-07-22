@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/inventory_reorder_signals.schema.json",
+  "title": "ReconForge Inventory Reorder Signals",
+  "description": "Deterministic local advice for active stock thresholds; this contract does not create purchase orders.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "source", "workspace", "organization_code", "entity_code", "summary", "pagination", "signals"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "generated_at": {"$ref": "#/$defs/timestamp"},
+    "source": {"$ref": "#/$defs/source"},
+    "workspace": {"$ref": "#/$defs/text"},
+    "organization_code": {"$ref": "#/$defs/text"},
+    "entity_code": {"$ref": "#/$defs/text"},
+    "summary": {"$ref": "#/$defs/summary"},
+    "pagination": {"$ref": "#/$defs/pagination"},
+    "signals": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/signal"}}
+  },
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "timestamp": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"},
+    "quantity": {"type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]{1,6})?$", "maxLength": 40},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "local_first", "external_calls"],
+      "properties": {
+        "kind": {"const": "local-inventory-reorder-controls"},
+        "local_first": {"const": true},
+        "external_calls": {"const": false}
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "high", "medium"],
+      "properties": {
+        "total": {"type": "integer", "minimum": 0},
+        "high": {"type": "integer", "minimum": 0},
+        "medium": {"type": "integer", "minimum": 0}
+      }
+    },
+    "pagination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["limit", "offset", "returned"],
+      "properties": {
+        "limit": {"type": "integer", "minimum": 1, "maximum": 100000},
+        "offset": {"type": "integer", "minimum": 0, "maximum": 10000000},
+        "returned": {"type": "integer", "minimum": 0, "maximum": 100000}
+      }
+    },
+    "signal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["signal_id", "rule_id", "risk_rating", "item_code", "item_name", "warehouse_code", "location_code", "uom_code", "quantity_precision", "on_hand_quantity_scaled", "on_hand_quantity", "minimum_quantity_scaled", "minimum_quantity", "target_quantity_scaled", "target_quantity", "suggested_quantity_scaled", "suggested_quantity", "lead_time_days", "description"],
+      "properties": {
+        "signal_id": {"$ref": "#/$defs/text"},
+        "rule_id": {"$ref": "#/$defs/text"},
+        "risk_rating": {"enum": ["high", "medium"]},
+        "item_code": {"$ref": "#/$defs/text"},
+        "item_name": {"$ref": "#/$defs/text"},
+        "warehouse_code": {"$ref": "#/$defs/text"},
+        "location_code": {"$ref": "#/$defs/text"},
+        "uom_code": {"$ref": "#/$defs/text"},
+        "quantity_precision": {"type": "integer", "minimum": 0, "maximum": 6},
+        "on_hand_quantity_scaled": {"type": "integer"},
+        "on_hand_quantity": {"$ref": "#/$defs/quantity"},
+        "minimum_quantity_scaled": {"type": "integer", "minimum": 0},
+        "minimum_quantity": {"$ref": "#/$defs/quantity"},
+        "target_quantity_scaled": {"type": "integer", "minimum": 1},
+        "target_quantity": {"$ref": "#/$defs/quantity"},
+        "suggested_quantity_scaled": {"type": "integer", "minimum": 1},
+        "suggested_quantity": {"$ref": "#/$defs/quantity"},
+        "lead_time_days": {"type": "integer", "minimum": 0, "maximum": 3650},
+        "description": {"$ref": "#/$defs/text"}
+      }
+    }
+  }
+}

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -29,17 +30,43 @@ BACKUP_WARNING = (
 )
 
 BACKUP_TABLES = [
-    "schema_migrations",
     "workspaces",
     "organizations",
+    "currencies",
     "legal_entities",
+    "branches",
     "periods",
+    "units_of_measure",
+    "warehouses",
+    "inventory_locations",
+    "charts_of_accounts",
+    "accounting_dimensions",
+    "accounting_dimension_values",
     "users",
     "roles",
     "permissions",
     "user_roles",
     "role_permissions",
     "accounts",
+    "inventory_items",
+    "inventory_lots",
+    "finance_journals",
+    "ledger_entries",
+    "ledger_lines",
+    "ledger_line_dimensions",
+    "inventory_movements",
+    "inventory_movement_lines",
+    "inventory_count_sessions",
+    "inventory_count_lines",
+    "inventory_reorder_rules",
+    "inventory_valuation_policies",
+    "inventory_valuation_documents",
+    "inventory_valuation_input_costs",
+    "inventory_valuation_lines",
+    "inventory_cost_layers",
+    "inventory_layer_consumptions",
+    "inventory_valuation_reversals",
+    "inventory_valuation_reversal_effects",
     "reconciliations",
     "tasks",
     "controls",
@@ -85,17 +112,43 @@ BACKUP_TABLES = [
 EXCLUDED_BACKUP_TABLES = ["api_sessions"]
 
 BACKUP_SELECT_QUERIES = {
-    "schema_migrations": "SELECT * FROM schema_migrations ORDER BY version",
     "workspaces": "SELECT * FROM workspaces ORDER BY created_at, id",
     "organizations": "SELECT * FROM organizations ORDER BY created_at, id",
+    "currencies": "SELECT * FROM currencies ORDER BY code",
     "legal_entities": "SELECT * FROM legal_entities ORDER BY entity_code, id",
+    "branches": "SELECT * FROM branches ORDER BY organization_id, branch_code, id",
     "periods": "SELECT * FROM periods ORDER BY start_date, id",
+    "units_of_measure": "SELECT * FROM units_of_measure ORDER BY workspace_id, uom_code",
+    "warehouses": "SELECT * FROM warehouses ORDER BY workspace_id, organization_id, warehouse_code",
+    "inventory_locations": "SELECT * FROM inventory_locations ORDER BY warehouse_id, location_code",
+    "charts_of_accounts": "SELECT * FROM charts_of_accounts ORDER BY workspace_id, chart_code",
+    "accounting_dimensions": "SELECT * FROM accounting_dimensions ORDER BY workspace_id, dimension_code",
+    "accounting_dimension_values": "SELECT * FROM accounting_dimension_values ORDER BY dimension_id, value_code",
     "users": "SELECT * FROM users ORDER BY username",
     "roles": "SELECT * FROM roles ORDER BY name",
     "permissions": "SELECT * FROM permissions ORDER BY name",
     "user_roles": "SELECT * FROM user_roles ORDER BY user_id, role_id",
     "role_permissions": "SELECT * FROM role_permissions ORDER BY role_id, permission_name",
     "accounts": "SELECT * FROM accounts ORDER BY account_code, id",
+    "inventory_items": "SELECT * FROM inventory_items ORDER BY workspace_id, item_code",
+    "inventory_lots": "SELECT * FROM inventory_lots ORDER BY item_id, organization_id, lot_serial_code",
+    "finance_journals": "SELECT * FROM finance_journals ORDER BY workspace_id, organization_id, journal_code",
+    "ledger_entries": "SELECT * FROM ledger_entries ORDER BY workspace_id, posting_date, entry_number",
+    "ledger_lines": "SELECT * FROM ledger_lines ORDER BY entry_id, line_number",
+    "ledger_line_dimensions": "SELECT * FROM ledger_line_dimensions ORDER BY line_id, dimension_value_id",
+    "inventory_movements": "SELECT * FROM inventory_movements ORDER BY workspace_id, movement_date, movement_number",
+    "inventory_movement_lines": "SELECT * FROM inventory_movement_lines ORDER BY movement_id, line_number",
+    "inventory_count_sessions": "SELECT * FROM inventory_count_sessions ORDER BY workspace_id, count_date, count_number",
+    "inventory_count_lines": "SELECT * FROM inventory_count_lines ORDER BY session_id, line_number",
+    "inventory_reorder_rules": "SELECT * FROM inventory_reorder_rules ORDER BY workspace_id, organization_id, legal_entity_id, item_id, location_id",
+    "inventory_valuation_policies": "SELECT * FROM inventory_valuation_policies ORDER BY workspace_id, organization_id, legal_entity_id, policy_code",
+    "inventory_valuation_documents": "SELECT * FROM inventory_valuation_documents ORDER BY workspace_id, valuation_date, valuation_number",
+    "inventory_valuation_input_costs": "SELECT * FROM inventory_valuation_input_costs ORDER BY valuation_document_id, movement_line_id",
+    "inventory_valuation_lines": "SELECT * FROM inventory_valuation_lines ORDER BY valuation_document_id, line_number",
+    "inventory_cost_layers": "SELECT * FROM inventory_cost_layers ORDER BY created_at, id",
+    "inventory_layer_consumptions": "SELECT * FROM inventory_layer_consumptions ORDER BY valuation_line_id, cost_layer_id",
+    "inventory_valuation_reversals": "SELECT * FROM inventory_valuation_reversals ORDER BY workspace_id, reversal_date, reversal_number",
+    "inventory_valuation_reversal_effects": "SELECT * FROM inventory_valuation_reversal_effects ORDER BY reversal_id, original_valuation_line_id, id",
     "reconciliations": "SELECT * FROM reconciliations ORDER BY created_at, id",
     "tasks": "SELECT * FROM tasks ORDER BY created_at, id",
     "controls": "SELECT * FROM controls ORDER BY control_code, id",
@@ -139,17 +192,43 @@ BACKUP_SELECT_QUERIES = {
 }
 
 BACKUP_DELETE_QUERIES = {
-    "schema_migrations": "DELETE FROM schema_migrations",
     "workspaces": "DELETE FROM workspaces",
     "organizations": "DELETE FROM organizations",
+    "currencies": "DELETE FROM currencies",
     "legal_entities": "DELETE FROM legal_entities",
+    "branches": "DELETE FROM branches",
     "periods": "DELETE FROM periods",
+    "units_of_measure": "DELETE FROM units_of_measure",
+    "warehouses": "DELETE FROM warehouses",
+    "inventory_locations": "DELETE FROM inventory_locations",
+    "charts_of_accounts": "DELETE FROM charts_of_accounts",
+    "accounting_dimensions": "DELETE FROM accounting_dimensions",
+    "accounting_dimension_values": "DELETE FROM accounting_dimension_values",
     "users": "DELETE FROM users",
     "roles": "DELETE FROM roles",
     "permissions": "DELETE FROM permissions",
     "user_roles": "DELETE FROM user_roles",
     "role_permissions": "DELETE FROM role_permissions",
     "accounts": "DELETE FROM accounts",
+    "inventory_items": "DELETE FROM inventory_items",
+    "inventory_lots": "DELETE FROM inventory_lots",
+    "finance_journals": "DELETE FROM finance_journals",
+    "ledger_entries": "DELETE FROM ledger_entries",
+    "ledger_lines": "DELETE FROM ledger_lines",
+    "ledger_line_dimensions": "DELETE FROM ledger_line_dimensions",
+    "inventory_movements": "DELETE FROM inventory_movements",
+    "inventory_movement_lines": "DELETE FROM inventory_movement_lines",
+    "inventory_count_sessions": "DELETE FROM inventory_count_sessions",
+    "inventory_count_lines": "DELETE FROM inventory_count_lines",
+    "inventory_reorder_rules": "DELETE FROM inventory_reorder_rules",
+    "inventory_valuation_policies": "DELETE FROM inventory_valuation_policies",
+    "inventory_valuation_documents": "DELETE FROM inventory_valuation_documents",
+    "inventory_valuation_input_costs": "DELETE FROM inventory_valuation_input_costs",
+    "inventory_valuation_lines": "DELETE FROM inventory_valuation_lines",
+    "inventory_cost_layers": "DELETE FROM inventory_cost_layers",
+    "inventory_layer_consumptions": "DELETE FROM inventory_layer_consumptions",
+    "inventory_valuation_reversals": "DELETE FROM inventory_valuation_reversals",
+    "inventory_valuation_reversal_effects": "DELETE FROM inventory_valuation_reversal_effects",
     "reconciliations": "DELETE FROM reconciliations",
     "tasks": "DELETE FROM tasks",
     "controls": "DELETE FROM controls",
@@ -193,11 +272,42 @@ BACKUP_DELETE_QUERIES = {
 }
 
 BACKUP_INSERT_COLUMNS = {
-    "schema_migrations": ("version", "name", "applied_at"),
     "workspaces": ("id", "name", "local_first_note", "created_at"),
-    "organizations": ("id", "workspace_id", "name", "created_at"),
-    "legal_entities": ("id", "organization_id", "entity_code", "name", "currency", "created_at"),
-    "periods": ("id", "workspace_id", "name", "start_date", "end_date", "status", "created_at"),
+    "organizations": ("id", "workspace_id", "name", "created_at", "organization_code", "active", "updated_at"),
+    "currencies": ("code", "name", "minor_units", "active", "created_at", "updated_at"),
+    "legal_entities": (
+        "id", "organization_id", "entity_code", "name", "currency", "created_at", "active", "updated_at",
+    ),
+    "branches": (
+        "id", "organization_id", "legal_entity_id", "branch_code", "name", "active", "created_at", "updated_at",
+    ),
+    "periods": (
+        "id", "workspace_id", "name", "start_date", "end_date", "status", "created_at",
+        "fiscal_year", "period_number", "status_reason", "updated_at",
+    ),
+    "units_of_measure": (
+        "id", "workspace_id", "uom_code", "name", "category", "decimal_places",
+        "active", "created_at", "updated_at",
+    ),
+    "warehouses": (
+        "id", "workspace_id", "organization_id", "legal_entity_id", "warehouse_code",
+        "name", "active", "created_at", "updated_at",
+    ),
+    "inventory_locations": (
+        "id", "warehouse_id", "parent_location_id", "location_code", "name", "location_type",
+        "allow_negative", "active", "created_at", "updated_at",
+    ),
+    "charts_of_accounts": (
+        "id", "workspace_id", "organization_id", "chart_code", "name", "description",
+        "active", "created_at", "updated_at",
+    ),
+    "accounting_dimensions": (
+        "id", "workspace_id", "organization_id", "dimension_code", "name", "dimension_type",
+        "required_on_entries", "active", "created_at", "updated_at",
+    ),
+    "accounting_dimension_values": (
+        "id", "dimension_id", "value_code", "name", "active", "created_at", "updated_at",
+    ),
     "users": (
         "id",
         "username",
@@ -217,7 +327,108 @@ BACKUP_INSERT_COLUMNS = {
     "permissions": ("name", "description"),
     "user_roles": ("user_id", "role_id"),
     "role_permissions": ("role_id", "permission_name"),
-    "accounts": ("id", "workspace_id", "account_code", "account_name", "created_at"),
+    "accounts": (
+        "id", "workspace_id", "account_code", "account_name", "created_at", "chart_id",
+        "parent_account_id", "account_type", "normal_balance", "allow_posting",
+        "allow_manual_posting", "reconciliation_required", "active", "description", "updated_at",
+    ),
+    "inventory_items": (
+        "id", "workspace_id", "organization_id", "item_code", "name", "item_type",
+        "tracking_mode", "uom_id", "inventory_account_id", "description", "active",
+        "created_at", "updated_at",
+    ),
+    "inventory_lots": (
+        "id", "workspace_id", "organization_id", "item_id", "lot_serial_code",
+        "tracking_type", "manufactured_on", "expires_on", "active", "created_at", "updated_at",
+    ),
+    "finance_journals": (
+        "id", "workspace_id", "organization_id", "chart_id", "journal_code", "name",
+        "journal_type", "currency_code", "active", "created_at", "updated_at",
+    ),
+    "ledger_entries": (
+        "id", "workspace_id", "organization_id", "chart_id", "legal_entity_id", "period_id",
+        "finance_journal_id", "entry_number", "posting_date", "currency_code", "description",
+        "external_reference", "source_type", "status", "created_by", "validated_by",
+        "validated_at", "validation_reason", "voided_by", "voided_at", "void_reason",
+        "created_at", "updated_at",
+    ),
+    "ledger_lines": (
+        "id", "entry_id", "line_number", "account_id", "description",
+        "debit_minor", "credit_minor", "created_at",
+    ),
+    "ledger_line_dimensions": ("line_id", "dimension_value_id"),
+    "inventory_movements": (
+        "id", "workspace_id", "organization_id", "legal_entity_id", "period_id",
+        "movement_number", "movement_type", "movement_date", "source_reference", "description",
+        "source_type", "status", "created_by", "posted_by", "posted_at", "post_reason",
+        "voided_by", "voided_at", "void_reason", "created_at", "updated_at",
+    ),
+    "inventory_movement_lines": (
+        "id", "movement_id", "line_number", "item_id", "uom_id", "inventory_lot_id",
+        "from_location_id", "to_location_id", "quantity_scaled", "quantity_precision",
+        "description", "created_at",
+    ),
+    "inventory_count_sessions": (
+        "id", "workspace_id", "organization_id", "legal_entity_id", "period_id",
+        "location_id", "count_number", "count_date", "description", "status",
+        "created_by", "started_by", "started_at", "submitted_by", "submitted_at",
+        "submit_reason", "approved_by", "approved_at", "approval_reason",
+        "cancelled_by", "cancelled_at", "cancel_reason", "adjustment_movement_id",
+        "created_at", "updated_at",
+    ),
+    "inventory_count_lines": (
+        "id", "session_id", "line_number", "item_id", "uom_id", "inventory_lot_id",
+        "expected_quantity_scaled", "counted_quantity_scaled", "quantity_precision",
+        "count_note", "counted_by", "counted_at", "created_at",
+    ),
+    "inventory_reorder_rules": (
+        "id", "workspace_id", "organization_id", "legal_entity_id", "item_id",
+        "location_id", "minimum_quantity_scaled", "target_quantity_scaled",
+        "quantity_precision", "lead_time_days", "active", "created_by", "created_at",
+        "updated_at",
+    ),
+    "inventory_valuation_policies": (
+        "id", "workspace_id", "organization_id", "legal_entity_id", "policy_code",
+        "costing_method", "currency_code", "finance_journal_id",
+        "receipt_clearing_account_id", "cogs_account_id", "adjustment_account_id",
+        "active", "created_by", "created_at", "updated_at",
+    ),
+    "inventory_valuation_documents": (
+        "id", "workspace_id", "organization_id", "legal_entity_id", "period_id",
+        "movement_id", "policy_id", "valuation_number", "valuation_date", "currency_code",
+        "status", "total_value_minor", "finance_entry_id", "created_by", "approved_by",
+        "approved_at", "approval_reason", "cancelled_by", "cancelled_at", "cancel_reason",
+        "created_at", "updated_at",
+    ),
+    "inventory_valuation_input_costs": (
+        "id", "valuation_document_id", "movement_line_id", "total_cost_minor", "created_at",
+    ),
+    "inventory_valuation_lines": (
+        "id", "valuation_document_id", "movement_line_id", "line_number", "flow_direction",
+        "item_id", "uom_id", "inventory_lot_id", "quantity_scaled", "quantity_precision",
+        "value_minor", "inventory_account_id", "offset_account_id", "created_at",
+    ),
+    "inventory_cost_layers": (
+        "id", "source_valuation_line_id", "legal_entity_id", "item_id", "uom_id",
+        "inventory_lot_id", "quantity_precision", "original_quantity_scaled",
+        "remaining_quantity_scaled", "original_value_minor", "remaining_value_minor",
+        "currency_code", "created_at",
+    ),
+    "inventory_layer_consumptions": (
+        "id", "valuation_line_id", "cost_layer_id", "quantity_scaled", "value_minor", "created_at",
+    ),
+    "inventory_valuation_reversals": (
+        "id", "workspace_id", "organization_id", "legal_entity_id", "period_id",
+        "original_valuation_document_id", "reversal_movement_id", "reversal_number",
+        "reversal_date", "currency_code", "status", "total_value_minor",
+        "finance_entry_id", "created_by", "approved_by", "approved_at",
+        "approval_reason", "cancelled_by", "cancelled_at", "cancel_reason",
+        "created_at", "updated_at",
+    ),
+    "inventory_valuation_reversal_effects": (
+        "id", "reversal_id", "original_valuation_line_id", "original_consumption_id",
+        "cost_layer_id", "effect_type", "quantity_scaled", "value_minor", "created_at",
+    ),
     "reconciliations": ("id", "workspace_id", "period_id", "account_id", "reconciliation_type", "status", "owner_user_id", "created_at"),
     "tasks": ("id", "workspace_id", "period_id", "task_type", "status", "owner_user_id", "created_at"),
     "controls": ("id", "workspace_id", "control_code", "name", "status", "owner_user_id", "created_at"),
@@ -355,11 +566,67 @@ BACKUP_INSERT_COLUMNS = {
 }
 
 BACKUP_INSERT_QUERIES = {
-    "schema_migrations": "INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)",
     "workspaces": "INSERT INTO workspaces (id, name, local_first_note, created_at) VALUES (?, ?, ?, ?)",
-    "organizations": "INSERT INTO organizations (id, workspace_id, name, created_at) VALUES (?, ?, ?, ?)",
-    "legal_entities": "INSERT INTO legal_entities (id, organization_id, entity_code, name, currency, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-    "periods": "INSERT INTO periods (id, workspace_id, name, start_date, end_date, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    "organizations": """
+        INSERT INTO organizations (
+            id, workspace_id, name, created_at, organization_code, active, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    """,
+    "currencies": """
+        INSERT INTO currencies (code, name, minor_units, active, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """,
+    "legal_entities": """
+        INSERT INTO legal_entities (
+            id, organization_id, entity_code, name, currency, created_at, active, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "branches": """
+        INSERT INTO branches (
+            id, organization_id, legal_entity_id, branch_code, name, active, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "periods": """
+        INSERT INTO periods (
+            id, workspace_id, name, start_date, end_date, status, created_at,
+            fiscal_year, period_number, status_reason, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "units_of_measure": """
+        INSERT INTO units_of_measure (
+            id, workspace_id, uom_code, name, category, decimal_places,
+            active, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "warehouses": """
+        INSERT INTO warehouses (
+            id, workspace_id, organization_id, legal_entity_id, warehouse_code,
+            name, active, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "inventory_locations": """
+        INSERT INTO inventory_locations (
+            id, warehouse_id, parent_location_id, location_code, name, location_type,
+            allow_negative, active, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "charts_of_accounts": """
+        INSERT INTO charts_of_accounts (
+            id, workspace_id, organization_id, chart_code, name, description,
+            active, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "accounting_dimensions": """
+        INSERT INTO accounting_dimensions (
+            id, workspace_id, organization_id, dimension_code, name, dimension_type,
+            required_on_entries, active, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "accounting_dimension_values": """
+        INSERT INTO accounting_dimension_values (
+            id, dimension_id, value_code, name, active, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    """,
     "users": """
         INSERT INTO users (
             id, username, display_name, email, disabled, created_at,
@@ -372,7 +639,146 @@ BACKUP_INSERT_QUERIES = {
     "permissions": "INSERT INTO permissions (name, description) VALUES (?, ?)",
     "user_roles": "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
     "role_permissions": "INSERT INTO role_permissions (role_id, permission_name) VALUES (?, ?)",
-    "accounts": "INSERT INTO accounts (id, workspace_id, account_code, account_name, created_at) VALUES (?, ?, ?, ?, ?)",
+    "accounts": """
+        INSERT INTO accounts (
+            id, workspace_id, account_code, account_name, created_at, chart_id,
+            parent_account_id, account_type, normal_balance, allow_posting,
+            allow_manual_posting, reconciliation_required, active, description, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "inventory_items": """
+        INSERT INTO inventory_items (
+            id, workspace_id, organization_id, item_code, name, item_type,
+            tracking_mode, uom_id, inventory_account_id, description, active,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "inventory_lots": """
+        INSERT INTO inventory_lots (
+            id, workspace_id, organization_id, item_id, lot_serial_code,
+            tracking_type, manufactured_on, expires_on, active, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "finance_journals": """
+        INSERT INTO finance_journals (
+            id, workspace_id, organization_id, chart_id, journal_code, name,
+            journal_type, currency_code, active, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "ledger_entries": """
+        INSERT INTO ledger_entries (
+            id, workspace_id, organization_id, chart_id, legal_entity_id, period_id,
+            finance_journal_id, entry_number, posting_date, currency_code, description,
+            external_reference, source_type, status, created_by, validated_by,
+            validated_at, validation_reason, voided_by, voided_at, void_reason,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "ledger_lines": """
+        INSERT INTO ledger_lines (
+            id, entry_id, line_number, account_id, description,
+            debit_minor, credit_minor, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "ledger_line_dimensions": """
+        INSERT INTO ledger_line_dimensions (line_id, dimension_value_id) VALUES (?, ?)
+    """,
+    "inventory_movements": """
+        INSERT INTO inventory_movements (
+            id, workspace_id, organization_id, legal_entity_id, period_id,
+            movement_number, movement_type, movement_date, source_reference, description,
+            source_type, status, created_by, posted_by, posted_at, post_reason,
+            voided_by, voided_at, void_reason, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "inventory_movement_lines": """
+        INSERT INTO inventory_movement_lines (
+            id, movement_id, line_number, item_id, uom_id, inventory_lot_id,
+            from_location_id, to_location_id, quantity_scaled, quantity_precision,
+            description, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "inventory_count_sessions": """
+        INSERT INTO inventory_count_sessions (
+            id, workspace_id, organization_id, legal_entity_id, period_id,
+            location_id, count_number, count_date, description, status,
+            created_by, started_by, started_at, submitted_by, submitted_at,
+            submit_reason, approved_by, approved_at, approval_reason,
+            cancelled_by, cancelled_at, cancel_reason, adjustment_movement_id,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "inventory_count_lines": """
+        INSERT INTO inventory_count_lines (
+            id, session_id, line_number, item_id, uom_id, inventory_lot_id,
+            expected_quantity_scaled, counted_quantity_scaled, quantity_precision,
+            count_note, counted_by, counted_at, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "inventory_reorder_rules": """
+        INSERT INTO inventory_reorder_rules (
+            id, workspace_id, organization_id, legal_entity_id, item_id,
+            location_id, minimum_quantity_scaled, target_quantity_scaled,
+            quantity_precision, lead_time_days, active, created_by, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "inventory_valuation_policies": """
+        INSERT INTO inventory_valuation_policies (
+            id, workspace_id, organization_id, legal_entity_id, policy_code,
+            costing_method, currency_code, finance_journal_id,
+            receipt_clearing_account_id, cogs_account_id, adjustment_account_id,
+            active, created_by, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "inventory_valuation_documents": """
+        INSERT INTO inventory_valuation_documents (
+            id, workspace_id, organization_id, legal_entity_id, period_id,
+            movement_id, policy_id, valuation_number, valuation_date, currency_code,
+            status, total_value_minor, finance_entry_id, created_by, approved_by,
+            approved_at, approval_reason, cancelled_by, cancelled_at, cancel_reason,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "inventory_valuation_input_costs": """
+        INSERT INTO inventory_valuation_input_costs (
+            id, valuation_document_id, movement_line_id, total_cost_minor, created_at
+        ) VALUES (?, ?, ?, ?, ?)
+    """,
+    "inventory_valuation_lines": """
+        INSERT INTO inventory_valuation_lines (
+            id, valuation_document_id, movement_line_id, line_number, flow_direction,
+            item_id, uom_id, inventory_lot_id, quantity_scaled, quantity_precision,
+            value_minor, inventory_account_id, offset_account_id, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "inventory_cost_layers": """
+        INSERT INTO inventory_cost_layers (
+            id, source_valuation_line_id, legal_entity_id, item_id, uom_id,
+            inventory_lot_id, quantity_precision, original_quantity_scaled,
+            remaining_quantity_scaled, original_value_minor, remaining_value_minor,
+            currency_code, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "inventory_layer_consumptions": """
+        INSERT INTO inventory_layer_consumptions (
+            id, valuation_line_id, cost_layer_id, quantity_scaled, value_minor, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?)
+    """,
+    "inventory_valuation_reversals": """
+        INSERT INTO inventory_valuation_reversals (
+            id, workspace_id, organization_id, legal_entity_id, period_id,
+            original_valuation_document_id, reversal_movement_id, reversal_number,
+            reversal_date, currency_code, status, total_value_minor, finance_entry_id,
+            created_by, approved_by, approved_at, approval_reason,
+            cancelled_by, cancelled_at, cancel_reason, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "inventory_valuation_reversal_effects": """
+        INSERT INTO inventory_valuation_reversal_effects (
+            id, reversal_id, original_valuation_line_id, original_consumption_id,
+            cost_layer_id, effect_type, quantity_scaled, value_minor, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
     "reconciliations": """
         INSERT INTO reconciliations (
             id, workspace_id, period_id, account_id, reconciliation_type,
@@ -799,26 +1205,70 @@ def _clear_restore_tables(connection: sqlite3.Connection) -> None:
     connection.commit()
 
 
+def _legacy_organization_code(row: dict[str, Any]) -> str:
+    digest = sha256(str(row.get("id", "legacy")).encode("utf-8")).hexdigest()[:12].upper()
+    return f"LEGACY-{digest}"
+
+
+def _restore_row_defaults(table: str, row: dict[str, Any]) -> dict[str, Any]:
+    """Fill additive fields when restoring a backup created before schema version 7."""
+
+    restored = dict(row)
+    if table == "organizations":
+        restored.setdefault("organization_code", _legacy_organization_code(restored))
+        restored.setdefault("active", 1)
+        restored.setdefault("updated_at", restored.get("created_at", ""))
+    elif table == "legal_entities":
+        restored.setdefault("active", 1)
+        restored.setdefault("updated_at", restored.get("created_at", ""))
+    elif table == "periods":
+        start_date = str(restored.get("start_date", ""))
+        restored.setdefault("fiscal_year", int(start_date[:4]) if start_date[:4].isdigit() else 0)
+        restored.setdefault("period_number", int(start_date[5:7]) if start_date[5:7].isdigit() else 0)
+        restored.setdefault("status_reason", "")
+        restored.setdefault("updated_at", restored.get("created_at", ""))
+    return restored
+
+
 def _insert_rows(connection: sqlite3.Connection, *, table: str, rows: object) -> None:
     if rows is None:
         return
     if not isinstance(rows, list):
         raise DBBridgeError("Backup table rows are invalid.")
+    if not rows:
+        return
     if not _table_exists(connection, table):
         raise DBBridgeError(f"Backup table is not supported by this ReconForge version: {table}.")
     columns = BACKUP_INSERT_COLUMNS.get(table)
-    query = BACKUP_INSERT_QUERIES.get(table)
-    if columns is None or query is None:
+    preferred_query = BACKUP_INSERT_QUERIES.get(table)
+    if columns is None or preferred_query is None:
         raise DBBridgeError("Unsupported restore table.")
+    actual_columns = {
+        str(column["name"])
+        for column in connection.execute(f"PRAGMA table_info({table})").fetchall()
+    }
     for row in rows:
         if not isinstance(row, dict):
             raise DBBridgeError("Backup table row is invalid.")
         if not row:
             continue
-        unknown_columns = set(row) - set(columns)
+        restored_row = _restore_row_defaults(table, row)
+        unknown_columns = set(restored_row) - set(columns)
         if unknown_columns:
             raise DBBridgeError(f"Backup table contains unsupported columns: {table}.")
-        values = [row.get(column) for column in columns]
+        insert_columns = tuple(
+            column for column in columns if column in restored_row and column in actual_columns
+        )
+        if not insert_columns:
+            raise DBBridgeError(f"Backup table row does not contain supported columns: {table}.")
+        if insert_columns == columns:
+            query = preferred_query
+        else:
+            column_sql = ", ".join(insert_columns)
+            placeholders = ", ".join("?" for _ in insert_columns)
+            # Table and column identifiers come only from the module allowlists above; row values remain parameters.
+            query = f"INSERT INTO {table} ({column_sql}) VALUES ({placeholders})"  # nosec B608
+        values = [restored_row[column] for column in insert_columns]
         connection.execute(query, values)
 
 
@@ -850,8 +1300,15 @@ def restore_backup(
             raise DBBridgeError("Unsafe temporary restore path.")
         temp_path.unlink()
     restored_tables: list[str] = []
+    ledger_statuses: list[tuple[str, str]] = []
+    inventory_statuses: list[tuple[str, str]] = []
+    count_statuses: list[tuple[str, str, bool, bool]] = []
+    count_line_results: list[tuple[str, object, object, object, object]] = []
+    valuation_statuses: list[tuple[str, str, object, object, str, str]] = []
+    reversal_statuses: list[tuple[str, str, object, object, str, str]] = []
     try:
-        run_migrations(temp_path)
+        backup_schema_version = int(backup["schema_version"])
+        run_migrations(temp_path, target_version=backup_schema_version)
         connection = connect(temp_path, require_exists=True)
         try:
             _clear_restore_tables(connection)
@@ -859,10 +1316,309 @@ def restore_backup(
             if not isinstance(tables, dict):
                 raise DBBridgeError("Backup table payload is invalid.")
             for table in BACKUP_TABLES:
-                _insert_rows(connection, table=table, rows=tables.get(table, []))
+                rows = tables.get(table, [])
+                if table == "ledger_entries" and isinstance(rows, list):
+                    draft_rows: list[object] = []
+                    for row in rows:
+                        if not isinstance(row, dict):
+                            raise DBBridgeError("Backup table row is invalid.")
+                        status = str(row.get("status", "Draft"))
+                        if status not in {"Draft", "Validated", "Voided"}:
+                            raise DBBridgeError("Backup contains an invalid ledger-entry status.")
+                        ledger_statuses.append((str(row.get("id", "")), status))
+                        draft_rows.append({**row, "status": "Draft"})
+                    rows = draft_rows
+                if table == "inventory_movements" and isinstance(rows, list):
+                    draft_rows = []
+                    for row in rows:
+                        if not isinstance(row, dict):
+                            raise DBBridgeError("Backup table row is invalid.")
+                        status = str(row.get("status", "Draft"))
+                        if status not in {"Draft", "Posted", "Voided"}:
+                            raise DBBridgeError("Backup contains an invalid inventory-movement status.")
+                        inventory_statuses.append((str(row.get("id", "")), status))
+                        draft_rows.append({**row, "status": "Draft"})
+                    rows = draft_rows
+                if table == "inventory_count_sessions" and isinstance(rows, list):
+                    draft_rows = []
+                    for row in rows:
+                        if not isinstance(row, dict):
+                            raise DBBridgeError("Backup table row is invalid.")
+                        status = str(row.get("status", "Draft"))
+                        if status not in {"Draft", "Counting", "Submitted", "Approved", "Cancelled"}:
+                            raise DBBridgeError("Backup contains an invalid inventory-count status.")
+                        count_statuses.append(
+                            (
+                                str(row.get("id", "")),
+                                status,
+                                bool(row.get("started_at")),
+                                bool(row.get("submitted_at")),
+                            )
+                        )
+                        draft_rows.append({**row, "status": "Draft"})
+                    rows = draft_rows
+                if table == "inventory_count_lines" and isinstance(rows, list):
+                    draft_rows = []
+                    for row in rows:
+                        if not isinstance(row, dict):
+                            raise DBBridgeError("Backup table row is invalid.")
+                        result = (
+                            str(row.get("id", "")),
+                            row.get("counted_quantity_scaled"),
+                            row.get("count_note", ""),
+                            row.get("counted_by", ""),
+                            row.get("counted_at"),
+                        )
+                        if any(value not in {None, ""} for value in result[1:]):
+                            count_line_results.append(result)
+                        draft_rows.append(
+                            {
+                                **row,
+                                "counted_quantity_scaled": None,
+                                "count_note": "",
+                                "counted_by": "",
+                                "counted_at": None,
+                            }
+                        )
+                    rows = draft_rows
+                if table == "inventory_valuation_documents" and isinstance(rows, list):
+                    draft_rows = []
+                    for row in rows:
+                        if not isinstance(row, dict):
+                            raise DBBridgeError("Backup table row is invalid.")
+                        status = str(row.get("status", "Draft"))
+                        if status not in {"Draft", "Approved", "Cancelled"}:
+                            raise DBBridgeError("Backup contains an invalid inventory-valuation status.")
+                        valuation_statuses.append(
+                            (
+                                str(row.get("id", "")),
+                                status,
+                                row.get("total_value_minor", 0),
+                                row.get("finance_entry_id"),
+                                str(row.get("valuation_date", "")),
+                                str(row.get("valuation_number", "")),
+                            )
+                        )
+                        draft_rows.append(
+                            {
+                                **row,
+                                "status": "Draft",
+                                "total_value_minor": 0,
+                                "finance_entry_id": None,
+                            }
+                        )
+                    rows = draft_rows
+                if table == "inventory_valuation_reversals" and isinstance(rows, list):
+                    draft_rows = []
+                    for row in rows:
+                        if not isinstance(row, dict):
+                            raise DBBridgeError("Backup table row is invalid.")
+                        status = str(row.get("status", "Draft"))
+                        if status not in {"Draft", "Approved", "Cancelled"}:
+                            raise DBBridgeError(
+                                "Backup contains an invalid inventory-valuation reversal status."
+                            )
+                        reversal_statuses.append(
+                            (
+                                str(row.get("id", "")),
+                                status,
+                                row.get("total_value_minor", 0),
+                                row.get("finance_entry_id"),
+                                str(row.get("reversal_date", "")),
+                                str(row.get("reversal_number", "")),
+                            )
+                        )
+                        draft_rows.append(
+                            {
+                                **row,
+                                "status": "Draft",
+                                "total_value_minor": 0,
+                                "finance_entry_id": None,
+                            }
+                        )
+                    rows = draft_rows
+                _insert_rows(connection, table=table, rows=rows)
                 restored_tables.append(table)
+            protected_finance_ids = {
+                str(finance_entry_id)
+                for _id, _status, _total, finance_entry_id, _date, _number in (
+                    valuation_statuses + reversal_statuses
+                )
+                if finance_entry_id
+            }
+            for entry_id, status in ledger_statuses:
+                if entry_id in protected_finance_ids:
+                    continue
+                if status in {"Validated", "Voided"}:
+                    connection.execute(
+                        "UPDATE ledger_entries SET status = 'Validated' WHERE id = ? AND status = 'Draft'",
+                        (entry_id,),
+                    )
+                if status == "Voided":
+                    connection.execute(
+                        "UPDATE ledger_entries SET status = 'Voided' WHERE id = ? AND status = 'Validated'",
+                        (entry_id,),
+                    )
+            for movement_id, status in inventory_statuses:
+                if status in {"Posted", "Voided"}:
+                    connection.execute(
+                        "UPDATE inventory_movements SET status = 'Posted' WHERE id = ? AND status = 'Draft'",
+                        (movement_id,),
+                    )
+                if status == "Voided":
+                    connection.execute(
+                        "UPDATE inventory_movements SET status = 'Voided' WHERE id = ? AND status = 'Posted'",
+                        (movement_id,),
+                    )
+            for session_id, status, was_started, _was_submitted in count_statuses:
+                if status in {"Counting", "Submitted", "Approved"} or (status == "Cancelled" and was_started):
+                    connection.execute(
+                        "UPDATE inventory_count_sessions SET status = 'Counting' WHERE id = ? AND status = 'Draft'",
+                        (session_id,),
+                    )
+            for line_id, quantity, note, counted_by, counted_at in count_line_results:
+                connection.execute(
+                    """
+                    UPDATE inventory_count_lines
+                    SET counted_quantity_scaled = ?, count_note = ?, counted_by = ?, counted_at = ?
+                    WHERE id = ?
+                    """,
+                    (quantity, note, counted_by, counted_at, line_id),
+                )
+            for session_id, status, _was_started, was_submitted in count_statuses:
+                if status in {"Submitted", "Approved"} or (status == "Cancelled" and was_submitted):
+                    connection.execute(
+                        "UPDATE inventory_count_sessions SET status = 'Submitted' WHERE id = ? AND status = 'Counting'",
+                        (session_id,),
+                    )
+                if status == "Approved":
+                    connection.execute(
+                        "UPDATE inventory_count_sessions SET status = 'Approved' WHERE id = ? AND status = 'Submitted'",
+                        (session_id,),
+                    )
+                if status == "Cancelled":
+                    connection.execute(
+                        "UPDATE inventory_count_sessions SET status = 'Cancelled' WHERE id = ?",
+                        (session_id,),
+                    )
+            for document_id, status, total_value, finance_entry_id, _date, _number in sorted(
+                valuation_statuses, key=lambda item: (item[4], item[5], item[0])
+            ):
+                if status == "Approved":
+                    connection.execute(
+                        """
+                        UPDATE inventory_valuation_documents
+                        SET status = 'Approved', total_value_minor = ?, finance_entry_id = ?
+                        WHERE id = ? AND status = 'Draft'
+                        """,
+                        (total_value, finance_entry_id, document_id),
+                    )
+                if status == "Cancelled":
+                    connection.execute(
+                        """
+                        UPDATE inventory_valuation_documents
+                        SET status = 'Cancelled' WHERE id = ? AND status = 'Draft'
+                        """,
+                        (document_id,),
+                    )
+            for reversal_id, status, total_value, finance_entry_id, _date, _number in sorted(
+                reversal_statuses, key=lambda item: (item[4], item[5], item[0])
+            ):
+                if status == "Approved":
+                    connection.execute(
+                        """
+                        UPDATE inventory_valuation_reversals
+                        SET status = 'Approved', total_value_minor = ?, finance_entry_id = ?
+                        WHERE id = ? AND status = 'Draft'
+                        """,
+                        (total_value, finance_entry_id, reversal_id),
+                    )
+                if status == "Cancelled":
+                    connection.execute(
+                        """
+                        UPDATE inventory_valuation_reversals
+                        SET status = 'Cancelled' WHERE id = ? AND status = 'Draft'
+                        """,
+                        (reversal_id,),
+                    )
+            for entry_id, status in ledger_statuses:
+                if entry_id not in protected_finance_ids:
+                    continue
+                if status in {"Validated", "Voided"}:
+                    connection.execute(
+                        "UPDATE ledger_entries SET status = 'Validated' WHERE id = ? AND status = 'Draft'",
+                        (entry_id,),
+                    )
+                if status == "Voided":
+                    connection.execute(
+                        "UPDATE ledger_entries SET status = 'Voided' WHERE id = ? AND status = 'Validated'",
+                        (entry_id,),
+                    )
+            if backup_schema_version >= 11:
+                if backup_schema_version >= 12:
+                    layer_balance_issue = connection.execute(
+                        """
+                        SELECT layers.id
+                        FROM inventory_cost_layers layers
+                        WHERE layers.remaining_quantity_scaled
+                            <> layers.original_quantity_scaled - COALESCE((
+                                SELECT SUM(consumptions.quantity_scaled)
+                                FROM inventory_layer_consumptions consumptions
+                                WHERE consumptions.cost_layer_id = layers.id
+                            ), 0) + COALESCE((
+                                SELECT SUM(CASE effects.effect_type
+                                    WHEN 'Restore' THEN effects.quantity_scaled
+                                    ELSE -effects.quantity_scaled END)
+                                FROM inventory_valuation_reversal_effects effects
+                                WHERE effects.cost_layer_id = layers.id
+                            ), 0)
+                           OR layers.remaining_value_minor
+                            <> layers.original_value_minor - COALESCE((
+                                SELECT SUM(consumptions.value_minor)
+                                FROM inventory_layer_consumptions consumptions
+                                WHERE consumptions.cost_layer_id = layers.id
+                            ), 0) + COALESCE((
+                                SELECT SUM(CASE effects.effect_type
+                                    WHEN 'Restore' THEN effects.value_minor
+                                    ELSE -effects.value_minor END)
+                                FROM inventory_valuation_reversal_effects effects
+                                WHERE effects.cost_layer_id = layers.id
+                            ), 0)
+                        LIMIT 1
+                        """
+                    ).fetchone()
+                else:
+                    layer_balance_issue = connection.execute(
+                        """
+                        SELECT layers.id
+                        FROM inventory_cost_layers layers
+                        WHERE layers.original_quantity_scaled - layers.remaining_quantity_scaled
+                            <> COALESCE((
+                                SELECT SUM(consumptions.quantity_scaled)
+                                FROM inventory_layer_consumptions consumptions
+                                WHERE consumptions.cost_layer_id = layers.id
+                            ), 0)
+                           OR layers.original_value_minor - layers.remaining_value_minor
+                            <> COALESCE((
+                                SELECT SUM(consumptions.value_minor)
+                                FROM inventory_layer_consumptions consumptions
+                                WHERE consumptions.cost_layer_id = layers.id
+                            ), 0)
+                        LIMIT 1
+                        """
+                    ).fetchone()
+                if layer_balance_issue is not None:
+                    raise DBBridgeError("Backup contains inconsistent FIFO layer balances.")
             connection.commit()
             connection.execute("PRAGMA foreign_keys = ON")
+        finally:
+            connection.close()
+        run_migrations(temp_path)
+        connection = connect(temp_path, require_exists=True)
+        try:
+            foreign_key_issues = connection.execute("PRAGMA foreign_key_check").fetchall()
+            if foreign_key_issues:
+                raise DBBridgeError("Backup restore contains invalid table relationships.")
             append_audit_event(
                 connection,
                 actor_label=actor_label,
@@ -871,7 +1627,8 @@ def restore_backup(
                 action="db_backup_restored",
                 metadata={
                     "backup_file": backup_path.name,
-                    "schema_version": int(backup["schema_version"]),
+                    "schema_version": backup_schema_version,
+                    "restored_to_schema_version": MIGRATIONS[-1].version,
                     "restored_table_count": len(restored_tables),
                 },
             )

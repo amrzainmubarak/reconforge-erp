@@ -6,14 +6,17 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+import reconforge.db.backup as backup_module
+import reconforge.db.migrations as migration_module
 from reconforge.api.security import create_session
 from reconforge.audit import list_audit_events
 from reconforge.auth import LocalAuthService
 from reconforge.cli import app
-from reconforge.db import connect, run_migrations
+from reconforge.db import connect, database_status, run_migrations
 from reconforge.db.backup import create_backup, restore_backup
 from reconforge.db.exporter import DBBridgeError, checksum_file
 from reconforge.domain.repositories import WorkspaceRepository
+from reconforge.platform.master_data import MasterDataService
 
 runner = CliRunner()
 
@@ -58,7 +61,7 @@ def test_backup_writes_manifest_checksum_and_audit_event(tmp_path: Path) -> None
     assert result.backup_path.exists()
     assert result.manifest_path.exists()
     assert manifest["artifacts"]["backup.json"]["sha256"] == checksum_file(result.backup_path)
-    assert manifest["schema_version"] == 6
+    assert manifest["schema_version"] == 12
     assert "sensitive local business data" in manifest["privacy_warning"]
     assert "credential verifier" in backup["restore_sensitive_material"]
     assert "api_sessions" in backup["excluded_tables"]
@@ -96,6 +99,118 @@ def test_restore_with_force_replaces_target_and_writes_audit_event(tmp_path: Pat
     assert "Target Workspace" not in _workspace_names(target_db)
     assert "db_backup_created" in _audit_actions(target_db)
     assert "db_backup_restored" in _audit_actions(target_db)
+
+
+def test_backup_restore_preserves_version_seven_master_data(tmp_path: Path) -> None:
+    source_db = _seed_db(tmp_path)
+    connection = connect(source_db, require_exists=True)
+    try:
+        service = MasterDataService(connection)
+        service.upsert_organization(organization_code="SYN", name="Synthetic Group")
+        service.upsert_organization(organization_code="SYN2", name="Synthetic Group Two")
+        service.upsert_legal_entity(
+            organization_code="SYN",
+            entity_code="EG01",
+            name="Synthetic Egypt",
+            currency_code="EGP",
+        )
+        service.upsert_branch(
+            organization_code="SYN",
+            branch_code="CAI",
+            name="Cairo",
+            entity_code="EG01",
+        )
+        service.upsert_period(name="2026-07", start_date="2026-07-01", end_date="2026-07-31")
+    finally:
+        connection.close()
+
+    backup = create_backup(source_db, tmp_path / "master-data-backup")
+    restored_db = tmp_path / "master-data-restored.db"
+    restore_backup(restored_db, backup.backup_path)
+
+    connection = connect(restored_db, require_exists=True)
+    try:
+        snapshot = MasterDataService(connection).snapshot()
+        assert snapshot["summary"] == {
+            "workspace": "default",
+            "organizations": 2,
+            "legal_entities": 1,
+            "branches": 1,
+            "periods": 1,
+            "active_currencies": 6,
+        }
+        assert {row["organization_code"] for row in snapshot["organizations"]} == {"SYN", "SYN2"}
+        assert snapshot["branches"][0]["branch_code"] == "CAI"
+    finally:
+        connection.close()
+
+
+def test_version_six_backup_restores_then_upgrades_to_latest(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    full_migrations = migration_module.MIGRATIONS
+    monkeypatch.setattr(migration_module, "MIGRATIONS", full_migrations[:6])
+    monkeypatch.setattr(backup_module, "MIGRATIONS", full_migrations[:6])
+    source_db = tmp_path / "version-six.db"
+    migration_module.run_migrations(source_db)
+    connection = connect(source_db, require_exists=True)
+    try:
+        connection.execute(
+            "INSERT INTO workspaces (id, name, local_first_note, created_at) VALUES (?, ?, ?, ?)",
+            ("WS-v6", "Version Six", "Local", "2026-01-01T00:00:00Z"),
+        )
+        connection.executemany(
+            "INSERT INTO organizations (id, workspace_id, name, created_at) VALUES (?, ?, ?, ?)",
+            [
+                ("ORG-v6-a", "WS-v6", "Legacy One", "2026-01-01T00:00:00Z"),
+                ("ORG-v6-b", "WS-v6", "Legacy Two", "2026-01-01T00:00:00Z"),
+            ],
+        )
+        connection.execute(
+            """
+            INSERT INTO legal_entities (id, organization_id, entity_code, name, currency, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            ("LE-v6", "ORG-v6-a", "EG01", "Legacy Egypt", "egp", "2026-01-01T00:00:00Z"),
+        )
+        connection.execute(
+            """
+            INSERT INTO periods (id, workspace_id, name, start_date, end_date, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            ("PER-v6", "WS-v6", "2026-01", "2026-01-01", "2026-01-31", "Open", "2026-01-01T00:00:00Z"),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    backup = backup_module.create_backup(source_db, tmp_path / "version-six-backup")
+    assert backup.schema_version == 6
+    monkeypatch.setattr(migration_module, "MIGRATIONS", full_migrations)
+    monkeypatch.setattr(backup_module, "MIGRATIONS", full_migrations)
+
+    restored_db = tmp_path / "version-six-restored.db"
+    backup_module.restore_backup(restored_db, backup.backup_path)
+    status = database_status(restored_db)
+    assert status.current_version == status.latest_version == 12
+    assert status.pending_versions == []
+
+    connection = connect(restored_db, require_exists=True)
+    try:
+        organization_codes = {
+            str(row["organization_code"])
+            for row in connection.execute("SELECT organization_code FROM organizations").fetchall()
+        }
+        currency = connection.execute("SELECT code FROM currencies WHERE code = 'EGP'").fetchone()
+        period = connection.execute("SELECT fiscal_year, period_number FROM periods WHERE id = 'PER-v6'").fetchone()
+        assert len(organization_codes) == 2
+        assert all(code.startswith("LEGACY-") for code in organization_codes)
+        assert currency is not None
+        assert period is not None
+        assert (period["fiscal_year"], period["period_number"]) == (2026, 1)
+    finally:
+        connection.close()
 
 
 def test_bad_backup_cli_error_is_sanitized(tmp_path: Path) -> None:

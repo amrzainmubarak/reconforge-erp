@@ -6,6 +6,7 @@ from pathlib import Path
 
 from reconforge.config import ReconForgeConfig
 from reconforge.engines.base import EngineResult
+from reconforge.engines.signature import build_reconciliation_signature
 from reconforge.io.readers import read_required_datasets
 from reconforge.reconciliation.stock_gl import reconcile_stock_gl
 from reconforge.schemas import DatasetName
@@ -28,4 +29,8 @@ class PandasEngine:
             stock_rows=len(stock),
             gl_rows=len(gl),
             summary=result.summary,
+            reconciliation_signature=build_reconciliation_signature(
+                matched_transactions=result.matched_transactions,
+                all_exceptions=result.all_exceptions,
+            ),
         )

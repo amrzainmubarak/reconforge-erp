@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/inventory_valuation_reversal_snapshot.schema.json",
+  "title": "ReconForge Inventory Valuation Reversal Snapshot",
+  "description": "Versioned, bounded, path-free summary of local FIFO valuation-reversal workflows.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "source", "workspace", "summary", "reversals", "boundary_note"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "generated_at": {"$ref": "#/$defs/timestamp"},
+    "source": {"$ref": "#/$defs/source"},
+    "workspace": {"$ref": "#/$defs/text"},
+    "summary": {"$ref": "#/$defs/summary"},
+    "reversals": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/reversal"}},
+    "boundary_note": {"$ref": "#/$defs/text"}
+  },
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "optionalText": {"type": "string", "maxLength": 2000},
+    "nullableText": {"oneOf": [{"$ref": "#/$defs/text"}, {"type": "null"}]},
+    "timestamp": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"},
+    "nullableTimestamp": {"oneOf": [{"$ref": "#/$defs/timestamp"}, {"type": "null"}]},
+    "date": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "amount": {"type": "string", "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]{1,6})?$", "maxLength": 40},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "local_first", "external_calls"],
+      "properties": {
+        "kind": {"const": "local-inventory-valuation-reversal"},
+        "local_first": {"const": true},
+        "external_calls": {"const": false}
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workspace", "draft_reversals", "approved_reversals", "cancelled_reversals", "approved_effects", "finance_drafts"],
+      "properties": {
+        "workspace": {"$ref": "#/$defs/text"},
+        "draft_reversals": {"type": "integer", "minimum": 0},
+        "approved_reversals": {"type": "integer", "minimum": 0},
+        "cancelled_reversals": {"type": "integer", "minimum": 0},
+        "approved_effects": {"type": "integer", "minimum": 0},
+        "finance_drafts": {"type": "integer", "minimum": 0}
+      }
+    },
+    "reversal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "workspace_id", "organization_id", "legal_entity_id", "period_id", "original_valuation_document_id", "reversal_movement_id", "reversal_number", "reversal_date", "currency_code", "status", "finance_entry_id", "created_by", "approved_by", "approved_at", "approval_reason", "cancelled_by", "cancelled_at", "cancel_reason", "created_at", "updated_at", "original_valuation_number", "original_total_value", "original_movement_id", "original_finance_entry_id", "original_movement_number", "original_movement_type", "reversal_movement_number", "reversal_movement_type", "reversal_movement_status", "organization_code", "entity_code", "period_name", "finance_entry_number", "finance_entry_status", "total_value"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"},
+        "workspace_id": {"$ref": "#/$defs/text"},
+        "organization_id": {"$ref": "#/$defs/text"},
+        "legal_entity_id": {"$ref": "#/$defs/text"},
+        "period_id": {"$ref": "#/$defs/text"},
+        "original_valuation_document_id": {"$ref": "#/$defs/text"},
+        "reversal_movement_id": {"$ref": "#/$defs/text"},
+        "reversal_number": {"$ref": "#/$defs/text"},
+        "reversal_date": {"$ref": "#/$defs/date"},
+        "currency_code": {"$ref": "#/$defs/text"},
+        "status": {"enum": ["Draft", "Approved", "Cancelled"]},
+        "finance_entry_id": {"$ref": "#/$defs/nullableText"},
+        "created_by": {"$ref": "#/$defs/text"},
+        "approved_by": {"$ref": "#/$defs/optionalText"},
+        "approved_at": {"$ref": "#/$defs/nullableTimestamp"},
+        "approval_reason": {"$ref": "#/$defs/optionalText"},
+        "cancelled_by": {"$ref": "#/$defs/optionalText"},
+        "cancelled_at": {"$ref": "#/$defs/nullableTimestamp"},
+        "cancel_reason": {"$ref": "#/$defs/optionalText"},
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "updated_at": {"$ref": "#/$defs/timestamp"},
+        "original_valuation_number": {"$ref": "#/$defs/text"},
+        "original_total_value": {"$ref": "#/$defs/amount"},
+        "original_movement_id": {"$ref": "#/$defs/text"},
+        "original_finance_entry_id": {"$ref": "#/$defs/text"},
+        "original_movement_number": {"$ref": "#/$defs/text"},
+        "original_movement_type": {"enum": ["Receipt", "Delivery", "Adjustment"]},
+        "reversal_movement_number": {"$ref": "#/$defs/text"},
+        "reversal_movement_type": {"enum": ["Receipt", "Delivery", "Adjustment"]},
+        "reversal_movement_status": {"enum": ["Posted"]},
+        "organization_code": {"$ref": "#/$defs/text"},
+        "entity_code": {"$ref": "#/$defs/text"},
+        "period_name": {"$ref": "#/$defs/text"},
+        "finance_entry_number": {"$ref": "#/$defs/nullableText"},
+        "finance_entry_status": {"oneOf": [{"enum": ["Draft", "Validated", "Voided"]}, {"type": "null"}]},
+        "total_value": {"$ref": "#/$defs/amount"}
+      }
+    }
+  }
+}

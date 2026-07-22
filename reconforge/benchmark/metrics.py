@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from datetime import datetime
 from typing import Any
+
+from reconforge.utils.time import utc_now_text
 
 
 @dataclass(frozen=True)
@@ -52,5 +53,5 @@ def build_metrics(
         exception_rate=round(exception_rows / denominator, 4),
         approximate_memory_mb=round(memory_mb, 2),
         engine_used=engine,
-        timestamp=datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+        timestamp=utc_now_text(),
     )

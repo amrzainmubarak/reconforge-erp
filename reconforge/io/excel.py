@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +11,8 @@ from openpyxl.chart import BarChart, Reference
 from openpyxl.formatting.rule import CellIsRule
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
+
+from reconforge.utils.time import utc_now_text
 
 HEADER_FILL = PatternFill("solid", fgColor="1F4E78")
 HEADER_FONT = Font(color="FFFFFF", bold=True)
@@ -118,6 +119,6 @@ def audit_metadata(company_name: str, report_title: str, currency: str) -> dict[
         "company_name": company_name,
         "report_title": report_title,
         "output_currency": currency,
-        "generated_at": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+        "generated_at": utc_now_text(),
         "tool": "ReconForge ERP",
     }

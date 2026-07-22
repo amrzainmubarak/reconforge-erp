@@ -136,6 +136,15 @@ def _summary(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
     return pd.DataFrame([{"metric": name, "count": len(frame)} for name, frame in frames.items()])
 
 
+def _concat_exceptions(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """Concatenate exception frames while returning a typed empty frame safely."""
+
+    non_empty = [frame for frame in frames.values() if not frame.empty]
+    if not non_empty:
+        return pd.DataFrame(columns=["exception_type", "risk_score", "risk_level"])
+    return pd.concat(non_empty, ignore_index=True, sort=False)
+
+
 def reconcile_workorders(
     stock_moves: pd.DataFrame,
     work_orders: pd.DataFrame,
@@ -191,7 +200,7 @@ def reconcile_workorders(
         "old_part_return_missing": old_part_missing,
         "cancelled_po_linked_to_movement": cancelled_po,
     }
-    all_exceptions = pd.concat([frame for frame in frames.values() if not frame.empty], ignore_index=True, sort=False)
+    all_exceptions = _concat_exceptions(frames)
     return WorkorderReconciliationResult(
         parts_issued_without_work_order=missing_wo,
         closed_work_orders_with_pending_stock=pending_stock,

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime
 from html import escape
 from pathlib import Path
 from typing import Any, Literal, TypeAlias, cast
@@ -14,6 +13,7 @@ import yaml
 
 from reconforge.io.excel import write_excel_workbook
 from reconforge.io.writers import ensure_output_dir, frame_to_records, json_default
+from reconforge.utils.time import utc_now_text
 
 CloseStatus = Literal["Not Started", "In Progress", "Blocked", "Complete", "Not Applicable"]
 ALLOWED_CLOSE_STATUSES: tuple[CloseStatus, ...] = (
@@ -115,7 +115,7 @@ class CloseReportArtifacts:
 
 
 def _now() -> str:
-    return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    return utc_now_text()
 
 
 def _clean_text(value: object) -> str:

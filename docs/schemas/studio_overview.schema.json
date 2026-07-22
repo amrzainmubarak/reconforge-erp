@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/studio_overview.schema.json",
+  "title": "ReconForge Studio Synthetic Overview",
+  "description": "Versioned synthetic-only data contract for the experimental modern Studio dashboard.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "synthetic_data_only",
+    "synthetic_data_marker",
+    "generated_at",
+    "source",
+    "workspace",
+    "executive_brief",
+    "control_domains",
+    "entity_health",
+    "metrics",
+    "risk_distribution",
+    "status_distribution",
+    "entities",
+    "close_tasks",
+    "exceptions",
+    "notices"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "synthetic_data_only": {"const": true},
+    "synthetic_data_marker": {"const": "SYNTHETIC_ENTERPRISE_DEMO_ONLY"},
+    "generated_at": {"type": "string", "maxLength": 2000},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "local_first", "external_calls"],
+      "properties": {
+        "kind": {"const": "reconforge-enterprise-demo"},
+        "local_first": {"const": true},
+        "external_calls": {"const": false}
+      }
+    },
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "current_period", "entity_count", "evidence_count", "close_task_count"],
+      "properties": {
+        "name": {"$ref": "#/$defs/text"},
+        "current_period": {"$ref": "#/$defs/text"},
+        "entity_count": {"type": "integer", "minimum": 0},
+        "evidence_count": {"type": "integer", "minimum": 0},
+        "close_task_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "executive_brief": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["readiness_score", "readiness_status", "high_risk_count", "open_exception_count", "blocked_task_count", "completed_task_count"],
+      "properties": {
+        "readiness_score": {"type": "number", "minimum": 0, "maximum": 100},
+        "readiness_status": {"enum": ["strong", "watch", "attention"]},
+        "high_risk_count": {"type": "integer", "minimum": 0},
+        "open_exception_count": {"type": "integer", "minimum": 0},
+        "blocked_task_count": {"type": "integer", "minimum": 0},
+        "completed_task_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "control_domains": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {"$ref": "#/$defs/control_domain"}
+    },
+    "entity_health": {
+      "type": "array",
+      "maxItems": 100000,
+      "items": {"$ref": "#/$defs/entity_health"}
+    },
+    "metrics": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "label", "value", "format", "tone", "lineage"],
+        "properties": {
+          "key": {"$ref": "#/$defs/text"},
+          "label": {"$ref": "#/$defs/text"},
+          "value": {"type": "number"},
+          "format": {"enum": ["percent", "count", "days"]},
+          "tone": {"enum": ["positive", "critical", "warning", "neutral"]},
+          "lineage": {"type": "string", "maxLength": 500}
+        }
+      }
+    },
+    "risk_distribution": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {"$ref": "#/$defs/risk_distribution_point"}
+    },
+    "status_distribution": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {"$ref": "#/$defs/status_distribution_point"}
+    },
+    "entities": {
+      "type": "array",
+      "maxItems": 100000,
+      "items": {"$ref": "#/$defs/entity"}
+    },
+    "close_tasks": {
+      "type": "array",
+      "maxItems": 100000,
+      "items": {"$ref": "#/$defs/close_task"}
+    },
+    "exceptions": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {"$ref": "#/$defs/exception"}
+    },
+    "notices": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {"$ref": "#/$defs/text"}
+    }
+  },
+  "$defs": {
+    "text": {"type": "string", "maxLength": 2000},
+    "risk_distribution_point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["risk", "count"],
+      "properties": {
+        "risk": {"enum": ["critical", "high", "medium", "low"]},
+        "count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "status_distribution_point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "count"],
+      "properties": {
+        "status": {"$ref": "#/$defs/text"},
+        "count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entity_code", "entity_name", "region", "currency"],
+      "properties": {
+        "entity_code": {"$ref": "#/$defs/text"},
+        "entity_name": {"$ref": "#/$defs/text"},
+        "region": {"$ref": "#/$defs/text"},
+        "currency": {"$ref": "#/$defs/text"}
+      }
+    },
+    "control_domain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain", "score", "status", "lineage"],
+      "properties": {
+        "domain": {"enum": ["close", "evidence", "matching", "controls"]},
+        "score": {"type": "number", "minimum": 0, "maximum": 100},
+        "status": {"enum": ["strong", "watch", "attention"]},
+        "lineage": {"type": "string", "maxLength": 500}
+      }
+    },
+    "entity_health": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entity_code", "entity_name", "region", "currency", "open_exception_count", "high_risk_count", "status"],
+      "properties": {
+        "entity_code": {"$ref": "#/$defs/text"},
+        "entity_name": {"$ref": "#/$defs/text"},
+        "region": {"$ref": "#/$defs/text"},
+        "currency": {"$ref": "#/$defs/text"},
+        "open_exception_count": {"type": "integer", "minimum": 0},
+        "high_risk_count": {"type": "integer", "minimum": 0},
+        "status": {"enum": ["strong", "watch", "attention"]}
+      }
+    },
+    "close_task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_id", "period_name", "name", "status", "owner"],
+      "properties": {
+        "task_id": {"$ref": "#/$defs/text"},
+        "period_name": {"$ref": "#/$defs/text"},
+        "name": {"$ref": "#/$defs/text"},
+        "status": {"$ref": "#/$defs/text"},
+        "owner": {"$ref": "#/$defs/text"}
+      }
+    },
+    "exception": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_type",
+        "period_name",
+        "entity_code",
+        "account_code",
+        "control_code",
+        "risk_rating",
+        "owner",
+        "status",
+        "description"
+      ],
+      "properties": {
+        "source_type": {"$ref": "#/$defs/text"},
+        "period_name": {"$ref": "#/$defs/text"},
+        "entity_code": {"$ref": "#/$defs/text"},
+        "account_code": {"$ref": "#/$defs/text"},
+        "control_code": {"$ref": "#/$defs/text"},
+        "risk_rating": {"enum": ["critical", "high", "medium", "low"]},
+        "owner": {"$ref": "#/$defs/text"},
+        "status": {"$ref": "#/$defs/text"},
+        "description": {"$ref": "#/$defs/text"}
+      }
+    }
+  }
+}

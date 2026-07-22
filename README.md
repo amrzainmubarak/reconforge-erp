@@ -158,30 +158,6 @@ The native inventory page displays exact synthetic on-hand quantities, warehouse
 
 The valuation tab renders bounded synthetic FIFO and exact-reversal summaries and explicitly labels generated accounting references as Draft. It does not imply browser-side approval, automatic ledger validation, partial reversal, supplier costing, landed cost, manufacturing costing, or source-ERP posting.
 
-### Dashboard
-
-![ReconForge ERP dashboard preview](docs/assets/dashboard-preview.png)
-
-Captured from `output/dashboard.html`, showing executive metrics, top exceptions, and WIP aging.
-
-### Executive HTML Report
-
-![ReconForge ERP executive HTML report preview](docs/assets/executive-report-preview.png)
-
-Captured from `output/executive_report.html`, generated from the same local management-pack workflow.
-
-### Evidence Binder
-
-![ReconForge ERP evidence binder preview](docs/assets/evidence-binder-preview.png)
-
-Captured from `output/evidence/index.html`, listing high and critical exception cases.
-
-### Management Pack Workbook
-
-![ReconForge ERP management pack workbook preview](docs/assets/management-pack-preview.png)
-
-Rendered from the real `output/management_pack.xlsx` workbook contents.
-
 ## Quick Start
 
 ```bash

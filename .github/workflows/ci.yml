@@ -117,7 +117,23 @@ jobs:
         env:
           RECONFORGE_POSTGRES_DSN: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
         run: |
-          python -m alembic -c "${GITHUB_WORKSPACE}/alembic.ini" upgrade head
+          python - <<'PY'
+          import os
+          from alembic import command
+          from alembic.config import Config
+
+          config_path = os.path.join(os.environ["GITHUB_WORKSPACE"], "alembic.ini")
+          workspace = os.environ["GITHUB_WORKSPACE"]
+          script_location = os.path.join(workspace, "alembic")
+
+          config = Config(config_path)
+          config.set_main_option("script_location", script_location)
+          config.set_main_option(
+              "sqlalchemy.url",
+              os.environ["RECONFORGE_POSTGRES_DSN"].replace("%", "%%"),
+          )
+          command.upgrade(config, "head")
+          PY
 
       - name: Run live server-boundary tests
         env:

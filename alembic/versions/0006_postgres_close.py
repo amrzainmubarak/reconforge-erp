@@ -1,7 +1,12 @@
 """Add tenant-scoped PostgreSQL close-control metadata."""
 
 from alembic import op
-from reconforge.infrastructure.postgres_close import POSTGRES_CLOSE_SCHEMA_SQL
+from reconforge_migration_sql import load_postgres_schema_sql
+
+POSTGRES_CLOSE_SCHEMA_SQL = load_postgres_schema_sql(
+    "reconforge.infrastructure.postgres_close",
+    "POSTGRES_CLOSE_SCHEMA_SQL",
+)
 
 revision = "0006_postgres_close"
 down_revision = "0005_postgres_fiscal_periods"

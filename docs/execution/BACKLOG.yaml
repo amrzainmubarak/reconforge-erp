@@ -1,0 +1,131 @@
+phases:
+  - id: phase-0-baseline
+    name: Baseline reproducibility and claim validation
+    status: in_progress
+    tasks:
+      - id: P0-B0
+        title: Fix Python typing and lint blockers from baseline
+        priority: P0
+        depends_on: []
+        status: done
+      - id: P0-B1
+        title: Stabilize pytest environment and rerun full suite
+        priority: P0
+        depends_on: ["P0-B0"]
+        status: done
+      - id: P0-B2
+        title: Resolve bandit SQL-construction hotspots and dependency vulnerabilities (Pillow)
+        priority: P0
+        depends_on: []
+        status: done
+      - id: P1-B3
+        title: Backfill docs evidence linkage for implementation claims
+        priority: P1
+        depends_on: ["P0-B0"]
+        status: done
+      - id: P0-B4
+        title: Implement deterministic money/currency validation invariants slice
+        priority: P0
+        depends_on: ["P0-B0"]
+        status: done
+      - id: P1-B5
+        title: Add empty-exception and complete exception-classification tests
+        priority: P1
+        depends_on: ["P0-B4"]
+        status: done
+      - id: P1-B6
+        title: Add property-based row-order invariance tests (matching + reconciliation)
+        priority: P1
+        depends_on: ["P0-B4"]
+        status: done
+      - id: P2-B7
+        title: Resolve frontend Vitest dependency and rerun test:run
+        priority: P2
+        depends_on: []
+        status: done
+      - id: P2-B8
+        title: Container build/run parity gating in CI
+        priority: P2
+        depends_on: []
+        status: done
+      - id: P1-B9
+        title: Remove backup restore SQL query-assembly `# nosec` risk and harden table/column interpolation
+        priority: P1
+        depends_on:
+          - P2-B8
+        status: done
+      - id: P1-B10
+        title: Harden report aggregation amount parsing against invalid numeric data
+        priority: P1
+        depends_on:
+          - P1-B9
+        status: done
+      - id: P1-B11
+        title: Validate reference-normalization regex rules and fail fast on malformed patterns
+        priority: P1
+        depends_on:
+          - P1-B5
+        status: done
+      - id: P1-B12
+        title: Fix server PostgreSQL migration bootstrap in CI boundaries check
+        priority: P1
+        depends_on:
+          - P2-B8
+          - P1-B11
+        status: done
+      - id: P1-B13
+        title: Verify server-boundaries succeeds in hosted CI with current Alembic bootstrap
+        priority: P1
+        depends_on:
+          - P1-B12
+        status: in_progress
+
+history:
+  - date: "2026-07-24"
+    event: "Completed Static quality follow-up slice by fixing remaining import-order/exception chaining issues in `reconforge/platform/matching.py` and `tests/test_platform_matching.py` (`ruff` back to clean)."
+  - date: "2026-07-24"
+    event: "Created execution baseline artifacts in docs/execution and recorded command outcomes."
+  - date: "2026-07-24"
+    event: "Completed P0 follow-up matching precision hardening: exact amount bucketing for unknown precision in `reconforge/platform/matching.py` and regression test coverage."
+  - date: "2026-07-24"
+    event: "Completed P1-B5 slice with currency precision and data-quality exception tests for deterministic matching."
+  - date: "2026-07-24"
+    event: "Enhanced money parser with locale-aware separator parsing and added `test_amount_parser_supports_locale_decimal_and_thousands_separators`."
+  - date: "2026-07-24"
+    event: "Added strict scientific-notation rejection for financial amounts and preserved finite-float backward compatibility in `test_reconciliation_hardening.py`."
+  - date: "2026-07-24"
+    event: "Re-ran full `tests/test_reconciliation_hardening.py` with explicit basetemp (`14 passed`) to strengthen money/currency slice evidence."
+  - date: "2026-07-24"
+    event: "Completed P0-B0: resolved baseline mypy blockers in money/common/matching and achieved `mypy reconforge` success."
+  - date: "2026-07-24"
+    event: "Completed P0-B2 security slice: replaced DuckDB string-built SQL execution paths with validated relation-based querying and re-ran bandit on DuckDB engine."
+  - date: "2026-07-24"
+    event: "Completed P2-B7 frontend runtime slice: `npm --prefix apps/web run test:run` now passes and frontend gate evidence updated."
+  - date: "2026-07-24"
+    event: "Dependency refresh verification: Pillow upgraded to 12.3.0 in environment and `python -m pip_audit` now reports no known vulnerabilities."
+  - date: "2026-07-24"
+    event: "Completed P1-B3 docs evidence backfill; synchronized baseline/gap metrics and advanced backlog state for claims-evidence traceability."
+  - date: "2026-07-24"
+    event: "Attempted `P2-B8` container parity check; both docker build and run failed due unavailable Windows docker API (`npipe:////./pipe/dockerDesktopLinuxEngine`)."
+  - date: "2026-07-24"
+    event: "Implemented `P2-B8` CI enforcement by adding `.github/workflows/ci.yml` `docker-parity` job (build and run `reconforge doctor` in-container)."
+  - date: "2026-07-24"
+    event: "Completed `P1-B9`: hardened `reconforge/db/backup.py` restore path by validating identifiers for pragma/table references, removing dynamic insert SQL assembly, and restoring missing optional columns via schema defaults."
+  - date: "2026-07-24"
+    event: "Attempted additional Docker parity probe via `docker --context desktop-linux run --rm hello-world`; daemon remains unavailable in this workstation (`npipe:////./pipe/dockerDesktopLinuxEngine`)."
+  - date: "2026-07-24"
+    event: "Expanded `docker-parity` CI step to run parity checks mirroring local CLI smoke (`reconforge validate examples/sample_data`, `reconforge rules validate --pack control-packs/audit-basic`) in-container."
+  - date: "2026-07-24"
+    event: "Completed `P0-B1` with explicit basetemp hardening (`python -m pytest --basetemp .\\.pytest-baseline`): `554 passed, 10 skipped, 1 warning`."
+  - date: "2026-07-24"
+    event: "Closed `P2-B8`: CI now enforces container build + in-image `reconforge doctor`, `validate`, and `rules validate` parity checks; local docker execution remains blocked by missing daemon on this workstation."
+  - date: "2026-07-24"
+    event: "Completed `P1-B10`: report aggregation hardening in `reconforge/reports/management_pack.py` and invalid-value regression coverage in `tests/test_reports.py`."
+  - date: "2026-07-24"
+    event: "Completed `P1-B11`: reference-normalization regex validation is now strict in `reconforge/platform/matching.py` and covered by `tests/test_platform_matching.py::test_reference_normalization_rules_reject_invalid_regex_normalization_pattern`."
+  - date: "2026-07-24"
+    event: "Completed `P1-B12`: server-boundaries migration bootstrap now uses `alembic -c alembic.ini upgrade head` in CI to avoid script-location drift."
+  - date: "2026-07-24"
+    event: "`P1-B13` created to require a hosted CI rerun for the current workflow revision; local verification already passes with `python -m ruff check alembic/versions` and `IMPORT_OK 11` migration revision import sweep."
+  - date: "2026-07-24"
+    event: "Progress on `P1-B13`: introduced `reconforge_migration_sql.py` and switched `alembic/versions/0001`..`0011` to resilient schema-SQL loading with file-based fallback for `reconforge.infrastructure` import failures; local `ruff` check and `IMPORT_OK 11` checks now pass."

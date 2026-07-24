@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 from alembic import op
-from reconforge.infrastructure.postgres_identity import POSTGRES_IDENTITY_SCHEMA_SQL
+from reconforge_migration_sql import load_postgres_schema_sql
+
+POSTGRES_IDENTITY_SCHEMA_SQL = load_postgres_schema_sql(
+    "reconforge.infrastructure.postgres_identity",
+    "POSTGRES_IDENTITY_SCHEMA_SQL",
+)
 
 revision = "0004_postgres_identity"
 down_revision = "0003_postgres_ledger"

@@ -49,6 +49,11 @@
 - `docker build -t reconforge:baseline .` → failed: cannot connect to docker API (`npipe:////./pipe/dockerDesktopLinuxEngine`)
 - `docker run --rm reconforge:baseline reconforge doctor` → failed: cannot connect to docker API (`npipe:////./pipe/dockerDesktopLinuxEngine`)
 - `docker --context desktop-linux run --rm hello-world` → failed for same API endpoint (`npipe:////./pipe/dockerDesktopLinuxEngine` not available)
+- `python -m ruff check alembic/versions` → success after import-block fixes applied to migration files (`10` files).
+- `gh run view 30072000950 --job 89414652400 --log --repo amrzainmubarak/reconforge-erp` equivalent check showed server-boundaries still failed for:
+  - import-lint `I001` in ten Alembic version files (`0001..0011`)
+  - migration import failure: `ModuleNotFoundError: No module named 'reconforge.infrastructure'`
+- Local smoke (`python` one-shot import over `alembic/versions/*.py` with `PYTHONPATH=$PWD`) → `IMPORT_OK 11` (all Alembic revision modules importable in repository checkout state).
 - `python -m pytest tests/test_readers.py -k preserves_invalid_numeric -q` → passed (`1 passed`)
 - `python -m pytest tests/test_platform_matching.py -k invariance --basetemp F:\reconforge-erp\.pytest-matching-invariance -q` → passed (`2 passed`)
 - `python -m pytest tests/test_platform_matching.py -k "empty_exceptions or invariance" --basetemp F:\reconforge-erp\.pytest-matching-invariance -q` → passed (`2 passed`)
@@ -91,7 +96,12 @@
   `tests/test_platform_matching.py::test_matching_data_quality_exception_ids_are_stable_under_row_shuffles` was added to lock row-order invariance.
 - `reconforge/platform/matching.py` now validates `reference_normalization_rules.regex_normalizations` patterns at parse time and rejects malformed regular expressions with deterministic `PlatformError` messages.
 - Targeted verification:
-  - `python -m pytest tests/test_platform_matching.py -k "reference_normalization_rules_reject_invalid_configuration or reference_normalization_rules_reject_invalid_regex_normalization_pattern" --basetemp .\\.pytest-baseline-target -q` → passed (`2 passed`).
+- `python -m pytest tests/test_platform_matching.py -k "reference_normalization_rules_reject_invalid_configuration or reference_normalization_rules_reject_invalid_regex_normalization_pattern" --basetemp .\\.pytest-baseline-target -q` → passed (`2 passed`).
+- `python -m ruff check alembic/versions` → pass (`All checks passed!`) with current migration imports.
+- `PYTHONPATH=(Get-Location).Path` import sweep over `alembic/versions/*.py` → `IMPORT_OK 11` (all revisions importable under clean checkout).
+- `reconforge_migration_sql.py` added as a resilient Alembic schema loader and `0001..0011` PostgreSQL migration revisions now resolve SQL constants through it.
+- `python -m ruff check reconforge_migration_sql.py alembic/versions/0001_postgres_tenant_boundary.py ... alembic/versions/0011_postgres_reconciliation_checkpoints.py` → pass.
+- One-shot revision load (`python -c ... importlib.util`) using local checkout root now returns `IMPORT_OK 11`.
 
 ## Reporting Hardening Slice
 - `reconforge/reports/management_pack.py` now avoids coerced zero substitution in aggregate report paths by switching to optional decimal parsing for risk and amount impact calculations.
@@ -103,17 +113,18 @@
 
 ## Planned Next Step
 1. `P2-B8` parity proof captured and archived in `docs/execution/EVIDENCE.md` (`docker-parity` success in run `30070878830`).
-2. Resolve `server-boundaries` failure path (`Run Alembic PostgreSQL migration`) in a follow-up slice before asserting full gate closure.
-3. Resume matching explainability and matching-engine extensions once P1 blockers are cleared.
-4. Done: Added explicit parity acceptance for unknown-currency bucketing behavior between in-memory and persisted runs.
-5. Done: Added deterministic benchmark coverage for unknown-currency precision (`amount_fractional_digits=4`) and captured 10k/100k synthetic profiling runs.
-6. Done: Implemented in-memory and persisted explainability coverage for matched, unmatched-right, unmatched-left, and lineages.
-7. Done: Extend explainability checks to tie-break determinism for identical confidence/rank ties.
-8. Done: Add many-to-many ambiguity explanation checks for grouped candidate alternatives and rejection narratives when group matching is disabled.
-9. Done: Added deterministic `data_quality` exception identifiers for platform matching (`EXC-*`) and row-shuffle invariance coverage.
-10. Done: Extended backup restore regression coverage to validate fallback defaults for `periods` optional columns.
-11. Done: Ran targeted verification for optional-column restore fallback: `test_restore_fills_optional_missing_restore_columns_from_defaults` (`1 passed`).
-12. Done: Added strict reference-normalization regex validation and test coverage for invalid regex patterns (`test_reference_normalization_rules_reject_invalid_regex_normalization_pattern`).
+2. Push or re-trigger hosted CI and confirm `server-boundaries` migration step now succeeds with this branch tip.
+3. If `server-boundaries` remains green, mark `P1-B13` complete and remove residual-risk tracking; otherwise patch and re-run.
+4. Resume matching explainability and matching-engine extensions once P1 blockers are cleared.
+5. Done: Added explicit parity acceptance for unknown-currency bucketing behavior between in-memory and persisted runs.
+6. Done: Added deterministic benchmark coverage for unknown-currency precision (`amount_fractional_digits=4`) and captured 10k/100k synthetic profiling runs.
+7. Done: Implemented in-memory and persisted explainability coverage for matched, unmatched-right, unmatched-left, and lineages.
+8. Done: Extend explainability checks to tie-break determinism for identical confidence/rank ties.
+9. Done: Add many-to-many ambiguity explanation checks for grouped candidate alternatives and rejection narratives when group matching is disabled.
+10. Done: Added deterministic `data_quality` exception identifiers for platform matching (`EXC-*`) and row-shuffle invariance coverage.
+11. Done: Extended backup restore regression coverage to validate fallback defaults for `periods` optional columns.
+12. Done: Ran targeted verification for optional-column restore fallback: `test_restore_fills_optional_missing_restore_columns_from_defaults` (`1 passed`).
+13. Done: Added strict reference-normalization regex validation and test coverage for invalid regex patterns (`test_reference_normalization_rules_reject_invalid_regex_normalization_pattern`).
 
 ## History
 
@@ -122,6 +133,10 @@
 - 2026-07-24: Hardened outbox list query construction (`reconforge/platform/outbox.py`) with allowlisted status-to-query mapping and removed predicate-based `# nosec` suppression.
 - 2026-07-24: Hardened backup insert SQL in `reconforge/db/backup.py` by adding strict identifier validation before PRAGMA/table/INSERT identifier interpolation.
 - 2026-07-24: Completed `P1-B9` SQL-hardening in `reconforge/db/backup.py`; backup restore insertion now uses static queries and schema-aware defaults, and `python -m bandit -q -r reconforge/db/backup.py` passes.
+- 2026-07-24: Addressed `server-boundaries` blockers after run `30072000950` by:
+  - normalizing imports in Alembic revision files (`0001..0011`) to remove `I001` lint blockers
+  - setting `PYTHONPATH` to `${{ github.workspace }}` for Alembic migration step
+  - keeping Alembic migration execution command on CLI (`alembic -c alembic.ini upgrade head`)
 - 2026-07-24: Extended `P1-B9` backup restore hardening for legacy schema snapshots (v6) by deriving insert columns from `PRAGMA table_info`, applying defaults from metadata, and keeping `# nosec B608` limited to validated identifier interpolation in `_build_insert_query`.
 - 2026-07-24: Added backup restore regression test `test_restore_fills_optional_missing_restore_columns_from_defaults` to verify missing additive columns and defaults are applied for `organizations` and `legal_entities` snapshots before insertion.
 - 2026-07-24: Expanded `test_restore_fills_optional_missing_restore_columns_from_defaults` to assert period optional defaults (`fiscal_year`, `period_number`, `status_reason`, `updated_at`) are restored correctly when omitted.
@@ -153,4 +168,5 @@
   - Workflow run: `https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30070878830`
   - `docker-parity` job `89411613485` completed successfully.
   - `test (3.11)` and `test (3.12)` succeeded; `server-boundaries` failed on migration step in this run.
+- 2026-07-24: Followed up on `server-boundaries` migration failure by replacing CI Python-configured Alembic invocation with direct CLI call (`alembic -c alembic.ini upgrade head`) in `.github/workflows/ci.yml` to remove path-dependent `script_location` configuration drift.
 

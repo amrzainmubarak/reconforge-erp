@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 from alembic import op
-from reconforge.infrastructure.postgres_ledger import POSTGRES_LEDGER_SCHEMA_SQL
+from reconforge_migration_sql import load_postgres_schema_sql
+
+POSTGRES_LEDGER_SCHEMA_SQL = load_postgres_schema_sql(
+    "reconforge.infrastructure.postgres_ledger",
+    "POSTGRES_LEDGER_SCHEMA_SQL",
+)
 
 revision = "0003_postgres_ledger"
 down_revision = "0002_postgres_master_data"

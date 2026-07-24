@@ -1,7 +1,12 @@
 """Add the tenant-scoped PostgreSQL evidence registry."""
 
 from alembic import op
-from reconforge.infrastructure.postgres_evidence import POSTGRES_EVIDENCE_SCHEMA_SQL
+from reconforge_migration_sql import load_postgres_schema_sql
+
+POSTGRES_EVIDENCE_SCHEMA_SQL = load_postgres_schema_sql(
+    "reconforge.infrastructure.postgres_evidence",
+    "POSTGRES_EVIDENCE_SCHEMA_SQL",
+)
 
 revision = "0008_postgres_evidence_registry"
 down_revision = "0007_postgres_outbox_delivery"

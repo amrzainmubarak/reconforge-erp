@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 from alembic import op
-from reconforge.infrastructure.postgres_master_data import POSTGRES_FISCAL_PERIOD_SCHEMA_SQL
+from reconforge_migration_sql import load_postgres_schema_sql
+
+POSTGRES_FISCAL_PERIOD_SCHEMA_SQL = load_postgres_schema_sql(
+    "reconforge.infrastructure.postgres_master_data",
+    "POSTGRES_FISCAL_PERIOD_SCHEMA_SQL",
+)
 
 revision = "0005_postgres_fiscal_periods"
 down_revision = "0004_postgres_identity"

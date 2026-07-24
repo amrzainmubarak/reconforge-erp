@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 from alembic import op
-from reconforge.infrastructure.postgres import POSTGRES_RLS_SCHEMA_SQL
+from reconforge_migration_sql import load_postgres_schema_sql
+
+POSTGRES_RLS_SCHEMA_SQL = load_postgres_schema_sql(
+    "reconforge.infrastructure.postgres",
+    "POSTGRES_RLS_SCHEMA_SQL",
+)
 
 revision = "0001_postgres_tenant_boundary"
 down_revision = None

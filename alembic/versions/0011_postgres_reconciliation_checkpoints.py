@@ -1,8 +1,11 @@
 """Add durable, idempotent reconciliation partition checkpoints."""
 
 from alembic import op
-from reconforge.infrastructure.postgres_reconciliation_checkpoints import (
-    POSTGRES_RECONCILIATION_CHECKPOINT_SCHEMA_SQL,
+from reconforge_migration_sql import load_postgres_schema_sql
+
+POSTGRES_RECONCILIATION_CHECKPOINT_SCHEMA_SQL = load_postgres_schema_sql(
+    "reconforge.infrastructure.postgres_reconciliation_checkpoints",
+    "POSTGRES_RECONCILIATION_CHECKPOINT_SCHEMA_SQL",
 )
 
 revision = "0011_postgres_reconciliation_checkpoints"

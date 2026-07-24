@@ -68,13 +68,27 @@
 - `P2-B8 container parity slice (CI evidence)`: PR `54` triggered workflow run `30070878830` with job list containing `docker-parity`.
   - Evidence:
     - https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30070878830
-    - `docker-parity` job `89411613485` → success.
-    - `docker-parity` steps completed: image build, `reconforge doctor`, `reconforge validate examples/sample_data`, and `reconforge rules validate --pack control-packs/audit-basic`.
-    - `test (3.11)` and `test (3.12)` also succeeded.
+  - `docker-parity` job `89411613485` → success.
+  - `docker-parity` steps completed: image build, `reconforge doctor`, `reconforge validate examples/sample_data`, and `reconforge rules validate --pack control-packs/audit-basic`.
+  - `test (3.11)` and `test (3.12)` also succeeded.
   - Note: run `30070878830` overall failed due unrelated `server-boundaries` failure in `Run Alembic PostgreSQL migration`; this does not invalidate `P2-B8` parity completion.
+  - Fix implemented for follow-up: `server-boundaries` now runs Alembic via CLI (`alembic -c alembic.ini upgrade head`) in `.github/workflows/ci.yml` to avoid config-bootstrap script-location drift in runner execution.
+  - Follow-up run `30072000950` confirmed additional `server-boundaries` blockers:
+    - `ruff check .` now fails due import-block formatting (`I001`) in 10 Alembic revision files (`0001..0011`) importing `reconforge.infrastructure.*`.
+    - Runtime migration fails with `ModuleNotFoundError: No module named 'reconforge.infrastructure'` at `alembic/versions/0001_postgres_tenant_boundary.py` during revision script import.
+  - Corrections committed in this branch to unblock these blockers:
+    - Added `reconforge_migration_sql.py` to provide resilient fallback extraction of Postgres schema SQL constants from checked-in source files when `reconforge.infrastructure` imports fail during revision loading.
+    - Updated `alembic/versions/0001_postgres_tenant_boundary.py` .. `0011_postgres_reconciliation_checkpoints.py` to load SQL from the helper module at top-level revision import-time.
+    - `python -m ruff check alembic/versions/0001_postgres_tenant_boundary.py ... alembic/versions/0011_postgres_reconciliation_checkpoints.py` now passes.
+    - `PYTHONPATH=(Get-Location).Path` one-shot import script over `alembic/versions/*.py` now returns `IMPORT_OK 11`.
+    - `PYTHONPATH: ${{ github.workspace }}` remains set in `Run Alembic PostgreSQL migration` step.
   - Historical context retained:
     - `gh run list --workflow ci.yml --repo amrzainmubarak/reconforge-erp --json databaseId,conclusion,status,headBranch --limit 80` + per-run `gh run view <id> --json jobs` previously confirmed no `docker-parity`; superseded by run `30070878830`.
     - `gh run list --workflow ci.yml --repo amrzainmubarak/reconforge-erp --branch feature/p0-atomic-audit-outbox --json databaseId,conclusion,status,createdAt --limit 20` returned `[]` before branch/PR run creation.
+- `Alembic migration hardening verification (local, current branch):`
+  - `python -m ruff check alembic/versions` → pass (`All checks passed!`).
+  - `PYTHONPATH=(Get-Location).Path python` one-shot import over `alembic/versions/*.py` → `IMPORT_OK 11`.
+  - `gh run view 30072000950 --job 89414652400 --log` remains a historical failure reference (inline bootstrap step), while `server-boundaries` migration command in the current workflow file is now CLI-based.
 - `Static quality slice`: `python -m ruff check .` and `python -m ruff check --fix reconforge/platform/matching.py tests/test_platform_matching.py` → pass (2 issues auto-fixed).
 - `docs/execution/BACKLOG.yaml`: `P1-B3` completed and execution tracker metadata synchronized (claims matrix + baseline/gap metrics).
   - `reconforge/io/readers.py`: invalid numeric values now remain explicit missing values (`None`) and preserve raw source text in `_reconforge_raw_<column>`.

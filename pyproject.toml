@@ -48,12 +48,19 @@ dev = [
   "pytest>=8.2",
   "ruff>=0.5",
   "types-PyYAML>=6.0",
+  "pillow>=12.3.0",
 ]
 docs = [
   "mkdocs>=1.6",
 ]
 duckdb = [
   "duckdb>=1.0",
+]
+server = [
+  "alembic>=1.16",
+  "psycopg[binary]>=3.2",
+  "redis>=6.4",
+  "sqlalchemy>=2.0",
 ]
 
 [project.scripts]

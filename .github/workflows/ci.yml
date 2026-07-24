@@ -113,9 +113,11 @@ jobs:
           psql --host localhost --username postgres --dbname postgres --command "CREATE ROLE reconforge_app LOGIN PASSWORD 'reconforge_app'"
 
       - name: Run Alembic PostgreSQL migration
+        working-directory: ${{ github.workspace }}
         env:
           RECONFORGE_POSTGRES_DSN: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
-        run: python -m alembic -c alembic.ini upgrade head
+        run: |
+          python -m alembic -c "${GITHUB_WORKSPACE}/alembic.ini" upgrade head
 
       - name: Run live server-boundary tests
         env:

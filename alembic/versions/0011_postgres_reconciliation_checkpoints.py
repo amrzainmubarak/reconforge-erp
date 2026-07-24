@@ -8,8 +8,8 @@ POSTGRES_RECONCILIATION_CHECKPOINT_SCHEMA_SQL = load_postgres_schema_sql(
     "POSTGRES_RECONCILIATION_CHECKPOINT_SCHEMA_SQL",
 )
 
-revision = "0011_postgres_reconciliation_checkpoints"
-down_revision = "0010_postgres_reconciliation_execution"
+revision = "0011_postgres_recon_ckpts"
+down_revision = "0010_postgres_recon_exec"
 branch_labels = None
 depends_on = None
 

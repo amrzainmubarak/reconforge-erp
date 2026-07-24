@@ -8,7 +8,7 @@ POSTGRES_RECONCILIATION_SCHEMA_SQL = load_postgres_schema_sql(
     "POSTGRES_RECONCILIATION_SCHEMA_SQL",
 )
 
-revision = "0009_postgres_reconciliation_results"
+revision = "0009_postgres_recon_results"
 down_revision = "0008_postgres_evidence_registry"
 branch_labels = None
 depends_on = None

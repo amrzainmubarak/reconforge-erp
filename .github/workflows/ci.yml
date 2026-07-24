@@ -115,7 +115,7 @@ jobs:
       - name: Run Alembic PostgreSQL migration
         env:
           RECONFORGE_POSTGRES_DSN: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
-        run: alembic upgrade head
+        run: python -m alembic -c alembic.ini upgrade head
 
       - name: Run live server-boundary tests
         env:

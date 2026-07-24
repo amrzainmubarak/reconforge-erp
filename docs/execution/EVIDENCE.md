@@ -65,14 +65,16 @@
 - `P2-B8 container parity slice`: `docker build -t reconforge:baseline .` and `docker run --rm reconforge:baseline reconforge doctor` failed in this environment because docker API socket is unavailable (`npipe:////./pipe/dockerDesktopLinuxEngine`).
 - `P2-B8 container parity slice`: `docker --context desktop-linux run --rm hello-world` also failed for the same API endpoint (`npipe:////./pipe/dockerDesktopLinuxEngine`).
 - `P2-B8 container parity slice (CI)`: `.github/workflows/ci.yml` now includes a `docker-parity` job that runs container build + `reconforge doctor`, plus `reconforge validate examples/sample_data` and `reconforge rules validate --pack control-packs/audit-basic` in an isolated image tag to validate parity in Docker-capable runners.
-- `P2-B8 container parity slice (CI evidence)`: API scan of remote CI runs still shows no executed `docker-parity` jobs.
-  - `python`-equivalent command used:
-    - `gh run list --workflow ci.yml --repo amrzainmubarak/reconforge-erp --json databaseId,conclusion,status,headBranch --limit 80`
-    - for each `run-id`, checked job list via `gh run view <id> --json jobs`
-  - Expanded check covered recent runs from `29951140420` (main, 2026-07-22) back to `26816522153` (2026-06-02), with no `docker-parity` jobs in any examined run.
-  - `gh run list --workflow ci.yml --repo amrzainmubarak/reconforge-erp --branch feature/p0-atomic-audit-outbox --json databaseId,conclusion,status,createdAt --limit 20` returned `[]`, indicating no workflow runs on this branch yet in GitHub.
-  - Conclusion: CI evidence still missing for container-parity path; follow-up needed after a workflow-pushed run that includes this job.
-  - 2026-07-24 follow-up sweep: `gh run list --workflow ci.yml --repo amrzainmubarak/reconforge-erp --json databaseId,conclusion,status,headBranch --limit 40` and `gh run list --workflow ci.yml --repo amrzainmubarak/reconforge-erp --branch feature/world-class-foundation-showcase --json databaseId,conclusion,status --limit 10` returned run sets with jobs limited to `test (3.11)` and `test (3.12)`; no dedicated `docker-parity` job name observed.
+- `P2-B8 container parity slice (CI evidence)`: PR `54` triggered workflow run `30070878830` with job list containing `docker-parity`.
+  - Evidence:
+    - https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30070878830
+    - `docker-parity` job `89411613485` → success.
+    - `docker-parity` steps completed: image build, `reconforge doctor`, `reconforge validate examples/sample_data`, and `reconforge rules validate --pack control-packs/audit-basic`.
+    - `test (3.11)` and `test (3.12)` also succeeded.
+  - Note: run `30070878830` overall failed due unrelated `server-boundaries` failure in `Run Alembic PostgreSQL migration`; this does not invalidate `P2-B8` parity completion.
+  - Historical context retained:
+    - `gh run list --workflow ci.yml --repo amrzainmubarak/reconforge-erp --json databaseId,conclusion,status,headBranch --limit 80` + per-run `gh run view <id> --json jobs` previously confirmed no `docker-parity`; superseded by run `30070878830`.
+    - `gh run list --workflow ci.yml --repo amrzainmubarak/reconforge-erp --branch feature/p0-atomic-audit-outbox --json databaseId,conclusion,status,createdAt --limit 20` returned `[]` before branch/PR run creation.
 - `Static quality slice`: `python -m ruff check .` and `python -m ruff check --fix reconforge/platform/matching.py tests/test_platform_matching.py` → pass (2 issues auto-fixed).
 - `docs/execution/BACKLOG.yaml`: `P1-B3` completed and execution tracker metadata synchronized (claims matrix + baseline/gap metrics).
   - `reconforge/io/readers.py`: invalid numeric values now remain explicit missing values (`None`) and preserve raw source text in `_reconforge_raw_<column>`.

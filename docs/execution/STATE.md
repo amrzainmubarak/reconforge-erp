@@ -74,8 +74,10 @@
   - `python -m pytest --basetemp .\\.pytest-baseline` → passed (`554 passed, 10 skipped, 1 warning`)
   - `gh run list --workflow ci.yml --repo amrzainmubarak/reconforge-erp --json databaseId,conclusion,status,headBranch --limit 80` + per-run `gh run view --json jobs` confirms no `docker-parity` job executed in inspected window.
   - The scan covered runs from `29951140420` (main, 2026-07-22) through `26816522153` (main, 2026-06-02); only `test` jobs were present in those runs.
-  - CI parity proof therefore remains pending; next run must still demonstrate `docker-parity` in job list.
-  - `gh run list --workflow ci.yml --repo amrzainmubarak/reconforge-erp --branch feature/p0-atomic-audit-outbox --json databaseId,conclusion,status,createdAt --limit 20` returned an empty set (`[]`), confirming no remote CI runs observed yet for the current local branch.
+  - `P2-B8` CI evidence is now captured in run `30070878830` (`https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30070878830`):
+    - `docker-parity` completed successfully (job `89411613485`).
+    - `test (3.11)` and `test (3.12)` succeeded.
+    - `server-boundaries` failed because `Run Alembic PostgreSQL migration` failed in this run; this is tracked as a residual risk separate from `P2-B8`.
 - Code hardening: `reconforge/platform/matching.py` now uses currency-aware exact decimal bucketing (`_amount_bucket_key`) instead of implicit two-decimal rounding when precision is unknown.
 - Regression test added: `tests/test_platform_matching.py::test_matching_without_currency_precision_uses_exact_amount_bucketing_for_candidate_indexing`.
 - Outbox SQL hardening: `reconforge/platform/outbox.py` switched `list_events` to allowlisted full SQL templates and removed `# nosec` suppression for predicate-based query construction.
@@ -100,9 +102,9 @@
   - `tests/test_reports.py::test_risk_matrix_ignores_invalid_amounts_when_summing`
 
 ## Planned Next Step
-1. Validate `P2-B8` parity results in CI output and archive the run proof in `docs/execution/EVIDENCE.md` as soon as a workflow-run with `docker-parity` appears.
-2. Resume matching explainability and matching-engine extensions once P1 blockers are cleared.
-3. Archive the `docker-parity` CI proof in `docs/execution/EVIDENCE.md` once the next container-capable run completes (latest CI sweep still shows only `test` jobs; no `docker-parity` evidence yet).
+1. `P2-B8` parity proof captured and archived in `docs/execution/EVIDENCE.md` (`docker-parity` success in run `30070878830`).
+2. Resolve `server-boundaries` failure path (`Run Alembic PostgreSQL migration`) in a follow-up slice before asserting full gate closure.
+3. Resume matching explainability and matching-engine extensions once P1 blockers are cleared.
 4. Done: Added explicit parity acceptance for unknown-currency bucketing behavior between in-memory and persisted runs.
 5. Done: Added deterministic benchmark coverage for unknown-currency precision (`amount_fractional_digits=4`) and captured 10k/100k synthetic profiling runs.
 6. Done: Implemented in-memory and persisted explainability coverage for matched, unmatched-right, unmatched-left, and lineages.
@@ -147,4 +149,8 @@
 - 2026-07-24: Branch-level check for `feature/p0-atomic-audit-outbox` via `gh run list --workflow ci.yml --branch feature/p0-atomic-audit-outbox ... --limit 20` returned `[]`, so parity job evidence is not yet runnable until branch is pushed and workflow executed.
 - 2026-07-24: Completed `P1-B11`: reference-normalization regex validation now fails fast in `reconforge/platform/matching.py` and is covered by `tests/test_platform_matching.py::test_reference_normalization_rules_reject_invalid_regex_normalization_pattern`.
 - 2026-07-24: Executed targeted reference-normalization validation command (`reference_normalization_rules_reject_invalid_configuration or reference_normalization_rules_reject_invalid_regex_normalization_pattern`) with basetemp `.\\.pytest-baseline-target`; observed `2 passed`.
+- 2026-07-24: Collected CI parity evidence in PR `54`:
+  - Workflow run: `https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30070878830`
+  - `docker-parity` job `89411613485` completed successfully.
+  - `test (3.11)` and `test (3.12)` succeeded; `server-boundaries` failed on migration step in this run.
 

@@ -6839,3 +6839,39 @@ P1-PLAT-004 is complete for this bounded local safe-partition-workload contract.
 Arbitrary external side effects, PostgreSQL parity, host/filesystem loss,
 distributed exactly-once transport, and HA/DR remain unclaimed and assigned to
 their specific later gates.
+
+## E-095: Live PostgreSQL durable-job contract parity
+
+Alembic revision 0012 installs tenant-scoped durable jobs, transitions, leases,
+lease events, and partition effects. RLS is forced on every table. Transition,
+lease-event, and effect rows are append-only. The adapter owns a transaction per
+Application operation, uses optimistic versions, claims with `FOR UPDATE SKIP
+LOCKED`, and requires the exact unexpired fencing generation for worker writes.
+
+On PostgreSQL 17.10, two independent connections submit the same scoped key
+concurrently: exactly one creates and one replays the identical aggregate.
+Live non-superuser tests prove cross-tenant invisibility, idempotency conflict,
+stale-version rejection, heartbeat, connection close, takeover generation 2,
+old-worker rejection, committed-partition enumeration, and exactly two final
+effects. The normalized partition/input/output/progress/reference tuples and
+final manifest equal the SQLite execution. A fresh database passes migration
+upgrade, downgrade from 0012 to 0011 while preserving the predecessor table,
+and re-upgrade to 0012.
+
+A clean-database sweep of all PostgreSQL contract modules plus the server API
+identity boundary passes 119 tests. It also exposed and fixed an order-dependent
+evidence test setup that omitted the master-data prerequisite.
+
+| Command | Result |
+| --- | --- |
+| live PostgreSQL durable-job contract | 2 passed |
+| all live PostgreSQL modules plus server identity on a fresh database | 119 passed |
+| Alembic forward/downgrade/re-upgrade on a fresh database | 2 passed |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 222 source files |
+| `python -m pytest` without live-service environment | 1,333 passed, 11 live-service skips, 7 expected warnings |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 668,213-byte wheel and 945,233-byte sdist |
+| `git diff --check` | Pass |
+
+P1-PLAT-002 remains in progress because live SQLite/PostgreSQL parity has not
+yet been established for every supported Application repository boundary.

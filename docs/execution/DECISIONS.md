@@ -804,3 +804,8 @@
 - Rationale: Checkpoint-only durability can duplicate output or skip missing output depending on which side of a crash commits first.
 - Consequence: Migration 23 and the safe partition-worker methods close P1-PLAT-004's local exit. Uninterrupted and restarted runs have identical semantic outputs and no duplicate partition. External systems remain outside the atomic SQLite resource and need independent controls.
 - ADR: `docs/adr/0105-atomic-partition-effects-and-checkpoints.md`
+### D-091: PostgreSQL durable-job operations own transactions and fencing
+
+- **Decision**: Implement the same backend-neutral durable-job ports through a PostgreSQL adapter whose operations set transaction-local tenant scope, atomically compare versions, and fence every worker write by owner, generation, and unexpired lease. Claims use row locks with `SKIP LOCKED`; effects and transitions are append-only.
+- **Reason**: Method-name similarity is not backend parity. Real concurrency, connection loss, RLS, and migration rollback must be exercised on PostgreSQL.
+- **Consequence**: E-095 proves this boundary on PostgreSQL 17 and compares its semantic effects with SQLite. It does not close P1-PLAT-002 for unrelated repository boundaries.

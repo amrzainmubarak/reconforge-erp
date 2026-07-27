@@ -284,9 +284,11 @@ tasks:
     priority: P1
     area: platform
     title: PostgreSQL contract test suite
-    status: planned
+    status: in_progress
     depends_on: [P1-PLAT-001]
     exit_evidence: Live PostgreSQL behavior matches SQLite contracts for supported boundaries.
+    completed_slices:
+      - E-095 implements the durable-job Application/worker ports on PostgreSQL with migration 0012. A live PostgreSQL 17 non-superuser role proves tenant RLS, atomic two-connection idempotency, optimistic stale-write rejection, SKIP LOCKED claims, heartbeat, generation-fenced takeover after connection close, stale-worker refusal, atomic partition effects, final manifest/lease release, and exact semantic effect parity with SQLite. A fresh database passes upgrade, downgrade to 0011, and re-upgrade. Other repository boundaries remain unproven, so the task stays in progress.
   - id: P1-PLAT-003
     priority: P1
     area: platform

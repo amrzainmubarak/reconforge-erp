@@ -23,6 +23,7 @@ from reconforge.infrastructure.postgres_evidence import (
     PostgresEvidenceValidationError,
 )
 from reconforge.infrastructure.postgres_ledger import POSTGRES_LEDGER_SCHEMA_SQL
+from reconforge.infrastructure.postgres_master_data import POSTGRES_MASTER_DATA_SCHEMA_SQL
 
 
 class _Cursor:
@@ -286,6 +287,7 @@ def test_live_postgres_evidence_registry_enforces_tenant_visibility() -> None:
     try:
         with admin.transaction():
             install_postgres_rls_schema(admin)
+            admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
             admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
             admin.execute(POSTGRES_EVIDENCE_SCHEMA_SQL)
             if app_user:

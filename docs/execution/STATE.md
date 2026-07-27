@@ -155,5 +155,13 @@ files, the 65-test compatibility focus, wheel/sdist build, and diff checks pass.
 ## Next exact actions
 
 1. Migrate the next transactionally coherent Platform use case into the Application layer and reduce the E-090 coupling counts without exposing a database connection.
-2. Add PostgreSQL/SQLite behavioral parity fixtures for the stable job/application contracts; do not label method-name similarity as backend parity.
+2. Add live PostgreSQL parity for the next stable Application repository boundary; durable-job parity is now established by E-095.
 3. Keep the Phase 1–3 matrix closed as implementation changes; never substitute synthetic evidence for the two external Phase 3 gates.
+E-095 advances P1-PLAT-002 with live PostgreSQL durable-job parity. Migration
+0012, forced RLS, atomic concurrent idempotency, optimistic versions, SKIP
+LOCKED claims, generation fencing, connection-loss takeover, immutable effects,
+SQLite semantic parity, and forward/downgrade/re-upgrade are verified. A fresh
+PostgreSQL 17 database passes all 119 PostgreSQL/server-identity contract tests.
+P1-PLAT-002 remains in progress for the other supported repository boundaries.
+The non-live full suite passes 1,333 tests with eleven live-service skips; Ruff,
+mypy over 222 source files, build, and diff checks pass.

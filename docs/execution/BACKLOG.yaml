@@ -399,9 +399,11 @@ tasks:
     priority: P1
     area: reconciliation
     title: True grouped match model
-    status: planned
+    status: completed
     depends_on: [P1-REC-002, P1-REC-003]
     exit_evidence: Bounded one/many and many/many groups, sum/currency/date/cardinality constraints, deterministic tie-break, and explanation.
+    completed_slices:
+      - E-108 adds an experimental versioned grouped-subset-sum strategy with exact Decimal sums, common currency and partition, date/cardinality constraints, deterministic selection and digest, a fail-closed 25,000-evaluation budget, and one/many plus many/many tests invariant to input order.
   - id: P1-REC-005
     priority: P1
     area: reconciliation

@@ -25,6 +25,9 @@ class StrategyLimits:
     max_total_candidate_evaluations: int
     max_date_window_days: int
     max_amount_text_characters: int = 128
+    max_left_group_cardinality: int | None = None
+    max_right_group_cardinality: int | None = None
+    max_group_search_evaluations: int | None = None
 
     def __post_init__(self) -> None:
         values = (
@@ -34,9 +37,16 @@ class StrategyLimits:
             self.max_total_candidate_evaluations,
             self.max_date_window_days,
             self.max_amount_text_characters,
+            self.max_left_group_cardinality,
+            self.max_right_group_cardinality,
+            self.max_group_search_evaluations,
         )
-        if any(isinstance(value, bool) or value < 1 for value in values):
+        if any(value is not None and (isinstance(value, bool) or value < 1) for value in values):
             raise MatchingStrategyContractError("Strategy limits must be positive integers.")
+
+    @property
+    def as_dict(self) -> dict[str, int]:
+        return {key: value for key, value in self.__dict__.items() if value is not None}
 
 
 @dataclass(frozen=True)
@@ -64,7 +74,7 @@ class MatchingStrategyManifest:
                 "deterministic_tie_break": self.deterministic_tie_break,
                 "explanation_schema": self.explanation_schema,
                 "id": self.id,
-                "limits": self.limits.__dict__,
+                "limits": self.limits.as_dict,
                 "maturity": self.maturity,
                 "supported_modes": self.supported_modes,
                 "version": self.version,
@@ -84,6 +94,9 @@ class MatchingStrategyRequest:
     exact_fields: str = ""
     amount_tolerance: str = "0"
     date_window_days: int = 0
+    mode: str = "one-to-one"
+    currency_field: str = "currency"
+    partition_field: str = "partition"
 
 
 @dataclass(frozen=True)
@@ -168,10 +181,13 @@ def request_digest(request: MatchingStrategyRequest, manifest_digest: str) -> st
             "amount_tolerance": request.amount_tolerance,
             "date_field": request.date_field,
             "date_window_days": request.date_window_days,
+            "currency_field": request.currency_field,
             "exact_fields": request.exact_fields,
             "left_id_field": request.left_id_field,
             "left_records": canonical_records(request.left_records),
             "manifest_digest": manifest_digest,
+            "mode": request.mode,
+            "partition_field": request.partition_field,
             "reference_field": request.reference_field,
             "right_id_field": request.right_id_field,
             "right_records": canonical_records(request.right_records),

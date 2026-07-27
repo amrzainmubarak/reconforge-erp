@@ -1,5 +1,9 @@
 """Backend-neutral ReconForge application use cases."""
 
+from reconforge.application.grouped_matching import (
+    GroupedMatchingApplicationService,
+    GroupedMatchRequest,
+)
 from reconforge.application.jobs import (
     DurableJobApplicationService,
     DurableJobNotFoundError,
@@ -27,6 +31,8 @@ __all__ = [
     "DurableJobWorkerRepositoryProtocol",
     "DurableJobWorkerService",
     "JobSubmission",
+    "GroupedMatchRequest",
+    "GroupedMatchingApplicationService",
     "LeasedJob",
     "MigrationStatus",
     "OperationsApplicationService",

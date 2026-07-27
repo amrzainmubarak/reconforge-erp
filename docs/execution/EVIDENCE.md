@@ -7248,3 +7248,40 @@ strategy manifest publishes both ceilings.
 This is a deterministic candidate-evaluation budget, not a wall-clock or memory
 benchmark. It does not prove grouped-search bounds, configurable tenant policy,
 supported throughput, or explanation schema v2.
+
+## E-108: Bounded true grouped matching
+
+`bounded-grouped-subset-sum@1.0.0` adds a pure domain model, backend-neutral
+application boundary, and versioned strategy adapter for true one-to-many,
+many-to-one, and many-to-many sums. Candidate groups require exact Decimal
+amounts, one currency and partition, a bounded date span, and published
+cardinality ceilings. Selection records sums, difference, candidate and search
+counts, stable tie-break, explanation, group identity, and decision digest.
+
+The enumerator sorts stable record identities and evaluates no more than 25,000
+group pairs. Crossing that ceiling returns
+`GROUP_SEARCH_BUDGET_EXCEEDED` with no selected record IDs. The published
+manifest distinguishes this experimental strategy from the unchanged legacy
+pair-capacity flags.
+
+| Evidence | Result |
+| --- | --- |
+| True one-to-many, many-to-one, and many-to-many exact sums | Pass |
+| Currency, partition, date, tolerance, and cardinality constraints | Pass |
+| Right-side permutation and equal-business-cost tie-break | Pass |
+| Search-budget exhaustion | Explicit Ambiguous result; no selected group |
+| Strict application ingress | Binary float, NaN, Infinity, malformed amount, noncanonical date, and missing fields rejected |
+| Published strategy manifest/schema parity | Pass |
+| Focused domain/application/strategy tests | Pass: 21 tests |
+| Repository mypy | Pass over 239 source files |
+| Repository boundary inventory | New connection-free Application Service registered; exact-inventory gate passes with 7 backend-neutral services |
+| `python -m pytest` after inventory and compatibility corrections | Pass: 1,410 passed, 16 environment-dependent skips, 7 warnings in 201.43 seconds |
+| Bandit on all E-108 Python files | Pass: no findings |
+| Repository-wide Bandit baseline | Non-zero: 7 pre-existing Medium/Medium B608 findings in PostgreSQL/SQLite durable-job SQL assembly; no High findings and no E-108 findings |
+| Final `python -m build --no-isolation` to a new temporary directory | Pass: 713,349-byte wheel and 1,004,993-byte sdist |
+| `python -m pip_audit --timeout 60` | Pass on retry: no known vulnerabilities; local unpublished `reconforge-erp` distribution explicitly skipped |
+| `git diff --check` | Pass |
+
+This evidence proves one bounded group decision per request. It does not prove
+batch non-overlap assignment, netting, fees, FX, partial settlement, grouped
+throughput, or persistence/API/CLI exposure.

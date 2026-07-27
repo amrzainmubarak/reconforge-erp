@@ -22,6 +22,30 @@
         "reference-normalized"
       ],
       "version": "1.0.0"
+    },
+    {
+      "algorithm": "bounded-partitioned-subset-sum-enumeration-v1",
+      "deterministic_tie_break": "difference-cardinality-date-span-stable-record-identities-v1",
+      "explanation_schema": "grouped-matching-explanation-v1",
+      "id": "bounded-grouped-subset-sum",
+      "limits": {
+        "max_amount_text_characters": 128,
+        "max_candidates_per_record": 25000,
+        "max_total_candidate_evaluations": 25000,
+        "max_date_window_days": 3660,
+        "max_group_search_evaluations": 25000,
+        "max_left_group_cardinality": 4,
+        "max_left_records": 64,
+        "max_right_group_cardinality": 4,
+        "max_right_records": 64
+      },
+      "maturity": "experimental",
+      "supported_modes": [
+        "many-to-many",
+        "many-to-one",
+        "one-to-many"
+      ],
+      "version": "1.0.0"
     }
   ]
 }

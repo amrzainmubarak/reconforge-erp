@@ -15,6 +15,10 @@ from reconforge.application.matching_strategies import (
     canonical_payload,
 )
 from reconforge.db import connect, run_migrations
+from reconforge.infrastructure.grouped_matching_strategy import (
+    GROUPED_SUBSET_SUM_MANIFEST,
+    GroupedSubsetSumStrategy,
+)
 from reconforge.infrastructure.indexed_matching_strategy import (
     INDEXED_ONE_TO_ONE_MANIFEST,
     IndexedOneToOneStrategy,
@@ -55,6 +59,7 @@ def test_indexed_strategy_manifest_is_versioned_bounded_and_registry_addressable
         assert manifest.version == "1.0.0"
         assert manifest.maturity == "beta"
         assert len(manifest.digest) == 64
+        assert manifest.digest == "e3760bb991ea1edef3dbb2448e8e2b92063147b8dd9261433cac7cfa7fda5da3"
         assert manifest.limits.max_left_records == 250_000
         assert manifest.limits.max_candidates_per_record == 10_000
         registry = MatchingStrategyRegistry((strategy,))
@@ -138,8 +143,46 @@ def test_published_strategy_manifest_matches_runtime_contract() -> None:
         "deterministic_tie_break": manifest.deterministic_tie_break,
         "explanation_schema": manifest.explanation_schema,
         "id": manifest.id,
-        "limits": manifest.limits.__dict__,
+        "limits": manifest.limits.as_dict,
         "maturity": manifest.maturity,
         "supported_modes": list(manifest.supported_modes),
         "version": manifest.version,
     }
+    grouped_published = document["strategies"][1]
+    grouped = GROUPED_SUBSET_SUM_MANIFEST
+    assert grouped_published == {
+        "algorithm": grouped.algorithm,
+        "deterministic_tie_break": grouped.deterministic_tie_break,
+        "explanation_schema": grouped.explanation_schema,
+        "id": grouped.id,
+        "limits": grouped.limits.as_dict,
+        "maturity": grouped.maturity,
+        "supported_modes": list(grouped.supported_modes),
+        "version": grouped.version,
+    }
+
+
+def test_grouped_strategy_is_registered_versioned_and_permutation_invariant() -> None:
+    strategy = GroupedSubsetSumStrategy()
+    request = MatchingStrategyRequest(
+        left_records=({"id": "L1", "amount": "100", "currency": "USD", "date": "2026-01-10", "partition": "AR"},),
+        right_records=(
+            {"id": "R2", "amount": "60", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+            {"id": "R1", "amount": "40", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+        ),
+        mode="one-to-many",
+    )
+
+    first = strategy.execute(request)
+    second = strategy.execute(
+        MatchingStrategyRequest(
+            left_records=request.left_records,
+            right_records=tuple(reversed(request.right_records)),
+            mode="one-to-many",
+        )
+    )
+
+    assert first == second
+    assert first.results[0]["left_record_ids"] == ("L1",)
+    registry = MatchingStrategyRegistry((strategy,))
+    assert registry.get(strategy.manifest.id, strategy.manifest.version) is strategy

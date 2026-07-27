@@ -280,3 +280,11 @@ exclusion reason. Stable left identity makes total-budget behavior invariant to
 row permutation. The deterministic search budget governs business output;
 infrastructure wall-clock watchdogs may be added later without authorizing a
 partial financial decision.
+
+E-108 closes P1-REC-004 with the separate experimental
+`bounded-grouped-subset-sum@1.0.0` strategy. Its pure domain and application
+boundaries implement true one-to-many, many-to-one, and many-to-many exact-
+Decimal group sums under common currency, partition, date, cardinality, and
+search constraints. Selection and digests are invariant to input order; a
+25,000-evaluation ceiling fails closed. The legacy CLI pair-capacity flags are
+unchanged and are explicitly not presented as true grouped sums.

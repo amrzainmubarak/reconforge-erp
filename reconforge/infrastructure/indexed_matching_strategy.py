@@ -79,6 +79,8 @@ class IndexedOneToOneStrategy:
 
     def _validate_request(self, request: MatchingStrategyRequest) -> None:
         limits = self.manifest.limits
+        if request.mode != "one-to-one":
+            raise MatchingStrategyContractError("Indexed one-to-one strategy does not support the requested mode.")
         if len(request.left_records) > limits.max_left_records or len(request.right_records) > limits.max_right_records:
             raise MatchingStrategyContractError("Matching strategy input record limit exceeded.")
         if (

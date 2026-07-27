@@ -31,7 +31,10 @@
               "max_candidates_per_record": {"type": "integer", "minimum": 1},
               "max_total_candidate_evaluations": {"type": "integer", "minimum": 1},
               "max_date_window_days": {"type": "integer", "minimum": 1},
-              "max_amount_text_characters": {"type": "integer", "minimum": 1}
+              "max_amount_text_characters": {"type": "integer", "minimum": 1},
+              "max_left_group_cardinality": {"type": "integer", "minimum": 1},
+              "max_right_group_cardinality": {"type": "integer", "minimum": 1},
+              "max_group_search_evaluations": {"type": "integer", "minimum": 1}
             }
           }
         }

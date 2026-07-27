@@ -27,6 +27,10 @@ platform_services:
   - {file: payables.py, service: PayablesService, status: direct_sqlite}
   - {file: receivables.py, service: ReceivablesService, status: direct_sqlite}
 application_services:
+  - file: grouped_matching.py
+    service: GroupedMatchingApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.grouped_matching_strategy.GroupedSubsetSumStrategy
   - file: backup_restore.py
     service: BackupRestoreApplicationService
     status: backend_neutral
@@ -56,4 +60,4 @@ summary:
   direct_sqlite: 16
   partial_repository: 3
   compatibility_adapter: 1
-  backend_neutral_application: 6
+  backend_neutral_application: 7

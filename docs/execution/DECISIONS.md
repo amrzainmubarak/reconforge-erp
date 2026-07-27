@@ -891,3 +891,10 @@
 - **Reason**: Choosing the first N candidates would turn a resource safeguard into an arbitrary financial decision, while wall-clock time alone is not reproducible across machines.
 - **Consequence**: E-107 closes P1-REC-003 with deterministic search budgets and fail-closed output. Configurable/grouped budgets and infrastructure watchdogs remain separate.
 - **ADR**: `docs/adr/0118-fail-closed-candidate-budgets.md`
+
+### D-104: True grouped sums use a separate bounded strategy
+
+- **Decision**: Introduce `bounded-grouped-subset-sum@1.0.0` rather than relabeling the legacy pair-capacity flags. Enforce exact Decimal sums, currency/partition/date/cardinality constraints, stable tie-breaks, and a deterministic 25,000-evaluation fail-closed budget.
+- **Why**: Reusing individually equal edges is not grouped financial reconciliation, while unrestricted subset search is unsafe and non-operational.
+- **Consequence**: E-108 closes P1-REC-004 for one group per request. Batch group assignment, fee/FX/netting, governed ambiguity, and throughput evidence remain open.
+- **ADR**: `docs/adr/0119-bounded-true-grouped-matching.md`

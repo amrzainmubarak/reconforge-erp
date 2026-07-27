@@ -381,9 +381,11 @@ tasks:
     priority: P1
     area: reconciliation
     title: Range-indexed tolerance lookup
-    status: planned
+    status: completed
     depends_on: [P1-REC-001]
     exit_evidence: Exact Decimal ranges avoid full cross products and match golden outputs.
+    completed_slices:
+      - E-106 replaces positive-tolerance amount-bucket scans with exact Decimal binary-search partitions, preserves missing/explicit currency compatibility, includes duplicate and boundary amounts, proves logarithmic boundary lookup on a synthetic billion-position sequence, and passes existing matching/property/strategy outputs.
   - id: P1-REC-003
     priority: P1
     area: reconciliation

@@ -6,8 +6,9 @@ import hashlib
 import heapq
 import json
 import sqlite3
+from bisect import bisect_left, bisect_right
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
@@ -55,7 +56,6 @@ from reconforge.utils.money import (
     InvalidAmountError,
     parse_amount,
     parse_amount_for_currency_precision,
-    round_exact_money,
     validate_financial_input_policy,
 )
 
@@ -176,19 +176,6 @@ def _parse_amount(
         )
     except InvalidAmountError:
         return None
-
-
-def _amount_bucket_key(value: Decimal, precision: int | None) -> str:
-    """Build a deterministic bucket key for amount matching without assumptions.
-
-    For known currency precisions we quantize the bucket explicitly.
-    For unknown precision we use the canonical normalized decimal text.
-    """
-
-    if precision is None:
-        normalized = value.normalize()
-        return _decimal_text(normalized)
-    return str(round_exact_money(value, places=precision))
 
 
 def _non_negative_amount(
@@ -415,6 +402,40 @@ class _MatchCandidate:
     explanation: str
     amount_difference: Decimal
     date_difference_days: int | None
+
+
+_IndexedRightRecord = tuple[int, str, dict[str, Any], Decimal, str, int | None]
+
+
+def _decimal_range_bounds(amounts: Sequence[Decimal], lower: Decimal, upper: Decimal) -> tuple[int, int]:
+    """Return inclusive Decimal range boundaries through logarithmic binary search."""
+
+    if lower > upper:
+        raise PlatformError("Amount range bounds are invalid.")
+    return bisect_left(amounts, lower), bisect_right(amounts, upper)
+
+
+@dataclass(frozen=True)
+class _AmountRangePartition:
+    """Sorted exact-Decimal partition supporting logarithmic range boundaries."""
+
+    amounts: tuple[Decimal, ...]
+    candidates: tuple[_IndexedRightRecord, ...]
+
+    def __post_init__(self) -> None:
+        if len(self.amounts) != len(self.candidates) or tuple(sorted(self.amounts)) != self.amounts:
+            raise PlatformError("Amount range index is invalid.")
+
+    def between(self, lower: Decimal, upper: Decimal) -> tuple[_IndexedRightRecord, ...]:
+        start, end = _decimal_range_bounds(self.amounts, lower, upper)
+        return self.candidates[start:end]
+
+
+@dataclass(frozen=True)
+class _RightCandidateIndex:
+    reference: dict[str, list[_IndexedRightRecord]]
+    exact: dict[str, list[_IndexedRightRecord]]
+    amount_partitions: dict[tuple[str, int | None], _AmountRangePartition]
 
 
 @dataclass
@@ -1313,12 +1334,10 @@ class MatchingService:
         reference_field: str,
         exact_fields: list[str],
         reference_normalization_rules: ReferenceNormalizationRules,
-    ) -> dict[str, dict[str, list[tuple[int, str, dict[str, Any], Decimal, str, int | None]]]]:
-        indexes: dict[str, dict[str, list[tuple[int, str, dict[str, Any], Decimal, str, int | None]]]] = {
-            "reference": {},
-            "amount": {},
-            "exact": {},
-        }
+    ) -> _RightCandidateIndex:
+        reference_index: dict[str, list[_IndexedRightRecord]] = {}
+        exact_index: dict[str, list[_IndexedRightRecord]] = {}
+        amount_rows: dict[tuple[str, int | None], list[_IndexedRightRecord]] = {}
         for index, record_id, record, _stable_key, _, amount_value in ordered_right_records:
             if amount_value is None:
                 continue
@@ -1328,25 +1347,33 @@ class MatchingService:
             )
             right_currency = right_currency_map.get(index, "")
             right_precision = right_precision_map.get(index)
+            candidate = (index, record_id, record, amount_value, right_currency, right_precision)
             if reference:
-                indexes["reference"].setdefault(reference, []).append(
-                    (index, record_id, record, amount_value, right_currency, right_precision),
-                )
-            amount_bucket = _amount_bucket_key(amount_value, right_precision)
-            indexes["amount"].setdefault(str(amount_bucket), []).append(
-                (index, record_id, record, amount_value, right_currency, right_precision),
-            )
+                reference_index.setdefault(reference, []).append(candidate)
+            amount_rows.setdefault((right_currency, right_precision), []).append(candidate)
             if exact_fields:
                 key = self._exact_key(record, exact_fields)
-                indexes["exact"].setdefault(key, []).append(
-                    (index, record_id, record, amount_value, right_currency, right_precision),
-                )
-        return indexes
+                exact_index.setdefault(key, []).append(candidate)
+        amount_partitions: dict[tuple[str, int | None], _AmountRangePartition] = {}
+        for partition_key, candidates in amount_rows.items():
+            ordered = sorted(
+                candidates,
+                key=lambda item: (item[3], self._record_key(item[2], fallback=item[1]), item[1], item[0]),
+            )
+            amount_partitions[partition_key] = _AmountRangePartition(
+                amounts=tuple(item[3] for item in ordered),
+                candidates=tuple(ordered),
+            )
+        return _RightCandidateIndex(
+            reference=reference_index,
+            exact=exact_index,
+            amount_partitions=amount_partitions,
+        )
 
     def _candidates(
         self,
         left: dict[str, Any],
-        right_index: dict[str, dict[str, list[tuple[int, str, dict[str, Any], Decimal, str, int | None]]]],
+        right_index: _RightCandidateIndex,
         *,
         left_amount: Decimal,
         left_currency: str,
@@ -1360,28 +1387,28 @@ class MatchingService:
             left.get(reference_field),
             rules=reference_normalization_rules,
         )
-        candidates_by_key: dict[tuple[int, str], tuple[int, str, dict[str, Any], Decimal, str, int | None]] = {}
-        if reference and reference in right_index["reference"]:
-            for candidate in right_index["reference"][reference]:
+        candidates_by_key: dict[tuple[int, str], _IndexedRightRecord] = {}
+        if reference and reference in right_index.reference:
+            for candidate in right_index.reference[reference]:
                 if left_currency and candidate[4] and candidate[4] != left_currency:
                     continue
                 candidates_by_key[(candidate[0], candidate[1])] = candidate
         if exact_fields:
             key = self._exact_key(left, exact_fields)
-            if key in right_index["exact"]:
-                for candidate in right_index["exact"][key]:
+            if key in right_index.exact:
+                for candidate in right_index.exact[key]:
                     if left_currency and candidate[4] and candidate[4] != left_currency:
                         continue
                     candidates_by_key[(candidate[0], candidate[1])] = candidate
-        if amount_tolerance == 0:
-            bucket = _amount_bucket_key(left_amount, left_precision)
-            amount_candidates = right_index["amount"].get(bucket, [])
-        else:
-            amount_candidates = []
-            for bucket, candidates in right_index["amount"].items():
-                bucket_decimal = Decimal(bucket)
-                if abs(left_amount - bucket_decimal) <= amount_tolerance:
-                    amount_candidates.extend(candidates)
+        _ = left_precision
+        amount_candidates: list[_IndexedRightRecord] = []
+        for (partition_currency, _partition_precision), partition in sorted(
+            right_index.amount_partitions.items(),
+            key=lambda item: (item[0][0], -1 if item[0][1] is None else item[0][1]),
+        ):
+            if left_currency and partition_currency and partition_currency != left_currency:
+                continue
+            amount_candidates.extend(partition.between(left_amount - amount_tolerance, left_amount + amount_tolerance))
         for candidate in amount_candidates:
             if left_currency and candidate[4] and candidate[4] != left_currency:
                 continue
@@ -1499,7 +1526,7 @@ class MatchingService:
         left_currency_map: dict[int, str],
         left_currency_issues: dict[int, str | None],
         right_currency_map: dict[int, str],
-        right_index_data: dict[str, dict[str, list[tuple[int, str, dict[str, Any], Decimal, str, int | None]]]],
+        right_index_data: _RightCandidateIndex,
         *,
         amount_field: str,
         date_field: str,

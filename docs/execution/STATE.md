@@ -261,3 +261,12 @@ permutation-invariant input, and complete decision digests. Binary floats,
 non-finite values, colliding field names, invalid tolerance/date windows, and
 limit excess fail before matching. Candidate accounting, grouped matching,
 ambiguity v2, and benchmark thresholds remain open under P1-REC-002 onward.
+
+E-106 closes P1-REC-002. The indexed matcher now stores exact Decimal amounts
+in stable currency/precision partitions and finds inclusive tolerance windows
+with binary search instead of scanning and reparsing every amount bucket per
+left record. Missing-currency compatibility and explicit currency rejection are
+preserved. Synthetic boundary evidence uses a billion-position lazy sequence
+with at most 64 indexed lookups; duplicate/lower/upper boundary cases and all
+existing matching/property/strategy tests pass. Candidate count, timeout,
+search, and partition budgets remain open under P1-REC-003.

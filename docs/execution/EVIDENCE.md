@@ -7199,3 +7199,27 @@ compared with the runtime declaration.
 This proves the first typed strategy boundary and current-output compatibility,
 not candidate-count instrumentation, grouped matching, search budgets,
 explanation schema v2, backend performance parity, or supported scale.
+
+## E-106: Exact Decimal range-indexed tolerance lookup
+
+The matcher replaces its positive-tolerance loop over all amount buckets with
+immutable currency/precision partitions sorted by exact Decimal values and the
+existing stable record key. Inclusive lower and upper positions use Python's
+binary-search primitives. Each compatible partition performs logarithmic
+boundary discovery, after which work is proportional only to the returned
+candidate slice. Explicit unequal currencies remain excluded; a missing
+currency retains the historical compatibility path across partitions.
+
+| Evidence | Result |
+| --- | --- |
+| Range-index algorithm/boundary/invalid-state tests | 3 passed |
+| Billion-position lazy index boundary lookup | Exact three-position window with no more than 64 indexed reads |
+| Existing Platform/property/strategy matching focus | Pass with unchanged decisions |
+| `python -m pytest` without live-service environment | 1,393 passed, 16 skipped, 7 expected warnings |
+| `python -m ruff check .` and `python -m mypy reconforge` | Pass over 236 source files |
+| `python -m pip_audit` | No known third-party dependency vulnerabilities; the local package is not a PyPI audit subject |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 706,645-byte wheel and 996,965-byte sdist |
+
+This proves exact range-bound lookup and current-output compatibility. It does
+not establish a total candidate cap, timeout/search budget, memory ceiling,
+grouped matching, or supported throughput.

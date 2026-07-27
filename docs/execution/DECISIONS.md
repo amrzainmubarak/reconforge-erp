@@ -877,3 +877,10 @@
 - **Reason**: A generic matcher method cannot distinguish strategy capabilities or reproduce a decision after algorithms and defaults evolve.
 - **Consequence**: E-105 closes P1-REC-001 while preserving current one-to-one output compatibility. Candidate accounting, grouped strategies, explanation v2, and measured scale remain open tasks.
 - **ADR**: `docs/adr/0116-versioned-matching-strategy-contract.md`
+
+### D-102: Binary-search exact Decimal amount windows
+
+- **Decision**: Partition right-side amounts by currency/precision, sort exact Decimal values with stable record keys, and use inclusive binary-search boundaries for tolerance lookup.
+- **Reason**: Scanning and reparsing every distinct amount bucket for each left record defeats indexed candidate generation even though it avoids a literal row cross product.
+- **Consequence**: E-106 closes P1-REC-002 with logarithmic boundary lookup and unchanged existing outputs. Returned candidates still require linear scoring, and caps/time/search budgets remain P1-REC-003.
+- **ADR**: `docs/adr/0117-exact-decimal-range-index.md`

@@ -729,5 +729,5 @@
 - Date: 2026-07-27
 - Decision: Regenerate the npm v3 lock from the reviewed manifest, retain exact resolved versions, require HTTPS registry resolution and SRI on all 209 non-root entries, and set the policy's known integrity gap to zero.
 - Rationale: The prior lock fixed versions but left 155 downloads dependent on mutable registry response metadata. npm can emit exact resolution and integrity for the same graph, so retaining the gap is unnecessary.
-- Consequence: Clean installation verifies every registry tarball against the committed lock. This does not prove publisher provenance, package safety, reachability, licensing, or registry availability. P0-SEC-008 remains open until the exact lock revision passes hosted gates.
+- Consequence: Clean installation verifies every registry tarball against the committed lock. The exact revision passed hosted Security, Docker, CI, and CodeQL runs, so P0-SEC-008's written exit is complete. This does not prove publisher provenance, package safety, reachability, licensing, malware absence, or registry availability.
 - ADR: `docs/adr/0069-lock-dependencies-and-fail-closed-supply-chain-gates.md`

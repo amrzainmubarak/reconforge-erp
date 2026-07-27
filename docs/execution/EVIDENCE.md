@@ -6485,7 +6485,18 @@ threshold was weakened.
 | `npm audit --package-lock-only --audit-level=high` | Zero vulnerabilities |
 | Web typecheck / unit / production build | Pass; 17 unit tests and Vite production build |
 
-This proves committed checksum coverage and current advisory results, not
-publisher identity, package-code safety, reachability, licensing, malware
-absence, registry availability, or artifact provenance. P0-SEC-008 remains in
-progress until this exact lock revision passes the hosted policy and web gates.
+Hosted verification on committed revision
+`d5433097317c77bfaae86acc654e7d10a11489b5` is all-green:
+
+| Hosted run | Result |
+| --- | --- |
+| Security `30240642293` | Pass; both locked Python audits and the secret/npm policy gate |
+| Docker `30240642306` | Pass; checksum-pinned container build |
+| CI `30240642321` | Pass; Python 3.11/3.12, four engine cells, live server boundaries, and Docker parity |
+| CodeQL `30240642386` | Pass; Python analysis |
+
+This completes P0-SEC-008's exact lock/constraint, secret scanning, update
+cadence, exception workflow, and CI-gate exit. It proves committed checksum
+coverage and current advisory results, not publisher identity, package-code
+safety, reachability, licensing, malware absence, registry availability, or
+artifact provenance.

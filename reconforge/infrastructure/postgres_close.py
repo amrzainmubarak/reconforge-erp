@@ -455,7 +455,7 @@ class PostgresCloseRepository:
             INSERT INTO reconforge.close_tasks
                 (tenant_id, id, close_period_id, task_code, name, owner_user_id, category,
                  risk_rating, due_date, status, blocker_reason, updated_by, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NULLIF(%s, ''), 'Not Started', '', %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NULLIF(%s, '')::date, 'Not Started', '', %s, %s, %s)
             ON CONFLICT (tenant_id, id) DO UPDATE SET
                 name = EXCLUDED.name,
                 owner_user_id = EXCLUDED.owner_user_id,

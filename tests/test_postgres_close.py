@@ -125,7 +125,8 @@ def test_close_period_and_task_writes_are_caller_owned_and_deterministic() -> No
     assert task["task_code"] == "CLOSE-001"
     assert connection.commits == 0
     assert any("INSERT INTO reconforge.close_periods" in sql for sql, _ in connection.executed)
-    assert any("INSERT INTO reconforge.close_tasks" in sql for sql, _ in connection.executed)
+    task_insert = next(sql for sql, _ in connection.executed if "INSERT INTO reconforge.close_tasks" in sql)
+    assert "NULLIF(%s, '')::date" in task_insert
 
 
 def test_close_period_rejects_a_date_mismatch_without_writing() -> None:

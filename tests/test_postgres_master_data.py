@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 
+import reconforge.infrastructure.postgres_master_data as postgres_master_data
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings, PostgresTenantBoundary
 from reconforge.infrastructure.postgres_master_data import (
     POSTGRES_FISCAL_PERIOD_SCHEMA_SQL,
@@ -96,6 +97,7 @@ def test_master_data_repository_parameterizes_tenant_and_does_not_commit() -> No
     assert record["tenant_id"] == "tenant_a"
     assert record["id"] == "org-a"
     assert connection.executed[0][1] == ("tenant_a", "org-a", "ORG_A", "North", "USD", True)
+    assert "ON CONFLICT (tenant_id, organization_code) WHERE organization_code IS NOT NULL" in connection.executed[0][0]
     assert connection.commits == 0
 
 
@@ -117,6 +119,30 @@ def test_master_data_mutation_can_append_audit_and_outbox_evidence_in_caller_tra
     assert any("INSERT INTO reconforge.audit_events" in statement for statement in sql)
     assert any("INSERT INTO reconforge.outbox_events" in statement for statement in sql)
     assert connection.commits == 0
+
+
+def test_master_data_audit_hash_includes_the_persisted_blank_reason(monkeypatch: pytest.MonkeyPatch) -> None:
+    connection = _EvidenceConnection()
+    connection.queue_rows(("tenant_a", "USD", "US Dollar", 2, True, "created", "updated"))
+    hashed_payloads: list[dict[str, object]] = []
+    original_hash_payload = postgres_master_data._hash_payload
+
+    def capture_hash_payload(payload: dict[str, object]) -> str:
+        hashed_payloads.append(payload)
+        return original_hash_payload(payload)
+
+    monkeypatch.setattr(postgres_master_data, "_hash_payload", capture_hash_payload)
+    PostgresMasterDataRepository(connection).upsert_currency(
+        tenant_id="tenant_a",
+        code="USD",
+        name="US Dollar",
+        actor_id="user-a",
+    )
+
+    audit_payload = next(
+        payload for payload in hashed_payloads if "event_id" in payload and "previous_event_hash" in payload
+    )
+    assert audit_payload["reason"] == ""
 
 
 def test_master_data_repository_lists_rows_deterministically() -> None:

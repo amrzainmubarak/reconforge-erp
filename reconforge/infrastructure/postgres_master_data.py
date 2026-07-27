@@ -286,6 +286,7 @@ class PostgresMasterDataRepository:
                 "before_state_hash": before_state_hash,
                 "after_state_hash": after_state_hash,
                 "previous_event_hash": previous_hash,
+                "reason": "",
                 "metadata": metadata_json,
             }
         )
@@ -431,8 +432,7 @@ class PostgresMasterDataRepository:
             INSERT INTO reconforge.organizations
                 (tenant_id, id, organization_code, name, base_currency, active)
             VALUES (%s, %s, %s, %s, %s, %s)
-            ON CONFLICT (tenant_id, id) DO UPDATE SET
-                organization_code = EXCLUDED.organization_code,
+            ON CONFLICT (tenant_id, organization_code) WHERE organization_code IS NOT NULL DO UPDATE SET
                 name = EXCLUDED.name,
                 base_currency = EXCLUDED.base_currency,
                 active = EXCLUDED.active,
@@ -451,7 +451,7 @@ class PostgresMasterDataRepository:
             request_id=request_id,
             action="organization_upserted",
             resource_type="organization",
-            resource_id=identifier,
+            resource_id=str(record["id"]),
             before_state_hash=before_state_hash,
             after_state=record,
             metadata=metadata,

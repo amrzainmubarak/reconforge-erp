@@ -747,3 +747,12 @@
 - Rationale: A green pull request or workflow definition cannot prove tag identity, hosted image inventory, attestation authenticity, archive retention, or consumer verification. The combined GitHub tag API, exact-main runs, candidate job, retained artifact metadata, checksum revalidation, and independent `gh attestation verify` executions provide the evidence required by the two written exits.
 - Consequence: Phase 0 is 22/22 complete as an evidence-bounded foundation milestone. The candidate remains non-publishing; SBOM completeness is unknown, OCI reproducibility and SLSA levels are unclaimed, and GitHub Release/PyPI promotion, compliance, certification, independent assurance, production readiness, real adoption, and later platform phases remain outside this closure.
 - ADR: `docs/adr/0067-tag-only-signed-release-candidate.md`, `docs/adr/0068-bind-cyclonedx-sbom-to-each-release-subject.md`
+
+### D-084: Start backend neutrality at an atomic application boundary
+
+- Date: 2026-07-27
+- Decision: Introduce a typed domain unit-of-work port and a SQLite adapter around the workspace plus first-period bootstrap use case. Keep existing direct repository constructors autocommitting by default for compatibility, but disable per-repository commits inside the unit of work so business rows and both audit events share one owned transaction.
+- Rationale: The Phase 0 protocols were runtime-unused and their tests only proved structural compatibility of three SQLite classes. Migrating an atomic use case exposes transaction ownership, rollback, audit-chain, and backend-leakage requirements that isolated repository tests cannot prove.
+- Consequence: Application code now depends only on domain ports and rejects malformed dates/text before opening a transaction. A second-audit failure rolls back workspace, period, first audit event, and ledger head. P1-PLAT-001 remains in progress because most platform services still depend directly on SQLite; no PostgreSQL parity or broad repository abstraction is claimed.
+- Reversibility: Remove the new application/adapter modules and restore the two repository constructors; existing callers retain their default autocommit behavior throughout the slice.
+- ADR: `docs/adr/0099-atomic-application-unit-of-work-port.md`

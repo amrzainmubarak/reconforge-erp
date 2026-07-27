@@ -35,6 +35,8 @@ from reconforge.domain.models import (
 )
 from reconforge.domain.protocols import (
     AuditEventRepositoryProtocol,
+    DomainUnitOfWorkFactory,
+    DomainUnitOfWorkProtocol,
     PeriodRepositoryProtocol,
     WorkspaceRepositoryProtocol,
 )
@@ -47,6 +49,8 @@ __all__ = [
     "Branch",
     "ChartOfAccounts",
     "Currency",
+    "DomainUnitOfWorkFactory",
+    "DomainUnitOfWorkProtocol",
     "EvidenceReference",
     "FinanceJournal",
     "FinancialAccount",

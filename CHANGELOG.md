@@ -1,5 +1,7 @@
 # Changelog
 
+- Added the first Phase 1 backend-neutral application boundary: a typed unit-of-work port and SQLite adapter atomically create a workspace, initial period, and two chained audit events, with pre-transaction validation and fail-closed rollback. Existing direct repository autocommit remains compatible; broader service migration and PostgreSQL parity remain open.
+
 - Added a bounded exact-text FI-008 business-record CSV/JSON reader with stable parsed-byte provenance, strict ambiguity/shape/resource controls, and compatibility routing for platform matching, finance/control imports, ledger, inventory, and receivables CLI inputs. This is a parser boundary, not a semantic-validation, source-authentication, malware, authorization, or scale claim.
 - Added a bounded FI-007 Studio generated-artifact CSV/JSON reader with stable pre/post fingerprints, strict resource/header/ambiguity controls, safe empty-state rendering, preserved pandas display typing, and optional companion shape/count checks. Companion consistency is not a signature, authenticated provenance, malware scan, disclosure authorization, or throughput claim.
 

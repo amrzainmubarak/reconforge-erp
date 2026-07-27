@@ -7,7 +7,9 @@ enabling clean separation between domain logic and underlying database implement
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from collections.abc import Callable
+from types import TracebackType
+from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
 
 from reconforge.domain.models import AuditEventReference, Period, Workspace
 
@@ -74,3 +76,37 @@ class AuditEventRepositoryProtocol(Protocol):
 
     def verify(self) -> AuditVerificationResult:
         ...
+
+
+@runtime_checkable
+class DomainUnitOfWorkProtocol(Protocol):
+    """Atomic application boundary for the local domain backbone.
+
+    Implementations own the transaction and expose repositories without
+    leaking a database connection into application services. Exiting without
+    an explicit successful ``commit`` must roll back.
+    """
+
+    workspaces: WorkspaceRepositoryProtocol
+    periods: PeriodRepositoryProtocol
+    audit_events: AuditEventRepositoryProtocol
+
+    def __enter__(self) -> DomainUnitOfWorkProtocol:
+        ...
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> Literal[False]:
+        ...
+
+    def commit(self) -> None:
+        ...
+
+    def rollback(self) -> None:
+        ...
+
+
+DomainUnitOfWorkFactory = Callable[[], DomainUnitOfWorkProtocol]

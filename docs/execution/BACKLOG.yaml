@@ -1,8 +1,8 @@
 schema_version: 1
 updated_at: "2026-07-27"
-phase: "Phase 0 — Truth and Reproducibility"
+phase: "Phase 1 — Platform Foundation"
 snapshot:
-  commit: "d47edd845e6aef3bae16e05698e07878086d690b"
+  commit: "0fa2c5b06af68d301cce561b5d71ed4c496c561e"
   dirty_worktree: false
 status_values: [planned, in_progress, blocked, completed]
 
@@ -273,9 +273,11 @@ tasks:
     priority: P1
     area: platform
     title: Repository contracts
-    status: planned
+    status: in_progress
     depends_on: [P0-004, P0-006]
     exit_evidence: Application services depend on typed ports with SQLite contract tests.
+    completed_slices:
+      - E-088 introduces the first real backend-neutral application use case: atomic workspace plus initial-period creation depends only on a typed unit-of-work/repository port, while a SQLite adapter owns BEGIN IMMEDIATE/commit/fail-closed rollback. Default direct repository autocommit remains compatible. Thirteen focused repository/application tests prove success, pre-transaction validation, ambiguous nested-transaction refusal, no SQLite/infrastructure import in the application layer, and rollback of workspace, period, both audit events, and audit-chain head when the second append fails. Broader platform services still accept sqlite3.Connection directly, PostgreSQL parity is P1-PLAT-002, and the task remains in progress.
   - id: P1-PLAT-002
     priority: P1
     area: platform

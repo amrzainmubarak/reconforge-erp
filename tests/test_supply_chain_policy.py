@@ -105,7 +105,7 @@ def test_repository_policy_closes_resolution_and_exception_inputs() -> None:
     assert active == []
     assert python_packages == 103
     assert npm_packages == 209
-    assert npm_gap == 155
+    assert npm_gap == 0
 
 
 def _mutate_pyproject(root: Path) -> None:

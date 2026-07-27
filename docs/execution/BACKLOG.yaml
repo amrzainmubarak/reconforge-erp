@@ -109,7 +109,7 @@ tasks:
     priority: P0
     area: correctness
     title: Cross-engine deterministic digest
-    status: in_progress
+    status: completed
     depends_on: [P0-006, P0-008]
     exit_evidence: Pandas/DuckDB decisions and canonical digests match across declared datasets and supported versions.
     completed_slices:
@@ -118,8 +118,7 @@ tasks:
       - A bounded repository/worker contract raises an unhandled termination after one committed partition, rejects takeover before lease expiry, then proves attempt-two checkpoint skipping, no duplicate business effect, and uninterrupted/resumed digest equality under ADR 0049.
       - The closed supported-engine-parity-v1 manifest configures four no-skip CI cells over Python 3.11/3.12 and reviewed lower/current-compatible NumPy/Pandas/DuckDB pins; schema/workflow/dependency/golden alignment tests pass under ADR 0050, but no remote cell result is yet claimed.
       - All four declared cells pass locally with 53 tests and zero skips per cell after making the binary-only override dependency-aware and normalizing missing required text consistently across DuckDB 1.0/Pandas readers; ADR 0098 and E-083 retain exact versions, JUnit hashes, and the pre-remediation failures.
-    remaining_scope:
-      - Obtain and record one identified all-green GitHub Actions run for all four supported engine-parity cells before closure; live process/PostgreSQL crash recovery remains the separate P1-PLAT-004 gate.
+      - GitHub Actions run 30239994946 on committed revision aaf2110 passes all four declared no-skip cells, the Python 3.11/3.12 suites, server boundaries, and Docker parity; E-084 closes the exact supported-version exit while live process/PostgreSQL crash recovery remains P1-PLAT-004.
   - id: P0-010
     priority: P0
     area: correctness
@@ -221,6 +220,7 @@ tasks:
     exit_evidence: Python/server locks or constraints, secret scanning, update cadence, exception workflow, and CI gates.
     completed_slices:
       - Universal uv.lock v1/revision 3 closes 103 Python runtime/server/build/tool packages under exact uv 0.11.32 and an absolute upload cutoff; normal/server/security/candidate CI and checksum-pinned Docker definitions consume it with --locked. Closed schema-v1 policy/zero-active-exception registries enforce weekly pip/npm/Docker/Actions updates, exact 30-day two-approver exceptions, hash-exported Python and high/critical npm audit, and checksum-verified Gitleaks history/tree scans before registry authentication under ADR 0069. Local Python 3.11 all-extra sync/audit/build and current 903-test execution, npm audit, 69-commit/tree scans, actionlint, and negative contracts pass; hosted Python 3.11/3.12, Docker, release/branch enforcement, and closure of 155 npm entries without embedded SRI remain open, so the task stays in progress.
+      - E-085 regenerates the npm v3 lock from the declared package manifest so all 209 non-root registry entries carry HTTPS resolution and SRI, reduces the reviewed integrity-gap count from 155 to zero, and passes policy/release/SBOM, clean-install, audit, typecheck, unit, and build gates locally. Hosted execution of this exact lock revision remains required before closure.
   - id: P0-SEC-009
     priority: P0
     area: security

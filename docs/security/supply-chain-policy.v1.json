@@ -31,7 +31,7 @@
     "lock": "apps/web/package-lock.json",
     "install_command": "npm --prefix apps/web ci",
     "audit_threshold": "high",
-    "known_integrity_gap_entries": 155
+    "known_integrity_gap_entries": 0
   },
   "container_resolution": {
     "dockerfile": "Dockerfile",
@@ -95,7 +95,7 @@
   },
   "limitations": [
     "A lock or clean vulnerability scan does not establish package safety, provenance, reachability, or license suitability.",
-    "The current npm lock fixes versions but 155 of 209 non-root entries lack embedded SRI; registry responses remain part of npm installation trust.",
+    "The npm lock records registry resolution and SRI for all 209 non-root entries; registry availability, package provenance, and package safety remain separate trust concerns.",
     "Local scans do not prove that hosted branch protection or release gates executed."
   ]
 }

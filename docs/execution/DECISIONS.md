@@ -715,3 +715,19 @@
 - Rationale: The first real Python 3.11 lower-bound execution proved `--no-deps` omitted Pandas 2.2's `pytz`, while DuckDB 1.0 materialized an empty CSV field as `None` and the shared string coercer converted it to the literal `"None"`, changing record identity and the digest. Neither behavior represents a financial decision difference.
 - Consequence: Exact direct engine pins and binary-wheel enforcement remain unchanged. Missing required text has one backend-neutral representation, historical signature-v1 digest tests still pass, all four local cells pass without skips, and P0-009 remains open until an identified hosted run passes.
 - ADR: `docs/adr/0098-engine-matrix-lower-bound-compatibility.md`
+
+### D-080: Close supported engine parity only from the identified hosted matrix
+
+- Date: 2026-07-27
+- Decision: Close P0-009 on GitHub Actions run `30239994946` at committed revision `aaf2110`, where every declared Python/dependency cell executes the closed no-skip parity command successfully.
+- Rationale: E-083 established the exact local matrix, while the backlog explicitly withheld closure until an identified hosted run proved the same four cells. The run also passes the full supported Python, live server-boundary, and Docker-parity jobs without broadening the digest claim.
+- Consequence: The supported-version Pandas/DuckDB digest gate is complete. Arbitrary versions, other backends/strategies, performance, and live process/PostgreSQL crash recovery remain outside this exit and under later gates.
+- ADR: `docs/adr/0050-declare-supported-engine-parity-matrix.md`, `docs/adr/0098-engine-matrix-lower-bound-compatibility.md`
+
+### D-081: Require SRI for every npm registry lock entry
+
+- Date: 2026-07-27
+- Decision: Regenerate the npm v3 lock from the reviewed manifest, retain exact resolved versions, require HTTPS registry resolution and SRI on all 209 non-root entries, and set the policy's known integrity gap to zero.
+- Rationale: The prior lock fixed versions but left 155 downloads dependent on mutable registry response metadata. npm can emit exact resolution and integrity for the same graph, so retaining the gap is unnecessary.
+- Consequence: Clean installation verifies every registry tarball against the committed lock. This does not prove publisher provenance, package safety, reachability, licensing, or registry availability. P0-SEC-008 remains open until the exact lock revision passes hosted gates.
+- ADR: `docs/adr/0069-lock-dependencies-and-fail-closed-supply-chain-gates.md`

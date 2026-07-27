@@ -6439,3 +6439,53 @@ committed revision. It does not prove Linux/Windows equivalence, arbitrary
 dependency versions, performance, scale, every backend/strategy, or live
 PostgreSQL recovery. No customer data, secret, release, or production system
 was changed.
+
+## E-084: Identified all-green hosted engine and platform gates
+
+GitHub Actions run `30239994946` executed committed revision
+`aaf2110c1f0d68e3253c6d9f837bc674a7d6ff9b` from Draft PR #54. The four
+closed `supported-engine-parity-v1` cells all passed their exact version check
+and no-skip parity command:
+
+| Hosted job | Result |
+| --- | --- |
+| Python 3.11 / lower NumPy 1.26.4, Pandas 2.2.0, DuckDB 1.0.0 (`89895023766`) | Pass, 46s |
+| Python 3.12 / lower NumPy 1.26.4, Pandas 2.2.0, DuckDB 1.0.0 (`89895023754`) | Pass, 53s |
+| Python 3.11 / current NumPy 2.4.3, Pandas 3.0.5, DuckDB 1.5.5 (`89895023857`) | Pass, 50s |
+| Python 3.12 / current NumPy 2.4.3, Pandas 3.0.5, DuckDB 1.5.5 (`89895023779`) | Pass, 45s |
+| Full Python 3.11 / 3.12 (`89895023781`, `89895023745`) | Pass, 3m37s / 3m50s |
+| Live PostgreSQL/Redis server boundaries (`89895023773`) | Pass, 49s |
+| Docker parity (`89895562480`) | Pass, 40s |
+
+The same revision also passed Docker build run `30239994942`, security-policy
+run `30239994948` (both locked Python audits and secret/npm policy), CodeQL run
+`30239994933`, and its Python analysis job. The earlier Docker uv-version and
+PostgreSQL date/upsert/audit-hash failures remain visible in prior runs and
+were corrected with regression coverage rather than hidden or retried.
+
+This closes only P0-009's declared datasets/supported-version digest exit. It
+does not establish arbitrary engine compatibility, Windows/Linux identity,
+performance or scale, every matcher/backend, or live crash recovery. The two
+uv setup annotations report mirror HTTP 403 followed by the action's normal
+GitHub Releases fallback; installation and every affected job passed.
+
+## E-085: Zero-gap npm registry integrity lock
+
+The npm v3 lock was regenerated from the unchanged reviewed package manifest.
+All 209 non-root entries retain the resolved dependency graph and now carry an
+HTTPS registry location plus SRI; the policy count changes from 155 known gaps
+to zero. No dependency range, application source, expected output, or audit
+threshold was weakened.
+
+| Command | Result |
+| --- | --- |
+| Supply-chain policy validator | Valid; 103 Python packages, 209 npm packages, zero npm integrity gaps, zero active exceptions |
+| Release/SBOM/policy/readiness tests | 39 passed |
+| `npm ci --ignore-scripts --no-audit --no-fund` | Pass; 158 packages installed from the committed lock |
+| `npm audit --package-lock-only --audit-level=high` | Zero vulnerabilities |
+| Web typecheck / unit / production build | Pass; 17 unit tests and Vite production build |
+
+This proves committed checksum coverage and current advisory results, not
+publisher identity, package-code safety, reachability, licensing, malware
+absence, registry availability, or artifact provenance. P0-SEC-008 remains in
+progress until this exact lock revision passes the hosted policy and web gates.

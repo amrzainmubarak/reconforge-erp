@@ -13,6 +13,7 @@ from reconforge.db.schema import (
     API_SESSIONS_SCHEMA_SQL,
     AUTH_RBAC_SCHEMA_SQL,
     DB_BRIDGE_SCHEMA_SQL,
+    DURABLE_JOB_EFFECTS_SCHEMA_SQL,
     DURABLE_JOB_LEASES_SCHEMA_SQL,
     DURABLE_JOBS_SCHEMA_SQL,
     EVIDENCE_OBJECT_STORAGE_MIGRATION_SQL,
@@ -91,6 +92,7 @@ MIGRATIONS = [
     Migration(version=20, name="accounts_receivable_credit_control_foundation", sql=RECEIVABLES_SCHEMA_SQL),
     Migration(version=21, name="durable_job_state_machine_foundation", sql=DURABLE_JOBS_SCHEMA_SQL),
     Migration(version=22, name="durable_job_worker_leases", sql=DURABLE_JOB_LEASES_SCHEMA_SQL),
+    Migration(version=23, name="durable_job_partition_effects", sql=DURABLE_JOB_EFFECTS_SCHEMA_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """

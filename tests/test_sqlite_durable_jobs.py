@@ -40,7 +40,7 @@ def _job(*, job_id: str = "JOB-001", input_digest: str = DIGEST_A) -> DurableJob
 def repository(tmp_path: Path) -> tuple[SQLiteDurableJobRepository, sqlite3.Connection]:
     database_path = tmp_path / "jobs.db"
     result = run_migrations(database_path)
-    assert result.current_version == 22
+    assert result.current_version == 23
     connection = connect(database_path)
     return SQLiteDurableJobRepository(connection), connection
 
@@ -242,7 +242,7 @@ def test_version_20_upgrade_applies_only_durable_job_migration(tmp_path: Path) -
     before = run_migrations(database_path, target_version=20)
     assert before.current_version == 20
     upgraded = run_migrations(database_path)
-    assert upgraded.applied_versions == [21, 22]
+    assert upgraded.applied_versions == [21, 22, 23]
     connection = connect(database_path, require_exists=True)
     tables = {
         str(row["name"])
@@ -253,6 +253,7 @@ def test_version_20_upgrade_applies_only_durable_job_migration(tmp_path: Path) -
         "durable_job_transitions",
         "durable_job_leases",
         "durable_job_lease_events",
+        "durable_job_partition_effects",
     } <= tables
     connection.close()
 

@@ -6802,3 +6802,40 @@ only in progress: there is not yet a real workload whose checkpoint, output,
 audit, and business effect are committed together and proven duplicate-free
 across injected termination. PostgreSQL parity and host/filesystem loss are also
 outside this evidence.
+
+## E-094: Atomic workload effects and duplicate-free restart
+
+Migration 23 adds immutable partition effects with deterministic key/ordinal,
+cumulative integer units, input/output SHA-256 identities, effect reference,
+commit time, and exact job version. The repository requires the active fencing
+generation and next contiguous ordinal. It inserts the effect before the job
+transition, but both remain inside one owned transaction; an injected
+CHECKPOINTED transition failure proves neither effect nor progress commits and
+the lease remains usable.
+
+The executable workload uses two partitions. The uninterrupted path claims,
+commits partition one, then atomically commits partition two plus completion,
+manifest, and lease release. The restart path commits partition one, closes the
+connection without release, reopens at lease expiry, records takeover with a
+new generation, enumerates partition one as completed, and commits only
+partition two. Both paths finish with exactly two effects, identical ordered
+partition/input/output/progress/reference semantics, and the same output
+manifest. The restarted transition history adds only LEASE_TAKEOVER.
+
+Backup/restore and public export preserve effect rows; database triggers reject
+effect UPDATE and DELETE.
+
+| Command | Result |
+| --- | --- |
+| durable jobs, leases, effects, restart, backup, and governance focus | 39 passed |
+| durable jobs plus migration/backup/export compatibility focus | 65 passed |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 221 source files |
+| `python -m pytest` | 1,332 passed, 10 live-service skips, 7 expected warnings |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 662,213-byte wheel and 936,894-byte sdist |
+| `git diff --check` | Pass |
+
+P1-PLAT-004 is complete for this bounded local safe-partition-workload contract.
+Arbitrary external side effects, PostgreSQL parity, host/filesystem loss,
+distributed exactly-once transport, and HA/DR remain unclaimed and assigned to
+their specific later gates.

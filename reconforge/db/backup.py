@@ -145,6 +145,7 @@ BACKUP_TABLES = [
     "durable_job_transitions",
     "durable_job_leases",
     "durable_job_lease_events",
+    "durable_job_partition_effects",
     "workflow_objects",
     "workflow_transitions",
     "workflow_transition_events",
@@ -247,6 +248,7 @@ BACKUP_SELECT_QUERIES = {
     "durable_job_transitions": "SELECT * FROM durable_job_transitions ORDER BY job_id, job_version",
     "durable_job_leases": "SELECT * FROM durable_job_leases ORDER BY tenant_id, expires_at, job_id",
     "durable_job_lease_events": "SELECT * FROM durable_job_lease_events ORDER BY job_id, event_sequence",
+    "durable_job_partition_effects": "SELECT * FROM durable_job_partition_effects ORDER BY job_id, ordinal",
     "workflow_objects": "SELECT * FROM workflow_objects ORDER BY object_type, object_id",
     "workflow_transitions": "SELECT * FROM workflow_transitions ORDER BY object_type, from_status, to_status, id",
     "workflow_transition_events": "SELECT * FROM workflow_transition_events ORDER BY created_at, id",
@@ -347,6 +349,7 @@ BACKUP_DELETE_QUERIES = {
     "durable_job_transitions": "DELETE FROM durable_job_transitions",
     "durable_job_leases": "DELETE FROM durable_job_leases",
     "durable_job_lease_events": "DELETE FROM durable_job_lease_events",
+    "durable_job_partition_effects": "DELETE FROM durable_job_partition_effects",
     "workflow_objects": "DELETE FROM workflow_objects",
     "workflow_transitions": "DELETE FROM workflow_transitions",
     "workflow_transition_events": "DELETE FROM workflow_transition_events",
@@ -694,6 +697,10 @@ BACKUP_INSERT_COLUMNS = {
     ),
     "durable_job_lease_events": (
         "job_id", "event_sequence", "generation", "action", "owner_id", "occurred_at", "expires_at",
+    ),
+    "durable_job_partition_effects": (
+        "job_id", "partition_key", "ordinal", "completed_units", "input_digest", "output_digest",
+        "effect_reference", "committed_at", "job_version",
     ),
     "workflow_objects": ("object_type", "object_id", "status", "updated_at", "id", "created_at"),
     "workflow_transitions": ("id", "object_type", "from_status", "to_status", "required_permission", "sod_rule", "reason_required", "active"),
@@ -1272,6 +1279,12 @@ BACKUP_INSERT_QUERIES = {
         INSERT INTO durable_job_lease_events (
             job_id, event_sequence, generation, action, owner_id, occurred_at, expires_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    """,
+    "durable_job_partition_effects": """
+        INSERT INTO durable_job_partition_effects (
+            job_id, partition_key, ordinal, completed_units, input_digest,
+            output_digest, effect_reference, committed_at, job_version
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "workflow_objects": "INSERT INTO workflow_objects (object_type, object_id, status, updated_at, id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
     "workflow_transitions": """

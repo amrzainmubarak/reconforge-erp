@@ -143,8 +143,17 @@ contains four backend-neutral Application services.
 The full collection passes with 1,328 tests executed and ten live-service
 skips; the wheel and sdist build pass.
 
+E-094 closes P1-PLAT-004's local safe-workload exit: migration 23 binds each
+immutable partition effect to its fenced checkpoint/final transition. Injected
+failure rolls effect and progress back together. An uninterrupted run and a
+connection-close/restarted run finish with the same two semantic effects and
+manifest; restart enumerates and skips the already committed partition. This
+does not cover external systems or host loss. The full collection passes with
+1,332 tests executed and ten live-service skips; Ruff, mypy over 221 source
+files, the 65-test compatibility focus, wheel/sdist build, and diff checks pass.
+
 ## Next exact actions
 
 1. Migrate the next transactionally coherent Platform use case into the Application layer and reduce the E-090 coupling counts without exposing a database connection.
-2. Implement the generic job lease/takeover worker contract and then add PostgreSQL/SQLite behavioral parity fixtures; do not label method-name similarity as backend parity.
+2. Add PostgreSQL/SQLite behavioral parity fixtures for the stable job/application contracts; do not label method-name similarity as backend parity.
 3. Keep the Phase 1–3 matrix closed as implementation changes; never substitute synthetic evidence for the two external Phase 3 gates.

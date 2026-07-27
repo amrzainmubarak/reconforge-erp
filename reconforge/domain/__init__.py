@@ -9,6 +9,7 @@ from reconforge.domain.jobs import (
     JobInvariantError,
     JobLease,
     JobOutputManifest,
+    JobPartitionEffect,
     JobStatus,
     JobTransition,
 )
@@ -58,6 +59,7 @@ __all__ = [
     "JobInvariantError",
     "JobLease",
     "JobOutputManifest",
+    "JobPartitionEffect",
     "JobStatus",
     "JobTransition",
     "AccountingDimension",

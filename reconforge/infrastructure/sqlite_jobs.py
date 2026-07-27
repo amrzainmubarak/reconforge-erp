@@ -10,6 +10,7 @@ from reconforge.domain.jobs import (
     DurableJob,
     JobLease,
     JobOutputManifest,
+    JobPartitionEffect,
     JobStatus,
     JobTransition,
 )
@@ -158,6 +159,7 @@ class SQLiteDurableJobRepository:
             "durable_job_transitions",
             "durable_job_leases",
             "durable_job_lease_events",
+            "durable_job_partition_effects",
         }
         tables = {
             str(row["name"])
@@ -544,6 +546,110 @@ class SQLiteDurableJobRepository:
             (job_id,),
         ).fetchall()
         return [dict(row) for row in rows]
+
+    def persist_owned_effect_transition(
+        self,
+        previous: DurableJob,
+        changed: DurableJob,
+        event: JobTransition,
+        effect: JobPartitionEffect,
+        *,
+        lease: JobLease,
+        release_lease: bool,
+    ) -> DurableJob:
+        """Commit one workload effect, progress, and evidence as one unit."""
+
+        self._validate_transition(previous, changed, event)
+        if effect.job_id != changed.id or effect.completed_units != changed.completed_units:
+            raise SQLiteJobRepositoryError("Partition effect does not match durable-job progress.")
+        if effect.committed_at != event.occurred_at:
+            raise SQLiteJobRepositoryError("Partition effect time does not match transition evidence.")
+        self._begin()
+        try:
+            owned = self.connection.execute(
+                """
+                SELECT 1 FROM durable_job_leases
+                WHERE job_id = ? AND tenant_id = ? AND owner_id = ? AND generation = ?
+                  AND expires_at > ?
+                """,
+                (
+                    lease.job_id,
+                    lease.tenant_id,
+                    lease.owner_id,
+                    lease.generation,
+                    event.occurred_at,
+                ),
+            ).fetchone()
+            if owned is None or previous.id != lease.job_id or previous.tenant_id != lease.tenant_id:
+                raise SQLiteJobConflictError("Durable-job lease ownership changed or expired.")
+            ordinal_row = self.connection.execute(
+                "SELECT COALESCE(MAX(ordinal), 0) + 1 AS next_ordinal "
+                "FROM durable_job_partition_effects WHERE job_id = ?",
+                (effect.job_id,),
+            ).fetchone()
+            if int(ordinal_row["next_ordinal"]) != effect.ordinal:
+                raise SQLiteJobConflictError("Partition effect ordinal is not the next committed effect.")
+            self.connection.execute(
+                """
+                INSERT INTO durable_job_partition_effects (
+                    job_id, partition_key, ordinal, completed_units, input_digest,
+                    output_digest, effect_reference, committed_at, job_version
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    effect.job_id,
+                    effect.partition_key,
+                    effect.ordinal,
+                    effect.completed_units,
+                    effect.input_digest,
+                    effect.output_digest,
+                    effect.effect_reference,
+                    effect.committed_at,
+                    changed.version,
+                ),
+            )
+            self._persist_transition_rows(previous, changed, event)
+            if release_lease:
+                self.connection.execute(
+                    "DELETE FROM durable_job_leases WHERE job_id = ? AND owner_id = ? AND generation = ?",
+                    (lease.job_id, lease.owner_id, lease.generation),
+                )
+                self._append_lease_event(lease, action="released", occurred_at=event.occurred_at)
+            self.connection.commit()
+            return changed
+        except SQLiteJobConflictError:
+            self.connection.rollback()
+            raise
+        except sqlite3.IntegrityError as exc:
+            self.connection.rollback()
+            raise SQLiteJobConflictError("Durable-job partition effect conflicts with committed state.") from exc
+        except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
+            raise SQLiteJobRepositoryError("Unable to persist durable-job partition effect.") from exc
+
+    def list_partition_effects(self, *, tenant_id: str, job_id: str) -> list[JobPartitionEffect]:
+        if self.get(tenant_id=tenant_id, job_id=job_id) is None:
+            return []
+        rows = self.connection.execute(
+            "SELECT * FROM durable_job_partition_effects WHERE job_id = ? ORDER BY ordinal",
+            (job_id,),
+        ).fetchall()
+        try:
+            return [
+                JobPartitionEffect(
+                    job_id=str(row["job_id"]),
+                    partition_key=str(row["partition_key"]),
+                    ordinal=int(row["ordinal"]),
+                    completed_units=int(row["completed_units"]),
+                    input_digest=str(row["input_digest"]),
+                    output_digest=str(row["output_digest"]),
+                    effect_reference=str(row["effect_reference"]),
+                    committed_at=str(row["committed_at"]),
+                )
+                for row in rows
+            ]
+        except (TypeError, ValueError) as exc:
+            raise SQLiteJobRepositoryError("Stored durable-job partition effect is invalid.") from exc
 
     def list_transitions(self, *, tenant_id: str, job_id: str) -> list[dict[str, Any]]:
         if self.get(tenant_id=tenant_id, job_id=job_id) is None:

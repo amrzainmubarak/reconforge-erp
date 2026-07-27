@@ -1,5 +1,7 @@
 # Changelog
 
+- Added atomic, immutable partition effects bound to durable-job checkpoints and final completion. A two-partition workload now proves connection-close/restart takeover skips the committed partition, produces the same effect semantics and manifest identity as uninterrupted execution, and rolls effect plus progress back together on injected failure. External side effects and host loss remain outside this local proof.
+
 - Added generation-fenced, expiring durable-job worker leases with atomic claim/takeover, heartbeat extension, stale-worker rejection, lease release evidence, retry reclaim, and connection-close/reopen checkpoint recovery. This is local SQLite process-restart proof, not PostgreSQL parity, host-loss durability, or exactly-once transport.
 
 - Added a schema-v1 durable-job aggregate and SQLite migration with seven fail-closed states, tenant-scoped idempotency, optimistic state versions, monotonic digest-addressed checkpoints, retry ceilings, safe error codes, completion manifests, immutable transition evidence, and backup/restore/export coverage. Generic worker leases, PostgreSQL parity, and real crash recovery remain open.

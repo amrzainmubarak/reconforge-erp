@@ -301,11 +301,12 @@ tasks:
     priority: P1
     area: platform
     title: Checkpoint and resume infrastructure
-    status: in_progress
+    status: completed
     depends_on: [P1-PLAT-003]
     exit_evidence: Crash/restart resumes safe workloads from verified checkpoints without duplicate business effect.
     completed_slices:
       - E-093 closes the storage/ownership prerequisite: after a committed checkpoint and real SQLite connection close, a new connection takes over exactly at lease expiry, increments the fencing generation, retains completed units/digest, records LEASE_TAKEOVER, and rejects the stale worker. No external business workload is integrated yet, so no-duplicate-effect and the task remain open.
+      - E-094 closes the defined local safe-workload exit with migration 23 and immutable partition effects. Effect plus checkpoint/final completion share the fenced transaction; injected transition failure rolls both back. Uninterrupted and connection-close/restarted two-partition runs produce the same two semantic effects and output manifest, while the resumed worker lists and skips partition one before committing partition two. External systems require separate idempotency/outbox/compensation evidence.
   - id: P1-PLAT-005
     priority: P1
     area: platform

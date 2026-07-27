@@ -796,3 +796,11 @@
 - Rationale: Worker names and status flags cannot stop a pre-crash process from writing after takeover. A monotonically increasing generation makes old authority objectively stale.
 - Consequence: Migration 22 and the worker Application service close the local P1-PLAT-003 exit and advance P1-PLAT-004. Real process reconnection retains the committed checkpoint; stale writes fail. External workload effects, PostgreSQL parity, and host loss remain unproven.
 - ADR: `docs/adr/0104-generation-fenced-job-worker-leases.md`
+
+### D-090: A checkpoint is valid only with its committed partition effect
+
+- Date: 2026-07-27
+- Decision: Persist each deterministic partition effect, cumulative progress, checkpoint/final transition, and lease evidence in one fenced transaction; resume by enumerating immutable committed effects.
+- Rationale: Checkpoint-only durability can duplicate output or skip missing output depending on which side of a crash commits first.
+- Consequence: Migration 23 and the safe partition-worker methods close P1-PLAT-004's local exit. Uninterrupted and restarted runs have identical semantic outputs and no duplicate partition. External systems remain outside the atomic SQLite resource and need independent controls.
+- ADR: `docs/adr/0105-atomic-partition-effects-and-checkpoints.md`

@@ -142,6 +142,31 @@ class JobLease:
 
 
 @dataclass(frozen=True)
+class JobPartitionEffect:
+    """One immutable, digest-addressed workload effect committed with progress."""
+
+    job_id: str
+    partition_key: str
+    ordinal: int
+    completed_units: int
+    input_digest: str
+    output_digest: str
+    effect_reference: str
+    committed_at: str
+
+    def __post_init__(self) -> None:
+        for field in ("job_id", "partition_key", "effect_reference"):
+            object.__setattr__(self, field, _identifier(getattr(self, field), field))
+        if isinstance(self.ordinal, bool) or self.ordinal < 1:
+            raise JobInvariantError("partition ordinal must be positive.")
+        if isinstance(self.completed_units, bool) or self.completed_units < 1:
+            raise JobInvariantError("partition completed_units must be positive integer units.")
+        object.__setattr__(self, "input_digest", _digest(self.input_digest, "partition input_digest"))
+        object.__setattr__(self, "output_digest", _digest(self.output_digest, "partition output_digest"))
+        object.__setattr__(self, "committed_at", _utc_timestamp(self.committed_at, "committed_at"))
+
+
+@dataclass(frozen=True)
 class DurableJob:
     """Backend-neutral durable-job aggregate."""
 

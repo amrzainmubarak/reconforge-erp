@@ -6,7 +6,7 @@ from pathlib import Path
 from reconforge.db import connect, run_migrations
 from reconforge.db.backup import create_backup, restore_backup
 from reconforge.db.exporter import export_database
-from reconforge.domain.jobs import DurableJob
+from reconforge.domain.jobs import DurableJob, JobPartitionEffect
 from reconforge.infrastructure.sqlite_jobs import SQLiteDurableJobRepository
 
 
@@ -44,10 +44,20 @@ def _seed_checkpointed_job(database_path: Path) -> DurableJob:
         completed_units=2,
         checkpoint_digest="c" * 64,
     )
-    store.persist_owned_transition(
+    store.persist_owned_effect_transition(
         running,
         checkpointed,
         checkpoint,
+        JobPartitionEffect(
+            job_id=running.id,
+            partition_key="partition/0001",
+            ordinal=1,
+            completed_units=2,
+            input_digest="d" * 64,
+            output_digest="c" * 64,
+            effect_reference="effect/0001",
+            committed_at="2026-07-27T08:00:02Z",
+        ),
         lease=lease,
         release_lease=False,
     )
@@ -70,6 +80,8 @@ def test_backup_restore_preserves_job_and_append_only_transition_history(tmp_pat
     assert transitions[-1]["reason_code"] == "CHECKPOINTED"
     lease_events = store.list_lease_events(tenant_id="TENANT-1", job_id=expected.id)
     assert [row["action"] for row in lease_events] == ["claimed"]
+    effects = store.list_partition_effects(tenant_id="TENANT-1", job_id=expected.id)
+    assert [(effect.partition_key, effect.completed_units) for effect in effects] == [("partition/0001", 2)]
     lease_row = connection.execute(
         "SELECT owner_id, generation, expires_at FROM durable_job_leases WHERE job_id = ?",
         (expected.id,),
@@ -93,9 +105,12 @@ def test_public_export_contains_sanitized_job_contract_without_hidden_error_text
     transitions = payload["durable_job_transitions"]
     leases = payload["durable_job_leases"]
     lease_events = payload["durable_job_lease_events"]
+    effects = payload["durable_job_partition_effects"]
     assert jobs[0]["id"] == expected.id
     assert jobs[0]["safe_error_code"] == ""
     assert "error_message" not in jobs[0]
     assert [row["job_version"] for row in transitions] == [1, 2, 3]
     assert leases[0]["owner_id"] == "worker-1"
     assert lease_events[0]["action"] == "claimed"
+    assert effects[0]["partition_key"] == "partition/0001"
+    assert effects[0]["output_digest"] == "c" * 64

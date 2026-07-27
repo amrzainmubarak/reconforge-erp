@@ -9,6 +9,7 @@ from reconforge.domain.jobs import (
     DurableJob,
     JobLease,
     JobOutputManifest,
+    JobPartitionEffect,
     JobStatus,
     JobTransition,
 )
@@ -62,6 +63,19 @@ class DurableJobWorkerRepositoryProtocol(DurableJobRepositoryProtocol, Protocol)
         lease: JobLease,
         release_lease: bool,
     ) -> DurableJob: ...
+
+    def persist_owned_effect_transition(
+        self,
+        previous: DurableJob,
+        changed: DurableJob,
+        event: JobTransition,
+        effect: JobPartitionEffect,
+        *,
+        lease: JobLease,
+        release_lease: bool,
+    ) -> DurableJob: ...
+
+    def list_partition_effects(self, *, tenant_id: str, job_id: str) -> list[JobPartitionEffect]: ...
 
 
 @dataclass(frozen=True)
@@ -217,6 +231,95 @@ class DurableJobWorkerService:
             release_lease=False,
         )
         return LeasedJob(persisted, leased_job.lease)
+
+    def completed_effects(self, leased_job: LeasedJob) -> list[JobPartitionEffect]:
+        """Return committed effects so a resumed worker can skip them."""
+
+        return self._repository.list_partition_effects(
+            tenant_id=leased_job.job.tenant_id,
+            job_id=leased_job.job.id,
+        )
+
+    def commit_partition(
+        self,
+        leased_job: LeasedJob,
+        *,
+        partition_key: str,
+        ordinal: int,
+        completed_units: int,
+        input_digest: str,
+        output_digest: str,
+        effect_reference: str,
+        occurred_at: str,
+    ) -> LeasedJob:
+        """Atomically commit one non-final effect and its checkpoint."""
+
+        changed, event = leased_job.job.checkpoint(
+            actor_id=leased_job.lease.owner_id,
+            occurred_at=occurred_at,
+            completed_units=completed_units,
+            checkpoint_digest=output_digest,
+        )
+        effect = JobPartitionEffect(
+            job_id=leased_job.job.id,
+            partition_key=partition_key,
+            ordinal=ordinal,
+            completed_units=completed_units,
+            input_digest=input_digest,
+            output_digest=output_digest,
+            effect_reference=effect_reference,
+            committed_at=occurred_at,
+        )
+        persisted = self._repository.persist_owned_effect_transition(
+            leased_job.job,
+            changed,
+            event,
+            effect,
+            lease=leased_job.lease,
+            release_lease=False,
+        )
+        return LeasedJob(persisted, leased_job.lease)
+
+    def complete_partition(
+        self,
+        leased_job: LeasedJob,
+        *,
+        partition_key: str,
+        ordinal: int,
+        input_digest: str,
+        output_digest: str,
+        effect_reference: str,
+        occurred_at: str,
+        output_manifest: JobOutputManifest,
+    ) -> DurableJob:
+        """Atomically commit the final effect, completion, manifest, and lease release."""
+
+        changed, event = leased_job.job.transition(
+            JobStatus.COMPLETED,
+            actor_id=leased_job.lease.owner_id,
+            occurred_at=occurred_at,
+            reason_code="FINISHED",
+            completed_units=leased_job.job.total_units,
+            output_manifest=output_manifest,
+        )
+        effect = JobPartitionEffect(
+            job_id=leased_job.job.id,
+            partition_key=partition_key,
+            ordinal=ordinal,
+            completed_units=leased_job.job.total_units,
+            input_digest=input_digest,
+            output_digest=output_digest,
+            effect_reference=effect_reference,
+            committed_at=occurred_at,
+        )
+        return self._repository.persist_owned_effect_transition(
+            leased_job.job,
+            changed,
+            event,
+            effect,
+            lease=leased_job.lease,
+            release_lease=True,
+        )
 
     def complete(
         self,

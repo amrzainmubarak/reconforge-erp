@@ -3342,6 +3342,35 @@ BEGIN
 END;
 """
 
+DURABLE_JOB_EFFECTS_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS durable_job_partition_effects (
+    job_id TEXT NOT NULL REFERENCES durable_jobs(id) ON DELETE RESTRICT,
+    partition_key TEXT NOT NULL,
+    ordinal INTEGER NOT NULL CHECK (ordinal >= 1),
+    completed_units INTEGER NOT NULL CHECK (completed_units >= 1),
+    input_digest TEXT NOT NULL CHECK (length(input_digest) = 64),
+    output_digest TEXT NOT NULL CHECK (length(output_digest) = 64),
+    effect_reference TEXT NOT NULL,
+    committed_at TEXT NOT NULL,
+    job_version INTEGER NOT NULL CHECK (job_version >= 2),
+    PRIMARY KEY (job_id, partition_key),
+    UNIQUE (job_id, ordinal),
+    UNIQUE (job_id, job_version)
+);
+
+CREATE TRIGGER IF NOT EXISTS durable_job_partition_effects_immutable_update
+BEFORE UPDATE ON durable_job_partition_effects
+BEGIN
+    SELECT RAISE(ABORT, 'durable job partition effects are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS durable_job_partition_effects_immutable_delete
+BEFORE DELETE ON durable_job_partition_effects
+BEGIN
+    SELECT RAISE(ABORT, 'durable job partition effects are immutable');
+END;
+"""
+
 
 ACCOUNT_RECONCILIATION_MONEY_MIGRATION_SQL = """
 -- Add canonical Decimal text alongside legacy REAL compatibility columns. New

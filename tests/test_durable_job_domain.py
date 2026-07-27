@@ -12,6 +12,7 @@ from reconforge.domain.jobs import (
     JobInvariantError,
     JobLease,
     JobOutputManifest,
+    JobPartitionEffect,
     JobStatus,
 )
 
@@ -242,3 +243,21 @@ def test_lease_and_running_reclaim_are_versioned_and_time_bounded() -> None:
             renewed_at=T1,
             expires_at=T1,
         )
+
+
+def test_partition_effect_requires_integer_progress_and_digest_identity() -> None:
+    effect = JobPartitionEffect(
+        job_id="JOB-001",
+        partition_key="partition/0001",
+        ordinal=1,
+        completed_units=4,
+        input_digest=DIGEST_A,
+        output_digest=DIGEST_B,
+        effect_reference="effect/0001",
+        committed_at=T2,
+    )
+    assert effect.completed_units == 4
+    with pytest.raises(JobInvariantError, match="positive integer units"):
+        replace(effect, completed_units=True)
+    with pytest.raises(JobInvariantError, match="lowercase SHA-256"):
+        replace(effect, output_digest="B" * 64)

@@ -772,3 +772,11 @@
 - Rationale: Protocol definitions and optional repository constructor arguments do not prove that active services are backend-neutral when authorization, audit, outbox, schema, or other operations still consume a SQLite connection.
 - Consequence: The measured baseline is 17 direct-SQLite Platform services, three partial-repository Platform services, and one backend-neutral Application service. P1-PLAT-001 stays in progress until implementation reduces the coupling and its behavioral contracts pass; the inventory itself is not backend parity.
 - ADR: `docs/adr/0101-measure-runtime-repository-boundaries.md`
+
+### D-087: Preserve the operations API while moving decisions behind ports
+
+- Date: 2026-07-27
+- Decision: Move operational result composition into a backend-neutral Application service, put SQLite reads and audit/migration adaptation in infrastructure, and keep `platform.OperationsService(connection)` as a thin compatibility adapter.
+- Rationale: The health/jobs/errors path is active CLI behavior with a small, sanitized contract, making it a bounded first migration that proves the inventory can decrease without breaking users.
+- Consequence: Direct-SQLite Platform services decrease from 17 to 16 and backend-neutral Application services increase from one to two. The compatibility adapter executes no SQL. PostgreSQL behavior and the rest of P1-PLAT-001 remain open.
+- ADR: `docs/adr/0102-extract-operational-diagnostics-application-port.md`

@@ -6695,3 +6695,32 @@ imports for backend-neutral application classes.
 Claim boundary: this is a closed source-coupling measurement and migration
 regression gate. It is not behavioral backend parity, proof that an adapter is
 correct, live PostgreSQL evidence, or completion of P1-PLAT-001.
+
+## E-091: Operational diagnostics application-port migration
+
+`OperationsApplicationService` now composes the existing health dictionary and
+delegates job/error reads through `OperationsRepositoryProtocol` plus a callable
+migration-status port. It imports neither SQLite nor infrastructure. The SQLite
+adapter owns schema validation, audit-chain verification, migration-status
+adaptation, record counts, and stable ordered reads. The historical
+`OperationsService(connection)` API delegates only and contains no SQL execute
+call.
+
+The fake-port test proves exact health output, count placement, and job/error
+delegation without a database. A fully migrated temporary SQLite file proves
+the compatibility adapter retains job/error row shapes and returns current
+migration, audit, and count health fields.
+
+| Command | Result |
+| --- | --- |
+| `python -m pytest -q tests/test_operations_application.py tests/test_repository_boundary_inventory.py` | 5 passed |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 218 source files |
+| `python -m pytest` | 1,300 passed, 10 live-service skips, 7 expected warnings in 194.80s |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 649,678-byte wheel and 917,130-byte sdist |
+| `git diff --check` | Pass |
+
+Inventory movement: direct-SQLite Platform services `17 -> 16`; compatibility
+adapters `0 -> 1`; backend-neutral Application services `1 -> 2`. This proves
+one migrated local read boundary, not PostgreSQL parity, cross-backend health,
+live operability, or P1-PLAT-001 completion.

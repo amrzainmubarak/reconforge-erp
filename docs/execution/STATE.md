@@ -116,6 +116,13 @@ E-090 measures the exact runtime migration gap: 17 Platform services are
 `backend_neutral`. Three AST contracts fail on omitted services, false
 classification, or count drift. This keeps P1-PLAT-001 explicitly in progress.
 
+E-091 moves operational diagnostics composition behind explicit Application
+ports and leaves a SQL-free compatibility adapter for the current CLI. The
+current inventory is 16 direct-SQLite Platform services, three partial
+repositories, one compatibility adapter, and two backend-neutral Application
+services. The full Python collection passes with 1,300 tests executed and ten
+live-service skips; wheel and sdist builds pass. P1-PLAT-001 remains in progress.
+
 ## Next exact actions
 
 1. Migrate the next transactionally coherent Platform use case into the Application layer and reduce the E-090 coupling counts without exposing a database connection.

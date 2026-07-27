@@ -1,5 +1,7 @@
 # Changelog
 
+- Extracted operational health, job, and sanitized-error composition into a backend-neutral Application service with explicit repository and migration-status ports. The existing connection-based `OperationsService` remains a compatibility adapter over SQLite; no PostgreSQL parity or production-operability claim is made.
+
 - Added the first Phase 1 backend-neutral application boundary: a typed unit-of-work port and SQLite adapter atomically create a workspace, initial period, and two chained audit events, with pre-transaction validation and fail-closed rollback. Existing direct repository autocommit remains compatible; broader service migration and PostgreSQL parity remain open.
 
 - Added a bounded exact-text FI-008 business-record CSV/JSON reader with stable parsed-byte provenance, strict ambiguity/shape/resource controls, and compatibility routing for platform matching, finance/control imports, ledger, inventory, and receivables CLI inputs. This is a parser boundary, not a semantic-validation, source-authentication, malware, authorization, or scale claim.

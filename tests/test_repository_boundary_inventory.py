@@ -62,17 +62,26 @@ def test_inventory_status_matches_source_boundaries() -> None:
         assert status in allowed
         counts[status] += 1
         imports = _imports(PLATFORM_ROOT / entry["file"])
-        if status in {"direct_sqlite", "partial_repository"}:
+        if status in {"direct_sqlite", "partial_repository", "compatibility_adapter"}:
             assert "sqlite3" in imports, entry
         if status == "partial_repository":
             assert any(name.endswith("_repository") for name in imports), entry
         if status == "backend_neutral":
             assert "sqlite3" not in imports, entry
             assert not any(name.startswith("reconforge.infrastructure") for name in imports), entry
+        if status == "compatibility_adapter":
+            assert any(name.startswith("reconforge.application") for name in imports), entry
+            assert any(name.startswith("reconforge.infrastructure") for name in imports), entry
+            tree = ast.parse((PLATFORM_ROOT / entry["file"]).read_text(encoding="utf-8"))
+            assert not any(
+                isinstance(node, ast.Attribute) and node.attr == "execute"
+                for node in ast.walk(tree)
+            ), entry
 
     summary = inventory["summary"]
     assert counts["direct_sqlite"] == summary["direct_sqlite"]
     assert counts["partial_repository"] == summary["partial_repository"]
+    assert counts["compatibility_adapter"] == summary["compatibility_adapter"]
 
 
 def test_backend_neutral_application_inventory_is_exact_and_connection_free() -> None:

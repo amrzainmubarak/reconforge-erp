@@ -7011,3 +7011,33 @@ HTTP route, connector, or external side effect. Owner-token unpredictability,
 caller authorization, transport authentication, rate limiting, external
 exactly-once effects, hosted enforcement, compliance, certification, and
 production readiness are not inferred.
+
+## E-100: Signed context-bound cursor pagination
+
+`CursorCodec` authenticates a closed, bounded schema-v1 keyset position with
+HMAC-SHA-256 and rejects keys shorter than 32 bytes. `KeysetPaginator` accepts
+only registered sort definitions, includes a stable string ID tie-breaker,
+and binds tokens to direction plus a digest of the request scope. Strict
+base64url, signature, UTF-8, JSON shape, type, size, depth, and collection
+checks run before a position is used.
+
+The local evidence list integrates the contract through explicit
+`pagination=cursor`, with tenant/resource/status scope binding and durable
+operator key configuration. Existing offset responses remain unchanged.
+PostgreSQL cursor mode returns a stable unsupported response until its native
+keyset query is implemented; no bounded full-scan result is presented as
+complete.
+
+| Command | Result |
+| --- | --- |
+| Cursor/application/API focused tests | 20 passed |
+| `python -m pytest` without live-service environment | 1,361 passed, 16 skipped, 7 expected warnings |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 229 source files |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 687,327-byte wheel and 970,329-byte sdist |
+| `git diff --check` | Pass |
+
+This evidence proves token integrity and
+bounded local traversal, not confidentiality, multi-key rotation, PostgreSQL
+keyset performance, hosted enforcement, compliance, certification, or
+production readiness.

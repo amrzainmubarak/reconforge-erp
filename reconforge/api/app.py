@@ -47,6 +47,7 @@ from reconforge.api.routes import (
     workflow,
 )
 from reconforge.api.server_identity import authenticate_server_request, server_identity_enabled
+from reconforge.application.pagination import CursorCodec
 from reconforge.db import resolve_db_path
 from reconforge.db.tenancy import TenantDatabaseRouter
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings
@@ -74,6 +75,7 @@ def create_api_app(
     redis_require_tls: bool = True,
     postgres_dsn: str | None = None,
     postgres_require_tls: bool = True,
+    cursor_signing_key: bytes | None = None,
 ) -> FastAPI:
     """Create the API with local mode or an explicit server identity profile."""
 
@@ -99,6 +101,7 @@ def create_api_app(
     app.state.postgres_close_factory = app.state.postgres_identity_factory
     app.state.postgres_evidence_factory = app.state.postgres_identity_factory
     app.state.postgres_reconciliation_factory = app.state.postgres_identity_factory
+    app.state.cursor_codec = CursorCodec(cursor_signing_key) if cursor_signing_key is not None else None
     if redis_url is not None:
         redis_factory = RedisConnectionFactory(RedisSettings(url=redis_url, require_tls=redis_require_tls))
         app.state.redis_store = TenantRedisStore(redis_factory)

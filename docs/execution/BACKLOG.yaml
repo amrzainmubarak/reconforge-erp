@@ -334,9 +334,11 @@ tasks:
     priority: P1
     area: platform
     title: Cursor pagination contract
-    status: planned
+    status: completed
     depends_on: [P1-PLAT-001]
     exit_evidence: Stable allowlisted sort keys and opaque cursor behavior pass mutation/duplicate tests.
+    completed_slices:
+      - E-100 closes the backend-neutral cursor contract and local evidence integration with signed/versioned bounded tokens, allowlisted ordering, stable tie-breaks, query-context binding, mutation and duplicate tests, explicit operator key configuration, and offset compatibility. PostgreSQL native keyset execution remains an enterprise-backend gate and fails explicitly instead of truncating a scan.
   - id: P1-PLAT-008
     priority: P1
     area: platform

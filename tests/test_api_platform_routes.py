@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from reconforge.api import create_api_app
 from reconforge.auth import LocalAuthService
 from reconforge.db import connect, run_migrations
+from reconforge.platform.evidence import EvidenceRegistryService
 from reconforge.platform.metrics import MetricsService
 
 
@@ -63,3 +64,36 @@ def test_account_api_lifecycle_and_metrics_are_rbac_protected(tmp_path: Path) ->
     assert metrics.status_code == 200
     assert denied.status_code == 403
     assert "Traceback" not in denied.text
+
+
+def test_local_evidence_cursor_pagination_is_signed_and_offset_compatible(tmp_path: Path) -> None:
+    client, db_path = _setup(tmp_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        service = EvidenceRegistryService(connection)
+        expected_ids: set[str] = set()
+        for index in range(3):
+            source = tmp_path / f"evidence-{index}.txt"
+            source.write_text(f"synthetic-{index}", encoding="utf-8")
+            registered = service.register(source, evidence_code=f"PAGE-{index}")
+            expected_ids.add(str(registered["id"]))
+    finally:
+        connection.close()
+    client = TestClient(create_api_app(db_path, cursor_signing_key=b"local-cursor-test-key-at-least-32-bytes"))
+    headers = {"Authorization": f"Bearer {_token(client, 'review')}"}
+
+    offset_page = client.get("/api/v1/evidence?limit=1&offset=1", headers=headers)
+    first = client.get("/api/v1/evidence?pagination=cursor&limit=2", headers=headers)
+    token = first.json()["pagination"]["next_cursor"]
+    second = client.get(f"/api/v1/evidence?pagination=cursor&limit=2&cursor={token}", headers=headers)
+    tampered = client.get(f"/api/v1/evidence?pagination=cursor&limit=2&status=available&cursor={token}", headers=headers)
+
+    assert offset_page.status_code == 200
+    assert offset_page.json()["pagination"] == {"limit": 1, "offset": 1, "returned": 1}
+    assert first.status_code == 200 and token
+    assert second.status_code == 200
+    assert len(first.json()["evidence"]) == 2
+    assert len(second.json()["evidence"]) == 1
+    assert {record["id"] for record in first.json()["evidence"] + second.json()["evidence"]} == expected_ids
+    assert tampered.status_code == 400
+    assert tampered.json()["error"]["code"] == "cursor_context_mismatch"

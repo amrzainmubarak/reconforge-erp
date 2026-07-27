@@ -202,3 +202,11 @@ responses survive SQLite backup/restore; PostgreSQL uses forced tenant RLS.
 The repository inventory now records five backend-neutral Application
 services. HTTP middleware composition remains open and no exactly-once
 transport claim is made.
+
+E-100 closes P1-PLAT-007. A bounded, versioned HMAC cursor binds allowlisted
+ordering and a stable ID tie-breaker to tenant/resource/filter context. The
+local evidence API supports explicit cursor mode while retaining offset mode;
+mutation, duplicate-key traversal, insert/delete movement, direction, scope,
+and configuration failures are tested. Tokens are authenticated encodings,
+not encryption. PostgreSQL cursor execution remains open and fails explicitly
+until a native keyset query is implemented.

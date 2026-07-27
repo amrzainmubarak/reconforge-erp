@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -11,6 +11,13 @@ from pydantic import BaseModel, ConfigDict, Field
 from reconforge.api.dependencies import get_local_db, require_any_permission, require_permission
 from reconforge.api.errors import APIError
 from reconforge.api.server_evidence import execute_postgres_evidence, server_evidence_enabled
+from reconforge.application.pagination import (
+    CursorCodec,
+    CursorError,
+    KeysetPaginator,
+    SortDefinition,
+    cursor_scope_digest,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.platform.common import PlatformError
@@ -24,6 +31,32 @@ EvidenceManage = Annotated[LocalUser, Depends(require_permission("evidence.manag
 EvidenceVerify = Annotated[LocalUser, Depends(require_permission("evidence.verify"))]
 PageLimit = Annotated[int, Query(ge=1, le=MAX_LIMIT)]
 PageOffset = Annotated[int, Query(ge=0, le=10_000_000)]
+CursorToken = Annotated[str | None, Query(max_length=4096)]
+
+
+def _cursor_page(
+    request: Request,
+    records: list[dict[str, object]],
+    *,
+    status: str,
+    limit: int,
+    cursor: str | None,
+) -> tuple[list[dict[str, object]], str | None]:
+    codec = getattr(request.app.state, "cursor_codec", None)
+    if not isinstance(codec, CursorCodec):
+        raise APIError(
+            status_code=503,
+            code="cursor_pagination_not_configured",
+            message="Cursor pagination requires an operator-configured signing key.",
+        )
+    tenant = request.headers.get("x-reconforge-tenant", "local")
+    scope = cursor_scope_digest({"resource": "evidence", "status": status.casefold(), "tenant": tenant})
+    paginator = KeysetPaginator(codec, (SortDefinition("created", ("created_at",)),))
+    try:
+        page = paginator.page(records, sort_key="created", direction="desc", scope_digest=scope, limit=limit, cursor=cursor)
+    except CursorError as exc:
+        raise APIError(status_code=400, code=exc.code, message="The pagination cursor is invalid for this request.") from exc
+    return [dict(record) for record in page.items], page.next_cursor
 
 
 class EvidenceRecordRequest(BaseModel):
@@ -96,10 +129,22 @@ def list_evidence(
     status: str = "all",
     limit: PageLimit = 500,
     offset: PageOffset = 0,
+    pagination: Literal["offset", "cursor"] = "offset",
+    cursor: CursorToken = None,
 ) -> dict[str, object]:
     """List evidence metadata without exposing artifact bytes."""
 
+    if cursor is not None and pagination != "cursor":
+        raise APIError(status_code=400, code="cursor_mode_required", message="Set pagination=cursor when supplying a cursor.")
+    if pagination == "cursor" and offset != 0:
+        raise APIError(status_code=400, code="pagination_mode_conflict", message="Offset is not valid in cursor mode.")
     if server_evidence_enabled(request):
+        if pagination == "cursor":
+            raise APIError(
+                status_code=501,
+                code="cursor_pagination_backend_unavailable",
+                message="Cursor pagination is not available for the PostgreSQL evidence registry yet.",
+            )
         records = execute_postgres_evidence(
             request,
             lambda repository, tenant: repository.list_evidence(
@@ -117,6 +162,12 @@ def list_evidence(
         )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="evidence_list_failed", message=str(exc)) from exc
+    if pagination == "cursor":
+        page, next_cursor = _cursor_page(request, records, status=status, limit=limit, cursor=cursor)
+        return {
+            "evidence": page,
+            "pagination": {"limit": limit, "returned": len(page), "next_cursor": next_cursor, "mode": "cursor"},
+        }
     page = records[offset : offset + limit]
     return {
         "evidence": page,

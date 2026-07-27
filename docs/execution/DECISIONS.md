@@ -835,3 +835,10 @@
 - **Reason**: A key alone cannot distinguish a legitimate retry from reuse for different financial input, and a plaintext owner token would turn persistence or backup access into execution authority.
 - **Consequence**: E-099 closes P1-PLAT-006 for generic requests while preserving the specialized durable-job contract. Middleware composition and capability generation remain caller responsibilities.
 - **ADR**: `docs/adr/0110-atomic-request-idempotency.md`
+
+### D-096: Authenticate keyset cursors and bind them to query context
+
+- **Decision**: Encode a stable keyset position and authenticate it with an operator-owned HMAC key while binding it to resource, tenant, filters, order, direction, and a stable ID tie-breaker.
+- **Reason**: Offset movement can skip/repeat records, while unsigned or cross-context cursors permit position and scope manipulation.
+- **Consequence**: E-100 closes P1-PLAT-007 for the backend-neutral contract and local evidence route. Tokens are not confidential, key rotation invalidates them, and PostgreSQL native keyset execution remains explicitly open.
+- **ADR**: `docs/adr/0111-signed-keyset-pagination.md`

@@ -23,6 +23,12 @@ def test_cursor_pagination_custom() -> None:
     assert params.limit == 100
 
 
+def test_cursor_pagination_rejects_blank_cursor() -> None:
+    with pytest.raises(APIError) as exc_info:
+        get_cursor_pagination(cursor="   ", limit=50)
+    assert exc_info.value.code == "invalid_cursor"
+
+
 def test_idempotency_key_absent() -> None:
     assert get_idempotency_key(None, None) is None
 

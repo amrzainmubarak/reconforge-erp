@@ -35,12 +35,14 @@ class CursorPaginationParams(BaseModel):
 
 
 def get_cursor_pagination(
-    cursor: str | None = Query(default=None, description="Opaque cursor token for next page."),
+    cursor: str | None = Query(default=None, max_length=4096, description="Opaque cursor token for next page."),
     limit: int = Query(default=50, ge=1, le=500, description="Page size limit (1-500)."),
 ) -> CursorPaginationParams:
     """FastAPI dependency providing validated cursor pagination parameters."""
 
-    resolved_cursor = None if not isinstance(cursor, str) else cursor
+    resolved_cursor = None if not isinstance(cursor, str) else cursor.strip()
+    if resolved_cursor == "":
+        raise APIError(status_code=400, code="invalid_cursor", message="Cursor must not be blank.")
     resolved_limit = 50 if not isinstance(limit, int) else limit
     return CursorPaginationParams(cursor=resolved_cursor, limit=resolved_limit)
 

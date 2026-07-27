@@ -134,3 +134,17 @@ jobs:
             --project-root . \
             --npm-audit-report "$report" \
             --npm-audit-exit-code "$audit_exit"
+
+  required-security-context:
+    name: python-security
+    runs-on: ubuntu-24.04
+    if: ${{ always() }}
+    needs: [python-security, repository-security]
+    permissions: {}
+    steps:
+      - name: Require every security job to pass
+        shell: bash
+        run: |
+          set -euo pipefail
+          test '${{ needs.python-security.result }}' = 'success'
+          test '${{ needs.repository-security.result }}' = 'success'

@@ -290,6 +290,13 @@ def test_security_and_release_workflows_pin_tools_and_fail_before_registry_write
         assert "--pip-audit-exit-code" in workflow
         assert "--npm-audit-exit-code" in workflow
 
+    assert "required-security-context:" in security
+    assert "name: python-security" in security
+    assert "needs: [python-security, repository-security]" in security
+    assert "if: ${{ always() }}" in security
+    assert "needs.python-security.result" in security
+    assert "needs.repository-security.result" in security
+
     registry_login = release.index("docker/login-action@")
     for gate in (
         "Validate closed supply-chain policy and current lock",

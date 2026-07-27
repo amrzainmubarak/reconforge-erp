@@ -6600,3 +6600,48 @@ safety/reachability/licensing, OCI reproducibility, an immutable GitHub Release
 or PyPI publication, a SLSA Build/Source level, compliance, certification,
 independent security assurance, production readiness, customer adoption, or
 the later multi-phase platform mission.
+
+## E-088: First atomic backend-neutral application boundary
+
+Phase 1 inspection found that `WorkspaceRepositoryProtocol`,
+`PeriodRepositoryProtocol`, and `AuditEventRepositoryProtocol` had no runtime
+consumer: only tests imported their concrete SQLite repositories, while active
+platform services accepted `sqlite3.Connection` directly. Structural
+`isinstance` checks therefore did not satisfy P1-PLAT-001.
+
+This slice adds `DomainUnitOfWorkProtocol` and a workspace/initial-period
+application service that imports only domain models and ports. The
+`SQLiteDomainUnitOfWork` adapter owns `BEGIN IMMEDIATE`, refuses an already
+active transaction, uses non-autocommitting repositories, requires explicit
+commit, and rolls back on exceptions or context exit without commit. Existing
+direct repository callers retain `autocommit=True` by default.
+
+The application validates bounded printable names/actor and canonical ISO
+business dates before creating the unit of work. One transaction creates the
+workspace, period, `workspace.created` audit event, and `period.created` audit
+event. A database trigger that rejects the second audit insert proves rollback
+of both business rows, the first audit row, and `audit_ledger_state` to the
+genesis hash.
+
+| Command | Result |
+| --- | --- |
+| `python -m pytest tests/test_workspace_period_application.py tests/test_domain_repository_contracts.py -q` | 13 passed |
+| focused Ruff command over application/adapter/protocol/repository/test files | Pass |
+| focused Mypy command over five source files | Pass |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 216 source files |
+| `python -m pytest` | 1,291 passed, 10 live-service skips, 7 expected compatibility/deprecation warnings in 205.10s |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 648,129-byte wheel and 913,628-byte sdist |
+| package membership assertion | New application, protocol, and SQLite adapter present in wheel and sdist |
+| `git diff --check` | Pass |
+
+Claim boundary: this is one local SQLite application/UoW contract, not broad
+application-layer migration, PostgreSQL parity, distributed transaction,
+multi-user isolation, performance, production readiness, or completion of
+P1-PLAT-001. It adds no network call and preserves Community local-first
+defaults.
+
+Packaging boundary: runtime application, port, and SQLite adapter code is in
+both wheel and sdist; the dedicated transaction/rollback test and ADR remain
+sdist/repository evidence. Package presence does not prove PostgreSQL parity,
+live concurrency, cross-process recovery, or broader service migration.

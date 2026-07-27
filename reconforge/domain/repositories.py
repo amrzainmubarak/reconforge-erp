@@ -12,8 +12,9 @@ from reconforge.domain.models import DEFAULT_LOCAL_FIRST_NOTE, AuditEventReferen
 class WorkspaceRepository:
     """CRUD helpers for local workspaces."""
 
-    def __init__(self, connection: sqlite3.Connection) -> None:
+    def __init__(self, connection: sqlite3.Connection, *, autocommit: bool = True) -> None:
         self.connection = connection
+        self.autocommit = autocommit
 
     def create(self, *, name: str, local_first_note: str | None = None) -> Workspace:
         workspace = Workspace(name=name, local_first_note=local_first_note or DEFAULT_LOCAL_FIRST_NOTE)
@@ -21,7 +22,8 @@ class WorkspaceRepository:
             "INSERT INTO workspaces (id, name, local_first_note, created_at) VALUES (?, ?, ?, ?)",
             (workspace.id, workspace.name, workspace.local_first_note, workspace.created_at),
         )
-        self.connection.commit()
+        if self.autocommit:
+            self.connection.commit()
         return workspace
 
     def get(self, workspace_id: str) -> Workspace | None:
@@ -45,8 +47,9 @@ class WorkspaceRepository:
 class PeriodRepository:
     """CRUD helpers for local periods."""
 
-    def __init__(self, connection: sqlite3.Connection) -> None:
+    def __init__(self, connection: sqlite3.Connection, *, autocommit: bool = True) -> None:
         self.connection = connection
+        self.autocommit = autocommit
 
     def create(
         self,
@@ -65,7 +68,8 @@ class PeriodRepository:
             """,
             (period.id, period.workspace_id, period.name, period.start_date, period.end_date, period.status, period.created_at),
         )
-        self.connection.commit()
+        if self.autocommit:
+            self.connection.commit()
         return period
 
     def get(self, period_id: str) -> Period | None:

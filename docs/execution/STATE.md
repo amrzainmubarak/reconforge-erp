@@ -4,13 +4,13 @@ Updated: 2026-07-27
 
 ## Current phase
 
-Phase 0 — Truth and Reproducibility (22/22 complete)
+Phase 1 — Platform Foundation (in progress)
 
 ## Snapshot boundary
 
-- Branch: `feature/p0-signed-release-closeout` from merged `origin/main`
-- Verified implementation and signed-candidate source commit: `d47edd845e6aef3bae16e05698e07878086d690b`
-- Base: merged PR #54 on `origin/main`; GitHub verifies the merge commit and signed annotated tag `v0.7.1`.
+- Branch: `feature/p1-platform-foundation-audit` from merged `origin/main`
+- Phase 1 base: `0fa2c5b06af68d301cce561b5d71ed4c496c561e` (merged Phase 0 closeout PR #61)
+- Phase 0 signed-candidate source remains `d47edd845e6aef3bae16e05698e07878086d690b`; its evidence is immutable historical baseline, not evidence for Phase 1 changes.
 - Publication scope: PR #54 merged the evidence-bounded Phase 0 implementation. Signed Release Candidate run `30243819239` is non-publishing: it retained review artifact `8644255664` and pushed only the digest-addressed candidate image required for verification; no GitHub Release, PyPI publication, compliance claim, or production migration occurred.
 - Worktree outside the publication scope retains 19 status entries: the user-owned `AGENTS.md` modification, an unapproved `CODE_OF_CONDUCT.md` deletion, `.codex-test-tmp/`, and 16 raw duplicated command-output files. None is staged or attributed to the Phase 0 commit.
 - GitHub Actions run `30239994946` closes P0-009; runs `30240642293`, `30240642306`, `30240642321`, and `30240642386` close P0-SEC-008. Exact-main CI `30242293585`, Security `30242293659`, Docker `30242293668`, CodeQL `30242293667`, and OpenSSF Scorecard `30242293599` pass on `d47edd8`. E-087 closes P0-SEC-006/007 through the GitHub-verified signed tag and independently verified retained provenance/SBOM bundles. All 22 evidence-defined Phase 0 tasks are complete.
@@ -102,10 +102,12 @@ Phase 0 — Truth and Reproducibility (22/22 complete)
 
 ## Active task
 
-Phase 0 is complete at 22/22 evidence-defined tasks. This is a bounded foundation milestone, not a claim that the multi-phase world-class platform mission, Enterprise/Regulated editions, complete connector/industry ecosystem, independent security validation, scale targets, or real-customer adoption are complete. Residual risks and later-phase work remain governed by the backlog and risk register.
+`P1-PLAT-001` is in progress. E-088 replaces the previously unused repository-protocol claim with one production-shaped application boundary: workspace plus initial period plus two audit events commit atomically through a typed unit of work, and failure rolls back business rows and the audit-chain head. The application layer imports neither SQLite nor infrastructure. Remaining platform services still coupled to `sqlite3.Connection` prevent task or Phase 1 closure.
+
+Current E-088 gates: repository/application focus 13 passed; full Ruff passed; Mypy passed over 216 source files; full pytest collected 1,301 tests with 1,291 passed and ten live-service skips in 205.10s; wheel/sdist build passed and contains every new runtime module.
 
 ## Next exact actions
 
-1. Review and merge the isolated Phase 0 closeout PR after its hosted documentation/policy gates pass.
-2. Begin Phase 1 with the highest-risk unblocked platform task from `BACKLOG.yaml`, preserving Community local-first operation and the completed Phase 0 contracts.
-3. Keep immutable publication, release promotion, SLSA level assertions, compliance/certification, and production-readiness claims human-gated and evidence-specific.
+1. Complete the repository-boundary inventory and migrate the next transactionally coherent platform use case without exposing a database connection to the application layer.
+2. Add PostgreSQL and SQLite behavioral parity fixtures only after the shared application contract is stable; do not label method-name similarity as backend parity.
+3. Define the complete Phase 3 enterprise backlog and external pilot/security-review gates before feature implementation, preserving evidence-specific non-claims.

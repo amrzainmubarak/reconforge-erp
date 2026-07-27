@@ -24,11 +24,12 @@
           "limits": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["max_left_records", "max_right_records", "max_candidates_per_record", "max_date_window_days", "max_amount_text_characters"],
+            "required": ["max_left_records", "max_right_records", "max_candidates_per_record", "max_total_candidate_evaluations", "max_date_window_days", "max_amount_text_characters"],
             "properties": {
               "max_left_records": {"type": "integer", "minimum": 1},
               "max_right_records": {"type": "integer", "minimum": 1},
               "max_candidates_per_record": {"type": "integer", "minimum": 1},
+              "max_total_candidate_evaluations": {"type": "integer", "minimum": 1},
               "max_date_window_days": {"type": "integer", "minimum": 1},
               "max_amount_text_characters": {"type": "integer", "minimum": 1}
             }

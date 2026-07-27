@@ -884,3 +884,10 @@
 - **Reason**: Scanning and reparsing every distinct amount bucket for each left record defeats indexed candidate generation even though it avoids a literal row cross product.
 - **Consequence**: E-106 closes P1-REC-002 with logarithmic boundary lookup and unchanged existing outputs. Returned candidates still require linear scoring, and caps/time/search budgets remain P1-REC-003.
 - **ADR**: `docs/adr/0117-exact-decimal-range-index.md`
+
+### D-103: Exceeding a candidate budget is ambiguity, never truncation
+
+- **Decision**: Count stable indexed candidates before scoring, cap one left record at 10,000 and one run at 1,000,000 evaluations, and select none for an over-budget record while emitting explicit ambiguity evidence.
+- **Reason**: Choosing the first N candidates would turn a resource safeguard into an arbitrary financial decision, while wall-clock time alone is not reproducible across machines.
+- **Consequence**: E-107 closes P1-REC-003 with deterministic search budgets and fail-closed output. Configurable/grouped budgets and infrastructure watchdogs remain separate.
+- **ADR**: `docs/adr/0118-fail-closed-candidate-budgets.md`

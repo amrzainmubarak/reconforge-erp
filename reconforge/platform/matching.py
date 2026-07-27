@@ -64,6 +64,9 @@ _RECORD_SEQUENCE_BASIS = "record-sequence-v1"
 _JSON_RECORD_BASIS = "json-record-position-v1"
 _SOURCE_LOCATION_UNAVAILABLE_BASIS = "source-location-unavailable-v1"
 LEGACY_RECORD_IDENTITY_POLICY = "row-order-occurrence-legacy-v0"
+MATCHING_CANDIDATE_POLICY = "indexed-candidate-budget-v1"
+MAX_CANDIDATES_PER_LEFT_RECORD = 10_000
+MAX_TOTAL_CANDIDATE_EVALUATIONS = 1_000_000
 
 
 def _exception_identity_payload(value: object) -> str:
@@ -757,7 +760,7 @@ class MatchingService:
             source_locations_trusted=_source_locations_trusted,
             record_identity_policy=record_identity_policy,
         )
-        candidates = self._build_candidates(
+        candidates, candidate_budget_failures = self._build_candidates(
             ordered_left,
             left_precision_map,
             left_currency_map,
@@ -772,9 +775,6 @@ class MatchingService:
             date_window_days=date_window_days,
             reference_normalization_rules=normalization_rules,
         )
-        candidate_counts: dict[str, int] = {}
-        for candidate in candidates:
-            candidate_counts[candidate.left_id] = candidate_counts.get(candidate.left_id, 0) + 1
         candidates_by_left_index: dict[int, list[_MatchCandidate]] = {}
         for candidate in candidates:
             candidates_by_left_index.setdefault(candidate.left_index, []).append(candidate)
@@ -968,6 +968,44 @@ class MatchingService:
                 record_lineage=left_record_lineage[left_index],
             )
 
+        for left_index, budget in sorted(candidate_budget_failures.items()):
+            left_id = next(item[1] for item in ordered_left if item[0] == left_index)
+            explanation = "Candidate generation exceeded its deterministic search budget; no candidate was selected."
+            title = "Candidate search budget exceeded"
+            evidence: dict[str, object] = {
+                "candidate_policy": MATCHING_CANDIDATE_POLICY,
+                "observed_candidates": budget["observed_candidates"],
+                "exceeded_limit": budget["exceeded_limit"],
+                "limit": budget["limit"],
+                "max_candidates_per_left_record": MAX_CANDIDATES_PER_LEFT_RECORD,
+                "max_total_candidate_evaluations": MAX_TOTAL_CANDIDATE_EVALUATIONS,
+                "inclusion_reason": "indexed reference, exact-key, or exact Decimal amount window",
+                "exclusion_reason": budget["reason"],
+            }
+            payload = {
+                "exception_type": "matching_ambiguity",
+                "source_side": "Left",
+                "source_id": left_id,
+                "title": title,
+                "explanation": explanation,
+                "severity": "High",
+                "risk_score": "0.8",
+                "reason_code": "CANDIDATE_BUDGET_EXCEEDED",
+                "evidence": evidence,
+            }
+            payload["exception_id"] = _exception_id(
+                exception_type="matching_ambiguity",
+                source_side="Left",
+                source_id=left_id,
+                code="CANDIDATE_BUDGET_EXCEEDED",
+                title=title,
+                explanation=explanation,
+                severity="High",
+                risk_score="0.8",
+                evidence=evidence,
+            )
+            exceptions.append(payload)
+
         right_quality_codes: dict[int, str] = {}
         for right_index_value, right_id, right_record, _, _, right_amount in ordered_right:
             right_quality_codes[right_index_value] = check_record_quality(
@@ -1010,6 +1048,28 @@ class MatchingService:
                         "status": "Invalid",
                         "reason_code": quality_code,
                         "lineage": build_lineage_payload(left_index=left_index, selected_match=None),
+                    }
+                )
+                continue
+            if left_index in candidate_budget_failures:
+                budget = candidate_budget_failures[left_index]
+                results.append(
+                    {
+                        "left_id": left_id,
+                        "match_type": "unresolved_ambiguity",
+                        "confidence": "0",
+                        "explanation": "Candidate generation exceeded its deterministic search budget.",
+                        "amount_difference": "0",
+                        "status": "Ambiguous",
+                        "reason_code": "CANDIDATE_BUDGET_EXCEEDED",
+                        "lineage": {
+                            "candidate_count": budget["observed_candidates"],
+                            "candidate_policy": MATCHING_CANDIDATE_POLICY,
+                            "exceeded_limit": budget["exceeded_limit"],
+                            "limit": budget["limit"],
+                            "rejection_reasons": [budget["reason"]],
+                            "left_record": left_record_lineage[left_index],
+                        },
                     }
                 )
                 continue
@@ -1535,8 +1595,10 @@ class MatchingService:
         amount_tolerance: Decimal,
         date_window_days: int,
         reference_normalization_rules: ReferenceNormalizationRules,
-    ) -> list[_MatchCandidate]:
+    ) -> tuple[list[_MatchCandidate], dict[int, dict[str, int | str]]]:
         candidates: list[_MatchCandidate] = []
+        budget_failures: dict[int, dict[str, int | str]] = {}
+        evaluated = 0
         for left_index, left_id, left, left_key, _, left_amount in ordered_left:
             if left_amount is None:
                 continue
@@ -1549,14 +1611,7 @@ class MatchingService:
             )
             left_precision = left_precision_map.get(left_index)
             left_currency = left_currency_map.get(left_index, "")
-            for (
-                candidate_right_index,
-                right_id,
-                right,
-                right_amount,
-                right_currency,
-                right_precision,
-            ) in self._candidates(
+            indexed_candidates = self._candidates(
                 left,
                 right_index_data,
                 left_amount=left_amount,
@@ -1566,7 +1621,33 @@ class MatchingService:
                 exact_fields=exact_fields,
                 amount_tolerance=amount_tolerance,
                 reference_normalization_rules=reference_normalization_rules,
-            ):
+            )
+            observed = len(indexed_candidates)
+            if observed > MAX_CANDIDATES_PER_LEFT_RECORD:
+                budget_failures[left_index] = {
+                    "observed_candidates": observed,
+                    "exceeded_limit": "max_candidates_per_left_record",
+                    "limit": MAX_CANDIDATES_PER_LEFT_RECORD,
+                    "reason": "Per-record candidate ceiling exceeded.",
+                }
+                continue
+            if evaluated + observed > MAX_TOTAL_CANDIDATE_EVALUATIONS:
+                budget_failures[left_index] = {
+                    "observed_candidates": observed,
+                    "exceeded_limit": "max_total_candidate_evaluations",
+                    "limit": MAX_TOTAL_CANDIDATE_EVALUATIONS,
+                    "reason": "Run candidate-evaluation ceiling exceeded.",
+                }
+                continue
+            evaluated += observed
+            for (
+                candidate_right_index,
+                right_id,
+                right,
+                right_amount,
+                right_currency,
+                right_precision,
+            ) in indexed_candidates:
                 if right_currency and left_currency and right_currency != left_currency:
                     continue
                 _ = right_precision
@@ -1618,7 +1699,7 @@ class MatchingService:
                 candidate.right_id,
             ),
         )
-        return candidates
+        return candidates, budget_failures
 
     def _record_key(self, record: dict[str, Any], *, fallback: str = "") -> str:
         payload = {

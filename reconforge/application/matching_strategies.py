@@ -22,6 +22,7 @@ class StrategyLimits:
     max_left_records: int
     max_right_records: int
     max_candidates_per_record: int
+    max_total_candidate_evaluations: int
     max_date_window_days: int
     max_amount_text_characters: int = 128
 
@@ -30,6 +31,7 @@ class StrategyLimits:
             self.max_left_records,
             self.max_right_records,
             self.max_candidates_per_record,
+            self.max_total_candidate_evaluations,
             self.max_date_window_days,
             self.max_amount_text_characters,
         )

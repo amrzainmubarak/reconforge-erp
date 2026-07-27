@@ -26,7 +26,8 @@ INDEXED_ONE_TO_ONE_MANIFEST = MatchingStrategyManifest(
     limits=StrategyLimits(
         max_left_records=250_000,
         max_right_records=250_000,
-        max_candidates_per_record=250_000,
+        max_candidates_per_record=10_000,
+        max_total_candidate_evaluations=1_000_000,
         max_date_window_days=3660,
     ),
 )

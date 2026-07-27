@@ -390,9 +390,11 @@ tasks:
     priority: P1
     area: reconciliation
     title: Candidate budgets and limits
-    status: planned
+    status: completed
     depends_on: [P1-REC-001]
     exit_evidence: Partition, candidate cap, timeout/search budget, inclusion/exclusion reason, and safe ambiguity output.
+    completed_slices:
+      - E-107 adds stable currency/precision partitions, a 10,000-per-left cap and 1,000,000-evaluation deterministic run budget, published limits, explicit inclusion/exclusion evidence, and fail-closed Ambiguous output with no partial match; permutation and dense-candidate tests pass.
   - id: P1-REC-004
     priority: P1
     area: reconciliation

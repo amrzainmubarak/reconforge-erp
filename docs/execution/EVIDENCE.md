@@ -7223,3 +7223,28 @@ currency retains the historical compatibility path across partitions.
 This proves exact range-bound lookup and current-output compatibility. It does
 not establish a total candidate cap, timeout/search budget, memory ceiling,
 grouped matching, or supported throughput.
+
+## E-107: Deterministic candidate budgets and safe ambiguity
+
+`indexed-candidate-budget-v1` counts the deduplicated reference, exact-key, and
+exact-Decimal-window candidates before scoring. A left record exceeding 10,000
+candidates, or a run crossing 1,000,000 candidate evaluations, receives no
+selected match. Instead the pure output contains `status=Ambiguous`, reason
+`CANDIDATE_BUDGET_EXCEEDED`, lineage with observed count/policy/limit/rejection,
+and a matching-ambiguity exception with inclusion and exclusion evidence. The
+strategy manifest publishes both ceilings.
+
+| Evidence | Result |
+| --- | --- |
+| Per-record dense candidate overflow | No matched result; explicit three-candidate ambiguity under a test ceiling of two |
+| Total search-budget overflow | Stable result under left/right row permutation; later record unresolved rather than truncated |
+| Existing matching/property/strategy compatibility focus | Pass |
+| Repository Ruff and mypy | Pass over 236 source files |
+| `python -m pytest` | Pass: 1,395 passed, 16 environment-dependent skips, 7 warnings in 200.57 seconds |
+| `python -m build --no-isolation` to a new temporary directory | Pass: 707,337-byte wheel and 998,536-byte sdist |
+| `python -m pip_audit` | Pass: no known vulnerabilities; the local `reconforge-erp` distribution is not published on PyPI and is explicitly unauditable by that lookup |
+| `git diff --check` | Pass |
+
+This is a deterministic candidate-evaluation budget, not a wall-clock or memory
+benchmark. It does not prove grouped-search bounds, configurable tenant policy,
+supported throughput, or explanation schema v2.

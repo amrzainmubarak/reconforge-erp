@@ -26,6 +26,7 @@ tests/             unit, integration, API, security, migration and regression te
 
 - Stock-to-GL matching uses deterministic min-cost bipartite assignment.
 - Positive amount tolerances use exact Decimal binary-search windows over stable currency/precision partitions rather than scanning all distinct amount buckets. Boundary lookup is logarithmic per compatible partition; returned-candidate work, budgets, and supported throughput remain separate evidence gates.
+- `indexed-candidate-budget-v1` caps one left record at 10,000 indexed candidates and a run at 1,000,000 evaluations. Excess produces explicit ambiguity and no partial selection; these deterministic ceilings are safety contracts, not throughput claims.
 - Stable match and exception identifiers use canonical content/business keys.
 - Invalid amounts are rejected by Decimal parsing and become visible data-quality exceptions.
 - Invalid or missing reconciliation dates are excluded from matching and retained as data-quality evidence.

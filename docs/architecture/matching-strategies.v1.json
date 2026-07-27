@@ -8,7 +8,8 @@
       "id": "indexed-composite-one-to-one",
       "limits": {
         "max_amount_text_characters": 128,
-        "max_candidates_per_record": 250000,
+        "max_candidates_per_record": 10000,
+        "max_total_candidate_evaluations": 1000000,
         "max_date_window_days": 3660,
         "max_left_records": 250000,
         "max_right_records": 250000

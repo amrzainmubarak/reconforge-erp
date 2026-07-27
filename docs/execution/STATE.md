@@ -270,3 +270,13 @@ preserved. Synthetic boundary evidence uses a billion-position lazy sequence
 with at most 64 indexed lookups; duplicate/lower/upper boundary cases and all
 existing matching/property/strategy tests pass. Candidate count, timeout,
 search, and partition budgets remain open under P1-REC-003.
+
+E-107 closes P1-REC-003 with `indexed-candidate-budget-v1`. Stable indexed
+candidates are counted before scoring; more than 10,000 for one left record or
+more than 1,000,000 evaluations in one run yields an explicit Ambiguous result
+and matching-ambiguity exception, never a truncated partial match. Evidence
+records the observed count, published ceilings, index inclusion basis, and
+exclusion reason. Stable left identity makes total-budget behavior invariant to
+row permutation. The deterministic search budget governs business output;
+infrastructure wall-clock watchdogs may be added later without authorizing a
+partial financial decision.

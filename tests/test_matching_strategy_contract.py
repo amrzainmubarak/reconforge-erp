@@ -56,6 +56,7 @@ def test_indexed_strategy_manifest_is_versioned_bounded_and_registry_addressable
         assert manifest.maturity == "beta"
         assert len(manifest.digest) == 64
         assert manifest.limits.max_left_records == 250_000
+        assert manifest.limits.max_candidates_per_record == 10_000
         registry = MatchingStrategyRegistry((strategy,))
         assert registry.get(manifest.id, manifest.version) is strategy
         assert registry.manifests == (manifest,)

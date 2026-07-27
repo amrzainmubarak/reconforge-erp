@@ -1,5 +1,7 @@
 # Changelog
 
+- Added a PostgreSQL adapter for the workspace/initial-period unit of work with forced tenant RLS, atomic workspace-period-audit persistence, concurrency-safe audit chaining, SQLite semantic parity, fail-closed rollback, immutable audit evidence, and Alembic downgrade/re-upgrade coverage.
+
 - Added a PostgreSQL durable-job adapter and Alembic migration with tenant RLS, atomic concurrent idempotency, optimistic transitions, fenced worker leases, append-only partition effects, live crash/resume parity with SQLite, and verified downgrade/re-upgrade behavior.
 
 - Added atomic, immutable partition effects bound to durable-job checkpoints and final completion. A two-partition workload now proves connection-close/restart takeover skips the committed partition, produces the same effect semantics and manifest identity as uninterrupted execution, and rolls effect plus progress back together on injected failure. External side effects and host loss remain outside this local proof.

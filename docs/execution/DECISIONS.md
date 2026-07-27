@@ -809,3 +809,9 @@
 - **Decision**: Implement the same backend-neutral durable-job ports through a PostgreSQL adapter whose operations set transaction-local tenant scope, atomically compare versions, and fence every worker write by owner, generation, and unexpired lease. Claims use row locks with `SKIP LOCKED`; effects and transitions are append-only.
 - **Reason**: Method-name similarity is not backend parity. Real concurrency, connection loss, RLS, and migration rollback must be exercised on PostgreSQL.
 - **Consequence**: E-095 proves this boundary on PostgreSQL 17 and compares its semantic effects with SQLite. It does not close P1-PLAT-002 for unrelated repository boundaries.
+
+### D-092: Preserve the local workspace contract behind a PostgreSQL UoW
+
+- **Decision**: Bind the current workspace/initial-period ports to a tenant-specific PostgreSQL unit of work. Use dedicated `domain_` compatibility tables, forced RLS, one transaction, an append-only audit chain, and row-locked chain-head serialization.
+- **Reason**: Reusing enterprise Organization/FiscalPeriod tables would silently change the current local-first domain contract. A compatibility adapter enables measured backend parity while canonical-model migration remains explicit.
+- **Consequence**: E-096 proves atomicity, rollback, tenant isolation, concurrency, audit verification, and SQLite semantic parity. The compatibility tables are not an enterprise canonical-model claim.

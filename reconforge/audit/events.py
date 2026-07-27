@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import hashlib
 import hmac
-import json
 import sqlite3
 import uuid
 from dataclasses import dataclass
 from typing import Any
 
+from reconforge.domain.audit_chain import calculate_audit_event_hash
 from reconforge.domain.models import AuditEventReference, utc_now_text
 from reconforge.io.persisted import (
     PersistedJsonError,
@@ -63,44 +62,8 @@ def _metadata_from_json(value: str) -> dict[str, Any]:
         raise AuditLedgerError("Stored audit event metadata is invalid.") from exc
 
 
-def _event_hash_payload(
-    *,
-    event_id: str,
-    sequence: int,
-    previous_hash: str,
-    actor_user_id: str | None,
-    actor_label: str,
-    object_type: str,
-    object_id: str,
-    action: str,
-    before_hash: str | None,
-    after_hash: str | None,
-    metadata_json: str,
-    created_at: str,
-) -> dict[str, Any]:
-    return {
-        "action": action,
-        "actor_label": actor_label,
-        "actor_user_id": actor_user_id,
-        "after_hash": after_hash,
-        "before_hash": before_hash,
-        "created_at": created_at,
-        "id": event_id,
-        "metadata_json": metadata_json,
-        "object_id": object_id,
-        "object_type": object_type,
-        "previous_hash": previous_hash,
-        "sequence": sequence,
-    }
-
-
-def _calculate_event_hash(payload: dict[str, Any]) -> str:
-    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-
-
 def _row_hash(row: sqlite3.Row) -> str:
-    payload = _event_hash_payload(
+    return calculate_audit_event_hash(
         event_id=str(row["id"]),
         sequence=int(row["sequence"]),
         previous_hash=str(row["previous_hash"]),
@@ -114,7 +77,6 @@ def _row_hash(row: sqlite3.Row) -> str:
         metadata_json=str(row["metadata_json"]),
         created_at=str(row["created_at"]),
     )
-    return _calculate_event_hash(payload)
 
 
 def _row_to_event(row: sqlite3.Row) -> AuditEventReference:
@@ -168,7 +130,7 @@ def append_audit_event(
             raise AuditLedgerError("Audit ledger is not initialized. Run 'reconforge db init' first.")
         sequence = int(state["last_sequence"]) + 1
         previous_hash = str(state["last_event_hash"])
-        payload = _event_hash_payload(
+        event_hash = calculate_audit_event_hash(
             event_id=event_id,
             sequence=sequence,
             previous_hash=previous_hash,
@@ -182,7 +144,6 @@ def append_audit_event(
             metadata_json=metadata_json,
             created_at=created_at,
         )
-        event_hash = _calculate_event_hash(payload)
         connection.execute(
             """
             INSERT INTO audit_events (

@@ -23,6 +23,7 @@ def test_postgres_alembic_contract_has_no_repository_credentials() -> None:
     execution_revision = (ROOT / "alembic" / "versions" / "0010_postgres_reconciliation_execution.py").read_text(encoding="utf-8")
     checkpoint_revision = (ROOT / "alembic" / "versions" / "0011_postgres_reconciliation_checkpoints.py").read_text(encoding="utf-8")
     jobs_revision = (ROOT / "alembic" / "versions" / "0012_postgres_durable_jobs.py").read_text(encoding="utf-8")
+    domain_revision = (ROOT / "alembic" / "versions" / "0013_postgres_domain_uow.py").read_text(encoding="utf-8")
 
     assert "sqlalchemy.url =\n" in config
     assert "RECONFORGE_POSTGRES_DSN" in env
@@ -61,6 +62,9 @@ def test_postgres_alembic_contract_has_no_repository_credentials() -> None:
     assert 'revision = "0012_postgres_jobs"' in jobs_revision
     assert 'down_revision = "0011_postgres_recon_ckpts"' in jobs_revision
     assert "POSTGRES_DURABLE_JOB_SCHEMA_SQL" in jobs_revision
+    assert 'revision = "0013_postgres_domain_uow"' in domain_revision
+    assert 'down_revision = "0012_postgres_jobs"' in domain_revision
+    assert "POSTGRES_DOMAIN_SCHEMA_SQL" in domain_revision
     assert "password" not in config.lower()
 
 
@@ -89,3 +93,6 @@ def test_alembic_upgrade_command_is_available_when_server_extra_is_installed() -
         assert connection.execute(
             "SELECT to_regclass('reconforge.durable_job_partition_effects')"
         ).fetchone()[0] == "reconforge.durable_job_partition_effects"
+        assert connection.execute(
+            "SELECT to_regclass('reconforge.domain_audit_events')"
+        ).fetchone()[0] == "reconforge.domain_audit_events"

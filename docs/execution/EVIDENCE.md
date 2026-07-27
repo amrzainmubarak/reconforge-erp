@@ -6875,3 +6875,40 @@ evidence test setup that omitted the master-data prerequisite.
 
 P1-PLAT-002 remains in progress because live SQLite/PostgreSQL parity has not
 yet been established for every supported Application repository boundary.
+
+## E-096: PostgreSQL workspace-period unit-of-work parity
+
+Alembic revision 0013 adds tenant-scoped compatibility persistence for the
+current local-first Workspace and Period ports. `PostgresDomainUnitOfWork`
+owns one connection and transaction, sets transaction-local tenant scope, and
+commits workspace, period, both audit events, and the chain head together.
+Forced RLS covers all four tables and a database trigger rejects audit UPDATE
+or DELETE. SQLite and PostgreSQL call the same pure canonical audit-hash
+function, so parity does not depend on two copied implementations staying equal.
+
+On PostgreSQL 17.10 with a non-superuser/non-BYPASSRLS role, the unchanged
+Application service creates the same normalized business fields, event order,
+and metadata shape as SQLite. Another tenant cannot read any object. Exiting
+without commit persists nothing. An injected failure on `period.created`
+rolls back workspace, period, first event, second event, and ledger head.
+Two concurrent units of work on one tenant serialize through the chain-head
+row lock and finish with unique contiguous sequences 1–6 and a verified chain.
+
+A fresh-database sweep of all PostgreSQL modules plus server identity now
+passes 121 tests. Migration 0013 passes initial upgrade, downgrade through
+0012/0011, and re-upgrade, with both domain and durable-job tables restored.
+
+| Command | Result |
+| --- | --- |
+| live workspace-period PostgreSQL contract | 2 passed |
+| SQLite workspace contract plus live PostgreSQL contract | 12 passed |
+| all live PostgreSQL modules plus server identity on a fresh database | 121 passed |
+| Alembic forward/downgrade/re-upgrade on a fresh database | 2 passed |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 224 source files |
+| `python -m pytest` without live-service environment | 1,334 passed, 12 live-service skips, 7 expected warnings |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 673,224-byte wheel and 950,975-byte sdist |
+| `git diff --check` | Pass |
+
+P1-PLAT-001 and P1-PLAT-002 remain in progress because the measured inventory
+still contains direct-SQLite Platform services and their parity is not proven.

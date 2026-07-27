@@ -165,3 +165,15 @@ PostgreSQL 17 database passes all 119 PostgreSQL/server-identity contract tests.
 P1-PLAT-002 remains in progress for the other supported repository boundaries.
 The non-live full suite passes 1,333 tests with eleven live-service skips; Ruff,
 mypy over 222 source files, build, and diff checks pass.
+
+E-096 adds PostgreSQL parity for the workspace/initial-period unit of work.
+The unchanged Application service now has SQLite and PostgreSQL adapters;
+PostgreSQL live evidence covers one-transaction commit, no-commit rollback,
+second-audit failure rollback, RLS isolation, immutable events, concurrent
+chain serialization, verification, semantic parity, and migration rollback.
+The clean PostgreSQL sweep passes 121 tests. Repository migration and parity
+remain in progress for the direct-SQLite services in the measured inventory.
+The non-live full suite passes 1,334 tests with twelve live-service skips;
+Ruff, mypy over 224 source files, build, and diff checks pass. SQLite and
+PostgreSQL now call the same pure canonical audit-hash function, preventing
+adapter drift in the chain algorithm.

@@ -6500,3 +6500,43 @@ cadence, exception workflow, and CI-gate exit. It proves committed checksum
 coverage and current advisory results, not publisher identity, package-code
 safety, reachability, licensing, malware absence, registry availability, or
 artifact provenance.
+
+## E-086: Clean protected v0.7.1 pre-merge candidate
+
+The `main` protection API requires strict up-to-date contexts
+`python-security`, `CodeQL`, `test (3.12)`, and `test (3.11)`, plus resolved
+conversations. Matrix display names had removed the literal
+`python-security` check. Commit `2692133` adds one `always()` aggregate job
+that succeeds only when both the two-cell locked Python audit and the complete
+history/tree secret plus npm policy job succeed. It does not bypass, duplicate,
+or mark a failed/cancelled prerequisite successful.
+
+Existing annotated tag v0.7.0 points at an older revision and GitHub reports
+it unsigned. Because the candidate workflow requires the tag to equal the
+project version exactly, commit `6d33f32` advances only current candidate
+metadata and links to v0.7.1, retains v0.7.0 historical documents, and adds a
+conservative v0.7.1 note. Local release/readiness/SBOM/policy tests pass 39/39;
+the supply-chain validator reports 103 Python packages, 209 npm packages, zero
+integrity gaps, and zero active exceptions. A no-isolation build produces
+`reconforge_erp-0.7.1-py3-none-any.whl` and
+`reconforge_erp-0.7.1.tar.gz` with matching metadata.
+
+| Hosted run on `6d33f3249de138acdec8c533e6d9dde8c97bd91b` | Result |
+| --- | --- |
+| Security `30241634766` | Pass; both locked Python audits, secret/npm gate, and protected `python-security` aggregate |
+| Docker `30241634765` | Pass |
+| CI `30241634773` | Pass; Python 3.11/3.12, four engine cells, live server boundary, Docker parity |
+| CodeQL `30241634826` | Pass |
+
+GitHub reports PR #54 `mergeable=true` and `mergeable_state=clean`. The PR is
+currently non-draft in external state. This workstation has no configured
+Git signing key or signing format, no GPG executable, and no reachable SSH
+agent. No merge, key generation/enrollment, tag, tag workflow, OIDC signing,
+attestation, registry push, candidate upload, GitHub Release, or package
+publication occurred.
+
+This is pre-merge readiness evidence only. P0-SEC-006/007 remain in progress
+until an authorized identity merges the reviewed PR, creates a GitHub-verified
+signed annotated `v0.7.1` tag on that exact `main` commit, and the retained
+candidate provenance and four subject-specific SBOM bundles independently
+verify.

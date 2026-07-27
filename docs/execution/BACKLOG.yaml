@@ -202,6 +202,7 @@ tasks:
     exit_evidence: Source, wheel, sdist, and image signatures/provenance verify from a clean tree.
     completed_slices:
       - A tag-only non-publishing candidate workflow now requires a clean signed annotated version tag on main, hash-locks six Python release tools including the Windows-conditional dependency, pins every action by full commit, records commit-time SOURCE_DATE_EPOCH, fail-closed normalizes sdist metadata, creates a closed manifest for source/wheel/sdist/digest-addressed image, requests keyless SLSA provenance, verifies repository/workflow/ref/revision/runner expectations from preserved bundles before upload, and retains human-gated immutable-release publication under ADR 0067. Two same-machine Python 3.14.6 builds reproduced identical source, wheel, and normalized-sdist bytes; local contracts pass, but no hosted signature/provenance or OCI reproducibility result exists, so the task remains in progress.
+      - E-086 restores the exact protected `python-security` aggregate context without weakening its three prerequisite jobs, prepares unique candidate version 0.7.1 because v0.7.0 already exists, builds matching wheel/sdist locally, and records an all-green clean/mergeable PR head. Merge, signing-identity enrollment, signed tag creation, and the hosted candidate result remain human-gated and unexecuted.
   - id: P0-SEC-007
     priority: P0
     area: security
@@ -211,6 +212,7 @@ tasks:
     exit_evidence: Reproducible CycloneDX or SPDX SBOMs are generated, archived, and verified for each released artifact.
     completed_slices:
       - CycloneDX 1.7 generation now binds separate source/wheel/sdist/image documents to exact release-manifest SHA-256 subjects, validates Python metadata parity, inventories source npm-lock versions, normalizes a pinned Syft 1.49.0 exact-image scan, writes a closed SBOM manifest/checksum set, and defines four distinct keyless SBOM attestations plus strict bundle verification inside the non-publishing candidate workflow under ADR 0068. Clean-HEAD local source/package outputs are deterministic and official-schema valid; the image inventory remains synthetic locally and no hosted scan, signed attestation, immutable publication, or retained consumer verification exists, so the task remains in progress.
+      - E-086 proves the v0.7.1 metadata/release-note/build boundary and protected pre-merge checks, but no tag-triggered image scan, four signed SBOM attestations, archive retention, or independent consumer verification has occurred.
   - id: P0-SEC-008
     priority: P0
     area: security

@@ -731,3 +731,11 @@
 - Rationale: The prior lock fixed versions but left 155 downloads dependent on mutable registry response metadata. npm can emit exact resolution and integrity for the same graph, so retaining the gap is unnecessary.
 - Consequence: Clean installation verifies every registry tarball against the committed lock. The exact revision passed hosted Security, Docker, CI, and CodeQL runs, so P0-SEC-008's written exit is complete. This does not prove publisher provenance, package safety, reachability, licensing, malware absence, or registry availability.
 - ADR: `docs/adr/0069-lock-dependencies-and-fail-closed-supply-chain-gates.md`
+
+### D-082: Preserve protected security aggregation and advance a unique candidate version
+
+- Date: 2026-07-27
+- Decision: Restore the exact protected `python-security` status as a fail-closed aggregate over both locked Python matrix audits and the repository secret/npm job; prepare v0.7.1 as the next unique patch candidate while retaining v0.7.0 documentation as historical evidence.
+- Rationale: Branch protection still required the historical context name after matrix display names changed, leaving an otherwise green PR blocked. The tag-only workflow requires `v<project-version>`, while v0.7.0 already exists and cannot identify the new merged revision.
+- Consequence: PR #54 becomes clean/mergeable only when every security prerequisite and all other protected checks pass. Wheel/sdist metadata and current release links identify v0.7.1. Merge, signing-key enrollment, signed tag creation, and candidate execution remain explicit human-gated actions.
+- ADR: `docs/adr/0067-tag-only-signed-release-candidate.md`, `docs/adr/0069-lock-dependencies-and-fail-closed-supply-chain-gates.md`

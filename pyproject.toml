@@ -41,7 +41,7 @@ dev = [
   "bandit>=1.7",
   "build>=1.2",
   "httpx>=0.27",
-  "hypothesis==6.161.2",
+  "hypothesis==6.161.6",
   "jsonschema>=4.23",
   "mypy>=1.10",
   "pandas-stubs>=2.2",

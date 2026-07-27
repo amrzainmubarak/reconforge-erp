@@ -17,6 +17,7 @@ from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import Response
 
 from reconforge import __version__
+from reconforge.api.authorization import authorization_inventory_digest, build_route_authorization_inventory
 from reconforge.api.errors import (
     APIError,
     api_error_handler,
@@ -165,4 +166,18 @@ def create_api_app(
     app.include_router(inventory_planning.router, prefix="/api/v1")
     app.include_router(inventory_valuation.router, prefix="/api/v1")
     app.include_router(inventory_valuation_reversal.router, prefix="/api/v1")
+    authorization_routers = (
+        health.router, auth.router, users.router, roles.router, audit.router, workflow.router,
+        accounts.router, close.router, evidence.router, reconciliation.router, exceptions.router,
+        metrics.router, payables.router, receivables.router, master_data.router, finance_core.router,
+        inventory_core.router, inventory_planning.router, inventory_valuation.router,
+        inventory_valuation_reversal.router,
+    )
+    app.state.authorization_contracts = build_route_authorization_inventory(
+        authorization_routers,
+        prefix="/api/v1",
+        public_routes=frozenset({("GET", "/api/v1/health"), ("GET", "/api/v1/version"), ("POST", "/api/v1/auth/login")}),
+        identity_routes=frozenset({("POST", "/api/v1/auth/logout"), ("GET", "/api/v1/auth/me")}),
+    )
+    app.state.authorization_contract_digest = authorization_inventory_digest(app.state.authorization_contracts)
     return app

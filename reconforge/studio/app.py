@@ -25,6 +25,7 @@ from reconforge.api.security import (
 )
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService
 from reconforge.auth.models import LocalUser
+from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext, audit_policy_decision
 from reconforge.close import close_summary_frame, close_tasks_frame, load_close_checklist
 from reconforge.db import DatabaseError, connect
 from reconforge.io.generated import GeneratedArtifactError
@@ -135,7 +136,22 @@ def create_studio_app(
             logger.warning("Rejected Studio action because the auth database is unavailable")
             return False
         try:
-            return LocalAuthService(connection).user_has_permission(username=user.username, permission=permission)
+            service = LocalAuthService(connection)
+            decision = CentralPolicyEngine().evaluate(
+                PolicyEvaluationContext(
+                    user_id=user.id,
+                    username=user.username,
+                    user_permissions=service.roles.user_permissions(user.username),
+                ),
+                required_permission=permission,
+            )
+            audit_policy_decision(
+                decision,
+                actor_id=user.id,
+                required_permissions=frozenset({permission}),
+                surface=f"studio:{permission}",
+            )
+            return decision.allowed
         except (DatabaseError, AuthRepositoryError, AuthServiceError):
             logger.warning("Rejected Studio action after RBAC lookup failure")
             return False

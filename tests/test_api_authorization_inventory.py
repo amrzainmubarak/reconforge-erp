@@ -1,0 +1,60 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+from fastapi import APIRouter
+
+from reconforge.api import create_api_app
+from reconforge.api.authorization import build_route_authorization_inventory
+from reconforge.api.dependencies import require_any_permission, require_permission
+
+EXPECTED_ROUTE_COUNT = 156
+EXPECTED_DIGEST = "494c5a0d5cfe72a99b50737307099b8b901bc54e09d0fabbe063e164db043d40"
+
+
+def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Path) -> None:
+    app = create_api_app(tmp_path / "unused.db")
+    contracts = app.state.authorization_contracts
+
+    assert len(contracts) == EXPECTED_ROUTE_COUNT
+    assert app.state.authorization_contract_digest == EXPECTED_DIGEST
+    assert {contract.mode for contract in contracts} == {"all", "any", "dynamic", "identity", "public"}
+    assert [contract for contract in contracts if contract.mode == "dynamic"] == [
+        next(
+            contract
+            for contract in contracts
+            if contract.method == "POST"
+            and contract.path == "/api/v1/workflow/objects/{object_type}/{object_id}/transition"
+        )
+    ]
+    assert all(contract.permissions for contract in contracts if contract.mode in {"all", "any"})
+
+
+def test_inventory_rejects_unclassified_and_stale_allowlisted_routes() -> None:
+    router = APIRouter(prefix="/unsafe")
+
+    @router.get("")
+    def unsafe() -> dict[str, bool]:
+        return {"ok": False}
+
+    with pytest.raises(ValueError, match="lacks an authorization contract"):
+        build_route_authorization_inventory(
+            (router,), prefix="/api/v1", identity_routes=frozenset(), public_routes=frozenset()
+        )
+    with pytest.raises(ValueError, match="not registered"):
+        build_route_authorization_inventory(
+            (router,), prefix="/api/v1", identity_routes=frozenset(),
+            public_routes=frozenset({("GET", "/api/v1/unsafe"), ("GET", "/api/v1/missing")}),
+        )
+
+
+def test_permission_dependencies_freeze_and_validate_their_contract() -> None:
+    mutable = {"evidence.read"}
+    dependency = require_any_permission(mutable)
+    mutable.add("admin")
+    assert dependency.__reconforge_permissions__ == frozenset({"evidence.read"})  # type: ignore[attr-defined]
+    assert require_permission("audit.read").__reconforge_permission_mode__ == "all"  # type: ignore[attr-defined]
+    for invalid in (set(), {""}, {"ADMIN"}, {"permission with spaces"}):
+        with pytest.raises(ValueError, match="valid non-empty"):
+            require_any_permission(invalid)

@@ -343,9 +343,11 @@ tasks:
     priority: P1
     area: platform
     title: Central policy engine
-    status: planned
+    status: completed
     depends_on: [P0-SEC-010]
     exit_evidence: Permission-to-route/action map and RBAC/ABAC/SoD enforcement are centralized and audited.
+    completed_slices:
+      - E-101 routes API, platform, Studio, and dynamic workflow authorization through the central deny-by-default engine; closes all 156 API operations under a digest-addressed contract inventory; preserves scoped ABAC and SoD properties; and emits versioned redacted structured decision records. Durable tamper-evident decision retention remains an observability/operations gate.
   - id: P1-PLAT-009
     priority: P1
     area: platform

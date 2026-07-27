@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from collections.abc import Callable, Iterator
 from pathlib import Path
+from typing import Any, cast
 
 from fastapi import Depends, Header, Query, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -15,6 +17,7 @@ from reconforge.api.security import SessionError, authenticate_token
 from reconforge.api.server_identity import authenticate_server_request, server_identity_enabled
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService
 from reconforge.auth.models import LocalUser
+from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext, audit_policy_decision
 from reconforge.db import DatabaseError, connect
 from reconforge.db.tenancy import (
     InvalidTenantIdError,
@@ -25,6 +28,14 @@ from reconforge.db.tenancy import (
 from reconforge.platform.common import ServerPrincipal, current_server_principal, server_principal_context
 
 bearer_scheme = HTTPBearer(auto_error=False)
+_PERMISSION_PATTERN = re.compile(r"^[a-z][a-z0-9_.:-]{0,127}$")
+
+
+def _permission_contract(values: set[str] | frozenset[str]) -> frozenset[str]:
+    normalized = frozenset(values)
+    if not normalized or any(not isinstance(value, str) or not _PERMISSION_PATTERN.fullmatch(value) for value in normalized):
+        raise ValueError("Permission dependency requires valid non-empty permission names.")
+    return normalized
 
 
 class CursorPaginationParams(BaseModel):
@@ -165,49 +176,51 @@ def get_current_user(
     yield local_user
 
 
+def require_dynamic_policy_user(
+    current_user: LocalUser = Depends(get_current_user),
+) -> LocalUser:
+    """Mark a route whose exact permission is resolved by a governed domain transition."""
+
+    return current_user
+
+
+dynamic_policy_dependency = cast(Any, require_dynamic_policy_user)
+dynamic_policy_dependency.__reconforge_permissions__ = frozenset()
+dynamic_policy_dependency.__reconforge_permission_mode__ = "dynamic"
+
+
 def require_permission(permission: str) -> Callable[..., LocalUser]:
     """Build a dependency requiring one local RBAC permission."""
 
-    def dependency(
-        request: Request,
-        current_user: LocalUser = Depends(get_current_user),
-        connection: sqlite3.Connection | None = Depends(get_auth_db),
-    ) -> LocalUser:
-        if server_identity_enabled(request):
-            principal = getattr(request.state, "server_principal", None)
-            if not isinstance(principal, ServerPrincipal):
-                principal = current_server_principal()
-            allowed = principal is not None and principal.user.id == current_user.id and permission in principal.permissions
-            if not allowed:
-                raise APIError(status_code=403, code="permission_denied", message="Permission denied.")
-            return current_user
-        if connection is None:
-            raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
-        try:
-            allowed = LocalAuthService(connection).user_has_permission(username=current_user.username, permission=permission)
-        except (DatabaseError, AuthRepositoryError, AuthServiceError) as exc:
-            raise APIError(status_code=403, code="permission_denied", message="Permission denied.") from exc
-        if not allowed:
-            raise APIError(status_code=403, code="permission_denied", message="Permission denied.")
-        return current_user
-
-    return dependency
-
-
-def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
-    """Build a dependency requiring at least one local RBAC permission."""
+    contract = _permission_contract({permission})
+    required_permission = next(iter(contract))
 
     def dependency(
         request: Request,
         current_user: LocalUser = Depends(get_current_user),
         connection: sqlite3.Connection | None = Depends(get_auth_db),
     ) -> LocalUser:
+        route = request.scope.get("route")
+        surface = f"{request.method} {getattr(route, 'path', '<unresolved-route>')}"
         if server_identity_enabled(request):
             principal = getattr(request.state, "server_principal", None)
             if not isinstance(principal, ServerPrincipal):
                 principal = current_server_principal()
-            allowed = principal is not None and principal.user.id == current_user.id and bool(
-                principal.permissions.intersection(permissions)
+            decision = CentralPolicyEngine().evaluate(
+                PolicyEvaluationContext(
+                    user_id=current_user.id if principal is not None else "",
+                    username=current_user.username,
+                    user_permissions=principal.permissions if principal is not None else frozenset(),
+                ),
+                required_permission=required_permission,
+            )
+            allowed = principal is not None and principal.user.id == current_user.id and decision.allowed
+            audit_policy_decision(
+                decision,
+                actor_id=current_user.id,
+                required_permissions=contract,
+                surface=surface,
+                request_id=str(getattr(request.state, "request_id", "")),
             )
             if not allowed:
                 raise APIError(status_code=403, code="permission_denied", message="Permission denied.")
@@ -216,14 +229,96 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
             raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
         try:
             service = LocalAuthService(connection)
-            allowed = any(
-                service.user_has_permission(username=current_user.username, permission=permission)
-                for permission in permissions
+            decision = CentralPolicyEngine().evaluate(
+                PolicyEvaluationContext(
+                    user_id=current_user.id,
+                    username=current_user.username,
+                    user_permissions=service.roles.user_permissions(current_user.username),
+                ),
+                required_permission=required_permission,
             )
+            allowed = decision.allowed
         except (DatabaseError, AuthRepositoryError, AuthServiceError) as exc:
             raise APIError(status_code=403, code="permission_denied", message="Permission denied.") from exc
+        audit_policy_decision(
+            decision,
+            actor_id=current_user.id,
+            required_permissions=contract,
+            surface=surface,
+            request_id=str(getattr(request.state, "request_id", "")),
+        )
         if not allowed:
             raise APIError(status_code=403, code="permission_denied", message="Permission denied.")
         return current_user
 
+    annotated_dependency = cast(Any, dependency)
+    annotated_dependency.__reconforge_permissions__ = contract
+    annotated_dependency.__reconforge_permission_mode__ = "all"
+    return dependency
+
+
+def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
+    """Build a dependency requiring at least one local RBAC permission."""
+
+    contract = _permission_contract(permissions)
+
+    def dependency(
+        request: Request,
+        current_user: LocalUser = Depends(get_current_user),
+        connection: sqlite3.Connection | None = Depends(get_auth_db),
+    ) -> LocalUser:
+        route = request.scope.get("route")
+        surface = f"{request.method} {getattr(route, 'path', '<unresolved-route>')}"
+        if server_identity_enabled(request):
+            principal = getattr(request.state, "server_principal", None)
+            if not isinstance(principal, ServerPrincipal):
+                principal = current_server_principal()
+            decision = CentralPolicyEngine().evaluate_any(
+                PolicyEvaluationContext(
+                    user_id=current_user.id if principal is not None else "",
+                    username=current_user.username,
+                    user_permissions=principal.permissions if principal is not None else frozenset(),
+                ),
+                required_permissions=contract,
+            )
+            allowed = principal is not None and principal.user.id == current_user.id and decision.allowed
+            audit_policy_decision(
+                decision,
+                actor_id=current_user.id,
+                required_permissions=contract,
+                surface=surface,
+                request_id=str(getattr(request.state, "request_id", "")),
+            )
+            if not allowed:
+                raise APIError(status_code=403, code="permission_denied", message="Permission denied.")
+            return current_user
+        if connection is None:
+            raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
+        try:
+            service = LocalAuthService(connection)
+            decision = CentralPolicyEngine().evaluate_any(
+                PolicyEvaluationContext(
+                    user_id=current_user.id,
+                    username=current_user.username,
+                    user_permissions=service.roles.user_permissions(current_user.username),
+                ),
+                required_permissions=contract,
+            )
+            allowed = decision.allowed
+        except (DatabaseError, AuthRepositoryError, AuthServiceError) as exc:
+            raise APIError(status_code=403, code="permission_denied", message="Permission denied.") from exc
+        audit_policy_decision(
+            decision,
+            actor_id=current_user.id,
+            required_permissions=contract,
+            surface=surface,
+            request_id=str(getattr(request.state, "request_id", "")),
+        )
+        if not allowed:
+            raise APIError(status_code=403, code="permission_denied", message="Permission denied.")
+        return current_user
+
+    annotated_dependency = cast(Any, dependency)
+    annotated_dependency.__reconforge_permissions__ = contract
+    annotated_dependency.__reconforge_permission_mode__ = "any"
     return dependency

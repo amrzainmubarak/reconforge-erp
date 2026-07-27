@@ -7041,3 +7041,38 @@ This evidence proves token integrity and
 bounded local traversal, not confidentiality, multi-key rotation, PostgreSQL
 keyset performance, hosted enforcement, compliance, certification, or
 production readiness.
+
+## E-101: Central policy enforcement and closed route map
+
+All API permission dependencies now snapshot validated immutable contracts and
+call `CentralPolicyEngine`; platform `require_permission`, authenticated Studio
+actions, and table-driven workflow transitions use the same evaluator. The
+engine retains deny-by-default RBAC, all-supplied-scope ABAC, SoD conflict, and
+self-approval rules, adds stable reason codes and immutable any-of evaluation,
+and emits sanitized `central-policy-v1` decision records.
+
+Application construction derives 156 normalized API operation contracts:
+74 single/all, 76 any-of, one dynamic workflow transition, two identity-only,
+and three public. The canonical inventory digest is
+`494c5a0d5cfe72a99b50737307099b8b901bc54e09d0fabbe063e164db043d40`.
+Tests reject unclassified routes, stale allowlists, malformed permission names,
+and caller mutation of permission sets. The dynamic route remains protected by
+the transition table's required permission and SoD rule through the same
+engine.
+
+| Command | Result |
+| --- | --- |
+| Central policy/API/workflow/Studio focused tests | 48 passed, 1 live-service skip |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 230 source files |
+| `python -m pytest` without live-service environment | 1,366 passed, 16 skipped, 7 expected warnings |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 690,665-byte wheel and 974,562-byte sdist |
+| `python -m pip_audit` | No known third-party dependency vulnerabilities; the local package is not a PyPI audit subject |
+| `git diff --check` | Pass |
+
+This proves current in-process enforcement and route-map closure. Structured
+logs require deployment collection, access control, retention, and integrity
+controls; they are not an append-only authorization ledger. Amount/region/data
+classification ABAC, emergency-access workflows, external identity policy,
+hosted enforcement, compliance, certification, and production readiness are
+not inferred.

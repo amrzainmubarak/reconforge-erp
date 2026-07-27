@@ -210,3 +210,13 @@ mutation, duplicate-key traversal, insert/delete movement, direction, scope,
 and configuration failures are tested. Tokens are authenticated encodings,
 not encryption. PostgreSQL cursor execution remains open and fails explicitly
 until a native keyset query is implemented.
+
+E-101 closes P1-PLAT-008. API dependencies, platform services, Studio, and
+dynamic workflow transitions now enforce permission, supplied scope, and SoD
+context through `CentralPolicyEngine`. Application construction inventories
+all 156 API operations and fails on missing, ambiguous, duplicate, or stale
+authorization classifications; the current canonical map digest is
+`494c5a0d5cfe72a99b50737307099b8b901bc54e09d0fabbe063e164db043d40`.
+Versioned structured decision records retain safe reason/surface/request data
+and hash actor/permission identities. They are not a durable tamper-evident
+authorization ledger.

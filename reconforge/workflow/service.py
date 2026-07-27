@@ -6,6 +6,7 @@ import sqlite3
 
 from reconforge.auth import AuthRepositoryError, LocalAuthService
 from reconforge.auth.models import LocalUser
+from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext, audit_policy_decision
 from reconforge.auth.rbac import check_sod_conflict
 from reconforge.platform.common import (
     PlatformError,
@@ -107,8 +108,7 @@ class WorkflowService:
             raise WorkflowServiceError("Authenticated actor label must match the current server principal.")
         if actor_user is None and not is_trusted_local_mode():
             raise WorkflowServiceError("Authenticated actor required outside trusted local mode.")
-        self._check_permission_if_needed(actor_user=actor_user, transition=validation.transition)
-        self._check_sod_if_needed(
+        self._check_policy_if_needed(
             workflow_object=workflow_object,
             actor_user=actor_user,
             actor_label=actor_label,
@@ -186,16 +186,60 @@ class WorkflowService:
         except AuthRepositoryError as exc:
             raise WorkflowServiceError(str(exc)) from exc
 
-    def _check_permission_if_needed(self, *, actor_user: LocalUser | None, transition: WorkflowTransition) -> None:
+    def _check_policy_if_needed(
+        self,
+        *,
+        workflow_object: WorkflowObject,
+        actor_user: LocalUser | None,
+        actor_label: str,
+        transition: WorkflowTransition,
+    ) -> None:
         if actor_user is None or transition.required_permission is None:
+            self._check_sod_if_needed(
+                workflow_object=workflow_object,
+                actor_user=actor_user,
+                actor_label=actor_label,
+                transition=transition,
+            )
             return
         principal = current_server_principal()
-        if principal is not None:
-            if transition.required_permission not in principal.permissions:
-                raise WorkflowServiceError("Workflow actor does not have the required permission.")
-            return
-        if not self.auth.user_has_permission(username=actor_user.username, permission=transition.required_permission):
-            raise WorkflowServiceError("Workflow actor does not have the required permission.")
+        permissions = principal.permissions if principal is not None else frozenset(
+            self.auth.roles.user_permissions(actor_user.username)
+        )
+        action = _STATUS_TO_ACTION.get(transition.to_status)
+        prior_actions = self._prior_actions(workflow_object) if transition.sod_rule and action else []
+        decision = CentralPolicyEngine().evaluate(
+            PolicyEvaluationContext(
+                user_id=actor_user.id,
+                username=actor_user.username,
+                user_permissions=permissions,
+                object_type=workflow_object.object_type,
+                object_id=workflow_object.object_id,
+                action=action,
+                prior_actions=prior_actions,
+            ),
+            required_permission=transition.required_permission,
+            enforce_sod=bool(transition.sod_rule and action),
+            enforce_ownership=False,
+        )
+        audit_policy_decision(
+            decision,
+            actor_id=actor_user.id,
+            required_permissions=frozenset({transition.required_permission}),
+            surface=f"workflow:{workflow_object.object_type}:{action or 'transition'}",
+        )
+        if not decision.allowed:
+            raise WorkflowServiceError(decision.reason)
+
+    def _prior_actions(self, workflow_object: WorkflowObject) -> list[tuple[str, str, str, str]]:
+        prior_actions: list[tuple[str, str, str, str]] = []
+        for event in self.repository.list_events(workflow_object_id=workflow_object.id):
+            prior_action = _STATUS_TO_ACTION.get(event.to_status)
+            if prior_action is None:
+                continue
+            prior_identity = event.actor_user_id or f"label:{event.actor_label.strip().casefold()}"
+            prior_actions.append((prior_identity, workflow_object.object_type, workflow_object.object_id, prior_action))
+        return prior_actions
 
     def _check_sod_if_needed(
         self,
@@ -210,20 +254,7 @@ class WorkflowService:
         action = _STATUS_TO_ACTION.get(transition.to_status)
         if action is None:
             return
-        prior_actions: list[tuple[str, str, str, str]] = []
-        for event in self.repository.list_events(workflow_object_id=workflow_object.id):
-            prior_action = _STATUS_TO_ACTION.get(event.to_status)
-            if prior_action is None:
-                continue
-            prior_identity = event.actor_user_id or f"label:{event.actor_label.strip().casefold()}"
-            prior_actions.append(
-                (
-                    prior_identity,
-                    workflow_object.object_type,
-                    workflow_object.object_id,
-                    prior_action,
-                )
-            )
+        prior_actions = self._prior_actions(workflow_object)
         actor_identity = actor_user.id if actor_user is not None else f"label:{actor_label.strip().casefold()}"
         result = check_sod_conflict(
             user_id=actor_identity,

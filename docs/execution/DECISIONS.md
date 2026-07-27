@@ -842,3 +842,10 @@
 - **Reason**: Offset movement can skip/repeat records, while unsigned or cross-context cursors permit position and scope manipulation.
 - **Consequence**: E-100 closes P1-PLAT-007 for the backend-neutral contract and local evidence route. Tokens are not confidential, key rotation invalidates them, and PostgreSQL native keyset execution remains explicitly open.
 - **ADR**: `docs/adr/0111-signed-keyset-pagination.md`
+
+### D-097: Fail application construction for unclassified authorization surfaces
+
+- **Decision**: Route enforcement through one central evaluator, annotate immutable permission dependencies, classify every API operation, and digest the normalized route map at application construction.
+- **Reason**: A policy engine beside direct membership checks does not prevent drift, and an undocumented new route can silently escape a permission-to-action review.
+- **Consequence**: E-101 closes P1-PLAT-008 for the current API/platform/Studio/workflow surfaces. Redacted decision logs are operational audit evidence, not a tamper-evident retained ledger.
+- **ADR**: `docs/adr/0112-central-policy-enforcement-and-route-inventory.md`

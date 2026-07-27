@@ -1,5 +1,7 @@
 # Changelog
 
+- Centralized API, platform, Studio, and workflow RBAC/ABAC/SoD enforcement; added a fail-closed digest-addressed inventory for all API authorization contracts and redacted versioned policy-decision records.
+
 - Added signed, bounded, context-bound keyset cursors with stable duplicate tie-breaking and an opt-in local evidence API path that preserves offset compatibility and fails explicitly where native PostgreSQL keyset execution is not yet available.
 
 - Added atomic backend-neutral request idempotency with tenant/operation scoping, request conflict detection, in-progress ownership, expiry/rebind, bounded response replay, hashed owner capabilities, SQLite backup/restore retention, and forced-RLS PostgreSQL parity.

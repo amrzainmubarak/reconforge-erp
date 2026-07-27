@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -9,6 +12,9 @@ from reconforge.auth.rbac import check_sod_conflict
 
 if TYPE_CHECKING:
     from reconforge.platform.common import ServerPrincipal
+
+_POLICY_LOGGER = logging.getLogger("reconforge.authorization")
+POLICY_VERSION = "central-policy-v1"
 
 
 @dataclass(frozen=True)
@@ -39,7 +45,39 @@ class PolicyDecision:
 
     allowed: bool
     reason: str
+    reason_code: str = "policy_allowed"
     evaluator: str = "CentralPolicyEngine"
+
+
+def audit_policy_decision(
+    decision: PolicyDecision,
+    *,
+    actor_id: str,
+    required_permissions: frozenset[str],
+    surface: str,
+    request_id: str = "",
+) -> None:
+    """Emit a sanitized structured authorization record without raw scope data."""
+
+    permission_digest = hashlib.sha256(
+        json.dumps(sorted(required_permissions), separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    ).hexdigest()
+    actor_digest = hashlib.sha256(actor_id.strip().casefold().encode("utf-8")).hexdigest() if actor_id.strip() else ""
+    _POLICY_LOGGER.info(
+        "authorization_decision",
+        extra={
+            "authorization": {
+                "actor_digest": actor_digest,
+                "allowed": decision.allowed,
+                "evaluator": decision.evaluator,
+                "permission_contract_digest": permission_digest,
+                "policy_version": POLICY_VERSION,
+                "reason_code": decision.reason_code,
+                "request_id": request_id,
+                "surface": surface,
+            }
+        },
+    )
 
 
 class CentralPolicyEngine:
@@ -60,15 +98,16 @@ class CentralPolicyEngine:
 
         # 1. Deny if context is missing basic user identity
         if not ctx.user_id:
-            return PolicyDecision(allowed=False, reason="Deny: missing authenticated user identity.")
+            return PolicyDecision(False, "Deny: missing authenticated user identity.", "identity_missing")
 
         # 2. A caller must name the permission contract. Identity alone never grants access.
         if not required_permission:
-            return PolicyDecision(allowed=False, reason="Deny: no required permission was specified.")
+            return PolicyDecision(False, "Deny: no required permission was specified.", "permission_contract_missing")
         if required_permission not in ctx.user_permissions:
             return PolicyDecision(
                 allowed=False,
                 reason=f"Deny: missing required permission '{required_permission}'.",
+                reason_code="permission_missing",
             )
 
         # 3. Enforce every supplied resource scope. Empty grants deny scoped access.
@@ -83,6 +122,7 @@ class CentralPolicyEngine:
                 return PolicyDecision(
                     allowed=False,
                     reason=f"Deny: {scope_name} scope is not authorized.",
+                    reason_code=f"{scope_name}_scope_denied",
                 )
 
         # 4. Check Segregation of Duties (SoD) if object & action are specified
@@ -95,7 +135,7 @@ class CentralPolicyEngine:
                 prior_actions=ctx.prior_actions,
             )
             if not sod_result.allowed:
-                return PolicyDecision(allowed=False, reason=sod_result.reason)
+                return PolicyDecision(False, sod_result.reason, "sod_conflict")
 
         # 5. Self-approval/review is never an ordinary override path.
         if (
@@ -107,9 +147,28 @@ class CentralPolicyEngine:
             return PolicyDecision(
                 allowed=False,
                 reason="Deny: user cannot approve or review objects they created.",
+                reason_code="self_approval_denied",
             )
 
         return PolicyDecision(allowed=True, reason="Access granted.")
+
+    def evaluate_any(
+        self,
+        ctx: PolicyEvaluationContext,
+        *,
+        required_permissions: frozenset[str],
+    ) -> PolicyDecision:
+        """Require one permission from a non-empty, immutable any-of contract."""
+
+        if not required_permissions or any(not value.strip() for value in required_permissions):
+            return PolicyDecision(False, "Deny: no required permission was specified.", "permission_contract_missing")
+        if not ctx.user_id:
+            return PolicyDecision(False, "Deny: missing authenticated user identity.", "identity_missing")
+        if ctx.user_permissions.isdisjoint(required_permissions):
+            return PolicyDecision(False, "Deny: no required permission is granted.", "permission_missing")
+        # Scope and future contextual checks remain centralized in evaluate.
+        selected = min(ctx.user_permissions.intersection(required_permissions))
+        return self.evaluate(ctx, required_permission=selected)
 
 
 def evaluate_principal_access(

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import logging
+
+import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -9,6 +12,7 @@ from reconforge.auth.models import LocalUser
 from reconforge.auth.policy import (
     CentralPolicyEngine,
     PolicyEvaluationContext,
+    audit_policy_decision,
     evaluate_principal_access,
 )
 from reconforge.platform.common import ServerPrincipal
@@ -168,3 +172,43 @@ def test_creator_can_never_approve_or_review_own_object(action: str) -> None:
 
     assert not decision.allowed
     assert "cannot approve or review" in decision.reason
+
+
+def test_any_permission_contract_still_enforces_abac_scope() -> None:
+    context = PolicyEvaluationContext(
+        user_id="U-1",
+        username="reader",
+        user_permissions={"evidence.read"},
+        tenant_id="tenant-b",
+        authorized_tenant_ids=frozenset({"tenant-a"}),
+    )
+    decision = CentralPolicyEngine().evaluate_any(
+        context, required_permissions=frozenset({"evidence.read", "evidence.manage"})
+    )
+    assert not decision.allowed
+    assert decision.reason_code == "tenant_scope_denied"
+
+
+def test_policy_audit_record_is_versioned_and_redacts_actor_and_permissions(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    decision = CentralPolicyEngine().evaluate(
+        PolicyEvaluationContext(user_id="sensitive-user", username="alice", user_permissions={"audit.read"}),
+        required_permission="audit.read",
+    )
+    with caplog.at_level(logging.INFO, logger="reconforge.authorization"):
+        audit_policy_decision(
+            decision,
+            actor_id="sensitive-user",
+            required_permissions=frozenset({"audit.read"}),
+            surface="GET /api/v1/audit/events",
+            request_id="request-1",
+        )
+    record = caplog.records[-1]
+    evidence = record.authorization
+    assert evidence["policy_version"] == "central-policy-v1"
+    assert evidence["allowed"] is True
+    assert evidence["reason_code"] == "policy_allowed"
+    assert len(evidence["actor_digest"]) == 64
+    assert "sensitive-user" not in str(evidence)
+    assert "audit.read" not in str(evidence)

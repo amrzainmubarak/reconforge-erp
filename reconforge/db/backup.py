@@ -141,6 +141,8 @@ BACKUP_TABLES = [
     "metric_snapshots",
     "ops_job_history",
     "ops_error_records",
+    "durable_jobs",
+    "durable_job_transitions",
     "workflow_objects",
     "workflow_transitions",
     "workflow_transition_events",
@@ -239,6 +241,8 @@ BACKUP_SELECT_QUERIES = {
     "metric_snapshots": "SELECT * FROM metric_snapshots ORDER BY workspace_id, period_name, metric_key",
     "ops_job_history": "SELECT * FROM ops_job_history ORDER BY started_at, id",
     "ops_error_records": "SELECT * FROM ops_error_records ORDER BY created_at, id",
+    "durable_jobs": "SELECT * FROM durable_jobs ORDER BY tenant_id, workspace_id, created_at, id",
+    "durable_job_transitions": "SELECT * FROM durable_job_transitions ORDER BY job_id, job_version",
     "workflow_objects": "SELECT * FROM workflow_objects ORDER BY object_type, object_id",
     "workflow_transitions": "SELECT * FROM workflow_transitions ORDER BY object_type, from_status, to_status, id",
     "workflow_transition_events": "SELECT * FROM workflow_transition_events ORDER BY created_at, id",
@@ -335,6 +339,8 @@ BACKUP_DELETE_QUERIES = {
     "metric_snapshots": "DELETE FROM metric_snapshots",
     "ops_job_history": "DELETE FROM ops_job_history",
     "ops_error_records": "DELETE FROM ops_error_records",
+    "durable_jobs": "DELETE FROM durable_jobs",
+    "durable_job_transitions": "DELETE FROM durable_job_transitions",
     "workflow_objects": "DELETE FROM workflow_objects",
     "workflow_transitions": "DELETE FROM workflow_transitions",
     "workflow_transition_events": "DELETE FROM workflow_transition_events",
@@ -667,6 +673,16 @@ BACKUP_INSERT_COLUMNS = {
     ),
     "ops_job_history": ("id", "workspace_id", "job_type", "status", "summary", "started_at", "completed_at"),
     "ops_error_records": ("id", "workspace_id", "source", "error_code", "message", "created_at"),
+    "durable_jobs": (
+        "id", "schema_version", "version", "status", "idempotency_scope", "idempotency_key",
+        "tenant_id", "workspace_id", "entity_id", "input_digest", "config_digest", "worker_version",
+        "completed_units", "total_units", "checkpoint_digest", "retry_count", "retry_ceiling",
+        "safe_error_code", "created_at", "updated_at", "started_at", "completed_at",
+        "output_manifest_schema_version", "output_manifest_digest", "output_manifest_reference",
+    ),
+    "durable_job_transitions": (
+        "job_id", "job_version", "from_status", "to_status", "actor_id", "occurred_at", "reason_code",
+    ),
     "workflow_objects": ("object_type", "object_id", "status", "updated_at", "id", "created_at"),
     "workflow_transitions": ("id", "object_type", "from_status", "to_status", "required_permission", "sod_rule", "reason_required", "active"),
     "workflow_transition_events": ("id", "workflow_object_id", "from_status", "to_status", "actor_user_id", "actor_label", "reason", "created_at"),
@@ -1220,6 +1236,20 @@ BACKUP_INSERT_QUERIES = {
     "ops_error_records": """
         INSERT INTO ops_error_records (id, workspace_id, source, error_code, message, created_at)
         VALUES (?, ?, ?, ?, ?, ?)
+    """,
+    "durable_jobs": """
+        INSERT INTO durable_jobs (
+            id, schema_version, version, status, idempotency_scope, idempotency_key,
+            tenant_id, workspace_id, entity_id, input_digest, config_digest, worker_version,
+            completed_units, total_units, checkpoint_digest, retry_count, retry_ceiling,
+            safe_error_code, created_at, updated_at, started_at, completed_at,
+            output_manifest_schema_version, output_manifest_digest, output_manifest_reference
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "durable_job_transitions": """
+        INSERT INTO durable_job_transitions (
+            job_id, job_version, from_status, to_status, actor_id, occurred_at, reason_code
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
     """,
     "workflow_objects": "INSERT INTO workflow_objects (object_type, object_id, status, updated_at, id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
     "workflow_transitions": """

@@ -1,5 +1,7 @@
 # Changelog
 
+- Added a schema-v1 durable-job aggregate and SQLite migration with seven fail-closed states, tenant-scoped idempotency, optimistic state versions, monotonic digest-addressed checkpoints, retry ceilings, safe error codes, completion manifests, immutable transition evidence, and backup/restore/export coverage. Generic worker leases, PostgreSQL parity, and real crash recovery remain open.
+
 - Extracted operational health, job, and sanitized-error composition into a backend-neutral Application service with explicit repository and migration-status ports. The existing connection-based `OperationsService` remains a compatibility adapter over SQLite; no PostgreSQL parity or production-operability claim is made.
 
 - Added the first Phase 1 backend-neutral application boundary: a typed unit-of-work port and SQLite adapter atomically create a workspace, initial period, and two chained audit events, with pre-transaction validation and fail-closed rollback. Existing direct repository autocommit remains compatible; broader service migration and PostgreSQL parity remain open.

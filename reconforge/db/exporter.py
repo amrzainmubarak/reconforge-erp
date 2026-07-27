@@ -132,6 +132,8 @@ SELECT_QUERIES = {
     "metric_snapshots": "SELECT * FROM metric_snapshots ORDER BY workspace_id, period_name, metric_key",
     "ops_job_history": "SELECT * FROM ops_job_history ORDER BY started_at, id",
     "ops_error_records": "SELECT * FROM ops_error_records ORDER BY created_at, id",
+    "durable_jobs": "SELECT * FROM durable_jobs ORDER BY tenant_id, workspace_id, created_at, id",
+    "durable_job_transitions": "SELECT * FROM durable_job_transitions ORDER BY job_id, job_version",
 }
 
 # Exact inventory of structured values reachable from the public DB export.
@@ -652,6 +654,8 @@ def _finance_payload(connection: sqlite3.Connection) -> dict[str, Any]:
         "metric_snapshots": _rows(connection, "metric_snapshots"),
         "ops_job_history": _rows(connection, "ops_job_history"),
         "ops_error_records": _rows(connection, "ops_error_records"),
+        "durable_jobs": _rows(connection, "durable_jobs"),
+        "durable_job_transitions": _rows(connection, "durable_job_transitions"),
     }
 
 

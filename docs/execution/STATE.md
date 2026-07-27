@@ -123,8 +123,18 @@ repositories, one compatibility adapter, and two backend-neutral Application
 services. The full Python collection passes with 1,300 tests executed and ten
 live-service skips; wheel and sdist builds pass. P1-PLAT-001 remains in progress.
 
+E-092 starts P1-PLAT-003 with the pure seven-state durable-job aggregate,
+backend-neutral application lifecycle, SQLite migration 21, atomic scoped
+idempotency and optimistic transitions, immutable transition evidence,
+monotonic checkpoints, completion manifests, and backup/restore/export proof.
+The repository inventory now contains three backend-neutral Application
+services. Generic workers/leases, PostgreSQL parity, authorization, and real
+crash recovery remain open, so P1-PLAT-003 remains in progress and P1-PLAT-004
+is not closed. The full collection passes with 1,323 tests executed and ten
+live-service skips; wheel/sdist build and runtime-module membership pass.
+
 ## Next exact actions
 
 1. Migrate the next transactionally coherent Platform use case into the Application layer and reduce the E-090 coupling counts without exposing a database connection.
-2. Add PostgreSQL and SQLite behavioral parity fixtures only after the shared application contract is stable; do not label method-name similarity as backend parity.
+2. Implement the generic job lease/takeover worker contract and then add PostgreSQL/SQLite behavioral parity fixtures; do not label method-name similarity as backend parity.
 3. Keep the Phase 1–3 matrix closed as implementation changes; never substitute synthetic evidence for the two external Phase 3 gates.

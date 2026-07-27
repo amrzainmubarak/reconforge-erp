@@ -6724,3 +6724,44 @@ Inventory movement: direct-SQLite Platform services `17 -> 16`; compatibility
 adapters `0 -> 1`; backend-neutral Application services `1 -> 2`. This proves
 one migrated local read boundary, not PostgreSQL parity, cross-backend health,
 live operability, or P1-PLAT-001 completion.
+
+## E-092: Versioned local durable-job state, checkpoint, and recovery foundation
+
+`DurableJob` is a pure schema-v1 aggregate covering exactly queued, running,
+paused, retrying, failed, completed, and cancelled. Its transition matrix is
+closed. It uses integer completed/total units, lowercase SHA-256 input/config/
+checkpoint/output identities, canonical whole-second UTC timestamps, a fixed
+retry ceiling, safe error-code syntax, and immutable output-manifest identity.
+Completed jobs require full progress plus the manifest; terminal states cannot
+transition; checkpoint progress cannot reverse or equal full completion.
+
+Migration 21 adds tenant-scoped `durable_jobs` and append-only
+`durable_job_transitions`. The SQLite repository owns `BEGIN IMMEDIATE`, binds
+tenant/scope/idempotency key atomically, rejects changed replays, compares the
+prior state version, and writes state plus transition in one transaction. An
+injected transition trigger failure proves the state update rolls back; a stale
+version fails; stored invalid digest state fails at the repository boundary.
+Transition UPDATE and DELETE are blocked by database triggers.
+
+The backend-neutral application service exposes submit, start, pause, requeue,
+retry, fail, cancel, checkpoint, and complete use cases without importing a
+database adapter. Cross-tenant lookup returns the same not-found boundary.
+Backup/restore round-trips a running checkpoint and all transition versions;
+public export contains safe codes and no hidden error-message field. Migration
+20-to-21 applies only version 21.
+
+| Command | Result |
+| --- | --- |
+| durable job domain, SQLite, application, backup/export, and boundary focus | 26 passed |
+| migration, backup, export, receivables compatibility focus | 36 passed |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 221 source files |
+| `git diff --check` | Pass |
+| `python -m pytest` | 1,323 passed, 10 live-service skips, 7 expected warnings in 190.65s |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 658,187-byte wheel and 929,372-byte sdist |
+| wheel membership assertion | Application, domain, and SQLite durable-job modules present |
+
+Claim boundary: the evidence is local SQLite and pure application/domain proof.
+It is not PostgreSQL parity, a leased generic worker, real process/host-loss
+recovery, distributed exactly-once transport, throughput, HA/DR, or completion
+of P1-PLAT-003/P1-PLAT-004.

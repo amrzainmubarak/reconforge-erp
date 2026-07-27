@@ -13,6 +13,7 @@ from reconforge.db.schema import (
     API_SESSIONS_SCHEMA_SQL,
     AUTH_RBAC_SCHEMA_SQL,
     DB_BRIDGE_SCHEMA_SQL,
+    DURABLE_JOBS_SCHEMA_SQL,
     EVIDENCE_OBJECT_STORAGE_MIGRATION_SQL,
     FINANCE_CORE_SCHEMA_SQL,
     FINANCE_PLATFORM_SCHEMA_SQL,
@@ -87,6 +88,7 @@ MIGRATIONS = [
     Migration(version=18, name="matching_decimal_money_columns", sql=MATCHING_MONEY_MIGRATION_SQL),
     Migration(version=19, name="evidence_object_storage_references", sql=EVIDENCE_OBJECT_STORAGE_MIGRATION_SQL),
     Migration(version=20, name="accounts_receivable_credit_control_foundation", sql=RECEIVABLES_SCHEMA_SQL),
+    Migration(version=21, name="durable_job_state_machine_foundation", sql=DURABLE_JOBS_SCHEMA_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """

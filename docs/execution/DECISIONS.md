@@ -815,3 +815,9 @@
 - **Decision**: Bind the current workspace/initial-period ports to a tenant-specific PostgreSQL unit of work. Use dedicated `domain_` compatibility tables, forced RLS, one transaction, an append-only audit chain, and row-locked chain-head serialization.
 - **Reason**: Reusing enterprise Organization/FiscalPeriod tables would silently change the current local-first domain contract. A compatibility adapter enables measured backend parity while canonical-model migration remains explicit.
 - **Consequence**: E-096 proves atomicity, rollback, tenant isolation, concurrency, audit verification, and SQLite semantic parity. The compatibility tables are not an enterprise canonical-model claim.
+
+### D-093: Operational health reports storage mode from its adapter
+
+- **Decision**: Add `is_local_only` to the operational repository port and support integer SQLite plus string Alembic revisions. PostgreSQL diagnostics use forced-RLS tables and the shared audit verifier.
+- **Reason**: Hard-coded `local_only=true` becomes false information as soon as the same Application service runs on PostgreSQL.
+- **Consequence**: E-097 preserves the response field while reporting it accurately and proves record-shape/RLS parity. It does not certify future diagnostic writers as redaction-complete.

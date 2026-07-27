@@ -177,3 +177,10 @@ The non-live full suite passes 1,334 tests with twelve live-service skips;
 Ruff, mypy over 224 source files, build, and diff checks pass. SQLite and
 PostgreSQL now call the same pure canonical audit-hash function, preventing
 adapter drift in the chain algorithm.
+
+E-097 adds operational diagnostics parity. Deployment mode is adapter-owned,
+so PostgreSQL is no longer mislabeled `local_only`; SQLite compatibility is
+unchanged. Live RLS, record-shape/count, audit-health, real Alembic status, and
+migration rollback pass. The clean PostgreSQL sweep now passes 123 tests.
+The non-live full suite passes 1,336 tests with thirteen live-service skips;
+Ruff, mypy over 225 source files, build, and diff checks pass.

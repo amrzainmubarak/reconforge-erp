@@ -24,6 +24,7 @@ def test_postgres_alembic_contract_has_no_repository_credentials() -> None:
     checkpoint_revision = (ROOT / "alembic" / "versions" / "0011_postgres_reconciliation_checkpoints.py").read_text(encoding="utf-8")
     jobs_revision = (ROOT / "alembic" / "versions" / "0012_postgres_durable_jobs.py").read_text(encoding="utf-8")
     domain_revision = (ROOT / "alembic" / "versions" / "0013_postgres_domain_uow.py").read_text(encoding="utf-8")
+    operations_revision = (ROOT / "alembic" / "versions" / "0014_postgres_operations.py").read_text(encoding="utf-8")
 
     assert "sqlalchemy.url =\n" in config
     assert "RECONFORGE_POSTGRES_DSN" in env
@@ -65,6 +66,9 @@ def test_postgres_alembic_contract_has_no_repository_credentials() -> None:
     assert 'revision = "0013_postgres_domain_uow"' in domain_revision
     assert 'down_revision = "0012_postgres_jobs"' in domain_revision
     assert "POSTGRES_DOMAIN_SCHEMA_SQL" in domain_revision
+    assert 'revision = "0014_postgres_operations"' in operations_revision
+    assert 'down_revision = "0013_postgres_domain_uow"' in operations_revision
+    assert "POSTGRES_OPERATIONS_SCHEMA_SQL" in operations_revision
     assert "password" not in config.lower()
 
 
@@ -75,6 +79,9 @@ def test_alembic_upgrade_command_is_available_when_server_extra_is_installed() -
     from alembic.config import Config
 
     from alembic import command
+    from reconforge.application.operations import MigrationStatus
+    from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings
+    from reconforge.infrastructure.postgres_operations import PostgresMigrationStatusProvider
 
     assert alembic is not None
     config = Config(str(ROOT / "alembic.ini"))
@@ -96,3 +103,14 @@ def test_alembic_upgrade_command_is_available_when_server_extra_is_installed() -
         assert connection.execute(
             "SELECT to_regclass('reconforge.domain_audit_events')"
         ).fetchone()[0] == "reconforge.domain_audit_events"
+        assert connection.execute(
+            "SELECT to_regclass('reconforge.ops_job_history')"
+        ).fetchone()[0] == "reconforge.ops_job_history"
+    provider = PostgresMigrationStatusProvider(
+        PostgresConnectionFactory(
+            PostgresSettings(dsn=os.environ["RECONFORGE_POSTGRES_DSN"], require_tls=False)
+        )
+    )
+    assert provider("migration-test") == MigrationStatus(
+        "0014_postgres_operations", "0014_postgres_operations", ()
+    )

@@ -15,6 +15,7 @@ class FakeOperationsRepository:
     counts: tuple[int, int] = (2, 1)
     jobs: list[dict[str, Any]] = field(default_factory=lambda: [{"id": "JOB-1"}])
     errors: list[dict[str, Any]] = field(default_factory=lambda: [{"id": "ERR-1"}])
+    local_only: bool = True
 
     def audit_chain_ok(self) -> bool:
         return self.audit_ok
@@ -27,6 +28,9 @@ class FakeOperationsRepository:
 
     def list_errors(self) -> list[dict[str, Any]]:
         return self.errors
+
+    def is_local_only(self) -> bool:
+        return self.local_only
 
 
 def test_application_composes_health_without_database_dependency() -> None:
@@ -48,6 +52,15 @@ def test_application_composes_health_without_database_dependency() -> None:
     }
     assert service.jobs() == [{"id": "JOB-1"}]
     assert service.errors() == [{"id": "ERR-1"}]
+
+
+def test_application_reports_repository_deployment_mode() -> None:
+    service = OperationsApplicationService(
+        FakeOperationsRepository(local_only=False),
+        lambda locator: MigrationStatus("0013", "0014", ("0014",)),
+    )
+    assert service.health("opaque-server-locator")["local_only"] is False
+    assert service.health("opaque-server-locator")["schema_version"] == "0013"
 
 
 def test_connection_compatibility_adapter_preserves_job_and_error_shapes(tmp_path: Path) -> None:

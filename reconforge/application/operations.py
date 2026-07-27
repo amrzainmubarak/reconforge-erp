@@ -5,14 +5,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+SchemaVersion = int | str
+
 
 @dataclass(frozen=True)
 class MigrationStatus:
     """Database migration state needed by the operational health use case."""
 
-    current_version: int
-    latest_version: int
-    pending_versions: tuple[int, ...]
+    current_version: SchemaVersion
+    latest_version: SchemaVersion
+    pending_versions: tuple[SchemaVersion, ...]
 
 
 class OperationsRepositoryProtocol(Protocol):
@@ -25,6 +27,8 @@ class OperationsRepositoryProtocol(Protocol):
     def list_jobs(self) -> list[dict[str, Any]]: ...
 
     def list_errors(self) -> list[dict[str, Any]]: ...
+
+    def is_local_only(self) -> bool: ...
 
 
 class MigrationStatusProvider(Protocol):
@@ -55,7 +59,7 @@ class OperationsApplicationService:
             "audit_chain_ok": self._repository.audit_chain_ok(),
             "job_records": job_records,
             "error_records": error_records,
-            "local_only": True,
+            "local_only": self._repository.is_local_only(),
         }
 
     def jobs(self) -> list[dict[str, Any]]:

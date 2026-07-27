@@ -6912,3 +6912,36 @@ passes 121 tests. Migration 0013 passes initial upgrade, downgrade through
 
 P1-PLAT-001 and P1-PLAT-002 remain in progress because the measured inventory
 still contains direct-SQLite Platform services and their parity is not proven.
+
+## E-097: Backend-aware operational diagnostics parity
+
+The operational repository port now reports whether its backend is local-only;
+the Application service no longer hard-codes that claim. SQLite returns true
+and PostgreSQL false. `MigrationStatus` accepts the integer local migration
+sequence and explicit Alembic revision strings without converting either into
+misleading values.
+
+Migration 0014 adds tenant-scoped operational job/error records with forced
+RLS and workspace foreign keys. Live PostgreSQL 17.10 tests under a
+non-superuser role prove exact SQLite-compatible job/error shapes, counts,
+verified audit health, cross-tenant emptiness, and correct `local_only=false`.
+The PostgreSQL migration provider reads the real Alembic head on a newly
+upgraded database and reports no pending revision. Downgrade to 0011 and
+re-upgrade restores the operations table at head.
+
+A fresh-database sweep of all PostgreSQL modules plus server identity passes
+123 tests. No raw-row writer or universal redaction claim is made by this
+read-only diagnostic slice.
+
+| Command | Result |
+| --- | --- |
+| operational Application/SQLite/live PostgreSQL focus | 5 passed |
+| all live PostgreSQL modules plus server identity on a fresh database | 123 passed |
+| Alembic forward/downgrade/re-upgrade plus live status provider | 2 passed |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 225 source files |
+| `python -m pytest` without live-service environment | 1,336 passed, 13 live-service skips, 7 expected warnings |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 675,437-byte wheel and 954,139-byte sdist |
+| `git diff --check` | Pass |
+
+P1-PLAT-002 remains in progress for remaining supported repository boundaries.

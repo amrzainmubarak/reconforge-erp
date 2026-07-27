@@ -40,6 +40,9 @@ class SQLiteOperationsRepository:
         rows = self.connection.execute("SELECT * FROM ops_error_records ORDER BY created_at DESC").fetchall()
         return [dict(row) for row in rows]
 
+    def is_local_only(self) -> bool:
+        return True
+
 
 def sqlite_migration_status(database_locator: str) -> MigrationStatus:
     """Adapt the existing local migration status contract."""

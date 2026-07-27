@@ -289,6 +289,7 @@ tasks:
     depends_on: [P1-PLAT-001]
     exit_evidence: Live PostgreSQL behavior matches SQLite contracts for supported boundaries.
     completed_slices:
+      - E-097 adds live SQLite/PostgreSQL parity for operational job/error record shapes, counts, audit health, migration status, and deployment-mode reporting. PostgreSQL forces RLS and a non-superuser role sees only its tenant. The Application service no longer hard-codes local_only=true. Migration 0014 passes downgrade/re-upgrade. Other boundaries remain open.
       - E-096 adds live SQLite/PostgreSQL semantic parity for the workspace/initial-period unit-of-work boundary, including business fields, action order, metadata shape, atomic rollback, RLS, append-only evidence, and concurrent chain serialization. Migration 0013 passes forward, downgrade through the prior job migration, and re-upgrade. Other supported boundaries remain open.
       - E-095 implements the durable-job Application/worker ports on PostgreSQL with migration 0012. A live PostgreSQL 17 non-superuser role proves tenant RLS, atomic two-connection idempotency, optimistic stale-write rejection, SKIP LOCKED claims, heartbeat, generation-fenced takeover after connection close, stale-worker refusal, atomic partition effects, final manifest/lease release, and exact semantic effect parity with SQLite. A fresh database passes upgrade, downgrade to 0011, and re-upgrade. Other repository boundaries remain unproven, so the task stays in progress.
   - id: P1-PLAT-003

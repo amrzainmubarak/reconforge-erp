@@ -11,7 +11,7 @@ RUN mkdir /tmp/uv \
     && tar --extract --gzip --file /tmp/uv.tar.gz --directory /tmp/uv --strip-components=1 \
     && install -m 0755 /tmp/uv/uv /usr/local/bin/uv \
     && install -m 0755 /tmp/uv/uvx /usr/local/bin/uvx \
-    && test "$(uv --version)" = "uv 0.11.32" \
+    && uv --version | grep -Eq '^uv 0\.11\.32( |$)' \
     && rm -rf /tmp/uv /tmp/uv.tar.gz
 
 COPY pyproject.toml uv.lock setup.py README.md LICENSE ./

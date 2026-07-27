@@ -123,6 +123,13 @@ def _mutate_docker_base(root: Path) -> None:
     path.write_text(re.sub(r"@sha256:[0-9a-f]{64}", "", path.read_text(encoding="utf-8"), count=1), encoding="utf-8")
 
 
+def test_docker_uv_version_check_accepts_only_the_pinned_version_with_optional_build_metadata() -> None:
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+
+    assert "uv --version | grep -Eq '^uv 0\\.11\\.32( |$)'" in dockerfile
+    assert 'test "$(uv --version)" = "uv 0.11.32"' not in dockerfile
+
+
 def _mutate_dependabot(root: Path) -> None:
     path = root / ".github" / "dependabot.yml"
     text = path.read_text(encoding="utf-8")

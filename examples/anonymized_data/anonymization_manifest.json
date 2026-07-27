@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "algorithm_version": "exact-global-decimal-noise-v1",
+  "prng": "python-random-mt19937-randint",
+  "profile": "consulting-safe",
+  "mask_amounts": false,
+  "amount_noise_percent": "15",
+  "amount_factor_scale": 4,
+  "amount_factor_scope": "all-amount-columns",
+  "amount_rounding": "ROUND_HALF_UP_SOURCE_SCALE",
+  "preserve_dates": false,
+  "date_shift_days": 0,
+  "seed_fingerprint": "73475cb40a568e8da8a045ced110137e159f890ac4da883b6b17dc651b3a8049",
+  "policy_digest_algorithm": "sha256",
+  "policy_digest": "690f573ee1c6d78e0965da641e04c4cc05a7310123ba98d539916388330a6fd9",
+  "source_files": [
+    "customers.csv",
+    "gl_entries.csv",
+    "invoices.csv",
+    "old_parts_returns.csv",
+    "products.csv",
+    "purchase_orders.csv",
+    "stock_moves.csv",
+    "work_orders.csv"
+  ],
+  "outputs": [
+    {
+      "name": "customers.csv",
+      "bytes": 418,
+      "sha256": "3a0d7e7bc8cc565334d4a559b534285c113facb7046232bb0d6a33876432a07f"
+    },
+    {
+      "name": "gl_entries.csv",
+      "bytes": 1343,
+      "sha256": "f02dd41848ffec8ed8ea670b58e3349290e4e7d7f610fa2a1a7ef4b80c5edd93"
+    },
+    {
+      "name": "invoices.csv",
+      "bytes": 400,
+      "sha256": "38d8ca3c1055fcdbc8dc84e67063e336a69ae540b20d6237c31d39f2dbacfc0d"
+    },
+    {
+      "name": "old_parts_returns.csv",
+      "bytes": 307,
+      "sha256": "ae4793900a918a49f73ae21fb395fa14195feb1e7ba581e4302fb16126c1e602"
+    },
+    {
+      "name": "products.csv",
+      "bytes": 618,
+      "sha256": "1fae9188aa28bb188cd1da3a5fe0e61229540c75b519123e04d437e7175fdb18"
+    },
+    {
+      "name": "purchase_orders.csv",
+      "bytes": 774,
+      "sha256": "10df86941f670e8b4f32e919f1b182d5bfc3931b689b14b85e71e7fb0f44e91a"
+    },
+    {
+      "name": "stock_moves.csv",
+      "bytes": 1933,
+      "sha256": "aa449c20588bc4f32751c6ad1a44bbdd75e44705f3d9a82f92d421bba99b6677"
+    },
+    {
+      "name": "work_orders.csv",
+      "bytes": 1577,
+      "sha256": "c46b1dcf2e0bd8e529fb4e4a6bedc3ff16aa25259585a772f49a9449dc77c525"
+    }
+  ],
+  "private_mapping_exported": false,
+  "privacy_boundary": "Risk-reduction aid only: review every output before sharing; amount noise is deterministic and reversible, and free-text or unclassified fields may remain sensitive.",
+  "manifest_digest_algorithm": "sha256",
+  "manifest_digest": "49201c60db767af469060cad785a8b3a924ba88ef57646507cd14e961a95cb5e"
+}

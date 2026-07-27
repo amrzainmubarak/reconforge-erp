@@ -8,7 +8,7 @@ ReconForge ERP is local-first. The default workflow reads local CSV/XLSX exports
 - No paid API requirement.
 - No secrets in control packs.
 - No live ERP credentials in the core workflow.
-- Anonymization available for safe sharing.
+- Local anonymization is available as a risk-reduction aid; it is not proof that data is safe to share.
 - Evidence folders treated as sensitive audit files.
 
 ## Threats Considered
@@ -24,10 +24,12 @@ ReconForge ERP is local-first. The default workflow reads local CSV/XLSX exports
 - SECURITY guidance.
 - Pre-commit hooks.
 - CI with Ruff, Mypy, Pytest.
-- Security workflow for Bandit and pip-audit.
+- Security workflow definitions for Bandit, locked Python/server and npm audits, and checksum-pinned redacted history/tree secret scans.
 - CodeQL workflow.
 - OpenSSF Scorecard workflow.
-- CycloneDX SBOM workflow.
+- Release-integrated, exact-subject CycloneDX 1.7 SBOM definition and local deterministic package/source fixtures.
+- Closed supply-chain and expiring exception policy with pre-registry candidate gates; hosted enforcement remains unverified.
+- Versioned bounded tabular preflight plus a closed direct-parser inventory reject the documented hostile CSV/XLSX cases before canonical parsing; this is not malware, upload, connector, source-authenticity, or legacy-XLS-internal assurance.
 - Dependabot.
 - Local SQLite database foundation with schema migrations is available for new DB-backed workflows.
 - Local audit event hash chaining provides checksum integrity aids for appended audit events. It is not a legal digital signature, compliance certification, audit opinion, or non-repudiation guarantee.
@@ -46,4 +48,6 @@ ReconForge ERP is local-first. The default workflow reads local CSV/XLSX exports
 
 ## User Responsibilities
 
-Run ReconForge in trusted environments, review generated outputs before sharing, and anonymize sensitive exports.
+Run ReconForge in trusted environments and review every generated output before
+sharing. Treat explicit private anonymization maps as source-sensitive data.
+Anonymization reduces selected risks but does not establish safe publication.

@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/management_pack.schema.json",
+  "title": "ReconForge Management Pack",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "currency_policy",
+    "executive_summary",
+    "control_value_summary",
+    "certification_metadata",
+    "top_control_themes",
+    "risk_scoring",
+    "stock_gl_summary",
+    "workorder_summary",
+    "wip_aging",
+    "top_exceptions"
+  ],
+  "oneOf": [
+    {
+      "properties": {"schema_version": {"const": 1}},
+      "not": {
+        "anyOf": [
+          {"required": ["financial_input_policy"]},
+          {"required": ["record_identity_policy"]},
+          {"required": ["matching_ambiguity_policy"]}
+        ]
+      }
+    },
+    {
+      "properties": {"schema_version": {"const": 2}},
+      "required": ["financial_input_policy"],
+      "not": {
+        "anyOf": [
+          {"required": ["record_identity_policy"]},
+          {"required": ["matching_ambiguity_policy"]}
+        ]
+      }
+    },
+    {
+      "properties": {"schema_version": {"const": 3}},
+      "required": ["financial_input_policy", "record_identity_policy"],
+      "not": {"required": ["matching_ambiguity_policy"]}
+    },
+    {
+      "properties": {"schema_version": {"const": 4}},
+      "required": [
+        "financial_input_policy",
+        "record_identity_policy",
+        "matching_ambiguity_policy"
+      ]
+    }
+  ],
+  "properties": {
+    "schema_version": {"type": "integer", "enum": [1, 2, 3, 4]},
+    "financial_input_policy": {
+      "type": "string",
+      "enum": ["legacy-financial-input-v1", "strict-financial-input-v2"]
+    },
+    "record_identity_policy": {
+      "const": "canonical-multiset-occurrence-v1"
+    },
+    "matching_ambiguity_policy": {
+      "enum": ["stable-tie-break-v1", "unresolved-equal-cost-v1"]
+    },
+    "currency_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "currency",
+        "currency_minor_units",
+        "currency_rounding_policy",
+        "currency_policy_digest",
+        "currency_registry_version",
+        "currency_registry_digest",
+        "aggregation_policy",
+        "missing_currency_policy"
+      ],
+      "properties": {
+        "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+        "currency_minor_units": {"type": "integer", "minimum": 0, "maximum": 8},
+        "currency_rounding_policy": {"const": "ROUND_HALF_UP"},
+        "currency_policy_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "currency_registry_version": {"type": "string", "minLength": 1, "maxLength": 128},
+        "currency_registry_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "aggregation_policy": {"const": "single-currency-only-no-implicit-fx"},
+        "missing_currency_policy": {"const": "configured-output-currency-compatibility"}
+      }
+    },
+    "executive_summary": {"$ref": "#/$defs/records"},
+    "control_value_summary": {"$ref": "#/$defs/records"},
+    "certification_metadata": {"$ref": "#/$defs/records"},
+    "top_control_themes": {"$ref": "#/$defs/records"},
+    "risk_scoring": {"$ref": "#/$defs/records"},
+    "stock_gl_summary": {"$ref": "#/$defs/records"},
+    "workorder_summary": {"$ref": "#/$defs/records"},
+    "wip_aging": {"$ref": "#/$defs/records"},
+    "top_exceptions": {"$ref": "#/$defs/records"}
+  },
+  "$defs": {
+    "records": {
+      "type": "array",
+      "items": {"type": "object"}
+    }
+  }
+}

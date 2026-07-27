@@ -14,6 +14,10 @@ from reconforge.io.excel import write_excel_workbook
 from reconforge.io.writers import ensure_output_dir, frame_to_records, json_default
 from reconforge.rules.loader import load_rule_pack
 from reconforge.rules.models import ControlPack, RuleDefinition
+from reconforge.utils.money import (
+    STRICT_FINANCIAL_INPUT_POLICY,
+    FinancialInputPolicy,
+)
 
 
 @dataclass(frozen=True)
@@ -52,12 +56,19 @@ def _risk_area(pack: ControlPack, rule: RuleDefinition) -> str:
     return " | ".join(part for part in parts if part)
 
 
-def control_matrix_frame(pack_path: Path | str) -> pd.DataFrame:
+def control_matrix_frame(
+    pack_path: Path | str,
+    *,
+    financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
+) -> pd.DataFrame:
     """Build a control matrix from a local ReconForge rule pack."""
 
     try:
-        pack = load_rule_pack(pack_path)
-    except ValidationError as exc:
+        pack = load_rule_pack(
+            pack_path,
+            financial_input_policy=financial_input_policy,
+        )
+    except (ValidationError, ValueError) as exc:
         raise ValueError("Control pack is invalid. Run `reconforge rules validate` for schema details.") from exc
     pack_root = Path(pack.root_path)
     expected_exceptions = _expected_exceptions_summary(pack_root)
@@ -124,10 +135,18 @@ def _write_markdown(path: Path, summary: pd.DataFrame, matrix: pd.DataFrame) -> 
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def export_control_matrix(pack_path: Path | str, output_path: Path | str) -> ControlMatrixArtifacts:
+def export_control_matrix(
+    pack_path: Path | str,
+    output_path: Path | str,
+    *,
+    financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
+) -> ControlMatrixArtifacts:
     """Write control matrix artifacts for a local rule pack."""
 
-    matrix = control_matrix_frame(pack_path)
+    matrix = control_matrix_frame(
+        pack_path,
+        financial_input_policy=financial_input_policy,
+    )
     summary = _summary_frame(matrix)
     output_dir = ensure_output_dir(output_path)
     workbook_path = write_excel_workbook({"Control Matrix Summary": summary, "Control Matrix": matrix}, output_dir / "control_matrix.xlsx")

@@ -22,6 +22,10 @@ class EngineResult:
     gl_rows: int
     summary: pd.DataFrame
     reconciliation_signature: str = ""
+    reconciliation_signature_version: str = ""
+    financial_input_policy: str = ""
+    record_identity_policy: str = ""
+    matching_ambiguity_policy: str = ""
 
 
 class ReconciliationEngine(Protocol):

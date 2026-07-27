@@ -64,7 +64,7 @@ reconforge report client-pack --input output/demo --output output/client_pack_re
 - `review_register.xlsx`
 - `evidence/`
 - `client_pack/`
-- optional `files_manifest.json` with SHA-256 checksums when requested
+- schema-v2 `files_manifest.json` with current CLI source/output SHA-256 fingerprints (the option remains a compatibility request flag)
 
 ## How To Reproduce With Sample Data
 

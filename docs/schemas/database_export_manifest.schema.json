@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/database_export_manifest.schema.json",
+  "title": "ReconForge database export manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artifact_type", "export_format_version", "manifest_version", "schema_version", "artifacts"],
+  "properties": {
+    "artifact_type": {"const": "reconforge_database_export"},
+    "export_format_version": {"const": 1},
+    "manifest_version": {"const": 1},
+    "schema_version": {"type": "integer", "minimum": 0},
+    "artifacts": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"pattern": "^[A-Za-z0-9_-]+\\.json$"},
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["bytes", "sha256"],
+        "properties": {
+          "bytes": {"type": "integer", "minimum": 0},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    }
+  }
+}

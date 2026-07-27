@@ -37,7 +37,7 @@ def generate_wip_aging(work_orders: pd.DataFrame, config: ReconForgeConfig, as_o
         assessment = assess_risk(
             exception_type,
             config,
-            amount=float(row.get("actual_cost", 0.0) or 0.0),
+            amount=row.get("actual_cost"),
             aging_days=int(row["aging_days"]),
         )
         scores.append(assessment.score)

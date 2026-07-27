@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+import uuid
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
@@ -10,10 +11,12 @@ from decimal import ROUND_HALF_EVEN, Decimal
 from hashlib import sha256
 from typing import Any
 
+from reconforge.auth.rbac import same_actor
 from reconforge.domain.models import utc_now_text
 from reconforge.platform.common import (
     PlatformError,
-    audit,
+    append_outbox_event,
+    commit_audited,
     ensure_platform_schema,
     ensure_workspace,
     platform_id,
@@ -88,9 +91,7 @@ class InventoryValuationService:
         try:
             existing = {
                 str(row["name"])
-                for row in self.connection.execute(
-                    "SELECT name FROM sqlite_master WHERE type = 'table'"
-                ).fetchall()
+                for row in self.connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()
             }
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to inspect the local inventory valuation schema.") from exc
@@ -129,9 +130,7 @@ class InventoryValuationService:
         if not bool(organization["active"]) or not bool(entity["active"]):
             raise PlatformError("Inventory valuation requires an active organization and legal entity.")
         journal = self._required(
-            self.repository.journal(
-                workspace_id, str(organization["id"]), code(journal_code, "Journal code")
-            ),
+            self.repository.journal(workspace_id, str(organization["id"]), code(journal_code, "Journal code")),
             "Inventory valuation requires an existing Finance Core journal.",
         )
         if not bool(journal["active"]) or not bool(journal["chart_active"]):
@@ -149,9 +148,7 @@ class InventoryValuationService:
                 chart_id, receipt_clearing_account_code, "Receipt clearing account"
             ),
             "cogs_account_id": self._posting_account(chart_id, cogs_account_code, "COGS account"),
-            "adjustment_account_id": self._posting_account(
-                chart_id, adjustment_account_code, "Adjustment account"
-            ),
+            "adjustment_account_id": self._posting_account(chart_id, adjustment_account_code, "Adjustment account"),
         }
         selected_code = code(policy_code, "Valuation policy code")
         policy_id = platform_id("IVP", workspace_id, organization["id"], entity["id"], selected_code)
@@ -188,16 +185,19 @@ class InventoryValuationService:
         try:
             with self.repository.transaction():
                 self.repository.upsert_policy(record)
+                _finalize_valuation_event(
+                    self.connection,
+                    event_type="inventory.valuation.policy_upserted",
+                    aggregate_type="inventory_valuation_policy",
+                    aggregate_id=policy_id,
+                    payload={"policy_code": selected_code, "costing_method": "FIFO", "active": active},
+                    actor_label=actor_label,
+                    object_type="inventory_valuation_policy",
+                    action="inventory_valuation_policy_upserted",
+                    metadata={"policy_code": selected_code, "costing_method": "FIFO", "active": active},
+                )
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to save the local FIFO valuation policy.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_valuation_policy",
-            object_id=policy_id,
-            action="inventory_valuation_policy_upserted",
-            metadata={"policy_code": selected_code, "costing_method": "FIFO", "active": active},
-        )
         return self.get_policy(policy_id, actor_label=actor_label)
 
     def create_document(
@@ -222,7 +222,9 @@ class InventoryValuationService:
         if str(movement["status"]) != "Posted":
             raise PlatformError("Only Posted inventory movements can be prepared for valuation.")
         if str(movement["movement_type"]) == "Transfer":
-            raise PlatformError("Transfers do not create valuation documents because entity cost ownership is unchanged.")
+            raise PlatformError(
+                "Transfers do not create valuation documents because entity cost ownership is unchanged."
+            )
         if str(movement["period_status"]) != "Open":
             raise PlatformError("Inventory valuations can be prepared only while the movement period is Open.")
         workspace_id = str(movement["workspace_id"])
@@ -294,22 +296,29 @@ class InventoryValuationService:
             with self.repository.transaction():
                 self.repository.insert_document(document)
                 self.repository.insert_input_costs(cost_records)
+                _finalize_valuation_event(
+                    self.connection,
+                    event_type="inventory.valuation.draft_created",
+                    aggregate_type="inventory_valuation_document",
+                    aggregate_id=document_id,
+                    payload={
+                        "valuation_number": number,
+                        "movement_id": movement["id"],
+                        "input_cost_lines": len(cost_records),
+                    },
+                    actor_label=actor_label,
+                    object_type="inventory_valuation_document",
+                    action="inventory_valuation_draft_created",
+                    metadata={
+                        "valuation_number": number,
+                        "movement_id": movement["id"],
+                        "input_cost_lines": len(cost_records),
+                    },
+                )
         except sqlite3.IntegrityError as exc:
             raise PlatformError("Valuation number or movement is already assigned to an active document.") from exc
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to save the local valuation Draft.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_valuation_document",
-            object_id=document_id,
-            action="inventory_valuation_draft_created",
-            metadata={
-                "valuation_number": number,
-                "movement_id": movement["id"],
-                "input_cost_lines": len(cost_records),
-            },
-        )
         return self.get_document(document_id, actor_label=actor_label)
 
     def approve_document(
@@ -339,7 +348,7 @@ class InventoryValuationService:
                 document_number_value = str(document["valuation_number"])
                 if str(document["status"]) != "Draft":
                     raise PlatformError("Only Draft inventory valuations can be approved.")
-                if actor_user is not None and str(document["created_by"]) == actor_user.username:
+                if same_actor(document["created_by"], actor):
                     raise PlatformError("Segregation of duties prevents approving your own inventory valuation.")
                 movement = self._required(
                     self.repository.movement(str(document["movement_id"])),
@@ -434,9 +443,7 @@ class InventoryValuationService:
                         )
                     else:
                         for allocation in allocations:
-                            consumption_id = platform_id(
-                                "IVX", valuation_line_id, allocation["layer_id"]
-                            )
+                            consumption_id = platform_id("IVX", valuation_line_id, allocation["layer_id"])
                             self.repository.insert_layer_consumption(
                                 {
                                     "id": consumption_id,
@@ -447,11 +454,14 @@ class InventoryValuationService:
                                     "created_at": now,
                                 }
                             )
-                            if self.repository.update_cost_layer(
-                                str(allocation["layer_id"]),
-                                int(allocation["remaining_quantity_scaled"]),
-                                int(allocation["remaining_value_minor"]),
-                            ) != 1:
+                            if (
+                                self.repository.update_cost_layer(
+                                    str(allocation["layer_id"]),
+                                    int(allocation["remaining_quantity_scaled"]),
+                                    int(allocation["remaining_value_minor"]),
+                                )
+                                != 1
+                            ):
                                 raise PlatformError("FIFO cost layer changed concurrently; reload and retry.")
                     inventory_account_id = str(line["inventory_account_id"])
                     description = f"{document['valuation_number']} line {line['line_number']}"
@@ -476,34 +486,45 @@ class InventoryValuationService:
                     postings=journal_postings,
                     created_at=now,
                 )
-                if self.repository.approve_document(
-                    str(document["id"]),
-                    actor=actor,
-                    timestamp=now,
-                    reason=approval_reason,
-                    total_value_minor=total_value_minor,
-                    finance_entry_id=finance_entry_id,
-                ) != 1:
+                if (
+                    self.repository.approve_document(
+                        str(document["id"]),
+                        actor=actor,
+                        timestamp=now,
+                        reason=approval_reason,
+                        total_value_minor=total_value_minor,
+                        finance_entry_id=finance_entry_id,
+                    )
+                    != 1
+                ):
                     raise PlatformError("Inventory valuation changed concurrently; reload and retry.")
+                _finalize_valuation_event(
+                    self.connection,
+                    event_type="inventory.valuation.approved",
+                    aggregate_type="inventory_valuation_document",
+                    aggregate_id=document_id,
+                    payload={
+                        "valuation_number": document_number_value,
+                        "total_value_minor": total_value_minor,
+                        "finance_entry_id": finance_entry_id,
+                        "finance_entry_status": "Draft",
+                    },
+                    actor_label=actor_label,
+                    object_type="inventory_valuation_document",
+                    action="inventory_valuation_approved",
+                    metadata={
+                        "valuation_number": document_number_value,
+                        "total_value_minor": total_value_minor,
+                        "finance_entry_id": finance_entry_id,
+                        "finance_entry_status": "Draft",
+                    },
+                )
         except PlatformError:
             raise
         except sqlite3.IntegrityError as exc:
             raise PlatformError("Unable to approve valuation because a protected local record conflicts.") from exc
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to approve the local inventory valuation.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_valuation_document",
-            object_id=document_id,
-            action="inventory_valuation_approved",
-            metadata={
-                "valuation_number": document_number_value,
-                "total_value_minor": total_value_minor,
-                "finance_entry_id": finance_entry_id,
-                "finance_entry_status": "Draft",
-            },
-        )
         return self.get_document(document_id, actor_label=actor_label)
 
     def cancel_document(
@@ -527,20 +548,26 @@ class InventoryValuationService:
                 )
                 if str(document["status"]) != "Draft":
                     raise PlatformError("Only Draft inventory valuations can be cancelled.")
-                if self.repository.cancel_document(
-                    str(document["id"]), actor=actor, timestamp=now, reason=cancel_reason
-                ) != 1:
+                if (
+                    self.repository.cancel_document(
+                        str(document["id"]), actor=actor, timestamp=now, reason=cancel_reason
+                    )
+                    != 1
+                ):
                     raise PlatformError("Inventory valuation changed concurrently; reload and retry.")
+                _finalize_valuation_event(
+                    self.connection,
+                    event_type="inventory.valuation.cancelled",
+                    aggregate_type="inventory_valuation_document",
+                    aggregate_id=document_id,
+                    payload={"reason": cancel_reason},
+                    actor_label=actor_label,
+                    object_type="inventory_valuation_document",
+                    action="inventory_valuation_cancelled",
+                    metadata={"reason": cancel_reason},
+                )
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to cancel the local inventory valuation.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_valuation_document",
-            object_id=document_id,
-            action="inventory_valuation_cancelled",
-            metadata={"reason": cancel_reason},
-        )
         return self.get_document(document_id, actor_label=actor_label)
 
     def get_policy(self, policy_id: str, *, actor_label: str = "local-cli") -> dict[str, Any]:
@@ -565,9 +592,7 @@ class InventoryValuationService:
         if workspace_record is None:
             return []
         try:
-            records = self.repository.list_policies(
-                str(workspace_record["id"]), limit=page_limit, offset=page_offset
-            )
+            records = self.repository.list_policies(str(workspace_record["id"]), limit=page_limit, offset=page_offset)
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to list local valuation policies.") from exc
         return [self._public_policy(record) for record in records]
@@ -628,16 +653,12 @@ class InventoryValuationService:
             raise PlatformError("Unable to list local FIFO cost layers.") from exc
         return [self._public_layer(row) for row in rows]
 
-    def summary(
-        self, *, workspace: str = "default", actor_label: str = "local-cli"
-    ) -> InventoryValuationSummary:
+    def summary(self, *, workspace: str = "default", actor_label: str = "local-cli") -> InventoryValuationSummary:
         require_permission(self.connection, actor_label=actor_label, permission=INVENTORY_READ_PERMISSION)
         workspace_name = clean_text(workspace, "Workspace name")
         workspace_record = self.repository.workspace_by_name(workspace_name)
         try:
-            counts = (
-                self.repository.summary_counts(str(workspace_record["id"])) if workspace_record else {}
-            )
+            counts = self.repository.summary_counts(str(workspace_record["id"])) if workspace_record else {}
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to summarize local inventory valuations.") from exc
         return InventoryValuationSummary(
@@ -649,9 +670,7 @@ class InventoryValuationService:
             unvalued_posted_movements=counts.get("unvalued_posted_movements", 0),
         )
 
-    def snapshot(
-        self, *, workspace: str = "default", actor_label: str = "local-cli"
-    ) -> dict[str, Any]:
+    def snapshot(self, *, workspace: str = "default", actor_label: str = "local-cli") -> dict[str, Any]:
         """Return a bounded, path-free valuation control snapshot."""
 
         return {
@@ -666,9 +685,7 @@ class InventoryValuationService:
             "summary": self.summary(workspace=workspace, actor_label=actor_label).to_dict(),
             "policies": self.list_policies(workspace=workspace, actor_label=actor_label),
             "documents": self.list_documents(workspace=workspace, actor_label=actor_label),
-            "open_cost_layers": self.list_cost_layers(
-                workspace=workspace, open_only=True, actor_label=actor_label
-            ),
+            "open_cost_layers": self.list_cost_layers(workspace=workspace, open_only=True, actor_label=actor_label),
             "boundary_note": (
                 "FIFO foundation only. Approval creates a balanced local Finance Core Draft; "
                 "it does not validate that entry or write to a source ERP."
@@ -684,9 +701,7 @@ class InventoryValuationService:
             raise PlatformError(f"{label} must be active and posting-enabled.")
         return str(account["id"])
 
-    def _validate_policy_state(
-        self, policy: Mapping[str, object], movement: Mapping[str, object]
-    ) -> None:
+    def _validate_policy_state(self, policy: Mapping[str, object], movement: Mapping[str, object]) -> None:
         if not bool(policy["active"]) or not bool(policy["journal_active"]):
             raise PlatformError("Inventory valuation requires an active policy and Finance Core journal.")
         if str(policy["costing_method"]) != "FIFO":
@@ -704,9 +719,7 @@ class InventoryValuationService:
             raise PlatformError("Valuation offset accounts must remain active and posting-enabled.")
 
     @staticmethod
-    def _validate_inventory_line_account(
-        line: Mapping[str, object], policy: Mapping[str, object]
-    ) -> None:
+    def _validate_inventory_line_account(line: Mapping[str, object], policy: Mapping[str, object]) -> None:
         if str(line["item_type"]) == "Service":
             raise PlatformError("Service items cannot participate in inventory valuation.")
         if not line.get("inventory_account_id"):
@@ -726,9 +739,7 @@ class InventoryValuationService:
     ) -> dict[str, int]:
         lines_by_number = {self._as_int(line["line_number"]): line for line in movement_lines}
         inbound_numbers = {
-            number
-            for number, line in lines_by_number.items()
-            if self._line_flow(movement_type, line) == "Inbound"
+            number for number, line in lines_by_number.items() if self._line_flow(movement_type, line) == "Inbound"
         }
         prepared: dict[str, int] = {}
         seen_numbers: set[int] = set()
@@ -773,9 +784,7 @@ class InventoryValuationService:
             return str(policy["cogs_account_id"])
         return str(policy["adjustment_account_id"])
 
-    def _fifo_allocations(
-        self, *, legal_entity_id: str, line: Mapping[str, object]
-    ) -> list[dict[str, int | str]]:
+    def _fifo_allocations(self, *, legal_entity_id: str, line: Mapping[str, object]) -> list[dict[str, int | str]]:
         needed = self._as_int(line["quantity_scaled"])
         precision = self._as_int(line["quantity_precision"])
         allocations: list[dict[str, int | str]] = []
@@ -815,9 +824,7 @@ class InventoryValuationService:
         return allocations
 
     @staticmethod
-    def _allocate_layer_value(
-        *, remaining_value: int, remaining_quantity: int, consumed_quantity: int
-    ) -> int:
+    def _allocate_layer_value(*, remaining_value: int, remaining_quantity: int, consumed_quantity: int) -> int:
         if consumed_quantity == remaining_quantity:
             return remaining_value
         exact = (Decimal(remaining_value) * Decimal(consumed_quantity)) / Decimal(remaining_quantity)
@@ -909,9 +916,7 @@ class InventoryValuationService:
             result.pop(field, None)
         return result
 
-    def _public_document(
-        self, document: Mapping[str, object], *, include_details: bool
-    ) -> dict[str, Any]:
+    def _public_document(self, document: Mapping[str, object], *, include_details: bool) -> dict[str, Any]:
         result: dict[str, Any] = dict(document)
         currency = self._required(
             self.repository.currency(str(document["currency_code"])),
@@ -943,8 +948,7 @@ class InventoryValuationService:
         consumptions = self.repository.layer_consumptions(str(document["id"]))
         result["layer_consumptions"] = []
         precision_by_line = {
-            self._as_int(line["line_number"]): self._as_int(line["quantity_precision"])
-            for line in lines
+            self._as_int(line["line_number"]): self._as_int(line["quantity_precision"]) for line in lines
         }
         for consumption in consumptions:
             consumption_result = dict(consumption)
@@ -966,18 +970,10 @@ class InventoryValuationService:
         )
         precision = self._as_int(result["quantity_precision"])
         minor_units = int(currency["minor_units"])
-        result["original_quantity"] = scaled_to_text(
-            self._as_int(result.pop("original_quantity_scaled")), precision
-        )
-        result["remaining_quantity"] = scaled_to_text(
-            self._as_int(result.pop("remaining_quantity_scaled")), precision
-        )
-        result["original_value"] = minor_to_text(
-            self._as_int(result.pop("original_value_minor")), minor_units
-        )
-        result["remaining_value"] = minor_to_text(
-            self._as_int(result.pop("remaining_value_minor")), minor_units
-        )
+        result["original_quantity"] = scaled_to_text(self._as_int(result.pop("original_quantity_scaled")), precision)
+        result["remaining_quantity"] = scaled_to_text(self._as_int(result.pop("remaining_quantity_scaled")), precision)
+        result["original_value"] = minor_to_text(self._as_int(result.pop("original_value_minor")), minor_units)
+        result["remaining_value"] = minor_to_text(self._as_int(result.pop("remaining_value_minor")), minor_units)
         result["layer_status"] = "Open" if result["remaining_quantity"] != scaled_to_text(0, precision) else "Closed"
         return result
 
@@ -994,3 +990,39 @@ class InventoryValuationService:
     @staticmethod
     def _as_int(value: object) -> int:
         return int(str(value))
+
+
+def _finalize_valuation_event(
+    connection: sqlite3.Connection,
+    *,
+    event_type: str,
+    aggregate_type: str,
+    aggregate_id: str,
+    payload: dict[str, Any],
+    actor_label: str,
+    object_type: str,
+    action: str,
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    """Commit valuation business writes only after outbox and audit evidence exist."""
+
+    try:
+        append_outbox_event(
+            connection,
+            event_id=f"OBX-{uuid.uuid4().hex}",
+            event_type=event_type,
+            aggregate_type=aggregate_type,
+            aggregate_id=aggregate_id,
+            payload=payload,
+        )
+        commit_audited(
+            connection,
+            actor_label=actor_label,
+            object_type=object_type,
+            object_id=aggregate_id,
+            action=action,
+            metadata=metadata,
+        )
+    except (PlatformError, sqlite3.DatabaseError):
+        connection.rollback()
+        raise

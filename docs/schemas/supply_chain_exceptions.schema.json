@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/supply_chain_exceptions.schema.json",
+  "title": "ReconForge supply-chain exceptions v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "as_of", "exceptions"],
+  "properties": {
+    "$schema": {"const": "../schemas/supply_chain_exceptions.schema.json"},
+    "schema_version": {"const": 1},
+    "as_of": {"type": "string", "format": "date"},
+    "exceptions": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/exception"}
+    }
+  },
+  "$defs": {
+    "exception": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "ecosystem", "kind", "subject", "identifiers", "owner", "approved_by", "issue_url", "justification", "compensating_controls", "created_on", "expires_on"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^SC-EXC-[0-9]{4}$"},
+        "status": {"enum": ["active", "expired", "revoked"]},
+        "ecosystem": {"enum": ["python", "npm", "container", "github-actions", "secret-scan"]},
+        "kind": {"enum": ["vulnerability", "secret-false-positive", "temporary-resolution"]},
+        "subject": {"type": "string", "minLength": 1, "maxLength": 200},
+        "identifiers": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 3, "maxLength": 300}},
+        "owner": {"type": "string", "minLength": 3},
+        "approved_by": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string", "minLength": 3}},
+        "issue_url": {"type": "string", "format": "uri", "pattern": "^https://github\\.com/amrzainmubarak/reconforge-erp/issues/[1-9][0-9]*$"},
+        "justification": {"type": "string", "minLength": 20},
+        "compensating_controls": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 10}},
+        "created_on": {"type": "string", "format": "date"},
+        "expires_on": {"type": "string", "format": "date"}
+      }
+    }
+  }
+}

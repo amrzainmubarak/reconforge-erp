@@ -9,11 +9,11 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
-import pandas as pd
-import yaml
-
+from reconforge.io.readers import read_table
+from reconforge.io.structured import read_yaml_document
 from reconforge.io.writers import ensure_output_dir, json_default
 from reconforge.schemas import REQUIRED_COLUMNS, DatasetName
+from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY
 
 SUPPORTED_INPUT_SUFFIXES = {".csv", ".xlsx", ".xls"}
 
@@ -86,11 +86,8 @@ def _tokenize(value: str) -> set[str]:
 
 def _read_headers(path: Path) -> HeaderScan:
     try:
-        if path.suffix.lower() == ".csv":
-            frame = pd.read_csv(path, dtype=str, keep_default_na=False, nrows=1)
-        else:
-            frame = pd.read_excel(path, dtype=str, keep_default_na=False, nrows=1)
-    except (OSError, ValueError, pd.errors.ParserError, UnicodeDecodeError) as exc:
+        frame = read_table(path, nrows=1)
+    except (OSError, ValueError, UnicodeDecodeError) as exc:
         return HeaderScan(path=path, headers=[], status="error", error=str(exc))
     return HeaderScan(path=path, headers=[str(column) for column in frame.columns], status="ok")
 
@@ -106,9 +103,12 @@ def scan_input_headers(input_path: Path | str) -> list[HeaderScan]:
 
 def _load_mapping(pack_path: Path) -> dict[str, Any]:
     mapping_path = pack_path / "mapping.yml"
-    payload = yaml.safe_load(mapping_path.read_text(encoding="utf-8")) or {}
+    payload = read_yaml_document(
+        mapping_path,
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    ) or {}
     if not isinstance(payload, dict):
-        raise ValueError(f"mapping.yml must contain an object: {mapping_path}")
+        raise ValueError("mapping.yml must contain an object")
     return payload
 
 

@@ -9,9 +9,9 @@ from pathlib import Path
 from typing import Any, Literal, TypeAlias, cast
 
 import pandas as pd
-import yaml
 
 from reconforge.io.excel import write_excel_workbook
+from reconforge.io.structured import StructuredDocumentError, read_json_document, read_yaml_document
 from reconforge.io.writers import ensure_output_dir, frame_to_records, json_default
 from reconforge.utils.time import utc_now_text
 
@@ -178,10 +178,10 @@ def _read_template(path: Path | str) -> list[CloseTask]:
         raise FileNotFoundError(f"Close checklist template not found: {template_path}")
     try:
         if template_path.suffix.lower() in {".yml", ".yaml"}:
-            payload = yaml.safe_load(template_path.read_text(encoding="utf-8")) or {}
+            payload = read_yaml_document(template_path) or {}
         else:
-            payload = json.loads(template_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError, yaml.YAMLError) as exc:
+            payload = read_json_document(template_path)
+    except StructuredDocumentError as exc:
         raise ValueError("Close checklist template could not be parsed.") from exc
     raw_tasks = payload.get("tasks", payload) if isinstance(payload, dict) else payload
     return _normalize_tasks(raw_tasks)
@@ -225,8 +225,8 @@ def load_close_checklist(input_path: Path | str) -> CloseChecklist:
     if not path.exists() or not path.is_file():
         raise FileNotFoundError(f"Close checklist not found: {path}")
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+        payload = read_json_document(path)
+    except StructuredDocumentError as exc:
         raise ValueError("Close checklist JSON could not be parsed.") from exc
     if not isinstance(payload, dict):
         raise ValueError("Close checklist JSON must contain an object.")

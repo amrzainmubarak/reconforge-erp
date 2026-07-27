@@ -45,6 +45,16 @@ The import commands read local JSON files and create DB bridge references where 
 
 Imports create or update workflow reference rows plus sanitized `legacy_import_records` summaries. Re-running an import updates the same deterministic bridge records instead of creating uncontrolled duplicates. The original JSON files remain the source workflow files and are not deleted.
 
+account_reconciliations.json and control_tests.json accept a direct list, one
+documented list envelope, an empty object, or an identifier-keyed object map.
+They are read through database-legacy-import-json-ingress-v1 with fixed
+byte/node/depth/collection/scalar limits, duplicate-key and non-finite-number
+rejection, regular non-reparse path checks, and stable raw-byte fingerprints.
+Ambiguous aliases and arbitrary objects fail before database inspection instead
+of becoming empty imports. Audit/outbox and sanitized bridge summaries retain
+the parsed-byte digest, byte count, and profile. These unkeyed values do not
+authenticate or authorize the source.
+
 This bridge does not implement the full DB-backed account reconciliation lifecycle, close engine, control testing workflow, approvals, or evidence vault. It only records migration references and audit events.
 
 ## Backup And Restore
@@ -58,6 +68,14 @@ The manifest records the backup checksum, created timestamp, schema version, and
 
 Current backups include organization, legal-entity, branch, currency-reference, fiscal-period, chart/account, dimension, finance-journal, balanced ledger-control, and inventory master/movement/count/reorder/FIFO-valuation/reversal data. Migration history is regenerated from trusted local migration definitions rather than restored as backup content. A supported older backup is loaded into its source schema first and then upgraded through the current migration sequence. Validated/Voided finance, Posted/Voided movement, Counting/Submitted/Approved/Cancelled count, and Approved/Cancelled valuation/reversal states are rebuilt only after restored detail rows pass database transition triggers. Restore verifies every FIFO layer's remaining quantity/value against its immutable origin, consumptions, and approved `Restore`/`Remove` effects.
 
+When an older row omits an additive column, restore does not interpret that
+column's SQL default in Python. It omits the column from the parameterized
+insert and lets the trusted locally installed SQLite schema apply the default.
+Missing required columns without defaults remain errors. Backup values cannot
+supply SQL expressions. Exact fractional defaults must use quoted canonical
+text or integer minor units; unquoted SQLite fractional literals may use REAL
+semantics.
+
 Backups may contain sensitive local business data and local password hashes needed for restore. Protect backup folders like finance control evidence. Backups never include raw session tokens or the `api_sessions` table.
 
 ## Security Boundary
@@ -70,5 +88,7 @@ The bridge is local-first:
 - No direct ERP connector.
 - No enterprise backup or disaster-recovery guarantee.
 - No digital signature, legal assurance, audit opinion, or compliance certification.
+- No archive input, malware scan, centralized import/restore authorization, or
+  encrypted backup/import-file guarantee.
 
 Review exported and backed-up files before sharing them. Use anonymized or synthetic examples for public issues, demos, and support requests.

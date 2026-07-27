@@ -110,9 +110,8 @@ class _TrialBalanceConnection(_FakeConnection):
 
 
 class _AuditConnection(_FakeConnection):
-    def __init__(self, *, tampered: bool = False) -> None:
+    def __init__(self, *, tampered: bool = False, metadata_json: str = '{"source":"test"}') -> None:
         super().__init__()
-        metadata_json = '{"source":"test"}'
         event_hash = _hash_payload(
             {
                 "tenant_id": "tenant_a",
@@ -322,6 +321,19 @@ def test_postgres_audit_verification_detects_tampering() -> None:
     assert result["ok"] is False
     assert result["checked_events"] == 1
     assert result["issues"] == [{"sequence": 1, "message": "Audit event hash does not match row content."}]
+
+
+def test_postgres_audit_metadata_corruption_is_not_normalized_into_valid_evidence() -> None:
+    repository = PostgresLedgerRepository(_AuditConnection(metadata_json='{"source":"a","source":"b"}'))
+
+    with pytest.raises(PostgresLedgerIntegrityError, match="audit metadata is invalid"):
+        repository.list_audit_events(tenant_id="tenant_a")
+
+    verification = repository.verify_audit_events(tenant_id="tenant_a")
+    assert verification["ok"] is False
+    assert {issue["message"] for issue in verification["issues"]} >= {
+        "Audit event metadata is invalid.",
+    }
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires a live PostgreSQL service")

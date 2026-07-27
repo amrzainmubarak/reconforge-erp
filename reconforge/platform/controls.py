@@ -7,17 +7,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from reconforge.db.exporter import checksum_file
 from reconforge.domain.models import utc_now_text
 from reconforge.platform.common import (
     PlatformError,
-    audit,
+    commit_audited,
     ensure_platform_schema,
     ensure_workspace,
     normalize_key,
     normalize_text,
     platform_id,
-    read_local_records,
+    read_local_record_document,
     require_permission,
     rows_to_dicts,
 )
@@ -49,16 +48,26 @@ class ControlTestingService:
         """Import a local CSV/JSON control library."""
 
         require_permission(self.connection, actor_label=actor_label, permission="controls.manage")
-        source_path, records = read_local_records(input_path)
+        document = read_local_record_document(input_path)
+        source_path = document.source_path
+        records = document.records
         if not records:
             raise PlatformError("Control library input did not contain any records.")
         workspace_id = ensure_workspace(self.connection, workspace)
-        source_checksum = checksum_file(source_path)
+        source_checksum = document.checksum_sha256
+        source_metadata = {
+            "source_file": source_path.name,
+            "source_checksum_sha256": source_checksum,
+            "source_size_bytes": document.size_bytes,
+            "ingress_profile": document.profile_id,
+        }
         now = utc_now_text()
         imported = 0
         try:
             for index, record in enumerate(records, start=1):
-                control_code = normalize_key(record.get("control_code") or record.get("id") or record.get("control_id"), default="")
+                control_code = normalize_key(
+                    record.get("control_code") or record.get("id") or record.get("control_id"), default=""
+                )
                 if not control_code:
                     control_code = platform_id("CTRLREF", source_checksum, index)
                 control_id = platform_id("CTRL", workspace_id, control_code)
@@ -92,17 +101,16 @@ class ControlTestingService:
                     ),
                 )
                 imported += 1
-            self.connection.commit()
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to import control library.") from exc
-        audit(
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="control_library",
             object_id="import",
             action="control_library_imported",
-            metadata={"source_file": source_path.name, "imported_rows": imported},
+            metadata={**source_metadata, "imported_rows": imported},
         )
         return ControlLibraryImportResult(source_path=source_path, imported_rows=imported)
 
@@ -143,8 +151,7 @@ class ControlTestingService:
                 (plan_id, workspace_id, control["id"], period_name, actor_label, sample_size, now, now),
             )
             count += 1
-        self.connection.commit()
-        audit(
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="control_test_plan",
@@ -195,12 +202,12 @@ class ControlTestingService:
                 "UPDATE control_test_plans SET status = 'Tested', updated_at = ? WHERE id = ?",
                 (now, plan_id),
             )
-            self.connection.commit()
         except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
             raise PlatformError("Unable to record control test result.") from exc
         if normalize_key(effectiveness_status, default="").lower() not in {"effective", "passed", "pass"}:
             control = self._control_for_plan(plan_id)
-            ExceptionQueueService(self.connection).upsert_exception(
+            ExceptionQueueService(self.connection, autocommit=False).upsert_exception(
                 source_type="control_test",
                 source_id=result_id,
                 description="Control test result is not marked effective.",
@@ -210,7 +217,7 @@ class ControlTestingService:
                 risk_rating=str(control["risk_rating"]),
                 actor_label=actor_label,
             )
-        audit(
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="control_test_result",
@@ -253,8 +260,7 @@ class ControlTestingService:
             """,
             (remediation_id, source_type, source_id, owner, target_date, action_plan, now, now),
         )
-        self.connection.commit()
-        audit(
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="remediation_plan",
@@ -262,7 +268,9 @@ class ControlTestingService:
             action="remediation_plan_saved",
             metadata={"source_type": source_type, "source_id": source_id},
         )
-        return dict(self.connection.execute("SELECT * FROM remediation_plans WHERE id = ?", (remediation_id,)).fetchone())
+        return dict(
+            self.connection.execute("SELECT * FROM remediation_plans WHERE id = ?", (remediation_id,)).fetchone()
+        )
 
     def report(self) -> dict[str, Any]:
         """Return a compact control testing report."""

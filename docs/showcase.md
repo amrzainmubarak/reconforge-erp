@@ -19,4 +19,4 @@ The walkthrough begins with deterministic close readiness, decision signals, dom
 
 All records are generated and visibly marked synthetic. The showcase performs no cloud upload, telemetry, external API call, source-ERP writeback, accounting validation, or hidden mutation. It demonstrates foundation-level local behavior, not production deployment, customer adoption, audit assurance, or a complete ERP suite.
 
-See the root `DEMO.md` for the five-minute presenter script and artifact/evidence map.
+See the [demo scenarios](demo-scenarios.md) for the review path and the [recording checklist](demo-recording-checklist.md) for the presenter/evidence sequence.

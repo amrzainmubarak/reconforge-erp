@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/maturity_policy.schema.json",
+  "title": "ReconForge Evidence-Bounded Maturity Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy_id",
+    "product_stage",
+    "module_maturity_order",
+    "module_ceilings",
+    "public_surfaces",
+    "required_boundary_phrases",
+    "forbidden_unqualified_phrases"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "policy_id": {"const": "reconforge-evidence-bounded-maturity"},
+    "product_stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maximum_public_label", "evidence_claim"],
+      "properties": {
+        "maximum_public_label": {"const": "alpha"},
+        "evidence_claim": {"type": "string", "minLength": 10, "maxLength": 160}
+      }
+    },
+    "module_maturity_order": {
+      "const": {"experimental": 1, "beta": 2, "stable": 3}
+    },
+    "module_ceilings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["module_id", "maximum_maturity", "evidence_claim"],
+        "properties": {
+          "module_id": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$"},
+          "maximum_maturity": {"enum": ["experimental", "beta", "stable"]},
+          "evidence_claim": {"type": "string", "minLength": 5, "maxLength": 160}
+        }
+      }
+    },
+    "public_surfaces": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "allOf": [
+          {"type": "string", "pattern": "^(README\\.md|docs/website/[A-Za-z0-9_.-]+\\.md)$"},
+          {"not": {"pattern": "(^|/)\\.\\.(/|$)"}}
+        ]
+      }
+    },
+    "required_boundary_phrases": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 4, "maxLength": 80}
+    },
+    "forbidden_unqualified_phrases": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 4, "maxLength": 80}
+    }
+  }
+}

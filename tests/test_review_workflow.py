@@ -83,10 +83,11 @@ def test_review_state_rejects_invalid_status() -> None:
         update_review_status("EXC-0001", "Done", {})
 
 
-def test_malformed_review_state_json_falls_back_safely(tmp_path: Path) -> None:
+def test_malformed_review_state_json_fails_closed(tmp_path: Path) -> None:
     path = tmp_path / "review_state.json"
     path.write_text("{bad json", encoding="utf-8")
-    assert load_review_state(path) == {}
+    with pytest.raises(ValueError, match="json_structure_invalid"):
+        load_review_state(path)
 
 
 def test_review_state_merge_with_exceptions_preserves_unknown_entries() -> None:
@@ -250,6 +251,20 @@ def test_studio_filters_render_and_status_filter_works(tmp_path: Path) -> None:
     html = _render_studio_exceptions(tmp_path, status="Escalated")
     assert "Review status" in html
     assert "Escalated" in html
+
+
+def test_studio_minimum_amount_query_remains_string_and_rejects_invalid_text(tmp_path: Path) -> None:
+    client = TestClient(create_studio_app("examples/sample_data", tmp_path))
+
+    schema = client.get("/openapi.json").json()
+    exception_operation = schema["paths"]["/exceptions"]["get"]
+    minimum_amount = next(item for item in exception_operation["parameters"] if item["name"] == "min_amount")
+    assert minimum_amount["schema"]["type"] == "string"
+
+    response = client.get("/exceptions", params={"min_amount": "1e2"})
+    assert response.status_code == 400
+    assert "finite, non-negative plain decimal" in response.text
+    assert "1e2" not in response.text
 
 
 def test_studio_valid_status_update_persists_to_review_state(tmp_path: Path) -> None:

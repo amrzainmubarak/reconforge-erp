@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -47,12 +48,12 @@ def test_missing_operator() -> None:
 
 
 def test_amount_tolerance_operator() -> None:
-    row = {"stock_amount": 100.0, "gl_amount": 101.5}
+    row = {"stock_amount": "100.0", "gl_amount": "101.5"}
     condition = Condition(
         operator="amount_within_tolerance",
         field="stock_amount",
         other_field="gl_amount",
-        tolerance=2.0,
+        tolerance="2.0",
     )
     assert evaluate_condition(row, condition) is True
 
@@ -94,6 +95,8 @@ def test_rule_execution_output(tmp_path: Path) -> None:
     assert (tmp_path / "rule_results.csv").exists()
     assert (tmp_path / "rule_results.json").exists()
     assert len(paths) == 2
+    payload = json.loads((tmp_path / "rule_results.json").read_text(encoding="utf-8"))
+    assert set(payload) == {"results"}
 
 
 def test_rule_definition_rejects_non_csv_source() -> None:

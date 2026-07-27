@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/database_account_reconciliations_import.schema.json",
+  "title": "ReconForge legacy account reconciliation DB import",
+  "description": "Compatibility contract for account_reconciliations.json under database-legacy-import-json-ingress-v1.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/records"
+    },
+    {
+      "$ref": "#/$defs/account_reconciliations_envelope"
+    },
+    {
+      "$ref": "#/$defs/reconciliations_envelope"
+    },
+    {
+      "$ref": "#/$defs/records_envelope"
+    },
+    {
+      "$ref": "#/$defs/items_envelope"
+    },
+    {
+      "$ref": "#/$defs/keyed_record_map"
+    }
+  ],
+  "$defs": {
+    "record": {
+      "type": "object",
+      "maxProperties": 50000
+    },
+    "records": {
+      "type": "array",
+      "maxItems": 50000,
+      "items": {
+        "$ref": "#/$defs/record"
+      }
+    },
+    "account_reconciliations_envelope": {
+      "type": "object",
+      "maxProperties": 50000,
+      "required": [
+        "account_reconciliations"
+      ],
+      "properties": {
+        "account_reconciliations": {
+          "$ref": "#/$defs/records"
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/no_reconciliations_records_items"
+        }
+      ]
+    },
+    "reconciliations_envelope": {
+      "type": "object",
+      "maxProperties": 50000,
+      "required": [
+        "reconciliations"
+      ],
+      "properties": {
+        "reconciliations": {
+          "$ref": "#/$defs/records"
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/no_account_records_items"
+        }
+      ]
+    },
+    "records_envelope": {
+      "type": "object",
+      "maxProperties": 50000,
+      "required": [
+        "records"
+      ],
+      "properties": {
+        "records": {
+          "$ref": "#/$defs/records"
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/no_account_reconciliations_items"
+        }
+      ]
+    },
+    "items_envelope": {
+      "type": "object",
+      "maxProperties": 50000,
+      "required": [
+        "items"
+      ],
+      "properties": {
+        "items": {
+          "$ref": "#/$defs/records"
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/no_account_reconciliations_records"
+        }
+      ]
+    },
+    "keyed_record_map": {
+      "type": "object",
+      "maxProperties": 50000,
+      "propertyNames": {
+        "maxLength": 1048576
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/record"
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "account_reconciliations"
+            ]
+          },
+          {
+            "required": [
+              "reconciliations"
+            ]
+          },
+          {
+            "required": [
+              "records"
+            ]
+          },
+          {
+            "required": [
+              "items"
+            ]
+          }
+        ]
+      }
+    },
+    "no_reconciliations_records_items": {
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "reconciliations"
+            ]
+          },
+          {
+            "required": [
+              "records"
+            ]
+          },
+          {
+            "required": [
+              "items"
+            ]
+          }
+        ]
+      }
+    },
+    "no_account_records_items": {
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "account_reconciliations"
+            ]
+          },
+          {
+            "required": [
+              "records"
+            ]
+          },
+          {
+            "required": [
+              "items"
+            ]
+          }
+        ]
+      }
+    },
+    "no_account_reconciliations_items": {
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "account_reconciliations"
+            ]
+          },
+          {
+            "required": [
+              "reconciliations"
+            ]
+          },
+          {
+            "required": [
+              "items"
+            ]
+          }
+        ]
+      }
+    },
+    "no_account_reconciliations_records": {
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "account_reconciliations"
+            ]
+          },
+          {
+            "required": [
+              "reconciliations"
+            ]
+          },
+          {
+            "required": [
+              "records"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

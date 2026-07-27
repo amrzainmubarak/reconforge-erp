@@ -1,0 +1,546 @@
+schema_version: 1
+mapping_id: reconforge-nist-ssdf-1.1
+status: evidence-bounded
+last_reviewed: "2026-07-25"
+claim_boundary: >-
+  This all-task repository mapping is not an organizational SSDF conformance
+  assessment, certification, independent review, deployment assessment, or
+  proof that a secure software development process operates continuously. A
+  partial status identifies bounded files and tests but does not satisfy the
+  full NIST task. Planned is not implementation evidence, and no task is
+  promoted to implemented-bounded by this review.
+
+standard:
+  publication: NIST SP 800-218
+  ssdf_version: "1.1"
+  publication_status: final
+  published: "2022-02-03"
+  verified_at: "2026-07-25"
+  official_publication_url: https://csrc.nist.gov/pubs/sp/800/218/final
+  doi_url: https://doi.org/10.6028/NIST.SP.800-218
+  pdf:
+    url: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-218.pdf
+    sha256: 617746e553a9e2da49bfbd4eef0dfc3094758a39b869314e4173ac36605cde22
+    bytes: 739891
+  official_table:
+    url: https://csrc.nist.gov/files/pubs/sp/800/218/final/docs/nist.sp.800-218.ssdf-table.xlsx
+    sha256: f5729c4c6c792cbf6cfbea74eee7cc84c579b2109006fe3cbfa8934eb460bd55
+    bytes: 50039
+  official_counts:
+    groups: 4
+    practices: 19
+    tasks: 42
+  source_note: >-
+    Identifiers, group/practice names, and counts were reviewed from the official
+    NIST PDF and Excel table in memory; the source files and task prose are not
+    copied into this repository.
+  excluded_draft:
+    publication: NIST SP 800-218 Rev. 1
+    ssdf_version: "1.2"
+    status: initial-public-draft
+    published: "2025-12-17"
+    url: https://csrc.nist.gov/pubs/sp/800/218/r1/ipd
+    reason: >-
+      NIST lists version 1.2 as an Initial Public Draft, so it is monitored but
+      excluded from this final-publication mapping.
+  supplemental_profile:
+    publication: NIST SP 800-218A
+    status: final
+    published: "2024-07-26"
+    url: https://csrc.nist.gov/pubs/sp/800/218/a/final
+    applicability: >-
+      A separate profile assessment is required before promoting any generative
+      AI model or model-backed system capability; it is not silently treated as
+      covered or not applicable by this core SSDF 1.1 mapping.
+
+assessment_scope:
+  target: ReconForge repository artifacts and the measured dirty worktree only.
+  coverage_type: all-task-repository-evidence
+  method:
+    - Cover every one of the 42 final SSDF 1.1 task identifiers exactly once.
+    - Link only existing repository files and tests as bounded evidence.
+    - Record accountable roles from Security Architecture v2 and explicit gaps.
+    - Reassess on a fixed cadence and on material source or product changes.
+  excluded_assurance:
+    - No organizational interviews, personnel training records, or management attestation.
+    - No branch-protection, production, release-signing, or artifact-retention operating evidence.
+    - No independent audit, penetration test, legal conclusion, or compliance certification.
+    - No SP 800-218A community-profile assessment for AI model-backed capabilities.
+
+status_definitions:
+  implemented_bounded: Full task outcome is proven only within an explicitly limited repository boundary; none received this status.
+  partial: Repository evidence addresses part of the task while named process, deployment, or operating-evidence gaps remain.
+  planned: No sufficient positive repository evidence supports the task outcome; the recorded action is future work.
+  not_applicable: A conditional scope exclusion with a reassessment trigger; no core SSDF 1.1 task received this status.
+
+review:
+  owner: release-security
+  cadence_days: 90
+  next_review_due: "2026-10-23"
+  triggers:
+    - NIST publishes a final successor to SSDF 1.1.
+    - Release, build, dependency, vulnerability-response, or source-control policy changes.
+    - A model-backed AI capability is enabled or promoted beyond an offline placeholder.
+    - A material security incident or high-severity vulnerability affects the project.
+
+summary:
+  official_group_count: 4
+  official_practice_count: 19
+  official_task_count: 42
+  status_counts:
+    implemented_bounded: 0
+    partial: 28
+    planned: 14
+    not_applicable: 0
+
+groups:
+  - group_id: PO
+    group_name: Prepare the Organization
+    group_status: partial
+    practices:
+      - practice_id: PO.1
+        practice_name: Define Security Requirements for Software Development
+        owner: release-security
+        practice_status: partial
+        tasks:
+          - task_id: PO.1.1
+            status: partial
+            owner: release-security
+            evidence: [AGENTS.md, docs/security/security-architecture.v2.yaml, docs/execution/SECURITY_BASELINE.md]
+            test_evidence: [tests/test_security_architecture.py, tests/test_release_readiness_docs.py]
+            assessment: Repository development and security requirements are documented and versioned.
+            gap_or_limitation: No approved organization-wide infrastructure/process requirement register or exception history is evidenced.
+            next_action: Establish an approved requirement register, review history, and exception workflow.
+          - task_id: PO.1.2
+            status: partial
+            owner: platform-security
+            evidence: [AGENTS.md, docs/security/asvs-5.0.0-mapping.v1.yaml, docs/security/security-architecture.v2.yaml]
+            test_evidence: [tests/test_asvs_mapping.py, tests/test_security_architecture.py]
+            assessment: Product security invariants, selected ASVS gaps, and architecture boundaries are reviewable.
+            gap_or_limitation: The repository does not prove a complete approved security-requirement lifecycle or waivers.
+            next_action: Create requirement approval, traceability, change, waiver, and retirement records.
+          - task_id: PO.1.3
+            status: planned
+            owner: release-security
+            evidence: []
+            test_evidence: []
+            assessment: Dependency metadata exists but no supplier-facing security requirement process is evidenced.
+            gap_or_limitation: Commercial and open-source supplier requirements, attestations, and exceptions are not governed.
+            next_action: Define acquisition criteria and a documented exception/review process for third-party components.
+      - practice_id: PO.2
+        practice_name: Implement Roles and Responsibilities
+        owner: release-security
+        practice_status: partial
+        tasks:
+          - task_id: PO.2.1
+            status: partial
+            owner: release-security
+            evidence: [.github/CODEOWNERS, docs/security/security-architecture.v2.yaml, docs/execution/BACKLOG.yaml]
+            test_evidence: [tests/test_security_architecture.py, tests/test_phase2_deliverables.py]
+            assessment: Security control roles and repository review ownership are named as role identifiers.
+            gap_or_limitation: Role identifiers are not personnel assignments and no periodic proficiency/ownership review is proven.
+            next_action: Record accountable people or teams, delegation, succession, and scheduled role reviews.
+          - task_id: PO.2.2
+            status: planned
+            owner: release-security
+            evidence: []
+            test_evidence: []
+            assessment: Contribution guidance is present but is not role-based secure-development training evidence.
+            gap_or_limitation: No curriculum, completion record, proficiency review, or training refresh cadence exists.
+            next_action: Define role-based training outcomes and retain privacy-safe completion/proficiency evidence.
+          - task_id: PO.2.3
+            status: planned
+            owner: release-security
+            evidence: []
+            test_evidence: []
+            assessment: Repository instructions cannot demonstrate authorizing-official commitment or communication.
+            gap_or_limitation: No signed management commitment, accountable release authority, or communication record exists.
+            next_action: Obtain and record management commitment without manufacturing an approval in repository prose.
+      - practice_id: PO.3
+        practice_name: Implement Supporting Toolchains
+        owner: release-security
+        practice_status: partial
+        tasks:
+          - task_id: PO.3.1
+            status: partial
+            owner: release-security
+            evidence: [.github/workflows/ci.yml, .github/workflows/security.yml, .github/workflows/codeql.yml, .github/workflows/release.yml, .github/scripts/build_release_sboms.py]
+            test_evidence: [tests/test_phase2_deliverables.py, tests/test_release_readiness_docs.py]
+            assessment: CI, static analysis, dependency audit, CodeQL, build, and SBOM tools are declared.
+            gap_or_limitation: No approved toolchain catalogue, data-flow contract, or risk-to-tool selection record is complete.
+            next_action: Version an approved toolchain inventory with purpose, owner, inputs, outputs, and replacement criteria.
+          - task_id: PO.3.2
+            status: partial
+            owner: release-security
+            evidence: [.github/workflows/ci.yml, .github/workflows/security.yml, SECURITY.md, pyproject.toml]
+            test_evidence: [tests/test_phase2_deliverables.py, tests/test_release_readiness_docs.py]
+            assessment: Actions are commit-pinned and security tools run, but Python tool/dependency resolution is open-ended.
+            gap_or_limitation: No hash-locked Python toolchain, reproducible build proof, or continuous tool integrity review exists.
+            next_action: Add reviewed hashed constraints, reproducibility checks, and tool provenance/update records.
+          - task_id: PO.3.3
+            status: partial
+            owner: evidence-security
+            evidence: [.github/workflows/codeql.yml, .github/workflows/release.yml, .github/scripts/build_release_sboms.py, docs/execution/EVIDENCE.md]
+            test_evidence: [tests/test_phase2_deliverables.py, tests/test_release_readiness_docs.py]
+            assessment: Workflows generate SARIF/SBOM artifacts and execution evidence records local gates.
+            gap_or_limitation: Artifact retention, access, immutability, review, and linkage to a clean release are not proven.
+            next_action: Define protected artifact retention and bind reviewed outputs to immutable release identities.
+      - practice_id: PO.4
+        practice_name: Define and Use Criteria for Software Security Checks
+        owner: release-security
+        practice_status: partial
+        tasks:
+          - task_id: PO.4.1
+            status: partial
+            owner: release-security
+            evidence: [docs/release-readiness-checklist.md, docs/execution/QUALITY_BASELINE.md, docs/execution/SECURITY_BASELINE.md]
+            test_evidence: [tests/test_release_readiness_docs.py, tests/test_phase2_deliverables.py]
+            assessment: Security/quality gates and explicit blockers are documented with measured local results.
+            gap_or_limitation: Gate approval, exception, risk acceptance, and enforcement across the full SDLC are not proven.
+            next_action: Version gate criteria and require auditable approval, rejection, and exception records.
+          - task_id: PO.4.2
+            status: partial
+            owner: evidence-security
+            evidence: [.github/workflows/security.yml, .github/workflows/codeql.yml, docs/execution/EVIDENCE.md]
+            test_evidence: [tests/test_phase2_deliverables.py, tests/test_release_readiness_docs.py]
+            assessment: Automated checks and persistent repository evidence gather part of the required information.
+            gap_or_limitation: Access-controlled, tamper-resistant centralized evidence and retention are absent.
+            next_action: Protect gate evidence, define retention/access controls, and verify deletion/tamper boundaries.
+      - practice_id: PO.5
+        practice_name: Implement and Maintain Secure Environments for Software Development
+        owner: platform-security
+        practice_status: partial
+        tasks:
+          - task_id: PO.5.1
+            status: partial
+            owner: platform-security
+            evidence: [.github/workflows/ci.yml, docs/security/security-architecture.v2.yaml, docs/security/deployment-boundaries.md]
+            test_evidence: [tests/test_security_architecture.py, tests/test_threat_model_index.py]
+            assessment: Repository trust boundaries separate local, CI, server, dependency, and release contexts conceptually.
+            gap_or_limitation: Actual GitHub, developer, build, test, and distribution environment isolation is not assessed.
+            next_action: Document and test environment separation, credentials, network paths, and privileged transitions.
+          - task_id: PO.5.2
+            status: planned
+            owner: platform-security
+            evidence: []
+            test_evidence: []
+            assessment: Endpoint hardening is outside the current repository evidence boundary.
+            gap_or_limitation: No device baseline, patch status, EDR, disk encryption, or privileged-access evidence exists.
+            next_action: Define risk-based developer endpoint controls and an operator-verifiable evidence process.
+
+  - group_id: PS
+    group_name: Protect the Software
+    group_status: partial
+    practices:
+      - practice_id: PS.1
+        practice_name: Protect All Forms of Code from Unauthorized Access and Tampering
+        owner: release-security
+        practice_status: partial
+        tasks:
+          - task_id: PS.1.1
+            status: partial
+            owner: release-security
+            evidence: [.github/CODEOWNERS, .github/workflows/ci.yml, .github/workflows/security.yml]
+            test_evidence: [tests/test_phase2_deliverables.py, tests/test_release_readiness_docs.py]
+            assessment: CODEOWNERS and least-privilege workflow permissions express intended repository controls.
+            gap_or_limitation: Repository rulesets, branch protection, administrator access, and artifact-store ACLs are not verified.
+            next_action: Capture read-only ruleset/branch/access evidence and review privileged principals periodically.
+      - practice_id: PS.2
+        practice_name: Provide a Mechanism for Verifying Software Release Integrity
+        owner: release-security
+        practice_status: planned
+        tasks:
+          - task_id: PS.2.1
+            status: planned
+            owner: release-security
+            evidence: []
+            test_evidence: []
+            assessment: Local content hashes exist, but release verification information is not published or signed.
+            gap_or_limitation: No signed package/image, checksum publication, provenance verification, or trust policy exists.
+            next_action: Implement signed release checksums/attestations and document verifier trust and rollback behavior.
+      - practice_id: PS.3
+        practice_name: Archive and Protect Each Software Release
+        owner: release-security
+        practice_status: partial
+        tasks:
+          - task_id: PS.3.1
+            status: partial
+            owner: evidence-security
+            evidence: [docs/maintainers/release-process.md, docs/releases/v0.7.0.md, docs/release-readiness-checklist.md]
+            test_evidence: [tests/test_release_readiness_docs.py, tests/test_phase2_deliverables.py]
+            assessment: Release documentation identifies files, gates, notes, and post-release checks.
+            gap_or_limitation: A protected archive with source, artifacts, dependencies, retention, and restore evidence is absent.
+            next_action: Define release archive contents/retention and test authorized retrieval and integrity verification.
+          - task_id: PS.3.2
+            status: planned
+            owner: release-security
+            evidence: []
+            test_evidence: []
+            assessment: Exact-subject SBOM generation/attestation definitions and deterministic local package/source outputs exist, but no reviewed hosted release-bound provenance set is proven.
+            gap_or_limitation: Hosted image inventory, safeguarded SBOM retention, signed execution, immutable publication, and consumer sharing remain absent.
+            next_action: Bind signed SBOM and provenance attestations to each immutable source/package/image release.
+
+  - group_id: PW
+    group_name: Produce Well-Secured Software
+    group_status: partial
+    practices:
+      - practice_id: PW.1
+        practice_name: Design Software to Meet Security Requirements and Mitigate Security Risks
+        owner: platform-security
+        practice_status: partial
+        tasks:
+          - task_id: PW.1.1
+            status: partial
+            owner: platform-security
+            evidence: [docs/security/threat-model-index.v1.yaml, docs/security/security-architecture.v2.yaml, docs/risk-register.yaml]
+            test_evidence: [tests/test_threat_model_index.py, tests/test_security_architecture.py, tests/test_risk_register.py]
+            assessment: Closed threat, architecture, and risk registries cover current modules and named boundaries.
+            gap_or_limitation: Abuse-case testing, independent review, deployment validation, and complete threat enumeration are absent.
+            next_action: Add risk-triggered abuse cases and independent/live validation without promoting design evidence.
+          - task_id: PW.1.2
+            status: partial
+            owner: platform-security
+            evidence: [docs/adr/0062-version-security-architecture-registry.md, docs/risk-register.yaml, docs/execution/DECISIONS.md]
+            test_evidence: [tests/test_security_architecture.py, tests/test_risk_register.py]
+            assessment: ADRs and governed registries track selected requirements, risks, owners, and decisions.
+            gap_or_limitation: End-to-end traceability from every approved requirement/risk to release evidence is incomplete.
+            next_action: Add stable requirement IDs and bidirectional design/code/test/release traceability.
+          - task_id: PW.1.3
+            status: partial
+            owner: platform-security
+            evidence: [reconforge/auth/passwords.py, reconforge/audit/events.py, docs/security/security-architecture.v2.yaml]
+            test_evidence: [tests/test_api_auth.py, tests/test_security_architecture.py]
+            assessment: Standard password hashing and platform primitives are reused instead of custom cryptography.
+            gap_or_limitation: Enterprise identity, centralized logging, KMS, and vulnerability-management integrations are absent.
+            next_action: Define adapter contracts and verification gates for approved standard security services.
+      - practice_id: PW.2
+        practice_name: Review the Software Design to Verify Compliance with Security Requirements and Risk Information
+        owner: platform-security
+        practice_status: partial
+        tasks:
+          - task_id: PW.2.1
+            status: partial
+            owner: release-security
+            evidence: [.github/CODEOWNERS, .github/workflows/codeql.yml, docs/security/security-architecture.v2.yaml]
+            test_evidence: [tests/test_security_architecture.py, tests/test_phase2_deliverables.py]
+            assessment: Automated analysis and review ownership support design review at repository boundaries.
+            gap_or_limitation: No independent qualified design-review record or full requirement/risk decision trace exists.
+            next_action: Require recorded independent review for high-risk ADRs and trace findings to resolution.
+      - practice_id: PW.4
+        practice_name: Reuse Existing Well-Secured Software When Feasible
+        owner: release-security
+        practice_status: partial
+        tasks:
+          - task_id: PW.4.1
+            status: partial
+            owner: release-security
+            evidence: [pyproject.toml, uv.lock, docs/security/supply-chain-policy.v1.json, .github/dependabot.yml, .github/workflows/security.yml]
+            test_evidence: [tests/test_supply_chain_policy.py, tests/test_phase2_deliverables.py, tests/test_release_readiness_docs.py]
+            assessment: A universal hash-bearing Python/server resolution, weekly four-ecosystem update definitions, and fail-closed audit/exception policy are configured and locally validated.
+            gap_or_limitation: Hosted two-version operation, maintainer-health/provenance/license review, npm SRI completeness, and support policy are incomplete.
+            next_action: Execute and retain hosted locked gates, close the npm SRI gap, and record component selection, provenance, license, and maintainer-health review.
+          - task_id: PW.4.2
+            status: partial
+            owner: platform-security
+            evidence: [reconforge/utils/money.py, reconforge/utils/yaml.py, reconforge/domain/protocols.py]
+            test_evidence: [tests/test_financial_input_policy.py, tests/test_config_financial_input_policy.py, tests/test_domain_repository_contracts.py]
+            assessment: Shared exact-money, safe-YAML, and repository contracts reduce duplicated sensitive logic.
+            gap_or_limitation: No internal secure-component catalogue, ownership lifecycle, or reuse conformance gate exists.
+            next_action: Register security-sensitive shared components with owners, consumers, tests, and deprecation rules.
+          - task_id: PW.4.4
+            status: partial
+            owner: release-security
+            evidence: [uv.lock, docs/security/supply-chain-policy.v1.json, docs/security/supply-chain-exceptions.v1.json, .github/workflows/security.yml, .github/dependabot.yml, .github/workflows/release.yml, .github/scripts/build_release_sboms.py]
+            test_evidence: [tests/test_supply_chain_policy.py, tests/test_release_sbom_pipeline.py, tests/test_release_readiness_docs.py]
+            assessment: Hash-locked Python/server resolution, bounded exceptions, dependency audits, update automation, and exact-subject SBOM generation are configured and locally tested.
+            gap_or_limitation: Hosted enforcement, npm SRI completeness, license/provenance/reachability review, signed SBOM verification, and retained per-release decisions are absent.
+            next_action: Execute hosted gates and retain reviewed dependency, exception, SBOM, license/provenance, and consumer-verification evidence per release.
+      - practice_id: PW.5
+        practice_name: Create Source Code by Adhering to Secure Coding Practices
+        owner: platform-security
+        practice_status: partial
+        tasks:
+          - task_id: PW.5.1
+            status: partial
+            owner: platform-security
+            evidence: [CONTRIBUTING.md, AGENTS.md, docs/security/api-security.md, docs/security/file-ingestion-inventory.v1.yaml, reconforge/io/ingress.py, reconforge/io/structured.py, reconforge/io/records.py, reconforge/io/generated.py, reconforge/io/persisted.py]
+            test_evidence: [tests/test_validation.py, tests/test_readers.py, tests/test_file_ingress_security.py, tests/test_structured_ingress_security.py, tests/test_close_workflow_structured_ingress.py, tests/test_generated_manifest_structured_ingress.py, tests/test_client_pack_redaction_ingress.py, tests/test_client_pack_csv_redaction_ingress.py, tests/test_client_pack_copy_publication.py, tests/test_client_pack_publication_recovery.py, tests/test_business_record_ingress.py, tests/test_evidence_review_csv_ingress.py, tests/test_review_state_json_ingress.py, tests/test_direct_json_ingress_inventory.py, tests/test_financial_idempotency_json.py, tests/test_generated_report_ingress.py, tests/test_studio_artifact_ingress.py, tests/test_file_ingestion_inventory.py, tests/test_api_foundation.py]
+            assessment: Secure coding boundaries cover exact financial input, selected untrusted paths/API errors, closed direct tabular/JSON/YAML inventories, bounded canonical tabular/configuration/control/FI-005/FI-006/FI-007/FI-008/FI-011/FI-014/FI-015/FI-016/AP-AR/PostgreSQL-reconciliation/SQLite-matching-and-export/Redis-session-FI-013/two-FI-012-manifest parsing, and frozen resource-bounded staged FI-012 JSON/CSV/text/non-redacted copies with handled-failure rollback.
+            gap_or_limitation: Crash-atomic existing-directory client-pack/database-export replacement and recovery, legacy XLS internals, malware quarantine, authenticated provenance/actor/disclosure authorization, and a complete language-specific standard, training, exception, mutation, and fuzz program remain absent.
+            next_action: Migrate every partial file surface, then version Python/TypeScript secure-coding standards and add risk-prioritized fuzz/mutation gates.
+      - practice_id: PW.6
+        practice_name: Configure Compilation Interpreter and Build Processes for Executable Security
+        owner: release-security
+        practice_status: partial
+        tasks:
+          - task_id: PW.6.1
+            status: partial
+            owner: release-security
+            evidence: [pyproject.toml, Dockerfile, .github/workflows/ci.yml]
+            test_evidence: [tests/test_phase2_deliverables.py, tests/test_release_readiness_docs.py]
+            assessment: Supported interpreters, digest-pinned container base, and package builds are declared/tested in CI definitions.
+            gap_or_limitation: Build isolation, reproducibility, compiler/interpreter hardening features, and release execution are unproven.
+            next_action: Evaluate and document approved build/interpreter security features per artifact type.
+          - task_id: PW.6.2
+            status: planned
+            owner: release-security
+            evidence: []
+            test_evidence: []
+            assessment: No approved hardening configuration for interpreter, native dependencies, or frontend build is evidenced.
+            gap_or_limitation: Feature selection, configuration enforcement, reproducibility, and exception handling are absent.
+            next_action: Define, enforce, and test approved build/interpreter hardening profiles.
+      - practice_id: PW.7
+        practice_name: Review or Analyze Human-Readable Code
+        owner: release-security
+        practice_status: partial
+        tasks:
+          - task_id: PW.7.1
+            status: partial
+            owner: release-security
+            evidence: [.github/workflows/ci.yml, .github/workflows/security.yml, .github/workflows/codeql.yml]
+            test_evidence: [tests/test_phase2_deliverables.py, tests/test_release_readiness_docs.py]
+            assessment: Ruff, Mypy, Bandit, pip-audit, and CodeQL analysis are selected in workflows.
+            gap_or_limitation: Risk-based analysis selection, language coverage, configuration review, and manual-review criteria are incomplete.
+            next_action: Define analysis/code-review policy by risk and language with versioned configurations.
+          - task_id: PW.7.2
+            status: partial
+            owner: release-security
+            evidence: [CONTRIBUTING.md, .github/CODEOWNERS, .github/workflows/codeql.yml]
+            test_evidence: [tests/test_release_readiness_docs.py, tests/test_phase2_deliverables.py]
+            assessment: Contribution checks request review and automated findings can enter GitHub security surfaces.
+            gap_or_limitation: No complete finding triage/remediation SLA or verified required-review/ruleset evidence exists.
+            next_action: Define severity-based triage/remediation and capture required independent review evidence.
+      - practice_id: PW.8
+        practice_name: Test Executable Code for Vulnerabilities and Security Requirements
+        owner: platform-security
+        practice_status: partial
+        tasks:
+          - task_id: PW.8.1
+            status: partial
+            owner: platform-security
+            evidence: [.github/workflows/ci.yml, docs/security/threat-model-index.v1.yaml, docs/execution/QUALITY_BASELINE.md]
+            test_evidence: [tests/test_threat_model_index.py, tests/test_phase2_deliverables.py]
+            assessment: Unit/integration/security/live-boundary categories and threat cases identify selected executable tests.
+            gap_or_limitation: Formal risk-based DAST, fuzz, penetration, chaos, and coverage/mutation selection is absent.
+            next_action: Define test types by threat/risk and add executable abuse, fuzz, and DAST gates.
+          - task_id: PW.8.2
+            status: planned
+            owner: platform-security
+            evidence: []
+            test_evidence: []
+            assessment: Existing tests do not constitute a documented end-to-end vulnerability testing program.
+            gap_or_limitation: Scope, adversarial design, finding triage, remediation SLA, and independent penetration evidence are absent.
+            next_action: Establish a vulnerability-testing plan and retain findings, decisions, remediation, and retest evidence.
+      - practice_id: PW.9
+        practice_name: Configure Software to Have Secure Settings by Default
+        owner: platform-security
+        practice_status: partial
+        tasks:
+          - task_id: PW.9.1
+            status: partial
+            owner: platform-security
+            evidence: [config/reconforge.yml, reconforge/api/app.py, docs/security/security-architecture.v2.yaml]
+            test_evidence: [tests/test_api_foundation.py, tests/test_security_architecture.py]
+            assessment: Local-first defaults, no mandatory provider call, request boundaries, and selected headers are defined.
+            gap_or_limitation: Complete configuration inventory, server hardening baseline, TLS, secret, and hosted defaults are absent.
+            next_action: Build a versioned setting inventory with secure defaults and deployment-specific validation.
+          - task_id: PW.9.2
+            status: partial
+            owner: platform-security
+            evidence: [docs/configuration.md, docs/security/deployment-boundaries.md, docs/security/api-security.md]
+            test_evidence: [tests/test_release_readiness_docs.py, tests/test_phase2_deliverables.py]
+            assessment: Operators receive bounded configuration, deployment, and API guidance for current surfaces.
+            gap_or_limitation: The documented settings do not cover every runtime/dependency mode or enforce drift checks.
+            next_action: Generate administrator settings reference from a closed versioned configuration schema.
+
+  - group_id: RV
+    group_name: Respond to Vulnerabilities
+    group_status: partial
+    practices:
+      - practice_id: RV.1
+        practice_name: Identify and Confirm Vulnerabilities on an Ongoing Basis
+        owner: release-security
+        practice_status: partial
+        tasks:
+          - task_id: RV.1.1
+            status: partial
+            owner: release-security
+            evidence: [SECURITY.md, .github/dependabot.yml, .github/workflows/security.yml]
+            test_evidence: [tests/test_phase2_deliverables.py, tests/test_release_readiness_docs.py]
+            assessment: Private reporting, dependency updates, and scheduled dependency/static checks are configured.
+            gap_or_limitation: Intake availability, monitoring coverage, report investigation records, and response metrics are not verified.
+            next_action: Test private intake and maintain a protected vulnerability case register with response evidence.
+          - task_id: RV.1.2
+            status: partial
+            owner: release-security
+            evidence: [.github/workflows/security.yml, .github/workflows/codeql.yml, SECURITY.md]
+            test_evidence: [tests/test_phase2_deliverables.py, tests/test_release_readiness_docs.py]
+            assessment: Bandit, dependency audit, CodeQL, and focused tests can help confirm selected reports.
+            gap_or_limitation: No formal confirmation playbook, isolated reproduction environment, or protected finding records exist.
+            next_action: Define safe confirmation, evidence handling, severity, confidentiality, and retest procedures.
+          - task_id: RV.1.3
+            status: partial
+            owner: release-security
+            evidence: [SECURITY.md, .github/ISSUE_TEMPLATE/security_hardening.md]
+            test_evidence: [tests/test_phase2_deliverables.py, tests/test_release_readiness_docs.py]
+            assessment: A private disclosure route, content guidance, and non-binding response targets are documented.
+            gap_or_limitation: Role assignments, escalation, service measurement, embargo, advisory, and remediation policy are incomplete.
+            next_action: Version a full vulnerability disclosure/remediation policy and test the intake/escalation workflow.
+      - practice_id: RV.2
+        practice_name: Assess Prioritize and Remediate Vulnerabilities
+        owner: release-security
+        practice_status: planned
+        tasks:
+          - task_id: RV.2.1
+            status: planned
+            owner: release-security
+            evidence: []
+            test_evidence: []
+            assessment: Project risk scoring is not a vulnerability-specific technical/business impact assessment process.
+            gap_or_limitation: No vulnerability severity, exploitability, affected-version, exposure, or response-decision record is governed.
+            next_action: Define a vulnerability assessment model with human approval and protected evidence.
+          - task_id: RV.2.2
+            status: planned
+            owner: release-security
+            evidence: []
+            test_evidence: []
+            assessment: No closed-loop vulnerability response lifecycle is evidenced in the repository.
+            gap_or_limitation: Remediation ownership, SLA, mitigation, backport, advisory, release, and verification steps are absent.
+            next_action: Implement a governed response lifecycle with exception, disclosure, release, and retest records.
+      - practice_id: RV.3
+        practice_name: Analyze Vulnerabilities to Identify Their Root Causes
+        owner: release-security
+        practice_status: planned
+        tasks:
+          - task_id: RV.3.1
+            status: planned
+            owner: release-security
+            evidence: []
+            test_evidence: []
+            assessment: Bug regression records do not prove security-vulnerability root-cause analysis.
+            gap_or_limitation: No protected vulnerability case with causal analysis, contributing factors, and review exists.
+            next_action: Require blameless security root-cause analysis for confirmed material vulnerabilities.
+          - task_id: RV.3.2
+            status: planned
+            owner: release-security
+            evidence: []
+            test_evidence: []
+            assessment: No longitudinal vulnerability root-cause dataset is available for pattern analysis.
+            gap_or_limitation: Taxonomy, trend measures, recurrence analysis, and privacy-safe reporting are absent.
+            next_action: Create a protected root-cause taxonomy and periodically review recurrence patterns.
+          - task_id: RV.3.3
+            status: planned
+            owner: platform-security
+            evidence: []
+            test_evidence: []
+            assessment: Broad financial-input remediation is not evidence of a confirmed vulnerability class eradication process.
+            gap_or_limitation: No governed class-wide query, affected-surface inventory, fixes, and retest record exists.
+            next_action: Define class-eradication searches and complete affected-version/component verification after root cause.
+          - task_id: RV.3.4
+            status: planned
+            owner: release-security
+            evidence: []
+            test_evidence: []
+            assessment: ADR and regression practices do not prove an SDLC update driven by vulnerability root cause.
+            gap_or_limitation: No causal linkage from a confirmed vulnerability through process change and effectiveness review exists.
+            next_action: Require root-cause-driven SDLC updates, owners, due dates, and effectiveness checks.

@@ -7,12 +7,12 @@ source ERP or imply statutory period close.
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
+from reconforge.domain.control_scores import COMPLETE_READINESS, readiness_percentage
 from reconforge.infrastructure.postgres import PostgresConfigurationError, normalize_scope_id, validate_tenant_id
 from reconforge.infrastructure.postgres_ledger import (
     _hash_payload,
@@ -20,6 +20,7 @@ from reconforge.infrastructure.postgres_ledger import (
     _record,
     _row_value,
 )
+from reconforge.io.persisted import PersistedJsonError, encode_postgres_outbox_payload
 from reconforge.utils.time import utc_now_text
 
 
@@ -33,6 +34,13 @@ class PostgresCloseIntegrityError(RuntimeError):
 
 class PostgresCloseNotFoundError(PostgresCloseIntegrityError):
     """Raised when a requested close-control record does not exist."""
+
+
+def _outbox_json_text(value: Mapping[str, object]) -> str:
+    try:
+        return encode_postgres_outbox_payload(value).text
+    except PersistedJsonError as exc:
+        raise PostgresCloseValidationError("outbox payload must be JSON-serializable.") from exc
 
 
 _ID_PATTERN = r"^[a-z0-9][a-z0-9_-]{0,63}$"
@@ -183,8 +191,11 @@ class PostgresCloseRepository:
         request = _optional_text(request_id, "request_id", maximum=160)
         audit_reason = _optional_text(reason, "reason", maximum=500)
         metadata_json = _json_text(metadata, "metadata")
-        self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (tenant,))
         after_state_hash = _hash_payload(after_state)
+        outbox_payload_json = _outbox_json_text(
+            {"resource_type": resource_type, "resource_id": resource_id, "after_state_hash": after_state_hash}
+        )
+        self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (tenant,))
         event_id = _hash_payload(
             {
                 "tenant_id": tenant,
@@ -259,12 +270,7 @@ class PostgresCloseRepository:
                 f"close.{action}",
                 resource_type,
                 resource_id,
-                json.dumps(
-                    {"resource_type": resource_type, "resource_id": resource_id, "after_state_hash": after_state_hash},
-                    sort_keys=True,
-                    separators=(",", ":"),
-                    ensure_ascii=True,
-                ),
+                outbox_payload_json,
             ),
         )
 
@@ -595,7 +601,7 @@ class PostgresCloseRepository:
         total = len(rows)
         complete = sum(1 for row in rows if str(_row_value(row, "status", 0)) in {"Complete", "Not Applicable"})
         blocked = sum(1 for row in rows if str(_row_value(row, "status", 0)) == "Blocked")
-        score = round((complete / total) * 100, 2) if total else 0.0
+        score = readiness_percentage(complete=complete, total=total)
         self.connection.execute(
             "UPDATE reconforge.close_periods SET readiness_score = %s, updated_at = %s WHERE tenant_id = %s AND id = %s",
             (score, utc_now_text(), tenant, str(period["id"])),
@@ -633,7 +639,7 @@ class PostgresCloseRepository:
             raise PostgresCloseValidationError("Reopening a close period requires a reason.")
         if selected in {"Approved", "Locked"}:
             readiness = self.readiness(tenant_id=tenant, period_id=identifier)
-            if float(readiness["readiness_score"]) < 100:
+            if readiness["readiness_score"] != COMPLETE_READINESS:
                 raise PostgresCloseValidationError("A close period cannot be approved or locked before all tasks are complete.")
         now = utc_now_text()
         cursor = self.connection.execute(

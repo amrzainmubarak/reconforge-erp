@@ -3,12 +3,26 @@
 from __future__ import annotations
 
 import json
+from decimal import Decimal
 from pathlib import Path
 from typing import Literal, TypeAlias, cast
 
 import pandas as pd
 
 from reconforge.io.excel import write_excel_workbook
+from reconforge.io.generated import (
+    GeneratedCsvMode,
+    read_generated_csv_document,
+    read_generated_json_document,
+)
+from reconforge.io.structured import StructuredDocumentPolicy
+from reconforge.utils.money import (
+    STRICT_FINANCIAL_INPUT_POLICY,
+    FinancialInputPolicy,
+    InvalidAmountError,
+    parse_amount,
+    validate_financial_input_policy,
+)
 from reconforge.utils.time import utc_now_text
 
 ReviewStatus = Literal["New", "Under Review", "Resolved", "Accepted Risk", "Escalated"]
@@ -26,6 +40,16 @@ ALLOWED_CERTIFICATION_STATUSES: tuple[CertificationStatus, ...] = (
 
 ReviewEntry: TypeAlias = dict[str, str]
 ReviewState: TypeAlias = dict[str, ReviewEntry]
+
+REVIEW_STATE_INGRESS_PROFILE = "review-state-json-ingress-v1"
+REVIEW_STATE_JSON_POLICY = StructuredDocumentPolicy(
+    max_file_bytes=16 * 1024 * 1024,
+    max_nodes=500_000,
+    max_depth=32,
+    max_collection_items=100_000,
+    max_scalar_characters=1_000_000,
+    max_yaml_aliases=1,
+)
 
 EXCEPTION_FILE_CANDIDATES = [
     "management_pack_stock_gl_all_exceptions.csv",
@@ -124,15 +148,16 @@ def _coerce_entry(exception_id: str, payload: object) -> ReviewEntry | None:
 
 
 def load_review_state(path: Path | str) -> ReviewState:
-    """Load local review state, returning an empty state for missing or malformed files."""
+    """Load bounded local review state while retaining legacy entry coercion."""
 
     state_path = Path(path)
     if not state_path.exists():
         return {}
-    try:
-        payload = json.loads(state_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
+    payload = read_generated_json_document(
+        state_path,
+        policy=REVIEW_STATE_JSON_POLICY,
+        profile_id=REVIEW_STATE_INGRESS_PROFILE,
+    ).payload
     raw_entries: object
     if isinstance(payload, dict) and isinstance(payload.get("entries"), dict):
         raw_entries = payload["entries"]
@@ -222,14 +247,23 @@ def update_review_status(
     return entry
 
 
-def _amount_impact(row: pd.Series) -> float:
+def _amount_impact(
+    row: pd.Series,
+    *,
+    financial_input_policy: FinancialInputPolicy,
+) -> Decimal | None:
     for field in ("amount_impact", "amount", "total_cost", "actual_cost", "estimated_cost", "invoice_amount", "total_price"):
         value = row.get(field)
         try:
-            return abs(float(str(value)))
-        except (TypeError, ValueError):
+            return abs(
+                parse_amount(
+                    value,
+                    input_policy=financial_input_policy,
+                )
+            )
+        except InvalidAmountError:
             continue
-    return 0.0
+    return None
 
 
 def _source_file(frame_path: Path, frame: pd.DataFrame) -> pd.Series:
@@ -238,16 +272,26 @@ def _source_file(frame_path: Path, frame: pd.DataFrame) -> pd.Series:
     return pd.Series([frame_path.name] * len(frame), index=frame.index)
 
 
-def collect_exception_frame(input_dir: Path | str) -> pd.DataFrame:
+def collect_exception_frame(
+    input_dir: Path | str,
+    *,
+    financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
+) -> pd.DataFrame:
     """Collect generated exception CSV files into one deterministic frame."""
 
+    input_policy = validate_financial_input_policy(financial_input_policy)
     base = Path(input_dir)
     frames: list[pd.DataFrame] = []
     for filename in EXCEPTION_FILE_CANDIDATES:
         path = base / filename
         if not path.exists():
             continue
-        frame = pd.read_csv(path, keep_default_na=False)
+        mode: GeneratedCsvMode = (
+            "exact-text"
+            if input_policy == STRICT_FINANCIAL_INPUT_POLICY
+            else "display"
+        )
+        frame = read_generated_csv_document(path, mode=mode).frame
         if frame.empty:
             continue
         frame = frame.copy()
@@ -268,10 +312,17 @@ def collect_exception_frame(input_dir: Path | str) -> pd.DataFrame:
             ],
         )
     combined = pd.concat(frames, ignore_index=True, sort=False)
-    return _ensure_exception_columns(combined)
+    return _ensure_exception_columns(
+        combined,
+        financial_input_policy=input_policy,
+    )
 
 
-def _ensure_exception_columns(frame: pd.DataFrame) -> pd.DataFrame:
+def _ensure_exception_columns(
+    frame: pd.DataFrame,
+    *,
+    financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
+) -> pd.DataFrame:
     output = frame.copy()
     if "exception_id" not in output.columns:
         output.insert(0, "exception_id", [f"EXC-{index:04d}" for index in range(1, len(output) + 1)])
@@ -290,7 +341,13 @@ def _ensure_exception_columns(frame: pd.DataFrame) -> pd.DataFrame:
         else:
             output["exception_type"] = "unclassified_exception"
     if "amount_impact" not in output.columns:
-        output["amount_impact"] = [_amount_impact(row) for _, row in output.iterrows()]
+        output["amount_impact"] = [
+            _amount_impact(
+                row,
+                financial_input_policy=financial_input_policy,
+            )
+            for _, row in output.iterrows()
+        ]
     if "source_file" not in output.columns:
         output["source_file"] = ""
     return output
@@ -312,12 +369,23 @@ def merge_review_state_with_exceptions(exceptions: pd.DataFrame, state: ReviewSt
     return merged
 
 
-def review_register_frame(input_dir: Path | str, state_path: Path | str | None = None) -> pd.DataFrame:
+def review_register_frame(
+    input_dir: Path | str,
+    state_path: Path | str | None = None,
+    *,
+    financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
+) -> pd.DataFrame:
     """Build a review register frame from generated exceptions and local state."""
 
     base = Path(input_dir)
     review_state_path = Path(state_path) if state_path is not None else base / "review_state.json"
-    merged = merge_review_state_with_exceptions(collect_exception_frame(base), load_review_state(review_state_path))
+    merged = merge_review_state_with_exceptions(
+        collect_exception_frame(
+            base,
+            financial_input_policy=financial_input_policy,
+        ),
+        load_review_state(review_state_path),
+    )
     columns = [
         "exception_id",
         "status",
@@ -344,8 +412,26 @@ def review_register_frame(input_dir: Path | str, state_path: Path | str | None =
     return merged[columns].copy()
 
 
-def export_review_register(input_dir: Path | str, output_path: Path | str) -> Path:
+def export_review_register(
+    input_dir: Path | str,
+    output_path: Path | str,
+    *,
+    financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
+) -> Path:
     """Export local review state merged with exceptions to an Excel workbook."""
 
-    register = review_register_frame(input_dir)
-    return write_excel_workbook({"Review Register": register}, output_path)
+    input_policy = validate_financial_input_policy(financial_input_policy)
+    register = review_register_frame(
+        input_dir,
+        financial_input_policy=input_policy,
+    )
+    parameters = pd.DataFrame(
+        [{"financial_input_policy": input_policy}],
+    )
+    return write_excel_workbook(
+        {
+            "Review Register": register,
+            "Report Parameters": parameters,
+        },
+        output_path,
+    )

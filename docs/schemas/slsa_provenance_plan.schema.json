@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/slsa_provenance_plan.schema.json",
+  "title": "ReconForge evidence-bounded SLSA provenance plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "plan_id",
+    "status",
+    "last_reviewed",
+    "claim_boundary",
+    "specification",
+    "current_assessment",
+    "artifacts",
+    "trust_boundaries",
+    "attestation_contract",
+    "verification_policy",
+    "rollback_policy",
+    "implementation_gates",
+    "review"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "plan_id": {"const": "reconforge-slsa-1.2-provenance-plan"},
+    "status": {"const": "implementation-in-progress-evidence-bounded"},
+    "last_reviewed": {"type": "string", "format": "date"},
+    "claim_boundary": {"type": "string", "minLength": 140},
+    "specification": {"$ref": "#/$defs/specification"},
+    "current_assessment": {"$ref": "#/$defs/currentAssessment"},
+    "artifacts": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {"$ref": "#/$defs/artifact"}
+    },
+    "trust_boundaries": {
+      "type": "array",
+      "minItems": 7,
+      "items": {"$ref": "#/$defs/trustBoundary"}
+    },
+    "attestation_contract": {"$ref": "#/$defs/attestationContract"},
+    "verification_policy": {"$ref": "#/$defs/verificationPolicy"},
+    "rollback_policy": {"$ref": "#/$defs/rollbackPolicy"},
+    "implementation_gates": {
+      "type": "array",
+      "minItems": 10,
+      "items": {"$ref": "#/$defs/gate"}
+    },
+    "review": {"$ref": "#/$defs/review"}
+  },
+  "$defs": {
+    "httpsUrl": {"type": "string", "format": "uri", "pattern": "^https://"},
+    "sha1": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "owner": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+    "identifier": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+    "repositoryPath": {
+      "type": "string",
+      "minLength": 3,
+      "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"
+    },
+    "repositoryPaths": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/repositoryPath"}
+    },
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 5}
+    },
+    "specification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version",
+        "status",
+        "released",
+        "verified_at",
+        "official_spec_url",
+        "official_announcement_url",
+        "official_repository_url",
+        "release_tag",
+        "release_commit",
+        "release_branch",
+        "release_branch_head_observed",
+        "tracks",
+        "source_note"
+      ],
+      "properties": {
+        "name": {"const": "Supply-chain Levels for Software Artifacts"},
+        "version": {"const": "1.2"},
+        "status": {"const": "Approved"},
+        "released": {"const": "2025-11-24"},
+        "verified_at": {"type": "string", "format": "date"},
+        "official_spec_url": {"const": "https://slsa.dev/spec/v1.2/"},
+        "official_announcement_url": {"const": "https://slsa.dev/blog/2025/11/announce-slsa-v1.2"},
+        "official_repository_url": {"const": "https://github.com/slsa-framework/slsa"},
+        "release_tag": {"const": "v1.2"},
+        "release_commit": {"$ref": "#/$defs/sha1"},
+        "release_branch": {"const": "releases/v1.2"},
+        "release_branch_head_observed": {"$ref": "#/$defs/sha1"},
+        "tracks": {
+          "type": "array",
+          "prefixItems": [{"const": "build"}, {"const": "source"}],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "source_note": {"type": "string", "minLength": 40}
+      }
+    },
+    "currentAssessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["build_track", "source_track", "verified_properties", "reasons"],
+      "properties": {
+        "build_track": {"const": "SLSA_BUILD_LEVEL_UNEVALUATED"},
+        "source_track": {"const": "SLSA_SOURCE_LEVEL_UNEVALUATED"},
+        "verified_properties": {"type": "array", "maxItems": 0},
+        "reasons": {"$ref": "#/$defs/nonEmptyStrings"}
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "artifact_name_pattern",
+        "media_type",
+        "distribution_channel",
+        "identity_requirements",
+        "current_state",
+        "gap"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "artifact_name_pattern": {"type": "string", "minLength": 5},
+        "media_type": {"type": "string", "minLength": 5},
+        "distribution_channel": {"type": "string", "minLength": 5},
+        "identity_requirements": {"$ref": "#/$defs/nonEmptyStrings"},
+        "current_state": {
+          "enum": [
+            "local-build-only",
+            "workflow-definition-only",
+            "release-candidate-workflow-definition",
+            "release-candidate-workflow-definition-and-local-output"
+          ]
+        },
+        "gap": {"type": "string", "minLength": 30}
+      }
+    },
+    "trustBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "owner", "current_state", "trust_assumption", "required_controls", "evidence"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "owner": {"$ref": "#/$defs/owner"},
+        "current_state": {"enum": ["bounded", "partial", "planned"]},
+        "trust_assumption": {"type": "string", "minLength": 25},
+        "required_controls": {"$ref": "#/$defs/nonEmptyStrings"},
+        "evidence": {"$ref": "#/$defs/repositoryPaths"}
+      }
+    },
+    "attestationContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "statement_type",
+        "predicate_type",
+        "subject_requirements",
+        "build_definition_requirements",
+        "run_details_requirements",
+        "signature_requirements",
+        "prohibited_inputs"
+      ],
+      "properties": {
+        "statement_type": {"const": "https://in-toto.io/Statement/v1"},
+        "predicate_type": {"const": "https://slsa.dev/provenance/v1"},
+        "subject_requirements": {"$ref": "#/$defs/nonEmptyStrings"},
+        "build_definition_requirements": {"$ref": "#/$defs/nonEmptyStrings"},
+        "run_details_requirements": {"$ref": "#/$defs/nonEmptyStrings"},
+        "signature_requirements": {"$ref": "#/$defs/nonEmptyStrings"},
+        "prohibited_inputs": {"$ref": "#/$defs/nonEmptyStrings"}
+      }
+    },
+    "verificationPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "expected_source_uri", "allowed_ref_types", "checks", "failure_codes", "on_failure"],
+      "properties": {
+        "owner": {"$ref": "#/$defs/owner"},
+        "expected_source_uri": {"const": "https://github.com/amrzainmubarak/reconforge-erp"},
+        "allowed_ref_types": {
+          "type": "array",
+          "prefixItems": [{"const": "signed-release-tag"}],
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "checks": {"$ref": "#/$defs/nonEmptyStrings"},
+        "failure_codes": {
+          "type": "array",
+          "minItems": 8,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^PROV_[A-Z0-9_]+$"}
+        },
+        "on_failure": {"$ref": "#/$defs/nonEmptyStrings"}
+      }
+    },
+    "rollbackPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "triggers", "required_records", "actions", "prohibited_actions"],
+      "properties": {
+        "owner": {"$ref": "#/$defs/owner"},
+        "triggers": {"$ref": "#/$defs/nonEmptyStrings"},
+        "required_records": {"$ref": "#/$defs/nonEmptyStrings"},
+        "actions": {"$ref": "#/$defs/nonEmptyStrings"},
+        "prohibited_actions": {"$ref": "#/$defs/nonEmptyStrings"}
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "status", "owner", "evidence", "test_evidence", "exit_criteria", "rollback"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^PROV-G(?:0[1-9]|1[0-9])$"},
+        "name": {"type": "string", "minLength": 8},
+        "status": {"enum": ["partial", "planned", "verified"]},
+        "owner": {"$ref": "#/$defs/owner"},
+        "evidence": {"$ref": "#/$defs/repositoryPaths"},
+        "test_evidence": {"$ref": "#/$defs/repositoryPaths"},
+        "exit_criteria": {"$ref": "#/$defs/nonEmptyStrings"},
+        "rollback": {"type": "string", "minLength": 20}
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "cadence_days", "next_review_due", "triggers"],
+      "properties": {
+        "owner": {"$ref": "#/$defs/owner"},
+        "cadence_days": {"type": "integer", "minimum": 1, "maximum": 366},
+        "next_review_due": {"type": "string", "format": "date"},
+        "triggers": {"$ref": "#/$defs/nonEmptyStrings"}
+      }
+    }
+  }
+}

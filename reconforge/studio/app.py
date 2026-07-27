@@ -27,9 +27,10 @@ from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthServ
 from reconforge.auth.models import LocalUser
 from reconforge.close import close_summary_frame, close_tasks_frame, load_close_checklist
 from reconforge.db import DatabaseError, connect
+from reconforge.io.generated import GeneratedArtifactError
 from reconforge.platform.accounts import AccountReconciliationService
 from reconforge.platform.close import CloseManagementService
-from reconforge.platform.common import PlatformError
+from reconforge.platform.common import PlatformError, trusted_local_mode
 from reconforge.platform.evidence import EvidenceRegistryService
 from reconforge.platform.exceptions import ExceptionQueueService
 from reconforge.platform.metrics import MetricsService
@@ -57,6 +58,7 @@ from reconforge.studio.data import (
     DOC_SUFFIXES,
     DOWNLOAD_SUFFIXES,
     INVALID_REVIEW_STATUS_MESSAGE,
+    AmountFilterInput,
     _evidence_coverage_cards,
     _evidence_download_key,
     _filter_exceptions,
@@ -67,6 +69,7 @@ from reconforge.studio.data import (
     _validate_auth_database,
 )
 from reconforge.studio.security import STUDIO_SESSION_COOKIE, _safe_denial_page
+from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY, InvalidAmountError
 from reconforge.utils.safe_paths import build_download_registry, get_registered_download
 from reconforge.validators import issues_to_frame, validate_input_directory
 
@@ -175,6 +178,13 @@ def create_studio_app(
         request.state.studio_user = user
         return await call_next(request)
 
+    @app.middleware("http")
+    async def set_studio_actor_context(request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """Allow unbound actors only for the explicitly trusted no-auth Studio mode."""
+
+        with trusted_local_mode(not require_auth):
+            return await call_next(request)
+
     def _render_exceptions_page(
         *,
         severity: str = "",
@@ -182,13 +192,19 @@ def create_studio_app(
         status: str = "",
         source_file: str = "",
         search: str = "",
-        min_amount: float = 0.0,
+        min_amount: AmountFilterInput = "0",
         sort: str = "risk_score",
         message: str = "",
         message_type: str = "success",
     ) -> str:
         rec = _load_reconciliation(input_path)
-        review_state = load_review_state(output_path / "review_state.json")
+        try:
+            review_state = load_review_state(output_path / "review_state.json")
+        except GeneratedArtifactError:
+            logger.warning("Rejected unsafe local review state")
+            review_state = {}
+            message = "Review state failed safety validation. The file was not loaded."
+            message_type = "error"
         exceptions_frame = merge_review_state_with_exceptions(
             rec["exceptions"],
             review_state,
@@ -214,6 +230,7 @@ def create_studio_app(
             source_file=_allowed_choice(source_file, source_values),
             search=_bounded_search(search),
             min_amount=min_amount,
+            financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
             sort=_allowed_choice(sort, ["risk_score", "amount_impact", "updated_at"]) or "risk_score",
         )
         if selected_status:
@@ -349,7 +366,7 @@ def create_studio_app(
     @app.get("/health", response_class=HTMLResponse)
     def health() -> str:
         files = sorted(input_path.glob("*.csv"))
-        rows = [{"file": path.name, "rows": len(pd.read_csv(path, keep_default_na=False))} for path in files]
+        rows = [{"file": path.name, "rows": len(_read_generated_csv(path))} for path in files]
         return _render("Dataset Health", "<h2>Dataset Health</h2>" + _table(pd.DataFrame(rows)))
 
     @app.get("/validation", response_class=HTMLResponse)
@@ -367,25 +384,35 @@ def create_studio_app(
             + _table(rec["workorders"].summary),
         )
 
-    @app.get("/exceptions", response_class=HTMLResponse)
+    @app.get("/exceptions", response_class=HTMLResponse, response_model=None)
     def exceptions(
         severity: str = "",
         exception_type: str = "",
         status: str = "",
         source_file: str = "",
         search: str = "",
-        min_amount: float = 0.0,
+        min_amount: str = "0",
         sort: str = "risk_score",
-    ) -> str:
-        return _render_exceptions_page(
-            severity=severity,
-            exception_type=exception_type,
-            status=status,
-            source_file=source_file,
-            search=search,
-            min_amount=min_amount,
-            sort=sort,
-        )
+    ) -> str | HTMLResponse:
+        try:
+            return _render_exceptions_page(
+                severity=severity,
+                exception_type=exception_type,
+                status=status,
+                source_file=source_file,
+                search=search,
+                min_amount=min_amount,
+                sort=sort,
+            )
+        except InvalidAmountError:
+            return HTMLResponse(
+                _render(
+                    "Invalid Exception Filter",
+                    "<h2>Invalid Exception Filter</h2>"
+                    "<p>Minimum amount must be a finite, non-negative plain decimal value.</p>",
+                ),
+                status_code=400,
+            )
 
     @app.post("/exceptions/update-review", response_class=HTMLResponse, response_model=None)
     async def update_exception_review(request: Request) -> str | HTMLResponse:
@@ -399,7 +426,14 @@ def create_studio_app(
         if _form_value(form, "csrf_token", max_length=200) != csrf_token:
             return _render_exceptions_page(message="Review update rejected. Refresh Studio and try again.", message_type="error")
         state_path = output_path / "review_state.json"
-        state = load_review_state(state_path)
+        try:
+            state = load_review_state(state_path)
+        except GeneratedArtifactError:
+            logger.warning("Rejected review update because local review state failed safety validation")
+            return _render_exceptions_page(
+                message="Review state failed safety validation. No changes were saved.",
+                message_type="error",
+            )
         exception_id = _form_value(form, "exception_id", max_length=80)
         status_value = _form_value(form, "status", max_length=40)
         if not _allowed_choice(status_value, list(ALLOWED_STATUSES)):
@@ -442,7 +476,12 @@ def create_studio_app(
         rules_path = output_path / "rules" / "rule_results.csv"
         if not rules_path.exists():
             return _render("Rule Results", "<h2>Rule Results</h2><p>No rule results have been generated yet.</p>")
-        return _render("Rule Results", "<h2>Rule Results</h2>" + _table(pd.read_csv(rules_path, keep_default_na=False), limit=100))
+        frame = _read_generated_csv(
+            rules_path,
+            companion_path=rules_path.with_suffix(".json"),
+            collection_key="results",
+        )
+        return _render("Rule Results", "<h2>Rule Results</h2>" + _table(frame, limit=100))
 
     @app.get("/close", response_class=HTMLResponse)
     def close() -> str:
@@ -457,7 +496,11 @@ def create_studio_app(
     @app.get("/variance", response_class=HTMLResponse)
     def variance() -> str:
         variance_path = output_path / "variance" / "variance_analysis.csv"
-        frame = _read_generated_csv(variance_path)
+        frame = _read_generated_csv(
+            variance_path,
+            companion_path=variance_path.with_suffix(".json"),
+            collection_key="variances",
+        )
         if frame.empty:
             return _render("Variance", "<h2>Variance Analysis</h2><p>No variance analysis has been generated yet.</p>")
         return _render("Variance", "<h2>Variance Analysis</h2>" + _table(frame, limit=100))
@@ -465,7 +508,11 @@ def create_studio_app(
     @app.get("/control-matrix", response_class=HTMLResponse)
     def control_matrix() -> str:
         matrix_path = output_path / "control_matrix" / "control_matrix.csv"
-        frame = _read_generated_csv(matrix_path)
+        frame = _read_generated_csv(
+            matrix_path,
+            companion_path=matrix_path.with_suffix(".json"),
+            collection_key="controls",
+        )
         if frame.empty:
             return _render("Control Matrix", "<h2>Control Matrix</h2><p>No control matrix has been generated yet.</p>")
         return _render("Control Matrix", "<h2>Control Matrix</h2>" + _table(frame, limit=100))
@@ -492,7 +539,12 @@ def create_studio_app(
         rules_path = output_path / "rules" / "rule_results.csv"
         body = "<h2>Control Packs</h2>" + _table(pd.DataFrame(pack_rows))
         if rules_path.exists():
-            body += "<h2>Latest Rule Results</h2>" + _table(pd.read_csv(rules_path, keep_default_na=False))
+            frame = _read_generated_csv(
+                rules_path,
+                companion_path=rules_path.with_suffix(".json"),
+                collection_key="results",
+            )
+            body += "<h2>Latest Rule Results</h2>" + _table(frame)
         return _render("Control Packs", body)
 
     @app.get("/evidence", response_class=HTMLResponse)

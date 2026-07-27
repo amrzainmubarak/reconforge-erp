@@ -72,7 +72,7 @@ Use:
 - Conservative dependency additions.
 - Release notes for material dependency changes.
 
-The SBOM workflow generates a CycloneDX artifact on release tags and manual runs. Future improvement: document an SBOM review policy for releases.
+The tag-only candidate definition generates exact-subject CycloneDX 1.7 documents and verification bundles. Local package/source fixtures pass; future work must execute the image scan and signed verification in a reviewed hosted release and retain the evidence.
 
 ## 10. Contributor Security Checklist
 
@@ -114,11 +114,11 @@ Reviewers should ask:
 
 | Threat | Impact | Current controls | Needed improvements |
 | --- | --- | --- | --- |
-| Live ERP data committed publicly | Confidentiality breach | SECURITY guidance, anonymizer | Pre-commit secret/data scans; contributor reminders in issue templates |
+| Live ERP data committed publicly | Confidentiality breach | SECURITY guidance, anonymizer, checksum-pinned history/tree secret-scan definitions | Hosted enforcement, data-classification scans, contributor reminders, and incident/rotation drills |
 | Path traversal in local Studio downloads | Unauthorized local file read | Safe path utilities and tests | Continue route-specific tests |
 | Unsafe YAML parsing | Code execution or object injection | `yaml.safe_load` | Schema validation for mapping/risk model files |
 | Malicious plugin | Data exfiltration | Plugin foundation is limited | Plugin permissions, review policy, network declaration |
-| Dependency vulnerability | Exploit through dependency | Dependabot, pip-audit, Bandit | SBOM and release gating |
+| Dependency vulnerability | Exploit through dependency | Universal Python/server lock, weekly four-ecosystem updates, locked Python/npm audit definitions, bounded exceptions, Bandit | Hosted two-version/release execution, npm SRI closure, container/service-image evidence, reachability and response drills |
 | Over-trusting generated reports | Bad audit decisions | Docs and deterministic explanations | Reviewer workflow and sign-off controls |
 | Sharing generated reports externally | Sensitive data leakage | Security and privacy docs | Output classification warnings |
 | Formula injection in CSV/Excel outputs | Spreadsheet risk | Limited explicit controls | Escape dangerous cell prefixes in exported CSV/Excel where relevant |
@@ -130,7 +130,7 @@ Codex Security could help review:
 - File path and download route safety.
 - YAML schema validation and allowlists.
 - Formula injection handling.
-- Dependency and SBOM workflow.
+- Locked dependency/exception/secret-gate policy plus release-integrated per-subject SBOM definitions.
 - Plugin threat model.
 - Secure release checklist.
 - Test cases for malicious input files.

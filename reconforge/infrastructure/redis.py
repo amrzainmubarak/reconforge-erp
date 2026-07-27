@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import hashlib
 import importlib
-import json
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -22,6 +21,11 @@ from typing import Any, TypeVar
 from urllib.parse import urlsplit
 
 from reconforge.infrastructure.postgres import normalize_scope_id
+from reconforge.io.persisted import (
+    PersistedJsonError,
+    decode_redis_session,
+    encode_redis_session,
+)
 
 _KEY_PREFIX_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,47}$")
 _TOKEN_DIGEST_PATTERN = re.compile(r"^[0-9a-f]{64}$")
@@ -178,16 +182,17 @@ class TenantRedisStore:
 
         ttl = self._positive_ttl(ttl_seconds)
         token_hash = self._validate_token_hash(record.token_hash)
-        payload = json.dumps(
-            {
+        try:
+            payload = encode_redis_session(
+                {
                 "session_id": record.session_id,
                 "user_id": record.user_id,
                 "token_hash": token_hash,
                 "expires_at": record.expires_at,
-            },
-            separators=(",", ":"),
-            sort_keys=True,
-        )
+                },
+            ).text
+        except PersistedJsonError as exc:
+            raise RedisConfigurationError("Redis session data is invalid.") from exc
         self._call(
             lambda client: client.set(
                 self._hashed_key(tenant_id, "session", record.session_id),
@@ -203,14 +208,14 @@ class TenantRedisStore:
         if value is None:
             return None
         try:
-            payload = json.loads(str(value))
+            payload = decode_redis_session(value).payload
             record = RedisSessionRecord(
                 session_id=str(payload["session_id"]),
                 user_id=str(payload["user_id"]),
-                token_hash=self._validate_token_hash(str(payload["token_hash"])),
+                token_hash=str(payload["token_hash"]),
                 expires_at=str(payload["expires_at"]),
             )
-        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        except PersistedJsonError as exc:
             raise RedisDataError("Redis session data is malformed.") from exc
         if record.session_id != session_id:
             raise RedisDataError("Redis session identifier does not match its key.")

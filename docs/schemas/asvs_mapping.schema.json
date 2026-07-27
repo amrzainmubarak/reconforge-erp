@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/asvs_mapping.schema.json",
+  "title": "ReconForge evidence-bounded OWASP ASVS mapping",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "mapping_id",
+    "status",
+    "last_reviewed",
+    "claim_boundary",
+    "standard",
+    "assessment_scope",
+    "status_definitions",
+    "summary",
+    "chapters"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "mapping_id": {"const": "reconforge-owasp-asvs-5.0.0"},
+    "status": {"const": "evidence-bounded"},
+    "last_reviewed": {"type": "string", "format": "date"},
+    "claim_boundary": {"type": "string", "minLength": 100},
+    "standard": {"$ref": "#/$defs/standard"},
+    "assessment_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "coverage_type", "method", "excluded_assurance", "review_triggers"],
+      "properties": {
+        "target": {"type": "string", "minLength": 20},
+        "coverage_type": {"const": "all-chapter-selected-requirement"},
+        "method": {"$ref": "#/$defs/nonEmptyStrings"},
+        "excluded_assurance": {"$ref": "#/$defs/nonEmptyStrings"},
+        "review_triggers": {"$ref": "#/$defs/nonEmptyStrings"}
+      }
+    },
+    "status_definitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["implemented", "partial", "planned", "not_applicable", "unassessed"],
+      "properties": {
+        "implemented": {"type": "string", "minLength": 20},
+        "partial": {"type": "string", "minLength": 20},
+        "planned": {"type": "string", "minLength": 20},
+        "not_applicable": {"type": "string", "minLength": 20},
+        "unassessed": {"type": "string", "minLength": 20}
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "official_chapter_count",
+        "official_requirement_count",
+        "mapped_requirement_count",
+        "unassessed_requirement_count",
+        "status_counts"
+      ],
+      "properties": {
+        "official_chapter_count": {"const": 17},
+        "official_requirement_count": {"const": 345},
+        "mapped_requirement_count": {"type": "integer", "minimum": 1, "maximum": 345},
+        "unassessed_requirement_count": {"type": "integer", "minimum": 0, "maximum": 344},
+        "status_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["implemented", "partial", "planned", "not_applicable"],
+          "properties": {
+            "implemented": {"type": "integer", "minimum": 1},
+            "partial": {"type": "integer", "minimum": 1},
+            "planned": {"type": "integer", "minimum": 1},
+            "not_applicable": {"type": "integer", "minimum": 1}
+          }
+        }
+      }
+    },
+    "chapters": {
+      "type": "array",
+      "minItems": 17,
+      "maxItems": 17,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/chapter"}
+    }
+  },
+  "$defs": {
+    "repositoryPath": {
+      "type": "string",
+      "minLength": 3,
+      "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"
+    },
+    "repositoryPaths": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/repositoryPath"}
+    },
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 5}
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "httpsUrl": {"type": "string", "format": "uri", "pattern": "^https://"},
+    "standard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version",
+        "release_status",
+        "release_date",
+        "verified_at",
+        "release_tag",
+        "release_commit",
+        "official_project_url",
+        "official_release_url",
+        "official_source_url",
+        "official_source_sha256",
+        "official_source_bytes",
+        "license",
+        "reference_format",
+        "excluded_source"
+      ],
+      "properties": {
+        "name": {"const": "OWASP Application Security Verification Standard"},
+        "version": {"const": "5.0.0"},
+        "release_status": {"const": "stable"},
+        "release_date": {"const": "2025-05-30"},
+        "verified_at": {"type": "string", "format": "date"},
+        "release_tag": {"const": "v5.0.0_release"},
+        "release_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "official_project_url": {"$ref": "#/$defs/httpsUrl"},
+        "official_release_url": {"$ref": "#/$defs/httpsUrl"},
+        "official_source_url": {"$ref": "#/$defs/httpsUrl"},
+        "official_source_sha256": {"$ref": "#/$defs/sha256"},
+        "official_source_bytes": {"type": "integer", "minimum": 1},
+        "license": {"const": "CC-BY-SA-4.0"},
+        "reference_format": {"const": "v<version>-<chapter>.<section>.<requirement>"},
+        "excluded_source": {"type": "string", "minLength": 30}
+      }
+    },
+    "mapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requirement_id",
+        "level",
+        "status",
+        "scope",
+        "owner",
+        "evidence",
+        "test_evidence",
+        "assessment",
+        "gap_or_limitation",
+        "next_action"
+      ],
+      "properties": {
+        "requirement_id": {"type": "string", "pattern": "^v5\\.0\\.0-[1-9][0-9]*\\.[1-9][0-9]*\\.[1-9][0-9]*$"},
+        "level": {"type": "integer", "minimum": 1, "maximum": 3},
+        "status": {"enum": ["implemented", "partial", "planned", "not_applicable"]},
+        "scope": {"type": "string", "minLength": 10},
+        "owner": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+        "evidence": {"$ref": "#/$defs/repositoryPaths"},
+        "test_evidence": {"$ref": "#/$defs/repositoryPaths"},
+        "assessment": {"type": "string", "minLength": 20},
+        "gap_or_limitation": {"type": "string", "minLength": 15},
+        "next_action": {"type": "string", "minLength": 15}
+      }
+    },
+    "chapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chapter_id",
+        "chapter_name",
+        "official_requirement_count",
+        "chapter_assessment",
+        "chapter_boundary",
+        "mappings"
+      ],
+      "properties": {
+        "chapter_id": {"type": "string", "pattern": "^V(?:[1-9]|1[0-7])$"},
+        "chapter_name": {"type": "string", "minLength": 3},
+        "official_requirement_count": {"type": "integer", "minimum": 1},
+        "chapter_assessment": {"enum": ["partial", "planned", "not_applicable"]},
+        "chapter_boundary": {"type": "string", "minLength": 20},
+        "mappings": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/mapping"}
+        }
+      }
+    }
+  }
+}

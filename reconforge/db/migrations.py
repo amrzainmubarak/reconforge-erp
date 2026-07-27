@@ -9,9 +9,11 @@ from pathlib import Path
 
 from reconforge.db.connection import DatabaseError, connect, resolve_db_path
 from reconforge.db.schema import (
+    ACCOUNT_RECONCILIATION_MONEY_MIGRATION_SQL,
     API_SESSIONS_SCHEMA_SQL,
     AUTH_RBAC_SCHEMA_SQL,
     DB_BRIDGE_SCHEMA_SQL,
+    EVIDENCE_OBJECT_STORAGE_MIGRATION_SQL,
     FINANCE_CORE_SCHEMA_SQL,
     FINANCE_PLATFORM_SCHEMA_SQL,
     INITIAL_SCHEMA_SQL,
@@ -19,7 +21,13 @@ from reconforge.db.schema import (
     INVENTORY_PLANNING_SCHEMA_SQL,
     INVENTORY_VALUATION_REVERSAL_SCHEMA_SQL,
     INVENTORY_VALUATION_SCHEMA_SQL,
+    JOURNALS_INTERCOMPANY_MONEY_MIGRATION_SQL,
     MASTER_DATA_SCHEMA_SQL,
+    MATCHING_MONEY_MIGRATION_SQL,
+    OUTBOX_DELIVERY_MIGRATION_SQL,
+    OUTBOX_SCHEMA_SQL,
+    PAYABLES_SCHEMA_SQL,
+    RECEIVABLES_SCHEMA_SQL,
     WORKFLOW_STATE_MACHINE_SCHEMA_SQL,
 )
 
@@ -71,6 +79,14 @@ MIGRATIONS = [
         name="inventory_fifo_valuation_reversal_foundation",
         sql=INVENTORY_VALUATION_REVERSAL_SCHEMA_SQL,
     ),
+    Migration(version=13, name="transactional_outbox_foundation", sql=OUTBOX_SCHEMA_SQL),
+    Migration(version=14, name="transactional_outbox_delivery_state", sql=OUTBOX_DELIVERY_MIGRATION_SQL),
+    Migration(version=15, name="accounts_payable_three_way_match_foundation", sql=PAYABLES_SCHEMA_SQL),
+    Migration(version=16, name="account_reconciliation_decimal_money_columns", sql=ACCOUNT_RECONCILIATION_MONEY_MIGRATION_SQL),
+    Migration(version=17, name="journal_intercompany_decimal_money_columns", sql=JOURNALS_INTERCOMPANY_MONEY_MIGRATION_SQL),
+    Migration(version=18, name="matching_decimal_money_columns", sql=MATCHING_MONEY_MIGRATION_SQL),
+    Migration(version=19, name="evidence_object_storage_references", sql=EVIDENCE_OBJECT_STORAGE_MIGRATION_SQL),
+    Migration(version=20, name="accounts_receivable_credit_control_foundation", sql=RECEIVABLES_SCHEMA_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """

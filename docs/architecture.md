@@ -152,10 +152,10 @@ flowchart TB
 | Control packs | Domain-specific controls |
 | Evidence binder | Audit case folders and register |
 | Report writer | Excel, JSON, CSV, Markdown, HTML |
-| Anonymizer | Safe sharing with referential integrity |
+| Anonymizer | Local risk reduction with referential linkage and mandatory review boundary |
 | Synthetic generator | Demo and benchmark datasets |
 | Benchmark engine | Runtime and output metrics |
 | Plugin system | Export adapter/profile interface |
-| Security layer | Local-first processing and safe sharing guidance |
+| Security layer | Local-first processing and disclosure-risk guidance |
 | Observability/logging | Future run logs and diagnostics |
 | Future AI assistant | Optional explanation layer, never required for core reconciliation |

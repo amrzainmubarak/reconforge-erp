@@ -2,11 +2,22 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 from reconforge.ai.offline import offline_exception_explanation
+from reconforge.io.generated import GeneratedArtifactError, read_generated_json_value_document
+from reconforge.io.structured import StructuredDocumentPolicy
+
+EXCEPTION_EXPLANATION_JSON_PROFILE = "exception-explanation-json-ingress-v1"
+EXCEPTION_EXPLANATION_JSON_POLICY = StructuredDocumentPolicy(
+    max_file_bytes=16 * 1024 * 1024,
+    max_nodes=500_000,
+    max_depth=32,
+    max_collection_items=100_000,
+    max_scalar_characters=1_000_000,
+    max_yaml_aliases=1,
+)
 
 
 def _flatten_payload(payload: Any) -> list[dict[str, object]]:
@@ -25,7 +36,15 @@ def explain_exception_file(input_path: Path | str, exception_id: str) -> str:
     """Explain an exception from a local JSON file."""
 
     path = Path(input_path)
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        payload = read_generated_json_value_document(
+            path,
+            policy=EXCEPTION_EXPLANATION_JSON_POLICY,
+            profile_id=EXCEPTION_EXPLANATION_JSON_PROFILE,
+            mode="display",
+        ).payload
+    except GeneratedArtifactError as exc:
+        raise ValueError("Exception JSON failed safety validation.") from exc
     records = _flatten_payload(payload)
     for record in records:
         identifiers = {
@@ -38,4 +57,4 @@ def explain_exception_file(input_path: Path | str, exception_id: str) -> str:
             return offline_exception_explanation(record)
     if records:
         return offline_exception_explanation(records[0])
-    raise ValueError(f"No exceptions found in {path}")
+    raise ValueError("No exceptions found in input JSON.")

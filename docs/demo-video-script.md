@@ -30,7 +30,7 @@ reconforge report client-pack --input output/demo --output output/client_pack_re
 - `output/demo/management_pack.xlsx`
 - `output/demo/evidence/index.html`
 - `output/demo/review_register.xlsx`
-- `output/demo/client_pack/files_manifest.json`
+- `output/client_pack/files_manifest.json`
 - `output/client_pack_redacted/files_manifest.json`
 - `output/mapping_wizard/mapping_report.md`
 - `output/period_comparison/period_comparison.html`

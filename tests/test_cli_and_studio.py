@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import cast
@@ -76,6 +77,47 @@ def test_cli_generate_synthetic(tmp_path: Path) -> None:
     result = runner.invoke(app, ["generate", "synthetic", "--rows", "25", "--output", str(tmp_path / "synthetic")])
     assert result.exit_code == 0
     assert (tmp_path / "synthetic" / "gl_entries.csv").exists()
+
+
+def test_cli_generate_synthetic_preserves_exact_rate_text_and_rejects_scientific(tmp_path: Path) -> None:
+    target = tmp_path / "exact-synthetic"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "synthetic",
+            "--rows",
+            "25",
+            "--output",
+            str(target),
+            "--exception-rate",
+            "0.100000000000000005",
+        ],
+    )
+    assert result.exit_code == 0
+    manifest = json.loads((target / "synthetic_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["schema_version"] == 2
+    assert manifest["policy"]["exception_rate"] == "0.100000000000000005"
+    assert manifest["policy"]["financial_input_policy"] == "strict-financial-input-v2"
+
+    invalid_target = tmp_path / "invalid-synthetic"
+    rejected = runner.invoke(
+        app,
+        [
+            "generate",
+            "synthetic",
+            "--rows",
+            "25",
+            "--output",
+            str(invalid_target),
+            "--exception-rate",
+            "1e-2",
+        ],
+    )
+    assert rejected.exit_code == 1
+    assert "exception_rate must be a plain decimal between 0 and 1" in rejected.output
+    assert "1e-2" not in rejected.output
+    assert not invalid_target.exists()
 
 
 def test_cli_benchmark_pandas(tmp_path: Path) -> None:

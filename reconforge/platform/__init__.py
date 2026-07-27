@@ -11,6 +11,13 @@ from reconforge.platform.inventory_valuation_reversal import (
     InventoryValuationReversalSummary,
 )
 from reconforge.platform.master_data import MasterDataService, MasterDataSummary
+from reconforge.platform.outbox import OutboxError, OutboxEvent, OutboxProcessResult, OutboxService
+from reconforge.platform.payables import (
+    PayablesService,
+    PurchaseOrderLineInput,
+    SupplierInvoiceLineInput,
+    ThreeWayMatchResult,
+)
 
 __all__ = [
     "FinanceCoreService",
@@ -24,4 +31,12 @@ __all__ = [
     "MasterDataService",
     "MasterDataSummary",
     "PlatformError",
+    "OutboxError",
+    "OutboxEvent",
+    "OutboxProcessResult",
+    "OutboxService",
+    "PayablesService",
+    "PurchaseOrderLineInput",
+    "SupplierInvoiceLineInput",
+    "ThreeWayMatchResult",
 ]

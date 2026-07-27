@@ -18,6 +18,19 @@ from decimal import Decimal, InvalidOperation
 from typing import Any, cast
 
 from reconforge.infrastructure.postgres import PostgresConfigurationError, normalize_scope_id, validate_tenant_id
+from reconforge.io.persisted import (
+    PersistedJsonError,
+    decode_postgres_reconciliation_attributes,
+    decode_postgres_reconciliation_evidence,
+    decode_postgres_reconciliation_lineage,
+    decode_postgres_reconciliation_rule,
+    encode_audit_metadata,
+    encode_postgres_outbox_payload,
+    encode_postgres_reconciliation_attributes,
+    encode_postgres_reconciliation_evidence,
+    encode_postgres_reconciliation_lineage,
+    encode_postgres_reconciliation_rule,
+)
 from reconforge.utils.time import utc_now_text
 
 _ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
@@ -397,24 +410,45 @@ class PostgresReconciliationRepository:
 
     @classmethod
     def _json_text(cls, value: Mapping[str, object] | None, field_name: str) -> str:
+        encoders = {
+            "rule": encode_postgres_reconciliation_rule,
+            "attributes": encode_postgres_reconciliation_attributes,
+            "lineage": encode_postgres_reconciliation_lineage,
+            "evidence": encode_postgres_reconciliation_evidence,
+        }
         try:
-            return json.dumps(dict(value or {}), sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-        except (TypeError, ValueError) as exc:
-            raise PostgresReconciliationValidationError(f"{field_name} must be JSON-serializable.") from exc
+            return encoders[field_name](value).text
+        except (KeyError, PersistedJsonError) as exc:
+            raise PostgresReconciliationValidationError(f"{field_name} must be a bounded JSON object.") from exc
 
     @classmethod
     def _canonical_json_text(cls, value: object, field_name: str) -> str:
         """Canonicalize a JSONB value returned by either tuple or dict cursors."""
 
-        if isinstance(value, Mapping):
-            return cls._json_text(value, field_name)
+        decoders = {
+            "rule": decode_postgres_reconciliation_rule,
+            "attributes": decode_postgres_reconciliation_attributes,
+            "lineage": decode_postgres_reconciliation_lineage,
+            "evidence": decode_postgres_reconciliation_evidence,
+        }
         try:
-            parsed = json.loads(str(value or "{}"))
-        except json.JSONDecodeError as exc:
-            raise PostgresReconciliationIntegrityError(f"Stored {field_name} is not valid JSON.") from exc
-        if not isinstance(parsed, Mapping):
-            raise PostgresReconciliationIntegrityError(f"Stored {field_name} must be a JSON object.")
-        return cls._json_text(parsed, field_name)
+            return decoders[field_name](value).text
+        except (KeyError, PersistedJsonError) as exc:
+            raise PostgresReconciliationIntegrityError(f"Stored {field_name} is invalid.") from exc
+
+    @staticmethod
+    def _audit_metadata_text(value: Mapping[str, object] | None) -> str:
+        try:
+            return encode_audit_metadata(value).text
+        except PersistedJsonError as exc:
+            raise PostgresReconciliationValidationError("metadata must be JSON-serializable.") from exc
+
+    @staticmethod
+    def _outbox_payload_text(value: Mapping[str, object]) -> str:
+        try:
+            return encode_postgres_outbox_payload(value).text
+        except PersistedJsonError as exc:
+            raise PostgresReconciliationValidationError("outbox payload must be JSON-serializable.") from exc
 
     @staticmethod
     def _row_value(row: Any, key: str, index: int) -> Any:
@@ -422,16 +456,34 @@ class PostgresReconciliationRepository:
             return row.get(key)
         return row[index]
 
-    @staticmethod
-    def _record(row: Any, columns: tuple[str, ...]) -> dict[str, Any]:
+    @classmethod
+    def _record(cls, row: Any, columns: tuple[str, ...]) -> dict[str, Any]:
         if row is None:
             raise PostgresReconciliationIntegrityError("PostgreSQL reconciliation operation returned no record.")
         if isinstance(row, Mapping):
-            return {str(key): value for key, value in row.items()}
-        values = tuple(row)
-        if len(values) != len(columns):
-            raise PostgresReconciliationIntegrityError("PostgreSQL reconciliation record shape was unexpected.")
-        return dict(zip(columns, values, strict=True))
+            record = {str(key): value for key, value in row.items()}
+        else:
+            values = tuple(row)
+            if len(values) != len(columns):
+                raise PostgresReconciliationIntegrityError("PostgreSQL reconciliation record shape was unexpected.")
+            record = dict(zip(columns, values, strict=True))
+        json_fields = {
+            "rule_json": "rule",
+            "attributes_json": "attributes",
+            "lineage_json": "lineage",
+            "evidence_json": "evidence",
+        }
+        for key, field_name in json_fields.items():
+            if key in record:
+                canonical = cls._canonical_json_text(record[key], field_name)
+                decoder = {
+                    "rule": decode_postgres_reconciliation_rule,
+                    "attributes": decode_postgres_reconciliation_attributes,
+                    "lineage": decode_postgres_reconciliation_lineage,
+                    "evidence": decode_postgres_reconciliation_evidence,
+                }[field_name]
+                record[key] = decoder(canonical).payload
+        return record
 
     @staticmethod
     def _hash_payload(payload: object) -> str:
@@ -507,7 +559,8 @@ class PostgresReconciliationRepository:
         actor = self._text(actor_id, "actor_id", maximum=160)
         request = self._text(request_id, "request_id", maximum=160, allow_blank=True)
         audit_reason = self._text(reason, "reason", maximum=500, allow_blank=True)
-        metadata_json = self._json_text(metadata, "metadata")
+        metadata_json = self._audit_metadata_text(metadata)
+        outbox_payload_json = self._outbox_payload_text(payload)
         self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (tenant,))
         event_id = self._hash_payload({"tenant_id": tenant, "action": action, "resource_id": resource_id, "after": after_state_hash})
         previous = self.connection.execute(
@@ -552,7 +605,7 @@ class PostgresReconciliationRepository:
             VALUES (%s, %s, %s, 'reconciliation_run', %s, CAST(%s AS jsonb))
             ON CONFLICT (tenant_id, event_id) DO NOTHING
             """,
-            (tenant, outbox_id, f"reconciliation.{action}", resource_id, self._json_text(payload, "outbox payload")),
+            (tenant, outbox_id, f"reconciliation.{action}", resource_id, outbox_payload_json),
         )
 
     def create_run(
@@ -915,8 +968,6 @@ class PostgresReconciliationRepository:
         original_reference = self._text(reference_original, "reference_original", maximum=512, allow_blank=True)
         normalized_reference = self._text(reference_normalized, "reference_normalized", maximum=512, allow_blank=True)
         attributes_json = self._json_text(attributes, "attributes")
-        if len(attributes_json.encode("utf-8")) > 100_000:
-            raise PostgresReconciliationValidationError("attributes must be at most 100000 UTF-8 bytes.")
         if not 1 <= int(allowed_uses) <= 1_000:
             raise PostgresReconciliationValidationError("allowed_uses must be between 1 and 1000.")
         self._run_row(tenant, run, lock=True)
@@ -1133,38 +1184,6 @@ class PostgresReconciliationRepository:
         worker = self._text(worker_id, "worker_id", maximum=160)
         if isinstance(input_count, bool) or not 0 <= int(input_count) <= 100_000_000:
             raise PostgresReconciliationValidationError("input_count must be between 0 and 100000000.")
-        before = self._run_row(tenant, run, lock=True)
-        if str(before.get("status")) != "Running" or str(before.get("execution_status") or "Queued") not in {"Queued", "Running"}:
-            raise PostgresReconciliationIntegrityError("Only an active reconciliation can receive a partition checkpoint.")
-        if str(before.get("execution_worker_id") or "") != worker:
-            raise PostgresReconciliationIntegrityError("Reconciliation execution is not leased by this worker.")
-        output_payload = {
-            "partition_key": partition,
-            "results": [dict(record) for record in results],
-            "exceptions": [dict(record) for record in exceptions],
-        }
-        output_hash = self._hash_payload(output_payload)
-        existing_row = self.connection.execute(
-            """
-            SELECT tenant_id, run_id, partition_key, status, input_count,
-                   result_count, exception_count, output_hash, worker_id,
-                   created_at, completed_at
-            FROM reconforge.reconciliation_execution_checkpoints
-            WHERE tenant_id = %s AND run_id = %s AND partition_key = %s
-            FOR UPDATE
-            """,
-            (tenant, run, partition),
-        ).fetchone()
-        if existing_row is not None:
-            existing = self._record(existing_row, self._CHECKPOINT_COLUMNS)
-            if (
-                str(existing.get("output_hash")) != output_hash
-                or int(existing.get("input_count") or 0) != int(input_count)
-                or int(existing.get("result_count") or 0) != len(results)
-                or int(existing.get("exception_count") or 0) != len(exceptions)
-            ):
-                raise PostgresReconciliationIntegrityError("Partition checkpoint already contains different output.")
-            return existing
         result_fields = {
             "left_id",
             "right_id",
@@ -1189,21 +1208,57 @@ class PostgresReconciliationRepository:
             "owner_id",
             "evidence",
         }
-        for record in results:
-            values = cast(dict[str, Any], dict(record))
+        result_values = [cast(dict[str, Any], dict(record)) for record in results]
+        exception_values = [cast(dict[str, Any], dict(record)) for record in exceptions]
+        for values in result_values:
             unknown = set(values).difference(result_fields)
             if unknown:
                 raise PostgresReconciliationValidationError(
                     f"Partition result contains unsupported fields: {', '.join(sorted(unknown))}."
                 )
-            self.append_result(tenant_id=tenant, run_id=run, **values)
-        for record in exceptions:
-            values = cast(dict[str, Any], dict(record))
+            self._json_text(cast(Mapping[str, object] | None, values.get("lineage")), "lineage")
+        for values in exception_values:
             unknown = set(values).difference(exception_fields)
             if unknown:
                 raise PostgresReconciliationValidationError(
                     f"Partition exception contains unsupported fields: {', '.join(sorted(unknown))}."
                 )
+            self._json_text(cast(Mapping[str, object] | None, values.get("evidence")), "evidence")
+        output_payload = {
+            "partition_key": partition,
+            "results": result_values,
+            "exceptions": exception_values,
+        }
+        output_hash = self._hash_payload(output_payload)
+        before = self._run_row(tenant, run, lock=True)
+        if str(before.get("status")) != "Running" or str(before.get("execution_status") or "Queued") not in {"Queued", "Running"}:
+            raise PostgresReconciliationIntegrityError("Only an active reconciliation can receive a partition checkpoint.")
+        if str(before.get("execution_worker_id") or "") != worker:
+            raise PostgresReconciliationIntegrityError("Reconciliation execution is not leased by this worker.")
+        existing_row = self.connection.execute(
+            """
+            SELECT tenant_id, run_id, partition_key, status, input_count,
+                   result_count, exception_count, output_hash, worker_id,
+                   created_at, completed_at
+            FROM reconforge.reconciliation_execution_checkpoints
+            WHERE tenant_id = %s AND run_id = %s AND partition_key = %s
+            FOR UPDATE
+            """,
+            (tenant, run, partition),
+        ).fetchone()
+        if existing_row is not None:
+            existing = self._record(existing_row, self._CHECKPOINT_COLUMNS)
+            if (
+                str(existing.get("output_hash")) != output_hash
+                or int(existing.get("input_count") or 0) != int(input_count)
+                or int(existing.get("result_count") or 0) != len(results)
+                or int(existing.get("exception_count") or 0) != len(exceptions)
+            ):
+                raise PostgresReconciliationIntegrityError("Partition checkpoint already contains different output.")
+            return existing
+        for values in result_values:
+            self.append_result(tenant_id=tenant, run_id=run, **values)
+        for values in exception_values:
             self.append_exception(tenant_id=tenant, run_id=run, **values)
         cursor = self.connection.execute(
             """

@@ -3,12 +3,24 @@
 from __future__ import annotations
 
 from reconforge.rules.loader import load_rule_pack
+from reconforge.utils.money import (
+    STRICT_FINANCIAL_INPUT_POLICY,
+    FinancialInputPolicy,
+)
 
 
-def explain_rule(pack_path: str, rule_id: str) -> str:
+def explain_rule(
+    pack_path: str,
+    rule_id: str,
+    *,
+    financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
+) -> str:
     """Return a deterministic plain-English explanation for a rule."""
 
-    pack = load_rule_pack(pack_path)
+    pack = load_rule_pack(
+        pack_path,
+        financial_input_policy=financial_input_policy,
+    )
     for rule in pack.rules:
         if rule.rule_id == rule_id:
             evidence = ", ".join(rule.evidence_fields) if rule.evidence_fields else "source row fields"

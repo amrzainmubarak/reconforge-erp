@@ -2,11 +2,22 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, ValidationError, ValidationInfo, field_validator
+
+from reconforge.io.structured import StructuredDocumentError, read_yaml_document
+from reconforge.utils.money import (
+    STRICT_FINANCIAL_INPUT_POLICY,
+    FinancialInputPolicy,
+    InvalidAmountError,
+    parse_amount,
+    validate_financial_input_policy,
+)
 
 
 class AgingBucket(BaseModel):
@@ -44,7 +55,36 @@ class RiskScoringWeights(BaseModel):
 class ReconForgeConfig(BaseModel):
     """Runtime configuration for reconciliation and reporting."""
 
-    amount_tolerance: float = Field(default=2.0, ge=0)
+    amount_tolerance: Decimal = Field(default=Decimal("2"))
+    matching_ambiguity_policy: Literal[
+        "stable-tie-break-v1",
+        "unresolved-equal-cost-v1",
+    ] = "stable-tie-break-v1"
+
+    @field_validator("amount_tolerance", mode="before")
+    @classmethod
+    def _coerce_amount_tolerance(cls, value: object, info: ValidationInfo) -> Decimal:
+        """Parse tolerance under the selected versioned input policy.
+
+        Direct model construction retains the historical legacy-v1 policy.
+        ``load_config`` supplies strict-v2 context for current application
+        paths after preserving decimal-looking YAML scalars as source text.
+        """
+        context = info.context if isinstance(info.context, Mapping) else {}
+        input_policy = context.get(
+            "financial_input_policy",
+            STRICT_FINANCIAL_INPUT_POLICY,
+        )
+        try:
+            parsed = parse_amount(
+                value,
+                input_policy=validate_financial_input_policy(input_policy),
+            )
+        except (InvalidAmountError, TypeError) as exc:
+            raise ValueError(f"amount_tolerance must be a non-negative number: {exc}") from exc
+        if parsed < Decimal("0"):
+            raise ValueError("amount_tolerance must be non-negative")
+        return parsed
     date_tolerance_days: int = Field(default=3, ge=0)
     aging_buckets: list[AgingBucket] = Field(
         default_factory=lambda: [
@@ -85,23 +125,39 @@ def default_config_dict() -> dict[str, Any]:
     return ReconForgeConfig().model_dump(mode="json")
 
 
-def load_config(path: Path | str | None = None) -> ReconForgeConfig:
-    """Load a YAML configuration file, falling back to defaults when absent."""
+def load_config(
+    path: Path | str | None = None,
+    *,
+    financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
+) -> ReconForgeConfig:
+    """Load safe YAML under a named policy, falling back to exact defaults."""
+
+    try:
+        input_policy = validate_financial_input_policy(financial_input_policy)
+    except InvalidAmountError as exc:
+        raise ValueError("Invalid ReconForge config financial-input policy") from exc
+
+    validation_context = {"financial_input_policy": input_policy}
 
     if path is None:
-        return ReconForgeConfig()
+        return ReconForgeConfig.model_validate({}, context=validation_context)
 
     config_path = Path(path)
     if not config_path.exists():
-        return ReconForgeConfig()
-
-    with config_path.open("r", encoding="utf-8") as handle:
-        raw = yaml.safe_load(handle) or {}
+        return ReconForgeConfig.model_validate({}, context=validation_context)
 
     try:
-        return ReconForgeConfig.model_validate(raw)
+        raw = read_yaml_document(
+            config_path,
+            financial_input_policy=input_policy,
+        ) or {}
+    except StructuredDocumentError as exc:
+        raise ValueError(f"Invalid ReconForge config YAML ({exc.code})") from exc
+
+    try:
+        return ReconForgeConfig.model_validate(raw, context=validation_context)
     except ValidationError as exc:
-        raise ValueError(f"Invalid ReconForge config at {config_path}: {exc}") from exc
+        raise ValueError("Invalid ReconForge config values") from exc
 
 
 def write_default_config(path: Path | str) -> Path:

@@ -10,7 +10,14 @@ import pandas as pd
 
 from reconforge.rules.models import Condition
 from reconforge.utils.dates import days_between
-from reconforge.utils.money import InvalidAmountError, parse_amount, within_tolerance
+from reconforge.utils.money import (
+    STRICT_FINANCIAL_INPUT_POLICY,
+    FinancialInputPolicy,
+    InvalidAmountError,
+    parse_amount,
+    validate_financial_input_policy,
+    within_exact_tolerance,
+)
 
 
 def is_missing(value: object) -> bool:
@@ -34,19 +41,34 @@ def _right_value(row: pd.Series, condition: Condition) -> object:
     return condition.value
 
 
-def _as_float(value: object) -> Decimal | float | None:
+def _as_decimal(
+    value: object,
+    *,
+    financial_input_policy: FinancialInputPolicy,
+) -> Decimal | None:
     try:
-        return parse_amount(value)
+        return parse_amount(value, input_policy=financial_input_policy)
     except InvalidAmountError:
         return None
 
 
-def _numeric_pair(left: object, right: object) -> tuple[float, float] | None:
-    left_number = _as_float(left)
-    right_number = _as_float(right)
+def _numeric_pair(
+    left: object,
+    right: object,
+    *,
+    financial_input_policy: FinancialInputPolicy,
+) -> tuple[Decimal, Decimal] | None:
+    left_number = _as_decimal(
+        left,
+        financial_input_policy=financial_input_policy,
+    )
+    right_number = _as_decimal(
+        right,
+        financial_input_policy=financial_input_policy,
+    )
     if left_number is None or right_number is None:
         return None
-    return float(left_number), float(right_number)
+    return left_number, right_number
 
 
 def _as_date(value: object) -> date | None:
@@ -64,24 +86,47 @@ def evaluate_condition(
     *,
     frame: pd.DataFrame | None = None,
     related_frames: dict[str, pd.DataFrame] | None = None,
+    financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
 ) -> bool:
     """Evaluate a condition against a row."""
 
+    input_policy = validate_financial_input_policy(financial_input_policy)
     operator = condition.operator.lower()
     left = _value(row, condition)
     right = _right_value(row, condition)
 
     if operator == "and":
         return all(
-            evaluate_condition(row, child, frame=frame, related_frames=related_frames) for child in condition.conditions
+            evaluate_condition(
+                row,
+                child,
+                frame=frame,
+                related_frames=related_frames,
+                financial_input_policy=input_policy,
+            )
+            for child in condition.conditions
         )
     if operator == "or":
         return any(
-            evaluate_condition(row, child, frame=frame, related_frames=related_frames) for child in condition.conditions
+            evaluate_condition(
+                row,
+                child,
+                frame=frame,
+                related_frames=related_frames,
+                financial_input_policy=input_policy,
+            )
+            for child in condition.conditions
         )
     if operator == "not":
         return not any(
-            evaluate_condition(row, child, frame=frame, related_frames=related_frames) for child in condition.conditions
+            evaluate_condition(
+                row,
+                child,
+                frame=frame,
+                related_frames=related_frames,
+                financial_input_policy=input_policy,
+            )
+            for child in condition.conditions
         )
 
     if operator == "exists":
@@ -101,16 +146,16 @@ def evaluate_condition(
     if operator == "ends_with":
         return str(left).endswith(str(right))
     if operator == "greater_than":
-        pair = _numeric_pair(left, right)
+        pair = _numeric_pair(left, right, financial_input_policy=input_policy)
         return pair is not None and pair[0] > pair[1]
     if operator == "less_than":
-        pair = _numeric_pair(left, right)
+        pair = _numeric_pair(left, right, financial_input_policy=input_policy)
         return pair is not None and pair[0] < pair[1]
     if operator == "greater_or_equal":
-        pair = _numeric_pair(left, right)
+        pair = _numeric_pair(left, right, financial_input_policy=input_policy)
         return pair is not None and pair[0] >= pair[1]
     if operator == "less_or_equal":
-        pair = _numeric_pair(left, right)
+        pair = _numeric_pair(left, right, financial_input_policy=input_policy)
         return pair is not None and pair[0] <= pair[1]
     if operator == "in_list":
         values = condition.value if isinstance(condition.value, list) else []
@@ -119,8 +164,17 @@ def evaluate_condition(
         values = condition.value if isinstance(condition.value, list) else []
         return str(left) not in {str(value) for value in values}
     if operator == "amount_within_tolerance":
-        pair = _numeric_pair(left, right)
-        return pair is not None and within_tolerance(pair[0], pair[1], float(condition.tolerance or 0.0))
+        pair = _numeric_pair(left, right, financial_input_policy=input_policy)
+        tolerance = condition.tolerance if condition.tolerance is not None else Decimal("0")
+        tolerance_number = _as_decimal(
+            tolerance,
+            financial_input_policy=input_policy,
+        )
+        return (
+            pair is not None
+            and tolerance_number is not None
+            and within_exact_tolerance(pair[0], pair[1], tolerance_number)
+        )
     if operator == "date_within_days":
         diff = days_between(_as_date(left), _as_date(right))
         return diff is not None and diff <= int(condition.days or 0)
@@ -136,8 +190,11 @@ def evaluate_condition(
         return left_date is not None and right_date is not None and left_date > right_date
     if operator == "variance_above":
         threshold = condition.threshold if condition.threshold is not None else condition.value
-        pair = _numeric_pair(left, right)
-        threshold_number = _as_float(threshold)
+        pair = _numeric_pair(left, right, financial_input_policy=input_policy)
+        threshold_number = _as_decimal(
+            threshold,
+            financial_input_policy=input_policy,
+        )
         return pair is not None and threshold_number is not None and abs(pair[0] - pair[1]) > threshold_number
     if operator == "aging_bucket":
         left_date = _as_date(left)
@@ -189,12 +246,23 @@ def evaluate_condition(
             return False
         source_value = row.get(source_key)
         raw_values = target[target[target_key].astype(str).eq(str(source_value))][aggregate_field]
-        parsed_values = [_as_float(value) for value in raw_values]
-        expected = _as_float(left if condition.field else condition.value)
+        parsed_values = [
+            _as_decimal(value, financial_input_policy=input_policy)
+            for value in raw_values
+        ]
+        expected = _as_decimal(
+            left if condition.field else condition.value,
+            financial_input_policy=input_policy,
+        )
         if expected is None or any(value is None for value in parsed_values):
             return False
-        total = sum(value for value in parsed_values if value is not None)
-        return within_tolerance(total, expected, float(condition.tolerance or 0.0))
+        total = sum((value for value in parsed_values if value is not None), Decimal("0"))
+        tolerance = condition.tolerance if condition.tolerance is not None else Decimal("0")
+        tolerance_number = _as_decimal(
+            tolerance,
+            financial_input_policy=input_policy,
+        )
+        return tolerance_number is not None and within_exact_tolerance(total, expected, tolerance_number)
     raise ValueError(f"Unsupported rule operator: {condition.operator}")
 
 

@@ -18,6 +18,11 @@ from datetime import UTC, datetime
 from typing import Any
 
 from reconforge.infrastructure.postgres import PostgresConfigurationError, normalize_scope_id, validate_tenant_id
+from reconforge.io.persisted import (
+    PersistedJsonError,
+    encode_audit_metadata,
+    encode_postgres_outbox_payload,
+)
 from reconforge.utils.time import utc_now_text
 
 _ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
@@ -181,9 +186,16 @@ def _storage_key(value: object, *, required: bool) -> str:
 
 def _json_text(value: Mapping[str, object] | None, field_name: str) -> str:
     try:
-        return json.dumps(dict(value or {}), sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-    except (TypeError, ValueError) as exc:
+        return encode_audit_metadata(value).text
+    except PersistedJsonError as exc:
         raise PostgresEvidenceValidationError(f"{field_name} must be JSON-serializable.") from exc
+
+
+def _outbox_json_text(value: Mapping[str, object]) -> str:
+    try:
+        return encode_postgres_outbox_payload(value).text
+    except PersistedJsonError as exc:
+        raise PostgresEvidenceValidationError("outbox payload must be JSON-serializable.") from exc
 
 
 def _row_value(row: Any, key: str, index: int) -> Any:
@@ -288,6 +300,7 @@ class PostgresEvidenceRepository:
         request = _text(request_id, "request_id", maximum=160, allow_blank=True)
         audit_reason = _text(reason, "reason", maximum=500, allow_blank=True)
         metadata_json = _json_text(metadata, "metadata")
+        payload_json = _outbox_json_text(payload)
         self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (tenant,))
         audit_event_id = _hash_payload(
             {"tenant_id": tenant, "action": action, "resource_id": resource_id, "after_state_hash": after_state_hash}
@@ -343,7 +356,6 @@ class PostgresEvidenceRepository:
             ),
         )
         outbox_event_id = _hash_payload({"tenant_id": tenant, "event_type": f"evidence.{action}", "resource_id": resource_id})
-        payload_json = _json_text(payload, "outbox payload")
         self.connection.execute(
             """
             INSERT INTO reconforge.outbox_events

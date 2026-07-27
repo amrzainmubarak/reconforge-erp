@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-import json
+import os
 import sqlite3
+import stat
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
-from reconforge.audit import append_audit_event
 from reconforge.close import load_close_checklist
 from reconforge.db.connection import connect, resolve_db_path
 from reconforge.db.exporter import (
@@ -20,7 +21,34 @@ from reconforge.db.exporter import (
 )
 from reconforge.db.migrations import database_status
 from reconforge.domain.models import utc_now_text
+from reconforge.io.generated import GeneratedArtifactError
+from reconforge.io.persisted import (
+    PersistedJsonError,
+    encode_sqlite_legacy_import_summary,
+)
+from reconforge.io.structured import (
+    StructuredDocumentError,
+    StructuredDocumentPolicy,
+    read_json_document,
+)
+from reconforge.platform.common import PlatformError, commit_audited
 from reconforge.review.state import load_review_state
+
+LEGACY_DB_IMPORT_JSON_PROFILE = "database-legacy-import-json-ingress-v1"
+LEGACY_DB_IMPORT_JSON_MAX_FILE_BYTES = 16 * 1024 * 1024
+LEGACY_DB_IMPORT_JSON_MAX_NODES = 500_000
+LEGACY_DB_IMPORT_JSON_MAX_DEPTH = 32
+LEGACY_DB_IMPORT_JSON_MAX_COLLECTION_ITEMS = 50_000
+LEGACY_DB_IMPORT_JSON_MAX_SCALAR_CHARACTERS = 1024 * 1024
+LEGACY_DB_IMPORT_JSON_POLICY = StructuredDocumentPolicy(
+    max_file_bytes=LEGACY_DB_IMPORT_JSON_MAX_FILE_BYTES,
+    max_nodes=LEGACY_DB_IMPORT_JSON_MAX_NODES,
+    max_depth=LEGACY_DB_IMPORT_JSON_MAX_DEPTH,
+    max_collection_items=LEGACY_DB_IMPORT_JSON_MAX_COLLECTION_ITEMS,
+    max_scalar_characters=LEGACY_DB_IMPORT_JSON_MAX_SCALAR_CHARACTERS,
+    max_yaml_aliases=1,
+)
+_IMPORT_READ_CHUNK_BYTES = 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -37,11 +65,54 @@ def _clean_text(value: object) -> str:
     return "" if text.lower() in {"nan", "nat", "none", "null", "<na>"} else text
 
 
-def _read_json(path: Path) -> object:
+def _path_is_reparse(path: Path) -> bool:
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+        metadata = path.lstat()
+    except OSError as exc:
         raise DBBridgeError("Input JSON could not be parsed.") from exc
+    file_attributes = getattr(metadata, "st_file_attributes", 0)
+    reparse_attribute = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    return stat.S_ISLNK(metadata.st_mode) or bool(file_attributes & reparse_attribute)
+
+
+def _bounded_json_checksum(path: Path) -> tuple[str, int]:
+    if _path_is_reparse(path):
+        raise DBBridgeError("Input JSON could not be parsed.")
+    try:
+        metadata = path.lstat()
+        if not stat.S_ISREG(metadata.st_mode):
+            raise DBBridgeError("Input JSON could not be parsed.")
+        if metadata.st_size > LEGACY_DB_IMPORT_JSON_POLICY.max_file_bytes:
+            raise StructuredDocumentError("document_size_limit")
+        digest = sha256()
+        total = 0
+        with path.open("rb") as handle:
+            if os.fstat(handle.fileno()).st_size != metadata.st_size:
+                raise StructuredDocumentError("document_size_changed")
+            for chunk in iter(lambda: handle.read(_IMPORT_READ_CHUNK_BYTES), b""):
+                total += len(chunk)
+                if total > LEGACY_DB_IMPORT_JSON_POLICY.max_file_bytes:
+                    raise StructuredDocumentError("document_size_limit")
+                digest.update(chunk)
+            if total != metadata.st_size or os.fstat(handle.fileno()).st_size != metadata.st_size:
+                raise StructuredDocumentError("document_size_changed")
+    except DBBridgeError:
+        raise
+    except (OSError, StructuredDocumentError) as exc:
+        raise DBBridgeError("Input JSON could not be parsed.") from exc
+    return digest.hexdigest(), total
+
+
+def _read_json(path: Path) -> tuple[object, str, int]:
+    before_checksum, before_size = _bounded_json_checksum(path)
+    try:
+        payload = read_json_document(path, policy=LEGACY_DB_IMPORT_JSON_POLICY)
+    except (OSError, StructuredDocumentError) as exc:
+        raise DBBridgeError("Input JSON could not be parsed.") from exc
+    after_checksum, after_size = _bounded_json_checksum(path)
+    if before_checksum != after_checksum or before_size != after_size:
+        raise DBBridgeError("Input JSON could not be parsed.")
+    return payload, after_checksum, after_size
 
 
 def _ensure_current_database(db_path: Path | str) -> Path:
@@ -55,19 +126,22 @@ def _ensure_current_database(db_path: Path | str) -> Path:
 def _records_from_payload(payload: object, *, preferred_keys: tuple[str, ...], label: str) -> list[dict[str, Any]]:
     raw_records: object = payload
     if isinstance(payload, dict):
-        for key in preferred_keys:
-            if key in payload:
-                raw_records = payload[key]
-                break
-        else:
-            if all(isinstance(value, dict) for value in payload.values()):
+        present_keys = [key for key in preferred_keys if key in payload]
+        if len(present_keys) > 1:
+            raise DBBridgeError(f"{label} JSON contains ambiguous record collections.")
+        if present_keys:
+            raw_records = payload[present_keys[0]]
+        elif not payload or all(isinstance(value, dict) for value in payload.values()):
+            if payload:
                 mapped_records = []
                 for key, value in payload.items():
                     record = dict(value)
                     record.setdefault("id", key)
                     mapped_records.append(record)
                 return mapped_records
-            raw_records = payload.get("records", payload.get("items", []))
+            return []
+        else:
+            raise DBBridgeError(f"{label} JSON must contain a list or object map of records.")
     if not isinstance(raw_records, list):
         raise DBBridgeError(f"{label} JSON must contain a list of records.")
     records: list[dict[str, Any]] = []
@@ -86,8 +160,8 @@ def _first_text(record: dict[str, Any], keys: tuple[str, ...]) -> str:
     return ""
 
 
-def _safe_summary(record: dict[str, Any], keys: tuple[str, ...]) -> dict[str, str]:
-    summary: dict[str, str] = {}
+def _safe_summary(record: dict[str, Any], keys: tuple[str, ...]) -> dict[str, Any]:
+    summary: dict[str, Any] = {}
     for key in keys:
         value = _clean_text(record.get(key, ""))
         if value:
@@ -145,7 +219,10 @@ def _upsert_legacy_record(
     summary: dict[str, Any],
     timestamp: str,
 ) -> None:
-    payload = json.dumps(summary, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    try:
+        payload = encode_sqlite_legacy_import_summary(summary).text
+    except PersistedJsonError as exc:
+        raise DBBridgeError("Legacy import summary is invalid.") from exc
     existing = connection.execute(
         """
         SELECT id FROM legacy_import_records
@@ -207,9 +284,12 @@ def _import_records(
     summary_keys: tuple[str, ...],
     audit_action: str,
     actor_label: str,
+    source_checksum: str | None = None,
+    source_size_bytes: int | None = None,
+    ingress_profile: str | None = None,
 ) -> DBImportResult:
     resolved_db_path = _ensure_current_database(db_path)
-    checksum = checksum_file(source_path)
+    checksum = source_checksum or checksum_file(source_path)
     timestamp = utc_now_text()
     connection = connect(resolved_db_path, require_exists=True)
     try:
@@ -221,6 +301,10 @@ def _import_records(
             status = _first_text(record, status_keys) or default_status
             summary = _safe_summary(record, summary_keys)
             summary["source_type"] = source_type
+            if ingress_profile is not None:
+                summary["ingress_profile"] = ingress_profile
+            if source_size_bytes is not None:
+                summary["source_size_bytes"] = source_size_bytes
             _upsert_workflow_object(
                 connection,
                 object_type=object_type,
@@ -240,8 +324,7 @@ def _import_records(
                 timestamp=timestamp,
             )
             imported += 1
-        connection.commit()
-        append_audit_event(
+        commit_audited(
             connection,
             actor_label=actor_label,
             object_type="db_bridge",
@@ -252,12 +335,27 @@ def _import_records(
                 "source_file": source_path.name,
                 "source_checksum_sha256": checksum,
                 "imported_count": imported,
+                **({"ingress_profile": ingress_profile} if ingress_profile is not None else {}),
+                **({"source_size_bytes": source_size_bytes} if source_size_bytes is not None else {}),
+            },
+            emit_outbox=True,
+            outbox_event_type="legacy_import_completed",
+            outbox_aggregate_type="legacy_import",
+            outbox_aggregate_id=source_type,
+            outbox_payload={
+                "source_type": source_type,
+                "source_file": source_path.name,
+                "source_checksum_sha256": checksum,
+                "imported_count": imported,
+                "audit_action": audit_action,
+                **({"ingress_profile": ingress_profile} if ingress_profile is not None else {}),
+                **({"source_size_bytes": source_size_bytes} if source_size_bytes is not None else {}),
             },
         )
     except DBBridgeError:
         connection.rollback()
         raise
-    except (sqlite3.DatabaseError, OSError, TypeError, ValueError) as exc:
+    except (sqlite3.DatabaseError, OSError, TypeError, ValueError, PlatformError) as exc:
         connection.rollback()
         raise DBBridgeError(f"Unable to import {source_type} records.") from exc
     finally:
@@ -274,7 +372,10 @@ def import_review_state(
     """Import legacy review_state.json into DB workflow references."""
 
     source_path = resolve_input_file(input_path)
-    state = load_review_state(source_path)
+    try:
+        state = load_review_state(source_path)
+    except GeneratedArtifactError as exc:
+        raise DBBridgeError("Unable to import review state records.") from exc
     records = [dict(entry) for _, entry in sorted(state.items())]
     return _import_records(
         db_path,
@@ -336,7 +437,7 @@ def import_account_reconciliations(
     """Import legacy account_reconciliations.json summaries into DB references."""
 
     source_path = resolve_input_file(input_path, expected_name="account_reconciliations.json")
-    payload = _read_json(source_path)
+    payload, source_checksum, source_size = _read_json(source_path)
     records = _records_from_payload(
         payload,
         preferred_keys=("account_reconciliations", "reconciliations", "records", "items"),
@@ -366,6 +467,9 @@ def import_account_reconciliations(
         ),
         audit_action="legacy_account_reconciliations_imported",
         actor_label=actor_label,
+        source_checksum=source_checksum,
+        source_size_bytes=source_size,
+        ingress_profile=LEGACY_DB_IMPORT_JSON_PROFILE,
     )
 
 
@@ -378,7 +482,7 @@ def import_control_tests(
     """Import legacy control_tests.json summaries into DB references."""
 
     source_path = resolve_input_file(input_path, expected_name="control_tests.json")
-    payload = _read_json(source_path)
+    payload, source_checksum, source_size = _read_json(source_path)
     records = _records_from_payload(
         payload,
         preferred_keys=("control_tests", "tests", "records", "items"),
@@ -407,4 +511,7 @@ def import_control_tests(
         ),
         audit_action="legacy_control_tests_imported",
         actor_label=actor_label,
+        source_checksum=source_checksum,
+        source_size_bytes=source_size,
+        ingress_profile=LEGACY_DB_IMPORT_JSON_PROFILE,
     )

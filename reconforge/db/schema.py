@@ -735,6 +735,8 @@ CREATE TABLE IF NOT EXISTS match_results (
     amount_difference REAL NOT NULL DEFAULT 0,
     date_difference_days INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL,
+    reason_code TEXT NOT NULL DEFAULT '',
+    lineage_json TEXT NOT NULL DEFAULT '{}',
     created_at TEXT NOT NULL,
     UNIQUE (job_id, left_id, right_id, match_type)
 );
@@ -2824,4 +2826,535 @@ FROM roles
 JOIN permissions
 WHERE roles.name = 'reviewer'
   AND permissions.name = 'inventory.valuation.reverse.approve';
+"""
+
+
+OUTBOX_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS outbox_events (
+    id TEXT PRIMARY KEY,
+    event_type TEXT NOT NULL,
+    aggregate_type TEXT NOT NULL,
+    aggregate_id TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    published_at TEXT,
+    attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+    last_error TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_outbox_events_pending
+ON outbox_events(published_at, created_at, id);
+"""
+
+
+OUTBOX_DELIVERY_MIGRATION_SQL = """
+ALTER TABLE outbox_events ADD COLUMN available_at TEXT;
+ALTER TABLE outbox_events ADD COLUMN locked_at TEXT;
+ALTER TABLE outbox_events ADD COLUMN locked_by TEXT;
+ALTER TABLE outbox_events ADD COLUMN dead_lettered_at TEXT;
+
+UPDATE outbox_events
+SET available_at = created_at
+WHERE available_at IS NULL;
+
+DROP INDEX IF EXISTS idx_outbox_events_pending;
+CREATE INDEX IF NOT EXISTS idx_outbox_events_pending
+ON outbox_events(published_at, dead_lettered_at, available_at, locked_at, created_at, id);
+"""
+
+
+PAYABLES_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS ap_suppliers (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id TEXT REFERENCES organizations(id) ON DELETE RESTRICT,
+    legal_entity_id TEXT REFERENCES legal_entities(id) ON DELETE RESTRICT,
+    supplier_code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    currency_code TEXT NOT NULL,
+    tax_identifier TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'Active'
+        CHECK (status IN ('Draft', 'Active', 'Suspended', 'Closed')),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    row_version INTEGER NOT NULL DEFAULT 1 CHECK (row_version > 0),
+    UNIQUE (workspace_id, supplier_code)
+);
+
+CREATE TABLE IF NOT EXISTS ap_purchase_orders (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id TEXT REFERENCES organizations(id) ON DELETE RESTRICT,
+    legal_entity_id TEXT REFERENCES legal_entities(id) ON DELETE RESTRICT,
+    branch_id TEXT REFERENCES branches(id) ON DELETE RESTRICT,
+    supplier_id TEXT NOT NULL REFERENCES ap_suppliers(id) ON DELETE RESTRICT,
+    po_number TEXT NOT NULL,
+    order_date TEXT NOT NULL,
+    expected_date TEXT NOT NULL DEFAULT '',
+    currency_code TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Draft'
+        CHECK (status IN ('Draft', 'Submitted', 'Approved', 'Closed', 'Cancelled')),
+    created_by TEXT NOT NULL DEFAULT '',
+    approved_by TEXT NOT NULL DEFAULT '',
+    approved_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    row_version INTEGER NOT NULL DEFAULT 1 CHECK (row_version > 0),
+    UNIQUE (workspace_id, po_number)
+);
+
+CREATE TABLE IF NOT EXISTS ap_purchase_order_lines (
+    id TEXT PRIMARY KEY,
+    purchase_order_id TEXT NOT NULL REFERENCES ap_purchase_orders(id) ON DELETE CASCADE,
+    line_number INTEGER NOT NULL CHECK (line_number > 0),
+    item_code TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    ordered_quantity TEXT NOT NULL,
+    unit_price_minor INTEGER NOT NULL CHECK (unit_price_minor >= 0),
+    tax_minor INTEGER NOT NULL DEFAULT 0 CHECK (tax_minor >= 0),
+    created_at TEXT NOT NULL,
+    UNIQUE (purchase_order_id, line_number)
+);
+
+CREATE TABLE IF NOT EXISTS ap_goods_receipts (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    purchase_order_id TEXT NOT NULL REFERENCES ap_purchase_orders(id) ON DELETE RESTRICT,
+    receipt_number TEXT NOT NULL,
+    receipt_date TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Draft'
+        CHECK (status IN ('Draft', 'Posted', 'Cancelled')),
+    created_by TEXT NOT NULL DEFAULT '',
+    posted_by TEXT NOT NULL DEFAULT '',
+    posted_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (workspace_id, receipt_number)
+);
+
+CREATE TABLE IF NOT EXISTS ap_goods_receipt_lines (
+    id TEXT PRIMARY KEY,
+    receipt_id TEXT NOT NULL REFERENCES ap_goods_receipts(id) ON DELETE CASCADE,
+    purchase_order_line_id TEXT NOT NULL REFERENCES ap_purchase_order_lines(id) ON DELETE RESTRICT,
+    received_quantity TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (receipt_id, purchase_order_line_id)
+);
+
+CREATE TABLE IF NOT EXISTS ap_supplier_invoices (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id TEXT REFERENCES organizations(id) ON DELETE RESTRICT,
+    legal_entity_id TEXT REFERENCES legal_entities(id) ON DELETE RESTRICT,
+    supplier_id TEXT NOT NULL REFERENCES ap_suppliers(id) ON DELETE RESTRICT,
+    purchase_order_id TEXT REFERENCES ap_purchase_orders(id) ON DELETE RESTRICT,
+    invoice_number TEXT NOT NULL,
+    invoice_date TEXT NOT NULL,
+    due_date TEXT NOT NULL DEFAULT '',
+    currency_code TEXT NOT NULL,
+    tax_minor INTEGER NOT NULL DEFAULT 0 CHECK (tax_minor >= 0),
+    total_minor INTEGER NOT NULL CHECK (total_minor >= 0),
+    status TEXT NOT NULL DEFAULT 'Draft'
+        CHECK (status IN ('Draft', 'Submitted', 'Matched', 'Exception', 'Approved', 'Paid', 'Rejected')),
+    created_by TEXT NOT NULL DEFAULT '',
+    approved_by TEXT NOT NULL DEFAULT '',
+    approved_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    row_version INTEGER NOT NULL DEFAULT 1 CHECK (row_version > 0),
+    UNIQUE (workspace_id, supplier_id, invoice_number)
+);
+
+CREATE TABLE IF NOT EXISTS ap_supplier_invoice_lines (
+    id TEXT PRIMARY KEY,
+    supplier_invoice_id TEXT NOT NULL REFERENCES ap_supplier_invoices(id) ON DELETE CASCADE,
+    purchase_order_line_id TEXT REFERENCES ap_purchase_order_lines(id) ON DELETE RESTRICT,
+    line_number INTEGER NOT NULL CHECK (line_number > 0),
+    description TEXT NOT NULL DEFAULT '',
+    invoiced_quantity TEXT NOT NULL,
+    unit_price_minor INTEGER NOT NULL CHECK (unit_price_minor >= 0),
+    tax_minor INTEGER NOT NULL DEFAULT 0 CHECK (tax_minor >= 0),
+    line_total_minor INTEGER NOT NULL CHECK (line_total_minor >= 0),
+    created_at TEXT NOT NULL,
+    UNIQUE (supplier_invoice_id, line_number)
+);
+
+CREATE TABLE IF NOT EXISTS ap_three_way_matches (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    supplier_invoice_id TEXT NOT NULL REFERENCES ap_supplier_invoices(id) ON DELETE CASCADE,
+    purchase_order_id TEXT REFERENCES ap_purchase_orders(id) ON DELETE RESTRICT,
+    status TEXT NOT NULL CHECK (status IN ('Passed', 'Exception')),
+    quantity_variance TEXT NOT NULL DEFAULT '0',
+    price_variance_minor INTEGER NOT NULL DEFAULT 0,
+    total_variance_minor INTEGER NOT NULL DEFAULT 0,
+    reason TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (supplier_invoice_id)
+);
+
+CREATE TABLE IF NOT EXISTS ap_idempotency_keys (
+    scope TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    response_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (scope, idempotency_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ap_purchase_orders_supplier
+ON ap_purchase_orders(workspace_id, supplier_id, status, order_date, id);
+CREATE INDEX IF NOT EXISTS idx_ap_supplier_invoices_supplier
+ON ap_supplier_invoices(workspace_id, supplier_id, status, invoice_date, id);
+CREATE INDEX IF NOT EXISTS idx_ap_receipt_lines_po_line
+ON ap_goods_receipt_lines(purchase_order_line_id, receipt_id);
+CREATE INDEX IF NOT EXISTS idx_ap_invoice_lines_po_line
+ON ap_supplier_invoice_lines(purchase_order_line_id, supplier_invoice_id);
+
+CREATE TRIGGER IF NOT EXISTS ap_supplier_invoice_header_immutable
+BEFORE UPDATE OF workspace_id, organization_id, legal_entity_id, supplier_id,
+                 purchase_order_id, invoice_number, invoice_date, due_date,
+                 currency_code, tax_minor, total_minor, created_by, created_at
+ON ap_supplier_invoices
+WHEN OLD.status IN ('Approved', 'Paid')
+BEGIN
+    SELECT RAISE(ABORT, 'approved supplier invoices are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ap_supplier_invoice_delete_blocked
+BEFORE DELETE ON ap_supplier_invoices
+WHEN OLD.status IN ('Approved', 'Paid')
+BEGIN
+    SELECT RAISE(ABORT, 'approved supplier invoices cannot be deleted');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ap_supplier_invoice_line_update_blocked
+BEFORE UPDATE ON ap_supplier_invoice_lines
+WHEN COALESCE((SELECT status FROM ap_supplier_invoices WHERE id = OLD.supplier_invoice_id), '') IN ('Approved', 'Paid')
+BEGIN
+    SELECT RAISE(ABORT, 'approved supplier invoice lines are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ap_supplier_invoice_line_delete_blocked
+BEFORE DELETE ON ap_supplier_invoice_lines
+WHEN COALESCE((SELECT status FROM ap_supplier_invoices WHERE id = OLD.supplier_invoice_id), '') IN ('Approved', 'Paid')
+BEGIN
+    SELECT RAISE(ABORT, 'approved supplier invoice lines cannot be deleted');
+END;
+
+INSERT OR IGNORE INTO permissions (name, description) VALUES
+    ('payables.read', 'Read local supplier, purchase order, receipt, and supplier invoice records.'),
+    ('payables.manage', 'Manage local supplier, purchase order, receipt, and supplier invoice drafts.'),
+    ('payables.approve', 'Approve matched local supplier invoices.'),
+    ('payables.match', 'Run deterministic three-way supplier invoice matching.');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name IN ('admin', 'controller')
+  AND permissions.name IN ('payables.read', 'payables.manage', 'payables.approve', 'payables.match');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name = 'preparer'
+  AND permissions.name IN ('payables.read', 'payables.manage', 'payables.match');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name = 'reviewer'
+  AND permissions.name IN ('payables.read', 'payables.approve', 'payables.match');
+"""
+
+
+RECEIVABLES_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS ar_customers (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id TEXT REFERENCES organizations(id) ON DELETE RESTRICT,
+    legal_entity_id TEXT REFERENCES legal_entities(id) ON DELETE RESTRICT,
+    customer_code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    currency_code TEXT NOT NULL,
+    tax_identifier TEXT NOT NULL DEFAULT '',
+    payment_terms_days INTEGER NOT NULL DEFAULT 0 CHECK (payment_terms_days >= 0),
+    credit_limit_minor INTEGER NOT NULL DEFAULT 0 CHECK (credit_limit_minor >= 0),
+    credit_hold INTEGER NOT NULL DEFAULT 0 CHECK (credit_hold IN (0, 1)),
+    status TEXT NOT NULL DEFAULT 'Active'
+        CHECK (status IN ('Draft', 'Active', 'Suspended', 'Closed')),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    row_version INTEGER NOT NULL DEFAULT 1 CHECK (row_version > 0),
+    UNIQUE (workspace_id, customer_code)
+);
+
+CREATE TABLE IF NOT EXISTS ar_invoices (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id TEXT REFERENCES organizations(id) ON DELETE RESTRICT,
+    legal_entity_id TEXT REFERENCES legal_entities(id) ON DELETE RESTRICT,
+    customer_id TEXT NOT NULL REFERENCES ar_customers(id) ON DELETE RESTRICT,
+    invoice_number TEXT NOT NULL,
+    invoice_date TEXT NOT NULL,
+    due_date TEXT NOT NULL,
+    currency_code TEXT NOT NULL,
+    subtotal_minor INTEGER NOT NULL CHECK (subtotal_minor >= 0),
+    tax_minor INTEGER NOT NULL DEFAULT 0 CHECK (tax_minor >= 0),
+    total_minor INTEGER NOT NULL CHECK (total_minor >= 0),
+    status TEXT NOT NULL DEFAULT 'Draft'
+        CHECK (status IN ('Draft', 'Submitted', 'Approved', 'PartiallyPaid', 'Paid', 'Cancelled')),
+    created_by TEXT NOT NULL DEFAULT '',
+    approved_by TEXT NOT NULL DEFAULT '',
+    approved_at TEXT,
+    credit_override_reason TEXT NOT NULL DEFAULT '',
+    cancelled_by TEXT NOT NULL DEFAULT '',
+    cancelled_at TEXT,
+    cancel_reason TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    row_version INTEGER NOT NULL DEFAULT 1 CHECK (row_version > 0),
+    UNIQUE (workspace_id, customer_id, invoice_number),
+    CHECK (total_minor = subtotal_minor + tax_minor)
+);
+
+CREATE TABLE IF NOT EXISTS ar_invoice_lines (
+    id TEXT PRIMARY KEY,
+    invoice_id TEXT NOT NULL REFERENCES ar_invoices(id) ON DELETE CASCADE,
+    line_number INTEGER NOT NULL CHECK (line_number > 0),
+    description TEXT NOT NULL DEFAULT '',
+    quantity TEXT NOT NULL,
+    unit_price_minor INTEGER NOT NULL CHECK (unit_price_minor >= 0),
+    tax_minor INTEGER NOT NULL DEFAULT 0 CHECK (tax_minor >= 0),
+    line_total_minor INTEGER NOT NULL CHECK (line_total_minor >= 0),
+    created_at TEXT NOT NULL,
+    UNIQUE (invoice_id, line_number)
+);
+
+CREATE TABLE IF NOT EXISTS ar_receipts (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id TEXT REFERENCES organizations(id) ON DELETE RESTRICT,
+    legal_entity_id TEXT REFERENCES legal_entities(id) ON DELETE RESTRICT,
+    customer_id TEXT NOT NULL REFERENCES ar_customers(id) ON DELETE RESTRICT,
+    receipt_number TEXT NOT NULL,
+    receipt_date TEXT NOT NULL,
+    currency_code TEXT NOT NULL,
+    amount_minor INTEGER NOT NULL CHECK (amount_minor > 0),
+    status TEXT NOT NULL DEFAULT 'Posted'
+        CHECK (status IN ('Posted', 'Cancelled')),
+    created_by TEXT NOT NULL DEFAULT '',
+    posted_by TEXT NOT NULL DEFAULT '',
+    posted_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    row_version INTEGER NOT NULL DEFAULT 1 CHECK (row_version > 0),
+    UNIQUE (workspace_id, receipt_number)
+);
+
+CREATE TABLE IF NOT EXISTS ar_receipt_allocations (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    receipt_id TEXT NOT NULL REFERENCES ar_receipts(id) ON DELETE RESTRICT,
+    invoice_id TEXT NOT NULL REFERENCES ar_invoices(id) ON DELETE RESTRICT,
+    amount_minor INTEGER NOT NULL CHECK (amount_minor > 0),
+    created_at TEXT NOT NULL,
+    UNIQUE (receipt_id, invoice_id)
+);
+
+CREATE TABLE IF NOT EXISTS ar_idempotency_keys (
+    scope TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    response_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (scope, idempotency_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ar_invoices_customer_status
+ON ar_invoices(workspace_id, customer_id, status, due_date, invoice_date, id);
+CREATE INDEX IF NOT EXISTS idx_ar_receipts_customer_date
+ON ar_receipts(workspace_id, customer_id, receipt_date, id);
+CREATE INDEX IF NOT EXISTS idx_ar_allocations_invoice
+ON ar_receipt_allocations(workspace_id, invoice_id, created_at, id);
+
+CREATE TRIGGER IF NOT EXISTS ar_invoice_header_immutable
+BEFORE UPDATE OF workspace_id, organization_id, legal_entity_id, customer_id,
+                 invoice_number, invoice_date, due_date, currency_code,
+                 subtotal_minor, tax_minor, total_minor, created_by, credit_override_reason, created_at
+ON ar_invoices
+WHEN OLD.status IN ('Approved', 'PartiallyPaid', 'Paid', 'Cancelled')
+BEGIN
+    SELECT RAISE(ABORT, 'approved receivable invoices are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ar_invoice_delete_blocked
+BEFORE DELETE ON ar_invoices
+WHEN OLD.status IN ('Approved', 'PartiallyPaid', 'Paid', 'Cancelled')
+BEGIN
+    SELECT RAISE(ABORT, 'approved receivable invoices cannot be deleted');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ar_invoice_line_update_blocked
+BEFORE UPDATE ON ar_invoice_lines
+WHEN COALESCE((SELECT status FROM ar_invoices WHERE id = OLD.invoice_id), '') IN
+    ('Approved', 'PartiallyPaid', 'Paid', 'Cancelled')
+BEGIN
+    SELECT RAISE(ABORT, 'approved receivable invoice lines are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ar_invoice_line_delete_blocked
+BEFORE DELETE ON ar_invoice_lines
+WHEN COALESCE((SELECT status FROM ar_invoices WHERE id = OLD.invoice_id), '') IN
+    ('Approved', 'PartiallyPaid', 'Paid', 'Cancelled')
+BEGIN
+    SELECT RAISE(ABORT, 'approved receivable invoice lines cannot be deleted');
+END;
+
+INSERT OR IGNORE INTO permissions (name, description) VALUES
+    ('receivables.read', 'Read local customer, invoice, receipt, allocation, credit, and aging records.'),
+    ('receivables.manage', 'Manage local customer, invoice, receipt, and allocation drafts.'),
+    ('receivables.approve', 'Approve local receivable invoices after credit-control checks.'),
+    ('receivables.credit_override', 'Override a customer credit hold or credit-limit breach with a reason.');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name IN ('admin', 'controller')
+  AND permissions.name IN ('receivables.read', 'receivables.manage', 'receivables.approve', 'receivables.credit_override');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name = 'preparer'
+  AND permissions.name IN ('receivables.read', 'receivables.manage');
+
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles
+JOIN permissions
+WHERE roles.name = 'reviewer'
+  AND permissions.name IN ('receivables.read', 'receivables.approve');
+"""
+
+
+ACCOUNT_RECONCILIATION_MONEY_MIGRATION_SQL = """
+-- Add canonical Decimal text alongside legacy REAL compatibility columns. New
+-- account-reconciliation service writes and reads the text columns; the legacy
+-- columns remain temporarily for additive upgrade compatibility.
+ALTER TABLE account_reconciliation_templates
+    ADD COLUMN materiality_threshold_decimal TEXT NOT NULL DEFAULT '0';
+ALTER TABLE trial_balance_rows
+    ADD COLUMN balance_decimal TEXT NOT NULL DEFAULT '0';
+ALTER TABLE account_reconciliation_records
+    ADD COLUMN balance_decimal TEXT NOT NULL DEFAULT '0';
+ALTER TABLE account_reconciliation_records
+    ADD COLUMN materiality_threshold_decimal TEXT NOT NULL DEFAULT '0';
+ALTER TABLE account_reconciliation_records
+    ADD COLUMN currency_code TEXT NOT NULL DEFAULT 'LOCAL';
+ALTER TABLE account_reconciliation_items
+    ADD COLUMN amount_decimal TEXT NOT NULL DEFAULT '0';
+
+-- Existing REAL values are copied with SQLite's shortest round-trippable text
+-- representation. They are legacy compatibility data and are revalidated by the
+-- service before any subsequent financial workflow uses them.
+UPDATE account_reconciliation_templates
+SET materiality_threshold_decimal = CASE
+    WHEN materiality_threshold = 0 THEN '0'
+    ELSE printf('%.17g', materiality_threshold)
+END;
+UPDATE trial_balance_rows
+SET balance_decimal = CASE
+    WHEN balance = 0 THEN '0'
+    ELSE printf('%.17g', balance)
+END;
+UPDATE account_reconciliation_records
+SET balance_decimal = CASE
+        WHEN balance = 0 THEN '0'
+        ELSE printf('%.17g', balance)
+    END,
+    materiality_threshold_decimal = CASE
+        WHEN materiality_threshold = 0 THEN '0'
+        ELSE printf('%.17g', materiality_threshold)
+    END;
+UPDATE account_reconciliation_items
+SET amount_decimal = CASE
+    WHEN amount = 0 THEN '0'
+    ELSE printf('%.17g', amount)
+END;
+
+CREATE INDEX IF NOT EXISTS idx_trial_balance_rows_decimal_currency
+ON trial_balance_rows(workspace_id, period_name, entity_code, currency, account_code);
+CREATE INDEX IF NOT EXISTS idx_account_reconciliation_records_currency
+ON account_reconciliation_records(workspace_id, period_name, currency_code, account_code);
+"""
+
+
+JOURNALS_INTERCOMPANY_MONEY_MIGRATION_SQL = """
+-- Canonical Decimal text for legacy journal and intercompany amounts. The
+-- existing REAL-compatible columns remain temporarily for export compatibility.
+ALTER TABLE journal_entries
+    ADD COLUMN amount_decimal TEXT NOT NULL DEFAULT '0';
+ALTER TABLE intercompany_transactions
+    ADD COLUMN amount_decimal TEXT NOT NULL DEFAULT '0';
+ALTER TABLE intercompany_cases
+    ADD COLUMN imbalance_amount_decimal TEXT NOT NULL DEFAULT '0';
+
+UPDATE journal_entries
+SET amount_decimal = CASE
+    WHEN amount = 0 THEN '0'
+    ELSE printf('%.17g', amount)
+END;
+UPDATE intercompany_transactions
+SET amount_decimal = CASE
+    WHEN amount = 0 THEN '0'
+    ELSE printf('%.17g', amount)
+END;
+UPDATE intercompany_cases
+SET imbalance_amount_decimal = CASE
+    WHEN imbalance_amount = 0 THEN '0'
+    ELSE printf('%.17g', imbalance_amount)
+END;
+
+CREATE INDEX IF NOT EXISTS idx_journal_entries_decimal_currency
+ON journal_entries(workspace_id, period_name, currency, account_code);
+CREATE INDEX IF NOT EXISTS idx_intercompany_transactions_decimal_currency
+ON intercompany_transactions(workspace_id, period_name, currency, reference);
+CREATE INDEX IF NOT EXISTS idx_intercompany_cases_decimal_currency
+ON intercompany_cases(workspace_id, period_name, currency, reference);
+"""
+
+
+MATCHING_MONEY_MIGRATION_SQL = """
+-- Canonical Decimal text for persisted match differences. The legacy REAL
+-- column remains temporarily for additive upgrade and export compatibility.
+ALTER TABLE match_results
+    ADD COLUMN amount_difference_decimal TEXT NOT NULL DEFAULT '0';
+
+UPDATE match_results
+SET amount_difference_decimal = CASE
+    WHEN amount_difference = 0 THEN '0'
+    ELSE printf('%.17g', amount_difference)
+END;
+
+CREATE INDEX IF NOT EXISTS idx_match_results_amount_difference_decimal
+ON match_results(job_id, status, amount_difference_decimal);
+"""
+
+
+EVIDENCE_OBJECT_STORAGE_MIGRATION_SQL = """
+ALTER TABLE evidence_registry ADD COLUMN storage_backend TEXT NOT NULL DEFAULT 'local-filesystem';
+ALTER TABLE evidence_registry ADD COLUMN storage_tenant_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE evidence_registry ADD COLUMN storage_key TEXT NOT NULL DEFAULT '';
+ALTER TABLE evidence_registry ADD COLUMN storage_version_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE evidence_registry ADD COLUMN content_type TEXT NOT NULL DEFAULT 'application/octet-stream';
+ALTER TABLE evidence_registry ADD COLUMN byte_size INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE evidence_registry ADD COLUMN retention_until TEXT NOT NULL DEFAULT '';
+
+CREATE INDEX IF NOT EXISTS idx_evidence_registry_storage
+    ON evidence_registry(workspace_id, storage_backend, storage_tenant_id, storage_key);
 """

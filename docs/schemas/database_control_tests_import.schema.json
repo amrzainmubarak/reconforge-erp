@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/database_control_tests_import.schema.json",
+  "title": "ReconForge legacy control test DB import",
+  "description": "Compatibility contract for control_tests.json under database-legacy-import-json-ingress-v1.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/records"
+    },
+    {
+      "$ref": "#/$defs/control_tests_envelope"
+    },
+    {
+      "$ref": "#/$defs/tests_envelope"
+    },
+    {
+      "$ref": "#/$defs/records_envelope"
+    },
+    {
+      "$ref": "#/$defs/items_envelope"
+    },
+    {
+      "$ref": "#/$defs/keyed_record_map"
+    }
+  ],
+  "$defs": {
+    "record": {
+      "type": "object",
+      "maxProperties": 50000
+    },
+    "records": {
+      "type": "array",
+      "maxItems": 50000,
+      "items": {
+        "$ref": "#/$defs/record"
+      }
+    },
+    "control_tests_envelope": {
+      "type": "object",
+      "maxProperties": 50000,
+      "required": [
+        "control_tests"
+      ],
+      "properties": {
+        "control_tests": {
+          "$ref": "#/$defs/records"
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/no_tests_records_items"
+        }
+      ]
+    },
+    "tests_envelope": {
+      "type": "object",
+      "maxProperties": 50000,
+      "required": [
+        "tests"
+      ],
+      "properties": {
+        "tests": {
+          "$ref": "#/$defs/records"
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/no_control_records_items"
+        }
+      ]
+    },
+    "records_envelope": {
+      "type": "object",
+      "maxProperties": 50000,
+      "required": [
+        "records"
+      ],
+      "properties": {
+        "records": {
+          "$ref": "#/$defs/records"
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/no_control_tests_items"
+        }
+      ]
+    },
+    "items_envelope": {
+      "type": "object",
+      "maxProperties": 50000,
+      "required": [
+        "items"
+      ],
+      "properties": {
+        "items": {
+          "$ref": "#/$defs/records"
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/no_control_tests_records"
+        }
+      ]
+    },
+    "keyed_record_map": {
+      "type": "object",
+      "maxProperties": 50000,
+      "propertyNames": {
+        "maxLength": 1048576
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/record"
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "control_tests"
+            ]
+          },
+          {
+            "required": [
+              "tests"
+            ]
+          },
+          {
+            "required": [
+              "records"
+            ]
+          },
+          {
+            "required": [
+              "items"
+            ]
+          }
+        ]
+      }
+    },
+    "no_tests_records_items": {
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "tests"
+            ]
+          },
+          {
+            "required": [
+              "records"
+            ]
+          },
+          {
+            "required": [
+              "items"
+            ]
+          }
+        ]
+      }
+    },
+    "no_control_records_items": {
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "control_tests"
+            ]
+          },
+          {
+            "required": [
+              "records"
+            ]
+          },
+          {
+            "required": [
+              "items"
+            ]
+          }
+        ]
+      }
+    },
+    "no_control_tests_items": {
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "control_tests"
+            ]
+          },
+          {
+            "required": [
+              "tests"
+            ]
+          },
+          {
+            "required": [
+              "items"
+            ]
+          }
+        ]
+      }
+    },
+    "no_control_tests_records": {
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "control_tests"
+            ]
+          },
+          {
+            "required": [
+              "tests"
+            ]
+          },
+          {
+            "required": [
+              "records"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

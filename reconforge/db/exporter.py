@@ -2,18 +2,53 @@
 
 from __future__ import annotations
 
+import hmac
 import json
+import os
+import re
+import secrets
 import sqlite3
+import stat
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
+from shutil import rmtree
+from tempfile import NamedTemporaryFile
+from types import MappingProxyType
 from typing import Any
 
 from reconforge.audit import append_audit_event
 from reconforge.db.connection import connect, resolve_db_path
 from reconforge.db.migrations import database_status
+from reconforge.io.persisted import (
+    PersistedJsonError,
+    PersistedJsonObjectDocument,
+    decode_audit_metadata,
+    decode_sqlite_legacy_import_summary,
+    decode_sqlite_matching_lineage,
+    decode_sqlite_matching_rule,
+)
+from reconforge.io.structured import StructuredDocumentError, read_json_document
 
 EXPORT_FORMAT_VERSION = 1
+EXPORT_MANIFEST_VERSION = 1
+EXPORT_ARTIFACT_NAMES = frozenset(
+    {
+        "audit_events.json",
+        "domain.json",
+        "evidence.json",
+        "finance_workflows.json",
+        "identity.json",
+        "inventory.json",
+        "legacy_imports.json",
+        "metadata.json",
+        "workflow.json",
+    }
+)
+_SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
+_MARKER_PHASES = {"prepared", "previous-moved", "published"}
+_MARKER_BOUNDARY = "Local crash-recovery integrity marker; SHA-256 detects change but is not authentication."
 
 SELECT_QUERIES = {
     "workspaces": "SELECT * FROM workspaces ORDER BY created_at, id",
@@ -99,6 +134,24 @@ SELECT_QUERIES = {
     "ops_error_records": "SELECT * FROM ops_error_records ORDER BY created_at, id",
 }
 
+# Exact inventory of structured values reachable from the public DB export.
+# ``output_name=None`` validates while preserving the historical raw field.
+EXPORT_JSON_FIELDS: Mapping[
+    tuple[str, str],
+    tuple[Callable[[object], PersistedJsonObjectDocument], str | None],
+] = MappingProxyType(
+    {
+        ("audit_events", "metadata_json"): (decode_audit_metadata, "metadata"),
+        ("legacy_import_records", "summary_json"): (
+            decode_sqlite_legacy_import_summary,
+            "summary",
+        ),
+        ("match_jobs", "rule_json"): (decode_sqlite_matching_rule, "rule"),
+        ("match_rules", "rule_json"): (decode_sqlite_matching_rule, "rule"),
+        ("match_results", "lineage_json"): (decode_sqlite_matching_lineage, None),
+    }
+)
+
 
 class DBBridgeError(ValueError):
     """Raised for safe, user-facing DB bridge errors."""
@@ -111,6 +164,14 @@ class DBExportResult:
     output_dir: Path
     paths: list[Path]
     schema_version: int
+
+
+@dataclass(frozen=True)
+class DBExportPublicationRecovery:
+    """Result of an explicit interrupted export publication recovery."""
+
+    transaction_id: str
+    action: str
 
 
 def _has_control_character(value: str) -> bool:
@@ -179,6 +240,291 @@ def write_json_file(path: Path, payload: dict[str, Any]) -> Path:
     return path
 
 
+def _canonical_digest(payload: object) -> str:
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _path_is_reparse(path: Path) -> bool:
+    try:
+        metadata = path.lstat()
+    except FileNotFoundError:
+        return False
+    except OSError as exc:
+        raise DBBridgeError("Database export publication path is unreadable.") from exc
+    attributes = getattr(metadata, "st_file_attributes", 0)
+    return stat.S_ISLNK(metadata.st_mode) or bool(attributes & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400))
+
+
+def _publication_siblings(output_dir: Path, kind: str) -> list[Path]:
+    prefix = f".{output_dir.name}.{kind}-"
+    return sorted(
+        (path for path in output_dir.parent.iterdir() if path.name.startswith(prefix)),
+        key=lambda path: path.name,
+    )
+
+
+def _expected_artifacts(root: Path) -> dict[str, dict[str, object]]:
+    manifest_path = root / "export_manifest.json"
+    try:
+        document = read_json_document(manifest_path)
+    except (OSError, StructuredDocumentError) as exc:
+        raise DBBridgeError("Database export manifest is invalid.") from exc
+    if not isinstance(document, dict) or set(document) != {
+        "artifact_type",
+        "export_format_version",
+        "manifest_version",
+        "schema_version",
+        "artifacts",
+    }:
+        raise DBBridgeError("Database export manifest is invalid.")
+    artifacts = document.get("artifacts")
+    if (
+        document.get("artifact_type") != "reconforge_database_export"
+        or document.get("export_format_version") != EXPORT_FORMAT_VERSION
+        or document.get("manifest_version") != EXPORT_MANIFEST_VERSION
+        or not isinstance(document.get("schema_version"), int)
+        or not isinstance(artifacts, dict)
+    ):
+        raise DBBridgeError("Database export manifest is invalid.")
+    if set(artifacts) != EXPORT_ARTIFACT_NAMES:
+        raise DBBridgeError("Database export manifest is invalid.")
+    validated: dict[str, dict[str, object]] = {}
+    for name, record in artifacts.items():
+        if (
+            not isinstance(name, str)
+            or Path(name).name != name
+            or not name.endswith(".json")
+            or not isinstance(record, dict)
+            or set(record) != {"bytes", "sha256"}
+            or not isinstance(record.get("bytes"), int)
+            or record["bytes"] < 0
+            or not isinstance(record.get("sha256"), str)
+            or _SHA256_PATTERN.fullmatch(record["sha256"]) is None
+        ):
+            raise DBBridgeError("Database export manifest is invalid.")
+        validated[name] = record
+    actual_names = {path.name for path in root.iterdir()}
+    if actual_names != {*validated, "export_manifest.json"}:
+        raise DBBridgeError("Database export artifact set does not match its manifest.")
+    for name, record in validated.items():
+        path = root / name
+        if _path_is_reparse(path) or not path.is_file():
+            raise DBBridgeError("Database export artifact is invalid.")
+        if path.stat().st_size != record["bytes"] or not hmac.compare_digest(
+            checksum_file(path), str(record["sha256"])
+        ):
+            raise DBBridgeError("Database export artifact integrity check failed.")
+    return validated
+
+
+def _tree_digest(root: Path) -> str:
+    artifacts = _expected_artifacts(root)
+    manifest = read_json_document(root / "export_manifest.json")
+    return _canonical_digest({"manifest": manifest, "artifacts": artifacts})
+
+
+def _bounded_directory_digest(root: Path) -> str:
+    """Digest a prior export without requiring the newer additive manifest."""
+
+    records: list[dict[str, object]] = []
+    total_bytes = 0
+    paths = sorted(root.iterdir(), key=lambda path: path.name)
+    if len(paths) > 32:
+        raise DBBridgeError("Existing database export exceeds the recovery file limit.")
+    for path in paths:
+        if _path_is_reparse(path) or not path.is_file():
+            raise DBBridgeError("Existing database export contains an unsupported entry.")
+        size = path.stat().st_size
+        total_bytes += size
+        if total_bytes > 1024 * 1024 * 1024:
+            raise DBBridgeError("Existing database export exceeds the recovery byte limit.")
+        records.append({"name": path.name, "bytes": size, "sha256": checksum_file(path)})
+    return _canonical_digest(records)
+
+
+def _write_marker(path: Path, payload: dict[str, object]) -> None:
+    temporary: Path | None = None
+    try:
+        with NamedTemporaryFile(
+            "w", encoding="utf-8", dir=path.parent, prefix=path.name, suffix=".tmp", delete=False
+        ) as handle:
+            temporary = Path(handle.name)
+            json.dump(payload, handle, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+            handle.flush()
+            os.fsync(handle.fileno())
+        temporary.replace(path)
+    finally:
+        if temporary is not None and temporary.exists():
+            temporary.unlink()
+
+
+def _marker_payload(
+    output: Path, staging: Path, rollback: Path, transaction_id: str, previous: str, staged: str, phase: str
+) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "schema_version": 1,
+        "artifact_type": "reconforge_db_export_publication",
+        "transaction_id": transaction_id,
+        "output_name": output.name,
+        "staging_name": staging.name,
+        "rollback_name": rollback.name,
+        "phase": phase,
+        "previous_tree_digest": previous,
+        "staged_tree_digest": staged,
+        "integrity_boundary": _MARKER_BOUNDARY,
+    }
+    payload["marker_digest"] = _canonical_digest(payload)
+    return payload
+
+
+def _read_marker(output: Path, path: Path) -> dict[str, object]:
+    try:
+        document = read_json_document(path)
+    except (OSError, StructuredDocumentError) as exc:
+        raise DBBridgeError("Database export publication marker is invalid.") from exc
+    required = {
+        "schema_version",
+        "artifact_type",
+        "transaction_id",
+        "output_name",
+        "staging_name",
+        "rollback_name",
+        "phase",
+        "previous_tree_digest",
+        "staged_tree_digest",
+        "integrity_boundary",
+        "marker_digest",
+    }
+    if not isinstance(document, dict) or set(document) != required:
+        raise DBBridgeError("Database export publication marker is invalid.")
+    transaction_id = document.get("transaction_id")
+    if (
+        document.get("schema_version") != 1
+        or document.get("artifact_type") != "reconforge_db_export_publication"
+        or document.get("integrity_boundary") != _MARKER_BOUNDARY
+        or not isinstance(transaction_id, str)
+        or re.fullmatch(r"[0-9a-f]{32}", transaction_id) is None
+        or document.get("phase") not in _MARKER_PHASES
+        or document.get("output_name") != output.name
+        or document.get("staging_name") != f".{output.name}.staging-{transaction_id}"
+        or document.get("rollback_name") != f".{output.name}.rollback-{transaction_id}"
+        or path.name != f".{output.name}.db-export-transaction-{transaction_id}.json"
+    ):
+        raise DBBridgeError("Database export publication marker is invalid.")
+    for key in ("previous_tree_digest", "staged_tree_digest", "marker_digest"):
+        if not isinstance(document.get(key), str) or _SHA256_PATTERN.fullmatch(str(document[key])) is None:
+            raise DBBridgeError("Database export publication marker is invalid.")
+    unsigned = {key: value for key, value in document.items() if key != "marker_digest"}
+    if not hmac.compare_digest(str(document["marker_digest"]), _canonical_digest(unsigned)):
+        raise DBBridgeError("Database export publication marker is invalid.")
+    return document
+
+
+def _ensure_siblings(output: Path, expected: set[Path]) -> None:
+    found = {
+        *_publication_siblings(output, "staging"),
+        *_publication_siblings(output, "rollback"),
+        *_publication_siblings(output, "db-export-transaction"),
+    }
+    if found != {path for path in expected if path.exists()}:
+        raise DBBridgeError("Database export publication recovery state is ambiguous.")
+
+
+def _publish_staged_export(staging: Path, output: Path) -> None:
+    staged_digest = _tree_digest(staging)
+    if not output.exists():
+        _ensure_siblings(output, {staging})
+        staging.replace(output)
+        return
+    _ensure_siblings(output, {staging})
+    transaction_id = staging.name.removeprefix(f".{output.name}.staging-")
+    if re.fullmatch(r"[0-9a-f]{32}", transaction_id) is None:
+        raise DBBridgeError("Database export staging directory is invalid.")
+    rollback = output.parent / f".{output.name}.rollback-{transaction_id}"
+    marker_path = output.parent / f".{output.name}.db-export-transaction-{transaction_id}.json"
+    previous_digest = _bounded_directory_digest(output)
+    marker = _marker_payload(output, staging, rollback, transaction_id, previous_digest, staged_digest, "prepared")
+    _write_marker(marker_path, marker)
+    try:
+        output.replace(rollback)
+        marker = _marker_payload(
+            output, staging, rollback, transaction_id, previous_digest, staged_digest, "previous-moved"
+        )
+        _write_marker(marker_path, marker)
+        staging.replace(output)
+        marker = _marker_payload(output, staging, rollback, transaction_id, previous_digest, staged_digest, "published")
+        _write_marker(marker_path, marker)
+        rmtree(rollback)
+        marker_path.unlink()
+    except Exception:
+        if output.exists() and not staging.exists() and rollback.exists():
+            output.replace(staging)
+        if rollback.exists() and not output.exists():
+            rollback.replace(output)
+        if staging.exists():
+            rmtree(staging)
+        marker_path.unlink(missing_ok=True)
+        raise
+
+
+def recover_database_export_publication(output_dir: Path | str) -> DBExportPublicationRecovery:
+    """Recover exactly one integrity-verified interrupted export publication."""
+
+    output = resolve_local_path(output_dir)
+    if not output.name or not output.parent.is_dir() or _path_is_reparse(output):
+        raise DBBridgeError("Database export publication recovery output is invalid.")
+    markers = _publication_siblings(output, "db-export-transaction")
+    if len(markers) != 1 or _path_is_reparse(markers[0]):
+        raise DBBridgeError("Database export publication recovery requires exactly one valid marker.")
+    marker_path = markers[0]
+    marker = _read_marker(output, marker_path)
+    transaction_id = str(marker["transaction_id"])
+    staging = output.parent / str(marker["staging_name"])
+    rollback = output.parent / str(marker["rollback_name"])
+    _ensure_siblings(output, {staging, rollback, marker_path})
+    for path in (staging, rollback):
+        if _path_is_reparse(path) or (path.exists() and not path.is_dir()):
+            raise DBBridgeError("Database export publication recovery state is invalid.")
+    state = (output.exists(), staging.exists(), rollback.exists())
+    phase = marker["phase"]
+    previous, staged = str(marker["previous_tree_digest"]), str(marker["staged_tree_digest"])
+    if (
+        state == (True, True, False)
+        and phase == "prepared"
+        and _bounded_directory_digest(output) == previous
+        and _tree_digest(staging) == staged
+    ):
+        rmtree(staging)
+        marker_path.unlink()
+        action = "aborted-before-swap"
+    elif (
+        state == (False, True, True)
+        and phase in {"prepared", "previous-moved"}
+        and _bounded_directory_digest(rollback) == previous
+        and _tree_digest(staging) == staged
+    ):
+        rollback.replace(output)
+        rmtree(staging)
+        marker_path.unlink()
+        action = "restored-previous"
+    elif (
+        state == (True, False, True)
+        and phase in {"previous-moved", "published"}
+        and _bounded_directory_digest(rollback) == previous
+        and _tree_digest(output) == staged
+    ):
+        rmtree(rollback)
+        marker_path.unlink()
+        action = "finalized-published"
+    elif state == (True, False, False) and phase == "published" and _tree_digest(output) == staged:
+        marker_path.unlink()
+        action = "confirmed-published"
+    else:
+        raise DBBridgeError("Database export publication recovery state is ambiguous or fails integrity verification.")
+    return DBExportPublicationRecovery(transaction_id=transaction_id, action=action)
+
+
 def _table_exists(connection: sqlite3.Connection, table: str) -> bool:
     row = connection.execute(
         "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
@@ -197,16 +543,22 @@ def _rows(connection: sqlite3.Connection, table: str) -> list[dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
-def _json_rows(connection: sqlite3.Connection, table: str, *, json_columns: set[str]) -> list[dict[str, Any]]:
+def _json_rows(connection: sqlite3.Connection, table: str) -> list[dict[str, Any]]:
     records = _rows(connection, table)
+    field_contracts = {
+        column: contract for (field_table, column), contract in EXPORT_JSON_FIELDS.items() if field_table == table
+    }
     for record in records:
-        for column in json_columns:
+        for column, (decoder, output_name) in field_contracts.items():
             value = record.get(column)
-            if isinstance(value, str):
-                try:
-                    record[column.removesuffix("_json")] = json.loads(value)
-                except json.JSONDecodeError:
-                    record[column.removesuffix("_json")] = {"invalid_json": True}
+            if not isinstance(value, str):
+                raise DBBridgeError(f"Stored {table}.{column} is invalid.")
+            try:
+                document = decoder(value)
+            except PersistedJsonError as exc:
+                raise DBBridgeError(f"Stored {table}.{column} is invalid.") from exc
+            if output_name is not None:
+                record[output_name] = document.payload
                 del record[column]
     return records
 
@@ -257,17 +609,13 @@ def _workflow_payload(connection: sqlite3.Connection) -> dict[str, Any]:
 
 def _audit_payload(connection: sqlite3.Connection) -> dict[str, Any]:
     return {
-        "audit_events": _json_rows(connection, "audit_events", json_columns={"metadata_json"}),
+        "audit_events": _json_rows(connection, "audit_events"),
     }
 
 
 def _legacy_payload(connection: sqlite3.Connection) -> dict[str, Any]:
     return {
-        "legacy_import_records": _json_rows(
-            connection,
-            "legacy_import_records",
-            json_columns={"summary_json"},
-        ),
+        "legacy_import_records": _json_rows(connection, "legacy_import_records"),
     }
 
 
@@ -296,9 +644,9 @@ def _finance_payload(connection: sqlite3.Connection) -> dict[str, Any]:
         "control_test_samples": _rows(connection, "control_test_samples"),
         "control_test_results": _rows(connection, "control_test_results"),
         "remediation_plans": _rows(connection, "remediation_plans"),
-        "match_jobs": _json_rows(connection, "match_jobs", json_columns={"rule_json"}),
-        "match_rules": _json_rows(connection, "match_rules", json_columns={"rule_json"}),
-        "match_results": _rows(connection, "match_results"),
+        "match_jobs": _json_rows(connection, "match_jobs"),
+        "match_rules": _json_rows(connection, "match_rules"),
+        "match_results": _json_rows(connection, "match_results"),
         "exceptions_queue": _rows(connection, "exceptions_queue"),
         "metric_definitions": _rows(connection, "metric_definitions"),
         "metric_snapshots": _rows(connection, "metric_snapshots"),
@@ -326,9 +674,7 @@ def _inventory_payload(connection: sqlite3.Connection) -> dict[str, Any]:
         "cost_layers": _rows(connection, "inventory_cost_layers"),
         "layer_consumptions": _rows(connection, "inventory_layer_consumptions"),
         "valuation_reversals": _rows(connection, "inventory_valuation_reversals"),
-        "valuation_reversal_effects": _rows(
-            connection, "inventory_valuation_reversal_effects"
-        ),
+        "valuation_reversal_effects": _rows(connection, "inventory_valuation_reversal_effects"),
     }
 
 
@@ -370,14 +716,42 @@ def export_database(
 
     resolved_db_path = resolve_db_path(db_path)
     schema_version = _schema_version(resolved_db_path)
-    resolved_output_dir = resolve_output_dir(output_dir)
     connection = connect(resolved_db_path, require_exists=True)
     try:
         payloads = build_public_export_payloads(connection, schema_version=schema_version)
-        paths = [
-            write_json_file(resolved_output_dir / f"{name}.json", payload)
-            for name, payload in sorted(payloads.items())
-        ]
+        resolved_output_dir = resolve_local_path(output_dir)
+        if resolved_output_dir.exists() and (not resolved_output_dir.is_dir() or _path_is_reparse(resolved_output_dir)):
+            raise DBBridgeError("Output path must be a local directory.")
+        resolved_output_dir.parent.mkdir(parents=True, exist_ok=True)
+        transaction_id = secrets.token_hex(16)
+        staging_dir = resolved_output_dir.parent / f".{resolved_output_dir.name}.staging-{transaction_id}"
+        staging_dir.mkdir(mode=0o700)
+        try:
+            staged_paths = [
+                write_json_file(staging_dir / f"{name}.json", payload) for name, payload in sorted(payloads.items())
+            ]
+            artifacts = {
+                path.name: {"bytes": path.stat().st_size, "sha256": checksum_file(path)} for path in staged_paths
+            }
+            write_json_file(
+                staging_dir / "export_manifest.json",
+                {
+                    "artifact_type": "reconforge_database_export",
+                    "export_format_version": EXPORT_FORMAT_VERSION,
+                    "manifest_version": EXPORT_MANIFEST_VERSION,
+                    "schema_version": schema_version,
+                    "artifacts": artifacts,
+                },
+            )
+            _expected_artifacts(staging_dir)
+            _publish_staged_export(staging_dir, resolved_output_dir)
+        finally:
+            if staging_dir.exists() and not any(
+                marker.name.endswith(f"{staging_dir.name.removeprefix(f'.{resolved_output_dir.name}.staging-')}.json")
+                for marker in _publication_siblings(resolved_output_dir, "db-export-transaction")
+            ):
+                rmtree(staging_dir)
+        paths = sorted(resolved_output_dir.glob("*.json"))
         append_audit_event(
             connection,
             actor_label=actor_label,

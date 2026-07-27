@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/supply_chain_policy.schema.json",
+  "title": "ReconForge supply-chain policy v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "policy_id",
+    "effective_on",
+    "owner",
+    "review_cadence_days",
+    "python_resolution",
+    "javascript_resolution",
+    "container_resolution",
+    "secret_scanning",
+    "dependency_audits",
+    "updates",
+    "exceptions",
+    "release_gate",
+    "limitations"
+  ],
+  "properties": {
+    "$schema": {"const": "../schemas/supply_chain_policy.schema.json"},
+    "schema_version": {"const": 1},
+    "policy_id": {"const": "reconforge-supply-chain"},
+    "effective_on": {"type": "string", "format": "date"},
+    "owner": {"type": "string", "minLength": 3},
+    "review_cadence_days": {"type": "integer", "minimum": 1, "maximum": 90},
+    "python_resolution": {"$ref": "#/$defs/pythonResolution"},
+    "javascript_resolution": {"$ref": "#/$defs/javascriptResolution"},
+    "container_resolution": {"$ref": "#/$defs/containerResolution"},
+    "secret_scanning": {"$ref": "#/$defs/secretScanning"},
+    "dependency_audits": {"$ref": "#/$defs/dependencyAudits"},
+    "updates": {"$ref": "#/$defs/updates"},
+    "exceptions": {"$ref": "#/$defs/exceptions"},
+    "release_gate": {"$ref": "#/$defs/releaseGate"},
+    "limitations": {
+      "type": "array",
+      "minItems": 3,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 20}
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "pythonResolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manifest", "lock", "manager", "manager_version", "manager_commit", "linux_x86_64_archive_sha256", "windows_x86_64_archive_sha256", "exclude_newer", "supported_python", "required_profiles"],
+      "properties": {
+        "manifest": {"const": "pyproject.toml"},
+        "lock": {"const": "uv.lock"},
+        "manager": {"const": "uv"},
+        "manager_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "manager_commit": {"$ref": "#/$defs/commit"},
+        "linux_x86_64_archive_sha256": {"$ref": "#/$defs/sha256"},
+        "windows_x86_64_archive_sha256": {"$ref": "#/$defs/sha256"},
+        "exclude_newer": {"type": "string", "format": "date-time"},
+        "supported_python": {"type": "array", "const": ["3.11", "3.12"]},
+        "required_profiles": {"type": "array", "const": ["runtime", "dev", "docs", "duckdb", "server"]}
+      }
+    },
+    "javascriptResolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manifest", "lock", "install_command", "audit_threshold", "known_integrity_gap_entries"],
+      "properties": {
+        "manifest": {"const": "apps/web/package.json"},
+        "lock": {"const": "apps/web/package-lock.json"},
+        "install_command": {"const": "npm --prefix apps/web ci"},
+        "audit_threshold": {"const": "high"},
+        "known_integrity_gap_entries": {"type": "integer", "minimum": 0}
+      }
+    },
+    "containerResolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dockerfile", "base_image", "dependency_command"],
+      "properties": {
+        "dockerfile": {"const": "Dockerfile"},
+        "base_image": {"type": "string", "pattern": "^python:3\\.11-slim@sha256:[0-9a-f]{64}$"},
+        "dependency_command": {"const": "uv sync --locked --no-dev --no-editable --python 3.11 --link-mode copy"}
+      }
+    },
+    "secretScanning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["config", "tool", "version", "commit", "linux_x86_64_archive_sha256", "windows_x86_64_archive_sha256", "required_scopes", "redaction_percent"],
+      "properties": {
+        "config": {"const": ".gitleaks.toml"},
+        "tool": {"const": "gitleaks"},
+        "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "commit": {"$ref": "#/$defs/commit"},
+        "linux_x86_64_archive_sha256": {"$ref": "#/$defs/sha256"},
+        "windows_x86_64_archive_sha256": {"$ref": "#/$defs/sha256"},
+        "required_scopes": {"type": "array", "const": ["full-git-history", "checked-out-tree"]},
+        "redaction_percent": {"const": 100}
+      }
+    },
+    "dependencyAudits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["python", "javascript", "scanner_error_policy"],
+      "properties": {
+        "python": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tool", "locked_extra", "policy"],
+          "properties": {
+            "tool": {"const": "pip-audit"},
+            "locked_extra": {"const": "dev"},
+            "policy": {"const": "fail-on-every-known-advisory-without-an-active-exact-exception"}
+          }
+        },
+        "javascript": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tool", "policy"],
+          "properties": {
+            "tool": {"const": "npm-audit"},
+            "policy": {"const": "fail-on-high-or-critical-without-an-active-exact-exception"}
+          }
+        },
+        "scanner_error_policy": {"const": "fail-closed"}
+      }
+    },
+    "updates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["automated_ecosystems", "automated_cadence", "lock_review_cadence_days", "emergency_review_trigger"],
+      "properties": {
+        "automated_ecosystems": {"type": "array", "const": ["pip", "npm", "docker", "github-actions"]},
+        "automated_cadence": {"const": "weekly"},
+        "lock_review_cadence_days": {"type": "integer", "minimum": 1, "maximum": 90},
+        "emergency_review_trigger": {"type": "string", "minLength": 10}
+      }
+    },
+    "exceptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["registry", "max_active_days", "minimum_distinct_approvers", "critical_release_exception_allowed", "expired_or_revoked_entries_exempt"],
+      "properties": {
+        "registry": {"const": "docs/security/supply-chain-exceptions.v1.json"},
+        "max_active_days": {"type": "integer", "minimum": 1, "maximum": 30},
+        "minimum_distinct_approvers": {"type": "integer", "minimum": 2},
+        "critical_release_exception_allowed": {"const": false},
+        "expired_or_revoked_entries_exempt": {"const": false}
+      }
+    },
+    "releaseGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workflow", "must_run_before_external_write", "required_checks"],
+      "properties": {
+        "workflow": {"const": ".github/workflows/release.yml"},
+        "must_run_before_external_write": {"const": true},
+        "required_checks": {"type": "array", "const": ["policy-validation", "lock-current", "python-audit", "javascript-audit", "git-secret-scan", "tree-secret-scan"]}
+      }
+    }
+  }
+}

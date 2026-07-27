@@ -71,6 +71,7 @@ class _ReconciliationConnection:
         self.exceptions: list[dict[str, Any]] = []
         self.checkpoints: list[dict[str, Any]] = []
         self.overused = 0
+        self.lease_expired = False
 
     @contextmanager
     def transaction(self) -> Any:
@@ -190,16 +191,21 @@ class _ReconciliationConnection:
             return _Cursor((self.overused,))
         if normalized.startswith("update reconforge.reconciliation_runs") and "set execution_status = 'running'" in normalized:
             assert self.run is not None and params is not None
-            if self.run.get("execution_status") == "Running" and self.run.get("execution_worker_id") != params[0]:
+            assert "execution_status = 'queued'" in normalized
+            assert "execution_lease_until <= now()" in normalized
+            if self.run.get("execution_status") == "Running" and not self.lease_expired:
                 return _Cursor()
             self.run.update(
                 {
                     "execution_status": "Running",
                     "execution_worker_id": params[0],
+                    "execution_claimed_at": "2026-07-23T00:01:00Z",
+                    "execution_lease_until": "2026-07-23T00:06:00Z",
                     "execution_attempt": int(self.run.get("execution_attempt", 0)) + 1,
                     "execution_progress": 0,
                 }
             )
+            self.lease_expired = False
             return _Cursor(self.run)
         if normalized.startswith("update reconforge.reconciliation_runs") and "set execution_progress" in normalized:
             assert self.run is not None and params is not None
@@ -514,6 +520,69 @@ def test_local_matcher_partitioning_is_deterministic_and_reports_progress() -> N
     adapter.close()
 
 
+def test_local_matcher_uses_persisted_financial_input_policy() -> None:
+    adapter = LocalDeterministicMatcherAdapter()
+    left = (
+        {
+            "side": "Left",
+            "source_id": "left-1",
+            "amount_decimal": "10.50",
+            "attributes_json": {
+                "id": "left-1",
+                "amount": 10.5,
+                "date": "2026-07-25",
+                "reference": "INV-1",
+            },
+        },
+    )
+    right = (
+        {
+            "side": "Right",
+            "source_id": "right-1",
+            "amount_decimal": "10.50",
+            "attributes_json": {
+                "id": "right-1",
+                "amount": 10.5,
+                "date": "2026-07-25",
+                "reference": "INV-1",
+            },
+        },
+    )
+
+    def execute(policy: str | None, identity_policy: str | None = None) -> ReconciliationExecutionResult:
+        rule = {"amount_tolerance": "0"}
+        if policy is not None:
+            rule["financial_input_policy"] = policy
+        if identity_policy is not None:
+            rule["record_identity_policy"] = identity_policy
+        return adapter(
+            ReconciliationExecutionContext(
+                run={"rule_json": rule},
+                left_inputs=left,
+                right_inputs=right,
+                heartbeat=lambda _: {},
+                cancellation_requested=lambda: False,
+            )
+        )
+
+    try:
+        historical = execute(None)
+        strict = execute(
+            "strict-financial-input-v2",
+            "canonical-multiset-occurrence-v1",
+        )
+    finally:
+        adapter.close()
+
+    assert sum(item["status"] == "Matched" for item in historical.results) == 1
+    assert not any(item["status"] == "Matched" for item in strict.results)
+    assert {item["reason_code"] for item in strict.exceptions} == {"INVALID_AMOUNT"}
+    historical_lineage = historical.results[0]["lineage"]["left_record"]
+    strict_lineage = strict.results[0]["lineage"]["left_record"]
+    assert historical_lineage["record_identity_policy"] == "row-order-occurrence-legacy-v0"
+    assert strict_lineage["record_identity_policy"] == "canonical-multiset-occurrence-v1"
+
+
 def test_local_matcher_partition_limit_fails_closed() -> None:
     adapter = LocalDeterministicMatcherAdapter()
     context = ReconciliationExecutionContext(
@@ -587,12 +656,15 @@ def test_postgres_reconciliation_partition_checkpoint_is_idempotent() -> None:
     assert "FOR UPDATE" in POSTGRES_RECONCILIATION_CHECKPOINT_SCHEMA_SQL or "PRIMARY KEY" in POSTGRES_RECONCILIATION_CHECKPOINT_SCHEMA_SQL
 
 
-def test_postgres_reconciliation_worker_resumes_after_partition_failure() -> None:
-    connection = _ReconciliationConnection()
+def _create_partitioned_reconciliation(
+    connection: _ReconciliationConnection,
+    *,
+    run_id: str,
+) -> PostgresReconciliationRepository:
     repository = PostgresReconciliationRepository(connection)
     repository.create_run(
         tenant_id="tenant_a",
-        run_id="run-resume",
+        run_id=run_id,
         name="Partitioned reconciliation",
         left_source="left.csv",
         right_source="right.csv",
@@ -609,7 +681,7 @@ def test_postgres_reconciliation_worker_resumes_after_partition_failure() -> Non
     ):
         repository.register_input(
             tenant_id="tenant_a",
-            run_id="run-resume",
+            run_id=run_id,
             side=side,
             source_id=source_id,
             record_hash=f"hash-{source_id}",
@@ -623,6 +695,12 @@ def test_postgres_reconciliation_worker_resumes_after_partition_failure() -> Non
                 "entity_id": entity,
             },
         )
+    return repository
+
+
+def test_postgres_reconciliation_worker_resumes_after_partition_failure() -> None:
+    connection = _ReconciliationConnection()
+    repository = _create_partitioned_reconciliation(connection, run_id="run-resume")
 
     adapter = LocalDeterministicMatcherAdapter()
 
@@ -673,6 +751,102 @@ def test_postgres_reconciliation_worker_resumes_after_partition_failure() -> Non
     ]
     assert streamed_queries and streamed_queries[-1][-2:] == ("tenant_a", "run-resume")
     adapter.close()
+
+
+def test_postgres_reconciliation_worker_resumes_after_unhandled_crash_and_lease_expiry() -> None:
+    run_id = "run-crash-resume"
+    adapter = LocalDeterministicMatcherAdapter()
+    try:
+        baseline_connection = _ReconciliationConnection()
+        _create_partitioned_reconciliation(baseline_connection, run_id=run_id)
+        baseline_worker = PostgresReconciliationWorker(
+            _ConnectionFactory(baseline_connection),
+            tenant_supplier=lambda: ["tenant_a"],
+            matcher=adapter,
+            settings=PostgresReconciliationWorkerSettings(worker_id="worker-baseline", poll_interval_seconds=0),
+        )
+        baseline = baseline_worker.process_run(tenant_id="tenant_a", run_id=run_id)
+        assert baseline.status == "Complete"
+        assert baseline_connection.run is not None
+
+        crash_connection = _ReconciliationConnection()
+        _create_partitioned_reconciliation(crash_connection, run_id=run_id)
+
+        class _SyntheticProcessCrash(BaseException):
+            pass
+
+        class _CrashAfterFirstCheckpoint:
+            def __init__(self) -> None:
+                self.crashed = False
+                self.seen_by_attempt: list[list[str]] = []
+
+            def iter_partition_results(
+                self,
+                context: ReconciliationExecutionContext,
+                *,
+                completed_partition_keys: frozenset[str] = frozenset(),
+            ) -> Any:
+                seen: list[str] = []
+                self.seen_by_attempt.append(seen)
+                for partition in adapter.iter_partition_results(
+                    context,
+                    completed_partition_keys=completed_partition_keys,
+                ):
+                    seen.append(partition.partition_key)
+                    yield partition
+                    if not self.crashed:
+                        self.crashed = True
+                        raise _SyntheticProcessCrash("synthetic process termination after checkpoint commit")
+
+        matcher = _CrashAfterFirstCheckpoint()
+        first_worker = PostgresReconciliationWorker(
+            _ConnectionFactory(crash_connection),
+            tenant_supplier=lambda: ["tenant_a"],
+            matcher=matcher,
+            settings=PostgresReconciliationWorkerSettings(worker_id="worker-a", poll_interval_seconds=0),
+        )
+        with pytest.raises(_SyntheticProcessCrash, match="after checkpoint commit"):
+            first_worker.process_run(tenant_id="tenant_a", run_id=run_id)
+
+        assert crash_connection.run is not None
+        assert crash_connection.run["execution_status"] == "Running"
+        assert crash_connection.run["execution_worker_id"] == "worker-a"
+        assert crash_connection.run["execution_attempt"] == 1
+        assert len(crash_connection.checkpoints) == 1
+        assert len(crash_connection.results) == 1
+
+        replacement_worker = PostgresReconciliationWorker(
+            _ConnectionFactory(crash_connection),
+            tenant_supplier=lambda: ["tenant_a"],
+            matcher=matcher,
+            settings=PostgresReconciliationWorkerSettings(worker_id="worker-b", poll_interval_seconds=0),
+        )
+        with pytest.raises(PostgresReconciliationBusyError, match="already leased"):
+            replacement_worker.process_run(tenant_id="tenant_a", run_id=run_id)
+        assert len(matcher.seen_by_attempt) == 1
+
+        crash_connection.lease_expired = True
+        resumed = replacement_worker.process_run(tenant_id="tenant_a", run_id=run_id)
+
+        assert resumed.status == "Complete"
+        assert resumed.result_count == 2
+        assert crash_connection.run["execution_status"] == "Complete"
+        assert crash_connection.run["execution_worker_id"] is None
+        assert crash_connection.run["execution_attempt"] == 2
+        assert len(crash_connection.checkpoints) == 2
+        assert len(crash_connection.results) == 2
+        assert len({str(item["id"]) for item in crash_connection.results}) == 2
+        assert len(matcher.seen_by_attempt) == 2
+        assert all(len(attempt) == 1 for attempt in matcher.seen_by_attempt)
+        assert set(matcher.seen_by_attempt[0]).isdisjoint(matcher.seen_by_attempt[1])
+        assert [item["worker_id"] for item in crash_connection.checkpoints] == ["worker-a", "worker-b"]
+        assert crash_connection.run["input_manifest_hash"] == baseline_connection.run["input_manifest_hash"]
+        assert crash_connection.run["result_set_hash"] == baseline_connection.run["result_set_hash"]
+        assert sorted(item["output_hash"] for item in crash_connection.checkpoints) == sorted(
+            item["output_hash"] for item in baseline_connection.checkpoints
+        )
+    finally:
+        adapter.close()
 
 
 def test_postgres_reconciliation_scheduler_aggregates_worker_slots() -> None:

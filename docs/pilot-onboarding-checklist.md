@@ -41,7 +41,7 @@ Review:
 - `output/demo/management_pack.xlsx`
 - `output/demo/review_register.xlsx`
 - `output/demo/evidence/index.html`
-- `output/demo/client_pack/handoff_summary.md`
+- `output/client_pack/handoff_summary.md`
 
 ## Run The Synthetic Enterprise Demo
 
@@ -67,7 +67,7 @@ Use this package to review DB-backed platform foundations without using live cli
 For public or maintainer-shared reproductions, start from local copies and run:
 
 ```bash
-reconforge anonymize --input examples/sample_data --output examples/anonymized_data --profile public-demo --amount-noise-percent 5
+reconforge anonymize --input examples/sample_data --output output/pilot-anonymized --profile public-demo --amount-noise-percent 5
 ```
 
 Review anonymized output before sharing. Anonymization is a risk-reduction aid, not a guarantee that data is safe to publish.

@@ -5,10 +5,11 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
+from reconforge.auth.rbac import same_actor
 from reconforge.domain.models import utc_now_text
 from reconforge.platform.common import (
     PlatformError,
-    audit,
+    commit_audited,
     ensure_platform_schema,
     normalize_key,
     normalize_text,
@@ -77,10 +78,10 @@ class ApprovalService:
                     now,
                 ),
             )
-            self.connection.commit()
         except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
             raise PlatformError("Unable to submit approval request.") from exc
-        audit(
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="approval_request",
@@ -98,9 +99,11 @@ class ApprovalService:
         reason: str = "",
         override_reason: str = "",
     ) -> dict[str, Any]:
-        """Approve a local request, enforcing basic SoD unless an override reason is supplied."""
+        """Approve a local request while prohibiting requester self-approval."""
 
-        return self._decide(approval_id, status="Approved", actor_label=actor_label, reason=reason, override_reason=override_reason)
+        return self._decide(
+            approval_id, status="Approved", actor_label=actor_label, reason=reason, override_reason=override_reason
+        )
 
     def reject(self, approval_id: str, *, actor_label: str = "local-cli", reason: str) -> dict[str, Any]:
         """Reject a local request with a required reason."""
@@ -147,7 +150,7 @@ class ApprovalService:
 
         require_permission(self.connection, actor_label=actor_label, permission="approval.approve")
         existing = self._certification_by_object(object_type, object_id)
-        if normalize_text(existing.get("prepared_by")).lower() == normalize_text(actor_label).lower() and actor_label:
+        if same_actor(existing.get("prepared_by"), actor_label):
             raise PlatformError("Separation of duties conflict: preparer and reviewer must be different.")
         return self._upsert_certification(
             object_type=object_type,
@@ -177,7 +180,9 @@ class ApprovalService:
     def list_certifications(self) -> list[dict[str, Any]]:
         """List certification metadata records."""
 
-        return rows_to_dicts(self.connection.execute("SELECT * FROM certification_records ORDER BY updated_at DESC").fetchall())
+        return rows_to_dicts(
+            self.connection.execute("SELECT * FROM certification_records ORDER BY updated_at DESC").fetchall()
+        )
 
     def get(self, approval_id: str) -> dict[str, Any]:
         """Read one approval request."""
@@ -198,10 +203,10 @@ class ApprovalService:
     ) -> dict[str, Any]:
         require_permission(self.connection, actor_label=actor_label, permission="approval.approve")
         current = self.get(approval_id)
-        requester = normalize_text(current.get("requested_by")).lower()
-        actor = normalize_text(actor_label).lower()
-        if requester and requester == actor and not normalize_text(override_reason):
-            raise PlatformError("Approval SoD override reason is required when requester and approver are the same.")
+        if status == "Approved" and same_actor(current.get("requested_by"), actor_label):
+            raise PlatformError("Separation of duties conflict: requester cannot approve their own request.")
+        if normalize_text(override_reason):
+            raise PlatformError("Approval SoD overrides are not permitted.")
         now = utc_now_text()
         try:
             self.connection.execute(
@@ -212,16 +217,20 @@ class ApprovalService:
                 """,
                 (status, reason, override_reason, actor_label, now, approval_id),
             )
-            self.connection.commit()
         except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
             raise PlatformError("Unable to update approval request.") from exc
-        audit(
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="approval_request",
             object_id=approval_id,
             action=f"approval_{status.lower()}",
-            metadata={"status": status, "override_used": bool(override_reason), "reason_required": status == "Rejected"},
+            metadata={
+                "status": status,
+                "override_used": bool(override_reason),
+                "reason_required": status == "Rejected",
+            },
         )
         return self.get(approval_id)
 
@@ -263,12 +272,24 @@ class ApprovalService:
                     note = excluded.note,
                     updated_at = excluded.updated_at
                 """,
-                (certification_id, target_type, target_id, period_name, entity_code, status, prepared_by, reviewed_by, note, now, now),
+                (
+                    certification_id,
+                    target_type,
+                    target_id,
+                    period_name,
+                    entity_code,
+                    status,
+                    prepared_by,
+                    reviewed_by,
+                    note,
+                    now,
+                    now,
+                ),
             )
-            self.connection.commit()
         except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
             raise PlatformError("Unable to update certification metadata.") from exc
-        audit(
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="certification_metadata",

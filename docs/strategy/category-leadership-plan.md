@@ -25,7 +25,7 @@ ReconForge is the open-source audit intelligence layer between ERP operations an
 - Deterministic reconciliation and rules.
 - YAML control packs.
 - Evidence binder outputs.
-- Anonymization for safe sharing.
+- Local anonymization as a reviewed risk-reduction aid, not a safe-sharing guarantee.
 - Consultant-friendly mapping profiles.
 
 ## 6. Beachhead Market
@@ -143,7 +143,7 @@ Keep the open-source core strong. Monetize around services, support, self-hosted
 4. Add ERPNext/Dynamics/NetSuite CSV profiles.
 5. Add mapping wizard foundation.
 6. Add consultant implementation playbooks.
-7. Add signed release and SBOM workflow.
+7. Execute, independently verify, and retain one signed release with every exact-subject SBOM.
 
 ## 19. 12-Month Plan
 

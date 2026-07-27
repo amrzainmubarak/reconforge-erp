@@ -1,0 +1,20 @@
+title = "ReconForge secret-scanning policy"
+
+[extend]
+useDefault = true
+
+# Only generated or tool-owned directories are excluded. Source, tests,
+# fixtures, documentation, lockfiles, and example configuration stay in scope.
+[[allowlists]]
+description = "Exclude VCS metadata, dependency installs, and local generated output"
+paths = [
+  '''(^|/)\.git/''',
+  '''(^|/)\.venv/''',
+  '''(^|/)\.codex-test-tmp/''',
+  '''(^|/)node_modules/''',
+  '''(^|/)__pycache__/''',
+  '''(^|/)\.mypy_cache/''',
+  '''(^|/)\.pytest_cache/''',
+  '''(^|/)\.ruff_cache/''',
+  '''(^|/)(build|dist|output)/''',
+]

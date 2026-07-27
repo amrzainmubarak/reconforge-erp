@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from html import escape
 from pathlib import Path
 
@@ -41,7 +42,11 @@ def _value_summary_section(
     )
     themes_frame = top_control_themes if top_control_themes is not None else pd.DataFrame()
     actions_frame = recommended_actions if recommended_actions is not None else pd.DataFrame()
-    themes = _table(themes_frame, ["control_theme", "exception_count", "amount_impact"], limit=5)
+    themes = _table(
+        themes_frame,
+        ["control_theme", "exception_count", "amount_impact", "currency", "unquantified_amount_count"],
+        limit=5,
+    )
     actions = _table(actions_frame, ["priority", "owner", "action", "trigger_count"], limit=5)
     return f"""
     <section class="report">
@@ -58,7 +63,7 @@ def _value_summary_section(
 def write_html_dashboard(
     output_path: Path | str,
     config: ReconForgeConfig,
-    summary: dict[str, float | int | str],
+    summary: dict[str, Decimal | float | int | str],
     exceptions: pd.DataFrame,
     wip_aging: pd.DataFrame,
     control_value_summary: pd.DataFrame | None = None,

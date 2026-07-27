@@ -2,16 +2,23 @@
 
 from __future__ import annotations
 
+import hashlib
 import sqlite3
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import get_db, require_any_permission, require_permission
+from reconforge.api.dependencies import get_local_db, require_any_permission, require_permission
 from reconforge.api.errors import APIError
+from reconforge.api.server_ledger import execute_postgres_ledger, server_ledger_enabled
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
+from reconforge.infrastructure.postgres_ledger import (
+    LedgerLine,
+    PostgresLedgerRepository,
+    PostgresLedgerValidationError,
+)
 from reconforge.platform.common import PlatformError
 from reconforge.platform.finance_core import DEFAULT_LIST_LIMIT, FinanceCoreService
 
@@ -45,6 +52,7 @@ class AccountRequest(BaseModel):
     account_code: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=160)
     workspace: str = Field(default="default", min_length=1, max_length=160)
+    organization_code: str = Field(default="", max_length=64)
     chart_code: str = Field(default="DEFAULT", min_length=1, max_length=64)
     parent_account_code: str = Field(default="", max_length=64)
     account_type: str = Field(default="Asset", min_length=1, max_length=40)
@@ -106,15 +114,16 @@ class LedgerEntryRequest(BaseModel):
 
     entry_number: str = Field(min_length=1, max_length=64)
     organization_code: str = Field(min_length=1, max_length=64)
-    entity_code: str = Field(min_length=1, max_length=64)
-    period_id: str = Field(min_length=1, max_length=160)
-    journal_code: str = Field(min_length=1, max_length=64)
+    entity_code: str = Field(default="", max_length=64)
+    period_id: str = Field(default="", max_length=160)
+    journal_code: str = Field(default="", max_length=64)
     posting_date: str = Field(min_length=10, max_length=10)
     description: str = Field(min_length=1, max_length=500)
     lines: list[LedgerLineRequest] = Field(min_length=2, max_length=1_000)
     workspace: str = Field(default="default", min_length=1, max_length=160)
     external_reference: str = Field(default="", max_length=160)
     source_type: str = Field(default="Manual", min_length=1, max_length=40)
+    currency_code: str = Field(default="", max_length=3)
 
 
 class ReasonRequest(BaseModel):
@@ -137,41 +146,171 @@ def _list_response(
     return {key: records, "pagination": {"limit": limit, "offset": offset, "returned": len(records)}}
 
 
+def _local_connection(connection: sqlite3.Connection | None) -> sqlite3.Connection:
+    if connection is None:
+        raise APIError(
+            status_code=500,
+            code="local_database_not_configured",
+            message="The local Finance Core database is not configured for this request.",
+        )
+    return connection
+
+
+def _server_unsupported(capability: str) -> APIError:
+    return APIError(
+        status_code=501,
+        code="server_ledger_capability_unavailable",
+        message=f"The PostgreSQL server ledger boundary does not support {capability} yet.",
+    )
+
+
+def _server_workspace(workspace: str) -> None:
+    if workspace.strip().casefold() not in {"", "default"}:
+        raise APIError(
+            status_code=400,
+            code="server_workspace_unsupported",
+            message="The PostgreSQL server ledger boundary is tenant-scoped and does not support workspaces yet.",
+        )
+
+
+def _server_id(prefix: str, *parts: object) -> str:
+    digest = hashlib.sha256("|".join(str(part).strip().casefold() for part in parts).encode("utf-8")).hexdigest()
+    return f"{prefix}-{digest[:48]}"
+
+
+def _server_account_record(record: dict[str, object]) -> dict[str, object]:
+    return {
+        **record,
+        "source_backend": "postgresql-ledger-control",
+        "chart_code": None,
+        "workspace": None,
+        "allow_posting": True,
+        "allow_manual_posting": True,
+        "reconciliation_required": False,
+        "description": "",
+    }
+
+
+def _server_entry(
+    repository: PostgresLedgerRepository,
+    tenant_id: str,
+    payload: LedgerEntryRequest,
+    *,
+    actor_id: str,
+    request_id: str,
+) -> dict[str, object]:
+    _server_workspace(payload.workspace)
+    if payload.entity_code.strip() or payload.period_id.strip() or payload.journal_code.strip():
+        # These fields are part of the local Finance Core contract but are not
+        # represented by the bounded PostgreSQL ledger schema.  Rejecting them
+        # avoids silently dropping accounting dimensions from a posted entry.
+        raise _server_unsupported("legal entities, fiscal periods, and finance journals")
+    organization = repository.organization_by_code(
+        tenant_id=tenant_id, organization_code=payload.organization_code
+    )
+    if not bool(organization["active"]):
+        raise PostgresLedgerValidationError("Ledger entries require an active organization.")
+    currency = payload.currency_code.strip().upper() or str(organization.get("base_currency") or "").upper()
+    if not currency:
+        raise PostgresLedgerValidationError(
+            "currency_code is required when the organization has no configured base currency."
+        )
+    normalized_lines: list[LedgerLine] = []
+    for line_number, line in enumerate(payload.lines, start=1):
+        if line.dimensions:
+            raise _server_unsupported("accounting dimensions")
+        account = repository.account_by_code(
+            tenant_id=tenant_id,
+            organization_id=str(organization["id"]),
+            account_code=line.account_code,
+        )
+        if not bool(account["active"]):
+            raise PostgresLedgerValidationError(f"Line {line_number} requires an active posting account.")
+        normalized_lines.append(
+            LedgerLine(
+                account_id=str(account["id"]),
+                debit=line.debit,
+                credit=line.credit,
+                description=line.description,
+                reference="",
+            )
+        )
+    entry_number = payload.entry_number.strip().upper()
+    return repository.post_entry(
+        tenant_id=tenant_id,
+        entry_id=_server_id("entry", tenant_id, organization["id"], entry_number),
+        entry_number=entry_number,
+        organization_id=str(organization["id"]),
+        currency_code=currency,
+        posting_date=payload.posting_date,
+        description=payload.description,
+        lines=normalized_lines,
+        actor_id=actor_id,
+        request_id=request_id,
+        source_type=payload.source_type,
+        source_id=payload.external_reference or None,
+    )
+
+
 @router.get("/summary")
 def summary(
+    request: Request,
     current_user: FinanceRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
 ) -> dict[str, object]:
+    if server_ledger_enabled(request):
+        _server_workspace(workspace)
+        server_result = execute_postgres_ledger(request, lambda repository, tenant: repository.summary(tenant_id=tenant))
+        return {
+            "summary": {
+                "workspace": None,
+                "accounts": server_result["accounts"],
+                "draft_entries": server_result["draft_entries"],
+                "posted_entries": server_result["posted_entries"],
+                "source": server_result["source"],
+                "unsupported_collections": server_result["unsupported_collections"],
+            }
+        }
     try:
-        result = FinanceCoreService(connection).summary(workspace=workspace, actor_label=current_user.username)
+        local_result = FinanceCoreService(_local_connection(connection)).summary(
+            workspace=workspace, actor_label=current_user.username
+        )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_core_summary_failed", exc) from exc
-    return {"summary": result.to_dict()}
+    return {"summary": local_result.to_dict()}
 
 
 @router.get("/snapshot")
 def snapshot(
+    request: Request,
     current_user: FinanceRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
 ) -> dict[str, object]:
+    if server_ledger_enabled(request):
+        raise _server_unsupported("the full Finance Core snapshot")
     try:
-        return FinanceCoreService(connection).snapshot(workspace=workspace, actor_label=current_user.username)
+        return FinanceCoreService(_local_connection(connection)).snapshot(
+            workspace=workspace, actor_label=current_user.username
+        )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_core_snapshot_failed", exc) from exc
 
 
 @router.get("/charts")
 def list_charts(
+    request: Request,
     current_user: FinanceRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_ledger_enabled(request):
+        raise _server_unsupported("charts of accounts")
     try:
-        records = FinanceCoreService(connection).list_charts(
+        records = FinanceCoreService(_local_connection(connection)).list_charts(
             workspace=workspace, limit=limit, offset=offset, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
@@ -181,12 +320,15 @@ def list_charts(
 
 @router.post("/charts")
 def upsert_chart(
+    request: Request,
     payload: ChartRequest,
     current_user: FinanceManage,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_ledger_enabled(request):
+        raise _server_unsupported("charts of accounts")
     try:
-        record = FinanceCoreService(connection).upsert_chart(
+        record = FinanceCoreService(_local_connection(connection)).upsert_chart(
             **payload.model_dump(), actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
@@ -196,16 +338,35 @@ def upsert_chart(
 
 @router.get("/accounts")
 def list_accounts(
+    request: Request,
     current_user: FinanceRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
     chart: str = "",
+    organization: str = "",
     active_only: bool = False,
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_ledger_enabled(request):
+        _server_workspace(workspace)
+        if chart:
+            raise _server_unsupported("chart filtering")
+
+        def operation(repository: PostgresLedgerRepository, tenant: str) -> list[dict[str, object]]:
+            organization_id = None
+            if organization:
+                organization_id = str(
+                    repository.organization_by_code(tenant_id=tenant, organization_code=organization)["id"]
+                )
+            records = repository.list_accounts(tenant_id=tenant, organization_id=organization_id)
+            return [_server_account_record(record) for record in records if not active_only or bool(record["active"])]
+
+        records = execute_postgres_ledger(request, operation)
+        page = records[offset : offset + limit]
+        return _list_response("accounts", page, limit=limit, offset=offset)
     try:
-        records = FinanceCoreService(connection).list_accounts(
+        records = FinanceCoreService(_local_connection(connection)).list_accounts(
             workspace=workspace,
             chart_code=chart,
             active_only=active_only,
@@ -220,13 +381,51 @@ def list_accounts(
 
 @router.post("/accounts")
 def upsert_account(
+    request: Request,
     payload: AccountRequest,
     current_user: FinanceManage,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_ledger_enabled(request):
+        _server_workspace(payload.workspace)
+        if not payload.organization_code.strip():
+            raise APIError(
+                status_code=400,
+                code="organization_required",
+                message="organization_code is required by the PostgreSQL server ledger boundary.",
+            )
+        if payload.chart_code.strip().upper() != "DEFAULT" or payload.parent_account_code.strip():
+            raise _server_unsupported("chart hierarchy")
+        if not payload.allow_posting or not payload.allow_manual_posting or payload.reconciliation_required:
+            raise _server_unsupported("account posting-policy flags")
+        if payload.description.strip():
+            raise _server_unsupported("account descriptions")
+
+        def operation(repository: PostgresLedgerRepository, tenant: str) -> dict[str, object]:
+            organization = repository.organization_by_code(
+                tenant_id=tenant, organization_code=payload.organization_code
+            )
+            return _server_account_record(
+                repository.upsert_account(
+                    tenant_id=tenant,
+                    organization_id=str(organization["id"]),
+                    account_id=_server_id("account", tenant, organization["id"], payload.account_code),
+                    account_code=payload.account_code,
+                    name=payload.name,
+                    account_type=payload.account_type,
+                    normal_balance=payload.normal_balance,
+                    active=payload.active,
+                    actor_id=current_user.id,
+                    request_id=str(getattr(request.state, "request_id", "")),
+                )
+            )
+
+        return {"account": execute_postgres_ledger(request, operation)}
     try:
-        record = FinanceCoreService(connection).upsert_account(
-            **payload.model_dump(), actor_label=current_user.username
+        values = payload.model_dump()
+        values.pop("organization_code", None)
+        record = FinanceCoreService(_local_connection(connection)).upsert_account(
+            **values, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_account_save_failed", exc) from exc
@@ -235,14 +434,17 @@ def upsert_account(
 
 @router.get("/dimensions")
 def list_dimensions(
+    request: Request,
     current_user: FinanceRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_ledger_enabled(request):
+        raise _server_unsupported("accounting dimensions")
     try:
-        records = FinanceCoreService(connection).list_dimensions(
+        records = FinanceCoreService(_local_connection(connection)).list_dimensions(
             workspace=workspace, limit=limit, offset=offset, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
@@ -252,12 +454,15 @@ def list_dimensions(
 
 @router.post("/dimensions")
 def upsert_dimension(
+    request: Request,
     payload: DimensionRequest,
     current_user: FinanceManage,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_ledger_enabled(request):
+        raise _server_unsupported("accounting dimensions")
     try:
-        record = FinanceCoreService(connection).upsert_dimension(
+        record = FinanceCoreService(_local_connection(connection)).upsert_dimension(
             **payload.model_dump(), actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
@@ -267,15 +472,18 @@ def upsert_dimension(
 
 @router.get("/dimension-values")
 def list_dimension_values(
+    request: Request,
     current_user: FinanceRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
     dimension: str = "",
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_ledger_enabled(request):
+        raise _server_unsupported("accounting dimension values")
     try:
-        records = FinanceCoreService(connection).list_dimension_values(
+        records = FinanceCoreService(_local_connection(connection)).list_dimension_values(
             workspace=workspace,
             dimension_code=dimension,
             limit=limit,
@@ -289,12 +497,15 @@ def list_dimension_values(
 
 @router.post("/dimension-values")
 def upsert_dimension_value(
+    request: Request,
     payload: DimensionValueRequest,
     current_user: FinanceManage,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_ledger_enabled(request):
+        raise _server_unsupported("accounting dimension values")
     try:
-        record = FinanceCoreService(connection).upsert_dimension_value(
+        record = FinanceCoreService(_local_connection(connection)).upsert_dimension_value(
             **payload.model_dump(), actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
@@ -304,15 +515,18 @@ def upsert_dimension_value(
 
 @router.get("/journals")
 def list_journals(
+    request: Request,
     current_user: FinanceRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
     organization: str = "",
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_ledger_enabled(request):
+        raise _server_unsupported("finance journals")
     try:
-        records = FinanceCoreService(connection).list_journals(
+        records = FinanceCoreService(_local_connection(connection)).list_journals(
             workspace=workspace,
             organization_code=organization,
             limit=limit,
@@ -326,12 +540,15 @@ def list_journals(
 
 @router.post("/journals")
 def upsert_journal(
+    request: Request,
     payload: JournalRequest,
     current_user: FinanceManage,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_ledger_enabled(request):
+        raise _server_unsupported("finance journals")
     try:
-        record = FinanceCoreService(connection).upsert_journal(
+        record = FinanceCoreService(_local_connection(connection)).upsert_journal(
             **payload.model_dump(), actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
@@ -341,15 +558,36 @@ def upsert_journal(
 
 @router.get("/trial-balance")
 def trial_balance(
+    request: Request,
     period_id: str,
     organization: str,
     entity: str,
     current_user: FinanceRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
 ) -> dict[str, object]:
+    if server_ledger_enabled(request):
+        _server_workspace(workspace)
+        if entity.strip():
+            raise _server_unsupported("legal-entity-scoped trial balance")
+
+        def operation(repository: PostgresLedgerRepository, tenant: str) -> dict[str, object]:
+            organization_record = repository.organization_by_code(
+                tenant_id=tenant,
+                organization_code=organization,
+            )
+            if not bool(organization_record["active"]):
+                raise PostgresLedgerValidationError("Trial balance requires an active organization.")
+            return repository.trial_balance(
+                tenant_id=tenant,
+                organization_id=str(organization_record["id"]),
+                organization_code=organization,
+                period_id=period_id,
+            )
+
+        return execute_postgres_ledger(request, operation)
     try:
-        return FinanceCoreService(connection).trial_balance(
+        return FinanceCoreService(_local_connection(connection)).trial_balance(
             period_id=period_id,
             organization_code=organization,
             entity_code=entity,
@@ -362,8 +600,9 @@ def trial_balance(
 
 @router.get("/entries")
 def list_entries(
+    request: Request,
     current_user: FinanceRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
     organization: str = "",
     entity: str = "",
@@ -372,8 +611,30 @@ def list_entries(
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_ledger_enabled(request):
+        _server_workspace(workspace)
+        if entity or period_id:
+            raise _server_unsupported("entity- and fiscal-period-scoped entry filtering")
+
+        def operation(repository: PostgresLedgerRepository, tenant: str) -> list[dict[str, object]]:
+            organization_id = None
+            if organization:
+                organization_record = repository.organization_by_code(
+                    tenant_id=tenant, organization_code=organization
+                )
+                organization_id = str(organization_record["id"])
+            return repository.list_entries(
+                tenant_id=tenant,
+                organization_id=organization_id,
+                status=status or None,
+                limit=limit,
+                offset=offset,
+            )
+
+        records = execute_postgres_ledger(request, operation)
+        return _list_response("entries", records, limit=limit, offset=offset)
     try:
-        records = FinanceCoreService(connection).list_entries(
+        records = FinanceCoreService(_local_connection(connection)).list_entries(
             workspace=workspace,
             organization_code=organization,
             entity_code=entity,
@@ -390,13 +651,29 @@ def list_entries(
 
 @router.post("/entries")
 def create_entry(
+    request: Request,
     payload: LedgerEntryRequest,
     current_user: FinanceManage,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_ledger_enabled(request):
+        record = execute_postgres_ledger(
+            request,
+            lambda repository, tenant: _server_entry(
+                repository,
+                tenant,
+                payload,
+                actor_id=current_user.id,
+                request_id=str(getattr(request.state, "request_id", "")),
+            ),
+        )
+        return {"entry": record}
     try:
         values = payload.model_dump()
-        record = FinanceCoreService(connection).create_entry(**values, actor_label=current_user.username)
+        values.pop("currency_code", None)
+        record = FinanceCoreService(_local_connection(connection)).create_entry(
+            **values, actor_label=current_user.username
+        )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_entry_save_failed", exc) from exc
     return {"entry": record}
@@ -404,12 +681,20 @@ def create_entry(
 
 @router.get("/entries/{entry_id}")
 def get_entry(
+    request: Request,
     entry_id: str,
     current_user: FinanceRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_ledger_enabled(request):
+        record = execute_postgres_ledger(
+            request, lambda repository, tenant: repository.get_entry(tenant_id=tenant, entry_id=entry_id)
+        )
+        return {"entry": record}
     try:
-        record = FinanceCoreService(connection).get_entry(entry_id, actor_label=current_user.username)
+        record = FinanceCoreService(_local_connection(connection)).get_entry(
+            entry_id, actor_label=current_user.username
+        )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_entry_not_found", exc, status_code=404) from exc
     return {"entry": record}
@@ -417,13 +702,16 @@ def get_entry(
 
 @router.post("/entries/{entry_id}/validate")
 def validate_entry(
+    request: Request,
     entry_id: str,
     payload: ReasonRequest,
     current_user: FinanceValidate,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_ledger_enabled(request):
+        raise _server_unsupported("draft validation; server entries are posted atomically")
     try:
-        record = FinanceCoreService(connection).validate_entry(
+        record = FinanceCoreService(_local_connection(connection)).validate_entry(
             entry_id, reason=payload.reason, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
@@ -433,13 +721,16 @@ def validate_entry(
 
 @router.post("/entries/{entry_id}/void")
 def void_entry(
+    request: Request,
     entry_id: str,
     payload: ReasonRequest,
     current_user: FinanceValidate,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_ledger_enabled(request):
+        raise _server_unsupported("voiding; server entries are immutable and require reversal support")
     try:
-        record = FinanceCoreService(connection).void_entry(
+        record = FinanceCoreService(_local_connection(connection)).void_entry(
             entry_id, reason=payload.reason, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:

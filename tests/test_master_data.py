@@ -392,8 +392,8 @@ def test_migration_seven_upgrades_v6_data_and_export_includes_master_data(tmp_pa
     monkeypatch.setattr(migration_module, "MIGRATIONS", full_migrations)
     upgraded = migration_module.run_migrations(path)
 
-    assert upgraded.applied_versions == [7, 8, 9, 10, 11, 12]
-    assert upgraded.current_version == 12
+    assert upgraded.applied_versions == list(range(7, migration_module.MIGRATIONS[-1].version + 1))
+    assert upgraded.current_version == migration_module.MIGRATIONS[-1].version
     connection = connect(path, require_exists=True)
     try:
         organization = connection.execute("SELECT * FROM organizations WHERE id = 'ORG-old'").fetchone()
@@ -406,7 +406,7 @@ def test_migration_seven_upgrades_v6_data_and_export_includes_master_data(tmp_pa
         connection.close()
 
     exported = export_database(path, tmp_path / "export")
-    assert exported.schema_version == 12
+    assert exported.schema_version == migration_module.MIGRATIONS[-1].version
     domain = json.loads((tmp_path / "export" / "domain.json").read_text(encoding="utf-8"))
     assert "currencies" in domain
     assert "branches" in domain

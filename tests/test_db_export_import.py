@@ -3,18 +3,21 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from reconforge.api.security import create_session
 from reconforge.audit import list_audit_events
 from reconforge.auth import LocalAuthService
 from reconforge.close import write_close_checklist
 from reconforge.db import connect, run_migrations
-from reconforge.db.exporter import export_database
+from reconforge.db.exporter import DBBridgeError, export_database
 from reconforge.db.importers import (
     import_account_reconciliations,
     import_close_checklist,
     import_control_tests,
     import_review_state,
 )
+from reconforge.db.migrations import MIGRATIONS
 from reconforge.domain.repositories import WorkspaceRepository
 from reconforge.review.state import save_review_state
 
@@ -46,6 +49,21 @@ def _table_count(db_path: Path, table: str) -> int:
         connection.close()
 
 
+def _outbox_event_count(db_path: Path, *, event_type: str | None = None) -> int:
+    connection = connect(db_path, require_exists=True)
+    try:
+        if event_type is None:
+            row = connection.execute("SELECT COUNT(*) AS count FROM outbox_events").fetchone()
+        else:
+            row = connection.execute(
+                "SELECT COUNT(*) AS count FROM outbox_events WHERE event_type = ?",
+                (event_type,),
+            ).fetchone()
+        return int(row["count"])
+    finally:
+        connection.close()
+
+
 def test_db_export_writes_expected_files_and_excludes_credentials(tmp_path: Path) -> None:
     db_path = _seed_db(tmp_path)
     connection = connect(db_path, require_exists=True)
@@ -72,8 +90,12 @@ def test_db_export_writes_expected_files_and_excludes_credentials(tmp_path: Path
         "evidence.json",
         "inventory.json",
         "legacy_imports.json",
+        "export_manifest.json",
     } <= exported_files
-    assert metadata["schema_version"] == 12
+    manifest = _read_json(tmp_path / "db_export" / "export_manifest.json")
+    assert manifest["export_format_version"] == 1
+    assert set(manifest["artifacts"]) == exported_files - {"export_manifest.json"}
+    assert metadata["schema_version"] == MIGRATIONS[-1].version
     assert "users" in identity
     assert "password_hash" not in exported_text
     assert "password_salt" not in exported_text
@@ -89,6 +111,25 @@ def test_db_export_writes_expected_files_and_excludes_credentials(tmp_path: Path
     finally:
         connection.close()
     assert "db_exported" in actions
+
+
+def test_db_export_refuses_corrupt_audit_metadata_before_writing_files(tmp_path: Path) -> None:
+    db_path = _seed_db(tmp_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        connection.execute("DROP TRIGGER audit_events_no_update")
+        connection.execute("UPDATE audit_events SET metadata_json = ?", ('{"x":1,"x":2}',))
+        connection.commit()
+        before_count = connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"]
+    finally:
+        connection.close()
+
+    output_dir = tmp_path / "rejected_export"
+    with pytest.raises(DBBridgeError, match="Unable to export local database records"):
+        export_database(db_path, output_dir)
+
+    assert not list(output_dir.glob("*.json"))
+    assert _table_count(db_path, "audit_events") == before_count
 
 
 def test_import_review_state_is_idempotent_and_audited(tmp_path: Path) -> None:
@@ -125,6 +166,7 @@ def test_import_review_state_is_idempotent_and_audited(tmp_path: Path) -> None:
     assert workflow_rows[0]["object_id"] == "EXC-001"
     assert workflow_rows[0]["status"] == "Under Review"
     assert actions.count("legacy_review_state_imported") == 2
+    assert _outbox_event_count(db_path, event_type="legacy_import_completed") == 2
 
 
 def test_import_close_checklist_creates_close_task_references(tmp_path: Path) -> None:
@@ -143,6 +185,7 @@ def test_import_close_checklist_creates_close_task_references(tmp_path: Path) ->
         connection.close()
     assert len(rows) == 7
     assert legacy_count == 7
+    assert _outbox_event_count(db_path, event_type="legacy_import_completed") == 1
 
 
 def test_import_account_reconciliations_and_control_tests(tmp_path: Path) -> None:
@@ -210,3 +253,4 @@ def test_import_account_reconciliations_and_control_tests(tmp_path: Path) -> Non
     assert {"account_reconciliations", "control_tests"} <= legacy_types
     assert "legacy_account_reconciliations_imported" in actions
     assert "legacy_control_tests_imported" in actions
+    assert _outbox_event_count(db_path, event_type="legacy_import_completed") == 2

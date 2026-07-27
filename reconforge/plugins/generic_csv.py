@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from reconforge.io.readers import normalize_columns
+from reconforge.io.readers import normalize_columns, read_table
 
 
 class GenericCSVConnector:
@@ -15,7 +15,10 @@ class GenericCSVConnector:
     name = "generic_csv"
 
     def load_data(self, input_path: Path) -> dict[str, pd.DataFrame]:
-        return {path.stem: normalize_columns(pd.read_csv(path, keep_default_na=False)) for path in sorted(input_path.glob("*.csv"))}
+        return {
+            path.stem: normalize_columns(read_table(path))
+            for path in sorted(input_path.glob("*.csv"))
+        }
 
     def validate_schema(self, datasets: dict[str, pd.DataFrame]) -> list[str]:
         return [] if datasets else ["No CSV datasets found."]

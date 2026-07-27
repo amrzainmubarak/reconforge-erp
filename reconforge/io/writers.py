@@ -3,11 +3,101 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from datetime import date, datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
+
+
+@dataclass(frozen=True)
+class _ExactDecimalToken:
+    text: str
+
+
+def canonical_decimal_text(value: Decimal) -> str:
+    """Return a finite Decimal as context-independent plain canonical text."""
+
+    if not value.is_finite():
+        raise ValueError("exact JSON decimal values must be finite")
+    if value == 0:
+        return "0"
+    sign, raw_digits, raw_exponent = value.as_tuple()
+    exponent = int(raw_exponent)
+    digits = list(raw_digits)
+    while digits and digits[-1] == 0:
+        digits.pop()
+        exponent += 1
+    digit_text = "".join(str(digit) for digit in digits)
+    if exponent >= 0:
+        text = digit_text + ("0" * exponent)
+    else:
+        point = len(digit_text) + exponent
+        text = (
+            f"{digit_text[:point]}.{digit_text[point:]}"
+            if point > 0
+            else f"0.{('0' * -point)}{digit_text}"
+        )
+    return f"-{text}" if sign else text
+
+
+def _prepare_exact_json(value: Any) -> Any:
+    if isinstance(value, Decimal):
+        return _ExactDecimalToken(canonical_decimal_text(value))
+    if isinstance(value, dict):
+        return {key: _prepare_exact_json(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_prepare_exact_json(item) for item in value]
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    return _prepare_exact_json(json_default(value))
+
+
+def _contains_marker_prefix(value: Any, prefix: str) -> bool:
+    if isinstance(value, str):
+        return prefix in value
+    if isinstance(value, dict):
+        return any(
+            (isinstance(key, str) and prefix in key) or _contains_marker_prefix(item, prefix)
+            for key, item in value.items()
+        )
+    if isinstance(value, list):
+        return any(_contains_marker_prefix(item, prefix) for item in value)
+    return False
+
+
+def exact_json_dumps(payload: Any, *, indent: int | None = 2) -> str:
+    """Serialize Decimal values as exact JSON numbers without a float boundary.
+
+    The standard-library encoder does not accept Decimal. This function first
+    replaces Decimals with collision-checked private markers, uses the standard
+    encoder for all JSON syntax and escaping, then substitutes only those quoted
+    markers with validated canonical number lexemes.
+    """
+
+    prepared = _prepare_exact_json(payload)
+    marker_prefix = "\x00reconforge:exact-decimal:"
+    while _contains_marker_prefix(prepared, marker_prefix):
+        marker_prefix += ":"
+    replacements: dict[str, str] = {}
+
+    def materialize(value: Any) -> Any:
+        if isinstance(value, _ExactDecimalToken):
+            marker = f"{marker_prefix}{len(replacements)}"
+            replacements[marker] = value.text
+            return marker
+        if isinstance(value, dict):
+            return {key: materialize(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [materialize(item) for item in value]
+        return value
+
+    encoded = json.dumps(materialize(prepared), indent=indent, allow_nan=False)
+    for marker, decimal_text in replacements.items():
+        encoded = encoded.replace(json.dumps(marker), decimal_text)
+    return encoded
 
 
 def ensure_output_dir(path: Path | str) -> Path:

@@ -33,11 +33,17 @@ from reconforge.domain.models import (
     Warehouse,
     Workspace,
 )
+from reconforge.domain.protocols import (
+    AuditEventRepositoryProtocol,
+    PeriodRepositoryProtocol,
+    WorkspaceRepositoryProtocol,
+)
 
 __all__ = [
     "AccountingDimension",
     "AccountingDimensionValue",
     "AuditEventReference",
+    "AuditEventRepositoryProtocol",
     "Branch",
     "ChartOfAccounts",
     "Currency",
@@ -57,6 +63,7 @@ __all__ = [
     "LegalEntity",
     "Organization",
     "Period",
+    "PeriodRepositoryProtocol",
     "Permission",
     "ReconciliationReference",
     "Role",
@@ -64,4 +71,5 @@ __all__ = [
     "UserReference",
     "Warehouse",
     "Workspace",
+    "WorkspaceRepositoryProtocol",
 ]

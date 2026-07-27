@@ -1,0 +1,732 @@
+schema_version: 1
+mapping_id: reconforge-owasp-asvs-5.0.0
+status: evidence-bounded
+last_reviewed: "2026-07-26"
+claim_boundary: >-
+  This is a scoped repository-evidence mapping for selected OWASP ASVS 5.0.0
+  requirements across all chapters. It is not a full 345-requirement assessment,
+  not a compliance assessment or certification, not a penetration test or audit
+  opinion, and not a secure-deployment or continuous-control guarantee.
+
+standard:
+  name: OWASP Application Security Verification Standard
+  version: 5.0.0
+  release_status: stable
+  release_date: "2025-05-30"
+  verified_at: "2026-07-25"
+  release_tag: v5.0.0_release
+  release_commit: 5cf9b032440be53ce345ab3c130fda46ba1ce7a2
+  official_project_url: https://owasp.org/www-project-application-security-verification-standard/
+  official_release_url: https://github.com/OWASP/ASVS/releases/tag/v5.0.0_release
+  official_source_url: https://raw.githubusercontent.com/OWASP/ASVS/v5.0.0_release/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.csv
+  official_source_sha256: 98c8fe911b9edb403af8ee05d3ce8201ecac2659e313b053890a62847cdcf680
+  official_source_bytes: 105100
+  license: CC-BY-SA-4.0
+  reference_format: v<version>-<chapter>.<section>.<requirement>
+  excluded_source: >-
+    The mutable master-branch Bleeding Edge release was checked but excluded;
+    OWASP explicitly directs production users to the stable v5.0.0 release.
+
+assessment_scope:
+  target: Dirty ReconForge repository snapshot documented in docs/execution/STATE.md.
+  coverage_type: all-chapter-selected-requirement
+  method:
+    - Verify the latest stable version, release tag, commit, source bytes, digest, chapter counts, levels, and reference format from official OWASP sources only.
+    - Select high-relevance requirements for current file, API, identity, persistence, evidence, dependency, and deployment boundaries; do not copy full requirement prose.
+    - Link only existing repository code, test, workflow, or governance evidence and preserve an explicit limitation and next action for every status.
+    - Treat all requirements not listed below as unassessed, not passed, failed, planned, or not applicable.
+  excluded_assurance:
+    - No live deployment configuration, external penetration test, DAST, fuzzing campaign, production log review, or independent control assessment was performed.
+    - No ASVS verification level, certification, compliance, secure-product, or release-readiness claim is assigned.
+  review_triggers:
+    - OWASP publishes a newer stable ASVS release or changes the pinned release source.
+    - ReconForge adds or materially changes an API, browser, file, identity, token, cryptography, network, logging, dependency, or WebRTC surface.
+    - A linked evidence path, threat model, security architecture control, or assessment status changes.
+
+status_definitions:
+  implemented: A narrowly stated repository scope has direct code and test evidence; deployment operation and the rest of the requirement remain outside the status.
+  partial: Some relevant repository behavior or governance exists, but the requirement or its product/deployment scope is incomplete.
+  planned: The requirement is applicable or expected to become applicable, but current evidence is insufficient for a partial status.
+  not_applicable: The named technology or capability is absent from the assessed snapshot; a concrete trigger requires reassessment if it is introduced.
+  unassessed: The official requirement is not one of the selected mappings and receives no implementation, gap, applicability, or assurance conclusion.
+
+summary:
+  official_chapter_count: 17
+  official_requirement_count: 345
+  mapped_requirement_count: 55
+  unassessed_requirement_count: 290
+  status_counts:
+    implemented: 4
+    partial: 33
+    planned: 10
+    not_applicable: 8
+
+chapters:
+  - chapter_id: V1
+    chapter_name: Encoding and Sanitization
+    official_requirement_count: 30
+    chapter_assessment: partial
+    chapter_boundary: Selected injection, spreadsheet-export, and parser controls only; 27 requirements remain unassessed.
+    mappings:
+      - requirement_id: v5.0.0-1.2.4
+        level: 1
+        status: partial
+        scope: SQLite and PostgreSQL repository queries reviewed in the current bounded paths.
+        owner: platform-security
+        evidence: [reconforge/db/backup.py, reconforge/infrastructure/postgres.py]
+        test_evidence: [tests/test_db_backup_restore.py, tests/test_db_backup_structured_ingress.py, tests/test_postgres_foundation.py]
+        assessment: Values use parameters and dynamic identifiers in the reviewed backup path pass a strict identifier allowlist.
+        gap_or_limitation: No whole-repository query audit or live database injection assessment has been completed.
+        next_action: Add a query-construction inventory and injection-focused contract tests for every persistence adapter.
+      - requirement_id: v5.0.0-1.2.10
+        level: 3
+        status: planned
+        scope: CSV/XLSX report and evidence exports opened by spreadsheet software.
+        owner: evidence-security
+        evidence: []
+        test_evidence: []
+        assessment: Output escaping exists for structure, but formula-injection neutralization is not a documented cross-export contract.
+        gap_or_limitation: User-controlled leading formula characters may remain dangerous in spreadsheet consumers.
+        next_action: Define and test one versioned spreadsheet-cell safety policy without corrupting financial source evidence.
+      - requirement_id: v5.0.0-1.5.1
+        level: 1
+        status: not_applicable
+        scope: Production XML parsing surfaces in the current registered modules.
+        owner: platform-security
+        evidence: []
+        test_evidence: []
+        assessment: No production XML connector or XML parser is present in the assessed runtime modules.
+        gap_or_limitation: Planned XML or ISO 20022 parsing would immediately make this requirement applicable.
+        next_action: Reassess before merging any XML parser, connector, or document ingestion surface.
+
+  - chapter_id: V2
+    chapter_name: Validation and Business Logic
+    official_requirement_count: 13
+    chapter_assessment: partial
+    chapter_boundary: Selected validation, transaction, and multi-user approval requirements only; 10 remain unassessed.
+    mappings:
+      - requirement_id: v5.0.0-2.2.1
+        level: 1
+        status: partial
+        scope: Current financial, schema, identifier, and workflow decision inputs.
+        owner: financial-integrity
+        evidence: [reconforge/validators.py, reconforge/utils/money.py]
+        test_evidence: [tests/test_validation.py, tests/test_financial_input_policy.py]
+        assessment: Exact financial values and selected structures fail closed or become explicit data-quality findings.
+        gap_or_limitation: Validation is not uniform across every legacy interface and file type.
+        next_action: Complete P0 financial compatibility migration and P0-SEC-009 ingestion abuse coverage.
+      - requirement_id: v5.0.0-2.3.3
+        level: 2
+        status: partial
+        scope: Migrated SQLite/PostgreSQL business mutation, audit, and outbox paths.
+        owner: domain-integrity
+        evidence: [reconforge/platform/common.py, reconforge/platform/outbox.py]
+        test_evidence: [tests/test_atomic_legacy_services.py, tests/test_outbox_delivery.py]
+        assessment: Selected business changes and their audit/outbox effects share explicit transaction boundaries and rollback tests.
+        gap_or_limitation: Legacy services and external publisher effects are not transactionally or idempotently equivalent.
+        next_action: Finish the mutation inventory and add repository-specific rollback/idempotency contracts.
+      - requirement_id: v5.0.0-2.3.5
+        level: 3
+        status: partial
+        scope: Implemented preparer/reviewer/approval and high-risk local control workflows.
+        owner: identity-security
+        evidence: [reconforge/auth/policy.py, reconforge/auth/rbac.py, reconforge/platform/approvals.py]
+        test_evidence: [tests/test_policy_engine.py, tests/test_approval_sod.py, tests/test_approval_surface_inventory.py, tests/test_workflow_state_machine.py]
+        assessment: The central primitive denies missing permissions and unauthorized supplied tenant/workspace/entity/period scopes; generated ownership properties and an exact inventory cover all nine current platform approve/review service methods, including trusted-local workflow labels.
+        gap_or_limitation: The property primitive is not universally integrated at every route/repository, and amount/region/data-class rules, assignments/delegation, privileged emergency access, external identity governance, and deployed effectiveness remain incomplete.
+        next_action: Extend centralized ABAC through route/repository contracts and implement governed delegation and emergency-access workflows without weakening the closed self-approval property.
+
+  - chapter_id: V3
+    chapter_name: Web Frontend Security
+    official_requirement_count: 31
+    chapter_assessment: partial
+    chapter_boundary: Selected rendering, response-header, and request-origin safeguards only; 28 remain unassessed.
+    mappings:
+      - requirement_id: v5.0.0-3.2.2
+        level: 1
+        status: partial
+        scope: Server-rendered Studio and generated HTML surfaces covered by escaping tests.
+        owner: platform-security
+        evidence: [reconforge/studio/components.py, reconforge/reports/html.py]
+        test_evidence: [tests/test_studio_auth.py, tests/test_reports.py]
+        assessment: Selected dynamic HTML uses explicit escaping and regression tests cover hostile values.
+        gap_or_limitation: No complete template/render sink inventory or browser DAST exists.
+        next_action: Inventory every HTML/DOM sink and add browser security tests for untrusted content.
+      - requirement_id: v5.0.0-3.4.4
+        level: 2
+        status: implemented
+        scope: Responses emitted by the bounded FastAPI application factory.
+        owner: platform-security
+        evidence: [reconforge/api/app.py]
+        test_evidence: [tests/test_api_foundation.py]
+        assessment: API middleware sets X-Content-Type-Options to nosniff and the health response contract verifies it.
+        gap_or_limitation: This status does not cover reverse proxies, separate Studio servers, or operator-added responses.
+        next_action: Retain the middleware/test and verify equivalent headers in any supported deployment profile.
+      - requirement_id: v5.0.0-3.5.1
+        level: 1
+        status: partial
+        scope: Server-rendered Studio form mutations and bearer-token API requests.
+        owner: identity-security
+        evidence: [reconforge/studio/app.py, reconforge/studio/components.py]
+        test_evidence: [tests/test_studio_auth.py, tests/test_review_workflow.py]
+        assessment: Studio mutations use per-process CSRF tokens; API authorization uses explicit bearer headers rather than cookies.
+        gap_or_limitation: There is no deployed origin policy proof or complete cross-origin analysis for every browser surface.
+        next_action: Document supported origins and test CSRF/CORS behavior in a deployed browser topology.
+
+  - chapter_id: V4
+    chapter_name: API and Web Service
+    official_requirement_count: 16
+    chapter_assessment: partial
+    chapter_boundary: Selected FastAPI response/method behavior plus absent GraphQL/WebSocket surfaces; 12 remain unassessed.
+    mappings:
+      - requirement_id: v5.0.0-4.1.1
+        level: 1
+        status: partial
+        scope: FastAPI JSON and error responses from current registered routes.
+        owner: platform-security
+        evidence: [reconforge/api/app.py, reconforge/api/errors.py]
+        test_evidence: [tests/test_api_foundation.py]
+        assessment: Framework responses set content types and structured errors are validated on representative routes.
+        gap_or_limitation: Every response/media-type/charset combination has not been enumerated or integration-tested.
+        next_action: Add an API contract inventory that checks media type and charset for every route response class.
+      - requirement_id: v5.0.0-4.1.4
+        level: 3
+        status: partial
+        scope: HTTP methods registered by the bounded FastAPI router.
+        owner: platform-security
+        evidence: [reconforge/api/app.py]
+        test_evidence: [tests/test_api_foundation.py]
+        assessment: The router exposes declared methods and rejects unsupported route-method combinations through the framework.
+        gap_or_limitation: Proxy method filtering and an exhaustive allowed-method test per route are absent.
+        next_action: Generate and verify an allowed-method matrix for every API route and deployment proxy.
+      - requirement_id: v5.0.0-4.3.1
+        level: 2
+        status: not_applicable
+        scope: GraphQL query processing in the assessed runtime.
+        owner: platform-security
+        evidence: []
+        test_evidence: []
+        assessment: No GraphQL endpoint, schema, or execution engine is present.
+        gap_or_limitation: Adding GraphQL would create query-depth, cost, authorization, and introspection risks.
+        next_action: Reassess the complete V4.3 section before introducing any GraphQL dependency or endpoint.
+      - requirement_id: v5.0.0-4.4.1
+        level: 1
+        status: not_applicable
+        scope: WebSocket connections in the assessed runtime.
+        owner: platform-security
+        evidence: []
+        test_evidence: []
+        assessment: No WebSocket route or client is present in the registered interfaces.
+        gap_or_limitation: Future real-time jobs or notifications would make the WebSocket section applicable.
+        next_action: Reassess V4.4 before adding WebSocket routes, libraries, or browser clients.
+
+  - chapter_id: V5
+    chapter_name: File Handling
+    official_requirement_count: 13
+    chapter_assessment: partial
+    chapter_boundary: Selected documentation, bounded tabular and structured-document limits/type/path controls, and malware gaps only; eight remain unassessed.
+    mappings:
+      - requirement_id: v5.0.0-5.1.1
+        level: 2
+        status: partial
+        scope: Inventoried CSV/XLS/XLSX/JSON/YAML and selected registry/evidence inputs.
+        owner: workspace-data-owner
+        evidence: [docs/security/file-ingestion-inventory.v1.yaml, docs/security/file-ingestion.md]
+        test_evidence: [tests/test_file_ingestion_inventory.py, tests/test_file_ingress_security.py, tests/test_structured_ingress_security.py, tests/test_close_workflow_structured_ingress.py, tests/test_generated_manifest_structured_ingress.py, tests/test_client_pack_redaction_ingress.py, tests/test_client_pack_csv_redaction_ingress.py, tests/test_client_pack_copy_publication.py, tests/test_client_pack_publication_recovery.py, tests/test_db_backup_structured_ingress.py, tests/test_db_import_structured_ingress.py, tests/test_business_record_ingress.py, tests/test_evidence_review_csv_ingress.py, tests/test_review_state_json_ingress.py, tests/test_direct_json_ingress_inventory.py, tests/test_financial_idempotency_json.py, tests/test_generated_report_ingress.py, tests/test_studio_artifact_ingress.py]
+        assessment: A closed feature-by-feature inventory records supported formats, trust, entrypoints, parser families, coverage, budgets, tests, risks, limitations, and exact direct tabular/JSON/YAML calls; FI-005 evidence/review CSV, FI-006 reports, FI-007 Studio, FI-008 business records, FI-009 DB JSON, FI-014 review-state JSON, FI-015 generated compatibility JSON, FI-016 explanation JSON, AP/AR, PostgreSQL reconciliation, SQLite matching/public export, and Redis session FI-013 JSON, and FI-012 redistribution paths have named bounded profiles.
+        gap_or_limitation: Crash-atomic existing-directory client-pack replacement/recovery, legacy XLS internals, malware quarantine, source/actor authenticity, disclosure authorization, and future connector/upload behavior remain incomplete.
+        next_action: Migrate every partial inventory surface and add quarantine before adding HTTP uploads or broader connectors.
+      - requirement_id: v5.0.0-5.2.1
+        level: 1
+        status: partial
+        scope: Canonical reconciliation CSV/XLS/XLSX paths plus selected configuration/workflow/client-pack, FI-005 evidence/review CSV, FI-006 reports, FI-007 Studio, FI-009 local database import/restore JSON, FI-014 review-state JSON, FI-015 generated compatibility JSON, FI-016 explanation JSON, and AP/AR, PostgreSQL reconciliation, SQLite matching/public export, and Redis session FI-013 JSON paths.
+        owner: platform-security
+        evidence: [reconforge/io/ingress.py, reconforge/io/structured.py, reconforge/io/records.py, reconforge/io/generated.py, reconforge/io/persisted.py, docs/security/file-ingestion-inventory.v1.yaml]
+        test_evidence: [tests/test_file_ingress_security.py, tests/test_structured_ingress_security.py, tests/test_close_workflow_structured_ingress.py, tests/test_generated_manifest_structured_ingress.py, tests/test_client_pack_redaction_ingress.py, tests/test_client_pack_csv_redaction_ingress.py, tests/test_client_pack_copy_publication.py, tests/test_client_pack_publication_recovery.py, tests/test_db_backup_structured_ingress.py, tests/test_db_import_structured_ingress.py, tests/test_business_record_ingress.py, tests/test_evidence_review_csv_ingress.py, tests/test_review_state_json_ingress.py, tests/test_direct_json_ingress_inventory.py, tests/test_financial_idempotency_json.py, tests/test_generated_report_ingress.py, tests/test_studio_artifact_ingress.py, tests/test_file_ingestion_inventory.py]
+        assessment: Bounded tabular paths enforce byte/shape/archive ceilings; selected JSON/YAML plus FI-005 evidence/review CSV, FI-006 reports, FI-007 Studio, FI-008 business records, FI-009 import/restore JSON, FI-014 review-state JSON, FI-015 generated compatibility JSON, FI-016 explanation JSON, and AP/AR, PostgreSQL reconciliation, SQLite matching/public export, and Redis session FI-013 JSON enforce byte/node/depth/collection/scalar ceilings; FI-012 also freezes a bounded set and stages handled-failure publication.
+        gap_or_limitation: Generated-artifact consistency is not cryptographic, existing-directory replacement and the multi-file database export are not observer/crash atomic, and bounded inputs/state are not authenticated, malware-scanned, or approved for disclosure.
+        next_action: Inventory and migrate each remaining partial surface through bounded structured or generated-artifact readers.
+      - requirement_id: v5.0.0-5.2.2
+        level: 1
+        status: partial
+        scope: Canonical CSV/XLS/XLSX and inherited mapping, DuckDB, and built-in adapter paths.
+        owner: platform-security
+        evidence: [reconforge/io/ingress.py, docs/security/file-ingestion-inventory.v1.yaml]
+        test_evidence: [tests/test_file_ingress_security.py, tests/test_file_ingestion_inventory.py]
+        assessment: Bounded tabular paths pair an extension allowlist with CSV anti-mismatch checks, XLS OLE magic, and XLSX ZIP/content checks before parsing.
+        gap_or_limitation: Legacy XLS internals and non-tabular file types do not yet have equivalent content checks; polyglot resistance is not comprehensive.
+        next_action: Add format-specific content validation to each remaining inventoried surface without trusting extension or MIME alone.
+      - requirement_id: v5.0.0-5.3.2
+        level: 1
+        status: partial
+        scope: Paths routed through the current safe-path and tenant database helpers.
+        owner: platform-security
+        evidence: [reconforge/utils/safe_paths.py, reconforge/db/tenancy.py]
+        test_evidence: [tests/test_safe_paths.py, tests/test_tenant_isolation.py]
+        assessment: Selected outputs and tenant paths reject traversal, overlap, reserved names, and boundary escape.
+        gap_or_limitation: Not every legacy caller and future connector is proven to use the bounded helpers.
+        next_action: Add a production path-call inventory and AST/contract gate for untrusted filenames.
+      - requirement_id: v5.0.0-5.4.3
+        level: 2
+        status: planned
+        scope: Untrusted files later served, shared, or stored as evidence artifacts.
+        owner: evidence-security
+        evidence: []
+        test_evidence: []
+        assessment: The architecture reserves a malware-scanning hook, but no scanner integration or quarantine workflow exists.
+        gap_or_limitation: ReconForge cannot assert that accepted or redistributed files are free of known malicious content.
+        next_action: Define a provider-neutral scan/quarantine interface and failure tests before authorized downloads.
+
+  - chapter_id: V6
+    chapter_name: Authentication
+    official_requirement_count: 47
+    chapter_assessment: partial
+    chapter_boundary: Selected password and login-abuse controls only; 43 requirements, including MFA, remain unassessed.
+    mappings:
+      - requirement_id: v5.0.0-6.1.1
+        level: 1
+        status: partial
+        scope: Local/API password login throttling documentation.
+        owner: identity-security
+        evidence: [docs/security/api-security.md, reconforge/api/routes/auth.py]
+        test_evidence: [tests/test_api_auth.py, tests/test_redis_foundation.py]
+        assessment: Login failure windows, safe messages, and optional Redis atomic counters are documented and tested.
+        gap_or_limitation: Adaptive response, distributed deployment configuration, monitoring, and malicious lockout analysis are incomplete.
+        next_action: Publish deployment-specific throttle policy and test distributed failure/recovery behavior.
+      - requirement_id: v5.0.0-6.2.1
+        level: 1
+        status: planned
+        scope: Local user creation and password changes.
+        owner: identity-security
+        evidence: []
+        test_evidence: []
+        assessment: Passwords must be non-empty, but the required minimum-length policy is not enforced centrally.
+        gap_or_limitation: Weak short passwords can satisfy the current hash helper contract.
+        next_action: Introduce a versioned password policy with compatibility/migration handling and boundary tests.
+      - requirement_id: v5.0.0-6.3.1
+        level: 1
+        status: partial
+        scope: Local and bounded server password-login endpoints.
+        owner: identity-security
+        evidence: [reconforge/api/routes/auth.py, reconforge/infrastructure/redis.py]
+        test_evidence: [tests/test_api_auth.py, tests/test_redis_foundation.py]
+        assessment: Repeated failures are rate-limited and successful authentication clears the relevant counter.
+        gap_or_limitation: Multi-node effectiveness depends on configured Redis and has no current remote live-run evidence.
+        next_action: Obtain live multi-worker rate-limit evidence and define alert/lockout operating procedures.
+      - requirement_id: v5.0.0-6.4.3
+        level: 2
+        status: planned
+        scope: Forgotten-password recovery for local or server users.
+        owner: identity-security
+        evidence: []
+        test_evidence: []
+        assessment: No self-service password recovery capability is implemented.
+        gap_or_limitation: Operator/admin password change is not a complete secure recovery ceremony and MFA is absent.
+        next_action: Design recovery only with identity proof, token lifetime/replay controls, audit, and MFA compatibility.
+
+  - chapter_id: V7
+    chapter_name: Session Management
+    official_requirement_count: 19
+    chapter_assessment: partial
+    chapter_boundary: Selected backend verification, token generation, and termination requirements only; 16 remain unassessed.
+    mappings:
+      - requirement_id: v5.0.0-7.2.1
+        level: 1
+        status: implemented
+        scope: Opaque local API and bounded PostgreSQL server session tokens.
+        owner: identity-security
+        evidence: [reconforge/api/security.py, reconforge/infrastructure/postgres_identity.py]
+        test_evidence: [tests/test_api_auth.py, tests/test_api_server_identity.py]
+        assessment: Session verification occurs at the trusted backend and binds active user/principal state before protected routes.
+        gap_or_limitation: This does not cover OAuth/OIDC, browser cookie sessions, external IdPs, or public deployment topology.
+        next_action: Retain backend-only verification and reassess when adding any new session mechanism.
+      - requirement_id: v5.0.0-7.2.3
+        level: 1
+        status: partial
+        scope: Opaque reference tokens generated by local and PostgreSQL identity services.
+        owner: identity-security
+        evidence: [reconforge/api/security.py, reconforge/infrastructure/postgres_identity.py]
+        test_evidence: [tests/test_api_auth.py, tests/test_postgres_identity.py]
+        assessment: Tokens use the standard secrets CSPRNG, return raw material once, and store only hashes.
+        gap_or_limitation: A dedicated test does not currently assert the standard's entropy and collision boundary.
+        next_action: Add token entropy/length/uniqueness and rotation contracts without logging raw tokens.
+      - requirement_id: v5.0.0-7.4.1
+        level: 1
+        status: implemented
+        scope: Explicit logout and expired/revoked local or bounded server opaque sessions.
+        owner: identity-security
+        evidence: [reconforge/api/security.py, reconforge/infrastructure/postgres_identity.py]
+        test_evidence: [tests/test_api_auth.py, tests/test_api_server_identity.py]
+        assessment: Logout revokes session state and subsequent verification rejects expired, disabled, or revoked sessions.
+        gap_or_limitation: Client-side token deletion and distributed cache propagation remain deployment/client responsibilities.
+        next_action: Preserve revocation tests and add active-session management before claiming broader session lifecycle coverage.
+
+  - chapter_id: V8
+    chapter_name: Authorization
+    official_requirement_count: 13
+    chapter_assessment: partial
+    chapter_boundary: Selected function, object/tenant, and trusted-service enforcement only; 10 remain unassessed.
+    mappings:
+      - requirement_id: v5.0.0-8.1.1
+        level: 1
+        status: partial
+        scope: Registered permissions, API dependencies, module actions, and documented roles.
+        owner: identity-security
+        evidence: [reconforge/auth/policy.py, reconforge/api/dependencies.py]
+        test_evidence: [tests/test_auth_rbac.py, tests/test_policy_engine.py]
+        assessment: Named function permissions and selected object/action policies are explicit and deny missing permission.
+        gap_or_limitation: Field, amount, entity, period, region, and data-class ABAC documentation is incomplete.
+        next_action: Complete the centralized authorization matrix and generated deny-by-default tests.
+      - requirement_id: v5.0.0-8.2.2
+        level: 1
+        status: partial
+        scope: Tenant-scoped server repositories and selected object-action routes.
+        owner: platform-security
+        evidence: [reconforge/db/tenancy.py, reconforge/infrastructure/postgres.py]
+        test_evidence: [tests/test_tenant_isolation.py, tests/test_api_dependencies.py]
+        assessment: Tenant identifiers/paths and selected PostgreSQL contexts are bound before data access.
+        gap_or_limitation: Full domain repository migration and live cross-service object-level isolation are absent.
+        next_action: Add per-route resource ownership tests and current live RLS evidence for every server repository.
+      - requirement_id: v5.0.0-8.3.1
+        level: 1
+        status: partial
+        scope: FastAPI permission dependencies and application-service policy checks.
+        owner: identity-security
+        evidence: [reconforge/api/dependencies.py, reconforge/auth/policy.py]
+        test_evidence: [tests/test_api_foundation.py, tests/test_policy_engine.py]
+        assessment: Authorization is evaluated in backend code and does not rely on client-side controls.
+        gap_or_limitation: Trusted-local compatibility and scattered legacy checks prevent a universal service-layer claim.
+        next_action: Route every sensitive use case through the central policy boundary and test all permission/action pairs.
+
+  - chapter_id: V9
+    chapter_name: Self-contained Tokens
+    official_requirement_count: 7
+    chapter_assessment: not_applicable
+    chapter_boundary: Current sessions are opaque reference tokens; all seven self-contained-token requirements require reassessment if JWT/PASETO is added.
+    mappings:
+      - requirement_id: v5.0.0-9.1.1
+        level: 1
+        status: not_applicable
+        scope: JWT, PASETO, or other self-contained authentication/authorization tokens.
+        owner: identity-security
+        evidence: []
+        test_evidence: []
+        assessment: The assessed identity implementations use server-stored opaque token hashes, not trusted client-contained claims.
+        gap_or_limitation: Any self-contained token would add algorithm, key source, audience, time, type, and replay requirements.
+        next_action: Reassess the entire V9 chapter before introducing self-contained security tokens.
+
+  - chapter_id: V10
+    chapter_name: OAuth and OIDC
+    official_requirement_count: 36
+    chapter_assessment: not_applicable
+    chapter_boundary: OAuth authorization/resource-server and OIDC client/provider roles are not implemented; all 36 requirements are conditionally unassessed.
+    mappings:
+      - requirement_id: v5.0.0-10.4.1
+        level: 1
+        status: not_applicable
+        scope: OAuth authorization-server redirect URI processing.
+        owner: identity-security
+        evidence: []
+        test_evidence: []
+        assessment: ReconForge is not an OAuth authorization server and exposes no authorization endpoint.
+        gap_or_limitation: Planned enterprise identity integration will make relevant OAuth/OIDC roles applicable.
+        next_action: Select the exact role and reassess all V10 requirements before implementing OAuth or OIDC.
+      - requirement_id: v5.0.0-10.5.1
+        level: 2
+        status: not_applicable
+        scope: OIDC relying-party ID Token processing.
+        owner: identity-security
+        evidence: []
+        test_evidence: []
+        assessment: No OIDC client, provider metadata, authorization flow, or ID Token validation is present.
+        gap_or_limitation: OIDC integration would add nonce, issuer, audience, key, flow, logout, and replay controls.
+        next_action: Reassess the complete client/provider subset before enabling an OIDC adapter.
+
+  - chapter_id: V11
+    chapter_name: Cryptography
+    official_requirement_count: 24
+    chapter_assessment: partial
+    chapter_boundary: Selected standard-library password, comparison, hash, and CSPRNG uses only; 21 remain unassessed.
+    mappings:
+      - requirement_id: v5.0.0-11.2.1
+        level: 2
+        status: partial
+        scope: Password/session hashing, comparisons, and local artifact digests.
+        owner: identity-security
+        evidence: [reconforge/auth/passwords.py, reconforge/api/security.py]
+        test_evidence: [tests/test_auth_passwords.py, tests/test_api_auth.py]
+        assessment: Implementations use Python standard cryptographic primitives and constant-time comparison for credential/session checks.
+        gap_or_limitation: There is no approved-cryptography inventory, policy, module validation, or crypto-agility review.
+        next_action: Create the cryptographic inventory and policy before expanding encryption or signature claims.
+      - requirement_id: v5.0.0-11.4.2
+        level: 2
+        status: partial
+        scope: Local and PostgreSQL password verifier storage.
+        owner: identity-security
+        evidence: [reconforge/auth/passwords.py, reconforge/infrastructure/postgres_identity.py]
+        test_evidence: [tests/test_auth_passwords.py, tests/test_postgres_identity.py]
+        assessment: Passwords use salted PBKDF2-HMAC-SHA256 with a guarded iteration floor and no plaintext storage.
+        gap_or_limitation: Parameters are not linked to a reviewed current password-storage policy or upgrade-on-login mechanism.
+        next_action: Benchmark and version the password hash policy with transparent verifier migration and rollback tests.
+      - requirement_id: v5.0.0-11.5.1
+        level: 2
+        status: partial
+        scope: Opaque session and CSRF token generation.
+        owner: identity-security
+        evidence: [reconforge/api/security.py, reconforge/studio/app.py]
+        test_evidence: [tests/test_api_auth.py, tests/test_studio_auth.py]
+        assessment: Security tokens are generated through the standard secrets CSPRNG and raw API tokens are not stored.
+        gap_or_limitation: Entropy, uniqueness, lifecycle, and every non-guessable identifier use are not centrally inventoried.
+        next_action: Add a cryptographic-randomness registry and property tests for each security-token purpose.
+
+  - chapter_id: V12
+    chapter_name: Secure Communication
+    official_requirement_count: 12
+    chapter_assessment: partial
+    chapter_boundary: Optional adapter TLS defaults and deployment responsibility only; nine requirements remain unassessed.
+    mappings:
+      - requirement_id: v5.0.0-12.1.1
+        level: 1
+        status: planned
+        scope: Supported HTTP and internal-service TLS protocol configuration.
+        owner: platform-security
+        evidence: []
+        test_evidence: []
+        assessment: Adapter settings require encrypted schemes by default, but ReconForge does not own or verify a complete TLS termination profile.
+        gap_or_limitation: Protocol versions, cipher suites, certificate lifecycle, and proxy termination are deployment-defined.
+        next_action: Publish and test a versioned deployment TLS profile before supporting an internet-facing mode.
+      - requirement_id: v5.0.0-12.2.1
+        level: 1
+        status: partial
+        scope: Optional PostgreSQL, Redis, and S3-compatible adapter configuration.
+        owner: platform-security
+        evidence: [reconforge/infrastructure/postgres.py, reconforge/infrastructure/redis.py, reconforge/infrastructure/object_storage.py]
+        test_evidence: [tests/test_postgres_foundation.py, tests/test_redis_foundation.py, tests/test_object_storage_foundation.py]
+        assessment: Network adapters require TLS schemes/settings by default and reject insecure configuration unless explicitly overridden.
+        gap_or_limitation: Local live services, certificate trust, endpoint identity, proxies, and all external links are not verified end to end.
+        next_action: Run live certificate/hostname/failure tests in a reviewed deployment topology.
+      - requirement_id: v5.0.0-12.3.2
+        level: 2
+        status: partial
+        scope: TLS client behavior inherited from supported PostgreSQL, Redis, and object-storage libraries.
+        owner: platform-security
+        evidence: [reconforge/infrastructure/postgres.py, reconforge/infrastructure/object_storage.py]
+        test_evidence: [tests/test_postgres_foundation.py, tests/test_object_storage_foundation.py]
+        assessment: Secure defaults delegate certificate validation to standard client libraries when TLS is required.
+        gap_or_limitation: No adversarial invalid/expired/wrong-host certificate integration test is currently recorded.
+        next_action: Add live negative-certificate tests and document custom-CA handling without insecure global overrides.
+
+  - chapter_id: V13
+    chapter_name: Configuration
+    official_requirement_count: 21
+    chapter_assessment: partial
+    chapter_boundary: Selected dependency documentation and secret/deployment gaps only; 18 requirements remain unassessed.
+    mappings:
+      - requirement_id: v5.0.0-13.1.1
+        level: 2
+        status: partial
+        scope: Declared runtime network/dependency trust boundaries.
+        owner: platform-security
+        evidence: [docs/security/security-architecture.v2.yaml, docs/security/threat-model-index.v1.yaml]
+        test_evidence: [tests/test_security_architecture.py, tests/test_threat_model_index.py]
+        assessment: Current PostgreSQL, Redis, object storage, publisher, and no-network local boundaries are documented and schema-validated.
+        gap_or_limitation: Connection pools, timeouts, fallback, operator endpoints, and future connectors lack one complete inventory.
+        next_action: Add a connector/dependency manifest contract with egress, limits, retry, and secret metadata.
+      - requirement_id: v5.0.0-13.3.1
+        level: 2
+        status: planned
+        scope: Backend database, Redis, object-storage, signing, and encryption secrets.
+        owner: platform-security
+        evidence: []
+        test_evidence: []
+        assessment: Secrets are expected through environment/deployment mechanisms, but no integrated vault lifecycle is implemented.
+        gap_or_limitation: Creation, access control, audit, expiry, rotation, revocation, and destruction are operator responsibilities.
+        next_action: Define a provider-neutral secret-manager port and customer-managed deployment contract.
+      - requirement_id: v5.0.0-13.4.2
+        level: 2
+        status: planned
+        scope: Production deployment debug and framework configuration.
+        owner: platform-security
+        evidence: []
+        test_evidence: []
+        assessment: Local defaults are conservative, but no supported production hardening profile or deployed configuration audit exists.
+        gap_or_limitation: Operator servers/proxies may expose debug behavior outside repository defaults.
+        next_action: Add a production-profile configuration validator and deployment smoke test.
+
+  - chapter_id: V14
+    chapter_name: Data Protection
+    official_requirement_count: 13
+    chapter_assessment: partial
+    chapter_boundary: Selected classification, handling, and API cache-control requirements only; 10 remain unassessed.
+    mappings:
+      - requirement_id: v5.0.0-14.1.1
+        level: 2
+        status: partial
+        scope: Security Architecture v2 data classes and active-module classified assets.
+        owner: workspace-data-owner
+        evidence: [docs/security/security-architecture.v2.yaml, docs/security/threat-model-index.v1.yaml]
+        test_evidence: [tests/test_security_architecture.py, tests/test_threat_model_index.py]
+        assessment: Six handling classes and 20 module assets identify public, internal, financial, identity, audit, and secret data.
+        gap_or_limitation: Field-level discovery/classification and deployed storage inventories are not automated or complete.
+        next_action: Add schema/field classification metadata and export/log enforcement tests.
+      - requirement_id: v5.0.0-14.2.4
+        level: 2
+        status: partial
+        scope: Local financial artifacts, logs, client packs, anonymized exports, and retention metadata.
+        owner: evidence-security
+        evidence: [docs/security/data-handling.md, reconforge/reports/client_pack.py]
+        test_evidence: [tests/test_client_pack_financial_input_policy.py, tests/test_anonymizer.py]
+        assessment: Redaction/anonymization/checksum boundaries and non-guarantees are explicit for selected sharing workflows.
+        gap_or_limitation: Encryption, deletion, legal hold, field-level log enforcement, and recipient authorization are incomplete.
+        next_action: Implement classified-data handling policy enforcement and restore/deletion authorization tests.
+      - requirement_id: v5.0.0-14.3.2
+        level: 2
+        status: implemented
+        scope: Responses emitted by the bounded FastAPI application factory.
+        owner: platform-security
+        evidence: [reconforge/api/app.py]
+        test_evidence: [tests/test_api_foundation.py]
+        assessment: API middleware sets Cache-Control to no-store on responses and the representative health contract verifies response headers.
+        gap_or_limitation: This does not prove browser/proxy cache behavior for separate Studio/static/deployment surfaces.
+        next_action: Retain the API header gate and add equivalent cache policy to any supported sensitive browser surface.
+
+  - chapter_id: V15
+    chapter_name: Secure Coding and Architecture
+    official_requirement_count: 21
+    chapter_assessment: partial
+    chapter_boundary: Selected dependency/SBOM/audit and atomicity requirements only; 17 remain unassessed.
+    mappings:
+      - requirement_id: v5.0.0-15.1.1
+        level: 1
+        status: planned
+        scope: Dependency vulnerability remediation and update policy.
+        owner: release-security
+        evidence: []
+        test_evidence: []
+        assessment: Automated audit workflows exist, but risk-based remediation time frames and exception governance are not adopted.
+        gap_or_limitation: A vulnerable component can lack a documented owner, deadline, acceptance record, or release gate.
+        next_action: Define severity-based patch SLAs, ownership, exceptions, and release blocking criteria.
+      - requirement_id: v5.0.0-15.1.2
+        level: 2
+        status: partial
+        scope: Python/web/container release dependency inventory.
+        owner: release-security
+        evidence: [.github/workflows/release.yml, .github/scripts/build_release_sboms.py, docs/schemas/sbom_manifest.schema.json, docs/execution/DEPENDENCY_RISK.md]
+        test_evidence: [tests/test_release_sbom_pipeline.py, tests/test_signed_release_pipeline.py]
+        assessment: Exact-subject CycloneDX 1.7 generation, candidate attestation/verification definitions, and deterministic local package/source fixtures exist.
+        gap_or_limitation: No hosted image scan, signed SBOM, trusted-builder execution, immutable publication, or retained consumer verification is proven.
+        next_action: Execute and independently verify every artifact-specific SBOM in a clean trusted release exercise.
+      - requirement_id: v5.0.0-15.2.1
+        level: 1
+        status: partial
+        scope: Locked Python/server and exact-version npm dependency audit gates.
+        owner: release-security
+        evidence: [uv.lock, docs/security/supply-chain-policy.v1.json, docs/security/supply-chain-exceptions.v1.json, .github/workflows/security.yml, .github/workflows/release.yml, docs/execution/DEPENDENCY_RISK.md]
+        test_evidence: [tests/test_supply_chain_policy.py, tests/test_release_readiness_docs.py]
+        assessment: Universal hash-bearing Python/server resolution and exact npm versions feed fail-closed audit/exception gates locally and before candidate registry authentication.
+        gap_or_limitation: Hosted Python 3.11/3.12 and release execution, npm SRI completeness, artifact reachability, and operating remediation evidence are not proven.
+        next_action: Execute and retain hosted supported-version/release audits, close the npm SRI gap, and add artifact reachability plus remediation evidence.
+      - requirement_id: v5.0.0-15.4.2
+        level: 3
+        status: partial
+        scope: Selected business-state checks and writes in migrated local/server services.
+        owner: domain-integrity
+        evidence: [reconforge/platform/common.py, reconforge/infrastructure/postgres_reconciliation.py]
+        test_evidence: [tests/test_atomic_legacy_services.py, tests/test_postgres_reconciliation.py]
+        assessment: Selected state validation and mutation occurs inside transactions with rollback/immutability contracts.
+        gap_or_limitation: A whole-repository TOCTOU/race analysis and live multi-worker adversarial tests do not exist.
+        next_action: Add concurrency/property tests per shared resource and complete legacy mutation migration.
+
+  - chapter_id: V16
+    chapter_name: Security Logging and Error Handling
+    official_requirement_count: 17
+    chapter_assessment: partial
+    chapter_boundary: Selected audit metadata, UTC, sensitive logging, authorization failure, and API error controls; 11 remain unassessed.
+    mappings:
+      - requirement_id: v5.0.0-16.1.1
+        level: 2
+        status: planned
+        scope: Application, worker, dependency, deployment, and security log inventory.
+        owner: platform-security
+        evidence: []
+        test_evidence: []
+        assessment: Audit-event and logging guidance exists, but no complete layer-by-layer log/format/access/retention inventory is maintained.
+        gap_or_limitation: Operators cannot verify consistent collection, access, retention, or alert coverage from repository evidence alone.
+        next_action: Create the structured-log inventory and bind each event category to owner, class, retention, sink, and tests.
+      - requirement_id: v5.0.0-16.2.1
+        level: 2
+        status: partial
+        scope: SQLite/PostgreSQL audit events and selected business mutations.
+        owner: domain-integrity
+        evidence: [reconforge/audit/events.py, reconforge/infrastructure/postgres_ledger.py]
+        test_evidence: [tests/test_audit_events.py, tests/test_postgres_ledger.py]
+        assessment: Audit entries include event identity, actor, action/object metadata, timestamps, and integrity links in selected stores.
+        gap_or_limitation: Audit coverage and metadata are not uniform across all legacy services and deployment layers.
+        next_action: Complete the audit event inventory and schema parity tests for every sensitive mutation.
+      - requirement_id: v5.0.0-16.2.2
+        level: 2
+        status: partial
+        scope: Application-generated timestamps and current audit/artifact helpers.
+        owner: domain-integrity
+        evidence: [reconforge/domain/models.py, reconforge/audit/events.py]
+        test_evidence: [tests/test_utc_time.py, tests/test_audit_events.py]
+        assessment: Shared helpers emit timezone-aware UTC text with deterministic precision for selected records.
+        gap_or_limitation: Host/service time synchronization and every external/deployment log source are not verified.
+        next_action: Add deployment time-source monitoring and cross-component timestamp contract evidence.
+      - requirement_id: v5.0.0-16.2.5
+        level: 2
+        status: partial
+        scope: Financial, identity, audit, and secret data in application logs and shareable artifacts.
+        owner: evidence-security
+        evidence: [docs/security/data-handling.md, docs/security/security-architecture.v2.yaml]
+        test_evidence: [tests/test_client_pack_financial_input_policy.py, tests/test_security_architecture.py]
+        assessment: Policy forbids raw financial rows/secrets by default and selected disclosure workflows apply explicit transformations.
+        gap_or_limitation: There is no field-level logging enforcement or comprehensive sink scan proving sensitive values cannot be logged.
+        next_action: Add structured redaction middleware, classified fields, and secret/financial canary log tests.
+      - requirement_id: v5.0.0-16.3.2
+        level: 2
+        status: planned
+        scope: Failed authorization decisions across API, Studio, CLI, and server repositories.
+        owner: identity-security
+        evidence: []
+        test_evidence: []
+        assessment: Permission failures return safe errors, but consistent audit logging of failed authorization is not implemented.
+        gap_or_limitation: Security monitoring cannot rely on a complete denied-action event stream.
+        next_action: Define redacted authorization-decision events and tests without recording sensitive request bodies.
+      - requirement_id: v5.0.0-16.5.1
+        level: 2
+        status: partial
+        scope: FastAPI validation, authentication, permission, not-found, conflict, and unhandled error responses.
+        owner: platform-security
+        evidence: [reconforge/api/errors.py, reconforge/api/app.py]
+        test_evidence: [tests/test_api_foundation.py, tests/test_api_auth.py]
+        assessment: Central handlers emit structured error codes/messages/request IDs and representative tests reject tracebacks.
+        gap_or_limitation: Several routes expose bounded exception text and no DAST verifies every error path against sensitive leakage.
+        next_action: Inventory error codes/messages, classify safe details, and fuzz route failures for secret/query/path leakage.
+
+  - chapter_id: V17
+    chapter_name: WebRTC
+    official_requirement_count: 12
+    chapter_assessment: not_applicable
+    chapter_boundary: No WebRTC, TURN, DTLS-SRTP, media, or signaling surface exists; all 12 requirements require reassessment if introduced.
+    mappings:
+      - requirement_id: v5.0.0-17.1.1
+        level: 2
+        status: not_applicable
+        scope: TURN relay access and network-range restrictions.
+        owner: platform-security
+        evidence: []
+        test_evidence: []
+        assessment: ReconForge contains no TURN relay or WebRTC connectivity feature.
+        gap_or_limitation: Real-time media or browser communication would make TURN and network-abuse controls applicable.
+        next_action: Reassess all V17 requirements before adding WebRTC, TURN, media, or signaling components.
+      - requirement_id: v5.0.0-17.2.1
+        level: 2
+        status: not_applicable
+        scope: DTLS certificate key management for WebRTC media.
+        owner: platform-security
+        evidence: []
+        test_evidence: []
+        assessment: No DTLS-SRTP media server or WebRTC certificate key is present.
+        gap_or_limitation: Any future media server would require dedicated key, cipher, fingerprint, flood, and malformed-packet controls.
+        next_action: Reassess the full media and signaling chapter before introducing a WebRTC dependency.

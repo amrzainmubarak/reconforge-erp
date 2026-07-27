@@ -1,0 +1,464 @@
+schema_version: 1
+registry_id: reconforge-risk-register
+risk_method:
+  likelihood_scale:
+    unlikely: 1
+    possible: 2
+    likely: 3
+    almost_certain: 4
+  impact_scale:
+    low: 1
+    medium: 2
+    high: 3
+    critical: 4
+  rating_thresholds:
+    low: [1, 3]
+    medium: [4, 7]
+    high: [8, 11]
+    critical: [12, 16]
+last_reviewed: "2026-07-26"
+risks:
+  - id: R-001
+    title: Hosted tenant escape
+    category: security
+    owner: platform-security
+    trigger: A hosted request, worker, cache, object, export, or repository operation reads or mutates another tenant's data.
+    likelihood: likely
+    impact: critical
+    inherent_risk: critical
+    status: partially_mitigated
+    mitigations:
+      - Strict local tenant path/header routing and transaction-local PostgreSQL tenant scope.
+      - Forced RLS, composite foreign keys, and explicit schema-only matcher boundaries.
+      - Live identity, session, evidence, and reconciliation isolation contract tests where services are available.
+    evidence:
+      - reconforge/infrastructure/postgres.py
+      - tests/test_tenant_isolation.py
+    residual_risk: high
+    residual_rationale: Most domain persistence and cache/object/export integration remain outside one end-to-end hosted isolation proof.
+    next_actions:
+      - Add live repository, worker, cache, object-storage, and export tenant-escape tests.
+      - Complete shared-schema domain migrations behind tenant-scoped repository contracts.
+    review_cadence_days: 14
+    next_review: "2026-08-08"
+  - id: R-002
+    title: Complete ERP capability overclaim
+    category: product
+    owner: product-governance
+    trigger: Public or sales-facing wording describes ReconForge as a complete ERP or claims unverified enterprise, banking, scale, or compliance maturity.
+    likelihood: likely
+    impact: critical
+    inherent_risk: critical
+    status: partially_mitigated
+    mitigations:
+      - README, architecture, evidence matrix, and AP/AR documents state bounded scope and non-goals.
+      - Public wording is governed by the claims evidence matrix.
+    evidence:
+      - README.md
+      - docs/execution/CLAIMS_EVIDENCE_MATRIX.md
+    residual_risk: medium
+    residual_rationale: Broad capability files and future copy can still drift without automated maturity-label enforcement.
+    next_actions:
+      - Add CI enforcement linking public claims and module maturity to evidence records.
+      - Require end-to-end evidence and an approved ADR before changing positioning.
+    review_cadence_days: 14
+    next_review: "2026-08-08"
+  - id: R-003
+    title: Business change without audit evidence
+    category: audit
+    owner: domain-integrity
+    trigger: A financial or operational lifecycle mutation commits while its required audit event or outbox evidence is missing.
+    likelihood: likely
+    impact: high
+    inherent_risk: high
+    status: partially_mitigated
+    mitigations:
+      - Migrated services write business, audit, and required outbox records atomically.
+      - Forced audit/outbox failure tests prove rollback for migrated boundaries.
+    evidence:
+      - tests/test_atomic_legacy_services.py
+      - reconforge/platform/outbox.py
+    residual_risk: high
+    residual_rationale: Several legacy platform services have not yet adopted the atomic mutation contract.
+    next_actions:
+      - Inventory and migrate remaining mutating services.
+      - Add failure-injection tests to every migrated transaction boundary.
+    review_cadence_days: 30
+    next_review: "2026-08-24"
+  - id: R-004
+    title: Floating-point financial storage
+    category: financial_integrity
+    owner: financial-integrity
+    trigger: A monetary value, tolerance, balance, cost, or financial difference is parsed, stored, or compared through binary floating point.
+    likelihood: likely
+    impact: high
+    inherent_risk: high
+    status: partially_mitigated
+    mitigations:
+      - Named strict-v2 parsing and canonical Decimal text protect current reconciliation writers.
+      - Classified source ledger records every remaining float compatibility boundary.
+      - Exact round-trip and strict rejection tests cover migrated paths.
+    evidence:
+      - docs/execution/FLOAT_BOUNDARY_CLASSIFICATION.md
+      - tests/test_financial_input_policy.py
+    residual_risk: high
+    residual_rationale: Public compatibility readers and SQLite REAL-affinity columns remain in non-migrated boundaries.
+    next_actions:
+      - Migrate the next classified financial compatibility boundary with versioned reader/writer evidence.
+      - Replace remaining financial REAL projections with canonical exact storage.
+    review_cadence_days: 30
+    next_review: "2026-08-24"
+  - id: R-005
+    title: Incomplete shared exception taxonomy
+    category: data_model
+    owner: reconciliation-domain
+    trigger: Different domains encode equivalent exceptions with incompatible types, severities, evidence links, or lifecycle semantics.
+    likelihood: likely
+    impact: high
+    inherent_risk: high
+    status: open
+    mitigations:
+      - Stock/GL exceptions expose typed metadata and source lineage.
+      - PostgreSQL reconciliation persists independent exception type, reason, severity, and risk fields.
+    evidence:
+      - reconforge/reconciliation/stock_gl.py
+      - reconforge/infrastructure/postgres_reconciliation.py
+    residual_risk: high
+    residual_rationale: Other local domains do not implement one versioned cross-domain exception contract.
+    next_actions:
+      - Define a versioned exception schema and domain adapters.
+      - Add cross-domain golden taxonomy cases and compatibility tests.
+    review_cadence_days: 30
+    next_review: "2026-08-24"
+  - id: R-006
+    title: Large datasets exceed memory
+    category: reliability
+    owner: performance-reliability
+    trigger: Candidate generation or global assignment materializes an unbounded working set or exceeds declared memory/runtime limits.
+    likelihood: possible
+    impact: high
+    inherent_risk: medium
+    status: partially_mitigated
+    mitigations:
+      - DuckDB provides bounded relation batches and work-order partition execution.
+      - Hosted workers stream explicit hard-key partitions and checkpoint completed output.
+      - No million-row claim is allowed after the timed-out local attempt.
+    evidence:
+      - reconforge/engines/duckdb_engine.py
+      - tests/test_generator_benchmark_engines.py
+    residual_risk: medium
+    residual_rationale: Global matching still materializes its graph and peak-memory evidence is incomplete.
+    next_actions:
+      - Implement bounded candidate pruning/global assignment where justified.
+      - Record trustworthy peak RSS and a reproducible one-million-row tier before any claim.
+    review_cadence_days: 60
+    next_review: "2026-09-23"
+  - id: R-007
+    title: Local identity is not enterprise identity
+    category: identity
+    owner: identity-security
+    trigger: A deployment relies on local password/session behavior while claiming or requiring OIDC, SAML, SCIM, MFA, or enterprise lifecycle controls.
+    likelihood: possible
+    impact: high
+    inherent_risk: medium
+    status: open
+    mitigations:
+      - Tenant-scoped PostgreSQL password, RBAC, session, revocation, and bounded server-auth paths are tested.
+      - Documentation explicitly withholds enterprise identity claims.
+    evidence:
+      - reconforge/infrastructure/postgres_identity.py
+      - tests/test_api_server_identity.py
+    residual_risk: medium
+    residual_rationale: Federation, MFA, provisioning, lifecycle administration, and multi-worker session integration are absent.
+    next_actions:
+      - Design provider-neutral federation and MFA boundaries.
+      - Add lifecycle, revocation, worker, UI, and principal-propagation tests.
+    review_cadence_days: 60
+    next_review: "2026-09-23"
+  - id: R-008
+    title: Outbox is not yet a hosted delivery system
+    category: operations
+    owner: platform-operations
+    trigger: An event is published twice, lost after commit, replayed unsafely, or left undelivered because external transport and hosted scheduling are incomplete.
+    likelihood: possible
+    impact: high
+    inherent_risk: medium
+    status: partially_mitigated
+    mitigations:
+      - SQLite and PostgreSQL outboxes implement claim, lease, retry, dead-letter, and replay states.
+      - Bounded workers use fresh connections and tested ownership transitions.
+    evidence:
+      - reconforge/infrastructure/postgres_outbox.py
+      - tests/test_postgres_outbox.py
+    residual_risk: medium
+    residual_rationale: No external transport, tenant enumerator, publisher idempotency contract, or managed deployment exists.
+    next_actions:
+      - Add transport/idempotency contracts and crash-after-publish recovery tests.
+      - Define tenant enumeration, observability, and deployment scheduling.
+    review_cadence_days: 60
+    next_review: "2026-09-23"
+  - id: R-009
+    title: Contributor environment mismatch
+    category: developer_experience
+    owner: developer-experience
+    trigger: A contributor follows repository setup instructions but resolves an absent or unsupported interpreter/toolchain.
+    likelihood: possible
+    impact: low
+    inherent_risk: low
+    status: open
+    mitigations:
+      - Baseline documents the broken workspace launcher and actual interpreter versions.
+      - Package metadata declares supported Python versions.
+    evidence:
+      - docs/execution/BASELINE.md
+      - pyproject.toml
+    residual_risk: low
+    residual_rationale: The local launcher remains stale and clean-install smoke evidence is incomplete.
+    next_actions:
+      - Repair or remove stale workspace launcher references.
+      - Add clean-install setup diagnostics for supported Python versions.
+    review_cadence_days: 90
+    next_review: "2026-10-23"
+  - id: R-010
+    title: React Studio is read-only
+    category: user_experience
+    owner: studio-experience
+    trigger: Users infer that the experimental React surface can complete governed mutations or replace the current local Studio.
+    likelihood: possible
+    impact: low
+    inherent_risk: low
+    status: monitoring
+    mitigations:
+      - Product and architecture documentation label the React client read-only and experimental.
+      - Unit and E2E tests cover the disclosed read-only paths.
+    evidence:
+      - apps/web
+      - tests/test_studio_platform_pages.py
+    residual_risk: low
+    residual_rationale: Mutation workflows and full accessibility coverage are not implemented.
+    next_actions:
+      - Add authenticated API-backed write screens only with authorization and E2E evidence.
+      - Complete critical-path accessibility coverage before maturity changes.
+    review_cadence_days: 90
+    next_review: "2026-10-23"
+  - id: R-011
+    title: Unbound local actor labels
+    category: identity
+    owner: identity-security
+    trigger: An untrusted API, UI, or worker caller supplies a trusted local actor label and bypasses principal binding or segregation-of-duties checks.
+    likelihood: likely
+    impact: high
+    inherent_risk: high
+    status: partially_mitigated
+    mitigations:
+      - API requests run in explicit untrusted actor context.
+      - PostgreSQL server profile binds a tenant-scoped principal through migrated domain calls.
+      - Trusted local labels remain limited to explicit local CLI/service paths.
+    evidence:
+      - reconforge/platform/common.py
+      - tests/test_api_dependencies.py
+    residual_risk: high
+    residual_rationale: CLI, Studio, worker, and remaining server boundaries lack one end-to-end principal proof.
+    next_actions:
+      - Enforce principal context across every server, UI, CLI, and worker boundary.
+      - Add end-to-end self-approval and delegated-actor SoD tests.
+    review_cadence_days: 30
+    next_review: "2026-08-24"
+  - id: R-012
+    title: AP workflow stops before accounting and payment
+    category: product
+    owner: payables-domain
+    trigger: AP workflow metadata is represented as statutory posting, tax determination, payment execution, or source-ERP writeback.
+    likelihood: likely
+    impact: high
+    inherent_risk: high
+    status: open
+    mitigations:
+      - AP scope documents bounded suppliers, POs, receipts, invoices, and match exceptions.
+      - Approval is labeled workflow metadata and no posting/payment claim is made.
+    evidence:
+      - reconforge/platform/payables.py
+      - tests/test_payables.py
+    residual_risk: high
+    residual_rationale: Posting, tax, withholding, payment, reversal, and writeback invariants are not implemented.
+    next_actions:
+      - Design a versioned AP accounting/payment slice with domain review.
+      - Add period, tax, reversal, idempotency, and ledger-invariant tests.
+    review_cadence_days: 30
+    next_review: "2026-08-24"
+  - id: R-013
+    title: Multi-worker coordination is not active in the API
+    category: reliability
+    owner: platform-operations
+    trigger: A multi-worker deployment assumes shared throttling, locks, sessions, or recovery behavior that the active API profile does not provide.
+    likelihood: likely
+    impact: high
+    inherent_risk: high
+    status: partially_mitigated
+    mitigations:
+      - PostgreSQL server-auth sessions and revocation are tenant scoped and live-tested.
+      - Redis coordination primitives have bounded contract tests but remain optional.
+    evidence:
+      - reconforge/infrastructure/redis.py
+      - tests/test_redis_foundation.py
+    residual_risk: high
+    residual_rationale: Redis-backed auth/rate limiting, failure modes, and lock recovery are not integrated by default.
+    next_actions:
+      - Integrate shared session/rate-limit coordination behind explicit deployment policy.
+      - Add dependency-failure, recovery, and tenant-isolation tests.
+    review_cadence_days: 30
+    next_review: "2026-08-24"
+  - id: R-014
+    title: Evidence artifacts are not yet centrally stored
+    category: security
+    owner: evidence-security
+    trigger: Evidence bytes are uploaded, downloaded, retained, replicated, or deleted without authorized checksum, malware, tenant, and retention enforcement.
+    likelihood: likely
+    impact: high
+    inherent_risk: high
+    status: partially_mitigated
+    mitigations:
+      - S3-compatible adapter verifies checksums, tenant keys, bounded reads, optional encryption/retention, and disables deletion by default.
+      - Local/PostgreSQL registries preserve immutable artifact metadata and verification state.
+    evidence:
+      - reconforge/infrastructure/object_storage.py
+      - tests/test_evidence_object_storage.py
+    residual_risk: high
+    residual_rationale: Worker upload, malware scanning, download authorization, retention enforcement, and restore replication remain open.
+    next_actions:
+      - Implement trusted storage worker and malware-scanning hook.
+      - Add signed-download authorization, retention/versioning, restore, and tenant-escape tests.
+    review_cadence_days: 30
+    next_review: "2026-08-24"
+  - id: R-015
+    title: PostgreSQL schema coverage is incomplete
+    category: data_model
+    owner: platform-persistence
+    trigger: A server-profile request reaches an unmigrated domain or silently falls back from tenant-scoped PostgreSQL to local SQLite behavior.
+    likelihood: likely
+    impact: high
+    inherent_risk: high
+    status: partially_mitigated
+    mitigations:
+      - Eleven Alembic revisions cover bounded master data, ledger, identity, close, outbox, evidence, and reconciliation foundations.
+      - Unsupported server capabilities fail explicitly instead of silently falling back.
+      - Migrated repositories use tenant-scoped contracts and atomic evidence where required.
+    evidence:
+      - alembic/versions
+      - tests/test_alembic_postgres.py
+    residual_risk: high
+    residual_rationale: Remaining Finance Core, workflow, backup/restore, and broader domains are not in one upgrade/rollback chain.
+    next_actions:
+      - Add expand-and-contract migrations for remaining server domains.
+      - Test backup/restore, downgrade/roll-forward, and cross-version upgrades.
+    review_cadence_days: 30
+    next_review: "2026-08-24"
+  - id: R-016
+    title: AR workflow stops before statutory accounting and collections
+    category: product
+    owner: receivables-domain
+    trigger: AR workflow, exposure, or aging metadata is represented as statutory GL posting, tax, credit-note, collections, payment, or ERP writeback capability.
+    likelihood: likely
+    impact: high
+    inherent_risk: high
+    status: open
+    mitigations:
+      - AR documentation and tests explicitly bound invoices, controls, receipts, allocations, exposure, and aging.
+      - No complete statutory accounting or collections claim is allowed.
+    evidence:
+      - reconforge/platform/receivables.py
+      - tests/test_receivables.py
+    residual_risk: high
+    residual_rationale: Revenue/receivable posting, tax, credit notes, dunning, payment, reversal, and writeback are absent.
+    next_actions:
+      - Design a versioned AR posting/tax/collections/payment slice with domain review.
+      - Add period, reversal, tax, idempotency, and ledger-invariant tests.
+    review_cadence_days: 30
+    next_review: "2026-08-24"
+  - id: R-017
+    title: Anonymized exports can remain identifying or reversible
+    category: privacy
+    owner: privacy-security
+    trigger: A shareable export preserves identifiers, free text, filenames, linkable amounts, or reversible mapping data sufficient for re-identification.
+    likelihood: likely
+    impact: high
+    inherent_risk: high
+    status: partially_mitigated
+    mitigations:
+      - Default output excludes reversible mappings and refuses stale/non-empty targets.
+      - Exact versioned noise and manifest digests disclose the bounded privacy transformation.
+      - Private mapping export requires a separate explicit path.
+    evidence:
+      - reconforge/anonymizer/engine.py
+      - tests/test_anonymizer.py
+    residual_risk: high
+    residual_rationale: No independent disclosure-risk method, free-text allowlist, or adversarial re-identification assessment exists.
+    next_actions:
+      - Define field classification and free-text policy.
+      - Commission adversarial re-identification and qualified privacy review before any safe-publication claim.
+    review_cadence_days: 30
+    next_review: "2026-08-24"
+  - id: R-018
+    title: Unbounded or hostile local file parsing
+    category: security
+    owner: platform-security
+    trigger: An operator-selected or generated file reaches a parser without enforced type, size, shape, decompression, active-content, and safe-error boundaries.
+    likelihood: likely
+    impact: high
+    inherent_risk: high
+    status: partially_mitigated
+    mitigations:
+      - Versioned tabular ingress preflight bounds canonical CSV/XLS/XLSX, mapping, DuckDB, and built-in CSV adapter paths before normal parsing.
+      - A closed schema-v1 inventory and AST allowlist fail when a direct tabular parser call appears without an explicit surface record.
+      - Versioned structured-document ingress bounds selected JSON/YAML bytes, nodes, depth, collections, scalars, and aliases; configuration/mapping/control, close-workflow, client-pack manifest, and evidence-index files reject duplicate keys and unsafe or over-budget structures before domain validation.
+      - Client-pack JSON redaction preflights through the same boundary before fingerprint hashing or destination preparation, preserving strict fractional/exponent lexemes and legacy finite-float behavior while rejecting malformed JSON instead of reinterpreting it as text.
+      - Client-pack CSV redaction preflights through tabular-file-ingress-v1 before hashing/output, rejects duplicate headers, preserves exact field strings, and streams rows through a temporary file with per-file atomic replace.
+      - Client-pack text and non-redacted copies now share file-count, traversal, per-file, aggregate, regular-file, and change-detection budgets; generic text uses strict UTF-8 bounded-line streaming.
+      - Client-pack generation freezes the selected source set, builds and rechecks the complete pack in a sibling staging directory, and preserves or restores prior output on handled generation/publication failure.
+      - Local DB restore backup/manifest JSON uses fixed byte/node/depth/collection/scalar ceilings, duplicate/non-finite rejection, regular non-reparse paths, stable pre/post-read fingerprints, and closed manifest/backup/table-name validation before temporary restore allocation or target mutation.
+      - Legacy DB account/control JSON imports use fixed byte/node/depth/collection/scalar ceilings, duplicate/non-finite rejection, stable regular non-reparse reads, unambiguous envelope/list/map shapes, and parsed-byte digest/size provenance before database inspection or mutation.
+      - FI-008 business-record CSV/JSON imports use fixed byte/record/field/cell/scalar and JSON node/depth ceilings, strict ambiguity/shape/encoding checks, exact fractional lexemes, stable fingerprints, and parsed-byte provenance before domain mutation.
+      - FI-007 Studio generated CSV/JSON uses fixed byte/row/column/cell/field plus JSON node/depth/collection/scalar ceilings, duplicate/header/non-finite rejection, stable fingerprints, safe empty views, and optional companion shape/count consistency while preserving display typing.
+      - FI-006 variance CSV/JSON and management-report JSON reuse the same bounded stable reader; variance selects an explicit exact-text CSV representation before Decimal validation while Studio keeps display inference.
+      - FI-005 evidence/review CSV reuses explicit strict/legacy representations; evidence generation parses each selected CSV once and binds v3 fingerprints to the cached parsed bytes with final stability verification.
+      - FI-014 review-state JSON uses a 16 MiB/500000-node/depth-32/100000-item bounded duplicate-safe profile with stable regular-file fingerprints; malformed present input fails visibly and rejected updates preserve the original while valid legacy coercion remains.
+      - Exact AST allowlists close current direct tabular/JSON/YAML calls. FI-015 generated report/workflow/demo and FI-016 user-selected explanation JSON use bounded stable readers with explicit display/exact-text numeric representation; FI-013 persisted decoders and FI-017 package text are classified separately.
+      - FI-013 AP/AR idempotency response producers and consumers use canonical object JSON under 4 MiB/100000-node/depth-32/25000-item/262144-character ceilings with unique keys and integer-only number tokens; producer rejection rolls back and corrupt replay rejects before a new financial business/audit/outbox effect.
+      - FI-013 SQLite matching rules use one 4 MiB/100000-node/depth-32/25000-item/262144-character finite-object profile across both table writes, replay, and public readers; encoding precedes the transaction and preserves historical spaced bytes and policy defaults.
+      - FI-013 tenant-scoped Redis sessions use one closed 16 KiB/16-node/depth-2/four-field/256-character profile with digest and explicit-UTC validation; producer rejection precedes client access and corrupt reads do not mutate stored values.
+      - FI-013 public SQLite export maintains an exact five-field JSON registry. Audit/rule fields reuse established profiles; legacy summaries and matching lineage use two new 4 MiB/100000-node/depth-32/25000-item/262144-character finite-object profiles across producer and export validation.
+      - Export validates every registered JSON row before destination creation or file writes, rejects non-text/corrupt values without a sentinel or audit effect, and preserves all format-v1 field shapes including the lineage_json string.
+      - Existing-output publication writes a versioned, self-validating local transaction marker before the first rename; an explicit recovery command verifies exact siblings and bounded previous/staged tree digests against a closed state table before restoring, finalizing, or deleting anything.
+      - The closed AST allowlist also fails when a direct PyYAML load or parse call appears without an explicit surface record.
+    evidence:
+      - reconforge/io/ingress.py
+      - reconforge/io/structured.py
+      - reconforge/io/records.py
+      - reconforge/io/generated.py
+      - reconforge/io/persisted.py
+      - docs/security/file-ingestion-inventory.v1.yaml
+      - tests/test_file_ingress_security.py
+      - tests/test_structured_ingress_security.py
+      - tests/test_business_record_ingress.py
+      - tests/test_studio_artifact_ingress.py
+      - tests/test_generated_report_ingress.py
+      - tests/test_evidence_review_csv_ingress.py
+      - tests/test_review_state_json_ingress.py
+      - tests/test_direct_json_ingress_inventory.py
+      - tests/test_financial_idempotency_json.py
+      - tests/test_close_workflow_structured_ingress.py
+      - tests/test_generated_manifest_structured_ingress.py
+      - tests/test_client_pack_redaction_ingress.py
+      - tests/test_client_pack_csv_redaction_ingress.py
+      - tests/test_client_pack_copy_publication.py
+      - tests/test_client_pack_publication_recovery.py
+      - tests/test_db_backup_structured_ingress.py
+      - tests/test_db_import_structured_ingress.py
+      - tests/test_file_ingestion_inventory.py
+    residual_risk: high
+    residual_rationale: Legacy XLS, malware quarantine, provenance/disclosure and actor authorization, export crash atomicity, and future uploads/connectors remain incomplete. AP/AR, audit, PostgreSQL outbox/reconciliation, SQLite matching/export, and Redis session JSON are bounded but unauthenticated. DB/artifact hashes are unkeyed, legacy schemas remain permissive, and pack/export recovery is neither crash atomic nor authenticated.
+    next_actions:
+      - Stage and integrity-bind the multi-file public database export, then test handled failure and real process/host/filesystem interruption without losing an existing destination.
+      - Add provider-neutral malware scanning and quarantine before any HTTP upload, evidence redistribution, or connector expansion.
+    review_cadence_days: 30
+    next_review: "2026-08-25"

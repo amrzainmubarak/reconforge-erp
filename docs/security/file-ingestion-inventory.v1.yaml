@@ -1,0 +1,458 @@
+schema_version: 1
+inventory_id: reconforge-file-ingestion
+reviewed_on: "2026-07-26"
+owner: platform-security
+claim_boundary: >-
+  This inventory proves repository-visible parser coverage and bounded controls only. It does not prove
+  that files are authentic or malware-free, does not cover future connectors, and does not authorize
+  redistribution of accepted content. Partial surfaces remain untrusted and must not be described as secure uploads.
+tabular_policy:
+  id: tabular-file-ingress-v1
+  implementation: reconforge/io/ingress.py
+  accepted_extensions: [.csv, .xls, .xlsx]
+  max_file_bytes: 67108864
+  max_rows: 1000000
+  max_columns: 2048
+  max_cells: 20000000
+  max_csv_field_characters: 128000
+  max_archive_members: 4096
+  max_archive_member_bytes: 134217728
+  max_archive_uncompressed_bytes: 268435456
+  max_archive_compression_ratio: 1000
+structured_document_policy:
+  id: structured-document-ingress-v1
+  implementation: reconforge/io/structured.py
+  accepted_extensions: [.json, .yaml, .yml]
+  max_file_bytes: 8388608
+  max_nodes: 200000
+  max_depth: 64
+  max_collection_items: 100000
+  max_scalar_characters: 1000000
+  max_yaml_aliases: 64
+persisted_json_policies:
+  - id: financial-idempotency-json-v1
+    implementation: reconforge/io/persisted.py
+    schema_id: financial-idempotency-response-object-v1
+    schema_path: docs/schemas/financial_idempotency_response.schema.json
+    max_utf8_bytes: 4194304
+    max_nodes: 100000
+    max_depth: 32
+    max_collection_items: 25000
+    max_scalar_characters: 262144
+    unique_keys: true
+    object_root: true
+    integer_number_tokens_only: true
+    canonical_producer_text: true
+surfaces:
+  - id: FI-001
+    name: Canonical reconciliation tabular reader
+    module_ids: [reconciliation.core]
+    trust: untrusted-local
+    entrypoints:
+      - reconforge/io/readers.py::read_table
+      - reconforge/io/ingress.py::validate_tabular_input
+    formats: [csv, xls, xlsx]
+    parser_families: [csv-stdlib, openpyxl, pandas]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002]
+    test_evidence: [tests/test_file_ingress_security.py, tests/test_readers.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - Legacy XLS receives size and OLE-signature checks but not workbook-internal active-content inspection.
+      - The policy rejects XLSX formulas and external relationships but does not establish malware absence or source authenticity.
+    next_action: Replace or sandbox legacy XLS parsing and connect a provider-neutral malware scan and quarantine boundary.
+  - id: FI-002
+    name: DuckDB direct reconciliation scans
+    module_ids: [reconciliation.core]
+    trust: untrusted-local
+    entrypoints:
+      - reconforge/engines/duckdb_engine.py::DuckDBEngine.iter_dataset_batches
+      - reconforge/engines/duckdb_engine.py::DuckDBEngine._register_dataset
+    formats: [csv, xls, xlsx]
+    parser_families: [duckdb, pandas]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002]
+    test_evidence: [tests/test_file_ingress_security.py, tests/test_generator_benchmark_engines.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - CSV is preflighted before DuckDB receives the path, but parser-library vulnerabilities remain a dependency risk.
+    next_action: Retain the preflight contract gate and add memory-constrained adversarial DuckDB parser runs in CI.
+  - id: FI-003
+    name: Mapping header inspection
+    module_ids: [mapping.profiles]
+    trust: untrusted-local
+    entrypoints: [reconforge/mappings/inspector.py::_read_headers]
+    formats: [csv, xls, xlsx]
+    parser_families: [pandas]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002]
+    test_evidence: [tests/test_file_ingress_security.py, tests/test_mapping_wizard.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - Header inspection does not authenticate the export or prove that the mapped business meaning is correct.
+    next_action: Preserve the centralized reader route and add signed source-profile support only with a reviewed connector contract.
+  - id: FI-004
+    name: Built-in generic CSV adapter
+    module_ids: [plugins.export]
+    trust: untrusted-local
+    entrypoints: [reconforge/plugins/generic_csv.py::GenericCSVConnector.load_data]
+    formats: [csv]
+    parser_families: [pandas]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002]
+    test_evidence: [tests/test_file_ingress_security.py, tests/test_v03_platform.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - The built-in adapter is local and read-only; it provides neither export-origin authentication nor malware assurance.
+    next_action: Keep arbitrary plugin loading disabled and require the same preflight contract for every future tabular connector.
+  - id: FI-005
+    name: Evidence and review CSV assembly
+    module_ids: [reconciliation.core]
+    trust: generated-local
+    entrypoints:
+      - reconforge/evidence/binder.py::_read_csv_if_exists
+      - reconforge/review/state.py::collect_exception_frame
+    formats: [csv]
+    parser_families: [pandas]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-006]
+    test_evidence: [tests/test_evidence_review_csv_ingress.py, tests/test_evidence_binder_financial_input_policy.py, tests/test_period_financial_input_policy.py, tests/test_review_workflow.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - "generated-artifact-ingress-v1 applies 67108864 bytes/file, 250000 rows, 512 columns, 10000000 cells, and 128000 characters/field with strict encoding, shape, and header checks."
+      - Strict financial paths select exact-text representation; legacy compatibility retains display inference. Evidence generation caches each selected CSV document once and its v3 fingerprint uses the exact parsed checksum/size with a final stable-byte verification.
+      - Generated CSV fingerprints are unkeyed and do not authenticate producer identity, schema authorization, disclosure approval, classification, or malware status. Adjacent review-state JSON is bounded separately by FI-014.
+    next_action: Add authenticated producer/schema manifests without weakening bounded legacy compatibility.
+  - id: FI-006
+    name: Variance and management artifact readers
+    module_ids: [reconciliation.core]
+    trust: generated-local
+    entrypoints:
+      - reconforge/variance.py::_extract_csv_metrics
+      - reconforge/variance.py::_extract_json_metrics
+      - reconforge/reports/management_pack.py::_json_payload
+    formats: [csv, json]
+    parser_families: [json-stdlib, pandas]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-006]
+    test_evidence: [tests/test_generated_report_ingress.py, tests/test_reports.py, tests/test_variance_analysis.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - "generated-artifact-ingress-v1 applies 67108864 bytes/file, 250000 CSV rows, 512 columns, 10000000 cells, and 128000 characters/CSV field. JSON additionally caps 1000000 nodes, depth 64, 250000 items/collection, and 1000000 characters/scalar while rejecting duplicates and non-finite values."
+      - Stable pre/post-parse SHA-256 and byte counts reject reparse/non-regular or changed files. Variance CSV values use exact-text mode; JSON fractional/exponent lexemes remain exact strings.
+      - These generated artifacts are not yet cryptographically bound to producer manifests, signed releases, or an authenticated workspace identity.
+    next_action: Add producer-manifest authentication and schema/version binding without weakening bounded legacy compatibility.
+  - id: FI-007
+    name: Current local Studio artifact readers
+    module_ids: [reconciliation.core]
+    trust: generated-local
+    entrypoints:
+      - reconforge/studio/app.py::create_studio_app
+      - reconforge/studio/data.py::_read_generated_csv
+      - reconforge/studio/data.py::_json_payload
+    formats: [csv, json]
+    parser_families: [json-stdlib, pandas]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-006]
+    test_evidence: [tests/test_studio_artifact_ingress.py, tests/test_studio_data.py, tests/test_studio_platform_pages.py, tests/test_studio_auth.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - "generated-artifact-ingress-v1 applies 67108864 bytes/file, 250000 CSV rows, 512 columns, 10000000 cells, and 128000 characters/CSV field. JSON additionally caps 1000000 nodes, depth 64, 250000 items/collection, and 1000000 characters/scalar while rejecting duplicates and non-finite values."
+      - Stable pre/post-parse SHA-256 and byte counts reject reparse/non-regular or changed files. CSV retains pandas keep_default_na=False display typing and rejects blank/duplicate headers. JSON fractional/exponent lexemes remain exact strings.
+      - When a generated CSV companion JSON exists, Studio requires the named collection to contain the same row count and only columns present in the CSV. This is consistency evidence, not a cryptographic CSV-to-companion binding; legacy CSV-only output remains readable.
+      - Studio still trusts the operator-selected local directory. Unkeyed hashes do not authenticate producer/source, authorize disclosure, classify fields, scan malware, or prove supported throughput.
+    next_action: Add producer-signed or manifest-digested CSV bindings and disclosure/classification/malware controls before treating generated artifacts as authenticated evidence.
+  - id: FI-008
+    name: Platform business record imports
+    module_ids: [finance.controls, finance.core, inventory.core, reconciliation.core]
+    trust: untrusted-local
+    entrypoints:
+      - reconforge/platform/common.py::read_local_records
+      - reconforge/cli.py::_ledger_lines_from_json
+      - reconforge/cli.py::_inventory_lines_from_json
+      - reconforge/cli.py::_receivables_json_records
+    formats: [csv, json]
+    parser_families: [csv-stdlib, json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002]
+    test_evidence: [tests/test_business_record_ingress.py, tests/test_finance_core.py, tests/test_inventory_core.py, tests/test_platform_controls_matching_exceptions.py, tests/test_receivables_cli.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - "business-record-ingress-v1 applies 67108864 bytes/file, 250000 records, 512 fields/record, 10000000 cells, and 128000 characters/field. JSON additionally caps 2000000 nodes and depth 32, preserves fractional/exponent lexemes, and rejects duplicate/non-finite/ambiguous/non-object input; CSV receives strict UTF-8, shape, header, and tabular preflight."
+      - Stable pre/post-parse SHA-256 and byte counts reject reparse/non-regular or changed files. Account, control, intercompany, and journal audit/outbox evidence uses the parsed-byte digest/size/profile rather than re-reading provenance after parsing.
+      - The generic reader retains direct-list, one recognized envelope, and historical single-object compatibility. Domain validation remains service-specific; hashes are unkeyed and do not authenticate origin, authorize an actor, classify free text, or prove malware absence.
+    next_action: Add source authentication/classification and malware quarantine at a separately reviewed boundary; reassess this bounded parser status if another business-record parser or upload surface is introduced.
+  - id: FI-009
+    name: Local database import and restore artifacts
+    module_ids: [platform.core]
+    trust: untrusted-local
+    entrypoints:
+      - reconforge/db/importers.py::_read_json
+      - reconforge/db/backup.py::_read_json_file
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-007]
+    test_evidence: [tests/test_db_export_import.py, tests/test_db_import_structured_ingress.py, tests/test_db_backup_restore.py, tests/test_db_backup_structured_ingress.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - "Backup/manifest restore JSON uses the shared structured-document engine with the database-backup-json-ingress-v1 profile: 67108864 bytes per file, 1000000 nodes, depth 64, 250000 items per collection, and 8388608 characters per scalar. Duplicate/non-finite/invalid-encoding input, reparse points, changes during validation, unknown top-level/table keys, and manifest checksum/size/schema mismatches fail before restore temporary-file creation or target mutation."
+      - Runtime validation permits missing known tables for historical schema-v1 additive compatibility but rejects unknown tables. The two published schemas describe current writer output; hashes remain unkeyed and do not authenticate origin or authorize restore.
+      - "Legacy account-reconciliation/control-test DB imports use database-legacy-import-json-ingress-v1: 16777216 bytes per file, 500000 nodes, depth 32, 50000 items per collection, and 1048576 characters per scalar. Stable pre/post-read fingerprints, duplicate/non-finite/invalid-encoding and reparse rejection, unambiguous list/envelope/keyed-map validation, and parsed-byte digest/size provenance apply before database inspection or mutation."
+      - No archive input is accepted. The bounded import schemas retain permissive legacy record fields; neither import nor restore authenticates origin, authorizes the actor centrally, scans malware, encrypts files, or proves DR recovery.
+    next_action: Design centralized restore/import authorization, encryption/key management, malware hooks, and real backup/restore/DR exercises; reassess this bounded status if another parser or archive format is introduced.
+  - id: FI-010
+    name: Configuration mapping and control YAML
+    module_ids: [mapping.profiles, reconciliation.core]
+    trust: untrusted-local
+    entrypoints:
+      - reconforge/config.py::load_config
+      - reconforge/mappings/inspector.py::_load_mapping
+      - reconforge/mappings/validator.py::_read_yaml
+      - reconforge/rules/loader.py::_read_yaml
+      - reconforge/rules/recon_as_code.py::ReconciliationAsCodeSpec.from_yaml
+    formats: [yaml]
+    parser_families: [pyyaml]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002]
+    test_evidence:
+      - tests/test_structured_ingress_security.py
+      - tests/test_config_financial_input_policy.py
+      - tests/test_mapping_validation_cli.py
+      - tests/test_rules_engine.py
+    residual_risk_ids: [R-018]
+    limitations:
+      - The boundary limits bytes, nodes, depth, collection width, scalar size, and aliases and rejects duplicate keys, merges, cycles, multiple documents, unsafe tags, and non-finite legacy values.
+      - These structural controls do not authenticate configuration authors or prove that accepted rules and mappings are financially correct.
+    next_action: Preserve the exact direct-parser allowlist and add signed approved-pack provenance only through a separately reviewed release workflow.
+  - id: FI-011
+    name: Close workflow YAML and JSON
+    module_ids: [finance.controls]
+    trust: untrusted-local
+    entrypoints:
+      - reconforge/close_workflow.py::_read_template
+      - reconforge/close_workflow.py::load_close_checklist
+    formats: [json, yaml]
+    parser_families: [json-stdlib, pyyaml]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002]
+    test_evidence:
+      - tests/test_close_workflow.py
+      - tests/test_close_workflow_structured_ingress.py
+      - tests/test_platform_close_evidence_metrics.py
+    residual_risk_ids: [R-018]
+    limitations:
+      - Structural limits and duplicate/unsafe-value rejection do not authenticate the template author or prove that accepted task content is operationally correct.
+      - Normalized checklist task fields remain workflow metadata and do not constitute approval, sign-off, or an audit opinion.
+    next_action: Preserve the bounded reader contract and add authenticated template provenance only through a separately reviewed workflow.
+  - id: FI-012
+    name: Client pack bounded copy/redaction and generated manifest readers
+    module_ids: [reconciliation.core]
+    trust: generated-local
+    entrypoints:
+      - reconforge/reports/client_pack.py::_redact_csv_file
+      - reconforge/reports/client_pack.py::_redact_json_file
+      - reconforge/reports/client_pack.py::_redact_text_file
+      - reconforge/reports/client_pack.py::_copy_bounded_file
+      - reconforge/reports/client_pack.py::generate_client_pack
+      - reconforge/reports/client_pack.py::recover_client_pack_publication
+      - reconforge/reports/client_pack.py::read_client_pack_manifest
+      - reconforge/evidence/binder.py::read_evidence_index
+    formats: [csv, json, text]
+    parser_families: [csv-stdlib, json-stdlib]
+    policy_coverage: partial
+    status: partial
+    controls: [SEC-C-002, SEC-C-006, SEC-C-009]
+    test_evidence:
+      - tests/test_client_pack_csv_redaction_ingress.py
+      - tests/test_client_pack_copy_publication.py
+      - tests/test_client_pack_publication_recovery.py
+      - tests/test_client_pack_financial_input_policy.py
+      - tests/test_client_pack_redaction_ingress.py
+      - tests/test_evidence_binder_financial_input_policy.py
+      - tests/test_generated_manifest_structured_ingress.py
+    residual_risk_ids: [R-014, R-017, R-018]
+    limitations:
+      - Manifest/JSON redaction inherit structured-document limits; CSV redaction inherits tabular limits and rejects duplicate headers. Selected text/non-redacted copies are regular non-symlink files bounded to 10000 files, 20000 traversed entries, 67108864 bytes each, and 536870912 aggregate bytes; strict UTF-8 text streams with a 1048576-character line ceiling.
+      - The selected file set is frozen before fingerprinting. The complete pack is built and rechecked in a sibling staging directory; handled generation/publication failure preserves or restores the prior destination, and successful replacement removes stale hidden content.
+      - Fresh-directory publication is one same-filesystem rename. Replacing an existing non-empty directory on Windows remains non-observer-atomic and non-crash-atomic, but a closed schema-v1 marker binds exact sibling basenames plus bounded previous/staged tree digests and the explicit recovery command handles four allowlisted filesystem states.
+      - Recovery refuses missing/multiple/tampered markers, changed trees, reparse points, unexpected siblings, and ambiguous states. Marker SHA-256 is self-consistency only, not authentication; file fsync does not guarantee parent-directory durability on every filesystem or host-loss mode.
+      - Bounded bytes and handled-failure rollback do not provide authenticated provenance, disclosure authorization, malware quarantine, redaction completeness, or safe-redistribution assurance.
+    next_action: Bind copied artifacts to separately authenticated scan/provenance and disclosure-approval metadata, test real process/host/filesystem durability, and refuse unscanned redistribution where policy requires scanning.
+  - id: FI-013
+    name: Internal persisted JSON fields
+    module_ids: [platform.core, finance.controls, reconciliation.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/audit/events.py::_metadata_from_json
+      - reconforge/db/exporter.py::_json_rows
+      - reconforge/infrastructure/postgres_ledger.py::PostgresLedgerRepository.list_audit_events
+      - reconforge/infrastructure/postgres_ledger.py::PostgresLedgerRepository.verify_audit_events
+      - reconforge/infrastructure/postgres_outbox.py::_metadata
+      - reconforge/infrastructure/redis.py::TenantRedisStore.get_session
+      - reconforge/platform/matching.py::MatchingService._matching_rule_document
+      - reconforge/platform/payables.py::PayablesService._idempotent
+      - reconforge/platform/receivables.py::ReceivablesService._idempotent
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: partial
+    status: partial
+    controls: [SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_audit_metadata_json.py, tests/test_postgres_outbox_payload_json.py, tests/test_postgres_reconciliation_persisted_json.py, tests/test_sqlite_matching_rule_json.py, tests/test_redis_session_json.py, tests/test_db_export_persisted_json.py, tests/test_audit_events.py, tests/test_db_export_import.py, tests/test_postgres_ledger.py, tests/test_postgres_outbox.py, tests/test_postgres_reconciliation.py, tests/test_redis_foundation.py, tests/test_payables.py, tests/test_receivables.py, tests/test_financial_idempotency_json.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - These are database, cache, or event values rather than filesystem ingress and must not be described as accepted upload paths.
+      - "AP/AR idempotency responses use financial-idempotency-json-v1: 4194304 UTF-8 bytes, 100000 nodes, depth 32, 25000 items/collection, 262144 characters/scalar, unique keys, object root, integer-only JSON number tokens, and canonical producer text. Producer rejection rolls back the enclosing mutation; corrupt replay rejects before a new business effect."
+      - "SQLite/PostgreSQL audit metadata use audit-metadata-json-v1: 4194304 UTF-8 bytes, 100000 nodes, depth 32, 25000 items/collection, 262144 characters/scalar, unique keys, finite JSON values, object root, and canonical producer text. SQLite hashes exact stored text; PostgreSQL verification reconstructs the historical canonical producer text after JSONB rendering. Invalid metadata independently fails verification, list, and audit export instead of becoming a plausible sentinel object."
+      - "PostgreSQL outbox payloads use postgres-outbox-payload-json-v1 with the same ceilings, unique keys, finite object values, canonical producer/publisher text, and five producer-family wrappers. Invalid stored payloads roll back claims before an external publisher receives an event; event IDs, leases, retries, and valid JSONB shapes remain unchanged."
+      - "PostgreSQL reconciliation rule, input-attribute, decision-lineage, and exception-evidence JSONB use four named profiles over postgres-reconciliation-object-v1. Rule/lineage/evidence allow 4194304 UTF-8 bytes; attributes preserve the existing 100000-byte producer ceiling."
+      - "All reconciliation JSONB profiles allow 100000 nodes, depth 32, 25000 items/collection, unique keys, and finite object values. Attributes allow 100000 and the other profiles 262144 characters/scalar. Canonical bytes preserve JSONB fingerprints; corrupt rows fail before matcher use or public return instead of becoming sentinel values."
+      - "SQLite matching rules use sqlite-matching-rule-json-v1: 4194304 UTF-8 bytes, 100000 nodes, depth 32, 25000 items/collection, 262144 characters/scalar, unique keys, finite object values, and historical spaced sorted ASCII text. New producers reject binary floats; historical finite floats remain readable."
+      - "Tenant-scoped Redis sessions use redis-session-json-v1: 16384 UTF-8 bytes, 16 nodes, depth 2, four fields, and 256 characters/scalar. The closed schema requires string IDs, a lowercase SHA-256 token digest, and explicit UTC expiry; producer rejection precedes client access and corrupt reads do not mutate Redis."
+      - "The public SQLite export has an exact five-field registry: audit metadata and both matching rules reuse their established profiles; legacy summaries use sqlite-legacy-import-summary-json-v1; matching lineage uses sqlite-matching-lineage-json-v1. All use finite unique-key object JSON and explicit 4194304-byte/100000-node/depth-32/25000-item/262144-character ceilings."
+      - "Legacy-summary and matching-lineage producers use their respective contracts. Export preflights every registered row before creating the destination or writing any file, rejects non-text/corrupt values without sentinels, preserves metadata/summary/rule object outputs, and retains lineage_json as its historical string field."
+      - Stored values and source artifacts are not authenticated; actor/disclosure authorization, malware quarantine, full business-semantic schemas, and supported-throughput evidence remain outside this structural boundary.
+    next_action: Add authenticated producer/source provenance and centralized actor/disclosure authorization, then exercise bounded persisted-state profiles at declared throughput and live-service boundaries.
+  - id: FI-014
+    name: Local review-state JSON compatibility ingress
+    module_ids: [reconciliation.core]
+    trust: generated-local
+    entrypoints:
+      - reconforge/review/state.py::load_review_state
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-006]
+    test_evidence: [tests/test_review_state_json_ingress.py, tests/test_review_workflow.py, tests/test_db_export_import.py, tests/test_period_comparison.py, tests/test_studio_auth.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - "review-state-json-ingress-v1 applies 16777216 bytes/file, 500000 nodes, depth 32, 100000 items/collection, and 1000000 characters/scalar with duplicate/non-finite/invalid-encoding rejection and stable pre/post-parse SHA-256 plus byte counts."
+      - Missing files remain empty for compatibility. Valid direct maps and versioned entries envelopes retain tolerant entry coercion; malformed present files fail closed and rejected CLI/Studio updates do not replace the original.
+      - Hashes are unkeyed and do not authenticate producer or actor identity, authorize workflow changes or disclosure, enforce an approved semantic schema, scan malware, or establish supported throughput.
+    next_action: Add centralized actor/workspace authorization and authenticated producer/schema provenance without converting tolerated legacy records silently.
+  - id: FI-015
+    name: Generated report workflow and synthetic-demo JSON compatibility readers
+    module_ids: [platform.core, reconciliation.core, studio.modern]
+    trust: generated-local
+    entrypoints:
+      - reconforge/dashboard/app.py::_load_json
+      - reconforge/enterprise_demo.py::_read_records
+      - reconforge/periods.py::read_period_comparison
+      - reconforge/rules/engine.py::read_rule_results
+      - reconforge/studio/demo_bridge.py::_read_object
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-006]
+    test_evidence: [tests/test_direct_json_ingress_inventory.py, tests/test_enterprise_demo.py, tests/test_period_financial_input_policy.py, tests/test_rule_financial_input_policy.py, tests/test_studio_demo_bridge.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - Dashboard, enterprise-demo, period, and rule JSON use generated-artifact-ingress-v1 with 67108864 bytes/file, 1000000 nodes, depth 64, 250000 items/collection, and 1000000 characters/scalar. Studio demo JSON uses studio-demo-json-ingress-v1 with 10485760 bytes/file, 500000 nodes, depth 32, 100000 items/collection, and 1000000 characters/scalar.
+      - Present files require strict UTF-8, unique keys, finite values, regular non-reparse paths, and equal SHA-256/size before and after parsing. These historical readers explicitly select display-number compatibility so current digests, Studio numeric fields, period/rule schemas, and synthetic record filtering remain unchanged after structural acceptance.
+      - Unkeyed hashes do not authenticate a producer, approve a rule/report/demo, authorize disclosure, scan malware, or establish supported throughput.
+    next_action: Bind current writer schema/version and authenticated producer manifests where the artifact has financial or workflow meaning.
+  - id: FI-016
+    name: Local exception explanation JSON ingress
+    module_ids: [reconciliation.core]
+    trust: untrusted-local
+    entrypoints:
+      - reconforge/ai/summaries.py::explain_exception_file
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-006]
+    test_evidence: [tests/test_direct_json_ingress_inventory.py, tests/test_v03_platform.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - exception-explanation-json-ingress-v1 applies 16777216 bytes/file, 500000 nodes, depth 32, 100000 items/collection, and 1000000 characters/scalar with stable regular-file fingerprints, strict UTF-8, unique keys, and finite values.
+      - Historical root-list, known-envelope, single-object selection, and display-number representation remain compatible. Structural acceptance does not authorize access to the file or prove that explanation source records are authentic or complete.
+      - Errors are path-free, but no field classification, masking policy, malware scan, tenant authorization, or prompt-injection assessment is implied by this offline deterministic helper.
+    next_action: Add central workspace authorization and field-classification/masking before exposing evidence explanation beyond trusted local operation.
+  - id: FI-017
+    name: Packaged currency registry JSON text
+    module_ids: [finance.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/utils/money.py::_json_without_duplicate_keys
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: not-applicable
+    status: excluded
+    controls: [SEC-C-002, SEC-C-005]
+    test_evidence: [tests/test_money_currency.py]
+    residual_risk_ids: []
+    limitations:
+      - This call parses package-resource text already loaded by the currency-registry contract rather than an operator-selected filesystem path; duplicate keys and registry digest/schema invariants are enforced separately.
+    next_action: Preserve package-resource digest/schema tests and reassess classification if runtime registry upload or replacement is introduced.
+direct_tabular_parser_allowlist:
+  - path: reconforge/io/ingress.py
+    parser: csv.reader
+    call_count: 1
+    surface_id: FI-001
+    rationale: Streaming CSV preflight enforces shape and resource ceilings before the dataframe parser.
+  - path: reconforge/io/readers.py
+    parser: pandas.read_csv
+    call_count: 1
+    surface_id: FI-001
+    rationale: Central dataframe parser executes only after the tabular ingress preflight succeeds.
+  - path: reconforge/io/readers.py
+    parser: pandas.read_excel
+    call_count: 1
+    surface_id: FI-001
+    rationale: Central spreadsheet parser executes only after XLS/XLSX content and resource preflight.
+  - path: reconforge/io/generated.py
+    parser: pandas.read_csv
+    call_count: 1
+    surface_id: FI-007
+    rationale: Shared FI-005/FI-006/FI-007 generated-artifact parser executes only after fixed tabular budgets, strict header checks, and a stable pre/post fingerprint bracket; callers select display or exact-text representation explicitly.
+  - path: reconforge/io/generated.py
+    parser: csv.reader
+    call_count: 1
+    surface_id: FI-007
+    rationale: Shared FI-005/FI-006/FI-007 header inspection rejects blank or duplicate generated CSV columns before pandas constructs a dataframe.
+  - path: reconforge/io/records.py
+    parser: csv.DictReader
+    call_count: 1
+    surface_id: FI-008
+    rationale: The centralized business-record reader invokes DictReader only after strict tabular preflight and brackets parsing with exact stable fingerprints.
+  - path: reconforge/reports/client_pack.py
+    parser: csv.DictReader
+    call_count: 2
+    surface_id: FI-012
+    rationale: Client-pack CSV redaction performs a bounded duplicate-header preflight and then streams generated rows into a controlled temporary copy.
+direct_json_parser_allowlist:
+  - path: reconforge/io/structured.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-010
+    rationale: Central parser executes only after bounded strict UTF-8 document reading and enforces duplicate, non-finite, and graph controls.
+  - path: reconforge/utils/money.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-017
+    rationale: Parses package-resource currency registry text under separate duplicate-key, schema, and digest contracts.
+direct_yaml_parser_allowlist:
+  - path: reconforge/io/structured.py
+    parser: yaml.parse
+    call_count: 1
+    surface_id: FI-010
+    rationale: The event stream enforces YAML depth, node, document, merge, scalar, and alias ceilings before construction.
+  - path: reconforge/utils/yaml.py
+    parser: yaml.safe_load
+    call_count: 1
+    surface_id: FI-010
+    rationale: The centralized compatibility branch retains safe construction after the bounded structured-document preflight.

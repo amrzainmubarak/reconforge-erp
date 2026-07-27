@@ -71,9 +71,7 @@ class InventoryValuationRepository(Protocol):
 
     def update_cost_layer(self, layer_id: str, quantity_scaled: int, value_minor: int) -> int: ...
 
-    def insert_finance_draft(
-        self, entry: Mapping[str, object], lines: Sequence[Mapping[str, object]]
-    ) -> None: ...
+    def insert_finance_draft(self, entry: Mapping[str, object], lines: Sequence[Mapping[str, object]]) -> None: ...
 
     def approve_document(
         self,
@@ -86,9 +84,7 @@ class InventoryValuationRepository(Protocol):
         finance_entry_id: str,
     ) -> int: ...
 
-    def cancel_document(
-        self, document_id: str, *, actor: str, timestamp: str, reason: str
-    ) -> int: ...
+    def cancel_document(self, document_id: str, *, actor: str, timestamp: str, reason: str) -> int: ...
 
     def valuation_lines(self, document_id: str) -> list[dict[str, Any]]: ...
 
@@ -100,9 +96,7 @@ class InventoryValuationRepository(Protocol):
 
     def list_policies(self, workspace_id: str, *, limit: int, offset: int) -> list[dict[str, Any]]: ...
 
-    def list_documents(
-        self, workspace_id: str, *, status: str, limit: int, offset: int
-    ) -> list[dict[str, Any]]: ...
+    def list_documents(self, workspace_id: str, *, status: str, limit: int, offset: int) -> list[dict[str, Any]]: ...
 
     def list_cost_layers(
         self, workspace_id: str, *, open_only: bool, limit: int, offset: int
@@ -602,9 +596,7 @@ class SQLiteInventoryValuationRepository:
         )
         return cursor.rowcount
 
-    def insert_finance_draft(
-        self, entry: Mapping[str, object], lines: Sequence[Mapping[str, object]]
-    ) -> None:
+    def insert_finance_draft(self, entry: Mapping[str, object], lines: Sequence[Mapping[str, object]]) -> None:
         self.connection.execute(
             """
             INSERT INTO ledger_entries (
@@ -680,9 +672,7 @@ class SQLiteInventoryValuationRepository:
         )
         return cursor.rowcount
 
-    def cancel_document(
-        self, document_id: str, *, actor: str, timestamp: str, reason: str
-    ) -> int:
+    def cancel_document(self, document_id: str, *, actor: str, timestamp: str, reason: str) -> int:
         cursor = self.connection.execute(
             """
             UPDATE inventory_valuation_documents
@@ -766,9 +756,7 @@ class SQLiteInventoryValuationRepository:
             (workspace_id, limit, offset),
         )
 
-    def list_documents(
-        self, workspace_id: str, *, status: str, limit: int, offset: int
-    ) -> list[dict[str, Any]]:
+    def list_documents(self, workspace_id: str, *, status: str, limit: int, offset: int) -> list[dict[str, Any]]:
         query = """
             SELECT documents.*, movements.movement_number, movements.movement_type,
                    organizations.organization_code, entities.entity_code,
@@ -790,9 +778,7 @@ class SQLiteInventoryValuationRepository:
         parameters.extend((limit, offset))
         return self._many(query, tuple(parameters))
 
-    def list_cost_layers(
-        self, workspace_id: str, *, open_only: bool, limit: int, offset: int
-    ) -> list[dict[str, Any]]:
+    def list_cost_layers(self, workspace_id: str, *, open_only: bool, limit: int, offset: int) -> list[dict[str, Any]]:
         query = """
             SELECT layers.*, items.item_code, units.uom_code, lots.lot_serial_code,
                    entities.entity_code, source_documents.valuation_number
@@ -862,9 +848,7 @@ class SQLiteInventoryValuationRepository:
                 (workspace_id,),
             ).fetchone()
         result = {str(key): int(value) for key, value in dict(row).items()}
-        result["unvalued_posted_movements"] = (
-            int(unvalued_row["total"]) if unvalued_row is not None else 0
-        )
+        result["unvalued_posted_movements"] = int(unvalued_row["total"]) if unvalued_row is not None else 0
         return result
 
     def _table_exists(self, name: str) -> bool:

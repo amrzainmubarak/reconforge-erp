@@ -19,6 +19,11 @@ from datetime import date
 from typing import Any
 
 from reconforge.infrastructure.postgres import PostgresConfigurationError, normalize_scope_id, validate_tenant_id
+from reconforge.io.persisted import (
+    PersistedJsonError,
+    encode_audit_metadata,
+    encode_postgres_outbox_payload,
+)
 from reconforge.utils.time import utc_now_text
 
 _CODE_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9_-]{0,63}$")
@@ -181,9 +186,16 @@ def _hash_payload(payload: Mapping[str, object]) -> str:
 
 def _json_text(value: Mapping[str, object] | None, field_name: str) -> str:
     try:
-        return json.dumps(dict(value or {}), sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-    except (TypeError, ValueError) as exc:
+        return encode_audit_metadata(value).text
+    except PersistedJsonError as exc:
         raise PostgresMasterDataValidationError(f"{field_name} must be JSON-serializable.") from exc
+
+
+def _outbox_json_text(value: Mapping[str, object]) -> str:
+    try:
+        return encode_postgres_outbox_payload(value).text
+    except PersistedJsonError as exc:
+        raise PostgresMasterDataValidationError("outbox payload must be JSON-serializable.") from exc
 
 
 @dataclass(frozen=True)
@@ -234,9 +246,17 @@ class PostgresMasterDataRepository:
         request = str(request_id or "").strip()
         if len(request) > 160:
             raise PostgresMasterDataValidationError("request_id must be at most 160 characters.")
-        self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (tenant,))
         after_state_hash = _hash_payload(after_state)
         metadata_json = _json_text(metadata, "metadata")
+        payload_json = _outbox_json_text(
+            {
+                "resource_type": resource_type,
+                "resource_id": resource_id,
+                "before_state_hash": before_state_hash,
+                "after_state_hash": after_state_hash,
+            }
+        )
+        self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (tenant,))
         audit_event_id = _hash_payload(
             {
                 "tenant_id": tenant,
@@ -302,17 +322,6 @@ class PostgresMasterDataRepository:
                 "resource_id": resource_id,
                 "after_state_hash": after_state_hash,
             }
-        )
-        payload_json = json.dumps(
-            {
-                "resource_type": resource_type,
-                "resource_id": resource_id,
-                "before_state_hash": before_state_hash,
-                "after_state_hash": after_state_hash,
-            },
-            sort_keys=True,
-            separators=(",", ":"),
-            ensure_ascii=True,
         )
         self.connection.execute(
             """

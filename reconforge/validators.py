@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from pathlib import Path
 
 import pandas as pd
 
 from reconforge.io.readers import find_dataset_file, read_available_datasets, read_table
 from reconforge.schemas import DATE_COLUMNS, NUMERIC_COLUMNS, REQUIRED_COLUMNS, DatasetName, ValidationIssue
+from reconforge.utils.money import (
+    CurrencyRegistry,
+    InvalidAmountError,
+    UnknownCurrencyError,
+    parse_amount_for_currency_precision,
+)
 
 OPTIONAL_DATE_COLUMNS: dict[DatasetName, set[str]] = {
     DatasetName.WORK_ORDERS: {"closed_date"},
@@ -159,39 +166,119 @@ def validate_amount_consistency(datasets: dict[DatasetName, pd.DataFrame]) -> li
     """Validate accounting amount consistency for transactional datasets."""
 
     issues: list[ValidationIssue] = []
+
+    def _currency_precision(row: pd.Series, default_currency: str = "USD") -> int:
+        currency_code = str(row.get("currency") or default_currency).strip().upper() or default_currency
+        return CurrencyRegistry.get_precision(currency_code)
+
+    def _parse_money(value: object, row: pd.Series, default_currency: str = "USD") -> Decimal:
+        precision = _currency_precision(row, default_currency=default_currency)
+        return parse_amount_for_currency_precision(value, precision=precision)
+
+    def _unknown_currency_issue(
+        dataset: DatasetName,
+        *,
+        index: object,
+        row: pd.Series,
+        reference_field: str,
+        default_currency: str = "USD",
+    ) -> ValidationIssue:
+        currency_code = str(row.get("currency") or default_currency).strip().upper() or default_currency
+        return _issue(
+            dataset,
+            "warning",
+            "unknown_currency",
+            "Currency has no registered precision and rounding policy",
+            row=_row_number(index),
+            column="currency",
+            reference=currency_code or str(row.get(reference_field, "")),
+        )
+
     stock = datasets.get(DatasetName.STOCK_MOVES)
     if stock is not None and {"quantity", "unit_cost", "total_cost"}.issubset(stock.columns):
-        expected = (stock["quantity"] * stock["unit_cost"]).round(2)
-        diff = (stock["total_cost"] - expected).abs().round(2)
-        for index, row in stock[diff > 0.01].iterrows():
-            issues.append(
-                _issue(
-                    DatasetName.STOCK_MOVES,
-                    "warning",
-                    "invalid_amount",
-                    "Stock total_cost does not equal quantity multiplied by unit_cost",
-                    row=_row_number(index),
-                    column="total_cost",
-                    reference=str(row.get("move_id", "")),
-                ),
-            )
+        for index, row in stock.iterrows():
+            try:
+                total_cost = _parse_money(row.get("total_cost"), row, default_currency="USD")
+                expected = _parse_money((row.get("quantity") * row.get("unit_cost")), row, default_currency="USD")
+                diff = abs(total_cost - expected)
+            except UnknownCurrencyError:
+                issues.append(
+                    _unknown_currency_issue(
+                        DatasetName.STOCK_MOVES,
+                        index=index,
+                        row=row,
+                        reference_field="move_id",
+                    ),
+                )
+                continue
+            except InvalidAmountError:
+                issues.append(
+                    _issue(
+                        DatasetName.STOCK_MOVES,
+                        "warning",
+                        "invalid_amount",
+                        "Stock total_cost is not a valid amount for the configured currency precision",
+                        row=_row_number(index),
+                        column="total_cost",
+                        reference=str(row.get("move_id", "")),
+                    ),
+                )
+                continue
+            if diff > Decimal("0.01"):
+                issues.append(
+                    _issue(
+                        DatasetName.STOCK_MOVES,
+                        "warning",
+                        "invalid_amount",
+                        "Stock total_cost does not equal quantity multiplied by unit_cost",
+                        row=_row_number(index),
+                        column="total_cost",
+                        reference=str(row.get("move_id", "")),
+                    ),
+                )
 
     gl = datasets.get(DatasetName.GL_ENTRIES)
     if gl is not None and {"debit", "credit", "amount"}.issubset(gl.columns):
-        expected_amount = (gl["debit"] - gl["credit"]).abs().round(2)
-        diff = (gl["amount"].abs().round(2) - expected_amount).abs()
-        for index, row in gl[diff > 0.01].iterrows():
-            issues.append(
-                _issue(
-                    DatasetName.GL_ENTRIES,
-                    "warning",
-                    "invalid_amount",
-                    "GL amount does not equal absolute debit minus credit",
-                    row=_row_number(index),
-                    column="amount",
-                    reference=str(row.get("entry_id", "")),
-                ),
-            )
+        for index, row in gl.iterrows():
+            try:
+                expected_amount = _parse_money(abs(row.get("debit") - row.get("credit")), row, default_currency="USD")
+                parsed_amount = _parse_money(row.get("amount"), row, default_currency="USD")
+                diff = abs(parsed_amount - expected_amount)
+            except UnknownCurrencyError:
+                issues.append(
+                    _unknown_currency_issue(
+                        DatasetName.GL_ENTRIES,
+                        index=index,
+                        row=row,
+                        reference_field="entry_id",
+                    ),
+                )
+                continue
+            except InvalidAmountError:
+                issues.append(
+                    _issue(
+                        DatasetName.GL_ENTRIES,
+                        "warning",
+                        "invalid_amount",
+                        "GL amount is not a valid amount for the configured currency precision",
+                        row=_row_number(index),
+                        column="amount",
+                        reference=str(row.get("entry_id", "")),
+                    ),
+                )
+                continue
+            if diff > Decimal("0.01"):
+                issues.append(
+                    _issue(
+                        DatasetName.GL_ENTRIES,
+                        "warning",
+                        "invalid_amount",
+                        "GL amount does not equal absolute debit minus credit",
+                        row=_row_number(index),
+                        column="amount",
+                        reference=str(row.get("entry_id", "")),
+                    ),
+                )
     return issues
 
 

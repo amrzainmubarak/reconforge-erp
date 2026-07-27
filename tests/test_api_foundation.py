@@ -9,6 +9,8 @@ from reconforge import __version__
 from reconforge.api import create_api_app
 from reconforge.cli import app
 from reconforge.db import run_migrations
+from reconforge.db.migrations import MIGRATIONS
+from reconforge.platform.common import is_trusted_local_mode
 
 runner = CliRunner()
 
@@ -25,7 +27,7 @@ def test_api_health_and_version_work_without_auth(tmp_path: Path) -> None:
     assert health.json()["status"] == "ok"
     assert health.json()["version"] == __version__
     assert health.json()["database"]["reachable"] is True
-    assert health.json()["database"]["schema_version"] == 12
+    assert health.json()["database"]["schema_version"] == MIGRATIONS[-1].version
     assert health.json()["database"]["path_summary"] == "api.db"
     assert version.status_code == 200
     assert version.json()["scope"] == "local/self-hosted foundation"
@@ -48,6 +50,23 @@ def test_protected_route_requires_auth_and_returns_structured_error(tmp_path: Pa
     assert set(payload["error"]) == {"code", "message", "request_id"}
     assert payload["error"]["code"] == "auth_required"
     assert "Traceback" not in response.text
+
+
+def test_api_request_context_rejects_trusted_local_mode(tmp_path: Path) -> None:
+    db_path = tmp_path / "api-context.db"
+    run_migrations(db_path)
+    api = create_api_app(db_path)
+
+    @api.get("/test-context")
+    def context_probe() -> dict[str, bool]:
+        return {"trusted_local": is_trusted_local_mode()}
+
+    client = TestClient(api)
+    response = client.get("/test-context")
+
+    assert response.status_code == 200
+    assert response.json() == {"trusted_local": False}
+    assert is_trusted_local_mode() is True
 
 
 def test_api_serve_missing_db_fails_without_starting_server(tmp_path: Path) -> None:

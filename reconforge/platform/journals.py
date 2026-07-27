@@ -4,25 +4,26 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-from reconforge.db.exporter import checksum_file
 from reconforge.domain.models import utc_now_text
 from reconforge.platform.common import (
     PlatformError,
-    audit,
+    append_outbox_event,
+    commit_audited,
     ensure_platform_schema,
     ensure_workspace,
     normalize_key,
     normalize_text,
     parse_date,
+    parse_financial_amount,
     platform_id,
-    read_local_records,
+    read_local_record_document,
     require_permission,
     rows_to_dicts,
     to_bool,
-    to_float,
 )
 from reconforge.platform.exceptions import ExceptionQueueService
 
@@ -54,27 +55,38 @@ class JournalControlService:
         """Import local CSV/JSON journal entries."""
 
         require_permission(self.connection, actor_label=actor_label, permission="journals.manage")
-        source_path, records = read_local_records(input_path)
+        document = read_local_record_document(input_path)
+        source_path = document.source_path
+        records = document.records
         if not records:
             raise PlatformError("Journal input did not contain any records.")
         workspace_id = ensure_workspace(self.connection, workspace)
-        source_checksum = checksum_file(source_path)
+        source_checksum = document.checksum_sha256
+        source_metadata = {
+            "source_file": source_path.name,
+            "source_checksum_sha256": source_checksum,
+            "source_size_bytes": document.size_bytes,
+            "ingress_profile": document.profile_id,
+        }
         now = utc_now_text()
         imported = 0
         try:
             for index, record in enumerate(records, start=1):
-                journal_id = normalize_key(record.get("journal_id") or record.get("id") or record.get("entry_id"), default="")
+                journal_id = normalize_key(
+                    record.get("journal_id") or record.get("id") or record.get("entry_id"), default=""
+                )
                 if not journal_id:
                     journal_id = platform_id("JREF", source_checksum, index)
                 row_id = platform_id("JRN", workspace_id, journal_id)
+                amount = parse_financial_amount(record.get("amount"), field=f"journal row {index} amount")
                 self.connection.execute(
                     """
                     INSERT INTO journal_entries (
                         id, workspace_id, journal_id, period_name, entity_code, posting_date,
-                        account_code, amount, currency, reference, approver, is_manual,
+                        account_code, amount, amount_decimal, currency, reference, approver, is_manual,
                         source_path, imported_at
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(workspace_id, journal_id)
                     DO UPDATE SET
                         period_name = excluded.period_name,
@@ -82,6 +94,7 @@ class JournalControlService:
                         posting_date = excluded.posting_date,
                         account_code = excluded.account_code,
                         amount = excluded.amount,
+                        amount_decimal = excluded.amount_decimal,
                         currency = excluded.currency,
                         reference = excluded.reference,
                         approver = excluded.approver,
@@ -97,7 +110,8 @@ class JournalControlService:
                         normalize_key(record.get("entity") or record.get("entity_code"), default=default_entity),
                         normalize_key(record.get("posting_date") or record.get("date"), default=""),
                         normalize_key(record.get("account_code") or record.get("account"), default="UNKNOWN"),
-                        to_float(record.get("amount")),
+                        str(amount),
+                        _decimal_text(amount),
                         normalize_key(record.get("currency"), default="LOCAL"),
                         normalize_text(record.get("reference") or record.get("ref")),
                         normalize_text(record.get("approver") or record.get("approved_by")),
@@ -107,18 +121,28 @@ class JournalControlService:
                     ),
                 )
                 imported += 1
-            self.connection.commit()
+            append_outbox_event(
+                self.connection,
+                event_id=platform_id("OB", workspace_id, "journal_import", source_checksum),
+                event_type="journal.imported",
+                aggregate_type="journal_import",
+                aggregate_id=source_checksum,
+                payload={"workspace_id": workspace_id, **source_metadata, "imported_rows": imported},
+            )
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type="journal",
+                object_id="import",
+                action="journals_imported",
+                metadata={**source_metadata, "imported_rows": imported},
+            )
+        except PlatformError:
+            self.connection.rollback()
+            raise
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to import journal entries.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="journal",
-            object_id="import",
-            action="journals_imported",
-            metadata={"source_file": source_path.name, "imported_rows": imported},
-        )
         return JournalImportResult(source_path=source_path, imported_rows=imported)
 
     def policy_run(
@@ -127,13 +151,14 @@ class JournalControlService:
         workspace: str = "default",
         period_name: str = "",
         period_end: str = "",
-        high_value_threshold: float = 100000.0,
+        high_value_threshold: object = Decimal("100000"),
         high_risk_accounts: str = "",
         actor_label: str = "local-cli",
     ) -> int:
         """Run deterministic journal policies and push exceptions to the unified queue."""
 
         require_permission(self.connection, actor_label=actor_label, permission="journals.manage")
+        threshold = _non_negative_amount(high_value_threshold, field="high-value journal threshold")
         workspace_id = ensure_workspace(self.connection, workspace)
         high_risk = {item.strip() for item in high_risk_accounts.split(",") if item.strip()}
         if period_name:
@@ -147,12 +172,12 @@ class JournalControlService:
                 (workspace_id,),
             ).fetchall()
         count = 0
-        queue = ExceptionQueueService(self.connection)
+        queue = ExceptionQueueService(self.connection, autocommit=False)
         for row in rows:
             policies = self._policies_for_row(
                 row,
                 period_end=period_end,
-                high_value_threshold=high_value_threshold,
+                high_value_threshold=threshold,
                 high_risk_accounts=high_risk,
             )
             for policy_code, risk_rating, description in policies:
@@ -184,14 +209,21 @@ class JournalControlService:
                     actor_label=actor_label,
                 )
                 count += 1
-        self.connection.commit()
-        audit(
+        append_outbox_event(
+            self.connection,
+            event_id=platform_id("OBX", "journal_policy_run", workspace_id, period_name, utc_now_text()),
+            event_type="journal.policies_run",
+            aggregate_type="journal_policy_run",
+            aggregate_id=platform_id("JPR", workspace_id, period_name),
+            payload={"workspace_id": workspace_id, "period": period_name, "exception_count": count},
+        )
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="journal",
             object_id="policy_run",
             action="journal_policies_run",
-            metadata={"period": period_name, "exception_count": count},
+            metadata={"period": period_name, "exception_count": count, "high_value_threshold": str(threshold)},
         )
         return count
 
@@ -200,7 +232,8 @@ class JournalControlService:
 
         query = """
             SELECT journal_exceptions.*, journal_entries.journal_id, journal_entries.period_name,
-                   journal_entries.entity_code, journal_entries.account_code, journal_entries.amount
+                   journal_entries.entity_code, journal_entries.account_code, journal_entries.amount,
+                   journal_entries.amount_decimal
             FROM journal_exceptions
             JOIN journal_entries ON journal_entries.id = journal_exceptions.journal_entry_id
         """
@@ -230,7 +263,7 @@ class JournalControlService:
         row: sqlite3.Row,
         *,
         period_end: str,
-        high_value_threshold: float,
+        high_value_threshold: Decimal,
         high_risk_accounts: set[str],
     ) -> list[tuple[str, str, str]]:
         policies: list[tuple[str, str, str]] = []
@@ -246,8 +279,26 @@ class JournalControlService:
             policies.append(("MISSING_REFERENCE", "medium", "Journal is missing a source reference."))
         if not normalize_text(row["approver"]):
             policies.append(("MISSING_APPROVER", "high", "Journal is missing approver evidence/reference."))
-        if abs(float(row["amount"])) >= high_value_threshold:
+        if abs(_amount(row["amount_decimal"], field="journal amount")) >= high_value_threshold:
             policies.append(("HIGH_VALUE", "high", "Journal amount exceeds the configured high-value threshold."))
         if str(row["account_code"]) in high_risk_accounts:
             policies.append(("HIGH_RISK_ACCOUNT", "high", "Journal uses a configured high-risk account."))
         return policies
+
+
+def _amount(value: object, *, field: str) -> Decimal:
+    return parse_financial_amount(value, field=field)
+
+
+def _non_negative_amount(value: object, *, field: str) -> Decimal:
+    parsed = _amount(value, field=field)
+    if parsed < 0:
+        raise PlatformError(f"Financial amount in field '{field}' cannot be negative.")
+    return parsed
+
+
+def _decimal_text(value: Decimal) -> str:
+    normalized = value.normalize()
+    if normalized == 0:
+        return "0"
+    return format(normalized, "f")

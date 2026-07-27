@@ -4,6 +4,20 @@ ReconForge includes a governed local foundation for organizations, legal entitie
 
 This is shared reference metadata for finance-control workflows. It is not a complete ERP company administration system, statutory entity registry, exchange-rate provider, consolidation engine, general ledger, or source-ERP posting lock.
 
+## PostgreSQL server boundary
+
+The explicit authenticated server profile routes currencies, organizations,
+legal entities, branches, fiscal periods, summary, and the path-free snapshot to the
+tenant-scoped PostgreSQL repository. PostgreSQL enforces tenant-aware foreign
+keys and forced RLS. Mutation audit events and outbox records are appended in
+the same caller-owned transaction as each write. The server response identifies
+`source_backend: postgresql-master-data` for collection records.
+
+Alembic revision `0005_postgres_fiscal_periods` adds the tenant-scoped fiscal
+calendar table. Server-mode period list/create/status calls use this table and
+the same audit/outbox contract. Period status is coordination metadata only; it
+does not prevent postings in a source ERP or certify a close.
+
 ## Initialize or upgrade
 
 ```bash

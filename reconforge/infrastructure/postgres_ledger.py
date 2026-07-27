@@ -19,6 +19,12 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from reconforge.infrastructure.postgres import PostgresConfigurationError, normalize_scope_id, validate_tenant_id
+from reconforge.io.persisted import (
+    PersistedJsonError,
+    decode_audit_metadata,
+    encode_audit_metadata,
+    encode_postgres_outbox_payload,
+)
 from reconforge.utils.time import utc_now_text
 
 _ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
@@ -174,11 +180,17 @@ def _minor_text(value: int, minor_units: int) -> str:
 
 
 def _json_text(value: Mapping[str, object] | None, field_name: str) -> str:
-    payload = dict(value or {})
     try:
-        return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-    except (TypeError, ValueError) as exc:
+        return encode_audit_metadata(value).text
+    except PersistedJsonError as exc:
         raise PostgresLedgerValidationError(f"{field_name} must be JSON-serializable.") from exc
+
+
+def _outbox_json_text(value: Mapping[str, object]) -> str:
+    try:
+        return encode_postgres_outbox_payload(value).text
+    except PersistedJsonError as exc:
+        raise PostgresLedgerValidationError("outbox payload must be JSON-serializable.") from exc
 
 
 def _row_value(row: Any, key: str, index: int) -> Any:
@@ -308,8 +320,16 @@ class PostgresLedgerRepository:
         request = _optional_text(request_id, "request_id", maximum=160)
         audit_reason = _optional_text(reason, "reason", maximum=500)
         metadata_json = _json_text(metadata, "metadata")
-        self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (tenant,))
         after_state_hash = _hash_payload(record)
+        outbox_payload_json = _outbox_json_text(
+            {
+                "account_id": identifier,
+                "account_code": code,
+                "organization_id": organization,
+                "after_state_hash": after_state_hash,
+            }
+        )
+        self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (tenant,))
         audit_event_id = _hash_payload(
             {
                 "tenant_id": tenant,
@@ -388,17 +408,7 @@ class PostgresLedgerRepository:
                 "ledger.account_upserted",
                 "ledger_account",
                 identifier,
-                json.dumps(
-                    {
-                        "account_id": identifier,
-                        "account_code": code,
-                        "organization_id": organization,
-                        "after_state_hash": after_state_hash,
-                    },
-                    sort_keys=True,
-                    separators=(",", ":"),
-                    ensure_ascii=True,
-                ),
+                outbox_payload_json,
             ),
         )
         return record
@@ -529,6 +539,17 @@ class PostgresLedgerRepository:
             raise PostgresLedgerValidationError(
                 f"Ledger entry is unbalanced: debit {debit_total} does not equal credit {credit_total}."
             )
+        payload_json = _outbox_json_text(
+            {
+                "entry_id": identifier,
+                "entry_number": number,
+                "organization_id": organization,
+                "currency_code": currency,
+                "debit_total": str(debit_total),
+                "credit_total": str(credit_total),
+                "line_count": len(line_values),
+            }
+        )
         fingerprint = _hash_payload(
             {
                 "tenant_id": tenant,
@@ -651,20 +672,6 @@ class PostgresLedgerRepository:
         )
         outbox_event_id = _hash_payload(
             {"tenant_id": tenant, "event_type": "ledger.entry_posted", "resource_id": identifier}
-        )
-        payload_json = json.dumps(
-            {
-                "entry_id": identifier,
-                "entry_number": number,
-                "organization_id": organization,
-                "currency_code": currency,
-                "debit_total": str(debit_total),
-                "credit_total": str(credit_total),
-                "line_count": len(line_values),
-            },
-            sort_keys=True,
-            separators=(",", ":"),
-            ensure_ascii=True,
         )
         self.connection.execute(
             """
@@ -946,10 +953,9 @@ class PostgresLedgerRepository:
             record = _record(row, columns)
             metadata_text = str(record.pop("metadata_text") or "{}")
             try:
-                metadata = json.loads(metadata_text)
-            except json.JSONDecodeError:
-                metadata = {"invalid_metadata_json": True}
-            record["metadata"] = metadata if isinstance(metadata, dict) else {"metadata_value": metadata}
+                record["metadata"] = decode_audit_metadata(metadata_text).payload
+            except PersistedJsonError as exc:
+                raise PostgresLedgerIntegrityError("Stored PostgreSQL audit metadata is invalid.") from exc
             record["occurred_at"] = record.pop("occurred_at_text")
             events.append(record)
         return events
@@ -1004,13 +1010,14 @@ class PostgresLedgerRepository:
                 )
             metadata_text = str(record["metadata_text"] or "{}")
             try:
-                metadata_value = json.loads(metadata_text)
-            except json.JSONDecodeError:
-                metadata_value = {"invalid_metadata_json": True}
-            metadata_json = _json_text(
-                metadata_value if isinstance(metadata_value, Mapping) else {"metadata_value": metadata_value},
-                "metadata",
-            )
+                metadata_json = encode_audit_metadata(
+                    decode_audit_metadata(metadata_text).payload
+                ).text
+            except PersistedJsonError:
+                issues.append(
+                    {"sequence": sequence, "message": "Audit event metadata is invalid."}
+                )
+                metadata_json = metadata_text
             expected_hash = _hash_payload(
                 {
                     "tenant_id": str(record["tenant_id"]),

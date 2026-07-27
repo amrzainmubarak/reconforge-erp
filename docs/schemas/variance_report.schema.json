@@ -5,6 +5,7 @@
   "additionalProperties": true,
   "required": ["current", "previous", "summary", "variances", "thresholds", "analysis_boundary"],
   "properties": {
+    "schema_version": {"type": "integer", "enum": [1, 2, 3]},
     "current": {"type": "string"},
     "previous": {"type": "string"},
     "summary": {"type": "array", "items": {"type": "object"}},
@@ -26,11 +27,81 @@
     },
     "thresholds": {
       "type": "object",
+      "additionalProperties": false,
+      "required": ["amount_threshold", "percent_threshold"],
       "properties": {
-        "amount_threshold": {"type": "number"},
-        "percent_threshold": {"type": "number"}
+        "amount_threshold": {"type": "number", "minimum": 0},
+        "percent_threshold": {"type": "number", "minimum": 0}
+      }
+    },
+    "threshold_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "value_encoding",
+        "amount_threshold",
+        "percent_threshold",
+        "amount_comparison",
+        "percent_comparison",
+        "display_rounding",
+        "digest_algorithm",
+        "policy_digest"
+      ],
+      "properties": {
+        "schema_version": {"type": "integer", "enum": [1, 2]},
+        "value_encoding": {"const": "canonical-decimal-string"},
+        "amount_threshold": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]*[1-9])?$"
+        },
+        "percent_threshold": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]*[1-9])?$"
+        },
+        "amount_comparison": {"const": "disabled-at-zero-otherwise-absolute-unrounded-gte"},
+        "percent_comparison": {"const": "absolute-unrounded-gte"},
+        "display_rounding": {"const": "ROUND_HALF_EVEN_2DP"},
+        "financial_input_policy": {
+          "type": "string",
+          "enum": ["legacy-financial-input-v1", "strict-financial-input-v2"]
+        },
+        "digest_algorithm": {"const": "sha256"},
+        "policy_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
       }
     },
     "analysis_boundary": {"type": "string"}
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["schema_version"],
+        "properties": {"schema_version": {"const": 2}}
+      },
+      "then": {
+        "required": ["threshold_policy"],
+        "properties": {
+          "threshold_policy": {
+            "properties": {"schema_version": {"const": 1}},
+            "not": {"required": ["financial_input_policy"]}
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["schema_version"],
+        "properties": {"schema_version": {"const": 3}}
+      },
+      "then": {
+        "required": ["threshold_policy"],
+        "properties": {
+          "threshold_policy": {
+            "required": ["financial_input_policy"],
+            "properties": {"schema_version": {"const": 2}}
+          }
+        }
+      }
+    }
+  ]
 }

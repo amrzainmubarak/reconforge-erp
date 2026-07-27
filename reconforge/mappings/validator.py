@@ -7,12 +7,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-import yaml
 from pydantic import ValidationError
 
+from reconforge.io.structured import StructuredDocumentError, read_yaml_document
 from reconforge.rules.models import PackMetadata, RuleDefinition
 from reconforge.rules.operators import SUPPORTED_OPERATORS
 from reconforge.schemas import REQUIRED_COLUMNS, DatasetName
+from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY
 
 CheckStatus = Literal["PASS", "FAIL"]
 
@@ -80,12 +81,12 @@ def _read_yaml(path: Path, checks: list[MappingValidationCheck]) -> dict[str, An
         _add_check(checks, f"{path.name} YAML", False, f"Missing required file: {path}")
         return None
     try:
-        payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    except yaml.YAMLError as exc:
+        payload = read_yaml_document(
+            path,
+            financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+        ) or {}
+    except StructuredDocumentError as exc:
         _add_check(checks, f"{path.name} YAML", False, f"Malformed YAML: {exc}")
-        return None
-    except OSError as exc:
-        _add_check(checks, f"{path.name} YAML", False, f"Could not read file: {exc}")
         return None
     if not isinstance(payload, dict):
         _add_check(checks, f"{path.name} YAML", False, "YAML root must be an object.")

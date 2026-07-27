@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/redis-session-object-v1",
+  "title": "ReconForge Redis Session Object v1",
+  "description": "Closed bounded contract for tenant-scoped Redis session metadata. It contains a token digest, never a raw bearer token.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["session_id", "user_id", "token_hash", "expires_at"],
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[^\\u0000-\\u001F\\u007F]+$"
+    },
+    "user_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[^\\u0000-\\u001F\\u007F]+$"
+    },
+    "token_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 64,
+      "pattern": "T.*(Z|\\+00:00)$"
+    }
+  },
+  "maxProperties": 4
+}

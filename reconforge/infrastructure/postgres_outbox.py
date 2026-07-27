@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-import json
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
 from reconforge.infrastructure.postgres import PostgresConfigurationError, normalize_scope_id, validate_tenant_id
+from reconforge.io.persisted import (
+    PersistedJsonError,
+    decode_postgres_outbox_payload,
+    encode_postgres_outbox_payload,
+)
 
 _ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 _STATUSES = ("Pending", "Claimed", "Published", "Dead")
@@ -100,19 +104,12 @@ def _row_value(row: Any, key: str, index: int) -> Any:
 
 
 def _metadata(value: object) -> tuple[dict[str, Any], str]:
-    if isinstance(value, Mapping):
-        data = dict(value)
-    else:
-        try:
-            parsed = json.loads(str(value or "{}"))
-        except json.JSONDecodeError as exc:
-            raise PostgresOutboxIntegrityError("Outbox payload is not valid JSON.") from exc
-        data = parsed if isinstance(parsed, dict) else {"payload_value": parsed}
     try:
-        encoded = json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-    except (TypeError, ValueError) as exc:
-        raise PostgresOutboxIntegrityError("Outbox payload is not JSON-serializable.") from exc
-    return data, encoded
+        decoded = decode_postgres_outbox_payload(value)
+        canonical = encode_postgres_outbox_payload(decoded.payload)
+    except PersistedJsonError as exc:
+        raise PostgresOutboxIntegrityError("Stored outbox payload is invalid.") from exc
+    return canonical.payload, canonical.text
 
 
 @dataclass(frozen=True)

@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/ssdf_mapping.schema.json",
+  "title": "ReconForge evidence-bounded NIST SSDF mapping",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "mapping_id",
+    "status",
+    "last_reviewed",
+    "claim_boundary",
+    "standard",
+    "assessment_scope",
+    "status_definitions",
+    "review",
+    "summary",
+    "groups"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "mapping_id": {"const": "reconforge-nist-ssdf-1.1"},
+    "status": {"const": "evidence-bounded"},
+    "last_reviewed": {"type": "string", "format": "date"},
+    "claim_boundary": {"type": "string", "minLength": 120},
+    "standard": {"$ref": "#/$defs/standard"},
+    "assessment_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "coverage_type", "method", "excluded_assurance"],
+      "properties": {
+        "target": {"type": "string", "minLength": 20},
+        "coverage_type": {"const": "all-task-repository-evidence"},
+        "method": {"$ref": "#/$defs/nonEmptyStrings"},
+        "excluded_assurance": {"$ref": "#/$defs/nonEmptyStrings"}
+      }
+    },
+    "status_definitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["implemented_bounded", "partial", "planned", "not_applicable"],
+      "properties": {
+        "implemented_bounded": {"type": "string", "minLength": 20},
+        "partial": {"type": "string", "minLength": 20},
+        "planned": {"type": "string", "minLength": 20},
+        "not_applicable": {"type": "string", "minLength": 20}
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "cadence_days", "next_review_due", "triggers"],
+      "properties": {
+        "owner": {"$ref": "#/$defs/owner"},
+        "cadence_days": {"type": "integer", "minimum": 1, "maximum": 366},
+        "next_review_due": {"type": "string", "format": "date"},
+        "triggers": {"$ref": "#/$defs/nonEmptyStrings"}
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["official_group_count", "official_practice_count", "official_task_count", "status_counts"],
+      "properties": {
+        "official_group_count": {"const": 4},
+        "official_practice_count": {"const": 19},
+        "official_task_count": {"const": 42},
+        "status_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["implemented_bounded", "partial", "planned", "not_applicable"],
+          "properties": {
+            "implemented_bounded": {"type": "integer", "minimum": 0, "maximum": 42},
+            "partial": {"type": "integer", "minimum": 0, "maximum": 42},
+            "planned": {"type": "integer", "minimum": 0, "maximum": 42},
+            "not_applicable": {"type": "integer", "minimum": 0, "maximum": 42}
+          }
+        }
+      }
+    },
+    "groups": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {"$ref": "#/$defs/group"}
+    }
+  },
+  "$defs": {
+    "httpsUrl": {"type": "string", "format": "uri", "pattern": "^https://"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "owner": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+    "repositoryPath": {
+      "type": "string",
+      "minLength": 3,
+      "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"
+    },
+    "repositoryPaths": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/repositoryPath"}
+    },
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 5}
+    },
+    "sourceArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "sha256", "bytes"],
+      "properties": {
+        "url": {"$ref": "#/$defs/httpsUrl"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "bytes": {"type": "integer", "minimum": 1}
+      }
+    },
+    "excludedDraft": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["publication", "ssdf_version", "status", "published", "url", "reason"],
+      "properties": {
+        "publication": {"const": "NIST SP 800-218 Rev. 1"},
+        "ssdf_version": {"const": "1.2"},
+        "status": {"const": "initial-public-draft"},
+        "published": {"const": "2025-12-17"},
+        "url": {"$ref": "#/$defs/httpsUrl"},
+        "reason": {"type": "string", "minLength": 30}
+      }
+    },
+    "supplementalProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["publication", "status", "published", "url", "applicability"],
+      "properties": {
+        "publication": {"const": "NIST SP 800-218A"},
+        "status": {"const": "final"},
+        "published": {"const": "2024-07-26"},
+        "url": {"$ref": "#/$defs/httpsUrl"},
+        "applicability": {"type": "string", "minLength": 50}
+      }
+    },
+    "standard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "publication",
+        "ssdf_version",
+        "publication_status",
+        "published",
+        "verified_at",
+        "official_publication_url",
+        "doi_url",
+        "pdf",
+        "official_table",
+        "official_counts",
+        "source_note",
+        "excluded_draft",
+        "supplemental_profile"
+      ],
+      "properties": {
+        "publication": {"const": "NIST SP 800-218"},
+        "ssdf_version": {"const": "1.1"},
+        "publication_status": {"const": "final"},
+        "published": {"const": "2022-02-03"},
+        "verified_at": {"type": "string", "format": "date"},
+        "official_publication_url": {"$ref": "#/$defs/httpsUrl"},
+        "doi_url": {"$ref": "#/$defs/httpsUrl"},
+        "pdf": {"$ref": "#/$defs/sourceArtifact"},
+        "official_table": {"$ref": "#/$defs/sourceArtifact"},
+        "official_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["groups", "practices", "tasks"],
+          "properties": {
+            "groups": {"const": 4},
+            "practices": {"const": 19},
+            "tasks": {"const": 42}
+          }
+        },
+        "source_note": {"type": "string", "minLength": 40},
+        "excluded_draft": {"$ref": "#/$defs/excludedDraft"},
+        "supplemental_profile": {"$ref": "#/$defs/supplementalProfile"}
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_id", "status", "owner", "evidence", "test_evidence", "assessment", "gap_or_limitation", "next_action"],
+      "properties": {
+        "task_id": {"type": "string", "pattern": "^(?:PO|PS|PW|RV)\\.[1-9]\\.[1-9]$"},
+        "status": {"enum": ["implemented_bounded", "partial", "planned", "not_applicable"]},
+        "owner": {"$ref": "#/$defs/owner"},
+        "evidence": {"$ref": "#/$defs/repositoryPaths"},
+        "test_evidence": {"$ref": "#/$defs/repositoryPaths"},
+        "assessment": {"type": "string", "minLength": 20},
+        "gap_or_limitation": {"type": "string", "minLength": 20},
+        "next_action": {"type": "string", "minLength": 20}
+      }
+    },
+    "practice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["practice_id", "practice_name", "owner", "practice_status", "tasks"],
+      "properties": {
+        "practice_id": {"type": "string", "pattern": "^(?:PO|PS|PW|RV)\\.[1-9]$"},
+        "practice_name": {"type": "string", "minLength": 10},
+        "owner": {"$ref": "#/$defs/owner"},
+        "practice_status": {"enum": ["partial", "planned"]},
+        "tasks": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/task"}}
+      }
+    },
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["group_id", "group_name", "group_status", "practices"],
+      "properties": {
+        "group_id": {"enum": ["PO", "PS", "PW", "RV"]},
+        "group_name": {"type": "string", "minLength": 10},
+        "group_status": {"enum": ["partial", "planned"]},
+        "practices": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/practice"}}
+      }
+    }
+  }
+}

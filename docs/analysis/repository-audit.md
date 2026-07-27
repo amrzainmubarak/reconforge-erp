@@ -23,7 +23,7 @@ The safe next step is therefore additive. A modern web client should consume a n
 | Examples | Canonical CSV/XLSX sample exports, anonymized data, expected-output guidance, synthetic generator, and enterprise demo generator |
 | Tests | 46 tracked Python test files covering CLI, API, auth/RBAC, audit, workflows, DB services, reconciliation, rules, reports, evidence, paths, mappings, demos, and claim boundaries |
 | Documentation | 150 tracked docs covering users, architecture, strategy, schemas, security, releases, deployment, mappings, controls, demos, and maintainership |
-| Delivery | Dockerfile, Compose file, Makefile, pre-commit, CI, CodeQL, dependency/security workflows, SBOM workflow, Scorecard workflow, issue templates, and PR template |
+| Delivery | Dockerfile, Compose file, Makefile, pre-commit, CI, CodeQL, dependency/security workflows, release-integrated per-subject SBOM definition, Scorecard workflow, issue templates, and PR template |
 | Static site | Small `site/` landing-page foundation, separate from product Studio |
 
 Generated `output/`, caches, build products, benchmark output, and the local virtual environment were excluded from architectural conclusions.
@@ -99,7 +99,7 @@ flowchart LR
 | Frontend test/toolchain | No React/Vite/TypeScript workspace exists | Add isolated npm scripts, component tests, build checks, and browser screenshots |
 | Documentation information architecture | Many valuable docs overlap across `docs/` and `docs/strategy/` | Add canonical architecture/product indexes and deprecate duplicates gradually |
 | Release identity consistency | Source metadata and release tests say `v0.7.0`; the supplied repository instructions describe `v0.6.1` | Maintainers must resolve the authoritative release label; do not silently downgrade or advance it |
-| Docker reproducibility in this checkout | Dockerfile references requirements lock files that are currently deleted in the working tree | Preserve the user’s deletions; validate after the dependency-file state is intentionally resolved |
+| Docker reproducibility in this checkout | Dockerfile now pins its base digest, checksum-pins uv 0.11.32, and installs the runtime-only universal lock; local Docker remains unavailable | Execute a clean hosted/local build, doctor, validation, exact-image scan, and rollback before any runtime/reproducibility claim |
 
 ## Risky areas
 

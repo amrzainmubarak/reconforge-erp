@@ -1,0 +1,415 @@
+schema_version: 1
+plan_id: reconforge-slsa-1.2-provenance-plan
+status: implementation-in-progress-evidence-bounded
+last_reviewed: "2026-07-26"
+claim_boundary: >-
+  This document is a version-pinned implementation plan, not generated or
+  signed provenance, and not a builder assessment. No ReconForge artifact or
+  source revision is shown to meet a SLSA Build or Source level. Both tracks
+  remain UNEVALUATED until artifact-specific attestations,
+  expectations, verification results, failure behavior, and external platform
+  controls are implemented and independently reviewable.
+
+specification:
+  name: Supply-chain Levels for Software Artifacts
+  version: "1.2"
+  status: Approved
+  released: "2025-11-24"
+  verified_at: "2026-07-25"
+  official_spec_url: https://slsa.dev/spec/v1.2/
+  official_announcement_url: https://slsa.dev/blog/2025/11/announce-slsa-v1.2
+  official_repository_url: https://github.com/slsa-framework/slsa
+  release_tag: v1.2
+  release_commit: 19e4e2f005f871270c4f555fc47afecfb37f3efe
+  release_branch: releases/v1.2
+  release_branch_head_observed: ae7fc76215004e8fae250c877eff8919bf048e3b
+  tracks: [build, source]
+  source_note: >-
+    The Approved versioned specification and announcement are normative; the
+    release tag is pinned, while the observed release-branch head is recorded
+    separately because branches can receive later editorial changes.
+
+current_assessment:
+  build_track: SLSA_BUILD_LEVEL_UNEVALUATED
+  source_track: SLSA_SOURCE_LEVEL_UNEVALUATED
+  verified_properties: []
+  reasons:
+    - A tag-only candidate workflow is defined, but no reviewed hosted run proves release-bound SLSA provenance generation.
+    - No actual signed provenance, trusted-builder assessment, retained verifier result, or failure drill is evidenced.
+    - Repository rulesets, continuous source controls, source provenance, and review enforcement are not verified.
+    - A workflow definition or successful build is not an artifact-specific SLSA level assessment.
+
+artifacts:
+  - id: source-archive
+    artifact_name_pattern: reconforge-erp-<version>-source.tar.gz
+    media_type: application/gzip
+    distribution_channel: planned GitHub Release source attachment
+    identity_requirements:
+      - Subject name is the exact source-archive filename with no local path.
+      - Subject digest contains SHA-256 computed from the immutable signed-tag revision archive.
+      - Embedded project and npm metadata agree with the package artifacts and release version.
+      - The per-subject SBOM records the same source revision and exact covered digest.
+    current_state: release-candidate-workflow-definition-and-local-output
+    gap: A deterministic local clean-HEAD archive and SBOM were validated, but no clean tagged hosted run, signature, publication, or retained consumer verification is proven.
+  - id: python-wheel
+    artifact_name_pattern: reconforge_erp-<version>-py3-none-any.whl
+    media_type: application/vnd.pypa.wheel+zip
+    distribution_channel: planned GitHub Release and/or PyPI release channel
+    identity_requirements:
+      - Subject name is the exact published filename with no local path.
+      - Subject digest contains SHA-256 computed by the trusted build control plane.
+      - Package metadata version equals the signed release-tag version.
+      - Source revision and build-definition identity are immutable and verifier-approved.
+    current_state: release-candidate-workflow-definition
+    gap: Exact manifest and keyless-attestation steps are defined and locally contract-tested, but no clean tagged hosted run, publication, or retained consumer verification is proven.
+  - id: python-sdist
+    artifact_name_pattern: reconforge_erp-<version>.tar.gz
+    media_type: application/gzip
+    distribution_channel: planned GitHub Release and/or PyPI release channel
+    identity_requirements:
+      - Subject name is the exact published filename with no local path.
+      - Subject digest contains SHA-256 computed by the trusted build control plane.
+      - Archive contents derive from the same immutable release revision as the wheel.
+      - Package metadata version equals the signed release-tag version.
+    current_state: release-candidate-workflow-definition
+    gap: Exact manifest and keyless-attestation steps are defined and locally contract-tested, but no clean tagged hosted run, publication, or retained consumer verification is proven.
+  - id: container-image
+    artifact_name_pattern: ghcr.io/amrzainmubarak/reconforge-erp@sha256:<digest>
+    media_type: application/vnd.oci.image.manifest.v1+json
+    distribution_channel: planned digest-addressed OCI registry publication
+    identity_requirements:
+      - Subject name is the immutable repository name and digest, never a mutable tag alone.
+      - Provenance binds the Dockerfile, base-image digest, source revision, and builder identity.
+      - Release tag and image version labels agree with package metadata.
+      - Multi-platform manifests identify every child digest when multiple platforms are published.
+    current_state: release-candidate-workflow-definition
+    gap: A digest-addressed candidate push, keyless attestation, and strict verifier step are defined, but no registry execution, retained signature, publication, or independent result is evidenced.
+  - id: cyclonedx-sbom
+    artifact_name_pattern: one <subject-specific-name>.cdx.json per source/wheel/sdist/image
+    media_type: application/vnd.cyclonedx+json
+    distribution_channel: planned release attachment beside each covered artifact
+    identity_requirements:
+      - SBOM digest is an attestation subject or byproduct bound to the same release revision.
+      - SBOM component version and covered artifact digest are explicit and cross-checked.
+      - Generator identity/version and dependency resolution inputs are recorded.
+      - Publication and retention match the wheel, sdist, and image release identities.
+    current_state: release-candidate-workflow-definition-and-local-output
+    gap: Four exact-subject generation/attestation/verification paths and deterministic local package/source outputs exist, but the image is fixture-only locally and no hosted signed SBOM, registry attachment, publication, or retained consumer result is proven.
+
+trust_boundaries:
+  - id: source-control
+    owner: release-security
+    current_state: partial
+    trust_assumption: Git object identity is available, but repository policy enforcement is an external control.
+    required_controls:
+      - Preserve immutable full source revision and signed release-tag identity.
+      - Verify branch/ruleset protection, privileged access, history retention, and review policy.
+      - Reject dirty, shallow-unresolved, detached-untrusted, or non-upstream release inputs.
+    evidence: [.github/CODEOWNERS, .github/workflows/ci.yml, docs/maintainers/release-process.md]
+  - id: tenant-build-definition
+    owner: release-security
+    current_state: partial
+    trust_assumption: Repository workflows and build files are tenant-controlled inputs and cannot attest to their own trustworthiness.
+    required_controls:
+      - Bind workflow path and immutable workflow revision/digest into expectations.
+      - Separate build parameters controlled by release approvers from hidden control-plane inputs.
+      - Pin actions, base images, build tools, and reusable workflows to reviewed immutable identities.
+    evidence: [.github/workflows/ci.yml, .github/workflows/release.yml, .github/scripts/build_release_sboms.py, Dockerfile, pyproject.toml]
+  - id: hosted-control-plane
+    owner: release-security
+    current_state: planned
+    trust_assumption: GitHub-hosted orchestration is external and no builder isolation/authenticity assessment is recorded.
+    required_controls:
+      - Select and document a hosted provenance-capable builder with an immutable builder ID.
+      - Keep provenance generation and signing outside tenant-defined build steps.
+      - Review platform security guarantees, isolation, updates, incident handling, and availability.
+    evidence: []
+  - id: build-environment
+    owner: release-security
+    current_state: partial
+    trust_assumption: Ephemeral runners and caches may be influenced by dependencies or prior work until assessed and constrained.
+    required_controls:
+      - Isolate builds and prevent cross-run or cross-tenant influence at the claimed boundary.
+      - Make dependencies and base images immutable, resolved, and represented in provenance.
+      - Prevent user build steps from accessing provenance signing material.
+    evidence: [.github/workflows/release.yml, .github/release-build-requirements.txt]
+  - id: attestation-signing
+    owner: release-security
+    current_state: partial
+    trust_assumption: No signing identity, issuer policy, keyless flow, key custody, or compromise procedure is implemented.
+    required_controls:
+      - Use an approved standard attestation/signature mechanism without repository-stored long-lived secrets.
+      - Bind issuer, subject identity, workflow, repository, ref, and builder ID to verifier expectations.
+      - Define rotation, revocation, transparency, outage, and compromise handling.
+    evidence: [.github/workflows/release.yml, docs/maintainers/signed-release-candidates.md]
+  - id: distribution
+    owner: release-security
+    current_state: partial
+    trust_assumption: Package, registry, release, and attestation channels can diverge or be tampered with.
+    required_controls:
+      - Publish artifacts and attestations atomically or fail the release visibly.
+      - Address artifacts by immutable digest and prevent mutable tags from being sole identity.
+      - Retain provenance, verification policy, SBOM, and revocation/advisory records.
+    evidence: [.github/workflows/release.yml, docs/maintainers/signed-release-candidates.md]
+  - id: consumer-verification
+    owner: release-security
+    current_state: partial
+    trust_assumption: Provenance has no protective effect unless consumers verify it against independent expectations.
+    required_controls:
+      - Publish a pinned verifier and policy with source, builder, workflow, issuer, ref, and digest expectations.
+      - Fail closed on missing, malformed, unauthentic, mismatched, revoked, or unsupported attestations.
+      - Provide offline-verifiable inputs or document required trust/network dependencies explicitly.
+    evidence:
+      - .github/workflows/release.yml
+      - docs/maintainers/signed-release-candidates.md
+      - docs/schemas/release_manifest.schema.json
+
+attestation_contract:
+  statement_type: https://in-toto.io/Statement/v1
+  predicate_type: https://slsa.dev/provenance/v1
+  subject_requirements:
+    - Every released artifact has an exact path-free subject name and SHA-256 digest.
+    - All simultaneously released wheel, sdist, image, and SBOM identities are mutually cross-checked.
+    - Empty, duplicate, mutable-tag-only, or unrecognized subjects are rejected.
+  build_definition_requirements:
+    - buildType is a versioned ReconForge release contract URI, not a free-form label.
+    - externalParameters include release tag, source URI/revision, artifact set, and approved public inputs.
+    - internalParameters exclude secrets and are limited to safe control-plane metadata.
+    - resolvedDependencies include source, workflow/build definition, actions, base image, and locked build inputs by digest.
+  run_details_requirements:
+    - builder.id is immutable and allowlisted by verifier policy.
+    - metadata records a unique invocation ID plus UTC start and finish timestamps.
+    - byproducts identify test, SBOM, and policy evidence by digest without embedding secrets or customer data.
+  signature_requirements:
+    - The trusted control plane signs or otherwise authenticates provenance outside tenant build steps.
+    - Verifiers bind issuer and subject identity to the expected repository and immutable workflow.
+    - Signature verification and transparency evidence are retained with tool/version and policy digest.
+  prohibited_inputs:
+    - Long-lived signing keys, tokens, credentials, private paths, usernames, or customer data.
+    - Unresolved mutable branches, mutable action tags, mutable base-image tags, or unpinned builder identity.
+    - Self-asserted SLSA levels or verified properties without an artifact-specific assessment.
+
+verification_policy:
+  owner: release-security
+  expected_source_uri: https://github.com/amrzainmubarak/reconforge-erp
+  allowed_ref_types: [signed-release-tag]
+  checks:
+    - Parse the attestation with strict size, schema, duplicate-key, and supported-version limits.
+    - Verify signature/authenticity, expected issuer/subject, and any required transparency evidence.
+    - Recompute each artifact SHA-256 and require an exact subject-name/digest match.
+    - Require expected source URI, full source revision, signed tag, workflow identity, build type, and builder ID.
+    - Require package/image/SBOM versions and identities to agree with the release tag and one another.
+    - Compare provenance against a separately reviewed, versioned policy digest rather than embedded assertions.
+    - Reject missing required dependencies, mutable identities, unexpected parameters, stale/revoked identities, and extra subjects.
+    - Emit a safe verification record with result UNEVALUATED or FAILED until a separately approved level assessment exists.
+  failure_codes:
+    - PROV_MISSING
+    - PROV_MALFORMED
+    - PROV_UNSUPPORTED_VERSION
+    - PROV_SIGNATURE_INVALID
+    - PROV_IDENTITY_MISMATCH
+    - PROV_SUBJECT_DIGEST_MISMATCH
+    - PROV_SOURCE_MISMATCH
+    - PROV_BUILDER_MISMATCH
+    - PROV_WORKFLOW_MISMATCH
+    - PROV_POLICY_MISMATCH
+    - PROV_REVOKED
+    - PROV_UNEXPECTED_INPUT
+  on_failure:
+    - Block publication or installation promotion and quarantine the artifact/attestation pair.
+    - Preserve safe failure evidence, correlation ID, verifier/version, policy digest, and affected artifact digest.
+    - Never retry until pass without a changed reviewed input, policy, identity, or artifact.
+    - Require human release-security review before rebuild, exception, revocation, or recovery.
+
+rollback_policy:
+  owner: release-security
+  triggers:
+    - Artifact digest or provenance subject mismatch after publication.
+    - Signing/builder identity compromise, revocation, or unexpected issuer/workflow.
+    - Provenance omission, malformed statement, unverifiable dependency, or policy bypass.
+    - Vulnerability or build-input compromise requiring replacement artifacts.
+  required_records:
+    - Original artifact, provenance, signatures, policy digest, verification result, and publication timestamps.
+    - Incident/correlation identity, affected versions/digests/channels, decision owner, and customer-safe advisory text.
+    - Replacement source revision, build invocation, artifact/provenance identities, and verification result.
+  actions:
+    - Stop promotion, mark affected digests revoked or deprecated, and preserve evidence.
+    - Yank or supersede mutable discovery references without deleting immutable forensic records.
+    - Rotate/revoke compromised signing or builder identity and update verifier trust policy deliberately.
+    - Rebuild from a reviewed immutable source revision on an approved builder and reverify before publication.
+    - Publish a replacement/advisory linked to exact affected and replacement digests.
+  prohibited_actions:
+    - Silently overwrite an artifact, tag, provenance statement, signature, or verification record.
+    - Delete failed or compromised release evidence before governed retention expires.
+    - Weaken verifier expectations or claim a SLSA level merely to make a release pass.
+
+implementation_gates:
+  - id: PROV-G01
+    name: Immutable source identity
+    status: partial
+    owner: release-security
+    evidence: [.github/workflows/ci.yml, .github/workflows/release.yml, docs/maintainers/release-process.md]
+    test_evidence:
+      - tests/test_release_readiness_docs.py
+      - tests/test_phase2_deliverables.py
+      - tests/test_signed_release_pipeline.py
+    exit_criteria:
+      - Release input is a clean full upstream revision reachable from one signed version tag.
+      - Package/image versions and source revision are checked before build.
+      - Dirty, shallow-unresolved, or untrusted refs fail before artifact creation.
+    rollback: Preserve current manual release process while the enforced tag/source gate is absent.
+  - id: PROV-G02
+    name: Immutable build definition identity
+    status: partial
+    owner: release-security
+    evidence:
+      - .github/workflows/ci.yml
+      - .github/workflows/release.yml
+      - .github/scripts/build_release_sboms.py
+      - .github/release-build-requirements.txt
+      - Dockerfile
+      - pyproject.toml
+    test_evidence:
+      - tests/test_phase2_deliverables.py
+      - tests/test_release_readiness_docs.py
+      - tests/test_signed_release_pipeline.py
+    exit_criteria:
+      - Workflow, reusable builder, actions, Docker base, and build tools use reviewed immutable identities.
+      - Build type and public parameters have versioned schemas and deterministic canonicalization.
+      - Dependency/tool inputs are locked and represented by digest.
+    rollback: Retain existing build definitions and make no provenance claim until all identities are immutable.
+  - id: PROV-G03
+    name: Deterministic artifact identity
+    status: partial
+    owner: release-security
+    evidence:
+      - .github/scripts/build_release_manifest.py
+      - .github/scripts/normalize_sdist.py
+      - .github/workflows/release.yml
+      - docs/schemas/release_manifest.schema.json
+      - docs/schemas/sbom_manifest.schema.json
+    test_evidence: [tests/test_signed_release_pipeline.py]
+    exit_criteria:
+      - Every artifact name/media type/version and SHA-256 subject is generated and cross-checked.
+      - Rebuild comparison distinguishes bit reproducibility from semantic/source equivalence.
+      - Duplicate, missing, extra, or mutable-only artifact identities fail closed.
+    rollback: Continue local non-release builds without publishing provenance or reproducibility claims.
+  - id: PROV-G04
+    name: Trusted provenance generation
+    status: partial
+    owner: release-security
+    evidence: [.github/workflows/release.yml, docs/maintainers/signed-release-candidates.md]
+    test_evidence: [tests/test_signed_release_pipeline.py]
+    exit_criteria:
+      - A provenance-capable control plane emits in-toto Statement v1 with SLSA provenance v1.
+      - Required subject, buildDefinition, runDetails, builder, and dependency fields pass closed-schema tests.
+      - Tenant build steps cannot alter the emitted provenance or access signing material.
+    rollback: Disable attestation publication and retain prior unsigned artifacts as explicitly unassessed.
+  - id: PROV-G05
+    name: Builder isolation assessment
+    status: planned
+    owner: release-security
+    evidence: []
+    test_evidence: []
+    exit_criteria:
+      - Hosted builder identity, control plane, tenant boundary, isolation, secret, cache, and incident controls are reviewed.
+      - Assessment names platform/version/date/evidence and does not inherit a level from marketing.
+      - Material platform changes trigger reassessment before level wording.
+    rollback: Revert to UNEVALUATED and stop level/property publication when the assessed boundary changes.
+  - id: PROV-G06
+    name: Keyless attestation authenticity
+    status: partial
+    owner: release-security
+    evidence: [.github/workflows/release.yml, docs/maintainers/signed-release-candidates.md]
+    test_evidence: [tests/test_signed_release_pipeline.py]
+    exit_criteria:
+      - Issuer, subject, repository, workflow, ref, and builder expectations are explicit and verified.
+      - Signing credentials are control-plane managed and unavailable to tenant build steps.
+      - Rotation, revocation, transparency, outage, and compromise paths have negative tests.
+    rollback: Revoke affected identity, block promotion, and preserve all attestations and verification evidence.
+  - id: PROV-G07
+    name: Coupled provenance distribution
+    status: partial
+    owner: release-security
+    evidence:
+      - .github/workflows/release.yml
+      - .github/scripts/build_release_sboms.py
+      - docs/schemas/sbom_manifest.schema.json
+      - docs/maintainers/signed-release-candidates.md
+    test_evidence:
+      - tests/test_release_sbom_pipeline.py
+      - tests/test_signed_release_pipeline.py
+    exit_criteria:
+      - Artifact, provenance, signature, SBOM, and policy identities publish as one reviewed release set.
+      - Registry/release lookup is documented and immutable digests remain discoverable.
+      - Partial publication fails visibly and can be recovered without overwrite.
+    rollback: Stop discovery references and preserve immutable partial-release evidence for review.
+  - id: PROV-G08
+    name: Independent verifier policy
+    status: partial
+    owner: release-security
+    evidence:
+      - .github/workflows/release.yml
+      - .github/scripts/build_release_manifest.py
+      - docs/maintainers/signed-release-candidates.md
+      - docs/schemas/release_manifest.schema.json
+    test_evidence: [tests/test_signed_release_pipeline.py]
+    exit_criteria:
+      - A pinned verifier checks authenticity, artifact digest, source, tag, builder, workflow, parameters, and policy digest.
+      - Golden valid fixtures and one negative fixture per safe failure code pass offline where feasible.
+      - Verification output is safe, deterministic, versioned, and retained.
+    rollback: Reject promotion and return UNEVALUATED when verifier or policy identity is unsupported.
+  - id: PROV-G09
+    name: Fail-closed release enforcement
+    status: partial
+    owner: release-security
+    evidence: [.github/workflows/release.yml, docs/maintainers/signed-release-candidates.md]
+    test_evidence: [tests/test_signed_release_pipeline.py]
+    exit_criteria:
+      - Missing/invalid/mismatched provenance blocks publication and downstream promotion.
+      - Exceptions require explicit human approval, expiry, reason, risk owner, and audit record.
+      - Retry requires a reviewed changed input rather than repeat-until-pass behavior.
+    rollback: Disable release publication instead of bypassing verification during verifier/platform outages.
+  - id: PROV-G10
+    name: Revocation and rollback drill
+    status: planned
+    owner: release-security
+    evidence: []
+    test_evidence: []
+    exit_criteria:
+      - A synthetic drill revokes one artifact/signing identity and blocks it at verification.
+      - Replacement rebuild/publish/verify preserves affected and replacement digest lineage.
+      - Recovery timing, owner actions, advisory, and retained evidence are reviewed.
+    rollback: Restore only the verifier/publisher configuration, never a revoked artifact identity or overwritten evidence.
+  - id: PROV-G11
+    name: Source track assessment
+    status: planned
+    owner: release-security
+    evidence: []
+    test_evidence: []
+    exit_criteria:
+      - Repository rulesets, history retention, change identity, technical controls, and review enforcement are observed directly.
+      - Source provenance/VSA expectations and continuity start revision are explicit.
+      - Any Source level is assessed per branch/revision and never inferred from Git presence or CODEOWNERS.
+    rollback: Publish SLSA_SOURCE_LEVEL_UNEVALUATED when continuity or technical-control evidence is unavailable.
+  - id: PROV-G12
+    name: Claim and evidence review
+    status: planned
+    owner: release-security
+    evidence: []
+    test_evidence: []
+    exit_criteria:
+      - Artifact-specific assessment records track specification, platform, builder, verifier, policy, and evidence versions.
+      - Public wording is generated from current passing assessment records only.
+      - Expired, changed, revoked, or incomplete evidence automatically removes level/property wording.
+    rollback: Fall back to UNEVALUATED wording and retain the last valid assessment as historical evidence only.
+
+review:
+  owner: release-security
+  cadence_days: 90
+  next_review_due: "2026-10-23"
+  triggers:
+    - SLSA publishes a new Approved specification or changes a versioned attestation format.
+    - Builder, source-control, signer, verifier, registry, workflow, or package ecosystem changes.
+    - A provenance verification failure, signing/builder compromise, or supply-chain incident occurs.
+    - Any artifact-specific SLSA level or verified-property wording is proposed.

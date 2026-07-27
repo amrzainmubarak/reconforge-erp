@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/sbom_manifest.schema.json",
+  "title": "ReconForge per-artifact SBOM manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "release_manifest",
+    "generator_policy",
+    "sboms",
+    "verification_requirements",
+    "claim_boundary"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "release_manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "sha256"],
+      "properties": {
+        "name": { "const": "release-manifest.v1.json" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "generator_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cyclonedx_spec_version",
+        "predicate_type",
+        "python_generator",
+        "image_generator",
+        "image_generator_commit"
+      ],
+      "properties": {
+        "cyclonedx_spec_version": { "const": "1.7" },
+        "predicate_type": { "const": "https://cyclonedx.org/bom" },
+        "python_generator": { "const": "reconforge-release-sbom-builder@1.0.0" },
+        "image_generator": { "const": "syft@1.49.0" },
+        "image_generator_commit": { "const": "29fd7d0dec81cf03e0a1194a1985c7c893bb2396" }
+      }
+    },
+    "sboms": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "prefixItems": [
+        { "$ref": "#/$defs/source" },
+        { "$ref": "#/$defs/wheel" },
+        { "$ref": "#/$defs/sdist" },
+        { "$ref": "#/$defs/image" }
+      ],
+      "items": false
+    },
+    "verification_requirements": {
+      "const": [
+        "subject-sha256-match",
+        "sbom-sha256-match",
+        "cyclonedx-1.7-schema",
+        "expected-generator",
+        "expected-repository",
+        "expected-workflow",
+        "expected-source-ref",
+        "expected-source-revision",
+        "deny-self-hosted-runner"
+      ]
+    },
+    "claim_boundary": { "type": "string", "minLength": 200 }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "common": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "subject",
+        "sbom",
+        "generation_mode",
+        "completeness",
+        "component_count",
+        "inventory_sha256"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "subject": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "location", "media_type", "sha256"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "location": { "type": "string", "minLength": 1 },
+            "media_type": { "type": "string", "minLength": 1 },
+            "sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "sbom": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "media_type", "spec_version", "sha256"],
+          "properties": {
+            "name": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+\\.cdx\\.json$" },
+            "media_type": { "const": "application/vnd.cyclonedx+json" },
+            "spec_version": { "const": "1.7" },
+            "sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "generation_mode": {
+          "enum": [
+            "declared-python-metadata",
+            "declared-python-and-locked-npm-metadata",
+            "syft-installed-image-scan"
+          ]
+        },
+        "completeness": { "const": "unknown" },
+        "component_count": { "type": "integer", "minimum": 1 },
+        "inventory_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "source": {
+      "allOf": [
+        { "$ref": "#/$defs/common" },
+        {
+          "properties": {
+            "id": { "const": "source-archive" },
+            "generation_mode": {
+              "enum": ["declared-python-metadata", "declared-python-and-locked-npm-metadata"]
+            },
+            "subject": {
+              "properties": {
+                "name": { "pattern": "^reconforge-erp-[0-9]+\\.[0-9]+\\.[0-9]+-source\\.tar\\.gz$" },
+                "location": { "pattern": "^reconforge-erp-[0-9]+\\.[0-9]+\\.[0-9]+-source\\.tar\\.gz$" },
+                "media_type": { "const": "application/gzip" }
+              }
+            },
+            "sbom": {
+              "properties": {
+                "name": { "pattern": "^reconforge-erp-[0-9]+\\.[0-9]+\\.[0-9]+-source\\.cdx\\.json$" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "wheel": {
+      "allOf": [
+        { "$ref": "#/$defs/common" },
+        {
+          "properties": {
+            "id": { "const": "python-wheel" },
+            "generation_mode": { "const": "declared-python-metadata" },
+            "subject": {
+              "properties": {
+                "name": { "pattern": "^reconforge_erp-[0-9]+\\.[0-9]+\\.[0-9]+-py3-none-any\\.whl$" },
+                "location": { "pattern": "^reconforge_erp-[0-9]+\\.[0-9]+\\.[0-9]+-py3-none-any\\.whl$" },
+                "media_type": { "const": "application/vnd.pypa.wheel+zip" }
+              }
+            },
+            "sbom": {
+              "properties": {
+                "name": { "pattern": "^reconforge_erp-[0-9]+\\.[0-9]+\\.[0-9]+-py3-none-any\\.cdx\\.json$" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "sdist": {
+      "allOf": [
+        { "$ref": "#/$defs/common" },
+        {
+          "properties": {
+            "id": { "const": "python-sdist" },
+            "generation_mode": { "const": "declared-python-metadata" },
+            "subject": {
+              "properties": {
+                "name": { "pattern": "^reconforge_erp-[0-9]+\\.[0-9]+\\.[0-9]+\\.tar\\.gz$" },
+                "location": { "pattern": "^reconforge_erp-[0-9]+\\.[0-9]+\\.[0-9]+\\.tar\\.gz$" },
+                "media_type": { "const": "application/gzip" }
+              }
+            },
+            "sbom": {
+              "properties": {
+                "name": { "pattern": "^reconforge_erp-[0-9]+\\.[0-9]+\\.[0-9]+-sdist\\.cdx\\.json$" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "image": {
+      "allOf": [
+        { "$ref": "#/$defs/common" },
+        {
+          "properties": {
+            "id": { "const": "container-image" },
+            "generation_mode": { "const": "syft-installed-image-scan" },
+            "subject": {
+              "properties": {
+                "name": { "const": "ghcr.io/amrzainmubarak/reconforge-erp" },
+                "location": {
+                  "pattern": "^ghcr\\.io/amrzainmubarak/reconforge-erp@sha256:[0-9a-f]{64}$"
+                },
+                "media_type": { "const": "application/vnd.oci.image.manifest.v1+json" }
+              }
+            },
+            "sbom": {
+              "properties": {
+                "name": { "pattern": "^reconforge-erp-[0-9]+\\.[0-9]+\\.[0-9]+-image\\.cdx\\.json$" }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -41,9 +41,13 @@ class OperationsService:
     def jobs(self) -> list[dict[str, Any]]:
         """List local job history summaries."""
 
-        return rows_to_dicts(self.connection.execute("SELECT * FROM ops_job_history ORDER BY started_at DESC").fetchall())
+        return rows_to_dicts(
+            self.connection.execute("SELECT * FROM ops_job_history ORDER BY started_at DESC").fetchall()
+        )
 
     def errors(self) -> list[dict[str, Any]]:
         """List sanitized local error records."""
 
-        return rows_to_dicts(self.connection.execute("SELECT * FROM ops_error_records ORDER BY created_at DESC").fetchall())
+        return rows_to_dicts(
+            self.connection.execute("SELECT * FROM ops_error_records ORDER BY created_at DESC").fetchall()
+        )

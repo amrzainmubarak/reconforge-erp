@@ -87,7 +87,7 @@ Please do not post live customer, supplier, employee, invoice, GL, asset, or wor
 - Cloud upload is not always acceptable.
 - Local-first does not mean manual.
 - Deterministic rules build reviewer trust.
-- Anonymization enables safe collaboration.
+- Reviewed anonymization can reduce selected collaboration risks but does not establish safe publication.
 - Evidence packs should be generated where the data lives.
 - Future: self-hosted review without weakening the local-first model.
 

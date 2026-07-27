@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,13 @@ from reconforge.io.readers import normalize_columns, read_table
 from reconforge.rules.models import RuleDefinition
 from reconforge.rules.operators import evaluate_condition
 from reconforge.rules.results import RuleResult
+from reconforge.utils.money import (
+    STRICT_FINANCIAL_INPUT_POLICY,
+    FinancialInputPolicy,
+    InvalidAmountError,
+    parse_amount,
+    validate_financial_input_policy,
+)
 
 
 def _load_source(input_dir: Path, source_file: str) -> pd.DataFrame:
@@ -45,25 +53,41 @@ def _first_text(row: pd.Series, fields: list[str]) -> str | None:
     return None
 
 
-def _amount_impact(row: pd.Series) -> float:
+def _amount_impact(
+    row: pd.Series,
+    *,
+    financial_input_policy: FinancialInputPolicy,
+) -> Decimal | None:
     for field in ("amount", "total_cost", "actual_cost", "estimated_cost", "invoice_amount", "total_price"):
         value = row.get(field)
         try:
-            return abs(float(str(value)))
-        except (TypeError, ValueError):
+            return abs(parse_amount(value, input_policy=financial_input_policy))
+        except InvalidAmountError:
             continue
-    return 0.0
+    return None
 
 
-def evaluate_rule(input_dir: Path | str, rule: RuleDefinition) -> list[RuleResult]:
+def evaluate_rule(
+    input_dir: Path | str,
+    rule: RuleDefinition,
+    *,
+    financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
+) -> list[RuleResult]:
     """Evaluate one rule against its source CSV."""
 
+    input_policy = validate_financial_input_policy(financial_input_policy)
     base = Path(input_dir)
     frame = _load_source(base, rule.source_file)
     related_frames = _load_related_sources(base)
     results: list[RuleResult] = []
     for index, row in frame.iterrows():
-        if evaluate_condition(row, rule.condition, frame=frame, related_frames=related_frames):
+        if evaluate_condition(
+            row,
+            rule.condition,
+            frame=frame,
+            related_frames=related_frames,
+            financial_input_policy=input_policy,
+        ):
             source_row = int(str(index)) + 2
             results.append(
                 RuleResult(
@@ -79,7 +103,10 @@ def evaluate_rule(input_dir: Path | str, rule: RuleDefinition) -> list[RuleResul
                     affected_work_order=_first_text(row, ["work_order", "linked_work_order"]),
                     affected_product=_first_text(row, ["product_code", "product_code_stock", "product_code_po"]),
                     affected_customer=_first_text(row, ["customer_code"]),
-                    amount_impact=_amount_impact(row),
+                    amount_impact=_amount_impact(
+                        row,
+                        financial_input_policy=input_policy,
+                    ),
                     message=rule.message,
                     business_impact=rule.business_impact
                     or "The control failed and should be reviewed before management or audit sign-off.",

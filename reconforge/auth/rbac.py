@@ -32,6 +32,14 @@ def has_permission(user_permissions: set[str], permission: str) -> bool:
     return permission in user_permissions
 
 
+def same_actor(left: object, right: object) -> bool:
+    """Compare two non-empty actor identities with one canonical policy."""
+
+    left_text = str(left or "").strip().casefold()
+    right_text = str(right or "").strip().casefold()
+    return bool(left_text and right_text and left_text == right_text)
+
+
 def check_object_action_permission(user_permissions: set[str], object_type: str, action: str) -> bool:
     """Check the conventional object/action permission name."""
 

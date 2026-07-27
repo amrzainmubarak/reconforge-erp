@@ -190,10 +190,17 @@ def test_live_redis_tenant_key_isolation() -> None:
     factory = RedisConnectionFactory(settings)
     store = TenantRedisStore(factory)
     token_hash = hashlib.sha256(b"live-token").hexdigest()
+    session = RedisSessionRecord("SES-LIVE", "USR-LIVE", token_hash, "2030-01-01T00:00:00Z")
+    session_key = store._hashed_key("test_redis_a", "session", session.session_id)
     try:
         store.revoke_token_hash("test_redis_a", token_hash, ttl_seconds=60)
         assert store.is_token_hash_revoked("test_redis_a", token_hash) is True
         assert store.is_token_hash_revoked("test_redis_b", token_hash) is False
+        store.put_session("test_redis_a", session, ttl_seconds=60)
+        assert store.get_session("test_redis_a", session.session_id) == session
+        assert store.get_session("test_redis_b", session.session_id) is None
+        assert 0 < int(factory.client().ttl(session_key)) <= 60
     finally:
         factory.client().delete(store._key("test_redis_a", "revoked-token", token_hash))
+        factory.client().delete(session_key)
         factory.close()

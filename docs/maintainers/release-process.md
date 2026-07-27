@@ -46,7 +46,7 @@ Recommended smoke commands:
 
 ```bash
 reconforge demo run --output output/demo
-reconforge report client-pack --input output/demo --output output/demo/client_pack --summary-only
+reconforge report client-pack --input output/demo --output output/demo_client_pack --summary-only
 reconforge mappings validate --pack control-packs/odoo-inventory-valuation
 reconforge mappings validate --pack control-packs/sap-mb51-fagll03
 reconforge mappings validate --pack control-packs/erpnext-stock-gl
@@ -58,10 +58,13 @@ reconforge mappings validate --pack control-packs/netsuite-inventory-gl
 
 ```bash
 python -m bandit -q -r reconforge
-pip-audit -r requirements.txt
+uv lock --check
+uv export --locked --all-extras --no-emit-project --format requirements.txt --output-file audit-requirements.txt
+pip-audit --require-hashes --disable-pip -r audit-requirements.txt --format json --output pip-audit.json
+python .github/scripts/validate_supply_chain_policy.py --pip-audit-report pip-audit.json --pip-audit-exit-code 0
 ```
 
-Review OpenSSF Scorecard and SBOM workflow runs when available. They support security maturity review but are not guarantees.
+Review OpenSSF Scorecard and the signed-candidate per-subject SBOM results when available. They support security maturity review but are not guarantees.
 
 ## Docker Checks
 

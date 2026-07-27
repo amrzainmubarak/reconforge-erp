@@ -9,7 +9,7 @@ from typing import Any
 from reconforge.domain.models import utc_now_text
 from reconforge.platform.common import (
     PlatformError,
-    audit,
+    commit_audited,
     ensure_platform_schema,
     ensure_workspace,
     normalize_key,
@@ -25,9 +25,10 @@ EXCEPTION_STATUSES = {"Open", "In Review", "Resolved", "Accepted Risk", "Closed"
 class ExceptionQueueService:
     """Service for one local queue across finance workflow sources."""
 
-    def __init__(self, connection: sqlite3.Connection) -> None:
+    def __init__(self, connection: sqlite3.Connection, *, autocommit: bool = True) -> None:
         ensure_platform_schema(connection)
         self.connection = connection
+        self.autocommit = autocommit
 
     def upsert_exception(
         self,
@@ -100,16 +101,20 @@ class ExceptionQueueService:
                     now,
                 ),
             )
-            self.connection.commit()
         except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
             raise PlatformError("Unable to save exception queue record.") from exc
-        audit(
-            self.connection,
+        self._finalize(
             actor_label=actor_label,
             object_type="exception",
             object_id=exception_id,
             action="exception_saved",
-            metadata={"source_type": source, "source_id": source_key, "risk_rating": risk_rating, "status": status_value},
+            metadata={
+                "source_type": source,
+                "source_id": source_key,
+                "risk_rating": risk_rating,
+                "status": status_value,
+            },
         )
         return self.get(exception_id)
 
@@ -165,8 +170,7 @@ class ExceptionQueueService:
         if not normalize_text(owner):
             raise PlatformError("Exception owner is required.")
         self._update_fields(exception_id, {"owner": owner, "updated_at": utc_now_text()})
-        audit(
-            self.connection,
+        self._finalize(
             actor_label=actor_label,
             object_type="exception",
             object_id=exception_id,
@@ -181,8 +185,7 @@ class ExceptionQueueService:
         require_permission(self.connection, actor_label=actor_label, permission="exceptions.manage")
         status_value = _allowed_status(status)
         self._update_fields(exception_id, {"status": status_value, "updated_at": utc_now_text()})
-        audit(
-            self.connection,
+        self._finalize(
             actor_label=actor_label,
             object_type="exception",
             object_id=exception_id,
@@ -213,8 +216,7 @@ class ExceptionQueueService:
         for exception_id in exception_ids:
             self._update_fields(exception_id, updates)
             count += 1
-        audit(
-            self.connection,
+        self._finalize(
             actor_label=actor_label,
             object_type="exception",
             object_id="bulk",
@@ -246,9 +248,37 @@ class ExceptionQueueService:
                 """,
                 (updates.get("owner"), updates.get("status"), updates["updated_at"], exception_id),
             )
-            self.connection.commit()
         except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
             raise PlatformError("Unable to update exception queue record.") from exc
+
+    def _finalize(
+        self,
+        *,
+        actor_label: str,
+        object_type: str,
+        object_id: str,
+        action: str,
+        metadata: dict[str, Any],
+    ) -> None:
+        if self.autocommit:
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type=object_type,
+                object_id=object_id,
+                action=action,
+                metadata=metadata,
+            )
+        else:
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type=object_type,
+                object_id=object_id,
+                action=action,
+                metadata=metadata,
+            )
 
 
 def _allowed_status(status: str) -> str:

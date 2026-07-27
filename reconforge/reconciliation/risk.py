@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from reconforge.config import ReconForgeConfig
+from reconforge.utils.money import InvalidAmountError, parse_amount
 
 
 @dataclass(frozen=True)
@@ -28,35 +29,38 @@ def risk_level(score: int) -> str:
     return "Critical"
 
 
-def amount_component(amount: object, baseline: float | Decimal = 1000.0) -> int:
+def amount_component(amount: object, baseline: object = Decimal("1000")) -> int:
     """Scale amount exposure into a small risk component."""
 
-    amount_value = _to_float(amount)
-    baseline_value = _to_float(baseline)
+    amount_value = _to_decimal(amount)
+    baseline_value = _to_decimal(baseline)
+    if amount_value.is_nan():
+        return 0
+    amount_value = amount_value.copy_abs()
     if amount_value <= 0:
+        return 0
+    if baseline_value.is_nan() or baseline_value <= 0:
         return 0
     return min(int((amount_value / baseline_value) * 20), 40)
 
 
-def _to_float(value: object) -> float:
-    if isinstance(value, Decimal):
-        return float(value)
-    if isinstance(value, (int, float)):
-        return float(value)
+def _to_decimal(value: object) -> Decimal:
     if value is None:
-        return 0.0
+        return Decimal("0")
     try:
-        return float(str(value))
-    except (TypeError, ValueError):
-        return 0.0
+        return parse_amount(value)
+    except InvalidAmountError:
+        # Keep invalid values as a non-numeric marker so scoring logic does not
+        # silently treat them as a valid zero amount.
+        return Decimal("NaN")
 
 
 def assess_risk(
     exception_type: str,
     config: ReconForgeConfig,
     *,
-    amount: float | Decimal = 0.0,
-    amount_difference: float | Decimal = 0.0,
+    amount: object = Decimal("0"),
+    amount_difference: object = Decimal("0"),
     aging_days: int = 0,
 ) -> RiskAssessment:
     """Score a reconciliation exception from 0 to 100."""
@@ -74,6 +78,7 @@ def assess_risk(
         "direct_purchase_fit": weights.direct_purchase_fit,
         "missing_old_part_return": weights.missing_old_part_return,
         "duplicate_reference": weights.duplicate_reference,
+        "ambiguous_match": weights.duplicate_reference,
         "closed_work_order_without_invoice": weights.closed_work_order_without_invoice,
         "closed_work_order_with_pending_stock": weights.closed_work_order_without_invoice,
         "cancelled_po_linked_to_movement": weights.cancelled_po_linked_to_movement,
@@ -84,8 +89,8 @@ def assess_risk(
         "reference_mismatch": weights.invalid_master_reference,
     }
     score = base_scores.get(normalized, 25)
-    score += amount_component(abs(amount))
-    score += amount_component(abs(amount_difference), baseline=250.0)
+    score += amount_component(amount)
+    score += amount_component(amount_difference, baseline=Decimal("250"))
     if aging_days > 90:
         score += min((aging_days - 90) // 15, 15)
     score = max(0, min(score, 100))

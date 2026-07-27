@@ -25,6 +25,7 @@ classifiers = [
   "Topic :: Office/Business :: Financial :: Accounting",
 ]
 dependencies = [
+  "defusedxml>=0.7.1",
   "fastapi>=0.111",
   "openpyxl>=3.1",
   "pandas>=2.2",
@@ -40,6 +41,7 @@ dev = [
   "bandit>=1.7",
   "build>=1.2",
   "httpx>=0.27",
+  "hypothesis==6.161.2",
   "jsonschema>=4.23",
   "mypy>=1.10",
   "pandas-stubs>=2.2",
@@ -47,7 +49,9 @@ dev = [
   "pre-commit>=3.7",
   "pytest>=8.2",
   "ruff>=0.5",
+  "setuptools>=83",
   "types-PyYAML>=6.0",
+  "wheel",
   "pillow>=12.3.0",
 ]
 docs = [
@@ -68,6 +72,16 @@ reconforge = "reconforge.cli:app"
 
 [tool.setuptools.packages.find]
 include = ["reconforge*"]
+
+[tool.setuptools.package-data]
+"reconforge.data" = ["*.json"]
+
+[tool.uv]
+# Keep application resolution reproducible and fail when an unreviewed uv
+# version attempts to rewrite the universal lock. Move the cutoff only in a
+# reviewed dependency-update change that regenerates and audits uv.lock.
+required-version = "==0.11.32"
+exclude-newer = "2026-07-26T00:00:00Z"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

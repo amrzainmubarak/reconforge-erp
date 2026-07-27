@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from decimal import Decimal
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -31,12 +32,12 @@ class CreateReconciliationRequest(BaseModel):
     account_code: str
     account_name: str = ""
     workspace: str = "default"
-    balance: float = 0.0
+    balance: Decimal = Decimal("0")
     owner: str = ""
     preparer: str = ""
     reviewer: str = ""
     risk_rating: str = "medium"
-    materiality_threshold: float = 0.0
+    materiality_threshold: Decimal = Decimal("0")
 
 
 class ActionRequest(BaseModel):

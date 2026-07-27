@@ -9,6 +9,8 @@ from fastapi.testclient import TestClient
 from jsonschema import Draft202012Validator
 from typer.testing import CliRunner
 
+import reconforge.db.migrations as migration_module
+import reconforge.platform.inventory_valuation as valuation_module
 from reconforge.api import create_api_app
 from reconforge.audit import list_audit_events, verify_audit_events
 from reconforge.auth import LocalAuthService
@@ -34,9 +36,7 @@ def _assert_contract(filename: str, payload: object) -> None:
 
 
 def test_valuation_amount_contract_supports_zero_to_six_minor_units() -> None:
-    schema = json.loads(
-        (SCHEMA_DIR / "inventory_valuation_document.schema.json").read_text(encoding="utf-8")
-    )
+    schema = json.loads((SCHEMA_DIR / "inventory_valuation_document.schema.json").read_text(encoding="utf-8"))
     validator = Draft202012Validator(schema["$defs"]["amount"])
 
     assert all(validator.is_valid(value) for value in ("1", "1.2", "1.234", "1.234567"))
@@ -70,9 +70,7 @@ def _seed(
         name="Synthetic Egypt",
         currency_code="EGP",
     )
-    period = master.upsert_period(
-        name="2026-07", start_date="2026-07-01", end_date="2026-07-31"
-    )
+    period = master.upsert_period(name="2026-07", start_date="2026-07-01", end_date="2026-07-31")
     finance = FinanceCoreService(connection)
     for account_code, name, account_type, normal_balance in (
         ("1400", "Inventory control", "Asset", "Debit"),
@@ -94,9 +92,7 @@ def _seed(
         journal_type="Adjustment",
     )
     inventory = InventoryCoreService(connection)
-    inventory.upsert_uom(
-        uom_code="KG", name="Kilogram", category="Weight", decimal_places=3
-    )
+    inventory.upsert_uom(uom_code="KG", name="Kilogram", category="Weight", decimal_places=3)
     inventory.upsert_item(
         item_code="MAT-01",
         name="Synthetic material",
@@ -164,7 +160,7 @@ def _valuation_document(
     *,
     number: str,
     total_cost: object | None = None,
-    actor: str = "local-cli",
+    actor: str = "valuation-preparer",
 ) -> dict[str, object]:
     costs = [] if total_cost is None else [{"line_number": 1, "total_cost": total_cost}]
     return valuation.create_document(
@@ -177,9 +173,7 @@ def _valuation_document(
 
 
 def _token(client: TestClient, username: str) -> str:
-    response = client.post(
-        "/api/v1/auth/login", json={"username": username, "password": "Secret-123"}
-    )
+    response = client.post("/api/v1/auth/login", json={"username": username, "password": "Secret-123"})
     assert response.status_code == 200
     return str(response.json()["access_token"])
 
@@ -197,9 +191,7 @@ def test_fifo_lifecycle_finance_draft_contracts_and_immutability(tmp_path: Path)
             movement_date="2026-07-01",
             quantity="10.000",
         )
-        receipt_document = _valuation_document(
-            valuation, receipt, number="VAL/2026/001", total_cost="100.01"
-        )
+        receipt_document = _valuation_document(valuation, receipt, number="VAL/2026/001", total_cost="100.01")
         approved_receipt = valuation.approve_document(
             str(receipt_document["id"]), reason="Receipt cost evidence reviewed"
         )
@@ -211,12 +203,8 @@ def test_fifo_lifecycle_finance_draft_contracts_and_immutability(tmp_path: Path)
             movement_date="2026-07-02",
             quantity="3.000",
         )
-        delivery_document = _valuation_document(
-            valuation, delivery, number="VAL/2026/002"
-        )
-        approved_delivery = valuation.approve_document(
-            str(delivery_document["id"]), reason="FIFO issue reviewed"
-        )
+        delivery_document = _valuation_document(valuation, delivery, number="VAL/2026/002")
+        approved_delivery = valuation.approve_document(str(delivery_document["id"]), reason="FIFO issue reviewed")
 
         assert approved_receipt["total_value"] == "100.01"
         assert approved_delivery["total_value"] == "30.00"
@@ -239,9 +227,10 @@ def test_fifo_lifecycle_finance_draft_contracts_and_immutability(tmp_path: Path)
             GROUP BY entries.id, entries.status ORDER BY entries.entry_number
             """
         ).fetchall()
-        assert sorted(
-            (row["status"], row["debit_minor"], row["credit_minor"]) for row in entries
-        ) == [("Draft", 3000, 3000), ("Draft", 10001, 10001)]
+        assert sorted((row["status"], row["debit_minor"], row["credit_minor"]) for row in entries) == [
+            ("Draft", 3000, 3000),
+            ("Draft", 10001, 10001),
+        ]
         with pytest.raises(PlatformError, match="must be reversed"):
             inventory.void_movement(str(receipt["id"]), reason="Blocked after valuation")
         finance_entry_id = str(approved_delivery["finance_entry_id"])
@@ -252,9 +241,7 @@ def test_fifo_lifecycle_finance_draft_contracts_and_immutability(tmp_path: Path)
             ).fetchone()["id"]
         )
         with pytest.raises(sqlite3.DatabaseError, match="finance lines are immutable"):
-            connection.execute(
-                "UPDATE ledger_lines SET description = 'Changed' WHERE id = ?", (finance_line_id,)
-            )
+            connection.execute("UPDATE ledger_lines SET description = 'Changed' WHERE id = ?", (finance_line_id,))
         connection.rollback()
         finance = FinanceCoreService(connection)
         finance.validate_entry(finance_entry_id, reason="Independent Finance Core review")
@@ -313,16 +300,12 @@ def test_fifo_sequence_insufficient_layers_and_exact_cost_boundaries(tmp_path: P
             movement_date="2026-07-02",
             quantity="1.000",
         )
-        second_document = _valuation_document(
-            valuation, second, number="VAL-B", total_cost="5.00"
-        )
+        second_document = _valuation_document(valuation, second, number="VAL-B", total_cost="5.00")
         with pytest.raises(PlatformError, match="RCV-A"):
             valuation.approve_document(str(second_document["id"]), reason="Out of sequence")
         with pytest.raises(PlatformError, match="exact decimal string"):
             _valuation_document(valuation, first, number="VAL-FLOAT", total_cost=10.0)
-        first_document = _valuation_document(
-            valuation, first, number="VAL-A", total_cost="0.01"
-        )
+        first_document = _valuation_document(valuation, first, number="VAL-A", total_cost="0.01")
         valuation.approve_document(str(first_document["id"]), reason="Opening layer reviewed")
         valuation.approve_document(str(second_document["id"]), reason="Second layer reviewed")
         delivery = _movement(
@@ -342,6 +325,66 @@ def test_fifo_sequence_insufficient_layers_and_exact_cost_boundaries(tmp_path: P
         connection.close()
 
 
+def test_valuation_audit_and_outbox_failures_roll_back_business_writes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = _database(tmp_path, "valuation_atomic.db")
+    connection = connect(path, require_exists=True)
+    try:
+        inventory, valuation, period = _seed(connection)
+        movement = _movement(
+            inventory,
+            period,
+            number="RCV-ATOMIC-AUDIT",
+            movement_type="Receipt",
+            movement_date="2026-07-01",
+            quantity="1.000",
+        )
+        audit_count = connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"]
+        outbox_count = connection.execute("SELECT COUNT(*) AS count FROM outbox_events").fetchone()["count"]
+        monkeypatch.setattr(
+            valuation_module,
+            "commit_audited",
+            lambda *_args, **_kwargs: (_ for _ in ()).throw(PlatformError("forced audit failure")),
+        )
+        with pytest.raises(PlatformError, match="forced audit failure"):
+            _valuation_document(valuation, movement, number="VAL-ATOMIC-AUDIT", total_cost="10.00")
+        assert (
+            connection.execute(
+                "SELECT COUNT(*) AS count FROM inventory_valuation_documents WHERE valuation_number = 'VAL-ATOMIC-AUDIT'",
+            ).fetchone()["count"]
+            == 0
+        )
+        assert connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"] == audit_count
+        assert connection.execute("SELECT COUNT(*) AS count FROM outbox_events").fetchone()["count"] == outbox_count
+
+        movement_two = _movement(
+            inventory,
+            period,
+            number="RCV-ATOMIC-OUTBOX",
+            movement_type="Receipt",
+            movement_date="2026-07-02",
+            quantity="1.000",
+        )
+        monkeypatch.setattr(valuation_module, "commit_audited", lambda *_args, **_kwargs: None)
+        monkeypatch.setattr(
+            valuation_module,
+            "append_outbox_event",
+            lambda *_args, **_kwargs: (_ for _ in ()).throw(PlatformError("forced outbox failure")),
+        )
+        with pytest.raises(PlatformError, match="forced outbox failure"):
+            _valuation_document(valuation, movement_two, number="VAL-ATOMIC-OUTBOX", total_cost="11.00")
+        assert (
+            connection.execute(
+                "SELECT COUNT(*) AS count FROM inventory_valuation_documents WHERE valuation_number = 'VAL-ATOMIC-OUTBOX'",
+            ).fetchone()["count"]
+            == 0
+        )
+    finally:
+        connection.close()
+
+
 def test_fifo_consumes_oldest_layers_with_deterministic_half_even_allocation(tmp_path: Path) -> None:
     path = _database(tmp_path)
     connection = connect(path, require_exists=True)
@@ -355,9 +398,7 @@ def test_fifo_consumes_oldest_layers_with_deterministic_half_even_allocation(tmp
             movement_date="2026-07-01",
             quantity="2.000",
         )
-        first_document = _valuation_document(
-            valuation, first, number="VAL-OLD", total_cost="20.01"
-        )
+        first_document = _valuation_document(valuation, first, number="VAL-OLD", total_cost="20.01")
         valuation.approve_document(str(first_document["id"]), reason="Old layer reviewed")
         second = _movement(
             inventory,
@@ -367,9 +408,7 @@ def test_fifo_consumes_oldest_layers_with_deterministic_half_even_allocation(tmp
             movement_date="2026-07-02",
             quantity="2.000",
         )
-        second_document = _valuation_document(
-            valuation, second, number="VAL-NEW", total_cost="30.01"
-        )
+        second_document = _valuation_document(valuation, second, number="VAL-NEW", total_cost="30.01")
         valuation.approve_document(str(second_document["id"]), reason="New layer reviewed")
         delivery = _movement(
             inventory,
@@ -380,9 +419,7 @@ def test_fifo_consumes_oldest_layers_with_deterministic_half_even_allocation(tmp
             quantity="3.000",
         )
         delivery_document = _valuation_document(valuation, delivery, number="VAL-FIFO")
-        approved = valuation.approve_document(
-            str(delivery_document["id"]), reason="FIFO sequence reviewed"
-        )
+        approved = valuation.approve_document(str(delivery_document["id"]), reason="FIFO sequence reviewed")
 
         assert approved["total_value"] == "35.01"
         assert [record["quantity"] for record in approved["layer_consumptions"]] == [
@@ -422,9 +459,7 @@ def test_known_user_sod_rbac_api_and_cli(tmp_path: Path) -> None:
             actor="controller",
         )
         with pytest.raises(PlatformError, match="Segregation of duties"):
-            valuation.approve_document(
-                str(document["id"]), reason="Self approval", actor_label="controller"
-            )
+            valuation.approve_document(str(document["id"]), reason="Self approval", actor_label="controller")
         approved = valuation.approve_document(
             str(document["id"]), reason="Independent approval", actor_label="reviewer"
         )
@@ -446,10 +481,13 @@ def test_known_user_sod_rbac_api_and_cli(tmp_path: Path) -> None:
     client = TestClient(create_api_app(path))
     auditor_token = _token(client, "auditor")
     reviewer_token = _token(client, "reviewer")
-    assert client.get(
-        "/api/v1/inventory-valuation/snapshot",
-        headers={"Authorization": f"Bearer {auditor_token}"},
-    ).status_code == 200
+    assert (
+        client.get(
+            "/api/v1/inventory-valuation/snapshot",
+            headers={"Authorization": f"Bearer {auditor_token}"},
+        ).status_code
+        == 200
+    )
     denied = client.post(
         "/api/v1/inventory-valuation/policies",
         headers={"Authorization": f"Bearer {auditor_token}"},
@@ -464,10 +502,13 @@ def test_known_user_sod_rbac_api_and_cli(tmp_path: Path) -> None:
         },
     )
     assert denied.status_code == 403
-    assert client.get(
-        "/api/v1/inventory-valuation/documents?status=Approved",
-        headers={"Authorization": f"Bearer {reviewer_token}"},
-    ).json()["pagination"]["returned"] == 1
+    assert (
+        client.get(
+            "/api/v1/inventory-valuation/documents?status=Approved",
+            headers={"Authorization": f"Bearer {reviewer_token}"},
+        ).json()["pagination"]["returned"]
+        == 1
+    )
 
     result = runner.invoke(app, ["inventory", "valuation", "summary", "--db", str(path)])
     assert result.exit_code == 0
@@ -487,9 +528,7 @@ def test_valuation_backup_restore_and_public_export(tmp_path: Path) -> None:
             movement_date="2026-07-01",
             quantity="4.000",
         )
-        receipt_document = _valuation_document(
-            valuation, receipt, number="VAL-BACKUP-R", total_cost="40.03"
-        )
+        receipt_document = _valuation_document(valuation, receipt, number="VAL-BACKUP-R", total_cost="40.03")
         valuation.approve_document(str(receipt_document["id"]), reason="Receipt reviewed")
         delivery = _movement(
             inventory,
@@ -499,9 +538,7 @@ def test_valuation_backup_restore_and_public_export(tmp_path: Path) -> None:
             movement_date="2026-07-02",
             quantity="1.000",
         )
-        delivery_document = _valuation_document(
-            valuation, delivery, number="VAL-BACKUP-D"
-        )
+        delivery_document = _valuation_document(valuation, delivery, number="VAL-BACKUP-D")
         valuation.approve_document(str(delivery_document["id"]), reason="Delivery reviewed")
         expected_layers = valuation.list_cost_layers(open_only=False)
         expected_summary = valuation.summary().to_dict()
@@ -516,16 +553,17 @@ def test_valuation_backup_restore_and_public_export(tmp_path: Path) -> None:
         restored_service = InventoryValuationService(restored_connection)
         assert restored_service.list_cost_layers(open_only=False) == expected_layers
         assert restored_service.summary().to_dict() == expected_summary
-        assert restored_connection.execute(
-            "SELECT COUNT(*) AS total FROM inventory_layer_consumptions"
-        ).fetchone()["total"] == 1
+        assert (
+            restored_connection.execute("SELECT COUNT(*) AS total FROM inventory_layer_consumptions").fetchone()[
+                "total"
+            ]
+            == 1
+        )
     finally:
         restored_connection.close()
 
     exported = export_database(restored, tmp_path / "export")
-    inventory_payload = json.loads(
-        (exported.output_dir / "inventory.json").read_text(encoding="utf-8")
-    )
+    inventory_payload = json.loads((exported.output_dir / "inventory.json").read_text(encoding="utf-8"))
     assert len(inventory_payload["valuation_documents"]) == 2
     assert len(inventory_payload["cost_layers"]) == 1
     assert len(inventory_payload["layer_consumptions"]) == 1
@@ -543,12 +581,10 @@ def test_migration_11_preserves_version_10_records(tmp_path: Path) -> None:
     finally:
         connection.close()
     result = run_migrations(path)
-    assert result.applied_versions == [11, 12]
+    assert result.applied_versions == list(range(11, migration_module.MIGRATIONS[-1].version + 1))
     connection = connect(path, require_exists=True)
     try:
-        assert connection.execute(
-            "SELECT name FROM workspaces WHERE id = 'WS-UP'"
-        ).fetchone()["name"] == "upgrade"
+        assert connection.execute("SELECT name FROM workspaces WHERE id = 'WS-UP'").fetchone()["name"] == "upgrade"
         assert SQLiteInventoryValuationRepository(connection).summary_counts("WS-UP") == {
             "policies": 0,
             "draft_documents": 0,

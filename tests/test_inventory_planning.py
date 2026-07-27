@@ -9,6 +9,8 @@ from fastapi.testclient import TestClient
 from jsonschema import Draft202012Validator
 from typer.testing import CliRunner
 
+import reconforge.db.migrations as migration_module
+import reconforge.platform.inventory_planning as planning_module
 from reconforge.api import create_api_app
 from reconforge.audit import list_audit_events, verify_audit_events
 from reconforge.auth import LocalAuthService
@@ -117,7 +119,7 @@ def _complete_count(
     quantity: str = "9.875",
     number: str = "COUNT/2026/001",
     preparer: str = "local-cli",
-    reviewer: str = "local-cli",
+    reviewer: str = "independent-reviewer",
 ) -> dict[str, object]:
     created = _create_count(planning, period_id, number=number, actor=preparer)
     started = planning.start_count_session(str(created["id"]), actor_label=preparer)
@@ -228,6 +230,49 @@ def test_count_lifecycle_is_exact_audited_and_prepares_only_a_draft_adjustment(t
         connection.close()
 
 
+def test_planning_audit_and_outbox_failures_roll_back_business_writes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = _database(tmp_path, "planning_atomic.db")
+    connection = connect(path, require_exists=True)
+    try:
+        _inventory, planning, period_id = _seed(connection)
+        audit_count = connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"]
+        outbox_count = connection.execute("SELECT COUNT(*) AS count FROM outbox_events").fetchone()["count"]
+
+        def fail_audit(*_args: object, **_kwargs: object) -> None:
+            raise PlatformError("forced audit failure")
+
+        monkeypatch.setattr(planning_module, "commit_audited", fail_audit)
+        with pytest.raises(PlatformError, match="forced audit failure"):
+            _create_count(planning, period_id, number="COUNT/ATOMIC-AUDIT")
+        assert (
+            connection.execute(
+                "SELECT COUNT(*) AS count FROM inventory_count_sessions WHERE count_number = 'COUNT/ATOMIC-AUDIT'",
+            ).fetchone()["count"]
+            == 0
+        )
+        assert connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"] == audit_count
+        assert connection.execute("SELECT COUNT(*) AS count FROM outbox_events").fetchone()["count"] == outbox_count
+
+        def fail_outbox(*_args: object, **_kwargs: object) -> None:
+            raise PlatformError("forced outbox failure")
+
+        monkeypatch.setattr(planning_module, "commit_audited", lambda *_args, **_kwargs: None)
+        monkeypatch.setattr(planning_module, "append_outbox_event", fail_outbox)
+        with pytest.raises(PlatformError, match="forced outbox failure"):
+            _create_count(planning, period_id, number="COUNT/ATOMIC-OUTBOX")
+        assert (
+            connection.execute(
+                "SELECT COUNT(*) AS count FROM inventory_count_sessions WHERE count_number = 'COUNT/ATOMIC-OUTBOX'",
+            ).fetchone()["count"]
+            == 0
+        )
+    finally:
+        connection.close()
+
+
 def test_count_rejects_incomplete_results_precision_and_balance_drift(tmp_path: Path) -> None:
     path = _database(tmp_path)
     connection = connect(path, require_exists=True)
@@ -239,9 +284,7 @@ def test_count_rejects_incomplete_results_precision_and_balance_drift(tmp_path: 
         with pytest.raises(PlatformError, match="Every inventory count line"):
             planning.submit_count_session(str(created["id"]), reason="Incomplete count")
         with pytest.raises(PlatformError, match="3-decimal precision"):
-            planning.record_counted_quantity(
-                str(created["id"]), line_id, counted_quantity="10.0001"
-            )
+            planning.record_counted_quantity(str(created["id"]), line_id, counted_quantity="10.0001")
         with pytest.raises(PlatformError, match="exact decimal string"):
             planning.record_counted_quantity(str(created["id"]), line_id, counted_quantity=10.0)
         planning.record_counted_quantity(str(created["id"]), line_id, counted_quantity="10.000")
@@ -259,12 +302,19 @@ def test_count_rejects_incomplete_results_precision_and_balance_drift(tmp_path: 
         )
         inventory.post_movement(str(receipt["id"]), reason="Reviewed movement after count snapshot")
         with pytest.raises(PlatformError, match="changed after this count started"):
-            planning.approve_count_session(str(created["id"]), reason="Must use a current snapshot")
+            planning.approve_count_session(
+                str(created["id"]),
+                reason="Must use a current snapshot",
+                actor_label="independent-reviewer",
+            )
         assert planning.get_count_session(str(created["id"]))["status"] == "Submitted"
-        assert connection.execute(
-            "SELECT COUNT(*) AS count FROM inventory_movements WHERE source_reference = ?",
-            (created["id"],),
-        ).fetchone()["count"] == 0
+        assert (
+            connection.execute(
+                "SELECT COUNT(*) AS count FROM inventory_movements WHERE source_reference = ?",
+                (created["id"],),
+            ).fetchone()["count"]
+            == 0
+        )
     finally:
         connection.close()
 
@@ -296,9 +346,7 @@ def test_count_rbac_and_segregation_of_duties_are_enforced(tmp_path: Path) -> No
             counted_quantity="10.125",
             actor_label="controller",
         )
-        planning.submit_count_session(
-            str(own["id"]), reason="Controller submission", actor_label="controller"
-        )
+        planning.submit_count_session(str(own["id"]), reason="Controller submission", actor_label="controller")
         with pytest.raises(PlatformError, match="Segregation of duties"):
             planning.approve_count_session(
                 str(own["id"]), reason="Self approval is forbidden", actor_label="controller"
@@ -346,12 +394,8 @@ def test_reorder_signals_are_exact_deterministic_advice_only_and_paginated(tmp_p
             target_quantity="20.000",
             lead_time_days=7,
         )
-        first = planning.reorder_signals(
-            organization_code="SYN", entity_code="EG01", limit=1, offset=0
-        )
-        second = planning.reorder_signals(
-            organization_code="SYN", entity_code="EG01", limit=1, offset=0
-        )
+        first = planning.reorder_signals(organization_code="SYN", entity_code="EG01", limit=1, offset=0)
+        second = planning.reorder_signals(organization_code="SYN", entity_code="EG01", limit=1, offset=0)
 
         assert rule["minimum_quantity"] == "10.125"
         assert rule["on_hand_quantity"] == "10.125"
@@ -408,9 +452,7 @@ def test_inventory_planning_api_is_strict_authenticated_and_rbac_protected(tmp_p
     created = client.post("/api/v1/inventory-planning/counts", json=payload, headers=controller)
     assert created.status_code == 200
     session_id = created.json()["count_session"]["id"]
-    started = client.post(
-        f"/api/v1/inventory-planning/counts/{session_id}/start", headers=controller
-    )
+    started = client.post(f"/api/v1/inventory-planning/counts/{session_id}/start", headers=controller)
     assert started.status_code == 200
     line_id = started.json()["count_session"]["lines"][0]["id"]
     recorded = client.post(
@@ -443,9 +485,7 @@ def test_inventory_planning_api_is_strict_authenticated_and_rbac_protected(tmp_p
         headers=controller,
     )
     denied = client.post("/api/v1/inventory-planning/counts", json=payload, headers=auditor)
-    listed = client.get(
-        "/api/v1/inventory-planning/counts?limit=1&offset=0", headers=auditor
-    )
+    listed = client.get("/api/v1/inventory-planning/counts?limit=1&offset=0", headers=auditor)
     bad_page = client.get("/api/v1/inventory-planning/counts?limit=1001", headers=auditor)
     unauthenticated = client.get("/api/v1/inventory-planning/summary")
 
@@ -466,7 +506,7 @@ def test_inventory_planning_cli_migration_backup_restore_and_export(tmp_path: Pa
     legacy_path = tmp_path / "legacy-v9.db"
     assert run_migrations(legacy_path, target_version=9).current_version == 9
     upgraded = run_migrations(legacy_path)
-    assert upgraded.applied_versions == [10, 11, 12]
+    assert upgraded.applied_versions == list(range(10, migration_module.MIGRATIONS[-1].version + 1))
 
     path = _database(tmp_path, "source.db")
     connection = connect(path, require_exists=True)

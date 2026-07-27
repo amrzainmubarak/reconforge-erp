@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/evidence_index.schema.json",
+  "title": "ReconForge Evidence Index",
+  "description": "Historical schema-v2 evidence indexes and current schema-v3 strict, fingerprinted evidence indexes.",
+  "type": "object",
+  "oneOf": [
+    {"$ref": "#/$defs/legacy_v2"},
+    {"$ref": "#/$defs/current_v3"}
+  ],
+  "$defs": {
+    "legacy_v2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "risk_score_policy", "case_count", "cases"],
+      "properties": {
+        "schema_version": {"const": 2},
+        "risk_score_policy": {"const": "integer-0-to-100-v1"},
+        "case_count": {"$ref": "#/$defs/count"},
+        "cases": {"$ref": "#/$defs/cases"}
+      }
+    },
+    "current_v3": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "artifact_type",
+        "generated_at",
+        "tool_version",
+        "financial_input_policy",
+        "risk_score_policy",
+        "input_files",
+        "integrity_boundary",
+        "case_count",
+        "cases",
+        "content_digest",
+        "artifact_digest"
+      ],
+      "properties": {
+        "schema_version": {"const": 3},
+        "artifact_type": {"const": "reconforge-evidence-index"},
+        "generated_at": {"$ref": "#/$defs/text"},
+        "tool_version": {"$ref": "#/$defs/text"},
+        "financial_input_policy": {"const": "strict-financial-input-v2"},
+        "risk_score_policy": {"const": "integer-0-to-100-v1"},
+        "input_files": {
+          "type": "array",
+          "maxItems": 9,
+          "items": {"$ref": "#/$defs/file_fingerprint"}
+        },
+        "integrity_boundary": {"$ref": "#/$defs/text"},
+        "case_count": {"$ref": "#/$defs/count"},
+        "cases": {"$ref": "#/$defs/cases"},
+        "content_digest": {"$ref": "#/$defs/sha256"},
+        "artifact_digest": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "cases": {
+      "type": "array",
+      "maxItems": 100000,
+      "items": {"$ref": "#/$defs/case"}
+    },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exception_id",
+        "exception_type",
+        "severity",
+        "risk_score",
+        "risk_score_status",
+        "risk_score_policy",
+        "affected_work_order",
+        "affected_product",
+        "affected_customer",
+        "affected_equipment",
+        "source_files",
+        "source_record",
+        "match_candidates",
+        "triggered_rules",
+        "business_impact",
+        "recommended_action",
+        "responsible_department",
+        "review_status",
+        "reviewer",
+        "review_note",
+        "review_updated_at",
+        "decision_reason",
+        "accepted_risk_reason",
+        "escalation_owner",
+        "prepared_by",
+        "prepared_at",
+        "reviewed_by",
+        "reviewed_at",
+        "certification_status",
+        "certification_note",
+        "generated_at"
+      ],
+      "properties": {
+        "exception_id": {"$ref": "#/$defs/text"},
+        "exception_type": {"$ref": "#/$defs/text"},
+        "severity": {"$ref": "#/$defs/text"},
+        "risk_score": {
+          "oneOf": [
+            {"type": "integer", "minimum": 0, "maximum": 100},
+            {"type": "null"}
+          ]
+        },
+        "risk_score_status": {"enum": ["valid", "missing", "invalid"]},
+        "risk_score_policy": {"const": "integer-0-to-100-v1"},
+        "affected_work_order": {"$ref": "#/$defs/nullable_text"},
+        "affected_product": {"$ref": "#/$defs/nullable_text"},
+        "affected_customer": {"$ref": "#/$defs/nullable_text"},
+        "affected_equipment": {"$ref": "#/$defs/nullable_text"},
+        "source_files": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {"$ref": "#/$defs/text"}
+        },
+        "source_record": {"type": "object"},
+        "match_candidates": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {"type": "object"}
+        },
+        "triggered_rules": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {"type": "object"}
+        },
+        "business_impact": {"$ref": "#/$defs/text"},
+        "recommended_action": {"$ref": "#/$defs/text"},
+        "responsible_department": {"$ref": "#/$defs/text"},
+        "review_status": {"$ref": "#/$defs/text"},
+        "reviewer": {"$ref": "#/$defs/text"},
+        "review_note": {"$ref": "#/$defs/text"},
+        "review_updated_at": {"$ref": "#/$defs/text"},
+        "decision_reason": {"$ref": "#/$defs/text"},
+        "accepted_risk_reason": {"$ref": "#/$defs/text"},
+        "escalation_owner": {"$ref": "#/$defs/text"},
+        "prepared_by": {"$ref": "#/$defs/text"},
+        "prepared_at": {"$ref": "#/$defs/text"},
+        "reviewed_by": {"$ref": "#/$defs/text"},
+        "reviewed_at": {"$ref": "#/$defs/text"},
+        "certification_status": {"$ref": "#/$defs/text"},
+        "certification_note": {"$ref": "#/$defs/text"},
+        "generated_at": {"$ref": "#/$defs/text"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"risk_score_status": {"const": "valid"}}},
+          "then": {"properties": {"risk_score": {"type": "integer", "minimum": 0, "maximum": 100}}},
+          "else": {"properties": {"risk_score": {"type": "null"}}}
+        }
+      ]
+    },
+    "file_fingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "size_bytes", "sha256"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*[\\\\:]).+$"
+        },
+        "size_bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "count": {"type": "integer", "minimum": 0},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "text": {"type": "string", "maxLength": 20000},
+    "nullable_text": {
+      "oneOf": [
+        {"$ref": "#/$defs/text"},
+        {"type": "null"}
+      ]
+    }
+  }
+}

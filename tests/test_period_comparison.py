@@ -8,6 +8,7 @@ from openpyxl import load_workbook
 from typer.testing import CliRunner
 
 from reconforge.cli import app
+from reconforge.periods import _amount_value
 from reconforge.review.state import load_review_state, save_review_state, update_review_status
 
 runner = CliRunner()
@@ -54,6 +55,12 @@ def test_compare_periods_detects_new_recurring_and_resolved(tmp_path: Path) -> N
     workbook = load_workbook(output / "period_comparison.xlsx", read_only=True)
     assert "Trend Summary" in workbook.sheetnames
     assert "Top Recurring Themes" in workbook.sheetnames
+
+
+def test_period_fingerprint_amount_uses_decimal_rounding() -> None:
+    row = pd.Series({"amount": "100.005"})
+
+    assert _amount_value(row) == "100.01"
 
 
 def test_compare_periods_matches_reordered_synthetic_exception_ids_by_fingerprint(tmp_path: Path) -> None:

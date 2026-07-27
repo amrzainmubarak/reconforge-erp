@@ -1,0 +1,426 @@
+name: Signed Release Candidate
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions: {}
+
+concurrency:
+  group: signed-release-candidate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-attest-verify:
+    name: Build, attest, and verify release candidate
+    runs-on: ubuntu-24.04
+    environment: release-candidate
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      packages: write
+    env:
+      IMAGE_NAME: ghcr.io/${{ github.repository }}
+      SIGNER_WORKFLOW: ${{ github.repository }}/.github/workflows/release.yml
+      SBOM_PREDICATE_TYPE: https://cyclonedx.org/bom
+      GITLEAKS_VERSION: "8.30.1"
+      GITLEAKS_LINUX_X64_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+      SYFT_VERSION: "1.49.0"
+      SYFT_COMMIT: 29fd7d0dec81cf03e0a1194a1985c7c893bb2396
+      SYFT_LINUX_AMD64_SHA256: 7aa2f03ee92739cf643279ba3990548b9925d4e22cae13f46831ee62821147fe
+    steps:
+      - name: Check out the signed tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up supported Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: .github/release-build-requirements.txt
+
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up supported Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Verify immutable source and signed annotated tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+
+          version="$(python -c 'import pathlib,tomllib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"])')"
+          test "$GITHUB_REF_NAME" = "v${version}"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main
+
+          tag_type="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${GITHUB_REF_NAME}" --jq .object.type)"
+          tag_object="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${GITHUB_REF_NAME}" --jq .object.sha)"
+          test "$tag_type" = "tag"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_object}" --jq .tag)" = "$GITHUB_REF_NAME"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_object}" --jq .object.type)" = "commit"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_object}" --jq .object.sha)" = "$GITHUB_SHA"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_object}" --jq .verification.verified)" = "true"
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_object}" --jq .verification.reason)" = "valid"
+
+          source_date_epoch="$(git show -s --format=%ct "$GITHUB_SHA")"
+          [[ "$source_date_epoch" =~ ^[0-9]+$ ]]
+          printf 'RELEASE_VERSION=%s\n' "$version" >> "$GITHUB_ENV"
+          printf 'SOURCE_DATE_EPOCH=%s\n' "$source_date_epoch" >> "$GITHUB_ENV"
+
+      - name: Validate closed supply-chain policy and current lock
+        run: |
+          python .github/scripts/validate_supply_chain_policy.py --project-root .
+          uv lock --check
+
+      - name: Install locked security tools
+        run: uv sync --locked --extra dev --no-editable --python 3.11
+
+      - name: Audit the hash-locked Python and server resolution
+        shell: bash
+        run: |
+          set -euo pipefail
+          requirements="${RUNNER_TEMP}/reconforge-all-extras.txt"
+          report="${RUNNER_TEMP}/pip-audit.json"
+          uv export --locked --all-extras --no-emit-project \
+            --format requirements.txt --quiet --output-file "$requirements"
+          set +e
+          uv run --no-sync pip-audit --require-hashes --disable-pip \
+            --requirement "$requirements" --format json --output "$report"
+          audit_exit=$?
+          set -e
+          python .github/scripts/validate_supply_chain_policy.py \
+            --project-root . \
+            --pip-audit-report "$report" \
+            --pip-audit-exit-code "$audit_exit"
+
+      - name: Install checksum-verified Gitleaks
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          archive_path="${RUNNER_TEMP}/${archive}"
+          install_dir="${RUNNER_TEMP}/gitleaks-bin"
+          mkdir -p "$install_dir"
+          curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 --retry 3 \
+            --output "$archive_path" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          printf '%s  %s\n' "$GITLEAKS_LINUX_X64_SHA256" "$archive_path" | sha256sum --check --strict
+          tar --extract --gzip --file "$archive_path" --directory "$install_dir" gitleaks
+          chmod 0755 "$install_dir/gitleaks"
+          test "$("$install_dir/gitleaks" version)" = "$GITLEAKS_VERSION"
+          printf 'GITLEAKS_PATH=%s\n' "$install_dir/gitleaks" >> "$GITHUB_ENV"
+
+      - name: Scan full Git history with redacted output
+        run: >-
+          "$GITLEAKS_PATH" git --config .gitleaks.toml --log-opts="--all"
+          --redact=100 --no-banner --no-color --timeout 120 .
+
+      - name: Scan checked-out tree with redacted output
+        run: >-
+          "$GITLEAKS_PATH" dir --config .gitleaks.toml
+          --redact=100 --no-banner --no-color --timeout 120 .
+
+      - name: Audit the npm lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="${RUNNER_TEMP}/npm-audit.json"
+          set +e
+          npm --prefix apps/web audit --package-lock-only --audit-level=high --json > "$report"
+          audit_exit=$?
+          set -e
+          python .github/scripts/validate_supply_chain_policy.py \
+            --project-root . \
+            --npm-audit-report "$report" \
+            --npm-audit-exit-code "$audit_exit"
+
+      - name: Install hash-locked release build tools
+        run: >-
+          python -m pip install --disable-pip-version-check --only-binary=:all:
+          --require-hashes -r .github/release-build-requirements.txt
+
+      - name: Build source, wheel, and sdist candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          mkdir release
+          git archive --format=tar.gz --prefix="reconforge-erp-${version}/" \
+            --output="release/reconforge-erp-${version}-source.tar.gz" "$GITHUB_SHA"
+          python -m build --no-isolation --outdir release
+          python .github/scripts/normalize_sdist.py \
+            --path "release/reconforge_erp-${version}.tar.gz" \
+            --source-date-epoch "$SOURCE_DATE_EPOCH"
+
+      - name: Log in to the candidate image registry
+        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+
+      - name: Build and push digest-addressed image candidate
+        id: image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          pull: true
+          no-cache: true
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:candidate-${{ github.sha }}
+          provenance: false
+          sbom: false
+
+      - name: Build and validate the release identity manifest
+        run: >-
+          python .github/scripts/build_release_manifest.py
+          --project-root .
+          --release-dir release
+          --tag "${GITHUB_REF_NAME}"
+          --source-revision "${GITHUB_SHA}"
+          --source-date-epoch "${SOURCE_DATE_EPOCH}"
+          --image-subject "${IMAGE_NAME}@${{ steps.image.outputs.digest }}"
+
+      - name: Install the pinned Syft image scanner
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="syft_${SYFT_VERSION}_linux_amd64.tar.gz"
+          archive_path="${RUNNER_TEMP}/${archive}"
+          install_dir="${RUNNER_TEMP}/syft-bin"
+          mkdir -p "$install_dir"
+          curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 --retry 3 \
+            --output "$archive_path" \
+            "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/${archive}"
+          printf '%s  %s\n' "$SYFT_LINUX_AMD64_SHA256" "$archive_path" | sha256sum --check --strict
+          tar --extract --gzip --file "$archive_path" --directory "$install_dir" syft
+          chmod 0755 "$install_dir/syft"
+
+          syft_version_json="$("$install_dir/syft" version --output json)"
+          SYFT_VERSION_JSON="$syft_version_json" python - <<'PY'
+          import json
+          import os
+
+          actual = json.loads(os.environ["SYFT_VERSION_JSON"])
+          expected = {
+              "application": "syft",
+              "gitCommit": os.environ["SYFT_COMMIT"],
+              "platform": "linux/amd64",
+              "version": os.environ["SYFT_VERSION"],
+          }
+          if any(actual.get(key) != value for key, value in expected.items()):
+              raise SystemExit("pinned Syft binary identity mismatch")
+          PY
+          printf 'SYFT_PATH=%s\n' "$install_dir/syft" >> "$GITHUB_ENV"
+
+      - name: Scan the exact image manifest and build per-artifact SBOMs
+        shell: bash
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          set -euo pipefail
+          "$SYFT_PATH" scan "registry:${IMAGE_NAME}@${IMAGE_DIGEST}" \
+            --source-name "$IMAGE_NAME" \
+            --source-version "$RELEASE_VERSION" \
+            --output "cyclonedx-json=${RUNNER_TEMP}/image-syft.raw.cdx.json"
+          python .github/scripts/build_release_sboms.py \
+            --project-root . \
+            --release-dir release \
+            --image-sbom-input "${RUNNER_TEMP}/image-syft.raw.cdx.json" \
+            --source-date-epoch "$SOURCE_DATE_EPOCH" \
+            --forbidden-path-prefix "$RUNNER_TEMP" \
+            --forbidden-path-prefix "$GITHUB_WORKSPACE"
+
+      - name: Attest source and Python release files
+        id: attest-files
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
+        with:
+          subject-path: |
+            release/reconforge-erp-${{ env.RELEASE_VERSION }}-source.tar.gz
+            release/reconforge_erp-${{ env.RELEASE_VERSION }}-py3-none-any.whl
+            release/reconforge_erp-${{ env.RELEASE_VERSION }}.tar.gz
+            release/release-manifest.v1.json
+            release/SHA256SUMS
+            release/reconforge-erp-${{ env.RELEASE_VERSION }}-source.cdx.json
+            release/reconforge_erp-${{ env.RELEASE_VERSION }}-py3-none-any.cdx.json
+            release/reconforge_erp-${{ env.RELEASE_VERSION }}-sdist.cdx.json
+            release/reconforge-erp-${{ env.RELEASE_VERSION }}-image.cdx.json
+            release/sbom-manifest.v1.json
+            release/SBOM_SHA256SUMS
+          create-storage-record: false
+
+      - name: Attest the image manifest digest
+        id: attest-image
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
+        with:
+          subject-name: ${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.image.outputs.digest }}
+          push-to-registry: true
+          create-storage-record: false
+
+      - name: Attest the source archive SBOM
+        id: attest-source-sbom
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
+        with:
+          subject-path: release/reconforge-erp-${{ env.RELEASE_VERSION }}-source.tar.gz
+          sbom-path: release/reconforge-erp-${{ env.RELEASE_VERSION }}-source.cdx.json
+          create-storage-record: false
+
+      - name: Attest the wheel SBOM
+        id: attest-wheel-sbom
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
+        with:
+          subject-path: release/reconforge_erp-${{ env.RELEASE_VERSION }}-py3-none-any.whl
+          sbom-path: release/reconforge_erp-${{ env.RELEASE_VERSION }}-py3-none-any.cdx.json
+          create-storage-record: false
+
+      - name: Attest the sdist SBOM
+        id: attest-sdist-sbom
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
+        with:
+          subject-path: release/reconforge_erp-${{ env.RELEASE_VERSION }}.tar.gz
+          sbom-path: release/reconforge_erp-${{ env.RELEASE_VERSION }}-sdist.cdx.json
+          create-storage-record: false
+
+      - name: Attest the image SBOM
+        id: attest-image-sbom
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
+        with:
+          subject-name: ${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.image.outputs.digest }}
+          sbom-path: release/reconforge-erp-${{ env.RELEASE_VERSION }}-image.cdx.json
+          push-to-registry: true
+          create-storage-record: false
+
+      - name: Preserve and independently verify provenance bundles
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FILES_BUNDLE: ${{ steps.attest-files.outputs.bundle-path }}
+          IMAGE_BUNDLE: ${{ steps.attest-image.outputs.bundle-path }}
+          SOURCE_SBOM_BUNDLE: ${{ steps.attest-source-sbom.outputs.bundle-path }}
+          WHEEL_SBOM_BUNDLE: ${{ steps.attest-wheel-sbom.outputs.bundle-path }}
+          SDIST_SBOM_BUNDLE: ${{ steps.attest-sdist-sbom.outputs.bundle-path }}
+          IMAGE_SBOM_BUNDLE: ${{ steps.attest-image-sbom.outputs.bundle-path }}
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          set -euo pipefail
+          install -m 0644 -- "$FILES_BUNDLE" release/files-provenance.sigstore.json
+          install -m 0644 -- "$IMAGE_BUNDLE" release/image-provenance.sigstore.json
+          install -m 0644 -- "$SOURCE_SBOM_BUNDLE" release/source-sbom.sigstore.json
+          install -m 0644 -- "$WHEEL_SBOM_BUNDLE" release/wheel-sbom.sigstore.json
+          install -m 0644 -- "$SDIST_SBOM_BUNDLE" release/sdist-sbom.sigstore.json
+          install -m 0644 -- "$IMAGE_SBOM_BUNDLE" release/image-sbom.sigstore.json
+          (
+            cd release
+            sha256sum --check SHA256SUMS
+            sha256sum --check SBOM_SHA256SUMS
+          )
+
+          verify_file_provenance() {
+            gh attestation verify "release/$1" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$SIGNER_WORKFLOW" \
+              --signer-digest "$GITHUB_SHA" \
+              --source-ref "$GITHUB_REF" \
+              --source-digest "$GITHUB_SHA" \
+              --deny-self-hosted-runners \
+              --bundle release/files-provenance.sigstore.json >/dev/null
+          }
+          while read -r _ artifact; do
+            verify_file_provenance "$artifact"
+          done < <(cat release/SHA256SUMS release/SBOM_SHA256SUMS)
+          for artifact in SHA256SUMS SBOM_SHA256SUMS; do
+            verify_file_provenance "$artifact"
+          done
+
+          gh attestation verify "oci://${IMAGE_NAME}@${IMAGE_DIGEST}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$SIGNER_WORKFLOW" \
+            --signer-digest "$GITHUB_SHA" \
+            --source-ref "$GITHUB_REF" \
+            --source-digest "$GITHUB_SHA" \
+            --deny-self-hosted-runners \
+            --bundle release/image-provenance.sigstore.json >/dev/null
+
+          gh attestation verify "release/reconforge-erp-${RELEASE_VERSION}-source.tar.gz" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$SIGNER_WORKFLOW" \
+            --signer-digest "$GITHUB_SHA" \
+            --source-ref "$GITHUB_REF" \
+            --source-digest "$GITHUB_SHA" \
+            --deny-self-hosted-runners \
+            --predicate-type "$SBOM_PREDICATE_TYPE" \
+            --bundle release/source-sbom.sigstore.json >/dev/null
+
+          gh attestation verify "release/reconforge_erp-${RELEASE_VERSION}-py3-none-any.whl" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$SIGNER_WORKFLOW" \
+            --signer-digest "$GITHUB_SHA" \
+            --source-ref "$GITHUB_REF" \
+            --source-digest "$GITHUB_SHA" \
+            --deny-self-hosted-runners \
+            --predicate-type "$SBOM_PREDICATE_TYPE" \
+            --bundle release/wheel-sbom.sigstore.json >/dev/null
+
+          gh attestation verify "release/reconforge_erp-${RELEASE_VERSION}.tar.gz" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$SIGNER_WORKFLOW" \
+            --signer-digest "$GITHUB_SHA" \
+            --source-ref "$GITHUB_REF" \
+            --source-digest "$GITHUB_SHA" \
+            --deny-self-hosted-runners \
+            --predicate-type "$SBOM_PREDICATE_TYPE" \
+            --bundle release/sdist-sbom.sigstore.json >/dev/null
+
+          gh attestation verify "oci://${IMAGE_NAME}@${IMAGE_DIGEST}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$SIGNER_WORKFLOW" \
+            --signer-digest "$GITHUB_SHA" \
+            --source-ref "$GITHUB_REF" \
+            --source-digest "$GITHUB_SHA" \
+            --deny-self-hosted-runners \
+            --predicate-type "$SBOM_PREDICATE_TYPE" \
+            --bundle release/image-sbom.sigstore.json >/dev/null
+
+          sha256sum release/*sigstore.json > release/ATTESTATION_SHA256SUMS
+
+      - name: Upload verified release candidate for human review
+        id: upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: signed-release-candidate-${{ github.ref_name }}
+          path: release/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Record candidate storage digest
+        run: |
+          echo "candidate_artifact_id=${{ steps.upload.outputs.artifact-id }}"
+          echo "candidate_storage_digest=${{ steps.upload.outputs.artifact-digest }}"
+          echo "No GitHub Release or PyPI publication was performed."

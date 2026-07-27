@@ -45,8 +45,14 @@ reconforge report client-pack --input output --output output/client_pack --summa
 
 ```bash
 python -m bandit -q -r reconforge
-pip-audit -r requirements.txt
+uv lock --check
+python .github/scripts/validate_supply_chain_policy.py --project-root .
+npm --prefix apps/web audit --package-lock-only --audit-level=high
 ```
+
+Use the exact uv version and locked audit/secret commands in
+`docs/security/supply-chain-policy.md`. Do not replace them with an ambient
+environment audit, floating scanner, or broad finding baseline.
 
 Security-sensitive changes include path handling, generated HTML, href values, YAML parsing, Studio routes, report output, evidence binder output, client packs, redaction, dependency workflows, and any code that handles user-controlled files.
 

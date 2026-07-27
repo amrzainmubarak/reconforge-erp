@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import sqlite3
+import uuid
 from dataclasses import asdict, dataclass
 from datetime import date
 from typing import Any
 
+from reconforge.auth.rbac import same_actor
 from reconforge.domain.models import utc_now_text
 from reconforge.platform.common import (
     PlatformError,
-    audit,
+    append_outbox_event,
+    commit_audited,
     ensure_platform_schema,
     ensure_workspace,
     platform_id,
@@ -155,22 +158,28 @@ class InventoryPlanningService:
         try:
             with self.repository.transaction():
                 self.repository.insert_count_session(record)
+                _finalize_planning_event(
+                    self.connection,
+                    event_type="inventory.count.created",
+                    aggregate_type="inventory_count_session",
+                    aggregate_id=session_id,
+                    payload={
+                        "count_number": number,
+                        "warehouse_code": location["warehouse_code"],
+                        "location_code": location_code,
+                    },
+                    actor_label=actor_label,
+                    action="inventory_count_created",
+                    metadata={
+                        "count_number": number,
+                        "warehouse_code": location["warehouse_code"],
+                        "location_code": location_code,
+                    },
+                )
         except sqlite3.IntegrityError as exc:
             raise PlatformError("Inventory count number already exists or references invalid local data.") from exc
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to create the local inventory count session.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_count_session",
-            object_id=session_id,
-            action="inventory_count_created",
-            metadata={
-                "count_number": number,
-                "warehouse_code": location["warehouse_code"],
-                "location_code": location_code,
-            },
-        )
         return self.get_count_session(session_id, actor_label=actor_label)
 
     def start_count_session(
@@ -211,18 +220,20 @@ class InventoryPlanningService:
                 if self.repository.start_count(session_id, actor, now) != 1:
                     raise PlatformError("Inventory count changed concurrently; reload and retry.")
                 line_count = len(lines)
+                _finalize_planning_event(
+                    self.connection,
+                    event_type="inventory.count.started",
+                    aggregate_type="inventory_count_session",
+                    aggregate_id=session_id,
+                    payload={"snapshot_lines": line_count},
+                    actor_label=actor_label,
+                    action="inventory_count_started",
+                    metadata={"snapshot_lines": line_count},
+                )
         except PlatformError:
             raise
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to start the local inventory count session.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_count_session",
-            object_id=session_id,
-            action="inventory_count_started",
-            metadata={"snapshot_lines": line_count},
-        )
         return self.get_count_session(session_id, actor_label=actor_label)
 
     def record_counted_quantity(
@@ -264,18 +275,20 @@ class InventoryPlanningService:
                     != 1
                 ):
                     raise PlatformError("Inventory count line changed concurrently; reload and retry.")
+                _finalize_planning_event(
+                    self.connection,
+                    event_type="inventory.count.quantity_recorded",
+                    aggregate_type="inventory_count_line",
+                    aggregate_id=line_id,
+                    payload={"session_id": session_id, "item_code": line["item_code"]},
+                    actor_label=actor_label,
+                    action="inventory_count_quantity_recorded",
+                    metadata={"session_id": session_id, "item_code": line["item_code"]},
+                )
         except PlatformError:
             raise
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to record the local counted quantity.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_count_line",
-            object_id=line_id,
-            action="inventory_count_quantity_recorded",
-            metadata={"session_id": session_id, "item_code": line["item_code"]},
-        )
         return self.get_count_session(session_id, actor_label=actor_label)
 
     def submit_count_session(
@@ -299,18 +312,20 @@ class InventoryPlanningService:
                     raise PlatformError("Every inventory count line requires a counted quantity before submission.")
                 if self.repository.submit_count(session_id, actor, now, submit_reason) != 1:
                     raise PlatformError("Inventory count changed concurrently; reload and retry.")
+                _finalize_planning_event(
+                    self.connection,
+                    event_type="inventory.count.submitted",
+                    aggregate_type="inventory_count_session",
+                    aggregate_id=session_id,
+                    payload={"reason": submit_reason},
+                    actor_label=actor_label,
+                    action="inventory_count_submitted",
+                    metadata={"reason": submit_reason},
+                )
         except PlatformError:
             raise
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to submit the local inventory count session.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_count_session",
-            object_id=session_id,
-            action="inventory_count_submitted",
-            metadata={"reason": submit_reason},
-        )
         return self.get_count_session(session_id, actor_label=actor_label)
 
     def approve_count_session(
@@ -320,7 +335,7 @@ class InventoryPlanningService:
         reason: str,
         actor_label: str = "local-cli",
     ) -> dict[str, Any]:
-        actor_user = require_permission(
+        require_permission(
             self.connection,
             actor_label=actor_label,
             permission=COUNT_APPROVE_PERMISSION,
@@ -336,10 +351,7 @@ class InventoryPlanningService:
                 session = self._session(session_id)
                 if session["status"] != "Submitted":
                     raise PlatformError("Only Submitted inventory count sessions can be approved.")
-                if actor_user is not None and actor_user.username in {
-                    str(session["created_by"]),
-                    str(session["submitted_by"]),
-                }:
+                if same_actor(session["created_by"], actor) or same_actor(session["submitted_by"], actor):
                     raise PlatformError("Segregation of duties prevents approving a count you created or submitted.")
                 period = self._period(str(session["workspace_id"]), str(session["period_id"]))
                 counted_on = self._required_date(session["count_date"], "Stored count date")
@@ -348,15 +360,11 @@ class InventoryPlanningService:
                 if not count_lines or any(line["counted_quantity_scaled"] is None for line in count_lines):
                     raise PlatformError("Submitted inventory count lines are incomplete.")
                 expected_balances = {
-                    (str(line["item_id"]), str(line["inventory_lot_id"] or "")): int(
-                        line["expected_quantity_scaled"]
-                    )
+                    (str(line["item_id"]), str(line["inventory_lot_id"] or "")): int(line["expected_quantity_scaled"])
                     for line in count_lines
                 }
                 current_balances = {
-                    (str(line["item_id"]), str(line["inventory_lot_id"] or "")): int(
-                        line["expected_quantity_scaled"]
-                    )
+                    (str(line["item_id"]), str(line["inventory_lot_id"] or "")): int(line["expected_quantity_scaled"])
                     for line in self.repository.location_balances(str(session["location_id"]))
                 }
                 if current_balances != expected_balances:
@@ -422,31 +430,39 @@ class InventoryPlanningService:
                     != 1
                 ):
                     raise PlatformError("Inventory count changed concurrently; reload and retry.")
+                _finalize_planning_event(
+                    self.connection,
+                    event_type="inventory.count.approved",
+                    aggregate_type="inventory_count_session",
+                    aggregate_id=session_id,
+                    payload={
+                        "reason": approval_reason,
+                        "variance_lines": variance_count,
+                        "adjustment_movement_id": adjustment_id,
+                    },
+                    actor_label=actor_label,
+                    action="inventory_count_approved",
+                    metadata={
+                        "reason": approval_reason,
+                        "variance_lines": variance_count,
+                        "adjustment_movement_id": adjustment_id,
+                    },
+                )
+                if adjustment_id is not None:
+                    _finalize_planning_event(
+                        self.connection,
+                        event_type="inventory.count.adjustment_draft_created",
+                        aggregate_type="inventory_movement",
+                        aggregate_id=adjustment_id,
+                        payload={"movement_number": adjustment_number, "count_session_id": session_id},
+                        actor_label=actor_label,
+                        action="inventory_count_adjustment_draft_created",
+                        metadata={"movement_number": adjustment_number, "count_session_id": session_id},
+                    )
         except PlatformError:
             raise
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to approve the local inventory count session.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_count_session",
-            object_id=session_id,
-            action="inventory_count_approved",
-            metadata={
-                "reason": approval_reason,
-                "variance_lines": variance_count,
-                "adjustment_movement_id": adjustment_id,
-            },
-        )
-        if adjustment_id is not None:
-            audit(
-                self.connection,
-                actor_label=actor_label,
-                object_type="inventory_movement",
-                object_id=adjustment_id,
-                action="inventory_count_adjustment_draft_created",
-                metadata={"movement_number": adjustment_number, "count_session_id": session_id},
-            )
         return self.get_count_session(session_id, actor_label=actor_label)
 
     def cancel_count_session(
@@ -474,18 +490,20 @@ class InventoryPlanningService:
                     raise PlatformError("Inventory count changed concurrently; reload and retry.")
                 if self.repository.cancel_count(session_id, actor, now, cancel_reason) != 1:
                     raise PlatformError("Inventory count changed concurrently; reload and retry.")
+                _finalize_planning_event(
+                    self.connection,
+                    event_type="inventory.count.cancelled",
+                    aggregate_type="inventory_count_session",
+                    aggregate_id=session_id,
+                    payload={"reason": cancel_reason},
+                    actor_label=actor_label,
+                    action="inventory_count_cancelled",
+                    metadata={"reason": cancel_reason},
+                )
         except PlatformError:
             raise
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to cancel the local inventory count session.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_count_session",
-            object_id=session_id,
-            action="inventory_count_cancelled",
-            metadata={"reason": cancel_reason},
-        )
         return self.get_count_session(session_id, actor_label=actor_label)
 
     def get_count_session(
@@ -507,10 +525,7 @@ class InventoryPlanningService:
         session["summary"] = {
             "lines": len(public_lines),
             "counted_lines": sum(line["counted_quantity"] is not None for line in public_lines),
-            "variance_lines": sum(
-                line["variance_quantity_scaled"] not in {None, 0}
-                for line in public_lines
-            ),
+            "variance_lines": sum(line["variance_quantity_scaled"] not in {None, 0} for line in public_lines),
         }
         return self._public_session(session)
 
@@ -608,22 +623,28 @@ class InventoryPlanningService:
                 saved = self.repository.reorder_rule(rule_id)
                 if saved is None:
                     raise PlatformError("Saved inventory reorder rule could not be reloaded.")
+                _finalize_planning_event(
+                    self.connection,
+                    event_type="inventory.reorder_rule.upserted",
+                    aggregate_type="inventory_reorder_rule",
+                    aggregate_id=rule_id,
+                    payload={
+                        "item_code": item["item_code"],
+                        "warehouse_code": location["warehouse_code"],
+                        "location_code": location["location_code"],
+                    },
+                    actor_label=actor_label,
+                    action="inventory_reorder_rule_upserted",
+                    metadata={
+                        "item_code": item["item_code"],
+                        "warehouse_code": location["warehouse_code"],
+                        "location_code": location["location_code"],
+                    },
+                )
         except PlatformError:
             raise
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to save the local inventory reorder rule.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_reorder_rule",
-            object_id=rule_id,
-            action="inventory_reorder_rule_upserted",
-            metadata={
-                "item_code": item["item_code"],
-                "warehouse_code": location["warehouse_code"],
-                "location_code": location["location_code"],
-            },
-        )
         return self._public_reorder_rule(saved)
 
     def list_reorder_rules(
@@ -918,3 +939,38 @@ class InventoryPlanningService:
             "pagination": {"limit": limit, "offset": offset, "returned": 0},
             "signals": [],
         }
+
+
+def _finalize_planning_event(
+    connection: sqlite3.Connection,
+    *,
+    event_type: str,
+    aggregate_type: str,
+    aggregate_id: str,
+    payload: dict[str, Any],
+    actor_label: str,
+    action: str,
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    """Commit planning business writes only after outbox and audit evidence exist."""
+
+    try:
+        append_outbox_event(
+            connection,
+            event_id=f"OBX-{uuid.uuid4().hex}",
+            event_type=event_type,
+            aggregate_type=aggregate_type,
+            aggregate_id=aggregate_id,
+            payload=payload,
+        )
+        commit_audited(
+            connection,
+            actor_label=actor_label,
+            object_type=aggregate_type,
+            object_id=aggregate_id,
+            action=action,
+            metadata=metadata,
+        )
+    except (PlatformError, sqlite3.DatabaseError):
+        connection.rollback()
+        raise

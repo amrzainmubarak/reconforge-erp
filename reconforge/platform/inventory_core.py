@@ -8,10 +8,11 @@ from dataclasses import asdict, dataclass
 from datetime import date
 from typing import Any
 
+from reconforge.audit import AuditLedgerError
 from reconforge.domain.models import utc_now_text
 from reconforge.platform.common import (
     PlatformError,
-    audit,
+    commit_audited,
     ensure_platform_schema,
     ensure_workspace,
     platform_id,
@@ -169,19 +170,22 @@ class InventoryCoreService:
                     now,
                 ),
             )
-            self.connection.commit()
-        except sqlite3.DatabaseError as exc:
+            record = self._uom(workspace_id, code)
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type="unit_of_measure",
+                object_id=str(record["id"]),
+                action="unit_of_measure_upserted",
+                metadata={"uom_code": code, "decimal_places": decimal_places, "active": active},
+                emit_outbox=True,
+                outbox_payload={"uom_code": code, "decimal_places": decimal_places, "active": active},
+            )
+        except (PlatformError, sqlite3.DatabaseError, AuditLedgerError) as exc:
             self.connection.rollback()
+            if isinstance(exc, PlatformError):
+                raise
             raise PlatformError("Unable to save the local unit of measure.") from exc
-        record = self._uom(workspace_id, code)
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="unit_of_measure",
-            object_id=str(record["id"]),
-            action="unit_of_measure_upserted",
-            metadata={"uom_code": code, "decimal_places": decimal_places, "active": active},
-        )
         return record
 
     def list_uoms(
@@ -306,25 +310,34 @@ class InventoryCoreService:
                     now,
                 ),
             )
-            self.connection.commit()
-        except sqlite3.DatabaseError as exc:
+            record = self._item(workspace_id, code)
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type="inventory_item",
+                object_id=str(record["id"]),
+                action="inventory_item_upserted",
+                metadata={
+                    "item_code": code,
+                    "organization_code": normalized_org,
+                    "uom_code": uom["uom_code"],
+                    "inventory_account_code": account_code,
+                    "active": active,
+                },
+                emit_outbox=True,
+                outbox_payload={
+                    "item_code": code,
+                    "organization_code": normalized_org,
+                    "uom_code": uom["uom_code"],
+                    "inventory_account_code": account_code,
+                    "active": active,
+                },
+            )
+        except (PlatformError, sqlite3.DatabaseError, AuditLedgerError) as exc:
             self.connection.rollback()
+            if isinstance(exc, PlatformError):
+                raise
             raise PlatformError("Unable to save the local inventory item.") from exc
-        record = self._item(workspace_id, code)
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_item",
-            object_id=str(record["id"]),
-            action="inventory_item_upserted",
-            metadata={
-                "item_code": code,
-                "organization_code": normalized_org,
-                "uom_code": uom["uom_code"],
-                "inventory_account_code": account_code,
-                "active": active,
-            },
-        )
         return record
 
     def list_items(
@@ -441,24 +454,32 @@ class InventoryCoreService:
                     now,
                 ),
             )
-            self.connection.commit()
-        except sqlite3.DatabaseError as exc:
+            record = self._warehouse(workspace_id, str(organization["id"]), code)
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type="warehouse",
+                object_id=str(record["id"]),
+                action="warehouse_upserted",
+                metadata={
+                    "warehouse_code": code,
+                    "organization_code": organization["organization_code"],
+                    "entity_code": normalized_entity,
+                    "active": active,
+                },
+                emit_outbox=True,
+                outbox_payload={
+                    "warehouse_code": code,
+                    "organization_code": organization["organization_code"],
+                    "entity_code": normalized_entity,
+                    "active": active,
+                },
+            )
+        except (PlatformError, sqlite3.DatabaseError, AuditLedgerError) as exc:
             self.connection.rollback()
+            if isinstance(exc, PlatformError):
+                raise
             raise PlatformError("Unable to save the local warehouse.") from exc
-        record = self._warehouse(workspace_id, str(organization["id"]), code)
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="warehouse",
-            object_id=str(record["id"]),
-            action="warehouse_upserted",
-            metadata={
-                "warehouse_code": code,
-                "organization_code": organization["organization_code"],
-                "entity_code": normalized_entity,
-                "active": active,
-            },
-        )
         return record
 
     def list_warehouses(
@@ -584,24 +605,32 @@ class InventoryCoreService:
                     now,
                 ),
             )
-            self.connection.commit()
-        except sqlite3.DatabaseError as exc:
+            record = self._location(str(warehouse["id"]), code)
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type="inventory_location",
+                object_id=str(record["id"]),
+                action="inventory_location_upserted",
+                metadata={
+                    "warehouse_code": warehouse["warehouse_code"],
+                    "location_code": code,
+                    "allow_negative": allow_negative,
+                    "active": active,
+                },
+                emit_outbox=True,
+                outbox_payload={
+                    "warehouse_code": warehouse["warehouse_code"],
+                    "location_code": code,
+                    "allow_negative": allow_negative,
+                    "active": active,
+                },
+            )
+        except (PlatformError, sqlite3.DatabaseError, AuditLedgerError) as exc:
             self.connection.rollback()
+            if isinstance(exc, PlatformError):
+                raise
             raise PlatformError("Unable to save the local inventory location.") from exc
-        record = self._location(str(warehouse["id"]), code)
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_location",
-            object_id=str(record["id"]),
-            action="inventory_location_upserted",
-            metadata={
-                "warehouse_code": warehouse["warehouse_code"],
-                "location_code": code,
-                "allow_negative": allow_negative,
-                "active": active,
-            },
-        )
         return record
 
     def list_locations(
@@ -704,24 +733,32 @@ class InventoryCoreService:
                     now,
                 ),
             )
-            self.connection.commit()
-        except sqlite3.DatabaseError as exc:
+            record = self._lot(str(item["id"]), str(organization["id"]), lot_code)
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type="inventory_lot",
+                object_id=str(record["id"]),
+                action="inventory_lot_upserted",
+                metadata={
+                    "item_code": item["item_code"],
+                    "lot_serial_code": lot_code,
+                    "tracking_type": tracking_type,
+                    "active": active,
+                },
+                emit_outbox=True,
+                outbox_payload={
+                    "item_code": item["item_code"],
+                    "lot_serial_code": lot_code,
+                    "tracking_type": tracking_type,
+                    "active": active,
+                },
+            )
+        except (PlatformError, sqlite3.DatabaseError, AuditLedgerError) as exc:
             self.connection.rollback()
+            if isinstance(exc, PlatformError):
+                raise
             raise PlatformError("Unable to save the local lot or serial reference.") from exc
-        record = self._lot(str(item["id"]), str(organization["id"]), lot_code)
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_lot",
-            object_id=str(record["id"]),
-            action="inventory_lot_upserted",
-            metadata={
-                "item_code": item["item_code"],
-                "lot_serial_code": lot_code,
-                "tracking_type": tracking_type,
-                "active": active,
-            },
-        )
         return record
 
     def list_lots(
@@ -930,21 +967,22 @@ class InventoryCoreService:
             if stored is None:
                 raise PlatformError("Unable to recheck the local inventory movement draft.")
             self._validate_movement_integrity(dict(stored), check_stock=False)
-            self.connection.commit()
-        except PlatformError:
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type="inventory_movement",
+                object_id=movement_id,
+                action="inventory_movement_draft_saved",
+                metadata={"movement_number": number, "movement_type": selected_type, "line_count": len(prepared)},
+                emit_outbox=True,
+                outbox_payload={"movement_number": number, "movement_type": selected_type, "line_count": len(prepared)},
+            )
+        except (PlatformError, AuditLedgerError):
             self.connection.rollback()
             raise
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to save the local inventory movement.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_movement",
-            object_id=movement_id,
-            action="inventory_movement_draft_saved",
-            metadata={"movement_number": number, "movement_type": selected_type, "line_count": len(prepared)},
-        )
         return self.get_movement(movement_id, actor_label=actor_label)
 
     def post_movement(
@@ -978,21 +1016,22 @@ class InventoryCoreService:
             )
             if cursor.rowcount != 1:
                 raise PlatformError("Inventory movement changed concurrently; reload and retry.")
-            self.connection.commit()
-        except PlatformError:
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type="inventory_movement",
+                object_id=movement_id,
+                action="inventory_movement_posted",
+                metadata={"movement_number": movement["movement_number"], "reason": post_reason},
+                emit_outbox=True,
+                outbox_payload={"movement_number": movement["movement_number"], "reason": post_reason},
+            )
+        except (PlatformError, AuditLedgerError):
             self.connection.rollback()
             raise
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to post the local inventory movement.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_movement",
-            object_id=movement_id,
-            action="inventory_movement_posted",
-            metadata={"movement_number": movement["movement_number"], "reason": post_reason},
-        )
         return self.get_movement(movement_id, actor_label=actor_label)
 
     def void_movement(
@@ -1062,21 +1101,22 @@ class InventoryCoreService:
             )
             if cursor.rowcount != 1:
                 raise PlatformError("Inventory movement changed concurrently; reload and retry.")
-            self.connection.commit()
-        except PlatformError:
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type="inventory_movement",
+                object_id=movement_id,
+                action="inventory_movement_voided",
+                metadata={"movement_number": movement["movement_number"], "reason": void_reason},
+                emit_outbox=True,
+                outbox_payload={"movement_number": movement["movement_number"], "reason": void_reason},
+            )
+        except (PlatformError, AuditLedgerError):
             self.connection.rollback()
             raise
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to void the local inventory movement.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_movement",
-            object_id=movement_id,
-            action="inventory_movement_voided",
-            metadata={"movement_number": movement["movement_number"], "reason": void_reason},
-        )
         return self.get_movement(movement_id, actor_label=actor_label)
 
     def get_movement(self, movement_id: str, *, actor_label: str = "local-cli") -> dict[str, Any]:

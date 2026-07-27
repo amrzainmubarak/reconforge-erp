@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from pathlib import Path
 
 import pandas as pd
 
+from reconforge.io.ingress import (
+    DEFAULT_TABULAR_INGRESS_POLICY,
+    FileIngressError,
+    TabularIngressPolicy,
+    validate_tabular_input,
+)
 from reconforge.schemas import DATE_COLUMNS, NUMERIC_COLUMNS, REQUIRED_COLUMNS, DatasetName
 from reconforge.utils.dates import parse_date_series
-from reconforge.utils.money import InvalidAmountError, parse_amount
+from reconforge.utils.money import InvalidAmountError, parse_exact_amount
 
 
 def dataset_filename(dataset: DatasetName, extension: str) -> str:
@@ -27,14 +34,36 @@ def find_dataset_file(input_dir: Path, dataset: DatasetName) -> Path | None:
     return None
 
 
-def read_table(path: Path) -> pd.DataFrame:
-    """Read a CSV or Excel table into a DataFrame."""
+def read_table(
+    path: Path,
+    *,
+    nrows: int | None = None,
+    ingress_policy: TabularIngressPolicy = DEFAULT_TABULAR_INGRESS_POLICY,
+) -> pd.DataFrame:
+    """Inspect and read a bounded CSV or Excel table into a DataFrame."""
 
-    if path.suffix.lower() == ".csv":
-        return pd.read_csv(path, dtype=str, keep_default_na=False)
-    if path.suffix.lower() in {".xlsx", ".xls"}:
-        return pd.read_excel(path, dtype=str, keep_default_na=False)
-    raise ValueError(f"Unsupported file type: {path}")
+    if nrows is not None and (isinstance(nrows, bool) or not 0 <= nrows <= ingress_policy.max_rows):
+        raise ValueError("nrows must be between zero and the ingress row limit")
+    validate_tabular_input(path, policy=ingress_policy)
+    parser_rows = ingress_policy.max_rows + 1 if nrows is None else nrows
+    try:
+        if path.suffix.lower() == ".csv":
+            frame = pd.read_csv(path, dtype=str, keep_default_na=False, nrows=parser_rows)
+        elif path.suffix.lower() in {".xlsx", ".xls"}:
+            frame = pd.read_excel(path, dtype=str, keep_default_na=False, nrows=parser_rows)
+        else:
+            raise FileIngressError("file_type_unsupported")
+    except FileIngressError:
+        raise
+    except Exception as exc:
+        raise FileIngressError("table_parse_failed") from exc
+    if len(frame) > ingress_policy.max_rows:
+        raise FileIngressError("table_row_limit")
+    if len(frame.columns) > ingress_policy.max_columns:
+        raise FileIngressError("table_column_limit")
+    if len(frame) * max(1, len(frame.columns)) > ingress_policy.max_cells:
+        raise FileIngressError("table_cell_limit")
+    return frame
 
 
 def normalize_columns(frame: pd.DataFrame) -> pd.DataFrame:
@@ -55,21 +84,21 @@ def coerce_dataset_types(frame: pd.DataFrame, dataset: DatasetName) -> pd.DataFr
     for column in NUMERIC_COLUMNS[dataset]:
         if column in coerced.columns:
             raw_values = coerced[column].copy()
-            parsed_values: list[float | object] = []
+            parsed_values: list[Decimal | None] = []
             invalid_values: list[str | None] = []
             for value in raw_values:
                 try:
-                    parsed_values.append(parse_amount(value))
+                    parsed_values.append(parse_exact_amount(value))
                     invalid_values.append(None)
                 except InvalidAmountError:
-                    parsed_values.append(float("nan"))
+                    parsed_values.append(None)
                     invalid_values.append(str(value))
             coerced[column] = parsed_values
             if any(value is not None for value in invalid_values):
                 coerced[f"_reconforge_raw_{column}"] = invalid_values
     for column in REQUIRED_COLUMNS[dataset]:
         if column in coerced.columns and column not in DATE_COLUMNS[dataset] and column not in NUMERIC_COLUMNS[dataset]:
-            coerced[column] = coerced[column].astype(str).str.strip()
+            coerced[column] = coerced[column].fillna("").astype(str).str.strip()
     return coerced
 
 

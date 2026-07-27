@@ -122,6 +122,19 @@ Snapshots omit database paths, local evidence paths, credentials, sessions, and 
 
 ## Authenticated API
 
+The default API profile uses the local SQLite Finance Core service. The
+explicit PostgreSQL server profile routes bounded account, posted-entry, and
+organization/fiscal-period trial-balance operations to the PostgreSQL
+ledger-control repository. Server mode is
+tenant-scoped rather than workspace-scoped: account writes require
+`organization_code`, and entry writes require `organization_code` plus
+`currency_code` (or an organization base currency). Entity, journal, dimension,
+chart hierarchy, draft-validation, and void semantics are not silently
+discarded; those capabilities return HTTP `501` until their PostgreSQL
+schema/workflow slices are implemented. Trial balance supports organization
+plus fiscal-period aggregation; legal-entity scoping remains unsupported
+because the bounded server ledger has no entity dimension.
+
 Read routes:
 
 - `GET /api/v1/finance-core/summary`

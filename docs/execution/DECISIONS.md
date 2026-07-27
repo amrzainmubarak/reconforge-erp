@@ -764,3 +764,11 @@
 - Rationale: Phase 3 was absent from the executable backlog, so task-count completion could silently omit identity federation, operations, connectors, upgrade/rollback, air-gap, external pilots, or independent review. A normative machine-tested matrix prevents that scope collapse.
 - Consequence: Completion requires every technical task and gate plus non-simulated external evidence. CI rejects missing/duplicate tasks, later-phase dependencies, empty gate evidence, and unsupported completion shortcuts. The matrix creates no readiness, compliance, scale, superiority, pilot, or independent-assurance claim by itself.
 - ADR: `docs/adr/0100-close-phase-1-3-execution-contract.md`
+
+### D-086: Count active service coupling instead of repository declarations
+
+- Date: 2026-07-27
+- Decision: Maintain a closed AST-tested inventory of all Platform and Application service classes, classifying direct SQLite, partial repository, and genuinely connection-free application boundaries.
+- Rationale: Protocol definitions and optional repository constructor arguments do not prove that active services are backend-neutral when authorization, audit, outbox, schema, or other operations still consume a SQLite connection.
+- Consequence: The measured baseline is 17 direct-SQLite Platform services, three partial-repository Platform services, and one backend-neutral Application service. P1-PLAT-001 stays in progress until implementation reduces the coupling and its behavioral contracts pass; the inventory itself is not backend parity.
+- ADR: `docs/adr/0101-measure-runtime-repository-boundaries.md`

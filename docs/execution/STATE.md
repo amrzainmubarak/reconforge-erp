@@ -111,8 +111,13 @@ Phase 3 enterprise/external-validation backlog. Four focused contract tests pass
 No Phase 3 implementation or external gate is complete; both external gates
 remain `planned` with empty evidence-artifact lists.
 
+E-090 measures the exact runtime migration gap: 17 Platform services are
+`direct_sqlite`, three are `partial_repository`, and one Application service is
+`backend_neutral`. Three AST contracts fail on omitted services, false
+classification, or count drift. This keeps P1-PLAT-001 explicitly in progress.
+
 ## Next exact actions
 
-1. Complete the repository-boundary inventory and migrate the next transactionally coherent platform use case without exposing a database connection to the application layer.
+1. Migrate the next transactionally coherent Platform use case into the Application layer and reduce the E-090 coupling counts without exposing a database connection.
 2. Add PostgreSQL and SQLite behavioral parity fixtures only after the shared application contract is stable; do not label method-name similarity as backend parity.
 3. Keep the Phase 1–3 matrix closed as implementation changes; never substitute synthetic evidence for the two external Phase 3 gates.

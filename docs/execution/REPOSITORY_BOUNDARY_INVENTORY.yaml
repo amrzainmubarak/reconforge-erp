@@ -1,0 +1,38 @@
+schema_version: 1
+updated_at: "2026-07-27"
+claim_boundary: >-
+  This inventory measures source coupling. A partial repository does not prove
+  backend neutrality, and only a connection-free application service may be
+  classified backend_neutral.
+allowed_statuses: [direct_sqlite, partial_repository, backend_neutral]
+platform_services:
+  - {file: accounts.py, service: AccountReconciliationService, status: direct_sqlite}
+  - {file: approvals.py, service: ApprovalService, status: direct_sqlite}
+  - {file: close.py, service: CloseManagementService, status: direct_sqlite}
+  - {file: controls.py, service: ControlTestingService, status: direct_sqlite}
+  - {file: evidence.py, service: EvidenceRegistryService, status: direct_sqlite}
+  - {file: exceptions.py, service: ExceptionQueueService, status: direct_sqlite}
+  - {file: finance_core.py, service: FinanceCoreService, status: direct_sqlite}
+  - {file: intercompany.py, service: IntercompanyService, status: direct_sqlite}
+  - {file: inventory_core.py, service: InventoryCoreService, status: direct_sqlite}
+  - {file: inventory_planning.py, service: InventoryPlanningService, status: partial_repository}
+  - {file: inventory_valuation.py, service: InventoryValuationService, status: partial_repository}
+  - {file: inventory_valuation_reversal.py, service: InventoryValuationReversalService, status: partial_repository}
+  - {file: journals.py, service: JournalControlService, status: direct_sqlite}
+  - {file: master_data.py, service: MasterDataService, status: direct_sqlite}
+  - {file: matching.py, service: MatchingService, status: direct_sqlite}
+  - {file: metrics.py, service: MetricsService, status: direct_sqlite}
+  - {file: operations.py, service: OperationsService, status: direct_sqlite}
+  - {file: outbox.py, service: OutboxService, status: direct_sqlite}
+  - {file: payables.py, service: PayablesService, status: direct_sqlite}
+  - {file: receivables.py, service: ReceivablesService, status: direct_sqlite}
+application_services:
+  - file: workspace_periods.py
+    service: WorkspacePeriodApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_domain.SQLiteDomainUnitOfWork
+summary:
+  platform_total: 20
+  direct_sqlite: 17
+  partial_repository: 3
+  backend_neutral_application: 1

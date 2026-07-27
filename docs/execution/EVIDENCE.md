@@ -6670,3 +6670,28 @@ omit a represented task or external gate. It does not implement any newly listed
 capability and does not prove enterprise readiness, production operation,
 customer validation, independent assurance, compliance, certification, scale,
 or competitive superiority.
+
+## E-090: Exact runtime repository-boundary inventory
+
+AST inspection finds twenty `*Service` classes under `reconforge/platform`.
+Seventeen import SQLite directly. Inventory planning, inventory valuation, and
+inventory valuation reversal accept repository protocols but retain direct
+SQLite dependencies and are therefore `partial_repository`, not backend
+neutral. `WorkspacePeriodApplicationService` is the sole current application
+service and imports only domain ports/models.
+
+The normative inventory and three contract tests require exact discovery,
+unique classifications and counts, SQLite imports for coupled classes,
+repository-module imports for partial classes, and no SQLite/infrastructure
+imports for backend-neutral application classes.
+
+| Command | Result |
+| --- | --- |
+| `python -m pytest -q tests/test_repository_boundary_inventory.py tests/test_phase_1_3_execution_contract.py` | 7 passed |
+| `python -m ruff check tests/test_repository_boundary_inventory.py` | Pass after import-order correction |
+| `python -m mypy tests/test_repository_boundary_inventory.py` | Pass |
+| `git diff --check` | Pass |
+
+Claim boundary: this is a closed source-coupling measurement and migration
+regression gate. It is not behavioral backend parity, proof that an adapter is
+correct, live PostgreSQL evidence, or completion of P1-PLAT-001.

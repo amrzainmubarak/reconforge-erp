@@ -13,6 +13,7 @@ from reconforge.domain.jobs import (
     JobStatus,
     JobTransition,
 )
+from reconforge.observability import ObservabilityRuntime
 
 
 class DurableJobNotFoundError(LookupError):
@@ -107,8 +108,14 @@ class LeasedJob:
 class DurableJobApplicationService:
     """Coordinate job lifecycle while persistence owns atomic compare-and-swap."""
 
-    def __init__(self, repository: DurableJobRepositoryProtocol) -> None:
+    def __init__(
+        self,
+        repository: DurableJobRepositoryProtocol,
+        *,
+        observability: ObservabilityRuntime | None = None,
+    ) -> None:
         self._repository = repository
+        self._observability = observability or ObservabilityRuntime.disabled()
 
     def submit(self, submission: JobSubmission, *, actor_id: str) -> tuple[DurableJob, bool]:
         job = DurableJob.queued(
@@ -125,7 +132,14 @@ class DurableJobApplicationService:
             retry_ceiling=submission.retry_ceiling,
             created_at=submission.created_at,
         )
-        return self._repository.create_or_get(job, actor_id=actor_id)
+        attributes: dict[str, object] = {"job.type": "durable", "reconforge.operation": "submit"}
+        with self._observability.span("reconforge.job.submit", attributes) as span:
+            persisted, created = self._repository.create_or_get(job, actor_id=actor_id)
+            result = "created" if created else "replayed"
+            if span is not None:
+                span.set_attribute("reconforge.result", result)
+            self._observability.record_job({**attributes, "job.status": persisted.status.value, "reconforge.result": result})
+            return persisted, created
 
     def requeue(self, *, tenant_id: str, job_id: str, actor_id: str, occurred_at: str) -> DurableJob:
         return self._transition(
@@ -164,7 +178,15 @@ class DurableJobApplicationService:
             occurred_at=occurred_at,
             reason_code=reason_code,
         )
-        return self._repository.persist_transition(previous, changed, event)
+        attributes: dict[str, object] = {
+            "job.type": "durable",
+            "job.status": to_status.value,
+            "reconforge.operation": "transition",
+        }
+        with self._observability.span("reconforge.job.transition", attributes):
+            persisted = self._repository.persist_transition(previous, changed, event)
+            self._observability.record_job({**attributes, "reconforge.result": "persisted"})
+            return persisted
 
     def _require_job(self, *, tenant_id: str, job_id: str) -> DurableJob:
         job = self._repository.get(tenant_id=tenant_id, job_id=job_id)
@@ -176,8 +198,14 @@ class DurableJobApplicationService:
 class DurableJobWorkerService:
     """Crash-safe worker lifecycle using expiring, generation-fenced leases."""
 
-    def __init__(self, repository: DurableJobWorkerRepositoryProtocol) -> None:
+    def __init__(
+        self,
+        repository: DurableJobWorkerRepositoryProtocol,
+        *,
+        observability: ObservabilityRuntime | None = None,
+    ) -> None:
         self._repository = repository
+        self._observability = observability or ObservabilityRuntime.disabled()
 
     def claim(
         self,
@@ -187,13 +215,19 @@ class DurableJobWorkerService:
         occurred_at: str,
         lease_expires_at: str,
     ) -> LeasedJob | None:
-        claimed = self._repository.claim_next(
-            tenant_id=tenant_id,
-            worker_id=worker_id,
-            occurred_at=occurred_at,
-            lease_expires_at=lease_expires_at,
-        )
-        return None if claimed is None else LeasedJob(*claimed)
+        attributes: dict[str, object] = {"job.type": "durable", "reconforge.operation": "claim"}
+        with self._observability.span("reconforge.job.claim", attributes) as span:
+            claimed = self._repository.claim_next(
+                tenant_id=tenant_id,
+                worker_id=worker_id,
+                occurred_at=occurred_at,
+                lease_expires_at=lease_expires_at,
+            )
+            result = "empty" if claimed is None else "claimed"
+            if span is not None:
+                span.set_attribute("reconforge.result", result)
+            self._observability.record_job({**attributes, "reconforge.result": result})
+            return None if claimed is None else LeasedJob(*claimed)
 
     def heartbeat(
         self,

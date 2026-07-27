@@ -67,6 +67,10 @@ server = [
   "redis>=6.4",
   "sqlalchemy>=2.0",
 ]
+observability = [
+    "opentelemetry-api==1.44.0",
+    "opentelemetry-sdk==1.44.0",
+]
 
 [project.scripts]
 reconforge = "reconforge.cli:app"

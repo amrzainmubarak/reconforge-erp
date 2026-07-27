@@ -352,9 +352,11 @@ tasks:
     priority: P1
     area: platform
     title: OpenTelemetry baseline
-    status: planned
+    status: completed
     depends_on: [P1-PLAT-003, P0-SEC-001]
     exit_evidence: Vendor-neutral traces/metrics/log correlation excludes raw financial and tenant-sensitive values.
+    completed_slices:
+      - E-102 adds optional OpenTelemetry API/SDK 1.44.0 traces and metrics for normalized API routes and durable-job operations, standard-log request/trace/span correlation, a closed low-cardinality attribute policy, injected exporters only, no export or SDK requirement by default, in-memory telemetry privacy tests, and a 110-package locked/audited dependency profile. Collector operation and production SLOs remain deployment gates.
   - id: P1-PLAT-010
     priority: P1
     area: platform

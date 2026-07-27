@@ -23,6 +23,7 @@
       "dev",
       "docs",
       "duckdb",
+      "observability",
       "server"
     ]
   },

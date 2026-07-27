@@ -220,3 +220,12 @@ authorization classifications; the current canonical map digest is
 Versioned structured decision records retain safe reason/surface/request data
 and hash actor/permission identities. They are not a durable tamper-evident
 authorization ledger.
+
+E-102 closes P1-PLAT-009's code baseline. Optional OpenTelemetry 1.44.0
+providers instrument normalized API routes and durable-job submit/transition/
+claim operations; standard logs receive request/trace/span correlation. The
+default runtime imports no SDK and exports nothing. A closed attribute policy
+rejects floats, arbitrary keys, oversized values, and tenant/workspace/entity/
+actor/record/amount/currency/path/job identifiers. Real in-memory SDK tests
+inspect spans and metrics. Collector security, sampling, retention, alerts,
+dashboards, and SLO operation remain unproven deployment gates.

@@ -7076,3 +7076,37 @@ controls; they are not an append-only authorization ledger. Amount/region/data
 classification ABAC, emergency-access workflows, external identity policy,
 hosted enforcement, compliance, certification, and production readiness are
 not inferred.
+
+## E-102: No-export-by-default OpenTelemetry baseline
+
+The optional `observability` extra pins OpenTelemetry API/SDK 1.44.0 in the
+universal lock. `ObservabilityRuntime` constructs isolated trace and metric
+providers and accepts exporters/readers only through explicit injection; the
+default application uses a no-op runtime, imports no SDK, and configures no
+network destination. OpenTelemetry's official Python status and PyPI release
+records were reviewed on 2026-07-27; traces/metrics are stable while its logs
+signal remains development and is not adopted here.
+
+API instrumentation records method, normalized route template, status, and
+integer duration. Durable jobs record only low-cardinality operation/status/
+result values. The closed schema rejects unknown attributes, floats, control
+characters, and oversized values. In-memory SDK tests inspect emitted spans and
+metrics and prove tenant, workspace, entity, actor, worker, idempotency, and job
+identifiers are absent. Standard logging handlers attach bounded request IDs
+and active trace/span IDs without changing message content.
+
+| Command | Result |
+| --- | --- |
+| OpenTelemetry/API/job/privacy and supply-chain focus | 19 passed |
+| exact uv 0.11.32 `lock --check` and closed supply-chain policy | Pass; 110 policy packages and zero active exceptions |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 231 source files |
+| `python -m pytest` without live-service environment | 1,371 passed, 16 skipped, 7 expected warnings |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 693,702-byte wheel and 978,576-byte sdist |
+| `python -m pip_audit` | No known third-party dependency vulnerabilities; the local package is not a PyPI audit subject |
+| `git diff --check` | Pass; uv.lock reports its existing Windows line-ending notice |
+
+This is a code-level, in-memory instrumentation proof. It does not prove an
+exporter, collector, network path, TLS/authentication, sampling/cardinality
+operation, durable telemetry retention, dashboard, alert, SLO, hosted
+enforcement, compliance, certification, or production readiness.

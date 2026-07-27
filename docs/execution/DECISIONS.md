@@ -849,3 +849,10 @@
 - **Reason**: A policy engine beside direct membership checks does not prevent drift, and an undocumented new route can silently escape a permission-to-action review.
 - **Consequence**: E-101 closes P1-PLAT-008 for the current API/platform/Studio/workflow surfaces. Redacted decision logs are operational audit evidence, not a tamper-evident retained ledger.
 - **ADR**: `docs/adr/0112-central-policy-enforcement-and-route-inventory.md`
+
+### D-098: Require explicit exporter injection and a closed telemetry schema
+
+- **Decision**: Keep observability disabled/no-export by default, use isolated OpenTelemetry providers when enabled, and reject every attribute outside a bounded low-cardinality allowlist.
+- **Reason**: Environment-driven auto-export or arbitrary span attributes can create hidden egress and disclose tenant or financial data.
+- **Consequence**: E-102 closes P1-PLAT-009's code-level trace/metric/log-correlation baseline. Collector security, sampling, retention, dashboards, alerting, and SLO operation remain deployment evidence.
+- **ADR**: `docs/adr/0113-no-export-by-default-opentelemetry-baseline.md`

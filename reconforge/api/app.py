@@ -7,6 +7,7 @@ from collections import defaultdict, deque
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from threading import Lock
+from time import monotonic_ns
 from typing import Final, cast
 
 from fastapi import FastAPI, Request
@@ -53,6 +54,7 @@ from reconforge.db import resolve_db_path
 from reconforge.db.tenancy import TenantDatabaseRouter
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings
 from reconforge.infrastructure.redis import RedisConnectionFactory, RedisSettings, TenantRedisStore
+from reconforge.observability import ObservabilityRuntime, safe_attributes, telemetry_request_context
 from reconforge.platform.common import ServerPrincipal, server_principal_context, trusted_local_mode
 
 ExceptionHandler = Callable[[Request, Exception], Response | Awaitable[Response]]
@@ -77,6 +79,7 @@ def create_api_app(
     postgres_dsn: str | None = None,
     postgres_require_tls: bool = True,
     cursor_signing_key: bytes | None = None,
+    observability: ObservabilityRuntime | None = None,
 ) -> FastAPI:
     """Create the API with local mode or an explicit server identity profile."""
 
@@ -103,6 +106,7 @@ def create_api_app(
     app.state.postgres_evidence_factory = app.state.postgres_identity_factory
     app.state.postgres_reconciliation_factory = app.state.postgres_identity_factory
     app.state.cursor_codec = CursorCodec(cursor_signing_key) if cursor_signing_key is not None else None
+    app.state.observability = observability or ObservabilityRuntime.disabled()
     if redis_url is not None:
         redis_factory = RedisConnectionFactory(RedisSettings(url=redis_url, require_tls=redis_require_tls))
         app.state.redis_store = TenantRedisStore(redis_factory)
@@ -110,6 +114,36 @@ def create_api_app(
         app.state.redis_store = None
     app.state.login_failures = defaultdict(deque)
     app.state.login_failures_lock = Lock()
+
+    @app.middleware("http")
+    async def observe_request(request: Request, call_next: RequestResponseEndpoint) -> Response:
+        runtime: ObservabilityRuntime = request.app.state.observability
+        started = monotonic_ns()
+        method = request.method.upper()
+        with runtime.span("HTTP request", {"http.request.method": method}) as span:
+            try:
+                response = await call_next(request)
+            except Exception as exc:
+                if span is not None:
+                    span.set_attribute("error.type", type(exc).__name__)
+                raise
+            route = request.scope.get("route")
+            local_template = str(getattr(route, "path", ""))
+            candidate = "/api/v1" + local_template
+            known_routes = {(contract.method, contract.path) for contract in request.app.state.authorization_contracts}
+            route_template = candidate if (method, candidate) in known_routes else "unmatched"
+            attributes = safe_attributes(
+                {
+                    "http.request.method": method,
+                    "http.response.status_code": response.status_code,
+                    "http.route": route_template,
+                }
+            )
+            if span is not None:
+                for key, value in attributes.items():
+                    span.set_attribute(key, value)
+            runtime.record_request(duration_ms=max(0, (monotonic_ns() - started) // 1_000_000), attributes=attributes)
+            return response
 
     @app.middleware("http")
     async def add_request_id(request: Request, call_next: RequestResponseEndpoint) -> Response:
@@ -124,7 +158,7 @@ def create_api_app(
                     user, permissions = authenticated
                     principal = ServerPrincipal(user=user, permissions=permissions)
                     request.state.server_principal = principal
-        with trusted_local_mode(False):
+        with telemetry_request_context(request.state.request_id), trusted_local_mode(False):
             if principal is None:
                 response = await call_next(request)
             else:

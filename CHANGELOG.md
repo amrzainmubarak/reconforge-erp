@@ -1,5 +1,7 @@
 # Changelog
 
+- Added an optional no-export-by-default OpenTelemetry 1.44.0 baseline for normalized API and durable-job traces/metrics, plus standard-log correlation and a fail-closed privacy/cardinality attribute policy.
+
 - Centralized API, platform, Studio, and workflow RBAC/ABAC/SoD enforcement; added a fail-closed digest-addressed inventory for all API authorization contracts and redacted versioned policy-decision records.
 
 - Added signed, bounded, context-bound keyset cursors with stable duplicate tie-breaking and an opt-in local evidence API path that preserves offset compatibility and fails explicitly where native PostgreSQL keyset execution is not yet available.

@@ -9,10 +9,11 @@ Phase 0 — Truth and Reproducibility
 ## Snapshot boundary
 
 - Branch: `feature/p0-atomic-audit-outbox`
-- Commit: `bdf63de48051a0ef5c694442208f5207f4dd5e1c`
+- Verified Phase 0 implementation commit: `536d463319b5e5b024d35224982c867a009e8bb3`
 - Base: `origin/main` at `6a785c0b42f57aee80e3082c0226e6f99742f80b`
-- Worktree: dirty; 207 tracked status entries differ and 275 untracked entries remain after verified E-077 cleanup. No status entry is attributed to `HEAD` or `main`.
-- Do not attribute worktree evidence to `HEAD` or `main` until changes are isolated, reviewed, and committed.
+- Publication scope: the 492-file evidence-bounded Phase 0 snapshot is isolated in commit `536d463`; its parent `bdf63de` supplies nine previously missing server-boundary test files. The branch is two commits ahead of its remote and 12 commits ahead of `origin/main` before publication.
+- Worktree outside the publication scope retains 19 status entries: the user-owned `AGENTS.md` modification, an unapproved `CODE_OF_CONDUCT.md` deletion, `.codex-test-tmp/`, and 16 raw duplicated command-output files. None is staged or attributed to the Phase 0 commit.
+- The full locked regression and four-cell local matrix cover the implementation snapshot immediately before commit; the only later implementation-file edits removed six whitespace-only diff-check violations. This state update is governance metadata. Hosted evidence is still required before the remaining remote gates can close.
 
 ## Task status
 

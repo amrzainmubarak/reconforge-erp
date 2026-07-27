@@ -739,3 +739,11 @@
 - Rationale: Branch protection still required the historical context name after matrix display names changed, leaving an otherwise green PR blocked. The tag-only workflow requires `v<project-version>`, while v0.7.0 already exists and cannot identify the new merged revision.
 - Consequence: PR #54 becomes clean/mergeable only when every security prerequisite and all other protected checks pass. Wheel/sdist metadata and current release links identify v0.7.1. Merge, signing-key enrollment, signed tag creation, and candidate execution remain explicit human-gated actions.
 - ADR: `docs/adr/0067-tag-only-signed-release-candidate.md`, `docs/adr/0069-lock-dependencies-and-fail-closed-supply-chain-gates.md`
+
+### D-083: Close Phase 0 only on retained signed-candidate evidence
+
+- Date: 2026-07-27
+- Decision: Close P0-SEC-006 and P0-SEC-007, and therefore the 22-task Phase 0 exit, only after PR #54 is merged, GitHub verifies signed annotated tag `v0.7.1` on exact `main` commit `d47edd8`, candidate run `30243819239` passes every fail-closed build/scan/attest/verify step, and the downloaded retained artifact independently verifies its checksums and subject-bound provenance/SBOM bundles.
+- Rationale: A green pull request or workflow definition cannot prove tag identity, hosted image inventory, attestation authenticity, archive retention, or consumer verification. The combined GitHub tag API, exact-main runs, candidate job, retained artifact metadata, checksum revalidation, and independent `gh attestation verify` executions provide the evidence required by the two written exits.
+- Consequence: Phase 0 is 22/22 complete as an evidence-bounded foundation milestone. The candidate remains non-publishing; SBOM completeness is unknown, OCI reproducibility and SLSA levels are unclaimed, and GitHub Release/PyPI promotion, compliance, certification, independent assurance, production readiness, real adoption, and later platform phases remain outside this closure.
+- ADR: `docs/adr/0067-tag-only-signed-release-candidate.md`, `docs/adr/0068-bind-cyclonedx-sbom-to-each-release-subject.md`

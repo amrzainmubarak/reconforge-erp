@@ -1,9 +1,9 @@
 schema_version: 1
-updated_at: "2026-07-25"
+updated_at: "2026-07-27"
 phase: "Phase 0 — Truth and Reproducibility"
 snapshot:
-  commit: "bdf63de48051a0ef5c694442208f5207f4dd5e1c"
-  dirty_worktree: true
+  commit: "d47edd845e6aef3bae16e05698e07878086d690b"
+  dirty_worktree: false
 status_values: [planned, in_progress, blocked, completed]
 
 tasks:
@@ -197,22 +197,24 @@ tasks:
     priority: P0
     area: security
     title: Signed release pipeline
-    status: in_progress
+    status: completed
     depends_on: [P0-SEC-005]
     exit_evidence: Source, wheel, sdist, and image signatures/provenance verify from a clean tree.
     completed_slices:
       - A tag-only non-publishing candidate workflow now requires a clean signed annotated version tag on main, hash-locks six Python release tools including the Windows-conditional dependency, pins every action by full commit, records commit-time SOURCE_DATE_EPOCH, fail-closed normalizes sdist metadata, creates a closed manifest for source/wheel/sdist/digest-addressed image, requests keyless SLSA provenance, verifies repository/workflow/ref/revision/runner expectations from preserved bundles before upload, and retains human-gated immutable-release publication under ADR 0067. Two same-machine Python 3.14.6 builds reproduced identical source, wheel, and normalized-sdist bytes; local contracts pass, but no hosted signature/provenance or OCI reproducibility result exists, so the task remains in progress.
       - E-086 restores the exact protected `python-security` aggregate context without weakening its three prerequisite jobs, prepares unique candidate version 0.7.1 because v0.7.0 already exists, builds matching wheel/sdist locally, and records an all-green clean/mergeable PR head. Merge, signing-identity enrollment, signed tag creation, and the hosted candidate result remain human-gated and unexecuted.
+      - E-087 closes the declared exit on merged main commit d47edd845e6aef3bae16e05698e07878086d690b: GitHub verifies signed annotated tag v0.7.1, hosted run 30243819239 builds the exact source/wheel/sdist/image subjects, emits and independently verifies provenance bundles with repository/workflow/ref/revision/runner constraints, and retains candidate artifact 8644255664 through 2026-08-10. This is a non-publishing candidate, not an immutable GitHub Release, PyPI publication, SLSA level, compliance, certification, or production-readiness claim.
   - id: P0-SEC-007
     priority: P0
     area: security
     title: SBOM per artifact
-    status: in_progress
+    status: completed
     depends_on: [P0-SEC-005]
     exit_evidence: Reproducible CycloneDX or SPDX SBOMs are generated, archived, and verified for each released artifact.
     completed_slices:
       - CycloneDX 1.7 generation now binds separate source/wheel/sdist/image documents to exact release-manifest SHA-256 subjects, validates Python metadata parity, inventories source npm-lock versions, normalizes a pinned Syft 1.49.0 exact-image scan, writes a closed SBOM manifest/checksum set, and defines four distinct keyless SBOM attestations plus strict bundle verification inside the non-publishing candidate workflow under ADR 0068. Clean-HEAD local source/package outputs are deterministic and official-schema valid; the image inventory remains synthetic locally and no hosted scan, signed attestation, immutable publication, or retained consumer verification exists, so the task remains in progress.
       - E-086 proves the v0.7.1 metadata/release-note/build boundary and protected pre-merge checks, but no tag-triggered image scan, four signed SBOM attestations, archive retention, or independent consumer verification has occurred.
+      - E-087 closes the declared exit with four subject-bound CycloneDX 1.7 documents produced by the hosted candidate: source 239 components, wheel 30, sdist 30, and exact Syft-scanned image 3972, all with completeness explicitly unknown. Five SBOM checksum records, four separate SBOM attestation bundles, and the exact image/file provenance verify independently against tag v0.7.1 and revision d47edd8; the retained candidate archive digest is sha256:0a59e3dd6a5e66118b44be5680e5abc312a44ad7b299579b7e16b64d35f42d63.
   - id: P0-SEC-008
     priority: P0
     area: security

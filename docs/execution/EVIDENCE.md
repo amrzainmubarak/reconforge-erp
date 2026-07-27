@@ -6540,3 +6540,63 @@ until an authorized identity merges the reviewed PR, creates a GitHub-verified
 signed annotated `v0.7.1` tag on that exact `main` commit, and the retained
 candidate provenance and four subject-specific SBOM bundles independently
 verify.
+
+## E-087: Verified signed v0.7.1 candidate and Phase 0 exit
+
+PR #54 merged at `2026-07-27T06:18:10Z` as
+`d47edd845e6aef3bae16e05698e07878086d690b`. GitHub's commit API reports the
+merge commit signature `verified: true`, `reason: valid`. Exact-main push runs
+CI `30242293585`, Security `30242293659`, Docker `30242293668`, CodeQL
+`30242293667`, and OpenSSF Scorecard `30242293599` all passed.
+
+After explicit human authorization, a dedicated Ed25519 public key was enrolled
+as a GitHub SSH signing key. Annotated tag `v0.7.1` targets the exact merge
+commit. GitHub tag object `a800eca30d590f46569afb1bf4088dc1ee900d94`
+reports `verified: true`, `reason: valid`; the tag was never moved or replaced.
+
+Signed Release Candidate run `30243819239`, job `89906410321`, passed in two
+minutes. Its fail-closed steps verified the signed tag, clean merged source,
+closed lock/policy, Python and npm audits, full-history/tree secret scans,
+hash-locked build tools, source/wheel/sdist builds, digest-addressed image,
+release manifest, pinned Syft image scan, four CycloneDX 1.7 documents, file
+and image provenance, four separate SBOM attestations, checksum sets, and
+independent repository/workflow/ref/revision/GitHub-hosted-runner expectations.
+
+Exact release subjects:
+
+| Subject | SHA-256 |
+| --- | --- |
+| `reconforge-erp-0.7.1-source.tar.gz` | `175f56e02f3b58189972f433e33188d9257d00588c4a696e195dc3d65dee3dde` |
+| `reconforge_erp-0.7.1-py3-none-any.whl` | `210e69770fe1ad55227173349ee22ca7f16e4f5270c093f12c78460c14b66f33` |
+| `reconforge_erp-0.7.1.tar.gz` | `d54850d698a0276c197a44e4aed7aa815fe2589d9cf9681c705612886423b76a` |
+| `ghcr.io/amrzainmubarak/reconforge-erp` OCI manifest | `89c598e291188ff85d75c2c17ab6d67ae9a0902519a6984f49fd0dcc1ec870f4` |
+
+The retained `signed-release-candidate-v0.7.1` artifact is GitHub artifact
+`8644255664`, 8,642,971 bytes, archive digest
+`sha256:0a59e3dd6a5e66118b44be5680e5abc312a44ad7b299579b7e16b64d35f42d63`,
+created `2026-07-27T06:48:14Z`, expiring `2026-08-10T06:48:13Z`.
+It was downloaded to a new temporary directory outside the repository. A
+path-bounded verifier recomputed and matched four `SHA256SUMS` entries, five
+`SBOM_SHA256SUMS` entries, and six `ATTESTATION_SHA256SUMS` entries.
+
+The downloaded SBOM manifest binds:
+
+| Subject | Generation mode | Components | SBOM SHA-256 |
+| --- | --- | ---: | --- |
+| source archive | declared Python plus locked npm metadata | 239 | `58a2b3069115aace09c1aa1433fd597b405eb148e1cbb78fd70ed45d0613f0ae` |
+| wheel | declared Python metadata | 30 | `7117a15218dcf3a2ca26e7f5757e5ca556e5b1fc090d4479d15eb46310206091` |
+| sdist | declared Python metadata | 30 | `f5450c3e7cd8d10043aff684ec043bf048d154a1671b48e3a67ea8bf0603ab40` |
+| exact OCI image | Syft installed-image scan | 3972 | `eba4c9bce9c9b0a665790739660c6f17c922056a55ca41760a110cd9582c39be` |
+
+Separate local `gh attestation verify` calls returned exit code zero for file
+provenance, image provenance, and the source/wheel/sdist/image CycloneDX
+predicates while requiring repository `amrzainmubarak/reconforge-erp`, signer
+workflow `.github/workflows/release.yml`, signer/source digest `d47edd8`, source
+ref `refs/tags/v0.7.1`, and `--deny-self-hosted-runners`.
+
+This evidence closes the exact P0-SEC-006 and P0-SEC-007 exits and makes Phase
+0 complete at 22/22 tasks. It does not prove SBOM completeness, dependency
+safety/reachability/licensing, OCI reproducibility, an immutable GitHub Release
+or PyPI publication, a SLSA Build/Source level, compliance, certification,
+independent security assurance, production readiness, customer adoption, or
+the later multi-phase platform mission.

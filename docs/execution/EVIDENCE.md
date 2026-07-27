@@ -6977,3 +6977,37 @@ manifest authenticity, crash-atomic content/manifest pairing, WORM semantics
 for local files, replication, backup, malware scanning, authorized downloads,
 host-loss durability, supported throughput, compliance, certification, or
 production readiness.
+
+## E-099: Atomic scoped request idempotency
+
+Migration 24 and Alembic revision 0015 add the same tenant/scope/key identity
+to SQLite and PostgreSQL. `IdempotencyApplicationService` hashes bounded
+request bytes before persistence, requires a short-lived owner capability for
+completion, bounds response bytes, and verifies the replay digest. Adapters
+store only the capability digest and strict bounded base64 response text.
+
+SQLite thread concurrency produces exactly one reservation owner and seven
+in-progress results. Tests cover changed-input conflict, scope separation,
+completion, exact replay, expiry/rebind, stale owner, request/response limits,
+and binary response backup/restore. Live PostgreSQL concurrency produces one
+owner and five in-progress results; it also proves conflict, completion,
+replay, expiry/rebind, stale-owner rejection, and cross-tenant invisibility
+under a non-superuser role. A fresh PostgreSQL database passes upgrade to
+0015, downgrade through 0011, and re-upgrade.
+
+| Command | Result |
+| --- | --- |
+| SQLite application/concurrency/backup focus | Pass |
+| live PostgreSQL idempotency contract | 2 passed |
+| fresh PostgreSQL Alembic forward/downgrade/re-upgrade | 2 passed |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 228 source files |
+| `python -m pytest` without live-service environment | 1,349 passed, 16 skipped, 7 expected warnings |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 683,714-byte wheel and 965,336-byte sdist |
+| `python -m bandit -q -r reconforge` | No new idempotency finding after removing the optimized-away assertion; existing reviewed fixed-identifier SQL notices remain |
+
+This proves an application/storage primitive, not automatic coverage of every
+HTTP route, connector, or external side effect. Owner-token unpredictability,
+caller authorization, transport authentication, rate limiting, external
+exactly-once effects, hosted enforcement, compliance, certification, and
+production readiness are not inferred.

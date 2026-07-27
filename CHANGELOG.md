@@ -1,5 +1,7 @@
 # Changelog
 
+- Added atomic backend-neutral request idempotency with tenant/operation scoping, request conflict detection, in-progress ownership, expiry/rebind, bounded response replay, hashed owner capabilities, SQLite backup/restore retention, and forced-RLS PostgreSQL parity.
+
 - Added a backend-neutral immutable object-store contract with a fail-closed offline local adapter, hardened S3 conditional writes and bounded verification, real MinIO retention/tamper tests, evidence-registry integration, and locked boto3 server support.
 
 - Added backend-aware operational diagnostics: SQLite remains `local_only`, PostgreSQL is reported accurately, tenant-scoped PostgreSQL job/error records match SQLite shapes, audit health uses the verified chain, and Alembic migration status is read without exposing connection settings to Application code.

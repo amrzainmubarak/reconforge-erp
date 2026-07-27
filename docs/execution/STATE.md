@@ -192,3 +192,13 @@ skips; the live MinIO focus passes all object-store/evidence cases except the
 Windows symlink-privilege branch. Ruff, mypy over 225 source files, lock check,
 build, and diff checks pass. Local sidecars are bounded and fail closed, but
 are neither keyed against a malicious local writer nor crash-atomic as a pair.
+
+E-099 closes P1-PLAT-006's defined generic-request exit. One backend-neutral
+Application service now reserves, completes, expires, and replays bounded
+responses through SQLite and PostgreSQL adapters. The owner capability is
+digest-only at rest; changed request bytes conflict; concurrent requests elect
+one owner; expired records rebind; stale completion fails; completed binary
+responses survive SQLite backup/restore; PostgreSQL uses forced tenant RLS.
+The repository inventory now records five backend-neutral Application
+services. HTTP middleware composition remains open and no exactly-once
+transport claim is made.

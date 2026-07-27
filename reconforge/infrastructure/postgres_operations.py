@@ -25,6 +25,7 @@ POSTGRES_MIGRATION_REVISIONS = (
     "0012_postgres_jobs",
     "0013_postgres_domain_uow",
     "0014_postgres_operations",
+    "0015_postgres_idempotency",
 )
 
 

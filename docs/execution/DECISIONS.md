@@ -828,3 +828,10 @@
 - **Reason**: A provider-specific class or unchecked local path cannot provide a portable evidence boundary, and an ordinary S3 delete marker does not prove deletion of a retained version.
 - **Consequence**: E-098 closes P1-PLAT-005's bounded exit, including live MinIO object-lock behavior. Local two-file publication fails closed after interruption but is not pair-atomic or authenticated against a malicious local writer.
 - **ADR**: `docs/adr/0109-immutable-object-store-contract.md`
+
+### D-095: Bind idempotency to request bytes and a short-lived owner capability
+
+- **Decision**: Reserve tenant/scope/key atomically against a request digest, store only the owner-capability digest, complete before canonical expiry, and replay a bounded digest-verified response.
+- **Reason**: A key alone cannot distinguish a legitimate retry from reuse for different financial input, and a plaintext owner token would turn persistence or backup access into execution authority.
+- **Consequence**: E-099 closes P1-PLAT-006 for generic requests while preserving the specialized durable-job contract. Middleware composition and capability generation remain caller responsibilities.
+- **ADR**: `docs/adr/0110-atomic-request-idempotency.md`

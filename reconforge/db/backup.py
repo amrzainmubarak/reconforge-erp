@@ -146,6 +146,7 @@ BACKUP_TABLES = [
     "durable_job_leases",
     "durable_job_lease_events",
     "durable_job_partition_effects",
+    "idempotency_records",
     "workflow_objects",
     "workflow_transitions",
     "workflow_transition_events",
@@ -249,6 +250,7 @@ BACKUP_SELECT_QUERIES = {
     "durable_job_leases": "SELECT * FROM durable_job_leases ORDER BY tenant_id, expires_at, job_id",
     "durable_job_lease_events": "SELECT * FROM durable_job_lease_events ORDER BY job_id, event_sequence",
     "durable_job_partition_effects": "SELECT * FROM durable_job_partition_effects ORDER BY job_id, ordinal",
+    "idempotency_records": "SELECT * FROM idempotency_records ORDER BY tenant_id, scope, idempotency_key",
     "workflow_objects": "SELECT * FROM workflow_objects ORDER BY object_type, object_id",
     "workflow_transitions": "SELECT * FROM workflow_transitions ORDER BY object_type, from_status, to_status, id",
     "workflow_transition_events": "SELECT * FROM workflow_transition_events ORDER BY created_at, id",
@@ -350,6 +352,7 @@ BACKUP_DELETE_QUERIES = {
     "durable_job_leases": "DELETE FROM durable_job_leases",
     "durable_job_lease_events": "DELETE FROM durable_job_lease_events",
     "durable_job_partition_effects": "DELETE FROM durable_job_partition_effects",
+    "idempotency_records": "DELETE FROM idempotency_records",
     "workflow_objects": "DELETE FROM workflow_objects",
     "workflow_transitions": "DELETE FROM workflow_transitions",
     "workflow_transition_events": "DELETE FROM workflow_transition_events",
@@ -701,6 +704,11 @@ BACKUP_INSERT_COLUMNS = {
     "durable_job_partition_effects": (
         "job_id", "partition_key", "ordinal", "completed_units", "input_digest", "output_digest",
         "effect_reference", "committed_at", "job_version",
+    ),
+    "idempotency_records": (
+        "schema_version", "tenant_id", "scope", "idempotency_key", "request_digest",
+        "owner_token_digest", "status", "response_body", "response_digest", "content_type",
+        "created_at", "expires_at", "completed_at",
     ),
     "workflow_objects": ("object_type", "object_id", "status", "updated_at", "id", "created_at"),
     "workflow_transitions": ("id", "object_type", "from_status", "to_status", "required_permission", "sod_rule", "reason_required", "active"),
@@ -1285,6 +1293,13 @@ BACKUP_INSERT_QUERIES = {
             job_id, partition_key, ordinal, completed_units, input_digest,
             output_digest, effect_reference, committed_at, job_version
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "idempotency_records": """
+        INSERT INTO idempotency_records (
+            schema_version, tenant_id, scope, idempotency_key, request_digest,
+            owner_token_digest, status, response_body, response_digest, content_type,
+            created_at, expires_at, completed_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "workflow_objects": "INSERT INTO workflow_objects (object_type, object_id, status, updated_at, id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
     "workflow_transitions": """

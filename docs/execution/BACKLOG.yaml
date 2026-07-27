@@ -325,9 +325,11 @@ tasks:
     priority: P1
     area: platform
     title: Idempotency service
-    status: planned
+    status: completed
     depends_on: [P1-PLAT-001]
     exit_evidence: Request/job idempotency keys have atomic persistence, scope, replay response, expiry, and conflict tests.
+    completed_slices:
+      - E-099 closes the generic request exit with a backend-neutral reserve/complete/replay contract, bounded request/response bytes, request and response digests, hashed ownership capabilities, canonical expiry, atomic SQLite and PostgreSQL concurrency, forced tenant RLS, stale-owner rejection, and SQLite backup/restore replay retention. Durable jobs retain their already-proven specialized atomic idempotency contract.
   - id: P1-PLAT-007
     priority: P1
     area: platform

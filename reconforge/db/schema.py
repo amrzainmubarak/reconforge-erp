@@ -3371,6 +3371,31 @@ BEGIN
 END;
 """
 
+IDEMPOTENCY_RECORDS_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS idempotency_records (
+    schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+    tenant_id TEXT NOT NULL,
+    scope TEXT NOT NULL CHECK (length(scope) BETWEEN 1 AND 160),
+    idempotency_key TEXT NOT NULL CHECK (length(idempotency_key) BETWEEN 1 AND 200),
+    request_digest TEXT NOT NULL CHECK (length(request_digest) = 64),
+    owner_token_digest TEXT NOT NULL CHECK (length(owner_token_digest) = 64),
+    status TEXT NOT NULL CHECK (status IN ('pending','completed')),
+    response_body TEXT NOT NULL DEFAULT '',
+    response_digest TEXT NOT NULL DEFAULT '',
+    content_type TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL CHECK (expires_at > created_at),
+    completed_at TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (tenant_id, scope, idempotency_key),
+    CHECK (
+      (status='pending' AND length(response_body)=0 AND response_digest='' AND completed_at='') OR
+      (status='completed' AND length(response_digest)=64 AND completed_at<>'')
+    )
+);
+CREATE INDEX IF NOT EXISTS idx_idempotency_expiry
+ON idempotency_records (expires_at, tenant_id);
+"""
+
 
 ACCOUNT_RECONCILIATION_MONEY_MIGRATION_SQL = """
 -- Add canonical Decimal text alongside legacy REAL compatibility columns. New

@@ -31,8 +31,8 @@ from reconforge.infrastructure.sqlite_operations import SQLiteOperationsReposito
 def test_postgres_operations_schema_and_revision_registry_are_explicit() -> None:
     assert POSTGRES_OPERATIONS_SCHEMA_SQL.count("FORCE ROW LEVEL SECURITY") == 2
     assert "FOREIGN KEY (tenant_id, workspace_id)" in POSTGRES_OPERATIONS_SCHEMA_SQL
-    assert POSTGRES_MIGRATION_REVISIONS[-1] == "0014_postgres_operations"
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 14
+    assert POSTGRES_MIGRATION_REVISIONS[-1] == "0015_postgres_idempotency"
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 15
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")

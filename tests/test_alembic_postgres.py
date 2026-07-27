@@ -25,6 +25,7 @@ def test_postgres_alembic_contract_has_no_repository_credentials() -> None:
     jobs_revision = (ROOT / "alembic" / "versions" / "0012_postgres_durable_jobs.py").read_text(encoding="utf-8")
     domain_revision = (ROOT / "alembic" / "versions" / "0013_postgres_domain_uow.py").read_text(encoding="utf-8")
     operations_revision = (ROOT / "alembic" / "versions" / "0014_postgres_operations.py").read_text(encoding="utf-8")
+    idempotency_revision = (ROOT / "alembic" / "versions" / "0015_postgres_idempotency.py").read_text(encoding="utf-8")
 
     assert "sqlalchemy.url =\n" in config
     assert "RECONFORGE_POSTGRES_DSN" in env
@@ -69,6 +70,9 @@ def test_postgres_alembic_contract_has_no_repository_credentials() -> None:
     assert 'revision = "0014_postgres_operations"' in operations_revision
     assert 'down_revision = "0013_postgres_domain_uow"' in operations_revision
     assert "POSTGRES_OPERATIONS_SCHEMA_SQL" in operations_revision
+    assert 'revision = "0015_postgres_idempotency"' in idempotency_revision
+    assert 'down_revision = "0014_postgres_operations"' in idempotency_revision
+    assert "POSTGRES_IDEMPOTENCY_SCHEMA_SQL" in idempotency_revision
     assert "password" not in config.lower()
 
 
@@ -106,11 +110,14 @@ def test_alembic_upgrade_command_is_available_when_server_extra_is_installed() -
         assert connection.execute(
             "SELECT to_regclass('reconforge.ops_job_history')"
         ).fetchone()[0] == "reconforge.ops_job_history"
+        assert connection.execute(
+            "SELECT to_regclass('reconforge.idempotency_records')"
+        ).fetchone()[0] == "reconforge.idempotency_records"
     provider = PostgresMigrationStatusProvider(
         PostgresConnectionFactory(
             PostgresSettings(dsn=os.environ["RECONFORGE_POSTGRES_DSN"], require_tls=False)
         )
     )
     assert provider("migration-test") == MigrationStatus(
-        "0014_postgres_operations", "0014_postgres_operations", ()
+        "0015_postgres_idempotency", "0015_postgres_idempotency", ()
     )

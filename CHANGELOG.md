@@ -1,5 +1,7 @@
 # Changelog
 
+- Added a backend-neutral immutable object-store contract with a fail-closed offline local adapter, hardened S3 conditional writes and bounded verification, real MinIO retention/tamper tests, evidence-registry integration, and locked boto3 server support.
+
 - Added backend-aware operational diagnostics: SQLite remains `local_only`, PostgreSQL is reported accurately, tenant-scoped PostgreSQL job/error records match SQLite shapes, audit health uses the verified chain, and Alembic migration status is read without exposing connection settings to Application code.
 
 - Added a PostgreSQL adapter for the workspace/initial-period unit of work with forced tenant RLS, atomic workspace-period-audit persistence, concurrency-safe audit chaining, SQLite semantic parity, fail-closed rollback, immutable audit evidence, and Alembic downgrade/re-upgrade coverage.

@@ -62,6 +62,7 @@ duckdb = [
 ]
 server = [
   "alembic>=1.16",
+  "boto3>=1.43.56",
   "psycopg[binary]>=3.2",
   "redis>=6.4",
   "sqlalchemy>=2.0",

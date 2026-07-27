@@ -821,3 +821,10 @@
 - **Decision**: Add `is_local_only` to the operational repository port and support integer SQLite plus string Alembic revisions. PostgreSQL diagnostics use forced-RLS tables and the shared audit verifier.
 - **Reason**: Hard-coded `local_only=true` becomes false information as soon as the same Application service runs on PostgreSQL.
 - **Consequence**: E-097 preserves the response field while reporting it accurately and proves record-shape/RLS parity. It does not certify future diagnostic writers as redaction-complete.
+
+### D-094: Object identity is immutable across local and S3 adapters
+
+- **Decision**: Put evidence bytes behind one tenant-scoped protocol whose local and S3 adapters reject overwrite, bound reads and writes, verify checksum and tenant metadata, disable delete by default, and honor configured retention.
+- **Reason**: A provider-specific class or unchecked local path cannot provide a portable evidence boundary, and an ordinary S3 delete marker does not prove deletion of a retained version.
+- **Consequence**: E-098 closes P1-PLAT-005's bounded exit, including live MinIO object-lock behavior. Local two-file publication fails closed after interruption but is not pair-atomic or authenticated against a malicious local writer.
+- **ADR**: `docs/adr/0109-immutable-object-store-contract.md`

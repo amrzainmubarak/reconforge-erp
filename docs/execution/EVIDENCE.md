@@ -6945,3 +6945,35 @@ read-only diagnostic slice.
 | `git diff --check` | Pass |
 
 P1-PLAT-002 remains in progress for remaining supported repository boundaries.
+
+## E-098: Immutable local and S3-compatible object-store contract
+
+`ObjectStoreProtocol` now binds tenant-scoped keys, immutable put, verified
+get, and guarded delete. Local storage uses bounded sidecar manifests and
+rejects traversal, reserved names, links where supported, overwrite, tamper,
+oversize content, missing manifests, and unexpired retention. Evidence
+registration/verification runs end to end through that local adapter after the
+source file is removed. S3 uses conditional create, bounded reads, mandatory
+checksum/tenant metadata, and exact version deletion.
+
+Real MinIO tests prove tenant separation, immutable conflict, provider-side
+tamper detection, and governance-retained version deletion failure. The local
+MinIO endpoint is an explicit HTTP development fixture without KMS; production
+defaults remain TLS plus AES256. The server extra and universal lock now include
+boto3 1.43.56 and its four-package dependency expansion (107 policy packages).
+
+| Command | Result |
+| --- | --- |
+| local/fake object-store plus evidence focus | Pass; three environment branches skipped |
+| same focus against live MinIO standard and object-lock buckets | Pass; only Windows symlink privilege branch skipped |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 225 source files |
+| `python -m pytest` without live-service environment | 1,343 passed, 15 skipped, 7 expected warnings |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 677,473-byte wheel and 958,135-byte sdist |
+| exact uv 0.11.32 `lock --check`, hash-exported pip-audit 2.10.1, policy validation, and `git diff --check` | Pass; 107 policy packages, zero known findings, zero active exceptions |
+
+This proves the bounded adapter contract only. It does not prove local
+manifest authenticity, crash-atomic content/manifest pairing, WORM semantics
+for local files, replication, backup, malware scanning, authorized downloads,
+host-loss durability, supported throughput, compliance, certification, or
+production readiness.

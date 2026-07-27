@@ -316,9 +316,11 @@ tasks:
     priority: P1
     area: platform
     title: Object store abstraction
-    status: planned
+    status: completed
     depends_on: [P1-PLAT-001, P0-SEC-002]
     exit_evidence: Local and S3-compatible adapters pass retention, checksum, path, tenant, and failure contract tests.
+    completed_slices:
+      - E-098 closes the bounded adapter exit with one immutable protocol, local and S3 implementations, evidence-registry integration, size/path/tenant/checksum/failure contracts, and live MinIO conditional-write and object-lock retention proof. Local sidecars are fail-closed but neither keyed nor crash-atomic as a pair; WORM, replication, malware scanning, and hosted durability remain separate gates.
   - id: P1-PLAT-006
     priority: P1
     area: platform

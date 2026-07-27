@@ -7,7 +7,7 @@ import pytest
 
 from reconforge.db import connect, run_migrations
 from reconforge.db.backup import create_backup, restore_backup
-from reconforge.infrastructure.object_storage import StoredObject
+from reconforge.infrastructure.object_storage import LocalObjectStorageSettings, LocalObjectStore, StoredObject
 from reconforge.platform.common import PlatformError
 from reconforge.platform.evidence import (
     LOCAL_STORAGE_BACKEND,
@@ -91,6 +91,30 @@ def test_object_backed_evidence_is_registered_and_verified_without_local_fallbac
     assert stored_row["byte_size"] == len(expected_content)
     assert verification.ok is True
     assert store.put_calls == [("tenant-a", stored_row["storage_key"])]
+
+
+def test_local_object_store_satisfies_evidence_contract_end_to_end(tmp_path: Path) -> None:
+    db_path = tmp_path / "evidence-local-object.db"
+    source = tmp_path / "support.txt"
+    source.write_text("offline evidence\n", encoding="utf-8")
+    run_migrations(db_path)
+    store = LocalObjectStore(LocalObjectStorageSettings(root=(tmp_path / "objects").resolve()))
+
+    connection = connect(db_path, require_exists=True)
+    try:
+        registered = EvidenceRegistryService(connection).register(
+            source,
+            evidence_code="LOCAL-OBJECT-1",
+            storage_tenant_id="tenant-a",
+            object_store=store,
+        )
+        source.unlink()
+        verification = EvidenceRegistryService(connection).verify(str(registered["id"]), object_store=store)
+    finally:
+        connection.close()
+
+    assert registered["storage_backend"] == OBJECT_STORAGE_BACKEND
+    assert verification.ok is True
 
 
 def test_object_backed_evidence_is_tenant_keyed_and_tampering_is_visible(tmp_path: Path) -> None:

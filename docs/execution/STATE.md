@@ -184,3 +184,11 @@ unchanged. Live RLS, record-shape/count, audit-health, real Alembic status, and
 migration rollback pass. The clean PostgreSQL sweep now passes 123 tests.
 The non-live full suite passes 1,336 tests with thirteen live-service skips;
 Ruff, mypy over 225 source files, build, and diff checks pass.
+
+E-098 closes P1-PLAT-005. The evidence registry now accepts a backend-neutral
+immutable object contract implemented by local filesystem and S3-compatible
+adapters. The non-live suite passes 1,343 tests with fifteen live/environment
+skips; the live MinIO focus passes all object-store/evidence cases except the
+Windows symlink-privilege branch. Ruff, mypy over 225 source files, lock check,
+build, and diff checks pass. Local sidecars are bounded and fail closed, but
+are neither keyed against a malicious local writer nor crash-atomic as a pair.

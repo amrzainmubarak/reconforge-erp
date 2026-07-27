@@ -398,6 +398,23 @@ surfaces:
     limitations:
       - This call parses package-resource text already loaded by the currency-registry contract rather than an operator-selected filesystem path; duplicate keys and registry digest/schema invariants are enforced separately.
     next_action: Preserve package-resource digest/schema tests and reassess classification if runtime registry upload or replacement is introduced.
+  - id: FI-018
+    name: Local immutable-object sidecar manifest
+    module_ids: [platform.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/object_storage.py::LocalObjectStore.get_bytes
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-005]
+    test_evidence: [tests/test_object_storage_foundation.py, tests/test_evidence_object_storage.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - The sidecar is limited to 64 KiB and must match the schema marker, object key, byte size, checksum, and tenant metadata before content is returned.
+      - The checksum is not keyed; an attacker able to rewrite both files can forge the local pair, and a crash between two filesystem renames can leave a fail-closed incomplete pair.
+    next_action: Add authenticated manifests or an external integrity anchor when the threat model includes malicious local filesystem writers.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader
@@ -435,6 +452,11 @@ direct_tabular_parser_allowlist:
     surface_id: FI-012
     rationale: Client-pack CSV redaction performs a bounded duplicate-header preflight and then streams generated rows into a controlled temporary copy.
 direct_json_parser_allowlist:
+  - path: reconforge/infrastructure/object_storage.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-018
+    rationale: Parses only a bounded internal sidecar before closed field, checksum, key, size, and tenant verification.
   - path: reconforge/io/structured.py
     parser: json.loads
     call_count: 1

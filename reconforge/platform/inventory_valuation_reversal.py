@@ -3,13 +3,22 @@
 from __future__ import annotations
 
 import sqlite3
+import uuid
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from hashlib import sha256
 from typing import Any
 
+from reconforge.auth.rbac import same_actor
 from reconforge.domain.models import utc_now_text
-from reconforge.platform.common import PlatformError, audit, ensure_platform_schema, platform_id, require_permission
+from reconforge.platform.common import (
+    PlatformError,
+    append_outbox_event,
+    commit_audited,
+    ensure_platform_schema,
+    platform_id,
+    require_permission,
+)
 from reconforge.platform.inventory_valuation import INVENTORY_READ_PERMISSION
 from reconforge.platform.inventory_valuation_reversal_repository import (
     InventoryValuationReversalRepository,
@@ -64,9 +73,7 @@ class InventoryValuationReversalService:
         try:
             existing = {
                 str(row["name"])
-                for row in self.connection.execute(
-                    "SELECT name FROM sqlite_master WHERE type = 'table'"
-                ).fetchall()
+                for row in self.connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()
             }
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to inspect the valuation-reversal schema.") from exc
@@ -83,12 +90,8 @@ class InventoryValuationReversalService:
     ) -> dict[str, Any]:
         """Link an Approved valuation to an already-Posted exact opposite movement."""
 
-        actor_user = require_permission(
-            self.connection, actor_label=actor_label, permission=REVERSAL_MANAGE_PERMISSION
-        )
-        document_id = clean_text(
-            original_valuation_document_id, "Original valuation document ID"
-        )
+        actor_user = require_permission(self.connection, actor_label=actor_label, permission=REVERSAL_MANAGE_PERMISSION)
+        document_id = clean_text(original_valuation_document_id, "Original valuation document ID")
         movement_id = clean_text(reversal_movement_id, "Reversal movement ID")
         original = self._required(
             self.repository.original_document(document_id), "Original inventory valuation was not found."
@@ -99,9 +102,7 @@ class InventoryValuationReversalService:
             raise PlatformError("Approved valuation is missing its protected Finance Core entry.")
         if self.repository.active_reversal_for_document(document_id) is not None:
             raise PlatformError("This valuation already has an active reversal workflow.")
-        movement = self._required(
-            self.repository.movement(movement_id), "Reversal inventory movement was not found."
-        )
+        movement = self._required(self.repository.movement(movement_id), "Reversal inventory movement was not found.")
         self._validate_reversal_scope(original, movement)
         if self.repository.active_valuation_for_movement(movement_id) is not None:
             raise PlatformError("The reversal movement cannot also have a normal valuation document.")
@@ -130,22 +131,28 @@ class InventoryValuationReversalService:
         try:
             with self.repository.transaction():
                 self.repository.insert_reversal(record)
+                _finalize_reversal_event(
+                    self.connection,
+                    event_type="inventory.valuation_reversal.draft_created",
+                    aggregate_type="inventory_valuation_reversal",
+                    aggregate_id=reversal_id,
+                    payload={
+                        "reversal_number": number,
+                        "original_valuation_document_id": original["id"],
+                        "reversal_movement_id": movement["id"],
+                    },
+                    actor_label=actor_label,
+                    action="inventory_valuation_reversal_draft_created",
+                    metadata={
+                        "reversal_number": number,
+                        "original_valuation_document_id": original["id"],
+                        "reversal_movement_id": movement["id"],
+                    },
+                )
         except sqlite3.IntegrityError as exc:
             raise PlatformError("Reversal number, valuation, or movement is already assigned.") from exc
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to save the local valuation reversal Draft.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_valuation_reversal",
-            object_id=reversal_id,
-            action="inventory_valuation_reversal_draft_created",
-            metadata={
-                "reversal_number": number,
-                "original_valuation_document_id": original["id"],
-                "reversal_movement_id": movement["id"],
-            },
-        )
         return self.get_reversal(reversal_id, actor_label=actor_label)
 
     def approve_reversal(
@@ -176,7 +183,7 @@ class InventoryValuationReversalService:
                 reversal_number_value = str(reversal["reversal_number"])
                 if str(reversal["status"]) != "Draft":
                     raise PlatformError("Only Draft valuation reversals can be approved.")
-                if actor_user is not None and str(reversal["created_by"]) == actor_user.username:
+                if same_actor(reversal["created_by"], actor):
                     raise PlatformError("Segregation of duties prevents approving your own valuation reversal.")
                 original = self._required(
                     self.repository.original_document(str(reversal["original_valuation_document_id"])),
@@ -207,43 +214,57 @@ class InventoryValuationReversalService:
                 for effect in effects:
                     self.repository.insert_effect(effect)
                 for layer_id, balance in sorted(balances.items()):
-                    if self.repository.update_layer(
-                        layer_id,
-                        expected_quantity=balance["expected_quantity"],
-                        expected_value=balance["expected_value"],
-                        new_quantity=balance["new_quantity"],
-                        new_value=balance["new_value"],
-                    ) != 1:
+                    if (
+                        self.repository.update_layer(
+                            layer_id,
+                            expected_quantity=balance["expected_quantity"],
+                            expected_value=balance["expected_value"],
+                            new_quantity=balance["new_quantity"],
+                            new_value=balance["new_value"],
+                        )
+                        != 1
+                    ):
                         raise PlatformError("FIFO layer changed concurrently; reload the reversal and retry.")
-                if self.repository.approve_reversal(
-                    selected_id,
-                    actor=actor,
-                    timestamp=now,
-                    reason=approval_reason,
-                    total_value_minor=total_value_minor,
-                    finance_entry_id=finance_entry_id,
-                ) != 1:
+                if (
+                    self.repository.approve_reversal(
+                        selected_id,
+                        actor=actor,
+                        timestamp=now,
+                        reason=approval_reason,
+                        total_value_minor=total_value_minor,
+                        finance_entry_id=finance_entry_id,
+                    )
+                    != 1
+                ):
                     raise PlatformError("Valuation reversal changed concurrently; reload and retry.")
+                _finalize_reversal_event(
+                    self.connection,
+                    event_type="inventory.valuation_reversal.approved",
+                    aggregate_type="inventory_valuation_reversal",
+                    aggregate_id=selected_id,
+                    payload={
+                        "reversal_number": reversal_number_value,
+                        "effect_count": effect_count,
+                        "total_value_minor": total_value_minor,
+                        "finance_entry_id": finance_entry_id,
+                        "finance_entry_status": "Draft",
+                    },
+                    actor_label=actor_label,
+                    action="inventory_valuation_reversal_approved",
+                    metadata={
+                        "reversal_number": reversal_number_value,
+                        "effect_count": effect_count,
+                        "total_value_minor": total_value_minor,
+                        "finance_entry_id": finance_entry_id,
+                        "finance_entry_status": "Draft",
+                    },
+                )
         except PlatformError:
             raise
         except sqlite3.IntegrityError as exc:
             raise PlatformError("Unable to approve reversal because protected local evidence conflicts.") from exc
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to approve the local valuation reversal.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_valuation_reversal",
-            object_id=selected_id,
-            action="inventory_valuation_reversal_approved",
-            metadata={
-                "reversal_number": reversal_number_value,
-                "effect_count": effect_count,
-                "total_value_minor": total_value_minor,
-                "finance_entry_id": finance_entry_id,
-                "finance_entry_status": "Draft",
-            },
-        )
         return self.get_reversal(selected_id, actor_label=actor_label)
 
     def cancel_reversal(
@@ -255,9 +276,7 @@ class InventoryValuationReversalService:
     ) -> dict[str, Any]:
         """Cancel a Draft reversal without changing its independent movement."""
 
-        require_permission(
-            self.connection, actor_label=actor_label, permission=REVERSAL_MANAGE_PERMISSION
-        )
+        require_permission(self.connection, actor_label=actor_label, permission=REVERSAL_MANAGE_PERMISSION)
         selected_id = clean_text(reversal_id, "Valuation reversal ID")
         cancel_reason = clean_text(reason, "Cancellation reason", maximum=500)
         actor = clean_text(actor_label, "Actor label")
@@ -269,20 +288,20 @@ class InventoryValuationReversalService:
                 )
                 if str(reversal["status"]) != "Draft":
                     raise PlatformError("Only Draft valuation reversals can be cancelled.")
-                if self.repository.cancel_reversal(
-                    selected_id, actor=actor, timestamp=now, reason=cancel_reason
-                ) != 1:
+                if self.repository.cancel_reversal(selected_id, actor=actor, timestamp=now, reason=cancel_reason) != 1:
                     raise PlatformError("Valuation reversal changed concurrently; reload and retry.")
+                _finalize_reversal_event(
+                    self.connection,
+                    event_type="inventory.valuation_reversal.cancelled",
+                    aggregate_type="inventory_valuation_reversal",
+                    aggregate_id=selected_id,
+                    payload={"reason": cancel_reason},
+                    actor_label=actor_label,
+                    action="inventory_valuation_reversal_cancelled",
+                    metadata={"reason": cancel_reason},
+                )
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to cancel the local valuation reversal.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="inventory_valuation_reversal",
-            object_id=selected_id,
-            action="inventory_valuation_reversal_cancelled",
-            metadata={"reason": cancel_reason},
-        )
         return self.get_reversal(selected_id, actor_label=actor_label)
 
     def get_reversal(self, reversal_id: str, *, actor_label: str = "local-cli") -> dict[str, Any]:
@@ -329,9 +348,7 @@ class InventoryValuationReversalService:
         workspace_name = clean_text(workspace, "Workspace name")
         workspace_record = self.repository.workspace_by_name(workspace_name)
         try:
-            counts = (
-                self.repository.summary_counts(str(workspace_record["id"])) if workspace_record else {}
-            )
+            counts = self.repository.summary_counts(str(workspace_record["id"])) if workspace_record else {}
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to summarize local valuation reversals.") from exc
         return InventoryValuationReversalSummary(
@@ -343,9 +360,7 @@ class InventoryValuationReversalService:
             finance_drafts=counts.get("finance_drafts", 0),
         )
 
-    def snapshot(
-        self, *, workspace: str = "default", actor_label: str = "local-cli"
-    ) -> dict[str, Any]:
+    def snapshot(self, *, workspace: str = "default", actor_label: str = "local-cli") -> dict[str, Any]:
         """Return a bounded, path-free valuation-reversal contract."""
 
         return {
@@ -365,9 +380,7 @@ class InventoryValuationReversalService:
             ),
         }
 
-    def _validate_reversal_scope(
-        self, original: Mapping[str, object], movement: Mapping[str, object]
-    ) -> None:
+    def _validate_reversal_scope(self, original: Mapping[str, object], movement: Mapping[str, object]) -> None:
         if str(movement["id"]) == str(original["movement_id"]):
             raise PlatformError("The original movement cannot serve as its own compensating movement.")
         if str(movement["status"]) != "Posted":
@@ -389,9 +402,7 @@ class InventoryValuationReversalService:
         if str(movement["movement_type"]) != expected_type:
             raise PlatformError(f"Compensating movement type must be {expected_type}.")
 
-    def _validate_mirror_lines(
-        self, original: Mapping[str, object], movement: Mapping[str, object]
-    ) -> None:
+    def _validate_mirror_lines(self, original: Mapping[str, object], movement: Mapping[str, object]) -> None:
         original_lines = self.repository.movement_lines(str(original["movement_id"]))
         reversal_lines = self.repository.movement_lines(str(movement["id"]))
         if not original_lines or len(original_lines) != len(reversal_lines):
@@ -437,9 +448,8 @@ class InventoryValuationReversalService:
                 layer = line
                 current_quantity = int(layer["remaining_quantity_scaled"])
                 current_value = int(layer["remaining_value_minor"])
-                if (
-                    current_quantity != int(layer["original_quantity_scaled"])
-                    or current_value != int(layer["original_value_minor"])
+                if current_quantity != int(layer["original_quantity_scaled"]) or current_value != int(
+                    layer["original_value_minor"]
                 ):
                     raise PlatformError(
                         f"Inbound layer for original line {line['line_number']} is still consumed; "
@@ -482,9 +492,8 @@ class InventoryValuationReversalService:
                 )
                 balance["new_quantity"] += int(consumption["quantity_scaled"])
                 balance["new_value"] += int(consumption["value_minor"])
-                if (
-                    balance["new_quantity"] > int(consumption["original_quantity_scaled"])
-                    or balance["new_value"] > int(consumption["original_value_minor"])
+                if balance["new_quantity"] > int(consumption["original_quantity_scaled"]) or balance["new_value"] > int(
+                    consumption["original_value_minor"]
                 ):
                     raise PlatformError("Restoring the outbound valuation would overstate its FIFO layer.")
                 effects.append(
@@ -560,18 +569,14 @@ class InventoryValuationReversalService:
         self.repository.insert_finance_draft(entry, lines)
         return entry_id
 
-    def _public_reversal(
-        self, reversal: Mapping[str, object], *, include_effects: bool
-    ) -> dict[str, Any]:
+    def _public_reversal(self, reversal: Mapping[str, object], *, include_effects: bool) -> dict[str, Any]:
         result = dict(reversal)
         currency = self._required(
             self.repository.currency(str(result["currency_code"])),
             "Valuation reversal currency is unavailable.",
         )
         minor_units = int(currency["minor_units"])
-        result["total_value"] = minor_to_text(
-            int(str(result.pop("total_value_minor"))), minor_units
-        )
+        result["total_value"] = minor_to_text(int(str(result.pop("total_value_minor"))), minor_units)
         if "original_total_value_minor" in result:
             result["original_total_value"] = minor_to_text(
                 int(str(result.pop("original_total_value_minor"))), minor_units
@@ -609,3 +614,38 @@ class InventoryValuationReversalService:
         if record is None:
             raise PlatformError(message)
         return record
+
+
+def _finalize_reversal_event(
+    connection: sqlite3.Connection,
+    *,
+    event_type: str,
+    aggregate_type: str,
+    aggregate_id: str,
+    payload: dict[str, Any],
+    actor_label: str,
+    action: str,
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    """Commit reversal business writes only after outbox and audit evidence exist."""
+
+    try:
+        append_outbox_event(
+            connection,
+            event_id=f"OBX-{uuid.uuid4().hex}",
+            event_type=event_type,
+            aggregate_type=aggregate_type,
+            aggregate_id=aggregate_id,
+            payload=payload,
+        )
+        commit_audited(
+            connection,
+            actor_label=actor_label,
+            object_type=aggregate_type,
+            object_id=aggregate_id,
+            action=action,
+            metadata=metadata,
+        )
+    except (PlatformError, sqlite3.DatabaseError):
+        connection.rollback()
+        raise

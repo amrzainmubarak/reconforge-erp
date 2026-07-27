@@ -37,9 +37,10 @@ def ensure_workflow_schema(connection: sqlite3.Connection) -> None:
 class WorkflowRepository:
     """Repository for local workflow objects, templates, and events."""
 
-    def __init__(self, connection: sqlite3.Connection) -> None:
+    def __init__(self, connection: sqlite3.Connection, *, autocommit: bool = True) -> None:
         ensure_workflow_schema(connection)
         self.connection = connection
+        self.autocommit = autocommit
 
     def list_transitions(self, *, object_type: str, active_only: bool = True) -> list[WorkflowTransition]:
         query = "SELECT * FROM workflow_transitions WHERE object_type = ?"
@@ -80,15 +81,23 @@ class WorkflowRepository:
                     workflow_object.updated_at,
                 ),
             )
-            self.connection.commit()
+            if self.autocommit:
+                self.connection.commit()
         except sqlite3.IntegrityError as exc:
             raise WorkflowRepositoryError("Workflow object already exists.") from exc
         except sqlite3.DatabaseError as exc:
             raise WorkflowRepositoryError("Unable to create workflow object.") from exc
         return workflow_object
 
-    def update_status(self, *, workflow_object: WorkflowObject, status: str) -> WorkflowObject:
+    def update_status(
+        self,
+        *,
+        workflow_object: WorkflowObject,
+        status: str,
+        autocommit: bool | None = None,
+    ) -> WorkflowObject:
         updated_at = utc_now_text()
+        should_commit = self.autocommit if autocommit is None else autocommit
         try:
             self.connection.execute(
                 """
@@ -98,7 +107,8 @@ class WorkflowRepository:
                 """,
                 (status, updated_at, workflow_object.object_type, workflow_object.object_id),
             )
-            self.connection.commit()
+            if should_commit:
+                self.connection.commit()
         except sqlite3.DatabaseError as exc:
             raise WorkflowRepositoryError("Unable to update workflow object.") from exc
         return WorkflowObject(
@@ -119,6 +129,7 @@ class WorkflowRepository:
         actor_label: str,
         actor_user_id: str | None = None,
         reason: str = "",
+        autocommit: bool | None = None,
     ) -> WorkflowTransitionEvent:
         event = WorkflowTransitionEvent(
             workflow_object_id=workflow_object.id,
@@ -128,6 +139,7 @@ class WorkflowRepository:
             actor_label=actor_label,
             reason=reason,
         )
+        should_commit = self.autocommit if autocommit is None else autocommit
         try:
             self.connection.execute(
                 """
@@ -147,7 +159,8 @@ class WorkflowRepository:
                     event.created_at,
                 ),
             )
-            self.connection.commit()
+            if should_commit:
+                self.connection.commit()
         except sqlite3.DatabaseError as exc:
             raise WorkflowRepositoryError("Unable to record workflow transition event.") from exc
         return event

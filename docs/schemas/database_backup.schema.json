@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/database_backup.schema.json",
+  "title": "ReconForge local database backup v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "backup_format_version",
+    "created_at",
+    "schema_version",
+    "latest_supported_schema_version",
+    "privacy_warning",
+    "restore_sensitive_material",
+    "excluded_tables",
+    "tables"
+  ],
+  "properties": {
+    "backup_format_version": {"const": 1},
+    "created_at": {"type": "string", "minLength": 1},
+    "schema_version": {"type": "integer", "minimum": 1},
+    "latest_supported_schema_version": {"type": "integer", "minimum": 1},
+    "privacy_warning": {"type": "string", "minLength": 1},
+    "restore_sensitive_material": {"type": "string", "minLength": 1},
+    "excluded_tables": {
+      "type": "array",
+      "prefixItems": [{"const": "api_sessions"}],
+      "items": false,
+      "minItems": 1,
+      "maxItems": 1
+    },
+    "tables": {
+      "type": "object",
+      "propertyNames": {"pattern": "^[A-Z_a-z][A-Za-z0-9_]{0,127}$"},
+      "additionalProperties": {
+        "type": "array",
+        "maxItems": 250000,
+        "items": {"type": "object"}
+      }
+    }
+  }
+}

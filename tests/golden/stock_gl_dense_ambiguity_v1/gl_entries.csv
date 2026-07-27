@@ -1,0 +1,7 @@
+entry_id,date,journal,account_code,account_name,reference,source_document,debit,credit,amount,cost_center,work_order,created_by,currency
+GL-USD-1,2026-07-25,INV,1400,Inventory,REF-USD,JE-USD-1,100.00,0,100.00,WORKSHOP,WO-DENSE,golden-fixture,USD
+GL-USD-2,2026-07-25,INV,1400,Inventory,REF-USD,JE-USD-2,100.00,0,100.00,WORKSHOP,WO-DENSE,golden-fixture,USD
+GL-USD-3,2026-07-25,INV,1400,Inventory,REF-USD,JE-USD-3,100.00,0,100.00,WORKSHOP,WO-DENSE,golden-fixture,USD
+GL-JPY-1,2026-07-25,INV,1400,Inventory,REF-JPY,JE-JPY-1,5000,0,5000,WORKSHOP,WO-DENSE,golden-fixture,JPY
+GL-JPY-2,2026-07-25,INV,1400,Inventory,REF-JPY,JE-JPY-2,5000,0,5000,WORKSHOP,WO-DENSE,golden-fixture,JPY
+GL-EUR-UNIQUE,2026-07-25,INV,1400,Inventory,REF-EUR-UNIQUE,JE-EUR-1,42.00,0,42.00,WORKSHOP,WO-DENSE,golden-fixture,EUR

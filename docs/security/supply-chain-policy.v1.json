@@ -1,0 +1,101 @@
+{
+  "$schema": "../schemas/supply_chain_policy.schema.json",
+  "schema_version": 1,
+  "policy_id": "reconforge-supply-chain",
+  "effective_on": "2026-07-26",
+  "owner": "security-maintainers",
+  "review_cadence_days": 30,
+  "python_resolution": {
+    "manifest": "pyproject.toml",
+    "lock": "uv.lock",
+    "manager": "uv",
+    "manager_version": "0.11.32",
+    "manager_commit": "3010295ae7ff572de459987ad70db315a62ecd61",
+    "linux_x86_64_archive_sha256": "aab924fd522efd06f1c5f3b93a243864fc453132c94b2dc49f1371b528a4b967",
+    "windows_x86_64_archive_sha256": "acfde570451cfdb8689fa159a138ee805ba4e241c466432750302c86254b0984",
+    "exclude_newer": "2026-07-26T00:00:00Z",
+    "supported_python": [
+      "3.11",
+      "3.12"
+    ],
+    "required_profiles": [
+      "runtime",
+      "dev",
+      "docs",
+      "duckdb",
+      "server"
+    ]
+  },
+  "javascript_resolution": {
+    "manifest": "apps/web/package.json",
+    "lock": "apps/web/package-lock.json",
+    "install_command": "npm --prefix apps/web ci",
+    "audit_threshold": "high",
+    "known_integrity_gap_entries": 0
+  },
+  "container_resolution": {
+    "dockerfile": "Dockerfile",
+    "base_image": "python:3.11-slim@sha256:a3ab0b966bc4e91546a033e22093cb840908979487a9fc0e6e38295747e49ac0",
+    "dependency_command": "uv sync --locked --no-dev --no-editable --python 3.11 --link-mode copy"
+  },
+  "secret_scanning": {
+    "config": ".gitleaks.toml",
+    "tool": "gitleaks",
+    "version": "8.30.1",
+    "commit": "83d9cd684c87d95d656c1458ef04895a7f1cbd8e",
+    "linux_x86_64_archive_sha256": "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
+    "windows_x86_64_archive_sha256": "d29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e",
+    "required_scopes": [
+      "full-git-history",
+      "checked-out-tree"
+    ],
+    "redaction_percent": 100
+  },
+  "dependency_audits": {
+    "python": {
+      "tool": "pip-audit",
+      "locked_extra": "dev",
+      "policy": "fail-on-every-known-advisory-without-an-active-exact-exception"
+    },
+    "javascript": {
+      "tool": "npm-audit",
+      "policy": "fail-on-high-or-critical-without-an-active-exact-exception"
+    },
+    "scanner_error_policy": "fail-closed"
+  },
+  "updates": {
+    "automated_ecosystems": [
+      "pip",
+      "npm",
+      "docker",
+      "github-actions"
+    ],
+    "automated_cadence": "weekly",
+    "lock_review_cadence_days": 30,
+    "emergency_review_trigger": "new-known-vulnerability-or-confirmed-secret"
+  },
+  "exceptions": {
+    "registry": "docs/security/supply-chain-exceptions.v1.json",
+    "max_active_days": 30,
+    "minimum_distinct_approvers": 2,
+    "critical_release_exception_allowed": false,
+    "expired_or_revoked_entries_exempt": false
+  },
+  "release_gate": {
+    "workflow": ".github/workflows/release.yml",
+    "must_run_before_external_write": true,
+    "required_checks": [
+      "policy-validation",
+      "lock-current",
+      "python-audit",
+      "javascript-audit",
+      "git-secret-scan",
+      "tree-secret-scan"
+    ]
+  },
+  "limitations": [
+    "A lock or clean vulnerability scan does not establish package safety, provenance, reachability, or license suitability.",
+    "The npm lock records registry resolution and SRI for all 209 non-root entries; registry availability, package provenance, and package safety remain separate trust concerns.",
+    "Local scans do not prove that hosted branch protection or release gates executed."
+  ]
+}

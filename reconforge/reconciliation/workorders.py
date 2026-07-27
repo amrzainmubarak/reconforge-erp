@@ -3,11 +3,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 
 import pandas as pd
 
 from reconforge.config import ReconForgeConfig
 from reconforge.reconciliation.risk import assess_risk
+from reconforge.utils.money import (
+    CurrencyRegistry,
+    InvalidAmountError,
+    parse_amount,
+    parse_amount_for_currency_precision,
+)
 
 
 @dataclass(frozen=True)
@@ -39,19 +46,39 @@ def _add_risk(frame: pd.DataFrame, exception_type: str, config: ReconForgeConfig
     enriched = frame.copy()
     scores: list[int] = []
     levels: list[str] = []
+    amount_status: list[str] = []
     for _, row in enriched.iterrows():
-        amount = float(row.get(amount_column, 0.0) or 0.0) if amount_column else 0.0
+        amount: Decimal | None = None
+        status = "not_applicable"
+        if amount_column:
+            try:
+                currency_code = str(row.get("currency") or "USD").strip().upper() or "USD"
+                precision = CurrencyRegistry.get_precision(currency_code)
+                amount = parse_amount_for_currency_precision(row.get(amount_column), precision=precision)
+                status = "valid"
+            except InvalidAmountError:
+                status = "missing_or_invalid"
         assessment = assess_risk(exception_type, config, amount=amount)
         scores.append(assessment.score)
         levels.append(assessment.level)
+        amount_status.append(status)
     enriched["exception_type"] = exception_type
     enriched["risk_score"] = scores
     enriched["risk_level"] = levels
+    if amount_column:
+        enriched["amount_parse_status"] = amount_status
     return enriched
 
 
 def _valid_work_orders(work_orders: pd.DataFrame) -> set[str]:
     return set(work_orders["work_order"].astype(str).str.strip())
+
+
+def _to_decimal_or_none(value: object) -> Decimal | None:
+    try:
+        return parse_amount(value)
+    except InvalidAmountError:
+        return None
 
 
 def find_parts_issued_without_work_order(stock_moves: pd.DataFrame, work_orders: pd.DataFrame, config: ReconForgeConfig) -> pd.DataFrame:
@@ -83,8 +110,10 @@ def find_work_orders_with_cost_but_no_invoice(work_orders: pd.DataFrame, invoice
     invoice_status = invoices[["work_order", "status", "invoice_amount"]].copy()
     invoice_status["is_valid_invoice"] = invoice_status["status"].map(_clean_status).isin(posted_status)
     valid_invoiced = set(invoice_status[invoice_status["is_valid_invoice"]]["work_order"].astype(str))
-    candidates = work_orders[work_orders["actual_cost"].fillna(0).gt(0)].copy()
-    return candidates[~candidates["work_order"].astype(str).isin(valid_invoiced)].copy()
+    actual_cost = pd.Series([_to_decimal_or_none(value) for value in work_orders["actual_cost"]], index=work_orders.index)
+    positive_cost = actual_cost.map(lambda value: value is not None and value > Decimal("0"))
+    missing_or_invalid_cost = actual_cost.isna()
+    return work_orders[(positive_cost | missing_or_invalid_cost) & ~work_orders["work_order"].astype(str).isin(valid_invoiced)].copy()
 
 
 def find_direct_purchase_fitting_risk(stock_moves: pd.DataFrame, purchase_orders: pd.DataFrame, config: ReconForgeConfig) -> pd.DataFrame:

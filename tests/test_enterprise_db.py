@@ -6,6 +6,7 @@ from typer.testing import CliRunner
 
 from reconforge.cli import app
 from reconforge.db import connect, database_status, run_migrations
+from reconforge.db.migrations import MIGRATIONS
 from reconforge.domain.repositories import PeriodRepository, WorkspaceRepository
 
 runner = CliRunner()
@@ -17,9 +18,10 @@ def test_db_init_creates_expected_schema_and_is_idempotent(tmp_path: Path) -> No
     first = run_migrations(db_path)
     second = run_migrations(db_path)
 
-    assert first.current_version == 12
-    assert first.applied_versions == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-    assert second.current_version == 12
+    latest = MIGRATIONS[-1].version
+    assert first.current_version == latest
+    assert first.applied_versions == list(range(1, latest + 1))
+    assert second.current_version == latest
     assert second.applied_versions == []
 
     connection = connect(db_path, require_exists=True)
@@ -52,6 +54,7 @@ def test_db_init_creates_expected_schema_and_is_idempotent(tmp_path: Path) -> No
         "metric_snapshots",
         "audit_events",
         "audit_ledger_state",
+        "outbox_events",
         "currencies",
         "branches",
         "charts_of_accounts",
@@ -77,8 +80,8 @@ def test_db_status_reports_pending_and_current_versions(tmp_path: Path) -> None:
 
     status = database_status(db_path)
 
-    assert status.current_version == 12
-    assert status.latest_version == 12
+    assert status.current_version == MIGRATIONS[-1].version
+    assert status.latest_version == MIGRATIONS[-1].version
     assert status.pending_versions == []
 
 

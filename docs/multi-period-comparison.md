@@ -34,6 +34,22 @@ If `review_state.json` exists in a period folder, the comparison includes review
 
 The workbook includes trend sheets for period counts, review progress, and top recurring themes where available.
 
+Current CLI output uses `strict-financial-input-v2`. Exception CSV fields stay
+as text until Decimal validation, so binary floating-point inference cannot
+change a comparison decision. The workbook records the policy and decision
+digest in `Report Parameters`; HTML and Markdown also display the policy.
+
+The current JSON contract is schema v2. It records the comparison and rounding
+policy, sorted SHA-256/byte fingerprints for recognized input CSVs and
+`review_state.json`, a path-independent `decision_digest`, and a complete
+`artifact_digest`. Historical unversioned JSON remains readable as v1 but is
+reported as `legacy-unverified`; it has no policy or input provenance.
+
+Python callers can use `read_period_comparison` to read v1/v2 and
+`verify_period_comparison_payload` to verify v2. Passing the original period
+paths to the verifier additionally rechecks their current bytes against the
+recorded input fingerprints.
+
 ## Categories
 
 - New exceptions: present in the final period and absent from earlier periods.
@@ -60,9 +76,21 @@ ReconForge uses `exception_id` when it appears to be a stable business identifie
 
 When a stable ID is unavailable, ReconForge creates a deterministic fallback fingerprint from available business fields such as source file, exception type, rule/control ID, reference, source document, work order, product/item/customer, amount, and date.
 
+The current strict fallback rounds valid amounts to two fractional digits with
+`ROUND_HALF_UP` for compatibility with the historical comparison rule. Missing,
+malformed, and valid-zero amounts have distinct fingerprint values. The direct
+Python API defaults to the explicit legacy-v1 reader during its compatibility
+window; current CLI and demo calls select strict v2 explicitly.
+
 ## Limitations
 
 - The report does not infer financial savings.
 - Fallback matching can be imperfect if references or amounts change between periods.
 - The command compares generated local outputs; it does not run reconciliation for each period automatically.
 - Review completion trends depend on local `review_state.json` files being present and aligned with generated exceptions.
+- The input and artifact hashes provide local integrity checks only. They are
+  not signatures, audit opinions, compliance certifications, or proof that a
+  source system is authentic.
+- Currency-specific comparison identity is not yet implemented; callers should
+  not interpret the two-fractional-digit fingerprint rule as a universal
+  currency precision policy.

@@ -4,23 +4,24 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-from reconforge.db.exporter import checksum_file
 from reconforge.domain.models import utc_now_text
 from reconforge.platform.common import (
     PlatformError,
-    audit,
+    append_outbox_event,
+    commit_audited,
     ensure_platform_schema,
     ensure_workspace,
     normalize_key,
     normalize_text,
+    parse_financial_amount,
     platform_id,
-    read_local_records,
+    read_local_record_document,
     require_permission,
     rows_to_dicts,
-    to_float,
 )
 from reconforge.platform.exceptions import ExceptionQueueService
 
@@ -51,11 +52,19 @@ class IntercompanyService:
         """Import local intercompany transactions."""
 
         require_permission(self.connection, actor_label=actor_label, permission="intercompany.manage")
-        source_path, records = read_local_records(input_path)
+        document = read_local_record_document(input_path)
+        source_path = document.source_path
+        records = document.records
         if not records:
             raise PlatformError("Intercompany input did not contain any records.")
         workspace_id = ensure_workspace(self.connection, workspace)
-        source_checksum = checksum_file(source_path)
+        source_checksum = document.checksum_sha256
+        source_metadata = {
+            "source_file": source_path.name,
+            "source_checksum_sha256": source_checksum,
+            "source_size_bytes": document.size_bytes,
+            "ingress_profile": document.profile_id,
+        }
         now = utc_now_text()
         imported = 0
         try:
@@ -64,14 +73,15 @@ class IntercompanyService:
                 if not transaction_id:
                     transaction_id = platform_id("ICREF", source_checksum, index)
                 row_id = platform_id("IC", workspace_id, transaction_id)
+                amount = _amount(record.get("amount"), field=f"intercompany row {index} amount")
                 self.connection.execute(
                     """
                     INSERT INTO intercompany_transactions (
                         id, workspace_id, transaction_id, period_name, entity_code,
-                        counterparty_code, posting_date, amount, currency, reference,
+                        counterparty_code, posting_date, amount, amount_decimal, currency, reference,
                         source_path, imported_at
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(workspace_id, transaction_id)
                     DO UPDATE SET
                         period_name = excluded.period_name,
@@ -79,6 +89,7 @@ class IntercompanyService:
                         counterparty_code = excluded.counterparty_code,
                         posting_date = excluded.posting_date,
                         amount = excluded.amount,
+                        amount_decimal = excluded.amount_decimal,
                         currency = excluded.currency,
                         reference = excluded.reference,
                         source_path = excluded.source_path,
@@ -92,7 +103,8 @@ class IntercompanyService:
                         normalize_key(record.get("entity") or record.get("entity_code"), default="local"),
                         normalize_key(record.get("counterparty") or record.get("counterparty_code"), default="unknown"),
                         normalize_key(record.get("posting_date") or record.get("date"), default=""),
-                        to_float(record.get("amount")),
+                        str(amount),
+                        _decimal_text(amount),
                         normalize_key(record.get("currency"), default="LOCAL"),
                         normalize_text(record.get("reference") or record.get("ref")),
                         source_path.name,
@@ -100,17 +112,24 @@ class IntercompanyService:
                     ),
                 )
                 imported += 1
-            self.connection.commit()
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to import intercompany transactions.") from exc
-        audit(
+        append_outbox_event(
+            self.connection,
+            event_id=platform_id("OBX", "intercompany_import", workspace_id, source_checksum),
+            event_type="intercompany.imported",
+            aggregate_type="intercompany_import",
+            aggregate_id=source_checksum,
+            payload={"workspace_id": workspace_id, **source_metadata, "imported_rows": imported},
+        )
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="intercompany",
             object_id="import",
             action="intercompany_imported",
-            metadata={"source_file": source_path.name, "imported_rows": imported},
+            metadata={**source_metadata, "imported_rows": imported},
         )
         return IntercompanyImportResult(source_path=source_path, imported_rows=imported)
 
@@ -119,12 +138,13 @@ class IntercompanyService:
         *,
         workspace: str = "default",
         period_name: str = "",
-        tolerance: float = 0.01,
+        tolerance: object = Decimal("0.01"),
         actor_label: str = "local-cli",
     ) -> int:
         """Create intercompany cases for imbalances and unmatched counterparty rows."""
 
         require_permission(self.connection, actor_label=actor_label, permission="intercompany.manage")
+        tolerance_amount = _non_negative_amount(tolerance, field="intercompany tolerance")
         workspace_id = ensure_workspace(self.connection, workspace)
         if period_name:
             rows = self.connection.execute(
@@ -140,30 +160,36 @@ class IntercompanyService:
         for row in rows:
             key = (str(row["period_name"]), str(row["reference"]), str(row["currency"]))
             grouped.setdefault(key, []).append(row)
-        queue = ExceptionQueueService(self.connection)
+        queue = ExceptionQueueService(self.connection, autocommit=False)
         case_count = 0
         now = utc_now_text()
         for (period, reference, currency), group in grouped.items():
             if not reference:
                 continue
-            imbalance = round(sum(float(row["amount"]) for row in group), 2)
-            if abs(imbalance) <= tolerance and len(group) >= 2:
+            imbalance = sum(
+                (_amount(row["amount_decimal"], field="intercompany amount") for row in group),
+                Decimal("0"),
+            )
+            if abs(imbalance) <= tolerance_amount and len(group) >= 2:
                 continue
             first = group[0]
-            case_id = platform_id("ICC", workspace_id, period, str(first["entity_code"]), str(first["counterparty_code"]), reference)
+            case_id = platform_id(
+                "ICC", workspace_id, period, str(first["entity_code"]), str(first["counterparty_code"]), reference
+            )
             status = "Open"
             try:
                 self.connection.execute(
                     """
                     INSERT INTO intercompany_cases (
                         id, workspace_id, period_name, entity_code, counterparty_code,
-                        reference, imbalance_amount, currency, status, settlement_status,
+                        reference, imbalance_amount, imbalance_amount_decimal, currency, status, settlement_status,
                         aging_days, created_at, updated_at
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Open', 0, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Open', 0, ?, ?)
                     ON CONFLICT(workspace_id, period_name, entity_code, counterparty_code, reference)
                     DO UPDATE SET
                         imbalance_amount = excluded.imbalance_amount,
+                        imbalance_amount_decimal = excluded.imbalance_amount_decimal,
                         currency = excluded.currency,
                         status = excluded.status,
                         updated_at = excluded.updated_at
@@ -175,7 +201,8 @@ class IntercompanyService:
                         str(first["entity_code"]),
                         str(first["counterparty_code"]),
                         reference,
-                        imbalance,
+                        str(imbalance),
+                        _decimal_text(imbalance),
                         currency,
                         status,
                         now,
@@ -191,18 +218,25 @@ class IntercompanyService:
                 workspace=workspace,
                 period_name=period,
                 entity_code=str(first["entity_code"]),
-                risk_rating="high" if abs(imbalance) > tolerance else "medium",
+                risk_rating="high" if abs(imbalance) > tolerance_amount else "medium",
                 actor_label=actor_label,
             )
             case_count += 1
-        self.connection.commit()
-        audit(
+        append_outbox_event(
+            self.connection,
+            event_id=platform_id("OBX", "intercompany_match", workspace_id, period_name, now),
+            event_type="intercompany.matched",
+            aggregate_type="intercompany_match",
+            aggregate_id=platform_id("ICM", workspace_id, period_name),
+            payload={"workspace_id": workspace_id, "period": period_name, "case_count": case_count},
+        )
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="intercompany",
             object_id="match",
             action="intercompany_matched",
-            metadata={"period": period_name, "case_count": case_count, "tolerance": tolerance},
+            metadata={"period": period_name, "case_count": case_count, "tolerance": str(tolerance_amount)},
         )
         return case_count
 
@@ -228,10 +262,18 @@ class IntercompanyService:
                 """,
                 (normalize_key(settlement_status, default="Settled"), dispute_owner, evidence_note, now, case_id),
             )
-            self.connection.commit()
         except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
             raise PlatformError("Unable to update intercompany case.") from exc
-        audit(
+        append_outbox_event(
+            self.connection,
+            event_id=platform_id("OBX", "intercompany_settle", case_id, now),
+            event_type="intercompany.case_settled",
+            aggregate_type="intercompany_case",
+            aggregate_id=case_id,
+            payload={"case_id": case_id, "settlement_status": settlement_status},
+        )
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="intercompany_case",
@@ -260,3 +302,21 @@ class IntercompanyService:
         if row is None:
             raise PlatformError("Intercompany case not found.")
         return dict(row)
+
+
+def _amount(value: object, *, field: str) -> Decimal:
+    return parse_financial_amount(value, field=field)
+
+
+def _non_negative_amount(value: object, *, field: str) -> Decimal:
+    parsed = _amount(value, field=field)
+    if parsed < 0:
+        raise PlatformError(f"Financial amount in field '{field}' cannot be negative.")
+    return parsed
+
+
+def _decimal_text(value: Decimal) -> str:
+    normalized = value.normalize()
+    if normalized == 0:
+        return "0"
+    return format(normalized, "f")

@@ -60,9 +60,11 @@ This questionnaire summarizes the current ReconForge ERP security posture for lo
 | Area | Status | Notes |
 | --- | --- | --- |
 | Ruff, mypy, pytest gates | Implemented | Required local quality commands are documented. |
-| Bandit and pip-audit checks | Implemented | Security checks are documented for release and PR review. |
+| Bandit and locked dependency audit definitions | Partial | Local Python 3.11 all-extra and npm lock audits pass; hosted Python 3.11/3.12 and release-gate execution are not yet evidenced. |
+| Secret scanning | Partial | A checksum-verified Gitleaks binary passes all 69 commits and the checked tree with redacted output and bounded generated-path exclusions; no hosted/branch-protection execution is evidenced. |
+| Dependency exceptions and updates | Partial | Closed 30-day/two-approver/no-self-approval contracts and weekly pip/npm/Docker/Actions update definitions exist with zero active exceptions; organizational operation is not proven. |
 | CodeQL workflow | Implemented | Repository workflow support exists where configured. |
-| SBOM workflow | Implemented | SBOM workflow support exists for release/manual workflow contexts. |
+| Per-artifact SBOM | Partial | The tag-only candidate definition binds CycloneDX 1.7 to source, wheel, sdist, and image subjects; local package/source fixtures pass, but no hosted image scan or signed release result exists. |
 | Docker build workflow | Implemented | Docker build support is documented. |
 | Docker runtime verification | Partial | Only claim runtime verification after documented Docker build/run commands pass in a live Docker environment. |
 

@@ -11,6 +11,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from reconforge.domain.models import AuditEventReference, utc_now_text
+from reconforge.io.persisted import (
+    PersistedJsonError,
+    decode_audit_metadata,
+    encode_audit_metadata,
+)
 
 GENESIS_AUDIT_HASH = "0000000000000000000000000000000000000000000000000000000000000000"
 
@@ -46,17 +51,16 @@ def _require_text(value: str, label: str) -> str:
 
 def _metadata_to_json(metadata: dict[str, Any] | None) -> str:
     try:
-        return json.dumps(metadata or {}, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-    except (TypeError, ValueError) as exc:
+        return encode_audit_metadata(metadata).text
+    except PersistedJsonError as exc:
         raise AuditLedgerError("Audit event metadata must be JSON-serializable.") from exc
 
 
 def _metadata_from_json(value: str) -> dict[str, Any]:
     try:
-        raw = json.loads(value)
-    except json.JSONDecodeError:
-        return {"invalid_metadata_json": True}
-    return raw if isinstance(raw, dict) else {"metadata_value": raw}
+        return decode_audit_metadata(value).payload
+    except PersistedJsonError as exc:
+        raise AuditLedgerError("Stored audit event metadata is invalid.") from exc
 
 
 def _event_hash_payload(
@@ -153,8 +157,10 @@ def append_audit_event(
     event_id = f"AE-{uuid.uuid4().hex}"
     created_at = utc_now_text()
 
+    owns_transaction = not connection.in_transaction
     try:
-        connection.execute("BEGIN IMMEDIATE")
+        if owns_transaction:
+            connection.execute("BEGIN IMMEDIATE")
         state = connection.execute(
             "SELECT last_sequence, last_event_hash FROM audit_ledger_state WHERE id = 1",
         ).fetchone()
@@ -205,12 +211,15 @@ def append_audit_event(
             "UPDATE audit_ledger_state SET last_sequence = ?, last_event_hash = ?, updated_at = ? WHERE id = 1",
             (sequence, event_hash, created_at),
         )
-        connection.commit()
+        if owns_transaction:
+            connection.commit()
     except AuditLedgerError:
-        connection.rollback()
+        if owns_transaction:
+            connection.rollback()
         raise
     except sqlite3.DatabaseError as exc:
-        connection.rollback()
+        if owns_transaction:
+            connection.rollback()
         raise AuditLedgerError("Unable to append audit event. Run 'reconforge db init' and retry.") from exc
 
     return AuditEventReference(
@@ -261,6 +270,10 @@ def verify_audit_events(connection: sqlite3.Connection) -> AuditVerificationResu
     expected_previous_hash = GENESIS_AUDIT_HASH
     for row in rows:
         sequence = int(row["sequence"])
+        try:
+            decode_audit_metadata(str(row["metadata_json"]))
+        except PersistedJsonError:
+            issues.append(AuditVerificationIssue(sequence=sequence, message="Audit event metadata is invalid."))
         if sequence != expected_sequence:
             issues.append(AuditVerificationIssue(sequence=sequence, message="Audit event sequence is not contiguous."))
         previous_hash = str(row["previous_hash"])

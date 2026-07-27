@@ -277,8 +277,13 @@ python -m ruff check .
 python -m mypy reconforge
 python -m pytest
 python -m bandit -q -r reconforge
-pip-audit -r requirements.txt
+uv lock --check
+python .github/scripts/validate_supply_chain_policy.py --project-root .
 ```
+
+The security workflow exports all Python extras from `uv.lock` with hashes and
+runs pip-audit under Python 3.11/3.12; npm and secret gates are defined in the
+[supply-chain policy](../security/supply-chain-policy.md).
 
 Modern Studio:
 

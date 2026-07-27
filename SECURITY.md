@@ -67,11 +67,13 @@ The repository includes:
 
 - Ruff and Mypy checks.
 - Pytest coverage.
-- Bandit and pip-audit security workflow.
+- Bandit plus locked Python/server and npm audit definitions on change and schedule.
 - CodeQL workflow for supported GitHub environments.
 - OpenSSF Scorecard workflow on `main`/`master` pushes, schedule, and manual dispatch as a repository security maturity check.
-- CycloneDX SBOM workflow for Python dependency visibility on manual runs and release tags.
-- Dependabot configuration for Python and GitHub Actions.
+- Release-integrated, exact-subject CycloneDX SBOM definitions for source, wheel, sdist, and image candidates.
+- Checksum-pinned, redacted Gitleaks definitions for full history and the checked tree.
+- Closed dependency/secret policy and bounded exception registry with fail-closed pre-registry release gates.
+- Weekly Dependabot configuration for Python, npm, Docker, and GitHub Actions.
 - Pre-commit hooks for formatting and basic file hygiene.
 
-Security tooling supports maintainers, but it does not replace careful review of file handling, report output, export-profile logic, and user-supplied data. Scorecard results and SBOM artifacts are visibility aids, not guarantees, certifications, or signed release attestations.
+Security tooling supports maintainers, but it does not replace careful review of file handling, report output, export-profile logic, dependencies, credentials, and user-supplied data. Local scans and workflow definitions are visibility aids, not proof of hosted enforcement, package safety, certification, or a signed release.

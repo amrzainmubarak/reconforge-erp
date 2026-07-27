@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/anonymization_manifest.schema.json",
+  "title": "ReconForge Anonymization Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "algorithm_version",
+    "prng",
+    "profile",
+    "mask_amounts",
+    "amount_noise_percent",
+    "amount_factor_scale",
+    "amount_factor_scope",
+    "amount_rounding",
+    "preserve_dates",
+    "date_shift_days",
+    "seed_fingerprint",
+    "policy_digest_algorithm",
+    "policy_digest",
+    "source_files",
+    "outputs",
+    "private_mapping_exported",
+    "privacy_boundary",
+    "manifest_digest_algorithm",
+    "manifest_digest"
+  ],
+  "properties": {
+    "schema_version": {"enum": [1, 2]},
+    "algorithm_version": {"const": "exact-global-decimal-noise-v1"},
+    "prng": {"const": "python-random-mt19937-randint"},
+    "profile": {"enum": ["consulting-safe", "public-demo"]},
+    "mask_amounts": {"type": "boolean"},
+    "amount_noise_percent": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]*[1-9])?$"
+    },
+    "amount_factor_scale": {"const": 4},
+    "amount_factor_scope": {"const": "all-amount-columns"},
+    "amount_rounding": {"const": "ROUND_HALF_UP_SOURCE_SCALE"},
+    "financial_input_policy": {
+      "enum": ["legacy-financial-input-v1", "strict-financial-input-v2"]
+    },
+    "preserve_dates": {"type": "boolean"},
+    "date_shift_days": {"type": "integer"},
+    "seed_fingerprint": {"$ref": "#/$defs/sha256"},
+    "policy_digest_algorithm": {"const": "sha256"},
+    "policy_digest": {"$ref": "#/$defs/sha256"},
+    "source_files": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "outputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "bytes", "sha256"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1, "pattern": "^[^/\\\\]+$"},
+          "bytes": {"type": "integer", "minimum": 0},
+          "sha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    "private_mapping_exported": {"type": "boolean"},
+    "privacy_boundary": {
+      "const": "Risk-reduction aid only: review every output before sharing; amount noise is deterministic and reversible, and free-text or unclassified fields may remain sensitive."
+    },
+    "manifest_digest_algorithm": {"const": "sha256"},
+    "manifest_digest": {"$ref": "#/$defs/sha256"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"schema_version": {"const": 1}}, "required": ["schema_version"]},
+      "then": {"not": {"required": ["financial_input_policy"]}}
+    },
+    {
+      "if": {"properties": {"schema_version": {"const": 2}}, "required": ["schema_version"]},
+      "then": {"required": ["financial_input_policy"]}
+    }
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

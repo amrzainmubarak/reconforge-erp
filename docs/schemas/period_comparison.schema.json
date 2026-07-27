@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/period_comparison.schema.json",
+  "title": "ReconForge Period Comparison",
+  "type": "object",
+  "oneOf": [
+    {"$ref": "#/$defs/legacy_v1"},
+    {"$ref": "#/$defs/current_v2"}
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "records": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "trend": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["periods", "chart_data", "top_recurring_themes"],
+      "properties": {
+        "periods": {"$ref": "#/$defs/records"},
+        "chart_data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "labels",
+            "new",
+            "recurring",
+            "resolved",
+            "high_or_critical",
+            "review_completion_percent",
+            "accepted_risk",
+            "escalated"
+          ],
+          "properties": {
+            "labels": {"type": "array"},
+            "new": {"type": "array"},
+            "recurring": {"type": "array"},
+            "resolved": {"type": "array"},
+            "high_or_critical": {"type": "array"},
+            "review_completion_percent": {"type": "array"},
+            "accepted_risk": {"type": "array"},
+            "escalated": {"type": "array"}
+          }
+        },
+        "top_recurring_themes": {"$ref": "#/$defs/records"}
+      }
+    },
+    "legacy_v1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "periods",
+        "summary",
+        "period_counts",
+        "trend",
+        "new_exceptions",
+        "recurring_exceptions",
+        "resolved_exceptions",
+        "escalated_exceptions",
+        "accepted_risk_items"
+      ],
+      "not": {"required": ["schema_version"]},
+      "properties": {
+        "periods": {"type": "array", "minItems": 2, "items": {"type": "string"}},
+        "summary": {"$ref": "#/$defs/records"},
+        "period_counts": {"$ref": "#/$defs/records"},
+        "trend": {"$ref": "#/$defs/trend"},
+        "new_exceptions": {"$ref": "#/$defs/records"},
+        "recurring_exceptions": {"$ref": "#/$defs/records"},
+        "resolved_exceptions": {"$ref": "#/$defs/records"},
+        "escalated_exceptions": {"$ref": "#/$defs/records"},
+        "accepted_risk_items": {"$ref": "#/$defs/records"}
+      }
+    },
+    "current_v2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "artifact_type",
+        "financial_input_policy",
+        "comparison_policy",
+        "input_periods",
+        "decision_digest",
+        "artifact_digest",
+        "integrity_boundary",
+        "periods",
+        "summary",
+        "period_counts",
+        "trend",
+        "new_exceptions",
+        "recurring_exceptions",
+        "resolved_exceptions",
+        "escalated_exceptions",
+        "accepted_risk_items"
+      ],
+      "properties": {
+        "schema_version": {"const": 2},
+        "artifact_type": {"const": "reconforge-period-comparison"},
+        "financial_input_policy": {
+          "enum": ["legacy-financial-input-v1", "strict-financial-input-v2"]
+        },
+        "comparison_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "algorithm_version",
+            "amount_rounding_policy",
+            "amount_fractional_digits",
+            "invalid_amount_policy"
+          ],
+          "properties": {
+            "algorithm_version": {"const": "period-exception-fingerprint-v2"},
+            "amount_rounding_policy": {"const": "ROUND_HALF_UP"},
+            "amount_fractional_digits": {"const": 2},
+            "invalid_amount_policy": {
+              "enum": ["legacy-zero-v1", "explicit-invalid-or-missing-v2"]
+            }
+          }
+        },
+        "input_periods": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["period", "files"],
+            "properties": {
+              "period": {"type": "string", "pattern": "^period_[1-9][0-9]*$"},
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["name", "bytes", "sha256"],
+                  "properties": {
+                    "name": {
+                      "enum": [
+                        "management_pack_stock_gl_all_exceptions.csv",
+                        "management_pack_workorders_all_exceptions.csv",
+                        "review_state.json",
+                        "stock_gl_all_exceptions.csv",
+                        "workorders_all_exceptions.csv"
+                      ]
+                    },
+                    "bytes": {"type": "integer", "minimum": 0},
+                    "sha256": {"$ref": "#/$defs/sha256"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "decision_digest": {"$ref": "#/$defs/sha256"},
+        "artifact_digest": {"$ref": "#/$defs/sha256"},
+        "integrity_boundary": {
+          "const": "Local content digests only; this artifact is not a signature, audit opinion, compliance certification, or proof of source-system authenticity."
+        },
+        "periods": {"type": "array", "minItems": 2, "items": {"type": "string"}},
+        "summary": {"$ref": "#/$defs/records"},
+        "period_counts": {"$ref": "#/$defs/records"},
+        "trend": {"$ref": "#/$defs/trend"},
+        "new_exceptions": {"$ref": "#/$defs/records"},
+        "recurring_exceptions": {"$ref": "#/$defs/records"},
+        "resolved_exceptions": {"$ref": "#/$defs/records"},
+        "escalated_exceptions": {"$ref": "#/$defs/records"},
+        "accepted_risk_items": {"$ref": "#/$defs/records"}
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "financial_input_policy": {"const": "legacy-financial-input-v1"}
+            }
+          },
+          "then": {
+            "properties": {
+              "comparison_policy": {
+                "properties": {"invalid_amount_policy": {"const": "legacy-zero-v1"}}
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "financial_input_policy": {"const": "strict-financial-input-v2"}
+            }
+          },
+          "then": {
+            "properties": {
+              "comparison_policy": {
+                "properties": {"invalid_amount_policy": {"const": "explicit-invalid-or-missing-v2"}}
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

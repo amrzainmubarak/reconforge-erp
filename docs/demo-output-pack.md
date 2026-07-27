@@ -13,13 +13,13 @@ reconforge demo run --output output/demo
 Generate a summary-only client pack:
 
 ```bash
-reconforge report client-pack --input output/demo --output output/demo/client_pack --summary-only
+reconforge report client-pack --input output/demo --output output/demo_client_pack --summary-only
 ```
 
 Generate a more conservative redacted client pack:
 
 ```bash
-reconforge report client-pack --input output/demo --output output/demo/client_pack_redacted --redact-names --redact-amounts --exclude-raw-records --include-manifest-checksums
+reconforge report client-pack --input output/demo --output output/demo_client_pack_redacted --redact-names --redact-amounts --exclude-raw-records --include-manifest-checksums
 ```
 
 ## Files That May Be Shareable After Review
@@ -29,10 +29,10 @@ For synthetic demo data only, these outputs are usually reasonable to review for
 - `output/demo/summary.md`
 - `output/demo/executive_report.html`
 - `output/demo/dashboard.html`
-- `output/demo/client_pack/handoff_summary.md`
-- `output/demo/client_pack/privacy_note.md`
-- `output/demo/client_pack/manifest.json`
-- `output/demo/client_pack_redacted/`
+- `output/demo_client_pack/handoff_summary.md`
+- `output/demo_client_pack/data_privacy_note.md`
+- `output/demo_client_pack/files_manifest.json`
+- `output/demo_client_pack_redacted/`
 
 Review every file before sharing, even when the input is synthetic.
 

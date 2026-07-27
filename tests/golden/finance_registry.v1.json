@@ -1,0 +1,156 @@
+{
+  "cases": [
+    {
+      "case_digest": "827af9e644073b199d28da3539857e03a274b7a79041e6e112719b68fa277131",
+      "configuration": {
+        "amount_tolerance": "2",
+        "date_tolerance_days": 3,
+        "matching_ambiguity_policy": "stable-tie-break-v1",
+        "matching_strategy": "standard"
+      },
+      "description": "Existing synthetic workshop sample frozen under the default stock/GL contract.",
+      "expected": {
+        "exception_rows": 13,
+        "financial_input_policy": "strict-financial-input-v2",
+        "gl_rows": 9,
+        "matched_rows": 7,
+        "matching_ambiguity_policy": "stable-tie-break-v1",
+        "reconciliation_signature": "4812aded0f8bedb41b78623652ee0833f2431881c72d61208b0d550fa2f6a0ad",
+        "reconciliation_signature_version": "reconciliation-signature-v3",
+        "record_identity_policy": "canonical-multiset-occurrence-v1",
+        "stock_rows": 12,
+        "summary": [
+          {"count": 7, "metric": "matched_transactions"},
+          {"count": 5, "metric": "stock_without_gl"},
+          {"count": 2, "metric": "gl_without_stock"},
+          {"count": 1, "metric": "value_differences"},
+          {"count": 3, "metric": "date_differences"},
+          {"count": 2, "metric": "reference_mismatches"}
+        ]
+      },
+      "expected_digest": "424ea616fd6ddce07311feaf3eb930f0e8159aa31466499d229c62e81b38e477",
+      "files": [
+        {
+          "bytes": 1778,
+          "dataset": "stock_moves",
+          "path": "examples/sample_data/stock_moves.csv",
+          "sha256": "56ac2cbb8019de21c26f30da72e54585cdfb33808d8d723e82bc9a2529e96a34"
+        },
+        {
+          "bytes": 1233,
+          "dataset": "gl_entries",
+          "path": "examples/sample_data/gl_entries.csv",
+          "sha256": "6b5e954872d977b7fa8bafadcbed8d573b215738d77630c55bc8e16ebe55c465"
+        }
+      ],
+      "id": "sample-stock-gl-default-v1",
+      "input_schema_version": "stock-gl-csv-v1",
+      "required_engines": ["pandas", "duckdb"],
+      "synthetic": true,
+      "version": "1.0.0"
+    },
+    {
+      "case_digest": "2d527faa06b608520e9ba0c4b1cce3c9693169aaf55fa68fb463879b463bc63a",
+      "configuration": {
+        "amount_tolerance": "2",
+        "date_tolerance_days": 3,
+        "matching_ambiguity_policy": "unresolved-equal-cost-v1",
+        "matching_strategy": "standard"
+      },
+      "description": "Synthetic dense USD/JPY equal-cost candidate components plus one unique EUR pair under bounded unresolved ambiguity policy.",
+      "expected": {
+        "exception_rows": 10,
+        "financial_input_policy": "strict-financial-input-v2",
+        "gl_rows": 6,
+        "matched_rows": 1,
+        "matching_ambiguity_policy": "unresolved-equal-cost-v1",
+        "reconciliation_signature": "cdfb89883b491920dcbd52a27a19003275ffea6e87b9219d059b7d2b67a9d914",
+        "reconciliation_signature_version": "reconciliation-signature-v3",
+        "record_identity_policy": "canonical-multiset-occurrence-v1",
+        "stock_rows": 6,
+        "summary": [
+          {"count": 1, "metric": "matched_transactions"},
+          {"count": 5, "metric": "stock_without_gl"},
+          {"count": 5, "metric": "gl_without_stock"},
+          {"count": 0, "metric": "value_differences"},
+          {"count": 0, "metric": "date_differences"},
+          {"count": 0, "metric": "reference_mismatches"}
+        ]
+      },
+      "expected_digest": "d62b4c0e97269e7fa3e983e91f22e84cfe67e9b068e75c686a6f55fa03a9905c",
+      "files": [
+        {
+          "bytes": 1053,
+          "dataset": "stock_moves",
+          "path": "tests/golden/stock_gl_dense_ambiguity_v1/stock_moves.csv",
+          "sha256": "73c3cd68ff6809bb39222a979c8ec012574c80dab885f7ae1ba7053b07d336f9"
+        },
+        {
+          "bytes": 793,
+          "dataset": "gl_entries",
+          "path": "tests/golden/stock_gl_dense_ambiguity_v1/gl_entries.csv",
+          "sha256": "9a65c819e34877431d86c23853fd71d0ef809727e1c4d8114093f998fe5266ae"
+        }
+      ],
+      "id": "stock-gl-dense-ambiguity-v1",
+      "input_schema_version": "stock-gl-csv-v1",
+      "required_engines": ["pandas", "duckdb"],
+      "synthetic": true,
+      "version": "1.0.0"
+    },
+    {
+      "case_digest": "dde72323a81ecd4835b7b03cb4a17d652a95816a79ba746f116f23cd161ac6ae",
+      "configuration": {
+        "amount_tolerance": "2",
+        "date_tolerance_days": 3,
+        "matching_ambiguity_policy": "stable-tie-break-v1",
+        "matching_strategy": "standard"
+      },
+      "description": "Synthetic exact, duplicate, malformed amount/date, JPY, and cross-currency boundary case.",
+      "expected": {
+        "exception_rows": 7,
+        "financial_input_policy": "strict-financial-input-v2",
+        "gl_rows": 8,
+        "matched_rows": 4,
+        "matching_ambiguity_policy": "stable-tie-break-v1",
+        "reconciliation_signature": "9c0890143ed07c249f2ff88d5206415e3dd524e58e9595879ed982a06c484841",
+        "reconciliation_signature_version": "reconciliation-signature-v3",
+        "record_identity_policy": "canonical-multiset-occurrence-v1",
+        "stock_rows": 7,
+        "summary": [
+          {"count": 4, "metric": "matched_transactions"},
+          {"count": 1, "metric": "stock_without_gl"},
+          {"count": 2, "metric": "gl_without_stock"},
+          {"count": 0, "metric": "value_differences"},
+          {"count": 0, "metric": "date_differences"},
+          {"count": 0, "metric": "reference_mismatches"}
+        ]
+      },
+      "expected_digest": "4e6fbc727810dac20dfc7d5056ef31544a12bcf63f0af46669c1ee03288f6d7b",
+      "files": [
+        {
+          "bytes": 1148,
+          "dataset": "stock_moves",
+          "path": "tests/golden/stock_gl_identity_quality_currency_v1/stock_moves.csv",
+          "sha256": "f38d29c53fd01613d844ef1034826dfd4d80f5d26819e95ff4c1d9cda38944b7"
+        },
+        {
+          "bytes": 951,
+          "dataset": "gl_entries",
+          "path": "tests/golden/stock_gl_identity_quality_currency_v1/gl_entries.csv",
+          "sha256": "841dadf9ea2765a892031af287440f724747e56a37a37220e18294797ea2a883"
+        }
+      ],
+      "id": "stock-gl-identity-quality-currency-v1",
+      "input_schema_version": "stock-gl-csv-v1",
+      "required_engines": ["pandas", "duckdb"],
+      "synthetic": true,
+      "version": "1.0.0"
+    }
+  ],
+  "digest_algorithm": "sha256",
+  "registry_digest": "5b11613b34ff578c7b2754c361389690887518ac24ac85640babdb31ed0ea88e",
+  "registry_id": "reconforge-golden-finance-datasets",
+  "registry_version": "1.1.0",
+  "schema_version": 1
+}

@@ -1,0 +1,467 @@
+schema_version: 1
+updated_at: "2026-07-25"
+phase: "Phase 0 — Truth and Reproducibility"
+snapshot:
+  commit: "bdf63de48051a0ef5c694442208f5207f4dd5e1c"
+  dirty_worktree: true
+status_values: [planned, in_progress, blocked, completed]
+
+tasks:
+  - id: P0-001
+    priority: P0
+    area: correctness
+    title: Baseline reproducibility report
+    status: completed
+    depends_on: []
+    exit_evidence: docs/execution/BASELINE.md records snapshot, environment, commands, durations, failures, and unavailable gates.
+  - id: P0-002
+    priority: P0
+    area: correctness
+    title: Claims Evidence Matrix
+    status: completed
+    depends_on: [P0-001]
+    exit_evidence: docs/execution/CLAIMS_EVIDENCE_MATRIX.md binds each allowed phrase to current code, test, and runtime evidence.
+  - id: P0-003
+    priority: P0
+    area: correctness
+    title: Documentation drift correction
+    status: completed
+    depends_on: [P0-001, P0-002]
+    exit_evidence: Broken DEMO/ROADMAP references and determinism/category wording are corrected; targeted documentation tests are required in the evidence log.
+  - id: P0-004
+    priority: P0
+    area: correctness
+    title: Canonical Money and Currency registry
+    status: completed
+    depends_on: [P0-001]
+    exit_evidence: Exact Decimal types, explicit currency/precision/rounding/unknown-code policy, deterministic serialization, and compatibility tests pass.
+    completed_slices:
+      - Stock-to-GL matching uses explicit Money/currency, strict precision, visible invalid data, canonical serialization, and legacy finite-float ingress tests.
+      - Versioned offline registry snapshot, fail-closed unknown codes, explicit rounding policy, atomic local-file updates, policy-provenance serialization, and large-value exact arithmetic are verified.
+  - id: P0-005
+    priority: P0
+    area: correctness
+    title: Remove financial floats from critical paths
+    status: completed
+    depends_on: [P0-004]
+    exit_evidence: Audited critical amount, balance, cost, tolerance, materiality, and valuation paths contain no binary-float financial effect.
+    completed_slices:
+      - E-082/ADR 0097 changes all 52 FinancialInputPolicy defaults across 23 runtime files to strict-financial-input-v2, makes Money scalar operators strict, keeps legacy only as an explicit historical compatibility selection, updates default artifact schemas/policies, publishes migration/release notes, and adds a repository-wide no-implicit-legacy-default gate. The locked focus passes 190/190 and the full 1,288-test collection passes with 1,278 executed and ten service skips.
+      - Accounts materiality, journal high-value, and intercompany tolerance CLI inputs preserve exact decimal text before the existing Decimal application-service boundary.
+      - Variance amount/percentage thresholds and summary JSON/CSV numeric ingress preserve exact Decimal values; current schema-v3 output keeps legacy numeric keys and adds strict/legacy ingress provenance to threshold-policy v2, while unversioned/v1 and schema-v2 artifacts remain compatibility readers.
+      - Anonymizer amount noise uses one versioned exact Decimal factor, source-scale rounding, and exact CLI text; shareable output omits the reversible map by default and carries a digested/checksummed manifest, while explicit private-map export preserves the legacy CSV shape outside input/output directories.
+      - Server-rendered Studio minimum-amount queries remain bounded decimal text through exact comparison; matched stock/GL rows retain currency; schema-v1 management reports capture registry policy, reject implicit cross-currency aggregation, use context-independent sums, and expose unquantified rows.
+      - Synthetic finance fixtures use versioned exact integer-step Decimal draws, exact CLI scenario-rate text, registered currency precision, explicit currency columns, and LF-stable bytes; current manifest v2 records strict/legacy ingress in both digests while v1 remains an implicit-legacy reader, and the eight-CSV return contract remains compatible.
+      - Evidence binder risk scores use a versioned exact integer 0-100 policy with explicit missing/invalid status instead of float truncation or zeroing; local/PostgreSQL close readiness uses exact count-derived Decimal percentages and exact full-readiness gating.
+      - Local backup restore no longer parses trusted-schema defaults through Python float; per-row parameterized inserts omit missing defaulted/nullable columns so SQLite applies declared defaults, while missing required columns still fail closed.
+      - Governed metric count percentages and readiness averaging publish canonical exact Decimal `value_text`; the REAL column remains a compatibility projection, invalid stored readiness fails closed, and SQLite aging remains explicitly approximate.
+      - DuckDB work-order bucket sizing uses integer ceiling division; boundary and beyond-IEEE-754-integer-range regressions preserve deterministic batching without making a scale claim.
+      - Reconciliation signature v2 rejects binary floating-point and boolean financial result fields before missing-value handling, canonicalizes exact amounts, embeds its policy identifier, and is exposed by both engines; explicit v1 preserves the historical golden digest.
+      - Canonical amount parsing exposes legacy-financial-input-v1 and current strict-financial-input-v2; official dataset coercion, reconciliation tolerance, signature-v2, and current shared YAML config/rule readers use strict paths, while direct compatibility loaders warn on accepted finite floating inputs.
+      - Stock/GL and platform matching contracts now carry a versioned financial-input policy; current Engine/CLI/Studio/API writers select strict v2, persisted local/PostgreSQL rules and local audit/outbox evidence record it, historical missing-policy rules remain explicit legacy v1, and idempotency cannot cross policies.
+      - Current rounding, difference, and tolerance helpers reject binary floating-point under strict v2; every production scalar call site uses the exact names after any isolated compatibility parse, while the three historical public names remain warning legacy-v1 readers guarded against internal reuse.
+      - "Money.from_exact, multiply_exact, and divide_exact provide strict-v2 construction and scalar arithmetic; legacy float construction now warns, all production constructors must spell input_policy explicitly, and constructor/dunder defaults remain compatibility-only until a breaking release."
+      - "Studio exception filtering now has exact current and legacy service input aliases plus a named financial-input policy; the HTTP application selects strict v2 explicitly, AST blocks implicit production selection, and direct Python finite-float compatibility remains warning legacy v1."
+      - "Anonymizer percentage/factor/cell masking now carries a named financial-input policy; CLI selects strict v2, direct service defaults to warning legacy v1, manifest writer advances to schema v2 with policy-digest coverage, and schema-v1 artifacts remain implicit-legacy compatibility readers."
+      - "Variance thresholds now carry a named financial-input policy; CLI selects strict v2, direct service defaults to warning legacy v1, report writer advances to schema v3/threshold-policy v2 with policy-digest coverage, and unversioned/v1 plus schema-v2 artifacts remain implicit-legacy readers."
+      - "Synthetic-generator rates now carry a named financial-input policy; CLI and internal exact parsing select strict v2, direct service defaults to warning legacy v1, manifest writer advances to schema v2 with both digests covering policy, and schema-v1 artifacts remain implicit-legacy readers."
+      - "YAML amount-tolerance loading now carries a named policy; CLI, benchmark, and Studio select strict v2 through a SafeLoader-derived lexeme-preserving reader, default configs quote exact text, AST blocks implicit production selection, and direct Python model/loader defaults remain warning legacy v1."
+      - "Declarative rule loading/evaluation carries the named policy through a shared safe exact-lexeme YAML reader; current CLI/demo/explain/control-matrix paths select strict v2, AST blocks implicit production selection, current result schema v2 binds pack/input/decision/artifact digests, and direct Python plus unversioned result paths remain explicit legacy compatibility."
+      - "Review and period exception ingestion carries the named policy before pandas inference; current CLI/demo callers select strict v2, malformed/missing fingerprints stay distinct from valid zero, review workbooks expose policy without moving the compatibility sheet, and current period schema v2 binds recognized input bytes plus path-independent decision and full artifact digests while unversioned v1 remains legacy-unverified."
+      - "Client-pack amount redaction carries the named policy before JSON numeric inference; current CLI/demo callers select strict v2, exact buckets apply once, local paths are omitted, and schema-v2 manifests require selected-source/included-output fingerprints plus path-independent content and full artifact digests while unversioned direct output remains legacy-unverified."
+      - "Evidence-binder risk ingress carries the named policy before pandas CSV inference; current CLI/demo callers select strict v2, fractional/malformed scores remain visible data-quality cases, and schema-v3 indexes bind selected exception/match/rule/review input fingerprints plus path-independent content and full artifact digests while direct schema-v2 output remains legacy-unverified."
+    remaining_classification: docs/execution/FLOAT_BOUNDARY_CLASSIFICATION.md
+    remaining_scope:
+      - Explicit historical legacy readers and named legacy scalar helpers remain for replay only; supported-version/live-backend proof remains P0-009/hosted-gate scope and no longer leaves an implicit binary-float default.
+  - id: P0-006
+    priority: P0
+    area: correctness
+    title: Stable source lineage identity
+    status: completed
+    depends_on: [P0-001]
+    exit_evidence: DuckDB partitioned permutation and cross-engine digest tests pass without row-index identity.
+    completed_slices:
+      - E-081 closes the exact bounded exit after direct generated and fixed partition/permutation/signature regressions pass: identity excludes row index, duplicate physical instances use canonical multiset occurrence identity, source location remains separate evidence, and Pandas/DuckDB full/forced-partition signature-v3 outputs agree under ADR 0096.
+      - Decimal lexical scale no longer changes stock/GL match IDs or reconciliation signatures; full-scan parity, forced partition parity, and permutation tests pass.
+      - Canonical multiset occurrence identity distinguishes duplicate-identical records across stock/GL and platform matching; trusted source location is separate evidence, unavailable hosted locations stay null, signature v3 covers instance identity, and Pandas/DuckDB duplicate permutation parity passes.
+      - CSV-level generated parity now compares original/permuted Pandas, DuckDB full-scan, and forced-partition signature-v3 output contracts; the minimized partition-summary order drift is fixed for the disclosed local versions.
+    remaining_scope:
+      - Follow-up outside this exit gate remains under P0-009: supported backend/Python/DuckDB version permutations and cross-engine expansion beyond the current stock/GL contract.
+  - id: P0-007
+    priority: P0
+    area: correctness
+    title: Duplicate-identical-record policy
+    status: completed
+    depends_on: [P0-006]
+    exit_evidence: ADR, lineage representation, ambiguity behavior, and duplicate permutation tests.
+    completed_slices:
+      - ADR 0042 defines equivalence-class fingerprints, occurrence ordinals, the physical-copy limitation, source-location semantics, versioned rollback, and duplicate permutation tests across stock/GL/platform/Pandas/DuckDB paths.
+  - id: P0-008
+    priority: P0
+    area: correctness
+    title: Property-based order invariance suite
+    status: completed
+    depends_on: [P0-006, P0-007]
+    exit_evidence: Seeded property tests cover permutations, duplicates, invalid values, and stable tie-breaks.
+    completed_slices:
+      - Pinned Hypothesis 6.161.2 runs three derandomized 35-example properties over all stock/GL strategies, all platform grouping modes, duplicates, invalid amounts/dates, exact ties/tolerances, and non-identity source-row relocation.
+  - id: P0-009
+    priority: P0
+    area: correctness
+    title: Cross-engine deterministic digest
+    status: completed
+    depends_on: [P0-006, P0-008]
+    exit_evidence: Pandas/DuckDB decisions and canonical digests match across declared datasets and supported versions.
+    completed_slices:
+      - Ten derandomized bounded cases plus two explicit regressions prove signature/policy/count/ordered-summary equality through real CSV readers on Python 3.14.6, Pandas 3.0.3, and DuckDB 1.5.5; ADR 0044 records the scope.
+      - Opt-in unresolved-equal-cost-v1 leaves equal-optimum or over-budget stock/GL components as explainable ambiguity exceptions; a dense USD/JPY plus unique-EUR golden case is permutation-stable across Pandas and DuckDB full/partition execution under ADR 0048.
+      - A bounded repository/worker contract raises an unhandled termination after one committed partition, rejects takeover before lease expiry, then proves attempt-two checkpoint skipping, no duplicate business effect, and uninterrupted/resumed digest equality under ADR 0049.
+      - The closed supported-engine-parity-v1 manifest configures four no-skip CI cells over Python 3.11/3.12 and reviewed lower/current-compatible NumPy/Pandas/DuckDB pins; schema/workflow/dependency/golden alignment tests pass under ADR 0050, but no remote cell result is yet claimed.
+      - All four declared cells pass locally with 53 tests and zero skips per cell after making the binary-only override dependency-aware and normalizing missing required text consistently across DuckDB 1.0/Pandas readers; ADR 0098 and E-083 retain exact versions, JUnit hashes, and the pre-remediation failures.
+      - GitHub Actions run 30239994946 on committed revision aaf2110 passes all four declared no-skip cells, the Python 3.11/3.12 suites, server boundaries, and Docker parity; E-084 closes the exact supported-version exit while live process/PostgreSQL crash recovery remains P1-PLAT-004.
+  - id: P0-010
+    priority: P0
+    area: correctness
+    title: Golden finance dataset registry
+    status: completed
+    depends_on: [P0-004, P0-007]
+    exit_evidence: Versioned synthetic datasets, schema versions, SHA-256 manifests, expected outputs, and update policy.
+    completed_slices:
+      - Schema-v1 registry 1.1.0 freezes the existing workshop sample, a focused duplicate/data-quality/multi-currency case, and dense bounded ambiguity with file, expected-output, case, and registry SHA-256 digests; Pandas/DuckDB full/partition outputs and the versioned update policy pass under ADRs 0045 and 0048.
+  - id: P0-011
+    priority: P0
+    area: correctness
+    title: Risk register normalization
+    status: completed
+    depends_on: [P0-001]
+    exit_evidence: Unique IDs, owners, triggers, likelihood/impact, mitigations, residual risk, and review dates are validated.
+    completed_slices:
+      - Closed schema-v1 YAML preserves R-001 through R-018 with role owners, deterministic inherent/residual ratings, triggers, mitigations, repository evidence, next actions, and cadence-bound review dates; Markdown parity and sdist governance packaging are covered under ADR 0046, while R-018 records the bounded tabular-ingress residual under ADR 0070.
+  - id: P0-012
+    priority: P0
+    area: correctness
+    title: Maturity labels enforcement tests
+    status: completed
+    depends_on: [P0-002, P0-003]
+    exit_evidence: Public claims and module maturity labels fail CI when they exceed the evidence matrix.
+    completed_slices:
+      - Schema-v1 policy caps product wording at Alpha and all nine current modules at Experimental, references exact evidence-matrix claims, scans seven publishing surfaces, and proves a synthetic Beta promotion fails; three prior Beta descriptors were conservatively downgraded under ADR 0047.
+
+  - id: P0-SEC-001
+    priority: P0
+    area: security
+    title: Security Architecture v2
+    status: completed
+    depends_on: [P0-001]
+    exit_evidence: Trust boundaries, editions, data classes, control ownership, and residual risks map to implemented evidence.
+    completed_slices:
+      - Closed schema-v2 YAML defines three conservatively labeled deployment modes, six data classes, seven trust boundaries, ten evidence-linked bounded/partial controls, role ownership, and normalized residual-risk mappings; tests require existing code/test paths, closed references, and risk-register owner/rating parity under ADR 0062.
+  - id: P0-SEC-002
+    priority: P0
+    area: security
+    title: Threat-model index by module
+    status: completed
+    depends_on: [P0-SEC-001]
+    exit_evidence: Every active module links assets, actors, threats, controls, tests, and owner.
+    completed_slices:
+      - Closed schema-v1 index matches all nine active runtime modules exactly and links eight scoped actors, eight shared threats, 20 classified assets, 32 module threat cases, Security Architecture owners/boundaries/controls, existing test evidence, normalized residual-risk IDs where exact, assumptions, limitations, and out-of-scope capabilities under ADR 0063.
+  - id: P0-SEC-003
+    priority: P0
+    area: security
+    title: Latest-stable ASVS mapping
+    status: completed
+    depends_on: [P0-SEC-001]
+    exit_evidence: Official-version mapping distinguishes implemented, partial, planned, and not applicable without compliance claims.
+    completed_slices:
+      - Official OWASP sources verified ASVS 5.0.0 as latest stable and pinned release tag/commit plus a 105,100-byte SHA-256-identified CSV; closed schema-v1 mapping covers all 17 official chapters with 55 selected requirements (4 implemented, 33 partial, 10 planned, 8 not applicable) and leaves 290 explicitly unassessed under ADR 0064. The bounded tabular slice advances only V5.2.2 from planned to partial.
+  - id: P0-SEC-004
+    priority: P0
+    area: security
+    title: SSDF implementation matrix
+    status: completed
+    depends_on: [P0-SEC-001]
+    exit_evidence: Official SSDF practices map to repository evidence, owners, gaps, and review cadence.
+    completed_slices:
+      - Official NIST sources verified SP 800-218/SSDF 1.1 as the current final core publication while version 1.2 remains an Initial Public Draft; closed schema-v1 mapping covers all 4 groups, 19 practices, and 42 tasks as 28 partial and 14 planned with Security Architecture owners, evidence/tests where positive, gaps, actions, 90-day review cadence, and separate SP 800-218A applicability under ADR 0065.
+  - id: P0-SEC-005
+    priority: P0
+    area: security
+    title: SLSA and provenance plan
+    status: completed
+    depends_on: [P0-SEC-004]
+    exit_evidence: Artifact/build identity, trusted builder boundary, attestation, verification, and rollback are documented and tested.
+    completed_slices:
+      - Official SLSA sources verified Approved v1.2 and pinned tag/commit; closed schema-v1 plan keeps Build/Source UNEVALUATED while defining four artifact identities, seven trust boundaries, in-toto Statement v1/SLSA provenance v1, strict verification/failure and evidence-preserving rollback contracts, plus 12 testable gates (2 partial, 10 planned) under ADR 0066.
+      - E-052/E-053 implementation updates the plan to five exact source/wheel/sdist/image/SBOM identities and makes eight gates partial while four remain planned; both tracks remain UNEVALUATED because no hosted signed execution, builder/source assessment, immutable publication, revocation drill, or level review is proven.
+  - id: P0-SEC-006
+    priority: P0
+    area: security
+    title: Signed release pipeline
+    status: in_progress
+    depends_on: [P0-SEC-005]
+    exit_evidence: Source, wheel, sdist, and image signatures/provenance verify from a clean tree.
+    completed_slices:
+      - A tag-only non-publishing candidate workflow now requires a clean signed annotated version tag on main, hash-locks six Python release tools including the Windows-conditional dependency, pins every action by full commit, records commit-time SOURCE_DATE_EPOCH, fail-closed normalizes sdist metadata, creates a closed manifest for source/wheel/sdist/digest-addressed image, requests keyless SLSA provenance, verifies repository/workflow/ref/revision/runner expectations from preserved bundles before upload, and retains human-gated immutable-release publication under ADR 0067. Two same-machine Python 3.14.6 builds reproduced identical source, wheel, and normalized-sdist bytes; local contracts pass, but no hosted signature/provenance or OCI reproducibility result exists, so the task remains in progress.
+      - E-086 restores the exact protected `python-security` aggregate context without weakening its three prerequisite jobs, prepares unique candidate version 0.7.1 because v0.7.0 already exists, builds matching wheel/sdist locally, and records an all-green clean/mergeable PR head. Merge, signing-identity enrollment, signed tag creation, and the hosted candidate result remain human-gated and unexecuted.
+  - id: P0-SEC-007
+    priority: P0
+    area: security
+    title: SBOM per artifact
+    status: in_progress
+    depends_on: [P0-SEC-005]
+    exit_evidence: Reproducible CycloneDX or SPDX SBOMs are generated, archived, and verified for each released artifact.
+    completed_slices:
+      - CycloneDX 1.7 generation now binds separate source/wheel/sdist/image documents to exact release-manifest SHA-256 subjects, validates Python metadata parity, inventories source npm-lock versions, normalizes a pinned Syft 1.49.0 exact-image scan, writes a closed SBOM manifest/checksum set, and defines four distinct keyless SBOM attestations plus strict bundle verification inside the non-publishing candidate workflow under ADR 0068. Clean-HEAD local source/package outputs are deterministic and official-schema valid; the image inventory remains synthetic locally and no hosted scan, signed attestation, immutable publication, or retained consumer verification exists, so the task remains in progress.
+      - E-086 proves the v0.7.1 metadata/release-note/build boundary and protected pre-merge checks, but no tag-triggered image scan, four signed SBOM attestations, archive retention, or independent consumer verification has occurred.
+  - id: P0-SEC-008
+    priority: P0
+    area: security
+    title: Secret and dependency policies
+    status: completed
+    depends_on: [P0-SEC-004]
+    exit_evidence: Python/server locks or constraints, secret scanning, update cadence, exception workflow, and CI gates.
+    completed_slices:
+      - Universal uv.lock v1/revision 3 closes 103 Python runtime/server/build/tool packages under exact uv 0.11.32 and an absolute upload cutoff; normal/server/security/candidate CI and checksum-pinned Docker definitions consume it with --locked. Closed schema-v1 policy/zero-active-exception registries enforce weekly pip/npm/Docker/Actions updates, exact 30-day two-approver exceptions, hash-exported Python and high/critical npm audit, and checksum-verified Gitleaks history/tree scans before registry authentication under ADR 0069. Local Python 3.11 all-extra sync/audit/build and current 903-test execution, npm audit, 69-commit/tree scans, actionlint, and negative contracts pass; hosted Python 3.11/3.12, Docker, release/branch enforcement, and closure of 155 npm entries without embedded SRI remain open, so the task stays in progress.
+      - E-085 regenerates the npm v3 lock from the declared package manifest so all 209 non-root registry entries carry HTTPS resolution and SRI, reduces the reviewed integrity-gap count from 155 to zero, and passes policy/release/SBOM, clean-install, audit, typecheck, unit, and build gates locally. GitHub runs 30240642293, 30240642306, 30240642321, and 30240642386 pass the exact committed revision d543309, closing the declared lock/scan/cadence/exception/CI exit without claiming package provenance or safety.
+  - id: P0-SEC-009
+    priority: P0
+    area: security
+    title: File ingestion abuse tests
+    status: completed
+    depends_on: [P0-SEC-002]
+    exit_evidence: Size/type/path/decompression/formula/XML/YAML abuse cases fail safely without sensitive logging.
+    completed_slices:
+      - E-080 closes only the evidence-defined abuse gate after a 61-test direct size/type/path/decompression/formula/XML/YAML/inventory focus and the locked E-079 full suite pass. Exact parser inventories remain closed and tested public errors omit paths/source values. FI-012/FI-013, R-018, legacy-XLS internals, malware/quarantine, authenticity, disclosure approval, uploads/connectors, real host-loss durability, and throughput remain explicitly partial or open under ADR 0095.
+      - Versioned tabular-file-ingress-v1 now preflights canonical CSV/XLS/XLSX before pandas and direct DuckDB access, with fixed byte/row/column/cell/field/archive/member/decompression budgets; safe path/type/content checks; XLSX traversal/duplicate/encryption/compression/active-content/DTD/entity/external-link/formula/sparse-column/aggregate-sheet rejection; and code-only non-sensitive errors. Mapping header and built-in CSV adapter paths inherit the boundary. A closed schema-v1 13-surface inventory plus exact AST allowlist exposes every remaining direct tabular parser, R-018 and Security Architecture/threat/ASVS/SSDF records preserve residual gaps, and 19 focused plus both full Python 3.11/3.14 suites pass under ADR 0070. Legacy XLS internals, JSON/YAML/generated artifact budgets, malware quarantine, uploads, and future connectors remain open, so the task stays in progress.
+      - Versioned structured-document-ingress-v1 bounds JSON/YAML bytes, nodes, depth, collection width, scalar length, and aliases; rejects duplicate keys, JSON non-finite constants, YAML merges/cycles/multiple documents/unsafe tags/non-finite legacy values; preserves strict financial lexemes; and routes FI-010 configuration, mapping, control-pack, and Reconciliation-as-Code YAML through safe code-only failures. The closed inventory now enforces exact runtime-policy parity and all direct PyYAML parser calls through AST contracts under ADR 0071. Generated/restore/Studio/report JSON/CSV, close-workflow YAML, legacy XLS internals, malware quarantine, uploads, and future connectors remain open, so the task stays in progress.
+      - FI-011 close checklist JSON and JSON/YAML templates now reuse structured-document-ingress-v1 while preserving valid task normalization, the legacy title alias, and existing generic CLI parse errors. Dedicated duplicate/depth/size/non-finite/alias/unsafe-tag/multiple-document/safe-error cases pass and the exact PyYAML AST allowlist contracts to the two central parser locations under ADR 0072. Generated/restore/Studio/report JSON/CSV, legacy XLS internals, malware quarantine, uploads, authenticity, and future connectors remain open, so the task stays in progress.
+      - FI-012 client-pack manifest and evidence-index JSON readers now reuse structured-document-ingress-v1 while preserving current/legacy schema, digest, fingerprint, verification-status, and generic invalid-JSON behavior. Ten duplicate/non-finite/depth/malformed/default-size/safe-cause cases plus existing compatibility/tamper tests pass under ADR 0073. At the conclusion of that slice, FI-012 remained partial because JSON/CSV/text redaction/copying, authenticated provenance, malware quarantine, redistribution authorization, uploads, and future connectors were open; the later JSON-redaction slice is recorded separately.
+      - FI-012 client-pack JSON redaction now uses structured-document-ingress-v1 with an exact fractional/exponent lexeme mode for strict financial bucketing and unchanged legacy finite-float behavior. Selected JSON is preflighted before destination preparation and then read again under the same bounds; duplicate, non-finite, malformed, deep, invalid-UTF-8, and default-ceiling oversized inputs fail with a generic public error instead of falling back to unrestricted text. CSV/text copying, CSV redaction, concurrent full-output atomicity, authenticated provenance, disclosure authorization, malware quarantine, uploads, and connectors remain open under ADR 0074, so the task stays in progress.
+      - FI-012 client-pack CSV redaction now reuses tabular-file-ingress-v1 before fingerprint hashing/output preparation, rejects duplicate headers, preserves exact field strings, and streams rows through a temporary file with per-file atomic replace. Ten empty/shape/encoding/duplicate/type/field/file-limit, destination-non-mutation, exact-bucket, multiline-field, streaming-order, failure-rollback, and temp-cleanup cases pass under ADR 0075. Text/non-redacted copying, pack-wide atomicity under concurrent mutation, authenticated provenance, disclosure authorization, malware quarantine, uploads, and connectors remain open, so the task stays in progress.
+      - FI-012 client-pack source traversal, generic text redaction, non-redacted copying, and output-manifest rechecks now share fixed entry/file/per-file/aggregate budgets, strict UTF-8 bounded-line or chunked temporary copying, frozen candidate/selected sets, final fingerprint comparison, sibling full-pack staging, and handled-failure destination rollback including old-pack cleanup failure. Seventeen hostile/resource/race/publication/nested-output/compatibility/AST cases pass under ADR 0076. Existing-directory replacement remains two-rename and not observer/crash atomic on Windows; recovery, authenticated provenance, disclosure authorization, malware quarantine, remaining report/restore/Studio/legacy-XLS paths, uploads, and connectors remain open, so the task stays in progress.
+      - FI-012 existing-output publication now writes a schema-v1 path-minimized local transaction marker before the two-rename window. The explicit recovery CLI binds exact sibling basenames plus bounded previous/staged tree digests, accepts four closed states, preserves only transaction-bound staging through unhandled generator unwinding, and refuses missing/multiple/tampered markers, changed trees, unexpected siblings, reparse points, or ambiguity. Thirteen focused abrupt-loss/refusal/CLI/success cases pass under ADR 0077. Replacement remains non-observer-atomic/non-crash-atomic, the unkeyed marker is not authenticated, and real host/filesystem-loss durability, provenance, disclosure authorization, malware quarantine, remaining parser paths, uploads, and connectors remain open, so the task stays in progress.
+      - FI-009 local DB restore now routes both manifest.json and backup.json through the shared duplicate-safe structured engine under database-backup-json-ingress-v1: 64 MiB/file, 1000000 nodes, depth 64, 250000 items/collection, and 8 MiB/scalar. Bounded before/after fingerprints, reparse refusal, closed manifest/backup contracts, actual checksum/byte/schema agreement, registered table names, published writer schemas, and pre-target-mutation failure are covered by 19 hostile/compatibility cases under ADR 0078. The adjacent DB import JSON reader, archive support, encryption/authenticated provenance, centralized restore authorization, malware scanning, and real DR/host-loss exercises remain open, so FI-009 and the task stay partial/in progress.
+      - FI-009 legacy account/control DB imports now route through database-legacy-import-json-ingress-v1: 16 MiB/file, 500000 nodes, depth 32, 50000 items/collection, and 1 MiB/scalar. Stable regular non-reparse reads, duplicate/non-finite rejection, direct-list/single-envelope/keyed-map schemas, ambiguity/invalid-object refusal, parsed-byte digest/size/profile evidence, and pre-database-mutation failures are covered by 25 dedicated cases under ADR 0079. Both inventoried FI-009 parsers are bounded; permissive record semantics, archive absence, encryption/authenticated provenance, centralized authorization, malware scanning, and real DR/host-loss exercises remain open, so the broader task stays in progress.
+      - FI-008 platform business-record CSV/JSON entrypoints now route through business-record-ingress-v1: 64 MiB/file, 250000 records, 512 fields/record, 10000000 cells, 128000-character fields/scalars, and JSON 2000000-node/depth-32 ceilings. Strict encoding/header/shape, duplicate/non-finite/ambiguity refusal, exact fractional lexemes, stable fingerprints, and parsed-byte provenance cover accounts, controls, intercompany, journals, matching, ledger, inventory, and receivables while the generic compatibility shim remains under ADR 0080. Domain semantics, authenticated provenance, centralized authorization, classification, malware scanning, remaining report/legacy-XLS/upload/connector surfaces, and supported throughput remain open, so the broader task stays in progress.
+      - FI-007 current Studio generated CSV/JSON entrypoints now route through generated-artifact-ingress-v1: 64 MiB/file, 250000 CSV rows, 512 columns, 10000000 cells, strict headers, JSON 1000000-node/depth-64/250000-item ceilings, duplicate/non-finite rejection, stable fingerprints, safe empty views, preserved display typing, and optional companion shape/count consistency under ADR 0081. Companions do not cryptographically bind CSV bytes; authenticated provenance, disclosure/classification, malware controls, remaining report/legacy-XLS/upload/connector surfaces, and supported throughput remain open, so the broader task stays in progress.
+      - FI-006 variance CSV/JSON and management-report JSON entrypoints now route through generated-artifact-ingress-v1 with the same stable resource/ambiguity boundary. CSV representation is explicit: Studio retains display mode while variance uses exact-text mode before Decimal validation; hostile optional report artifacts fail closed under ADR 0082. Producer/schema authentication, disclosure/classification, malware controls, FI-005/legacy-XLS/upload/connector surfaces, and supported throughput remain open, so the broader task stays in progress.
+      - FI-005 evidence/review CSV now routes through generated-artifact-ingress-v1 with exact-text strict finance and display legacy modes. Hostile present files fail closed with safe CLI wording; evidence generation parses each selected CSV once, fingerprints v3 from those parsed bytes, freezes the selected set, and verifies stability before index publication under ADR 0083. Adjacent review-state JSON, producer/schema authentication, disclosure/classification, malware controls, legacy-XLS/upload/connector surfaces, and supported throughput remain open, so the broader task stays in progress.
+      - FI-014 review-state JSON now routes through review-state-json-ingress-v1: 16 MiB/file, 500000 nodes, depth 32, 100000 items/collection, and 1 MiB/scalar. Duplicate/non-finite/invalid-encoding/reparse/changed/over-budget present files fail closed; missing files and valid direct-map/envelope entry coercion remain compatible. CLI/Studio errors are path-free, rejected updates preserve the source, and DB import rejects before mutation under ADR 0084. Producer/schema authentication, actor/workspace authorization, disclosure/classification, malware controls, legacy-XLS/upload/connector surfaces, and supported throughput remain open, so the broader task stays in progress.
+      - The schema-v1 inventory now closes every direct production json.load/json.loads call through an exact AST allowlist. FI-015 routes five generated report/workflow/synthetic-demo readers through stable bounded JSON with explicit display-number compatibility; FI-016 gives user-selected exception explanation a narrower 16 MiB/500000-node/depth-32 profile and path-free errors; FI-013 now enumerates all 12 persisted-value decoders and FI-017 excludes already-loaded packaged currency-registry text accurately. No direct filesystem stdlib JSON parser remains under ADR 0085. Authenticated producer/schema and actor authorization, disclosure/classification, malware controls, persisted-value size/schema contracts, legacy-XLS/upload/connector surfaces, and supported throughput remain open, so the broader task stays in progress.
+      - FI-013 AP/AR idempotency response writers and readers now share financial-idempotency-json-v1: canonical object text, 4 MiB/100000-node/depth-32/25000-item/262144-character ceilings, unique keys, integer-only JSON number tokens, and a recursive structural schema. Corrupt replay rejects before a new business/audit/outbox effect and producer rejection rolls back the enclosing mutation; two direct JSON calls leave the exact AST allowlist under ADR 0086. Ten other FI-013 audit/outbox/reconciliation/Redis/matching/worker calls plus authentication, malware, legacy-XLS/upload/connector, and supported-throughput gaps remain, so the broader task stays in progress.
+      - FI-013 SQLite/PostgreSQL audit metadata now share audit-metadata-json-v1 with the same explicit resource ceilings, unique keys, finite object values, canonical producers, backend-compatible historical hash reconstruction, independent verifier validation, fail-closed list consumers, and pre-write SQLite export refusal under ADR 0087. Three more direct JSON calls leave the allowlist; seven generic export/outbox/reconciliation/Redis/matching/worker decoders plus authenticity, authorization, malware, and throughput gaps remain, so the broader task stays in progress.
+      - FI-013 PostgreSQL outbox payloads now share postgres-outbox-payload-json-v1 across six writer call sites, list/claim decoding, and publisher canonical bytes. Corrupt claims roll back before publisher handoff; valid event IDs, JSONB objects, leases, retries, and dead-letter transitions remain compatible. E-073 also closes the three PostgreSQL audit-writer families omitted from E-072 implementation. One direct decoder leaves the allowlist; six generic export/reconciliation/Redis/matching/worker FI-013 calls and live/authentication/authorization/malware/throughput gaps remain, so the broader task stays in progress.
+      - FI-013 PostgreSQL reconciliation rule, attributes, lineage, and evidence JSONB now use four named bounded profiles over postgres-reconciliation-object-v1. The prior 100000-byte attributes ceiling remains exact; the other fields use a 4 MiB ceiling and all enforce object/unique/finite graph budgets. Corrupt rows fail before matcher/public use, valid JSONB rule fingerprints remain canonical, and three direct calls leave the allowlist. Three generic export/Redis/matching FI-013 calls and live/authentication/authorization/malware/throughput gaps remain, so the broader task stays in progress.
+      - FI-013 SQLite matching rules now use sqlite-matching-rule-json-v1 across both table writes, idempotent replay, and public job readers. The 4 MiB/100000-node/depth-32/25000-item/262144-character finite-object contract encodes once before the transaction, preserves historical spaced sorted ASCII text and missing-policy defaults, and rejects corrupt replay before new business/audit/outbox effects under ADR 0090. One direct call leaves the allowlist; two generic export/Redis FI-013 calls plus authenticity, authorization, malware, and throughput gaps remain, so the broader task stays in progress.
+      - FI-013 tenant-scoped Redis sessions now use redis-session-json-v1 across the producer and consumer. The closed 16 KiB/16-node/depth-2/four-field/256-character contract requires bounded string IDs, a lowercase SHA-256 token digest, and explicit UTC expiry; encoding precedes Redis client access, corrupt reads preserve stored state, and tenant-key/TTL/missing-key behavior remains compatible under ADR 0091. One direct call leaves the allowlist; the generic export FI-013 call plus authenticity, login-lifecycle integration, authorization, malware, and live-service gaps remain, so the broader task stays in progress.
+      - FI-013 public SQLite export now maintains an exact five-field JSON registry. Audit/rule fields reuse their established profiles; legacy summaries and matching lineage use two new 4 MiB finite-object producer/consumer profiles. Every row validates before destination creation or file writes, corrupt/non-text state produces neither sentinel nor export audit effect, and all valid format-v1 shapes remain stable under ADR 0092. The exporter leaves the AST allowlist, but authenticity, actor/disclosure authorization, malware, crash-atomic publication, live-service, and throughput gaps keep the broader task in progress.
+      - E-078 stages and verifies the exact nine format-v1 database export artifacts plus an additive manifest before directory publication. Existing replacement uses a path-minimized integrity marker and bounded rollback tree; handled failure restores prior bytes, explicit recovery verifies crash states, and stale files disappear only after successful replacement under ADR 0093. Local-filesystem observer/crash limitations, audit/filesystem cross-resource atomicity, authenticity, authorization, malware, and supported throughput keep the broader task in progress.
+  - id: P0-SEC-010
+    priority: P0
+    area: security
+    title: Authorization and SoD property tests
+    status: completed
+    depends_on: [P0-SEC-002]
+    exit_evidence: Deny-by-default, tenant/entity/period restrictions, and no self-approval paths hold under generated cases.
+    completed_slices:
+      - CentralPolicyEngine now requires a named permission and denies every supplied tenant/workspace/entity/period outside immutable grants; ownership checks default on for approve/review. Hypothesis covers the four-scope conjunction and creator actions. One exact platform approval/review inventory binds all nine current service surfaces to the shared actor comparator; generic override text, trusted-local workflow labels, AP/AR, accounts, certification, counts, valuation, and reversal self-approval paths fail closed under ADR 0094.
+      - E-079 locked verification passed an 85-test authorization/SoD/security-governance focus and the full 1,287-test Python 3.11 collection with 1,277 passes, ten service skips, and zero failures/errors; Ruff, Mypy, Bandit, dependency audit, build, package membership, doctor, validate, and demo also pass.
+
+  - id: P1-PLAT-001
+    priority: P1
+    area: platform
+    title: Repository contracts
+    status: planned
+    depends_on: [P0-004, P0-006]
+    exit_evidence: Application services depend on typed ports with SQLite contract tests.
+  - id: P1-PLAT-002
+    priority: P1
+    area: platform
+    title: PostgreSQL contract test suite
+    status: planned
+    depends_on: [P1-PLAT-001]
+    exit_evidence: Live PostgreSQL behavior matches SQLite contracts for supported boundaries.
+  - id: P1-PLAT-003
+    priority: P1
+    area: platform
+    title: Durable job state machine
+    status: planned
+    depends_on: [P1-PLAT-001]
+    exit_evidence: Versioned queued/running/paused/retrying/failed/completed/cancelled transitions, idempotency, audit, and output manifest.
+  - id: P1-PLAT-004
+    priority: P1
+    area: platform
+    title: Checkpoint and resume infrastructure
+    status: planned
+    depends_on: [P1-PLAT-003]
+    exit_evidence: Crash/restart resumes safe workloads from verified checkpoints without duplicate business effect.
+  - id: P1-PLAT-005
+    priority: P1
+    area: platform
+    title: Object store abstraction
+    status: planned
+    depends_on: [P1-PLAT-001, P0-SEC-002]
+    exit_evidence: Local and S3-compatible adapters pass retention, checksum, path, tenant, and failure contract tests.
+  - id: P1-PLAT-006
+    priority: P1
+    area: platform
+    title: Idempotency service
+    status: planned
+    depends_on: [P1-PLAT-001]
+    exit_evidence: Request/job idempotency keys have atomic persistence, scope, replay response, expiry, and conflict tests.
+  - id: P1-PLAT-007
+    priority: P1
+    area: platform
+    title: Cursor pagination contract
+    status: planned
+    depends_on: [P1-PLAT-001]
+    exit_evidence: Stable allowlisted sort keys and opaque cursor behavior pass mutation/duplicate tests.
+  - id: P1-PLAT-008
+    priority: P1
+    area: platform
+    title: Central policy engine
+    status: planned
+    depends_on: [P0-SEC-010]
+    exit_evidence: Permission-to-route/action map and RBAC/ABAC/SoD enforcement are centralized and audited.
+  - id: P1-PLAT-009
+    priority: P1
+    area: platform
+    title: OpenTelemetry baseline
+    status: planned
+    depends_on: [P1-PLAT-003, P0-SEC-001]
+    exit_evidence: Vendor-neutral traces/metrics/log correlation excludes raw financial and tenant-sensitive values.
+  - id: P1-PLAT-010
+    priority: P1
+    area: platform
+    title: Backup and restore verification matrix
+    status: planned
+    depends_on: [P1-PLAT-002, P1-PLAT-005]
+    exit_evidence: Edition/backend/version backup, encrypted storage, authorized restore, integrity, and rollback drills.
+
+  - id: P1-REC-001
+    priority: P1
+    area: reconciliation
+    title: Matching Strategy protocol
+    status: planned
+    depends_on: [P0-004, P0-006]
+    exit_evidence: Typed strategy contract, manifest declaration, deterministic explanation, limits, and compatibility tests.
+  - id: P1-REC-002
+    priority: P1
+    area: reconciliation
+    title: Range-indexed tolerance lookup
+    status: planned
+    depends_on: [P1-REC-001]
+    exit_evidence: Exact Decimal ranges avoid full cross products and match golden outputs.
+  - id: P1-REC-003
+    priority: P1
+    area: reconciliation
+    title: Candidate budgets and limits
+    status: planned
+    depends_on: [P1-REC-001]
+    exit_evidence: Partition, candidate cap, timeout/search budget, inclusion/exclusion reason, and safe ambiguity output.
+  - id: P1-REC-004
+    priority: P1
+    area: reconciliation
+    title: True grouped match model
+    status: planned
+    depends_on: [P1-REC-002, P1-REC-003]
+    exit_evidence: Bounded one/many and many/many groups, sum/currency/date/cardinality constraints, deterministic tie-break, and explanation.
+  - id: P1-REC-005
+    priority: P1
+    area: reconciliation
+    title: Netting and fee-aware matching
+    status: planned
+    depends_on: [P1-REC-004]
+    exit_evidence: Explicit fee/netting policies and golden accounting cases with unresolved ambiguity behavior.
+  - id: P1-REC-006
+    priority: P1
+    area: reconciliation
+    title: FX-aware matching
+    status: planned
+    depends_on: [P0-004, P1-REC-004]
+    exit_evidence: Versioned rate source/effective time/type, conversion/rounding, inversion, and missing-rate exceptions.
+  - id: P1-REC-007
+    priority: P1
+    area: reconciliation
+    title: Ambiguity representation
+    status: planned
+    depends_on: [P1-REC-003]
+    exit_evidence: Equal/near candidates remain explicit and require governed review rather than arbitrary selection.
+  - id: P1-REC-008
+    priority: P1
+    area: reconciliation
+    title: Explanation schema v2
+    status: planned
+    depends_on: [P1-REC-001, P1-REC-007]
+    exit_evidence: Sources, normalized values, candidates, rules, costs, rejection reasons, tie-break, digests, actor, time, and evidence refs.
+  - id: P1-REC-009
+    priority: P1
+    area: reconciliation
+    title: Benchmark harness
+    status: planned
+    depends_on: [P0-009, P0-010, P1-REC-003]
+    exit_evidence: Checksummed 10K/100K tiers record hardware, versions, time, CPU, peak memory, candidates, outcomes, and digest.
+  - id: P1-REC-010
+    priority: P1
+    area: reconciliation
+    title: Performance regression gates
+    status: planned
+    depends_on: [P1-REC-009]
+    exit_evidence: Reviewed thresholds detect time/memory/candidate/digest regressions without unsupported scale claims.
+
+  - id: P2-001
+    priority: P2
+    area: evidence_ux
+    title: Evidence Graph schema
+    status: planned
+    depends_on: [P0-006, P1-REC-008]
+    exit_evidence: Versioned node/edge/integrity/redaction/retention contracts and tamper tests.
+  - id: P2-002
+    priority: P2
+    area: evidence_ux
+    title: Drill-down API
+    status: planned
+    depends_on: [P2-001, P1-PLAT-007, P1-PLAT-008]
+    exit_evidence: Authorized KPI/decision-to-source traversal with pagination, masking, and audit.
+  - id: P2-003
+    priority: P2
+    area: evidence_ux
+    title: Reconciliation-as-Code schema
+    status: planned
+    depends_on: [P0-004, P1-REC-001]
+    exit_evidence: Safe versioned schema with deterministic formatting, validation, golden cases, and rollback.
+  - id: P2-004
+    priority: P2
+    area: evidence_ux
+    title: Pack lint, test, diff, and simulation
+    status: planned
+    depends_on: [P2-003, P0-010]
+    exit_evidence: No arbitrary execution; impact diff and simulation produce deterministic, reviewable evidence.
+  - id: P2-005
+    priority: P2
+    area: evidence_ux
+    title: Mapping Studio foundation
+    status: planned
+    depends_on: [P2-003, P1-PLAT-008]
+    exit_evidence: Safe preview/mapping/error states with no implicit zero conversion and accessible keyboard flow.
+  - id: P2-006
+    priority: P2
+    area: evidence_ux
+    title: Rule Studio foundation
+    status: planned
+    depends_on: [P2-004, P1-PLAT-008]
+    exit_evidence: Draft/version/diff/test/approval workflow; no unreviewed rule publication.
+  - id: P2-007
+    priority: P2
+    area: evidence_ux
+    title: Live read-only Studio contract
+    status: planned
+    depends_on: [P2-002]
+    exit_evidence: Browser reads authorized live contracts with explicit loading/empty/error/stale states and no synthetic fallback.
+  - id: P2-008
+    priority: P2
+    area: evidence_ux
+    title: Arabic, RTL, and accessibility regression suite
+    status: planned
+    depends_on: [P2-005, P2-006, P2-007]
+    exit_evidence: Keyboard, screen-reader semantics, RTL, contrast, reduced motion, masking, and critical E2E paths pass.

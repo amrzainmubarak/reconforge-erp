@@ -399,6 +399,20 @@ Run rules:
 reconforge rules run --input examples/sample_data --pack control-packs/audit-basic --output output/rules
 ```
 
+The current CLI loads financial YAML literals under
+`strict-financial-input-v2`, preserving unquoted decimal lexemes before
+validation. It writes `rule_results.json` schema v2 with the named policy,
+normalized executable `pack.yml`/`rules.yml` digest, sorted local CSV byte hashes, deterministic
+decision digest, complete artifact digest, and result records. The companion
+CSV repeats pack/policy/digest provenance on each triggered row. See
+`docs/schemas/rule_results.schema.json`.
+
+The digests detect local content inconsistency; they are not signatures, pack
+approval, audit opinions, compliance certifications, or proof that an export
+came from its claimed source system. Direct Python rule APIs retain legacy-v1
+defaults during the compatibility window, and the historical unversioned
+`{"results": [...]}` JSON shape remains readable as `legacy-unverified`.
+
 Explain one rule:
 
 ```bash

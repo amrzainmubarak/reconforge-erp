@@ -6,6 +6,8 @@ import json
 import shutil
 import sqlite3
 import tempfile
+from dataclasses import asdict
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, cast
 
@@ -21,6 +23,10 @@ from reconforge.anonymizer.engine import anonymize_directory
 from reconforge.api import create_api_app
 from reconforge.audit import AuditLedgerError, list_audit_events, verify_audit_events
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService, RoleRepository
+from reconforge.benchmark.reconciliation_execution import (
+    run_reconciliation_execution_benchmark,
+    run_reconciliation_execution_streaming_benchmark,
+)
 from reconforge.benchmark.runner import run_benchmark
 from reconforge.cli_inventory_planning import inventory_planning_app
 from reconforge.cli_inventory_valuation import inventory_valuation_app
@@ -37,9 +43,21 @@ from reconforge.close import (
 from reconforge.config import load_config, write_default_config
 from reconforge.control_matrix import export_control_matrix
 from reconforge.dashboard.app import create_app
-from reconforge.db import DatabaseError, connect, database_status, run_migrations
+from reconforge.db import (
+    DatabaseError,
+    TenantDatabaseRouter,
+    TenantRoutingError,
+    connect,
+    database_status,
+    run_migrations,
+)
 from reconforge.db.backup import create_backup, restore_backup, verify_backup
-from reconforge.db.exporter import DBBridgeError, export_database, resolve_input_file
+from reconforge.db.exporter import (
+    DBBridgeError,
+    export_database,
+    recover_database_export_publication,
+    resolve_input_file,
+)
 from reconforge.db.importers import (
     import_account_reconciliations,
     import_close_checklist,
@@ -49,8 +67,15 @@ from reconforge.db.importers import (
 from reconforge.enterprise_demo import EnterpriseDemoError, generate_enterprise_demo
 from reconforge.evidence.binder import generate_evidence_binder
 from reconforge.generator.synthetic import generate_synthetic_dataset
+from reconforge.infrastructure.object_storage import (
+    ObjectStorageConnectionFactory,
+    ObjectStorageSettings,
+    S3ObjectStore,
+)
 from reconforge.io.excel import audit_metadata, write_excel_workbook
+from reconforge.io.generated import GeneratedArtifactError
 from reconforge.io.readers import read_required_datasets
+from reconforge.io.records import RecordIngressError, read_json_record_document
 from reconforge.io.writers import ensure_output_dir, frame_to_records, write_json, write_report_frames
 from reconforge.mappings.inspector import inspect_mapping_inputs
 from reconforge.mappings.profile_template import write_profile_template
@@ -69,7 +94,7 @@ from reconforge.platform.approvals import ApprovalService
 from reconforge.platform.close import CloseManagementService
 from reconforge.platform.common import PlatformError
 from reconforge.platform.controls import ControlTestingService
-from reconforge.platform.evidence import EvidenceRegistryService
+from reconforge.platform.evidence import OBJECT_STORAGE_BACKEND, EvidenceRegistryService
 from reconforge.platform.exceptions import ExceptionQueueService
 from reconforge.platform.finance_core import FinanceCoreService
 from reconforge.platform.intercompany import IntercompanyService
@@ -79,12 +104,14 @@ from reconforge.platform.master_data import MasterDataService
 from reconforge.platform.matching import MatchingService
 from reconforge.platform.metrics import MetricsService
 from reconforge.platform.operations import OperationsService
-from reconforge.reconciliation.matching import MatchingStrategy
+from reconforge.platform.outbox import OutboxError, OutboxService
+from reconforge.platform.receivables import ReceiptAllocationInput, ReceivableInvoiceLineInput, ReceivablesService
+from reconforge.reconciliation.matching import RECORD_IDENTITY_POLICY, MatchingStrategy
 from reconforge.reconciliation.stock_gl import reconcile_stock_gl
 from reconforge.reconciliation.stock_gl import result_frames as stock_gl_result_frames
 from reconforge.reconciliation.workorders import reconcile_workorders
 from reconforge.reconciliation.workorders import result_frames as workorder_result_frames
-from reconforge.reports.client_pack import generate_client_pack
+from reconforge.reports.client_pack import generate_client_pack, recover_client_pack_publication
 from reconforge.reports.management_pack import generate_management_pack
 from reconforge.reports.wip_aging import aging_summary, generate_wip_aging
 from reconforge.review.state import (
@@ -96,12 +123,13 @@ from reconforge.review.state import (
     save_review_state,
     update_review_status,
 )
-from reconforge.rules.engine import run_rule_pack, write_rule_results
+from reconforge.rules.engine import execute_rule_pack, write_rule_execution
 from reconforge.rules.explain import explain_rule
 from reconforge.rules.loader import load_rule_pack
 from reconforge.schemas import DatasetName
 from reconforge.studio.app import create_studio_app
 from reconforge.studio.demo_bridge import StudioDemoBridgeError, build_studio_demo_bundle
+from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY
 from reconforge.validators import issues_to_frame, validate_input_directory
 from reconforge.variance import analyze_variance
 from reconforge.workflow import WorkflowRepositoryError, WorkflowService, WorkflowServiceError
@@ -142,6 +170,8 @@ modules_app = typer.Typer(help="Inspect deterministic local module capability me
 master_data_app = typer.Typer(help="Manage governed local organization and fiscal master data.")
 finance_core_app = typer.Typer(help="Manage local chart-of-accounts and balanced ledger-control foundations.")
 inventory_app = typer.Typer(help="Manage local inventory masters, movements, balances, and controls.")
+receivables_app = typer.Typer(help="Manage bounded local Accounts Receivable, credit controls, receipts, and aging.")
+outbox_app = typer.Typer(help="Inspect and replay local transactional outbox events.")
 app.add_typer(reconcile_app, name="reconcile")
 app.add_typer(report_app, name="report")
 app.add_typer(rules_app, name="rules")
@@ -175,6 +205,8 @@ app.add_typer(modules_app, name="modules")
 app.add_typer(master_data_app, name="master-data")
 app.add_typer(finance_core_app, name="finance-core")
 app.add_typer(inventory_app, name="inventory")
+app.add_typer(receivables_app, name="receivables")
+app.add_typer(outbox_app, name="outbox")
 inventory_app.add_typer(inventory_planning_app, name="planning")
 inventory_app.add_typer(inventory_valuation_app, name="valuation")
 inventory_valuation_app.add_typer(inventory_valuation_reversal_app, name="reversal")
@@ -188,7 +220,9 @@ def _version_callback(value: bool) -> None:
 
 @app.callback()
 def main(
-    version: Annotated[bool, typer.Option("--version", callback=_version_callback, help="Show version and exit.")] = False,
+    version: Annotated[
+        bool, typer.Option("--version", callback=_version_callback, help="Show version and exit.")
+    ] = False,
 ) -> None:
     """ReconForge ERP command group."""
 
@@ -276,24 +310,33 @@ def _inventory_service(db_path: Path) -> tuple[InventoryCoreService, sqlite3.Con
     return service, connection
 
 
+def _receivables_service(db_path: Path) -> tuple[ReceivablesService, sqlite3.Connection]:
+    connection = _db_connection(db_path)
+    try:
+        service = ReceivablesService(connection)
+    except (DatabaseError, PlatformError):
+        connection.close()
+        raise
+    return service, connection
+
+
 def _ledger_lines_from_json(input_path: Path) -> list[dict[str, object]]:
     try:
         resolved = resolve_input_file(input_path)
         if resolved.suffix.lower() != ".json":
             raise PlatformError("Ledger lines input must be a local JSON file.")
-        payload = json.loads(resolved.read_text(encoding="utf-8"))
+        document = read_json_record_document(resolved, envelope_keys=("lines",))
     except DBBridgeError as exc:
         raise PlatformError(str(exc)) from exc
-    except (OSError, json.JSONDecodeError) as exc:
+    except RecordIngressError as exc:
+        if exc.code == "json_record_collection_required":
+            raise PlatformError("Ledger lines JSON must be a list or an object containing a lines list.") from exc
+        if exc.code == "json_record_not_object":
+            raise PlatformError("Each ledger line in JSON must be an object.") from exc
         raise PlatformError("Ledger lines JSON could not be parsed.") from exc
-    raw_lines = payload.get("lines") if isinstance(payload, dict) else payload
-    if not isinstance(raw_lines, list):
-        raise PlatformError("Ledger lines JSON must be a list or an object containing a lines list.")
     allowed = {"account_code", "description", "debit", "credit", "dimensions"}
     records: list[dict[str, object]] = []
-    for raw_line in raw_lines:
-        if not isinstance(raw_line, dict):
-            raise PlatformError("Each ledger line in JSON must be an object.")
+    for raw_line in document.records:
         if set(raw_line) - allowed:
             raise PlatformError("Ledger lines JSON contains unsupported fields.")
         records.append({str(key): value for key, value in raw_line.items()})
@@ -305,14 +348,15 @@ def _inventory_lines_from_json(input_path: Path) -> list[dict[str, object]]:
         resolved = resolve_input_file(input_path)
         if resolved.suffix.lower() != ".json":
             raise PlatformError("Inventory movement lines input must be a local JSON file.")
-        payload = json.loads(resolved.read_text(encoding="utf-8"))
+        document = read_json_record_document(resolved, envelope_keys=("lines",))
     except DBBridgeError as exc:
         raise PlatformError(str(exc)) from exc
-    except (OSError, json.JSONDecodeError) as exc:
+    except RecordIngressError as exc:
+        if exc.code == "json_record_collection_required":
+            raise PlatformError("Inventory lines JSON must be a list or an object containing a lines list.") from exc
+        if exc.code == "json_record_not_object":
+            raise PlatformError("Each inventory movement line in JSON must be an object.") from exc
         raise PlatformError("Inventory movement lines JSON could not be parsed.") from exc
-    raw_lines = payload.get("lines") if isinstance(payload, dict) else payload
-    if not isinstance(raw_lines, list):
-        raise PlatformError("Inventory lines JSON must be a list or an object containing a lines list.")
     allowed = {
         "item_code",
         "quantity",
@@ -322,9 +366,7 @@ def _inventory_lines_from_json(input_path: Path) -> list[dict[str, object]]:
         "description",
     }
     records: list[dict[str, object]] = []
-    for raw_line in raw_lines:
-        if not isinstance(raw_line, dict):
-            raise PlatformError("Each inventory movement line in JSON must be an object.")
+    for raw_line in document.records:
         if set(raw_line) - allowed:
             raise PlatformError("Inventory movement lines JSON contains unsupported fields.")
         records.append({str(key): value for key, value in raw_line.items()})
@@ -774,6 +816,294 @@ def master_data_period_status_command(
     _print_record_detail("Fiscal Period Status", record)
 
 
+@receivables_app.command("customer-upsert")
+def receivables_customer_upsert_command(
+    code: Annotated[str, typer.Option(help="Customer code.")],
+    name: Annotated[str, typer.Option(help="Customer display name.")],
+    currency: Annotated[str, typer.Option(help="Three-letter customer currency code.")],
+    credit_limit: Annotated[
+        int, typer.Option("--credit-limit-minor", min=0, help="Exact credit limit in currency minor units.")
+    ],
+    credit_hold: Annotated[
+        bool, typer.Option("--credit-hold/--no-credit-hold", help="Block approvals unless explicitly overridden.")
+    ] = False,
+    payment_terms: Annotated[
+        int, typer.Option("--payment-terms-days", min=0, help="Default payment terms in days.")
+    ] = 0,
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    organization: Annotated[str, typer.Option(help="Optional organization code.")] = "",
+    entity: Annotated[str, typer.Option(help="Optional legal-entity code.")] = "",
+    status: Annotated[str, typer.Option(help="Draft, Active, Suspended, or Closed.")] = "Active",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Create or update a customer credit profile."""
+
+    try:
+        service, connection = _receivables_service(db_path)
+        try:
+            record = service.upsert_customer(
+                customer_code=code,
+                name=name,
+                currency_code=currency,
+                credit_limit_minor=credit_limit,
+                credit_hold=credit_hold,
+                payment_terms_days=payment_terms,
+                workspace=workspace,
+                organization_code=organization,
+                entity_code=entity,
+                status=status,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Receivables Customer", record)
+
+
+@receivables_app.command("customers")
+def receivables_customers_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    status: Annotated[str, typer.Option(help="Optional customer-status filter.")] = "",
+    limit: Annotated[int, typer.Option(min=1, max=100_000)] = 500,
+    offset: Annotated[int, typer.Option(min=0, max=10_000_000)] = 0,
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List customer credit profiles in deterministic order."""
+
+    try:
+        service, connection = _receivables_service(db_path)
+        try:
+            records = service.list_customers(workspace=workspace, status=status)[offset : offset + limit]
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Receivables Customers", records)
+
+
+@receivables_app.command("invoice-create")
+def receivables_invoice_create_command(
+    number: Annotated[str, typer.Option(help="Invoice number.")],
+    customer: Annotated[str, typer.Option(help="Customer code.")],
+    invoice_date: Annotated[str, typer.Option("--date", help="Invoice date in YYYY-MM-DD format.")],
+    currency: Annotated[str, typer.Option(help="Three-letter invoice currency code.")],
+    lines: Annotated[Path, typer.Option("--lines", help='JSON list or {"lines": [...]} of invoice lines.')],
+    tax: Annotated[int, typer.Option("--tax-minor", min=0, help="Exact invoice tax in minor units.")] = 0,
+    due_date: Annotated[str, typer.Option("--due-date", help="Optional due date in YYYY-MM-DD format.")] = "",
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    organization: Annotated[str, typer.Option(help="Optional organization code.")] = "",
+    entity: Annotated[str, typer.Option(help="Optional legal-entity code.")] = "",
+    idempotency_key: Annotated[str, typer.Option(help="Optional idempotency key.")] = "",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Create a Draft customer invoice from a strict JSON line file."""
+
+    try:
+        raw_lines = _receivables_json_records(lines, key="lines")
+        service, connection = _receivables_service(db_path)
+        try:
+            record = service.create_invoice(
+                invoice_number=number,
+                customer_code=customer,
+                invoice_date=invoice_date,
+                currency_code=currency,
+                tax_minor=tax,
+                lines=[_receivable_invoice_line_from_json(item) for item in raw_lines],
+                due_date=due_date,
+                workspace=workspace,
+                organization_code=organization,
+                entity_code=entity,
+                idempotency_key=idempotency_key,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError, TypeError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Receivables Invoice", record)
+
+
+@receivables_app.command("invoices")
+def receivables_invoices_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    status: Annotated[str, typer.Option(help="Optional invoice-status filter.")] = "",
+    limit: Annotated[int, typer.Option(min=1, max=100_000)] = 500,
+    offset: Annotated[int, typer.Option(min=0, max=10_000_000)] = 0,
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """List customer invoices in deterministic order."""
+
+    try:
+        service, connection = _receivables_service(db_path)
+        try:
+            records = service.list_invoices(workspace=workspace, status=status)[offset : offset + limit]
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_records("Receivables Invoices", records)
+
+
+@receivables_app.command("invoice-submit")
+def receivables_invoice_submit_command(
+    invoice_id: Annotated[str, typer.Option("--invoice-id", help="Invoice identifier.")],
+    expected_version: Annotated[int, typer.Option(min=1, help="Expected optimistic row version.")],
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Submit a Draft customer invoice."""
+
+    try:
+        service, connection = _receivables_service(db_path)
+        try:
+            record = service.submit_invoice(invoice_id, expected_version=expected_version, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Submitted Receivables Invoice", record)
+
+
+@receivables_app.command("invoice-approve")
+def receivables_invoice_approve_command(
+    invoice_id: Annotated[str, typer.Option("--invoice-id", help="Invoice identifier.")],
+    expected_version: Annotated[int, typer.Option(min=1, help="Expected optimistic row version.")],
+    override_reason: Annotated[
+        str, typer.Option("--credit-override-reason", help="Required when credit controls block approval.")
+    ] = "",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Approve a submitted invoice after deterministic credit controls."""
+
+    try:
+        service, connection = _receivables_service(db_path)
+        try:
+            record = service.approve_invoice(
+                invoice_id,
+                expected_version=expected_version,
+                credit_override_reason=override_reason,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Approved Receivables Invoice", record)
+
+
+@receivables_app.command("receipt-post")
+def receivables_receipt_post_command(
+    number: Annotated[str, typer.Option(help="Receipt number.")],
+    customer: Annotated[str, typer.Option(help="Customer code.")],
+    receipt_date: Annotated[str, typer.Option("--date", help="Receipt date in YYYY-MM-DD format.")],
+    currency: Annotated[str, typer.Option(help="Three-letter receipt currency code.")],
+    amount: Annotated[int, typer.Option("--amount-minor", min=1, help="Exact receipt amount in minor units.")],
+    allocations: Annotated[
+        Path | None, typer.Option("--allocations", help='Optional JSON list or {"allocations": [...]}.')
+    ] = None,
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    organization: Annotated[str, typer.Option(help="Optional organization code.")] = "",
+    entity: Annotated[str, typer.Option(help="Optional legal-entity code.")] = "",
+    idempotency_key: Annotated[str, typer.Option(help="Optional idempotency key.")] = "",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Post a receipt with optional atomic invoice allocations."""
+
+    try:
+        raw_allocations = _receivables_json_records(allocations, key="allocations") if allocations is not None else []
+        service, connection = _receivables_service(db_path)
+        try:
+            record = service.post_receipt(
+                receipt_number=number,
+                customer_code=customer,
+                receipt_date=receipt_date,
+                currency_code=currency,
+                amount_minor=amount,
+                allocations=[_receivable_allocation_from_json(item) for item in raw_allocations],
+                workspace=workspace,
+                organization_code=organization,
+                entity_code=entity,
+                idempotency_key=idempotency_key,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError, TypeError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Receivables Receipt", record)
+
+
+@receivables_app.command("receipt-allocate")
+def receivables_receipt_allocate_command(
+    receipt_id: Annotated[str, typer.Option("--receipt-id", help="Posted receipt identifier.")],
+    invoice_id: Annotated[str, typer.Option("--invoice-id", help="Approved invoice identifier.")],
+    amount: Annotated[int, typer.Option("--amount-minor", min=1, help="Exact allocation amount in minor units.")],
+    expected_version: Annotated[int, typer.Option(min=1, help="Expected receipt row version.")],
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Allocate additional unapplied receipt value with a row-version check."""
+
+    try:
+        service, connection = _receivables_service(db_path)
+        try:
+            record = service.allocate_receipt(
+                receipt_id,
+                invoice_id=invoice_id,
+                amount_minor=amount,
+                expected_version=expected_version,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Allocated Receivables Receipt", record)
+
+
+@receivables_app.command("credit-exposure")
+def receivables_credit_exposure_command(
+    customer: Annotated[str, typer.Option(help="Customer code.")],
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Show deterministic customer credit exposure."""
+
+    try:
+        service, connection = _receivables_service(db_path)
+        try:
+            record = service.credit_exposure(customer, workspace=workspace)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Receivables Credit Exposure", record)
+
+
+@receivables_app.command("aging")
+def receivables_aging_command(
+    as_of_date: Annotated[str, typer.Option("--as-of", help="Aging date in YYYY-MM-DD format.")],
+    workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Print deterministic open-item aging buckets."""
+
+    try:
+        service, connection = _receivables_service(db_path)
+        try:
+            payload = service.aging_report(workspace=workspace, as_of_date=as_of_date)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    typer.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
 @finance_core_app.command("summary")
 def finance_core_summary_command(
     workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
@@ -825,9 +1155,7 @@ def finance_core_charts_command(
     try:
         service, connection = _finance_core_service(db_path)
         try:
-            records = service.list_charts(
-                workspace=workspace, limit=limit, offset=offset, actor_label=actor
-            )
+            records = service.list_charts(workspace=workspace, limit=limit, offset=offset, actor_label=actor)
         finally:
             connection.close()
     except (DatabaseError, PlatformError) as exc:
@@ -901,7 +1229,9 @@ def finance_core_accounts_command(
 def finance_core_account_upsert_command(
     code: Annotated[str, typer.Option(help="Account code.")],
     name: Annotated[str, typer.Option(help="Account display name.")],
-    account_type: Annotated[str, typer.Option("--type", help="Asset, Liability, Equity, Income, Expense, or Off Balance.")],
+    account_type: Annotated[
+        str, typer.Option("--type", help="Asset, Liability, Equity, Income, Expense, or Off Balance.")
+    ],
     normal_balance: Annotated[str, typer.Option(help="Debit or Credit.")],
     chart: Annotated[str, typer.Option(help="Chart code.")] = "DEFAULT",
     parent: Annotated[str, typer.Option(help="Optional parent account code.")] = "",
@@ -949,10 +1279,14 @@ def finance_core_account_upsert_command(
 def finance_core_dimension_upsert_command(
     code: Annotated[str, typer.Option(help="Dimension code.")],
     name: Annotated[str, typer.Option(help="Dimension display name.")],
-    dimension_type: Annotated[str, typer.Option("--type", help="Cost Center, Department, Project, or Custom.")] = "Custom",
+    dimension_type: Annotated[
+        str, typer.Option("--type", help="Cost Center, Department, Project, or Custom.")
+    ] = "Custom",
     organization: Annotated[str, typer.Option(help="Optional organization code.")] = "",
     workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
-    required: Annotated[bool, typer.Option("--required/--optional", help="Require this dimension on every line.")] = False,
+    required: Annotated[
+        bool, typer.Option("--required/--optional", help="Require this dimension on every line.")
+    ] = False,
     active: Annotated[bool, typer.Option("--active/--inactive", help="Whether the dimension is active.")] = True,
     actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
     db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
@@ -1034,9 +1368,7 @@ def finance_core_dimensions_command(
                 )
                 title = "Accounting Dimension Values"
             else:
-                records = service.list_dimensions(
-                    workspace=workspace, limit=limit, offset=offset, actor_label=actor
-                )
+                records = service.list_dimensions(workspace=workspace, limit=limit, offset=offset, actor_label=actor)
                 title = "Accounting Dimensions"
         finally:
             connection.close()
@@ -1222,7 +1554,9 @@ def finance_core_entry_validate_command(
             connection.close()
     except (DatabaseError, PlatformError) as exc:
         _safe_cli_error(exc)
-    _print_record_detail("Ledger-Control Entry Validated", {key: value for key, value in record.items() if key != "lines"})
+    _print_record_detail(
+        "Ledger-Control Entry Validated", {key: value for key, value in record.items() if key != "lines"}
+    )
 
 
 @finance_core_app.command("entry-void")
@@ -1324,9 +1658,7 @@ def inventory_units_command(
     try:
         service, connection = _inventory_service(db_path)
         try:
-            records = service.list_uoms(
-                workspace=workspace, limit=limit, offset=offset, actor_label=actor
-            )
+            records = service.list_uoms(workspace=workspace, limit=limit, offset=offset, actor_label=actor)
         finally:
             connection.close()
     except (DatabaseError, PlatformError) as exc:
@@ -1670,9 +2002,7 @@ def inventory_movement_create_command(
             connection.close()
     except (DatabaseError, PlatformError) as exc:
         _safe_cli_error(exc)
-    _print_record_detail(
-        "Inventory Movement Saved", {key: value for key, value in record.items() if key != "lines"}
-    )
+    _print_record_detail("Inventory Movement Saved", {key: value for key, value in record.items() if key != "lines"})
 
 
 @inventory_app.command("movements")
@@ -1745,9 +2075,7 @@ def inventory_movement_post_command(
             connection.close()
     except (DatabaseError, PlatformError) as exc:
         _safe_cli_error(exc)
-    _print_record_detail(
-        "Inventory Movement Posted", {key: value for key, value in record.items() if key != "lines"}
-    )
+    _print_record_detail("Inventory Movement Posted", {key: value for key, value in record.items() if key != "lines"})
 
 
 @inventory_app.command("movement-void")
@@ -1767,9 +2095,7 @@ def inventory_movement_void_command(
             connection.close()
     except (DatabaseError, PlatformError) as exc:
         _safe_cli_error(exc)
-    _print_record_detail(
-        "Inventory Movement Voided", {key: value for key, value in record.items() if key != "lines"}
-    )
+    _print_record_detail("Inventory Movement Voided", {key: value for key, value in record.items() if key != "lines"})
 
 
 @inventory_app.command("on-hand")
@@ -1839,23 +2165,72 @@ def inventory_control_exceptions_command(
 @api_app.command("serve")
 def api_serve_command(
     db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    tenant_db_root: Annotated[
+        Path | None,
+        typer.Option(
+            "--tenant-db-root", help="Optional database-per-tenant root; requests require X-ReconForge-Tenant."
+        ),
+    ] = None,
     host: Annotated[str, typer.Option("--host", help="Bind host.")] = "127.0.0.1",
     port: Annotated[int, typer.Option("--port", help="Bind port.")] = 8765,
+    postgres_dsn: Annotated[
+        str | None,
+        typer.Option(
+            "--postgres-dsn",
+            envvar="RECONFORGE_POSTGRES_DSN",
+            help="Optional PostgreSQL server-auth DSN; prefer RECONFORGE_POSTGRES_DSN in the environment.",
+        ),
+    ] = None,
+    postgres_require_tls: Annotated[
+        bool,
+        typer.Option("--postgres-require-tls/--postgres-no-tls", help="Require PostgreSQL TLS verification."),
+    ] = True,
+    redis_url: Annotated[
+        str | None,
+        typer.Option(
+            "--redis-url",
+            envvar="RECONFORGE_REDIS_URL",
+            help="Optional Redis coordination URL; prefer RECONFORGE_REDIS_URL in the environment.",
+        ),
+    ] = None,
+    redis_require_tls: Annotated[
+        bool,
+        typer.Option("--redis-require-tls/--redis-no-tls", help="Require Redis TLS."),
+    ] = True,
 ) -> None:
-    """Start the local REST API server."""
+    """Start the local REST API or explicit PostgreSQL server-auth profile."""
 
     try:
-        status = database_status(_db_option(db_path))
-        if status.pending_versions:
-            console.print("[red]ReconForge database has pending migrations. Run 'reconforge db migrate' first.[/red]")
-            raise typer.Exit(code=1)
-    except DatabaseError as exc:
+        if tenant_db_root is None:
+            status = database_status(_db_option(db_path))
+            if status.pending_versions:
+                console.print(
+                    "[red]ReconForge database has pending migrations. Run 'reconforge db migrate' first.[/red]"
+                )
+                raise typer.Exit(code=1)
+        else:
+            TenantDatabaseRouter.from_root(tenant_db_root)
+    except (DatabaseError, TenantRoutingError) as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
     if host == ALL_INTERFACES_HOST:
-        console.print(f"[yellow]Warning:[/yellow] binding to {ALL_INTERFACES_HOST} exposes the local API beyond localhost. This is not a public internet deployment mode.")
+        console.print(
+            f"[yellow]Warning:[/yellow] binding to {ALL_INTERFACES_HOST} exposes the local API beyond localhost. This is not a public internet deployment mode."
+        )
+    try:
+        application = create_api_app(
+            db_path,
+            tenant_db_root=tenant_db_root,
+            postgres_dsn=postgres_dsn,
+            postgres_require_tls=postgres_require_tls,
+            redis_url=redis_url,
+            redis_require_tls=redis_require_tls,
+        )
+    except (DatabaseError, TenantRoutingError, ValueError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
     console.print(f"[green]Starting ReconForge local API:[/green] http://{host}:{port}")
-    uvicorn.run(create_api_app(db_path), host=host, port=port, log_level="info")
+    uvicorn.run(application, host=host, port=port, log_level="info")
 
 
 @db_app.command("init")
@@ -1872,6 +2247,45 @@ def db_init_command(
     applied = ", ".join(str(version) for version in status.applied_versions) or "already current"
     console.print(f"[green]Database ready:[/green] {status.path}")
     console.print(f"Schema version: {status.current_version}/{status.latest_version} | Applied: {applied}")
+
+
+@outbox_app.command("list")
+def outbox_list_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    status: Annotated[str, typer.Option("--status", help="pending, published, dead_letter, or all.")] = "pending",
+    limit: Annotated[int, typer.Option("--limit", help="Maximum events to return.")] = 100,
+) -> None:
+    """List local transactional outbox events as machine-readable JSON."""
+
+    connection: sqlite3.Connection | None = None
+    try:
+        connection = connect(_db_option(db_path), require_exists=True)
+        events = OutboxService(connection).list_events(status=status, limit=limit)
+        typer.echo(json.dumps([asdict(event) for event in events], indent=2, sort_keys=True))
+    except (DatabaseError, OutboxError) as exc:
+        _safe_cli_error(exc)
+    finally:
+        if connection is not None:
+            connection.close()
+
+
+@outbox_app.command("requeue")
+def outbox_requeue_command(
+    event_id: Annotated[str, typer.Argument(help="Dead-lettered outbox event identifier.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Requeue one dead-lettered event for an explicit operator replay."""
+
+    connection: sqlite3.Connection | None = None
+    try:
+        connection = connect(_db_option(db_path), require_exists=True)
+        OutboxService(connection).requeue_dead_letter(event_id=event_id)
+    except (DatabaseError, OutboxError) as exc:
+        _safe_cli_error(exc)
+    finally:
+        if connection is not None:
+            connection.close()
+    typer.echo(json.dumps({"event_id": event_id, "status": "requeued"}, sort_keys=True))
 
 
 @db_app.command("migrate")
@@ -1916,7 +2330,9 @@ def db_status_command(
 @db_app.command("export")
 def db_export_command(
     db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
-    output_path: Annotated[Path, typer.Option("--output", help="Local output directory for sanitized JSON export.")] = Path("output/db_export"),
+    output_path: Annotated[
+        Path, typer.Option("--output", help="Local output directory for sanitized JSON export.")
+    ] = Path("output/db_export"),
 ) -> None:
     """Export sanitized local DB records to deterministic JSON files."""
 
@@ -1930,10 +2346,28 @@ def db_export_command(
     _print_success_paths(result.paths)
 
 
+@db_app.command("export-recover")
+def db_export_recover_command(
+    output_path: Annotated[Path, typer.Option("--output", help="Interrupted local DB export directory.")] = Path(
+        "output/db_export"
+    ),
+) -> None:
+    """Explicitly recover one integrity-verified interrupted DB export publication."""
+
+    try:
+        result = recover_database_export_publication(output_path)
+    except DBBridgeError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps({"action": result.action, "transaction_id": result.transaction_id}, sort_keys=True))
+
+
 @db_app.command("import-review-state")
 def db_import_review_state_command(
     db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
-    input_path: Annotated[Path, typer.Option("--input", help="Local review_state.json file.")] = Path("output/review_state.json"),
+    input_path: Annotated[Path, typer.Option("--input", help="Local review_state.json file.")] = Path(
+        "output/review_state.json"
+    ),
 ) -> None:
     """Import legacy review_state.json into DB bridge references."""
 
@@ -1942,13 +2376,17 @@ def db_import_review_state_command(
     except (DatabaseError, DBBridgeError) as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
-    console.print(f"[green]Imported review state:[/green] {result.imported_count} records from {result.source_path.name}")
+    console.print(
+        f"[green]Imported review state:[/green] {result.imported_count} records from {result.source_path.name}"
+    )
 
 
 @db_app.command("import-close")
 def db_import_close_command(
     db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
-    input_path: Annotated[Path, typer.Option("--input", help="Local close folder or close_checklist.json file.")] = Path("output/close"),
+    input_path: Annotated[
+        Path, typer.Option("--input", help="Local close folder or close_checklist.json file.")
+    ] = Path("output/close"),
 ) -> None:
     """Import legacy close_checklist.json task state into DB bridge references."""
 
@@ -1957,13 +2395,17 @@ def db_import_close_command(
     except (DatabaseError, DBBridgeError) as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
-    console.print(f"[green]Imported close checklist:[/green] {result.imported_count} records from {result.source_path.name}")
+    console.print(
+        f"[green]Imported close checklist:[/green] {result.imported_count} records from {result.source_path.name}"
+    )
 
 
 @db_app.command("import-accounts")
 def db_import_accounts_command(
     db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
-    input_path: Annotated[Path, typer.Option("--input", help="Local accounts folder or account_reconciliations.json file.")] = Path("output/accounts"),
+    input_path: Annotated[
+        Path, typer.Option("--input", help="Local accounts folder or account_reconciliations.json file.")
+    ] = Path("output/accounts"),
 ) -> None:
     """Import legacy account_reconciliations.json summaries into DB bridge references."""
 
@@ -1972,13 +2414,17 @@ def db_import_accounts_command(
     except (DatabaseError, DBBridgeError) as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
-    console.print(f"[green]Imported account reconciliations:[/green] {result.imported_count} records from {result.source_path.name}")
+    console.print(
+        f"[green]Imported account reconciliations:[/green] {result.imported_count} records from {result.source_path.name}"
+    )
 
 
 @db_app.command("import-control-tests")
 def db_import_control_tests_command(
     db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
-    input_path: Annotated[Path, typer.Option("--input", help="Local control_testing folder or control_tests.json file.")] = Path("output/control_testing"),
+    input_path: Annotated[
+        Path, typer.Option("--input", help="Local control_testing folder or control_tests.json file.")
+    ] = Path("output/control_testing"),
 ) -> None:
     """Import legacy control_tests.json summaries into DB bridge references."""
 
@@ -1987,13 +2433,17 @@ def db_import_control_tests_command(
     except (DatabaseError, DBBridgeError) as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
-    console.print(f"[green]Imported control tests:[/green] {result.imported_count} records from {result.source_path.name}")
+    console.print(
+        f"[green]Imported control tests:[/green] {result.imported_count} records from {result.source_path.name}"
+    )
 
 
 @db_app.command("backup")
 def db_backup_command(
     db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
-    output_path: Annotated[Path, typer.Option("--output", help="Local backup output directory.")] = Path("output/backups"),
+    output_path: Annotated[Path, typer.Option("--output", help="Local backup output directory.")] = Path(
+        "output/backups"
+    ),
 ) -> None:
     """Create a local DB backup with checksum manifest."""
 
@@ -2002,7 +2452,9 @@ def db_backup_command(
     except (DatabaseError, DBBridgeError) as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
-    console.print("[yellow]Backup warning:[/yellow] local DB backups may contain sensitive business data and password hashes. Protect these files.")
+    console.print(
+        "[yellow]Backup warning:[/yellow] local DB backups may contain sensitive business data and password hashes. Protect these files."
+    )
     console.print(f"[green]Database backup written:[/green] {result.output_dir}")
     console.print(f"Schema version: {result.schema_version} | SHA-256: {result.checksum_sha256}")
     _print_success_paths([result.backup_path, result.manifest_path])
@@ -2010,10 +2462,18 @@ def db_backup_command(
 
 @db_app.command("restore")
 def db_restore_command(
-    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path to restore.")] = Path("output/reconforge.db"),
-    input_path: Annotated[Path, typer.Option("--input", help="Local backup.json file or backup folder.")] = Path("output/backups/backup.json"),
-    force: Annotated[bool, typer.Option("--force", help="Overwrite an existing local DB after checksum validation.")] = False,
-    dry_run: Annotated[bool, typer.Option("--dry-run", help="Validate restore inputs without writing the target DB.")] = False,
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path to restore.")] = Path(
+        "output/reconforge.db"
+    ),
+    input_path: Annotated[Path, typer.Option("--input", help="Local backup.json file or backup folder.")] = Path(
+        "output/backups/backup.json"
+    ),
+    force: Annotated[
+        bool, typer.Option("--force", help="Overwrite an existing local DB after checksum validation.")
+    ] = False,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Validate restore inputs without writing the target DB.")
+    ] = False,
 ) -> None:
     """Restore a local DB backup after checksum validation."""
 
@@ -2024,16 +2484,22 @@ def db_restore_command(
         raise typer.Exit(code=1) from exc
     if result.dry_run:
         console.print("[green]Restore dry-run passed:[/green] backup checksum and schema are supported.")
-        console.print(f"Target: {result.db_path} | Backup: {result.backup_path} | Schema version: {result.schema_version}")
+        console.print(
+            f"Target: {result.db_path} | Backup: {result.backup_path} | Schema version: {result.schema_version}"
+        )
         return
-    console.print("[yellow]Restore warning:[/yellow] restored data is local only and may include sensitive business data.")
+    console.print(
+        "[yellow]Restore warning:[/yellow] restored data is local only and may include sensitive business data."
+    )
     console.print(f"[green]Database restored:[/green] {result.db_path}")
     console.print(f"Schema version: {result.schema_version} | Tables restored: {len(result.restored_tables)}")
 
 
 @db_app.command("backup-verify")
 def db_backup_verify_command(
-    input_path: Annotated[Path, typer.Option("--input", help="Local backup.json file or backup folder.")] = Path("output/backups/backup.json"),
+    input_path: Annotated[Path, typer.Option("--input", help="Local backup.json file or backup folder.")] = Path(
+        "output/backups/backup.json"
+    ),
 ) -> None:
     """Verify a local DB backup manifest and checksum."""
 
@@ -2058,7 +2524,9 @@ def db_migration_dry_run_command(
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
     pending = ", ".join(str(version) for version in status.pending_versions) or "none"
-    console.print(f"[green]Migration dry-run:[/green] current {status.current_version}/{status.latest_version} | pending: {pending}")
+    console.print(
+        f"[green]Migration dry-run:[/green] current {status.current_version}/{status.latest_version} | pending: {pending}"
+    )
 
 
 @audit_app.command("list")
@@ -2117,7 +2585,9 @@ def audit_verify_command(
         raise typer.Exit(code=1) from exc
 
     if result.ok:
-        console.print(f"[green]Audit ledger verified:[/green] {result.checked_events} events | head {result.head_hash[:12]}")
+        console.print(
+            f"[green]Audit ledger verified:[/green] {result.checked_events} events | head {result.head_hash[:12]}"
+        )
         return
 
     table = Table(title="Audit Verification Issues")
@@ -2128,6 +2598,44 @@ def audit_verify_command(
     console.print(table)
     console.print("[red]Audit ledger verification failed.[/red]")
     raise typer.Exit(code=1)
+
+
+def _receivables_json_records(input_path: Path, *, key: str) -> list[dict[str, object]]:
+    try:
+        resolved = resolve_input_file(input_path)
+        document = read_json_record_document(resolved, envelope_keys=(key,))
+    except DBBridgeError as exc:
+        raise PlatformError("Receivables JSON input could not be read.") from exc
+    except RecordIngressError as exc:
+        if exc.code in {"json_record_collection_required", "json_record_not_object"}:
+            raise PlatformError(f"Receivables JSON must be a list or an object containing a {key} list.") from exc
+        raise PlatformError("Receivables JSON input could not be read.") from exc
+    return document.records
+
+
+def _receivable_invoice_line_from_json(item: dict[str, object]) -> ReceivableInvoiceLineInput:
+    try:
+        return ReceivableInvoiceLineInput(
+            description=str(item.get("description", "")),
+            quantity=str(item["quantity"]),
+            unit_price_minor=int(str(item["unit_price_minor"])),
+            line_total_minor=int(str(item["line_total_minor"])),
+            tax_minor=int(str(item.get("tax_minor", 0))),
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise PlatformError(
+            "Each receivables invoice line must contain quantity, unit_price_minor, and line_total_minor."
+        ) from exc
+
+
+def _receivable_allocation_from_json(item: dict[str, object]) -> ReceiptAllocationInput:
+    try:
+        return ReceiptAllocationInput(
+            invoice_id=str(item["invoice_id"]),
+            amount_minor=int(str(item["amount_minor"])),
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise PlatformError("Each receipt allocation must contain invoice_id and amount_minor.") from exc
 
 
 @users_app.command("init-admin")
@@ -2379,7 +2887,9 @@ def workflow_init_object_command(
     except (DatabaseError, AuthRepositoryError, WorkflowRepositoryError, WorkflowServiceError) as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
-    console.print(f"[green]Workflow object initialized:[/green] {workflow_object.object_type}:{workflow_object.object_id} | {workflow_object.status}")
+    console.print(
+        f"[green]Workflow object initialized:[/green] {workflow_object.object_type}:{workflow_object.object_id} | {workflow_object.status}"
+    )
 
 
 @workflow_app.command("status")
@@ -2403,7 +2913,9 @@ def workflow_status_command(
     table.add_column("Object")
     table.add_column("Status")
     table.add_column("Updated")
-    table.add_row(f"{workflow_object.object_type}:{workflow_object.object_id}", workflow_object.status, workflow_object.updated_at)
+    table.add_row(
+        f"{workflow_object.object_type}:{workflow_object.object_id}", workflow_object.status, workflow_object.updated_at
+    )
     console.print(table)
 
 
@@ -2433,7 +2945,9 @@ def workflow_transition_command(
     except (DatabaseError, AuthRepositoryError, WorkflowRepositoryError, WorkflowServiceError) as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
-    console.print(f"[green]Workflow transitioned:[/green] {workflow_object.object_type}:{workflow_object.object_id} | {workflow_object.status}")
+    console.print(
+        f"[green]Workflow transitioned:[/green] {workflow_object.object_type}:{workflow_object.object_id} | {workflow_object.status}"
+    )
 
 
 @workflow_app.command("history")
@@ -2492,7 +3006,9 @@ def accounts_import_trial_balance_command(
             connection.close()
     except (DatabaseError, PlatformError, WorkflowServiceError) as exc:
         _safe_cli_error(exc)
-    console.print(f"[green]Trial balance imported:[/green] {result.imported_rows} rows | records: {result.reconciliation_records}")
+    console.print(
+        f"[green]Trial balance imported:[/green] {result.imported_rows} rows | records: {result.reconciliation_records}"
+    )
 
 
 @accounts_app.command("create-template")
@@ -2502,7 +3018,10 @@ def accounts_create_template_command(
     workspace: Annotated[str, typer.Option("--workspace", help="Local workspace key.")] = "default",
     name: Annotated[str, typer.Option("--name", help="Template name.")] = "",
     risk_rating: Annotated[str, typer.Option("--risk", help="Risk rating.")] = "medium",
-    materiality_threshold: Annotated[float, typer.Option("--materiality", help="Materiality threshold.")] = 0.0,
+    materiality_threshold: Annotated[
+        str,
+        typer.Option("--materiality", help="Exact decimal materiality threshold."),
+    ] = "0",
     required_evidence: Annotated[str, typer.Option("--required-evidence", help="Evidence expectation text.")] = "",
     owner: Annotated[str, typer.Option("--owner", help="Owner/preparer reference.")] = "",
     reviewer: Annotated[str, typer.Option("--reviewer", help="Reviewer reference.")] = "",
@@ -2594,7 +3113,9 @@ def accounts_review_command(
     try:
         connection = _db_connection(db_path)
         try:
-            record = AccountReconciliationService(connection).review(reconciliation_id, reviewer=reviewer, actor_label=actor)
+            record = AccountReconciliationService(connection).review(
+                reconciliation_id, reviewer=reviewer, actor_label=actor
+            )
         finally:
             connection.close()
     except (DatabaseError, PlatformError, WorkflowServiceError) as exc:
@@ -2903,7 +3424,10 @@ def approvals_approve_command(
     approval_id: Annotated[str, typer.Option("--id", help="Approval request id.")],
     db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
     reason: Annotated[str, typer.Option("--reason", help="Decision reason.")] = "",
-    override_reason: Annotated[str, typer.Option("--override-reason", help="Required for SoD override.")] = "",
+    override_reason: Annotated[
+        str,
+        typer.Option("--override-reason", help="Deprecated; SoD overrides are rejected."),
+    ] = "",
     actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
 ) -> None:
     """Approve local workflow metadata."""
@@ -3088,11 +3612,65 @@ def evidence_register_command(
     object_type: Annotated[str, typer.Option("--object-type", help="Optional linked object type.")] = "",
     object_id: Annotated[str, typer.Option("--object-id", help="Optional linked object id.")] = "",
     redaction_status: Annotated[str, typer.Option("--redaction-status", help="Redaction status.")] = "unknown",
+    storage_backend: Annotated[str, typer.Option("--storage-backend", help="Storage backend: local or s3.")] = "local",
+    storage_tenant_id: Annotated[
+        str, typer.Option("--storage-tenant-id", help="Tenant scope for object storage.")
+    ] = "",
+    s3_bucket: Annotated[
+        str, typer.Option("--s3-bucket", envvar="RECONFORGE_S3_BUCKET", help="S3-compatible bucket.")
+    ] = "",
+    s3_endpoint_url: Annotated[
+        str,
+        typer.Option(
+            "--s3-endpoint-url", envvar="RECONFORGE_S3_ENDPOINT_URL", help="Optional S3-compatible endpoint URL."
+        ),
+    ] = "",
+    s3_region: Annotated[
+        str, typer.Option("--s3-region", envvar="RECONFORGE_S3_REGION", help="S3 region.")
+    ] = "us-east-1",
+    s3_key_prefix: Annotated[
+        str,
+        typer.Option("--s3-key-prefix", envvar="RECONFORGE_S3_KEY_PREFIX", help="Tenant-separated object key prefix."),
+    ] = "reconforge",
+    s3_no_tls: Annotated[
+        bool, typer.Option("--s3-no-tls", help="Allow an http:// S3 endpoint for local development only.")
+    ] = False,
+    retention_until: Annotated[
+        str,
+        typer.Option("--retention-until", help="Optional ISO-8601 retention timestamp; requires provider object lock."),
+    ] = "",
     actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
 ) -> None:
-    """Register local evidence with checksum/provenance metadata."""
+    """Register evidence with checksum/provenance metadata."""
 
+    object_store = None
+    storage_factory = None
     try:
+        backend = storage_backend.strip().casefold()
+        if backend not in {"local", "s3"}:
+            raise PlatformError("Evidence storage backend must be local or s3.")
+        parsed_retention: datetime | None = None
+        if retention_until:
+            try:
+                parsed_retention = datetime.fromisoformat(retention_until.replace("Z", "+00:00"))
+            except ValueError as exc:
+                raise PlatformError("Retention timestamp must be valid ISO-8601 text.") from exc
+            if parsed_retention.tzinfo is None:
+                raise PlatformError("Retention timestamp must include a timezone offset.")
+            parsed_retention = parsed_retention.astimezone(UTC)
+        if backend == "s3":
+            if not s3_bucket.strip():
+                raise PlatformError("--s3-bucket or RECONFORGE_S3_BUCKET is required for s3 evidence storage.")
+            storage_factory = ObjectStorageConnectionFactory(
+                ObjectStorageSettings(
+                    bucket=s3_bucket,
+                    endpoint_url=s3_endpoint_url or None,
+                    region=s3_region,
+                    key_prefix=s3_key_prefix,
+                    require_tls=not s3_no_tls,
+                )
+            )
+            object_store = S3ObjectStore(storage_factory)
         connection = _db_connection(db_path)
         try:
             evidence = EvidenceRegistryService(connection).register(
@@ -3102,11 +3680,17 @@ def evidence_register_command(
                 object_id=object_id,
                 redaction_status=redaction_status,
                 actor_label=actor,
+                object_store=object_store,
+                storage_tenant_id=storage_tenant_id,
+                retention_until=parsed_retention,
             )
         finally:
             connection.close()
-    except (DatabaseError, DBBridgeError, PlatformError) as exc:
+    except (DatabaseError, DBBridgeError, PlatformError, ValueError) as exc:
         _safe_cli_error(exc)
+    finally:
+        if storage_factory is not None:
+            storage_factory.close()
     _print_records("Evidence", [evidence])
 
 
@@ -3114,18 +3698,62 @@ def evidence_register_command(
 def evidence_verify_command(
     evidence_id: Annotated[str, typer.Option("--id", help="Evidence id.")],
     db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    s3_bucket: Annotated[
+        str,
+        typer.Option(
+            "--s3-bucket", envvar="RECONFORGE_S3_BUCKET", help="S3-compatible bucket for object-backed evidence."
+        ),
+    ] = "",
+    s3_endpoint_url: Annotated[
+        str,
+        typer.Option(
+            "--s3-endpoint-url", envvar="RECONFORGE_S3_ENDPOINT_URL", help="Optional S3-compatible endpoint URL."
+        ),
+    ] = "",
+    s3_region: Annotated[
+        str, typer.Option("--s3-region", envvar="RECONFORGE_S3_REGION", help="S3 region.")
+    ] = "us-east-1",
+    s3_key_prefix: Annotated[
+        str,
+        typer.Option("--s3-key-prefix", envvar="RECONFORGE_S3_KEY_PREFIX", help="Tenant-separated object key prefix."),
+    ] = "reconforge",
+    s3_no_tls: Annotated[
+        bool, typer.Option("--s3-no-tls", help="Allow an http:// S3 endpoint for local development only.")
+    ] = False,
     actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
 ) -> None:
-    """Verify local evidence checksum."""
+    """Verify local or configured object-backed evidence checksum."""
 
+    storage_factory = None
+    object_store = None
     try:
         connection = _db_connection(db_path)
         try:
-            result = EvidenceRegistryService(connection).verify(evidence_id, actor_label=actor)
+            service = EvidenceRegistryService(connection)
+            evidence = service.get(evidence_id)
+            if str(evidence.get("storage_backend") or "") == OBJECT_STORAGE_BACKEND:
+                if not s3_bucket.strip():
+                    raise PlatformError(
+                        "--s3-bucket or RECONFORGE_S3_BUCKET is required for object-backed evidence verification."
+                    )
+                storage_factory = ObjectStorageConnectionFactory(
+                    ObjectStorageSettings(
+                        bucket=s3_bucket,
+                        endpoint_url=s3_endpoint_url or None,
+                        region=s3_region,
+                        key_prefix=s3_key_prefix,
+                        require_tls=not s3_no_tls,
+                    )
+                )
+                object_store = S3ObjectStore(storage_factory)
+            result = service.verify(evidence_id, actor_label=actor, object_store=object_store)
         finally:
             connection.close()
-    except (DatabaseError, PlatformError) as exc:
+    except (DatabaseError, PlatformError, ValueError) as exc:
         _safe_cli_error(exc)
+    finally:
+        if storage_factory is not None:
+            storage_factory.close()
     _print_records("Evidence Verification", [result.__dict__])
 
 
@@ -3229,8 +3857,13 @@ def journals_policy_run_command(
     workspace: Annotated[str, typer.Option("--workspace", help="Local workspace key.")] = "default",
     period: Annotated[str, typer.Option("--period", help="Optional period filter.")] = "",
     period_end: Annotated[str, typer.Option("--period-end", help="Period end date for late postings.")] = "",
-    high_value_threshold: Annotated[float, typer.Option("--high-value", help="High-value journal threshold.")] = 100000.0,
-    high_risk_accounts: Annotated[str, typer.Option("--high-risk-accounts", help="Comma-separated high-risk account codes.")] = "",
+    high_value_threshold: Annotated[
+        str,
+        typer.Option("--high-value", help="Exact decimal high-value journal threshold."),
+    ] = "100000",
+    high_risk_accounts: Annotated[
+        str, typer.Option("--high-risk-accounts", help="Comma-separated high-risk account codes.")
+    ] = "",
     actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
 ) -> None:
     """Run deterministic local journal policies."""
@@ -3319,7 +3952,10 @@ def intercompany_match_command(
     db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
     workspace: Annotated[str, typer.Option("--workspace", help="Local workspace key.")] = "default",
     period: Annotated[str, typer.Option("--period", help="Optional period filter.")] = "",
-    tolerance: Annotated[float, typer.Option("--tolerance", help="Imbalance tolerance.")] = 0.01,
+    tolerance: Annotated[
+        str,
+        typer.Option("--tolerance", help="Exact decimal imbalance tolerance."),
+    ] = "0.01",
     actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
 ) -> None:
     """Match intercompany transactions into local cases."""
@@ -3362,7 +3998,9 @@ def intercompany_cases_command(
 def intercompany_settle_command(
     case_id: Annotated[str, typer.Option("--case-id", help="Intercompany case id.")],
     db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
-    settlement_status: Annotated[str, typer.Option("--settlement-status", help="Settlement status metadata.")] = "Settled",
+    settlement_status: Annotated[
+        str, typer.Option("--settlement-status", help="Settlement status metadata.")
+    ] = "Settled",
     dispute_owner: Annotated[str, typer.Option("--dispute-owner", help="Dispute owner reference.")] = "",
     evidence_note: Annotated[str, typer.Option("--evidence-note", help="Evidence note/reference.")] = "",
     actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
@@ -3415,12 +4053,16 @@ def controls_import_library_command(
     try:
         connection = _db_connection(db_path)
         try:
-            result = ControlTestingService(connection).import_library(input_path, workspace=workspace, actor_label=actor)
+            result = ControlTestingService(connection).import_library(
+                input_path, workspace=workspace, actor_label=actor
+            )
         finally:
             connection.close()
     except (DatabaseError, DBBridgeError, PlatformError) as exc:
         _safe_cli_error(exc)
-    console.print(f"[green]Control library imported:[/green] {result.imported_rows} rows from {result.source_path.name}")
+    console.print(
+        f"[green]Control library imported:[/green] {result.imported_rows} rows from {result.source_path.name}"
+    )
 
 
 @controls_app.command("plan-tests")
@@ -3541,11 +4183,15 @@ def match_run_command(
     right_id_field: Annotated[str, typer.Option("--right-id-field", help="Right id field.")] = "id",
     amount_field: Annotated[str, typer.Option("--amount-field", help="Amount field name on both sides.")] = "amount",
     date_field: Annotated[str, typer.Option("--date-field", help="Date field name on both sides.")] = "date",
-    reference_field: Annotated[str, typer.Option("--reference-field", help="Reference field name on both sides.")] = "reference",
+    reference_field: Annotated[
+        str, typer.Option("--reference-field", help="Reference field name on both sides.")
+    ] = "reference",
     exact_fields: Annotated[str, typer.Option("--exact-fields", help="Comma-separated exact-key fields.")] = "",
-    amount_tolerance: Annotated[float, typer.Option("--amount-tolerance", help="Allowed amount difference.")] = 0.0,
+    amount_tolerance: Annotated[str, typer.Option("--amount-tolerance", help="Allowed amount difference.")] = "0",
     date_window_days: Annotated[int, typer.Option("--date-window-days", help="Allowed date difference in days.")] = 0,
-    allow_many_to_one: Annotated[bool, typer.Option("--allow-many-to-one", help="Allow right-side records to match more than once.")] = False,
+    allow_many_to_one: Annotated[
+        bool, typer.Option("--allow-many-to-one", help="Allow right-side records to match more than once.")
+    ] = False,
     allow_one_to_many: Annotated[
         bool,
         typer.Option("--allow-one-to-many", help="Allow left-side records to match more than once."),
@@ -3554,6 +4200,10 @@ def match_run_command(
         bool,
         typer.Option("--allow-many-to-many", help="Allow both sides of records to match multiple times."),
     ] = False,
+    idempotency_key: Annotated[
+        str,
+        typer.Option("--idempotency-key", help="Optional stable key that makes a write retry return the original job."),
+    ] = "",
     actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
 ) -> None:
     """Run deterministic DB-backed matching with indexed candidate generation."""
@@ -3577,13 +4227,18 @@ def match_run_command(
                 allow_many_to_one=allow_many_to_one,
                 allow_one_to_many=allow_one_to_many,
                 allow_many_to_many=allow_many_to_many,
+                idempotency_key=idempotency_key or None,
                 actor_label=actor,
+                financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+                record_identity_policy=RECORD_IDENTITY_POLICY,
             )
         finally:
             connection.close()
     except (DatabaseError, DBBridgeError, PlatformError) as exc:
         _safe_cli_error(exc)
-    console.print(f"[green]Match job complete:[/green] {result.job_id} | matched {result.matched_count}/{result.result_count}")
+    console.print(
+        f"[green]Match job complete:[/green] {result.job_id} | matched {result.matched_count}/{result.result_count}"
+    )
 
 
 @match_app.command("job-status")
@@ -3640,7 +4295,9 @@ def match_benchmark_command(
             connection.close()
     except (DatabaseError, PlatformError) as exc:
         _safe_cli_error(exc)
-    console.print(f"[green]Benchmark complete:[/green] {result.job_id} | matched {result.matched_count}/{result.result_count}")
+    console.print(
+        f"[green]Benchmark complete:[/green] {result.job_id} | matched {result.matched_count}/{result.result_count}"
+    )
 
 
 @exceptions_app.command("list")
@@ -3729,7 +4386,9 @@ def exceptions_bulk_update_command(
     try:
         connection = _db_connection(db_path)
         try:
-            count = ExceptionQueueService(connection).bulk_update(exception_ids, status=status, owner=owner, actor_label=actor)
+            count = ExceptionQueueService(connection).bulk_update(
+                exception_ids, status=status, owner=owner, actor_label=actor
+            )
         finally:
             connection.close()
     except (DatabaseError, PlatformError) as exc:
@@ -3851,11 +4510,17 @@ def deployment_docker_verify_command() -> None:
     """Verify local Docker files and tooling presence without claiming production readiness."""
 
     rows: list[dict[str, object]] = [
-        {"check": "Dockerfile", "status": "OK" if Path("Dockerfile").exists() else "WARN", "detail": "Dockerfile present" if Path("Dockerfile").exists() else "Dockerfile not found"},
+        {
+            "check": "Dockerfile",
+            "status": "OK" if Path("Dockerfile").exists() else "WARN",
+            "detail": "Dockerfile present" if Path("Dockerfile").exists() else "Dockerfile not found",
+        },
         {
             "check": "Compose file",
             "status": "OK" if Path("docker-compose.yml").exists() or Path("compose.yml").exists() else "WARN",
-            "detail": "Compose file present" if Path("docker-compose.yml").exists() or Path("compose.yml").exists() else "Compose file not found",
+            "detail": "Compose file present"
+            if Path("docker-compose.yml").exists() or Path("compose.yml").exists()
+            else "Compose file not found",
         },
         {
             "check": "Docker CLI",
@@ -3865,7 +4530,9 @@ def deployment_docker_verify_command() -> None:
     ]
     _print_records("Docker Verification", rows)
     if any(row["status"] == "WARN" for row in rows):
-        console.print("[yellow]Docker verification is local file/tooling inspection only; no runtime guarantee is claimed.[/yellow]")
+        console.print(
+            "[yellow]Docker verification is local file/tooling inspection only; no runtime guarantee is claimed.[/yellow]"
+        )
 
 
 @deployment_app.command("release-check")
@@ -3879,7 +4546,13 @@ def deployment_release_check_command(
         temp_db = Path(folder) / "release_check.db"
         try:
             status = run_migrations(temp_db)
-            checks.append({"check": "DB migration smoke", "status": "OK", "detail": f"schema {status.current_version}/{status.latest_version}"})
+            checks.append(
+                {
+                    "check": "DB migration smoke",
+                    "status": "OK",
+                    "detail": f"schema {status.current_version}/{status.latest_version}",
+                }
+            )
         except DatabaseError as exc:
             checks.append({"check": "DB migration smoke", "status": "FAIL", "detail": str(exc)})
     try:
@@ -3889,8 +4562,12 @@ def deployment_release_check_command(
         probe.unlink()
         checks.append({"check": "Output directory writable", "status": "OK", "detail": str(output_path)})
     except OSError:
-        checks.append({"check": "Output directory writable", "status": "FAIL", "detail": "Unable to write output probe."})
-    checks.append({"check": "Default host binding", "status": "OK", "detail": "CLI API/Studio defaults bind to 127.0.0.1"})
+        checks.append(
+            {"check": "Output directory writable", "status": "FAIL", "detail": "Unable to write output probe."}
+        )
+    checks.append(
+        {"check": "Default host binding", "status": "OK", "detail": "CLI API/Studio defaults bind to 127.0.0.1"}
+    )
     _print_records("Release Check", checks)
     if any(row["status"] == "FAIL" for row in checks):
         raise typer.Exit(code=1)
@@ -3937,7 +4614,9 @@ def validate(
 @reconcile_app.command("stock-gl")
 def reconcile_stock_gl_command(
     input_path: Annotated[Path, typer.Option("--input", help="Directory containing stock_moves and gl_entries.")],
-    config_path: Annotated[Path, typer.Option("--config", help="ReconForge YAML config.")] = Path("config/reconforge.yml"),
+    config_path: Annotated[Path, typer.Option("--config", help="ReconForge YAML config.")] = Path(
+        "config/reconforge.yml"
+    ),
     output_path: Annotated[Path, typer.Option("--output", help="Output directory.")] = Path("output"),
     matching_strategy: Annotated[
         str,
@@ -3946,7 +4625,10 @@ def reconcile_stock_gl_command(
 ) -> None:
     """Compare stock movements with GL postings."""
 
-    config = load_config(_config_option(config_path))
+    config = load_config(
+        _config_option(config_path),
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
     datasets = read_required_datasets(input_path, [DatasetName.STOCK_MOVES, DatasetName.GL_ENTRIES])
     if matching_strategy not in {"standard", "strict", "aggressive", "audit-safe"}:
         console.print("[red]matching strategy must be one of: standard, strict, aggressive, audit-safe[/red]")
@@ -3956,6 +4638,7 @@ def reconcile_stock_gl_command(
         datasets[DatasetName.GL_ENTRIES],
         config,
         matching_strategy=cast(MatchingStrategy, matching_strategy),
+        input_policy=STRICT_FINANCIAL_INPUT_POLICY,
     )
     output_dir = ensure_output_dir(output_path)
     frames = stock_gl_result_frames(result)
@@ -3963,10 +4646,18 @@ def reconcile_stock_gl_command(
     workbook_path = write_excel_workbook(
         frames,
         output_dir / "stock_gl_reconciliation.xlsx",
-        metadata=audit_metadata(config.company_name, "Stock to GL Reconciliation", config.output_currency),
+        metadata={
+            **audit_metadata(config.company_name, "Stock to GL Reconciliation", config.output_currency),
+            "financial_input_policy": result.financial_input_policy,
+            "record_identity_policy": result.record_identity_policy,
+            "matching_ambiguity_policy": result.matching_ambiguity_policy,
+        },
     )
     write_json(
         {
+            "financial_input_policy": result.financial_input_policy,
+            "record_identity_policy": result.record_identity_policy,
+            "matching_ambiguity_policy": result.matching_ambiguity_policy,
             "summary": frame_to_records(result.summary),
             "matched_transactions": frame_to_records(result.matched_transactions),
             "all_exceptions": frame_to_records(result.all_exceptions),
@@ -3981,12 +4672,17 @@ def reconcile_stock_gl_command(
 @reconcile_app.command("workorders")
 def reconcile_workorders_command(
     input_path: Annotated[Path, typer.Option("--input", help="Directory containing workshop ERP files.")],
-    config_path: Annotated[Path, typer.Option("--config", help="ReconForge YAML config.")] = Path("config/reconforge.yml"),
+    config_path: Annotated[Path, typer.Option("--config", help="ReconForge YAML config.")] = Path(
+        "config/reconforge.yml"
+    ),
     output_path: Annotated[Path, typer.Option("--output", help="Output directory.")] = Path("output"),
 ) -> None:
     """Reconcile spare-parts issues, work orders, purchase orders, returns, and invoices."""
 
-    config = load_config(_config_option(config_path))
+    config = load_config(
+        _config_option(config_path),
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
     datasets = read_required_datasets(
         input_path,
         [
@@ -4026,11 +4722,16 @@ def reconcile_workorders_command(
 def wip_aging_command(
     input_path: Annotated[Path, typer.Option("--input", help="Directory containing work_orders.")],
     output_path: Annotated[Path, typer.Option("--output", help="Output directory.")] = Path("output"),
-    config_path: Annotated[Path, typer.Option("--config", help="ReconForge YAML config.")] = Path("config/reconforge.yml"),
+    config_path: Annotated[Path, typer.Option("--config", help="ReconForge YAML config.")] = Path(
+        "config/reconforge.yml"
+    ),
 ) -> None:
     """Generate WIP aging by work order, customer, equipment, department, and bucket."""
 
-    config = load_config(_config_option(config_path))
+    config = load_config(
+        _config_option(config_path),
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
     datasets = read_required_datasets(input_path, [DatasetName.WORK_ORDERS])
     wip = generate_wip_aging(datasets[DatasetName.WORK_ORDERS], config)
     summary = aging_summary(wip)
@@ -4050,12 +4751,17 @@ def wip_aging_command(
 @report_app.command("management-pack")
 def management_pack_command(
     input_path: Annotated[Path, typer.Option("--input", help="Directory containing all sample ERP files.")],
-    config_path: Annotated[Path, typer.Option("--config", help="ReconForge YAML config.")] = Path("config/reconforge.yml"),
+    config_path: Annotated[Path, typer.Option("--config", help="ReconForge YAML config.")] = Path(
+        "config/reconforge.yml"
+    ),
     output_path: Annotated[Path, typer.Option("--output", help="Output directory.")] = Path("output"),
 ) -> None:
     """Generate a complete Excel management pack and companion outputs."""
 
-    config = load_config(_config_option(config_path))
+    config = load_config(
+        _config_option(config_path),
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
     datasets = read_required_datasets(
         input_path,
         [
@@ -4067,7 +4773,12 @@ def management_pack_command(
             DatasetName.INVOICES,
         ],
     )
-    stock_result = reconcile_stock_gl(datasets[DatasetName.STOCK_MOVES], datasets[DatasetName.GL_ENTRIES], config)
+    stock_result = reconcile_stock_gl(
+        datasets[DatasetName.STOCK_MOVES],
+        datasets[DatasetName.GL_ENTRIES],
+        config,
+        input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
     workorder_result = reconcile_workorders(
         datasets[DatasetName.STOCK_MOVES],
         datasets[DatasetName.WORK_ORDERS],
@@ -4077,7 +4788,9 @@ def management_pack_command(
         config,
     )
     wip = generate_wip_aging(datasets[DatasetName.WORK_ORDERS], config)
-    artifacts = generate_management_pack(input_path, ensure_output_dir(output_path), config, stock_result, workorder_result, wip)
+    artifacts = generate_management_pack(
+        input_path, ensure_output_dir(output_path), config, stock_result, workorder_result, wip
+    )
     console.print(f"[green]Management pack:[/green] {artifacts.excel_path}")
     console.print(f"[green]JSON summary:[/green] {artifacts.json_path}")
     console.print(f"[green]HTML dashboard report:[/green] {artifacts.html_path}")
@@ -4086,11 +4799,21 @@ def management_pack_command(
 @report_app.command("evidence-binder")
 def evidence_binder_command(
     input_path: Annotated[Path, typer.Option("--input", help="Generated ReconForge output directory.")],
-    output_path: Annotated[Path, typer.Option("--output", help="Evidence binder output directory.")] = Path("output/evidence"),
+    output_path: Annotated[Path, typer.Option("--output", help="Evidence binder output directory.")] = Path(
+        "output/evidence"
+    ),
 ) -> None:
     """Generate audit evidence folders for High and Critical exceptions."""
 
-    artifacts = generate_evidence_binder(input_path, output_path)
+    try:
+        artifacts = generate_evidence_binder(
+            input_path,
+            output_path,
+            financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+        )
+    except GeneratedArtifactError as exc:
+        console.print("[red]Generated report input failed safety validation.[/red]")
+        raise typer.Exit(code=1) from exc
     console.print(f"[green]Evidence cases generated:[/green] {len(artifacts)}")
     if artifacts:
         _print_frame("Evidence Cases", pd.DataFrame([artifact.model_dump() for artifact in artifacts]))
@@ -4098,14 +4821,41 @@ def evidence_binder_command(
 
 @report_app.command("client-pack")
 def client_pack_command(
-    input_path: Annotated[Path, typer.Option("--input", help="Generated ReconForge output directory.")] = Path("output"),
-    output_path: Annotated[Path, typer.Option("--output", help="Client handoff pack directory.")] = Path("output/client_pack"),
-    redact_names: Annotated[bool, typer.Option("--redact-names", help="Redact customer, supplier, employee, reviewer, and equipment identifiers where practical.")] = False,
-    redact_amounts: Annotated[bool, typer.Option("--redact-amounts", help="Bucket or redact monetary values where practical.")] = False,
-    exclude_raw_records: Annotated[bool, typer.Option("--exclude-raw-records", help="Exclude source-record evidence extracts from the pack.")] = False,
-    summary_only: Annotated[bool, typer.Option("--summary-only", help="Create only generated handoff notes plus the source summary when available.")] = False,
-    exclude_evidence: Annotated[bool, typer.Option("--exclude-evidence", help="Exclude the evidence folder from the client pack.")] = False,
-    include_manifest_checksums: Annotated[bool, typer.Option("--include-manifest-checksums", help="Add SHA-256 checksums for included client-pack files.")] = False,
+    input_path: Annotated[Path, typer.Option("--input", help="Generated ReconForge output directory.")] = Path(
+        "output"
+    ),
+    output_path: Annotated[Path, typer.Option("--output", help="Client handoff pack directory.")] = Path(
+        "output/client_pack"
+    ),
+    redact_names: Annotated[
+        bool,
+        typer.Option(
+            "--redact-names",
+            help="Redact customer, supplier, employee, reviewer, and equipment identifiers where practical.",
+        ),
+    ] = False,
+    redact_amounts: Annotated[
+        bool, typer.Option("--redact-amounts", help="Bucket or redact monetary values where practical.")
+    ] = False,
+    exclude_raw_records: Annotated[
+        bool, typer.Option("--exclude-raw-records", help="Exclude source-record evidence extracts from the pack.")
+    ] = False,
+    summary_only: Annotated[
+        bool,
+        typer.Option(
+            "--summary-only", help="Create only generated handoff notes plus the source summary when available."
+        ),
+    ] = False,
+    exclude_evidence: Annotated[
+        bool, typer.Option("--exclude-evidence", help="Exclude the evidence folder from the client pack.")
+    ] = False,
+    include_manifest_checksums: Annotated[
+        bool,
+        typer.Option(
+            "--include-manifest-checksums",
+            help="Compatibility request flag; current schema-v2 manifests always include SHA-256 input/output fingerprints.",
+        ),
+    ] = False,
 ) -> None:
     """Create a local consultant/client handoff folder from generated outputs."""
 
@@ -4119,6 +4869,7 @@ def client_pack_command(
             summary_only=summary_only,
             exclude_evidence=exclude_evidence,
             include_manifest_checksums=include_manifest_checksums,
+            financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
         )
     except (FileNotFoundError, ValueError) as exc:
         console.print(f"[red]{exc}[/red]")
@@ -4130,13 +4881,35 @@ def client_pack_command(
     _print_success_paths(artifacts.included_files)
 
 
+@report_app.command("client-pack-recover")
+def client_pack_recover_command(
+    output_path: Annotated[
+        Path,
+        typer.Option("--output", help="Interrupted client handoff pack directory."),
+    ],
+) -> None:
+    """Explicitly recover one integrity-checked interrupted local client-pack publication."""
+
+    try:
+        result = recover_client_pack_publication(output_path)
+    except ValueError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(
+        f"[green]Client handoff publication recovery:[/green] {result.action} (transaction {result.transaction_id})"
+    )
+
+
 @rules_app.command("validate")
 def rules_validate_command(
     pack_path: Annotated[Path, typer.Option("--pack", help="Control pack directory.")],
 ) -> None:
     """Validate a control pack."""
 
-    pack = load_rule_pack(pack_path)
+    pack = load_rule_pack(
+        pack_path,
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
     console.print(f"[green]Control pack valid:[/green] {pack.metadata.pack_id} ({len(pack.rules)} rules)")
 
 
@@ -4183,7 +4956,9 @@ def _run_mapping_inspection(input_path: Path, pack_path: Path, output_path: Path
 def mappings_inspect_command(
     input_path: Annotated[Path, typer.Option("--input", help="Folder containing local CSV/XLSX ERP exports.")],
     pack_path: Annotated[Path, typer.Option("--pack", help="ERP mapping control-pack directory.")],
-    output_path: Annotated[Path, typer.Option("--output", help="Mapping inspection report directory.")] = Path("output/mapping_wizard"),
+    output_path: Annotated[Path, typer.Option("--output", help="Mapping inspection report directory.")] = Path(
+        "output/mapping_wizard"
+    ),
 ) -> None:
     """Inspect local export headers against an ERP mapping profile."""
 
@@ -4194,7 +4969,9 @@ def mappings_inspect_command(
 def mappings_wizard_command(
     input_path: Annotated[Path, typer.Option("--input", help="Folder containing local CSV/XLSX ERP exports.")],
     pack_path: Annotated[Path, typer.Option("--pack", help="ERP mapping control-pack directory.")],
-    output_path: Annotated[Path, typer.Option("--output", help="Mapping inspection report directory.")] = Path("output/mapping_wizard"),
+    output_path: Annotated[Path, typer.Option("--output", help="Mapping inspection report directory.")] = Path(
+        "output/mapping_wizard"
+    ),
 ) -> None:
     """Generate a draft local mapping report for ERP exports."""
 
@@ -4203,7 +4980,9 @@ def mappings_wizard_command(
 
 @mappings_app.command("profile-template")
 def mappings_profile_template_command(
-    output_path: Annotated[Path, typer.Option("--output", help="Profile template output directory.")] = Path("output/profile_template"),
+    output_path: Annotated[Path, typer.Option("--output", help="Profile template output directory.")] = Path(
+        "output/profile_template"
+    ),
 ) -> None:
     """Generate a local generic CSV mapping profile template."""
 
@@ -4217,7 +4996,10 @@ def rules_list_command(
 ) -> None:
     """List rules in a control pack."""
 
-    pack = load_rule_pack(pack_path)
+    pack = load_rule_pack(
+        pack_path,
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
     frame = pd.DataFrame(
         [
             {
@@ -4242,9 +5024,13 @@ def rules_run_command(
 ) -> None:
     """Run a control pack against ERP exports."""
 
-    results = run_rule_pack(input_path, pack_path)
-    paths = write_rule_results(results, output_path)
-    console.print(f"[green]Rule results:[/green] {len(results)} triggered controls")
+    execution = execute_rule_pack(
+        input_path,
+        pack_path,
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
+    paths = write_rule_execution(execution, output_path)
+    console.print(f"[green]Rule results:[/green] {len(execution.results)} triggered controls")
     _print_success_paths(paths)
 
 
@@ -4256,7 +5042,13 @@ def rules_explain_command(
     """Explain a control-pack rule in deterministic plain English."""
 
     try:
-        console.print(explain_rule(str(pack_path), rule_id))
+        console.print(
+            explain_rule(
+                str(pack_path),
+                rule_id,
+                financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+            )
+        )
     except ValueError as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
@@ -4267,24 +5059,42 @@ def anonymize_command(
     input_path: Annotated[Path, typer.Option("--input", help="Input ERP export directory.")],
     output_path: Annotated[Path, typer.Option("--output", help="Anonymized output directory.")],
     mask_amounts: Annotated[bool, typer.Option("--mask-amounts", help="Mask monetary amounts.")] = False,
-    amount_noise_percent: Annotated[float, typer.Option("--amount-noise-percent", help="Maximum percentage noise for masked amounts.")] = 15.0,
+    amount_noise_percent: Annotated[
+        str,
+        typer.Option("--amount-noise-percent", help="Exact maximum percentage noise for masked amounts."),
+    ] = "15",
     seed: Annotated[int, typer.Option("--seed", help="Deterministic anonymization seed.")] = 42,
     preserve_dates: Annotated[bool, typer.Option("--preserve-dates", help="Keep dates unchanged.")] = False,
     date_shift_days: Annotated[int, typer.Option("--date-shift-days", help="Shift dates by this many days.")] = 0,
-    profile: Annotated[str, typer.Option("--profile", help="Anonymization profile: consulting-safe or public-demo.")] = "consulting-safe",
+    profile: Annotated[
+        str, typer.Option("--profile", help="Anonymization profile: consulting-safe or public-demo.")
+    ] = "consulting-safe",
+    private_mapping_path: Annotated[
+        Path | None,
+        typer.Option(
+            "--private-map-output",
+            help="Explicit private original-to-mask CSV path outside both input and anonymized output directories.",
+        ),
+    ] = None,
 ) -> None:
     """Anonymize ERP exports while preserving referential integrity."""
 
-    paths = anonymize_directory(
-        input_path,
-        output_path,
-        mask_amounts=mask_amounts,
-        amount_noise_percent=amount_noise_percent,
-        seed=seed,
-        preserve_dates=preserve_dates,
-        date_shift_days=date_shift_days,
-        profile=profile,
-    )
+    try:
+        paths = anonymize_directory(
+            input_path,
+            output_path,
+            mask_amounts=mask_amounts,
+            amount_noise_percent=amount_noise_percent,
+            seed=seed,
+            preserve_dates=preserve_dates,
+            date_shift_days=date_shift_days,
+            profile=profile,
+            private_mapping_path=private_mapping_path,
+            financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
     console.print(f"[green]Anonymized files:[/green] {len(paths)}")
     _print_success_paths(paths)
 
@@ -4292,24 +5102,39 @@ def anonymize_command(
 @generate_app.command("synthetic")
 def generate_synthetic_command(
     rows: Annotated[int, typer.Option("--rows", help="Number of stock movement rows to generate.", min=1)] = 1000,
-    output_path: Annotated[Path, typer.Option("--output", help="Synthetic output directory.")] = Path("benchmarks/small_1k"),
-    exception_rate: Annotated[float, typer.Option("--exception-rate", help="Approximate exception rate.")] = 0.15,
-    critical_rate: Annotated[float, typer.Option("--critical-rate", help="Approximate critical exception rate.")] = 0.05,
+    output_path: Annotated[Path, typer.Option("--output", help="Synthetic output directory.")] = Path(
+        "benchmarks/small_1k"
+    ),
+    exception_rate: Annotated[
+        str, typer.Option("--exception-rate", help="Approximate exception rate as exact decimal text.")
+    ] = "0.15",
+    critical_rate: Annotated[
+        str, typer.Option("--critical-rate", help="Approximate critical exception rate as exact decimal text.")
+    ] = "0.05",
     seed: Annotated[int, typer.Option("--seed", help="Deterministic generation seed.")] = 42,
-    industry: Annotated[str, typer.Option("--industry", help="Industry profile: workshop, manufacturing, fleet, dealership, service.")] = "workshop",
-    currency: Annotated[str, typer.Option("--currency", help="Output currency code for synthetic monetary rows.")] = "USD",
+    industry: Annotated[
+        str, typer.Option("--industry", help="Industry profile: workshop, manufacturing, fleet, dealership, service.")
+    ] = "workshop",
+    currency: Annotated[
+        str, typer.Option("--currency", help="Output currency code for synthetic monetary rows.")
+    ] = "USD",
 ) -> None:
     """Generate synthetic ERP CSV exports matching ReconForge schema."""
 
-    paths = generate_synthetic_dataset(
-        rows,
-        output_path,
-        exception_rate=exception_rate,
-        critical_rate=critical_rate,
-        seed=seed,
-        industry=industry,
-        currency=currency,
-    )
+    try:
+        paths = generate_synthetic_dataset(
+            rows,
+            output_path,
+            exception_rate=exception_rate,
+            critical_rate=critical_rate,
+            seed=seed,
+            industry=industry,
+            currency=currency,
+            financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+        )
+    except ValueError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
     console.print(f"[green]Synthetic dataset generated:[/green] {output_path}")
     _print_success_paths(paths)
 
@@ -4318,8 +5143,12 @@ def generate_synthetic_command(
 def benchmark_command(
     input_path: Annotated[Path, typer.Option("--input", help="Input dataset directory.")],
     engine: Annotated[str, typer.Option("--engine", help="Benchmark engine: pandas or duckdb.")] = "pandas",
-    output_path: Annotated[Path, typer.Option("--output", help="Benchmark output directory.")] = Path("output/benchmark"),
-    config_path: Annotated[Path, typer.Option("--config", help="ReconForge YAML config.")] = Path("config/reconforge.yml"),
+    output_path: Annotated[Path, typer.Option("--output", help="Benchmark output directory.")] = Path(
+        "output/benchmark"
+    ),
+    config_path: Annotated[Path, typer.Option("--config", help="ReconForge YAML config.")] = Path(
+        "config/reconforge.yml"
+    ),
 ) -> None:
     """Benchmark reconciliation runtime and output metrics."""
 
@@ -4329,6 +5158,47 @@ def benchmark_command(
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
     _print_frame("Benchmark", pd.DataFrame([metrics.to_dict()]))
+
+
+@app.command("benchmark-reconciliation")
+def benchmark_reconciliation_command(
+    records: Annotated[
+        int, typer.Option("--records", min=2, max=2_000_000, help="Synthetic records across both sides.")
+    ] = 10_000,
+    partitions: Annotated[
+        int, typer.Option("--partitions", min=0, max=100_000, help="Hard-key partitions; 0 selects a bounded default.")
+    ] = 0,
+    partition_max_records: Annotated[int, typer.Option("--partition-max-records", min=1, max=100_000)] = 10_000,
+    seed: Annotated[int, typer.Option("--seed", help="Synthetic data seed.")] = 7,
+    amount_fractional_digits: Annotated[
+        int,
+        typer.Option("--amount-fractional-digits", min=0, max=18, help="Synthetic record decimals per amount field."),
+    ] = 2,
+    streaming: Annotated[
+        bool, typer.Option("--streaming", help="Generate and match one synthetic partition at a time.")
+    ] = False,
+    output_path: Annotated[Path, typer.Option("--output", help="Benchmark output directory.")] = Path(
+        "output/reconciliation-benchmark"
+    ),
+) -> None:
+    """Benchmark the deterministic partitioned execution adapter."""
+
+    try:
+        benchmark = (
+            run_reconciliation_execution_streaming_benchmark if streaming else run_reconciliation_execution_benchmark
+        )
+        metrics = benchmark(
+            records,
+            partition_count=partitions or None,
+            partition_max_records=partition_max_records,
+            seed=seed,
+            amount_fractional_digits=amount_fractional_digits,
+            output_dir=output_path,
+        )
+    except (ValueError, RuntimeError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    _print_frame("Reconciliation execution benchmark", pd.DataFrame([metrics.to_dict()]))
 
 
 @explain_app.command("exception")
@@ -4347,13 +5217,22 @@ def explain_exception_command(
 
 @review_app.command("list")
 def review_list_command(
-    input_path: Annotated[Path, typer.Option("--input", help="Generated ReconForge output directory.")] = Path("output"),
+    input_path: Annotated[Path, typer.Option("--input", help="Generated ReconForge output directory.")] = Path(
+        "output"
+    ),
 ) -> None:
     """List local exceptions with review status."""
 
     state_path = input_path / "review_state.json"
-    exceptions = collect_exception_frame(input_path)
-    merged = merge_review_state_with_exceptions(exceptions, load_review_state(state_path))
+    try:
+        exceptions = collect_exception_frame(
+            input_path,
+            financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+        )
+        merged = merge_review_state_with_exceptions(exceptions, load_review_state(state_path))
+    except GeneratedArtifactError as exc:
+        console.print("[red]Generated report input failed safety validation.[/red]")
+        raise typer.Exit(code=1) from exc
     if merged.empty:
         console.print("[yellow]No generated exceptions found.[/yellow]")
         return
@@ -4379,24 +5258,32 @@ def review_list_command(
 def review_set_status_command(
     exception_id: Annotated[str, typer.Option("--exception-id", help="Exception ID to update.")],
     status: Annotated[str, typer.Option("--status", help=f"Status: {', '.join(ALLOWED_STATUSES)}")],
-    input_path: Annotated[Path, typer.Option("--input", help="Generated ReconForge output directory.")] = Path("output"),
+    input_path: Annotated[Path, typer.Option("--input", help="Generated ReconForge output directory.")] = Path(
+        "output"
+    ),
     reviewer: Annotated[str, typer.Option("--reviewer", help="Reviewer name or initials.")] = "",
     note: Annotated[str, typer.Option("--note", help="Reviewer note.")] = "",
     decision_reason: Annotated[str, typer.Option("--decision-reason", help="Decision reason.")] = "",
     accepted_risk_reason: Annotated[str, typer.Option("--accepted-risk-reason", help="Accepted-risk reason.")] = "",
     escalation_owner: Annotated[str, typer.Option("--escalation-owner", help="Escalation owner.")] = "",
-    prepared_by: Annotated[str, typer.Option("--prepared-by", help="Preparer name or role for workflow metadata.")] = "",
+    prepared_by: Annotated[
+        str, typer.Option("--prepared-by", help="Preparer name or role for workflow metadata.")
+    ] = "",
     prepared_at: Annotated[str, typer.Option("--prepared-at", help="Optional prepared timestamp or date.")] = "",
-    reviewed_by: Annotated[str, typer.Option("--reviewed-by", help="Reviewer name or role for workflow metadata.")] = "",
+    reviewed_by: Annotated[
+        str, typer.Option("--reviewed-by", help="Reviewer name or role for workflow metadata.")
+    ] = "",
     reviewed_at: Annotated[str, typer.Option("--reviewed-at", help="Optional reviewed timestamp or date.")] = "",
-    certification_status: Annotated[str, typer.Option("--certification-status", help="Workflow certification status metadata.")] = "",
+    certification_status: Annotated[
+        str, typer.Option("--certification-status", help="Workflow certification status metadata.")
+    ] = "",
     certification_note: Annotated[str, typer.Option("--certification-note", help="Workflow certification note.")] = "",
 ) -> None:
     """Set local review status for one exception."""
 
     state_path = input_path / "review_state.json"
-    state = load_review_state(state_path)
     try:
+        state = load_review_state(state_path)
         entry = update_review_status(
             exception_id,
             status,
@@ -4413,6 +5300,9 @@ def review_set_status_command(
             certification_status=certification_status,
             certification_note=certification_note,
         )
+    except GeneratedArtifactError as exc:
+        console.print("[red]Review state failed safety validation.[/red]")
+        raise typer.Exit(code=1) from exc
     except ValueError as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
@@ -4424,19 +5314,35 @@ def review_set_status_command(
 
 @review_app.command("export")
 def review_export_command(
-    input_path: Annotated[Path, typer.Option("--input", help="Generated ReconForge output directory.")] = Path("output"),
-    output_path: Annotated[Path, typer.Option("--output", help="Review register workbook path.")] = Path("output/review_register.xlsx"),
+    input_path: Annotated[Path, typer.Option("--input", help="Generated ReconForge output directory.")] = Path(
+        "output"
+    ),
+    output_path: Annotated[Path, typer.Option("--output", help="Review register workbook path.")] = Path(
+        "output/review_register.xlsx"
+    ),
 ) -> None:
     """Export exception review state as an Excel register."""
 
-    path = export_review_register(input_path, output_path)
+    try:
+        path = export_review_register(
+            input_path,
+            output_path,
+            financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+        )
+    except GeneratedArtifactError as exc:
+        console.print("[red]Generated report input failed safety validation.[/red]")
+        raise typer.Exit(code=1) from exc
     console.print(f"[green]Review register written:[/green] {path}")
 
 
 @close_app.command("init")
 def close_init_command(
-    output_path: Annotated[Path, typer.Option("--output", help="Close checklist output directory.")] = Path("output/close"),
-    template_path: Annotated[Path | None, typer.Option("--template", help="Optional local JSON/YAML checklist template.")] = None,
+    output_path: Annotated[Path, typer.Option("--output", help="Close checklist output directory.")] = Path(
+        "output/close"
+    ),
+    template_path: Annotated[
+        Path | None, typer.Option("--template", help="Optional local JSON/YAML checklist template.")
+    ] = None,
     force: Annotated[bool, typer.Option("--force", help="Overwrite an existing close checklist.")] = False,
 ) -> None:
     """Create a local close checklist JSON file."""
@@ -4451,7 +5357,9 @@ def close_init_command(
 
 @close_app.command("list")
 def close_list_command(
-    input_path: Annotated[Path, typer.Option("--input", help="Close checklist directory or JSON file.")] = Path("output/close"),
+    input_path: Annotated[Path, typer.Option("--input", help="Close checklist directory or JSON file.")] = Path(
+        "output/close"
+    ),
 ) -> None:
     """List local close checklist tasks."""
 
@@ -4464,7 +5372,11 @@ def close_list_command(
     if tasks.empty:
         console.print("[yellow]No close checklist tasks found.[/yellow]")
         return
-    _print_frame("Close Checklist", tasks[["task_id", "status", "owner", "due_date", "category", "task_name", "note"]], max_rows=100)
+    _print_frame(
+        "Close Checklist",
+        tasks[["task_id", "status", "owner", "due_date", "category", "task_name", "note"]],
+        max_rows=100,
+    )
     summary = close_summary_frame(checklist)
     completion = summary[summary["metric"].eq("completion_rate_pct")]
     if not completion.empty:
@@ -4475,7 +5387,9 @@ def close_list_command(
 def close_set_status_command(
     task_id: Annotated[str, typer.Option("--task-id", help="Close checklist task ID.")],
     status: Annotated[str, typer.Option("--status", help=f"Status: {', '.join(ALLOWED_CLOSE_STATUSES)}")],
-    input_path: Annotated[Path, typer.Option("--input", help="Close checklist directory or JSON file.")] = Path("output/close"),
+    input_path: Annotated[Path, typer.Option("--input", help="Close checklist directory or JSON file.")] = Path(
+        "output/close"
+    ),
     owner: Annotated[str, typer.Option("--owner", help="Plain-text owner name or role.")] = "",
     note: Annotated[str, typer.Option("--note", help="Local workflow note.")] = "",
     due_date: Annotated[str, typer.Option("--due-date", help="Optional due date text.")] = "",
@@ -4483,7 +5397,9 @@ def close_set_status_command(
     """Update one local close checklist task."""
 
     try:
-        task = update_close_task_status(input_path, task_id=task_id, status=status, owner=owner, note=note, due_date=due_date)
+        task = update_close_task_status(
+            input_path, task_id=task_id, status=status, owner=owner, note=note, due_date=due_date
+        )
     except (FileNotFoundError, ValueError) as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
@@ -4492,8 +5408,12 @@ def close_set_status_command(
 
 @close_app.command("report")
 def close_report_command(
-    input_path: Annotated[Path, typer.Option("--input", help="Close checklist directory or JSON file.")] = Path("output/close"),
-    output_path: Annotated[Path, typer.Option("--output", help="Close report output directory.")] = Path("output/close_report"),
+    input_path: Annotated[Path, typer.Option("--input", help="Close checklist directory or JSON file.")] = Path(
+        "output/close"
+    ),
+    output_path: Annotated[Path, typer.Option("--output", help="Close report output directory.")] = Path(
+        "output/close_report"
+    ),
 ) -> None:
     """Export a local close checklist report."""
 
@@ -4518,8 +5438,12 @@ def analyze_variance_command(
     current_path: Annotated[Path, typer.Option("--current", help="Current generated ReconForge output folder.")],
     previous_path: Annotated[Path, typer.Option("--previous", help="Previous generated ReconForge output folder.")],
     output_path: Annotated[Path, typer.Option("--output", help="Variance output directory.")] = Path("output/variance"),
-    amount_threshold: Annotated[float, typer.Option("--amount-threshold", help="Absolute amount threshold for flags.")] = 0.0,
-    percent_threshold: Annotated[float, typer.Option("--percent-threshold", help="Percentage threshold for flags.")] = 10.0,
+    amount_threshold: Annotated[
+        str, typer.Option("--amount-threshold", help="Exact absolute amount threshold for flags.")
+    ] = "0",
+    percent_threshold: Annotated[
+        str, typer.Option("--percent-threshold", help="Exact percentage threshold for flags.")
+    ] = "10",
 ) -> None:
     """Compare two local summary output folders."""
 
@@ -4530,6 +5454,7 @@ def analyze_variance_command(
             output_path,
             amount_threshold=amount_threshold,
             percent_threshold=percent_threshold,
+            financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
         )
     except (FileNotFoundError, ValueError) as exc:
         console.print(f"[red]{exc}[/red]")
@@ -4548,12 +5473,18 @@ def analyze_variance_command(
 @controls_app.command("matrix")
 def controls_matrix_command(
     pack_path: Annotated[Path, typer.Option("--pack", help="Control pack directory.")],
-    output_path: Annotated[Path, typer.Option("--output", help="Control matrix output directory.")] = Path("output/control_matrix"),
+    output_path: Annotated[Path, typer.Option("--output", help="Control matrix output directory.")] = Path(
+        "output/control_matrix"
+    ),
 ) -> None:
     """Generate a local control matrix from a rule pack."""
 
     try:
-        artifacts = export_control_matrix(pack_path, output_path)
+        artifacts = export_control_matrix(
+            pack_path,
+            output_path,
+            financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+        )
     except (FileNotFoundError, ValueError) as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
@@ -4563,14 +5494,22 @@ def controls_matrix_command(
 @compare_app.command("periods", context_settings={"allow_extra_args": True})
 def compare_periods_command(
     ctx: typer.Context,
-    inputs: Annotated[list[Path], typer.Option("--inputs", help="Generated output folders to compare, in period order.")],
-    output_path: Annotated[Path, typer.Option("--output", help="Period comparison output directory.")] = Path("output/period_comparison"),
+    inputs: Annotated[
+        list[Path], typer.Option("--inputs", help="Generated output folders to compare, in period order.")
+    ],
+    output_path: Annotated[Path, typer.Option("--output", help="Period comparison output directory.")] = Path(
+        "output/period_comparison"
+    ),
 ) -> None:
     """Compare exception outputs from two or more generated periods."""
 
     period_inputs = [*inputs, *(Path(value) for value in ctx.args)]
     try:
-        artifacts = compare_period_outputs(period_inputs, output_path)
+        artifacts = compare_period_outputs(
+            period_inputs,
+            output_path,
+            financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+        )
     except (FileNotFoundError, ValueError) as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
@@ -4581,9 +5520,15 @@ def compare_periods_command(
 @demo_app.command("run")
 def demo_run_command(
     output_path: Annotated[Path, typer.Option("--output", help="Demo output directory.")] = Path("output/demo"),
-    input_path: Annotated[Path, typer.Option("--input", help="Sample ERP export directory.")] = Path("examples/sample_data"),
-    config_path: Annotated[Path, typer.Option("--config", help="ReconForge YAML config.")] = Path("config/reconforge.yml"),
-    rules_pack: Annotated[Path, typer.Option("--rules-pack", help="Control pack to run during the demo.")] = Path("control-packs/audit-basic"),
+    input_path: Annotated[Path, typer.Option("--input", help="Sample ERP export directory.")] = Path(
+        "examples/sample_data"
+    ),
+    config_path: Annotated[Path, typer.Option("--config", help="ReconForge YAML config.")] = Path(
+        "config/reconforge.yml"
+    ),
+    rules_pack: Annotated[Path, typer.Option("--rules-pack", help="Control pack to run during the demo.")] = Path(
+        "control-packs/audit-basic"
+    ),
 ) -> None:
     """Run the local 10-minute sample workflow end to end."""
 
@@ -4595,7 +5540,10 @@ def demo_run_command(
         console.print("[red]Demo stopped because sample data has validation errors.[/red]")
         raise typer.Exit(code=1)
 
-    config = load_config(_config_option(config_path))
+    config = load_config(
+        _config_option(config_path),
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
     datasets = read_required_datasets(
         input_path,
         [
@@ -4608,7 +5556,12 @@ def demo_run_command(
         ],
     )
     output_dir = ensure_output_dir(output_path)
-    stock_result = reconcile_stock_gl(datasets[DatasetName.STOCK_MOVES], datasets[DatasetName.GL_ENTRIES], config)
+    stock_result = reconcile_stock_gl(
+        datasets[DatasetName.STOCK_MOVES],
+        datasets[DatasetName.GL_ENTRIES],
+        config,
+        input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
     workorder_result = reconcile_workorders(
         datasets[DatasetName.STOCK_MOVES],
         datasets[DatasetName.WORK_ORDERS],
@@ -4626,7 +5579,12 @@ def demo_run_command(
     stock_workbook = write_excel_workbook(
         stock_frames,
         output_dir / "stock_gl_reconciliation.xlsx",
-        metadata=audit_metadata(config.company_name, "Stock to GL Reconciliation", config.output_currency),
+        metadata={
+            **audit_metadata(config.company_name, "Stock to GL Reconciliation", config.output_currency),
+            "financial_input_policy": stock_result.financial_input_policy,
+            "record_identity_policy": stock_result.record_identity_policy,
+            "matching_ambiguity_policy": stock_result.matching_ambiguity_policy,
+        },
     )
     workorder_workbook = write_excel_workbook(
         workorder_frames,
@@ -4634,12 +5592,20 @@ def demo_run_command(
         metadata=audit_metadata(config.company_name, "Work Order Reconciliation", config.output_currency),
     )
 
-    rule_paths = write_rule_results(run_rule_pack(input_path, rules_pack), output_dir / "rules")
+    rule_execution = execute_rule_pack(
+        input_path,
+        rules_pack,
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
+    rule_paths = write_rule_execution(rule_execution, output_dir / "rules")
     artifacts = generate_management_pack(input_path, output_dir, config, stock_result, workorder_result, wip)
 
     state_path = output_dir / "review_state.json"
     state = load_review_state(state_path)
-    exceptions = collect_exception_frame(output_dir)
+    exceptions = collect_exception_frame(
+        output_dir,
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
     if not exceptions.empty:
         exception_id = str(exceptions.iloc[0]["exception_id"])
         update_review_status(
@@ -4651,9 +5617,21 @@ def demo_run_command(
             decision_reason="Validate source posting and operational evidence.",
         )
     save_review_state(state_path, state)
-    register_path = export_review_register(output_dir, output_dir / "review_register.xlsx")
-    evidence_artifacts = generate_evidence_binder(output_dir, output_dir / "evidence")
-    client_pack_artifacts = generate_client_pack(output_dir, output_dir / "client_pack")
+    register_path = export_review_register(
+        output_dir,
+        output_dir / "review_register.xlsx",
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
+    evidence_artifacts = generate_evidence_binder(
+        output_dir,
+        output_dir / "evidence",
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
+    client_pack_artifacts = generate_client_pack(
+        output_dir,
+        output_dir / "client_pack",
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
 
     paths = [
         artifacts.excel_path,
@@ -4672,7 +5650,10 @@ def demo_run_command(
         "Demo Workflow",
         pd.DataFrame(
             [
-                {"step": "validated_sample_data", "result": f"{len(issue_frame)} validation issues, {error_count} errors"},
+                {
+                    "step": "validated_sample_data",
+                    "result": f"{len(issue_frame)} validation issues, {error_count} errors",
+                },
                 {"step": "stock_to_gl_exceptions", "result": len(stock_result.all_exceptions)},
                 {"step": "workorder_exceptions", "result": len(workorder_result.all_exceptions)},
                 {"step": "rules_triggered", "result": len(rule_paths)},
@@ -4695,8 +5676,12 @@ def demo_run_command(
 
 @demo_app.command("enterprise")
 def demo_enterprise_command(
-    output_path: Annotated[Path, typer.Option("--output", help="Synthetic enterprise demo output directory.")] = Path("output/enterprise_demo"),
-    db_path: Annotated[Path | None, typer.Option("--db", help="Optional local SQLite DB path inside the demo output directory.")] = None,
+    output_path: Annotated[Path, typer.Option("--output", help="Synthetic enterprise demo output directory.")] = Path(
+        "output/enterprise_demo"
+    ),
+    db_path: Annotated[
+        Path | None, typer.Option("--db", help="Optional local SQLite DB path inside the demo output directory.")
+    ] = None,
 ) -> None:
     """Generate a local synthetic enterprise demo package."""
 
@@ -4714,7 +5699,10 @@ def demo_enterprise_command(
                 {"artifact": "manifest", "result": result.manifest_path.name},
                 {"artifact": "walkthrough", "result": result.walkthrough_path.name},
                 {"artifact": "demo_script", "result": result.demo_script_path.name},
-                {"artifact": "database", "result": result.db_path.name if result.db_path is not None else "not persisted"},
+                {
+                    "artifact": "database",
+                    "result": result.db_path.name if result.db_path is not None else "not persisted",
+                },
                 {"artifact": "synthetic_data_marker", "result": "SYNTHETIC_ENTERPRISE_DEMO_ONLY"},
             ],
         ),
@@ -4826,10 +5814,18 @@ def dashboard(
 
 @app.command("studio")
 def studio(
-    input_path: Annotated[Path, typer.Option("--input", help="ERP input directory for Studio views.")] = Path("examples/sample_data"),
-    output_path: Annotated[Path, typer.Option("--output", help="Generated output directory for downloads/evidence.")] = Path("output"),
-    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path for --require-auth mode.")] = Path("output/reconforge.db"),
-    require_auth: Annotated[bool, typer.Option("--require-auth", help="Require local Studio login and RBAC checks.")] = False,
+    input_path: Annotated[Path, typer.Option("--input", help="ERP input directory for Studio views.")] = Path(
+        "examples/sample_data"
+    ),
+    output_path: Annotated[
+        Path, typer.Option("--output", help="Generated output directory for downloads/evidence.")
+    ] = Path("output"),
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path for --require-auth mode.")] = Path(
+        "output/reconforge.db"
+    ),
+    require_auth: Annotated[
+        bool, typer.Option("--require-auth", help="Require local Studio login and RBAC checks.")
+    ] = False,
     host: Annotated[str, typer.Option("--host", help="Bind host.")] = "127.0.0.1",
     port: Annotated[int, typer.Option("--port", help="Bind port.")] = 8601,
 ) -> None:
@@ -4839,7 +5835,9 @@ def studio(
         try:
             status = database_status(_db_option(db_path))
             if status.pending_versions:
-                console.print("[red]ReconForge database has pending migrations. Run 'reconforge db migrate' first.[/red]")
+                console.print(
+                    "[red]ReconForge database has pending migrations. Run 'reconforge db migrate' first.[/red]"
+                )
                 raise typer.Exit(code=1)
         except DatabaseError as exc:
             console.print(f"[red]{exc}[/red]")
@@ -4855,8 +5853,12 @@ def studio(
 
 @app.command("doctor")
 def doctor(
-    input_path: Annotated[Path, typer.Option("--input", help="Optional sample data directory to inspect.")] = Path("examples/sample_data"),
-    config_path: Annotated[Path, typer.Option("--config", help="ReconForge YAML config.")] = Path("config/reconforge.yml"),
+    input_path: Annotated[Path, typer.Option("--input", help="Optional sample data directory to inspect.")] = Path(
+        "examples/sample_data"
+    ),
+    config_path: Annotated[Path, typer.Option("--config", help="ReconForge YAML config.")] = Path(
+        "config/reconforge.yml"
+    ),
     output_path: Annotated[Path, typer.Option("--output", help="Output directory to inspect.")] = Path("output"),
 ) -> None:
     """Check environment, dependencies, sample data, config, and report output path."""
@@ -4864,7 +5866,10 @@ def doctor(
     checks = []
     checks.append(("Python package", "OK", f"ReconForge ERP {__version__}"))
     try:
-        config = load_config(_config_option(config_path))
+        config = load_config(
+            _config_option(config_path),
+            financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+        )
         checks.append(("Config", "OK", f"{config_path} | {config.company_name}"))
     except ValueError as exc:
         checks.append(("Config", "FAIL", str(exc)))
@@ -4873,7 +5878,9 @@ def doctor(
     issues = validate_input_directory(input_path) if input_path.exists() else []
     structural_errors = sum(1 for issue in issues if issue.severity == "error")
     warnings = sum(1 for issue in issues if issue.severity == "warning")
-    checks.append(("Validation", "OK" if structural_errors == 0 else "FAIL", f"{structural_errors} errors, {warnings} warnings"))
+    checks.append(
+        ("Validation", "OK" if structural_errors == 0 else "FAIL", f"{structural_errors} errors, {warnings} warnings")
+    )
 
     table = Table(title="ReconForge Doctor")
     table.add_column("Check")

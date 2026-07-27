@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from jsonschema import Draft202012Validator
 from typer.testing import CliRunner
 
+import reconforge.db.migrations as migration_module
 from reconforge.api import create_api_app
 from reconforge.audit import list_audit_events, verify_audit_events
 from reconforge.auth import LocalAuthService
@@ -64,9 +65,7 @@ def _seed(
         name="Synthetic Egypt",
         currency_code="EGP",
     )
-    period = master.upsert_period(
-        name="2026-07", start_date="2026-07-01", end_date="2026-07-31"
-    )
+    period = master.upsert_period(name="2026-07", start_date="2026-07-01", end_date="2026-07-31")
     finance = FinanceCoreService(connection)
     for account_code, name, account_type, normal_balance in (
         ("1400", "Inventory control", "Asset", "Debit"),
@@ -155,9 +154,7 @@ def _movement(
         ],
         actor_label=actor,
     )
-    return inventory.post_movement(
-        str(movement["id"]), reason="Independent stock review", actor_label=actor
-    )
+    return inventory.post_movement(str(movement["id"]), reason="Independent stock review", actor_label=actor)
 
 
 def _approve_valuation(
@@ -171,19 +168,14 @@ def _approve_valuation(
         valuation_number=number,
         movement_id=str(movement["id"]),
         policy_code="FIFO",
-        input_costs=(
-            [] if total_cost is None else [{"line_number": 1, "total_cost": total_cost}]
-        ),
+        input_costs=([] if total_cost is None else [{"line_number": 1, "total_cost": total_cost}]),
+        actor_label="valuation-preparer",
     )
-    return valuation.approve_document(
-        str(document["id"]), reason="Synthetic valuation independently reviewed"
-    )
+    return valuation.approve_document(str(document["id"]), reason="Synthetic valuation independently reviewed")
 
 
 def _token(client: TestClient, username: str) -> str:
-    response = client.post(
-        "/api/v1/auth/login", json={"username": username, "password": "Secret-123"}
-    )
+    response = client.post("/api/v1/auth/login", json={"username": username, "password": "Secret-123"})
     assert response.status_code == 200
     return str(response.json()["access_token"])
 
@@ -203,9 +195,7 @@ def test_receipt_reversal_removes_layer_and_creates_mirror_finance_draft(
             movement_date="2026-07-01",
             quantity="10.000",
         )
-        original = _approve_valuation(
-            valuation, receipt, number="VAL-001", total_cost="100.01"
-        )
+        original = _approve_valuation(valuation, receipt, number="VAL-001", total_cost="100.01")
         mirror = _movement(
             inventory,
             period,
@@ -219,10 +209,9 @@ def test_receipt_reversal_removes_layer_and_creates_mirror_finance_draft(
             reversal_number="IVR-001",
             original_valuation_document_id=str(original["id"]),
             reversal_movement_id=str(mirror["id"]),
+            actor_label="reversal-preparer",
         )
-        approved = service.approve_reversal(
-            str(draft["id"]), reason="Exact receipt correction independently reviewed"
-        )
+        approved = service.approve_reversal(str(draft["id"]), reason="Exact receipt correction independently reviewed")
 
         assert approved["status"] == "Approved"
         assert approved["total_value"] == "100.01"
@@ -231,9 +220,7 @@ def test_receipt_reversal_removes_layer_and_creates_mirror_finance_draft(
         assert approved["effects"][0]["quantity"] == "10.000"
         assert approved["effects"][0]["value"] == "100.01"
         _assert_contract("inventory_valuation_reversal.schema.json", approved)
-        _assert_contract(
-            "inventory_valuation_reversal_snapshot.schema.json", service.snapshot()
-        )
+        _assert_contract("inventory_valuation_reversal_snapshot.schema.json", service.snapshot())
         layer = valuation.list_cost_layers(open_only=False)[0]
         assert layer["remaining_quantity"] == "0.000"
         assert layer["remaining_value"] == "0.00"
@@ -250,12 +237,8 @@ def test_receipt_reversal_removes_layer_and_creates_mirror_finance_draft(
             (original["finance_entry_id"],),
         ).fetchall()
         assert reversal_entry["status"] == "Draft"
-        assert [row["debit_minor"] for row in reversal_lines] == [
-            row["credit_minor"] for row in original_lines
-        ]
-        assert [row["credit_minor"] for row in reversal_lines] == [
-            row["debit_minor"] for row in original_lines
-        ]
+        assert [row["debit_minor"] for row in reversal_lines] == [row["credit_minor"] for row in original_lines]
+        assert [row["credit_minor"] for row in reversal_lines] == [row["debit_minor"] for row in original_lines]
         with pytest.raises(PlatformError, match="preserves this mirror movement"):
             inventory.void_movement(str(mirror["id"]), reason="Blocked evidence deletion")
 
@@ -278,9 +261,7 @@ def test_receipt_reversal_removes_layer_and_creates_mirror_finance_draft(
             "finance_drafts": 1,
         }
         _assert_contract("inventory_valuation_reversal.schema.json", approved)
-        _assert_contract(
-            "inventory_valuation_reversal_snapshot.schema.json", service.snapshot()
-        )
+        _assert_contract("inventory_valuation_reversal_snapshot.schema.json", service.snapshot())
         actions = {event.action for event in list_audit_events(connection)}
         assert {
             "inventory_valuation_reversal_draft_created",
@@ -327,10 +308,9 @@ def test_delivery_reversal_restores_exact_consumed_layer(tmp_path: Path) -> None
             reversal_number="IVR-D",
             original_valuation_document_id=str(original["id"]),
             reversal_movement_id=str(mirror["id"]),
+            actor_label="reversal-preparer",
         )
-        approved = service.approve_reversal(
-            str(draft["id"]), reason="Exact delivery correction reviewed"
-        )
+        approved = service.approve_reversal(str(draft["id"]), reason="Exact delivery correction reviewed")
 
         assert approved["total_value"] == "30.00"
         assert approved["effects"][0]["effect_type"] == "Restore"
@@ -384,9 +364,7 @@ def test_cancelled_reversal_releases_document_and_movement_for_a_new_draft(
             movement_date="2026-07-01",
             quantity="1.000",
         )
-        original = _approve_valuation(
-            valuation, receipt, number="VAL-CANCEL", total_cost="25.00"
-        )
+        original = _approve_valuation(valuation, receipt, number="VAL-CANCEL", total_cost="25.00")
         mirror = _movement(
             inventory,
             period,
@@ -401,18 +379,14 @@ def test_cancelled_reversal_releases_document_and_movement_for_a_new_draft(
             original_valuation_document_id=str(original["id"]),
             reversal_movement_id=str(mirror["id"]),
         )
-        cancelled = service.cancel_reversal(
-            str(draft["id"]), reason="Replacement evidence will use a new workflow"
-        )
+        cancelled = service.cancel_reversal(str(draft["id"]), reason="Replacement evidence will use a new workflow")
 
         assert cancelled["status"] == "Cancelled"
         assert cancelled["finance_entry_id"] is None
         assert cancelled["effects"] == []
         assert inventory.get_movement(str(mirror["id"]))["status"] == "Posted"
         with pytest.raises(PlatformError, match="Only Draft"):
-            service.approve_reversal(
-                str(cancelled["id"]), reason="Cancelled records stay terminal"
-            )
+            service.approve_reversal(str(cancelled["id"]), reason="Cancelled records stay terminal")
 
         replacement = service.create_reversal(
             reversal_number="IVR-CANCEL-2",
@@ -442,9 +416,7 @@ def test_six_decimal_delivery_reversal_restores_multiple_fifo_layers_exactly(
             movement_date="2026-07-01",
             quantity="1.000001",
         )
-        _approve_valuation(
-            valuation, first_receipt, number="VAL-PREC-1", total_cost="100.01"
-        )
+        _approve_valuation(valuation, first_receipt, number="VAL-PREC-1", total_cost="100.01")
         second_receipt = _movement(
             inventory,
             period,
@@ -453,9 +425,7 @@ def test_six_decimal_delivery_reversal_restores_multiple_fifo_layers_exactly(
             movement_date="2026-07-02",
             quantity="1.000001",
         )
-        _approve_valuation(
-            valuation, second_receipt, number="VAL-PREC-2", total_cost="200.02"
-        )
+        _approve_valuation(valuation, second_receipt, number="VAL-PREC-2", total_cost="200.02")
         delivery = _movement(
             inventory,
             period,
@@ -478,10 +448,9 @@ def test_six_decimal_delivery_reversal_restores_multiple_fifo_layers_exactly(
             reversal_number="IVR-PREC",
             original_valuation_document_id=str(original["id"]),
             reversal_movement_id=str(mirror["id"]),
+            actor_label="reversal-preparer",
         )
-        approved = service.approve_reversal(
-            str(draft["id"]), reason="Six-decimal multi-layer restoration reviewed"
-        )
+        approved = service.approve_reversal(str(draft["id"]), reason="Six-decimal multi-layer restoration reviewed")
 
         assert [effect["quantity"] for effect in approved["effects"]] == [
             "1.000001",
@@ -494,10 +463,7 @@ def test_six_decimal_delivery_reversal_restores_multiple_fifo_layers_exactly(
                 (approved["id"],),
             ).fetchall()
         ) == int(original["total_value"].replace(".", ""))
-        layers = {
-            str(layer["valuation_number"]): layer
-            for layer in valuation.list_cost_layers(open_only=False)
-        }
+        layers = {str(layer["valuation_number"]): layer for layer in valuation.list_cost_layers(open_only=False)}
         assert layers["VAL-PREC-1"]["remaining_quantity"] == "1.000001"
         assert layers["VAL-PREC-1"]["remaining_value"] == "100.01"
         assert layers["VAL-PREC-2"]["remaining_quantity"] == "1.000001"
@@ -512,9 +478,7 @@ def test_reversal_rejects_mismatch_consumed_receipt_and_known_user_self_approval
     path = _database(tmp_path)
     connection = connect(path, require_exists=True)
     try:
-        inventory, valuation, period = _seed(
-            connection, with_users=True, allow_negative=True
-        )
+        inventory, valuation, period = _seed(connection, with_users=True, allow_negative=True)
         receipt = _movement(
             inventory,
             period,
@@ -523,9 +487,7 @@ def test_reversal_rejects_mismatch_consumed_receipt_and_known_user_self_approval
             movement_date="2026-07-01",
             quantity="10.000",
         )
-        original = _approve_valuation(
-            valuation, receipt, number="VAL-RISK", total_cost="100.00"
-        )
+        original = _approve_valuation(valuation, receipt, number="VAL-RISK", total_cost="100.00")
         delivery = _movement(
             inventory,
             period,
@@ -565,13 +527,9 @@ def test_reversal_rejects_mismatch_consumed_receipt_and_known_user_self_approval
             actor_label="controller",
         )
         with pytest.raises(PlatformError, match="Segregation of duties"):
-            service.approve_reversal(
-                str(draft["id"]), reason="Self approval blocked", actor_label="controller"
-            )
+            service.approve_reversal(str(draft["id"]), reason="Self approval blocked", actor_label="controller")
         with pytest.raises(PlatformError, match="still consumed"):
-            service.approve_reversal(
-                str(draft["id"]), reason="Independent review", actor_label="reviewer"
-            )
+            service.approve_reversal(str(draft["id"]), reason="Independent review", actor_label="reviewer")
         assert service.get_reversal(str(draft["id"]))["status"] == "Draft"
 
         dependent_mirror = _movement(
@@ -620,9 +578,7 @@ def test_reversal_api_cli_rbac_and_migration_12(tmp_path: Path) -> None:
             movement_date="2026-07-01",
             quantity="1.000",
         )
-        original = _approve_valuation(
-            valuation, receipt, number="VAL-API", total_cost="25.00"
-        )
+        original = _approve_valuation(valuation, receipt, number="VAL-API", total_cost="25.00")
         mirror = _movement(
             inventory,
             period,
@@ -674,21 +630,17 @@ def test_reversal_api_cli_rbac_and_migration_12(tmp_path: Path) -> None:
     assert read.json()["source"]["external_calls"] is False
     _assert_contract("inventory_valuation_reversal_snapshot.schema.json", read.json())
 
-    cli = runner.invoke(
-        app, ["inventory", "valuation", "reversal", "summary", "--db", str(path)]
-    )
+    cli = runner.invoke(app, ["inventory", "valuation", "reversal", "summary", "--db", str(path)])
     assert cli.exit_code == 0, cli.output
     assert json.loads(cli.stdout)["summary"]["approved_reversals"] == 1
 
     old = tmp_path / "version-eleven.db"
     run_migrations(old, target_version=11)
     result = run_migrations(old)
-    assert result.applied_versions == [12]
+    assert result.applied_versions == list(range(12, migration_module.MIGRATIONS[-1].version + 1))
     old_connection = connect(old, require_exists=True)
     try:
-        assert SQLiteInventoryValuationReversalRepository(old_connection).summary_counts(
-            "missing"
-        ) == {
+        assert SQLiteInventoryValuationReversalRepository(old_connection).summary_counts("missing") == {
             "draft_reversals": 0,
             "approved_reversals": 0,
             "cancelled_reversals": 0,
@@ -712,9 +664,7 @@ def test_reversal_backup_restore_and_public_export(tmp_path: Path) -> None:
             movement_date="2026-07-01",
             quantity="2.000",
         )
-        original = _approve_valuation(
-            valuation, receipt, number="VAL-BACKUP", total_cost="40.03"
-        )
+        original = _approve_valuation(valuation, receipt, number="VAL-BACKUP", total_cost="40.03")
         mirror = _movement(
             inventory,
             period,
@@ -728,10 +678,9 @@ def test_reversal_backup_restore_and_public_export(tmp_path: Path) -> None:
             reversal_number="IVR-BACKUP",
             original_valuation_document_id=str(original["id"]),
             reversal_movement_id=str(mirror["id"]),
+            actor_label="reversal-preparer",
         )
-        expected = service.approve_reversal(
-            str(draft["id"]), reason="Backup reversal review"
-        )
+        expected = service.approve_reversal(str(draft["id"]), reason="Backup reversal review")
     finally:
         connection.close()
 
@@ -740,13 +689,9 @@ def test_reversal_backup_restore_and_public_export(tmp_path: Path) -> None:
     restore_backup(restored, backup.output_dir)
     restored_connection = connect(restored, require_exists=True)
     try:
-        restored_reversal = InventoryValuationReversalService(
-            restored_connection
-        ).get_reversal(str(expected["id"]))
+        restored_reversal = InventoryValuationReversalService(restored_connection).get_reversal(str(expected["id"]))
         assert restored_reversal == expected
-        layer = InventoryValuationService(restored_connection).list_cost_layers(
-            open_only=False
-        )[0]
+        layer = InventoryValuationService(restored_connection).list_cost_layers(open_only=False)[0]
         assert layer["remaining_quantity"] == "0.000"
         assert restored_connection.execute("PRAGMA foreign_key_check").fetchall() == []
     finally:
@@ -773,9 +718,7 @@ def test_migration_12_preserves_and_locks_legacy_finance_line_dimensions(
             dimension_type="Cost Center",
             required_on_entries=False,
         )
-        value = finance.upsert_dimension_value(
-            dimension_code="CC", value_code="OPS", name="Operations"
-        )
+        value = finance.upsert_dimension_value(dimension_code="CC", value_code="OPS", name="Operations")
         receipt = _movement(
             inventory,
             period,
@@ -784,9 +727,7 @@ def test_migration_12_preserves_and_locks_legacy_finance_line_dimensions(
             movement_date="2026-07-01",
             quantity="2.000",
         )
-        original = _approve_valuation(
-            valuation, receipt, number="VAL-DIM", total_cost="40.03"
-        )
+        original = _approve_valuation(valuation, receipt, number="VAL-DIM", total_cost="40.03")
         original_line_ids = [
             str(row["id"])
             for row in connection.execute(
@@ -812,7 +753,7 @@ def test_migration_12_preserves_and_locks_legacy_finance_line_dimensions(
         connection.close()
 
     result = run_migrations(path)
-    assert result.applied_versions == [12]
+    assert result.applied_versions == list(range(12, migration_module.MIGRATIONS[-1].version + 1))
     connection = connect(path, require_exists=True)
     try:
         service = InventoryValuationReversalService(connection)
@@ -820,10 +761,9 @@ def test_migration_12_preserves_and_locks_legacy_finance_line_dimensions(
             reversal_number="IVR-DIM",
             original_valuation_document_id=str(original["id"]),
             reversal_movement_id=str(mirror["id"]),
+            actor_label="reversal-preparer",
         )
-        approved = service.approve_reversal(
-            str(draft["id"]), reason="Legacy dimensions independently reviewed"
-        )
+        approved = service.approve_reversal(str(draft["id"]), reason="Legacy dimensions independently reviewed")
         dimension_rows = connection.execute(
             """
             SELECT entries.id AS entry_id, lines.line_number, dimensions.dimension_value_id
@@ -840,9 +780,7 @@ def test_migration_12_preserves_and_locks_legacy_finance_line_dimensions(
             by_entry.setdefault(str(row["entry_id"]), []).append(
                 (int(row["line_number"]), str(row["dimension_value_id"]))
             )
-        assert by_entry[str(original["finance_entry_id"])] == by_entry[
-            str(approved["finance_entry_id"])
-        ]
+        assert by_entry[str(original["finance_entry_id"])] == by_entry[str(approved["finance_entry_id"])]
 
         reversal_dimension = connection.execute(
             """

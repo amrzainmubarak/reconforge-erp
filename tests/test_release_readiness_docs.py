@@ -4,10 +4,10 @@ import re
 import tomllib
 from pathlib import Path
 
-RELEASE_VERSION = "0.7.0"
+RELEASE_VERSION = "0.7.1"
 
 REQUIRED_DOCS = [
-    Path("docs/releases/v0.7.0.md"),
+    Path("docs/releases/v0.7.1.md"),
     Path("docs/deployment-smoke-check.md"),
     Path("docs/docker-verification.md"),
     Path("docs/release-readiness-checklist.md"),
@@ -40,7 +40,7 @@ def test_release_readiness_docs_exist_and_cover_release_positioning() -> None:
     for path in REQUIRED_DOCS:
         assert path.exists(), path
 
-    release_note = _read(Path("docs/releases/v0.7.0.md")).lower()
+    release_note = _read(Path("docs/releases/v0.7.1.md")).lower()
     for phrase in [
         "foundation-stage",
         "local-first",
@@ -87,7 +87,7 @@ def test_release_docs_avoid_unsupported_positive_claims() -> None:
     combined = "\n".join(
         _read(path).lower()
         for path in [
-            Path("docs/releases/v0.7.0.md"),
+            Path("docs/releases/v0.7.1.md"),
             Path("docs/deployment-smoke-check.md"),
             Path("docs/docker-verification.md"),
             Path("CHANGELOG.md"),
@@ -128,7 +128,7 @@ def test_version_references_are_consistent_for_v070_release() -> None:
         Path("README.md"),
         Path("docs/index.md"),
         Path("CHANGELOG.md"),
-        Path("docs/releases/v0.7.0.md"),
+        Path("docs/releases/v0.7.1.md"),
     ]:
         assert f"v{RELEASE_VERSION}" in _read(path), path
 
@@ -141,14 +141,14 @@ def test_docs_index_and_readme_link_release_smoke_docs() -> None:
     readme = _read(Path("README.md"))
 
     for link in [
-        "releases/v0.7.0.md",
+        "releases/v0.7.1.md",
         "deployment-smoke-check.md",
         "docker-verification.md",
     ]:
         assert f"]({link})" in docs_index
 
     for link in [
-        "docs/releases/v0.7.0.md",
+        "docs/releases/v0.7.1.md",
         "docs/deployment-smoke-check.md",
         "docs/docker-verification.md",
     ]:

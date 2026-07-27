@@ -59,7 +59,7 @@ How Codex can help:
 
 ## SBOM Workflow
 
-The SBOM workflow generates a CycloneDX artifact for release tags and manual runs. The SBOM improves dependency visibility but does not sign or certify artifacts. Future maintainer work should review SBOM artifacts during release checks and compare dependency changes over time.
+The tag-only candidate definition generates one exact-subject CycloneDX 1.7 document for the source, wheel, sdist, and image and defines separate attestations. Local package/source fixtures are deterministic, but no hosted signed result exists. Future maintainer work should review all subject/SBOM digests during release checks and compare dependency changes over time.
 
 How Codex can help:
 

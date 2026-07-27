@@ -1,0 +1,212 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/threat_model_index.schema.json",
+  "title": "ReconForge module threat-model index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "index_id",
+    "status",
+    "last_reviewed",
+    "claim_boundary",
+    "sources",
+    "review_policy",
+    "actors",
+    "threat_catalog",
+    "modules"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "index_id": {"const": "reconforge-module-threat-model-index"},
+    "status": {"const": "evidence-bounded"},
+    "last_reviewed": {"type": "string", "format": "date"},
+    "claim_boundary": {"type": "string", "minLength": 80},
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["module_registry", "security_architecture", "risk_register"],
+      "properties": {
+        "module_registry": {"$ref": "#/$defs/repositoryPath"},
+        "security_architecture": {"$ref": "#/$defs/repositoryPath"},
+        "risk_register": {"$ref": "#/$defs/repositoryPath"}
+      }
+    },
+    "review_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "cadence_days", "change_triggers", "required_review_evidence"],
+      "properties": {
+        "owner": {"$ref": "#/$defs/name"},
+        "cadence_days": {"type": "integer", "minimum": 1, "maximum": 365},
+        "change_triggers": {"$ref": "#/$defs/nonEmptyStrings"},
+        "required_review_evidence": {"$ref": "#/$defs/nonEmptyStrings"}
+      }
+    },
+    "actors": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/actor"}
+    },
+    "threat_catalog": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/threat"}
+    },
+    "modules": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/module"}
+    }
+  },
+  "$defs": {
+    "name": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "repositoryPath": {
+      "type": "string",
+      "minLength": 3,
+      "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"
+    },
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 3}
+    },
+    "repositoryPaths": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/repositoryPath"}
+    },
+    "names": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/name"}
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "trust", "capabilities", "boundary"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^ACT-[0-9]{3}$"},
+        "name": {"type": "string", "minLength": 3},
+        "trust": {"enum": ["trusted-deployment", "authenticated-limited", "untrusted", "external-recipient"]},
+        "capabilities": {"$ref": "#/$defs/nonEmptyStrings"},
+        "boundary": {"type": "string", "minLength": 12}
+      }
+    },
+    "threat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "category", "description"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^TM-T-[0-9]{3}$"},
+        "name": {"type": "string", "minLength": 3},
+        "category": {"enum": ["spoofing", "tampering", "repudiation", "information-disclosure", "denial-of-service", "elevation-of-privilege", "financial-integrity", "supply-chain"]},
+        "description": {"type": "string", "minLength": 20}
+      }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "data_class", "objectives"],
+      "properties": {
+        "id": {"$ref": "#/$defs/name"},
+        "description": {"type": "string", "minLength": 10},
+        "data_class": {"type": "string", "pattern": "^DC-[0-9]{3}$"},
+        "objectives": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["confidentiality", "integrity", "availability", "auditability", "privacy"]}
+        }
+      }
+    },
+    "threatCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["threat_id", "status", "attack_surface", "controls", "test_evidence", "residual_risk_ids", "limitations"],
+      "properties": {
+        "threat_id": {"type": "string", "pattern": "^TM-T-[0-9]{3}$"},
+        "status": {"enum": ["bounded", "partial", "deployment-dependent", "planned"]},
+        "attack_surface": {"type": "string", "minLength": 15},
+        "controls": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^SEC-C-[0-9]{3}$"}
+        },
+        "test_evidence": {"$ref": "#/$defs/repositoryPaths"},
+        "residual_risk_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^R-[0-9]{3}$"}
+        },
+        "limitations": {"$ref": "#/$defs/nonEmptyStrings"}
+      }
+    },
+    "module": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module_id",
+        "registry_maturity",
+        "capability_status",
+        "threat_model_status",
+        "owner",
+        "interfaces",
+        "module_data_classifications",
+        "architecture_boundaries",
+        "assets",
+        "actors",
+        "threat_cases",
+        "module_test_evidence",
+        "assumptions",
+        "out_of_scope"
+      ],
+      "properties": {
+        "module_id": {"$ref": "#/$defs/name"},
+        "registry_maturity": {"enum": ["experimental", "beta", "stable"]},
+        "capability_status": {"enum": ["foundation", "implemented"]},
+        "threat_model_status": {"const": "evidence-bounded"},
+        "owner": {"$ref": "#/$defs/name"},
+        "interfaces": {"$ref": "#/$defs/names"},
+        "module_data_classifications": {"$ref": "#/$defs/names"},
+        "architecture_boundaries": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^TB-[0-9]{3}$"}
+        },
+        "assets": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/asset"}
+        },
+        "actors": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^ACT-[0-9]{3}$"}
+        },
+        "threat_cases": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/threatCase"}
+        },
+        "module_test_evidence": {"$ref": "#/$defs/repositoryPaths"},
+        "assumptions": {"$ref": "#/$defs/nonEmptyStrings"},
+        "out_of_scope": {"$ref": "#/$defs/nonEmptyStrings"}
+      }
+    }
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/synthetic_generator_manifest.schema.json",
+  "title": "ReconForge Exact Synthetic Generator Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "policy", "policy_digest", "output_files", "manifest_digest"],
+  "properties": {
+    "schema_version": {"type": "integer", "enum": [1, 2]},
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm_version",
+        "amount_random_scale",
+        "critical_rate",
+        "currency_policy",
+        "exception_rate",
+        "industry",
+        "rows",
+        "seed"
+      ],
+      "properties": {
+        "algorithm_version": {"const": "exact-decimal-v1"},
+        "amount_random_scale": {"const": 6},
+        "critical_rate": {"$ref": "#/$defs/rate"},
+        "currency_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "currency",
+            "minor_units",
+            "rounding_policy",
+            "currency_policy_digest",
+            "currency_registry_version",
+            "currency_registry_digest"
+          ],
+          "properties": {
+            "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+            "minor_units": {"type": "integer", "minimum": 0, "maximum": 8},
+            "rounding_policy": {"const": "ROUND_HALF_UP"},
+            "currency_policy_digest": {"$ref": "#/$defs/sha256"},
+            "currency_registry_version": {"type": "string", "minLength": 1, "maxLength": 128},
+            "currency_registry_digest": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "exception_rate": {"$ref": "#/$defs/rate"},
+        "financial_input_policy": {
+          "type": "string",
+          "enum": ["legacy-financial-input-v1", "strict-financial-input-v2"]
+        },
+        "industry": {"enum": ["workshop", "manufacturing", "fleet", "dealership", "service"]},
+        "rows": {"type": "integer", "minimum": 1},
+        "seed": {"type": "integer"}
+      }
+    },
+    "policy_digest": {"$ref": "#/$defs/sha256"},
+    "output_files": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["bytes", "name", "sha256"],
+        "properties": {
+          "bytes": {"type": "integer", "minimum": 0},
+          "name": {
+            "enum": [
+              "customers.csv",
+              "gl_entries.csv",
+              "invoices.csv",
+              "old_parts_returns.csv",
+              "products.csv",
+              "purchase_orders.csv",
+              "stock_moves.csv",
+              "work_orders.csv"
+            ]
+          },
+          "sha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    "manifest_digest": {"$ref": "#/$defs/sha256"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"schema_version": {"const": 1}}},
+      "then": {
+        "properties": {
+          "policy": {"not": {"required": ["financial_input_policy"]}}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"schema_version": {"const": 2}}},
+      "then": {
+        "properties": {
+          "policy": {"required": ["financial_input_policy"]}
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "rate": {
+      "type": "string",
+      "pattern": "^(0(\\.[0-9]+)?|1(\\.0+)?)$",
+      "maxLength": 100
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

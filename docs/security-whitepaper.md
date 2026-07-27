@@ -67,16 +67,28 @@ The repository includes quality gates for:
 - mypy
 - pytest
 - Bandit
+- locked Python/server and npm dependency audits
+- checksum-pinned redacted Git history/tree secret scans
+- closed expiring exception policy
 - CodeQL
 - OpenSSF Scorecard
 - CycloneDX SBOM generation
 - package build
 
-Dependency review should be performed before production use. `pip-audit` is listed in development dependencies.
+Universal `uv.lock` closes the repository's runtime/server/tool resolution and
+the audit definition exports all extras with hashes. The npm lock fixes versions
+but 155 entries still lack embedded SRI. Both require review before production
+use; local clean scans do not establish safety, provenance, reachability, or
+license suitability.
 
 OpenSSF Scorecard is configured as a scheduled/manual repository security maturity check. It should be used to prioritize improvements, not as a guarantee that the repository is secure.
 
-The SBOM workflow generates a CycloneDX Python dependency artifact on release tags and manual dispatch. This improves dependency visibility, but it is not artifact signing, legal assurance, or supply-chain certification.
+The tag-only candidate definition generates a CycloneDX 1.7 document for each source, wheel, sdist, and digest-addressed image subject. Local package/source fixtures are deterministic; no hosted image scan or signed output is yet evidenced. This improves dependency visibility, but it is not vulnerability or license assurance, release publication, or supply-chain certification.
+
+The candidate definition also checks the universal lock, Python/npm audit JSON,
+closed exception registry, and checksum-verified full-history/tree Gitleaks scans
+before registry authentication. Local Python 3.11/npm and secret scans pass; no
+hosted Python 3.11/3.12, Docker, branch-control, or release execution is claimed.
 
 ## 10. CodeQL And Bandit
 
@@ -160,7 +172,7 @@ Near-term:
 - authenticated local workspace mode
 - workbook-level redaction strategy or clearer safe-export alternatives
 - Docker runtime verification across supported local environments
-- dependency audit workflow hardening
+- hosted two-version dependency/secret gate execution and npm SRI closure
 - Scorecard finding review and remediation process
 - SBOM artifact review for tagged releases
 - clearer secure deployment defaults

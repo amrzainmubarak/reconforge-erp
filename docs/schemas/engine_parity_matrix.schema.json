@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/engine-parity-matrix.schema.json",
+  "title": "ReconForge supported engine parity matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "matrix_id",
+    "matrix_digest",
+    "reviewed_at",
+    "python_versions",
+    "dependency_profiles",
+    "required_test_files",
+    "golden_registry",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "matrix_id": {"const": "supported-engine-parity-v1"},
+    "matrix_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "reviewed_at": {"type": "string", "format": "date"},
+    "python_versions": {
+      "type": "array",
+      "prefixItems": [{"const": "3.11"}, {"const": "3.12"}],
+      "items": false,
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "dependency_profiles": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {"$ref": "#/$defs/dependency_profile"}
+    },
+    "required_test_files": {
+      "type": "array",
+      "minItems": 5,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^tests/test_[a-z0-9_]+\\.py$"}
+    },
+    "golden_registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "registry_version", "registry_digest"],
+      "properties": {
+        "path": {"const": "tests/golden/finance_registry.v1.json"},
+        "registry_version": {"const": "1.1.0"},
+        "registry_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 3,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 10}
+    }
+  },
+  "$defs": {
+    "dependency_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "numpy", "pandas", "duckdb"],
+      "properties": {
+        "id": {"enum": ["lower-bounds", "current-compatible-2026-07-25"]},
+        "numpy": {"$ref": "#/$defs/package_release"},
+        "pandas": {"$ref": "#/$defs/package_release"},
+        "duckdb": {"$ref": "#/$defs/package_release"}
+      }
+    },
+    "package_release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "index_url", "requires_python", "first_upload_at", "cp311_wheels", "cp312_wheels"],
+      "properties": {
+        "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "index_url": {"type": "string", "pattern": "^https://pypi\\.org/project/(numpy|pandas|duckdb)/[0-9]+\\.[0-9]+\\.[0-9]+/$"},
+        "requires_python": {"type": "string", "minLength": 5},
+        "first_upload_at": {"type": "string", "format": "date-time"},
+        "cp311_wheels": {"type": "integer", "minimum": 1},
+        "cp312_wheels": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

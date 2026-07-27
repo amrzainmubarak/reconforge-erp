@@ -1,0 +1,170 @@
+"""Unit tests for Central Policy Engine (RBAC, ABAC, SoD)."""
+
+from __future__ import annotations
+
+from hypothesis import given
+from hypothesis import strategies as st
+
+from reconforge.auth.models import LocalUser
+from reconforge.auth.policy import (
+    CentralPolicyEngine,
+    PolicyEvaluationContext,
+    evaluate_principal_access,
+)
+from reconforge.platform.common import ServerPrincipal
+
+
+def test_policy_engine_deny_by_default_missing_user() -> None:
+    engine = CentralPolicyEngine()
+    ctx = PolicyEvaluationContext(user_id="", username="", user_permissions=set())
+    decision = engine.evaluate(ctx, required_permission="reconciliation.approve")
+
+    assert decision.allowed is False
+    assert "missing authenticated user identity" in decision.reason
+
+
+def test_policy_engine_rbac_permission_granted() -> None:
+    engine = CentralPolicyEngine()
+    ctx = PolicyEvaluationContext(
+        user_id="U-100",
+        username="analyst",
+        user_permissions={"reconciliation.read", "reconciliation.prepare"},
+    )
+    decision = engine.evaluate(ctx, required_permission="reconciliation.prepare")
+
+    assert decision.allowed is True
+    assert decision.reason == "Access granted."
+
+
+def test_policy_engine_rbac_permission_denied() -> None:
+    engine = CentralPolicyEngine()
+    ctx = PolicyEvaluationContext(
+        user_id="U-100",
+        username="analyst",
+        user_permissions={"reconciliation.read"},
+    )
+    decision = engine.evaluate(ctx, required_permission="reconciliation.approve")
+
+    assert decision.allowed is False
+    assert "missing required permission 'reconciliation.approve'" in decision.reason
+
+
+def test_policy_engine_sod_conflict_detected() -> None:
+    engine = CentralPolicyEngine()
+    ctx = PolicyEvaluationContext(
+        user_id="U-100",
+        username="analyst",
+        user_permissions={"reconciliation.prepare", "reconciliation.approve"},
+        object_type="reconciliation",
+        object_id="REC-999",
+        action="approve",
+        prior_actions=[("U-100", "reconciliation", "REC-999", "prepare")],
+    )
+    decision = engine.evaluate(ctx, required_permission="reconciliation.approve")
+
+    assert decision.allowed is False
+    assert "Separation of duties conflict" in decision.reason
+
+
+def test_policy_engine_self_approval_prevention() -> None:
+    engine = CentralPolicyEngine()
+    ctx = PolicyEvaluationContext(
+        user_id="U-100",
+        username="creator",
+        user_permissions={"close.approve"},
+        object_owner_id="U-100",
+        action="approve",
+    )
+    decision = engine.evaluate(ctx, required_permission="close.approve", enforce_ownership=True)
+
+    assert decision.allowed is False
+    assert "cannot approve or review objects they created" in decision.reason
+
+
+def test_evaluate_principal_access_granted() -> None:
+    user = LocalUser(id="U-200", username="manager", display_name="Manager")
+    principal = ServerPrincipal(user=user, permissions={"reconciliation.approve"})
+
+    decision = evaluate_principal_access(principal, required_permission="reconciliation.approve")
+    assert decision.allowed is True
+
+
+def test_policy_engine_denies_authenticated_identity_without_a_named_permission_contract() -> None:
+    decision = CentralPolicyEngine().evaluate(
+        PolicyEvaluationContext(user_id="U-1", username="user", user_permissions={"admin"})
+    )
+
+    assert not decision.allowed
+    assert "no required permission" in decision.reason
+
+
+SCOPE_IDS = st.text(
+    alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd")),
+    min_size=1,
+    max_size=12,
+)
+
+
+@given(
+    resource_tenant=SCOPE_IDS,
+    resource_workspace=SCOPE_IDS,
+    resource_entity=SCOPE_IDS,
+    resource_period=SCOPE_IDS,
+    granted_tenants=st.frozensets(SCOPE_IDS, max_size=5),
+    granted_workspaces=st.frozensets(SCOPE_IDS, max_size=5),
+    granted_entities=st.frozensets(SCOPE_IDS, max_size=5),
+    granted_periods=st.frozensets(SCOPE_IDS, max_size=5),
+)
+def test_scoped_policy_allows_only_when_every_resource_scope_is_granted(
+    resource_tenant: str,
+    resource_workspace: str,
+    resource_entity: str,
+    resource_period: str,
+    granted_tenants: frozenset[str],
+    granted_workspaces: frozenset[str],
+    granted_entities: frozenset[str],
+    granted_periods: frozenset[str],
+) -> None:
+    decision = CentralPolicyEngine().evaluate(
+        PolicyEvaluationContext(
+            user_id="U-1",
+            username="user",
+            user_permissions={"reconciliation.read"},
+            tenant_id=resource_tenant,
+            workspace_id=resource_workspace,
+            entity_id=resource_entity,
+            period_id=resource_period,
+            authorized_tenant_ids=granted_tenants,
+            authorized_workspace_ids=granted_workspaces,
+            authorized_entity_ids=granted_entities,
+            authorized_period_ids=granted_periods,
+        ),
+        required_permission="reconciliation.read",
+    )
+
+    expected = all(
+        (
+            resource_tenant in granted_tenants,
+            resource_workspace in granted_workspaces,
+            resource_entity in granted_entities,
+            resource_period in granted_periods,
+        )
+    )
+    assert decision.allowed is expected
+
+
+@given(action=st.sampled_from(["approve", "review"]))
+def test_creator_can_never_approve_or_review_own_object(action: str) -> None:
+    decision = CentralPolicyEngine().evaluate(
+        PolicyEvaluationContext(
+            user_id="U-creator",
+            username="creator",
+            user_permissions={f"close.{action}"},
+            object_owner_id="U-creator",
+            action=action,
+        ),
+        required_permission=f"close.{action}",
+    )
+
+    assert not decision.allowed
+    assert "cannot approve or review" in decision.reason

@@ -5,6 +5,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 
 from reconforge import __version__
+from reconforge.api.dependencies import get_db_path
+from reconforge.api.errors import APIError
 from reconforge.db import DatabaseError, database_status
 from reconforge.db.migrations import MIGRATIONS
 
@@ -15,10 +17,15 @@ router = APIRouter()
 def health(request: Request) -> dict[str, object]:
     """Return local API health without exposing secrets or environment data."""
 
-    db_path = request.app.state.db_path
+    try:
+        db_path = get_db_path(request)
+    except APIError:
+        db_path = None
     database_reachable = False
     schema_version = 0
     try:
+        if db_path is None:
+            raise DatabaseError("Tenant selection is required.")
         status = database_status(db_path)
         database_reachable = True
         schema_version = status.current_version
@@ -32,7 +39,7 @@ def health(request: Request) -> dict[str, object]:
             "reachable": database_reachable,
             "schema_version": schema_version,
             "latest_schema_version": MIGRATIONS[-1].version,
-            "path_summary": getattr(db_path, "name", "local sqlite database"),
+            "path_summary": getattr(db_path, "name", "tenant database"),
         },
     }
 

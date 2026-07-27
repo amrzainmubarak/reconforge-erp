@@ -11,20 +11,19 @@ python -m ruff check .
 python -m mypy reconforge
 python -m pytest
 python -m bandit -q -r reconforge
+uv lock --check
+python .github/scripts/validate_supply_chain_policy.py
 python -m reconforge.cli doctor
 git diff --check
 ```
 
-Optional dependency audit:
+Hash-locked dependency audit (the temporary files are evidence inputs and must
+not be committed):
 
 ```bash
-python -m pip_audit -r requirements.txt
-```
-
-If your environment exposes `pip-audit` as a command instead of a module, use:
-
-```bash
-pip-audit -r requirements.txt
+uv export --locked --all-extras --no-emit-project --format requirements.txt --output-file audit-requirements.txt
+pip-audit --require-hashes --disable-pip -r audit-requirements.txt --format json --output pip-audit.json
+python .github/scripts/validate_supply_chain_policy.py --pip-audit-report pip-audit.json --pip-audit-exit-code 0
 ```
 
 ## Demo Smoke Checks

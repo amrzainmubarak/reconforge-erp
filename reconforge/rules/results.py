@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -24,7 +25,7 @@ class RuleResult(BaseModel):
     affected_work_order: str | None = None
     affected_product: str | None = None
     affected_customer: str | None = None
-    amount_impact: float = 0.0
+    amount_impact: Decimal | None = None
     message: str
     business_impact: str = "The control failed and should be reviewed before management or audit sign-off."
     recommended_action: str

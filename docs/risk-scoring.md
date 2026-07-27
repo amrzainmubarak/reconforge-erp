@@ -28,6 +28,11 @@ ReconForge ERP scores exceptions from 0 to 100 using deterministic, explainable 
 - Manual journal.
 - Weekend or after-hours posting if data exists.
 
+## Data-quality behavior
+
+- Invalid or malformed monetary factor values are treated as non-numeric in risk calculations and therefore do not add amount/variance risk points.
+- Invalid `aging_days` values are treated as 0 for scoring purposes to keep batch scoring deterministic and failure-safe.
+
 ## Output
 
 The risk engine returns score, level, explanation, recommended action, responsible department, escalation level, and suggested audit note.

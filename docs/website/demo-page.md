@@ -24,7 +24,7 @@ Review:
 - `output/demo/management_pack.xlsx`
 - `output/demo/review_register.xlsx`
 - `output/demo/evidence/index.html`
-- `output/demo/client_pack/handoff_summary.md`
+- `output/client_pack/handoff_summary.md`
 
 ## Synthetic Enterprise Demo
 

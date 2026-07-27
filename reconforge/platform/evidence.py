@@ -2,16 +2,21 @@
 
 from __future__ import annotations
 
+import hashlib
+import mimetypes
 import sqlite3
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from reconforge.db.exporter import checksum_file, resolve_input_file
 from reconforge.domain.models import utc_now_text
+from reconforge.infrastructure.object_storage import StoredObject
+from reconforge.infrastructure.postgres import normalize_scope_id
 from reconforge.platform.common import (
     PlatformError,
-    audit,
+    commit_audited,
     ensure_platform_schema,
     ensure_workspace,
     normalize_key,
@@ -32,6 +37,38 @@ class EvidenceVerification:
     actual_sha256: str
 
 
+class EvidenceObjectStore(Protocol):
+    """Minimal object-storage contract required by the evidence registry."""
+
+    def put_bytes(
+        self,
+        tenant_id: str,
+        object_name: str,
+        content: bytes,
+        *,
+        content_type: str = "application/octet-stream",
+        metadata: dict[str, object] | None = None,
+        retention_until: datetime | None = None,
+    ) -> StoredObject:
+        """Store one tenant-scoped artifact."""
+
+    def get_bytes(self, tenant_id: str, object_name: str) -> StoredObject:
+        """Read one tenant-scoped artifact and verify provider metadata."""
+
+
+LOCAL_STORAGE_BACKEND = "local-filesystem"
+OBJECT_STORAGE_BACKEND = "s3-compatible-object-storage"
+_OBJECT_STORAGE_COLUMNS = {
+    "storage_backend",
+    "storage_tenant_id",
+    "storage_key",
+    "storage_version_id",
+    "content_type",
+    "byte_size",
+    "retention_until",
+}
+
+
 class EvidenceRegistryService:
     """Local checksum/provenance evidence registry.
 
@@ -42,6 +79,14 @@ class EvidenceRegistryService:
     def __init__(self, connection: sqlite3.Connection) -> None:
         ensure_platform_schema(connection)
         self.connection = connection
+
+    def _storage_columns_available(self) -> bool:
+        """Return whether the additive object-storage migration is present."""
+
+        columns = {
+            str(row["name"]) for row in self.connection.execute("PRAGMA table_info(evidence_registry)").fetchall()
+        }
+        return columns >= _OBJECT_STORAGE_COLUMNS
 
     def register(
         self,
@@ -56,61 +101,195 @@ class EvidenceRegistryService:
         object_id: str = "",
         link_type: str = "support",
         actor_label: str = "local-cli",
+        object_store: EvidenceObjectStore | None = None,
+        storage_tenant_id: str = "",
+        storage_object_name: str = "",
+        content_type: str = "",
+        retention_until: datetime | None = None,
     ) -> dict[str, Any]:
-        """Register a local evidence object and optionally link it to a workflow object."""
+        """Register evidence locally or in an explicit S3-compatible object store.
+
+        Local filesystem registration remains the default. When ``object_store``
+        is supplied, the bytes are uploaded and the DB row is committed only
+        after the provider returns a verified object reference. The local path
+        remains provenance metadata; verification reads the object store and
+        never silently falls back to that path.
+        """
 
         require_permission(self.connection, actor_label=actor_label, permission="evidence.manage")
         resolved = resolve_input_file(source_path)
         workspace_id = ensure_workspace(self.connection, workspace)
         code = normalize_key(evidence_code, default=resolved.name)
         evidence_id = platform_id("EVDREG", workspace_id, code)
-        checksum = checksum_file(resolved)
+        storage_columns_available = self._storage_columns_available()
+        if object_store is not None and not storage_columns_available:
+            raise PlatformError("Evidence object storage requires the latest database migration.")
+        if object_store is None and (storage_tenant_id or storage_object_name or retention_until is not None):
+            raise PlatformError("Object-storage options require an explicitly configured object store.")
+
+        storage_backend = LOCAL_STORAGE_BACKEND
+        storage_tenant = ""
+        storage_key = ""
+        storage_version_id = ""
+        stored_content_type = "application/octet-stream"
+        byte_size = 0
+        stored_retention_until = ""
+        if object_store is None:
+            checksum = checksum_file(resolved)
+        else:
+            try:
+                content = resolved.read_bytes()
+                checksum = hashlib.sha256(content).hexdigest()
+                storage_tenant = normalize_scope_id(storage_tenant_id or workspace_id)
+                stored_content_type = (
+                    content_type.strip() or mimetypes.guess_type(resolved.name)[0] or "application/octet-stream"
+                )
+                storage_key = (
+                    storage_object_name.strip() or f"evidence/{evidence_id}/{checksum}{resolved.suffix.lower()}"
+                )
+                stored = object_store.put_bytes(
+                    storage_tenant,
+                    storage_key,
+                    content,
+                    content_type=stored_content_type,
+                    metadata={"evidence-id": evidence_id, "source-name": resolved.name},
+                    retention_until=retention_until,
+                )
+                actual_checksum = hashlib.sha256(stored.content).hexdigest()
+                if actual_checksum != checksum or stored.sha256 != actual_checksum:
+                    raise PlatformError("Stored evidence checksum did not match the source content.")
+                returned_tenant = str(stored.metadata.get("reconforge-tenant", storage_tenant))
+                if returned_tenant != storage_tenant:
+                    raise PlatformError("Object storage returned an unexpected tenant scope.")
+                storage_backend = OBJECT_STORAGE_BACKEND
+                storage_version_id = stored.version_id or ""
+                byte_size = len(content)
+                stored_retention_until = retention_until.isoformat() if retention_until is not None else ""
+            except PlatformError:
+                raise
+            except Exception as exc:
+                raise PlatformError("Unable to store evidence artifact in configured object storage.") from exc
         now = utc_now_text()
         try:
-            self.connection.execute(
-                """
-                INSERT INTO evidence_registry (
-                    id, workspace_id, evidence_code, source_path, checksum_sha256,
-                    provenance_type, redaction_status, evidence_status, registered_by,
-                    created_at, updated_at
+            if storage_columns_available:
+                self.connection.execute(
+                    """
+                    INSERT INTO evidence_registry (
+                        id, workspace_id, evidence_code, source_path, checksum_sha256,
+                        provenance_type, redaction_status, evidence_status, storage_backend,
+                        storage_tenant_id, storage_key, storage_version_id, content_type,
+                        byte_size, retention_until, registered_by, created_at, updated_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(workspace_id, evidence_code)
+                    DO UPDATE SET
+                        source_path = excluded.source_path,
+                        checksum_sha256 = excluded.checksum_sha256,
+                        provenance_type = excluded.provenance_type,
+                        redaction_status = excluded.redaction_status,
+                        evidence_status = excluded.evidence_status,
+                        storage_backend = excluded.storage_backend,
+                        storage_tenant_id = excluded.storage_tenant_id,
+                        storage_key = excluded.storage_key,
+                        storage_version_id = excluded.storage_version_id,
+                        content_type = excluded.content_type,
+                        byte_size = excluded.byte_size,
+                        retention_until = excluded.retention_until,
+                        registered_by = excluded.registered_by,
+                        updated_at = excluded.updated_at
+                    """,
+                    (
+                        evidence_id,
+                        workspace_id,
+                        code,
+                        str(resolved),
+                        checksum,
+                        normalize_key(provenance_type, default="local-file"),
+                        normalize_key(redaction_status, default="unknown"),
+                        normalize_key(evidence_status, default="Available"),
+                        storage_backend,
+                        storage_tenant,
+                        storage_key,
+                        storage_version_id,
+                        stored_content_type,
+                        byte_size,
+                        stored_retention_until,
+                        actor_label,
+                        now,
+                        now,
+                    ),
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(workspace_id, evidence_code)
-                DO UPDATE SET
-                    source_path = excluded.source_path,
-                    checksum_sha256 = excluded.checksum_sha256,
-                    provenance_type = excluded.provenance_type,
-                    redaction_status = excluded.redaction_status,
-                    evidence_status = excluded.evidence_status,
-                    registered_by = excluded.registered_by,
-                    updated_at = excluded.updated_at
-                """,
-                (
-                    evidence_id,
-                    workspace_id,
-                    code,
-                    str(resolved),
-                    checksum,
-                    normalize_key(provenance_type, default="local-file"),
-                    normalize_key(redaction_status, default="unknown"),
-                    normalize_key(evidence_status, default="Available"),
-                    actor_label,
-                    now,
-                    now,
-                ),
-            )
-            self.connection.commit()
+            else:
+                self.connection.execute(
+                    """
+                    INSERT INTO evidence_registry (
+                        id, workspace_id, evidence_code, source_path, checksum_sha256,
+                        provenance_type, redaction_status, evidence_status, registered_by,
+                        created_at, updated_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(workspace_id, evidence_code)
+                    DO UPDATE SET
+                        source_path = excluded.source_path,
+                        checksum_sha256 = excluded.checksum_sha256,
+                        provenance_type = excluded.provenance_type,
+                        redaction_status = excluded.redaction_status,
+                        evidence_status = excluded.evidence_status,
+                        registered_by = excluded.registered_by,
+                        updated_at = excluded.updated_at
+                    """,
+                    (
+                        evidence_id,
+                        workspace_id,
+                        code,
+                        str(resolved),
+                        checksum,
+                        normalize_key(provenance_type, default="local-file"),
+                        normalize_key(redaction_status, default="unknown"),
+                        normalize_key(evidence_status, default="Available"),
+                        actor_label,
+                        now,
+                        now,
+                    ),
+                )
         except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
             raise PlatformError("Unable to register evidence.") from exc
         if object_type and object_id:
-            self.link(evidence_id, object_type=object_type, object_id=object_id, link_type=link_type, actor_label=actor_label)
-        audit(
+            link = self._insert_link(
+                evidence_id,
+                object_type=object_type,
+                object_id=object_id,
+                link_type=link_type,
+            )
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type="evidence_link",
+                object_id=link["id"],
+                action="evidence_linked",
+                metadata={"evidence_id": evidence_id, "target_type": object_type, "target_id": object_id},
+                emit_outbox=True,
+                outbox_event_type="evidence_linked",
+                outbox_payload={"evidence_id": evidence_id, "target_type": object_type, "target_id": object_id},
+            )
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="evidence",
             object_id=evidence_id,
             action="evidence_registered",
-            metadata={"evidence_code": code, "source_file": resolved.name, "redaction_status": redaction_status},
+            metadata={
+                "evidence_code": code,
+                "source_file": resolved.name,
+                "redaction_status": redaction_status,
+                "storage_backend": storage_backend,
+                "storage_key": storage_key,
+                "byte_size": byte_size,
+            },
+            emit_outbox=True,
+            outbox_event_type="evidence_registered",
+            outbox_payload={"evidence_id": evidence_id},
         )
         return self.get(evidence_id)
 
@@ -149,12 +328,21 @@ class EvidenceRegistryService:
                     description = excluded.description,
                     required_status = excluded.required_status
                 """,
-                (requirement_id, workspace_id, target_type, target_id, code, normalize_text(description), required_status, now),
+                (
+                    requirement_id,
+                    workspace_id,
+                    target_type,
+                    target_id,
+                    code,
+                    normalize_text(description),
+                    required_status,
+                    now,
+                ),
             )
-            self.connection.commit()
         except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
             raise PlatformError("Unable to save evidence requirement.") from exc
-        audit(
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="evidence_requirement",
@@ -179,6 +367,27 @@ class EvidenceRegistryService:
 
         require_permission(self.connection, actor_label=actor_label, permission="evidence.manage")
         self.get(evidence_id)
+        link = self._insert_link(evidence_id, object_type=object_type, object_id=object_id, link_type=link_type)
+        commit_audited(
+            self.connection,
+            actor_label=actor_label,
+            object_type="evidence_link",
+            object_id=link["id"],
+            action="evidence_linked",
+            metadata={"evidence_id": evidence_id, "target_type": object_type, "target_id": object_id},
+        )
+        return link
+
+    def _insert_link(
+        self,
+        evidence_id: str,
+        *,
+        object_type: str,
+        object_id: str,
+        link_type: str,
+    ) -> dict[str, Any]:
+        """Insert a link without committing; the caller owns audit and transaction finalization."""
+
         target_type = normalize_key(object_type, default="")
         target_id = normalize_key(object_id, default="")
         if not target_type or not target_id:
@@ -195,37 +404,56 @@ class EvidenceRegistryService:
                 """,
                 (link_id, evidence_id, target_type, target_id, normalize_key(link_type, default="support"), now),
             )
-            self.connection.commit()
         except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
             raise PlatformError("Unable to link evidence.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="evidence_link",
-            object_id=link_id,
-            action="evidence_linked",
-            metadata={"evidence_id": evidence_id, "target_type": target_type, "target_id": target_id},
-        )
         return {"id": link_id, "evidence_id": evidence_id, "object_type": target_type, "object_id": target_id}
 
-    def verify(self, evidence_id: str, *, actor_label: str = "local-cli") -> EvidenceVerification:
-        """Verify evidence checksum against the current local file."""
+    def verify(
+        self,
+        evidence_id: str,
+        *,
+        actor_label: str = "local-cli",
+        object_store: EvidenceObjectStore | None = None,
+    ) -> EvidenceVerification:
+        """Verify evidence checksum against its configured storage backend."""
 
         require_permission(self.connection, actor_label=actor_label, permission="evidence.read")
         evidence = self.get(evidence_id)
         expected = str(evidence["checksum_sha256"])
-        try:
-            actual = checksum_file(Path(str(evidence["source_path"])))
-        except OSError as exc:
-            raise PlatformError("Evidence file could not be read for checksum verification.") from exc
+        storage_backend = str(evidence.get("storage_backend") or LOCAL_STORAGE_BACKEND)
+        if storage_backend == OBJECT_STORAGE_BACKEND:
+            if object_store is None:
+                raise PlatformError("This evidence requires its configured object-storage provider for verification.")
+            storage_tenant = str(evidence.get("storage_tenant_id") or "")
+            storage_key = str(evidence.get("storage_key") or "")
+            if not storage_tenant or not storage_key:
+                raise PlatformError("Object-backed evidence is missing its storage reference.")
+            try:
+                stored = object_store.get_bytes(storage_tenant, storage_key)
+                actual = hashlib.sha256(stored.content).hexdigest()
+                if actual != stored.sha256:
+                    raise PlatformError("Object-storage content checksum verification failed.")
+            except PlatformError:
+                raise
+            except Exception as exc:
+                raise PlatformError("Unable to read evidence from configured object storage.") from exc
+        else:
+            try:
+                actual = checksum_file(Path(str(evidence["source_path"])))
+            except OSError as exc:
+                raise PlatformError("Evidence file could not be read for checksum verification.") from exc
         ok = expected == actual
-        audit(
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="evidence",
             object_id=evidence_id,
             action="evidence_checksum_verified",
             metadata={"ok": ok, "source_file": Path(str(evidence["source_path"])).name},
+            emit_outbox=True,
+            outbox_event_type="evidence_checksum_verified",
+            outbox_payload={"evidence_id": evidence_id, "ok": ok},
         )
         return EvidenceVerification(evidence_id=evidence_id, ok=ok, expected_sha256=expected, actual_sha256=actual)
 
@@ -284,6 +512,8 @@ class EvidenceRegistryService:
             raise PlatformError("Evidence record not found.")
         evidence = dict(row)
         evidence["links"] = rows_to_dicts(
-            self.connection.execute("SELECT * FROM evidence_links WHERE evidence_id = ? ORDER BY created_at", (evidence_id,)).fetchall(),
+            self.connection.execute(
+                "SELECT * FROM evidence_links WHERE evidence_id = ? ORDER BY created_at", (evidence_id,)
+            ).fetchall(),
         )
         return evidence

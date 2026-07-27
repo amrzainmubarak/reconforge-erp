@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Any
 
 from reconforge.close import ALLOWED_CLOSE_STATUSES
+from reconforge.domain.control_scores import readiness_percentage
 from reconforge.domain.models import utc_now_text
 from reconforge.platform.common import (
     PlatformError,
-    audit,
+    commit_audited,
     ensure_platform_schema,
     ensure_workspace,
     normalize_key,
@@ -38,7 +40,7 @@ class CloseReadiness:
     total_tasks: int
     complete_tasks: int
     blocked_tasks: int
-    readiness_score: float
+    readiness_score: Decimal
 
 
 class CloseManagementService:
@@ -83,8 +85,8 @@ class CloseManagementService:
                 """,
                 (period_id, workspace_id, period, start_date, end_date, now, now),
             )
-            self.connection.commit()
         except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
             raise PlatformError("Unable to initialize close period.") from exc
         if with_default_tasks:
             for code, name, category, risk in DEFAULT_CLOSE_TASKS:
@@ -96,15 +98,20 @@ class CloseManagementService:
                     risk_rating=risk,
                     actor_label=actor_label,
                     audit_task=False,
+                    autocommit=False,
                 )
-        readiness = self.readiness(period_id=period_id, actor_label=actor_label, audit_read=False)
-        audit(
+        readiness = self.readiness(period_id=period_id, actor_label=actor_label, audit_read=False, autocommit=False)
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="close_period",
             object_id=period_id,
             action="close_period_initialized",
-            metadata={"period": period, "default_tasks": with_default_tasks, "readiness_score": readiness.readiness_score},
+            metadata={
+                "period": period,
+                "default_tasks": with_default_tasks,
+                "readiness_score": readiness.readiness_score,
+            },
         )
         return self.get_period(period_id)
 
@@ -120,6 +127,7 @@ class CloseManagementService:
         due_date: str = "",
         actor_label: str = "local-cli",
         audit_task: bool = True,
+        autocommit: bool = True,
     ) -> dict[str, Any]:
         """Create or update one close task."""
 
@@ -160,18 +168,30 @@ class CloseManagementService:
                     now,
                 ),
             )
-            self.connection.commit()
         except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
             raise PlatformError("Unable to save close task.") from exc
         if audit_task:
-            audit(
-                self.connection,
-                actor_label=actor_label,
-                object_type="close_task",
-                object_id=task_id,
-                action="close_task_saved",
-                metadata={"task_code": code, "period": period["period_name"]},
-            )
+            if autocommit:
+                commit_audited(
+                    self.connection,
+                    actor_label=actor_label,
+                    object_type="close_task",
+                    object_id=task_id,
+                    action="close_task_saved",
+                    metadata={"task_code": code, "period": period["period_name"]},
+                )
+            else:
+                commit_audited(
+                    self.connection,
+                    actor_label=actor_label,
+                    object_type="close_task",
+                    object_id=task_id,
+                    action="close_task_saved",
+                    metadata={"task_code": code, "period": period["period_name"]},
+                )
+        elif autocommit:
+            self.connection.commit()
         return self.get_task(task_id)
 
     def task_dependency(
@@ -200,10 +220,10 @@ class CloseManagementService:
                 """,
                 (dependency_id, task["close_period_id"], task_id, depends_on_task_id, now),
             )
-            self.connection.commit()
         except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
             raise PlatformError("Unable to save close task dependency.") from exc
-        audit(
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="close_task_dependency",
@@ -241,11 +261,16 @@ class CloseManagementService:
                 """,
                 (normalized_status, blocker, actor_label, now, task_id),
             )
-            self.connection.commit()
         except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
             raise PlatformError("Unable to update close task status.") from exc
-        readiness = self.readiness(period_id=str(task["close_period_id"]), actor_label=actor_label, audit_read=False)
-        audit(
+        readiness = self.readiness(
+            period_id=str(task["close_period_id"]),
+            actor_label=actor_label,
+            audit_read=False,
+            autocommit=False,
+        )
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="close_task",
@@ -255,7 +280,14 @@ class CloseManagementService:
         )
         return self.get_task(task_id)
 
-    def readiness(self, *, period_id: str, actor_label: str = "local-cli", audit_read: bool = True) -> CloseReadiness:
+    def readiness(
+        self,
+        *,
+        period_id: str,
+        actor_label: str = "local-cli",
+        audit_read: bool = True,
+        autocommit: bool = True,
+    ) -> CloseReadiness:
         """Compute and store close readiness for a period."""
 
         require_permission(self.connection, actor_label=actor_label, permission="close.read")
@@ -267,21 +299,32 @@ class CloseManagementService:
         total = len(rows)
         complete = sum(1 for row in rows if str(row["status"]) in {"Complete", "Not Applicable"})
         blocked = sum(1 for row in rows if str(row["status"]) == "Blocked")
-        score = round((complete / total) * 100, 2) if total else 0.0
+        score = readiness_percentage(complete=complete, total=total)
         self.connection.execute(
             "UPDATE close_periods SET readiness_score = ?, updated_at = ? WHERE id = ?",
-            (score, utc_now_text(), period_id),
+            (str(score), utc_now_text(), period_id),
         )
-        self.connection.commit()
         if audit_read:
-            audit(
-                self.connection,
-                actor_label=actor_label,
-                object_type="close_period",
-                object_id=period_id,
-                action="close_readiness_computed",
-                metadata={"readiness_score": score, "total_tasks": total, "blocked_tasks": blocked},
-            )
+            if autocommit:
+                commit_audited(
+                    self.connection,
+                    actor_label=actor_label,
+                    object_type="close_period",
+                    object_id=period_id,
+                    action="close_readiness_computed",
+                    metadata={"readiness_score": str(score), "total_tasks": total, "blocked_tasks": blocked},
+                )
+            else:
+                commit_audited(
+                    self.connection,
+                    actor_label=actor_label,
+                    object_type="close_period",
+                    object_id=period_id,
+                    action="close_readiness_computed",
+                    metadata={"readiness_score": str(score), "total_tasks": total, "blocked_tasks": blocked},
+                )
+        elif autocommit:
+            self.connection.commit()
         return CloseReadiness(
             period_id=period_id,
             period_name=str(period["period_name"]),
@@ -295,7 +338,7 @@ class CloseManagementService:
         """Lock a close period when no task is blocked."""
 
         require_permission(self.connection, actor_label=actor_label, permission="close.manage")
-        readiness = self.readiness(period_id=period_id, actor_label=actor_label, audit_read=False)
+        readiness = self.readiness(period_id=period_id, actor_label=actor_label, audit_read=False, autocommit=False)
         if readiness.blocked_tasks:
             raise PlatformError("Close period cannot be locked while tasks are blocked.")
         now = utc_now_text()
@@ -303,8 +346,7 @@ class CloseManagementService:
             "UPDATE close_periods SET status = 'Locked', locked_at = ?, updated_at = ? WHERE id = ?",
             (now, now, period_id),
         )
-        self.connection.commit()
-        audit(
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="close_period",
@@ -325,8 +367,7 @@ class CloseManagementService:
             "UPDATE close_periods SET status = 'Reopened', reopened_at = ?, updated_at = ? WHERE id = ?",
             (now, now, period_id),
         )
-        self.connection.commit()
-        audit(
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="close_period",
@@ -340,7 +381,9 @@ class CloseManagementService:
         """List local DB close periods."""
 
         return rows_to_dicts(
-            self.connection.execute("SELECT * FROM close_periods ORDER BY period_name DESC, created_at DESC").fetchall(),
+            self.connection.execute(
+                "SELECT * FROM close_periods ORDER BY period_name DESC, created_at DESC"
+            ).fetchall(),
         )
 
     def list_tasks(self, *, period_id: str = "", status: str = "", owner: str = "") -> list[dict[str, Any]]:

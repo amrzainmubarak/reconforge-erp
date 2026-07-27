@@ -3,17 +3,54 @@
 from __future__ import annotations
 
 import sqlite3
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation, localcontext
 from typing import Any
 
+from reconforge.domain.control_scores import READINESS_QUANTUM, percentage_from_counts
 from reconforge.domain.models import utc_now_text
 from reconforge.platform.common import (
-    audit,
+    PlatformError,
+    commit_audited,
     ensure_platform_schema,
     ensure_workspace,
     platform_id,
     require_permission,
     rows_to_dicts,
 )
+
+
+def _metric_decimal(value: object, *, label: str) -> Decimal:
+    if value is None:
+        return Decimal("0.00")
+    if isinstance(value, bool):
+        raise PlatformError(f"Stored {label} metric is invalid.")
+    try:
+        parsed = Decimal(str(value).strip())
+    except (InvalidOperation, ValueError) as exc:
+        raise PlatformError(f"Stored {label} metric is invalid.") from exc
+    if not parsed.is_finite():
+        raise PlatformError(f"Stored {label} metric is invalid.")
+    return parsed
+
+
+def _quantize_metric(value: Decimal) -> Decimal:
+    integer_digits = max(1, value.adjusted() + 1) if value else 1
+    required_precision = max(28, len(value.as_tuple().digits) + 4, integer_digits + 4)
+    with localcontext() as context:
+        context.prec = required_precision
+        return value.quantize(READINESS_QUANTUM, rounding=ROUND_HALF_UP)
+
+
+def _average_metric(values: list[Decimal]) -> Decimal:
+    if not values:
+        return Decimal("0.00")
+    max_adjusted = max((value.adjusted() for value in values if value), default=0)
+    min_exponent = min((int(value.as_tuple().exponent) for value in values), default=0)
+    required_precision = max(28, max_adjusted - min_exponent + len(str(len(values))) + 6)
+    with localcontext() as context:
+        context.prec = required_precision
+        average = sum(values, Decimal(0)) / Decimal(len(values))
+    return _quantize_metric(average)
 
 
 class MetricsService:
@@ -23,7 +60,9 @@ class MetricsService:
         ensure_platform_schema(connection)
         self.connection = connection
 
-    def compute(self, *, workspace: str = "default", period_name: str = "", actor_label: str = "local-cli") -> list[dict[str, Any]]:
+    def compute(
+        self, *, workspace: str = "default", period_name: str = "", actor_label: str = "local-cli"
+    ) -> list[dict[str, Any]]:
         """Compute and store governed metric snapshots."""
 
         require_permission(self.connection, actor_label=actor_label, permission="metrics.read")
@@ -42,7 +81,8 @@ class MetricsService:
         now = utc_now_text()
         for definition in definitions:
             key = str(definition["metric_key"])
-            value = float(values.get(key, 0.0))
+            value = values.get(key, Decimal(0))
+            value_text = format(value, "f")
             snapshot_id = platform_id("METS", workspace_id, key, period_name)
             self.connection.execute(
                 """
@@ -57,10 +97,18 @@ class MetricsService:
                     lineage = excluded.lineage,
                     computed_at = excluded.computed_at
                 """,
-                (snapshot_id, workspace_id, key, period_name, value, str(value), str(definition["lineage"]), now),
+                (
+                    snapshot_id,
+                    workspace_id,
+                    key,
+                    period_name,
+                    value_text,
+                    value_text,
+                    str(definition["lineage"]),
+                    now,
+                ),
             )
-        self.connection.commit()
-        audit(
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="metrics",
@@ -100,7 +148,7 @@ class MetricsService:
 
         return rows_to_dicts(self.connection.execute("SELECT * FROM metric_definitions ORDER BY metric_key").fetchall())
 
-    def _close_completion(self, workspace_id: str, period_name: str) -> float:
+    def _close_completion(self, workspace_id: str, period_name: str) -> Decimal:
         row = self.connection.execute(
             """
             SELECT
@@ -114,9 +162,9 @@ class MetricsService:
         ).fetchone()
         total = int(row["total_count"] or 0)
         complete = int(row["complete_count"] or 0)
-        return round((complete / total) * 100, 2) if total else 0.0
+        return percentage_from_counts(numerator=complete, denominator=total)
 
-    def _unresolved_high_risk(self, workspace_id: str, period_name: str) -> float:
+    def _unresolved_high_risk(self, workspace_id: str, period_name: str) -> Decimal:
         row = self.connection.execute(
             """
             SELECT COUNT(*) AS count
@@ -128,12 +176,12 @@ class MetricsService:
             """,
             (workspace_id, period_name, period_name),
         ).fetchone()
-        return float(row["count"] or 0)
+        return Decimal(int(row["count"] or 0))
 
-    def _review_aging(self, workspace_id: str, period_name: str) -> float:
+    def _review_aging(self, workspace_id: str, period_name: str) -> Decimal:
         row = self.connection.execute(
             """
-            SELECT AVG(julianday('now') - julianday(created_at)) AS aging
+            SELECT CAST(AVG(julianday('now') - julianday(created_at)) AS TEXT) AS aging
             FROM account_reconciliation_records
             WHERE workspace_id = ?
               AND (? = '' OR period_name = ?)
@@ -141,9 +189,9 @@ class MetricsService:
             """,
             (workspace_id, period_name, period_name),
         ).fetchone()
-        return round(float(row["aging"] or 0.0), 2)
+        return _quantize_metric(_metric_decimal(row["aging"], label="review aging"))
 
-    def _evidence_coverage(self, workspace_id: str) -> float:
+    def _evidence_coverage(self, workspace_id: str) -> Decimal:
         row = self.connection.execute(
             """
             SELECT
@@ -159,9 +207,13 @@ class MetricsService:
         ).fetchone()
         total = int(row["requirement_count"] or 0)
         covered = int(row["covered_count"] or 0)
-        return round((covered / total) * 100, 2) if total else 100.0
+        return percentage_from_counts(
+            numerator=covered,
+            denominator=total,
+            empty_value=Decimal("100.00"),
+        )
 
-    def _control_effectiveness(self, workspace_id: str, period_name: str) -> float:
+    def _control_effectiveness(self, workspace_id: str, period_name: str) -> Decimal:
         row = self.connection.execute(
             """
             SELECT
@@ -175,9 +227,9 @@ class MetricsService:
         ).fetchone()
         total = int(row["total_count"] or 0)
         effective = int(row["effective_count"] or 0)
-        return round((effective / total) * 100, 2) if total else 0.0
+        return percentage_from_counts(numerator=effective, denominator=total)
 
-    def _match_rate(self, workspace_id: str) -> float:
+    def _match_rate(self, workspace_id: str) -> Decimal:
         row = self.connection.execute(
             """
             SELECT
@@ -191,12 +243,12 @@ class MetricsService:
         ).fetchone()
         total = int(row["total_count"] or 0)
         matched = int(row["matched_count"] or 0)
-        return round((matched / total) * 100, 2) if total else 0.0
+        return percentage_from_counts(numerator=matched, denominator=total)
 
-    def _exception_aging(self, workspace_id: str, period_name: str) -> float:
+    def _exception_aging(self, workspace_id: str, period_name: str) -> Decimal:
         row = self.connection.execute(
             """
-            SELECT AVG(julianday('now') - julianday(created_at)) AS aging
+            SELECT CAST(AVG(julianday('now') - julianday(created_at)) AS TEXT) AS aging
             FROM exceptions_queue
             WHERE workspace_id = ?
               AND (? = '' OR period_name = ?)
@@ -204,15 +256,19 @@ class MetricsService:
             """,
             (workspace_id, period_name, period_name),
         ).fetchone()
-        return round(float(row["aging"] or 0.0), 2)
+        return _quantize_metric(_metric_decimal(row["aging"], label="exception aging"))
 
-    def _period_readiness(self, workspace_id: str, period_name: str) -> float:
-        row = self.connection.execute(
+    def _period_readiness(self, workspace_id: str, period_name: str) -> Decimal:
+        rows = self.connection.execute(
             """
-            SELECT AVG(readiness_score) AS readiness
+            SELECT CAST(readiness_score AS TEXT) AS readiness
             FROM close_periods
             WHERE workspace_id = ? AND (? = '' OR period_name = ?)
             """,
             (workspace_id, period_name, period_name),
-        ).fetchone()
-        return round(float(row["readiness"] or 0.0), 2)
+        ).fetchall()
+        values = [_metric_decimal(row["readiness"], label="period readiness") for row in rows]
+        for value in values:
+            if value < 0 or value > 100:
+                raise PlatformError("Stored period readiness metric is invalid.")
+        return _average_metric(values)

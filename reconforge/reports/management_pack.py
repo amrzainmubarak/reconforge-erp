@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
+from decimal import ROUND_HALF_UP, Decimal, localcontext
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +12,7 @@ import pandas as pd
 from reconforge.close import close_summary_frame, load_close_checklist
 from reconforge.config import ReconForgeConfig
 from reconforge.io.excel import add_summary_chart, audit_metadata, write_excel_workbook
+from reconforge.io.generated import GeneratedArtifactError, read_generated_json_document
 from reconforge.io.writers import frame_to_records, write_json, write_report_frames
 from reconforge.reconciliation.stock_gl import StockGLReconciliationResult
 from reconforge.reconciliation.stock_gl import result_frames as stock_gl_frames
@@ -21,6 +22,7 @@ from reconforge.reports.html import write_html_dashboard
 from reconforge.reports.markdown import write_markdown_summary
 from reconforge.reports.wip_aging import aging_summary
 from reconforge.review.state import CERTIFICATION_COLUMNS, load_review_state, merge_review_state_with_exceptions
+from reconforge.utils.money import CurrencyRegistry, InvalidAmountError, ResolvedCurrencyPolicy, parse_amount
 from reconforge.validators import issues_to_frame, validate_input_directory
 
 
@@ -35,14 +37,121 @@ class ManagementPackArtifacts:
     csv_json_paths: list[Path]
 
 
+def _to_decimal(value: object) -> Decimal:
+    """Parse a strict, non-quantized decimal value for report math."""
+
+    try:
+        return parse_amount(value)
+    except (InvalidAmountError, TypeError, ValueError) as exc:
+        raise ValueError("Invalid amount value provided for report calculation.") from exc
+
+
+def _exact_decimal_sum(amounts: list[Decimal]) -> Decimal:
+    if not amounts:
+        return Decimal("0")
+    max_adjusted = max((value.adjusted() for value in amounts if value), default=0)
+    min_exponent = min(int(value.as_tuple().exponent) for value in amounts)
+    carry_digits = len(str(len(amounts))) + 1
+    with localcontext() as context:
+        context.prec = max(28, max_adjusted - min_exponent + carry_digits + 2)
+        return sum(amounts, Decimal("0"))
+
+
+def _sum_decimal_series(values: pd.Series[Any]) -> Decimal:
+    """Sum valid finance values exactly; callers must expose omitted invalid rows."""
+
+    amounts = [parsed for parsed in (_to_optional_decimal(value) for value in values) if parsed is not None]
+    return _exact_decimal_sum(amounts)
+
+
+def _sum_required_decimal_series(values: pd.Series[Any]) -> Decimal:
+    """Sum a required finance series, rejecting missing or malformed values."""
+
+    return _exact_decimal_sum([_to_decimal(value) for value in values])
+
+
+def _default_report_currency_policy() -> ResolvedCurrencyPolicy:
+    return CurrencyRegistry.resolve("USD")
+
+
+def _quantize_report_amount(value: Decimal, policy: ResolvedCurrencyPolicy) -> Decimal:
+    """Apply the captured registry policy with enough local precision."""
+
+    spec = policy.spec
+    quantum = Decimal("1").scaleb(-spec.minor_units)
+    integer_digits = max(1, value.adjusted() + 1) if value else 1
+    required_precision = max(28, len(value.as_tuple().digits) + 2, integer_digits + spec.minor_units + 2)
+    with localcontext() as context:
+        context.prec = required_precision
+        return value.quantize(quantum, rounding=ROUND_HALF_UP)
+
+
+def _amount_policy_fields(policy: ResolvedCurrencyPolicy) -> dict[str, object]:
+    spec = policy.spec
+    return {
+        "currency": spec.code,
+        "currency_minor_units": spec.minor_units,
+        "currency_rounding_policy": spec.rounding_policy,
+        "currency_policy_digest": policy.policy_digest,
+    }
+
+
+def _currency_policy_payload(policy: ResolvedCurrencyPolicy) -> dict[str, object]:
+    return {
+        **_amount_policy_fields(policy),
+        "aggregation_policy": "single-currency-only-no-implicit-fx",
+        "missing_currency_policy": "configured-output-currency-compatibility",
+        "currency_registry_digest": policy.registry_digest,
+        "currency_registry_version": policy.registry_version,
+    }
+
+
+def _validate_report_currency_scope(
+    frames: list[pd.DataFrame],
+    policy: ResolvedCurrencyPolicy,
+) -> None:
+    """Reject cross-currency aggregation because this report performs no FX conversion."""
+
+    explicit_codes: set[str] = set()
+    for frame in frames:
+        if frame.empty or "currency" not in frame.columns:
+            continue
+        for raw_value in frame["currency"]:
+            if raw_value is None or pd.isna(raw_value) or not str(raw_value).strip():
+                continue
+            try:
+                explicit_codes.add(CurrencyRegistry.resolve(str(raw_value)).spec.code)
+            except InvalidAmountError as exc:
+                raise ValueError("Management pack contains an invalid or unregistered currency.") from exc
+    if explicit_codes - {policy.spec.code}:
+        raise ValueError(
+            "Management pack cannot aggregate currencies that differ from output_currency without explicit FX conversion.",
+        )
+
+
+def _attach_amount_policy(frame: pd.DataFrame, policy: ResolvedCurrencyPolicy) -> pd.DataFrame:
+    if frame.empty:
+        return frame.copy()
+    return frame.assign(**_amount_policy_fields(policy))
+
+
 def _executive_summary(
     stock_result: StockGLReconciliationResult,
     workorder_result: WorkorderReconciliationResult,
     wip_aging: pd.DataFrame,
+    *,
+    currency_policy: ResolvedCurrencyPolicy | None = None,
 ) -> pd.DataFrame:
-    matched_amount = float(stock_result.matched_transactions.get("stock_amount", pd.Series(dtype=float)).sum())
-    unmatched_stock_amount = float(stock_result.stock_without_gl.get("total_cost", pd.Series(dtype=float)).sum())
-    unmatched_gl_amount = float(stock_result.gl_without_stock.get("amount", pd.Series(dtype=float)).sum())
+    policy = currency_policy or _default_report_currency_policy()
+    matched_amount = _sum_required_decimal_series(
+        stock_result.matched_transactions.get("stock_amount", pd.Series(dtype=object)),
+    )
+    unmatched_stock_amount = _sum_required_decimal_series(
+        stock_result.stock_without_gl.get("total_cost", pd.Series(dtype=object)),
+    )
+    unmatched_gl_amount = _sum_required_decimal_series(
+        stock_result.gl_without_stock.get("amount", pd.Series(dtype=object)),
+    )
     exception_count = len(stock_result.all_exceptions) + len(workorder_result.all_exceptions)
     critical_count = int(
         pd.concat([stock_result.all_exceptions, workorder_result.all_exceptions], ignore_index=True, sort=False)
@@ -53,14 +162,49 @@ def _executive_summary(
     )
     return pd.DataFrame(
         [
-            {"metric": "matched_amount", "value": round(matched_amount, 2)},
-            {"metric": "unmatched_stock_amount", "value": round(unmatched_stock_amount, 2)},
-            {"metric": "unmatched_gl_amount", "value": round(unmatched_gl_amount, 2)},
+            {
+                "metric": "matched_amount",
+                "value": _quantize_report_amount(matched_amount, policy),
+                **_amount_policy_fields(policy),
+            },
+            {
+                "metric": "unmatched_stock_amount",
+                "value": _quantize_report_amount(unmatched_stock_amount, policy),
+                **_amount_policy_fields(policy),
+            },
+            {
+                "metric": "unmatched_gl_amount",
+                "value": _quantize_report_amount(unmatched_gl_amount, policy),
+                **_amount_policy_fields(policy),
+            },
             {"metric": "exception_count", "value": exception_count},
             {"metric": "critical_risk_count", "value": critical_count},
             {"metric": "open_wip_orders", "value": len(wip_aging)},
         ],
     )
+
+
+def _to_optional_decimal(value: object) -> Decimal | None:
+    """Parse a strict numeric value, returning None when the value is malformed."""
+
+    try:
+        return parse_amount(value)
+    except (InvalidAmountError, TypeError, ValueError):
+        return None
+
+
+def _risk_score_series(frame: pd.DataFrame) -> pd.Series:
+    return pd.Series(
+        [_to_optional_decimal(value) for value in frame.get("risk_score", pd.Series([None] * len(frame), index=frame.index))],
+        index=frame.index,
+    )
+
+
+def _high_risk_exceptions(frame: pd.DataFrame) -> pd.DataFrame:
+    if frame.empty:
+        return frame.copy()
+    mask = _risk_score_series(frame).map(lambda value: value is not None and value >= Decimal("61"))
+    return frame[mask].copy()
 
 
 def _risk_scoring(stock_result: StockGLReconciliationResult, workorder_result: WorkorderReconciliationResult) -> pd.DataFrame:
@@ -72,13 +216,20 @@ def _risk_scoring(stock_result: StockGLReconciliationResult, workorder_result: W
 
 def _amount_impact_series(frame: pd.DataFrame) -> pd.Series:
     if frame.empty:
-        return pd.Series(dtype=float)
-    amount = pd.Series([0.0] * len(frame), index=frame.index)
+        return pd.Series([None] * len(frame), index=frame.index, dtype=object)
+    amount = pd.Series([None] * len(frame), index=frame.index, dtype=object)
     for field in ("amount_impact", "total_cost", "amount", "total_price", "actual_cost", "estimated_cost", "invoice_amount"):
         if field not in frame.columns:
             continue
-        values = pd.to_numeric(frame[field], errors="coerce").fillna(0).abs()
-        amount = amount.mask(amount.eq(0), values)
+        values = pd.Series(
+            [
+                parsed.copy_abs() if parsed is not None else None
+                for parsed in (_to_optional_decimal(value) for value in frame[field])
+            ],
+            index=frame.index,
+            dtype=object,
+        )
+        amount = amount.mask(amount.isna(), values)
     return amount
 
 
@@ -94,17 +245,26 @@ def _severity_series(frame: pd.DataFrame) -> pd.Series:
 
 def _top_control_themes(combined: pd.DataFrame) -> pd.DataFrame:
     if combined.empty:
-        return pd.DataFrame(columns=["control_theme", "exception_count", "amount_impact"])
+        return pd.DataFrame(
+            columns=["control_theme", "exception_count", "amount_impact", "unquantified_amount_count"],
+        )
     theme_column = "exception_type" if "exception_type" in combined.columns else "rule_name" if "rule_name" in combined.columns else ""
     if not theme_column:
-        return pd.DataFrame(columns=["control_theme", "exception_count", "amount_impact"])
+        return pd.DataFrame(
+            columns=["control_theme", "exception_count", "amount_impact", "unquantified_amount_count"],
+        )
     themed = combined.assign(
         control_theme=combined[theme_column].astype(str),
         amount_impact=_amount_impact_series(combined),
     )
+    themed = themed.assign(unquantified_amount=themed["amount_impact"].isna())
     return (
         themed.groupby("control_theme", as_index=False)
-        .agg(exception_count=("control_theme", "count"), amount_impact=("amount_impact", "sum"))
+        .agg(
+            exception_count=("control_theme", "count"),
+            amount_impact=("amount_impact", _sum_decimal_series),
+            unquantified_amount_count=("unquantified_amount", "sum"),
+        )
         .sort_values(["exception_count", "amount_impact"], ascending=False)
         .head(5)
     )
@@ -114,10 +274,10 @@ def _json_payload(path: Path) -> dict[str, Any]:
     if not path.exists() or not path.is_file():
         return {}
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+        payload = read_generated_json_document(path).payload
+    except GeneratedArtifactError:
         return {}
-    return payload if isinstance(payload, dict) else {}
+    return payload
 
 
 def _recurring_exception_count(output_dir: Path) -> int | str:
@@ -139,7 +299,7 @@ def _recurring_exception_count(output_dir: Path) -> int | str:
     return "not_available"
 
 
-def _close_completion_rate(output_dir: Path) -> float | str:
+def _close_completion_rate(output_dir: Path) -> Decimal | str:
     for path in [output_dir / "close", output_dir]:
         try:
             summary = close_summary_frame(load_close_checklist(path))
@@ -148,8 +308,8 @@ def _close_completion_rate(output_dir: Path) -> float | str:
         row = summary[summary["metric"].eq("completion_rate_pct")]
         if not row.empty:
             try:
-                return float(row.iloc[0]["value"])
-            except (TypeError, ValueError):
+                return parse_amount(row.iloc[0]["value"])
+            except (TypeError, ValueError, InvalidAmountError):
                 return "not_available"
     return "not_available"
 
@@ -172,7 +332,14 @@ def _evidence_coverage_pct(high_critical: int, output_dir: Path) -> float | str:
     return round(min((evidence_cases / high_critical) * 100, 100.0), 2)
 
 
-def _control_value_summary(combined: pd.DataFrame, wip_aging: pd.DataFrame, output_dir: Path) -> pd.DataFrame:
+def _control_value_summary(
+    combined: pd.DataFrame,
+    wip_aging: pd.DataFrame,
+    output_dir: Path,
+    *,
+    currency_policy: ResolvedCurrencyPolicy | None = None,
+) -> pd.DataFrame:
+    policy = currency_policy or _default_report_currency_policy()
     total_exceptions = len(combined)
     merged = merge_review_state_with_exceptions(combined, load_review_state(output_dir / "review_state.json"))
     status = merged.get("status", pd.Series(["New"] * len(merged))).astype(str)
@@ -188,9 +355,27 @@ def _control_value_summary(combined: pd.DataFrame, wip_aging: pd.DataFrame, outp
     review_completion_rate = round((reviewed / total_exceptions) * 100, 2) if total_exceptions else 0.0
     certification_status = merged.get("certification_status", pd.Series([""] * len(merged))).astype(str)
     certified_count = int(certification_status.isin({"Prepared", "Reviewed", "Accepted Risk"}).sum())
-    estimated_value_impact = round(float(_amount_impact_series(combined).sum()), 2) if total_exceptions else 0.0
-    wip_source = wip_aging.get("actual_cost", wip_aging.get("estimated_cost", pd.Series([0] * len(wip_aging))))
-    wip_exposure = round(float(pd.to_numeric(wip_source, errors="coerce").fillna(0).sum()), 2) if not wip_aging.empty else 0.0
+    exception_amounts = _amount_impact_series(combined)
+    unquantified_exception_count = int(exception_amounts.isna().sum())
+    estimated_value_impact = (
+        _quantize_report_amount(_sum_decimal_series(exception_amounts), policy)
+        if total_exceptions
+        else _quantize_report_amount(Decimal("0"), policy)
+    )
+    wip_source = wip_aging.get(
+        "actual_cost",
+        wip_aging.get("estimated_cost", pd.Series([None] * len(wip_aging), index=wip_aging.index)),
+    )
+    wip_amounts = (
+        pd.Series([_to_optional_decimal(value) for value in wip_source], index=wip_aging.index)
+        if isinstance(wip_source, pd.Series)
+        else pd.Series([_to_optional_decimal(wip_source)])
+    )
+    unquantified_wip_count = int(wip_amounts.isna().sum()) if not wip_aging.empty else 0
+    if not wip_aging.empty:
+        wip_exposure = _quantize_report_amount(_sum_decimal_series(wip_amounts), policy)
+    else:
+        wip_exposure = _quantize_report_amount(Decimal("0"), policy)
     return pd.DataFrame(
         [
             {"metric": "total_exceptions", "value": total_exceptions, "meaning": "All detected reconciliation and operational exceptions."},
@@ -199,8 +384,28 @@ def _control_value_summary(combined: pd.DataFrame, wip_aging: pd.DataFrame, outp
             {"metric": "unresolved_high_risk_count", "value": unresolved_high_risk, "meaning": "High or Critical exceptions not yet resolved or accepted as risk."},
             {"metric": "accepted_risk_count", "value": accepted_risk, "meaning": "Exceptions explicitly accepted with documented rationale."},
             {"metric": "escalated_count", "value": escalated, "meaning": "Exceptions assigned for escalation."},
-            {"metric": "estimated_value_impact", "value": estimated_value_impact, "meaning": "Simple sum of available exception amount fields; not a savings claim."},
-            {"metric": "wip_exposure", "value": wip_exposure, "meaning": "Available WIP cost exposure from open work-order aging data."},
+            {
+                "metric": "unquantified_exception_count",
+                "value": unquantified_exception_count,
+                "meaning": "Exceptions with no valid available amount; excluded from estimated value impact and never converted to zero.",
+            },
+            {
+                "metric": "unquantified_wip_count",
+                "value": unquantified_wip_count,
+                "meaning": "Open WIP rows with no valid cost; excluded from WIP exposure and never converted to zero.",
+            },
+            {
+                "metric": "estimated_value_impact",
+                "value": estimated_value_impact,
+                "meaning": "Simple sum of available exception amount fields; not a savings claim.",
+                **_amount_policy_fields(policy),
+            },
+            {
+                "metric": "wip_exposure",
+                "value": wip_exposure,
+                "meaning": "Available WIP cost exposure from open work-order aging data.",
+                **_amount_policy_fields(policy),
+            },
             {"metric": "review_completion_rate_pct", "value": review_completion_rate, "meaning": "Percent of exceptions with a status other than New."},
             {"metric": "certified_review_count", "value": certified_count, "meaning": "Exceptions with workflow certification metadata. This is not a legal sign-off."},
             {"metric": "recurring_exception_count", "value": _recurring_exception_count(output_dir), "meaning": "Recurring exceptions from a local period comparison report when available."},
@@ -212,13 +417,21 @@ def _control_value_summary(combined: pd.DataFrame, wip_aging: pd.DataFrame, outp
 
 def _risk_matrix(combined: pd.DataFrame) -> pd.DataFrame:
     if combined.empty:
-        return pd.DataFrame(columns=["risk_level", "exception_type", "exception_count", "amount_impact"])
-    amount = combined.get("total_cost", combined.get("amount", pd.Series([0] * len(combined))))
-    matrix = combined.assign(amount_impact=pd.to_numeric(amount, errors="coerce").fillna(0))
+        return pd.DataFrame(
+            columns=["risk_level", "exception_type", "exception_count", "amount_impact", "unquantified_amount_count"],
+        )
+    matrix = combined.assign(amount_impact=_amount_impact_series(combined))
+    matrix = matrix.assign(unquantified_amount=matrix["amount_impact"].isna())
     group_cols = [column for column in ["risk_level", "exception_type"] if column in matrix.columns]
     if not group_cols:
-        return pd.DataFrame(columns=["risk_level", "exception_type", "exception_count", "amount_impact"])
-    return matrix.groupby(group_cols, as_index=False).agg(exception_count=("exception_type", "count"), amount_impact=("amount_impact", "sum"))
+        return pd.DataFrame(
+            columns=["risk_level", "exception_type", "exception_count", "amount_impact", "unquantified_amount_count"],
+        )
+    return matrix.groupby(group_cols, as_index=False).agg(
+        exception_count=("exception_type", "count"),
+        amount_impact=("amount_impact", _sum_decimal_series),
+        unquantified_amount_count=("unquantified_amount", "sum"),
+    )
 
 
 def _control_effectiveness(stock_result: StockGLReconciliationResult, workorder_result: WorkorderReconciliationResult) -> pd.DataFrame:
@@ -239,6 +452,7 @@ def _configuration_used(config: ReconForgeConfig) -> pd.DataFrame:
         [
             {"parameter": "amount_tolerance", "value": config.amount_tolerance},
             {"parameter": "date_tolerance_days", "value": config.date_tolerance_days},
+            {"parameter": "matching_ambiguity_policy", "value": config.matching_ambiguity_policy},
             {"parameter": "output_currency", "value": config.output_currency},
             {"parameter": "company_name", "value": config.company_name},
             {"parameter": "report_title", "value": config.report_title},
@@ -280,13 +494,14 @@ def _audit_log(config: ReconForgeConfig, input_path: Path) -> pd.DataFrame:
     metadata["input_path"] = str(input_path)
     metadata["amount_tolerance"] = str(config.amount_tolerance)
     metadata["date_tolerance_days"] = str(config.date_tolerance_days)
+    metadata["matching_ambiguity_policy"] = config.matching_ambiguity_policy
     return pd.DataFrame([metadata])
 
 
-def management_summary_dict(executive_summary: pd.DataFrame) -> dict[str, float | int | str]:
+def management_summary_dict(executive_summary: pd.DataFrame) -> dict[str, Decimal | float | int | str]:
     """Convert executive summary frame to a dictionary."""
 
-    summary: dict[str, float | int | str] = {}
+    summary: dict[str, Decimal | float | int | str] = {}
     for _, row in executive_summary.iterrows():
         summary[str(row["metric"])] = row["value"]
     return summary
@@ -302,22 +517,42 @@ def generate_management_pack(
 ) -> ManagementPackArtifacts:
     """Generate the full Excel, JSON, CSV, Markdown, and HTML management pack."""
 
+    currency_policy = CurrencyRegistry.resolve(config.output_currency)
+    combined_exceptions = pd.concat(
+        [stock_result.all_exceptions, workorder_result.all_exceptions],
+        ignore_index=True,
+        sort=False,
+    )
+    _validate_report_currency_scope(
+        [
+            stock_result.matched_transactions,
+            stock_result.stock_without_gl,
+            stock_result.gl_without_stock,
+            combined_exceptions,
+            wip_aging,
+        ],
+        currency_policy,
+    )
     output_dir.mkdir(parents=True, exist_ok=True)
-    executive_summary = _executive_summary(stock_result, workorder_result, wip_aging)
+    executive_summary = _executive_summary(
+        stock_result,
+        workorder_result,
+        wip_aging,
+        currency_policy=currency_policy,
+    )
     risk_scoring = _risk_scoring(stock_result, workorder_result)
     recommended_actions = _recommended_actions(stock_result, workorder_result, wip_aging)
     wip_summary = aging_summary(wip_aging)
     audit_log = _audit_log(config, input_path)
-    combined_exceptions = pd.concat([stock_result.all_exceptions, workorder_result.all_exceptions], ignore_index=True, sort=False)
-    control_value_summary = _control_value_summary(combined_exceptions, wip_aging, output_dir)
-    top_control_themes = _top_control_themes(combined_exceptions)
-    high_risk = (
-        combined_exceptions[
-            pd.to_numeric(combined_exceptions.get("risk_score", pd.Series([0] * len(combined_exceptions))), errors="coerce").fillna(0).ge(61)
-        ].copy()
-        if not combined_exceptions.empty
-        else pd.DataFrame()
+    control_value_summary = _control_value_summary(
+        combined_exceptions,
+        wip_aging,
+        output_dir,
+        currency_policy=currency_policy,
     )
+    top_control_themes = _attach_amount_policy(_top_control_themes(combined_exceptions), currency_policy)
+    risk_matrix = _attach_amount_policy(_risk_matrix(combined_exceptions), currency_policy)
+    high_risk = _high_risk_exceptions(combined_exceptions) if not combined_exceptions.empty else pd.DataFrame()
     data_quality_warnings = issues_to_frame(validate_input_directory(input_path))
 
     sheets = {
@@ -337,7 +572,7 @@ def generate_management_pack(
         "Evidence Register": pd.DataFrame(),
         "WIP Aging Summary": wip_summary,
         "Risk Scoring": risk_scoring,
-        "Risk Matrix": _risk_matrix(combined_exceptions),
+        "Risk Matrix": risk_matrix,
         "Top Control Themes": top_control_themes,
         "Control Effectiveness": _control_effectiveness(stock_result, workorder_result),
         "Recommended Actions": recommended_actions,
@@ -345,10 +580,14 @@ def generate_management_pack(
         "Data Quality Warnings": data_quality_warnings,
         "Configuration Used": _configuration_used(config),
     }
+    excel_metadata = audit_metadata(config.company_name, config.report_title, config.output_currency)
+    excel_metadata["financial_input_policy"] = stock_result.financial_input_policy
+    excel_metadata["record_identity_policy"] = stock_result.record_identity_policy
+    excel_metadata["matching_ambiguity_policy"] = stock_result.matching_ambiguity_policy
     excel_path = write_excel_workbook(
         sheets,
         output_dir / "management_pack.xlsx",
-        metadata=audit_metadata(config.company_name, config.report_title, config.output_currency),
+        metadata=excel_metadata,
     )
     add_summary_chart(excel_path, "Risk Scoring", "Exceptions by Risk Level")
     add_summary_chart(excel_path, "WIP Aging Summary", "WIP Aging Buckets")
@@ -362,6 +601,11 @@ def generate_management_pack(
     csv_json_paths = write_report_frames(all_frames, output_dir, "management_pack")
 
     payload: dict[str, Any] = {
+        "schema_version": 4,
+        "financial_input_policy": stock_result.financial_input_policy,
+        "record_identity_policy": stock_result.record_identity_policy,
+        "matching_ambiguity_policy": stock_result.matching_ambiguity_policy,
+        "currency_policy": _currency_policy_payload(currency_policy),
         "executive_summary": frame_to_records(executive_summary),
         "control_value_summary": frame_to_records(control_value_summary),
         "certification_metadata": frame_to_records(_certification_register(combined_exceptions, output_dir)),

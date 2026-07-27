@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/client_pack_manifest.schema.json",
+  "title": "ReconForge Client Pack Manifest",
+  "type": "object",
+  "oneOf": [
+    {"$ref": "#/$defs/legacy_v1"},
+    {"$ref": "#/$defs/current_v2"}
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "safe_path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*\\\\)(?!.*:)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "redaction_settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "redact_names",
+        "redact_amounts",
+        "exclude_raw_records",
+        "summary_only",
+        "exclude_evidence",
+        "include_manifest_checksums"
+      ],
+      "properties": {
+        "redact_names": {"type": "boolean"},
+        "redact_amounts": {"type": "boolean"},
+        "exclude_raw_records": {"type": "boolean"},
+        "summary_only": {"type": "boolean"},
+        "exclude_evidence": {"type": "boolean"},
+        "include_manifest_checksums": {"type": "boolean"}
+      }
+    },
+    "legacy_file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "size_bytes"],
+      "properties": {
+        "path": {"$ref": "#/$defs/safe_path"},
+        "size_bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "current_file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "size_bytes", "sha256"],
+      "properties": {
+        "path": {"$ref": "#/$defs/safe_path"},
+        "size_bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "common_properties": {
+      "generated_at": {"type": "string", "minLength": 1},
+      "tool_version": {"type": "string", "minLength": 1},
+      "source_output_folder": {"type": "string"},
+      "local_first_note": {"type": "string", "minLength": 1},
+      "privacy_note": {"type": "string", "minLength": 1},
+      "redaction_settings": {"$ref": "#/$defs/redaction_settings"},
+      "missing_optional_files": {"type": "array", "items": {"type": "string"}},
+      "excluded_files": {"type": "array", "items": {"type": "string"}}
+    },
+    "legacy_v1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generated_at",
+        "tool_version",
+        "source_output_folder",
+        "local_first_note",
+        "privacy_note",
+        "redaction_settings",
+        "included_files",
+        "missing_optional_files",
+        "excluded_files"
+      ],
+      "not": {"required": ["schema_version"]},
+      "properties": {
+        "generated_at": {"$ref": "#/$defs/common_properties/generated_at"},
+        "tool_version": {"$ref": "#/$defs/common_properties/tool_version"},
+        "source_output_folder": {"$ref": "#/$defs/common_properties/source_output_folder"},
+        "local_first_note": {"$ref": "#/$defs/common_properties/local_first_note"},
+        "privacy_note": {"$ref": "#/$defs/common_properties/privacy_note"},
+        "redaction_settings": {"$ref": "#/$defs/common_properties/redaction_settings"},
+        "included_files": {"type": "array", "items": {"$ref": "#/$defs/legacy_file"}},
+        "missing_optional_files": {"$ref": "#/$defs/common_properties/missing_optional_files"},
+        "excluded_files": {"$ref": "#/$defs/common_properties/excluded_files"}
+      }
+    },
+    "current_v2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "artifact_type",
+        "financial_input_policy",
+        "redaction_policy",
+        "input_files",
+        "content_digest",
+        "artifact_digest",
+        "integrity_boundary",
+        "generated_at",
+        "tool_version",
+        "source_output_folder",
+        "local_first_note",
+        "privacy_note",
+        "redaction_settings",
+        "included_files",
+        "missing_optional_files",
+        "excluded_files"
+      ],
+      "properties": {
+        "schema_version": {"const": 2},
+        "artifact_type": {"const": "reconforge-client-pack-manifest"},
+        "financial_input_policy": {"const": "strict-financial-input-v2"},
+        "redaction_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "algorithm_version",
+            "json_decimal_policy",
+            "amount_bucket_boundaries",
+            "invalid_amount_policy",
+            "output_checksum_policy"
+          ],
+          "properties": {
+            "algorithm_version": {"const": "client-pack-redaction-v2"},
+            "json_decimal_policy": {"const": "preserve-lexeme-as-text-v2"},
+            "amount_bucket_boundaries": {
+              "const": ["0", "100", "1000", "10000", "100000"]
+            },
+            "invalid_amount_policy": {"const": "full-redaction-token-v1"},
+            "output_checksum_policy": {"const": "required-v2"}
+          }
+        },
+        "input_files": {"type": "array", "items": {"$ref": "#/$defs/current_file"}},
+        "content_digest": {"$ref": "#/$defs/sha256"},
+        "artifact_digest": {"$ref": "#/$defs/sha256"},
+        "integrity_boundary": {
+          "const": "Local source/output content digests only; redaction remains best-effort and this artifact is not a signature, disclosure approval, audit opinion, compliance certification, or proof of source-system authenticity."
+        },
+        "generated_at": {"$ref": "#/$defs/common_properties/generated_at"},
+        "tool_version": {"$ref": "#/$defs/common_properties/tool_version"},
+        "source_output_folder": {"$ref": "#/$defs/common_properties/source_output_folder"},
+        "local_first_note": {"$ref": "#/$defs/common_properties/local_first_note"},
+        "privacy_note": {"$ref": "#/$defs/common_properties/privacy_note"},
+        "redaction_settings": {"$ref": "#/$defs/common_properties/redaction_settings"},
+        "included_files": {"type": "array", "items": {"$ref": "#/$defs/current_file"}},
+        "missing_optional_files": {"$ref": "#/$defs/common_properties/missing_optional_files"},
+        "excluded_files": {"$ref": "#/$defs/common_properties/excluded_files"}
+      }
+    }
+  }
+}

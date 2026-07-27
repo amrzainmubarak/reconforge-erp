@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/risk_register.schema.json",
+  "title": "ReconForge Risk Register",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "registry_id", "risk_method", "last_reviewed", "risks"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "registry_id": {"const": "reconforge-risk-register"},
+    "last_reviewed": {"type": "string", "format": "date"},
+    "risk_method": {"$ref": "#/$defs/risk_method"},
+    "risks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/risk"}
+    }
+  },
+  "$defs": {
+    "rating": {"enum": ["low", "medium", "high", "critical"]},
+    "risk_method": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["likelihood_scale", "impact_scale", "rating_thresholds"],
+      "properties": {
+        "likelihood_scale": {
+          "const": {"unlikely": 1, "possible": 2, "likely": 3, "almost_certain": 4}
+        },
+        "impact_scale": {
+          "const": {"low": 1, "medium": 2, "high": 3, "critical": 4}
+        },
+        "rating_thresholds": {
+          "const": {"low": [1, 3], "medium": [4, 7], "high": [8, 11], "critical": [12, 16]}
+        }
+      }
+    },
+    "risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "category",
+        "owner",
+        "trigger",
+        "likelihood",
+        "impact",
+        "inherent_risk",
+        "status",
+        "mitigations",
+        "evidence",
+        "residual_risk",
+        "residual_rationale",
+        "next_actions",
+        "review_cadence_days",
+        "next_review"
+      ],
+      "properties": {
+        "id": {"type": "string", "pattern": "^R-[0-9]{3}$"},
+        "title": {"type": "string", "minLength": 8, "maxLength": 120},
+        "category": {
+          "enum": [
+            "audit",
+            "data_model",
+            "developer_experience",
+            "financial_integrity",
+            "identity",
+            "operations",
+            "privacy",
+            "product",
+            "reliability",
+            "security",
+            "user_experience"
+          ]
+        },
+        "owner": {"type": "string", "pattern": "^[a-z]+(?:-[a-z]+)*$"},
+        "trigger": {"type": "string", "minLength": 30, "maxLength": 400},
+        "likelihood": {"enum": ["unlikely", "possible", "likely", "almost_certain"]},
+        "impact": {"$ref": "#/$defs/rating"},
+        "inherent_risk": {"$ref": "#/$defs/rating"},
+        "status": {"enum": ["open", "partially_mitigated", "mitigated", "accepted", "monitoring"]},
+        "mitigations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 20, "maxLength": 400}
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "pattern": "^[A-Za-z0-9_.\\/-]+$"}
+        },
+        "residual_risk": {"$ref": "#/$defs/rating"},
+        "residual_rationale": {"type": "string", "minLength": 30, "maxLength": 500},
+        "next_actions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 20, "maxLength": 400}
+        },
+        "review_cadence_days": {"type": "integer", "enum": [14, 30, 60, 90]},
+        "next_review": {"type": "string", "format": "date"}
+      }
+    }
+  }
+}

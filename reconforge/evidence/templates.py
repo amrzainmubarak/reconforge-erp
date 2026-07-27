@@ -5,6 +5,12 @@ from __future__ import annotations
 from reconforge.evidence.models import EvidenceCase
 
 
+def _risk_score_display(case: EvidenceCase) -> str:
+    if case.risk_score_status == "valid" and case.risk_score is not None:
+        return str(case.risk_score)
+    return f"Unavailable ({case.risk_score_status})"
+
+
 def business_impact(exception_type: str) -> str:
     """Return a business impact statement for an exception type."""
 
@@ -57,6 +63,7 @@ def recommended_action(exception_type: str) -> str:
 def summary_markdown(case: EvidenceCase) -> str:
     """Render an evidence summary."""
 
+    risk_score = _risk_score_display(case)
     return f"""# Evidence Binder: {case.exception_id}
 
 ## Exception Summary
@@ -66,7 +73,8 @@ def summary_markdown(case: EvidenceCase) -> str:
 | Exception ID | {case.exception_id} |
 | Exception Type | {case.exception_type} |
 | Severity | {case.severity} |
-| Risk Score | {case.risk_score} |
+| Risk Score | {risk_score} |
+| Risk Score Policy | {case.risk_score_policy} |
 | Work Order | {case.affected_work_order or ""} |
 | Product | {case.affected_product or ""} |
 | Customer | {case.affected_customer or ""} |
@@ -127,6 +135,7 @@ Suggested evidence to collect:
 def review_form_markdown(case: EvidenceCase) -> str:
     """Render an auditor/manager review form."""
 
+    risk_score = _risk_score_display(case)
     return f"""# Review Form: {case.exception_id}
 
 ## Review Questions
@@ -176,5 +185,5 @@ def review_form_markdown(case: EvidenceCase) -> str:
 
 ## Suggested Audit Note
 
-Reviewed exception {case.exception_id}. The exception was rated {case.severity} with risk score {case.risk_score}. Management should document evidence reviewed, root cause, financial impact, and closure action.
+Reviewed exception {case.exception_id}. The exception was rated {case.severity} with risk score {risk_score}. Management should document evidence reviewed, root cause, financial impact, and closure action.
 """

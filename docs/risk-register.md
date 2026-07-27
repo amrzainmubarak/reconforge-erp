@@ -1,61 +1,33 @@
 # Risk Register
 
-## R-001: Empty-exception aggregation crash
+The normative governance source is `docs/risk-register.yaml`, validated against
+`docs/schemas/risk_register.schema.json`. It records unique IDs, role-based
+owners, triggers, likelihood/impact, implemented mitigations, evidence paths,
+residual risk, actions, and review dates. This table remains the concise human
+narrative and must retain exactly the same IDs.
 
-- **Status:** Open (patched during this turn in `workorders` and `evidence` paths).
-- **Likelihood:** Medium
-- **Impact:** High
-- **Description:** `pd.concat` on empty frame list can raise and break report/evidence steps.
-- **Owner:** Reconciliation module maintainer
-- **Controls:** Guard before concatenation and return deterministic empty outputs.
-- **Residual risk:** Low after guard tests.
+| ID | Severity | Risk | Evidence | Status / control | Remaining test or migration work |
+| --- | --- | --- | --- | --- | --- |
+| R-001 | Critical | Hosted tenant escape | PostgreSQL connection/RLS foundation and tenant-scoped master-data, ledger-control, identity, evidence, reconciliation-result, and reconciliation-execution repositories now exist; most domain persistence remains SQLite-first and the boundary is not integrated across repositories, workers, cache, object, or export paths | Partially mitigated by strict SQLite tenant path/header routing, parameterized transaction-local PostgreSQL scope, composite foreign keys, forced RLS, explicit schema-only matcher adapter, and live identity/session/evidence/reconciliation isolation tests; hosted mode is not advertised | Live RLS, repository contract, migration, authenticated API, worker/cache/object/export escape tests |
+| R-002 | Critical | Complete ERP capability overclaim | Current modules are reconciliation/control and local foundations; migrations 15 and 20 add bounded AP and AR workflow slices, not a full accounting, sales, tax, treasury, or manufacturing ERP | Mitigated by README, architecture boundary, AP/AR scope documentation, and explicit non-goals | End-to-end module tests before any claim change |
+| R-003 | High | Business change without audit evidence | Audit atomicity is enforced in the migrated local services, including account reconciliation, inventory planning, FIFO valuation, and reversal; other platform services remain | Partially mitigated; forced audit/outbox-failure rollback tests cover the migrated services | Migrate remaining services and add outbox coverage where event publication is required |
+| R-004 | High | Floating-point financial storage | Several platform tables use SQLite REAL affinity and legacy converters; migrations 16-18 add canonical Decimal text columns for account reconciliation, journals, intercompany, and persisted match differences | Partially mitigated; strict parsing, tolerance validation, and Decimal round-trip tests protect the migrated slices | Migrate remaining financial tables and remove permissive financial converters |
+| R-005 | High | Incomplete shared exception taxonomy | Stock-to-GL has typed metadata, and PostgreSQL reconciliation results now persist independent exception type/reason/severity/risk fields; other local domains do not yet share the complete contract | In progress | Versioned exception schema, cross-domain adapters, and golden datasets |
+| R-006 | Medium | Large datasets exceed memory | DuckDB has a bounded CSV relation-batch iterator, and the hosted worker streams opt-in hard-key partitions through a tenant-scoped PostgreSQL cursor; global matching still materializes its working set and the 1m attempt timed out | Partially mitigated by bounded partition failure, atomic checkpoint resume, server-cursor tests, scheduler leases, relation-batch tests, and 10k/100k evidence; no million-row claim is made | Streamed candidate pruning/global assignment, lower-memory profiling, and a verified 1m benchmark |
+| R-007 | Medium | Local identity is not enterprise identity | Local users/RBAC exist; a tenant-scoped PostgreSQL password/RBAC/session repository and bounded server API auth profile are live-tested, but OIDC/SAML/SCIM/MFA, lifecycle administration, and Redis-backed multi-worker sessions do not exist | Open and explicitly scoped; password/RBAC/session persistence and API principal propagation are implemented, but no enterprise identity claim is made | Provider, authorization, MFA, lifecycle, session, revocation, and worker/UI principal propagation tests |
+| R-008 | Medium | Outbox is not yet a hosted delivery system | SQLite migrations 13-14 and PostgreSQL migration 0007 provide claim/retry/dead-letter/replay state; bounded local and fresh-connection PostgreSQL workers exist, but no external transport, tenant enumerator, publisher idempotency contract, or managed worker deployment exists | Local and PostgreSQL delivery state machines, lease ownership, retry/dead-letter transitions, replay, and worker lifecycle are contract-tested; hosted delivery remains open | Transport contract, crash-after-publish recovery, replay, idempotency, tenant, and observability tests |
+| R-011 | High | Unbound local actor labels | `require_permission()` permits `local-cli`-style labels for trusted local operation; API requests now run in an explicit untrusted context, and the PostgreSQL server profile binds a tenant-scoped principal through domain calls | Partially mitigated by API middleware, principal-context, SoD, and live tenant tests; CLI, Studio, worker, and enterprise identity boundaries remain open | Enforce the principal boundary across every server/UI/worker path and add end-to-end SoD tests |
+| R-009 | Low | Contributor environment mismatch | Workspace `.venv` launcher points at a deleted Python 3.11 path | Local environment issue | Clean-install smoke test and setup diagnostic |
+| R-010 | Low | React Studio is read-only | `apps/web` is an experimental client; mutations remain in local Studio/CLI | Documented | API-backed write screens and accessibility/E2E tests |
+| R-012 | High | AP workflow stops before accounting/payment | AP migration 15 records suppliers, POs, receipts, invoices, and match exceptions, but does not post invoices, calculate statutory tax/withholding, issue payments, or integrate a source ERP | Explicitly bounded and documented; approval is workflow metadata only | Add a versioned AP accounting/payment slice with period, tax, reversal, idempotency, and ledger-invariant tests |
+| R-013 | High | Multi-worker coordination is not active in the API | The explicit server profile uses PostgreSQL hashed sessions and revocation, while the default local profile uses SQLite and login throttling remains Redis-optional; distributed locks/session coordination are not active by default | Partially mitigated by live PostgreSQL server-auth tests and Redis primitives; multi-worker Redis integration and failure-mode behavior remain open | Redis-backed auth/rate limits, failure-mode, lock-recovery, and tenant-isolation tests |
+| R-014 | High | Evidence artifacts are not yet centrally stored | S3-compatible object-storage adapter verifies checksums, separates tenant keys, supports bounded presigned reads, optional SSE/object-lock retention, and disables deletion by default; migrations 19 and 0008 now support explicit object-backed local registration plus tenant-scoped PostgreSQL evidence metadata, immutable artifact references, links, requirements, coverage, and verification, while reports still default to local paths | Partially mitigated by tested adapter, registry, API contract, and optional live RLS integration; worker upload, download authorization, malware scanning, retention enforcement, and restore workflows remain open | Object-storage worker/API integration, malware scanning, retention/versioning, signed-URL authorization, and tenant escape tests |
+| R-015 | High | PostgreSQL schema coverage is incomplete | Alembic now manages the PostgreSQL tenant/RLS foundation, master data including fiscal periods, bounded exact-amount ledger control, tenant-scoped identity, audit reads, close-control periods/tasks, outbox delivery, evidence metadata, and reconciliation inputs/results/exceptions/execution state; the server API now atomically submits bounded reconciliation manifests, while remaining Finance Core, workflow, and broader domain repositories are not yet migrated into the PostgreSQL chain | Partially mitigated by credential-free config, live migration job, master-data/ledger/identity/close/evidence/reconciliation repository contracts, atomic audit/outbox writes, balance/immutability triggers, authenticated server route contracts, and live isolation tests; unsupported server capabilities fail closed rather than falling back to SQLite | Expand-and-contract migrations for every server domain, production scheduling/large-dataset execution, backup/restore, downgrade/roll-forward, and cross-version upgrade tests |
+| R-016 | High | AR workflow stops before statutory accounting and collections | Migration 20 adds customer credit profiles, exact invoices, approval controls, receipts/allocations, exposure, and aging, but no revenue/receivable GL posting, tax, credit notes, dunning, payment execution, or ERP writeback | Explicitly bounded and covered by migration/API/CLI/audit/outbox/SoD tests; no complete AR claim is made | Add a versioned AR posting/tax/collections/payment slice with period, reversal, tax, idempotency, and ledger-invariant tests |
+| R-017 | High | Anonymized exports can remain identifying or reversible | Deterministic aliases preserve linkage, amount noise is reversible, unclassified/free-text fields and filenames may remain sensitive; older default output also exposed the full original-to-mask table | Default output no longer contains the reversible table, refuses stale/non-empty targets, uses exact versioned global noise, and emits a manifest with an explicit privacy boundary; private-map export requires a separate explicit path | Independent disclosure-risk methodology, field classification/allowlists, free-text policy, adversarial re-identification tests, and qualified privacy review before any safe-publication claim |
+| R-018 | High | Unbounded or hostile local file parsing | Versioned preflight bounds canonical tabular paths, selected JSON/YAML, both FI-009 DB import/restore readers, every public SQLite export JSON field, and staged client-pack JSON/CSV/text/non-redacted copies; closed AST guards expose parser drift | Partially mitigated; hostile inputs, symlinks/reparse points, ambiguity, safe errors, frozen selection, pre-mutation DB refusal, pre-publication export refusal, and handled client-pack rollback are tested, while legacy XLS internals, permissive legacy semantics, export crash atomicity, malware/authenticity/disclosure controls, and observer/crash-atomic replacement remain open | Stage and integrity-bind multi-file export, isolate legacy XLS, test real interruption/recovery, and add malware/provenance/disclosure/upload/connector tests |
 
-## R-002: Matching non-determinism across engines
-
-- **Status:** In Progress (platform matching flow now min-cost assignment with deterministic candidate ordering; broader cross-module parity continues)
-- **Likelihood:** Medium
-- **Impact:** High
-- **Description:** Platform matching implementation still uses greedy selection and may vary by row order under ambiguity.
-- **Owner:** Matching subsystem maintainer
-- **Controls:** Replace greedy with optimization-based assignment mode and property-based order tests.
-- **Residual risk:** Medium until additional strategy rollout.
-
-## R-003: Monetary precision drift
-
-- **Status:** Open
-- **Likelihood:** Medium
-- **Impact:** Medium
-- **Description:** Float-based values remain in several control and scoring paths.
-- **Owner:** Data model and finance controls maintainer
-- **Controls:** Introduce shared decimal value type with configured precision and strict parsing policy.
-- **Residual risk:** Medium until all critical codepaths migrate.
-
-## R-004: Evidence packaging quality when no exceptions exist
-
-- **Status:** Open (patched during this turn in evidence collection).
-- **Likelihood:** Medium
-- **Impact:** Medium
-- **Description:** Evidence flows can fail before index generation if high-risk candidate files are absent.
-- **Owner:** Evidence module maintainer
-- **Controls:** Explicit empty-case handling and manifest generation from available files.
-- **Residual risk:** Low after this patch.
-
-## R-005: Invalid platform amount values can be interpreted as numeric zero
-
-- **Status:** Mitigated in platform matching.
-- **Likelihood:** Medium
-- **Impact:** High
-- **Description:** Rows with malformed amount fields were previously normalized to `0.0`, allowing deterministic matching to produce false matches.
-- **Owner:** Platform reconciliation maintainer
-- **Controls:** Strict amount parsing in matching candidate build and score paths; unmatched status for invalid records.
-- **Residual risk:** Low after strict parsing change; add broader dataset-type-specific validation before wider rollout.
-
-## R-006: Duplicate or structurally identical rows without explicit IDs can still challenge stable fallback IDs
-
-- **Status:** Open.
-- **Likelihood:** Low.
-- **Impact:** Medium.
-- **Description:** For identical records lacking stable identifiers, deterministic fallback suffixing still uses canonical grouping order and may require explicit source keys for audit-perfect traceability.
-- **Owner:** Platform matching maintainer.
-- **Controls:** Recommend upstream source ID mapping, or future schema migration to include source-side deterministic record keys.
-- **Residual risk:** Medium until deterministic lineage model is standardized in schema and API contracts.
+Risk owners are explicit role labels in the normalized register, not claims
+about named staff. A risk may move to Mitigated only when the control is
+implemented, tested, documented, and compatible with the supported migration
+path.

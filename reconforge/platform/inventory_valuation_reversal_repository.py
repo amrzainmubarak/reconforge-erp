@@ -59,9 +59,7 @@ class InventoryValuationReversalRepository(Protocol):
 
     def finance_entry_by_number(self, workspace_id: str, entry_number: str) -> dict[str, Any] | None: ...
 
-    def insert_finance_draft(
-        self, entry: Mapping[str, object], lines: Sequence[Mapping[str, object]]
-    ) -> None: ...
+    def insert_finance_draft(self, entry: Mapping[str, object], lines: Sequence[Mapping[str, object]]) -> None: ...
 
     def approve_reversal(
         self,
@@ -74,15 +72,11 @@ class InventoryValuationReversalRepository(Protocol):
         finance_entry_id: str,
     ) -> int: ...
 
-    def cancel_reversal(
-        self, reversal_id: str, *, actor: str, timestamp: str, reason: str
-    ) -> int: ...
+    def cancel_reversal(self, reversal_id: str, *, actor: str, timestamp: str, reason: str) -> int: ...
 
     def effects(self, reversal_id: str) -> list[dict[str, Any]]: ...
 
-    def list_reversals(
-        self, workspace_id: str, *, status: str, limit: int, offset: int
-    ) -> list[dict[str, Any]]: ...
+    def list_reversals(self, workspace_id: str, *, status: str, limit: int, offset: int) -> list[dict[str, Any]]: ...
 
     def summary_counts(self, workspace_id: str) -> dict[str, int]: ...
 
@@ -334,9 +328,7 @@ class SQLiteInventoryValuationReversalRepository:
         return self._one("SELECT * FROM ledger_entries WHERE id = ?", (entry_id,))
 
     def finance_lines(self, entry_id: str) -> list[dict[str, Any]]:
-        return self._many(
-            "SELECT * FROM ledger_lines WHERE entry_id = ? ORDER BY line_number", (entry_id,)
-        )
+        return self._many("SELECT * FROM ledger_lines WHERE entry_id = ? ORDER BY line_number", (entry_id,))
 
     def line_dimensions(self, line_id: str) -> list[str]:
         rows = self.connection.execute(
@@ -354,9 +346,7 @@ class SQLiteInventoryValuationReversalRepository:
             (workspace_id, entry_number),
         )
 
-    def insert_finance_draft(
-        self, entry: Mapping[str, object], lines: Sequence[Mapping[str, object]]
-    ) -> None:
+    def insert_finance_draft(self, entry: Mapping[str, object], lines: Sequence[Mapping[str, object]]) -> None:
         self.connection.execute(
             """
             INSERT INTO ledger_entries (
@@ -409,9 +399,7 @@ class SQLiteInventoryValuationReversalRepository:
                 ),
             )
             dimension_value_ids = line.get("dimension_value_ids", ())
-            if isinstance(dimension_value_ids, str | bytes) or not isinstance(
-                dimension_value_ids, Sequence
-            ):
+            if isinstance(dimension_value_ids, str | bytes) or not isinstance(dimension_value_ids, Sequence):
                 raise TypeError("Finance line dimension IDs must be a sequence.")
             for dimension_value_id in dimension_value_ids:
                 self.connection.execute(
@@ -451,9 +439,7 @@ class SQLiteInventoryValuationReversalRepository:
         )
         return cursor.rowcount
 
-    def cancel_reversal(
-        self, reversal_id: str, *, actor: str, timestamp: str, reason: str
-    ) -> int:
+    def cancel_reversal(self, reversal_id: str, *, actor: str, timestamp: str, reason: str) -> int:
         cursor = self.connection.execute(
             """
             UPDATE inventory_valuation_reversals
@@ -486,9 +472,7 @@ class SQLiteInventoryValuationReversalRepository:
             (reversal_id,),
         )
 
-    def list_reversals(
-        self, workspace_id: str, *, status: str, limit: int, offset: int
-    ) -> list[dict[str, Any]]:
+    def list_reversals(self, workspace_id: str, *, status: str, limit: int, offset: int) -> list[dict[str, Any]]:
         return self._many(
             """
             SELECT reversals.*, original.valuation_number AS original_valuation_number,
@@ -542,9 +526,7 @@ class SQLiteInventoryValuationReversalRepository:
             """,
             (workspace_id, workspace_id, workspace_id, workspace_id, workspace_id),
         ).fetchone()
-        return {
-            str(key): int(value) for key, value in dict(row).items()
-        } if row is not None else {}
+        return {str(key): int(value) for key, value in dict(row).items()} if row is not None else {}
 
     def _one(self, sql: str, parameters: tuple[object, ...]) -> dict[str, Any] | None:
         row = self.connection.execute(sql, parameters).fetchone()

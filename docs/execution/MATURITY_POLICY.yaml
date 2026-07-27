@@ -1,0 +1,62 @@
+schema_version: 1
+policy_id: reconforge-evidence-bounded-maturity
+product_stage:
+  maximum_public_label: alpha
+  evidence_claim: Open-source financial reconciliation and controls toolkit
+module_maturity_order:
+  experimental: 1
+  beta: 2
+  stable: 3
+module_ceilings:
+  - module_id: finance.controls
+    maximum_maturity: experimental
+    evidence_claim: Exact control-decision scores
+  - module_id: finance.core
+    maximum_maturity: experimental
+    evidence_claim: Local SQLite backup/restore
+  - module_id: inventory.core
+    maximum_maturity: experimental
+    evidence_claim: Open-source financial reconciliation and controls toolkit
+  - module_id: mapping.profiles
+    maximum_maturity: experimental
+    evidence_claim: Works beside source systems; not a complete ERP
+  - module_id: platform.core
+    maximum_maturity: experimental
+    evidence_claim: Local SQLite backup/restore
+  - module_id: platform.master-data
+    maximum_maturity: experimental
+    evidence_claim: Optional PostgreSQL/Redis server profile
+  - module_id: plugins.export
+    maximum_maturity: experimental
+    evidence_claim: Live ERP connectors
+  - module_id: reconciliation.core
+    maximum_maturity: experimental
+    evidence_claim: Deterministic reconciliation
+  - module_id: studio.modern
+    maximum_maturity: experimental
+    evidence_claim: React Studio
+public_surfaces:
+  - README.md
+  - docs/website/demo-page.md
+  - docs/website/github-launch-post.md
+  - docs/website/homepage-copy.md
+  - docs/website/product-pages.md
+  - docs/website/release-announcement-draft.md
+  - docs/website/social-launch-snippets.md
+required_boundary_phrases:
+  - alpha-stage
+  - early-stage
+  - evaluation
+  - foundation-stage
+  - local-first
+  - pilot-ready
+forbidden_unqualified_phrases:
+  - bank-grade
+  - best in the world
+  - enterprise-ready
+  - iso certified
+  - millions of transactions
+  - production-ready
+  - soc 2 certified
+  - sox compliant
+  - الأفضل عالميًا

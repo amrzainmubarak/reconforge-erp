@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/postgres-outbox-payload-object-v1",
+  "title": "ReconForge PostgreSQL Outbox Payload Object v1",
+  "description": "Structural contract for bounded PostgreSQL transactional-outbox payloads. Financial amounts must use exact text or integer minor units; finite JSON numbers remain readable for historical non-financial compatibility.",
+  "$ref": "#/$defs/object",
+  "$defs": {
+    "value": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "boolean"},
+        {"type": "string"},
+        {"type": "number"},
+        {"$ref": "#/$defs/array"},
+        {"$ref": "#/$defs/object"}
+      ]
+    },
+    "array": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/value"},
+      "maxItems": 25000
+    },
+    "object": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/value"},
+      "maxProperties": 25000
+    }
+  }
+}

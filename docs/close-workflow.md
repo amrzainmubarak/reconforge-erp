@@ -1,6 +1,6 @@
 # Close Workflow
 
-ReconForge provides a local close checklist workflow for lightweight month-end coordination. It writes a JSON checklist and local reports only. There is no SaaS workflow, cloud upload, authentication, notification system, or database.
+ReconForge provides a local close checklist workflow for lightweight month-end coordination. The CLI writes a JSON checklist and local reports. The authenticated API also has a bounded PostgreSQL close-control profile for tenant-scoped close metadata.
 
 The close checklist is workflow metadata only. It is not an audit opinion, legal sign-off, compliance certification, tax advice, or digital signature.
 
@@ -70,6 +70,26 @@ Template files must contain a `tasks` list. Each task can include:
 - `note`
 
 YAML templates are parsed with safe loading.
+
+## Authenticated API close-control profile
+
+When the API is created with the explicit PostgreSQL server profile, the close
+routes persist `close_periods`, `close_tasks`, and task dependencies in the
+tenant-scoped PostgreSQL schema. A close period references an existing
+PostgreSQL fiscal period and organization. The server profile creates five
+starter tasks with deterministic IDs, computes readiness, blocks completion
+when dependencies are incomplete, requires full readiness before approval or
+locking, and requires a reason to reopen.
+
+Readiness is derived from integer task counts with an exact two-decimal Decimal
+percentage (`ROUND_HALF_UP`). Approval and locking require exact `100.00`
+readiness; an incomplete or unexpectedly represented value fails closed rather
+than being rounded through binary float.
+
+These are ReconForge workflow states only. A `Locked` close-control record does
+not prevent postings in a source ERP and is not a statutory close, legal
+certification, or digital signature. Server mutations append hash-chained audit
+and transactional-outbox evidence and do not fall back to tenant-local SQLite.
 
 ## Security Notes
 

@@ -1,0 +1,81 @@
+{
+  "schema_version": "1.0.0",
+  "matrix_id": "supported-engine-parity-v1",
+  "matrix_digest": "54777b4e1e92dfc675665ff55168507f2a9aa5b1415b2b4806f4fd99925a4aed",
+  "reviewed_at": "2026-07-25",
+  "python_versions": ["3.11", "3.12"],
+  "dependency_profiles": [
+    {
+      "id": "lower-bounds",
+      "numpy": {
+        "version": "1.26.4",
+        "index_url": "https://pypi.org/project/numpy/1.26.4/",
+        "requires_python": ">=3.9",
+        "first_upload_at": "2024-02-05T23:48:01.194769Z",
+        "cp311_wheels": 8,
+        "cp312_wheels": 8
+      },
+      "pandas": {
+        "version": "2.2.0",
+        "index_url": "https://pypi.org/project/pandas/2.2.0/",
+        "requires_python": ">=3.9",
+        "first_upload_at": "2024-01-20T02:10:54.053228Z",
+        "cp311_wheels": 7,
+        "cp312_wheels": 7
+      },
+      "duckdb": {
+        "version": "1.0.0",
+        "index_url": "https://pypi.org/project/duckdb/1.0.0/",
+        "requires_python": ">=3.7.0",
+        "first_upload_at": "2024-06-03T13:09:04.320890Z",
+        "cp311_wheels": 8,
+        "cp312_wheels": 8
+      }
+    },
+    {
+      "id": "current-compatible-2026-07-25",
+      "numpy": {
+        "version": "2.4.3",
+        "index_url": "https://pypi.org/project/numpy/2.4.3/",
+        "requires_python": ">=3.11",
+        "first_upload_at": "2026-03-09T07:55:57.774728Z",
+        "cp311_wheels": 11,
+        "cp312_wheels": 11
+      },
+      "pandas": {
+        "version": "3.0.5",
+        "index_url": "https://pypi.org/project/pandas/3.0.5/",
+        "requires_python": ">=3.11",
+        "first_upload_at": "2026-07-22T22:17:48.274862Z",
+        "cp311_wheels": 8,
+        "cp312_wheels": 9
+      },
+      "duckdb": {
+        "version": "1.5.5",
+        "index_url": "https://pypi.org/project/duckdb/1.5.5/",
+        "requires_python": ">=3.10.0",
+        "first_upload_at": "2026-07-22T10:53:19.069613Z",
+        "cp311_wheels": 7,
+        "cp312_wheels": 7
+      }
+    }
+  ],
+  "required_test_files": [
+    "tests/test_engine_signature.py",
+    "tests/test_generator_benchmark_engines.py",
+    "tests/test_matching_properties.py",
+    "tests/test_matching_ambiguity.py",
+    "tests/test_golden_finance_datasets.py"
+  ],
+  "golden_registry": {
+    "path": "tests/golden/finance_registry.v1.json",
+    "registry_version": "1.1.0",
+    "registry_digest": "5b11613b34ff578c7b2754c361389690887518ac24ac85640babdb31ed0ea88e"
+  },
+  "limitations": [
+    "A configured matrix is not passing runtime evidence until all four CI cells complete successfully.",
+    "The matrix covers bounded local stock/GL contracts and does not prove volume, performance, or true grouped matching.",
+    "Current-compatible pins are a dated review snapshot and require an intentional manifest and ADR update.",
+    "Live PostgreSQL process recovery remains governed separately by P1-PLAT-004."
+  ]
+}

@@ -1,0 +1,8 @@
+move_id,date,source_document,work_order,product_code,product_name,category,quantity,unit_cost,total_cost,warehouse,movement_type,customer_code,equipment_serial,created_by,currency
+SM-EXACT,2026-07-01,REF-EXACT,WO-EXACT,PRODUCT-1,Synthetic product,Engine,1,10.00,10.00,MAIN,ISSUE,CUSTOMER-1,SERIAL-1,golden-fixture,USD
+SM-DUP,2026-07-02,REF-DUP,WO-DUP,PRODUCT-2,Synthetic duplicate,Brakes,1,5.00,5.00,MAIN,ISSUE,CUSTOMER-2,SERIAL-2,golden-fixture,USD
+SM-DUP,2026-07-02,REF-DUP,WO-DUP,PRODUCT-2,Synthetic duplicate,Brakes,1,5.00,5.00,MAIN,ISSUE,CUSTOMER-2,SERIAL-2,golden-fixture,USD
+SM-BAD,2026-07-03,REF-BAD,WO-BAD,PRODUCT-3,Synthetic invalid,Engine,1,not-an-amount,not-an-amount,MAIN,ISSUE,CUSTOMER-3,SERIAL-3,golden-fixture,USD
+SM-JPY,2026-07-04,REF-JPY,WO-JPY,PRODUCT-4,Synthetic JPY item,Electrical,1,100,100,MAIN,ISSUE,CUSTOMER-4,SERIAL-4,golden-fixture,JPY
+SM-CROSS,2026-07-05,REF-CROSS,WO-CROSS,PRODUCT-5,Synthetic currency mismatch,Filters,1,7.00,7.00,MAIN,ISSUE,CUSTOMER-5,SERIAL-5,golden-fixture,EUR
+SM-NO-DATE,,REF-NO-DATE,WO-NO-DATE,PRODUCT-6,Synthetic missing date,Filters,1,3.00,3.00,MAIN,ISSUE,CUSTOMER-6,SERIAL-6,golden-fixture,USD

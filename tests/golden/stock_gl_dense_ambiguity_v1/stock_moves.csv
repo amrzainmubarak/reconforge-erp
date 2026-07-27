@@ -1,0 +1,7 @@
+move_id,date,source_document,work_order,product_code,product_name,category,quantity,unit_cost,total_cost,warehouse,movement_type,customer_code,equipment_serial,created_by,currency
+MOVE-USD-1,2026-07-25,REF-USD,WO-DENSE,PRODUCT-USD,Dense USD item,Engine,1,100.00,100.00,MAIN,ISSUE,CUSTOMER-USD,SERIAL-USD-1,golden-fixture,USD
+MOVE-USD-2,2026-07-25,REF-USD,WO-DENSE,PRODUCT-USD,Dense USD item,Engine,1,100.00,100.00,MAIN,ISSUE,CUSTOMER-USD,SERIAL-USD-2,golden-fixture,USD
+MOVE-USD-3,2026-07-25,REF-USD,WO-DENSE,PRODUCT-USD,Dense USD item,Engine,1,100.00,100.00,MAIN,ISSUE,CUSTOMER-USD,SERIAL-USD-3,golden-fixture,USD
+MOVE-JPY-1,2026-07-25,REF-JPY,WO-DENSE,PRODUCT-JPY,Dense JPY item,Engine,1,5000,5000,MAIN,ISSUE,CUSTOMER-JPY,SERIAL-JPY-1,golden-fixture,JPY
+MOVE-JPY-2,2026-07-25,REF-JPY,WO-DENSE,PRODUCT-JPY,Dense JPY item,Engine,1,5000,5000,MAIN,ISSUE,CUSTOMER-JPY,SERIAL-JPY-2,golden-fixture,JPY
+MOVE-EUR-UNIQUE,2026-07-25,REF-EUR-UNIQUE,WO-DENSE,PRODUCT-EUR,Unique EUR item,Engine,1,42.00,42.00,MAIN,ISSUE,CUSTOMER-EUR,SERIAL-EUR-1,golden-fixture,EUR

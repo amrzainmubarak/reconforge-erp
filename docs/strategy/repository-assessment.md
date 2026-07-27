@@ -2,7 +2,7 @@
 
 Assessment date: 2026-06-02
 
-Scope inspected: `README.md`, `CHANGELOG.md`, `ROADMAP.md`, `SECURITY.md`, `CONTRIBUTING.md`, `.github/`, `reconforge/`, `tests/`, `docs/`, `examples/`, and `control-packs/`.
+Scope inspected: `README.md`, `CHANGELOG.md`, `docs/roadmap.md`, `SECURITY.md`, `CONTRIBUTING.md`, `.github/`, `reconforge/`, `tests/`, `docs/`, `examples/`, and `control-packs/`.
 
 ## Summary
 

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/database_backup_manifest.schema.json",
+  "title": "ReconForge local database backup manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest_version",
+    "created_at",
+    "schema_version",
+    "privacy_warning",
+    "artifacts"
+  ],
+  "properties": {
+    "manifest_version": {"const": 1},
+    "created_at": {"type": "string", "minLength": 1},
+    "schema_version": {"type": "integer", "minimum": 1},
+    "privacy_warning": {"type": "string", "minLength": 1},
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backup.json"],
+      "properties": {
+        "backup.json": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sha256", "bytes"],
+          "properties": {
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "bytes": {"type": "integer", "minimum": 0, "maximum": 67108864}
+          }
+        }
+      }
+    }
+  }
+}

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 from random import Random
 from typing import TypeVar
 
@@ -70,23 +71,28 @@ def _choice(random: Random, values: list[T]) -> T:
     return random.choice(values)  # nosec B311
 
 
-def _random_float(random: Random) -> float:
+def _random_unit_decimal(random: Random) -> Decimal:
     # Deterministic synthetic data only; not used for secrets or cryptography.
-    return random.random()  # nosec B311
+    step = random.randrange(1_000_000)  # nosec B311
+    digits = tuple(int(character) for character in str(step)) if step else (0,)
+    return Decimal((0, digits, -6))
 
 
 def pick_profile(industry: str) -> IndustryProfile:
     """Return an industry profile."""
 
-    return PROFILES.get(industry, PROFILES["workshop"])
+    try:
+        return PROFILES[industry]
+    except KeyError as exc:
+        raise ValueError(f"Unknown synthetic industry profile: {industry}") from exc
 
 
-def pick_scenario(random: Random, exception_rate: float, critical_rate: float) -> str:
+def pick_scenario(random: Random, exception_rate: Decimal, critical_rate: Decimal) -> str:
     """Pick a synthetic reconciliation scenario."""
 
-    roll = _random_float(random)
+    roll = _random_unit_decimal(random)
     if roll > exception_rate:
-        return "fuzzy_match" if _random_float(random) < 0.15 else "exact_match"
-    if _random_float(random) < critical_rate:
+        return "fuzzy_match" if _random_unit_decimal(random) < Decimal("0.15") else "exact_match"
+    if _random_unit_decimal(random) < critical_rate:
         return _choice(random, ["missing_gl", "direct_fit", "missing_old_part"])
     return _choice(random, ["missing_stock", "value_mismatch", "date_mismatch"])

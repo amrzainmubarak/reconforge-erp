@@ -1,0 +1,279 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/file_ingestion_inventory.schema.json",
+  "title": "ReconForge File Ingestion Inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "inventory_id",
+    "reviewed_on",
+    "owner",
+    "claim_boundary",
+    "tabular_policy",
+    "structured_document_policy",
+    "persisted_json_policies",
+    "surfaces",
+    "direct_tabular_parser_allowlist",
+    "direct_json_parser_allowlist",
+    "direct_yaml_parser_allowlist"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "inventory_id": {"const": "reconforge-file-ingestion"},
+    "reviewed_on": {"type": "string", "format": "date"},
+    "owner": {"const": "platform-security"},
+    "claim_boundary": {"type": "string", "minLength": 80, "maxLength": 800},
+    "tabular_policy": {"$ref": "#/$defs/tabular_policy"},
+    "structured_document_policy": {"$ref": "#/$defs/structured_document_policy"},
+    "persisted_json_policies": {
+      "type": "array",
+      "prefixItems": [{"$ref": "#/$defs/financial_idempotency_json_policy"}],
+      "items": false,
+      "minItems": 1,
+      "maxItems": 1
+    },
+    "surfaces": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/surface"}
+    },
+    "direct_tabular_parser_allowlist": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/parser_allowlist_entry"}
+    },
+    "direct_json_parser_allowlist": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/json_parser_allowlist_entry"}
+    },
+    "direct_yaml_parser_allowlist": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/yaml_parser_allowlist_entry"}
+    }
+  },
+  "$defs": {
+    "repository_path": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.\\/-]+$",
+      "minLength": 3,
+      "maxLength": 240
+    },
+    "tabular_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "implementation",
+        "accepted_extensions",
+        "max_file_bytes",
+        "max_rows",
+        "max_columns",
+        "max_cells",
+        "max_csv_field_characters",
+        "max_archive_members",
+        "max_archive_member_bytes",
+        "max_archive_uncompressed_bytes",
+        "max_archive_compression_ratio"
+      ],
+      "properties": {
+        "id": {"const": "tabular-file-ingress-v1"},
+        "implementation": {"const": "reconforge/io/ingress.py"},
+        "accepted_extensions": {
+          "type": "array",
+          "prefixItems": [{"const": ".csv"}, {"const": ".xls"}, {"const": ".xlsx"}],
+          "items": false,
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "max_file_bytes": {"type": "integer", "minimum": 1},
+        "max_rows": {"type": "integer", "minimum": 1},
+        "max_columns": {"type": "integer", "minimum": 1},
+        "max_cells": {"type": "integer", "minimum": 1},
+        "max_csv_field_characters": {"type": "integer", "minimum": 1},
+        "max_archive_members": {"type": "integer", "minimum": 1},
+        "max_archive_member_bytes": {"type": "integer", "minimum": 1},
+        "max_archive_uncompressed_bytes": {"type": "integer", "minimum": 1},
+        "max_archive_compression_ratio": {"type": "integer", "minimum": 1}
+      }
+    },
+    "structured_document_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "implementation",
+        "accepted_extensions",
+        "max_file_bytes",
+        "max_nodes",
+        "max_depth",
+        "max_collection_items",
+        "max_scalar_characters",
+        "max_yaml_aliases"
+      ],
+      "properties": {
+        "id": {"const": "structured-document-ingress-v1"},
+        "implementation": {"const": "reconforge/io/structured.py"},
+        "accepted_extensions": {
+          "type": "array",
+          "prefixItems": [{"const": ".json"}, {"const": ".yaml"}, {"const": ".yml"}],
+          "items": false,
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "max_file_bytes": {"type": "integer", "minimum": 1},
+        "max_nodes": {"type": "integer", "minimum": 1},
+        "max_depth": {"type": "integer", "minimum": 1},
+        "max_collection_items": {"type": "integer", "minimum": 1},
+        "max_scalar_characters": {"type": "integer", "minimum": 1},
+        "max_yaml_aliases": {"type": "integer", "minimum": 1}
+      }
+    },
+    "financial_idempotency_json_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "implementation",
+        "schema_id",
+        "schema_path",
+        "max_utf8_bytes",
+        "max_nodes",
+        "max_depth",
+        "max_collection_items",
+        "max_scalar_characters",
+        "unique_keys",
+        "object_root",
+        "integer_number_tokens_only",
+        "canonical_producer_text"
+      ],
+      "properties": {
+        "id": {"const": "financial-idempotency-json-v1"},
+        "implementation": {"const": "reconforge/io/persisted.py"},
+        "schema_id": {"const": "financial-idempotency-response-object-v1"},
+        "schema_path": {"const": "docs/schemas/financial_idempotency_response.schema.json"},
+        "max_utf8_bytes": {"type": "integer", "minimum": 1},
+        "max_nodes": {"type": "integer", "minimum": 1},
+        "max_depth": {"type": "integer", "minimum": 1},
+        "max_collection_items": {"type": "integer", "minimum": 1},
+        "max_scalar_characters": {"type": "integer", "minimum": 1},
+        "unique_keys": {"const": true},
+        "object_root": {"const": true},
+        "integer_number_tokens_only": {"const": true},
+        "canonical_producer_text": {"const": true}
+      }
+    },
+    "surface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "module_ids",
+        "trust",
+        "entrypoints",
+        "formats",
+        "parser_families",
+        "policy_coverage",
+        "status",
+        "controls",
+        "test_evidence",
+        "residual_risk_ids",
+        "limitations",
+        "next_action"
+      ],
+      "properties": {
+        "id": {"type": "string", "pattern": "^FI-[0-9]{3}$"},
+        "name": {"type": "string", "minLength": 8, "maxLength": 120},
+        "module_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$"}
+        },
+        "trust": {"enum": ["untrusted-local", "generated-local", "internal-persisted"]},
+        "entrypoints": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[A-Za-z0-9_.\\/-]+::[A-Za-z0-9_.<>-]+$", "maxLength": 300}
+        },
+        "formats": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["csv", "xls", "xlsx", "json", "yaml", "sqlite", "text"]}
+        },
+        "parser_families": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["csv-stdlib", "duckdb", "json-stdlib", "openpyxl", "pandas", "pyyaml", "sqlite"]}
+        },
+        "policy_coverage": {"enum": ["complete", "partial", "none", "not-applicable"]},
+        "status": {"enum": ["bounded", "partial", "planned", "excluded"]},
+        "controls": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^SEC-C-[0-9]{3}$"}
+        },
+        "test_evidence": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/repository_path"}
+        },
+        "residual_risk_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^R-[0-9]{3}$"}
+        },
+        "limitations": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 20, "maxLength": 500}
+        },
+        "next_action": {"type": "string", "minLength": 20, "maxLength": 500}
+      }
+    },
+    "parser_allowlist_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "parser", "call_count", "surface_id", "rationale"],
+      "properties": {
+        "path": {"$ref": "#/$defs/repository_path"},
+        "parser": {"enum": ["csv.DictReader", "csv.reader", "pandas.read_csv", "pandas.read_excel"]},
+        "call_count": {"type": "integer", "minimum": 1, "maximum": 20},
+        "surface_id": {"type": "string", "pattern": "^FI-[0-9]{3}$"},
+        "rationale": {"type": "string", "minLength": 20, "maxLength": 300}
+      }
+    },
+    "yaml_parser_allowlist_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "parser", "call_count", "surface_id", "rationale"],
+      "properties": {
+        "path": {"$ref": "#/$defs/repository_path"},
+        "parser": {"enum": ["yaml.load", "yaml.parse", "yaml.safe_load"]},
+        "call_count": {"type": "integer", "minimum": 1, "maximum": 20},
+        "surface_id": {"type": "string", "pattern": "^FI-[0-9]{3}$"},
+        "rationale": {"type": "string", "minLength": 20, "maxLength": 300}
+      }
+    },
+    "json_parser_allowlist_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "parser", "call_count", "surface_id", "rationale"],
+      "properties": {
+        "path": {"$ref": "#/$defs/repository_path"},
+        "parser": {"enum": ["json.load", "json.loads"]},
+        "call_count": {"type": "integer", "minimum": 1, "maximum": 20},
+        "surface_id": {"type": "string", "pattern": "^FI-[0-9]{3}$"},
+        "rationale": {"type": "string", "minLength": 20, "maxLength": 300}
+      }
+    }
+  }
+}

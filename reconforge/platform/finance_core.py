@@ -10,10 +10,11 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from reconforge.audit import AuditLedgerError
 from reconforge.domain.models import utc_now_text
 from reconforge.platform.common import (
     PlatformError,
-    audit,
+    commit_audited,
     ensure_platform_schema,
     ensure_workspace,
     platform_id,
@@ -243,19 +244,22 @@ class FinanceCoreService:
                     now,
                 ),
             )
-            self.connection.commit()
-        except sqlite3.DatabaseError as exc:
+            record = self._chart(workspace_id, code)
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type="chart_of_accounts",
+                object_id=str(record["id"]),
+                action="chart_of_accounts_upserted",
+                metadata={"chart_code": code, "organization_code": normalized_org, "active": active},
+                emit_outbox=True,
+                outbox_payload={"chart_code": code, "organization_code": normalized_org, "active": active},
+            )
+        except (PlatformError, sqlite3.DatabaseError, AuditLedgerError) as exc:
             self.connection.rollback()
+            if isinstance(exc, PlatformError):
+                raise
             raise PlatformError("Unable to save the local chart of accounts.") from exc
-        record = self._chart(workspace_id, code)
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="chart_of_accounts",
-            object_id=str(record["id"]),
-            action="chart_of_accounts_upserted",
-            metadata={"chart_code": code, "organization_code": normalized_org, "active": active},
-        )
         return record
 
     def list_charts(
@@ -377,19 +381,22 @@ class FinanceCoreService:
                     now,
                 ),
             )
-            self.connection.commit()
-        except sqlite3.DatabaseError as exc:
+            record = self._account(str(chart["id"]), code)
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type="financial_account",
+                object_id=str(record["id"]),
+                action="financial_account_upserted",
+                metadata={"account_code": code, "chart_code": chart["chart_code"], "active": active},
+                emit_outbox=True,
+                outbox_payload={"account_code": code, "chart_code": chart["chart_code"], "active": active},
+            )
+        except (PlatformError, sqlite3.DatabaseError, AuditLedgerError) as exc:
             self.connection.rollback()
+            if isinstance(exc, PlatformError):
+                raise
             raise PlatformError("Unable to save the local financial account.") from exc
-        record = self._account(str(chart["id"]), code)
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="financial_account",
-            object_id=str(record["id"]),
-            action="financial_account_upserted",
-            metadata={"account_code": code, "chart_code": chart["chart_code"], "active": active},
-        )
         return record
 
     def list_accounts(
@@ -488,19 +495,22 @@ class FinanceCoreService:
                     now,
                 ),
             )
-            self.connection.commit()
-        except sqlite3.DatabaseError as exc:
+            record = self._dimension(workspace_id, code)
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type="accounting_dimension",
+                object_id=str(record["id"]),
+                action="accounting_dimension_upserted",
+                metadata={"dimension_code": code, "required_on_entries": required_on_entries, "active": active},
+                emit_outbox=True,
+                outbox_payload={"dimension_code": code, "required_on_entries": required_on_entries, "active": active},
+            )
+        except (PlatformError, sqlite3.DatabaseError, AuditLedgerError) as exc:
             self.connection.rollback()
+            if isinstance(exc, PlatformError):
+                raise
             raise PlatformError("Unable to save the local accounting dimension.") from exc
-        record = self._dimension(workspace_id, code)
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="accounting_dimension",
-            object_id=str(record["id"]),
-            action="accounting_dimension_upserted",
-            metadata={"dimension_code": code, "required_on_entries": required_on_entries, "active": active},
-        )
         return record
 
     def upsert_dimension_value(
@@ -540,19 +550,22 @@ class FinanceCoreService:
                 """,
                 (value_id, dimension["id"], code, _clean_text(name, "Dimension value name"), int(active), now, now),
             )
-            self.connection.commit()
-        except sqlite3.DatabaseError as exc:
+            record = self._dimension_value(str(dimension["id"]), code)
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type="accounting_dimension_value",
+                object_id=str(record["id"]),
+                action="accounting_dimension_value_upserted",
+                metadata={"dimension_code": dimension["dimension_code"], "value_code": code, "active": active},
+                emit_outbox=True,
+                outbox_payload={"dimension_code": dimension["dimension_code"], "value_code": code, "active": active},
+            )
+        except (PlatformError, sqlite3.DatabaseError, AuditLedgerError) as exc:
             self.connection.rollback()
+            if isinstance(exc, PlatformError):
+                raise
             raise PlatformError("Unable to save the local accounting dimension value.") from exc
-        record = self._dimension_value(str(dimension["id"]), code)
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="accounting_dimension_value",
-            object_id=str(record["id"]),
-            action="accounting_dimension_value_upserted",
-            metadata={"dimension_code": dimension["dimension_code"], "value_code": code, "active": active},
-        )
         return record
 
     def list_dimensions(
@@ -608,7 +621,9 @@ class FinanceCoreService:
         if dimension_code:
             query += " AND accounting_dimensions.dimension_code = ?"
             parameters.append(_code(dimension_code, "Dimension code"))
-        query += " ORDER BY accounting_dimensions.dimension_code, accounting_dimension_values.value_code LIMIT ? OFFSET ?"
+        query += (
+            " ORDER BY accounting_dimensions.dimension_code, accounting_dimension_values.value_code LIMIT ? OFFSET ?"
+        )
         parameters.extend((page_limit, page_offset))
         try:
             rows = self.connection.execute(query, parameters).fetchall()
@@ -695,19 +710,30 @@ class FinanceCoreService:
                     now,
                 ),
             )
-            self.connection.commit()
-        except sqlite3.DatabaseError as exc:
+            record = self._journal(workspace_id, str(organization["id"]), code)
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type="finance_journal",
+                object_id=str(record["id"]),
+                action="finance_journal_upserted",
+                metadata={
+                    "journal_code": code,
+                    "organization_code": organization["organization_code"],
+                    "active": active,
+                },
+                emit_outbox=True,
+                outbox_payload={
+                    "journal_code": code,
+                    "organization_code": organization["organization_code"],
+                    "active": active,
+                },
+            )
+        except (PlatformError, sqlite3.DatabaseError, AuditLedgerError) as exc:
             self.connection.rollback()
+            if isinstance(exc, PlatformError):
+                raise
             raise PlatformError("Unable to save the local finance journal.") from exc
-        record = self._journal(workspace_id, str(organization["id"]), code)
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="finance_journal",
-            object_id=str(record["id"]),
-            action="finance_journal_upserted",
-            metadata={"journal_code": code, "organization_code": organization["organization_code"], "active": active},
-        )
         return record
 
     def list_journals(
@@ -907,32 +933,36 @@ class FinanceCoreService:
                         "INSERT INTO ledger_line_dimensions (line_id, dimension_value_id) VALUES (?, ?)",
                         (line_id, dimension_value_id),
                     )
-            stored_entry = self.connection.execute(
-                "SELECT * FROM ledger_entries WHERE id = ?", (entry_id,)
-            ).fetchone()
+            stored_entry = self.connection.execute("SELECT * FROM ledger_entries WHERE id = ?", (entry_id,)).fetchone()
             if stored_entry is None:
                 raise PlatformError("Unable to recheck the local ledger-control draft.")
             self._validate_entry_integrity(dict(stored_entry))
-            self.connection.commit()
-        except PlatformError:
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type="ledger_entry",
+                object_id=entry_id,
+                action="ledger_entry_draft_saved",
+                metadata={
+                    "entry_number": number,
+                    "line_count": len(prepared_lines),
+                    "currency_code": currency["code"],
+                    "total_minor": total_debit,
+                },
+                emit_outbox=True,
+                outbox_payload={
+                    "entry_number": number,
+                    "line_count": len(prepared_lines),
+                    "currency_code": currency["code"],
+                    "total_minor": total_debit,
+                },
+            )
+        except (PlatformError, AuditLedgerError):
             self.connection.rollback()
             raise
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to save the local ledger-control entry.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="ledger_entry",
-            object_id=entry_id,
-            action="ledger_entry_draft_saved",
-            metadata={
-                "entry_number": number,
-                "line_count": len(prepared_lines),
-                "currency_code": currency["code"],
-                "total_minor": total_debit,
-            },
-        )
         return self.get_entry(entry_id, actor_label=actor_label)
 
     def validate_entry(
@@ -969,21 +999,22 @@ class FinanceCoreService:
             )
             if cursor.rowcount != 1:
                 raise PlatformError("Ledger-control entry changed concurrently; reload and retry.")
-            self.connection.commit()
-        except PlatformError:
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type="ledger_entry",
+                object_id=entry_id,
+                action="ledger_entry_validated",
+                metadata={"entry_number": entry["entry_number"], "reason": validation_reason},
+                emit_outbox=True,
+                outbox_payload={"entry_number": entry["entry_number"], "reason": validation_reason},
+            )
+        except (PlatformError, AuditLedgerError):
             self.connection.rollback()
             raise
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to validate the local ledger-control entry.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="ledger_entry",
-            object_id=entry_id,
-            action="ledger_entry_validated",
-            metadata={"entry_number": entry["entry_number"], "reason": validation_reason},
-        )
         return self.get_entry(entry_id, actor_label=actor_label)
 
     def void_entry(
@@ -1047,21 +1078,22 @@ class FinanceCoreService:
             )
             if cursor.rowcount != 1:
                 raise PlatformError("Ledger-control entry changed concurrently; reload and retry.")
-            self.connection.commit()
-        except PlatformError:
+            commit_audited(
+                self.connection,
+                actor_label=actor_label,
+                object_type="ledger_entry",
+                object_id=entry_id,
+                action="ledger_entry_voided",
+                metadata={"entry_number": entry["entry_number"], "reason": void_reason},
+                emit_outbox=True,
+                outbox_payload={"entry_number": entry["entry_number"], "reason": void_reason},
+            )
+        except (PlatformError, AuditLedgerError):
             self.connection.rollback()
             raise
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to void the local ledger-control entry.") from exc
-        audit(
-            self.connection,
-            actor_label=actor_label,
-            object_type="ledger_entry",
-            object_id=entry_id,
-            action="ledger_entry_voided",
-            metadata={"entry_number": entry["entry_number"], "reason": void_reason},
-        )
         return self.get_entry(entry_id, actor_label=actor_label)
 
     def get_entry(self, entry_id: str, *, actor_label: str = "local-cli") -> dict[str, Any]:
@@ -1095,9 +1127,7 @@ class FinanceCoreService:
             raise PlatformError("Unable to read local ledger-control lines.") from exc
         dimensions_by_line: dict[str, dict[str, str]] = {}
         for row in dimension_rows:
-            dimensions_by_line.setdefault(str(row["line_id"]), {})[str(row["dimension_code"])] = str(
-                row["value_code"]
-            )
+            dimensions_by_line.setdefault(str(row["line_id"]), {})[str(row["dimension_code"])] = str(row["value_code"])
         public_lines: list[dict[str, Any]] = []
         total_debit = 0
         total_credit = 0
@@ -1324,18 +1354,12 @@ class FinanceCoreService:
             "summary": summary.to_dict(),
             "charts": self.list_charts(workspace=workspace_name, limit=MAX_LIST_LIMIT, actor_label=actor_label),
             "accounts": self.list_accounts(workspace=workspace_name, limit=MAX_LIST_LIMIT, actor_label=actor_label),
-            "dimensions": self.list_dimensions(
-                workspace=workspace_name, limit=MAX_LIST_LIMIT, actor_label=actor_label
-            ),
+            "dimensions": self.list_dimensions(workspace=workspace_name, limit=MAX_LIST_LIMIT, actor_label=actor_label),
             "dimension_values": self.list_dimension_values(
                 workspace=workspace_name, limit=MAX_LIST_LIMIT, actor_label=actor_label
             ),
-            "journals": self.list_journals(
-                workspace=workspace_name, limit=MAX_LIST_LIMIT, actor_label=actor_label
-            ),
-            "entries": self.list_entries(
-                workspace=workspace_name, limit=MAX_LIST_LIMIT, actor_label=actor_label
-            ),
+            "journals": self.list_journals(workspace=workspace_name, limit=MAX_LIST_LIMIT, actor_label=actor_label),
+            "entries": self.list_entries(workspace=workspace_name, limit=MAX_LIST_LIMIT, actor_label=actor_label),
         }
 
     def _validate_entry_integrity(self, entry: dict[str, Any]) -> None:
@@ -1343,8 +1367,10 @@ class FinanceCoreService:
         if period["status"] != "Open":
             raise PlatformError("Ledger-control entries can be validated only while their fiscal period is Open.")
         posted_on = _iso_date(entry["posting_date"], "Stored posting date")
-        if not _iso_date(period["start_date"], "Stored period start date") <= posted_on <= _iso_date(
-            period["end_date"], "Stored period end date"
+        if (
+            not _iso_date(period["start_date"], "Stored period start date")
+            <= posted_on
+            <= _iso_date(period["end_date"], "Stored period end date")
         ):
             raise PlatformError("Posting date must remain inside the selected fiscal period.")
         try:
@@ -1521,21 +1547,29 @@ class FinanceCoreService:
     def _ensure_chart(self, workspace_id: str, chart_code: str) -> dict[str, Any]:
         if chart_code == "DEFAULT":
             now = utc_now_text()
-            try:
-                self.connection.execute(
-                    """
-                    INSERT OR IGNORE INTO charts_of_accounts (
-                        id, workspace_id, organization_id, chart_code, name, description,
-                        active, created_at, updated_at
-                    ) VALUES (?, ?, NULL, 'DEFAULT', 'Default chart of accounts',
-                              'Shared local chart for compatibility workflows.', 1, ?, ?)
-                    """,
-                    (self._default_chart_id(workspace_id), workspace_id, now, now),
-                )
-                self.connection.commit()
-            except sqlite3.DatabaseError as exc:
-                self.connection.rollback()
-                raise PlatformError("Unable to prepare the default chart of accounts.") from exc
+            exists = self.connection.execute(
+                "SELECT 1 FROM charts_of_accounts WHERE workspace_id = ? AND chart_code = 'DEFAULT'",
+                (workspace_id,),
+            ).fetchone()
+            if exists is None:
+                had_transaction = self.connection.in_transaction
+                try:
+                    self.connection.execute(
+                        """
+                        INSERT INTO charts_of_accounts (
+                            id, workspace_id, organization_id, chart_code, name, description,
+                            active, created_at, updated_at
+                        ) VALUES (?, ?, NULL, 'DEFAULT', 'Default chart of accounts',
+                            'Shared local chart for compatibility workflows.', 1, ?, ?)
+                        """,
+                        (self._default_chart_id(workspace_id), workspace_id, now, now),
+                    )
+                    if not had_transaction:
+                        self.connection.commit()
+                except sqlite3.DatabaseError as exc:
+                    if self.connection.in_transaction:
+                        self.connection.rollback()
+                    raise PlatformError("Unable to prepare the default chart of accounts.") from exc
         return self._chart(workspace_id, chart_code)
 
     def _workspace_id(self, workspace: str) -> str | None:

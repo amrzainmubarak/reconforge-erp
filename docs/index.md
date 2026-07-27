@@ -2,7 +2,7 @@
 
 ReconForge ERP is an open-source, local-first ERP reconciliation and finance controls toolkit for stock movements, GL postings, work orders, WIP, spare-parts, purchase flows, invoices, and operational controls.
 
-Current release: **v0.7.0 — Foundation-Stage Local Platform Readiness**. The project remains early-stage, local-first, export-based, and conservative about Docker runtime verification, production deployment identity, and audit/compliance claims.
+Current candidate: **v0.7.1 — Evidence-Bounded Phase 0 Foundation**. The project remains early-stage, local-first, export-based, and conservative about production deployment identity, signed-release evidence, and audit/compliance claims.
 
 ## Start Here
 
@@ -21,7 +21,7 @@ Current release: **v0.7.0 — Foundation-Stage Local Platform Readiness**. The p
 - [Buyer FAQ](buyer-faq.md)
 - [Website homepage copy](website/homepage-copy.md)
 - [Website claim boundary guide](website/claim-boundary-guide.md)
-- [v0.7.0 release notes](releases/v0.7.0.md)
+- [v0.7.1 release notes](releases/v0.7.1.md)
 - [Deployment smoke check](deployment-smoke-check.md)
 - [Docker deployment](docker-deployment.md)
 - [Docker verification](docker-verification.md)
@@ -49,6 +49,16 @@ Current release: **v0.7.0 — Foundation-Stage Local Platform Readiness**. The p
 - [ADR 0007: separate governed inventory counts from reorder advice](adr/0007-inventory-count-and-reorder-boundaries.md)
 - [ADR 0008: FIFO valuation prepares a separate Finance Core Draft](adr/0008-inventory-fifo-valuation-finance-draft.md)
 - [ADR 0009: FIFO corrections use an exact compensating movement](adr/0009-exact-fifo-valuation-reversal.md)
+- [ADR 0014: optional PostgreSQL tenant boundary](adr/0014-postgresql-tenant-boundary.md)
+- [ADR 0015: optional Redis server coordination boundary](adr/0015-redis-server-coordination.md)
+- [ADR 0016: optional S3-compatible object storage](adr/0016-s3-compatible-object-storage.md)
+- [ADR 0017: bounded transactional-outbox worker runtime](adr/0017-outbox-worker-runtime.md)
+- [ADR 0018: Alembic for PostgreSQL server migrations](adr/0018-alembic-postgresql-migrations.md)
+- [ADR 0021: PostgreSQL identity, RBAC, and hashed sessions](adr/0021-postgresql-identity-and-sessions.md)
+- [ADR 0022: PostgreSQL server API authentication profile](adr/0022-postgresql-server-api-auth.md)
+- [ADR 0027: PostgreSQL reconciliation result boundary](adr/0027-postgresql-reconciliation-result-boundary.md)
+- [ADR 0028: PostgreSQL reconciliation execution worker](adr/0028-postgresql-reconciliation-execution-worker.md)
+- [ADR 0029: Reconciliation partitioning and scheduler](adr/0029-reconciliation-partitioning-and-scheduler.md)
 - [Market research](market-research.md)
 - [Product strategy](product-strategy.md)
 - [Category strategy](category-strategy.md)
@@ -64,6 +74,8 @@ Current release: **v0.7.0 — Foundation-Stage Local Platform Readiness**. The p
 - [Local users and RBAC](security/local-users-rbac.md)
 - [Local auth and RBAC](security/local-auth-rbac.md)
 - [Local REST API](api.md)
+- [Accounts Payable three-way-match foundation](payables.md)
+- [Accounts Receivable and credit-control foundation](receivables.md)
 - [DB import/export bridge](db-import-export.md)
 - [Compliance disclaimer](compliance-disclaimer.md)
 - [OSS ecosystem importance](strategy/oss-ecosystem-importance.md)
@@ -127,6 +139,7 @@ Current release: **v0.7.0 — Foundation-Stage Local Platform Readiness**. The p
 - [Security model](security-model.md)
 - [Security whitepaper](security-whitepaper.md)
 - [Security questionnaire](security/security-questionnaire.md)
+- [Supply-chain dependency, secret, and exception policy](security/supply-chain-policy.md)
 - [Release readiness checklist](release-readiness-checklist.md)
 - [Deployment smoke check](deployment-smoke-check.md)
 - [Docker verification](docker-verification.md)
@@ -159,6 +172,8 @@ Current release: **v0.7.0 — Foundation-Stage Local Platform Readiness**. The p
 - [DB-backed finance workflows](db-finance-workflows.md)
 - [Finance core control ledger](finance-core.md)
 - [Inventory core movement ledger](inventory-core.md)
+- [Accounts Payable three-way-match foundation](payables.md)
+- [Accounts Receivable and credit-control foundation](receivables.md)
 - [Inventory counts and reorder signals](inventory-planning.md)
 - [FIFO inventory valuation foundation](inventory-valuation.md)
 - [Organization and fiscal master data](master-data.md)
@@ -198,6 +213,7 @@ Current release: **v0.7.0 — Foundation-Stage Local Platform Readiness**. The p
 - [File schemas](schemas/README.md)
 - [Data privacy](data-privacy.md)
 - [Benchmarking](benchmark.md)
+- [Reconciliation execution performance](performance/reconciliation-execution.md)
 - [Report samples](report-samples.md)
 - [Maintainer guide](maintainer-guide.md)
 - [Release process](maintainers/release-process.md)
@@ -236,5 +252,5 @@ Current release: **v0.7.0 — Foundation-Stage Local Platform Readiness**. The p
 - [OpenAI OSS application pack](openai-oss-application.md)
 - [v0.2.0 release notes](releases/v0.2.0.md)
 - [v0.3.0 release notes](releases/v0.3.0.md)
-- [v0.7.0 release notes](releases/v0.7.0.md)
+- [v0.7.1 release notes](releases/v0.7.1.md)
 - [v1.0.0 readiness note](releases/v1.0.0.md)

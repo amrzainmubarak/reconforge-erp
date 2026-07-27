@@ -11,6 +11,12 @@ import pandas as pd
 from reconforge.evidence.models import EvidenceCase
 
 
+def _risk_score_display(case: EvidenceCase) -> str:
+    if case.risk_score_status == "valid" and case.risk_score is not None:
+        return str(case.risk_score)
+    return f"Unavailable ({case.risk_score_status})"
+
+
 def evidence_register_frame(cases: list[EvidenceCase]) -> pd.DataFrame:
     """Return an evidence register DataFrame."""
 
@@ -21,6 +27,8 @@ def evidence_register_frame(cases: list[EvidenceCase]) -> pd.DataFrame:
                 "exception_type": case.exception_type,
                 "severity": case.severity,
                 "risk_score": case.risk_score,
+                "risk_score_status": case.risk_score_status,
+                "risk_score_policy": case.risk_score_policy,
                 "affected_work_order": case.affected_work_order,
                 "affected_product": case.affected_product,
                 "affected_customer": case.affected_customer,
@@ -67,7 +75,7 @@ def write_evidence_index_html(cases: list[EvidenceCase], output_dir: Path | str)
             f"<td><a href='{quote(case.exception_id, safe='')}/summary.md'>{escape(case.exception_id)}</a></td>"
             f"<td>{escape(case.exception_type)}</td>"
             f"<td>{escape(case.severity)}</td>"
-            f"<td>{case.risk_score}</td>"
+            f"<td>{escape(_risk_score_display(case))}</td>"
             f"<td>{escape(case.review_status)}</td>"
             f"<td>{escape(case.affected_work_order or '')}</td>"
             f"<td>{escape(case.responsible_department)}</td>"

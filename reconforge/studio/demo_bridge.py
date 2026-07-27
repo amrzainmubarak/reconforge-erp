@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Any
 
 from reconforge.enterprise_demo import SYNTHETIC_DATA_MARKER
+from reconforge.io.generated import GeneratedArtifactError, read_generated_json_document
+from reconforge.io.structured import StructuredDocumentPolicy
 from reconforge.io.writers import json_default
 
 STUDIO_OVERVIEW_SCHEMA_VERSION = 1
@@ -27,6 +29,15 @@ STUDIO_INVENTORY_CONTROL_FILENAME = "studio-inventory.json"
 MAX_SOURCE_FILE_BYTES = 10 * 1024 * 1024
 MAX_SOURCE_RECORDS = 100_000
 MAX_CONTRACT_TEXT_LENGTH = 2_000
+STUDIO_DEMO_JSON_PROFILE = "studio-demo-json-ingress-v1"
+STUDIO_DEMO_JSON_POLICY = StructuredDocumentPolicy(
+    max_file_bytes=MAX_SOURCE_FILE_BYTES,
+    max_nodes=500_000,
+    max_depth=32,
+    max_collection_items=MAX_SOURCE_RECORDS,
+    max_scalar_characters=1_000_000,
+    max_yaml_aliases=1,
+)
 RISK_RATINGS = ("critical", "high", "medium", "low")
 EXPECTED_SOURCE_FILES = {
     "manifest": Path("demo_manifest.json"),
@@ -381,18 +392,22 @@ def _source_file(source_dir: Path, relative_path: Path) -> Path:
 
 def _read_object(path: Path) -> dict[str, Any]:
     try:
-        if path.stat().st_size > MAX_SOURCE_FILE_BYTES:
-            raise StudioDemoBridgeError(
-                f"Synthetic demo JSON exceeds the {MAX_SOURCE_FILE_BYTES}-byte limit: {path.name}"
-            )
-        value = json.loads(path.read_text(encoding="utf-8"), parse_constant=_reject_json_constant)
+        return read_generated_json_document(
+            path,
+            policy=STUDIO_DEMO_JSON_POLICY,
+            profile_id=STUDIO_DEMO_JSON_PROFILE,
+            mode="display",
+        ).payload
     except StudioDemoBridgeError:
         raise
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
-        raise StudioDemoBridgeError(f"Synthetic demo JSON is invalid: {path.name}") from exc
-    if not isinstance(value, dict):
-        raise StudioDemoBridgeError(f"Synthetic demo JSON must be an object: {path.name}")
-    return value
+    except GeneratedArtifactError as exc:
+        if exc.code in {"generated_file_size_limit", "document_size_limit"}:
+            raise StudioDemoBridgeError(
+                f"Synthetic demo JSON exceeds the {STUDIO_DEMO_JSON_POLICY.max_file_bytes}-byte limit."
+            ) from exc
+        if exc.code == "document_non_finite_number":
+            raise StudioDemoBridgeError("Synthetic demo JSON values must be finite.") from exc
+        raise StudioDemoBridgeError("Synthetic demo JSON failed safety validation.") from exc
 
 
 def _require_synthetic_payload(payload: dict[str, Any], *, label: str) -> None:
@@ -1225,10 +1240,6 @@ def _project_text(value: Any, *, field: str, max_length: int = MAX_CONTRACT_TEXT
     if _has_control_character(text):
         raise StudioDemoBridgeError(f"Synthetic demo field contains control characters: {field}")
     return text[:max_length]
-
-
-def _reject_json_constant(value: str) -> None:
-    raise ValueError(f"Non-finite JSON value is not allowed: {value}")
 
 
 def _has_control_character(value: str) -> bool:

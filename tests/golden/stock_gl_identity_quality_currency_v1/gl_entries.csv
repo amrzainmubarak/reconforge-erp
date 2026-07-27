@@ -1,0 +1,9 @@
+entry_id,date,journal,account_code,account_name,reference,source_document,debit,credit,amount,cost_center,work_order,created_by,currency
+GE-EXACT,2026-07-01,INV,1400,Inventory,REF-EXACT,JE-EXACT,10.00,0,10.00,WORKSHOP,WO-EXACT,golden-fixture,USD
+GE-DUP,2026-07-02,INV,1400,Inventory,REF-DUP,JE-DUP,5.00,0,5.00,WORKSHOP,WO-DUP,golden-fixture,USD
+GE-DUP,2026-07-02,INV,1400,Inventory,REF-DUP,JE-DUP,5.00,0,5.00,WORKSHOP,WO-DUP,golden-fixture,USD
+GE-BAD,2026-07-03,INV,1400,Inventory,REF-BAD,JE-BAD,0,0,NaN,WORKSHOP,WO-BAD,golden-fixture,USD
+GE-JPY,2026-07-04,INV,1400,Inventory,REF-JPY,JE-JPY,100,0,100,WORKSHOP,WO-JPY,golden-fixture,JPY
+GE-CROSS,2026-07-05,INV,1400,Inventory,REF-CROSS,JE-CROSS,7.00,0,7.00,WORKSHOP,WO-CROSS,golden-fixture,USD
+GE-NO-DATE,,INV,1400,Inventory,REF-NO-DATE,JE-NO-DATE,3.00,0,3.00,WORKSHOP,WO-NO-DATE,golden-fixture,USD
+GE-ONLY,2026-07-06,INV,1400,Inventory,REF-ONLY,JE-ONLY,8.00,0,8.00,WORKSHOP,WO-ONLY,golden-fixture,USD

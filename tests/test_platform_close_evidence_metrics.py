@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from decimal import Decimal, localcontext
 from pathlib import Path
 
 import pytest
@@ -47,6 +48,7 @@ def test_close_evidence_and_metrics_foundations(tmp_path: Path) -> None:
 
     assert readiness.total_tasks == 5
     assert readiness.blocked_tasks == 1
+    assert readiness.readiness_score == Decimal("0.00")
     assert verification.ok is True
     assert requirement["requirement_code"] == "TB"
     assert coverage["coverage_pct"] == 100.0
@@ -54,3 +56,59 @@ def test_close_evidence_and_metrics_foundations(tmp_path: Path) -> None:
     assert "close_task_status_updated" in audit_actions
     assert "evidence_registered" in audit_actions
     assert "metrics_computed" in audit_actions
+
+
+def test_metric_snapshots_publish_exact_value_text_under_hostile_context(tmp_path: Path) -> None:
+    db_path = tmp_path / "exact_metrics.db"
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        close = CloseManagementService(connection)
+        period = close.period_init(
+            period_name="2026-06",
+            start_date="2026-06-01",
+            end_date="2026-06-30",
+            with_default_tasks=False,
+        )
+        tasks = [
+            close.task_add(period_id=str(period["id"]), task_code=f"T-{index}", name=f"Task {index}")
+            for index in range(1, 4)
+        ]
+        close.task_status(task_id=str(tasks[0]["id"]), status="Complete")
+
+        with localcontext() as context:
+            context.prec = 4
+            metrics = MetricsService(connection).compute(period_name="2026-06")
+        by_key = {str(metric["metric_key"]): metric for metric in metrics}
+
+        assert by_key["close_completion"]["value_text"] == "33.33"
+        assert by_key["period_readiness"]["value_text"] == "33.33"
+        assert by_key["evidence_coverage"]["value_text"] == "100.00"
+        assert by_key["unresolved_high_risk_exceptions"]["value_text"] == "0"
+        assert by_key["close_completion"]["value"] == 33.33
+    finally:
+        connection.close()
+
+
+def test_metric_snapshots_reject_non_finite_stored_readiness(tmp_path: Path) -> None:
+    db_path = tmp_path / "invalid_metrics.db"
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        close = CloseManagementService(connection)
+        period = close.period_init(
+            period_name="2026-07",
+            start_date="2026-07-01",
+            end_date="2026-07-31",
+            with_default_tasks=False,
+        )
+        connection.execute(
+            "UPDATE close_periods SET readiness_score = ? WHERE id = ?",
+            ("NaN", str(period["id"])),
+        )
+        connection.commit()
+
+        with pytest.raises(PlatformError, match="readiness metric is invalid"):
+            MetricsService(connection).compute(period_name="2026-07")
+    finally:
+        connection.close()

@@ -3,14 +3,14 @@
 </p>
 
 <p align="center">
-  <strong>Open-Source ERP Reconciliation, Financial Controls, Close Management, and Audit Evidence Platform</strong>
+  <strong>Open-Source Financial Reconciliation, Integrity Controls, Close Management, and Audit Evidence Platform</strong>
 </p>
 
 <p align="center">
   <a href="https://github.com/amrzainmubarak/reconforge-erp/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/amrzainmubarak/reconforge-erp/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/amrzainmubarak/reconforge-erp/actions/workflows/security.yml"><img alt="Security checks" src="https://github.com/amrzainmubarak/reconforge-erp/actions/workflows/security.yml/badge.svg"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-145c4e">
-  <img alt="Release v0.7.0" src="https://img.shields.io/badge/release-v0.7.0-b9d632">
+  <img alt="Release v0.7.1" src="https://img.shields.io/badge/release-v0.7.1-b9d632">
   <a href="https://www.bestpractices.dev/projects/13089"><img alt="OpenSSF Best Practices" src="https://www.bestpractices.dev/projects/13089/badge"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-f5f2e8"></a>
 </p>
@@ -20,7 +20,7 @@
   <a href="#product-tour">Product tour</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#architecture">Architecture</a> ·
-  <a href="DEMO.md">Live showcase</a> ·
+  <a href="docs/showcase.md">Live showcase</a> ·
   <a href="#project-maturity">Project maturity</a> ·
   <a href="#documentation">Documentation</a>
 </p>
@@ -41,7 +41,7 @@ It is deliberately positioned as a **finance-controls platform**, not a replacem
 ### Why teams use ReconForge
 
 - **Local by default.** Core reconciliation, review, reporting, and evidence workflows run against files and local state under the operator's control.
-- **Deterministic by design.** Matching uses stable ordering and explainable decision data rather than an opaque model or input-row position.
+- **Determinism as a release gate.** Matching is designed around stable ordering and explainable decision data; any input-order or engine variance is treated as a blocking correctness defect, not hidden behind a success claim.
 - **Finance-aware.** Invalid amounts remain visible as data-quality failures; unmatched records and exceptions are not silently discarded.
 - **Evidence first.** Source lineage, generated artifacts, review metadata, audit events, and checksums are treated as product outputs.
 - **Extensible without lock-in.** Mapping profiles, control packs, CLI commands, a local API, SQLite services, and documented schemas form the extension surface.
@@ -91,9 +91,11 @@ The same pipeline can be driven from the CLI, generated reports, the current loc
 
 | Domain | Implemented scope |
 | --- | --- |
-| Reconciliation | Stock-to-GL matching, amount/date/reference policies, unmatched-record visibility, deterministic IDs, candidate explanations, and optional Pandas/DuckDB execution |
+| Reconciliation | Stock-to-GL matching, amount/date/reference policies, unmatched-record visibility, stable-ID foundations, candidate explanations, and optional Pandas/experimental DuckDB execution subject to parity gates |
 | Finance controls | Account-reconciliation, close, approval metadata, journal, intercompany, control-testing, variance, and unified-exception foundations |
 | Inventory controls | Governed master data, movements, exact on-hand quantities, counts, reorder advice, FIFO valuation evidence, and exact whole-valuation reversal foundations |
+| Accounts Payable | Foundation-stage suppliers, purchase orders, posted receipts, supplier invoices, deterministic three-way matching, exception routing, and local workflow approvals; no statutory posting or payments |
+| Accounts Receivable | Foundation-stage customer credit profiles, exact invoices, approval-time credit controls, posted receipts, allocations, exposure, and aging; no statutory posting, tax, collections, or payments |
 | Workflow | Local review state, DB-backed state transitions, role/permission checks, preparer/reviewer metadata, period lock/reopen foundations, and audit events |
 | Evidence and reporting | Management workbook, executive HTML, Markdown/CSV/JSON exports, review register, evidence binder, redaction options, and checksum manifests |
 | Interfaces | First-class Typer CLI, local FastAPI v1 foundation, server-rendered Studio, and experimental React Studio |
@@ -169,12 +171,16 @@ Windows PowerShell users can replace the line continuations with backticks or ru
 ### Build the modern Studio showcase
 
 ```bash
-python -m pip install -e ".[dev]"
-npm --prefix apps/web install
+uv sync --locked --extra dev
+npm --prefix apps/web ci
 make showcase-serve
 ```
 
-Open `http://127.0.0.1:4173`. The command regenerates synthetic enterprise artifacts, validates the bounded browser contracts, builds the application, and serves it on loopback. The [showcase guide](DEMO.md) includes commands for environments without Make and a five-minute review path.
+The repository's reproducible contributor path requires the exact uv version in
+`pyproject.toml`; the simpler pip install above remains available for local
+Community evaluation but is not dependency-lock evidence.
+
+Open `http://127.0.0.1:4173`. The command regenerates synthetic enterprise artifacts, validates the bounded browser contracts, builds the application, and serves it on loopback. The [showcase guide](docs/showcase.md) includes the review boundary; [demo scenarios](docs/demo-scenarios.md) provide commands and review paths.
 
 ## Architecture
 
@@ -219,6 +225,7 @@ reconforge mappings wizard \
 ```
 
 Each pack contains metadata, mapping guidance, rules, a risk model, expected exceptions, documentation, and an executable sample command. Rules use bounded declarative operators; packs do not execute arbitrary Python.
+Current CLI rule runs preserve exact decimal YAML lexemes and emit schema-v2 local result provenance (policy plus pack, input, decision, and artifact digests). These hashes detect content inconsistency; they are not signatures or source-system authenticity proof. Historical unversioned rule results remain readable as legacy artifacts.
 
 ## Evidence, trust, and data handling
 
@@ -234,14 +241,14 @@ These controls aid review and tamper detection; they are not an assurance report
 
 ## Project maturity
 
-The current version is **v0.7.0**, classified as alpha/foundation-stage software.
+The current version is **v0.7.1**, classified as alpha/foundation-stage software.
 
 | Maturity | Scope |
 | --- | --- |
 | Implemented | Export validation and mapping, stock-to-GL and workshop reconciliation, deterministic control packs, risk/exceptions, local review state, reports/evidence, CLI, synthetic demos, and server-rendered Studio |
-| Foundation-stage | SQLite-backed finance/inventory services, local users and RBAC, workflows, audit events, API routes, backup/import/export, module registry, and governed master data |
+| Foundation-stage | SQLite-backed finance/inventory/AP/AR services, local users and RBAC, workflows, audit events, API routes, backup/import/export, module registry, and governed master data |
 | Experimental | Read-only React Studio, inventory planning, FIFO valuation and exact reversal, Finance Core Draft bridge, and optional DuckDB analytical execution |
-| Planned | Broader reconciliation templates, write-enabled modern Studio, PostgreSQL adapter, tenant isolation, resumable large-data jobs, richer observability, and separately tested live connectors |
+| Planned | Broader reconciliation templates, write-enabled modern Studio, remaining PostgreSQL/Redis/S3 server-profile integration, tenant propagation across all services, resumable large-data jobs, richer observability, and separately tested live connectors |
 | Outside released scope | Complete ERP transaction processing, automatic source-system posting, hosted multi-tenant service, and formal audit/compliance assurance |
 
 Implementation status is tracked in the [engineering audit](docs/engineering-audit.md), [repository audit](docs/analysis/repository-audit.md), [risk register](docs/risk-register.md), and [roadmap](docs/roadmap.md). Feature labels and screenshots are not evidence of production readiness; executable tests and release gates remain authoritative.
@@ -267,7 +274,7 @@ python -m bandit -q -r reconforge
 git diff --check
 ```
 
-Repository automation includes linting, typing, tests, package and container builds, Bandit, dependency auditing, CodeQL, SBOM generation, and OpenSSF Scorecard workflows. See the [v0.7.0 release notes](docs/releases/v0.7.0.md) and [release-readiness checklist](docs/release-readiness-checklist.md) for the evidence boundary.
+Repository automation defines linting, typing, tests, package/container builds, Bandit, universal hash-bearing Python/server and npm locks, checksum-pinned full-history/tree secret scans, a closed expiring exception policy, CodeQL, release-integrated per-subject CycloneDX SBOMs, and OpenSSF Scorecard. Identified hosted Python 3.11/3.12, live server, container, engine-parity, secret, dependency, and CodeQL gates pass; signed release and retained provenance/SBOM candidate evidence remain pending the human-gated tag workflow. See the [supply-chain policy](docs/security/supply-chain-policy.md), [v0.7.1 release notes](docs/releases/v0.7.1.md), and [release-readiness checklist](docs/release-readiness-checklist.md) for the evidence boundary.
 
 ## Documentation
 
@@ -280,6 +287,8 @@ Repository automation includes linting, typing, tests, package and container bui
 - [Control and audit guide](docs/controls-and-audit.md)
 - [ReconForge Studio](docs/reconforge-studio.md)
 - [Local REST API](docs/api.md)
+- [Accounts Payable three-way-match foundation](docs/payables.md)
+- [Accounts Receivable and credit-control foundation](docs/receivables.md)
 - [Arabic guide / الدليل العربي](docs/ar/guide.md)
 
 ### Operate and evaluate

@@ -58,6 +58,12 @@ Studio is a review companion, not a separate data store. The authoritative legac
 
 The Exceptions page can filter by severity/risk level, exception type, review status, source file, search text, and minimum amount impact. It can sort by risk score, amount impact, or review update date when those fields are available.
 
+Minimum amount is accepted as bounded plain-decimal text and compared as an
+exact Decimal. Scientific notation, negative/non-finite values, and overlong
+input are rejected with HTTP 400; the rejected text is not reflected in the
+response. The filter does not assume two currency decimals. Invalid amount
+fields remain unquantified and are excluded when a positive minimum is active.
+
 Review status is read from and written to `output/review_state.json`. Use the Studio form or CLI to update local state:
 
 ```bash

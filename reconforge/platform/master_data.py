@@ -11,7 +11,7 @@ from typing import Any
 from reconforge.domain.models import utc_now_text
 from reconforge.platform.common import (
     PlatformError,
-    audit,
+    commit_audited,
     ensure_platform_schema,
     ensure_workspace,
     platform_id,
@@ -161,11 +161,10 @@ class MasterDataService:
                 """,
                 (currency, currency_name, minor_units, int(active), now, now),
             )
-            self.connection.commit()
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to save local currency reference.") from exc
-        audit(
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="currency",
@@ -231,12 +230,11 @@ class MasterDataService:
                 """,
                 (organization_id, workspace_id, organization_name, now, code, int(active), now),
             )
-            self.connection.commit()
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to save local organization reference.") from exc
         record = self._organization(workspace_id, code)
-        audit(
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="organization",
@@ -309,18 +307,21 @@ class MasterDataService:
                 """,
                 (entity_id, organization["id"], code, entity_name, currency, now, int(active), now),
             )
-            self.connection.commit()
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to save local legal-entity reference.") from exc
         record = self._legal_entity(str(organization["id"]), code)
-        audit(
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="legal_entity",
             object_id=str(record["id"]),
             action="legal_entity_upserted",
-            metadata={"entity_code": code, "organization_code": organization["organization_code"], "currency": currency},
+            metadata={
+                "entity_code": code,
+                "organization_code": organization["organization_code"],
+                "currency": currency,
+            },
         )
         return record
 
@@ -397,18 +398,21 @@ class MasterDataService:
                 """,
                 (branch_id, organization["id"], legal_entity_id, code, branch_name, int(active), now, now),
             )
-            self.connection.commit()
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to save local branch reference.") from exc
         record = self._branch(str(organization["id"]), code)
-        audit(
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="branch",
             object_id=str(record["id"]),
             action="branch_upserted",
-            metadata={"branch_code": code, "organization_code": organization["organization_code"], "entity_code": normalized_entity_code},
+            metadata={
+                "branch_code": code,
+                "organization_code": organization["organization_code"],
+                "entity_code": normalized_entity_code,
+            },
         )
         return record
 
@@ -506,7 +510,6 @@ class MasterDataService:
                 """,
                 (period_id, workspace_id, period_name, start.isoformat(), end.isoformat(), now, year, number, now),
             )
-            self.connection.commit()
         except PlatformError:
             self.connection.rollback()
             raise
@@ -514,7 +517,7 @@ class MasterDataService:
             self.connection.rollback()
             raise PlatformError("Unable to save local fiscal-period reference.") from exc
         record = self._period(period_id)
-        audit(
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="fiscal_period",
@@ -535,8 +538,10 @@ class MasterDataService:
         """Apply a controlled metadata transition; this does not post or lock ERP transactions."""
 
         require_permission(self.connection, actor_label=actor_label, permission=MASTER_DATA_MANAGE_PERMISSION)
-        if not period_id or len(period_id) > 160 or any(
-            ord(character) < 32 or ord(character) == 127 for character in period_id
+        if (
+            not period_id
+            or len(period_id) > 160
+            or any(ord(character) < 32 or ord(character) == 127 for character in period_id)
         ):
             raise PlatformError("Fiscal-period identifier is invalid.")
         record = self._period(period_id)
@@ -559,14 +564,13 @@ class MasterDataService:
             )
             if cursor.rowcount != 1:
                 raise PlatformError("Fiscal-period status changed concurrently; reload and retry.")
-            self.connection.commit()
         except PlatformError:
             self.connection.rollback()
             raise
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to update local fiscal-period status.") from exc
-        audit(
+        commit_audited(
             self.connection,
             actor_label=actor_label,
             object_type="fiscal_period",
@@ -640,7 +644,13 @@ class MasterDataService:
         workspace_name = _workspace_name(workspace)
         summary = self.summary(workspace=workspace_name, actor_label=actor_label)
         total_currencies = self._currency_count(active_only=False)
-        scoped_counts = (summary.organizations, summary.legal_entities, summary.branches, summary.periods, total_currencies)
+        scoped_counts = (
+            summary.organizations,
+            summary.legal_entities,
+            summary.branches,
+            summary.periods,
+            total_currencies,
+        )
         if any(count > MAX_SNAPSHOT_RECORDS for count in scoped_counts):
             raise PlatformError(f"Master-data snapshot is limited to {MAX_SNAPSHOT_RECORDS} records per collection.")
         return {
@@ -663,9 +673,7 @@ class MasterDataService:
             "branches": self.list_branches(
                 workspace=workspace_name, limit=MAX_SNAPSHOT_RECORDS, actor_label=actor_label
             ),
-            "periods": self.list_periods(
-                workspace=workspace_name, limit=MAX_SNAPSHOT_RECORDS, actor_label=actor_label
-            ),
+            "periods": self.list_periods(workspace=workspace_name, limit=MAX_SNAPSHOT_RECORDS, actor_label=actor_label),
         }
 
     def _workspace_id(self, workspace: str) -> str | None:

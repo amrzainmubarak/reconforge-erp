@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -12,6 +11,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 
 from reconforge import __version__
+from reconforge.io.generated import GeneratedArtifactError, read_generated_json_document
 from reconforge.utils.safe_paths import build_download_registry, get_registered_download
 
 DOWNLOAD_SUFFIXES = {".html", ".xlsx", ".csv", ".json", ".md", ".txt", ".yml", ".yaml"}
@@ -20,8 +20,10 @@ DOWNLOAD_SUFFIXES = {".html", ".xlsx", ".csv", ".json", ".md", ".txt", ".yml", "
 def _load_json(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
-    with path.open("r", encoding="utf-8") as handle:
-        return json.load(handle)
+    try:
+        return read_generated_json_document(path, mode="display").payload
+    except GeneratedArtifactError as exc:
+        raise ValueError("Dashboard report JSON failed safety validation.") from exc
 
 
 def _report_links(registry: dict[str, Path]) -> list[str]:

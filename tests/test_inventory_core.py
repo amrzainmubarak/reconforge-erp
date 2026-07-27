@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from typer.testing import CliRunner
 
+import reconforge.db.migrations as migration_module
 from reconforge.api import create_api_app
 from reconforge.audit import list_audit_events, verify_audit_events
 from reconforge.auth import LocalAuthService
@@ -801,7 +802,7 @@ def test_inventory_v8_upgrade_seeds_default_unit_without_changing_existing_state
         connection.close()
 
     upgraded = run_migrations(path)
-    assert upgraded.applied_versions == [9, 10, 11, 12]
+    assert upgraded.applied_versions == list(range(9, migration_module.MIGRATIONS[-1].version + 1))
     connection = connect(path, require_exists=True)
     try:
         unit = connection.execute(
@@ -837,7 +838,7 @@ def test_inventory_backup_restore_and_public_export_preserve_posted_movement(tmp
     restored_path = tmp_path / "inventory_restored.db"
     restore_backup(restored_path, backup.backup_path)
 
-    assert backup.schema_version == exported.schema_version == 12
+    assert backup.schema_version == exported.schema_version == migration_module.MIGRATIONS[-1].version
     export_payload = json.loads((tmp_path / "inventory_export" / "inventory.json").read_text(encoding="utf-8"))
     assert len(export_payload["items"]) == 2
     assert export_payload["movements"][0]["status"] == "Posted"

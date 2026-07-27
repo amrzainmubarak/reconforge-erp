@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/rule_results.schema.json",
+  "title": "ReconForge Rule Results",
+  "type": "object",
+  "oneOf": [
+    {"$ref": "#/$defs/legacy_v1"},
+    {"$ref": "#/$defs/current_v2"}
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exception_id",
+        "rule_id",
+        "rule_name",
+        "severity",
+        "confidence",
+        "entity_type",
+        "source_file",
+        "source_row",
+        "affected_reference",
+        "affected_work_order",
+        "affected_product",
+        "affected_customer",
+        "amount_impact",
+        "message",
+        "business_impact",
+        "recommended_action",
+        "risk_impact",
+        "evidence_fields",
+        "triggered_at"
+      ],
+      "properties": {
+        "exception_id": {"type": "string"},
+        "rule_id": {"type": "string", "minLength": 1},
+        "rule_name": {"type": "string", "minLength": 1},
+        "severity": {"enum": ["info", "low", "medium", "high", "critical"]},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "entity_type": {"type": "string", "minLength": 1},
+        "source_file": {"type": "string", "pattern": "^[^/\\\\]+\\.csv$"},
+        "source_row": {"type": "integer", "minimum": 2},
+        "affected_reference": {"type": ["string", "null"]},
+        "affected_work_order": {"type": ["string", "null"]},
+        "affected_product": {"type": ["string", "null"]},
+        "affected_customer": {"type": ["string", "null"]},
+        "amount_impact": {
+          "oneOf": [
+            {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"},
+            {"type": "null"}
+          ]
+        },
+        "message": {"type": "string"},
+        "business_impact": {"type": "string"},
+        "recommended_action": {"type": "string"},
+        "risk_impact": {"type": "integer", "minimum": 0, "maximum": 100},
+        "evidence_fields": {"type": "object"},
+        "triggered_at": {"type": "string", "minLength": 1}
+      }
+    },
+    "legacy_v1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["results"],
+      "not": {"required": ["schema_version"]},
+      "properties": {
+        "results": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/result"}
+        }
+      }
+    },
+    "current_v2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "artifact_type",
+        "generated_at",
+        "financial_input_policy",
+        "rule_pack",
+        "input_files",
+        "result_count",
+        "decision_digest",
+        "artifact_digest",
+        "integrity_boundary",
+        "results"
+      ],
+      "properties": {
+        "schema_version": {"const": 2},
+        "artifact_type": {"const": "reconforge-rule-results"},
+        "generated_at": {"type": "string", "minLength": 1},
+        "financial_input_policy": {
+          "enum": ["legacy-financial-input-v1", "strict-financial-input-v2"]
+        },
+        "rule_pack": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pack_id", "name", "version", "digest"],
+          "properties": {
+            "pack_id": {"type": "string", "minLength": 1},
+            "name": {"type": "string", "minLength": 1},
+            "version": {"type": "string", "minLength": 1},
+            "digest": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "input_files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "bytes", "sha256"],
+            "properties": {
+              "name": {"type": "string", "pattern": "^[^/\\\\]+\\.csv$"},
+              "bytes": {"type": "integer", "minimum": 0},
+              "sha256": {"$ref": "#/$defs/sha256"}
+            }
+          }
+        },
+        "result_count": {"type": "integer", "minimum": 0},
+        "decision_digest": {"$ref": "#/$defs/sha256"},
+        "artifact_digest": {"$ref": "#/$defs/sha256"},
+        "integrity_boundary": {
+          "const": "Local content digests only; this artifact is not a signature, audit opinion, compliance certification, or proof of source-system authenticity."
+        },
+        "results": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/result"}
+        }
+      }
+    }
+  }
+}

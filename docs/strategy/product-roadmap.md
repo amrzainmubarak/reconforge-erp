@@ -64,7 +64,7 @@ This roadmap keeps the core local-first, deterministic, export-based, and audit-
 | CLI commands | `reconforge mapping wizard --input client_exports --profile odoo-inventory-valuation --output mapped_exports`; `reconforge handoff pack --input output --brand config/client_brand.yml --output output/client-handoff`. |
 | Tests | Mapping wizard dry-run; anonymized package generation; branding config validation; handoff pack artifact checks. |
 | Docs | Consultant implementation guide; handoff pack guide; training outline; mapping wizard reference. |
-| Acceptance criteria | A consultant can prepare a client-safe demo and handoff pack without writing custom code. |
+| Acceptance criteria | A consultant can prepare a risk-reduced demo and handoff pack for explicit human disclosure review without writing custom code. |
 | Release notes draft | Adds consultant delivery workflows for mapping, anonymized demos, branded reports, handoff packs, and training. |
 
 ## v0.9.0 - Self-Hosted Review Platform Foundation

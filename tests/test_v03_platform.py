@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from decimal import Decimal
 from pathlib import Path
 
 import pandas as pd
@@ -100,7 +101,7 @@ def test_all_control_packs_load() -> None:
 
 def test_reference_normalization_and_similarity() -> None:
     assert normalize_reference("AUTO/STK-1001") == "AUTOSTK1001"
-    assert reference_similarity("STK-1001", "AUTO/STK-1001") > 0.8
+    assert reference_similarity("STK-1001", "AUTO/STK-1001") == Decimal("0.94")
 
 
 def test_matching_strategy_audit_safe(sample_datasets: dict[DatasetName, pd.DataFrame]) -> None:

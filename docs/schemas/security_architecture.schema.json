@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/security_architecture.schema.json",
+  "title": "ReconForge Security Architecture Registry",
+  "description": "Evidence-bounded security trust boundaries, editions, data classes, controls, ownership, and residual-risk mappings.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "architecture_id",
+    "status",
+    "last_reviewed",
+    "claim_boundary",
+    "control_owners",
+    "editions",
+    "data_classes",
+    "trust_boundaries",
+    "controls",
+    "residual_risks"
+  ],
+  "properties": {
+    "schema_version": {"const": 2},
+    "architecture_id": {"const": "reconforge-security-architecture"},
+    "status": {"const": "evidence-bounded"},
+    "last_reviewed": {"type": "string", "format": "date"},
+    "claim_boundary": {"$ref": "#/$defs/text"},
+    "control_owners": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {"$ref": "#/$defs/owner"}
+    },
+    "editions": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 10,
+      "items": {"$ref": "#/$defs/edition"}
+    },
+    "data_classes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {"$ref": "#/$defs/data_class"}
+    },
+    "trust_boundaries": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {"$ref": "#/$defs/trust_boundary"}
+    },
+    "controls": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {"$ref": "#/$defs/control"}
+    },
+    "residual_risks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {"$ref": "#/$defs/residual_risk"}
+    }
+  },
+  "$defs": {
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "responsibility", "accountability_boundary"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "responsibility": {"$ref": "#/$defs/text"},
+        "accountability_boundary": {"$ref": "#/$defs/text"}
+      }
+    },
+    "edition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "maturity", "deployment_model", "default_network", "trust_boundaries", "data_classes", "enforced_controls", "limitations"],
+      "properties": {
+        "id": {"enum": ["community-local", "team-server", "regulated"]},
+        "maturity": {"enum": ["implemented-bounded", "experimental-bounded", "planned-only"]},
+        "deployment_model": {"$ref": "#/$defs/text"},
+        "default_network": {"$ref": "#/$defs/text"},
+        "trust_boundaries": {"$ref": "#/$defs/ids"},
+        "data_classes": {"$ref": "#/$defs/ids"},
+        "enforced_controls": {"$ref": "#/$defs/ids_allow_empty"},
+        "limitations": {"$ref": "#/$defs/texts"}
+      }
+    },
+    "data_class": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "sensitivity", "owner", "examples", "required_controls", "handling_rules"],
+      "properties": {
+        "id": {"pattern": "^DC-[0-9]{3}$", "type": "string"},
+        "name": {"$ref": "#/$defs/id"},
+        "sensitivity": {"enum": ["public", "internal", "confidential", "restricted", "secret"]},
+        "owner": {"$ref": "#/$defs/id"},
+        "examples": {"$ref": "#/$defs/texts"},
+        "required_controls": {"$ref": "#/$defs/ids"},
+        "handling_rules": {"$ref": "#/$defs/texts"}
+      }
+    },
+    "trust_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "source", "destination", "assets", "threats", "controls", "evidence"],
+      "properties": {
+        "id": {"pattern": "^TB-[0-9]{3}$", "type": "string"},
+        "name": {"$ref": "#/$defs/id"},
+        "source": {"$ref": "#/$defs/text"},
+        "destination": {"$ref": "#/$defs/text"},
+        "assets": {"$ref": "#/$defs/ids"},
+        "threats": {"$ref": "#/$defs/texts"},
+        "controls": {"$ref": "#/$defs/ids"},
+        "evidence": {"$ref": "#/$defs/paths"}
+      }
+    },
+    "control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "status", "owner", "purpose", "boundaries", "data_classes", "code_evidence", "test_evidence", "limitations"],
+      "properties": {
+        "id": {"pattern": "^SEC-C-[0-9]{3}$", "type": "string"},
+        "name": {"$ref": "#/$defs/id"},
+        "status": {"enum": ["implemented-bounded", "partial"]},
+        "owner": {"$ref": "#/$defs/id"},
+        "purpose": {"$ref": "#/$defs/text"},
+        "boundaries": {"$ref": "#/$defs/ids"},
+        "data_classes": {"$ref": "#/$defs/ids"},
+        "code_evidence": {"$ref": "#/$defs/paths"},
+        "test_evidence": {"$ref": "#/$defs/paths"},
+        "limitations": {"$ref": "#/$defs/texts"}
+      }
+    },
+    "residual_risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["risk_id", "owner", "residual_risk", "controls", "rationale"],
+      "properties": {
+        "risk_id": {"pattern": "^R-[0-9]{3}$", "type": "string"},
+        "owner": {"$ref": "#/$defs/id"},
+        "residual_risk": {"enum": ["low", "medium", "high", "critical"]},
+        "controls": {"$ref": "#/$defs/ids"},
+        "rationale": {"$ref": "#/$defs/text"}
+      }
+    },
+    "id": {"type": "string", "minLength": 1, "maxLength": 120, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+    "text": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "ids": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/id"}
+    },
+    "ids_allow_empty": {
+      "type": "array",
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/id"}
+    },
+    "texts": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {"$ref": "#/$defs/text"}
+    },
+    "paths": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 500, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"}
+    }
+  }
+}

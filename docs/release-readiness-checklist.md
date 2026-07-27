@@ -19,8 +19,14 @@ Record command output summaries in the release notes or maintainer handoff. Do n
 
 ```bash
 python -m bandit -q -r reconforge
-pip-audit -r requirements.txt
+uv lock --check
+python .github/scripts/validate_supply_chain_policy.py --project-root .
+npm --prefix apps/web audit --package-lock-only --audit-level=high
 ```
+
+Run the hash-exported Python audit and both redacted Gitleaks scopes exactly as
+documented in `docs/security/supply-chain-policy.md`; do not substitute an
+ambient-environment audit or commit baseline.
 
 Also check:
 
@@ -93,8 +99,9 @@ If Docker is unavailable or any command fails, document the limitation and do no
 
 ## SBOM And Release Artifacts
 
-- Confirm dependency files are intentional.
-- Confirm SBOM workflow status when available.
+- Confirm `pyproject.toml`, `uv.lock`, npm lock, uv cutoff/tool pins, Docker base/uv hashes, and dependency update notes are intentional.
+- Confirm the exception registry has no expired active entry, self-approval, broad subject, or critical npm release exception; retain expired/revoked decisions as evidence.
+- Confirm every release subject's SBOM digest, manifest, attestation bundle, and verification status when available.
 - Do not commit generated demo output, evidence packs, local DBs, backups, or binaries unless intentionally reviewed as a small documentation artifact.
 - Verify generated release artifacts do not contain secrets, live customer data, local usernames, private paths, or source exports.
 

@@ -2,7 +2,7 @@
 
 ReconForge includes a local/self-hosted REST API foundation for DB-backed workflows.
 
-This API is local-first. It reads and writes the local SQLite database selected by the user and does not add SaaS behavior, cloud upload, hosted storage, telemetry, direct ERP connectors, public internet deployment guidance, production hardening claims, SOC/ISO/SOX compliance, SSO, SCIM, OAuth, SAML, legal sign-off, audit opinions, or digital signatures.
+This API is local-first. The default profile reads and writes local SQLite. An explicit server-auth profile can use PostgreSQL for tenant-scoped identity and sessions while legacy domain routes remain on required database-per-tenant SQLite storage. This does not add SaaS behavior, cloud upload, hosted storage, telemetry, direct ERP connectors, public internet deployment guidance, production hardening claims, SOC/ISO/SOX compliance, SSO, SCIM, OAuth, SAML, legal sign-off, audit opinions, or digital signatures.
 
 ## Starting The API
 
@@ -20,9 +20,81 @@ reconforge api serve --db output/reconforge.db --host 127.0.0.1 --port 8765
 
 The default bind host is `127.0.0.1`. Binding to `0.0.0.0` prints a warning because this is not a public internet deployment mode.
 
+## Optional database-per-tenant mode
+
+For a bounded self-hosted deployment, route each tenant to an already-migrated
+SQLite database under one directory:
+
+```bash
+reconforge api serve --tenant-db-root output/tenants --host 127.0.0.1 --port 8765
+```
+
+Every database-backed request must then include `X-ReconForge-Tenant: tenant-a`.
+Tenant IDs are deliberately restricted and resolve only to `<tenant-id>.db` beneath
+the configured root. Missing or invalid scope is rejected. This mode is a
+database-per-tenant SQLite boundary; it is not shared-schema PostgreSQL/RLS,
+centralized identity, or hosted production readiness.
+
+The CLI exposes the explicit PostgreSQL server-auth profile through environment
+configuration:
+
+```bash
+$env:RECONFORGE_POSTGRES_DSN = "postgresql://reconforge_app@db.example/reconforge"
+reconforge api serve --tenant-db-root output/tenants
+```
+
+Use `--postgres-no-tls` or `--redis-no-tls` only for disposable local services.
+The PostgreSQL profile refuses to start without `--tenant-db-root` because
+legacy domain routes still require database-per-tenant SQLite isolation.
+
+## Optional Redis coordination
+
+The Python app factory can opt into a tenant-scoped Redis rate-limit backend:
+
+```python
+from reconforge.api import create_api_app
+
+app = create_api_app(
+    "output/reconforge.db",
+    redis_url="rediss://redis.example/reconforge",
+)
+```
+
+Install the optional server dependencies with
+`pip install "reconforge-erp[server]"`. TLS is required by default; disabling
+it is intended only for a local disposable Redis service. When configured, failed
+login counters use Redis atomic increments instead of process-local memory and
+Redis outages fail closed with a structured service-unavailable response. The
+Redis session/revocation and distributed-lock primitives are implemented in
+`reconforge.infrastructure.redis`, but existing SQLite session persistence is
+not silently replaced until a server deployment profile migrates the full auth
+lifecycle.
+
 ## Authentication
 
-The API uses local users stored in the ReconForge SQLite database. Login creates a random local session token and stores only its hash. Disabled users cannot authenticate. Tokens can expire or be revoked.
+The default API uses local users stored in the ReconForge SQLite database. Login creates a random local session token and stores only its hash. Disabled users cannot authenticate. Tokens can expire or be revoked.
+
+### PostgreSQL server-auth profile
+
+The app factory supports an explicit server profile:
+
+```python
+from reconforge.api import create_api_app
+
+app = create_api_app(
+    "output/unused.db",
+    tenant_db_root="output/tenants",
+    postgres_dsn="postgresql://reconforge_app@db.example/reconforge",
+)
+```
+
+This profile requires `X-ReconForge-Tenant` on authenticated requests and uses
+PostgreSQL/RLS for password verification, RBAC, bearer-session hashing, expiry,
+and revocation. The verified principal is propagated into current API/domain
+authorization and audit calls. `tenant_db_root` is mandatory because the
+remaining legacy domain routes still use tenant-local SQLite; this is a bounded
+transition profile, not full hosted PostgreSQL persistence. Use TLS verification
+and a non-superuser, non-`BYPASSRLS` database role in deployment.
 
 Implemented endpoints:
 
@@ -30,7 +102,42 @@ Implemented endpoints:
 - `POST /api/v1/auth/logout`
 - `GET /api/v1/auth/me`
 
+In this profile, the following Finance Core operations are also backed by the
+tenant-scoped PostgreSQL ledger boundary:
+
+- `GET /api/v1/finance-core/summary`
+- `GET, POST /api/v1/finance-core/accounts`
+- `GET /api/v1/finance-core/entries`
+- `GET /api/v1/finance-core/entries/{entry_id}`
+- `GET /api/v1/finance-core/trial-balance`
+
+Server-mode entry creation posts an immutable balanced entry atomically. It
+requires `organization_code` and `currency_code` (or an organization base
+currency), and currently accepts no entity, fiscal-period, journal, or analytic
+dimension fields. Charts, dimensions, journals, full snapshots,
+legal-entity-scoped trial balances, draft validation, and voiding are explicitly
+unavailable in server mode and return HTTP `501`; organization/fiscal-period
+trial balance is supported without a local fallback.
+
 Do not put passwords or tokens in docs, shell history, logs, generated reports, fixtures, or control packs.
+
+The following master-data operations are backed by the tenant-scoped
+PostgreSQL master-data boundary:
+
+- `GET /api/v1/master-data/summary`
+- `GET /api/v1/master-data/snapshot`
+- `GET, POST /api/v1/master-data/currencies`
+- `GET, POST /api/v1/master-data/organizations`
+- `GET, POST /api/v1/master-data/entities`
+- `GET, POST /api/v1/master-data/branches`
+- `GET, POST /api/v1/master-data/periods`
+- `POST /api/v1/master-data/periods/{period_id}/status`
+
+Master-data writes append audit-chain and transactional-outbox evidence in the
+same PostgreSQL transaction as the mutation. Fiscal-period list, create, and
+status operations use the tenant-scoped PostgreSQL fiscal-period table and
+remain metadata-only: they do not lock source-ERP postings. They never fall
+back to tenant-local SQLite.
 
 ## Endpoints
 
@@ -56,6 +163,11 @@ Audit:
 
 - `GET /api/v1/audit/events`
 - `GET /api/v1/audit/verify`
+
+In the explicit PostgreSQL server profile these endpoints read and verify the
+tenant-scoped PostgreSQL audit chain produced by the supported server
+boundaries. They never fall back to the legacy SQLite audit ledger. The local
+profile retains the SQLite audit event schema and verification behavior.
 
 Workflow state machine foundation:
 
@@ -84,6 +196,15 @@ Close management:
 - `GET /api/v1/close/periods/{period_id}/readiness`
 - `POST /api/v1/close/periods/{period_id}/lock`
 - `POST /api/v1/close/periods/{period_id}/reopen`
+
+In PostgreSQL server mode, close periods and tasks use the tenant-scoped
+PostgreSQL close-control boundary. `POST /close/periods` requires an existing
+`fiscal_period_id` and `organization_code`; it creates five deterministic
+starter tasks. Task completion is blocked by incomplete dependencies, approval
+and locking require 100% readiness, and reopening requires a reason. These
+states coordinate ReconForge close work only; they do not lock source-ERP
+postings. Close mutations append PostgreSQL audit-chain and outbox evidence in
+the same transaction and never fall back to SQLite.
 
 Exceptions and metrics:
 
@@ -182,6 +303,52 @@ Exact FIFO valuation reversal:
 
 Reversal reads accept `inventory.read` or either reversal permission. Draft creation/cancellation requires `inventory.valuation.reverse.manage`; approval requires `inventory.valuation.reverse.approve` and known-user creator/approver separation. Creation links an Approved valuation to a separately Posted exact opposite movement. Approval atomically records immutable FIFO `Restore`/`Remove` effects and prepares a debit/credit-swapped Finance Core **Draft**; it deletes no history, validates no entry, and writes to no source ERP.
 
+Accounts Payable three-way-match foundation:
+
+- `POST /api/v1/payables/suppliers`
+- `GET /api/v1/payables/suppliers`
+- `POST /api/v1/payables/purchase-orders`
+- `POST /api/v1/payables/purchase-orders/{purchase_order_id}/submit`
+- `POST /api/v1/payables/purchase-orders/{purchase_order_id}/approve`
+- `POST /api/v1/payables/receipts`
+- `POST /api/v1/payables/invoices`
+- `GET /api/v1/payables/invoices`
+- `POST /api/v1/payables/invoices/{invoice_id}/submit`
+- `POST /api/v1/payables/invoices/{invoice_id}/match`
+- `POST /api/v1/payables/invoices/{invoice_id}/approve`
+
+AP money fields use integer minor units and quantities use canonical decimal text. The bounded slice requires invoice lines to reference PO lines, rejects over-receipts, records deterministic match variances and exception-queue evidence, and uses idempotency keys and row-version checks where supplied. Approval is local workflow evidence only: these routes do not post a statutory payable, calculate statutory tax or withholding, issue payments, or write to a source ERP. See [Accounts Payable guide](payables.md).
+
+Accounts Receivable and credit-control foundation:
+
+- `POST /api/v1/receivables/customers`
+- `GET /api/v1/receivables/customers`
+- `POST /api/v1/receivables/invoices`
+- `GET /api/v1/receivables/invoices`
+- `POST /api/v1/receivables/invoices/{invoice_id}/submit`
+- `POST /api/v1/receivables/invoices/{invoice_id}/approve`
+- `POST /api/v1/receivables/receipts`
+- `POST /api/v1/receivables/receipts/{receipt_id}/allocate`
+- `GET /api/v1/receivables/credit-exposure/{customer_code}`
+- `GET /api/v1/receivables/aging?as_of_date=YYYY-MM-DD`
+
+AR values use integer minor units and canonical decimal quantities. Approval checks customer status, credit hold, and exposure against the configured credit limit. A hold or limit breach requires `receivables.credit_override` and a persisted reason; known-user creator/approver separation is enforced. Receipts may remain explicitly unapplied and allocations cannot exceed receipt or invoice outstanding balances. This slice does not post statutory revenue/receivables entries, calculate tax, execute payments, run dunning, or write to a source ERP. See [Accounts Receivable guide](receivables.md).
+
+PostgreSQL reconciliation execution boundary:
+
+- `POST /api/v1/reconciliations/runs` — atomically submit a bounded run manifest and canonical left/right inputs; requires `reconciliation.manage` or `match.run` and supports the `Idempotency-Key` header.
+- `GET /api/v1/reconciliations/runs`
+- `GET /api/v1/reconciliations/runs/{run_id}`
+- `GET /api/v1/reconciliations/runs/{run_id}/inputs`
+- `GET /api/v1/reconciliations/runs/{run_id}/results`
+- `GET /api/v1/reconciliations/runs/{run_id}/exceptions`
+- `POST /api/v1/reconciliations/runs/{run_id}/cancel`
+- `POST /api/v1/reconciliations/runs/{run_id}/requeue`
+
+Submission is capped at 5,000 inputs and 20 MB per request. The worker adapter is deterministic and schema-only in-memory SQLite. Rules may opt into hard-key partitioning with `partition_fields` and `partition_max_records`; the in-process `PostgresReconciliationScheduler` can run multiple leased worker slots. Partitioned adapter workers stream one tenant-scoped PostgreSQL cursor partition at a time, commit output and a deterministic checkpoint hash atomically, and explicit requeue resumes after committed partitions. Global relation-native assignment and million-row hosted processing remain open.
+
+In the explicit PostgreSQL server profile, evidence metadata is exposed through `GET /api/v1/evidence`, `GET /api/v1/evidence/records/{id}`, `GET /api/v1/evidence/coverage`, and governed metadata/link/requirement/verification writes under `/api/v1/evidence/`. These routes never accept arbitrary artifact bytes or expose download URLs; a trusted storage worker must upload and checksum content before registering the immutable provider reference.
+
 ## Errors
 
 API errors use a structured JSON shape:
@@ -203,5 +370,8 @@ Responses must not include raw tracebacks, password hashes, salts, raw persisted
 - API authentication is a local session foundation only.
 - API routes do not replace Studio auth and do not enable SaaS use.
 - Workflow routes operate on the DB-backed workflow state machine only; they do not migrate or enforce identity on legacy JSON workflows.
-- API coverage for journals, intercompany, evidence registry, controls, and matching remains primarily CLI/DB service first in this slice.
+- API coverage for journals, intercompany, controls, and matching remains primarily CLI/DB service first in this slice. Local evidence registration remains available through the CLI; the explicit PostgreSQL server profile now exposes tenant-scoped evidence metadata, links, requirements, coverage, and trusted checksum-verification records, but not arbitrary object upload/download URLs.
+- Transactional outbox inspection/replay is available locally with `reconforge outbox list` and `reconforge outbox requeue`; `reconforge.workers.outbox.OutboxWorker` provides bounded fresh-connection polling, while external publishing still requires an injected transport and deployment-managed worker.
+- The PostgreSQL server profile additionally provides `reconforge.infrastructure.postgres_outbox.PostgresOutboxRepository` and `reconforge.workers.postgres_outbox.PostgresOutboxWorker` for tenant-scoped claim, lease, acknowledgement, retry, dead-letter, and replay delivery. The worker publishes outside the database transaction and acknowledges by `(tenant_id, event_id, worker_id)`; publishers must treat the event ID as an idempotency key because a crash after publishing can require a safe duplicate retry. No public outbox API or external transport is claimed.
+- `reconforge.infrastructure.postgres_reconciliation.PostgresReconciliationRepository` is a tenant-scoped persistence contract for matcher workers: it records canonical inputs, deterministic results, explainable exceptions, completion hashes, cardinality invariants, and idempotent partition checkpoints. In the authenticated PostgreSQL server profile, `POST /api/v1/reconciliations/runs` atomically accepts a bounded run manifest and canonical left/right inputs with `Idempotency-Key`, while read routes expose paginated run metadata and child input/result/exception records and manage routes request cancellation or explicit retry. `reconforge.workers.postgres_reconciliation.PostgresReconciliationWorker` provides durable claims, leases, heartbeats, cooperative cancellation, retryable failure, and atomic persistence for the explicit `LocalDeterministicMatcherAdapter`, which uses only a schema-only in-memory SQLite dependency and never writes hosted financial data there. Hard-key partitioning, PostgreSQL server-cursor input streaming, checkpoint resume, and the multi-worker scheduler are implemented; global relation-native assignment and million-row hosted execution are not claimed.
 - This is not production enterprise identity, public cloud readiness, SOC/ISO/SOX compliance, legal sign-off, audit opinion, or digital signature support.

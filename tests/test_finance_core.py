@@ -598,7 +598,7 @@ def test_migration_eight_preserves_accounts_and_assigns_default_chart(
 
     monkeypatch.setattr(migration_module, "MIGRATIONS", full_migrations)
     upgraded = migration_module.run_migrations(path)
-    assert upgraded.applied_versions == [8, 9, 10, 11, 12]
+    assert upgraded.applied_versions == list(range(8, migration_module.MIGRATIONS[-1].version + 1))
     connection = connect(path, require_exists=True)
     try:
         account = connection.execute("SELECT * FROM accounts WHERE id = 'ACC-old'").fetchone()

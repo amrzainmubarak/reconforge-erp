@@ -17,6 +17,7 @@ from typing import Any
 
 from reconforge.db import DatabaseError, connect, resolve_db_path, run_migrations
 from reconforge.domain.models import DEFAULT_LOCAL_FIRST_NOTE
+from reconforge.io.generated import GeneratedArtifactError, read_generated_json_document
 from reconforge.io.writers import json_default
 from reconforge.platform.accounts import AccountReconciliationService
 from reconforge.platform.close import CloseManagementService
@@ -28,6 +29,8 @@ from reconforge.platform.intercompany import IntercompanyService
 from reconforge.platform.journals import JournalControlService
 from reconforge.platform.matching import MatchingService
 from reconforge.platform.metrics import MetricsService
+from reconforge.reconciliation.matching import RECORD_IDENTITY_POLICY
+from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY
 
 SYNTHETIC_DATA_MARKER = "SYNTHETIC_ENTERPRISE_DEMO_ONLY"
 DEMO_GENERATED_AT = "2026-06-01T09:00:00Z"
@@ -946,7 +949,7 @@ def _seed_platform_reports(db_path: Path, output_dir: Path) -> tuple[list[Path],
                 account_code=account_code,
                 name=f"Synthetic {account_name} reconciliation",
                 risk_rating=risk_rating,
-                materiality_threshold=10000.0,
+                materiality_threshold="10000",
                 required_evidence="Synthetic local support file",
                 owner="Synthetic Preparer",
                 reviewer="Synthetic Reviewer",
@@ -955,10 +958,18 @@ def _seed_platform_reports(db_path: Path, output_dir: Path) -> tuple[list[Path],
         current_reconciliations = accounts.list_reconciliations(period_name=DEMO_PERIOD)
         if current_reconciliations:
             first_reconciliation_id = str(current_reconciliations[0]["id"])
-            accounts.prepare(reconciliation_id=first_reconciliation_id, preparer="Synthetic Preparer")
-            accounts.submit(first_reconciliation_id)
-            accounts.review(first_reconciliation_id, reviewer="Synthetic Reviewer")
-            accounts.complete(first_reconciliation_id)
+            accounts.prepare(
+                reconciliation_id=first_reconciliation_id,
+                preparer="Synthetic Preparer",
+                actor_label="Synthetic Preparer",
+            )
+            accounts.submit(first_reconciliation_id, actor_label="Synthetic Preparer")
+            accounts.review(
+                first_reconciliation_id,
+                reviewer="Synthetic Reviewer",
+                actor_label="Synthetic Reviewer",
+            )
+            accounts.complete(first_reconciliation_id, actor_label="Synthetic Completer")
         else:
             first_reconciliation_id = "REC-SYNTHETIC"
 
@@ -1016,12 +1027,12 @@ def _seed_platform_reports(db_path: Path, output_dir: Path) -> tuple[list[Path],
         journal_exception_count = journals.policy_run(
             period_name=DEMO_PERIOD,
             period_end="2026-05-31",
-            high_value_threshold=100000.0,
+            high_value_threshold="100000",
             high_risk_accounts="9999,3999",
         )
 
         intercompany.import_transactions(output_dir / "sample_intercompany.csv", default_period=DEMO_PERIOD)
-        intercompany_case_count = intercompany.match(period_name=DEMO_PERIOD, tolerance=1.0)
+        intercompany_case_count = intercompany.match(period_name=DEMO_PERIOD, tolerance="1")
 
         controls.import_library(output_dir / "sample_controls.csv")
         control_plan_count = controls.plan_tests(period_name=DEMO_PERIOD, sample_size=3)
@@ -1038,8 +1049,10 @@ def _seed_platform_reports(db_path: Path, output_dir: Path) -> tuple[list[Path],
             left_path=output_dir / "sample_matching_left.csv",
             right_path=output_dir / "sample_matching_right.csv",
             name="synthetic-enterprise-demo-match",
-            amount_tolerance=1.0,
+            amount_tolerance="1",
             date_window_days=2,
+            financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+            record_identity_policy=RECORD_IDENTITY_POLICY,
         )
         match_rows = matching.results(match_result.job_id)
         for match_row in match_rows:
@@ -1498,7 +1511,10 @@ def _checksum_file(path: Path) -> str:
 
 
 def _read_records(path: Path) -> list[dict[str, Any]]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        payload = read_generated_json_document(path, mode="display").payload
+    except GeneratedArtifactError as exc:
+        raise EnterpriseDemoError("Synthetic enterprise demo JSON failed safety validation.") from exc
     records = payload.get("records", [])
     if not isinstance(records, list):
         return []

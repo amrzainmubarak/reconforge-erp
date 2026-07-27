@@ -1,0 +1,620 @@
+schema_version: 1
+index_id: reconforge-module-threat-model-index
+status: evidence-bounded
+last_reviewed: "2026-07-25"
+claim_boundary: >-
+  This index links active repository modules to bounded threat evidence. It is
+  not a security guarantee, not a compliance assessment or certification, not
+  a penetration-test result, and not proof that deployment controls operate
+  continuously or that an internet-facing or regulated deployment is safe.
+
+sources:
+  module_registry: reconforge/modules/registry.py
+  security_architecture: docs/security/security-architecture.v2.yaml
+  risk_register: docs/risk-register.yaml
+
+review_policy:
+  owner: platform-security
+  cadence_days: 90
+  change_triggers:
+    - A module is added, removed, enabled by default, or changes maturity or capability status.
+    - A module adds an interface, network dependency, persistent store, actor, permission, or data class.
+    - A linked control, trust boundary, risk, code path, or test is removed or materially changed.
+    - A security incident, vulnerability, failed isolation test, or new external assessment changes the threat evidence.
+  required_review_evidence:
+    - Exact active-module parity with the runtime registry.
+    - Closed owner, actor, trust-boundary, data-class, threat, control, and risk references.
+    - Existing module and threat-case test paths with no unsupported status promotion.
+
+actors:
+  - id: ACT-001
+    name: workspace-operator
+    trust: trusted-deployment
+    capabilities:
+      - Select local inputs, output paths, databases, configuration, and optional service endpoints.
+      - Control operating-system permissions, backups, retention, and disclosure decisions.
+    boundary: Trusted only as an explicit deployment dependency; operator mistakes or compromise remain possible.
+  - id: ACT-002
+    name: authenticated-application-user
+    trust: authenticated-limited
+    capabilities:
+      - Invoke authorized local or bounded server workflows through API, CLI, or Studio interfaces.
+      - Submit business changes within the permissions and actor context implemented by the selected path.
+    boundary: Authentication does not imply authorization for every object, tenant, period, or approval action.
+  - id: ACT-003
+    name: untrusted-input-provider
+    trust: untrusted
+    capabilities:
+      - Supply files, mappings, rule data, headers, financial values, and modified generated artifacts.
+    boundary: Every supplied byte and claimed file type remains untrusted until bounded validation succeeds.
+  - id: ACT-004
+    name: network-api-caller
+    trust: untrusted
+    capabilities:
+      - Send request bodies, headers, tokens, tenant identifiers, and repeated requests to enabled HTTP surfaces.
+    boundary: Loopback defaults reduce exposure but do not make request content trusted or prove public hardening.
+  - id: ACT-005
+    name: contributor-or-dependency-provider
+    trust: untrusted
+    capabilities:
+      - Propose source, workflow, dependency, package, container, or frontend changes entering build surfaces.
+    boundary: Review and configured CI gates are repository controls; clean trusted release execution is not proven here.
+  - id: ACT-006
+    name: artifact-recipient
+    trust: external-recipient
+    capabilities:
+      - Receive, retain, redistribute, or inspect reports, evidence, backups, client packs, or screenshots.
+    boundary: A checksum or redaction option neither grants disclosure authority nor prevents downstream redistribution.
+  - id: ACT-007
+    name: configured-dependency-endpoint
+    trust: untrusted
+    capabilities:
+      - Accept credentials and requests or return data/errors through PostgreSQL, Redis, object storage, or publishers.
+    boundary: TLS-by-default adapters do not authenticate operator intent or prove endpoint, certificate, or tenant correctness.
+  - id: ACT-008
+    name: browser-viewer
+    trust: authenticated-limited
+    capabilities:
+      - Render local or synthetic UI artifacts and follow links or actions exposed by the selected Studio surface.
+    boundary: The modern Studio is synthetic/read-only; the current Studio and API require their own actor and output controls.
+
+threat_catalog:
+  - id: TM-T-001
+    name: untrusted-path-and-parser-abuse
+    category: tampering
+    description: Malformed files, traversal paths, unsafe structured data, or parser edge cases escape the intended local ingress boundary.
+  - id: TM-T-002
+    name: financial-input-or-decision-manipulation
+    category: financial-integrity
+    description: Numeric coercion, malformed values, rule/configuration manipulation, or unstable identity changes a financial or control decision.
+  - id: TM-T-003
+    name: authentication-authorization-or-sod-bypass
+    category: elevation-of-privilege
+    description: A caller spoofs an actor, exceeds permissions, approves its own sensitive work, or invokes an unguarded action.
+  - id: TM-T-004
+    name: tenant-or-dependency-context-escape
+    category: information-disclosure
+    description: Tenant context, service keys, object names, sessions, or remote dependency configuration crosses an isolation boundary.
+  - id: TM-T-005
+    name: partial-mutation-audit-gap-or-replay
+    category: repudiation
+    description: A business mutation commits without corresponding audit/outbox evidence, or retries create duplicate or inconsistent effects.
+  - id: TM-T-006
+    name: artifact-tamper-or-unauthorized-disclosure
+    category: information-disclosure
+    description: Reports, evidence, backups, exports, screenshots, or redacted outputs are modified, overshared, or treated as authenticated evidence.
+  - id: TM-T-007
+    name: extension-build-or-egress-supply-chain
+    category: supply-chain
+    description: Plugin, dependency, workflow, build, optional endpoint, or publisher changes introduce code execution, secret exposure, or undeclared egress.
+  - id: TM-T-008
+    name: ui-content-or-synthetic-boundary-confusion
+    category: tampering
+    description: Modified artifacts, unescaped content, or synthetic markers cause unsafe rendering or make demonstration data appear production-authoritative.
+
+modules:
+  - module_id: platform.core
+    registry_maturity: experimental
+    capability_status: foundation
+    threat_model_status: evidence-bounded
+    owner: platform-security
+    interfaces: [api, cli, current-studio, library]
+    module_data_classifications: [authentication-metadata, financial-workflow-metadata]
+    architecture_boundaries: [TB-002, TB-003, TB-004, TB-007]
+    assets:
+      - id: platform-identity-state
+        description: Local users, verifier material, roles, permissions, sessions, and bound principal metadata.
+        data_class: DC-004
+        objectives: [confidentiality, integrity, auditability]
+      - id: platform-audit-and-workflow-state
+        description: Audit-chain events, workflow transitions, outbox records, and request actor metadata.
+        data_class: DC-005
+        objectives: [integrity, availability, auditability]
+      - id: platform-local-database-and-backups
+        description: Operator-selected SQLite databases, exports, imports, and backup/restore artifacts.
+        data_class: DC-003
+        objectives: [confidentiality, integrity, availability]
+    actors: [ACT-001, ACT-002, ACT-004, ACT-005, ACT-007]
+    threat_cases:
+      - threat_id: TM-T-003
+        status: partial
+        attack_surface: Local/API login, bearer sessions, actor propagation, role assignment, and privileged platform routes.
+        controls: [SEC-C-003, SEC-C-004]
+        test_evidence: [tests/test_api_auth.py, tests/test_api_dependencies.py, tests/test_policy_engine.py, tests/test_approval_sod.py, tests/test_approval_surface_inventory.py, tests/test_workflow_state_machine.py]
+        residual_risk_ids: [R-007, R-011]
+        limitations:
+          - Trusted-local labels cannot bypass the bounded inventoried no-self-approval property, but they are not enterprise principals; universal route/repository ABAC, governed emergency access, federation, and MFA are not implemented.
+      - threat_id: TM-T-004
+        status: partial
+        attack_surface: Tenant header routing, database-per-tenant paths, PostgreSQL principal context, and optional server dependencies.
+        controls: [SEC-C-004, SEC-C-009]
+        test_evidence: [tests/test_tenant_isolation.py, tests/test_api_server_identity.py]
+        residual_risk_ids: [R-001, R-015]
+        limitations:
+          - Live end-to-end PostgreSQL, Redis, and object-storage isolation is not established by skipped service tests.
+      - threat_id: TM-T-005
+        status: partial
+        attack_surface: Database mutations, audit append, outbox publication state, retry, backup, import, and restore transitions.
+        controls: [SEC-C-005, SEC-C-006, SEC-C-007]
+        test_evidence: [tests/test_atomic_legacy_services.py, tests/test_audit_events.py, tests/test_db_backup_restore.py, tests/test_db_backup_structured_ingress.py, tests/test_db_import_structured_ingress.py, tests/test_outbox_delivery.py]
+        residual_risk_ids: [R-003, R-008]
+        limitations:
+          - Local DB import and backup/manifest JSON are bounded before mutation/allocation, but compatibility-record semantics remain permissive; atomic audit/outbox migration is incomplete across legacy services and external publisher idempotency is not proven.
+      - threat_id: TM-T-007
+        status: deployment-dependent
+        attack_surface: Python dependencies, workflows, build tools, container inputs, and optional service configuration.
+        controls: [SEC-C-008, SEC-C-010]
+        test_evidence: [tests/test_release_readiness_docs.py, tests/test_security_architecture.py]
+        residual_risk_ids: [R-009]
+        limitations:
+          - Dependencies are not locked with hashes and no current clean-tree signed provenance is available.
+    module_test_evidence: [tests/test_api_foundation.py, tests/test_db_backup_structured_ingress.py, tests/test_db_export_import.py, tests/test_db_import_structured_ingress.py, tests/test_studio_auth.py]
+    assumptions:
+      - The operator protects the local operating-system account, database paths, backups, and process environment.
+      - Enabled HTTP services are restricted to reviewed local or self-hosted network boundaries.
+    out_of_scope:
+      - Enterprise identity lifecycle, public-internet hardening, complete shared-schema domain persistence, and managed delivery.
+
+  - module_id: platform.master-data
+    registry_maturity: experimental
+    capability_status: foundation
+    threat_model_status: evidence-bounded
+    owner: domain-integrity
+    interfaces: [api, cli, library]
+    module_data_classifications: [financial-reference-metadata, organization-reference-metadata]
+    architecture_boundaries: [TB-002, TB-003, TB-004, TB-006]
+    assets:
+      - id: governed-organization-and-period-references
+        description: Organizations, legal entities, branches, currencies, fiscal periods, and their relationships.
+        data_class: DC-003
+        objectives: [integrity, availability, auditability]
+      - id: master-data-change-evidence
+        description: Actor, audit, outbox, and snapshot metadata for governed reference changes.
+        data_class: DC-005
+        objectives: [integrity, auditability]
+    actors: [ACT-001, ACT-002, ACT-004, ACT-006, ACT-007]
+    threat_cases:
+      - threat_id: TM-T-001
+        status: partial
+        attack_surface: Local close checklist JSON and JSON/YAML template paths, structure, task fields, and CLI errors.
+        controls: [SEC-C-001, SEC-C-002]
+        test_evidence: [tests/test_close_workflow.py, tests/test_close_workflow_structured_ingress.py, tests/test_file_ingestion_inventory.py]
+        residual_risk_ids: [R-018]
+        limitations:
+          - Structural bounds do not authenticate template authors, prove task correctness, scan malware, or govern future upload and connector surfaces.
+      - threat_id: TM-T-003
+        status: partial
+        attack_surface: Master-data manage/read permissions, actor identity, and fiscal-period status changes.
+        controls: [SEC-C-003, SEC-C-005]
+        test_evidence: [tests/test_master_data.py, tests/test_policy_engine.py]
+        residual_risk_ids: [R-011]
+        limitations:
+          - Period status is control metadata and cannot lock source-ERP postings.
+      - threat_id: TM-T-004
+        status: partial
+        attack_surface: Optional PostgreSQL tenant-scoped organizations, branches, currencies, and fiscal-period rows.
+        controls: [SEC-C-004, SEC-C-005]
+        test_evidence: [tests/test_postgres_master_data.py, tests/test_tenant_isolation.py]
+        residual_risk_ids: [R-001, R-015]
+        limitations:
+          - The PostgreSQL repository is bounded and does not establish complete hosted domain isolation.
+      - threat_id: TM-T-005
+        status: bounded
+        attack_surface: Reference upserts, relationship checks, period overlap/status transitions, audit, outbox, and snapshot export.
+        controls: [SEC-C-005, SEC-C-006]
+        test_evidence: [tests/test_master_data.py, tests/test_atomic_legacy_services.py]
+        residual_risk_ids: [R-003]
+        limitations:
+          - External source-master authenticity and downstream source-system enforcement are outside the module.
+    module_test_evidence: [tests/test_master_data.py]
+    assumptions:
+      - Imported and entered reference values are authorized by the workspace data owner.
+      - Consumers treat local period and entity state as ReconForge control metadata, not source-system authority.
+    out_of_scope:
+      - Source-ERP master-data writeback, external reference attestation, and universal enterprise master-data governance.
+
+  - module_id: finance.core
+    registry_maturity: experimental
+    capability_status: foundation
+    threat_model_status: evidence-bounded
+    owner: financial-integrity
+    interfaces: [api, cli, library]
+    module_data_classifications: [financial-master-data, financial-transaction-control-data]
+    architecture_boundaries: [TB-002, TB-003, TB-004, TB-006]
+    assets:
+      - id: finance-control-ledger
+        description: Charts, accounts, dimensions, journals, exact entry lines, lifecycle state, and trial balances.
+        data_class: DC-003
+        objectives: [confidentiality, integrity, availability, auditability]
+      - id: ledger-mutation-evidence
+        description: Actor, validation, void, audit, outbox, and immutable posted-entry evidence.
+        data_class: DC-005
+        objectives: [integrity, auditability]
+    actors: [ACT-001, ACT-002, ACT-004, ACT-006, ACT-007]
+    threat_cases:
+      - threat_id: TM-T-002
+        status: bounded
+        attack_surface: Money construction, currency precision, balanced-entry validation, trial-balance aggregation, and JSON/CSV boundaries.
+        controls: [SEC-C-002, SEC-C-005]
+        test_evidence: [tests/test_money_currency.py, tests/test_finance_core.py, tests/test_postgres_ledger.py, tests/test_business_record_ingress.py]
+        residual_risk_ids: [R-004]
+        limitations:
+          - Remaining explicit legacy financial readers outside this module retain a versioned compatibility boundary.
+      - threat_id: TM-T-003
+        status: partial
+        attack_surface: Finance manage/read/validate permissions, preparer-validator separation, actor identity, and API routing.
+        controls: [SEC-C-003, SEC-C-005]
+        test_evidence: [tests/test_finance_core.py, tests/test_policy_engine.py]
+        residual_risk_ids: [R-011]
+        limitations:
+          - Trusted-local compatibility is not an enterprise identity or complete amount/period ABAC policy.
+      - threat_id: TM-T-005
+        status: partial
+        attack_surface: Draft save, validation, void, immutability, audit/outbox, backup, and optional PostgreSQL commit boundaries.
+        controls: [SEC-C-005, SEC-C-006]
+        test_evidence: [tests/test_finance_core.py, tests/test_postgres_ledger.py, tests/test_atomic_legacy_services.py]
+        residual_risk_ids: [R-003, R-015]
+        limitations:
+          - The ledger is a control ledger and does not perform statutory posting or source-ERP writeback.
+      - threat_id: TM-T-006
+        status: deployment-dependent
+        attack_surface: Trial-balance and snapshot exports, local database copies, backups, and external recipients.
+        controls: [SEC-C-007, SEC-C-008]
+        test_evidence: [tests/test_finance_core.py, tests/test_db_backup_restore.py]
+        residual_risk_ids: [R-014]
+        limitations:
+          - Export authorization, encrypted storage, recipient access, and retention are operator responsibilities.
+    module_test_evidence: [tests/test_finance_core.py]
+    assumptions:
+      - Currency registry selection and source master data are reviewed before financial control use.
+      - Validated entries mean validated inside the local control ledger only.
+    out_of_scope:
+      - Statutory accounting, tax, payment execution, ERP posting, legal books, and independent financial assurance.
+
+  - module_id: inventory.core
+    registry_maturity: experimental
+    capability_status: foundation
+    threat_model_status: evidence-bounded
+    owner: financial-integrity
+    interfaces: [api, cli, library, modern-studio]
+    module_data_classifications: [inventory-master-data, inventory-transaction-control-data]
+    architecture_boundaries: [TB-002, TB-003, TB-004, TB-006]
+    assets:
+      - id: inventory-control-ledger
+        description: Item, location, lot/serial, movement, count, reorder, FIFO layer, valuation, and reversal records.
+        data_class: DC-003
+        objectives: [confidentiality, integrity, availability, auditability]
+      - id: inventory-finance-bridge-evidence
+        description: Approval actors, layer effects, Finance Core Draft references, audit, and outbox metadata.
+        data_class: DC-005
+        objectives: [integrity, auditability]
+    actors: [ACT-001, ACT-002, ACT-004, ACT-006, ACT-008]
+    threat_cases:
+      - threat_id: TM-T-002
+        status: bounded
+        attack_surface: Exact quantities, currency costs, FIFO ordering, count variance, layer restoration/removal, and Finance Draft generation.
+        controls: [SEC-C-002, SEC-C-005]
+        test_evidence: [tests/test_inventory_core.py, tests/test_inventory_valuation.py, tests/test_inventory_valuation_reversal.py, tests/test_business_record_ingress.py]
+        residual_risk_ids: [R-004]
+        limitations:
+          - Only the implemented FIFO whole-valuation and reversal contracts are covered; AVCO and partial reversal are absent.
+      - threat_id: TM-T-003
+        status: partial
+        attack_surface: Movement posting, count approval, valuation approval, reversal approval, and known-user SoD paths.
+        controls: [SEC-C-003, SEC-C-005]
+        test_evidence: [tests/test_inventory_core.py, tests/test_inventory_planning.py, tests/test_inventory_valuation_reversal.py, tests/test_approval_surface_inventory.py]
+        residual_risk_ids: [R-011]
+        limitations:
+          - The inventoried creator/approver property is bounded; trusted-local identity and local permissions are not enterprise ABAC or privileged-access governance.
+      - threat_id: TM-T-005
+        status: partial
+        attack_surface: Movement/count/valuation/reversal lifecycle commits, immutable effects, audit/outbox, and Finance Draft linkage.
+        controls: [SEC-C-005, SEC-C-006]
+        test_evidence: [tests/test_inventory_valuation.py, tests/test_inventory_valuation_reversal.py, tests/test_atomic_legacy_services.py]
+        residual_risk_ids: [R-003]
+        limitations:
+          - Finance Draft creation does not validate or post the draft and cannot update a source ERP.
+      - threat_id: TM-T-006
+        status: deployment-dependent
+        attack_surface: Inventory snapshots, exception reports, modern-Studio synthetic projection, backups, and recipient sharing.
+        controls: [SEC-C-007, SEC-C-008]
+        test_evidence: [tests/test_studio_demo_bridge.py, tests/test_inventory_core.py]
+        residual_risk_ids: [R-014]
+        limitations:
+          - Real inventory disclosure authorization, encryption, and recipient controls are not supplied by the synthetic UI bridge.
+    module_test_evidence: [apps/web/src/App.test.tsx, tests/test_inventory_core.py, tests/test_inventory_planning.py, tests/test_inventory_valuation.py, tests/test_inventory_valuation_reversal.py, tests/test_studio_demo_bridge.py]
+    assumptions:
+      - Item, location, quantity, cost, lot/serial, and opening-state inputs are authorized and reconciled by the operator.
+      - Posted and Approved labels refer only to the local ReconForge control lifecycle.
+    out_of_scope:
+      - Purchasing, manufacturing posting, statutory inventory accounting, source-ERP writeback, AVCO, and automatic journal validation.
+
+  - module_id: finance.controls
+    registry_maturity: experimental
+    capability_status: foundation
+    threat_model_status: evidence-bounded
+    owner: domain-integrity
+    interfaces: [api, cli, current-studio, library]
+    module_data_classifications: [financial-workflow-metadata, local-evidence-references]
+    architecture_boundaries: [TB-002, TB-003, TB-004, TB-005, TB-006]
+    assets:
+      - id: finance-workflow-and-exception-state
+        description: Account reconciliation, close, approval, control, matching, exception, intercompany, journal, and metric state.
+        data_class: DC-003
+        objectives: [confidentiality, integrity, availability, auditability]
+      - id: evidence-and-control-action-metadata
+        description: Evidence references, review actions, audit events, outbox records, coverage, and verification metadata.
+        data_class: DC-005
+        objectives: [confidentiality, integrity, auditability]
+    actors: [ACT-001, ACT-002, ACT-004, ACT-006, ACT-007]
+    threat_cases:
+      - threat_id: TM-T-003
+        status: partial
+        attack_surface: Prepare/review/approve, close, evidence, journal, intercompany, exception, matching, and control permissions.
+        controls: [SEC-C-003, SEC-C-005]
+        test_evidence: [tests/test_platform_close_evidence_metrics.py, tests/test_platform_controls_matching_exceptions.py, tests/test_policy_engine.py, tests/test_approval_sod.py, tests/test_approval_surface_inventory.py, tests/test_workflow_state_machine.py]
+        residual_risk_ids: [R-007, R-011]
+        limitations:
+          - Permission coverage is bounded to implemented routes/actions; trusted-local labels are included in the inventoried SoD property but remain non-enterprise identities.
+      - threat_id: TM-T-004
+        status: partial
+        attack_surface: Optional PostgreSQL close/evidence metadata, object-store references, tenant context, and service endpoints.
+        controls: [SEC-C-004, SEC-C-009, SEC-C-010]
+        test_evidence: [tests/test_postgres_close.py, tests/test_api_server_evidence.py, tests/test_evidence_object_storage.py]
+        residual_risk_ids: [R-001, R-014, R-015]
+        limitations:
+          - Metadata repositories do not deliver, scan, authorize, encrypt, or restore evidence artifact bytes end to end.
+      - threat_id: TM-T-005
+        status: partial
+        attack_surface: Workflow mutation, approval, close, matching completion, exception update, audit, and outbox transitions.
+        controls: [SEC-C-005, SEC-C-006]
+        test_evidence: [tests/test_atomic_legacy_services.py, tests/test_outbox_delivery.py, tests/test_platform_controls_matching_exceptions.py]
+        residual_risk_ids: [R-003, R-008, R-013]
+        limitations:
+          - Legacy mutation and external delivery paths do not yet have uniform transactional/idempotency evidence.
+      - threat_id: TM-T-006
+        status: deployment-dependent
+        attack_surface: Evidence references, reports, exception exports, client packs, backups, and optional object storage.
+        controls: [SEC-C-006, SEC-C-007, SEC-C-009]
+        test_evidence: [tests/test_client_pack_financial_input_policy.py, tests/test_evidence_object_storage.py]
+        residual_risk_ids: [R-014, R-017]
+        limitations:
+          - Checksums do not authenticate source systems, approve disclosure, prove complete redaction, or create legal signatures.
+    module_test_evidence: [tests/test_close_workflow.py, tests/test_close_workflow_structured_ingress.py, tests/test_platform_close_evidence_metrics.py, tests/test_platform_controls_matching_exceptions.py]
+    assumptions:
+      - Evidence references and workflow inputs are authorized and retained by the workspace data owner.
+      - ReconForge control status does not establish a source-system lock or independent control opinion.
+    out_of_scope:
+      - Legal non-repudiation, centralized artifact delivery, enterprise IAM, source-ERP posting, and independent control assurance.
+
+  - module_id: reconciliation.core
+    registry_maturity: experimental
+    capability_status: implemented
+    threat_model_status: evidence-bounded
+    owner: financial-integrity
+    interfaces: [artifacts, cli, current-studio, library]
+    module_data_classifications: [user-provided-financial-exports, workflow-review-metadata]
+    architecture_boundaries: [TB-001, TB-003, TB-006, TB-007]
+    assets:
+      - id: reconciliation-source-and-normalized-records
+        description: User-provided financial exports, parsed values, normalized records, source locations, and fingerprints.
+        data_class: DC-003
+        objectives: [confidentiality, integrity, availability]
+      - id: reconciliation-decisions-and-review-evidence
+        description: Candidates, matches, exceptions, rule results, digests, reports, review actions, and evidence indexes.
+        data_class: DC-005
+        objectives: [integrity, auditability]
+      - id: reconciliation-rules-and-mappings
+        description: Configuration, mappings, rule packs, tolerances, policies, and versioned local schemas.
+        data_class: DC-002
+        objectives: [integrity, auditability]
+    actors: [ACT-001, ACT-002, ACT-003, ACT-005, ACT-006]
+    threat_cases:
+      - threat_id: TM-T-001
+        status: partial
+        attack_surface: CSV/XLSX/YAML/JSON paths, file types, size, headers, values, and output-directory selection.
+        controls: [SEC-C-001, SEC-C-002]
+        test_evidence: [tests/test_file_ingress_security.py, tests/test_structured_ingress_security.py, tests/test_generated_manifest_structured_ingress.py, tests/test_client_pack_redaction_ingress.py, tests/test_client_pack_csv_redaction_ingress.py, tests/test_client_pack_copy_publication.py, tests/test_client_pack_publication_recovery.py, tests/test_business_record_ingress.py, tests/test_evidence_review_csv_ingress.py, tests/test_review_state_json_ingress.py, tests/test_direct_json_ingress_inventory.py, tests/test_financial_idempotency_json.py, tests/test_generated_report_ingress.py, tests/test_studio_artifact_ingress.py, tests/test_file_ingestion_inventory.py, tests/test_readers.py, tests/test_safe_paths.py, tests/test_financial_input_policy.py]
+        residual_risk_ids: [R-018]
+        limitations:
+          - Malware scanning, legacy XLS internal inspection, observer/crash-atomic existing-directory replacement, real host/filesystem-loss recovery, arbitrary future connectors, actor/disclosure authorization, and source authenticity are not established; the bounded AP/AR idempotency, audit-metadata, PostgreSQL-outbox/reconciliation, SQLite-matching/public-export, and Redis-session contracts, generated-artifact/review-state fingerprints, Studio companions, and the local recovery marker are not authenticated.
+      - threat_id: TM-T-002
+        status: partial
+        attack_surface: Amount/date/reference normalization, matching candidates, ambiguity, rule/config input, duplicate identity, and decision digests.
+        controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+        test_evidence: [tests/test_matching_properties.py, tests/test_engine_signature.py, tests/test_golden_finance_datasets.py]
+        residual_risk_ids: [R-004, R-006]
+        limitations:
+          - Supported-version parity, true grouped many-to-many matching, and authenticated upstream records remain open.
+      - threat_id: TM-T-005
+        status: partial
+        attack_surface: Review state, period comparison, local/hosted run completion, checkpoint retry, audit, and outbox evidence.
+        controls: [SEC-C-005, SEC-C-006]
+        test_evidence: [tests/test_reconciliation_hardening.py, tests/test_postgres_reconciliation.py, tests/test_outbox_worker.py]
+        residual_risk_ids: [R-003, R-008, R-013]
+        limitations:
+          - Hosted process/PostgreSQL crash recovery and complete external-delivery idempotency are not proven.
+      - threat_id: TM-T-006
+        status: deployment-dependent
+        attack_surface: Reports, evidence binders, review exports, client packs, anonymized files, and external recipients.
+        controls: [SEC-C-006, SEC-C-007, SEC-C-008]
+        test_evidence: [tests/test_evidence_binder_financial_input_policy.py, tests/test_client_pack_financial_input_policy.py, tests/test_client_pack_redaction_ingress.py, tests/test_client_pack_csv_redaction_ingress.py, tests/test_client_pack_copy_publication.py, tests/test_client_pack_publication_recovery.py, tests/test_generated_manifest_structured_ingress.py, tests/test_anonymizer.py]
+        residual_risk_ids: [R-014, R-017]
+        limitations:
+          - Redaction and anonymization are review aids, while local hashes are neither signatures nor disclosure approval.
+    module_test_evidence: [tests/test_file_ingestion_inventory.py, tests/test_file_ingress_security.py, tests/test_structured_ingress_security.py, tests/test_generated_manifest_structured_ingress.py, tests/test_client_pack_redaction_ingress.py, tests/test_client_pack_csv_redaction_ingress.py, tests/test_client_pack_copy_publication.py, tests/test_client_pack_publication_recovery.py, tests/test_reports.py, tests/test_review_workflow.py, tests/test_stock_gl_reconciliation.py, tests/test_workorder_reconciliation.py]
+    assumptions:
+      - The workspace data owner is authorized to process inputs and has selected correct mappings, currencies, and policies.
+      - Human reviewers govern ambiguous, invalid, and high-risk outcomes before downstream financial action.
+    out_of_scope:
+      - Source-system attestation, autonomous approval/posting, malware scanning, unlimited grouped matching, and regulatory conclusions.
+
+  - module_id: mapping.profiles
+    registry_maturity: experimental
+    capability_status: implemented
+    threat_model_status: evidence-bounded
+    owner: platform-security
+    interfaces: [artifacts, cli, library]
+    module_data_classifications: [export-header-metadata, mapping-configuration]
+    architecture_boundaries: [TB-001, TB-003, TB-006]
+    assets:
+      - id: mapping-profile-configuration
+        description: Local export field mappings, format settings, canonical projections, and validation results.
+        data_class: DC-002
+        objectives: [integrity, auditability]
+      - id: inspected-source-headers
+        description: User-selected export filenames, headers, samples, and inferred mapping metadata.
+        data_class: DC-003
+        objectives: [confidentiality, integrity, privacy]
+    actors: [ACT-001, ACT-003, ACT-005, ACT-006]
+    threat_cases:
+      - threat_id: TM-T-001
+        status: partial
+        attack_surface: Profile YAML, source file paths, CSV/XLSX headers, profile-template output, and mapping validation reports.
+        controls: [SEC-C-001, SEC-C-002]
+        test_evidence: [tests/test_file_ingress_security.py, tests/test_structured_ingress_security.py, tests/test_file_ingestion_inventory.py, tests/test_mapping_validation_cli.py, tests/test_mapping_wizard.py, tests/test_safe_paths.py]
+        residual_risk_ids: [R-018]
+        limitations:
+          - Header inspection and format validation do not authenticate an ERP export, inspect legacy XLS internals, or scan file content for malware.
+      - threat_id: TM-T-002
+        status: partial
+        attack_surface: Canonical-field selection, amount/date/currency mappings, normalization intent, and configuration semantics.
+        controls: [SEC-C-002, SEC-C-006]
+        test_evidence: [tests/test_v04_mapping_profiles.py, tests/test_config_financial_input_policy.py]
+        residual_risk_ids: [R-004]
+        limitations:
+          - A syntactically valid but semantically incorrect mapping still requires human validation and golden examples.
+      - threat_id: TM-T-006
+        status: deployment-dependent
+        attack_surface: Mapping reports, templates, inspected headers, local paths, and recipient sharing.
+        controls: [SEC-C-007, SEC-C-008]
+        test_evidence: [tests/test_mapping_wizard.py, tests/test_release_readiness_docs.py]
+        residual_risk_ids: [R-017]
+        limitations:
+          - Mapping metadata may disclose business structure and remains operator-classified data.
+    module_test_evidence: [tests/test_file_ingestion_inventory.py, tests/test_file_ingress_security.py, tests/test_structured_ingress_security.py, tests/test_mapping_validation_cli.py, tests/test_mapping_wizard.py]
+    assumptions:
+      - The operator understands source semantics and reviews mappings before applying them to control decisions.
+      - Profiles remain local export mappings and are not live or vendor-certified connectors.
+    out_of_scope:
+      - Credential handling, live ERP access, writeback, vendor certification, and autonomous semantic mapping approval.
+
+  - module_id: plugins.export
+    registry_maturity: experimental
+    capability_status: foundation
+    threat_model_status: evidence-bounded
+    owner: platform-security
+    interfaces: [library]
+    module_data_classifications: [user-provided-financial-exports]
+    architecture_boundaries: [TB-001, TB-003, TB-007]
+    assets:
+      - id: export-adapter-inputs-and-projections
+        description: Explicit local export files and canonical records produced by allowlisted built-in adapters.
+        data_class: DC-003
+        objectives: [confidentiality, integrity, availability]
+      - id: adapter-registry-and-contracts
+        description: Built-in adapter names, supported formats, projection contracts, and activation boundaries.
+        data_class: DC-002
+        objectives: [integrity, auditability]
+    actors: [ACT-001, ACT-003, ACT-005]
+    threat_cases:
+      - threat_id: TM-T-001
+        status: partial
+        attack_surface: Explicit local CSV/export paths, parser inputs, adapter selection, and canonical projection.
+        controls: [SEC-C-001, SEC-C-002]
+        test_evidence: [tests/test_file_ingress_security.py, tests/test_file_ingestion_inventory.py, tests/test_v03_platform.py, tests/test_readers.py, tests/test_safe_paths.py]
+        residual_risk_ids: [R-018]
+        limitations:
+          - Built-in adapters do not authenticate export origin or provide general malware scanning beyond the bounded tabular preflight.
+      - threat_id: TM-T-007
+        status: partial
+        attack_surface: Adapter registry, future extension packaging, dependencies, network capability, credentials, and undeclared egress.
+        controls: [SEC-C-008, SEC-C-010]
+        test_evidence: [tests/test_v03_platform.py, tests/test_release_readiness_docs.py]
+        residual_risk_ids: [R-009]
+        limitations:
+          - No signed third-party connector package or sandbox exists; only built-in local adapters are currently allowed.
+      - threat_id: TM-T-006
+        status: deployment-dependent
+        attack_surface: Canonical projected records, local intermediate files, logs, downstream reports, and operator-selected retention.
+        controls: [SEC-C-007, SEC-C-008]
+        test_evidence: [tests/test_v03_platform.py, tests/test_client_pack_financial_input_policy.py]
+        residual_risk_ids: [R-014, R-017]
+        limitations:
+          - Adapters do not own downstream disclosure approval, encryption, deletion, or recipient access.
+    module_test_evidence: [tests/test_file_ingestion_inventory.py, tests/test_file_ingress_security.py, tests/test_v03_platform.py]
+    assumptions:
+      - Adapter inputs are local exports selected by an authorized workspace operator.
+      - Any future network or write capability requires a separate reviewed connector contract and threat model.
+    out_of_scope:
+      - Live credentials, network connectors, arbitrary plugin loading, writeback, signed packages, and sandbox execution.
+
+  - module_id: studio.modern
+    registry_maturity: experimental
+    capability_status: foundation
+    threat_model_status: evidence-bounded
+    owner: evidence-security
+    interfaces: [artifacts, modern-studio]
+    module_data_classifications: [synthetic-only]
+    architecture_boundaries: [TB-006, TB-007]
+    assets:
+      - id: synthetic-studio-contracts
+        description: Marked synthetic overview, exception, evidence, inventory, and screenshot artifacts.
+        data_class: DC-001
+        objectives: [integrity, availability]
+      - id: frontend-build-and-rendering-surface
+        description: React/Vite source, dependencies, static build output, browser rendering, and E2E screenshots.
+        data_class: DC-002
+        objectives: [integrity, availability]
+    actors: [ACT-001, ACT-003, ACT-005, ACT-006, ACT-008]
+    threat_cases:
+      - threat_id: TM-T-008
+        status: partial
+        attack_surface: Synthetic marker validation, modified JSON contracts, scalar rendering, links, labels, and screenshot interpretation.
+        controls: [SEC-C-001, SEC-C-007, SEC-C-008]
+        test_evidence: [tests/test_studio_demo_bridge.py, apps/web/src/App.test.tsx, apps/web/e2e/screenshots.spec.ts]
+        residual_risk_ids: [R-010]
+        limitations:
+          - A marker is a local contract guard, not proof that independently edited artifacts contain no sensitive data.
+      - threat_id: TM-T-006
+        status: deployment-dependent
+        attack_surface: Static artifacts, browser caches, build output, screenshots, copied demo bundles, and external recipients.
+        controls: [SEC-C-007, SEC-C-008]
+        test_evidence: [tests/test_studio_demo_bridge.py, apps/web/e2e/screenshots.spec.ts]
+        residual_risk_ids: [R-017]
+        limitations:
+          - Browser/device storage, screenshot disclosure, hosting access, and downstream sharing are operator responsibilities.
+      - threat_id: TM-T-007
+        status: deployment-dependent
+        attack_surface: npm lock resolution, Vite build, GitHub workflows, static hosting configuration, and dependency updates.
+        controls: [SEC-C-008, SEC-C-010]
+        test_evidence: [apps/web/src/App.test.tsx, tests/test_release_readiness_docs.py]
+        residual_risk_ids: [R-009]
+        limitations:
+          - Passing a lock-file build does not prove signed frontend provenance or secure public hosting.
+    module_test_evidence: [apps/web/e2e/screenshots.spec.ts, apps/web/src/App.test.tsx, tests/test_studio_demo_bridge.py]
+    assumptions:
+      - Inputs are produced from the explicitly marked synthetic demo flow and reviewed before external sharing.
+      - The module remains read-only and is not treated as the authenticated current Studio or a production frontend.
+    out_of_scope:
+      - Real financial data, write actions, API authentication, public hosting hardening, and production user workflows.

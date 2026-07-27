@@ -16,6 +16,7 @@ from reconforge.benchmark.metrics import BenchmarkMetrics, build_metrics
 from reconforge.benchmark.report import write_benchmark_reports
 from reconforge.config import load_config
 from reconforge.engines.registry import get_engine
+from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY
 
 
 def _memory_mb() -> float:
@@ -38,7 +39,10 @@ def run_benchmark(
 ) -> BenchmarkMetrics:
     """Run a reconciliation benchmark and write outputs."""
 
-    config = load_config(config_path)
+    config = load_config(
+        config_path,
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
     engine = get_engine(engine_name)
     start = time.perf_counter()
     result = engine.run(Path(input_dir), config)

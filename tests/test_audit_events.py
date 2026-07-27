@@ -9,6 +9,8 @@ from typer.testing import CliRunner
 from reconforge.audit import AuditLedgerError, append_audit_event, list_audit_events, verify_audit_events
 from reconforge.cli import app
 from reconforge.db import connect, run_migrations
+from reconforge.io import persisted as persisted_module
+from reconforge.io.structured import StructuredDocumentPolicy
 
 runner = CliRunner()
 
@@ -178,3 +180,65 @@ def test_audit_metadata_must_be_json_serializable(tmp_path: Path) -> None:
             )
     finally:
         connection.close()
+
+
+def test_audit_metadata_corruption_is_visible_to_list_and_verification(tmp_path: Path) -> None:
+    db_path = tmp_path / "corrupt_metadata.db"
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        append_audit_event(
+            connection,
+            actor_label="system",
+            object_type="workspace",
+            object_id="WS-1",
+            action="created",
+            metadata={"source": "test"},
+        )
+        connection.execute("DROP TRIGGER audit_events_no_update")
+        connection.execute(
+            "UPDATE audit_events SET metadata_json = ? WHERE sequence = 1",
+            ('{"source":"first","source":"second"}',),
+        )
+        connection.commit()
+
+        with pytest.raises(AuditLedgerError, match="Stored audit event metadata is invalid"):
+            list_audit_events(connection)
+        verification = verify_audit_events(connection)
+    finally:
+        connection.close()
+
+    assert verification.ok is False
+    assert any(issue.message == "Audit event metadata is invalid." for issue in verification.issues)
+    assert any("hash does not match" in issue.message for issue in verification.issues)
+
+
+def test_oversized_audit_metadata_rejects_before_transaction_mutation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db_path = tmp_path / "oversized_metadata.db"
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    monkeypatch.setattr(
+        persisted_module,
+        "AUDIT_METADATA_JSON_POLICY",
+        StructuredDocumentPolicy(max_file_bytes=16),
+    )
+    try:
+        before = connection.total_changes
+        with pytest.raises(AuditLedgerError, match="JSON-serializable"):
+            append_audit_event(
+                connection,
+                actor_label="system",
+                object_type="workspace",
+                object_id="WS-1",
+                action="created",
+                metadata={"value": "exceeds-budget"},
+            )
+        count = connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"]
+    finally:
+        connection.close()
+
+    assert count == 0
+    assert before == 0

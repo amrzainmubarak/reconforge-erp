@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/golden_finance_dataset_registry.schema.json",
+  "title": "ReconForge Golden Finance Dataset Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "registry_id",
+    "registry_version",
+    "digest_algorithm",
+    "cases",
+    "registry_digest"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "registry_id": {"const": "reconforge-golden-finance-datasets"},
+    "registry_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "digest_algorithm": {"const": "sha256"},
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/case"}
+    },
+    "registry_digest": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version",
+        "description",
+        "synthetic",
+        "input_schema_version",
+        "configuration",
+        "required_engines",
+        "files",
+        "expected",
+        "expected_digest",
+        "case_digest"
+      ],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*-v[0-9]+$"},
+        "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "description": {"type": "string", "minLength": 20, "maxLength": 300},
+        "synthetic": {"const": true},
+        "input_schema_version": {"const": "stock-gl-csv-v1"},
+        "configuration": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "matching_strategy",
+            "matching_ambiguity_policy",
+            "amount_tolerance",
+            "date_tolerance_days"
+          ],
+          "properties": {
+            "matching_strategy": {"enum": ["standard", "strict", "aggressive", "audit-safe"]},
+            "matching_ambiguity_policy": {
+              "enum": ["stable-tie-break-v1", "unresolved-equal-cost-v1"]
+            },
+            "amount_tolerance": {"type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"},
+            "date_tolerance_days": {"type": "integer", "minimum": 0, "maximum": 365}
+          }
+        },
+        "required_engines": {
+          "const": ["pandas", "duckdb"]
+        },
+        "files": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {"$ref": "#/$defs/file"}
+        },
+        "expected": {"$ref": "#/$defs/expected"},
+        "expected_digest": {"$ref": "#/$defs/sha256"},
+        "case_digest": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dataset", "path", "bytes", "sha256"],
+      "properties": {
+        "dataset": {"enum": ["stock_moves", "gl_entries"]},
+        "path": {
+          "type": "string",
+          "pattern": "^(examples/sample_data|tests/golden)/[A-Za-z0-9_./-]+\\.csv$"
+        },
+        "bytes": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "summary_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metric", "count"],
+      "properties": {
+        "metric": {
+          "enum": [
+            "matched_transactions",
+            "stock_without_gl",
+            "gl_without_stock",
+            "value_differences",
+            "date_differences",
+            "reference_mismatches"
+          ]
+        },
+        "count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stock_rows",
+        "gl_rows",
+        "matched_rows",
+        "exception_rows",
+        "summary",
+        "reconciliation_signature",
+        "reconciliation_signature_version",
+        "financial_input_policy",
+        "record_identity_policy",
+        "matching_ambiguity_policy"
+      ],
+      "properties": {
+        "stock_rows": {"type": "integer", "minimum": 0},
+        "gl_rows": {"type": "integer", "minimum": 0},
+        "matched_rows": {"type": "integer", "minimum": 0},
+        "exception_rows": {"type": "integer", "minimum": 0},
+        "summary": {
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 6,
+          "items": {"$ref": "#/$defs/summary_item"}
+        },
+        "reconciliation_signature": {"$ref": "#/$defs/sha256"},
+        "reconciliation_signature_version": {"const": "reconciliation-signature-v3"},
+        "financial_input_policy": {"const": "strict-financial-input-v2"},
+        "record_identity_policy": {"const": "canonical-multiset-occurrence-v1"},
+        "matching_ambiguity_policy": {
+          "enum": ["stable-tie-break-v1", "unresolved-equal-cost-v1"]
+        }
+      }
+    }
+  }
+}

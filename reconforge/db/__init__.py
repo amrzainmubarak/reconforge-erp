@@ -4,6 +4,13 @@ from __future__ import annotations
 
 from reconforge.db.connection import DatabaseError, DatabasePathError, connect, resolve_db_path
 from reconforge.db.migrations import DatabaseStatus, MigrationStatus, database_status, run_migrations
+from reconforge.db.tenancy import (
+    InvalidTenantIdError,
+    TenantDatabaseNotFoundError,
+    TenantDatabaseRouter,
+    TenantRoutingError,
+    resolve_tenant_root,
+)
 
 __all__ = [
     "DatabaseError",
@@ -14,4 +21,9 @@ __all__ = [
     "database_status",
     "resolve_db_path",
     "run_migrations",
+    "InvalidTenantIdError",
+    "TenantDatabaseNotFoundError",
+    "TenantDatabaseRouter",
+    "TenantRoutingError",
+    "resolve_tenant_root",
 ]

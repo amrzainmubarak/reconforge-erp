@@ -1,5 +1,6 @@
-amount_tolerance: 2.0
+amount_tolerance: "2.0"
 date_tolerance_days: 3
+matching_ambiguity_policy: stable-tie-break-v1
 aging_buckets:
   - label: "0-30"
     min_days: 0

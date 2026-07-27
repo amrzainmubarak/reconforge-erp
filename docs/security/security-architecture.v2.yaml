@@ -288,9 +288,9 @@ controls:
     purpose: Bound local DB import/restore JSON, check backup manifests and relationships, and avoid unsafe target replacement by default.
     boundaries: [TB-003, TB-006]
     data_classes: [DC-003, DC-004, DC-005]
-    code_evidence: [reconforge/db/backup.py, reconforge/db/importers.py]
-    test_evidence: [tests/test_db_backup_restore.py, tests/test_db_backup_structured_ingress.py, tests/test_db_export_import.py, tests/test_db_import_structured_ingress.py]
-    limitations: [Local DB import and restore JSON is resource-bounded and duplicate-safe, but record semantics remain a compatibility contract; encryption, authenticated provenance, centralized authorization, cross-edition restore, real host-loss recovery, malware scanning, and DR exercises are absent.]
+    code_evidence: [reconforge/db/backup.py, reconforge/db/encrypted_backup.py, reconforge/db/importers.py]
+    test_evidence: [tests/test_db_backup_restore.py, tests/test_encrypted_backup.py, tests/test_db_backup_structured_ingress.py, tests/test_db_export_import.py, tests/test_db_import_structured_ingress.py]
+    limitations: [Local DB import and restore JSON is resource-bounded and duplicate-safe; optional AES-256-GCM envelopes add confidentiality and authenticated integrity, but temporary plaintext, operator key custody/rotation, centralized authorization, cross-edition restore, real host-loss recovery, malware scanning, and DR exercises remain open.]
   - id: SEC-C-008
     name: secret-exclusion-and-claim-boundary
     status: implemented-bounded

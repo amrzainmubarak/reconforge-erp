@@ -7110,3 +7110,30 @@ This is a code-level, in-memory instrumentation proof. It does not prove an
 exporter, collector, network path, TLS/authentication, sampling/cardinality
 operation, durable telemetry retention, dashboard, alert, SLO, hosted
 enforcement, compliance, certification, or production readiness.
+
+## E-103: Operator-keyed encrypted Community backup
+
+The optional `backup` extra pins cryptography 49.0.0. The local backup command
+can place the established `backup.json` and `manifest.json` bytes inside one
+AES-256-GCM envelope without publishing plaintext siblings. An exact 32-byte
+raw key or 64-character hexadecimal key is read from a bounded ordinary local
+file and never accepted as a CLI value. Restore authenticates format, key
+fingerprint, ciphertext digest, associated data, and GCM tag before invoking
+the existing version/schema/invariant verifier or mutating the target.
+
+| Command | Result |
+| --- | --- |
+| Encrypted backup, legacy restore, and supply-chain focus | 28 passed |
+| `python -m pytest` without live-service environment | 1,376 passed, 16 skipped, 7 expected warnings |
+| Closed supply-chain policy | Pass; 113 Python packages and zero active exceptions |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 232 source files |
+| `python -m pip_audit` | No known third-party dependency vulnerabilities; the local package is not a PyPI audit subject |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 697,140-byte wheel and 982,789-byte sdist |
+| `git diff --check` | Pass; uv.lock reports its existing Windows line-ending notice |
+
+This proves a bounded Community SQLite envelope and fail-safe target behavior
+for tested local failures. It does not prove secure deletion of temporary
+plaintext, key generation/escrow/rotation, centralized restore authorization,
+PostgreSQL or cross-edition recovery, host/filesystem-loss durability, RPO/RTO,
+compliance, certification, or production readiness. P1-PLAT-010 remains open.

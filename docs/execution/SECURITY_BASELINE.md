@@ -7,7 +7,7 @@ Measured through 2026-07-26 against the dirty snapshot in `BASELINE.md` and `STA
 | Gate | Result | Scope boundary |
 | --- | --- | --- |
 | `python -m bandit -q -r reconforge` | E-062 locked Python 3.11 exit 0, no findings | Three notices refer to the same `# nosec B608` at `db/backup.py:1478`; identifiers pass `_IDENTIFIER_RE` and values use placeholders, but the suppression remains a manual-review point |
-| Hash-exported locked Python audit | The current 110-package lock, including boto3 for the S3 server boundary and OpenTelemetry API/SDK for optional local instrumentation, passes pip-audit 2.10.1 with no known findings and the closed policy validator with zero active exceptions | Exact local graph and current advisory-service result only; Python 3.12 hosted execution, reachability, provenance, malware, and license suitability are not proven |
+| Hash-exported locked Python audit | The current 113-package lock, including boto3 for the S3 server boundary, OpenTelemetry API/SDK for optional local instrumentation, and cryptography 49.0.0 for optional encrypted backups, passes pip-audit 2.10.1 with no known findings and the closed policy validator with zero active exceptions | Exact local graph and current advisory-service result only; Python 3.12 hosted execution, reachability, provenance, malware, and license suitability are not proven |
 | `npm.cmd --prefix apps/web audit --package-lock-only --audit-level=high` | Exit 0; 0 vulnerabilities reported | Covers the exact-version npm lock, whose 209 non-root entries still include 155 without embedded SRI |
 | Gitleaks 8.30.1 full history | Exit 0; 69 commits and about 4.73 MB scanned, no leaks found | Checksum-verified binary and default rules; detection is not proof that no secret existed or that external credentials are safe |
 | Gitleaks 8.30.1 checked tree | Initial scan identified one high-entropy idempotency test string; it was replaced with a behavior-equivalent low-entropy fixture, then exit 0 across about 15.02 MB | Generated/tool-owned paths only are excluded; output is 100% redacted and there is no baseline/commit/regex/stopword allowlist |
@@ -17,7 +17,7 @@ Measured through 2026-07-26 against the dirty snapshot in `BASELINE.md` and `STA
 
 - GitHub Actions are referenced by full commit SHA in the six inspected workflows.
 - The Docker base image is pinned by SHA-256 digest.
-- Universal `uv.lock` closes runtime, server, dev, docs, and DuckDB resolution; uv 0.11.32, its official archive hashes, and an absolute upload cutoff are policy-pinned. Normal CI, server CI, Docker, security, and candidate definitions use `--locked`.
+- Universal `uv.lock` closes runtime, server, backup, observability, dev, docs, and DuckDB resolution; uv 0.11.32, its official archive hashes, and an absolute upload cutoff are policy-pinned. Normal CI, server CI, Docker, security, and candidate definitions use `--locked`.
 - The closed supply-chain policy and exception registry require exact finding identity, repository issue, bounded owner/controls, two non-owner approvers, and at most 30 active days; there are no active exceptions. Scanner errors and report/exit disagreement fail closed.
 - Weekly Dependabot definitions cover pip, npm, Docker, and GitHub Actions. Bot output still requires lock diff review, audits, tests, and human review.
 - CodeQL, Bandit/pip-audit, release-integrated per-subject CycloneDX 1.7, Docker, and OpenSSF Scorecard workflow definitions exist.

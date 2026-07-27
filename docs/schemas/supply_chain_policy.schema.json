@@ -60,7 +60,7 @@
         "windows_x86_64_archive_sha256": {"$ref": "#/$defs/sha256"},
         "exclude_newer": {"type": "string", "format": "date-time"},
         "supported_python": {"type": "array", "const": ["3.11", "3.12"]},
-        "required_profiles": {"type": "array", "const": ["runtime", "dev", "docs", "duckdb", "observability", "server"]}
+        "required_profiles": {"type": "array", "const": ["runtime", "backup", "dev", "docs", "duckdb", "observability", "server"]}
       }
     },
     "javascriptResolution": {

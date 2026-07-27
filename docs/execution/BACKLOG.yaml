@@ -361,9 +361,11 @@ tasks:
     priority: P1
     area: platform
     title: Backup and restore verification matrix
-    status: planned
+    status: in_progress
     depends_on: [P1-PLAT-002, P1-PLAT-005]
     exit_evidence: Edition/backend/version backup, encrypted storage, authorized restore, integrity, and rollback drills.
+    completed_slices:
+      - E-103 adds optional AES-256-GCM Community SQLite envelopes, operator key-file custody, bounded authenticated restore before target mutation, CLI compatibility, and wrong-key/tamper/round-trip tests. PostgreSQL, centralized restore authorization, key rotation/KMS, and the full edition/version rollback matrix remain open.
 
   - id: P1-REC-001
     priority: P1

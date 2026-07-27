@@ -229,3 +229,13 @@ rejects floats, arbitrary keys, oversized values, and tenant/workspace/entity/
 actor/record/amount/currency/path/job identifiers. Real in-memory SDK tests
 inspect spans and metrics. Collector security, sampling, retention, alerts,
 dashboards, and SLO operation remain unproven deployment gates.
+
+E-103 starts P1-PLAT-010 with an optional AES-256-GCM envelope around the
+existing versioned Community SQLite backup. Operator keys enter only through a
+bounded local raw/hex key file; the envelope is authenticated before restore
+target mutation and is published as one exclusive staged file. Round-trip,
+dry-run, wrong-key, tamper, existing-target preservation, key contract, and CLI
+tests pass. The 113-package lock and supply-chain policy include cryptography
+49.0.0. Temporary plaintext protection, key rotation/KMS, PostgreSQL backup,
+centralized restore authorization, and the full edition/version rollback
+matrix remain open; P1-PLAT-010 is in progress.

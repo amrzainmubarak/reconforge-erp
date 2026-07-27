@@ -20,6 +20,7 @@
     ],
     "required_profiles": [
       "runtime",
+      "backup",
       "dev",
       "docs",
       "duckdb",

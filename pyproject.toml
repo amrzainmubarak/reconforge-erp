@@ -71,6 +71,9 @@ observability = [
     "opentelemetry-api==1.44.0",
     "opentelemetry-sdk==1.44.0",
 ]
+backup = [
+    "cryptography==49.0.0",
+]
 
 [project.scripts]
 reconforge = "reconforge.cli:app"

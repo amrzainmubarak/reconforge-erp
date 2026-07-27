@@ -52,6 +52,11 @@ from reconforge.db import (
     run_migrations,
 )
 from reconforge.db.backup import create_backup, restore_backup, verify_backup
+from reconforge.db.encrypted_backup import (
+    create_encrypted_backup,
+    read_operator_backup_key,
+    restore_encrypted_backup,
+)
 from reconforge.db.exporter import (
     DBBridgeError,
     export_database,
@@ -2492,6 +2497,66 @@ def db_restore_command(
         "[yellow]Restore warning:[/yellow] restored data is local only and may include sensitive business data."
     )
     console.print(f"[green]Database restored:[/green] {result.db_path}")
+    console.print(f"Schema version: {result.schema_version} | Tables restored: {len(result.restored_tables)}")
+
+
+@db_app.command("backup-encrypted")
+def db_backup_encrypted_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    output_path: Annotated[Path, typer.Option("--output", help="Encrypted .rfbackup output file.")] = Path(
+        "output/backups/reconforge.rfbackup"
+    ),
+    key_file: Annotated[
+        Path,
+        typer.Option("--key-file", help="File containing a 32-byte raw or 64-character hexadecimal key."),
+    ] = Path("backup.key"),
+) -> None:
+    """Create an authenticated AES-256-GCM local backup envelope."""
+
+    try:
+        key = read_operator_backup_key(key_file)
+        result = create_encrypted_backup(_db_option(db_path), output_path, key=key)
+    except (DatabaseError, DBBridgeError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Encrypted database backup written:[/green] {result.path}")
+    console.print(f"Schema version: {result.source_schema_version} | Ciphertext SHA-256: {result.ciphertext_sha256}")
+    console.print(
+        "[yellow]Key custody:[/yellow] keep the operator key separate; loss of the key makes recovery impossible."
+    )
+
+
+@db_app.command("restore-encrypted")
+def db_restore_encrypted_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path to restore.")] = Path(
+        "output/reconforge.db"
+    ),
+    input_path: Annotated[Path, typer.Option("--input", help="Encrypted .rfbackup input file.")] = Path(
+        "output/backups/reconforge.rfbackup"
+    ),
+    key_file: Annotated[
+        Path,
+        typer.Option("--key-file", help="File containing the backup's operator-owned key."),
+    ] = Path("backup.key"),
+    force: Annotated[
+        bool, typer.Option("--force", help="Replace an existing local DB only after full authentication.")
+    ] = False,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Authenticate and validate without writing the target DB.")
+    ] = False,
+) -> None:
+    """Authenticate and restore an AES-256-GCM local backup envelope."""
+
+    try:
+        key = read_operator_backup_key(key_file)
+        result = restore_encrypted_backup(_db_option(db_path), input_path, key=key, force=force, dry_run=dry_run)
+    except (DatabaseError, DBBridgeError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    if result.dry_run:
+        console.print("[green]Encrypted restore dry-run passed:[/green] authentication and schema checks succeeded.")
+        return
+    console.print(f"[green]Encrypted database restored:[/green] {result.db_path}")
     console.print(f"Schema version: {result.schema_version} | Tables restored: {len(result.restored_tables)}")
 
 

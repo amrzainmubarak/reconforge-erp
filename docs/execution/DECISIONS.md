@@ -856,3 +856,10 @@
 - **Reason**: Environment-driven auto-export or arbitrary span attributes can create hidden egress and disclose tenant or financial data.
 - **Consequence**: E-102 closes P1-PLAT-009's code-level trace/metric/log-correlation baseline. Collector security, sampling, retention, dashboards, alerting, and SLO operation remain deployment evidence.
 - **ADR**: `docs/adr/0113-no-export-by-default-opentelemetry-baseline.md`
+
+### D-099: Encrypt local backups with operator-owned authenticated keys
+
+- **Decision**: Keep the versioned plaintext compatibility format and add an optional AES-256-GCM envelope whose exact 32-byte key is read only from an operator-supplied local file.
+- **Reason**: Checksums detect change but neither conceal credential verifier and financial data nor authenticate it against an attacker who can rewrite both files.
+- **Consequence**: E-103 adds bounded authenticated local backup and fail-safe restore without mandatory networking or dependencies. Temporary plaintext, key custody/rotation, PostgreSQL backup, centralized authorization, and real DR exercises remain open, so P1-PLAT-010 is not complete.
+- **ADR**: `docs/adr/0114-operator-keyed-local-backup-envelopes.md`

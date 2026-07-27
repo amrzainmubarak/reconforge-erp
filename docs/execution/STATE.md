@@ -239,3 +239,15 @@ tests pass. The 113-package lock and supply-chain policy include cryptography
 49.0.0. Temporary plaintext protection, key rotation/KMS, PostgreSQL backup,
 centralized restore authorization, and the full edition/version rollback
 matrix remain open; P1-PLAT-010 is in progress.
+
+E-104 extends P1-PLAT-010 through a backend-neutral authorized Application
+boundary and PostgreSQL native-tool adapter. Exact create/restore permissions
+are checked before the adapter; absolute ordinary executables run without a
+shell; libpq service names keep credentials out of argv; custom dumps stream
+through AES-256-GCM; and restore creates a new database that is schema-verified
+or automatically dropped on failure. Seven adapter cases and a closed matrix
+contract pass. A live PostgreSQL 17 drill restored Alembic 0015 with all 41
+ReconForge tables, rejected a truncated dump, removed its partial target, and
+cleaned both drill databases. Enterprise HA, regulated air gap, KMS/key
+rotation, host loss, scheduled retention, cross-version upgrades, and measured
+RPO/RTO remain planned, so P1-PLAT-010 remains in progress.

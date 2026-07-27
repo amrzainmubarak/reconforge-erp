@@ -863,3 +863,10 @@
 - **Reason**: Checksums detect change but neither conceal credential verifier and financial data nor authenticate it against an attacker who can rewrite both files.
 - **Consequence**: E-103 adds bounded authenticated local backup and fail-safe restore without mandatory networking or dependencies. Temporary plaintext, key custody/rotation, PostgreSQL backup, centralized authorization, and real DR exercises remain open, so P1-PLAT-010 is not complete.
 - **ADR**: `docs/adr/0114-operator-keyed-local-backup-envelopes.md`
+
+### D-100: Restore PostgreSQL into a new verified database or remove it
+
+- **Decision**: Invoke prevalidated native tools through closed shell-free argv and libpq service names, stream-encrypt dumps, require central operation permissions, and restore only into a new database that is verified or dropped on failure.
+- **Reason**: Restoring over an active database cannot provide a safe rollback boundary, while credentials in argv and arbitrary tool lookup expand disclosure and command-execution risk.
+- **Consequence**: E-104 verifies the adapter contracts and a PostgreSQL 17 native restore/failed-restore drill. Cross-platform adapter execution, service-file custody, managed keys, HA/cutover, host loss, and RPO/RTO remain open; the matrix is partial.
+- **ADR**: `docs/adr/0115-isolated-postgresql-native-restore.md`

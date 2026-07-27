@@ -44,6 +44,7 @@ include docs/schemas/sqlite_legacy_import_summary.schema.json
 include docs/schemas/sqlite_matching_lineage.schema.json
 include docs/schemas/database_backup.schema.json
 include docs/schemas/database_backup_manifest.schema.json
+include docs/schemas/backup_restore_matrix.schema.json
 include docs/schemas/database_export_manifest.schema.json
 include docs/schemas/database_account_reconciliations_import.schema.json
 include docs/schemas/database_control_tests_import.schema.json
@@ -53,6 +54,7 @@ include docs/testing/golden-finance-datasets.md
 include docs/testing/engine-parity-matrix.md
 include docs/testing/engine-parity-matrix.v1.json
 include docs/execution/MATURITY_POLICY.yaml
+include docs/operations/backup-restore-matrix.v1.yaml
 include docs/risk-register.md
 include docs/risk-register.yaml
 include docs/financial-input-v2-migration.md
@@ -71,6 +73,8 @@ include tests/test_client_pack_csv_redaction_ingress.py
 include tests/test_client_pack_copy_publication.py
 include tests/test_client_pack_publication_recovery.py
 include tests/test_db_backup_structured_ingress.py
+include tests/test_backup_restore_matrix.py
+include tests/test_postgres_backup.py
 include tests/test_db_import_structured_ingress.py
 include tests/test_financial_idempotency_json.py
 include tests/test_audit_metadata_json.py

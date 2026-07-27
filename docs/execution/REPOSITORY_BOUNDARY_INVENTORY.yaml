@@ -27,6 +27,10 @@ platform_services:
   - {file: payables.py, service: PayablesService, status: direct_sqlite}
   - {file: receivables.py, service: ReceivablesService, status: direct_sqlite}
 application_services:
+  - file: backup_restore.py
+    service: BackupRestoreApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_backup.PostgresNativeBackupAdapter
   - file: idempotency.py
     service: IdempotencyApplicationService
     status: backend_neutral
@@ -52,4 +56,4 @@ summary:
   direct_sqlite: 16
   partial_repository: 3
   compatibility_adapter: 1
-  backend_neutral_application: 5
+  backend_neutral_application: 6

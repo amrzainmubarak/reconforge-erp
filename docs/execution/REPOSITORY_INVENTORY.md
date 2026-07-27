@@ -139,7 +139,7 @@ ADRs to 81; schemas remain 53 and workflows remain six.
 
 ## Data, persistence, and jobs
 
-- `reconforge/db/`: SQLite schema/migrations, import/export, backup/restore, and tenant routing helpers. Database import and restore JSON use separate named, bounded, strict, duplicate-safe profiles; operational authorization, encryption, malware scanning, and DR remain gaps.
+- `reconforge/db/`: SQLite schema/migrations, import/export, backup/restore, optional authenticated backup encryption, and tenant routing helpers. Database import and restore JSON use separate named, bounded, strict, duplicate-safe profiles; malware scanning, managed key lifecycle, and complete DR remain gaps.
 - `alembic/versions/`: 11 optional PostgreSQL server-profile migrations.
 - `reconforge/infrastructure/`: PostgreSQL repositories, Redis coordination, and object-storage adapters.
 - `reconforge/workers/`: outbox and PostgreSQL reconciliation workers.
@@ -168,7 +168,7 @@ ADRs to 81; schemas remain 53 and workflows remain six.
 
 ## Contracts and delivery
 
-- `docs/schemas/`: 61 JSON schemas, including field-specific persisted JSON, database backup/import, file-ingestion, evidence/report compatibility, release/SBOM/supply-chain, golden-data, risk/maturity/engine, security/threat/ASVS/SSDF/SLSA, browser, and module contracts.
+- `docs/schemas/`: 62 JSON schemas, including the backup/restore matrix, field-specific persisted JSON, database backup/import, file-ingestion, evidence/report compatibility, release/SBOM/supply-chain, golden-data, risk/maturity/engine, security/threat/ASVS/SSDF/SLSA, browser, and module contracts.
 - `tests/golden/`: schema-validated synthetic finance registry and five frozen registry/input files with layered SHA-256 evidence, including bounded dense ambiguity; these are correctness fixtures, not performance datasets.
 - `docs/risk-register.yaml`: normalized 18-risk governance source with schema/rating/evidence/review validation; the Markdown register remains its readable narrative view.
 - `docs/execution/MATURITY_POLICY.yaml`: evidence-linked ceilings for all nine modules and seven designated publishing surfaces; all current modules are Experimental.

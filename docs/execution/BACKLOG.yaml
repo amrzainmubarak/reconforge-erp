@@ -366,6 +366,7 @@ tasks:
     exit_evidence: Edition/backend/version backup, encrypted storage, authorized restore, integrity, and rollback drills.
     completed_slices:
       - E-103 adds optional AES-256-GCM Community SQLite envelopes, operator key-file custody, bounded authenticated restore before target mutation, CLI compatibility, and wrong-key/tamper/round-trip tests. PostgreSQL, centralized restore authorization, key rotation/KMS, and the full edition/version rollback matrix remain open.
+      - E-104 adds a centrally authorized PostgreSQL native-tool adapter, streaming AES-256-GCM, isolated new-database restore, post-restore schema verification, automatic partial-target cleanup, a schema-validated edition/backend/version matrix, and a live PostgreSQL 17 restore/rollback drill. Enterprise HA, regulated air gap, KMS/key rotation, host loss, and RPO/RTO remain open.
 
   - id: P1-REC-001
     priority: P1

@@ -1,0 +1,64 @@
+schema_version: 1
+generated_at: "2026-07-27"
+overall_status: partial
+cells:
+  - id: community-sqlite-v6-to-v24
+    edition: community
+    backend: sqlite
+    source_version: "6"
+    target_version: "24"
+    status: verified
+    encryption: Optional operator-keyed AES-256-GCM envelope; plaintext v1 remains a compatibility reader.
+    authorization: Trusted-local CLI boundary; operating-system access controls the database and key files.
+    integrity: Authenticated envelope plus exact inner checksum, byte count, schema, table, and relationship validation.
+    rollback: A temporary database is fully migrated and validated before atomic target replacement; failures preserve the existing target.
+    evidence: [tests/test_db_backup_restore.py, tests/test_encrypted_backup.py, E-063, E-103]
+    limitations: [No secure temporary-file deletion proof, no centralized local CLI identity, and no host-loss drill.]
+  - id: community-sqlite-v24-to-v24
+    edition: community
+    backend: sqlite
+    source_version: "24"
+    target_version: "24"
+    status: verified
+    encryption: Optional operator-keyed AES-256-GCM envelope with no plaintext output siblings.
+    authorization: Trusted-local CLI boundary; operating-system access controls the database and key files.
+    integrity: GCM authentication precedes current schema, checksum, invariant, and relationship verification.
+    rollback: Wrong key, tamper, invalid schema, and restore failure preserve an existing target.
+    evidence: [tests/test_db_backup_restore.py, tests/test_encrypted_backup.py, E-103]
+    limitations: [Key rotation and escrow are operator responsibilities; RPO and RTO are not yet declared.]
+  - id: team-postgresql-17-current
+    edition: team
+    backend: postgresql
+    source_version: "PostgreSQL 17 / Alembic 0015"
+    target_version: "PostgreSQL 17 / Alembic 0015"
+    status: verified
+    encryption: Streaming AES-256-GCM envelope with an operator-owned key; native dump plaintext exists only in a temporary directory.
+    authorization: Application boundary requires operations.backup.create or operations.restore.execute before invoking the adapter.
+    integrity: Authenticated header, ciphertext tag, plaintext SHA-256 and size, pg_restore list validation, Alembic and ReconForge-schema post-restore check.
+    rollback: Restore creates a new named database only and drops it after restore or verification failure; the source database is never a restore target.
+    evidence: [tests/test_postgres_backup.py, E-104]
+    limitations: [Live drill used one local PostgreSQL 17 container; operator service-file permissions, KMS, host loss, and scheduled retention are not proven.]
+  - id: enterprise-postgresql-ha
+    edition: enterprise
+    backend: postgresql
+    source_version: "current supported"
+    target_version: "current supported"
+    status: planned
+    encryption: Customer-managed key and encrypted immutable object storage are required.
+    authorization: Central permission plus privileged database role and change workflow are required.
+    integrity: Cross-node restore, evidence verification, and application smoke checks are required.
+    rollback: Isolated database restore, controlled cutover, and tested rollback are required.
+    evidence: [P2-OPS-002, P3-OPS-002]
+    limitations: [No HA topology, object-store backup integration, cross-region drill, or measured RPO and RTO yet.]
+  - id: regulated-airgap-postgresql
+    edition: regulated
+    backend: postgresql
+    source_version: "approved deployment baseline"
+    target_version: "approved deployment baseline"
+    status: planned
+    encryption: Customer-managed offline keys and approved encrypted media are required.
+    authorization: Dual-control restore ceremony and privileged-access evidence are required.
+    integrity: Offline signature, manifest, media, schema, audit-chain, and application verification are required.
+    rollback: Offline isolated restore and documented cutover reversal exercise are required.
+    evidence: [P3-OPS-002, P3-EXT-002]
+    limitations: [Air-gap installation, external validation, media custody, WORM backup workflow, and DR exercise are absent.]

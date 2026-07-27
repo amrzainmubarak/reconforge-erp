@@ -7137,3 +7137,36 @@ for tested local failures. It does not prove secure deletion of temporary
 plaintext, key generation/escrow/rotation, centralized restore authorization,
 PostgreSQL or cross-edition recovery, host/filesystem-loss durability, RPO/RTO,
 compliance, certification, or production readiness. P1-PLAT-010 remains open.
+
+## E-104: Authorized isolated PostgreSQL restore
+
+`BackupRestoreApplicationService` requires the exact
+`operations.backup.create` or `operations.restore.execute` permission before
+calling an adapter. `PostgresNativeBackupAdapter` accepts only prevalidated
+absolute ordinary tool paths and conservative service/database names, launches
+no shell, emits no child output, places no credential in argv, and uses a
+bounded timeout. The PostgreSQL custom dump is streamed through AES-256-GCM;
+its authenticated header binds format, key fingerprint, nonce, plaintext byte
+count, and SHA-256. Restore authenticates first, validates with `pg_restore
+--list`, creates a new database, restores without ownership/ACL replay, verifies
+Alembic and the ReconForge schema, and drops the target after restore or
+verification failure.
+
+| Evidence | Result |
+| --- | --- |
+| PostgreSQL adapter authorization/encryption/rollback tests | 7 passed |
+| Backup/restore matrix contract | Pass; five unique cells, two backends, four editions, explicit partial status |
+| PostgreSQL 17.10 native success drill | Alembic `0015_postgres_idempotency`; 41/41 ReconForge tables restored; dump SHA-256 `64c21881856409202b6e4be08d86ffcb99cf697d34baa484d5e8d110ccb82529` |
+| PostgreSQL 17.10 corrupt-dump drill | `pg_restore` exit 1; partial target dropped; zero drill databases remained after cleanup |
+| `python -m pytest` without live-service environment | 1,384 passed, 16 skipped, 7 expected warnings |
+| `python -m ruff check .` and `python -m mypy reconforge` | Pass over 234 source files |
+| `python -m pip_audit` | No known third-party dependency vulnerabilities; the local package is not a PyPI audit subject |
+| `python -m build --no-isolation` to a new temporary directory | Pass; matrix/schema/tests included in sdist; 702,843-byte wheel and 991,262-byte sdist |
+
+The live drill proves native PostgreSQL tool behavior in the current local
+container, while unit contracts prove adapter composition; it is not a live
+cross-platform execution of the adapter. It does not establish service-file
+custody, production identity provisioning, managed key rotation/KMS, object
+storage scheduling/retention, HA/cutover, host loss, cross-version restore,
+RPO/RTO, compliance, certification, or production readiness. The governed
+matrix remains `partial` and P1-PLAT-010 remains open.

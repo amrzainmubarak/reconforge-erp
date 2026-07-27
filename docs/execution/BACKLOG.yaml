@@ -291,18 +291,21 @@ tasks:
     priority: P1
     area: platform
     title: Durable job state machine
-    status: in_progress
+    status: completed
     depends_on: [P1-PLAT-001]
     exit_evidence: Versioned queued/running/paused/retrying/failed/completed/cancelled transitions, idempotency, audit, and output manifest.
     completed_slices:
       - E-092 adds a pure schema-v1 DurableJob aggregate and backend-neutral application service plus SQLite migration/repository. Integer progress, all seven statuses, closed transitions, canonical UTC time, retry ceilings, safe error codes, digest-addressed monotonic checkpoints, output-manifest completion, tenant-scoped atomic idempotency, optimistic compare-and-swap, immutable transition evidence, backup/restore, and public export tests pass. Generic leases/workers, PostgreSQL parity, authorization integration, and real process/host-loss recovery remain open, so the task stays in progress.
+      - E-093 closes the defined local durable-state exit with migration 22 and a backend-neutral worker service: atomic queued/retrying/expired-running claim, heartbeat, monotonically increasing fencing generations, stale-worker refusal, worker-owned checkpoint/terminal transitions, lease release evidence, and all seven persisted state paths pass. PostgreSQL parity remains P1-PLAT-002 and workload crash/no-duplicate-effect remains P1-PLAT-004.
   - id: P1-PLAT-004
     priority: P1
     area: platform
     title: Checkpoint and resume infrastructure
-    status: planned
+    status: in_progress
     depends_on: [P1-PLAT-003]
     exit_evidence: Crash/restart resumes safe workloads from verified checkpoints without duplicate business effect.
+    completed_slices:
+      - E-093 closes the storage/ownership prerequisite: after a committed checkpoint and real SQLite connection close, a new connection takes over exactly at lease expiry, increments the fencing generation, retains completed units/digest, records LEASE_TAKEOVER, and rejects the stale worker. No external business workload is integrated yet, so no-duplicate-effect and the task remain open.
   - id: P1-PLAT-005
     priority: P1
     area: platform

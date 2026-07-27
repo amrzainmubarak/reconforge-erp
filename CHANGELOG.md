@@ -1,5 +1,7 @@
 # Changelog
 
+- Added generation-fenced, expiring durable-job worker leases with atomic claim/takeover, heartbeat extension, stale-worker rejection, lease release evidence, retry reclaim, and connection-close/reopen checkpoint recovery. This is local SQLite process-restart proof, not PostgreSQL parity, host-loss durability, or exactly-once transport.
+
 - Added a schema-v1 durable-job aggregate and SQLite migration with seven fail-closed states, tenant-scoped idempotency, optimistic state versions, monotonic digest-addressed checkpoints, retry ceilings, safe error codes, completion manifests, immutable transition evidence, and backup/restore/export coverage. Generic worker leases, PostgreSQL parity, and real crash recovery remain open.
 
 - Extracted operational health, job, and sanitized-error composition into a backend-neutral Application service with explicit repository and migration-status ports. The existing connection-based `OperationsService` remains a compatibility adapter over SQLite; no PostgreSQL parity or production-operability claim is made.

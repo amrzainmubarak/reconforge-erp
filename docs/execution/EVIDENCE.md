@@ -6765,3 +6765,40 @@ Claim boundary: the evidence is local SQLite and pure application/domain proof.
 It is not PostgreSQL parity, a leased generic worker, real process/host-loss
 recovery, distributed exactly-once transport, throughput, HA/DR, or completion
 of P1-PLAT-003/P1-PLAT-004.
+
+## E-093: Generation-fenced worker claim, takeover, and process restart
+
+Migration 22 adds current leases and immutable lease-event history. Claim runs
+under `BEGIN IMMEDIATE`, selects expired running work before retrying and queued
+work, advances the job version, derives the next generation from history, and
+persists transition, lease, and lease event atomically. An injected lease-event
+failure leaves the job queued with no lease or additional transition.
+
+Heartbeat requires the exact owner/generation before expiry and must extend the
+expiry. Worker checkpoint and terminal methods verify that same unexpired token
+in the state-write transaction. Completion, pause, retry, failure, and running
+cancellation delete the current lease and append `released`; queued cancellation
+never allocates one. Ordinary application transitions cannot enter worker-owned
+states. An old generation is rejected after takeover before any state change.
+
+A process-restart regression commits six of ten units plus the checkpoint
+digest, closes the first SQLite connection without releasing its lease, opens a
+new connection at exact expiry, and claims as another worker. The resumed job
+retains six units/digest, increments generation, and has ordered CREATED,
+CLAIMED, CHECKPOINTED, LEASE_TAKEOVER evidence. Backup/restore and public export
+also preserve current leases and lease events.
+
+| Command | Result |
+| --- | --- |
+| durable job domain/SQLite/application/backup/boundary focus | 31 passed |
+| durable job plus migration/backup/export compatibility focus | 61 passed |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 221 source files |
+| `python -m pytest` | 1,328 passed, 10 live-service skips, 7 expected warnings in 190.58s |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 660,956-byte wheel and 934,012-byte sdist |
+
+P1-PLAT-003 is complete for its defined local foundation exit. P1-PLAT-004 is
+only in progress: there is not yet a real workload whose checkpoint, output,
+audit, and business effect are committed together and proven duplicate-free
+across injected termination. PostgreSQL parity and host/filesystem loss are also
+outside this evidence.

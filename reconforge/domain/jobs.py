@@ -117,6 +117,31 @@ class JobTransition:
 
 
 @dataclass(frozen=True)
+class JobLease:
+    """Time-bounded ownership token used to reject stale workers."""
+
+    job_id: str
+    tenant_id: str
+    owner_id: str
+    generation: int
+    acquired_at: str
+    renewed_at: str
+    expires_at: str
+
+    def __post_init__(self) -> None:
+        for field in ("job_id", "tenant_id", "owner_id"):
+            object.__setattr__(self, field, _identifier(getattr(self, field), field))
+        if isinstance(self.generation, bool) or self.generation < 1:
+            raise JobInvariantError("lease generation must be positive.")
+        for field in ("acquired_at", "renewed_at", "expires_at"):
+            object.__setattr__(self, field, _utc_timestamp(getattr(self, field), field))
+        if self.renewed_at < self.acquired_at:
+            raise JobInvariantError("lease renewal cannot precede acquisition.")
+        if self.expires_at <= self.renewed_at:
+            raise JobInvariantError("lease expiry must follow its latest renewal.")
+
+
+@dataclass(frozen=True)
 class DurableJob:
     """Backend-neutral durable-job aggregate."""
 
@@ -324,4 +349,29 @@ class DurableJob:
             actor_id=actor,
             occurred_at=timestamp,
             reason_code="CHECKPOINTED",
+        )
+
+    def reclaim(
+        self,
+        *,
+        actor_id: str,
+        occurred_at: str,
+    ) -> tuple[DurableJob, JobTransition]:
+        """Record deterministic takeover of a running job after lease expiry."""
+
+        if self.status is not JobStatus.RUNNING:
+            raise JobInvariantError("Only running jobs may be reclaimed.")
+        actor = _identifier(actor_id, "actor_id")
+        timestamp = _utc_timestamp(occurred_at, "occurred_at")
+        if timestamp < self.updated_at:
+            raise JobInvariantError("transition time cannot precede the current job version.")
+        changed = replace(self, version=self.version + 1, updated_at=timestamp)
+        return changed, JobTransition(
+            job_id=self.id,
+            job_version=changed.version,
+            from_status=self.status,
+            to_status=self.status,
+            actor_id=actor,
+            occurred_at=timestamp,
+            reason_code="LEASE_TAKEOVER",
         )

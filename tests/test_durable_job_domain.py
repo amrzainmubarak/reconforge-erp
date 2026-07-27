@@ -10,6 +10,7 @@ from reconforge.domain.jobs import (
     ALLOWED_TRANSITIONS,
     DurableJob,
     JobInvariantError,
+    JobLease,
     JobOutputManifest,
     JobStatus,
 )
@@ -210,4 +211,34 @@ def test_checkpoint_is_monotonic_bounded_and_digest_addressed() -> None:
             occurred_at="2026-07-27T08:00:03Z",
             completed_units=10,
             checkpoint_digest=DIGEST_C,
+        )
+
+
+def test_lease_and_running_reclaim_are_versioned_and_time_bounded() -> None:
+    lease = JobLease(
+        job_id="JOB-001",
+        tenant_id="TENANT-1",
+        owner_id="worker-1",
+        generation=1,
+        acquired_at=T1,
+        renewed_at=T1,
+        expires_at=T2,
+    )
+    assert lease.generation == 1
+    running = _running()
+    reclaimed, event = running.reclaim(actor_id="worker-2", occurred_at=T2)
+    assert reclaimed.status is JobStatus.RUNNING
+    assert reclaimed.version == running.version + 1
+    assert event.reason_code == "LEASE_TAKEOVER"
+    with pytest.raises(JobInvariantError, match="Only running jobs"):
+        _queued().reclaim(actor_id="worker-2", occurred_at=T2)
+    with pytest.raises(JobInvariantError, match="expiry must follow"):
+        JobLease(
+            job_id="JOB-001",
+            tenant_id="TENANT-1",
+            owner_id="worker-1",
+            generation=1,
+            acquired_at=T1,
+            renewed_at=T1,
+            expires_at=T1,
         )

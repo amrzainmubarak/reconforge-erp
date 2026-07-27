@@ -7,6 +7,7 @@ import pytest
 from reconforge.application.jobs import (
     DurableJobApplicationService,
     DurableJobNotFoundError,
+    DurableJobWorkerService,
     JobSubmission,
 )
 from reconforge.db import connect, run_migrations
@@ -14,11 +15,11 @@ from reconforge.domain.jobs import JobOutputManifest, JobStatus
 from reconforge.infrastructure.sqlite_jobs import SQLiteDurableJobRepository
 
 
-def _submission() -> JobSubmission:
+def _submission(*, job_id: str = "JOB-APP-1", idempotency_key: str = "request-app-1") -> JobSubmission:
     return JobSubmission(
-        job_id="JOB-APP-1",
+        job_id=job_id,
         idempotency_scope="tenant/workspace/import",
-        idempotency_key="request-app-1",
+        idempotency_key=idempotency_key,
         tenant_id="TENANT-1",
         workspace_id="WORKSPACE-1",
         entity_id="ENTITY-1",
@@ -31,90 +32,100 @@ def _submission() -> JobSubmission:
     )
 
 
-def test_application_lifecycle_is_tenant_scoped_resumable_and_manifest_gated(tmp_path: Path) -> None:
+def test_worker_lease_lifecycle_fences_progress_and_releases_on_completion(tmp_path: Path) -> None:
     database_path = tmp_path / "jobs.db"
     run_migrations(database_path)
     connection = connect(database_path, require_exists=True)
-    service = DurableJobApplicationService(SQLiteDurableJobRepository(connection))
-
-    queued, created = service.submit(_submission(), actor_id="scheduler-1")
-    replayed, replay_created = service.submit(_submission(), actor_id="scheduler-2")
+    repository = SQLiteDurableJobRepository(connection)
+    application = DurableJobApplicationService(repository)
+    worker = DurableJobWorkerService(repository)
+    queued, created = application.submit(_submission(), actor_id="scheduler-1")
+    replayed, replay_created = application.submit(_submission(), actor_id="scheduler-2")
     assert created is True
     assert replay_created is False
     assert replayed == queued
-
     with pytest.raises(DurableJobNotFoundError, match="requested tenant scope"):
-        service.start(
+        application.requeue(
             tenant_id="TENANT-2",
             job_id=queued.id,
-            actor_id="worker-1",
+            actor_id="scheduler-1",
             occurred_at="2026-07-27T08:00:01Z",
         )
 
-    running = service.start(
+    leased = worker.claim(
         tenant_id="TENANT-1",
-        job_id=queued.id,
-        actor_id="worker-1",
+        worker_id="worker-1",
         occurred_at="2026-07-27T08:00:01Z",
+        lease_expires_at="2026-07-27T08:00:04Z",
     )
-    checkpointed = service.checkpoint(
-        tenant_id="TENANT-1",
-        job_id=running.id,
-        actor_id="worker-1",
+    assert leased is not None
+    leased = worker.heartbeat(
+        leased,
         occurred_at="2026-07-27T08:00:02Z",
-        completed_units=6,
+        lease_expires_at="2026-07-27T08:00:05Z",
+    )
+    leased = worker.checkpoint(
+        leased,
+        occurred_at="2026-07-27T08:00:03Z",
+        completed_units=7,
         checkpoint_digest="c" * 64,
     )
-    completed = service.complete(
-        tenant_id="TENANT-1",
-        job_id=checkpointed.id,
-        actor_id="worker-1",
-        occurred_at="2026-07-27T08:00:03Z",
+    completed = worker.complete(
+        leased,
+        occurred_at="2026-07-27T08:00:04Z",
         output_manifest=JobOutputManifest(1, "d" * 64, "manifest/job-app-1"),
     )
     assert completed.status is JobStatus.COMPLETED
     assert completed.completed_units == completed.total_units == 10
     assert completed.checkpoint_digest == "c" * 64
-    assert completed.output_manifest == JobOutputManifest(1, "d" * 64, "manifest/job-app-1")
+    assert connection.execute(
+        "SELECT COUNT(*) FROM durable_job_leases WHERE job_id = ?",
+        (queued.id,),
+    ).fetchone()[0] == 0
+    assert [
+        row["action"]
+        for row in repository.list_lease_events(tenant_id="TENANT-1", job_id=queued.id)
+    ] == ["claimed", "renewed", "released"]
     connection.close()
 
 
-def test_application_retry_and_failure_paths_are_explicit(tmp_path: Path) -> None:
+def test_retry_claim_uses_a_new_fencing_generation(tmp_path: Path) -> None:
     database_path = tmp_path / "jobs.db"
     run_migrations(database_path)
     connection = connect(database_path, require_exists=True)
-    service = DurableJobApplicationService(SQLiteDurableJobRepository(connection))
-    queued, _ = service.submit(_submission(), actor_id="scheduler-1")
-    running = service.start(
+    repository = SQLiteDurableJobRepository(connection)
+    application = DurableJobApplicationService(repository)
+    worker = DurableJobWorkerService(repository)
+    queued, _ = application.submit(_submission(), actor_id="scheduler-1")
+    first = worker.claim(
         tenant_id="TENANT-1",
-        job_id=queued.id,
-        actor_id="worker-1",
+        worker_id="worker-1",
         occurred_at="2026-07-27T08:00:01Z",
+        lease_expires_at="2026-07-27T08:00:03Z",
     )
-    retrying = service.schedule_retry(
-        tenant_id="TENANT-1",
-        job_id=running.id,
-        actor_id="worker-1",
-        occurred_at="2026-07-27T08:00:02Z",
-    )
+    assert first is not None
+    retrying = worker.schedule_retry(first, occurred_at="2026-07-27T08:00:02Z")
     assert retrying.status is JobStatus.RETRYING
-    assert retrying.retry_count == 1
-    running_again = service.start(
+    second = worker.claim(
         tenant_id="TENANT-1",
-        job_id=retrying.id,
-        actor_id="worker-2",
+        worker_id="worker-2",
         occurred_at="2026-07-27T08:00:03Z",
+        lease_expires_at="2026-07-27T08:00:05Z",
     )
-    failed = service.fail(
-        tenant_id="TENANT-1",
-        job_id=running_again.id,
-        actor_id="worker-2",
+    assert second is not None
+    assert second.lease.generation == first.lease.generation + 1
+    assert second.job.status is JobStatus.RUNNING
+    failed = worker.fail(
+        second,
         occurred_at="2026-07-27T08:00:04Z",
         safe_error_code="SOURCE_UNAVAILABLE",
     )
     assert failed.status is JobStatus.FAILED
-    assert failed.safe_error_code == "SOURCE_UNAVAILABLE"
-    requeued = service.requeue(
+    assert connection.execute(
+        "SELECT COUNT(*) FROM durable_job_leases WHERE job_id = ?",
+        (queued.id,),
+    ).fetchone()[0] == 0
+    requeued = application.requeue(
         tenant_id="TENANT-1",
         job_id=failed.id,
         actor_id="scheduler-1",
@@ -122,4 +133,76 @@ def test_application_retry_and_failure_paths_are_explicit(tmp_path: Path) -> Non
     )
     assert requeued.status is JobStatus.QUEUED
     assert requeued.safe_error_code == ""
+    connection.close()
+
+
+def test_pause_requeue_and_both_cancel_paths_release_or_avoid_leases(tmp_path: Path) -> None:
+    database_path = tmp_path / "jobs.db"
+    run_migrations(database_path)
+    connection = connect(database_path, require_exists=True)
+    repository = SQLiteDurableJobRepository(connection)
+    application = DurableJobApplicationService(repository)
+    worker = DurableJobWorkerService(repository)
+
+    pause_job, _ = application.submit(
+        _submission(job_id="JOB-PAUSE-1", idempotency_key="pause-1"),
+        actor_id="scheduler-1",
+    )
+    pause_lease = worker.claim(
+        tenant_id="TENANT-1",
+        worker_id="worker-1",
+        occurred_at="2026-07-27T08:00:01Z",
+        lease_expires_at="2026-07-27T08:00:05Z",
+    )
+    assert pause_lease is not None and pause_lease.job.id == pause_job.id
+    paused = worker.pause(pause_lease, occurred_at="2026-07-27T08:00:02Z")
+    assert paused.status is JobStatus.PAUSED
+    requeued = application.requeue(
+        tenant_id="TENANT-1",
+        job_id=paused.id,
+        actor_id="scheduler-1",
+        occurred_at="2026-07-27T08:00:03Z",
+    )
+    assert requeued.status is JobStatus.QUEUED
+
+    running_cancel_job, _ = application.submit(
+        _submission(job_id="JOB-CANCEL-RUNNING", idempotency_key="cancel-running-1"),
+        actor_id="scheduler-1",
+    )
+    running_cancel_lease = worker.claim(
+        tenant_id="TENANT-1",
+        worker_id="worker-2",
+        occurred_at="2026-07-27T08:00:04Z",
+        lease_expires_at="2026-07-27T08:00:08Z",
+    )
+    assert running_cancel_lease is not None
+    # The older requeued job is deterministically claimed first.
+    if running_cancel_lease.job.id == requeued.id:
+        worker.cancel(running_cancel_lease, occurred_at="2026-07-27T08:00:05Z")
+        running_cancel_lease = worker.claim(
+            tenant_id="TENANT-1",
+            worker_id="worker-2",
+            occurred_at="2026-07-27T08:00:06Z",
+            lease_expires_at="2026-07-27T08:00:09Z",
+        )
+        assert running_cancel_lease is not None
+    assert running_cancel_lease.job.id == running_cancel_job.id
+    cancelled_running = worker.cancel(
+        running_cancel_lease,
+        occurred_at="2026-07-27T08:00:07Z",
+    )
+    assert cancelled_running.status is JobStatus.CANCELLED
+
+    queued_cancel_job, _ = application.submit(
+        _submission(job_id="JOB-CANCEL-QUEUED", idempotency_key="cancel-queued-1"),
+        actor_id="scheduler-1",
+    )
+    cancelled_queued = application.cancel(
+        tenant_id="TENANT-1",
+        job_id=queued_cancel_job.id,
+        actor_id="scheduler-1",
+        occurred_at="2026-07-27T08:00:08Z",
+    )
+    assert cancelled_queued.status is JobStatus.CANCELLED
+    assert connection.execute("SELECT COUNT(*) FROM durable_job_leases").fetchone()[0] == 0
     connection.close()

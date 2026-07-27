@@ -788,3 +788,11 @@
 - Rationale: Operational history and a specialized reconciliation runner did not provide a common durable application contract. A job marked complete without full progress and an output identity, or retried without a ceiling, cannot support reproducible financial operations.
 - Consequence: SQLite migration 21 and a backend-neutral Application service now provide local atomic create/replay/transition/checkpoint/backup/restore behavior. Stale versions and evidence-write failures roll back. Generic leases/workers, PostgreSQL parity, authorization, scheduling, and real crash recovery remain open.
 - ADR: `docs/adr/0103-versioned-durable-job-state-machine.md`
+
+### D-089: Treat lease generation—not worker identity—as the write authority
+
+- Date: 2026-07-27
+- Decision: Fence every worker write with an exact tenant/job/owner/generation lease that expires, renews only forward, increments from immutable history on every claim, and is verified in the same transaction as checkpoints or terminal state.
+- Rationale: Worker names and status flags cannot stop a pre-crash process from writing after takeover. A monotonically increasing generation makes old authority objectively stale.
+- Consequence: Migration 22 and the worker Application service close the local P1-PLAT-003 exit and advance P1-PLAT-004. Real process reconnection retains the committed checkpoint; stale writes fail. External workload effects, PostgreSQL parity, and host loss remain unproven.
+- ADR: `docs/adr/0104-generation-fenced-job-worker-leases.md`

@@ -3304,6 +3304,44 @@ BEGIN
 END;
 """
 
+DURABLE_JOB_LEASES_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS durable_job_leases (
+    job_id TEXT PRIMARY KEY REFERENCES durable_jobs(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL,
+    owner_id TEXT NOT NULL,
+    generation INTEGER NOT NULL CHECK (generation >= 1),
+    acquired_at TEXT NOT NULL,
+    renewed_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_durable_job_leases_expiry
+ON durable_job_leases (tenant_id, expires_at, job_id);
+
+CREATE TABLE IF NOT EXISTS durable_job_lease_events (
+    job_id TEXT NOT NULL REFERENCES durable_jobs(id) ON DELETE RESTRICT,
+    event_sequence INTEGER NOT NULL CHECK (event_sequence >= 1),
+    generation INTEGER NOT NULL CHECK (generation >= 1),
+    action TEXT NOT NULL CHECK (action IN ('claimed', 'taken_over', 'renewed', 'released')),
+    owner_id TEXT NOT NULL,
+    occurred_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (job_id, event_sequence)
+);
+
+CREATE TRIGGER IF NOT EXISTS durable_job_lease_events_immutable_update
+BEFORE UPDATE ON durable_job_lease_events
+BEGIN
+    SELECT RAISE(ABORT, 'durable job lease events are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS durable_job_lease_events_immutable_delete
+BEFORE DELETE ON durable_job_lease_events
+BEGIN
+    SELECT RAISE(ABORT, 'durable job lease events are immutable');
+END;
+"""
+
 
 ACCOUNT_RECONCILIATION_MONEY_MIGRATION_SQL = """
 -- Add canonical Decimal text alongside legacy REAL compatibility columns. New

@@ -4,7 +4,10 @@ from reconforge.application.jobs import (
     DurableJobApplicationService,
     DurableJobNotFoundError,
     DurableJobRepositoryProtocol,
+    DurableJobWorkerRepositoryProtocol,
+    DurableJobWorkerService,
     JobSubmission,
+    LeasedJob,
 )
 from reconforge.application.operations import (
     MigrationStatus,
@@ -21,7 +24,10 @@ __all__ = [
     "DurableJobApplicationService",
     "DurableJobNotFoundError",
     "DurableJobRepositoryProtocol",
+    "DurableJobWorkerRepositoryProtocol",
+    "DurableJobWorkerService",
     "JobSubmission",
+    "LeasedJob",
     "MigrationStatus",
     "OperationsApplicationService",
     "OperationsRepositoryProtocol",

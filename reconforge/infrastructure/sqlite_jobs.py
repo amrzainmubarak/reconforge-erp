@@ -8,6 +8,7 @@ from typing import Any
 
 from reconforge.domain.jobs import (
     DurableJob,
+    JobLease,
     JobOutputManifest,
     JobStatus,
     JobTransition,
@@ -152,7 +153,12 @@ class SQLiteDurableJobRepository:
     connection: sqlite3.Connection
 
     def __post_init__(self) -> None:
-        required = {"durable_jobs", "durable_job_transitions"}
+        required = {
+            "durable_jobs",
+            "durable_job_transitions",
+            "durable_job_leases",
+            "durable_job_lease_events",
+        }
         tables = {
             str(row["name"])
             for row in self.connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()
@@ -232,6 +238,41 @@ class SQLiteDurableJobRepository:
     ) -> DurableJob:
         """Compare-and-swap one state version and append its evidence atomically."""
 
+        self._validate_transition(previous, changed, event)
+        allowed_unleased = {
+            (JobStatus.QUEUED, JobStatus.CANCELLED),
+            (JobStatus.PAUSED, JobStatus.QUEUED),
+            (JobStatus.FAILED, JobStatus.QUEUED),
+        }
+        if (previous.status, changed.status) not in allowed_unleased:
+            raise SQLiteJobConflictError("Worker state changes require a generation-fenced lease.")
+        self._begin()
+        try:
+            lease_row = self.connection.execute(
+                "SELECT 1 FROM durable_job_leases WHERE job_id = ?",
+                (previous.id,),
+            ).fetchone()
+            if lease_row is not None:
+                raise SQLiteJobConflictError("Leased durable jobs require an owned transition.")
+            self._persist_transition_rows(previous, changed, event)
+            self.connection.commit()
+            return changed
+        except SQLiteJobConflictError:
+            self.connection.rollback()
+            raise
+        except sqlite3.IntegrityError as exc:
+            self.connection.rollback()
+            raise SQLiteJobConflictError("Durable-job transition conflicts with stored evidence.") from exc
+        except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
+            raise SQLiteJobRepositoryError("Unable to persist durable-job transition.") from exc
+
+    @staticmethod
+    def _validate_transition(
+        previous: DurableJob,
+        changed: DurableJob,
+        event: JobTransition,
+    ) -> None:
         if changed.id != previous.id or changed.tenant_id != previous.tenant_id:
             raise SQLiteJobRepositoryError("A durable-job transition cannot change job or tenant identity.")
         if changed.version != previous.version + 1:
@@ -244,32 +285,245 @@ class SQLiteDurableJobRepository:
         ):
             raise SQLiteJobRepositoryError("Transition evidence does not match the durable-job versions.")
 
+    def _persist_transition_rows(
+        self,
+        previous: DurableJob,
+        changed: DurableJob,
+        event: JobTransition,
+    ) -> None:
+        self._validate_transition(previous, changed, event)
+        assignments = ", ".join(f"{column} = ?" for column in _JOB_COLUMNS[1:])
+        values = _job_values(changed)[1:]
+        cursor = self.connection.execute(
+            f"UPDATE durable_jobs SET {assignments} WHERE tenant_id = ? AND id = ? AND version = ?",  # noqa: S608
+            (*values, previous.tenant_id, previous.id, previous.version),
+        )
+        if cursor.rowcount != 1:
+            raise SQLiteJobConflictError("Durable job changed before this transition could commit.")
+        self.connection.execute(
+            """
+            INSERT INTO durable_job_transitions
+                (job_id, job_version, from_status, to_status, actor_id, occurred_at, reason_code)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                event.job_id,
+                event.job_version,
+                event.from_status.value,
+                event.to_status.value,
+                event.actor_id,
+                event.occurred_at,
+                event.reason_code,
+            ),
+        )
+
+    def _append_lease_event(self, lease: JobLease, *, action: str, occurred_at: str) -> None:
+        sequence_row = self.connection.execute(
+            "SELECT COALESCE(MAX(event_sequence), 0) + 1 AS next_sequence "
+            "FROM durable_job_lease_events WHERE job_id = ?",
+            (lease.job_id,),
+        ).fetchone()
+        self.connection.execute(
+            """
+            INSERT INTO durable_job_lease_events
+                (job_id, event_sequence, generation, action, owner_id, occurred_at, expires_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                lease.job_id,
+                int(sequence_row["next_sequence"]),
+                lease.generation,
+                action,
+                lease.owner_id,
+                occurred_at,
+                "" if action == "released" else lease.expires_at,
+            ),
+        )
+
+    def claim_next(
+        self,
+        *,
+        tenant_id: str,
+        worker_id: str,
+        occurred_at: str,
+        lease_expires_at: str,
+    ) -> tuple[DurableJob, JobLease] | None:
+        """Claim queued work or take over the oldest expired running job."""
+
         self._begin()
         try:
-            assignments = ", ".join(f"{column} = ?" for column in _JOB_COLUMNS[1:])
-            values = _job_values(changed)[1:]
-            cursor = self.connection.execute(
-                f"UPDATE durable_jobs SET {assignments} WHERE tenant_id = ? AND id = ? AND version = ?",  # noqa: S608
-                (*values, previous.tenant_id, previous.id, previous.version),
+            row = self.connection.execute(
+                """
+                SELECT jobs.*,
+                       COALESCE(
+                           (SELECT MAX(events.generation)
+                            FROM durable_job_lease_events events
+                            WHERE events.job_id = jobs.id),
+                           0
+                       ) AS prior_lease_generation
+                FROM durable_jobs jobs
+                LEFT JOIN durable_job_leases leases ON leases.job_id = jobs.id
+                WHERE jobs.tenant_id = ?
+                  AND (
+                    jobs.status = 'queued'
+                    OR (jobs.status = 'retrying' AND (leases.job_id IS NULL OR leases.expires_at <= ?))
+                    OR (jobs.status = 'running' AND (leases.job_id IS NULL OR leases.expires_at <= ?))
+                  )
+                ORDER BY
+                    CASE jobs.status WHEN 'running' THEN 0 WHEN 'retrying' THEN 1 ELSE 2 END,
+                    jobs.created_at,
+                    jobs.id
+                LIMIT 1
+                """,
+                (tenant_id, occurred_at, occurred_at),
+            ).fetchone()
+            if row is None:
+                self.connection.commit()
+                return None
+            previous = _decode_job(row)
+            if previous.status in {JobStatus.QUEUED, JobStatus.RETRYING}:
+                changed, event = previous.transition(
+                    JobStatus.RUNNING,
+                    actor_id=worker_id,
+                    occurred_at=occurred_at,
+                    reason_code="CLAIMED",
+                )
+                action = "claimed"
+            else:
+                changed, event = previous.reclaim(actor_id=worker_id, occurred_at=occurred_at)
+                action = "taken_over"
+            generation = int(row["prior_lease_generation"]) + 1
+            lease = JobLease(
+                job_id=changed.id,
+                tenant_id=changed.tenant_id,
+                owner_id=worker_id,
+                generation=generation,
+                acquired_at=occurred_at,
+                renewed_at=occurred_at,
+                expires_at=lease_expires_at,
             )
-            if cursor.rowcount != 1:
-                raise SQLiteJobConflictError("Durable job changed before this transition could commit.")
+            self._persist_transition_rows(previous, changed, event)
             self.connection.execute(
                 """
-                INSERT INTO durable_job_transitions
-                    (job_id, job_version, from_status, to_status, actor_id, occurred_at, reason_code)
+                INSERT INTO durable_job_leases
+                    (job_id, tenant_id, owner_id, generation, acquired_at, renewed_at, expires_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(job_id) DO UPDATE SET
+                    tenant_id = excluded.tenant_id,
+                    owner_id = excluded.owner_id,
+                    generation = excluded.generation,
+                    acquired_at = excluded.acquired_at,
+                    renewed_at = excluded.renewed_at,
+                    expires_at = excluded.expires_at
                 """,
                 (
-                    event.job_id,
-                    event.job_version,
-                    event.from_status.value,
-                    event.to_status.value,
-                    event.actor_id,
-                    event.occurred_at,
-                    event.reason_code,
+                    lease.job_id,
+                    lease.tenant_id,
+                    lease.owner_id,
+                    lease.generation,
+                    lease.acquired_at,
+                    lease.renewed_at,
+                    lease.expires_at,
                 ),
             )
+            self._append_lease_event(lease, action=action, occurred_at=occurred_at)
+            self.connection.commit()
+            return changed, lease
+        except (SQLiteJobConflictError, SQLiteJobRepositoryError):
+            self.connection.rollback()
+            raise
+        except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
+            raise SQLiteJobRepositoryError("Unable to claim durable job.") from exc
+
+    def renew_lease(
+        self,
+        lease: JobLease,
+        *,
+        occurred_at: str,
+        lease_expires_at: str,
+    ) -> JobLease:
+        """Extend an active lease only for its exact owner and generation."""
+
+        renewed = JobLease(
+            job_id=lease.job_id,
+            tenant_id=lease.tenant_id,
+            owner_id=lease.owner_id,
+            generation=lease.generation,
+            acquired_at=lease.acquired_at,
+            renewed_at=occurred_at,
+            expires_at=lease_expires_at,
+        )
+        if occurred_at >= lease.expires_at or renewed.expires_at <= lease.expires_at:
+            raise SQLiteJobConflictError("Durable-job lease is expired or was not extended.")
+        self._begin()
+        try:
+            cursor = self.connection.execute(
+                """
+                UPDATE durable_job_leases
+                SET renewed_at = ?, expires_at = ?
+                WHERE job_id = ? AND tenant_id = ? AND owner_id = ? AND generation = ?
+                  AND expires_at > ?
+                """,
+                (
+                    renewed.renewed_at,
+                    renewed.expires_at,
+                    renewed.job_id,
+                    renewed.tenant_id,
+                    renewed.owner_id,
+                    renewed.generation,
+                    occurred_at,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise SQLiteJobConflictError("Durable-job lease ownership changed or expired.")
+            self._append_lease_event(renewed, action="renewed", occurred_at=occurred_at)
+            self.connection.commit()
+            return renewed
+        except SQLiteJobConflictError:
+            self.connection.rollback()
+            raise
+        except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
+            raise SQLiteJobRepositoryError("Unable to renew durable-job lease.") from exc
+
+    def persist_owned_transition(
+        self,
+        previous: DurableJob,
+        changed: DurableJob,
+        event: JobTransition,
+        *,
+        lease: JobLease,
+        release_lease: bool,
+    ) -> DurableJob:
+        """Persist worker output only while its exact lease remains active."""
+
+        self._validate_transition(previous, changed, event)
+        self._begin()
+        try:
+            owned = self.connection.execute(
+                """
+                SELECT 1 FROM durable_job_leases
+                WHERE job_id = ? AND tenant_id = ? AND owner_id = ? AND generation = ?
+                  AND expires_at > ?
+                """,
+                (
+                    lease.job_id,
+                    lease.tenant_id,
+                    lease.owner_id,
+                    lease.generation,
+                    event.occurred_at,
+                ),
+            ).fetchone()
+            if owned is None or previous.id != lease.job_id or previous.tenant_id != lease.tenant_id:
+                raise SQLiteJobConflictError("Durable-job lease ownership changed or expired.")
+            self._persist_transition_rows(previous, changed, event)
+            if release_lease:
+                self.connection.execute(
+                    "DELETE FROM durable_job_leases WHERE job_id = ? AND owner_id = ? AND generation = ?",
+                    (lease.job_id, lease.owner_id, lease.generation),
+                )
+                self._append_lease_event(lease, action="released", occurred_at=event.occurred_at)
             self.connection.commit()
             return changed
         except SQLiteJobConflictError:
@@ -277,10 +531,19 @@ class SQLiteDurableJobRepository:
             raise
         except sqlite3.IntegrityError as exc:
             self.connection.rollback()
-            raise SQLiteJobConflictError("Durable-job transition conflicts with stored evidence.") from exc
+            raise SQLiteJobConflictError("Durable-job leased transition conflicts with stored evidence.") from exc
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
-            raise SQLiteJobRepositoryError("Unable to persist durable-job transition.") from exc
+            raise SQLiteJobRepositoryError("Unable to persist leased durable-job transition.") from exc
+
+    def list_lease_events(self, *, tenant_id: str, job_id: str) -> list[dict[str, Any]]:
+        if self.get(tenant_id=tenant_id, job_id=job_id) is None:
+            return []
+        rows = self.connection.execute(
+            "SELECT * FROM durable_job_lease_events WHERE job_id = ? ORDER BY event_sequence",
+            (job_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
 
     def list_transitions(self, *, tenant_id: str, job_id: str) -> list[dict[str, Any]]:
         if self.get(tenant_id=tenant_id, job_id=job_id) is None:

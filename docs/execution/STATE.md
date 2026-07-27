@@ -133,6 +133,16 @@ crash recovery remain open, so P1-PLAT-003 remains in progress and P1-PLAT-004
 is not closed. The full collection passes with 1,323 tests executed and ten
 live-service skips; wheel/sdist build and runtime-module membership pass.
 
+E-093 closes P1-PLAT-003's local durable-state exit with generation-fenced
+leases, atomic claim/heartbeat/takeover/release, worker-owned transitions, all
+seven persisted state paths, and immutable lease evidence. A real connection
+close/reopen retains the last committed checkpoint and rejects the old worker,
+so P1-PLAT-004 is now in progress. It is not complete until an actual workload
+proves no duplicate business effect across injected termination. The inventory
+contains four backend-neutral Application services.
+The full collection passes with 1,328 tests executed and ten live-service
+skips; the wheel and sdist build pass.
+
 ## Next exact actions
 
 1. Migrate the next transactionally coherent Platform use case into the Application layer and reduce the E-090 coupling counts without exposing a database connection.

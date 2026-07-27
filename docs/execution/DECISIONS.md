@@ -870,3 +870,10 @@
 - **Reason**: Restoring over an active database cannot provide a safe rollback boundary, while credentials in argv and arbitrary tool lookup expand disclosure and command-execution risk.
 - **Consequence**: E-104 verifies the adapter contracts and a PostgreSQL 17 native restore/failed-restore drill. Cross-platform adapter execution, service-file custody, managed keys, HA/cutover, host loss, and RPO/RTO remain open; the matrix is partial.
 - **ADR**: `docs/adr/0115-isolated-postgresql-native-restore.md`
+
+### D-101: Bind matching behavior to an exact strategy manifest
+
+- **Decision**: Put matching behind an immutable typed protocol and exact-version registry, publish its manifest and limits, and digest the manifest, permutation-invariant inputs, and complete decisions.
+- **Reason**: A generic matcher method cannot distinguish strategy capabilities or reproduce a decision after algorithms and defaults evolve.
+- **Consequence**: E-105 closes P1-REC-001 while preserving current one-to-one output compatibility. Candidate accounting, grouped strategies, explanation v2, and measured scale remain open tasks.
+- **ADR**: `docs/adr/0116-versioned-matching-strategy-contract.md`

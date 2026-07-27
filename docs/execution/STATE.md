@@ -251,3 +251,13 @@ ReconForge tables, rejected a truncated dump, removed its partial target, and
 cleaned both drill databases. Enterprise HA, regulated air gap, KMS/key
 rotation, host loss, scheduled retention, cross-version upgrades, and measured
 RPO/RTO remain planned, so P1-PLAT-010 remains in progress.
+
+E-105 closes P1-REC-001. A backend-neutral immutable `MatchingStrategy`
+protocol, exact-version registry, and schema-validated published manifest bind
+the current indexed one-to-one algorithm, supported modes, deterministic
+tie-break, explanation schema, and conservative limits. The compatibility
+adapter preserves current results and exceptions while adding manifest,
+permutation-invariant input, and complete decision digests. Binary floats,
+non-finite values, colliding field names, invalid tolerance/date windows, and
+limit excess fail before matching. Candidate accounting, grouped matching,
+ambiguity v2, and benchmark thresholds remain open under P1-REC-002 onward.

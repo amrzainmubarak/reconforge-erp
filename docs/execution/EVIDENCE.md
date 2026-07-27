@@ -7170,3 +7170,32 @@ custody, production identity provisioning, managed key rotation/KMS, object
 storage scheduling/retention, HA/cutover, host loss, cross-version restore,
 RPO/RTO, compliance, certification, or production readiness. The governed
 matrix remains `partial` and P1-PLAT-010 remains open.
+
+## E-105: Versioned matching strategy contract
+
+The backend-neutral contract defines immutable strategy manifests, explicit
+limits, exact ID/version registry lookup, normalized requests, and results bound
+to manifest/input/decision SHA-256 digests. Canonicalization accepts exact
+Decimal text but rejects binary floats, non-finite values, unsupported types,
+and string-key collisions. Input fingerprints sort canonical records as a
+multiset, so row permutation does not change replay identity.
+
+`IndexedOneToOneStrategy` declares the existing range-indexed candidate and
+deterministic min-cost assignment algorithm as beta `1.0.0`. It fixes grouped
+flags off, validates its declared 250,000-record/3,660-day/128-character
+ceilings before execution, and delegates to the existing pure matcher. The
+published JSON manifest validates against its closed schema and is mechanically
+compared with the runtime declaration.
+
+| Evidence | Result |
+| --- | --- |
+| Strategy manifest/registry/limit/digest/compatibility tests | 6 passed |
+| Existing Platform matching compatibility focus | 40 passed |
+| `python -m pytest` without live-service environment | 1,390 passed, 16 skipped, 7 expected warnings |
+| `python -m ruff check .` and `python -m mypy reconforge` | Pass over 236 source files |
+| `python -m pip_audit` | No known third-party dependency vulnerabilities; the local package is not a PyPI audit subject |
+| `python -m build --no-isolation` to a new temporary directory | Pass; manifest/schema included in sdist; 706,333-byte wheel and 995,926-byte sdist |
+
+This proves the first typed strategy boundary and current-output compatibility,
+not candidate-count instrumentation, grouped matching, search budgets,
+explanation schema v2, backend performance parity, or supported scale.

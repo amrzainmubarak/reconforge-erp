@@ -372,9 +372,11 @@ tasks:
     priority: P1
     area: reconciliation
     title: Matching Strategy protocol
-    status: planned
+    status: completed
     depends_on: [P0-004, P0-006]
     exit_evidence: Typed strategy contract, manifest declaration, deterministic explanation, limits, and compatibility tests.
+    completed_slices:
+      - E-105 adds immutable typed strategy/request/result/limit contracts, an exact-version registry, a schema-validated published manifest, permutation-invariant input and complete decision digests, and an indexed one-to-one compatibility adapter whose outputs and explanations match the existing engine.
   - id: P1-REC-002
     priority: P1
     area: reconciliation

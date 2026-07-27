@@ -168,7 +168,7 @@ ADRs to 81; schemas remain 53 and workflows remain six.
 
 ## Contracts and delivery
 
-- `docs/schemas/`: 62 JSON schemas, including the backup/restore matrix, field-specific persisted JSON, database backup/import, file-ingestion, evidence/report compatibility, release/SBOM/supply-chain, golden-data, risk/maturity/engine, security/threat/ASVS/SSDF/SLSA, browser, and module contracts.
+- `docs/schemas/`: 64 JSON schemas, including matching-strategy and backup/restore manifests, field-specific persisted JSON, database backup/import, file-ingestion, evidence/report compatibility, release/SBOM/supply-chain, golden-data, risk/maturity/engine, security/threat/ASVS/SSDF/SLSA, browser, and module contracts.
 - `tests/golden/`: schema-validated synthetic finance registry and five frozen registry/input files with layered SHA-256 evidence, including bounded dense ambiguity; these are correctness fixtures, not performance datasets.
 - `docs/risk-register.yaml`: normalized 18-risk governance source with schema/rating/evidence/review validation; the Markdown register remains its readable narrative view.
 - `docs/execution/MATURITY_POLICY.yaml`: evidence-linked ceilings for all nine modules and seven designated publishing surfaces; all current modules are Experimental.

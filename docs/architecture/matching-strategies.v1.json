@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "strategies": [
+    {
+      "algorithm": "range-indexed-candidate-generation-plus-deterministic-min-cost-assignment-v1",
+      "deterministic_tie_break": "record-fingerprint-cost-right-fingerprint-left-id-right-id-v1",
+      "explanation_schema": "matching-explanation-v1",
+      "id": "indexed-composite-one-to-one",
+      "limits": {
+        "max_amount_text_characters": 128,
+        "max_candidates_per_record": 250000,
+        "max_date_window_days": 3660,
+        "max_left_records": 250000,
+        "max_right_records": 250000
+      },
+      "maturity": "beta",
+      "supported_modes": [
+        "amount-tolerance",
+        "date-window",
+        "exact-fields",
+        "reference-normalized"
+      ],
+      "version": "1.0.0"
+    }
+  ]
+}

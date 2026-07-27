@@ -45,6 +45,8 @@ include docs/schemas/sqlite_matching_lineage.schema.json
 include docs/schemas/database_backup.schema.json
 include docs/schemas/database_backup_manifest.schema.json
 include docs/schemas/backup_restore_matrix.schema.json
+include docs/schemas/matching_strategy_manifest.schema.json
+include docs/architecture/matching-strategies.v1.json
 include docs/schemas/database_export_manifest.schema.json
 include docs/schemas/database_account_reconciliations_import.schema.json
 include docs/schemas/database_control_tests_import.schema.json

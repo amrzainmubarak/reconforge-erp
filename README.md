@@ -10,7 +10,7 @@
   <a href="https://github.com/amrzainmubarak/reconforge-erp/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/amrzainmubarak/reconforge-erp/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/amrzainmubarak/reconforge-erp/actions/workflows/security.yml"><img alt="Security checks" src="https://github.com/amrzainmubarak/reconforge-erp/actions/workflows/security.yml/badge.svg"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-145c4e">
-  <img alt="Release v0.7.0" src="https://img.shields.io/badge/release-v0.7.0-b9d632">
+  <img alt="Release v0.7.1" src="https://img.shields.io/badge/release-v0.7.1-b9d632">
   <a href="https://www.bestpractices.dev/projects/13089"><img alt="OpenSSF Best Practices" src="https://www.bestpractices.dev/projects/13089/badge"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-f5f2e8"></a>
 </p>
@@ -241,7 +241,7 @@ These controls aid review and tamper detection; they are not an assurance report
 
 ## Project maturity
 
-The current version is **v0.7.0**, classified as alpha/foundation-stage software.
+The current version is **v0.7.1**, classified as alpha/foundation-stage software.
 
 | Maturity | Scope |
 | --- | --- |
@@ -274,7 +274,7 @@ python -m bandit -q -r reconforge
 git diff --check
 ```
 
-Repository automation defines linting, typing, tests, package/container builds, Bandit, a universal hash-bearing Python/server lock, npm lock audit, checksum-pinned full-history/tree secret scans, closed expiring exception policy, CodeQL, release-integrated per-subject CycloneDX SBOMs, and OpenSSF Scorecard. Local locked Python 3.11 and npm audits plus both secret scans pass; hosted Python 3.11/3.12 enforcement, container execution, image scanning, and signed release evidence do not yet exist. See the [supply-chain policy](docs/security/supply-chain-policy.md), [v0.7.0 release notes](docs/releases/v0.7.0.md), and [release-readiness checklist](docs/release-readiness-checklist.md) for the evidence boundary.
+Repository automation defines linting, typing, tests, package/container builds, Bandit, universal hash-bearing Python/server and npm locks, checksum-pinned full-history/tree secret scans, a closed expiring exception policy, CodeQL, release-integrated per-subject CycloneDX SBOMs, and OpenSSF Scorecard. Identified hosted Python 3.11/3.12, live server, container, engine-parity, secret, dependency, and CodeQL gates pass; signed release and retained provenance/SBOM candidate evidence remain pending the human-gated tag workflow. See the [supply-chain policy](docs/security/supply-chain-policy.md), [v0.7.1 release notes](docs/releases/v0.7.1.md), and [release-readiness checklist](docs/release-readiness-checklist.md) for the evidence boundary.
 
 ## Documentation
 

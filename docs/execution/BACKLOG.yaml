@@ -469,3 +469,109 @@ tasks:
     status: planned
     depends_on: [P2-005, P2-006, P2-007]
     exit_evidence: Keyboard, screen-reader semantics, RTL, contrast, reduced motion, masking, and critical E2E paths pass.
+
+  - id: P3-ENT-001
+    priority: P3
+    area: enterprise
+    title: Enterprise identity federation
+    status: planned
+    depends_on: [P1-PLAT-008]
+    exit_evidence: OIDC and SAML adapters validate issuer, audience, signature, replay, expiry, logout, failure, and air-gap-disabled behavior without a home-grown protocol.
+  - id: P3-ENT-002
+    priority: P3
+    area: enterprise
+    title: SCIM provisioning and lifecycle
+    status: planned
+    depends_on: [P3-ENT-001]
+    exit_evidence: Versioned SCIM user/group provisioning, deprovisioning, idempotency, scope, audit, and hostile-input contracts pass.
+  - id: P3-ENT-003
+    priority: P3
+    area: enterprise
+    title: Service accounts and privileged sessions
+    status: planned
+    depends_on: [P1-PLAT-008, P3-ENT-001]
+    exit_evidence: Bounded credentials, rotation, revocation, expiry, step-up, emergency-access review, and least-privilege tests pass.
+  - id: P3-ENT-004
+    priority: P3
+    area: enterprise
+    title: Multi-entity tenant isolation
+    status: planned
+    depends_on: [P1-PLAT-002, P1-PLAT-008]
+    exit_evidence: Application and PostgreSQL RLS tests deny cross-tenant/entity/workspace reads and writes, including background jobs, exports, object storage, and failure paths.
+  - id: P3-ENT-005
+    priority: P3
+    area: enterprise
+    title: Durable scheduler and notifications
+    status: planned
+    depends_on: [P1-PLAT-003, P1-PLAT-009]
+    exit_evidence: Timezone-aware schedules, misfire policy, idempotent dispatch, bounded retries, optional email/webhook egress allowlists, redaction, and audit tests pass.
+  - id: P3-ENT-006
+    priority: P3
+    area: enterprise
+    title: Administration and security center
+    status: planned
+    depends_on: [P3-ENT-002, P3-ENT-003, P3-ENT-004]
+    exit_evidence: Authorized identity, policy, session, integration, retention, audit, and security-status views pass accessibility and disclosure tests.
+  - id: P3-ENT-007
+    priority: P3
+    area: enterprise
+    title: Connector SDK and conformance suite
+    status: planned
+    depends_on: [P1-PLAT-003, P1-PLAT-005, P1-PLAT-008]
+    exit_evidence: Versioned manifests, read-only default, sandbox, secrets, cursor, idempotency, retry, egress, signature, threat-model, and synthetic-sandbox tests pass.
+  - id: P3-ENT-008
+    priority: P3
+    area: enterprise
+    title: Signed control and industry pack lifecycle
+    status: planned
+    depends_on: [P2-004, P3-ENT-007]
+    exit_evidence: Package identity, signature, dependency compatibility, approval, installation, migration, disable, rollback, and conformance tests pass without arbitrary code loading.
+  - id: P3-ENT-009
+    priority: P3
+    area: enterprise
+    title: Upgrade and rollback automation
+    status: planned
+    depends_on: [P1-PLAT-010, P3-ENT-004]
+    exit_evidence: Supported-version application, database, object, configuration, and pack upgrades plus bounded rollback and compatibility-reader drills pass.
+  - id: P3-ENT-010
+    priority: P3
+    area: enterprise
+    title: High availability and disaster recovery package
+    status: planned
+    depends_on: [P1-PLAT-004, P1-PLAT-005, P1-PLAT-010, P3-ENT-009]
+    exit_evidence: Declared topology failure, backup, restore, failover, split-brain prevention, integrity, RPO, and RTO measurements pass on named infrastructure.
+  - id: P3-ENT-011
+    priority: P3
+    area: enterprise
+    title: Air-gapped installation and sovereign operations
+    status: planned
+    depends_on: [P3-ENT-008, P3-ENT-009]
+    exit_evidence: Offline install, dependency mirror, signature verification, no-network enforcement, local identity fallback, backup, upgrade, and rollback drills pass.
+  - id: P3-ENT-012
+    priority: P3
+    area: enterprise
+    title: Enterprise observability and operational runbooks
+    status: planned
+    depends_on: [P1-PLAT-009, P3-ENT-005, P3-ENT-010]
+    exit_evidence: SLO-scoped metrics/traces/logs, alerts, redaction, correlation, capacity, dependency failure, incident, and recovery runbooks pass exercises.
+  - id: P3-ENT-013
+    priority: P3
+    area: enterprise
+    title: Evidence-based competitive capability assessment
+    status: planned
+    depends_on: [P3-ENT-006, P3-ENT-007, P3-ENT-012]
+    exit_evidence: Dated primary-source comparison maps like-for-like capabilities, measured ReconForge evidence, deployment sovereignty, costs left unknown, limitations, and prohibited claims.
+  - id: P3-EXT-001
+    priority: P3
+    area: external_validation
+    title: Three to five real controlled pilots
+    status: planned
+    depends_on: [P3-ENT-009, P3-ENT-012]
+    exit_evidence: At least three approved, scoped, real pilot records include environment, workflow, data authorization, outcomes, failures, user feedback, and allowed public wording; synthetic rehearsals do not qualify.
+  - id: P3-EXT-002
+    priority: P3
+    area: external_validation
+    title: Independent security review
+    status: planned
+    depends_on: [P3-ENT-004, P3-ENT-007, P3-ENT-009, P3-ENT-011]
+    exit_evidence: An independent qualified reviewer delivers a dated scoped report; findings have reproducible references, remediation state, retest evidence, and explicit residual-risk acceptance by an authorized human.

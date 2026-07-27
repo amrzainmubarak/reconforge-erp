@@ -8,8 +8,8 @@ Phase 1 — Platform Foundation (in progress)
 
 ## Snapshot boundary
 
-- Branch: `feature/p1-platform-foundation-audit` from merged `origin/main`
-- Phase 1 base: `0fa2c5b06af68d301cce561b5d71ed4c496c561e` (merged Phase 0 closeout PR #61)
+- Branch: `feature/phase123-execution-contract` from merged `origin/main`
+- Phase 1 base: `1c633eea53a2f11c9a90af57edfc80a36faeef82` (merged atomic application-boundary PR #62)
 - Phase 0 signed-candidate source remains `d47edd845e6aef3bae16e05698e07878086d690b`; its evidence is immutable historical baseline, not evidence for Phase 1 changes.
 - Publication scope: PR #54 merged the evidence-bounded Phase 0 implementation. Signed Release Candidate run `30243819239` is non-publishing: it retained review artifact `8644255664` and pushed only the digest-addressed candidate image required for verification; no GitHub Release, PyPI publication, compliance claim, or production migration occurred.
 - Worktree outside the publication scope retains 19 status entries: the user-owned `AGENTS.md` modification, an unapproved `CODE_OF_CONDUCT.md` deletion, `.codex-test-tmp/`, and 16 raw duplicated command-output files. None is staged or attributed to the Phase 0 commit.
@@ -106,8 +106,13 @@ Phase 1 — Platform Foundation (in progress)
 
 Current E-088 gates: repository/application focus 13 passed; full Ruff passed; Mypy passed over 216 source files; full pytest collected 1,301 tests with 1,291 passed and ten live-service skips in 205.10s; wheel/sdist build passed and contains every new runtime module.
 
+E-089 adds the normative Phase 1–3 execution matrix and the previously missing
+Phase 3 enterprise/external-validation backlog. Four focused contract tests pass.
+No Phase 3 implementation or external gate is complete; both external gates
+remain `planned` with empty evidence-artifact lists.
+
 ## Next exact actions
 
 1. Complete the repository-boundary inventory and migrate the next transactionally coherent platform use case without exposing a database connection to the application layer.
 2. Add PostgreSQL and SQLite behavioral parity fixtures only after the shared application contract is stable; do not label method-name similarity as backend parity.
-3. Define the complete Phase 3 enterprise backlog and external pilot/security-review gates before feature implementation, preserving evidence-specific non-claims.
+3. Keep the Phase 1–3 matrix closed as implementation changes; never substitute synthetic evidence for the two external Phase 3 gates.

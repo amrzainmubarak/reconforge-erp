@@ -756,3 +756,11 @@
 - Consequence: Application code now depends only on domain ports and rejects malformed dates/text before opening a transaction. A second-audit failure rolls back workspace, period, first audit event, and ledger head. P1-PLAT-001 remains in progress because most platform services still depend directly on SQLite; no PostgreSQL parity or broad repository abstraction is claimed.
 - Reversibility: Remove the new application/adapter modules and restore the two repository constructors; existing callers retain their default autocommit behavior throughout the slice.
 - ADR: `docs/adr/0099-atomic-application-unit-of-work-port.md`
+
+### D-085: Make all three requested phases a closed, testable execution contract
+
+- Date: 2026-07-27
+- Decision: Map every post-Phase-0 backlog task exactly once into Platform Foundation, Matching and Evidence 2.0, or Enterprise Product; add the missing enterprise and external-validation tasks; and make real pilots plus independent security review fail-closed external gates.
+- Rationale: Phase 3 was absent from the executable backlog, so task-count completion could silently omit identity federation, operations, connectors, upgrade/rollback, air-gap, external pilots, or independent review. A normative machine-tested matrix prevents that scope collapse.
+- Consequence: Completion requires every technical task and gate plus non-simulated external evidence. CI rejects missing/duplicate tasks, later-phase dependencies, empty gate evidence, and unsupported completion shortcuts. The matrix creates no readiness, compliance, scale, superiority, pilot, or independent-assurance claim by itself.
+- ADR: `docs/adr/0100-close-phase-1-3-execution-contract.md`

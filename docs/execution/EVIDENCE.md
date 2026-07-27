@@ -6645,3 +6645,28 @@ Packaging boundary: runtime application, port, and SQLite adapter code is in
 both wheel and sdist; the dedicated transaction/rollback test and ADR remain
 sdist/repository evidence. Package presence does not prove PostgreSQL parity,
 live concurrency, cross-process recovery, or broader service migration.
+
+## E-089: Closed Phase 1–3 execution and external-gate contract
+
+The prior backlog contained ten Platform tasks and eighteen Matching/Evidence
+tasks, but no Phase 3 tasks and no normative phase mapping. The new schema-v1
+execution matrix maps every post-Phase-0 task exactly once and adds fifteen
+Phase 3 tasks: thirteen technical enterprise tasks, three-to-five real
+controlled pilots, and independent security review.
+
+Four contract tests parse the normative matrix and backlog and enforce unique
+task identity, complete mapping, closed dependencies, non-forward phase order,
+non-empty gate evidence, explicit external-gate status, artifacts before
+external verification, and the six prohibited unsupported claim categories.
+
+| Command | Result |
+| --- | --- |
+| `python -m pytest -q tests/test_phase_1_3_execution_contract.py` | 4 passed |
+| `python -m ruff check tests/test_phase_1_3_execution_contract.py` | Pass after import-order correction |
+| `python -m mypy tests/test_phase_1_3_execution_contract.py` | Pass |
+
+Claim boundary: this evidence proves that requested scope can no longer silently
+omit a represented task or external gate. It does not implement any newly listed
+capability and does not prove enterprise readiness, production operation,
+customer validation, independent assurance, compliance, certification, scale,
+or competitive superiority.

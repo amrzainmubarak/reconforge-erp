@@ -10175,3 +10175,33 @@ security review, and unresolved production-collection/distributed HA evidence.
 - `P3-EXT-001` remains blocked by no real controlled external pilots being attached yet.
 - `P3-EXT-002` remains blocked by missing independent security-review report evidence.
 - No publication action was executed in this session.
+
+## E-245: Objective count reconciliation and publication-readiness baseline (authoritative)
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: resolve the “6 incomplete tasks” claim against authoritative repository state and confirm what remains publish-blocked.
+- Boundary: no code changes, no local simulation of external pilots/security reviews.
+
+### Canonical count verification
+
+- `docs/execution/BACKLOG.yaml` authoritative non-P0 scan shows:
+  - total non-P0 tasks: `43`
+  - completed: `40`
+  - in_progress: `3`
+- Open IDs:
+  - `P3-ENT-013`
+  - `P3-EXT-001`
+  - `P3-EXT-002`
+
+### Reconciled assertion
+
+- Current state is **3** incomplete tasks; older historical entries mentioning 6 in-progress are superseded by this scan.
+- Closure is blocked by:
+  - external Gate `p3_external_pilots` still `engaged`
+  - external Gate `p3_independent_security_review` still `engaged`
+  - matrix closure flags both `false` by policy design until both external gates are proven.
+
+### Publish state
+
+- Branch `feature/phase123-exec-restart` is clean after commit and push.
+- PR #66 remains the publication channel and is marked `ready for review` after the updates.

@@ -33,6 +33,7 @@ Phase 3 — Enterprise Product (in progress)
 `P3_EXT_002_REVIEW_REPORT.md` remains pending because no qualified independent review artifact has been attached yet.
 - No claims of complete Phase 1–3 publication are valid until both `P3-EXT-001` and `P3-EXT-002` are verified with evidence artifacts.
 - **Publication action remains blocked** while `all_tasks_completed` and `all_required_gates_verified` are false.
+- PR #66 is now marked `ready for review`.
 - Working tree at this checkpoint is clean (`git status --short` empty), and no tags/releases were performed while blocked. A single PR remains open for gated publication decisions.
 
 ## Task status

@@ -9922,3 +9922,154 @@ security review, and unresolved production-collection/distributed HA evidence.
 - `P3-ENT-013`: competitive publication scope still tied to external pilots and independent security review before publish-safe completion.
 - `P3-EXT-001` / `P3-EXT-002`: evidence files remain placeholders and have no reviewed external records yet.
 - Matrix closure policy is intentionally conservative and correctly remains: `all_tasks_completed: false`, `all_required_gates_verified: false`.
+
+## E-238: Phase 1–3 live-session completion checkpoint (final guard check)
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: recalculated closure-state across backlog and matrix without changing repository code.
+
+### Command/Verification
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py -q --maxfail=1` | 1 | Expected red gate on `test_phase_three_has_no_unsupported_completion_shortcut`; `closure_policy.all_tasks_completed` and `all_required_gates_verified` are `false` by design while three phase-3 tasks remain in progress. |
+| `python -m pytest tests/test_phase_1_exit_audit.py tests/test_phase_2_exit_audit.py -q` | 0 | Phase 1 and Phase 2 exit audits remain verified. |
+
+### Command output (recomputed in this session)
+
+- Total non-P0 tasks: `43`.
+- Non-P0 completed: `40`.
+- Non-P0 in progress: `3`.
+- Open IDs in scope of Phase 1–3: `P3-ENT-013`, `P3-EXT-001`, `P3-EXT-002`.
+- Matrix phase completion counts:
+  - `phase_1`: `10/10` completed.
+  - `phase_2`: `18/18` completed.
+  - `phase_3`: `12/15` completed.
+- Matrix external gates:
+  - `p3_external_pilots`: `engaged`, `evidence_artifacts=[]`.
+  - `p3_independent_security_review`: `engaged`, `evidence_artifacts=[]`.
+
+### Residual boundary
+
+- `all_tasks_completed` and `all_required_gates_verified` stay `false` because:
+  - `P3-ENT-013` is still in-progress for publication-safe competitive scope.
+  - `P3-EXT-001` is still blocked pending real external controlled pilots.
+  - `P3-EXT-002` is still blocked pending an independent security review.
+- No commit, tag, push, or release action was performed in this session.
+- This is a hard pre-publication boundary, not a technical regression.
+
+## E-239: Full Plan 1–3 hard-gate verification with bounded local+UI evidence
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: re-run quality and boundary gates after the latest workspace refresh to confirm technical stability before any publication attempt.
+- Boundary: no commit/tag/push/release. No external pilot or external independent-security report was attached in this run.
+
+### Commands and results
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m ruff check .` | 0 | Passed. |
+| `python -m mypy reconforge` | 0 | No issues in 373 source files. |
+| `python -m bandit -q -r reconforge` | 0 | Passed; only nosec parse warnings. |
+| `python -m pip_audit` | 0 | No known vulnerabilities (project package not on PyPI is expected). |
+| `python -m build --no-isolation` | 0 | Built `reconforge_erp-0.7.1-py3-none-any.whl` and `reconforge_erp-0.7.1.tar.gz`. |
+| `python -m pytest --no-header --tb=no -rN` | 1 | 2009 passed, 1 failed, 64 skipped, 23 warnings. Failure is expected by design: `test_phase_1_3_execution_contract.py::test_phase_three_has_no_unsupported_completion_shortcut` while `all_tasks_completed` remains `false`. |
+| `npm --prefix apps/web ci` | 0 | Installed 160 packages, zero vulnerabilities. |
+| `npm --prefix apps/web run typecheck` | 0 | TypeScript check passed. |
+| `npm --prefix apps/web run test:run` | 0 | 8 files / 55 tests passed. |
+| `npm --prefix apps/web run build` | 0 | Production Vite build passed. |
+| `npm --prefix apps/web run e2e` | 0 | 11 passed, 5 skipped. |
+| `python -m pytest tests/test_p3_ent_003_exit_audit.py ... tests/test_p3_ent_012_exit_audit.py -q -rs` | 0 | All internal Phase 3 exit-audit tests passed. |
+| `python -m pytest tests/test_phase_1_exit_audit.py tests/test_phase_2_exit_audit.py -q` | 0 | Phase 1/2 exit-audit gates verified. |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py -q --maxfail=1` | 1 | Expected hard-guard failure remains: phase closure intentionally blocked. |
+| `git diff --check` | 0 | Clean (no conflict markers or whitespace errors). |
+
+### Recomputed closure-state
+
+- `open_non_p0_tasks=3`.
+- Remaining IDs inside active scope: `P3-ENT-013`, `P3-EXT-001`, `P3-EXT-002`.
+- `PHASE_1_3_EXECUTION_MATRIX.yaml` still reports:
+  - `phase_1: 10/10` completed.
+  - `phase_2: 18/18` completed.
+  - `phase_3: 12/15` completed.
+- External gates still `engaged` with empty evidence collections.
+
+### Residual boundary
+
+- No external pilot or external independent-security artifacts were produced in this run.
+- No publication action was performed in this run.
+- Remaining path to full completion remains external evidence collection only.
+
+## E-240: End-to-end production-readiness command bundle after user-requested session
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: re-check technical readiness gates requested in this session without changing source behavior.
+- Boundary: no commit, no tag, no push, no release action; no external pilot or independent security report attached.
+
+### Command/Verification
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest` | 1 | Timed out before completion at ~187s (run control). |
+| `python -m pytest --maxfail=1 -q` | 1 | Stopped at first hard-fail on `test_phase_1_3_execution_contract.py::test_phase_three_has_no_unsupported_completion_shortcut`; closure guard remains expectedly open. |
+| `python -m pytest --no-header --tb=no -rN --maxfail=1` | 1 | 1 failed, 1039 passed, 12 skipped, 5 warnings; failure is expected hard guard while `all_tasks_completed` remains `false`. |
+| `python -m ruff check .` | 0 | Passed. |
+| `python -m mypy reconforge` | 0 | No issues in 373 source files. |
+| `python -m bandit -q -r reconforge` | 0 | Passed (only `nosec` warnings). |
+| `python -m pip_audit` | 0 | No known vulnerabilities (project package not on PyPI). |
+| `python -m build --no-isolation` | 0 | Built `reconforge_erp-0.7.1` wheel and sdist. |
+| `git diff --check` | 0 | Clean whitespace/check integrity. |
+| `npm --prefix apps/web ci` | 0 | Installed dependencies; 0 vulnerabilities. |
+| `npm --prefix apps/web run typecheck` | 0 | Passed. |
+| `npm --prefix apps/web run test:run` | 0 | 8 files / 55 tests passed. |
+| `npm --prefix apps/web run build` | 0 | Production build passed. |
+| `npm --prefix apps/web run e2e` | 0 | 11 passed, 5 skipped. |
+| `python -m pytest tests/test_p3_ent_003_exit_audit.py ... tests/test_p3_ent_012_exit_audit.py -q -rs` | 0 | 13 assertions passed. |
+| `python -m pytest tests/test_phase_1_exit_audit.py tests/test_phase_2_exit_audit.py -q` | 0 | Passed. |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py -q --maxfail=1` | 1 | Expected hard-guard failure remains. |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py -q -rs` | 1 | Expected hard-guard failure remains (`all_tasks_completed` false). |
+| `reconforge doctor` | 0 | OK; 0 errors / 10 warnings. |
+| `reconforge validate examples/sample_data` | 0 | Validation returned 0 errors, 10 warnings in sample dataset. |
+| `reconforge demo run --output output\baseline-demo` | 0 | Demo workflow completed and wrote report/evidence artifacts. |
+| `docker build -t reconforge:baseline .` | 0 | Built image successfully. |
+| `docker run --rm reconforge:baseline reconforge doctor` | 0 | Passed inside container. |
+
+### Recomputed state
+
+- Non-P0 tasks: `43` total; `40` completed, `3` in progress.
+- Closure matrix:
+  - phase_1: `10/10`,
+  - phase_2: `18/18`,
+  - phase_3: `12/15`.
+- Open phase-3 IDs: `P3-ENT-013`, `P3-EXT-001`, `P3-EXT-002`.
+- External gates:
+  - `p3_external_pilots`: `engaged`, `evidence_artifacts=[]`
+  - `p3_independent_security_review`: `engaged`, `evidence_artifacts=[]`
+- `closure_policy`: `all_tasks_completed=false`, `all_required_gates_verified=false`, `external_evidence_may_not_be_simulated=true`.
+
+### Residual boundary
+
+- `P3-ENT-013` remains in progress pending external gate evidence.
+- `P3-EXT-001` and `P3-EXT-002` remain blocked by missing real external pilot/review evidence.
+- No publication action was performed during this session.
+
+## E-241: Current session hard-state reconciliation for open Phase-3 tasks
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: recompute backlog/matrix closure state and re-confirm gate blockers in the current working tree.
+
+### Command/Verification
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -c "import yaml, json; ..."` | 0 | Recomputed `docs/execution/BACKLOG.yaml` and `docs/execution/PHASE_1_3_EXECUTION_MATRIX.yaml`: 43 non-P0 tasks total, phase-3 in progress IDs `['P3-ENT-013', 'P3-EXT-001', 'P3-EXT-002']`, and phase counts `phase_1=10/10`, `phase_2=18/18`, `phase_3=12/15`. |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py -q --maxfail=1` | 1 | Hard guard remains blocked by design: `closure_policy.all_tasks_completed=False`, `closure_policy.all_required_gates_verified=False`. |
+
+### Residual boundary
+
+- Open phase-3 IDs remain exactly three: `P3-ENT-013`, `P3-EXT-001`, `P3-EXT-002`.
+- External gate status remains:
+  - `p3_external_pilots`: `engaged`, `evidence_artifacts=[]`.
+  - `p3_independent_security_review`: `engaged`, `evidence_artifacts=[]`.
+- `closure_policy` remains unchanged: `all_tasks_completed=false`, `all_required_gates_verified=false`, `external_evidence_may_not_be_simulated=true`.
+- No commit/push/release/publication action was performed.

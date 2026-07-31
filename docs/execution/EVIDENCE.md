@@ -10205,3 +10205,45 @@ security review, and unresolved production-collection/distributed HA evidence.
 
 - Branch `feature/phase123-exec-restart` is clean after commit and push.
 - PR #66 remains the publication channel and is marked `ready for review` after the updates.
+
+## E-246: Phase-1/2/3 closure execution replay on 2026-07-31
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: reproduce local execution gates and full test gates without any publication action.
+- Boundary: no PR, tag, release, external customer pilot, or independent security report was attached in this replay.
+
+### Gate commands executed
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m ruff check .` | 0 | Passed. |
+| `python -m mypy reconforge` | 0 | Success: no issues found in 373 source files. |
+| `python -m bandit -q -r reconforge` | 0 | Completed with warnings only; no findings. |
+| `python -m build --no-isolation` | 0 | Built wheel/sdist successfully. |
+| `python -m pip_audit` | 0 | No known vulnerabilities; local package not found on PyPI. |
+| `git diff --check` | 0 | Passed. |
+| `npm --prefix apps/web ci` | 0 | Installed 160 packages and 0 vulnerabilities. |
+| `npm --prefix apps/web run typecheck` | 0 | Passed. |
+| `npm --prefix apps/web run test:run` | 0 | 55 tests passed. |
+| `npm --prefix apps/web run build` | 0 | Production build passed. |
+| `npm --prefix apps/web run e2e` | 0 | 11 passed + 5 skipped Chromium specs. |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py` | 1 | 1 failed (`test_phase_three_has_no_unsupported_completion_shortcut`) because `all_tasks_completed` is still false. |
+| `python -m pytest tests/test_phase_1_exit_audit.py tests/test_phase_2_exit_audit.py tests/test_p3_ent_004_exit_audit.py tests/test_p3_ent_005_exit_audit.py tests/test_p3_ent_006_exit_audit.py tests/test_p3_ent_007_exit_audit.py tests/test_p3_ent_008_exit_audit.py tests/test_p3_ent_009_exit_audit.py tests/test_p3_ent_010_exit_audit.py tests/test_p3_ent_011_exit_audit.py tests/test_p3_ent_012_exit_audit.py` | 0 | 22 passed. |
+| `python -m pytest` | 1 | 2009 passed, 64 skipped, 1 failed (phase-3 closure guard); 23 warnings. |
+| `reconforge doctor` | 0 | OK baseline report (0 errors, 10 warnings). |
+| `reconforge validate examples/sample_data` | 0 | 10 warnings, 0 errors. |
+| `reconforge demo run --output output/baseline-demo` | 0 | Demo outputs generated successfully. |
+| `docker build -t reconforge:baseline .` | 0 | Image `reconforge:baseline` built successfully. |
+| `docker run --rm reconforge:baseline reconforge doctor` | 0 | Docker-path doctor passed with baseline output. |
+
+### Recomputed state used for closure
+
+- `python -m pytest tests/test_phase_1_3_execution_contract.py` confirms:
+  - `closure_policy.all_tasks_completed` remains `false`.
+  - `closure_policy.all_required_gates_verified` remains `false`.
+  - `closure_policy.external_evidence_may_not_be_simulated` remains `true`.
+- `BACKLOG.yaml` scan still shows non-P0 in progress: `P3-ENT-013`, `P3-EXT-001`, `P3-EXT-002`.
+
+### Residual boundary
+
+- E-245 remains the controlling evidence for objective completion; phase-3 still cannot be marked publish-ready until real external pilot records and an independent review report are attached.

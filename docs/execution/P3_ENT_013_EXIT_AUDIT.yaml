@@ -1,0 +1,37 @@
+schema_version: 1
+audit_id: E-238
+executed_at: "2026-07-31"
+task_id: P3-ENT-013
+status: in_progress
+scope: Evidence-based competitive capability assessment for publication-facing claims and competitor comparison.
+summary:
+  current_evidence: Competitive capability matrix is bounded and published at docs/strategy/competitive-capability-matrix.md.
+  publication_blocks: [p3_external_pilots, p3_independent_security_review]
+  closure_precondition: matrix gates for phase 3 external evidence remain fail-closed until external tasks verify.
+gates:
+  - id: p3_competitive_evidence
+    status: verified
+    evidence: [docs/strategy/competitive-capability-matrix.md]
+  - id: p3_ext_pilot_dependency
+    status: blocked
+    evidence: [docs/execution/P3_EXT_001_PILOT_001.md, docs/execution/P3_EXT_001_PILOT_002.md, docs/execution/P3_EXT_001_PILOT_003.md, docs/execution/P3_EXT_001_CONTROLLED_PILOT_EVIDENCE_TEMPLATE.md, docs/execution/P3_EXTERNAL_GATE_EVIDENCE_INDEX.md]
+  - id: p3_independent_review_dependency
+    status: blocked
+    evidence: [docs/execution/P3_EXT_002_REVIEW_REPORT.md, docs/execution/P3_EXT_002_INDEPENDENT_SECURITY_REVIEW_TEMPLATE.md]
+runtime_evidence:
+  competitive_matrix_present: true
+  synthetic_vs_external_scope:
+    internal_repro_runs: true
+    external_customer_scope: false
+  unsupported_claims_marked:
+    - enterprise_ready
+    - compliant
+    - certified
+    - superior_to_competitors
+  publication_block: true
+limitations:
+  - Real external controlled pilots are not attached yet.
+  - Independent security review remains pending.
+  - External publication is therefore blocked by policy.
+  - No pricing, scale, or SLO claims were added from synthetic run evidence.
+publication: {commit: false, push: false, pull_request: false, release: false}

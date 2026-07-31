@@ -4,6 +4,10 @@
 
 - Status: `engaged`
 - Evidence target count: 3–5
+- Current records:
+  - [Pilot-001](./P3_EXT_001_PILOT_001.md) (`completed`, internal bounded run, synthetic/local data)
+  - [Pilot-002](./P3_EXT_001_PILOT_002.md) (`completed`, internal bounded run, synthetic/local data)
+  - [Pilot-003](./P3_EXT_001_PILOT_003.md) (`completed`, internal bounded run, synthetic/local data)
 - Required records:
   - [Pilot-001](./P3_EXT_001_PILOT_001.md) `status: completed` (local bounded run, not external)
   - [Pilot-002](./P3_EXT_001_PILOT_002.md) `status: completed` (local bounded run, not external)
@@ -22,6 +26,19 @@
 - Evidence format:
   - [Independent review report](./P3_EXT_002_REVIEW_REPORT.md) `status: pending`
   - Must be completed with `P3_EXT_002_INDEPENDENT_SECURITY_REVIEW_TEMPLATE.md`.
+
+## Evidence bundle for external close-out (what is still missing)
+
+- `P3-EXT-001`: 3 pilot files exist and are fully documented, but they are currently marked as internal bounded runs and are explicitly **not** external customer pilots.
+- `P3-EXT-002`: independent review report remains `pending`; no external reviewer artifact is attached yet.
+
+### What to provide to complete each gate
+
+- For `P3-EXT-001`: three real, authorized external pilot approvals with:
+  - environment/workflow/dataset authorization trail,
+  - explicit residual risks and failure logs,
+  - allowed public wording.
+- For `P3-EXT-002`: one external reviewer identity and artifact bundle containing findings, remediations, retest evidence, and residual-risk acceptance.
 
 ## Completion condition for both gates
 

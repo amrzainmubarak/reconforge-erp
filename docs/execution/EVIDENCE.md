@@ -10100,3 +10100,78 @@ security review, and unresolved production-collection/distributed HA evidence.
   - `all_tasks_completed`: false
   - `all_required_gates_verified`: false
   - `external_evidence_may_not_be_simulated`: true
+
+## E-243: Extended verification replay for this continuation step (no source change)
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: re-run full project-readiness gates on current clean working tree before preparing additional publication evidence.
+- Boundary: no commit, no tag, no push, no release during this evidence capture.
+
+### Commands
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m ruff check .` | 0 | Passed. |
+| `python -m mypy reconforge` | 0 | No issues in 373 source files. |
+| `python -m pytest` | 1 | Timed out before completion at runner wall-time. |
+| `python -m bandit -q -r reconforge` | 0 | Passed (nosec warnings only, no findings). |
+| `python -m pip_audit` | 0 | No known vulnerabilities (project package not on PyPI). |
+| `python -m build --no-isolation` | 0 | Built `reconforge_erp-0.7.1` wheel and sdist. |
+| `git diff --check` | 0 | Clean (no conflict markers/whitespace issues). |
+| `npm --prefix apps/web ci` | 0 | Installed dependencies; 0 vulnerabilities. |
+| `npm --prefix apps/web run typecheck` | 0 | Passed. |
+| `npm --prefix apps/web run test:run` | 0 | 8 test files / 55 tests passed. |
+| `npm --prefix apps/web run build` | 0 | Production build succeeded. |
+| `npm --prefix apps/web run e2e` | 0 | 11 passed, 5 skipped. |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py -q --maxfail=1` | 1 | Expected hard-guard failure on `test_phase_three_has_no_unsupported_completion_shortcut`. |
+| `python -m pytest tests/test_phase_1_exit_audit.py tests/test_phase_2_exit_audit.py tests/test_p3_ent_003_exit_audit.py tests/test_p3_ent_005_exit_audit.py tests/test_p3_ent_006_exit_audit.py tests/test_p3_ent_007_exit_audit.py tests/test_p3_ent_008_exit_audit.py tests/test_p3_ent_009_exit_audit.py tests/test_p3_ent_010_exit_audit.py tests/test_p3_ent_011_exit_audit.py tests/test_p3_ent_012_exit_audit.py -q` | 0 | 18 phase-audit tests passed. |
+
+### Recomputed state
+
+- Non-P0 tasks remain `43`, with `40` completed and `3` in progress.
+- Open IDs remain `P3-ENT-013`, `P3-EXT-001`, `P3-EXT-002`.
+- External gates remain:
+  - `p3_external_pilots`: `engaged` (`evidence_artifacts=[]`)
+  - `p3_independent_security_review`: `engaged` (`evidence_artifacts=[]`)
+- Closure guard flags remain:
+  - `all_tasks_completed=false`
+  - `all_required_gates_verified=false`
+  - `external_evidence_may_not_be_simulated=true`.
+
+### Residual boundary
+
+- No publication action was executed in this session.
+- The remaining step to publication-safe completion is external evidence onboarding, not local code/test integrity.
+
+## E-244: Full test suite replay with explicit failure fingerprint (current run)
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: execute complete `pytest` suite after prior local changes, then recalculate Phase-1/2/3 closure state from repository records only.
+- Boundary: no commit, no tag, no push, no release during this evidence capture.
+
+### Commands
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest --no-header --tb=no -q` | 1 | 1 failed, 2,069 passed, 23 skipped. Failure is expected and isolated to `test_phase_1_3_execution_contract.py::test_phase_three_has_no_unsupported_completion_shortcut` (`all_tasks_completed` / `all_required_gates_verified` are false by design). |
+| `python -c "import pathlib,yaml; ..."` | 0 | Recomputed non-P0 total `43`, non-P0 completed `40`, in-progress `3` (`P3-ENT-013`, `P3-EXT-001`, `P3-EXT-002`). |
+
+### Recomputed state
+
+- `phase_1`: `10/10`.
+- `phase_2`: `18/18`.
+- `phase_3`: `12/15`.
+- External gate status:
+  - `p3_external_pilots`: `engaged`, `evidence_artifacts=[]`
+  - `p3_independent_security_review`: `engaged`, `evidence_artifacts=[]`
+- Closure flags:
+  - `all_tasks_completed=false`
+  - `all_required_gates_verified=false`
+  - `external_evidence_may_not_be_simulated=true`
+
+### Residual boundary
+
+- `P3-ENT-013` remains `in_progress` awaiting external gate completion and `docs/execution/P3_ENT_013_EXIT_AUDIT.yaml` remains blocked pending external evidence linkage.
+- `P3-EXT-001` remains blocked by no real controlled external pilots being attached yet.
+- `P3-EXT-002` remains blocked by missing independent security-review report evidence.
+- No publication action was executed in this session.

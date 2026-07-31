@@ -8,11 +8,11 @@ Phase 3 — Enterprise Product (in progress)
 
 ## Snapshot boundary
 
-- Branch: `feature/phase123-execution-contract` from merged `origin/main`
+- Branch: `feature/phase123-exec-restart` from current local baseline commit.
 - Phase 1 base: `1c633eea53a2f11c9a90af57edfc80a36faeef82` (merged atomic application-boundary PR #62)
 - Phase 0 signed-candidate source remains `d47edd845e6aef3bae16e05698e07878086d690b`; its evidence is immutable historical baseline, not evidence for Phase 1 changes.
 - Publication scope: PR #54 merged the evidence-bounded Phase 0 implementation. Signed Release Candidate run `30243819239` is non-publishing: it retained review artifact `8644255664` and pushed only the digest-addressed candidate image required for verification; no GitHub Release, PyPI publication, compliance claim, or production migration occurred.
-- Worktree outside the publication scope retains 19 status entries: the user-owned `AGENTS.md` modification, an unapproved `CODE_OF_CONDUCT.md` deletion, `.codex-test-tmp/`, and 16 raw duplicated command-output files. None is staged or attributed to the Phase 0 commit.
+- Worktree is currently clean at this checkpoint (`git status --short` returns no local entries).
 - GitHub Actions run `30239994946` closes P0-009; runs `30240642293`, `30240642306`, `30240642321`, and `30240642386` close P0-SEC-008. Exact-main CI `30242293585`, Security `30242293659`, Docker `30242293668`, CodeQL `30242293667`, and OpenSSF Scorecard `30242293599` pass on `d47edd8`. E-087 closes P0-SEC-006/007 through the GitHub-verified signed tag and independently verified retained provenance/SBOM bundles. All 22 evidence-defined Phase 0 tasks are complete.
 
 ## Plan status at 2026-07-31
@@ -32,8 +32,8 @@ Phase 3 — Enterprise Product (in progress)
 - Controlled-pilot evidence holders now exist at `docs/execution/P3_EXT_001_PILOT_001.md` through `docs/execution/P3_EXT_001_PILOT_003.md`; `PILOT-001` to `PILOT-003` are now completed as internal bounded runs with synthetic/local scope.
 `P3_EXT_002_REVIEW_REPORT.md` remains pending because no qualified independent review artifact has been attached yet.
 - No claims of complete Phase 1–3 publication are valid until both `P3-EXT-001` and `P3-EXT-002` are verified with evidence artifacts.
-- **Publication rule remains enforced**: no commit/push/tag/release/publication was done in this environment while Phase 3 completion proof was still open.
-- **Working-tree disposition pending human direction (recorded 2026-07-31)**: branch `feature/phase123-exec-restart` HEAD is `dc888f3` ("Add bounded true grouped matching"), but the working tree carries the entire Phase 1-3 implementation delta (~E-082 to E-229) as 256 modified tracked files (≈20,183 insertions / 20,521 deletions) plus untracked source/test/ADR/migration docs. That committed body of work lives on `feature/phase123-execution-contract`, not on this branch. A read-only baseline gate run was captured (see EVIDENCE.md E-231) and is green except for the expected `test_phase_three_has_no_unsupported_completion_shortcut` Phase-3-closure guard. No git add/commit/push/release is performed on this tree until a human selects whether to (a) commit the working tree as-is on this branch, (b) rebase/realign to `origin/main` and re-apply as a clean patch series, (c) treat the dirty files as the new baseline and only commit at the end if gates pass, or (d) take no git action yet. Each option carries distinct history/attribution tradeoffs and is not reversible once executed, so it is deferred per the master prompt's irreversible-operation and "no release from dirty tree" rules.
+- **Publication action remains blocked** while `all_tasks_completed` and `all_required_gates_verified` are false.
+- Working tree at this checkpoint is clean (`git status --short` empty), and no tags/releases were performed while blocked. A single PR remains open for gated publication decisions.
 
 ## Task status
 

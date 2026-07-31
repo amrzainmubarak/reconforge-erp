@@ -10073,3 +10073,30 @@ security review, and unresolved production-collection/distributed HA evidence.
   - `p3_independent_security_review`: `engaged`, `evidence_artifacts=[]`.
 - `closure_policy` remains unchanged: `all_tasks_completed=false`, `all_required_gates_verified=false`, `external_evidence_may_not_be_simulated=true`.
 - No commit/push/release/publication action was performed.
+
+## E-242: Plan 1-3 closure hard-state verification for this session
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: reconfirm the execution state after no-code consolidation and produce a final numeric closure report before publication attempt.
+- Boundary: no commit, no tag, no push, no release; no external pilot/security documents added in this run.
+
+### Commands
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -c "import yaml... (backlog closure compute)"` | 0 | Recomputed non-P0 total `43`, non-P0 completed `40`, open `3`; open IDs exactly `P3-ENT-013`, `P3-EXT-001`, `P3-EXT-002`. |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py -q --maxfail=1` | 1 | Hard guard still blocks completion: `closure_policy.all_tasks_completed=False`, `closure_policy.all_required_gates_verified=False` as expected by policy. |
+
+### Residual state
+
+- `phase_1`: `10/10` completed.
+- `phase_2`: `18/18` completed.
+- `phase_3`: `12/15` completed.
+- External gate states remain:
+  - `p3_external_pilots`: `engaged`, `evidence_artifacts=[]`.
+  - `p3_independent_security_review`: `engaged`, `evidence_artifacts=[]`.
+- Status distribution (non-P0 tasks): `40 completed`, `3 in_progress`.
+- `closure_policy` unchanged and valid as a publication guard:
+  - `all_tasks_completed`: false
+  - `all_required_gates_verified`: false
+  - `external_evidence_may_not_be_simulated`: true

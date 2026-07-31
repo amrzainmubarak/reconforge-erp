@@ -17,6 +17,8 @@ def test_workflow_schema_files_are_valid_json() -> None:
         "period_comparison.schema.json",
         "client_pack_manifest.schema.json",
         "evidence_index.schema.json",
+        "evidence_graph.schema.json",
+        "reconciliation_as_code.schema.json",
         "security_architecture.schema.json",
         "threat_model_index.schema.json",
         "asvs_mapping.schema.json",

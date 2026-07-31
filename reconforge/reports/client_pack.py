@@ -172,9 +172,7 @@ def _validated_output_path(source_root: Path, output_path: Path | str) -> Path:
         or source_resolved.is_relative_to(output_resolved)
         or output_resolved.is_relative_to(evidence_resolved)
     ):
-        raise ValueError(
-            "Client pack output directory must be separate from the source output folder."
-        )
+        raise ValueError("Client pack output directory must be separate from the source output folder.")
     if output_dir.is_symlink() or (output_dir.exists() and not output_dir.is_dir()):
         raise ValueError("Client pack output path is invalid")
     return output_dir
@@ -191,6 +189,7 @@ def _create_staging_dir(output_dir: Path) -> Path:
 
 
 def _publication_siblings(output_dir: Path, kind: str) -> list[Path]:
+    output_dir = output_dir.resolve()
     prefix = f".{output_dir.name}.{kind}-"
     return sorted(
         (path for path in output_dir.parent.iterdir() if path.name.startswith(prefix)),
@@ -483,20 +482,29 @@ def recover_client_pack_publication(output_path: Path | str) -> ClientPackPublic
         "confirmed-published",
     ]
     if state == (True, True, False) and phase == "prepared":
-        if _directory_tree_digest(output_dir) != previous_digest or _directory_tree_digest(staging_dir) != staged_digest:
+        if (
+            _directory_tree_digest(output_dir) != previous_digest
+            or _directory_tree_digest(staging_dir) != staged_digest
+        ):
             raise ValueError("Client pack publication recovery tree digest mismatch")
         rmtree(staging_dir)
         _remove_publication_marker(marker_path)
         action = "aborted-before-swap"
     elif state == (False, True, True) and phase in {"prepared", "previous-moved"}:
-        if _directory_tree_digest(rollback_dir) != previous_digest or _directory_tree_digest(staging_dir) != staged_digest:
+        if (
+            _directory_tree_digest(rollback_dir) != previous_digest
+            or _directory_tree_digest(staging_dir) != staged_digest
+        ):
             raise ValueError("Client pack publication recovery tree digest mismatch")
         rollback_dir.replace(output_dir)
         rmtree(staging_dir)
         _remove_publication_marker(marker_path)
         action = "restored-previous"
     elif state == (True, False, True) and phase in {"previous-moved", "published"}:
-        if _directory_tree_digest(rollback_dir) != previous_digest or _directory_tree_digest(output_dir) != staged_digest:
+        if (
+            _directory_tree_digest(rollback_dir) != previous_digest
+            or _directory_tree_digest(output_dir) != staged_digest
+        ):
             raise ValueError("Client pack publication recovery tree digest mismatch")
         rmtree(rollback_dir)
         _remove_publication_marker(marker_path)
@@ -557,8 +565,7 @@ def _redact_value(key: str, value: Any, options: ClientPackOptions) -> Any:
 def _redact_json_object(value: Any, options: ClientPackOptions, key: str = "") -> Any:
     if isinstance(value, dict):
         return {
-            item_key: _redact_json_object(item_value, options, str(item_key))
-            for item_key, item_value in value.items()
+            item_key: _redact_json_object(item_value, options, str(item_key)) for item_key, item_value in value.items()
         }
     if isinstance(value, list):
         return [_redact_json_object(item, options, key) for item in value]
@@ -797,9 +804,7 @@ def _read_redaction_json(source: Path, options: ClientPackOptions) -> object:
     try:
         return read_json_document(
             source,
-            preserve_float_lexemes=(
-                options.financial_input_policy == STRICT_FINANCIAL_INPUT_POLICY
-            ),
+            preserve_float_lexemes=(options.financial_input_policy == STRICT_FINANCIAL_INPUT_POLICY),
         )
     except StructuredDocumentError as exc:
         raise ValueError("Client pack JSON redaction input is invalid") from exc
@@ -869,17 +874,17 @@ def _copy_evidence_folder(
     candidate_sources: frozenset[Path],
 ) -> tuple[list[Path], list[str]]:
     if options.summary_only or options.exclude_evidence:
-        return [], ["evidence/ (excluded by --summary-only)" if options.summary_only else "evidence/ (excluded by --exclude-evidence)"]
+        return [], [
+            "evidence/ (excluded by --summary-only)"
+            if options.summary_only
+            else "evidence/ (excluded by --exclude-evidence)"
+        ]
     evidence_root = source_root / "evidence"
     if not evidence_root.exists() or not evidence_root.is_dir():
         return [], []
     copied: list[Path] = []
     excluded: list[str] = []
-    for source in sorted(
-        path
-        for path in candidate_sources
-        if path.is_relative_to(evidence_root)
-    ):
+    for source in sorted(path for path in candidate_sources if path.is_relative_to(evidence_root)):
         relative = source.relative_to(source_root)
         if _is_hidden_or_system(relative):
             continue
@@ -896,11 +901,16 @@ def _copy_evidence_folder(
     return copied, excluded
 
 
-def _write_pack_text(output_dir: Path, input_path: Path, included: list[Path], missing: list[str], excluded: list[str], options: ClientPackOptions) -> tuple[Path, Path, Path]:
+def _write_pack_text(
+    output_dir: Path,
+    input_path: Path,
+    included: list[Path],
+    missing: list[str],
+    excluded: list[str],
+    options: ClientPackOptions,
+) -> tuple[Path, Path, Path]:
     source_label = (
-        "[local path omitted]"
-        if options.financial_input_policy == STRICT_FINANCIAL_INPUT_POLICY
-        else str(input_path)
+        "[local path omitted]" if options.financial_input_policy == STRICT_FINANCIAL_INPUT_POLICY else str(input_path)
     )
     summary_path = output_dir / "handoff_summary.md"
     summary_path.write_text(
@@ -1005,9 +1015,7 @@ def _canonical_digest(payload: object) -> str:
 
 def _bounded_tree_files(root: Path, *, include_hidden: bool = False) -> list[Path]:
     if _path_is_reparse(root):
-        raise ValueError("Client pack source input is invalid") from _source_rejection(
-            "file_not_regular"
-        )
+        raise ValueError("Client pack source input is invalid") from _source_rejection("file_not_regular")
     stack = [root]
     files: list[Path] = []
     entries_seen = 0
@@ -1089,9 +1097,7 @@ def _file_fingerprints(
     if max_files is None:
         max_files = CLIENT_PACK_MAX_SOURCE_FILES + _CLIENT_PACK_GENERATED_FILE_ALLOWANCE
     if max_total_bytes is None:
-        max_total_bytes = (
-            CLIENT_PACK_MAX_TOTAL_SOURCE_BYTES + _CLIENT_PACK_GENERATED_BYTE_ALLOWANCE
-        )
+        max_total_bytes = CLIENT_PACK_MAX_TOTAL_SOURCE_BYTES + _CLIENT_PACK_GENERATED_BYTE_ALLOWANCE
     _validate_bounded_source_set(
         paths,
         max_files=max_files,
@@ -1179,8 +1185,7 @@ def _write_manifest(
             "size_bytes": path.stat().st_size,
             **(
                 {"sha256": _sha256(path)}
-                if options.financial_input_policy == STRICT_FINANCIAL_INPUT_POLICY
-                or options.include_manifest_checksums
+                if options.financial_input_policy == STRICT_FINANCIAL_INPUT_POLICY or options.include_manifest_checksums
                 else {}
             ),
         }
@@ -1215,9 +1220,7 @@ def _write_manifest(
             "integrity_boundary": _CLIENT_PACK_INTEGRITY_BOUNDARY,
             **common_payload,
         }
-        payload["content_digest"] = _canonical_digest(
-            _current_content_payload(payload)
-        )
+        payload["content_digest"] = _canonical_digest(_current_content_payload(payload))
         payload["artifact_digest"] = _canonical_digest(payload)
     with manifest_path.open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=2, default=json_default)
@@ -1275,9 +1278,7 @@ def generate_client_pack(
         missing: list[str] = []
         excluded: list[str] = []
         for relative_name, _description in OPTIONAL_ARTIFACTS:
-            target_relative_name = (
-                "source_summary.md" if relative_name == "summary.md" else None
-            )
+            target_relative_name = "source_summary.md" if relative_name == "summary.md" else None
             copied, excluded_reason = _copy_optional_file(
                 source_root,
                 staging_dir,
@@ -1399,20 +1400,8 @@ def _validate_file_records(
             or isinstance(size_bytes, bool)
             or not isinstance(size_bytes, int)
             or size_bytes < 0
-            or (
-                require_digest
-                and (
-                    not isinstance(digest, str)
-                    or _SHA256_PATTERN.fullmatch(digest) is None
-                )
-            )
-            or (
-                digest is not None
-                and (
-                    not isinstance(digest, str)
-                    or _SHA256_PATTERN.fullmatch(digest) is None
-                )
-            )
+            or (require_digest and (not isinstance(digest, str) or _SHA256_PATTERN.fullmatch(digest) is None))
+            or (digest is not None and (not isinstance(digest, str) or _SHA256_PATTERN.fullmatch(digest) is None))
         ):
             raise ValueError("Client pack manifest contains an invalid file fingerprint")
         paths.append(path)
@@ -1431,9 +1420,7 @@ def _validated_redaction_settings(value: object) -> dict[str, bool]:
         "exclude_evidence",
         "include_manifest_checksums",
     }
-    if set(settings) != expected_keys or not all(
-        isinstance(settings[key], bool) for key in expected_keys
-    ):
+    if set(settings) != expected_keys or not all(isinstance(settings[key], bool) for key in expected_keys):
         raise ValueError("Client pack redaction settings are invalid")
     return {key: settings[key] for key in expected_keys}
 
@@ -1465,9 +1452,7 @@ def verify_client_pack_manifest_payload(
         raise ValueError("Only current v2 client pack manifests are verifiable")
     if payload.get("artifact_type") != _CLIENT_PACK_ARTIFACT_TYPE:
         raise ValueError("Client pack artifact type is invalid")
-    input_policy = validate_financial_input_policy(
-        payload.get("financial_input_policy")
-    )
+    input_policy = validate_financial_input_policy(payload.get("financial_input_policy"))
     if input_policy != STRICT_FINANCIAL_INPUT_POLICY:
         raise ValueError("Client pack v2 requires the strict financial input policy")
     if payload.get("redaction_policy") != _current_redaction_policy():
@@ -1494,9 +1479,7 @@ def verify_client_pack_manifest_payload(
     ):
         raise ValueError("Client pack content digest verification failed")
     artifact_digest = payload.get("artifact_digest")
-    payload_without_digest = {
-        key: value for key, value in payload.items() if key != "artifact_digest"
-    }
+    payload_without_digest = {key: value for key, value in payload.items() if key != "artifact_digest"}
     if not isinstance(artifact_digest, str) or not hmac.compare_digest(
         artifact_digest,
         _canonical_digest(payload_without_digest),
@@ -1517,9 +1500,7 @@ def verify_client_pack_manifest_payload(
         output_root = Path(output_dir)
         try:
             current_paths = [
-                path
-                for path in sorted(_bounded_tree_files(output_root))
-                if path.name != "files_manifest.json"
+                path for path in sorted(_bounded_tree_files(output_root)) if path.name != "files_manifest.json"
             ]
             current_output_files = _file_fingerprints(output_root, current_paths)
         except (FileIngressError, ValueError) as exc:

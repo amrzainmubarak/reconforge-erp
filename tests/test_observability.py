@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
@@ -15,10 +17,13 @@ from reconforge.infrastructure.sqlite_jobs import SQLiteDurableJobRepository
 from reconforge.observability import (
     ObservabilityConfigurationError,
     ObservabilityRuntime,
+    OTLPHTTPConfiguration,
     TelemetryCorrelationFilter,
+    create_otlp_http_runtime,
     safe_attributes,
     telemetry_request_context,
 )
+from reconforge.reliability import MetricKey
 
 
 def test_opentelemetry_api_trace_and_metrics_are_safe_and_correlated(
@@ -46,7 +51,7 @@ def test_opentelemetry_api_trace_and_metrics_are_safe_and_correlated(
     assert not ({"tenant_id", "workspace_id", "amount", "currency", "record"} & set(attributes))
     assert dict(finished[0].resource.attributes) == {"service.name": "reconforge-api"}
     metric_names = {metric.name for resource in metrics.get_metrics_data().resource_metrics for scope in resource.scope_metrics for metric in scope.metrics}
-    assert metric_names == {"reconforge.http.server.duration", "reconforge.http.server.requests"}
+    assert {"reconforge.http.server.duration", "reconforge.http.server.requests"} <= metric_names
 
 
 def test_telemetry_policy_rejects_sensitive_high_cardinality_or_financial_attributes() -> None:
@@ -114,3 +119,77 @@ def test_durable_job_spans_exclude_tenant_workspace_actor_and_job_identity(tmp_p
     assert "reconforge.job.submit" in serialized and "reconforge.job.claim" in serialized
     for secret in ("SECRET-JOB-ID", "SECRET-SCOPE", "SECRET-KEY", "SECRET-TENANT", "SECRET-WORKSPACE", "SECRET-ENTITY", "SECRET-ACTOR", "SECRET-WORKER"):
         assert secret not in serialized
+
+
+def test_reliability_measurements_are_closed_dimension_free_metrics() -> None:
+    metrics = InMemoryMetricReader()
+    runtime = ObservabilityRuntime.create(metric_reader=metrics)
+    runtime.record_reliability_measurement(MetricKey.QUEUE_DEPTH, 17)
+    exported = metrics.get_metrics_data()
+    named = {
+        metric.name: metric
+        for resource in exported.resource_metrics
+        for scope in resource.scope_metrics
+        for metric in scope.metrics
+    }
+    metric = named["reconforge.operations.job_queue_depth"]
+    assert metric.data.data_points[0].attributes == {}
+    with pytest.raises(ObservabilityConfigurationError, match="measurement is invalid"):
+        runtime.record_reliability_measurement(MetricKey.QUEUE_DEPTH, -1)
+
+
+def test_otlp_configuration_rejects_untrusted_or_plaintext_remote_egress(tmp_path: Path) -> None:
+    with pytest.raises(ObservabilityConfigurationError, match="allowlisted"):
+        OTLPHTTPConfiguration("https://collector.example:4318")
+    with pytest.raises(ObservabilityConfigurationError, match="Plaintext"):
+        OTLPHTTPConfiguration("http://collector.example:4318", allowed_hosts=("collector.example",))
+    with pytest.raises(ObservabilityConfigurationError, match="no path"):
+        OTLPHTTPConfiguration("https://collector.example:4318/v1", allowed_hosts=("collector.example",))
+    with pytest.raises(ObservabilityConfigurationError, match="does not exist"):
+        OTLPHTTPConfiguration("http://127.0.0.1:4318", certificate_file=tmp_path / "missing.pem")
+
+
+def test_otlp_http_exports_safe_trace_and_metrics_to_explicit_loopback(monkeypatch: pytest.MonkeyPatch) -> None:
+    received: list[tuple[str, bytes]] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:  # noqa: N802
+            size = int(self.headers.get("content-length", "0"))
+            received.append((self.path, self.rfile.read(size)))
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, format: str, *args: object) -> None:
+            return
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:1")
+    runtime = create_otlp_http_runtime(
+        OTLPHTTPConfiguration(f"http://127.0.0.1:{server.server_port}", export_interval_millis=300_000)
+    )
+    try:
+        with runtime.span("reconforge.otlp.drill", {"reconforge.operation": "collector-drill"}):
+            runtime.record_reliability_measurement(MetricKey.QUEUE_DEPTH, 3)
+            runtime.record_event("dependency.recovered", {"reconforge.result": "normal"})
+        assert runtime.force_flush()
+    finally:
+        runtime.shutdown()
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+    paths = {path for path, _ in received}
+    assert {"/v1/traces", "/v1/metrics", "/v1/logs"} <= paths
+    serialized = b"".join(body for _, body in received)
+    assert b"collector-drill" in serialized
+    assert b"tenant_id" not in serialized and b"amount" not in serialized
+
+
+def test_operational_log_events_reject_arbitrary_messages() -> None:
+    runtime = ObservabilityRuntime.create()
+    try:
+        with pytest.raises(ObservabilityConfigurationError, match="event name"):
+            runtime.record_event("raw customer row: 100 USD", {})
+    finally:
+        runtime.shutdown()

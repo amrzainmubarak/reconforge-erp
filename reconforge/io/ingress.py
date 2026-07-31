@@ -22,7 +22,7 @@ _ZIP_LOCAL_FILE_MAGIC = b"PK\x03\x04"
 _OLE_COMPOUND_MAGIC = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
 _WINDOWS_DRIVE_PREFIX = re.compile(r"^[A-Za-z]:")
 _XLSX_CELL_REFERENCE = re.compile(r"^([A-Za-z]+)[1-9][0-9]*$")
-_EXTERNAL_RELATIONSHIP = re.compile(br"targetmode\s*=\s*['\"]external['\"]", re.IGNORECASE)
+_EXTERNAL_RELATIONSHIP = re.compile(rb"targetmode\s*=\s*['\"]external['\"]", re.IGNORECASE)
 _FORBIDDEN_XML_DECLARATIONS = (b"<!DOCTYPE", b"<!ENTITY")
 _ALLOWED_ZIP_COMPRESSION = frozenset({zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED})
 _REQUIRED_XLSX_MEMBERS = frozenset({"[Content_Types].xml", "xl/workbook.xml"})

@@ -1,0 +1,41 @@
+schema_version: 1
+audit_id: E-210
+executed_at: "2026-07-30"
+task_id: P3-ENT-008
+status: verified
+scope: Local synthetic signed data-only control and industry pack lifecycle
+gates:
+  - {id: package_identity, status: verified_focused, evidence: [reconforge/packs/lifecycle.py, tests/test_signed_pack_lifecycle.py]}
+  - {id: signature_and_trust, status: verified_focused, evidence: [reconforge/packs/lifecycle.py, tests/test_signed_pack_lifecycle.py]}
+  - {id: dependency_compatibility, status: verified_focused, evidence: [reconforge/packs/lifecycle.py, tests/test_signed_pack_lifecycle.py]}
+  - {id: maker_checker_approval, status: verified_focused, evidence: [reconforge/packs/lifecycle.py, tests/test_signed_pack_lifecycle.py]}
+  - {id: immutable_install_and_upgrade, status: verified_focused, evidence: [reconforge/packs/lifecycle.py, tests/test_signed_pack_lifecycle.py]}
+  - {id: disable_and_rollback, status: verified_focused, evidence: [reconforge/packs/lifecycle.py, tests/test_signed_pack_lifecycle.py]}
+  - {id: declarative_golden_conformance, status: verified_focused, evidence: [reconforge/packs/lifecycle.py, tests/test_signed_pack_lifecycle.py]}
+  - {id: no_arbitrary_code_loading, status: verified_focused, evidence: [reconforge/packs/lifecycle.py, docs/adr/0203-signed-packs-are-approved-data-not-executable-extensions.md]}
+runtime_evidence:
+  focused_tests: 8_passed
+  focused_governance_target: 34_passed
+  locked_full_regression: 1924_passed_62_declared_external_skips
+  locked_full_regression_duration_seconds: 272.73
+  repository_ruff: passed
+  repository_mypy_source_files: 360
+  bandit: zero_findings_existing_reviewed_nosec_warnings_only
+  pip_audit: zero_known_third_party_vulnerabilities_local_unpublished_package_skipped
+  lock_check: 124_packages_resolved
+  wheel_bytes: 1141864
+  wheel_sha256: 9861d779c7779d2e8b943646129b03155c399d56787d9e5dbba7b466717ff8af
+  wheel_entries: 424
+  sdist_bytes: 1532617
+  sdist_sha256: 7902b4557c4bde098aadd4683d0205759f5f634136edcd124db178067dd488b4
+  sdist_entries: 845
+  external_network_calls: 0
+  production_keys_secrets_or_customer_data: 0
+limitations:
+  - no_public_marketplace_or_external_publisher_assurance
+  - no_production_trust_registry_or_identity_provider
+  - sqlite_local_lifecycle_not_ha_or_distributed
+  - no_customer_data_schema_migration_or_executable_migration_hooks
+  - existing_repository_yaml_packs_are_not_retroactively_signed
+  - no_compliance_certification_external_assurance_or_enterprise_ready_claim
+publication: {commit: false, push: false, pull_request: false, release: false}

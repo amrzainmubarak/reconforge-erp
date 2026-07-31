@@ -276,8 +276,16 @@ def close_summary_frame(checklist: CloseChecklist) -> pd.DataFrame:
         {"metric": "total_tasks", "value": total, "meaning": "All checklist tasks in the local close file."},
         {"metric": "complete_tasks", "value": complete, "meaning": "Tasks marked Complete."},
         {"metric": "blocked_tasks", "value": blocked, "meaning": "Tasks marked Blocked."},
-        {"metric": "not_applicable_tasks", "value": not_applicable, "meaning": "Tasks excluded from completion denominator."},
-        {"metric": "completion_rate_pct", "value": completion, "meaning": "Complete tasks divided by actionable tasks."},
+        {
+            "metric": "not_applicable_tasks",
+            "value": not_applicable,
+            "meaning": "Tasks excluded from completion denominator.",
+        },
+        {
+            "metric": "completion_rate_pct",
+            "value": completion,
+            "meaning": "Complete tasks divided by actionable tasks.",
+        },
     ]
     for status in ALLOWED_CLOSE_STATUSES:
         rows.append(
@@ -419,7 +427,9 @@ def export_close_report(input_path: Path | str, output_path: Path | str) -> Clos
     output_dir = ensure_output_dir(output_path)
     tasks = close_tasks_frame(checklist)
     summary = close_summary_frame(checklist)
-    workbook_path = write_excel_workbook({"Close Summary": summary, "Close Tasks": tasks}, output_dir / "close_report.xlsx")
+    workbook_path = write_excel_workbook(
+        {"Close Summary": summary, "Close Tasks": tasks}, output_dir / "close_report.xlsx"
+    )
     csv_path = output_dir / "close_report.csv"
     tasks.to_csv(csv_path, index=False)
     json_path = output_dir / "close_report.json"

@@ -52,7 +52,9 @@ def recommended_action(exception_type: str) -> str:
     if "old_part" in normalized:
         return "Collect the old part, attach disposal evidence, or approve a documented exception."
     if "direct_purchase" in normalized:
-        return "Attach purchase approval, goods receipt evidence, installation confirmation, and work-order authorization."
+        return (
+            "Attach purchase approval, goods receipt evidence, installation confirmation, and work-order authorization."
+        )
     if "cancelled_po" in normalized:
         return "Confirm whether the PO was reinstated or reverse the linked movement and related accounting."
     if "invoice" in normalized:

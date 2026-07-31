@@ -17,6 +17,7 @@ from reconforge.infrastructure.object_storage import (
     ObjectStorageIntegrityError,
     ObjectStorageNotFoundError,
     ObjectStorageOperationError,
+    ObjectStorageScope,
     ObjectStorageSettings,
     ObjectStorageUnavailableError,
     S3ObjectStore,
@@ -149,6 +150,58 @@ def test_upload_download_checksum_and_tenant_key_isolation() -> None:
     assert store.key_for("tenant_b", "evidence/report.json") != uploaded.key
 
 
+def test_hierarchical_scope_separates_sibling_workspaces_and_entities() -> None:
+    client = _FakeS3()
+    store = S3ObjectStore(_Factory(client))
+    workspace_a = ObjectStorageScope("Tenant_A", "Workspace_A")
+    workspace_b = ObjectStorageScope("tenant_a", "workspace_b")
+    entity_a = ObjectStorageScope("tenant_a", "workspace_a", "entity_a")
+    entity_b = ObjectStorageScope("tenant_a", "workspace_a", "entity_b")
+
+    uploaded = store.put_bytes(workspace_a, "exports/report.json", b"workspace-a")
+    store.put_bytes(workspace_b, "exports/report.json", b"workspace-b")
+    store.put_bytes(entity_a, "exports/report.json", b"entity-a")
+    store.put_bytes(entity_b, "exports/report.json", b"entity-b")
+
+    assert uploaded.key == "reconforge/tenant/tenant_a/workspace/workspace_a/exports/report.json"
+    assert store.get_bytes(workspace_a, "exports/report.json").content == b"workspace-a"
+    assert store.get_bytes(workspace_b, "exports/report.json").content == b"workspace-b"
+    assert store.get_bytes(entity_a, "exports/report.json").content == b"entity-a"
+    assert store.get_bytes(entity_b, "exports/report.json").content == b"entity-b"
+    assert store.key_for(entity_a, "exports/report.json") != store.key_for(
+        entity_b, "exports/report.json"
+    )
+    with pytest.raises(ObjectStorageNotFoundError):
+        store.get_bytes(ObjectStorageScope("tenant_a", "workspace_c"), "exports/report.json")
+
+
+def test_hierarchical_scope_validates_parentage_metadata_and_presigned_key() -> None:
+    client = _FakeS3()
+    store = S3ObjectStore(_Factory(client))
+    with pytest.raises(ValueError, match="requires workspace"):
+        ObjectStorageScope("tenant-a", entity_id="entity-a")
+
+    scope = ObjectStorageScope("tenant-a", "workspace-a", "entity-a")
+    uploaded = store.put_bytes(scope, "evidence.txt", b"evidence")
+    stored = client.objects[("reconforge-test", uploaded.key)]
+    assert stored["Metadata"] == {
+        "reconforge-sha256": uploaded.sha256,
+        "reconforge-tenant": "tenant-a",
+        "reconforge-workspace": "workspace-a",
+        "reconforge-entity": "entity-a",
+    }
+    assert "https://" in store.presigned_get_url(scope, "evidence.txt")
+    presign = next(kwargs for name, kwargs in client.calls if name == "get_object")
+    assert presign["Params"]["Key"] == uploaded.key
+
+    stored["Metadata"] = {
+        **stored["Metadata"],
+        "reconforge-workspace": "workspace-b",
+    }
+    with pytest.raises(ObjectStorageIntegrityError, match="hierarchy metadata"):
+        store.get_bytes(scope, "evidence.txt")
+
+
 def test_object_keys_metadata_retention_and_delete_are_guarded() -> None:
     client = _FakeS3()
     store = S3ObjectStore(_Factory(client))
@@ -258,6 +311,28 @@ def test_local_store_parity_retention_integrity_and_tenant_isolation(tmp_path: P
         store.get_bytes("tenant-a", "evidence/report.json")
 
 
+def test_local_store_hierarchical_scope_isolation(tmp_path: Path) -> None:
+    store = LocalObjectStore(
+        LocalObjectStorageSettings(root=tmp_path.resolve(), allow_delete=True)
+    )
+    scope_a = ObjectStorageScope("tenant-a", "workspace-a", "entity-a")
+    scope_b = ObjectStorageScope("tenant-a", "workspace-b", "entity-a")
+    uploaded = store.put_bytes(scope_a, "exports/report.json", b"workspace-a")
+    store.put_bytes(scope_b, "exports/report.json", b"workspace-b")
+
+    assert uploaded.key == (
+        "reconforge/tenant/tenant-a/workspace/workspace-a/"
+        "entity/entity-a/exports/report.json"
+    )
+    assert store.get_bytes(scope_a, "exports/report.json").content == b"workspace-a"
+    assert store.get_bytes(scope_b, "exports/report.json").content == b"workspace-b"
+    with pytest.raises(ObjectStorageNotFoundError):
+        store.get_bytes(
+            ObjectStorageScope("tenant-a", "workspace-c", "entity-a"),
+            "exports/report.json",
+        )
+
+
 def test_local_store_rejects_traversal_links_and_reserved_sidecars(tmp_path: Path) -> None:
     store = LocalObjectStore(LocalObjectStorageSettings(root=tmp_path.resolve()))
     for unsafe in ("../escape", "/absolute", "nested//empty", "file.reconforge-object.json"):
@@ -313,7 +388,7 @@ def test_local_store_concurrent_create_has_one_immutable_winner(tmp_path: Path) 
     not os.environ.get("RECONFORGE_TEST_S3_ENDPOINT") or not os.environ.get("RECONFORGE_TEST_S3_BUCKET"),
     reason="requires a live S3-compatible service",
 )
-def test_live_s3_tenant_key_isolation() -> None:
+def test_live_s3_hierarchical_key_isolation() -> None:
     pytest.importorskip("boto3")
     settings = ObjectStorageSettings(
         bucket=os.environ["RECONFORGE_TEST_S3_BUCKET"],
@@ -324,25 +399,31 @@ def test_live_s3_tenant_key_isolation() -> None:
     )
     factory = ObjectStorageConnectionFactory(settings)
     store = S3ObjectStore(factory)
-    object_name = "integration/live.txt"
+    object_name = f"integration/live-{os.getpid()}.txt"
+    scope_a = ObjectStorageScope("test_s3_a", "workspace-a", "entity-a")
+    scope_b = ObjectStorageScope("test_s3_a", "workspace-b", "entity-a")
     try:
-        uploaded = store.put_bytes("test_s3_a", object_name, b"tenant-a")
-        assert store.get_bytes("test_s3_a", object_name).content == b"tenant-a"
-        assert store.key_for("test_s3_a", object_name) != store.key_for("test_s3_b", object_name)
+        uploaded = store.put_bytes(scope_a, object_name, b"workspace-a")
+        store.put_bytes(scope_b, object_name, b"workspace-b")
+        assert store.get_bytes(scope_a, object_name).content == b"workspace-a"
+        assert store.get_bytes(scope_b, object_name).content == b"workspace-b"
+        assert store.key_for(scope_a, object_name) != store.key_for(scope_b, object_name)
         with pytest.raises(ObjectStorageNotFoundError):
-            store.get_bytes("test_s3_b", object_name)
+            store.get_bytes(
+                ObjectStorageScope("test_s3_a", "workspace-c", "entity-a"),
+                object_name,
+            )
         with pytest.raises(ObjectStorageConflictError):
-            store.put_bytes("test_s3_a", object_name, b"replacement")
+            store.put_bytes(scope_a, object_name, b"replacement")
         factory.client().put_object(
             Bucket=settings.bucket, Key=uploaded.key, Body=b"tampered",
             ContentType="application/octet-stream", Metadata=uploaded.metadata,
         )
         with pytest.raises(ObjectStorageIntegrityError):
-            store.get_bytes("test_s3_a", object_name)
+            store.get_bytes(scope_a, object_name)
     finally:
-        factory.client().delete_object(
-            Bucket=settings.bucket, Key=store.key_for("test_s3_a", object_name)
-        )
+        for key in (store.key_for(scope_a, object_name), store.key_for(scope_b, object_name)):
+            factory.client().delete_object(Bucket=settings.bucket, Key=key)
         factory.close()
 
 

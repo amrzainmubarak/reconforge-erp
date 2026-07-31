@@ -135,6 +135,7 @@ _MODULES = (
             "tests/test_db_export_import.py",
             "tests/test_db_import_structured_ingress.py",
             "tests/test_studio_auth.py",
+            "tests/test_upgrade_orchestrator.py",
         ),
     ),
     ModuleDescriptor(
@@ -381,6 +382,24 @@ _MODULES = (
         ),
     ),
     ModuleDescriptor(
+        module_id="packs.lifecycle",
+        name="Signed data-only pack lifecycle",
+        version=__version__,
+        maturity="experimental",
+        capability_status="foundation",
+        summary="Local signature, conformance, maker-checker, dependency, install, disable, and rollback boundary for declarative packs.",
+        default_enabled=False,
+        dependencies=("finance.controls",),
+        permissions=("controls.manage",),
+        interfaces=("library",),
+        import_contracts=("signed-data-pack-v1",),
+        export_contracts=("pack-lifecycle-events-v1",),
+        data_classification=("control-policy-metadata", "publisher-key-metadata"),
+        retention_note="Operators govern the local SQLite lifecycle registry and must retain events according to evidence policy.",
+        activation_note="Requires explicit trusted publisher keys and distinct maker-checker approval; external executable code is never loaded.",
+        test_evidence=("tests/test_p3_ent_008_exit_audit.py", "tests/test_signed_pack_lifecycle.py"),
+    ),
+    ModuleDescriptor(
         module_id="plugins.export",
         name="Local export-adapter plugins",
         version=__version__,
@@ -411,12 +430,21 @@ _MODULES = (
         default_enabled=False,
         dependencies=("finance.controls", "inventory.core"),
         interfaces=("artifacts", "modern-studio"),
-        import_contracts=("studio-evidence.v1", "studio-exceptions.v1", "studio-inventory-control.v1", "studio-overview.v1"),
+        import_contracts=(
+            "studio-evidence.v1",
+            "studio-exceptions.v1",
+            "studio-inventory-control.v1",
+            "studio-overview.v1",
+        ),
         export_contracts=("verified-ui-screenshots.v1",),
         data_classification=("synthetic-only",),
         retention_note="Static synthetic contracts remain in the local web build or operator-selected local path.",
         activation_note="Requires an explicit Node.js build and generated synthetic demo bundle; it is read-only and not API-authenticated.",
-        test_evidence=("apps/web/e2e/screenshots.spec.ts", "apps/web/src/App.test.tsx", "tests/test_studio_demo_bridge.py"),
+        test_evidence=(
+            "apps/web/e2e/screenshots.spec.ts",
+            "apps/web/src/App.test.tsx",
+            "tests/test_studio_demo_bridge.py",
+        ),
     ),
 )
 
@@ -461,7 +489,9 @@ def validate_registry(
     for record in sorted(records, key=lambda item: item.module_id):
         for dependency in record.dependencies:
             if dependency == record.module_id:
-                issues.append(RegistryValidationIssue("self_dependency", record.module_id, "A module cannot depend on itself."))
+                issues.append(
+                    RegistryValidationIssue("self_dependency", record.module_id, "A module cannot depend on itself.")
+                )
             elif dependency not in known_ids:
                 issues.append(
                     RegistryValidationIssue(
@@ -472,7 +502,9 @@ def validate_registry(
             if incompatible not in known_ids:
                 issues.append(
                     RegistryValidationIssue(
-                        "unknown_incompatibility", record.module_id, f"Incompatible module '{incompatible}' is not registered."
+                        "unknown_incompatibility",
+                        record.module_id,
+                        f"Incompatible module '{incompatible}' is not registered.",
                     )
                 )
         for migration_version in record.migration_versions:
@@ -492,7 +524,9 @@ def validate_registry(
     def visit(module_id: str, path: tuple[str, ...]) -> None:
         if module_id in visiting:
             cycle = " -> ".join((*path, module_id))
-            issues.append(RegistryValidationIssue("dependency_cycle", module_id, f"Dependency cycle detected: {cycle}."))
+            issues.append(
+                RegistryValidationIssue("dependency_cycle", module_id, f"Dependency cycle detected: {cycle}.")
+            )
             return
         if module_id in visited:
             return

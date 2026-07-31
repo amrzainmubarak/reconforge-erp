@@ -239,11 +239,17 @@ def verify_audit_events(connection: sqlite3.Connection) -> AuditVerificationResu
             issues.append(AuditVerificationIssue(sequence=sequence, message="Audit event sequence is not contiguous."))
         previous_hash = str(row["previous_hash"])
         if previous_hash != expected_previous_hash:
-            issues.append(AuditVerificationIssue(sequence=sequence, message="Audit event previous hash does not match ledger head."))
+            issues.append(
+                AuditVerificationIssue(
+                    sequence=sequence, message="Audit event previous hash does not match ledger head."
+                )
+            )
         expected_hash = _row_hash(row)
         actual_hash = str(row["event_hash"])
         if not hmac.compare_digest(actual_hash, expected_hash):
-            issues.append(AuditVerificationIssue(sequence=sequence, message="Audit event hash does not match row content."))
+            issues.append(
+                AuditVerificationIssue(sequence=sequence, message="Audit event hash does not match row content.")
+            )
         expected_previous_hash = actual_hash
         expected_sequence += 1
 
@@ -253,9 +259,15 @@ def verify_audit_events(connection: sqlite3.Connection) -> AuditVerificationResu
         last_sequence = int(state["last_sequence"])
         last_event_hash = str(state["last_event_hash"])
         if last_sequence != len(rows):
-            issues.append(AuditVerificationIssue(sequence=None, message="Audit ledger state sequence does not match event count."))
+            issues.append(
+                AuditVerificationIssue(sequence=None, message="Audit ledger state sequence does not match event count.")
+            )
         if last_event_hash != expected_previous_hash:
-            issues.append(AuditVerificationIssue(sequence=None, message="Audit ledger state hash does not match final event hash."))
+            issues.append(
+                AuditVerificationIssue(
+                    sequence=None, message="Audit ledger state hash does not match final event hash."
+                )
+            )
 
     return AuditVerificationResult(
         ok=not issues,

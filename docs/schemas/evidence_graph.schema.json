@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/evidence-graph-v1",
+  "title": "ReconForge Evidence Graph v1",
+  "description": "Evidence Graph export envelope with versioned lineage and integrity metadata.",
+  "type": "object",
+  "$defs": {
+    "value": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "boolean"},
+        {"type": "number"},
+        {"type": "string"},
+        {"$ref": "#/$defs/array"},
+        {"$ref": "#/$defs/object"}
+      ]
+    },
+    "array": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/value"},
+      "maxItems": 25000
+    },
+    "object": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/value"},
+      "maxProperties": 25000
+    },
+    "redaction_mask": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1, "maxLength": 128},
+      "uniqueItems": true,
+      "maxItems": 64
+    },
+    "node": {
+      "type": "object",
+      "required": [
+        "id",
+        "label",
+        "node_type",
+        "payload",
+        "created_at",
+        "data_classification",
+        "retention_policy",
+        "redaction_mask",
+        "node_hash"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "node_type": {
+          "type": "string",
+          "enum": [
+            "source_file",
+            "source_record",
+            "import_job",
+            "validation_result",
+            "normalization_result",
+            "rule_version",
+            "candidate",
+            "match_decision",
+            "exception",
+            "review_action",
+            "approval",
+            "report",
+            "export",
+            "external_reference"
+          ]
+        },
+        "payload": {"$ref": "#/$defs/object"},
+        "created_at": {"type": "string", "format": "date-time"},
+        "data_classification": {"type": "string", "minLength": 1, "maxLength": 64},
+        "retention_policy": {"type": "string", "minLength": 1, "maxLength": 128},
+        "redaction_mask": {"$ref": "#/$defs/redaction_mask"},
+        "node_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "required": [
+        "source_id",
+        "target_id",
+        "relation",
+        "metadata",
+        "created_at"
+      ],
+      "properties": {
+        "source_id": {"type": "string", "minLength": 1, "maxLength": 255},
+        "target_id": {"type": "string", "minLength": 1, "maxLength": 255},
+        "relation": {
+          "type": "string",
+          "enum": [
+            "derived_from",
+            "validated_by",
+            "normalized_by",
+            "candidate_for",
+            "matched_to",
+            "rejected_by",
+            "reviewed_by",
+            "approved_by",
+            "included_in",
+            "supersedes",
+            "reversed_by"
+          ]
+        },
+        "metadata": {
+          "$ref": "#/$defs/object",
+          "default": {}
+        },
+        "created_at": {"type": "string", "format": "date-time"}
+      }
+    }
+  },
+  "required": [
+    "artifact_type",
+    "schema_version",
+    "graph_id",
+    "workspace_id",
+    "created_at",
+    "nodes",
+    "edges",
+    "manifest_hash"
+  ],
+  "properties": {
+    "artifact_type": {
+      "type": "string",
+      "const": "reconforge-evidence-graph"
+    },
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "graph_id": {"type": "string", "minLength": 1, "maxLength": 255},
+    "workspace_id": {"type": "string", "minLength": 1, "maxLength": 255},
+    "created_at": {"type": "string", "format": "date-time"},
+    "nodes": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/node"},
+      "propertyNames": {
+        "minLength": 1,
+        "maxLength": 255
+      },
+      "minProperties": 1,
+      "maxProperties": 1000
+    },
+    "edges": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/edge"},
+      "maxItems": 50000
+    },
+    "manifest_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from importlib import import_module
 from pathlib import Path
 
 import pytest
@@ -10,7 +11,6 @@ from jsonschema import Draft202012Validator
 from typer.testing import CliRunner
 
 import reconforge.db.migrations as migration_module
-import reconforge.platform.inventory_valuation as valuation_module
 from reconforge.api import create_api_app
 from reconforge.audit import list_audit_events, verify_audit_events
 from reconforge.auth import LocalAuthService
@@ -24,6 +24,8 @@ from reconforge.platform.inventory_core import InventoryCoreService
 from reconforge.platform.inventory_valuation import InventoryValuationService
 from reconforge.platform.inventory_valuation_repository import SQLiteInventoryValuationRepository
 from reconforge.platform.master_data import MasterDataService
+
+valuation_module = import_module("reconforge.infrastructure.sqlite_inventory_valuation")
 
 runner = CliRunner()
 SCHEMA_DIR = Path(__file__).resolve().parents[1] / "docs" / "schemas"

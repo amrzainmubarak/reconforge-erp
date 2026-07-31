@@ -97,7 +97,7 @@ def _validate_policy_document(policy: dict[str, Any]) -> None:
         or python_policy["manager"] != "uv"
         or python_policy["supported_python"] != ["3.11", "3.12"]
         or python_policy["required_profiles"]
-        != ["runtime", "backup", "dev", "docs", "duckdb", "observability", "server"]
+        != ["runtime", "backup", "dev", "docs", "duckdb", "federation", "mfa", "observability", "server"]
         or re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", python_policy["manager_version"]) is None
         or re.fullmatch(r"[0-9a-f]{40}", python_policy["manager_commit"]) is None
     ):

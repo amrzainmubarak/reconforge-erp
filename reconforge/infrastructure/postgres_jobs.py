@@ -27,12 +27,31 @@ class PostgresJobConflictError(PostgresJobRepositoryError):
 
 
 _JOB_COLUMNS = (
-    "id", "schema_version", "version", "status", "idempotency_scope",
-    "idempotency_key", "tenant_id", "workspace_id", "entity_id", "input_digest",
-    "config_digest", "worker_version", "completed_units", "total_units",
-    "checkpoint_digest", "retry_count", "retry_ceiling", "safe_error_code",
-    "created_at", "updated_at", "started_at", "completed_at",
-    "output_manifest_schema_version", "output_manifest_digest", "output_manifest_reference",
+    "id",
+    "schema_version",
+    "version",
+    "status",
+    "idempotency_scope",
+    "idempotency_key",
+    "tenant_id",
+    "workspace_id",
+    "entity_id",
+    "input_digest",
+    "config_digest",
+    "worker_version",
+    "completed_units",
+    "total_units",
+    "checkpoint_digest",
+    "retry_count",
+    "retry_ceiling",
+    "safe_error_code",
+    "created_at",
+    "updated_at",
+    "started_at",
+    "completed_at",
+    "output_manifest_schema_version",
+    "output_manifest_digest",
+    "output_manifest_reference",
 )
 
 
@@ -51,18 +70,29 @@ def _decode_job(row: Any) -> DurableJob:
                 reference=str(values["output_manifest_reference"]),
             )
         return DurableJob(
-            id=str(values["id"]), schema_version=int(values["schema_version"]),
-            version=int(values["version"]), status=JobStatus(str(values["status"])),
+            id=str(values["id"]),
+            schema_version=int(values["schema_version"]),
+            version=int(values["version"]),
+            status=JobStatus(str(values["status"])),
             idempotency_scope=str(values["idempotency_scope"]),
-            idempotency_key=str(values["idempotency_key"]), tenant_id=str(values["tenant_id"]),
-            workspace_id=str(values["workspace_id"]), entity_id=str(values["entity_id"]),
-            input_digest=str(values["input_digest"]), config_digest=str(values["config_digest"]),
-            worker_version=str(values["worker_version"]), completed_units=int(values["completed_units"]),
-            total_units=int(values["total_units"]), checkpoint_digest=str(values["checkpoint_digest"]),
-            retry_count=int(values["retry_count"]), retry_ceiling=int(values["retry_ceiling"]),
-            safe_error_code=str(values["safe_error_code"]), created_at=str(values["created_at"]),
-            updated_at=str(values["updated_at"]), started_at=str(values["started_at"]),
-            completed_at=str(values["completed_at"]), output_manifest=manifest,
+            idempotency_key=str(values["idempotency_key"]),
+            tenant_id=str(values["tenant_id"]),
+            workspace_id=str(values["workspace_id"]),
+            entity_id=str(values["entity_id"]),
+            input_digest=str(values["input_digest"]),
+            config_digest=str(values["config_digest"]),
+            worker_version=str(values["worker_version"]),
+            completed_units=int(values["completed_units"]),
+            total_units=int(values["total_units"]),
+            checkpoint_digest=str(values["checkpoint_digest"]),
+            retry_count=int(values["retry_count"]),
+            retry_ceiling=int(values["retry_ceiling"]),
+            safe_error_code=str(values["safe_error_code"]),
+            created_at=str(values["created_at"]),
+            updated_at=str(values["updated_at"]),
+            started_at=str(values["started_at"]),
+            completed_at=str(values["completed_at"]),
+            output_manifest=manifest,
         )
     except (KeyError, TypeError, ValueError) as exc:
         raise PostgresJobRepositoryError("Stored durable-job state is invalid.") from exc
@@ -71,11 +101,28 @@ def _decode_job(row: Any) -> DurableJob:
 def _job_values(job: DurableJob) -> tuple[object, ...]:
     manifest = job.output_manifest
     return (
-        job.id, job.schema_version, job.version, job.status.value, job.idempotency_scope,
-        job.idempotency_key, job.tenant_id, job.workspace_id, job.entity_id, job.input_digest,
-        job.config_digest, job.worker_version, job.completed_units, job.total_units,
-        job.checkpoint_digest, job.retry_count, job.retry_ceiling, job.safe_error_code,
-        job.created_at, job.updated_at, job.started_at, job.completed_at,
+        job.id,
+        job.schema_version,
+        job.version,
+        job.status.value,
+        job.idempotency_scope,
+        job.idempotency_key,
+        job.tenant_id,
+        job.workspace_id,
+        job.entity_id,
+        job.input_digest,
+        job.config_digest,
+        job.worker_version,
+        job.completed_units,
+        job.total_units,
+        job.checkpoint_digest,
+        job.retry_count,
+        job.retry_ceiling,
+        job.safe_error_code,
+        job.created_at,
+        job.updated_at,
+        job.started_at,
+        job.completed_at,
         None if manifest is None else manifest.schema_version,
         "" if manifest is None else manifest.digest,
         "" if manifest is None else manifest.reference,
@@ -84,8 +131,16 @@ def _job_values(job: DurableJob) -> tuple[object, ...]:
 
 def _same_submission(left: DurableJob, right: DurableJob) -> bool:
     fields = (
-        "idempotency_scope", "idempotency_key", "tenant_id", "workspace_id", "entity_id",
-        "input_digest", "config_digest", "worker_version", "total_units", "retry_ceiling",
+        "idempotency_scope",
+        "idempotency_key",
+        "tenant_id",
+        "workspace_id",
+        "entity_id",
+        "input_digest",
+        "config_digest",
+        "worker_version",
+        "total_units",
+        "retry_ceiling",
     )
     return all(getattr(left, field) == getattr(right, field) for field in fields)
 
@@ -97,11 +152,18 @@ class PostgresDurableJobRepository:
     connection: Any
 
     @contextmanager
-    def _transaction(self, tenant_id: str) -> Iterator[None]:
+    def _transaction(
+        self,
+        tenant_id: str,
+        *,
+        workspace_id: str = "",
+        entity_id: str = "",
+    ) -> Iterator[None]:
         tenant = validate_tenant_id(tenant_id)
         try:
             with self.connection.transaction():
-                set_local_tenant_scope(self.connection, tenant)
+                set_local_tenant_scope(self.connection, tenant, workspace_id=workspace_id or None)
+                self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (entity_id,))
                 yield
         except PostgresJobRepositoryError:
             raise
@@ -113,16 +175,18 @@ class PostgresDurableJobRepository:
             raise PostgresJobRepositoryError("Only a new queued job may be submitted.")
         columns = ", ".join(_JOB_COLUMNS)
         placeholders = ", ".join("%s" for _ in _JOB_COLUMNS)
-        with self._transaction(job.tenant_id):
+        with self._transaction(job.tenant_id, workspace_id=job.workspace_id, entity_id=job.entity_id):
             try:
                 inserted = self.connection.execute(
-                    f"INSERT INTO reconforge.durable_jobs ({columns}) VALUES ({placeholders}) "  # noqa: S608
+                    # SQL identifiers come only from the immutable module-level _JOB_COLUMNS tuple.
+                    f"INSERT INTO reconforge.durable_jobs ({columns}) VALUES ({placeholders}) "  # nosec B608
                     "ON CONFLICT DO NOTHING RETURNING id",
                     _job_values(job),
                 ).fetchone()
                 if inserted is None:
                     row = self.connection.execute(
-                        "SELECT " + columns + " FROM reconforge.durable_jobs "
+                        # SQL identifiers come only from the immutable module-level _JOB_COLUMNS tuple.
+                        "SELECT " + columns + " FROM reconforge.durable_jobs "  # nosec B608
                         "WHERE tenant_id=%s AND idempotency_scope=%s AND idempotency_key=%s",
                         (job.tenant_id, job.idempotency_scope, job.idempotency_key),
                     ).fetchone()
@@ -144,23 +208,29 @@ class PostgresDurableJobRepository:
                     (job.tenant_id, job.id, actor_id, job.created_at),
                 )
             except Exception as exc:
-                raise PostgresJobConflictError(
-                    "Durable job identity or idempotency scope conflicts."
-                ) from exc
+                raise PostgresJobConflictError("Durable job identity or idempotency scope conflicts.") from exc
         return job, True
 
     def get(self, *, tenant_id: str, job_id: str) -> DurableJob | None:
         columns = ", ".join(_JOB_COLUMNS)
         with self._transaction(tenant_id):
             row = self.connection.execute(
-                "SELECT " + columns + " FROM reconforge.durable_jobs WHERE tenant_id = %s AND id = %s",
+                # SQL identifiers come only from the immutable module-level _JOB_COLUMNS tuple.
+                "SELECT " + columns + " FROM reconforge.durable_jobs WHERE tenant_id = %s AND id = %s",  # nosec B608
                 (tenant_id, job_id),
             ).fetchone()
-            return None if row is None else _decode_job(row)
+            if row is None:
+                return None
+            job = _decode_job(row)
+            set_local_tenant_scope(self.connection, job.tenant_id, workspace_id=job.workspace_id)
+            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (job.entity_id,))
+            scoped = self.connection.execute(
+                "SELECT " + columns + " FROM reconforge.durable_jobs WHERE tenant_id = %s AND id = %s",  # nosec B608
+                (tenant_id, job_id),
+            ).fetchone()
+            return None if scoped is None else _decode_job(scoped)
 
-    def persist_transition(
-        self, previous: DurableJob, changed: DurableJob, event: JobTransition
-    ) -> DurableJob:
+    def persist_transition(self, previous: DurableJob, changed: DurableJob, event: JobTransition) -> DurableJob:
         if changed.id != previous.id or changed.tenant_id != previous.tenant_id:
             raise PostgresJobRepositoryError("A durable-job transition cannot change job or tenant identity.")
         if changed.version != previous.version + 1 or event.job_version != changed.version:
@@ -172,7 +242,11 @@ class PostgresDurableJobRepository:
         }
         if (previous.status, changed.status) not in allowed:
             raise PostgresJobConflictError("Worker state changes require a generation-fenced lease.")
-        with self._transaction(previous.tenant_id):
+        with self._transaction(
+            previous.tenant_id,
+            workspace_id=previous.workspace_id,
+            entity_id=previous.entity_id,
+        ):
             lease = self.connection.execute(
                 "SELECT 1 FROM reconforge.durable_job_leases WHERE tenant_id = %s AND job_id = %s",
                 (previous.tenant_id, previous.id),
@@ -189,18 +263,19 @@ class PostgresDurableJobRepository:
         if changed.version != previous.version + 1:
             raise PostgresJobRepositoryError("A durable-job transition must advance exactly one version.")
         if (
-            event.job_id != changed.id or event.job_version != changed.version
-            or event.from_status is not previous.status or event.to_status is not changed.status
+            event.job_id != changed.id
+            or event.job_version != changed.version
+            or event.from_status is not previous.status
+            or event.to_status is not changed.status
         ):
             raise PostgresJobRepositoryError("Transition evidence does not match the durable-job versions.")
 
-    def _persist_transition_rows(
-        self, previous: DurableJob, changed: DurableJob, event: JobTransition
-    ) -> None:
+    def _persist_transition_rows(self, previous: DurableJob, changed: DurableJob, event: JobTransition) -> None:
         self._validate_transition(previous, changed, event)
         assignments = ", ".join(f"{column} = %s" for column in _JOB_COLUMNS[1:])
         cursor = self.connection.execute(
-            f"UPDATE reconforge.durable_jobs SET {assignments} "  # noqa: S608
+            # SQL identifiers come only from the immutable module-level _JOB_COLUMNS tuple.
+            f"UPDATE reconforge.durable_jobs SET {assignments} "  # nosec B608
             "WHERE tenant_id = %s AND id = %s AND version = %s",
             (*_job_values(changed)[1:], previous.tenant_id, previous.id, previous.version),
         )
@@ -213,8 +288,16 @@ class PostgresDurableJobRepository:
                  actor_id, occurred_at, reason_code)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
-            (previous.tenant_id, event.job_id, event.job_version, event.from_status.value,
-             event.to_status.value, event.actor_id, event.occurred_at, event.reason_code),
+            (
+                previous.tenant_id,
+                event.job_id,
+                event.job_version,
+                event.from_status.value,
+                event.to_status.value,
+                event.actor_id,
+                event.occurred_at,
+                event.reason_code,
+            ),
         )
 
     def _append_lease_event(self, lease: JobLease, *, action: str, occurred_at: str) -> None:
@@ -226,9 +309,17 @@ class PostgresDurableJobRepository:
             FROM reconforge.durable_job_lease_events
             WHERE tenant_id = %s AND job_id = %s
             """,
-            (lease.tenant_id, lease.job_id, lease.generation, action, lease.owner_id,
-             occurred_at, "" if action == "released" else lease.expires_at,
-             lease.tenant_id, lease.job_id),
+            (
+                lease.tenant_id,
+                lease.job_id,
+                lease.generation,
+                action,
+                lease.owner_id,
+                occurred_at,
+                "" if action == "released" else lease.expires_at,
+                lease.tenant_id,
+                lease.job_id,
+            ),
         )
 
     def claim_next(
@@ -253,12 +344,14 @@ class PostgresDurableJobRepository:
                 ORDER BY CASE jobs.status WHEN 'running' THEN 0 WHEN 'retrying' THEN 1 ELSE 2 END,
                          jobs.created_at, jobs.id
                 FOR UPDATE OF jobs SKIP LOCKED LIMIT 1
-                """,  # noqa: S608
+                """,  # nosec B608
                 (tenant_id, occurred_at, occurred_at),
             ).fetchone()
             if row is None:
                 return None
             previous = _decode_job(row)
+            set_local_tenant_scope(self.connection, previous.tenant_id, workspace_id=previous.workspace_id)
+            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (previous.entity_id,))
             if previous.status in {JobStatus.QUEUED, JobStatus.RETRYING}:
                 changed, event = previous.transition(
                     JobStatus.RUNNING, actor_id=worker_id, occurred_at=occurred_at, reason_code="CLAIMED"
@@ -269,8 +362,12 @@ class PostgresDurableJobRepository:
                 action = "taken_over"
             generation = int(_value(row, "prior_lease_generation", len(_JOB_COLUMNS))) + 1
             lease = JobLease(
-                job_id=changed.id, tenant_id=changed.tenant_id, owner_id=worker_id,
-                generation=generation, acquired_at=occurred_at, renewed_at=occurred_at,
+                job_id=changed.id,
+                tenant_id=changed.tenant_id,
+                owner_id=worker_id,
+                generation=generation,
+                acquired_at=occurred_at,
+                renewed_at=occurred_at,
                 expires_at=lease_expires_at,
             )
             self._persist_transition_rows(previous, changed, event)
@@ -284,30 +381,54 @@ class PostgresDurableJobRepository:
                     acquired_at=excluded.acquired_at, renewed_at=excluded.renewed_at,
                     expires_at=excluded.expires_at
                 """,
-                (lease.tenant_id, lease.job_id, lease.owner_id, lease.generation,
-                 lease.acquired_at, lease.renewed_at, lease.expires_at),
+                (
+                    lease.tenant_id,
+                    lease.job_id,
+                    lease.owner_id,
+                    lease.generation,
+                    lease.acquired_at,
+                    lease.renewed_at,
+                    lease.expires_at,
+                ),
             )
             self._append_lease_event(lease, action=action, occurred_at=occurred_at)
             return changed, lease
 
-    def renew_lease(
-        self, lease: JobLease, *, occurred_at: str, lease_expires_at: str
-    ) -> JobLease:
+    def renew_lease(self, lease: JobLease, *, occurred_at: str, lease_expires_at: str) -> JobLease:
         renewed = JobLease(
-            job_id=lease.job_id, tenant_id=lease.tenant_id, owner_id=lease.owner_id,
-            generation=lease.generation, acquired_at=lease.acquired_at,
-            renewed_at=occurred_at, expires_at=lease_expires_at,
+            job_id=lease.job_id,
+            tenant_id=lease.tenant_id,
+            owner_id=lease.owner_id,
+            generation=lease.generation,
+            acquired_at=lease.acquired_at,
+            renewed_at=occurred_at,
+            expires_at=lease_expires_at,
         )
         if occurred_at >= lease.expires_at or renewed.expires_at <= lease.expires_at:
             raise PostgresJobConflictError("Durable-job lease is expired or was not extended.")
         with self._transaction(lease.tenant_id):
+            scope_row = self.connection.execute(
+                "SELECT workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
+                (lease.tenant_id, lease.job_id),
+            ).fetchone()
+            if scope_row is None:
+                raise PostgresJobConflictError("Durable-job lease target no longer exists.")
+            set_local_tenant_scope(self.connection, lease.tenant_id, workspace_id=str(scope_row[0]))
+            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[1]),))
             cursor = self.connection.execute(
                 """
                 UPDATE reconforge.durable_job_leases SET renewed_at=%s, expires_at=%s
                 WHERE tenant_id=%s AND job_id=%s AND owner_id=%s AND generation=%s AND expires_at>%s
                 """,
-                (renewed.renewed_at, renewed.expires_at, renewed.tenant_id, renewed.job_id,
-                 renewed.owner_id, renewed.generation, occurred_at),
+                (
+                    renewed.renewed_at,
+                    renewed.expires_at,
+                    renewed.tenant_id,
+                    renewed.job_id,
+                    renewed.owner_id,
+                    renewed.generation,
+                    occurred_at,
+                ),
             )
             if cursor.rowcount != 1:
                 raise PostgresJobConflictError("Durable-job lease ownership changed or expired.")
@@ -337,11 +458,20 @@ class PostgresDurableJobRepository:
         self._append_lease_event(lease, action="released", occurred_at=occurred_at)
 
     def persist_owned_transition(
-        self, previous: DurableJob, changed: DurableJob, event: JobTransition, *,
-        lease: JobLease, release_lease: bool,
+        self,
+        previous: DurableJob,
+        changed: DurableJob,
+        event: JobTransition,
+        *,
+        lease: JobLease,
+        release_lease: bool,
     ) -> DurableJob:
         self._validate_transition(previous, changed, event)
-        with self._transaction(previous.tenant_id):
+        with self._transaction(
+            previous.tenant_id,
+            workspace_id=previous.workspace_id,
+            entity_id=previous.entity_id,
+        ):
             self._require_owned(previous, lease, event.occurred_at)
             self._persist_transition_rows(previous, changed, event)
             if release_lease:
@@ -349,15 +479,25 @@ class PostgresDurableJobRepository:
         return changed
 
     def persist_owned_effect_transition(
-        self, previous: DurableJob, changed: DurableJob, event: JobTransition,
-        effect: JobPartitionEffect, *, lease: JobLease, release_lease: bool,
+        self,
+        previous: DurableJob,
+        changed: DurableJob,
+        event: JobTransition,
+        effect: JobPartitionEffect,
+        *,
+        lease: JobLease,
+        release_lease: bool,
     ) -> DurableJob:
         self._validate_transition(previous, changed, event)
         if effect.job_id != changed.id or effect.completed_units != changed.completed_units:
             raise PostgresJobRepositoryError("Partition effect does not match durable-job progress.")
         if effect.committed_at != event.occurred_at:
             raise PostgresJobRepositoryError("Partition effect time does not match transition evidence.")
-        with self._transaction(previous.tenant_id):
+        with self._transaction(
+            previous.tenant_id,
+            workspace_id=previous.workspace_id,
+            entity_id=previous.entity_id,
+        ):
             self._require_owned(previous, lease, event.occurred_at)
             row = self.connection.execute(
                 "SELECT COALESCE(MAX(ordinal), 0) + 1 FROM reconforge.durable_job_partition_effects "
@@ -374,14 +514,21 @@ class PostgresDurableJobRepository:
                          output_digest, effect_reference, committed_at, job_version)
                     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     """,
-                    (previous.tenant_id, effect.job_id, effect.partition_key, effect.ordinal,
-                     effect.completed_units, effect.input_digest, effect.output_digest,
-                     effect.effect_reference, effect.committed_at, changed.version),
+                    (
+                        previous.tenant_id,
+                        effect.job_id,
+                        effect.partition_key,
+                        effect.ordinal,
+                        effect.completed_units,
+                        effect.input_digest,
+                        effect.output_digest,
+                        effect.effect_reference,
+                        effect.committed_at,
+                        changed.version,
+                    ),
                 )
             except Exception as exc:
-                raise PostgresJobConflictError(
-                    "Durable-job partition effect conflicts with committed state."
-                ) from exc
+                raise PostgresJobConflictError("Durable-job partition effect conflicts with committed state.") from exc
             self._persist_transition_rows(previous, changed, event)
             if release_lease:
                 self._release(lease, occurred_at=event.occurred_at)
@@ -389,6 +536,14 @@ class PostgresDurableJobRepository:
 
     def list_partition_effects(self, *, tenant_id: str, job_id: str) -> list[JobPartitionEffect]:
         with self._transaction(tenant_id):
+            scope_row = self.connection.execute(
+                "SELECT workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
+                (tenant_id, job_id),
+            ).fetchone()
+            if scope_row is None:
+                return []
+            set_local_tenant_scope(self.connection, tenant_id, workspace_id=str(scope_row[0]))
+            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[1]),))
             rows = self.connection.execute(
                 """
                 SELECT job_id, partition_key, ordinal, completed_units, input_digest,
@@ -398,14 +553,30 @@ class PostgresDurableJobRepository:
                 """,
                 (tenant_id, job_id),
             ).fetchall()
-            return [JobPartitionEffect(
-                job_id=str(row[0]), partition_key=str(row[1]), ordinal=int(row[2]),
-                completed_units=int(row[3]), input_digest=str(row[4]), output_digest=str(row[5]),
-                effect_reference=str(row[6]), committed_at=str(row[7]),
-            ) for row in rows]
+            return [
+                JobPartitionEffect(
+                    job_id=str(row[0]),
+                    partition_key=str(row[1]),
+                    ordinal=int(row[2]),
+                    completed_units=int(row[3]),
+                    input_digest=str(row[4]),
+                    output_digest=str(row[5]),
+                    effect_reference=str(row[6]),
+                    committed_at=str(row[7]),
+                )
+                for row in rows
+            ]
 
     def list_transitions(self, *, tenant_id: str, job_id: str) -> list[dict[str, Any]]:
         with self._transaction(tenant_id):
+            scope_row = self.connection.execute(
+                "SELECT workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
+                (tenant_id, job_id),
+            ).fetchone()
+            if scope_row is None:
+                return []
+            set_local_tenant_scope(self.connection, tenant_id, workspace_id=str(scope_row[0]))
+            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[1]),))
             cursor = self.connection.execute(
                 """
                 SELECT job_version, from_status, to_status, actor_id, occurred_at, reason_code
@@ -419,6 +590,14 @@ class PostgresDurableJobRepository:
 
     def list_lease_events(self, *, tenant_id: str, job_id: str) -> list[dict[str, Any]]:
         with self._transaction(tenant_id):
+            scope_row = self.connection.execute(
+                "SELECT workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
+                (tenant_id, job_id),
+            ).fetchone()
+            if scope_row is None:
+                return []
+            set_local_tenant_scope(self.connection, tenant_id, workspace_id=str(scope_row[0]))
+            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[1]),))
             cursor = self.connection.execute(
                 """
                 SELECT event_sequence, generation, action, owner_id, occurred_at, expires_at

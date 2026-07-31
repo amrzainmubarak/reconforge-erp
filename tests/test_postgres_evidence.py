@@ -112,8 +112,8 @@ class _EvidenceConnection:
                     ("evidence_status", 4),
                     ("content_type", 5),
                     ("byte_size", 6),
-                    ("retention_until", 7),
-                    ("registered_by", 8),
+                    ("retention_until", 8),
+                    ("registered_by", 9),
                 ):
                     self.record[field] = params[index]
                 self.record["updated_at"] = "2026-07-23T00:01:00Z"
@@ -195,6 +195,14 @@ def test_postgres_evidence_registry_is_atomic_and_tenant_scoped() -> None:
         actual_sha256=digest,
         actor_id="user-a",
     )
+    drill_down = repository.drill_down(
+        tenant_id="tenant_a",
+        evidence_id="evidence-a",
+        direction="down",
+        limit=1,
+        actor_id="user-a",
+        request_id="request-a",
+    )
     coverage = repository.coverage(tenant_id="tenant_a")
 
     assert record["tenant_id"] == "tenant_a"
@@ -202,9 +210,19 @@ def test_postgres_evidence_registry_is_atomic_and_tenant_scoped() -> None:
     assert link["evidence_id"] == "evidence-a"
     assert requirement["requirement_code"] == "TB"
     assert verification.ok is True
+    assert drill_down["nodes_count"] == 2
+    assert drill_down["pagination"]["returned_nodes"] == 1
+    assert drill_down["pagination"]["next_offset"] == 1
+    assert drill_down["nodes"][0]["record"]["checksum_sha256"] == "***redacted***"
     assert coverage["coverage_pct"] == 100.0
     assert connection.commits == 0
     assert any(params is not None and "tenant_a" in params for _, params in connection.executed)
+    assert any(
+        "insert into reconforge.audit_events" in " ".join(sql.split()).lower()
+        and params is not None
+        and "evidence_drill_down_viewed" in params
+        for sql, params in connection.executed
+    )
     assert any("ENABLE ROW LEVEL SECURITY" in POSTGRES_EVIDENCE_SCHEMA_SQL for _ in (0,))
 
 
@@ -260,6 +278,29 @@ def test_postgres_evidence_registry_rejects_cross_tenant_storage_and_mutation() 
             storage_key="evidence/a.pdf",
             actor_id="user-a",
         )
+
+
+def test_postgres_evidence_registry_preserves_and_never_shortens_retention() -> None:
+    connection = _EvidenceConnection()
+    repository = PostgresEvidenceRepository(connection)
+    arguments = {
+        "tenant_id": "tenant_a",
+        "evidence_id": "evidence-retained",
+        "evidence_code": "RETENTION-001",
+        "source_name": "retained evidence.pdf",
+        "checksum_sha256": "d" * 64,
+        "storage_backend": "external-reference",
+        "storage_tenant_id": "tenant_a",
+        "actor_id": "user-a",
+    }
+    floor = "2028-07-30T00:00:00Z"
+    repository.register(**arguments, retention_until=floor)
+
+    preserved = repository.register(**arguments)
+    assert preserved["retention_until"] == floor
+
+    with pytest.raises(PostgresEvidenceIntegrityError, match="cannot be shortened"):
+        repository.register(**arguments, retention_until="2027-07-30T00:00:00Z")
 
 
 def test_postgres_evidence_registry_schema_has_append_only_artifact_guards() -> None:

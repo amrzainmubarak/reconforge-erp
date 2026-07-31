@@ -25,12 +25,8 @@ class LegacyFinancialInputWarning(DeprecationWarning):
     """Warn that a compatibility reader accepted binary floating-point input."""
 
 
-LEGACY_FINANCIAL_INPUT_POLICY: Literal["legacy-financial-input-v1"] = (
-    "legacy-financial-input-v1"
-)
-STRICT_FINANCIAL_INPUT_POLICY: Literal["strict-financial-input-v2"] = (
-    "strict-financial-input-v2"
-)
+LEGACY_FINANCIAL_INPUT_POLICY: Literal["legacy-financial-input-v1"] = "legacy-financial-input-v1"
+STRICT_FINANCIAL_INPUT_POLICY: Literal["strict-financial-input-v2"] = "strict-financial-input-v2"
 FinancialInputPolicy = Literal[
     "legacy-financial-input-v1",
     "strict-financial-input-v2",
@@ -57,10 +53,7 @@ def _is_binary_floating_point(value: object) -> bool:
 
     if isinstance(value, float):
         return True
-    return any(
-        base.__module__.startswith("numpy") and base.__name__ == "floating"
-        for base in type(value).__mro__
-    )
+    return any(base.__module__.startswith("numpy") and base.__name__ == "floating" for base in type(value).__mro__)
 
 
 def _warn_legacy_financial_input_once(*, stacklevel: int = 2) -> None:
@@ -203,16 +196,12 @@ def parse_amount(
     input_policy = validate_financial_input_policy(input_policy)
     legacy_binary_input = _is_binary_floating_point(value)
     if legacy_binary_input and input_policy == STRICT_FINANCIAL_INPUT_POLICY:
-        raise InvalidAmountError(
-            "binary floating-point financial input is not allowed under strict-financial-input-v2"
-        )
+        raise InvalidAmountError("binary floating-point financial input is not allowed under strict-financial-input-v2")
     if value is None or isinstance(value, bool):
         raise InvalidAmountError("financial amount is missing or invalid")
     if decimal_separator is not None and (len(decimal_separator) != 1 or decimal_separator.isspace()):
         raise InvalidAmountError("financial amount separator must be a single non-space character")
-    if thousands_separator is not None and (
-        len(thousands_separator) != 1 or thousands_separator.isspace()
-    ):
+    if thousands_separator is not None and (len(thousands_separator) != 1 or thousands_separator.isspace()):
         raise InvalidAmountError("financial amount separator must be a single non-space character")
 
     text = str(value).strip()
@@ -281,11 +270,7 @@ def parse_amount_for_currency_precision(
         input_policy=input_policy,
         _warn_on_legacy_input=False,
     )
-    if (
-        legacy_binary_input
-        and input_policy == LEGACY_FINANCIAL_INPUT_POLICY
-        and _warn_on_legacy_input
-    ):
+    if legacy_binary_input and input_policy == LEGACY_FINANCIAL_INPUT_POLICY and _warn_on_legacy_input:
         _warn_legacy_financial_input_once()
     quantized = _quantize_decimal(parsed, precision=precision, rounding_policy=rounding_policy)
     if parsed != quantized:
@@ -409,18 +394,15 @@ def within_tolerance(
 ) -> bool:
     """Return true when two monetary values are within the configured tolerance."""
 
-    return (
-        money_difference(
-            left,
-            right,
-            decimal_separator=decimal_separator,
-            thousands_separator=thousands_separator,
-        )
-        <= round_money(
-            tolerance,
-            decimal_separator=decimal_separator,
-            thousands_separator=thousands_separator,
-        )
+    return money_difference(
+        left,
+        right,
+        decimal_separator=decimal_separator,
+        thousands_separator=thousands_separator,
+    ) <= round_money(
+        tolerance,
+        decimal_separator=decimal_separator,
+        thousands_separator=thousands_separator,
     )
 
 
@@ -434,18 +416,15 @@ def within_exact_tolerance(
 ) -> bool:
     """Compare exact financial inputs under the current strict policy."""
 
-    return (
-        exact_money_difference(
-            left,
-            right,
-            decimal_separator=decimal_separator,
-            thousands_separator=thousands_separator,
-        )
-        <= round_exact_money(
-            tolerance,
-            decimal_separator=decimal_separator,
-            thousands_separator=thousands_separator,
-        )
+    return exact_money_difference(
+        left,
+        right,
+        decimal_separator=decimal_separator,
+        thousands_separator=thousands_separator,
+    ) <= round_exact_money(
+        tolerance,
+        decimal_separator=decimal_separator,
+        thousands_separator=thousands_separator,
     )
 
 
@@ -615,9 +594,7 @@ class CurrencyRegistry:
         }
 
     @classmethod
-    def _build_state(
-        cls, payload: Mapping[str, object]
-    ) -> tuple[dict[str, CurrencySpec], CurrencyRegistryManifest]:
+    def _build_state(cls, payload: Mapping[str, object]) -> tuple[dict[str, CurrencySpec], CurrencyRegistryManifest]:
         allowed_top_level = {
             "currencies",
             "default_rounding_policy",
@@ -634,9 +611,7 @@ class CurrencyRegistry:
 
         schema_version = payload.get("schema_version")
         if isinstance(schema_version, bool) or schema_version != _CURRENCY_REGISTRY_SCHEMA_VERSION:
-            raise InvalidAmountError(
-                f"currency registry schema_version must be {_CURRENCY_REGISTRY_SCHEMA_VERSION}"
-            )
+            raise InvalidAmountError(f"currency registry schema_version must be {_CURRENCY_REGISTRY_SCHEMA_VERSION}")
         registry_version = str(payload.get("registry_version") or "").strip()
         if not _REGISTRY_VERSION_PATTERN.fullmatch(registry_version):
             raise InvalidAmountError("currency registry version is missing or invalid")
@@ -922,10 +897,7 @@ class Money:
             strict_precision=strict_precision,
             input_policy=input_policy,
         )
-        if (
-            input_policy == LEGACY_FINANCIAL_INPUT_POLICY
-            and _is_binary_floating_point(amount)
-        ):
+        if input_policy == LEGACY_FINANCIAL_INPUT_POLICY and _is_binary_floating_point(amount):
             _warn_legacy_financial_input_once()
 
     @classmethod

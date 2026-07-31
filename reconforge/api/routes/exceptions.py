@@ -72,7 +72,9 @@ def assign_exception(
     """Assign a unified exception."""
 
     try:
-        record = ExceptionQueueService(connection).assign(exception_id, owner=payload.owner, actor_label=current_user.username)
+        record = ExceptionQueueService(connection).assign(
+            exception_id, owner=payload.owner, actor_label=current_user.username
+        )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="exception_assign_failed", message=str(exc)) from exc
     return {"exception": record}
@@ -88,7 +90,9 @@ def set_exception_status(
     """Set a unified exception status."""
 
     try:
-        record = ExceptionQueueService(connection).set_status(exception_id, status=payload.status, actor_label=current_user.username)
+        record = ExceptionQueueService(connection).set_status(
+            exception_id, status=payload.status, actor_label=current_user.username
+        )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="exception_status_failed", message=str(exc)) from exc
     return {"exception": record}

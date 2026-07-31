@@ -271,7 +271,7 @@ def _read_prefix(source: Path, key: bytes) -> tuple[bytes, bytes, bytes, int, st
     return magic + encoded_length + encoded, nonce, encoded, plaintext_bytes, plaintext_sha256
 
 
-def _decrypt_dump(source: Path, target: Path, key: bytes) -> str:
+def _decrypt_dump(source: Path, target: Path, key: bytes) -> tuple[str, str]:
     prefix, nonce, _header_bytes, expected_bytes, expected_sha256 = _read_prefix(source, key)
     metadata = source.stat()
     ciphertext_offset = len(prefix)
@@ -288,7 +288,8 @@ def _decrypt_dump(source: Path, target: Path, key: bytes) -> str:
             cipher = _cipher_parts(key, nonce, tag=tag)
             decryptor = cipher.decryptor()  # type: ignore[attr-defined]
             decryptor.authenticate_additional_data(prefix)
-            digest = hashlib.sha256()
+            plaintext_digest = hashlib.sha256()
+            artifact_digest = hashlib.sha256(prefix)
             remaining = ciphertext_bytes
             with target.open("xb") as writer:
                 while remaining:
@@ -296,12 +297,14 @@ def _decrypt_dump(source: Path, target: Path, key: bytes) -> str:
                     if not chunk:
                         raise PostgresBackupError("Encrypted PostgreSQL backup changed during restore.")
                     remaining -= len(chunk)
+                    artifact_digest.update(chunk)
                     plaintext = decryptor.update(chunk)
                     writer.write(plaintext)
-                    digest.update(plaintext)
+                    plaintext_digest.update(plaintext)
+                artifact_digest.update(tag)
                 final = decryptor.finalize()
                 writer.write(final)
-                digest.update(final)
+                plaintext_digest.update(final)
                 writer.flush()
                 os.fsync(writer.fileno())
     except InvalidTag as exc:
@@ -316,10 +319,10 @@ def _decrypt_dump(source: Path, target: Path, key: bytes) -> str:
         if target.exists():
             target.unlink()
         raise PostgresBackupError("Unable to decrypt PostgreSQL backup safely.") from exc
-    if target.stat().st_size != expected_bytes or digest.hexdigest() != expected_sha256:
+    if target.stat().st_size != expected_bytes or plaintext_digest.hexdigest() != expected_sha256:
         target.unlink()
         raise PostgresBackupError("Encrypted PostgreSQL backup integrity verification failed.")
-    return expected_sha256
+    return expected_sha256, artifact_digest.hexdigest()
 
 
 class PostgresNativeBackupAdapter:
@@ -362,10 +365,9 @@ class PostgresNativeBackupAdapter:
         source = resolve_input_file(input_path)
         maintenance = _service(self._settings.maintenance_service, "Maintenance PostgreSQL service")
         database = _database(self._settings.restore_database)
-        artifact_sha256, _artifact_bytes = _file_digest(source)
         with tempfile.TemporaryDirectory(prefix="reconforge-postgres-restore-") as directory:
             dump_path = Path(directory) / "database.dump"
-            _decrypt_dump(source, dump_path, key)
+            _plaintext_sha256, artifact_sha256 = _decrypt_dump(source, dump_path, key)
             self._run((self._pg_restore, "--list", str(dump_path)), action="restore validation")
             self._run(
                 (self._createdb, f"--maintenance-db=service={maintenance}", database),
@@ -421,4 +423,14 @@ class PostgresNativeBackupAdapter:
             target=database,
             artifact_sha256=artifact_sha256,
             rollback_performed=False,
+        )
+
+    def drop_restored_database(self) -> None:
+        """Remove only the configured isolated restore target."""
+
+        maintenance = _service(self._settings.maintenance_service, "Maintenance PostgreSQL service")
+        database = _database(self._settings.restore_database)
+        self._run(
+            (self._dropdb, "--if-exists", f"--maintenance-db=service={maintenance}", database),
+            action="restore database cleanup",
         )

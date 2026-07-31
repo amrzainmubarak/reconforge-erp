@@ -161,7 +161,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
         env:
           POSTGRES_PASSWORD: postgres
         ports:
@@ -199,7 +199,7 @@ jobs:
           cache-dependency-glob: uv.lock
 
       - name: Install locked server dependencies
-        run: uv sync --locked --extra dev --extra server --no-editable --python 3.12
+        run: uv sync --locked --extra dev --extra server --extra backup --no-editable --python 3.12
 
       - name: Create non-privileged PostgreSQL application role
         env:
@@ -221,6 +221,24 @@ jobs:
           RECONFORGE_TEST_POSTGRES_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/postgres
           RECONFORGE_TEST_POSTGRES_DSN: postgresql://reconforge_app:reconforge_app@localhost:5432/postgres
           RECONFORGE_TEST_POSTGRES_APP_USER: reconforge_app
+          RECONFORGE_TEST_POSTGRES_SOURCE_SERVICE: reconforge_ci_source
+          RECONFORGE_TEST_POSTGRES_MAINTENANCE_SERVICE: reconforge_ci_admin
           RECONFORGE_TEST_REDIS_URL: redis://localhost:6379/0
+          PGSERVICEFILE: ${{ runner.temp }}/reconforge-pgservice.conf
         run: |
-          uv run --no-sync pytest tests/test_postgres_foundation.py tests/test_postgres_master_data.py tests/test_postgres_ledger.py tests/test_postgres_identity.py tests/test_postgres_evidence.py tests/test_postgres_reconciliation.py tests/test_api_server_identity.py tests/test_redis_foundation.py -q
+          printf '%s\n' \
+            '[reconforge_ci_source]' \
+            'host=localhost' \
+            'port=5432' \
+            'dbname=postgres' \
+            'user=postgres' \
+            'password=postgres' \
+            '[reconforge_ci_admin]' \
+            'host=localhost' \
+            'port=5432' \
+            'dbname=postgres' \
+            'user=postgres' \
+            'password=postgres' > "$PGSERVICEFILE"
+          chmod 600 "$PGSERVICEFILE"
+          mapfile -t parity_tests < <(uv run --no-sync python -c "import yaml; document = yaml.safe_load(open('docs/execution/POSTGRES_PARITY_INVENTORY.yaml', encoding='utf-8')); print(*dict.fromkeys(item['test'] for item in document['boundaries'] if item.get('test')), sep='\\n')")
+          uv run --no-sync pytest "${parity_tests[@]}" tests/test_alembic_postgres.py tests/test_postgres_foundation.py tests/test_postgres_master_data.py tests/test_postgres_ledger.py tests/test_postgres_identity.py tests/test_postgres_evidence.py tests/test_postgres_reconciliation.py tests/test_api_server_identity.py tests/test_redis_foundation.py -q

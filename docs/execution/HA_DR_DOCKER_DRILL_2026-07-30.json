@@ -1,0 +1,15 @@
+{
+  "backup_restore": {"digest_matches": true, "encrypted": true, "format": "reconforge-postgres-backup-v1", "isolated_restore": true, "restored_rows": 1},
+  "drill_id": "DR-DOCKER-20260730",
+  "executed_at": "2026-07-30",
+  "failure": "replication-network-partition-then-primary-container-stop-and-removal",
+  "fencing": {"failback_old_primary_id_sha256": "38ec43712ef4137f90d0def5d1850372adabfcc678f1bb0341b5907831d96e56", "failback_verified_absent_before_promotion": true, "method": "exact-id-stop-remove-before-promotion", "old_primary_id_sha256": "4f0e736d9e6ebef380ffded1677c7bffe995baf40ba7b9184555443fbbe8d8d2", "verified_absent_before_promotion": true},
+  "infrastructure": {"container_os": "linux/amd64", "docker_server": "Docker Engine 29.6.2", "failure_domains": 1, "node_count": 2, "postgres_image": "postgres:17.10-alpine"},
+  "integrity": {"former_primary_rejoined_read_only": true, "partition_write_not_acknowledged": true, "post_failback_sequence": 4, "post_failback_write": true, "post_failover_sequence": 2, "post_failover_write": true, "pre_failback_sequence": 3, "pre_failure_sequence": 1, "standby_pre_failure_match": true},
+  "limitations": ["single_host_not_host_loss", "no_cross_zone_or_cross_region", "synthetic_data_and_key_only", "manual_controller_not_automatic_failover", "no_production_rpo_rto_slo", "no_enterprise_ready_claim"],
+  "measurement": {"failback_rpo_transactions": 0, "failback_rto_seconds": 0.958, "rpo_ceiling_transactions": 0, "rpo_transactions": 0, "rto_ceiling_seconds": 60.0, "rto_seconds": 11.117},
+  "replication": "physical-streaming-synchronous-remote-apply",
+  "schema": "reconforge-ha-dr-drill-report-v1",
+  "scope_status": "verified-development-single-failure-domain",
+  "topology": "docker-single-host-primary-synchronous-standby-v1"
+}

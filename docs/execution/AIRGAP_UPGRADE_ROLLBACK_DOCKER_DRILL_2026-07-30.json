@@ -1,0 +1,36 @@
+{
+  "schema": "reconforge-airgap-upgrade-rollback-drill-report-v1",
+  "executed_at": "2026-07-30",
+  "runtime": {
+    "container_image": "python:3.14.1-slim",
+    "container_image_digest": "sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e",
+    "network_mode": "none",
+    "root_filesystem": "read-only",
+    "wheel_mounts": "read-only",
+    "writable_state": "bounded-tmpfs-only"
+  },
+  "transition": {
+    "from_version": "0.7.0",
+    "to_version": "0.7.1",
+    "source_wheel_sha256": "7ec21a8fe7cb299857414f10d98f94743274054a937a7fa910d1ae3cb0ca86ef",
+    "target_wheel_sha256": "55d0bbc93d2493409ea38c7d7de45bc901ab70587087cec45fdeb7fb3c5c2fc4",
+    "compatibility_reader": "wheel-import-v1"
+  },
+  "verification": {
+    "offline_pip": "--no-index --no-deps",
+    "cutover_verified": true,
+    "target_content_sha256": "be1890980fadc829aaddc43ea927567226fde0b8b3bc9dce8190205f3477ee3a",
+    "rollback_exact": true,
+    "rollback_sha256": "5de3b0a06852daa97666aadb939bc0daca0254d7363208ec0a8da2420edd347b",
+    "doctor_exit_zero": true,
+    "cleanup_complete": true
+  },
+  "scope_status": "verified-no-network-tagged-application-cutover-and-exact-rollback",
+  "limitations": [
+    "application_resource_only",
+    "connected_wheel_assembly_precedes_disconnected_consumption",
+    "single_runtime_single_run",
+    "no_zero_downtime_claim",
+    "no_production_readiness_claim"
+  ]
+}

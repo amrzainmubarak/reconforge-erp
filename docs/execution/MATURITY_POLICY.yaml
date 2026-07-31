@@ -20,6 +20,9 @@ module_ceilings:
   - module_id: mapping.profiles
     maximum_maturity: experimental
     evidence_claim: Works beside source systems; not a complete ERP
+  - module_id: packs.lifecycle
+    maximum_maturity: experimental
+    evidence_claim: Local synthetic signed data-only pack lifecycle
   - module_id: platform.core
     maximum_maturity: experimental
     evidence_claim: Local SQLite backup/restore

@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-import sqlite3
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from threading import Event
 from typing import Any, Protocol, cast
 
-from reconforge.db.migrations import MIGRATIONS
+from reconforge.application.matching import LEGACY_RECORD_IDENTITY_POLICY
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_reconciliation import (
     PostgresReconciliationBusyError,
@@ -24,10 +23,12 @@ from reconforge.io.persisted import (
     decode_postgres_reconciliation_lineage,
     decode_postgres_reconciliation_rule,
 )
-from reconforge.platform.matching import LEGACY_RECORD_IDENTITY_POLICY, MatchingService
+from reconforge.reconciliation.deterministic_engine import DeterministicMatchingEngine
 from reconforge.utils.money import (
     LEGACY_FINANCIAL_INPUT_POLICY,
+    CurrencyRegistry,
     FinancialInputPolicy,
+    InvalidAmountError,
 )
 
 
@@ -119,19 +120,21 @@ class ReconciliationPartitionMatcher(Protocol):
 class LocalDeterministicMatcherAdapter:
     """Adapt the deterministic matcher to canonical hosted records.
 
-    The SQLite connection is an in-memory schema-only dependency used by the
-    existing matching service's pure algorithm methods.  No source records,
-    match jobs, audit events, or outbox events are written to it; hosted
-    persistence remains exclusively in the PostgreSQL worker boundary. Rules
-    may opt into hard-key partitioning; the adapter never infers partitions.
+    The matcher has no local database dependency. Hosted inputs, checkpoints,
+    results, exceptions, audit events, and outbox events remain exclusively in
+    the PostgreSQL worker boundary. Rules may opt into hard-key partitioning;
+    the adapter never infers partitions.
     """
 
     def __init__(self) -> None:
-        self._connection = sqlite3.connect(":memory:")
-        self._connection.row_factory = sqlite3.Row
-        for migration in MIGRATIONS:
-            self._connection.executescript(migration.sql)
-        self._service = MatchingService(self._connection)
+        self._engine = DeterministicMatchingEngine(self._currency_precision)
+
+    @staticmethod
+    def _currency_precision(currency_code: str) -> tuple[int | None, str | None]:
+        try:
+            return CurrencyRegistry.get_precision(currency_code), None
+        except InvalidAmountError:
+            return None, "UNKNOWN_CURRENCY"
 
     @staticmethod
     def _json_object(value: object, field_name: str) -> dict[str, Any]:
@@ -147,16 +150,28 @@ class LocalDeterministicMatcherAdapter:
             raise PostgresReconciliationWorkerError(f"Stored {field_name} is invalid.") from exc
 
     @classmethod
-    def _canonical_record(cls, record: Mapping[str, Any], *, id_field: str, amount_field: str, date_field: str, reference_field: str) -> dict[str, Any]:
+    def _canonical_record(
+        cls, record: Mapping[str, Any], *, id_field: str, amount_field: str, date_field: str, reference_field: str
+    ) -> dict[str, Any]:
         attributes = cls._json_object(record.get("attributes_json", {}), "attributes_json")
         source_id = str(record.get("source_id", "")).strip()
         attributes.setdefault("id", source_id)
         attributes.setdefault(id_field, source_id)
         attributes.setdefault("source_id", source_id)
         attributes.setdefault("currency_code", str(record.get("currency_code", "") or ""))
-        attributes.setdefault(amount_field, record.get("amount_decimal") if record.get("amount_decimal") is not None else record.get("amount_original", ""))
-        attributes.setdefault(date_field, record.get("date_value") if record.get("date_value") is not None else record.get("date_original", ""))
-        attributes.setdefault(reference_field, record.get("reference_normalized") or record.get("reference_original", ""))
+        attributes.setdefault(
+            amount_field,
+            record.get("amount_decimal")
+            if record.get("amount_decimal") is not None
+            else record.get("amount_original", ""),
+        )
+        attributes.setdefault(
+            date_field,
+            record.get("date_value") if record.get("date_value") is not None else record.get("date_original", ""),
+        )
+        attributes.setdefault(
+            reference_field, record.get("reference_normalized") or record.get("reference_original", "")
+        )
         attributes.setdefault("amount_original", record.get("amount_original", ""))
         attributes["valid"] = bool(record.get("valid", True))
         return attributes
@@ -173,7 +188,9 @@ class LocalDeterministicMatcherAdapter:
         if len(fields) > 8:
             raise PostgresReconciliationWorkerError("partition_fields supports at most 8 fields.")
         if len(set(fields)) != len(fields) or any(len(field) > 128 for field in fields):
-            raise PostgresReconciliationWorkerError("partition_fields must contain unique names of at most 128 characters.")
+            raise PostgresReconciliationWorkerError(
+                "partition_fields must contain unique names of at most 128 characters."
+            )
         return tuple(fields)
 
     @staticmethod
@@ -237,7 +254,7 @@ class LocalDeterministicMatcherAdapter:
         exact_fields: str,
         rule: Mapping[str, Any],
     ) -> ReconciliationExecutionResult:
-        output = self._service.match_records(
+        output = self._engine.match_records(
             left_records=left_records,
             right_records=right_records,
             amount_field=amount_field,
@@ -293,7 +310,14 @@ class LocalDeterministicMatcherAdapter:
             )
             for record in context.right_inputs
         ]
-        return rule, {"amount_field": amount_field}, {"date_field": date_field, "reference_field": reference_field}, exact_fields, left_records, right_records
+        return (
+            rule,
+            {"amount_field": amount_field},
+            {"date_field": date_field, "reference_field": reference_field},
+            exact_fields,
+            left_records,
+            right_records,
+        )
 
     def iter_partition_results(
         self,
@@ -355,7 +379,9 @@ class LocalDeterministicMatcherAdapter:
                 yield ReconciliationPartitionResult(
                     partition_key=streamed_partition.partition_key,
                     input_count=streamed_partition.input_count,
-                    results=self._partition_output(output.results, partition_fields, partition_key=streamed_partition.partition_key),
+                    results=self._partition_output(
+                        output.results, partition_fields, partition_key=streamed_partition.partition_key
+                    ),
                     exceptions=self._partition_output(
                         output.exceptions,
                         partition_fields,
@@ -407,9 +433,7 @@ class LocalDeterministicMatcherAdapter:
         context.heartbeat(95)
 
     def close(self) -> None:
-        """Close the schema-only local matcher dependency."""
-
-        self._connection.close()
+        """Retain the historical lifecycle hook; the pure engine owns no resource."""
 
     def __call__(self, context: ReconciliationExecutionContext) -> ReconciliationExecutionResult:
         rule, fields_config, date_config, exact_fields, left_records, right_records = self._prepared_records(context)
@@ -495,7 +519,9 @@ class ReconciliationWorkerRunSummary:
     def empty(cls) -> ReconciliationWorkerRunSummary:
         return cls(cycles=0, discovered=0, completed=0, failed=0, cancelled=0, skipped=0)
 
-    def add(self, *, discovered: int, results: Sequence[ReconciliationProcessResult], skipped: int) -> ReconciliationWorkerRunSummary:
+    def add(
+        self, *, discovered: int, results: Sequence[ReconciliationProcessResult], skipped: int
+    ) -> ReconciliationWorkerRunSummary:
         return ReconciliationWorkerRunSummary(
             cycles=self.cycles + 1,
             discovered=self.discovered + discovered,
@@ -543,7 +569,9 @@ class PostgresReconciliationScheduler:
         """Execute one bounded cycle per worker and aggregate outcomes."""
 
         try:
-            with ThreadPoolExecutor(max_workers=len(self.worker_ids), thread_name_prefix="reconforge-reconciliation") as pool:
+            with ThreadPoolExecutor(
+                max_workers=len(self.worker_ids), thread_name_prefix="reconforge-reconciliation"
+            ) as pool:
                 futures = [pool.submit(self.worker_factory(worker_id).process_once) for worker_id in self.worker_ids]
                 cycles = [future.result() for future in futures]
         except PostgresReconciliationSchedulerError:
@@ -678,7 +706,9 @@ class PostgresReconciliationWorker:
                     request_id=request_id,
                     reason="Cancellation observed before result persistence.",
                 )
-                return ReconciliationProcessResult(tenant_id, run_id, str(cancelled.get("execution_status", "Cancelled")))
+                return ReconciliationProcessResult(
+                    tenant_id, run_id, str(cancelled.get("execution_status", "Cancelled"))
+                )
             for record in execution.results:
                 values = self._payload(record, self._RESULT_FIELDS, "matcher result")
                 repository.append_result(tenant_id=tenant_id, run_id=run_id, **values)
@@ -809,9 +839,7 @@ class PostgresReconciliationWorker:
                     left_inputs = tuple(record for record in inputs if str(record.get("side", "")) == "Left")
                     right_inputs = tuple(record for record in inputs if str(record.get("side", "")) == "Right")
             partition_supplier = (
-                self._stream_input_supplier(tenant_id=tenant_id, run_id=run_id, rule=rule)
-                if partition_fields
-                else None
+                self._stream_input_supplier(tenant_id=tenant_id, run_id=run_id, rule=rule) if partition_fields else None
             )
             context = ReconciliationExecutionContext(
                 run=claimed,
@@ -876,7 +904,9 @@ class PostgresReconciliationWorker:
             try:
                 return self._fail(tenant_id, run_id, str(exc), request_id)
             except Exception as failure_exc:  # noqa: BLE001 - preserve both operational failures.
-                raise PostgresReconciliationWorkerError("Unable to persist reconciliation execution failure.") from failure_exc
+                raise PostgresReconciliationWorkerError(
+                    "Unable to persist reconciliation execution failure."
+                ) from failure_exc
 
     def process_once(self, *, request_id: str = "") -> ReconciliationWorkerRunSummary:
         """Discover a bounded active page per tenant and process claimable runs."""

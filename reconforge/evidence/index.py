@@ -99,7 +99,7 @@ def write_evidence_index_html(cases: list[EvidenceCase], output_dir: Path | str)
   <p>High and Critical exception evidence folders generated locally.</p>
   <table>
     <thead><tr><th>Case</th><th>Type</th><th>Severity</th><th>Risk</th><th>Status</th><th>Work Order</th><th>Owner</th></tr></thead>
-    <tbody>{''.join(rows)}</tbody>
+    <tbody>{"".join(rows)}</tbody>
   </table>
 </body>
 </html>

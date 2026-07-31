@@ -106,6 +106,7 @@ def _scope_id(value: object, field_name: str) -> str:
     except PostgresConfigurationError as exc:
         raise PostgresCloseValidationError(str(exc)) from exc
     import re
+
     if not re.fullmatch(_ID_PATTERN, normalized):
         raise PostgresCloseValidationError(f"{field_name} has an invalid identifier.")
     return normalized
@@ -254,9 +255,7 @@ class PostgresCloseRepository:
                 metadata_json,
             ),
         )
-        outbox_id = _hash_payload(
-            {"tenant_id": tenant, "event_type": f"close.{action}", "resource_id": resource_id}
-        )
+        outbox_id = _hash_payload({"tenant_id": tenant, "event_type": f"close.{action}", "resource_id": resource_id})
         self.connection.execute(
             """
             INSERT INTO reconforge.outbox_events
@@ -388,9 +387,20 @@ class PostgresCloseRepository:
             (tenant,),
         )
         columns = (
-            "tenant_id", "id", "fiscal_period_id", "organization_id", "organization_code",
-            "fiscal_period_name", "start_date", "end_date", "status", "readiness_score",
-            "created_at", "updated_at", "locked_at", "reopened_at",
+            "tenant_id",
+            "id",
+            "fiscal_period_id",
+            "organization_id",
+            "organization_code",
+            "fiscal_period_name",
+            "start_date",
+            "end_date",
+            "status",
+            "readiness_score",
+            "created_at",
+            "updated_at",
+            "locked_at",
+            "reopened_at",
         )
         return [_record(row, columns) for row in cursor.fetchall()]
 
@@ -535,7 +545,9 @@ class PostgresCloseRepository:
         task = self._task(tenant_id=tenant, task_id=identifier)
         period = self._period(tenant_id=tenant, period_id=str(task["close_period_id"]))
         if str(period["status"]) in {"Locked", "Archived"}:
-            raise PostgresCloseValidationError("Close tasks cannot change after the close period is locked or archived.")
+            raise PostgresCloseValidationError(
+                "Close tasks cannot change after the close period is locked or archived."
+            )
         blocker = _optional_text(blocker_reason, "blocker_reason", maximum=500) if selected == "Blocked" else ""
         if selected == "Complete":
             blockers = self.connection.execute(
@@ -640,7 +652,9 @@ class PostgresCloseRepository:
         if selected in {"Approved", "Locked"}:
             readiness = self.readiness(tenant_id=tenant, period_id=identifier)
             if readiness["readiness_score"] != COMPLETE_READINESS:
-                raise PostgresCloseValidationError("A close period cannot be approved or locked before all tasks are complete.")
+                raise PostgresCloseValidationError(
+                    "A close period cannot be approved or locked before all tasks are complete."
+                )
         now = utc_now_text()
         cursor = self.connection.execute(
             """

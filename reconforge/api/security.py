@@ -48,7 +48,12 @@ def _new_token() -> str:
 
 
 def _expires_at() -> str:
-    return (datetime.now(UTC) + timedelta(hours=SESSION_TTL_HOURS)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        (datetime.now(UTC) + timedelta(hours=SESSION_TTL_HOURS))
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def ensure_session_schema(connection: sqlite3.Connection) -> None:
@@ -124,7 +129,9 @@ def authenticate_token(connection: sqlite3.Connection, *, token: str) -> LocalUs
         last_used_at = _parse_utc(str(row["last_used_at"])) if row["last_used_at"] is not None else None
         if last_used_at is None or last_used_at <= now - SESSION_LAST_USED_UPDATE_INTERVAL:
             now_text = now.replace(microsecond=0).isoformat().replace("+00:00", "Z")
-            threshold_text = (now - SESSION_LAST_USED_UPDATE_INTERVAL).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+            threshold_text = (
+                (now - SESSION_LAST_USED_UPDATE_INTERVAL).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+            )
             try:
                 cursor = connection.execute(
                     """

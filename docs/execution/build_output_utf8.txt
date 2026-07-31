@@ -1,0 +1,1122 @@
+﻿python : * Getting build dependencies for sdist...
+At line:1 char:157
++ ... t.txt 2>&1; python -m build --no-isolation > docs\execution\build_out ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (* Getting build...es for sdist...:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+C:\Users\LOQ\AppData\Roaming\Python\Python314\site-packages\setuptools\config\_apply_pyprojecttoml.py:82: 
+SetuptoolsWarning: `license` overwritten by `pyproject.toml`
+  corresp(dist, value, root_dir)
+C:\Users\LOQ\AppData\Roaming\Python\Python314\site-packages\setuptools\config\_apply_pyprojecttoml.py:82: 
+SetuptoolsWarning: `install_requires` overwritten in `pyproject.toml` (dependencies)
+  corresp(dist, value, root_dir)
+C:\Users\LOQ\AppData\Roaming\Python\Python314\site-packages\setuptools\config\_apply_pyprojecttoml.py:82: 
+SetuptoolsWarning: `extras_require` overwritten in `pyproject.toml` (optional-dependencies)
+  corresp(dist, value, root_dir)
+running egg_info
+writing reconforge_erp.egg-info\PKG-INFO
+writing dependency_links to reconforge_erp.egg-info\dependency_links.txt
+writing entry points to reconforge_erp.egg-info\entry_points.txt
+writing requirements to reconforge_erp.egg-info\requires.txt
+writing top-level names to reconforge_erp.egg-info\top_level.txt
+reading manifest file 'reconforge_erp.egg-info\SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file 'reconforge_erp.egg-info\SOURCES.txt'
+* Building sdist...
+C:\Users\LOQ\AppData\Roaming\Python\Python314\site-packages\setuptools\config\_apply_pyprojecttoml.py:82: 
+SetuptoolsWarning: `license` overwritten by `pyproject.toml`
+  corresp(dist, value, root_dir)
+C:\Users\LOQ\AppData\Roaming\Python\Python314\site-packages\setuptools\config\_apply_pyprojecttoml.py:82: 
+SetuptoolsWarning: `install_requires` overwritten in `pyproject.toml` (dependencies)
+  corresp(dist, value, root_dir)
+C:\Users\LOQ\AppData\Roaming\Python\Python314\site-packages\setuptools\config\_apply_pyprojecttoml.py:82: 
+SetuptoolsWarning: `extras_require` overwritten in `pyproject.toml` (optional-dependencies)
+  corresp(dist, value, root_dir)
+running sdist
+running egg_info
+writing reconforge_erp.egg-info\PKG-INFO
+writing dependency_links to reconforge_erp.egg-info\dependency_links.txt
+writing entry points to reconforge_erp.egg-info\entry_points.txt
+writing requirements to reconforge_erp.egg-info\requires.txt
+writing top-level names to reconforge_erp.egg-info\top_level.txt
+reading manifest file 'reconforge_erp.egg-info\SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file 'reconforge_erp.egg-info\SOURCES.txt'
+running check
+creating reconforge_erp-0.7.0
+creating reconforge_erp-0.7.0\reconforge
+creating reconforge_erp-0.7.0\reconforge\ai
+creating reconforge_erp-0.7.0\reconforge\anonymizer
+creating reconforge_erp-0.7.0\reconforge\api
+creating reconforge_erp-0.7.0\reconforge\api\routes
+creating reconforge_erp-0.7.0\reconforge\audit
+creating reconforge_erp-0.7.0\reconforge\auth
+creating reconforge_erp-0.7.0\reconforge\benchmark
+creating reconforge_erp-0.7.0\reconforge\close
+creating reconforge_erp-0.7.0\reconforge\dashboard
+creating reconforge_erp-0.7.0\reconforge\db
+creating reconforge_erp-0.7.0\reconforge\domain
+creating reconforge_erp-0.7.0\reconforge\engines
+creating reconforge_erp-0.7.0\reconforge\evidence
+creating reconforge_erp-0.7.0\reconforge\generator
+creating reconforge_erp-0.7.0\reconforge\infrastructure
+creating reconforge_erp-0.7.0\reconforge\io
+creating reconforge_erp-0.7.0\reconforge\mappings
+creating reconforge_erp-0.7.0\reconforge\modules
+creating reconforge_erp-0.7.0\reconforge\platform
+creating reconforge_erp-0.7.0\reconforge\plugins
+creating reconforge_erp-0.7.0\reconforge\reconciliation
+creating reconforge_erp-0.7.0\reconforge\reports
+creating reconforge_erp-0.7.0\reconforge\review
+creating reconforge_erp-0.7.0\reconforge\risk
+creating reconforge_erp-0.7.0\reconforge\rules
+creating reconforge_erp-0.7.0\reconforge\studio
+creating reconforge_erp-0.7.0\reconforge\utils
+creating reconforge_erp-0.7.0\reconforge\workers
+creating reconforge_erp-0.7.0\reconforge\workflow
+creating reconforge_erp-0.7.0\reconforge_erp.egg-info
+creating reconforge_erp-0.7.0\tests
+copying files to reconforge_erp-0.7.0...
+copying LICENSE -> reconforge_erp-0.7.0
+copying README.md -> reconforge_erp-0.7.0
+copying pyproject.toml -> reconforge_erp-0.7.0
+copying setup.py -> reconforge_erp-0.7.0
+copying reconforge\__init__.py -> reconforge_erp-0.7.0\reconforge
+copying reconforge\cli.py -> reconforge_erp-0.7.0\reconforge
+copying reconforge\cli_inventory_planning.py -> reconforge_erp-0.7.0\reconforge
+copying reconforge\cli_inventory_valuation.py -> reconforge_erp-0.7.0\reconforge
+copying reconforge\cli_inventory_valuation_reversal.py -> reconforge_erp-0.7.0\reconforge
+copying reconforge\close_workflow.py -> reconforge_erp-0.7.0\reconforge
+copying reconforge\config.py -> reconforge_erp-0.7.0\reconforge
+copying reconforge\control_matrix.py -> reconforge_erp-0.7.0\reconforge
+copying reconforge\enterprise_demo.py -> reconforge_erp-0.7.0\reconforge
+copying reconforge\periods.py -> reconforge_erp-0.7.0\reconforge
+copying reconforge\schemas.py -> reconforge_erp-0.7.0\reconforge
+copying reconforge\validators.py -> reconforge_erp-0.7.0\reconforge
+copying reconforge\variance.py -> reconforge_erp-0.7.0\reconforge
+copying reconforge\ai\__init__.py -> reconforge_erp-0.7.0\reconforge\ai
+copying reconforge\ai\interfaces.py -> reconforge_erp-0.7.0\reconforge\ai
+copying reconforge\ai\offline.py -> reconforge_erp-0.7.0\reconforge\ai
+copying reconforge\ai\prompts.py -> reconforge_erp-0.7.0\reconforge\ai
+copying reconforge\ai\summaries.py -> reconforge_erp-0.7.0\reconforge\ai
+copying reconforge\anonymizer\__init__.py -> reconforge_erp-0.7.0\reconforge\anonymizer
+copying reconforge\anonymizer\engine.py -> reconforge_erp-0.7.0\reconforge\anonymizer
+copying reconforge\anonymizer\mapping.py -> reconforge_erp-0.7.0\reconforge\anonymizer
+copying reconforge\anonymizer\maskers.py -> reconforge_erp-0.7.0\reconforge\anonymizer
+copying reconforge\api\__init__.py -> reconforge_erp-0.7.0\reconforge\api
+copying reconforge\api\app.py -> reconforge_erp-0.7.0\reconforge\api
+copying reconforge\api\dependencies.py -> reconforge_erp-0.7.0\reconforge\api
+copying reconforge\api\errors.py -> reconforge_erp-0.7.0\reconforge\api
+copying reconforge\api\security.py -> reconforge_erp-0.7.0\reconforge\api
+copying reconforge\api\server_close.py -> reconforge_erp-0.7.0\reconforge\api
+copying reconforge\api\server_evidence.py -> reconforge_erp-0.7.0\reconforge\api
+copying reconforge\api\server_identity.py -> reconforge_erp-0.7.0\reconforge\api
+copying reconforge\api\server_ledger.py -> reconforge_erp-0.7.0\reconforge\api
+copying reconforge\api\server_master_data.py -> reconforge_erp-0.7.0\reconforge\api
+copying reconforge\api\server_reconciliation.py -> reconforge_erp-0.7.0\reconforge\api
+copying reconforge\api\routes\__init__.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\accounts.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\audit.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\auth.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\close.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\evidence.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\exceptions.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\finance_core.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\health.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\inventory_core.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\inventory_planning.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\inventory_valuation.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\inventory_valuation_reversal.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\master_data.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\metrics.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\payables.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\receivables.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\reconciliation.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\roles.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\users.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\api\routes\workflow.py -> reconforge_erp-0.7.0\reconforge\api\routes
+copying reconforge\audit\__init__.py -> reconforge_erp-0.7.0\reconforge\audit
+copying reconforge\audit\events.py -> reconforge_erp-0.7.0\reconforge\audit
+copying reconforge\auth\__init__.py -> reconforge_erp-0.7.0\reconforge\auth
+copying reconforge\auth\models.py -> reconforge_erp-0.7.0\reconforge\auth
+copying reconforge\auth\passwords.py -> reconforge_erp-0.7.0\reconforge\auth
+copying reconforge\auth\policy.py -> reconforge_erp-0.7.0\reconforge\auth
+copying reconforge\auth\rbac.py -> reconforge_erp-0.7.0\reconforge\auth
+copying reconforge\auth\repositories.py -> reconforge_erp-0.7.0\reconforge\auth
+copying reconforge\auth\service.py -> reconforge_erp-0.7.0\reconforge\auth
+copying reconforge\benchmark\__init__.py -> reconforge_erp-0.7.0\reconforge\benchmark
+copying reconforge\benchmark\metrics.py -> reconforge_erp-0.7.0\reconforge\benchmark
+copying reconforge\benchmark\reconciliation_execution.py -> reconforge_erp-0.7.0\reconforge\benchmark
+copying reconforge\benchmark\report.py -> reconforge_erp-0.7.0\reconforge\benchmark
+copying reconforge\benchmark\runner.py -> reconforge_erp-0.7.0\reconforge\benchmark
+copying reconforge\close\__init__.py -> reconforge_erp-0.7.0\reconforge\close
+copying reconforge\dashboard\__init__.py -> reconforge_erp-0.7.0\reconforge\dashboard
+copying reconforge\dashboard\app.py -> reconforge_erp-0.7.0\reconforge\dashboard
+copying reconforge\db\__init__.py -> reconforge_erp-0.7.0\reconforge\db
+copying reconforge\db\backup.py -> reconforge_erp-0.7.0\reconforge\db
+copying reconforge\db\connection.py -> reconforge_erp-0.7.0\reconforge\db
+copying reconforge\db\exporter.py -> reconforge_erp-0.7.0\reconforge\db
+copying reconforge\db\importers.py -> reconforge_erp-0.7.0\reconforge\db
+copying reconforge\db\migrations.py -> reconforge_erp-0.7.0\reconforge\db
+copying reconforge\db\schema.py -> reconforge_erp-0.7.0\reconforge\db
+copying reconforge\db\tenancy.py -> reconforge_erp-0.7.0\reconforge\db
+copying reconforge\domain\__init__.py -> reconforge_erp-0.7.0\reconforge\domain
+copying reconforge\domain\models.py -> reconforge_erp-0.7.0\reconforge\domain
+copying reconforge\domain\protocols.py -> reconforge_erp-0.7.0\reconforge\domain
+copying reconforge\domain\repositories.py -> reconforge_erp-0.7.0\reconforge\domain
+copying reconforge\engines\__init__.py -> reconforge_erp-0.7.0\reconforge\engines
+copying reconforge\engines\base.py -> reconforge_erp-0.7.0\reconforge\engines
+copying reconforge\engines\duckdb_engine.py -> reconforge_erp-0.7.0\reconforge\engines
+copying reconforge\engines\pandas_engine.py -> reconforge_erp-0.7.0\reconforge\engines
+copying reconforge\engines\registry.py -> reconforge_erp-0.7.0\reconforge\engines
+copying reconforge\engines\signature.py -> reconforge_erp-0.7.0\reconforge\engines
+copying reconforge\evidence\__init__.py -> reconforge_erp-0.7.0\reconforge\evidence
+copying reconforge\evidence\binder.py -> reconforge_erp-0.7.0\reconforge\evidence
+copying reconforge\evidence\graph.py -> reconforge_erp-0.7.0\reconforge\evidence
+copying reconforge\evidence\index.py -> reconforge_erp-0.7.0\reconforge\evidence
+copying reconforge\evidence\models.py -> reconforge_erp-0.7.0\reconforge\evidence
+copying reconforge\evidence\templates.py -> reconforge_erp-0.7.0\reconforge\evidence
+copying reconforge\evidence\writer.py -> reconforge_erp-0.7.0\reconforge\evidence
+copying reconforge\generator\__init__.py -> reconforge_erp-0.7.0\reconforge\generator
+copying reconforge\generator\scenarios.py -> reconforge_erp-0.7.0\reconforge\generator
+copying reconforge\generator\synthetic.py -> reconforge_erp-0.7.0\reconforge\generator
+copying reconforge\infrastructure\__init__.py -> reconforge_erp-0.7.0\reconforge\infrastructure
+copying reconforge\infrastructure\object_storage.py -> reconforge_erp-0.7.0\reconforge\infrastructure
+copying reconforge\infrastructure\postgres.py -> reconforge_erp-0.7.0\reconforge\infrastructure
+copying reconforge\infrastructure\postgres_close.py -> reconforge_erp-0.7.0\reconforge\infrastructure
+copying reconforge\infrastructure\postgres_evidence.py -> reconforge_erp-0.7.0\reconforge\infrastructure
+copying reconforge\infrastructure\postgres_identity.py -> reconforge_erp-0.7.0\reconforge\infrastructure
+copying reconforge\infrastructure\postgres_ledger.py -> reconforge_erp-0.7.0\reconforge\infrastructure
+copying reconforge\infrastructure\postgres_master_data.py -> reconforge_erp-0.7.0\reconforge\infrastructure
+copying reconforge\infrastructure\postgres_outbox.py -> reconforge_erp-0.7.0\reconforge\infrastructure
+copying reconforge\infrastructure\postgres_reconciliation.py -> reconforge_erp-0.7.0\reconforge\infrastructure
+copying reconforge\infrastructure\postgres_reconciliation_checkpoints.py -> reconforge_erp-0.7.0\reconforge\infrastructure
+copying reconforge\infrastructure\postgres_reconciliation_execution.py -> reconforge_erp-0.7.0\reconforge\infrastructure
+copying reconforge\infrastructure\redis.py -> reconforge_erp-0.7.0\reconforge\infrastructure
+copying reconforge\io\__init__.py -> reconforge_erp-0.7.0\reconforge\io
+copying reconforge\io\excel.py -> reconforge_erp-0.7.0\reconforge\io
+copying reconforge\io\readers.py -> reconforge_erp-0.7.0\reconforge\io
+copying reconforge\io\writers.py -> reconforge_erp-0.7.0\reconforge\io
+copying reconforge\mappings\__init__.py -> reconforge_erp-0.7.0\reconforge\mappings
+copying reconforge\mappings\inspector.py -> reconforge_erp-0.7.0\reconforge\mappings
+copying reconforge\mappings\profile_template.py -> reconforge_erp-0.7.0\reconforge\mappings
+copying reconforge\mappings\validator.py -> reconforge_erp-0.7.0\reconforge\mappings
+copying reconforge\modules\__init__.py -> reconforge_erp-0.7.0\reconforge\modules
+copying reconforge\modules\registry.py -> reconforge_erp-0.7.0\reconforge\modules
+copying reconforge\platform\__init__.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\accounts.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\approvals.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\close.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\common.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\controls.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\evidence.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\exceptions.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\finance_core.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\intercompany.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\inventory_core.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\inventory_planning.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\inventory_planning_repository.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\inventory_valuation.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\inventory_valuation_repository.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\inventory_valuation_reversal.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\inventory_valuation_reversal_repository.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\inventory_values.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\journals.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\master_data.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\matching.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\metrics.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\operations.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\outbox.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\payables.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\platform\receivables.py -> reconforge_erp-0.7.0\reconforge\platform
+copying reconforge\plugins\__init__.py -> reconforge_erp-0.7.0\reconforge\plugins
+copying reconforge\plugins\base.py -> reconforge_erp-0.7.0\reconforge\plugins
+copying reconforge\plugins\generic_csv.py -> reconforge_erp-0.7.0\reconforge\plugins
+copying reconforge\plugins\odoo_export.py -> reconforge_erp-0.7.0\reconforge\plugins
+copying reconforge\plugins\registry.py -> reconforge_erp-0.7.0\reconforge\plugins
+copying reconforge\plugins\sap_export.py -> reconforge_erp-0.7.0\reconforge\plugins
+copying reconforge\reconciliation\__init__.py -> reconforge_erp-0.7.0\reconforge\reconciliation
+copying reconforge\reconciliation\matching.py -> reconforge_erp-0.7.0\reconforge\reconciliation
+copying reconforge\reconciliation\risk.py -> reconforge_erp-0.7.0\reconforge\reconciliation
+copying reconforge\reconciliation\stock_gl.py -> reconforge_erp-0.7.0\reconforge\reconciliation
+copying reconforge\reconciliation\workorders.py -> reconforge_erp-0.7.0\reconforge\reconciliation
+copying reconforge\reports\__init__.py -> reconforge_erp-0.7.0\reconforge\reports
+copying reconforge\reports\client_pack.py -> reconforge_erp-0.7.0\reconforge\reports
+copying reconforge\reports\html.py -> reconforge_erp-0.7.0\reconforge\reports
+copying reconforge\reports\management_pack.py -> reconforge_erp-0.7.0\reconforge\reports
+copying reconforge\reports\markdown.py -> reconforge_erp-0.7.0\reconforge\reports
+copying reconforge\reports\wip_aging.py -> reconforge_erp-0.7.0\reconforge\reports
+copying reconforge\review\__init__.py -> reconforge_erp-0.7.0\reconforge\review
+copying reconforge\review\state.py -> reconforge_erp-0.7.0\reconforge\review
+copying reconforge\risk\__init__.py -> reconforge_erp-0.7.0\reconforge\risk
+copying reconforge\risk\engine.py -> reconforge_erp-0.7.0\reconforge\risk
+copying reconforge\risk\explain.py -> reconforge_erp-0.7.0\reconforge\risk
+copying reconforge\risk\matrix.py -> reconforge_erp-0.7.0\reconforge\risk
+copying reconforge\risk\models.py -> reconforge_erp-0.7.0\reconforge\risk
+copying reconforge\risk\scoring.py -> reconforge_erp-0.7.0\reconforge\risk
+copying reconforge\rules\__init__.py -> reconforge_erp-0.7.0\reconforge\rules
+copying reconforge\rules\engine.py -> reconforge_erp-0.7.0\reconforge\rules
+copying reconforge\rules\evaluator.py -> reconforge_erp-0.7.0\reconforge\rules
+copying reconforge\rules\explain.py -> reconforge_erp-0.7.0\reconforge\rules
+copying reconforge\rules\loader.py -> reconforge_erp-0.7.0\reconforge\rules
+copying reconforge\rules\models.py -> reconforge_erp-0.7.0\reconforge\rules
+copying reconforge\rules\operators.py -> reconforge_erp-0.7.0\reconforge\rules
+copying reconforge\rules\recon_as_code.py -> reconforge_erp-0.7.0\reconforge\rules
+copying reconforge\rules\registry.py -> reconforge_erp-0.7.0\reconforge\rules
+copying reconforge\rules\results.py -> reconforge_erp-0.7.0\reconforge\rules
+copying reconforge\studio\__init__.py -> reconforge_erp-0.7.0\reconforge\studio
+copying reconforge\studio\app.py -> reconforge_erp-0.7.0\reconforge\studio
+copying reconforge\studio\components.py -> reconforge_erp-0.7.0\reconforge\studio
+copying reconforge\studio\data.py -> reconforge_erp-0.7.0\reconforge\studio
+copying reconforge\studio\demo_bridge.py -> reconforge_erp-0.7.0\reconforge\studio
+copying reconforge\studio\security.py -> reconforge_erp-0.7.0\reconforge\studio
+copying reconforge\utils\__init__.py -> reconforge_erp-0.7.0\reconforge\utils
+copying reconforge\utils\dates.py -> reconforge_erp-0.7.0\reconforge\utils
+copying reconforge\utils\logging.py -> reconforge_erp-0.7.0\reconforge\utils
+copying reconforge\utils\money.py -> reconforge_erp-0.7.0\reconforge\utils
+copying reconforge\utils\rtl.py -> reconforge_erp-0.7.0\reconforge\utils
+copying reconforge\utils\safe_paths.py -> reconforge_erp-0.7.0\reconforge\utils
+copying reconforge\utils\time.py -> reconforge_erp-0.7.0\reconforge\utils
+copying reconforge\workers\__init__.py -> reconforge_erp-0.7.0\reconforge\workers
+copying reconforge\workers\outbox.py -> reconforge_erp-0.7.0\reconforge\workers
+copying reconforge\workers\postgres_outbox.py -> reconforge_erp-0.7.0\reconforge\workers
+copying reconforge\workers\postgres_reconciliation.py -> reconforge_erp-0.7.0\reconforge\workers
+copying reconforge\workflow\__init__.py -> reconforge_erp-0.7.0\reconforge\workflow
+copying reconforge\workflow\models.py -> reconforge_erp-0.7.0\reconforge\workflow
+copying reconforge\workflow\repositories.py -> reconforge_erp-0.7.0\reconforge\workflow
+copying reconforge\workflow\service.py -> reconforge_erp-0.7.0\reconforge\workflow
+copying reconforge\workflow\state_machine.py -> reconforge_erp-0.7.0\reconforge\workflow
+copying reconforge_erp.egg-info\PKG-INFO -> reconforge_erp-0.7.0\reconforge_erp.egg-info
+copying reconforge_erp.egg-info\SOURCES.txt -> reconforge_erp-0.7.0\reconforge_erp.egg-info
+copying reconforge_erp.egg-info\dependency_links.txt -> reconforge_erp-0.7.0\reconforge_erp.egg-info
+copying reconforge_erp.egg-info\entry_points.txt -> reconforge_erp-0.7.0\reconforge_erp.egg-info
+copying reconforge_erp.egg-info\requires.txt -> reconforge_erp-0.7.0\reconforge_erp.egg-info
+copying reconforge_erp.egg-info\top_level.txt -> reconforge_erp-0.7.0\reconforge_erp.egg-info
+copying tests\test_alembic_postgres.py -> reconforge_erp-0.7.0\tests
+copying tests\test_anonymizer.py -> reconforge_erp-0.7.0\tests
+copying tests\test_api_audit_workflow.py -> reconforge_erp-0.7.0\tests
+copying tests\test_api_auth.py -> reconforge_erp-0.7.0\tests
+copying tests\test_api_dependencies.py -> reconforge_erp-0.7.0\tests
+copying tests\test_api_foundation.py -> reconforge_erp-0.7.0\tests
+copying tests\test_api_platform_routes.py -> reconforge_erp-0.7.0\tests
+copying tests\test_api_server_evidence.py -> reconforge_erp-0.7.0\tests
+copying tests\test_api_server_identity.py -> reconforge_erp-0.7.0\tests
+copying tests\test_api_server_reconciliation.py -> reconforge_erp-0.7.0\tests
+copying tests\test_api_users_roles.py -> reconforge_erp-0.7.0\tests
+copying tests\test_atomic_legacy_services.py -> reconforge_erp-0.7.0\tests
+copying tests\test_audit_events.py -> reconforge_erp-0.7.0\tests
+copying tests\test_auth_passwords.py -> reconforge_erp-0.7.0\tests
+copying tests\test_auth_rbac.py -> reconforge_erp-0.7.0\tests
+copying tests\test_cli_and_studio.py -> reconforge_erp-0.7.0\tests
+copying tests\test_close_workflow.py -> reconforge_erp-0.7.0\tests
+copying tests\test_control_matrix.py -> reconforge_erp-0.7.0\tests
+copying tests\test_db_backup_restore.py -> reconforge_erp-0.7.0\tests
+copying tests\test_db_export_import.py -> reconforge_erp-0.7.0\tests
+copying tests\test_demo_workflow.py -> reconforge_erp-0.7.0\tests
+copying tests\test_domain_repository_contracts.py -> reconforge_erp-0.7.0\tests
+copying tests\test_enterprise_db.py -> reconforge_erp-0.7.0\tests
+copying tests\test_enterprise_demo.py -> reconforge_erp-0.7.0\tests
+copying tests\test_evidence_binder.py -> reconforge_erp-0.7.0\tests
+copying tests\test_evidence_object_storage.py -> reconforge_erp-0.7.0\tests
+copying tests\test_finance_core.py -> reconforge_erp-0.7.0\tests
+copying tests\test_generator_benchmark_engines.py -> reconforge_erp-0.7.0\tests
+copying tests\test_inventory_core.py -> reconforge_erp-0.7.0\tests
+copying tests\test_inventory_planning.py -> reconforge_erp-0.7.0\tests
+copying tests\test_inventory_valuation.py -> reconforge_erp-0.7.0\tests
+copying tests\test_inventory_valuation_reversal.py -> reconforge_erp-0.7.0\tests
+copying tests\test_mapping_validation_cli.py -> reconforge_erp-0.7.0\tests
+copying tests\test_mapping_wizard.py -> reconforge_erp-0.7.0\tests
+copying tests\test_master_data.py -> reconforge_erp-0.7.0\tests
+copying tests\test_module_registry.py -> reconforge_erp-0.7.0\tests
+copying tests\test_money_currency.py -> reconforge_erp-0.7.0\tests
+copying tests\test_object_storage_foundation.py -> reconforge_erp-0.7.0\tests
+copying tests\test_outbox_delivery.py -> reconforge_erp-0.7.0\tests
+copying tests\test_outbox_worker.py -> reconforge_erp-0.7.0\tests
+copying tests\test_p0_correctness.py -> reconforge_erp-0.7.0\tests
+copying tests\test_payables.py -> reconforge_erp-0.7.0\tests
+copying tests\test_payables_api.py -> reconforge_erp-0.7.0\tests
+copying tests\test_period_comparison.py -> reconforge_erp-0.7.0\tests
+copying tests\test_phase2_deliverables.py -> reconforge_erp-0.7.0\tests
+copying tests\test_pilot_readiness_docs.py -> reconforge_erp-0.7.0\tests
+copying tests\test_platform_accounts.py -> reconforge_erp-0.7.0\tests
+copying tests\test_platform_close_evidence_metrics.py -> reconforge_erp-0.7.0\tests
+copying tests\test_platform_common.py -> reconforge_erp-0.7.0\tests
+copying tests\test_platform_controls_matching_exceptions.py -> reconforge_erp-0.7.0\tests
+copying tests\test_platform_matching.py -> reconforge_erp-0.7.0\tests
+copying tests\test_policy_engine.py -> reconforge_erp-0.7.0\tests
+copying tests\test_postgres_close.py -> reconforge_erp-0.7.0\tests
+copying tests\test_postgres_evidence.py -> reconforge_erp-0.7.0\tests
+copying tests\test_postgres_foundation.py -> reconforge_erp-0.7.0\tests
+copying tests\test_postgres_identity.py -> reconforge_erp-0.7.0\tests
+copying tests\test_postgres_ledger.py -> reconforge_erp-0.7.0\tests
+copying tests\test_postgres_master_data.py -> reconforge_erp-0.7.0\tests
+copying tests\test_postgres_outbox.py -> reconforge_erp-0.7.0\tests
+copying tests\test_postgres_reconciliation.py -> reconforge_erp-0.7.0\tests
+copying tests\test_readers.py -> reconforge_erp-0.7.0\tests
+copying tests\test_receivables.py -> reconforge_erp-0.7.0\tests
+copying tests\test_receivables_api.py -> reconforge_erp-0.7.0\tests
+copying tests\test_receivables_cli.py -> reconforge_erp-0.7.0\tests
+copying tests\test_reconciliation_hardening.py -> reconforge_erp-0.7.0\tests
+copying tests\test_redis_foundation.py -> reconforge_erp-0.7.0\tests
+copying tests\test_release_readiness_docs.py -> reconforge_erp-0.7.0\tests
+copying tests\test_reports.py -> reconforge_erp-0.7.0\tests
+copying tests\test_review_workflow.py -> reconforge_erp-0.7.0\tests
+copying tests\test_risk_scoring.py -> reconforge_erp-0.7.0\tests
+copying tests\test_rules_engine.py -> reconforge_erp-0.7.0\tests
+copying tests\test_safe_paths.py -> reconforge_erp-0.7.0\tests
+copying tests\test_stock_gl_reconciliation.py -> reconforge_erp-0.7.0\tests
+copying tests\test_studio_auth.py -> reconforge_erp-0.7.0\tests
+copying tests\test_studio_data.py -> reconforge_erp-0.7.0\tests
+copying tests\test_studio_demo_bridge.py -> reconforge_erp-0.7.0\tests
+copying tests\test_studio_platform_pages.py -> reconforge_erp-0.7.0\tests
+copying tests\test_tenant_isolation.py -> reconforge_erp-0.7.0\tests
+copying tests\test_users_cli.py -> reconforge_erp-0.7.0\tests
+copying tests\test_utc_time.py -> reconforge_erp-0.7.0\tests
+copying tests\test_v03_platform.py -> reconforge_erp-0.7.0\tests
+copying tests\test_v04_mapping_profiles.py -> reconforge_erp-0.7.0\tests
+copying tests\test_validation.py -> reconforge_erp-0.7.0\tests
+copying tests\test_variance_analysis.py -> reconforge_erp-0.7.0\tests
+copying tests\test_website_launch_copy_docs.py -> reconforge_erp-0.7.0\tests
+copying tests\test_workflow_cli.py -> reconforge_erp-0.7.0\tests
+copying tests\test_workflow_schemas.py -> reconforge_erp-0.7.0\tests
+copying tests\test_workflow_state_machine.py -> reconforge_erp-0.7.0\tests
+copying tests\test_workorder_reconciliation.py -> reconforge_erp-0.7.0\tests
+copying reconforge_erp.egg-info\SOURCES.txt -> reconforge_erp-0.7.0\reconforge_erp.egg-info
+Writing reconforge_erp-0.7.0\setup.cfg
+Creating tar archive
+removing 'reconforge_erp-0.7.0' (and everything under it)
+* Building wheel from sdist
+* Getting build dependencies for wheel...
+C:\Users\LOQ\AppData\Roaming\Python\Python314\site-packages\setuptools\config\_apply_pyprojecttoml.py:82: 
+SetuptoolsWarning: `license` overwritten by `pyproject.toml`
+  corresp(dist, value, root_dir)
+C:\Users\LOQ\AppData\Roaming\Python\Python314\site-packages\setuptools\config\_apply_pyprojecttoml.py:82: 
+SetuptoolsWarning: `install_requires` overwritten in `pyproject.toml` (dependencies)
+  corresp(dist, value, root_dir)
+C:\Users\LOQ\AppData\Roaming\Python\Python314\site-packages\setuptools\config\_apply_pyprojecttoml.py:82: 
+SetuptoolsWarning: `extras_require` overwritten in `pyproject.toml` (optional-dependencies)
+  corresp(dist, value, root_dir)
+running egg_info
+writing reconforge_erp.egg-info\PKG-INFO
+writing dependency_links to reconforge_erp.egg-info\dependency_links.txt
+writing entry points to reconforge_erp.egg-info\entry_points.txt
+writing requirements to reconforge_erp.egg-info\requires.txt
+writing top-level names to reconforge_erp.egg-info\top_level.txt
+reading manifest file 'reconforge_erp.egg-info\SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file 'reconforge_erp.egg-info\SOURCES.txt'
+* Building wheel...
+C:\Users\LOQ\AppData\Roaming\Python\Python314\site-packages\setuptools\config\_apply_pyprojecttoml.py:82: 
+SetuptoolsWarning: `license` overwritten by `pyproject.toml`
+  corresp(dist, value, root_dir)
+C:\Users\LOQ\AppData\Roaming\Python\Python314\site-packages\setuptools\config\_apply_pyprojecttoml.py:82: 
+SetuptoolsWarning: `install_requires` overwritten in `pyproject.toml` (dependencies)
+  corresp(dist, value, root_dir)
+C:\Users\LOQ\AppData\Roaming\Python\Python314\site-packages\setuptools\config\_apply_pyprojecttoml.py:82: 
+SetuptoolsWarning: `extras_require` overwritten in `pyproject.toml` (optional-dependencies)
+  corresp(dist, value, root_dir)
+running bdist_wheel
+running build
+running build_py
+creating build\lib\reconforge
+copying reconforge\cli.py -> build\lib\reconforge
+copying reconforge\cli_inventory_planning.py -> build\lib\reconforge
+copying reconforge\cli_inventory_valuation.py -> build\lib\reconforge
+copying reconforge\cli_inventory_valuation_reversal.py -> build\lib\reconforge
+copying reconforge\close_workflow.py -> build\lib\reconforge
+copying reconforge\config.py -> build\lib\reconforge
+copying reconforge\control_matrix.py -> build\lib\reconforge
+copying reconforge\enterprise_demo.py -> build\lib\reconforge
+copying reconforge\periods.py -> build\lib\reconforge
+copying reconforge\schemas.py -> build\lib\reconforge
+copying reconforge\validators.py -> build\lib\reconforge
+copying reconforge\variance.py -> build\lib\reconforge
+copying reconforge\__init__.py -> build\lib\reconforge
+creating build\lib\reconforge\ai
+copying reconforge\ai\interfaces.py -> build\lib\reconforge\ai
+copying reconforge\ai\offline.py -> build\lib\reconforge\ai
+copying reconforge\ai\prompts.py -> build\lib\reconforge\ai
+copying reconforge\ai\summaries.py -> build\lib\reconforge\ai
+copying reconforge\ai\__init__.py -> build\lib\reconforge\ai
+creating build\lib\reconforge\anonymizer
+copying reconforge\anonymizer\engine.py -> build\lib\reconforge\anonymizer
+copying reconforge\anonymizer\mapping.py -> build\lib\reconforge\anonymizer
+copying reconforge\anonymizer\maskers.py -> build\lib\reconforge\anonymizer
+copying reconforge\anonymizer\__init__.py -> build\lib\reconforge\anonymizer
+creating build\lib\reconforge\api
+copying reconforge\api\app.py -> build\lib\reconforge\api
+copying reconforge\api\dependencies.py -> build\lib\reconforge\api
+copying reconforge\api\errors.py -> build\lib\reconforge\api
+copying reconforge\api\security.py -> build\lib\reconforge\api
+copying reconforge\api\server_close.py -> build\lib\reconforge\api
+copying reconforge\api\server_evidence.py -> build\lib\reconforge\api
+copying reconforge\api\server_identity.py -> build\lib\reconforge\api
+copying reconforge\api\server_ledger.py -> build\lib\reconforge\api
+copying reconforge\api\server_master_data.py -> build\lib\reconforge\api
+copying reconforge\api\server_reconciliation.py -> build\lib\reconforge\api
+copying reconforge\api\__init__.py -> build\lib\reconforge\api
+creating build\lib\reconforge\audit
+copying reconforge\audit\events.py -> build\lib\reconforge\audit
+copying reconforge\audit\__init__.py -> build\lib\reconforge\audit
+creating build\lib\reconforge\auth
+copying reconforge\auth\models.py -> build\lib\reconforge\auth
+copying reconforge\auth\passwords.py -> build\lib\reconforge\auth
+copying reconforge\auth\policy.py -> build\lib\reconforge\auth
+copying reconforge\auth\rbac.py -> build\lib\reconforge\auth
+copying reconforge\auth\repositories.py -> build\lib\reconforge\auth
+copying reconforge\auth\service.py -> build\lib\reconforge\auth
+copying reconforge\auth\__init__.py -> build\lib\reconforge\auth
+creating build\lib\reconforge\benchmark
+copying reconforge\benchmark\metrics.py -> build\lib\reconforge\benchmark
+copying reconforge\benchmark\reconciliation_execution.py -> build\lib\reconforge\benchmark
+copying reconforge\benchmark\report.py -> build\lib\reconforge\benchmark
+copying reconforge\benchmark\runner.py -> build\lib\reconforge\benchmark
+copying reconforge\benchmark\__init__.py -> build\lib\reconforge\benchmark
+creating build\lib\reconforge\close
+copying reconforge\close\__init__.py -> build\lib\reconforge\close
+creating build\lib\reconforge\dashboard
+copying reconforge\dashboard\app.py -> build\lib\reconforge\dashboard
+copying reconforge\dashboard\__init__.py -> build\lib\reconforge\dashboard
+creating build\lib\reconforge\db
+copying reconforge\db\backup.py -> build\lib\reconforge\db
+copying reconforge\db\connection.py -> build\lib\reconforge\db
+copying reconforge\db\exporter.py -> build\lib\reconforge\db
+copying reconforge\db\importers.py -> build\lib\reconforge\db
+copying reconforge\db\migrations.py -> build\lib\reconforge\db
+copying reconforge\db\schema.py -> build\lib\reconforge\db
+copying reconforge\db\tenancy.py -> build\lib\reconforge\db
+copying reconforge\db\__init__.py -> build\lib\reconforge\db
+creating build\lib\reconforge\domain
+copying reconforge\domain\models.py -> build\lib\reconforge\domain
+copying reconforge\domain\protocols.py -> build\lib\reconforge\domain
+copying reconforge\domain\repositories.py -> build\lib\reconforge\domain
+copying reconforge\domain\__init__.py -> build\lib\reconforge\domain
+creating build\lib\reconforge\engines
+copying reconforge\engines\base.py -> build\lib\reconforge\engines
+copying reconforge\engines\duckdb_engine.py -> build\lib\reconforge\engines
+copying reconforge\engines\pandas_engine.py -> build\lib\reconforge\engines
+copying reconforge\engines\registry.py -> build\lib\reconforge\engines
+copying reconforge\engines\signature.py -> build\lib\reconforge\engines
+copying reconforge\engines\__init__.py -> build\lib\reconforge\engines
+creating build\lib\reconforge\evidence
+copying reconforge\evidence\binder.py -> build\lib\reconforge\evidence
+copying reconforge\evidence\graph.py -> build\lib\reconforge\evidence
+copying reconforge\evidence\index.py -> build\lib\reconforge\evidence
+copying reconforge\evidence\models.py -> build\lib\reconforge\evidence
+copying reconforge\evidence\templates.py -> build\lib\reconforge\evidence
+copying reconforge\evidence\writer.py -> build\lib\reconforge\evidence
+copying reconforge\evidence\__init__.py -> build\lib\reconforge\evidence
+creating build\lib\reconforge\generator
+copying reconforge\generator\scenarios.py -> build\lib\reconforge\generator
+copying reconforge\generator\synthetic.py -> build\lib\reconforge\generator
+copying reconforge\generator\__init__.py -> build\lib\reconforge\generator
+creating build\lib\reconforge\infrastructure
+copying reconforge\infrastructure\object_storage.py -> build\lib\reconforge\infrastructure
+copying reconforge\infrastructure\postgres.py -> build\lib\reconforge\infrastructure
+copying reconforge\infrastructure\postgres_close.py -> build\lib\reconforge\infrastructure
+copying reconforge\infrastructure\postgres_evidence.py -> build\lib\reconforge\infrastructure
+copying reconforge\infrastructure\postgres_identity.py -> build\lib\reconforge\infrastructure
+copying reconforge\infrastructure\postgres_ledger.py -> build\lib\reconforge\infrastructure
+copying reconforge\infrastructure\postgres_master_data.py -> build\lib\reconforge\infrastructure
+copying reconforge\infrastructure\postgres_outbox.py -> build\lib\reconforge\infrastructure
+copying reconforge\infrastructure\postgres_reconciliation.py -> build\lib\reconforge\infrastructure
+copying reconforge\infrastructure\postgres_reconciliation_checkpoints.py -> build\lib\reconforge\infrastructure
+copying reconforge\infrastructure\postgres_reconciliation_execution.py -> build\lib\reconforge\infrastructure
+copying reconforge\infrastructure\redis.py -> build\lib\reconforge\infrastructure
+copying reconforge\infrastructure\__init__.py -> build\lib\reconforge\infrastructure
+creating build\lib\reconforge\io
+copying reconforge\io\excel.py -> build\lib\reconforge\io
+copying reconforge\io\readers.py -> build\lib\reconforge\io
+copying reconforge\io\writers.py -> build\lib\reconforge\io
+copying reconforge\io\__init__.py -> build\lib\reconforge\io
+creating build\lib\reconforge\mappings
+copying reconforge\mappings\inspector.py -> build\lib\reconforge\mappings
+copying reconforge\mappings\profile_template.py -> build\lib\reconforge\mappings
+copying reconforge\mappings\validator.py -> build\lib\reconforge\mappings
+copying reconforge\mappings\__init__.py -> build\lib\reconforge\mappings
+creating build\lib\reconforge\modules
+copying reconforge\modules\registry.py -> build\lib\reconforge\modules
+copying reconforge\modules\__init__.py -> build\lib\reconforge\modules
+creating build\lib\reconforge\platform
+copying reconforge\platform\accounts.py -> build\lib\reconforge\platform
+copying reconforge\platform\approvals.py -> build\lib\reconforge\platform
+copying reconforge\platform\close.py -> build\lib\reconforge\platform
+copying reconforge\platform\common.py -> build\lib\reconforge\platform
+copying reconforge\platform\controls.py -> build\lib\reconforge\platform
+copying reconforge\platform\evidence.py -> build\lib\reconforge\platform
+copying reconforge\platform\exceptions.py -> build\lib\reconforge\platform
+copying reconforge\platform\finance_core.py -> build\lib\reconforge\platform
+copying reconforge\platform\intercompany.py -> build\lib\reconforge\platform
+copying reconforge\platform\inventory_core.py -> build\lib\reconforge\platform
+copying reconforge\platform\inventory_planning.py -> build\lib\reconforge\platform
+copying reconforge\platform\inventory_planning_repository.py -> build\lib\reconforge\platform
+copying reconforge\platform\inventory_valuation.py -> build\lib\reconforge\platform
+copying reconforge\platform\inventory_valuation_repository.py -> build\lib\reconforge\platform
+copying reconforge\platform\inventory_valuation_reversal.py -> build\lib\reconforge\platform
+copying reconforge\platform\inventory_valuation_reversal_repository.py -> build\lib\reconforge\platform
+copying reconforge\platform\inventory_values.py -> build\lib\reconforge\platform
+copying reconforge\platform\journals.py -> build\lib\reconforge\platform
+copying reconforge\platform\master_data.py -> build\lib\reconforge\platform
+copying reconforge\platform\matching.py -> build\lib\reconforge\platform
+copying reconforge\platform\metrics.py -> build\lib\reconforge\platform
+copying reconforge\platform\operations.py -> build\lib\reconforge\platform
+copying reconforge\platform\outbox.py -> build\lib\reconforge\platform
+copying reconforge\platform\payables.py -> build\lib\reconforge\platform
+copying reconforge\platform\receivables.py -> build\lib\reconforge\platform
+copying reconforge\platform\__init__.py -> build\lib\reconforge\platform
+creating build\lib\reconforge\plugins
+copying reconforge\plugins\base.py -> build\lib\reconforge\plugins
+copying reconforge\plugins\generic_csv.py -> build\lib\reconforge\plugins
+copying reconforge\plugins\odoo_export.py -> build\lib\reconforge\plugins
+copying reconforge\plugins\registry.py -> build\lib\reconforge\plugins
+copying reconforge\plugins\sap_export.py -> build\lib\reconforge\plugins
+copying reconforge\plugins\__init__.py -> build\lib\reconforge\plugins
+creating build\lib\reconforge\reconciliation
+copying reconforge\reconciliation\matching.py -> build\lib\reconforge\reconciliation
+copying reconforge\reconciliation\risk.py -> build\lib\reconforge\reconciliation
+copying reconforge\reconciliation\stock_gl.py -> build\lib\reconforge\reconciliation
+copying reconforge\reconciliation\workorders.py -> build\lib\reconforge\reconciliation
+copying reconforge\reconciliation\__init__.py -> build\lib\reconforge\reconciliation
+creating build\lib\reconforge\reports
+copying reconforge\reports\client_pack.py -> build\lib\reconforge\reports
+copying reconforge\reports\html.py -> build\lib\reconforge\reports
+copying reconforge\reports\management_pack.py -> build\lib\reconforge\reports
+copying reconforge\reports\markdown.py -> build\lib\reconforge\reports
+copying reconforge\reports\wip_aging.py -> build\lib\reconforge\reports
+copying reconforge\reports\__init__.py -> build\lib\reconforge\reports
+creating build\lib\reconforge\review
+copying reconforge\review\state.py -> build\lib\reconforge\review
+copying reconforge\review\__init__.py -> build\lib\reconforge\review
+creating build\lib\reconforge\risk
+copying reconforge\risk\engine.py -> build\lib\reconforge\risk
+copying reconforge\risk\explain.py -> build\lib\reconforge\risk
+copying reconforge\risk\matrix.py -> build\lib\reconforge\risk
+copying reconforge\risk\models.py -> build\lib\reconforge\risk
+copying reconforge\risk\scoring.py -> build\lib\reconforge\risk
+copying reconforge\risk\__init__.py -> build\lib\reconforge\risk
+creating build\lib\reconforge\rules
+copying reconforge\rules\engine.py -> build\lib\reconforge\rules
+copying reconforge\rules\evaluator.py -> build\lib\reconforge\rules
+copying reconforge\rules\explain.py -> build\lib\reconforge\rules
+copying reconforge\rules\loader.py -> build\lib\reconforge\rules
+copying reconforge\rules\models.py -> build\lib\reconforge\rules
+copying reconforge\rules\operators.py -> build\lib\reconforge\rules
+copying reconforge\rules\recon_as_code.py -> build\lib\reconforge\rules
+copying reconforge\rules\registry.py -> build\lib\reconforge\rules
+copying reconforge\rules\results.py -> build\lib\reconforge\rules
+copying reconforge\rules\__init__.py -> build\lib\reconforge\rules
+creating build\lib\reconforge\studio
+copying reconforge\studio\app.py -> build\lib\reconforge\studio
+copying reconforge\studio\components.py -> build\lib\reconforge\studio
+copying reconforge\studio\data.py -> build\lib\reconforge\studio
+copying reconforge\studio\demo_bridge.py -> build\lib\reconforge\studio
+copying reconforge\studio\security.py -> build\lib\reconforge\studio
+copying reconforge\studio\__init__.py -> build\lib\reconforge\studio
+creating build\lib\reconforge\utils
+copying reconforge\utils\dates.py -> build\lib\reconforge\utils
+copying reconforge\utils\logging.py -> build\lib\reconforge\utils
+copying reconforge\utils\money.py -> build\lib\reconforge\utils
+copying reconforge\utils\rtl.py -> build\lib\reconforge\utils
+copying reconforge\utils\safe_paths.py -> build\lib\reconforge\utils
+copying reconforge\utils\time.py -> build\lib\reconforge\utils
+copying reconforge\utils\__init__.py -> build\lib\reconforge\utils
+creating build\lib\reconforge\workers
+copying reconforge\workers\outbox.py -> build\lib\reconforge\workers
+copying reconforge\workers\postgres_outbox.py -> build\lib\reconforge\workers
+copying reconforge\workers\postgres_reconciliation.py -> build\lib\reconforge\workers
+copying reconforge\workers\__init__.py -> build\lib\reconforge\workers
+creating build\lib\reconforge\workflow
+copying reconforge\workflow\models.py -> build\lib\reconforge\workflow
+copying reconforge\workflow\repositories.py -> build\lib\reconforge\workflow
+copying reconforge\workflow\service.py -> build\lib\reconforge\workflow
+copying reconforge\workflow\state_machine.py -> build\lib\reconforge\workflow
+copying reconforge\workflow\__init__.py -> build\lib\reconforge\workflow
+creating build\lib\reconforge\api\routes
+copying reconforge\api\routes\accounts.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\audit.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\auth.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\close.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\evidence.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\exceptions.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\finance_core.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\health.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\inventory_core.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\inventory_planning.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\inventory_valuation.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\inventory_valuation_reversal.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\master_data.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\metrics.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\payables.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\receivables.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\reconciliation.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\roles.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\users.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\workflow.py -> build\lib\reconforge\api\routes
+copying reconforge\api\routes\__init__.py -> build\lib\reconforge\api\routes
+running egg_info
+writing reconforge_erp.egg-info\PKG-INFO
+writing dependency_links to reconforge_erp.egg-info\dependency_links.txt
+writing entry points to reconforge_erp.egg-info\entry_points.txt
+writing requirements to reconforge_erp.egg-info\requires.txt
+writing top-level names to reconforge_erp.egg-info\top_level.txt
+reading manifest file 'reconforge_erp.egg-info\SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file 'reconforge_erp.egg-info\SOURCES.txt'
+installing to build\bdist.win-amd64\wheel
+running install
+running install_lib
+creating build\bdist.win-amd64\wheel
+creating build\bdist.win-amd64\wheel\reconforge
+creating build\bdist.win-amd64\wheel\reconforge\ai
+copying build\lib\reconforge\ai\interfaces.py -> build\bdist.win-amd64\wheel\.\reconforge\ai
+copying build\lib\reconforge\ai\offline.py -> build\bdist.win-amd64\wheel\.\reconforge\ai
+copying build\lib\reconforge\ai\prompts.py -> build\bdist.win-amd64\wheel\.\reconforge\ai
+copying build\lib\reconforge\ai\summaries.py -> build\bdist.win-amd64\wheel\.\reconforge\ai
+copying build\lib\reconforge\ai\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\ai
+creating build\bdist.win-amd64\wheel\reconforge\anonymizer
+copying build\lib\reconforge\anonymizer\engine.py -> build\bdist.win-amd64\wheel\.\reconforge\anonymizer
+copying build\lib\reconforge\anonymizer\mapping.py -> build\bdist.win-amd64\wheel\.\reconforge\anonymizer
+copying build\lib\reconforge\anonymizer\maskers.py -> build\bdist.win-amd64\wheel\.\reconforge\anonymizer
+copying build\lib\reconforge\anonymizer\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\anonymizer
+creating build\bdist.win-amd64\wheel\reconforge\api
+copying build\lib\reconforge\api\app.py -> build\bdist.win-amd64\wheel\.\reconforge\api
+copying build\lib\reconforge\api\dependencies.py -> build\bdist.win-amd64\wheel\.\reconforge\api
+copying build\lib\reconforge\api\errors.py -> build\bdist.win-amd64\wheel\.\reconforge\api
+creating build\bdist.win-amd64\wheel\reconforge\api\routes
+copying build\lib\reconforge\api\routes\accounts.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\audit.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\auth.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\close.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\evidence.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\exceptions.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\finance_core.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\health.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\inventory_core.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\inventory_planning.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\inventory_valuation.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\inventory_valuation_reversal.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\master_data.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\metrics.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\payables.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\receivables.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\reconciliation.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\roles.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\users.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\workflow.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\routes\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\api\routes
+copying build\lib\reconforge\api\security.py -> build\bdist.win-amd64\wheel\.\reconforge\api
+copying build\lib\reconforge\api\server_close.py -> build\bdist.win-amd64\wheel\.\reconforge\api
+copying build\lib\reconforge\api\server_evidence.py -> build\bdist.win-amd64\wheel\.\reconforge\api
+copying build\lib\reconforge\api\server_identity.py -> build\bdist.win-amd64\wheel\.\reconforge\api
+copying build\lib\reconforge\api\server_ledger.py -> build\bdist.win-amd64\wheel\.\reconforge\api
+copying build\lib\reconforge\api\server_master_data.py -> build\bdist.win-amd64\wheel\.\reconforge\api
+copying build\lib\reconforge\api\server_reconciliation.py -> build\bdist.win-amd64\wheel\.\reconforge\api
+copying build\lib\reconforge\api\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\api
+creating build\bdist.win-amd64\wheel\reconforge\audit
+copying build\lib\reconforge\audit\events.py -> build\bdist.win-amd64\wheel\.\reconforge\audit
+copying build\lib\reconforge\audit\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\audit
+creating build\bdist.win-amd64\wheel\reconforge\auth
+copying build\lib\reconforge\auth\models.py -> build\bdist.win-amd64\wheel\.\reconforge\auth
+copying build\lib\reconforge\auth\passwords.py -> build\bdist.win-amd64\wheel\.\reconforge\auth
+copying build\lib\reconforge\auth\policy.py -> build\bdist.win-amd64\wheel\.\reconforge\auth
+copying build\lib\reconforge\auth\rbac.py -> build\bdist.win-amd64\wheel\.\reconforge\auth
+copying build\lib\reconforge\auth\repositories.py -> build\bdist.win-amd64\wheel\.\reconforge\auth
+copying build\lib\reconforge\auth\service.py -> build\bdist.win-amd64\wheel\.\reconforge\auth
+copying build\lib\reconforge\auth\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\auth
+creating build\bdist.win-amd64\wheel\reconforge\benchmark
+copying build\lib\reconforge\benchmark\metrics.py -> build\bdist.win-amd64\wheel\.\reconforge\benchmark
+copying build\lib\reconforge\benchmark\reconciliation_execution.py -> build\bdist.win-amd64\wheel\.\reconforge\benchmark
+copying build\lib\reconforge\benchmark\report.py -> build\bdist.win-amd64\wheel\.\reconforge\benchmark
+copying build\lib\reconforge\benchmark\runner.py -> build\bdist.win-amd64\wheel\.\reconforge\benchmark
+copying build\lib\reconforge\benchmark\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\benchmark
+copying build\lib\reconforge\cli.py -> build\bdist.win-amd64\wheel\.\reconforge
+copying build\lib\reconforge\cli_inventory_planning.py -> build\bdist.win-amd64\wheel\.\reconforge
+copying build\lib\reconforge\cli_inventory_valuation.py -> build\bdist.win-amd64\wheel\.\reconforge
+copying build\lib\reconforge\cli_inventory_valuation_reversal.py -> build\bdist.win-amd64\wheel\.\reconforge
+creating build\bdist.win-amd64\wheel\reconforge\close
+copying build\lib\reconforge\close\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\close
+copying build\lib\reconforge\close_workflow.py -> build\bdist.win-amd64\wheel\.\reconforge
+copying build\lib\reconforge\config.py -> build\bdist.win-amd64\wheel\.\reconforge
+copying build\lib\reconforge\control_matrix.py -> build\bdist.win-amd64\wheel\.\reconforge
+creating build\bdist.win-amd64\wheel\reconforge\dashboard
+copying build\lib\reconforge\dashboard\app.py -> build\bdist.win-amd64\wheel\.\reconforge\dashboard
+copying build\lib\reconforge\dashboard\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\dashboard
+creating build\bdist.win-amd64\wheel\reconforge\db
+copying build\lib\reconforge\db\backup.py -> build\bdist.win-amd64\wheel\.\reconforge\db
+copying build\lib\reconforge\db\connection.py -> build\bdist.win-amd64\wheel\.\reconforge\db
+copying build\lib\reconforge\db\exporter.py -> build\bdist.win-amd64\wheel\.\reconforge\db
+copying build\lib\reconforge\db\importers.py -> build\bdist.win-amd64\wheel\.\reconforge\db
+copying build\lib\reconforge\db\migrations.py -> build\bdist.win-amd64\wheel\.\reconforge\db
+copying build\lib\reconforge\db\schema.py -> build\bdist.win-amd64\wheel\.\reconforge\db
+copying build\lib\reconforge\db\tenancy.py -> build\bdist.win-amd64\wheel\.\reconforge\db
+copying build\lib\reconforge\db\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\db
+creating build\bdist.win-amd64\wheel\reconforge\domain
+copying build\lib\reconforge\domain\models.py -> build\bdist.win-amd64\wheel\.\reconforge\domain
+copying build\lib\reconforge\domain\protocols.py -> build\bdist.win-amd64\wheel\.\reconforge\domain
+copying build\lib\reconforge\domain\repositories.py -> build\bdist.win-amd64\wheel\.\reconforge\domain
+copying build\lib\reconforge\domain\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\domain
+creating build\bdist.win-amd64\wheel\reconforge\engines
+copying build\lib\reconforge\engines\base.py -> build\bdist.win-amd64\wheel\.\reconforge\engines
+copying build\lib\reconforge\engines\duckdb_engine.py -> build\bdist.win-amd64\wheel\.\reconforge\engines
+copying build\lib\reconforge\engines\pandas_engine.py -> build\bdist.win-amd64\wheel\.\reconforge\engines
+copying build\lib\reconforge\engines\registry.py -> build\bdist.win-amd64\wheel\.\reconforge\engines
+copying build\lib\reconforge\engines\signature.py -> build\bdist.win-amd64\wheel\.\reconforge\engines
+copying build\lib\reconforge\engines\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\engines
+copying build\lib\reconforge\enterprise_demo.py -> build\bdist.win-amd64\wheel\.\reconforge
+creating build\bdist.win-amd64\wheel\reconforge\evidence
+copying build\lib\reconforge\evidence\binder.py -> build\bdist.win-amd64\wheel\.\reconforge\evidence
+copying build\lib\reconforge\evidence\graph.py -> build\bdist.win-amd64\wheel\.\reconforge\evidence
+copying build\lib\reconforge\evidence\index.py -> build\bdist.win-amd64\wheel\.\reconforge\evidence
+copying build\lib\reconforge\evidence\models.py -> build\bdist.win-amd64\wheel\.\reconforge\evidence
+copying build\lib\reconforge\evidence\templates.py -> build\bdist.win-amd64\wheel\.\reconforge\evidence
+copying build\lib\reconforge\evidence\writer.py -> build\bdist.win-amd64\wheel\.\reconforge\evidence
+copying build\lib\reconforge\evidence\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\evidence
+creating build\bdist.win-amd64\wheel\reconforge\generator
+copying build\lib\reconforge\generator\scenarios.py -> build\bdist.win-amd64\wheel\.\reconforge\generator
+copying build\lib\reconforge\generator\synthetic.py -> build\bdist.win-amd64\wheel\.\reconforge\generator
+copying build\lib\reconforge\generator\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\generator
+creating build\bdist.win-amd64\wheel\reconforge\infrastructure
+copying build\lib\reconforge\infrastructure\object_storage.py -> build\bdist.win-amd64\wheel\.\reconforge\infrastructure
+copying build\lib\reconforge\infrastructure\postgres.py -> build\bdist.win-amd64\wheel\.\reconforge\infrastructure
+copying build\lib\reconforge\infrastructure\postgres_close.py -> build\bdist.win-amd64\wheel\.\reconforge\infrastructure
+copying build\lib\reconforge\infrastructure\postgres_evidence.py -> build\bdist.win-amd64\wheel\.\reconforge\infrastructure
+copying build\lib\reconforge\infrastructure\postgres_identity.py -> build\bdist.win-amd64\wheel\.\reconforge\infrastructure
+copying build\lib\reconforge\infrastructure\postgres_ledger.py -> build\bdist.win-amd64\wheel\.\reconforge\infrastructure
+copying build\lib\reconforge\infrastructure\postgres_master_data.py -> build\bdist.win-amd64\wheel\.\reconforge\infrastructure
+copying build\lib\reconforge\infrastructure\postgres_outbox.py -> build\bdist.win-amd64\wheel\.\reconforge\infrastructure
+copying build\lib\reconforge\infrastructure\postgres_reconciliation.py -> build\bdist.win-amd64\wheel\.\reconforge\infrastructure
+copying build\lib\reconforge\infrastructure\postgres_reconciliation_checkpoints.py -> build\bdist.win-amd64\wheel\.\reconforge\infrastructure
+copying build\lib\reconforge\infrastructure\postgres_reconciliation_execution.py -> build\bdist.win-amd64\wheel\.\reconforge\infrastructure
+copying build\lib\reconforge\infrastructure\redis.py -> build\bdist.win-amd64\wheel\.\reconforge\infrastructure
+copying build\lib\reconforge\infrastructure\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\infrastructure
+creating build\bdist.win-amd64\wheel\reconforge\io
+copying build\lib\reconforge\io\excel.py -> build\bdist.win-amd64\wheel\.\reconforge\io
+copying build\lib\reconforge\io\readers.py -> build\bdist.win-amd64\wheel\.\reconforge\io
+copying build\lib\reconforge\io\writers.py -> build\bdist.win-amd64\wheel\.\reconforge\io
+copying build\lib\reconforge\io\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\io
+creating build\bdist.win-amd64\wheel\reconforge\mappings
+copying build\lib\reconforge\mappings\inspector.py -> build\bdist.win-amd64\wheel\.\reconforge\mappings
+copying build\lib\reconforge\mappings\profile_template.py -> build\bdist.win-amd64\wheel\.\reconforge\mappings
+copying build\lib\reconforge\mappings\validator.py -> build\bdist.win-amd64\wheel\.\reconforge\mappings
+copying build\lib\reconforge\mappings\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\mappings
+creating build\bdist.win-amd64\wheel\reconforge\modules
+copying build\lib\reconforge\modules\registry.py -> build\bdist.win-amd64\wheel\.\reconforge\modules
+copying build\lib\reconforge\modules\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\modules
+copying build\lib\reconforge\periods.py -> build\bdist.win-amd64\wheel\.\reconforge
+creating build\bdist.win-amd64\wheel\reconforge\platform
+copying build\lib\reconforge\platform\accounts.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\approvals.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\close.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\common.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\controls.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\evidence.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\exceptions.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\finance_core.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\intercompany.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\inventory_core.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\inventory_planning.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\inventory_planning_repository.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\inventory_valuation.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\inventory_valuation_repository.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\inventory_valuation_reversal.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\inventory_valuation_reversal_repository.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\inventory_values.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\journals.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\master_data.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\matching.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\metrics.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\operations.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\outbox.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\payables.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\receivables.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+copying build\lib\reconforge\platform\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\platform
+creating build\bdist.win-amd64\wheel\reconforge\plugins
+copying build\lib\reconforge\plugins\base.py -> build\bdist.win-amd64\wheel\.\reconforge\plugins
+copying build\lib\reconforge\plugins\generic_csv.py -> build\bdist.win-amd64\wheel\.\reconforge\plugins
+copying build\lib\reconforge\plugins\odoo_export.py -> build\bdist.win-amd64\wheel\.\reconforge\plugins
+copying build\lib\reconforge\plugins\registry.py -> build\bdist.win-amd64\wheel\.\reconforge\plugins
+copying build\lib\reconforge\plugins\sap_export.py -> build\bdist.win-amd64\wheel\.\reconforge\plugins
+copying build\lib\reconforge\plugins\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\plugins
+creating build\bdist.win-amd64\wheel\reconforge\reconciliation
+copying build\lib\reconforge\reconciliation\matching.py -> build\bdist.win-amd64\wheel\.\reconforge\reconciliation
+copying build\lib\reconforge\reconciliation\risk.py -> build\bdist.win-amd64\wheel\.\reconforge\reconciliation
+copying build\lib\reconforge\reconciliation\stock_gl.py -> build\bdist.win-amd64\wheel\.\reconforge\reconciliation
+copying build\lib\reconforge\reconciliation\workorders.py -> build\bdist.win-amd64\wheel\.\reconforge\reconciliation
+copying build\lib\reconforge\reconciliation\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\reconciliation
+creating build\bdist.win-amd64\wheel\reconforge\reports
+copying build\lib\reconforge\reports\client_pack.py -> build\bdist.win-amd64\wheel\.\reconforge\reports
+copying build\lib\reconforge\reports\html.py -> build\bdist.win-amd64\wheel\.\reconforge\reports
+copying build\lib\reconforge\reports\management_pack.py -> build\bdist.win-amd64\wheel\.\reconforge\reports
+copying build\lib\reconforge\reports\markdown.py -> build\bdist.win-amd64\wheel\.\reconforge\reports
+copying build\lib\reconforge\reports\wip_aging.py -> build\bdist.win-amd64\wheel\.\reconforge\reports
+copying build\lib\reconforge\reports\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\reports
+creating build\bdist.win-amd64\wheel\reconforge\review
+copying build\lib\reconforge\review\state.py -> build\bdist.win-amd64\wheel\.\reconforge\review
+copying build\lib\reconforge\review\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\review
+creating build\bdist.win-amd64\wheel\reconforge\risk
+copying build\lib\reconforge\risk\engine.py -> build\bdist.win-amd64\wheel\.\reconforge\risk
+copying build\lib\reconforge\risk\explain.py -> build\bdist.win-amd64\wheel\.\reconforge\risk
+copying build\lib\reconforge\risk\matrix.py -> build\bdist.win-amd64\wheel\.\reconforge\risk
+copying build\lib\reconforge\risk\models.py -> build\bdist.win-amd64\wheel\.\reconforge\risk
+copying build\lib\reconforge\risk\scoring.py -> build\bdist.win-amd64\wheel\.\reconforge\risk
+copying build\lib\reconforge\risk\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\risk
+creating build\bdist.win-amd64\wheel\reconforge\rules
+copying build\lib\reconforge\rules\engine.py -> build\bdist.win-amd64\wheel\.\reconforge\rules
+copying build\lib\reconforge\rules\evaluator.py -> build\bdist.win-amd64\wheel\.\reconforge\rules
+copying build\lib\reconforge\rules\explain.py -> build\bdist.win-amd64\wheel\.\reconforge\rules
+copying build\lib\reconforge\rules\loader.py -> build\bdist.win-amd64\wheel\.\reconforge\rules
+copying build\lib\reconforge\rules\models.py -> build\bdist.win-amd64\wheel\.\reconforge\rules
+copying build\lib\reconforge\rules\operators.py -> build\bdist.win-amd64\wheel\.\reconforge\rules
+copying build\lib\reconforge\rules\recon_as_code.py -> build\bdist.win-amd64\wheel\.\reconforge\rules
+copying build\lib\reconforge\rules\registry.py -> build\bdist.win-amd64\wheel\.\reconforge\rules
+copying build\lib\reconforge\rules\results.py -> build\bdist.win-amd64\wheel\.\reconforge\rules
+copying build\lib\reconforge\rules\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\rules
+copying build\lib\reconforge\schemas.py -> build\bdist.win-amd64\wheel\.\reconforge
+creating build\bdist.win-amd64\wheel\reconforge\studio
+copying build\lib\reconforge\studio\app.py -> build\bdist.win-amd64\wheel\.\reconforge\studio
+copying build\lib\reconforge\studio\components.py -> build\bdist.win-amd64\wheel\.\reconforge\studio
+copying build\lib\reconforge\studio\data.py -> build\bdist.win-amd64\wheel\.\reconforge\studio
+copying build\lib\reconforge\studio\demo_bridge.py -> build\bdist.win-amd64\wheel\.\reconforge\studio
+copying build\lib\reconforge\studio\security.py -> build\bdist.win-amd64\wheel\.\reconforge\studio
+copying build\lib\reconforge\studio\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\studio
+creating build\bdist.win-amd64\wheel\reconforge\utils
+copying build\lib\reconforge\utils\dates.py -> build\bdist.win-amd64\wheel\.\reconforge\utils
+copying build\lib\reconforge\utils\logging.py -> build\bdist.win-amd64\wheel\.\reconforge\utils
+copying build\lib\reconforge\utils\money.py -> build\bdist.win-amd64\wheel\.\reconforge\utils
+copying build\lib\reconforge\utils\rtl.py -> build\bdist.win-amd64\wheel\.\reconforge\utils
+copying build\lib\reconforge\utils\safe_paths.py -> build\bdist.win-amd64\wheel\.\reconforge\utils
+copying build\lib\reconforge\utils\time.py -> build\bdist.win-amd64\wheel\.\reconforge\utils
+copying build\lib\reconforge\utils\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\utils
+copying build\lib\reconforge\validators.py -> build\bdist.win-amd64\wheel\.\reconforge
+copying build\lib\reconforge\variance.py -> build\bdist.win-amd64\wheel\.\reconforge
+creating build\bdist.win-amd64\wheel\reconforge\workers
+copying build\lib\reconforge\workers\outbox.py -> build\bdist.win-amd64\wheel\.\reconforge\workers
+copying build\lib\reconforge\workers\postgres_outbox.py -> build\bdist.win-amd64\wheel\.\reconforge\workers
+copying build\lib\reconforge\workers\postgres_reconciliation.py -> build\bdist.win-amd64\wheel\.\reconforge\workers
+copying build\lib\reconforge\workers\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\workers
+creating build\bdist.win-amd64\wheel\reconforge\workflow
+copying build\lib\reconforge\workflow\models.py -> build\bdist.win-amd64\wheel\.\reconforge\workflow
+copying build\lib\reconforge\workflow\repositories.py -> build\bdist.win-amd64\wheel\.\reconforge\workflow
+copying build\lib\reconforge\workflow\service.py -> build\bdist.win-amd64\wheel\.\reconforge\workflow
+copying build\lib\reconforge\workflow\state_machine.py -> build\bdist.win-amd64\wheel\.\reconforge\workflow
+copying build\lib\reconforge\workflow\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge\workflow
+copying build\lib\reconforge\__init__.py -> build\bdist.win-amd64\wheel\.\reconforge
+running install_egg_info
+Copying reconforge_erp.egg-info to build\bdist.win-amd64\wheel\.\reconforge_erp-0.7.0-py3.14.egg-info
+running install_scripts
+creating build\bdist.win-amd64\wheel\reconforge_erp-0.7.0.dist-info\WHEEL
+creating 'F:\\reconforge-erp\\dist\\.tmp-0v_0wiyp\\reconforge_erp-0.7.0-py3-none-any.whl' and adding 'build\\bdist.win-amd64\\wheel' to it
+adding 'reconforge/__init__.py'
+adding 'reconforge/cli.py'
+adding 'reconforge/cli_inventory_planning.py'
+adding 'reconforge/cli_inventory_valuation.py'
+adding 'reconforge/cli_inventory_valuation_reversal.py'
+adding 'reconforge/close_workflow.py'
+adding 'reconforge/config.py'
+adding 'reconforge/control_matrix.py'
+adding 'reconforge/enterprise_demo.py'
+adding 'reconforge/periods.py'
+adding 'reconforge/schemas.py'
+adding 'reconforge/validators.py'
+adding 'reconforge/variance.py'
+adding 'reconforge/ai/__init__.py'
+adding 'reconforge/ai/interfaces.py'
+adding 'reconforge/ai/offline.py'
+adding 'reconforge/ai/prompts.py'
+adding 'reconforge/ai/summaries.py'
+adding 'reconforge/anonymizer/__init__.py'
+adding 'reconforge/anonymizer/engine.py'
+adding 'reconforge/anonymizer/mapping.py'
+adding 'reconforge/anonymizer/maskers.py'
+adding 'reconforge/api/__init__.py'
+adding 'reconforge/api/app.py'
+adding 'reconforge/api/dependencies.py'
+adding 'reconforge/api/errors.py'
+adding 'reconforge/api/security.py'
+adding 'reconforge/api/server_close.py'
+adding 'reconforge/api/server_evidence.py'
+adding 'reconforge/api/server_identity.py'
+adding 'reconforge/api/server_ledger.py'
+adding 'reconforge/api/server_master_data.py'
+adding 'reconforge/api/server_reconciliation.py'
+adding 'reconforge/api/routes/__init__.py'
+adding 'reconforge/api/routes/accounts.py'
+adding 'reconforge/api/routes/audit.py'
+adding 'reconforge/api/routes/auth.py'
+adding 'reconforge/api/routes/close.py'
+adding 'reconforge/api/routes/evidence.py'
+adding 'reconforge/api/routes/exceptions.py'
+adding 'reconforge/api/routes/finance_core.py'
+adding 'reconforge/api/routes/health.py'
+adding 'reconforge/api/routes/inventory_core.py'
+adding 'reconforge/api/routes/inventory_planning.py'
+adding 'reconforge/api/routes/inventory_valuation.py'
+adding 'reconforge/api/routes/inventory_valuation_reversal.py'
+adding 'reconforge/api/routes/master_data.py'
+adding 'reconforge/api/routes/metrics.py'
+adding 'reconforge/api/routes/payables.py'
+adding 'reconforge/api/routes/receivables.py'
+adding 'reconforge/api/routes/reconciliation.py'
+adding 'reconforge/api/routes/roles.py'
+adding 'reconforge/api/routes/users.py'
+adding 'reconforge/api/routes/workflow.py'
+adding 'reconforge/audit/__init__.py'
+adding 'reconforge/audit/events.py'
+adding 'reconforge/auth/__init__.py'
+adding 'reconforge/auth/models.py'
+adding 'reconforge/auth/passwords.py'
+adding 'reconforge/auth/policy.py'
+adding 'reconforge/auth/rbac.py'
+adding 'reconforge/auth/repositories.py'
+adding 'reconforge/auth/service.py'
+adding 'reconforge/benchmark/__init__.py'
+adding 'reconforge/benchmark/metrics.py'
+adding 'reconforge/benchmark/reconciliation_execution.py'
+adding 'reconforge/benchmark/report.py'
+adding 'reconforge/benchmark/runner.py'
+adding 'reconforge/close/__init__.py'
+adding 'reconforge/dashboard/__init__.py'
+adding 'reconforge/dashboard/app.py'
+adding 'reconforge/db/__init__.py'
+adding 'reconforge/db/backup.py'
+adding 'reconforge/db/connection.py'
+adding 'reconforge/db/exporter.py'
+adding 'reconforge/db/importers.py'
+adding 'reconforge/db/migrations.py'
+adding 'reconforge/db/schema.py'
+adding 'reconforge/db/tenancy.py'
+adding 'reconforge/domain/__init__.py'
+adding 'reconforge/domain/models.py'
+adding 'reconforge/domain/protocols.py'
+adding 'reconforge/domain/repositories.py'
+adding 'reconforge/engines/__init__.py'
+adding 'reconforge/engines/base.py'
+adding 'reconforge/engines/duckdb_engine.py'
+adding 'reconforge/engines/pandas_engine.py'
+adding 'reconforge/engines/registry.py'
+adding 'reconforge/engines/signature.py'
+adding 'reconforge/evidence/__init__.py'
+adding 'reconforge/evidence/binder.py'
+adding 'reconforge/evidence/graph.py'
+adding 'reconforge/evidence/index.py'
+adding 'reconforge/evidence/models.py'
+adding 'reconforge/evidence/templates.py'
+adding 'reconforge/evidence/writer.py'
+adding 'reconforge/generator/__init__.py'
+adding 'reconforge/generator/scenarios.py'
+adding 'reconforge/generator/synthetic.py'
+adding 'reconforge/infrastructure/__init__.py'
+adding 'reconforge/infrastructure/object_storage.py'
+adding 'reconforge/infrastructure/postgres.py'
+adding 'reconforge/infrastructure/postgres_close.py'
+adding 'reconforge/infrastructure/postgres_evidence.py'
+adding 'reconforge/infrastructure/postgres_identity.py'
+adding 'reconforge/infrastructure/postgres_ledger.py'
+adding 'reconforge/infrastructure/postgres_master_data.py'
+adding 'reconforge/infrastructure/postgres_outbox.py'
+adding 'reconforge/infrastructure/postgres_reconciliation.py'
+adding 'reconforge/infrastructure/postgres_reconciliation_checkpoints.py'
+adding 'reconforge/infrastructure/postgres_reconciliation_execution.py'
+adding 'reconforge/infrastructure/redis.py'
+adding 'reconforge/io/__init__.py'
+adding 'reconforge/io/excel.py'
+adding 'reconforge/io/readers.py'
+adding 'reconforge/io/writers.py'
+adding 'reconforge/mappings/__init__.py'
+adding 'reconforge/mappings/inspector.py'
+adding 'reconforge/mappings/profile_template.py'
+adding 'reconforge/mappings/validator.py'
+adding 'reconforge/modules/__init__.py'
+adding 'reconforge/modules/registry.py'
+adding 'reconforge/platform/__init__.py'
+adding 'reconforge/platform/accounts.py'
+adding 'reconforge/platform/approvals.py'
+adding 'reconforge/platform/close.py'
+adding 'reconforge/platform/common.py'
+adding 'reconforge/platform/controls.py'
+adding 'reconforge/platform/evidence.py'
+adding 'reconforge/platform/exceptions.py'
+adding 'reconforge/platform/finance_core.py'
+adding 'reconforge/platform/intercompany.py'
+adding 'reconforge/platform/inventory_core.py'
+adding 'reconforge/platform/inventory_planning.py'
+adding 'reconforge/platform/inventory_planning_repository.py'
+adding 'reconforge/platform/inventory_valuation.py'
+adding 'reconforge/platform/inventory_valuation_repository.py'
+adding 'reconforge/platform/inventory_valuation_reversal.py'
+adding 'reconforge/platform/inventory_valuation_reversal_repository.py'
+adding 'reconforge/platform/inventory_values.py'
+adding 'reconforge/platform/journals.py'
+adding 'reconforge/platform/master_data.py'
+adding 'reconforge/platform/matching.py'
+adding 'reconforge/platform/metrics.py'
+adding 'reconforge/platform/operations.py'
+adding 'reconforge/platform/outbox.py'
+adding 'reconforge/platform/payables.py'
+adding 'reconforge/platform/receivables.py'
+adding 'reconforge/plugins/__init__.py'
+adding 'reconforge/plugins/base.py'
+adding 'reconforge/plugins/generic_csv.py'
+adding 'reconforge/plugins/odoo_export.py'
+adding 'reconforge/plugins/registry.py'
+adding 'reconforge/plugins/sap_export.py'
+adding 'reconforge/reconciliation/__init__.py'
+adding 'reconforge/reconciliation/matching.py'
+adding 'reconforge/reconciliation/risk.py'
+adding 'reconforge/reconciliation/stock_gl.py'
+adding 'reconforge/reconciliation/workorders.py'
+adding 'reconforge/reports/__init__.py'
+adding 'reconforge/reports/client_pack.py'
+adding 'reconforge/reports/html.py'
+adding 'reconforge/reports/management_pack.py'
+adding 'reconforge/reports/markdown.py'
+adding 'reconforge/reports/wip_aging.py'
+adding 'reconforge/review/__init__.py'
+adding 'reconforge/review/state.py'
+adding 'reconforge/risk/__init__.py'
+adding 'reconforge/risk/engine.py'
+adding 'reconforge/risk/explain.py'
+adding 'reconforge/risk/matrix.py'
+adding 'reconforge/risk/models.py'
+adding 'reconforge/risk/scoring.py'
+adding 'reconforge/rules/__init__.py'
+adding 'reconforge/rules/engine.py'
+adding 'reconforge/rules/evaluator.py'
+adding 'reconforge/rules/explain.py'
+adding 'reconforge/rules/loader.py'
+adding 'reconforge/rules/models.py'
+adding 'reconforge/rules/operators.py'
+adding 'reconforge/rules/recon_as_code.py'
+adding 'reconforge/rules/registry.py'
+adding 'reconforge/rules/results.py'
+adding 'reconforge/studio/__init__.py'
+adding 'reconforge/studio/app.py'
+adding 'reconforge/studio/components.py'
+adding 'reconforge/studio/data.py'
+adding 'reconforge/studio/demo_bridge.py'
+adding 'reconforge/studio/security.py'
+adding 'reconforge/utils/__init__.py'
+adding 'reconforge/utils/dates.py'
+adding 'reconforge/utils/logging.py'
+adding 'reconforge/utils/money.py'
+adding 'reconforge/utils/rtl.py'
+adding 'reconforge/utils/safe_paths.py'
+adding 'reconforge/utils/time.py'
+adding 'reconforge/workers/__init__.py'
+adding 'reconforge/workers/outbox.py'
+adding 'reconforge/workers/postgres_outbox.py'
+adding 'reconforge/workers/postgres_reconciliation.py'
+adding 'reconforge/workflow/__init__.py'
+adding 'reconforge/workflow/models.py'
+adding 'reconforge/workflow/repositories.py'
+adding 'reconforge/workflow/service.py'
+adding 'reconforge/workflow/state_machine.py'
+adding 'reconforge_erp-0.7.0.dist-info/licenses/LICENSE'
+adding 'reconforge_erp-0.7.0.dist-info/METADATA'
+adding 'reconforge_erp-0.7.0.dist-info/WHEEL'
+adding 'reconforge_erp-0.7.0.dist-info/entry_points.txt'
+adding 'reconforge_erp-0.7.0.dist-info/top_level.txt'
+adding 'reconforge_erp-0.7.0.dist-info/RECORD'
+removing build\bdist.win-amd64\wheel
+Successfully built reconforge_erp-0.7.0.tar.gz and reconforge_erp-0.7.0-py3-none-any.whl

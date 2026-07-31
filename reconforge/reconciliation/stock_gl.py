@@ -163,9 +163,7 @@ def _record_lineage_fields(row: pd.Series, *, prefix: str = "") -> dict[str, obj
         f"{prefix}source_position": int(row.get(SOURCE_POSITION_COLUMN) or 0),
         f"{prefix}source_row": int(row.get(SOURCE_ROW_COLUMN) or 0),
         f"{prefix}source_row_basis": str(row.get(SOURCE_ROW_BASIS_COLUMN) or SOURCE_ROW_BASIS),
-        f"{prefix}record_identity_policy": str(
-            row.get(RECORD_IDENTITY_POLICY_COLUMN) or RECORD_IDENTITY_POLICY
-        ),
+        f"{prefix}record_identity_policy": str(row.get(RECORD_IDENTITY_POLICY_COLUMN) or RECORD_IDENTITY_POLICY),
     }
 
 
@@ -316,9 +314,7 @@ def _risk_columns(
     for _, row in enriched.iterrows():
         amount_value = _safe_amount(row.get(amount_column), input_policy=input_policy)
         difference_value = (
-            _safe_amount(row.get(difference_column), input_policy=input_policy)
-            if difference_column
-            else None
+            _safe_amount(row.get(difference_column), input_policy=input_policy) if difference_column else None
         )
         assessment = assess_risk(
             exception_type,
@@ -689,25 +685,13 @@ def reconcile_stock_gl(
         input_policy=input_policy,
     )
 
-    ambiguous_stock_indices = {
-        index for ambiguity in assignment.ambiguities for index in ambiguity.stock_indices
-    }
-    ambiguous_gl_indices = {
-        index for ambiguity in assignment.ambiguities for index in ambiguity.gl_indices
-    }
+    ambiguous_stock_indices = {index for ambiguity in assignment.ambiguities for index in ambiguity.stock_indices}
+    ambiguous_gl_indices = {index for ambiguity in assignment.ambiguities for index in ambiguity.gl_indices}
     regular_stock_without = _expose_record_lineage(
-        stock[
-            ~stock.index.isin(
-                matched_indices | invalid_stock_indices | ambiguous_stock_indices
-            )
-        ].copy()
+        stock[~stock.index.isin(matched_indices | invalid_stock_indices | ambiguous_stock_indices)].copy()
     )
     regular_gl_without = _expose_record_lineage(
-        gl[
-            ~gl.index.isin(
-                matched_gl_indices | invalid_gl_indices | ambiguous_gl_indices
-            )
-        ].copy()
+        gl[~gl.index.isin(matched_gl_indices | invalid_gl_indices | ambiguous_gl_indices)].copy()
     )
     regular_stock_without = _risk_columns(
         regular_stock_without,

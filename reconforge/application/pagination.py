@@ -35,7 +35,13 @@ def _b64encode(value: bytes) -> str:
 
 
 def _b64decode(value: str) -> bytes:
-    if not value or len(value) > 4096 or any(character not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_" for character in value):
+    if (
+        not value
+        or len(value) > 4096
+        or any(
+            character not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_" for character in value
+        )
+    ):
         raise CursorError("cursor_encoding_invalid")
     padding = "=" * (-len(value) % 4)
     try:
@@ -114,9 +120,7 @@ class CursorCodec:
             raise CursorError("cursor_signature_invalid")
         try:
             payload_document = payload.decode("utf-8", errors="strict")
-            document = parse_json_document(
-                payload_document, policy=_CURSOR_POLICY, reject_fractional_numbers=True
-            )
+            document = parse_json_document(payload_document, policy=_CURSOR_POLICY, reject_fractional_numbers=True)
         except (StructuredDocumentError, UnicodeDecodeError) as exc:
             raise CursorError("cursor_payload_invalid") from exc
         if not isinstance(document, dict) or set(document) != {"d", "p", "q", "s", "t", "v"}:
@@ -134,9 +138,12 @@ class CursorCodec:
             raise CursorError("cursor_payload_invalid")
         try:
             return CursorPosition(
-                sort_key=document["s"], direction=document["d"],
-                scope_digest=document["q"], values=tuple(values),
-                tie_breaker=document["t"], schema_version=document["v"],
+                sort_key=document["s"],
+                direction=document["d"],
+                scope_digest=document["q"],
+                values=tuple(values),
+                tie_breaker=document["t"],
+                schema_version=document["v"],
             )
         except (TypeError, ValueError) as exc:
             if isinstance(exc, CursorError):
@@ -182,8 +189,14 @@ class KeysetPaginator:
         return value
 
     def page(
-        self, records: Sequence[Mapping[str, object]], *, sort_key: str, direction: str,
-        scope_digest: str, limit: int, cursor: str | None = None,
+        self,
+        records: Sequence[Mapping[str, object]],
+        *,
+        sort_key: str,
+        direction: str,
+        scope_digest: str,
+        limit: int,
+        cursor: str | None = None,
     ) -> CursorPage:
         definition = self.definitions.get(sort_key)
         if definition is None or direction not in _DIRECTIONS:
@@ -214,7 +227,8 @@ class KeysetPaginator:
         if boundary is not None:
             try:
                 ordered = [
-                    record for record in ordered
+                    record
+                    for record in ordered
                     if (record_key(record) > boundary if direction == "asc" else record_key(record) < boundary)
                 ]
             except TypeError as exc:
@@ -223,9 +237,13 @@ class KeysetPaginator:
         next_cursor = None
         if len(ordered) > limit and selected:
             last = selected[-1]
-            next_cursor = self.codec.encode(CursorPosition(
-                sort_key=sort_key, direction=direction, scope_digest=scope_digest,
-                values=tuple(self._value(last, field) for field in definition.fields),
-                tie_breaker=str(self._value(last, definition.tie_breaker_field)),
-            ))
+            next_cursor = self.codec.encode(
+                CursorPosition(
+                    sort_key=sort_key,
+                    direction=direction,
+                    scope_digest=scope_digest,
+                    values=tuple(self._value(last, field) for field in definition.fields),
+                    tie_breaker=str(self._value(last, definition.tie_breaker_field)),
+                )
+            )
         return CursorPage(tuple(selected), next_cursor)

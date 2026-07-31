@@ -111,11 +111,7 @@ def _read_csv_if_exists(
 ) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
-    mode: GeneratedCsvMode = (
-        "exact-text"
-        if financial_input_policy == STRICT_FINANCIAL_INPUT_POLICY
-        else "display"
-    )
+    mode: GeneratedCsvMode = "exact-text" if financial_input_policy == STRICT_FINANCIAL_INPUT_POLICY else "display"
     document = cache.get(path) if cache is not None else None
     if document is None:
         document = read_generated_csv_document(path, mode=mode)
@@ -227,7 +223,9 @@ def _rule_results(
     if work_order and "evidence_fields" in rules.columns:
         return cast(
             list[dict[str, Any]],
-            rules[rules["evidence_fields"].astype(str).str.contains(work_order, regex=False)].head(10).to_dict(
+            rules[rules["evidence_fields"].astype(str).str.contains(work_order, regex=False)]
+            .head(10)
+            .to_dict(
                 orient="records",
             ),
         )
@@ -388,11 +386,7 @@ def _selected_input_files(input_dir: Path) -> list[Path]:
         input_dir / "rule_results.csv",
         input_dir / "review_state.json",
     ]
-    selected = {
-        path.relative_to(input_dir).as_posix(): path
-        for path in candidates
-        if path.exists() and path.is_file()
-    }
+    selected = {path.relative_to(input_dir).as_posix(): path for path in candidates if path.exists() and path.is_file()}
     return [selected[name] for name in sorted(selected)]
 
 
@@ -543,12 +537,16 @@ def generate_evidence_binder(
     write_evidence_index_html(cases, target)
     write_evidence_register(cases, target)
     final_selected_inputs = _selected_input_files(input_path)
-    if final_selected_inputs != selected_inputs or _file_fingerprints(
-        input_path,
-        final_selected_inputs,
-        csv_cache=csv_cache,
-        verify_cached_csv=True,
-    ) != input_files:
+    if (
+        final_selected_inputs != selected_inputs
+        or _file_fingerprints(
+            input_path,
+            final_selected_inputs,
+            csv_cache=csv_cache,
+            verify_cached_csv=True,
+        )
+        != input_files
+    ):
         raise ValueError("Evidence binder source files changed during generation")
     payload: dict[str, Any]
     if input_policy == LEGACY_FINANCIAL_INPUT_POLICY:
@@ -665,9 +663,7 @@ def verify_evidence_index_payload(
     ):
         raise ValueError("Evidence index content digest verification failed")
     artifact_digest = payload.get("artifact_digest")
-    payload_without_digest = {
-        key: value for key, value in payload.items() if key != "artifact_digest"
-    }
+    payload_without_digest = {key: value for key, value in payload.items() if key != "artifact_digest"}
     if not isinstance(artifact_digest, str) or not hmac.compare_digest(
         artifact_digest,
         _canonical_digest(payload_without_digest),

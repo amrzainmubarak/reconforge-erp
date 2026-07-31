@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/postgres_reliability_drill_report.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile", "runtime", "checks", "limitations"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "profile": {"const": "disposable-postgresql-reliability-source-parity"},
+    "runtime": {
+      "type": "object", "additionalProperties": false,
+      "required": ["docker_server", "image", "migration_head"],
+      "properties": {
+        "docker_server": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "image": {"type": "string", "pattern": "^postgres@sha256:[0-9a-f]{64}$"},
+        "migration_head": {"const": "0053_audit_administration_acl"}
+      }
+    },
+    "checks": {"type": "object", "minProperties": 6, "maxProperties": 6, "additionalProperties": {"const": true}},
+    "limitations": {"type": "array", "minItems": 4, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9_]+$"}}
+  }
+}

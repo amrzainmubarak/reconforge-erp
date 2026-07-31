@@ -7,6 +7,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from reconforge.application.outbox import OutboxError, OutboxEvent, OutboxRepositoryProtocol
 from reconforge.infrastructure.postgres import PostgresConfigurationError, normalize_scope_id, validate_tenant_id
 from reconforge.io.persisted import (
     PersistedJsonError,
@@ -20,7 +21,8 @@ _LIST_STATUSES = {"pending", "claimed", "published", "dead", "all"}
 _LIST_OUTBOX_EVENT_QUERIES: dict[str, str] = {
     "all": (
         "SELECT tenant_id, event_id, event_type, aggregate_type, aggregate_id, payload, "
-        "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, created_at "
+        "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, "
+        "dead_lettered_at, created_at "
         "FROM reconforge.outbox_events "
         "WHERE tenant_id = %s "
         "ORDER BY created_at, event_id "
@@ -28,15 +30,17 @@ _LIST_OUTBOX_EVENT_QUERIES: dict[str, str] = {
     ),
     "pending": (
         "SELECT tenant_id, event_id, event_type, aggregate_type, aggregate_id, payload, "
-        "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, created_at "
+        "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, "
+        "dead_lettered_at, created_at "
         "FROM reconforge.outbox_events "
-        "WHERE tenant_id = %s AND status = 'Pending' "
+        "WHERE tenant_id = %s AND status IN ('Pending', 'Claimed') "
         "ORDER BY created_at, event_id "
         "LIMIT %s"
     ),
     "claimed": (
         "SELECT tenant_id, event_id, event_type, aggregate_type, aggregate_id, payload, "
-        "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, created_at "
+        "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, "
+        "dead_lettered_at, created_at "
         "FROM reconforge.outbox_events "
         "WHERE tenant_id = %s AND status = 'Claimed' "
         "ORDER BY created_at, event_id "
@@ -44,7 +48,8 @@ _LIST_OUTBOX_EVENT_QUERIES: dict[str, str] = {
     ),
     "published": (
         "SELECT tenant_id, event_id, event_type, aggregate_type, aggregate_id, payload, "
-        "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, created_at "
+        "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, "
+        "dead_lettered_at, created_at "
         "FROM reconforge.outbox_events "
         "WHERE tenant_id = %s AND status = 'Published' "
         "ORDER BY created_at, event_id "
@@ -52,13 +57,41 @@ _LIST_OUTBOX_EVENT_QUERIES: dict[str, str] = {
     ),
     "dead": (
         "SELECT tenant_id, event_id, event_type, aggregate_type, aggregate_id, payload, "
-        "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, created_at "
+        "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, "
+        "dead_lettered_at, created_at "
         "FROM reconforge.outbox_events "
         "WHERE tenant_id = %s AND status = 'Dead' "
         "ORDER BY created_at, event_id "
         "LIMIT %s"
     ),
 }
+
+POSTGRES_OUTBOX_APPLICATION_SCHEMA_SQL = r"""
+ALTER TABLE reconforge.outbox_events ADD COLUMN IF NOT EXISTS dead_lettered_at TIMESTAMPTZ;
+
+CREATE OR REPLACE FUNCTION reconforge.outbox_application_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF TG_OP='UPDATE' AND (NEW.event_type,NEW.aggregate_type,NEW.aggregate_id,NEW.payload,NEW.created_at)
+  IS DISTINCT FROM (OLD.event_type,OLD.aggregate_type,OLD.aggregate_id,OLD.payload,OLD.created_at)
+ THEN RAISE EXCEPTION 'outbox event identity and payload are immutable'; END IF;
+ IF NEW.status='Pending' AND (NEW.claimed_at IS NOT NULL OR NEW.claimed_by IS NOT NULL
+  OR NEW.published_at IS NOT NULL OR NEW.dead_lettered_at IS NOT NULL)
+ THEN RAISE EXCEPTION 'pending outbox state has inconsistent delivery metadata'; END IF;
+ IF NEW.status='Claimed' AND (NEW.claimed_at IS NULL OR NEW.claimed_by IS NULL
+  OR NEW.published_at IS NOT NULL OR NEW.dead_lettered_at IS NOT NULL)
+ THEN RAISE EXCEPTION 'claimed outbox state requires an exclusive lease'; END IF;
+ IF NEW.status='Published' AND (NEW.published_at IS NULL OR NEW.claimed_at IS NOT NULL
+  OR NEW.claimed_by IS NOT NULL OR NEW.dead_lettered_at IS NOT NULL)
+ THEN RAISE EXCEPTION 'published outbox state has inconsistent delivery metadata'; END IF;
+ IF NEW.status='Dead' AND (NEW.dead_lettered_at IS NULL OR NEW.claimed_at IS NOT NULL
+  OR NEW.claimed_by IS NOT NULL OR NEW.published_at IS NOT NULL)
+ THEN RAISE EXCEPTION 'dead outbox state requires exclusive transition evidence'; END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS outbox_application_state_guard ON reconforge.outbox_events;
+CREATE TRIGGER outbox_application_state_guard BEFORE INSERT OR UPDATE ON reconforge.outbox_events
+ FOR EACH ROW EXECUTE FUNCTION reconforge.outbox_application_guard();
+"""
 
 
 class PostgresOutboxValidationError(ValueError):
@@ -130,6 +163,7 @@ class PostgresOutboxEvent:
     claimed_by: str | None
     published_at: str | None
     last_error: str | None
+    dead_lettered_at: str | None
     created_at: str
 
 
@@ -156,7 +190,8 @@ class PostgresOutboxRepository:
             claimed_by=str(_row_value(row, "claimed_by", 10)) if _row_value(row, "claimed_by", 10) else None,
             published_at=self._optional_timestamp(_row_value(row, "published_at", 11)),
             last_error=str(_row_value(row, "last_error", 12)) if _row_value(row, "last_error", 12) else None,
-            created_at=str(_row_value(row, "created_at", 13)),
+            dead_lettered_at=self._optional_timestamp(_row_value(row, "dead_lettered_at", 13)),
+            created_at=str(_row_value(row, "created_at", 14)),
         )
 
     @staticmethod
@@ -223,11 +258,11 @@ class PostgresOutboxRepository:
                           events.aggregate_type, events.aggregate_id, events.payload,
                           events.status, events.attempt_count, events.available_at,
                           events.claimed_at, events.claimed_by, events.published_at,
-                          events.last_error, events.created_at
+                          events.last_error, events.dead_lettered_at, events.created_at
             )
             SELECT tenant_id, event_id, event_type, aggregate_type, aggregate_id,
                    payload, status, attempt_count, available_at, claimed_at, claimed_by,
-                   published_at, last_error, created_at
+                   published_at, last_error, dead_lettered_at, created_at
             FROM claimed
             ORDER BY available_at, created_at, event_id
             """,
@@ -288,7 +323,8 @@ class PostgresOutboxRepository:
             cursor = self.connection.execute(
                 """
                 UPDATE reconforge.outbox_events
-                SET status = 'Dead', last_error = %s, claimed_at = NULL, claimed_by = NULL
+                SET status = 'Dead', last_error = %s, claimed_at = NULL, claimed_by = NULL,
+                    dead_lettered_at = now()
                 WHERE tenant_id = %s AND event_id = %s AND status = 'Claimed' AND claimed_by = %s
                 """,
                 (safe_error, tenant, identifier, worker),
@@ -300,7 +336,7 @@ class PostgresOutboxRepository:
                 UPDATE reconforge.outbox_events
                 SET status = 'Pending', last_error = %s,
                     available_at = now() + (%s * INTERVAL '1 second'),
-                    claimed_at = NULL, claimed_by = NULL
+                    claimed_at = NULL, claimed_by = NULL, dead_lettered_at = NULL
                 WHERE tenant_id = %s AND event_id = %s AND status = 'Claimed' AND claimed_by = %s
                 """,
                 (safe_error, backoff, tenant, identifier, worker),
@@ -318,7 +354,8 @@ class PostgresOutboxRepository:
             """
             UPDATE reconforge.outbox_events
             SET status = 'Pending', attempt_count = 0, available_at = now(),
-                claimed_at = NULL, claimed_by = NULL, published_at = NULL, last_error = NULL
+                claimed_at = NULL, claimed_by = NULL, published_at = NULL, last_error = NULL,
+                dead_lettered_at = NULL
             WHERE tenant_id = %s AND event_id = %s AND status = 'Dead'
             """,
             (tenant, identifier),
@@ -364,3 +401,106 @@ class PostgresOutboxRepository:
             "published": int(_row_value(row, "published", 2) or 0),
             "dead": int(_row_value(row, "dead", 3) or 0),
         }
+
+
+@dataclass(frozen=True)
+class TenantBoundPostgresOutboxRepository:
+    """Bind the generic outbox contract to exactly one validated tenant.
+
+    PostgreSQL keeps tenant scope explicit at the persistence boundary.  This
+    adapter captures that scope once so the backend-neutral application service
+    cannot accidentally mix tenants or omit the tenant predicate.
+    """
+
+    repository: PostgresOutboxRepository
+    tenant_id: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "tenant_id", _tenant_id(self.tenant_id))
+
+    @staticmethod
+    def _event(event: PostgresOutboxEvent) -> OutboxEvent:
+        return OutboxEvent(
+            id=event.id,
+            event_type=event.event_type,
+            aggregate_type=event.aggregate_type,
+            aggregate_id=event.aggregate_id,
+            payload_json=event.payload_json,
+            created_at=event.created_at,
+            published_at=event.published_at,
+            attempts=event.attempt_count,
+            last_error=event.last_error,
+            available_at=event.available_at,
+            locked_at=event.claimed_at,
+            locked_by=event.claimed_by,
+            dead_lettered_at=event.dead_lettered_at,
+        )
+
+    @staticmethod
+    def _translate(operation: Any) -> Any:
+        try:
+            return operation()
+        except (PostgresOutboxValidationError, PostgresOutboxIntegrityError) as exc:
+            raise OutboxError(str(exc)) from exc
+
+    def claim_pending(
+        self,
+        *,
+        worker_id: str,
+        limit: int = 50,
+        max_attempts: int = 5,
+        lease_seconds: int = 300,
+    ) -> list[OutboxEvent]:
+        events = self._translate(
+            lambda: self.repository.claim_pending(
+                tenant_id=self.tenant_id,
+                worker_id=worker_id,
+                limit=limit,
+                max_attempts=max_attempts,
+                lease_seconds=lease_seconds,
+            )
+        )
+        return [self._event(event) for event in events]
+
+    def mark_published(self, *, event_id: str, worker_id: str) -> None:
+        self._translate(
+            lambda: self.repository.mark_published(tenant_id=self.tenant_id, event_id=event_id, worker_id=worker_id)
+        )
+
+    def mark_failed(
+        self,
+        *,
+        event_id: str,
+        worker_id: str,
+        error: str,
+        max_attempts: int = 5,
+        retry_base_seconds: int = 5,
+    ) -> bool:
+        return bool(
+            self._translate(
+                lambda: self.repository.mark_failed(
+                    tenant_id=self.tenant_id,
+                    event_id=event_id,
+                    worker_id=worker_id,
+                    error=error,
+                    max_attempts=max_attempts,
+                    retry_base_seconds=retry_base_seconds,
+                )
+            )
+        )
+
+    def requeue_dead_letter(self, *, event_id: str) -> None:
+        self._translate(lambda: self.repository.replay_dead(tenant_id=self.tenant_id, event_id=event_id))
+
+    def list_events(self, *, status: str = "pending", limit: int = 100) -> list[OutboxEvent]:
+        postgres_status = "dead" if status == "dead_letter" else status
+        events = self._translate(
+            lambda: self.repository.list_events(tenant_id=self.tenant_id, status=postgres_status, limit=limit)
+        )
+        return [self._event(event) for event in events]
+
+
+def tenant_bound_postgres_outbox_repository(connection: Any, *, tenant_id: str) -> OutboxRepositoryProtocol:
+    """Construct the PostgreSQL adapter through the public repository contract."""
+
+    return TenantBoundPostgresOutboxRepository(repository=PostgresOutboxRepository(connection), tenant_id=tenant_id)

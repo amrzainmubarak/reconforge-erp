@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/notification-request-v1.json",
+  "title": "ReconForge redacted scheduler notification request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "notification_id",
+    "route_id",
+    "route_version",
+    "destination_digest",
+    "workspace_id",
+    "entity_id",
+    "schedule_id",
+    "schedule_version",
+    "dispatch_key",
+    "scheduled_for",
+    "durable_job_id"
+  ],
+  "properties": {
+    "schema_version": {"const": "reconforge.notification.v1"},
+    "notification_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"},
+    "route_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"},
+    "route_version": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+    "destination_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "workspace_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"},
+    "entity_id": {"type": "string", "pattern": "^$|^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"},
+    "schedule_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"},
+    "schedule_version": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+    "dispatch_key": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "scheduled_for": {"type": "string", "format": "date-time"},
+    "durable_job_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$"}
+  }
+}

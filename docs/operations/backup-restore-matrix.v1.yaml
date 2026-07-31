@@ -29,15 +29,15 @@ cells:
   - id: team-postgresql-17-current
     edition: team
     backend: postgresql
-    source_version: "PostgreSQL 17 / Alembic 0015"
-    target_version: "PostgreSQL 17 / Alembic 0015"
+    source_version: "PostgreSQL 17 / Alembic 0033"
+    target_version: "PostgreSQL 17 / Alembic 0033"
     status: verified
     encryption: Streaming AES-256-GCM envelope with an operator-owned key; native dump plaintext exists only in a temporary directory.
     authorization: Application boundary requires operations.backup.create or operations.restore.execute before invoking the adapter.
     integrity: Authenticated header, ciphertext tag, plaintext SHA-256 and size, pg_restore list validation, Alembic and ReconForge-schema post-restore check.
     rollback: Restore creates a new named database only and drops it after restore or verification failure; the source database is never a restore target.
-    evidence: [tests/test_postgres_backup.py, E-104]
-    limitations: [Live drill used one local PostgreSQL 17 container; operator service-file permissions, KMS, host loss, and scheduled retention are not proven.]
+    evidence: [tests/test_postgres_backup.py, E-104, E-162, E-163]
+    limitations: [Verified on a disposable single-node PostgreSQL 17.10 service at Alembic 0033 with synthetic data. Operator service-file permissions outside the test container, KMS, host loss, HA, scheduled retention, and measured RPO/RTO are not proven.]
   - id: enterprise-postgresql-ha
     edition: enterprise
     backend: postgresql
@@ -48,8 +48,8 @@ cells:
     authorization: Central permission plus privileged database role and change workflow are required.
     integrity: Cross-node restore, evidence verification, and application smoke checks are required.
     rollback: Isolated database restore, controlled cutover, and tested rollback are required.
-    evidence: [P2-OPS-002, P3-OPS-002]
-    limitations: [No HA topology, object-store backup integration, cross-region drill, or measured RPO and RTO yet.]
+    evidence: [HA_DR_DOCKER_DRILL_2026-07-30, tests/test_ha_dr_drill.py, .github/scripts/verify_postgres_ha_dr.py]
+    limitations: [A two-node synchronous PostgreSQL 17.10 process-failure drill measured zero missing sentinel transactions and 0.947-second RTO, but both nodes and the manual controller share one Docker host; host/zone/region loss, quorum, automatic failover, object-store integration, production keys, and production SLOs remain unverified.]
   - id: regulated-airgap-postgresql
     edition: regulated
     backend: postgresql

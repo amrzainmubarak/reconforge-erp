@@ -8,9 +8,19 @@ from typing import Any
 
 
 def calculate_audit_event_hash(
-    *, event_id: str, sequence: int, previous_hash: str, actor_user_id: str | None,
-    actor_label: str, object_type: str, object_id: str, action: str,
-    before_hash: str | None, after_hash: str | None, metadata_json: str, created_at: str,
+    *,
+    event_id: str,
+    sequence: int,
+    previous_hash: str,
+    actor_user_id: str | None,
+    actor_label: str,
+    object_type: str,
+    object_id: str,
+    action: str,
+    before_hash: str | None,
+    after_hash: str | None,
+    metadata_json: str,
+    created_at: str,
 ) -> str:
     """Return the version-1 canonical SHA-256 identity for one audit event."""
 

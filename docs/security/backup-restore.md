@@ -44,6 +44,15 @@ Roadmap:
   import/restore authorization, encryption/key management, malware hooks, and
   real recovery exercises.
 
+PostgreSQL native-adapter rehearsal is opt-in and must use disposable service
+definitions. Set `RECONFORGE_TEST_POSTGRES_SOURCE_SERVICE` to the source service
+and `RECONFORGE_TEST_POSTGRES_MAINTENANCE_SERVICE` to a maintenance service that
+may create and drop only isolated drill databases. Put `pg_dump`, `pg_restore`,
+`createdb`, `dropdb`, and `psql` on `PATH`. The test creates a random
+`reconforge_restore_*` database, verifies the encrypted round-trip through the
+Application boundary, and drops that exact database. Never point this rehearsal
+at a production maintenance role.
+
 Not supported:
 
 - Cloud backup.

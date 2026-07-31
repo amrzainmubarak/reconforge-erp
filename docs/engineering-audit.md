@@ -90,13 +90,13 @@ The committed CI matrix remains Python 3.11/3.12.
 
 ### M-002 — The local authentication model is not an enterprise identity provider integration
 
-- Evidence: local users/RBAC/session foundations exist, and a tenant-scoped PostgreSQL identity repository plus explicit server API profile provide PBKDF2 password verification, RBAC assignments, hashed bearer sessions, lockout counters, revocation, and principal propagation; OIDC, SAML, SCIM, passkeys, MFA, and Redis-backed session coordination are not implemented.
+- Evidence: local users/RBAC/session foundations, bounded PostgreSQL OIDC/SAML, authenticated SCIM, service principals, emergency review, and optional user-verified WebAuthn MFA are implemented and live-tested; hosted provider/authenticator interoperability, recovery, attestation governance, administration UI, workload federation, and Redis-backed multi-worker coordination are not implemented.
 - Affected files: `reconforge/auth/`, `reconforge/api/security.py`.
 - Technical risk: enterprise identity lifecycle and centralized session revocation are unavailable.
 - Financial/operational risk: deployment teams may overestimate access-governance coverage.
 - Recommended fix: implement provider adapters behind explicit feature flags and verify authorization at the backend.
-- Implementation status: Local foundation and bounded PostgreSQL API authentication are implemented and live-tested; enterprise identity, MFA, and multi-worker Redis session coordination remain open.
-- Tests required: provider contract, MFA, session revocation, SoD, and tenant-scope tests.
+- Implementation status: Local and bounded PostgreSQL identity surfaces, including WebAuthn MFA enforcement, are live-tested; enterprise lifecycle/interoperability and multi-worker Redis session coordination remain open.
+- Tests required: hosted provider/authenticator interoperability, recovery, attestation policy, session revocation, SoD, workload federation, and tenant-scope tests.
 - Migration impact: Moderate.
 
 ### M-003 — Developer environment reproducibility is degraded on this workspace

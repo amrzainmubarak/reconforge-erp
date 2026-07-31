@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Mapping
+from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import pytest
 
+from reconforge.application.evidence import EvidenceStorageScope
 from reconforge.db import connect, run_migrations
 from reconforge.db.backup import create_backup, restore_backup
 from reconforge.infrastructure.object_storage import LocalObjectStorageSettings, LocalObjectStore, StoredObject
@@ -28,8 +32,8 @@ class FakeEvidenceObjectStore:
         content: bytes,
         *,
         content_type: str = "application/octet-stream",
-        metadata: dict[str, object] | None = None,
-        retention_until: object | None = None,
+        metadata: Mapping[str, object] | None = None,
+        retention_until: datetime | None = None,
     ) -> StoredObject:
         del retention_until
         tenant = tenant_id.lower()
@@ -115,6 +119,15 @@ def test_local_object_store_satisfies_evidence_contract_end_to_end(tmp_path: Pat
 
     assert registered["storage_backend"] == OBJECT_STORAGE_BACKEND
     assert verification.ok is True
+    scope = EvidenceStorageScope(
+        tenant_id="tenant-a",
+        workspace_id=str(registered["workspace_id"]),
+    )
+    object_path = tmp_path / "objects" / Path(
+        *store.key_for(scope, str(registered["storage_key"])).split("/")
+    )
+    assert object_path.is_file()
+    assert "/workspace/" in store.key_for(scope, str(registered["storage_key"]))
 
 
 def test_object_backed_evidence_is_tenant_keyed_and_tampering_is_visible(tmp_path: Path) -> None:
@@ -177,6 +190,61 @@ def test_object_storage_failure_does_not_create_a_registry_row(tmp_path: Path) -
                 object_store=FailingStore(),
             )
         assert connection.execute("SELECT COUNT(*) AS count FROM evidence_registry").fetchone()["count"] == 0
+    finally:
+        connection.close()
+
+
+def test_hierarchical_scope_mismatch_does_not_create_a_registry_row(tmp_path: Path) -> None:
+    class WrongWorkspaceStore:
+        supports_hierarchical_scope = True
+
+        def put_bytes(
+            self,
+            tenant_id: str | EvidenceStorageScope,
+            object_name: str,
+            content: bytes,
+            **_: Any,
+        ) -> StoredObject:
+            assert isinstance(tenant_id, EvidenceStorageScope)
+            digest = hashlib.sha256(content).hexdigest()
+            return StoredObject(
+                key=object_name,
+                content=content,
+                sha256=digest,
+                content_type="application/octet-stream",
+                metadata={
+                    "reconforge-tenant": tenant_id.tenant_id,
+                    "reconforge-workspace": "sibling-workspace",
+                    "reconforge-entity": "",
+                },
+                version_id="v1",
+            )
+
+        def get_bytes(
+            self,
+            tenant_id: str | EvidenceStorageScope,
+            object_name: str,
+        ) -> StoredObject:
+            raise AssertionError((tenant_id, object_name))
+
+    db_path = tmp_path / "evidence-scope-mismatch.db"
+    source = tmp_path / "support.txt"
+    source.write_text("support\n", encoding="utf-8")
+    run_migrations(db_path)
+
+    connection = connect(db_path, require_exists=True)
+    try:
+        with pytest.raises(PlatformError, match="workspace scope"):
+            EvidenceRegistryService(connection).register(
+                source,
+                evidence_code="WRONG-SCOPE-1",
+                workspace="workspace-a",
+                storage_tenant_id="tenant-a",
+                object_store=WrongWorkspaceStore(),
+            )
+        assert connection.execute(
+            "SELECT COUNT(*) AS count FROM evidence_registry"
+        ).fetchone()["count"] == 0
     finally:
         connection.close()
 

@@ -35,11 +35,7 @@ def canonical_decimal_text(value: Decimal) -> str:
         text = digit_text + ("0" * exponent)
     else:
         point = len(digit_text) + exponent
-        text = (
-            f"{digit_text[:point]}.{digit_text[point:]}"
-            if point > 0
-            else f"0.{('0' * -point)}{digit_text}"
-        )
+        text = f"{digit_text[:point]}.{digit_text[point:]}" if point > 0 else f"0.{('0' * -point)}{digit_text}"
     return f"-{text}" if sign else text
 
 

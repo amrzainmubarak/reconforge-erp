@@ -6,7 +6,7 @@ import hashlib
 import json
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from reconforge.auth.rbac import check_sod_conflict
 
@@ -15,6 +15,51 @@ if TYPE_CHECKING:
 
 _POLICY_LOGGER = logging.getLogger("reconforge.authorization")
 POLICY_VERSION = "central-policy-v1"
+PrincipalType = Literal["user", "service_account"]
+HUMAN_ONLY_PERMISSIONS = frozenset(
+    {
+        "accounts.review",
+        "accounts.complete",
+        "audit.read",
+        "audit.verify",
+        "close.manage",
+        "finance_core.manage",
+        "finance_core.validate",
+        "inventory.post",
+        "receivables.credit_override",
+        "roles.manage",
+        "service_accounts.manage",
+        "security.emergency.approve",
+        "security.emergency.review",
+        "security.center.read",
+        "security.policy.manage",
+        "users.manage",
+    }
+)
+PRIVILEGED_STEP_UP_PERMISSIONS = frozenset(
+    {
+        "audit.read",
+        "audit.verify",
+        "close.manage",
+        "finance_core.manage",
+        "finance_core.validate",
+        "inventory.post",
+        "receivables.credit_override",
+        "roles.manage",
+        "service_accounts.manage",
+        "security.emergency.approve",
+        "security.emergency.review",
+        "security.center.read",
+        "security.policy.manage",
+        "users.manage",
+    }
+)
+
+
+def permission_requires_human(permission: str) -> bool:
+    """Return whether a permission can make or administer a human-governed decision."""
+
+    return permission in HUMAN_ONLY_PERMISSIONS or permission.endswith((".approve", ".review", ".complete"))
 
 
 @dataclass(frozen=True)
@@ -24,6 +69,11 @@ class PolicyEvaluationContext:
     user_id: str
     username: str
     user_permissions: set[str] | frozenset[str]
+    principal_type: PrincipalType = "user"
+    step_up_active: bool = False
+    step_up_enforced: bool = False
+    required_step_up_method: str | None = None
+    step_up_method: str | None = None
     tenant_id: str | None = None
     workspace_id: str | None = None
     entity_id: str | None = None
@@ -47,6 +97,7 @@ class PolicyDecision:
     reason: str
     reason_code: str = "policy_allowed"
     evaluator: str = "CentralPolicyEngine"
+    granted_permission: str | None = None
 
 
 def audit_policy_decision(
@@ -56,6 +107,7 @@ def audit_policy_decision(
     required_permissions: frozenset[str],
     surface: str,
     request_id: str = "",
+    principal_type: PrincipalType = "user",
 ) -> None:
     """Emit a sanitized structured authorization record without raw scope data."""
 
@@ -71,6 +123,7 @@ def audit_policy_decision(
                 "allowed": decision.allowed,
                 "evaluator": decision.evaluator,
                 "permission_contract_digest": permission_digest,
+                "principal_type": principal_type,
                 "policy_version": POLICY_VERSION,
                 "reason_code": decision.reason_code,
                 "request_id": request_id,
@@ -108,6 +161,28 @@ class CentralPolicyEngine:
                 allowed=False,
                 reason=f"Deny: missing required permission '{required_permission}'.",
                 reason_code="permission_missing",
+            )
+        if ctx.principal_type == "service_account" and permission_requires_human(required_permission):
+            return PolicyDecision(
+                allowed=False,
+                reason="Deny: service accounts cannot perform a human-governed action.",
+                reason_code="human_principal_required",
+            )
+        if ctx.step_up_enforced and required_permission in PRIVILEGED_STEP_UP_PERMISSIONS and not ctx.step_up_active:
+            return PolicyDecision(
+                allowed=False,
+                reason="Deny: this privileged action requires recent human reauthentication.",
+                reason_code="step_up_required",
+            )
+        if (
+            required_permission in PRIVILEGED_STEP_UP_PERMISSIONS
+            and ctx.required_step_up_method is not None
+            and ctx.step_up_method != ctx.required_step_up_method
+        ):
+            return PolicyDecision(
+                allowed=False,
+                reason="Deny: this privileged action requires the configured MFA assurance method.",
+                reason_code="mfa_required",
             )
 
         # 3. Enforce every supplied resource scope. Empty grants deny scoped access.
@@ -150,7 +225,7 @@ class CentralPolicyEngine:
                 reason_code="self_approval_denied",
             )
 
-        return PolicyDecision(allowed=True, reason="Access granted.")
+        return PolicyDecision(allowed=True, reason="Access granted.", granted_permission=required_permission)
 
     def evaluate_any(
         self,
@@ -167,7 +242,16 @@ class CentralPolicyEngine:
         if ctx.user_permissions.isdisjoint(required_permissions):
             return PolicyDecision(False, "Deny: no required permission is granted.", "permission_missing")
         # Scope and future contextual checks remain centralized in evaluate.
-        selected = min(ctx.user_permissions.intersection(required_permissions))
+        candidates = ctx.user_permissions.intersection(required_permissions)
+        if ctx.principal_type == "service_account":
+            candidates = frozenset(permission for permission in candidates if not permission_requires_human(permission))
+            if not candidates:
+                return PolicyDecision(
+                    False,
+                    "Deny: service accounts cannot perform a human-governed action.",
+                    "human_principal_required",
+                )
+        selected = min(candidates)
         return self.evaluate(ctx, required_permission=selected)
 
 
@@ -195,6 +279,9 @@ def evaluate_principal_access(
         user_id=principal.user.id,
         username=principal.user.username,
         user_permissions=principal.permissions,
+        principal_type=principal.principal_type,
+        step_up_active=principal.step_up_active,
+        step_up_enforced=True,
         tenant_id=tenant_id,
         workspace_id=workspace_id,
         entity_id=entity_id,

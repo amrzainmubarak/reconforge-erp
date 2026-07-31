@@ -27,7 +27,7 @@ GROUPED_SUBSET_SUM_MANIFEST = MatchingStrategyManifest(
     algorithm="bounded-partitioned-subset-sum-enumeration-v1",
     supported_modes=("many-to-many", "many-to-one", "one-to-many"),
     deterministic_tie_break="difference-cardinality-date-span-stable-record-identities-v1",
-    explanation_schema="grouped-matching-explanation-v1",
+    explanation_schema="grouped-matching-explanation-v2",
     limits=StrategyLimits(
         max_left_records=64,
         max_right_records=64,
@@ -76,13 +76,18 @@ class GroupedSubsetSumStrategy:
                         max_left_cardinality=max_left_group,
                         max_right_cardinality=max_right_group,
                         max_search_evaluations=max_group_evaluations,
+                        netting_mode=request.netting_mode,
                     ),
                     left_id_field=request.left_id_field,
                     right_id_field=request.right_id_field,
                     amount_field=request.amount_field,
+                    left_fee_field=request.left_fee_field,
+                    right_fee_field=request.right_fee_field,
                     currency_field=request.currency_field,
                     date_field=request.date_field,
                     partition_field=request.partition_field,
+                    target_currency=request.target_currency,
+                    fx_rates=request.fx_rates,
                 )
             )
         except GroupedMatchingError as exc:
@@ -114,6 +119,12 @@ class GroupedSubsetSumStrategy:
         limits = self.manifest.limits
         if request.mode not in self.manifest.supported_modes:
             raise MatchingStrategyContractError("Grouped strategy mode is not supported.")
+        if not isinstance(request.target_currency, str):
+            raise MatchingStrategyContractError("Grouped strategy target currency must be a text value.")
+        if request.target_currency and not request.target_currency.strip():
+            raise MatchingStrategyContractError("Grouped strategy target currency cannot be empty text.")
+        if request.fx_rates and not isinstance(request.fx_rates, tuple):
+            raise MatchingStrategyContractError("Grouped strategy fx_rates must be a finite tuple of records.")
         if len(request.left_records) > limits.max_left_records or len(request.right_records) > limits.max_right_records:
             raise MatchingStrategyContractError("Grouped strategy input record limit exceeded.")
         if (
@@ -130,4 +141,10 @@ class GroupedSubsetSumStrategy:
             raise MatchingStrategyContractError("Grouped strategy amount tolerance is invalid.") from exc
         if not tolerance.is_finite() or tolerance < 0:
             raise MatchingStrategyContractError("Grouped strategy amount tolerance is invalid.")
+        if request.netting_mode not in {"gross", "net"}:
+            raise MatchingStrategyContractError("Grouped strategy netting mode is invalid.")
+        if request.netting_mode != "gross" and (
+            request.left_fee_field.strip() == "" or request.right_fee_field.strip() == ""
+        ):
+            raise MatchingStrategyContractError("Grouped strategy requires fee field names when netting mode is net.")
         return tolerance

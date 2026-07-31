@@ -1,0 +1,29 @@
+{
+  "backend": {
+    "bytes": 5426,
+    "sha256": "e611ce9c957d8de2500590dbffa7d22d11187b3bdde434b470e53c55c3c1c748"
+  },
+  "checks": {
+    "api_request_succeeded": true,
+    "cleanup_complete": true,
+    "closed_alert_persisted": true,
+    "force_flush_succeeded": true,
+    "metric_persisted": true,
+    "policy_binding_persisted": true,
+    "runbook_binding_persisted": true,
+    "sensitive_markers_absent": true,
+    "trace_persisted": true
+  },
+  "collector": {
+    "image": "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib@sha256:93aad750175cbf1a973ae1c5886c3371f4d800f61be25cdd26870b8441ffe9fa",
+    "version_output": "otelcol-contrib version 0.153.0"
+  },
+  "limitations": [
+    "loopback_single_collector",
+    "local_ephemeral_file_backend",
+    "no_external_alert_manager_acknowledgement",
+    "no_ha_retention_or_production_slo_claim"
+  ],
+  "profile": "pinned-official-collector-file-backend",
+  "schema_version": 1
+}

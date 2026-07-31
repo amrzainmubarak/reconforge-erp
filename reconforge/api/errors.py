@@ -56,9 +56,22 @@ async def http_error_handler(request: Request, exc: StarletteHTTPException) -> J
 async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """Handle validation errors without echoing sensitive submitted values."""
 
+    if request.url.path.startswith("/scim/v2"):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "schemas": ["urn:ietf:params:scim:api:messages:2.0:Error"],
+                "status": "400",
+                "scimType": "invalidValue",
+                "detail": "SCIM request validation failed.",
+            },
+            media_type="application/scim+json",
+        )
     return JSONResponse(
         status_code=422,
-        content=error_payload(code="validation_error", message="Request validation failed.", request_id_value=request_id(request)),
+        content=error_payload(
+            code="validation_error", message="Request validation failed.", request_id_value=request_id(request)
+        ),
     )
 
 
@@ -67,7 +80,9 @@ async def unhandled_error_handler(request: Request, exc: Exception) -> JSONRespo
 
     return JSONResponse(
         status_code=500,
-        content=error_payload(code="internal_error", message="Internal API error.", request_id_value=request_id(request)),
+        content=error_payload(
+            code="internal_error", message="Internal API error.", request_id_value=request_id(request)
+        ),
     )
 
 

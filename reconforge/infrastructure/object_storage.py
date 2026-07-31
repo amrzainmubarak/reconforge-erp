@@ -26,7 +26,7 @@ from types import ModuleType
 from typing import Any, Protocol
 from urllib.parse import urlsplit
 
-from reconforge.infrastructure.postgres import normalize_scope_id
+from reconforge.application.evidence import EvidenceStorageScope
 
 _BUCKET_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9.-]{1,61})[a-z0-9]$")
 _PREFIX_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
@@ -56,6 +56,13 @@ class ObjectStorageIntegrityError(ObjectStorageOperationError):
 
 class ObjectStorageConflictError(ObjectStorageOperationError):
     """Raised when immutable object identity already exists."""
+
+
+ObjectStorageScope = EvidenceStorageScope
+
+
+def _storage_scope(value: str | ObjectStorageScope) -> ObjectStorageScope:
+    return value if isinstance(value, ObjectStorageScope) else ObjectStorageScope(tenant_id=value)
 
 
 @dataclass(frozen=True)
@@ -149,22 +156,28 @@ class StoredObject:
 class ObjectStoreProtocol(Protocol):
     """Backend-neutral immutable byte-object contract."""
 
-    def key_for(self, tenant_id: str, object_name: str) -> str: ...
+    def key_for(self, tenant_id: str | ObjectStorageScope, object_name: str) -> str: ...
 
     def put_bytes(
-        self, tenant_id: str, object_name: str, content: bytes, *,
+        self,
+        tenant_id: str | ObjectStorageScope,
+        object_name: str,
+        content: bytes,
+        *,
         content_type: str = "application/octet-stream",
         metadata: Mapping[str, object] | None = None,
         retention_until: datetime | None = None,
     ) -> StoredObject: ...
 
-    def get_bytes(self, tenant_id: str, object_name: str) -> StoredObject: ...
+    def get_bytes(self, tenant_id: str | ObjectStorageScope, object_name: str) -> StoredObject: ...
 
-    def delete(self, tenant_id: str, object_name: str) -> None: ...
+    def delete(self, tenant_id: str | ObjectStorageScope, object_name: str) -> None: ...
 
 
 class S3ObjectStore:
     """Tenant-scoped S3-compatible artifact store."""
+
+    supports_hierarchical_scope = True
 
     def __init__(self, connection_factory: ObjectStorageConnectionFactory) -> None:
         self.connection_factory = connection_factory
@@ -180,17 +193,32 @@ class S3ObjectStore:
             raise ObjectStorageConfigurationError("Object name contains control characters.")
         return "/".join(parts)
 
-    def key_for(self, tenant_id: str, object_name: str) -> str:
+    def key_for(self, tenant_id: str | ObjectStorageScope, object_name: str) -> str:
         """Return a deterministic tenant-separated key."""
 
-        tenant = normalize_scope_id(tenant_id)
+        scope = _storage_scope(tenant_id)
         relative_name = self._object_name(object_name)
         prefix = f"{self.settings.key_prefix}/" if self.settings.key_prefix else ""
-        return f"{prefix}tenant/{tenant}/{relative_name}"
+        scope_path = f"tenant/{scope.tenant_id}"
+        if scope.workspace_id:
+            scope_path += f"/workspace/{scope.workspace_id}"
+        if scope.entity_id:
+            scope_path += f"/entity/{scope.entity_id}"
+        return f"{prefix}{scope_path}/{relative_name}"
 
     @staticmethod
-    def _metadata(metadata: Mapping[str, object] | None, *, tenant_id: str, digest: str) -> dict[str, str]:
-        result = {"reconforge-sha256": digest, "reconforge-tenant": tenant_id}
+    def _metadata(
+        metadata: Mapping[str, object] | None,
+        *,
+        scope: ObjectStorageScope,
+        digest: str,
+    ) -> dict[str, str]:
+        result = {
+            "reconforge-sha256": digest,
+            "reconforge-tenant": scope.tenant_id,
+            "reconforge-workspace": scope.workspace_id,
+            "reconforge-entity": scope.entity_id,
+        }
         for raw_key, raw_value in (metadata or {}).items():
             key = str(raw_key).strip().lower()
             if not _OBJECT_METADATA_KEY_PATTERN.fullmatch(key) or key.startswith("reconforge-"):
@@ -221,7 +249,7 @@ class S3ObjectStore:
 
     def put_bytes(
         self,
-        tenant_id: str,
+        tenant_id: str | ObjectStorageScope,
         object_name: str,
         content: bytes,
         *,
@@ -237,10 +265,10 @@ class S3ObjectStore:
             raise ObjectStorageConfigurationError("Object content exceeds the configured size limit.")
         if not content_type.strip() or any(ord(character) < 32 for character in content_type):
             raise ObjectStorageConfigurationError("Object content type is invalid.")
-        tenant = normalize_scope_id(tenant_id)
-        key = self.key_for(tenant, object_name)
+        scope = _storage_scope(tenant_id)
+        key = self.key_for(scope, object_name)
         digest = hashlib.sha256(content).hexdigest()
-        object_metadata = self._metadata(metadata, tenant_id=tenant, digest=digest)
+        object_metadata = self._metadata(metadata, scope=scope, digest=digest)
         put_kwargs: dict[str, object] = {
             "Bucket": self.settings.bucket,
             "Key": key,
@@ -271,10 +299,11 @@ class S3ObjectStore:
             version_id=str(response.get("VersionId")) if response.get("VersionId") is not None else None,
         )
 
-    def get_bytes(self, tenant_id: str, object_name: str) -> StoredObject:
+    def get_bytes(self, tenant_id: str | ObjectStorageScope, object_name: str) -> StoredObject:
         """Download and verify one tenant-scoped object."""
 
-        key = self.key_for(tenant_id, object_name)
+        scope = _storage_scope(tenant_id)
+        key = self.key_for(scope, object_name)
         response = self._call(lambda client: client.get_object(Bucket=self.settings.bucket, Key=key))
         body = response.get("Body")
         if body is None or not callable(getattr(body, "read", None)):
@@ -305,9 +334,13 @@ class S3ObjectStore:
             raise ObjectStorageIntegrityError("Object is missing its required SHA-256 metadata.")
         if expected != digest:
             raise ObjectStorageIntegrityError("Object checksum does not match its recorded SHA-256.")
-        expected_tenant = normalize_scope_id(tenant_id)
-        if metadata.get("reconforge-tenant") != expected_tenant:
-            raise ObjectStorageIntegrityError("Object tenant metadata does not match the requested scope.")
+        expected_scope = {
+            "reconforge-tenant": scope.tenant_id,
+            "reconforge-workspace": scope.workspace_id,
+            "reconforge-entity": scope.entity_id,
+        }
+        if any(metadata.get(name, "") != value for name, value in expected_scope.items()):
+            raise ObjectStorageIntegrityError("Object hierarchy metadata does not match the requested scope.")
         return StoredObject(
             key=key,
             content=content,
@@ -317,7 +350,13 @@ class S3ObjectStore:
             version_id=str(response.get("VersionId")) if response.get("VersionId") is not None else None,
         )
 
-    def presigned_get_url(self, tenant_id: str, object_name: str, *, expires_in_seconds: int | None = None) -> str:
+    def presigned_get_url(
+        self,
+        tenant_id: str | ObjectStorageScope,
+        object_name: str,
+        *,
+        expires_in_seconds: int | None = None,
+    ) -> str:
         """Create a bounded GET URL for a tenant-scoped object."""
 
         expiry = expires_in_seconds if expires_in_seconds is not None else self.settings.presign_expiry_seconds
@@ -336,7 +375,7 @@ class S3ObjectStore:
             raise ObjectStorageOperationError("Object-storage provider returned an invalid signed URL.")
         return url
 
-    def delete(self, tenant_id: str, object_name: str) -> None:
+    def delete(self, tenant_id: str | ObjectStorageScope, object_name: str) -> None:
         """Delete an object only when destructive deletion is explicitly enabled."""
 
         if not self.settings.allow_delete:
@@ -375,6 +414,8 @@ class LocalObjectStorageSettings:
 class LocalObjectStore:
     """Offline immutable object store with sidecar integrity manifests."""
 
+    supports_hierarchical_scope = True
+
     def __init__(self, settings: LocalObjectStorageSettings) -> None:
         self.settings = settings
         configured_root = settings.root
@@ -385,15 +426,20 @@ class LocalObjectStore:
         if not self.root.is_dir():
             raise ObjectStorageConfigurationError("Local object-storage root must be a regular directory.")
 
-    def key_for(self, tenant_id: str, object_name: str) -> str:
-        tenant = normalize_scope_id(tenant_id)
+    def key_for(self, tenant_id: str | ObjectStorageScope, object_name: str) -> str:
+        scope = _storage_scope(tenant_id)
         relative = S3ObjectStore._object_name(object_name)
         if relative.endswith(_LOCAL_METADATA_SUFFIX):
             raise ObjectStorageConfigurationError("Object name uses a reserved local metadata suffix.")
         prefix = f"{self.settings.key_prefix}/" if self.settings.key_prefix else ""
-        return f"{prefix}tenant/{tenant}/{relative}"
+        scope_path = f"tenant/{scope.tenant_id}"
+        if scope.workspace_id:
+            scope_path += f"/workspace/{scope.workspace_id}"
+        if scope.entity_id:
+            scope_path += f"/entity/{scope.entity_id}"
+        return f"{prefix}{scope_path}/{relative}"
 
-    def _paths(self, tenant_id: str, object_name: str) -> tuple[str, Path, Path]:
+    def _paths(self, tenant_id: str | ObjectStorageScope, object_name: str) -> tuple[str, Path, Path]:
         key = self.key_for(tenant_id, object_name)
         target = self.root.joinpath(*key.split("/"))
         manifest = target.with_name(target.name + _LOCAL_METADATA_SUFFIX)
@@ -430,7 +476,11 @@ class LocalObjectStore:
         return path
 
     def put_bytes(
-        self, tenant_id: str, object_name: str, content: bytes, *,
+        self,
+        tenant_id: str | ObjectStorageScope,
+        object_name: str,
+        content: bytes,
+        *,
         content_type: str = "application/octet-stream",
         metadata: Mapping[str, object] | None = None,
         retention_until: datetime | None = None,
@@ -441,13 +491,13 @@ class LocalObjectStore:
             raise ObjectStorageConfigurationError("Object content exceeds the configured size limit.")
         if not content_type.strip() or any(ord(character) < 32 for character in content_type):
             raise ObjectStorageConfigurationError("Object content type is invalid.")
-        tenant = normalize_scope_id(tenant_id)
-        key, target, manifest_path = self._paths(tenant, object_name)
+        scope = _storage_scope(tenant_id)
+        key, target, manifest_path = self._paths(scope, object_name)
         self._prepare_parent(target)
         if target.exists() or manifest_path.exists():
             raise ObjectStorageConflictError("Immutable object identity already exists.")
         digest = hashlib.sha256(content).hexdigest()
-        object_metadata = S3ObjectStore._metadata(metadata, tenant_id=tenant, digest=digest)
+        object_metadata = S3ObjectStore._metadata(metadata, scope=scope, digest=digest)
         retain_text = ""
         if retention_until is not None:
             if retention_until.tzinfo is None or retention_until <= datetime.now(UTC):
@@ -494,8 +544,9 @@ class LocalObjectStore:
             manifest_temp.unlink(missing_ok=True)
         return StoredObject(key, content, digest, content_type, object_metadata)
 
-    def get_bytes(self, tenant_id: str, object_name: str) -> StoredObject:
-        key, target, manifest_path = self._paths(tenant_id, object_name)
+    def get_bytes(self, tenant_id: str | ObjectStorageScope, object_name: str) -> StoredObject:
+        scope = _storage_scope(tenant_id)
+        key, target, manifest_path = self._paths(scope, object_name)
         if not target.is_file() or not manifest_path.is_file() or target.is_symlink() or manifest_path.is_symlink():
             raise ObjectStorageNotFoundError("Object was not found.")
         try:
@@ -517,7 +568,6 @@ class LocalObjectStore:
         if len(content) > self.settings.max_object_bytes:
             raise ObjectStorageOperationError("Stored object exceeds the configured size limit.")
         digest = hashlib.sha256(content).hexdigest()
-        tenant = normalize_scope_id(tenant_id)
         metadata = manifest.get("metadata") if isinstance(manifest, dict) else None
         if (
             not isinstance(metadata, dict)
@@ -526,15 +576,20 @@ class LocalObjectStore:
             or manifest.get("size") != len(content)
             or manifest.get("sha256") != digest
             or metadata.get("reconforge-sha256") != digest
-            or metadata.get("reconforge-tenant") != tenant
+            or metadata.get("reconforge-tenant") != scope.tenant_id
+            or metadata.get("reconforge-workspace", "") != scope.workspace_id
+            or metadata.get("reconforge-entity", "") != scope.entity_id
         ):
             raise ObjectStorageIntegrityError("Local object content or manifest failed verification.")
         return StoredObject(
-            key, content, digest, str(manifest.get("content_type") or "application/octet-stream"),
+            key,
+            content,
+            digest,
+            str(manifest.get("content_type") or "application/octet-stream"),
             {str(name): str(value) for name, value in metadata.items()},
         )
 
-    def delete(self, tenant_id: str, object_name: str) -> None:
+    def delete(self, tenant_id: str | ObjectStorageScope, object_name: str) -> None:
         if not self.settings.allow_delete:
             raise ObjectStorageConfigurationError("Object deletion is disabled by default for evidence storage.")
         _, target, manifest_path = self._paths(tenant_id, object_name)

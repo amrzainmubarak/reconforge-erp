@@ -6,9 +6,9 @@ Measured through 2026-07-26 against the dirty snapshot in `BASELINE.md` and `STA
 
 | Gate | Result | Scope boundary |
 | --- | --- | --- |
-| `python -m bandit -q -r reconforge` | E-062 locked Python 3.11 exit 0, no findings | Three notices refer to the same `# nosec B608` at `db/backup.py:1478`; identifiers pass `_IDENTIFIER_RE` and values use placeholders, but the suppression remains a manual-review point |
-| Hash-exported locked Python audit | The current 113-package lock, including boto3 for the S3 server boundary, OpenTelemetry API/SDK for optional local instrumentation, and cryptography 49.0.0 for optional encrypted backups, passes pip-audit 2.10.1 with no known findings and the closed policy validator with zero active exceptions | Exact local graph and current advisory-service result only; Python 3.12 hosted execution, reachability, provenance, malware, and license suitability are not proven |
-| `npm.cmd --prefix apps/web audit --package-lock-only --audit-level=high` | Exit 0; 0 vulnerabilities reported | Covers the exact-version npm lock, whose 209 non-root entries still include 155 without embedded SRI |
+| `python -m bandit -q -r reconforge` | E-131 local exit 0, no findings | Notices cover eight reviewed `# nosec B608` sites: one allowlisted backup identifier site and seven durable-job sites whose SQL identifiers derive only from immutable module-level `_JOB_COLUMNS`; every data value remains parameterized. Suppressions remain manual-review points. |
+| Hash-exported locked Python audit | The current 118-package lock, including boto3 for the S3 server boundary, OpenTelemetry API/SDK for optional local instrumentation, cryptography 49.0.0 for optional encrypted backups, joserfc 1.7.4 for OIDC, and python3-saml 1.16.0 with xmlsec/lxml for SAML, passes pip-audit 2.10.1 with no known findings and the closed policy validator with zero active exceptions | Exact local graph and current advisory-service result only; hosted cross-version execution, reachability, provenance, malware, and license suitability are not proven; the SAML dependency deprecation warning remains monitored |
+| `npm.cmd --prefix apps/web audit --package-lock-only --audit-level=high` | Exit 0; 0 vulnerabilities reported | Covers the exact-version npm lock; all 211 current non-root entries have HTTPS registry resolution and embedded SRI |
 | Gitleaks 8.30.1 full history | Exit 0; 69 commits and about 4.73 MB scanned, no leaks found | Checksum-verified binary and default rules; detection is not proof that no secret existed or that external credentials are safe |
 | Gitleaks 8.30.1 checked tree | Initial scan identified one high-entropy idempotency test string; it was replaced with a behavior-equivalent low-entropy fixture, then exit 0 across about 15.02 MB | Generated/tool-owned paths only are excluded; output is 100% redacted and there is no baseline/commit/regex/stopword allowlist |
 | Docker | Not run | Daemon unavailable; image contents and runtime user/permissions were not verified locally |
@@ -59,3 +59,9 @@ Measured through 2026-07-26 against the dirty snapshot in `BASELINE.md` and `STA
 - The worktree is too broad for a focused security review and includes authentication, tenant, DB, evidence, and worker changes together.
 
 Allowed wording: "Security checks and threat-model documentation exist; deployment security and release verification remain operator/reviewer responsibilities." Do not use `secure`, `compliant`, `certified`, `bank-grade`, or `enterprise-ready` as unqualified claims.
+# E-175 service-account security delta
+
+- Machine identities are separated from human users, roles, passwords, and browser sessions.
+- Four migration-0037 tables use forced RLS. PostgreSQL triggers enforce permission and TTL ceilings, immutable credential identity, monotonic account versions, same-account rotation, and append-only events.
+- Raw credentials are returned once by the operator CLI and only SHA-256 digests persist. Disable revokes all active credentials atomically.
+- Residual boundary: workload identity federation, WebAuthn recovery/attestation governance and broad authenticator interoperability, hosted identity operation, independent assessment, and production operation remain unverified; current service-principal, password-step-up, emergency-review, and WebAuthn evidence is synthetic and bounded.

@@ -1,0 +1,38 @@
+{
+  "schema": "reconforge-airgap-identity-recovery-drill-report-v1",
+  "executed_at": "2026-07-30",
+  "runtime": {
+    "container_image": "python:3.14.1-slim",
+    "container_image_digest": "sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e",
+    "network_mode": "none",
+    "root_filesystem": "read-only",
+    "bundle_mount": "read-only",
+    "writable_state": "bounded-tmpfs-only"
+  },
+  "installation": {
+    "application_version": "0.7.1",
+    "entry_count": 60,
+    "total_bytes": 98913160,
+    "bundle_manifest_sha256": "1213726ff418f7f84781832e45f24f33cc21ebe69dd01687d8343a8dafa1fa03",
+    "doctor_exit_zero": true
+  },
+  "identity_recovery": {
+    "local_users_restored": 2,
+    "admin_permission_restored": true,
+    "encrypted_backup": "AES-256-GCM",
+    "wrong_key_rejected_atomically": true,
+    "old_sessions_restored": 0,
+    "audit_chain_valid": true,
+    "source_schema_version": 24,
+    "restored_schema_version": 24,
+    "cleanup_complete": true
+  },
+  "scope_status": "verified-single-runtime-local-identity-encrypted-recovery",
+  "limitations": [
+    "no_forgotten_password_ceremony",
+    "no_hardware_backed_key_custody",
+    "single_runtime_single_run",
+    "no_physical_airgap_claim",
+    "no_production_readiness_claim"
+  ]
+}

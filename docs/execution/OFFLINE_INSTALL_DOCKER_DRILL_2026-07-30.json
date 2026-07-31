@@ -1,0 +1,10 @@
+{
+  "application_version": "0.7.1",
+  "bundle": {"entry_count": 60, "manifest_sha256": "845f7190510e31e6ec651dad4201c30b4279f01b7580f61289cab6facac596ce", "source_lock": "uv.lock", "total_bytes": 98913160, "wheel_only": true},
+  "executed_at": "2026-07-30",
+  "installation": {"bundle_mount": "read-only", "cleanup_complete": true, "doctor_exit_zero": true, "network_mode": "none", "pip_no_deps": true, "pip_no_index": true, "pip_require_hashes": true, "root_filesystem": "read-only"},
+  "limitations": ["no_offline_signature_trust", "no_local_identity_recovery", "no_backup_restore_in_same_drill", "no_upgrade_rollback_in_same_drill", "single_platform_single_run", "no_physical_airgap_claim", "no_production_readiness_claim"],
+  "runtime": {"image": "python:3.14.1-slim", "image_digest": "sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e", "platform": "linux/amd64", "python": "3.14.1"},
+  "schema": "reconforge-offline-install-drill-report-v1",
+  "scope_status": "verified-single-linux-runtime-install"
+}

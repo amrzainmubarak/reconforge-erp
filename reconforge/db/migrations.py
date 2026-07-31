@@ -86,8 +86,12 @@ MIGRATIONS = [
     Migration(version=13, name="transactional_outbox_foundation", sql=OUTBOX_SCHEMA_SQL),
     Migration(version=14, name="transactional_outbox_delivery_state", sql=OUTBOX_DELIVERY_MIGRATION_SQL),
     Migration(version=15, name="accounts_payable_three_way_match_foundation", sql=PAYABLES_SCHEMA_SQL),
-    Migration(version=16, name="account_reconciliation_decimal_money_columns", sql=ACCOUNT_RECONCILIATION_MONEY_MIGRATION_SQL),
-    Migration(version=17, name="journal_intercompany_decimal_money_columns", sql=JOURNALS_INTERCOMPANY_MONEY_MIGRATION_SQL),
+    Migration(
+        version=16, name="account_reconciliation_decimal_money_columns", sql=ACCOUNT_RECONCILIATION_MONEY_MIGRATION_SQL
+    ),
+    Migration(
+        version=17, name="journal_intercompany_decimal_money_columns", sql=JOURNALS_INTERCOMPANY_MONEY_MIGRATION_SQL
+    ),
     Migration(version=18, name="matching_decimal_money_columns", sql=MATCHING_MONEY_MIGRATION_SQL),
     Migration(version=19, name="evidence_object_storage_references", sql=EVIDENCE_OBJECT_STORAGE_MIGRATION_SQL),
     Migration(version=20, name="accounts_receivable_credit_control_foundation", sql=RECEIVABLES_SCHEMA_SQL),
@@ -150,7 +154,9 @@ def run_migrations(db_path: Path | str, *, target_version: int | None = None) ->
         current_version = max(applied, default=0)
     except sqlite3.DatabaseError as exc:
         connection.rollback()
-        raise DatabaseError("Unable to migrate ReconForge database. The file may not be a valid local SQLite database.") from exc
+        raise DatabaseError(
+            "Unable to migrate ReconForge database. The file may not be a valid local SQLite database."
+        ) from exc
     finally:
         connection.close()
 
@@ -174,7 +180,9 @@ def database_status(db_path: Path | str) -> DatabaseStatus:
         applied = _applied_versions(connection) if table_exists else []
         current_version = max(applied, default=0)
     except sqlite3.DatabaseError as exc:
-        raise DatabaseError("Unable to read ReconForge database. The file may not be a valid local SQLite database.") from exc
+        raise DatabaseError(
+            "Unable to read ReconForge database. The file may not be a valid local SQLite database."
+        ) from exc
     finally:
         connection.close()
 

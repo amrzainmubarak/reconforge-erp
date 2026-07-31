@@ -90,7 +90,8 @@ class PostgresWorkspaceRepository(WorkspaceRepositoryProtocol):
     @staticmethod
     def _decode(row: Any) -> Workspace:
         return Workspace(
-            id=str(_row_value(row, "id", 0)), name=str(_row_value(row, "name", 1)),
+            id=str(_row_value(row, "id", 0)),
+            name=str(_row_value(row, "name", 1)),
             local_first_note=str(_row_value(row, "local_first_note", 2)),
             created_at=str(_row_value(row, "created_at", 3)),
         )
@@ -102,12 +103,20 @@ class PostgresPeriodRepository(PeriodRepositoryProtocol):
         self.tenant_id = tenant_id
 
     def create(
-        self, *, workspace_id: str, name: str, start_date: str, end_date: str,
+        self,
+        *,
+        workspace_id: str,
+        name: str,
+        start_date: str,
+        end_date: str,
         status: str = "Open",
     ) -> Period:
         period = Period(
-            workspace_id=workspace_id, name=name, start_date=start_date,
-            end_date=end_date, status=status,
+            workspace_id=workspace_id,
+            name=name,
+            start_date=start_date,
+            end_date=end_date,
+            status=status,
         )
         self.connection.execute(
             """
@@ -115,8 +124,16 @@ class PostgresPeriodRepository(PeriodRepositoryProtocol):
                 (tenant_id, id, workspace_id, name, start_date, end_date, status, created_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
-            (self.tenant_id, period.id, period.workspace_id, period.name,
-             period.start_date, period.end_date, period.status, period.created_at),
+            (
+                self.tenant_id,
+                period.id,
+                period.workspace_id,
+                period.name,
+                period.start_date,
+                period.end_date,
+                period.status,
+                period.created_at,
+            ),
         )
         return period
 
@@ -143,9 +160,12 @@ class PostgresPeriodRepository(PeriodRepositoryProtocol):
     @staticmethod
     def _decode(row: Any) -> Period:
         return Period(
-            id=str(_row_value(row, "id", 0)), workspace_id=str(_row_value(row, "workspace_id", 1)),
-            name=str(_row_value(row, "name", 2)), start_date=str(_row_value(row, "start_date", 3)),
-            end_date=str(_row_value(row, "end_date", 4)), status=str(_row_value(row, "status", 5)),
+            id=str(_row_value(row, "id", 0)),
+            workspace_id=str(_row_value(row, "workspace_id", 1)),
+            name=str(_row_value(row, "name", 2)),
+            start_date=str(_row_value(row, "start_date", 3)),
+            end_date=str(_row_value(row, "end_date", 4)),
+            status=str(_row_value(row, "status", 5)),
             created_at=str(_row_value(row, "created_at", 6)),
         )
 
@@ -156,9 +176,16 @@ class PostgresAuditEventRepository(AuditEventRepositoryProtocol):
         self.tenant_id = tenant_id
 
     def append(
-        self, *, actor_label: str, object_type: str, object_id: str, action: str,
-        actor_user_id: str | None = None, before_hash: str | None = None,
-        after_hash: str | None = None, metadata: dict[str, Any] | None = None,
+        self,
+        *,
+        actor_label: str,
+        object_type: str,
+        object_id: str,
+        action: str,
+        actor_user_id: str | None = None,
+        before_hash: str | None = None,
+        after_hash: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> AuditEventReference:
         actor = _required_text(actor_label, "actor_label")
         target_type = _required_text(object_type, "object_type")
@@ -186,10 +213,18 @@ class PostgresAuditEventRepository(AuditEventRepositoryProtocol):
             sequence = int(_row_value(state, "last_sequence", 0)) + 1
             previous_hash = str(_row_value(state, "last_event_hash", 1))
             event_hash = calculate_audit_event_hash(
-                event_id=event_id, sequence=sequence, previous_hash=previous_hash,
-                actor_user_id=actor_user_id, actor_label=actor, object_type=target_type,
-                object_id=target_id, action=event_action, before_hash=before_hash,
-                after_hash=after_hash, metadata_json=metadata_json, created_at=created_at,
+                event_id=event_id,
+                sequence=sequence,
+                previous_hash=previous_hash,
+                actor_user_id=actor_user_id,
+                actor_label=actor,
+                object_type=target_type,
+                object_id=target_id,
+                action=event_action,
+                before_hash=before_hash,
+                after_hash=after_hash,
+                metadata_json=metadata_json,
+                created_at=created_at,
             )
             self.connection.execute(
                 """
@@ -199,9 +234,22 @@ class PostgresAuditEventRepository(AuditEventRepositoryProtocol):
                      metadata_json, created_at)
                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,CAST(%s AS jsonb),%s)
                 """,
-                (self.tenant_id, event_id, sequence, previous_hash, event_hash, actor_user_id,
-                 actor, target_type, target_id, event_action, before_hash, after_hash,
-                 metadata_json, created_at),
+                (
+                    self.tenant_id,
+                    event_id,
+                    sequence,
+                    previous_hash,
+                    event_hash,
+                    actor_user_id,
+                    actor,
+                    target_type,
+                    target_id,
+                    event_action,
+                    before_hash,
+                    after_hash,
+                    metadata_json,
+                    created_at,
+                ),
             )
             self.connection.execute(
                 "UPDATE reconforge.domain_audit_ledger_state "
@@ -213,10 +261,18 @@ class PostgresAuditEventRepository(AuditEventRepositoryProtocol):
         except Exception as exc:
             raise AuditLedgerError("Unable to append audit event.") from exc
         return AuditEventReference(
-            id=event_id, sequence=sequence, previous_hash=previous_hash, event_hash=event_hash,
-            actor_user_id=actor_user_id, actor_label=actor, object_type=target_type,
-            object_id=target_id, action=event_action, before_hash=before_hash,
-            after_hash=after_hash, metadata=decode_audit_metadata(metadata_json).payload,
+            id=event_id,
+            sequence=sequence,
+            previous_hash=previous_hash,
+            event_hash=event_hash,
+            actor_user_id=actor_user_id,
+            actor_label=actor,
+            object_type=target_type,
+            object_id=target_id,
+            action=event_action,
+            before_hash=before_hash,
+            after_hash=after_hash,
+            metadata=decode_audit_metadata(metadata_json).payload,
             created_at=created_at,
         )
 
@@ -237,19 +293,21 @@ class PostgresAuditEventRepository(AuditEventRepositoryProtocol):
         except PersistedJsonError as exc:
             raise AuditLedgerError("Stored audit event metadata is invalid.") from exc
         return AuditEventReference(
-            id=str(_row_value(row, "id", 0)), sequence=int(_row_value(row, "sequence", 1)),
+            id=str(_row_value(row, "id", 0)),
+            sequence=int(_row_value(row, "sequence", 1)),
             previous_hash=str(_row_value(row, "previous_hash", 2)),
             event_hash=str(_row_value(row, "event_hash", 3)),
-            actor_user_id=(None if _row_value(row, "actor_user_id", 4) is None
-                           else str(_row_value(row, "actor_user_id", 4))),
+            actor_user_id=(
+                None if _row_value(row, "actor_user_id", 4) is None else str(_row_value(row, "actor_user_id", 4))
+            ),
             actor_label=str(_row_value(row, "actor_label", 5)),
             object_type=str(_row_value(row, "object_type", 6)),
-            object_id=str(_row_value(row, "object_id", 7)), action=str(_row_value(row, "action", 8)),
-            before_hash=(None if _row_value(row, "before_hash", 9) is None
-                         else str(_row_value(row, "before_hash", 9))),
-            after_hash=(None if _row_value(row, "after_hash", 10) is None
-                        else str(_row_value(row, "after_hash", 10))),
-            metadata=metadata, created_at=str(_row_value(row, "created_at", 12)),
+            object_id=str(_row_value(row, "object_id", 7)),
+            action=str(_row_value(row, "action", 8)),
+            before_hash=(None if _row_value(row, "before_hash", 9) is None else str(_row_value(row, "before_hash", 9))),
+            after_hash=(None if _row_value(row, "after_hash", 10) is None else str(_row_value(row, "after_hash", 10))),
+            metadata=metadata,
+            created_at=str(_row_value(row, "created_at", 12)),
         )
 
     def verify(self) -> AuditVerificationResult:
@@ -261,14 +319,23 @@ class PostgresAuditEventRepository(AuditEventRepositoryProtocol):
             if event.sequence != expected_sequence:
                 issues.append(AuditVerificationIssue(event.sequence, "Audit event sequence is not contiguous."))
             if event.previous_hash != expected_previous:
-                issues.append(AuditVerificationIssue(event.sequence, "Audit event previous hash does not match ledger head."))
+                issues.append(
+                    AuditVerificationIssue(event.sequence, "Audit event previous hash does not match ledger head.")
+                )
             metadata_json = _metadata_text(event.metadata)
             expected_hash = calculate_audit_event_hash(
-                event_id=event.id, sequence=event.sequence, previous_hash=event.previous_hash,
-                actor_user_id=event.actor_user_id, actor_label=event.actor_label,
-                object_type=event.object_type, object_id=event.object_id, action=event.action,
-                before_hash=event.before_hash, after_hash=event.after_hash,
-                metadata_json=metadata_json, created_at=event.created_at,
+                event_id=event.id,
+                sequence=event.sequence,
+                previous_hash=event.previous_hash,
+                actor_user_id=event.actor_user_id,
+                actor_label=event.actor_label,
+                object_type=event.object_type,
+                object_id=event.object_id,
+                action=event.action,
+                before_hash=event.before_hash,
+                after_hash=event.after_hash,
+                metadata_json=metadata_json,
+                created_at=event.created_at,
             )
             if not hmac.compare_digest(event.event_hash, expected_hash):
                 issues.append(AuditVerificationIssue(event.sequence, "Audit event hash does not match row content."))
@@ -323,7 +390,9 @@ class PostgresDomainUnitOfWork(DomainUnitOfWorkProtocol):
         return self
 
     def __exit__(
-        self, exc_type: type[BaseException] | None, exc_value: BaseException | None,
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> Literal[False]:
         if self._active:
@@ -334,7 +403,9 @@ class PostgresDomainUnitOfWork(DomainUnitOfWorkProtocol):
         return False
 
     def _finish(
-        self, exc_type: type[BaseException] | None, exc_value: BaseException | None,
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
         transaction, connection = self._transaction, self._connection
@@ -369,7 +440,9 @@ class PostgresDomainUnitOfWork(DomainUnitOfWorkProtocol):
 POSTGRES_DOMAIN_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS reconforge.domain_workspaces (
     tenant_id TEXT NOT NULL REFERENCES reconforge.tenants(id) ON DELETE CASCADE,
-    id TEXT NOT NULL, name TEXT NOT NULL, local_first_note TEXT NOT NULL, created_at TEXT NOT NULL,
+    id TEXT NOT NULL, name TEXT NOT NULL,
+    local_first_note TEXT NOT NULL DEFAULT 'Local-first workspace. Data remains in user-selected local paths.',
+    created_at TEXT NOT NULL DEFAULT (now()::text),
     PRIMARY KEY (tenant_id, id)
 );
 CREATE TABLE IF NOT EXISTS reconforge.domain_periods (

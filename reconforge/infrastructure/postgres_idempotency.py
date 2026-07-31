@@ -26,8 +26,19 @@ def _decode(row: Any) -> IdempotencyReservation:
     except ValueError as exc:
         raise RuntimeError("Stored idempotency response encoding is invalid.") from exc
     return IdempotencyReservation(
-        int(row[0]), str(row[1]), str(row[2]), str(row[3]), str(row[4]), str(row[5]),
-        str(row[6]), response, str(row[8]), str(row[9]), str(row[10]), str(row[11]), str(row[12]),
+        int(row[0]),
+        str(row[1]),
+        str(row[2]),
+        str(row[3]),
+        str(row[4]),
+        str(row[5]),
+        str(row[6]),
+        response,
+        str(row[8]),
+        str(row[9]),
+        str(row[10]),
+        str(row[11]),
+        str(row[12]),
     )
 
 
@@ -70,9 +81,17 @@ class PostgresIdempotencyRepository:
                          response_body,response_digest,content_type,created_at,expires_at,completed_at)
                         VALUES (%s,%s,%s,%s,%s,%s,'pending',%s,'','',%s,%s,'')
                         ON CONFLICT (tenant_id,scope,idempotency_key) DO NOTHING RETURNING 1""",
-                        (reservation.schema_version, self.tenant_id, reservation.scope, reservation.key,
-                         reservation.request_digest, digest_bytes(reservation.owner_token.encode()), "", reservation.created_at,
-                         reservation.expires_at),
+                        (
+                            reservation.schema_version,
+                            self.tenant_id,
+                            reservation.scope,
+                            reservation.key,
+                            reservation.request_digest,
+                            digest_bytes(reservation.owner_token.encode()),
+                            "",
+                            reservation.created_at,
+                            reservation.expires_at,
+                        ),
                     ).fetchone()
                     if inserted is not None:
                         return IdempotencyBeginResult(reservation, True, False)
@@ -89,8 +108,13 @@ class PostgresIdempotencyRepository:
             connection.close()
 
     def complete(
-        self, reservation: IdempotencyReservation, *, response: bytes,
-        response_digest: str, content_type: str, completed_at: str,
+        self,
+        reservation: IdempotencyReservation,
+        *,
+        response: bytes,
+        response_digest: str,
+        content_type: str,
+        completed_at: str,
     ) -> IdempotencyReservation:
         connection = self.connection_factory.connect()
         try:
@@ -103,9 +127,18 @@ class PostgresIdempotencyRepository:
                        AND owner_token_digest=%s AND status='pending' AND expires_at>%s
                        RETURNING schema_version,tenant_id,scope,idempotency_key,request_digest,owner_token_digest,
                        status,response_body,response_digest,content_type,created_at,expires_at,completed_at""",
-                    (base64.b64encode(response).decode("ascii"), response_digest, content_type, completed_at, self.tenant_id, reservation.scope,
-                     reservation.key, reservation.request_digest, digest_bytes(reservation.owner_token.encode()),
-                     completed_at),
+                    (
+                        base64.b64encode(response).decode("ascii"),
+                        response_digest,
+                        content_type,
+                        completed_at,
+                        self.tenant_id,
+                        reservation.scope,
+                        reservation.key,
+                        reservation.request_digest,
+                        digest_bytes(reservation.owner_token.encode()),
+                        completed_at,
+                    ),
                 ).fetchone()
                 if row is None:
                     raise IdempotencyOwnershipError("Idempotency reservation ownership is stale or invalid.")

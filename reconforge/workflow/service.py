@@ -203,8 +203,10 @@ class WorkflowService:
             )
             return
         principal = current_server_principal()
-        permissions = principal.permissions if principal is not None else frozenset(
-            self.auth.roles.user_permissions(actor_user.username)
+        permissions = (
+            principal.permissions
+            if principal is not None
+            else frozenset(self.auth.roles.user_permissions(actor_user.username))
         )
         action = _STATUS_TO_ACTION.get(transition.to_status)
         prior_actions = self._prior_actions(workflow_object) if transition.sod_rule and action else []

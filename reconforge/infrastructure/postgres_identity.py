@@ -200,15 +200,25 @@ class PostgresIdentityRepository:
             """
             INSERT INTO reconforge.identity_roles (tenant_id, id, name, description)
             VALUES (%s, %s, %s, %s)
-            ON CONFLICT (tenant_id, name) DO UPDATE SET description = EXCLUDED.description, updated_at = now()
+            ON CONFLICT (tenant_id, name) DO NOTHING
             RETURNING tenant_id, id, name, description, created_at, updated_at
             """,
             (tenant, role_id, role, role_description),
         )
         row = cursor.fetchone()
         if row is None:
-            raise PostgresIdentityError("Identity role was not returned after creation.")
-        return dict(row) if isinstance(row, Mapping) else dict(zip(("tenant_id", "id", "name", "description", "created_at", "updated_at"), row, strict=True))
+            row = self.connection.execute(
+                """SELECT tenant_id,id,name,description,created_at,updated_at
+                   FROM reconforge.identity_roles WHERE tenant_id=%s AND name=%s""",
+                (tenant, role),
+            ).fetchone()
+        if row is None:
+            raise PostgresIdentityError("Identity role was not returned after bootstrap.")
+        return (
+            dict(row)
+            if isinstance(row, Mapping)
+            else dict(zip(("tenant_id", "id", "name", "description", "created_at", "updated_at"), row, strict=True))
+        )
 
     def create_permission(self, *, tenant_id: str, permission_name: str, description: str = "") -> dict[str, Any]:
         tenant = _tenant_id(tenant_id)
@@ -218,15 +228,25 @@ class PostgresIdentityRepository:
             """
             INSERT INTO reconforge.identity_permissions (tenant_id, name, description)
             VALUES (%s, %s, %s)
-            ON CONFLICT (tenant_id, name) DO UPDATE SET description = EXCLUDED.description, updated_at = now()
+            ON CONFLICT (tenant_id, name) DO NOTHING
             RETURNING tenant_id, name, description, created_at, updated_at
             """,
             (tenant, permission, permission_description),
         )
         row = cursor.fetchone()
         if row is None:
-            raise PostgresIdentityError("Identity permission was not returned after creation.")
-        return dict(row) if isinstance(row, Mapping) else dict(zip(("tenant_id", "name", "description", "created_at", "updated_at"), row, strict=True))
+            row = self.connection.execute(
+                """SELECT tenant_id,name,description,created_at,updated_at
+                   FROM reconforge.identity_permissions WHERE tenant_id=%s AND name=%s""",
+                (tenant, permission),
+            ).fetchone()
+        if row is None:
+            raise PostgresIdentityError("Identity permission was not returned after bootstrap.")
+        return (
+            dict(row)
+            if isinstance(row, Mapping)
+            else dict(zip(("tenant_id", "name", "description", "created_at", "updated_at"), row, strict=True))
+        )
 
     def grant_permission(self, *, tenant_id: str, role_name: str, permission_name: str) -> None:
         tenant = _tenant_id(tenant_id)
@@ -238,7 +258,7 @@ class PostgresIdentityRepository:
             FROM reconforge.identity_roles roles
             JOIN reconforge.identity_permissions permissions
               ON permissions.tenant_id = roles.tenant_id AND permissions.name = %s
-            WHERE roles.tenant_id = %s AND roles.name = %s
+            WHERE roles.tenant_id = %s AND roles.name = %s AND roles.active
             """,
             (permission, tenant, role),
         ).fetchone()
@@ -271,7 +291,7 @@ class PostgresIdentityRepository:
         user_display_name = _text(display_name or normalized_username, "display_name")
         user_email = _optional_text(email, "email", maximum=320)
         role_reference = self.connection.execute(
-            "SELECT id FROM reconforge.identity_roles WHERE tenant_id = %s AND name = %s",
+            "SELECT id FROM reconforge.identity_roles WHERE tenant_id = %s AND name = %s AND active",
             (tenant, role),
         ).fetchone()
         if role_reference is None:
@@ -381,6 +401,7 @@ class PostgresIdentityRepository:
             JOIN reconforge.identity_roles roles
               ON roles.tenant_id = assignments.tenant_id AND roles.id = assignments.role_id
             WHERE assignments.tenant_id = %s AND assignments.user_id = %s
+              AND assignments.active AND roles.active
             ORDER BY roles.name
             """,
             (tenant, identifier),
@@ -400,6 +421,12 @@ class PostgresIdentityRepository:
             WHERE assignments.tenant_id = %s
               AND assignments.user_id = %s
               AND role_permissions.permission_name = %s
+              AND assignments.active AND role_permissions.active
+              AND EXISTS (
+                    SELECT 1 FROM reconforge.identity_roles roles
+                     WHERE roles.tenant_id=assignments.tenant_id
+                       AND roles.id=assignments.role_id AND roles.active
+              )
             LIMIT 1
             """,
             (tenant, identifier, permission),
@@ -419,6 +446,12 @@ class PostgresIdentityRepository:
               ON role_permissions.tenant_id = assignments.tenant_id
              AND role_permissions.role_id = assignments.role_id
             WHERE assignments.tenant_id = %s AND assignments.user_id = %s
+              AND assignments.active AND role_permissions.active
+              AND EXISTS (
+                    SELECT 1 FROM reconforge.identity_roles roles
+                     WHERE roles.tenant_id=assignments.tenant_id
+                       AND roles.id=assignments.role_id AND roles.active
+              )
             ORDER BY role_permissions.permission_name
             """,
             (tenant, identifier),
@@ -505,7 +538,10 @@ class PostgresIdentityRepository:
         cursor = self.connection.execute(
             """
             UPDATE reconforge.identity_sessions
-            SET revoked_at = now()
+            SET revoked_at = now(),
+                revocation_reason_code = 'user_logout',
+                revoked_by = user_id,
+                lifecycle_version = lifecycle_version + 1
             WHERE tenant_id = %s AND token_hash = %s AND revoked_at IS NULL
             RETURNING id
             """,
@@ -520,10 +556,20 @@ CREATE TABLE IF NOT EXISTS reconforge.identity_roles (
     id TEXT NOT NULL,
     name TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    lifecycle_version BIGINT NOT NULL DEFAULT 1,
+    created_by TEXT,
+    retired_at TIMESTAMPTZ,
+    retired_by TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (tenant_id, id),
     UNIQUE (tenant_id, name),
+    CONSTRAINT identity_roles_lifecycle_version_positive CHECK (lifecycle_version >= 1),
+    CONSTRAINT identity_roles_retirement_state_consistent CHECK (
+        (active AND retired_at IS NULL AND retired_by IS NULL)
+        OR (NOT active AND retired_at IS NOT NULL AND retired_by IS NOT NULL)
+    ),
     FOREIGN KEY (tenant_id) REFERENCES reconforge.tenants(id) ON DELETE CASCADE
 );
 
@@ -553,8 +599,16 @@ CREATE TABLE IF NOT EXISTS reconforge.identity_users (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     failed_login_count INTEGER NOT NULL DEFAULT 0 CHECK (failed_login_count >= 0),
     locked_until TIMESTAMPTZ,
+    lifecycle_version BIGINT NOT NULL DEFAULT 1,
+    disabled_at TIMESTAMPTZ,
+    disabled_by TEXT,
     PRIMARY KEY (tenant_id, id),
     UNIQUE (tenant_id, username),
+    CONSTRAINT identity_users_lifecycle_version_positive CHECK (lifecycle_version >= 1),
+    CONSTRAINT identity_users_disabled_state_consistent CHECK (
+        (disabled AND disabled_at IS NOT NULL)
+        OR (NOT disabled AND disabled_at IS NULL AND disabled_by IS NULL)
+    ),
     FOREIGN KEY (tenant_id) REFERENCES reconforge.tenants(id) ON DELETE CASCADE
 );
 
@@ -562,7 +616,25 @@ CREATE TABLE IF NOT EXISTS reconforge.identity_user_roles (
     tenant_id TEXT NOT NULL,
     user_id TEXT NOT NULL,
     role_id TEXT NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    lifecycle_version BIGINT NOT NULL DEFAULT 1,
+    granted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    granted_by TEXT,
+    revoked_at TIMESTAMPTZ,
+    revoked_by TEXT,
+    revocation_reason_code TEXT,
     PRIMARY KEY (tenant_id, user_id, role_id),
+    CONSTRAINT identity_user_roles_lifecycle_version_positive CHECK (lifecycle_version >= 1),
+    CONSTRAINT identity_user_roles_revocation_reason_closed CHECK (
+        revocation_reason_code IS NULL OR revocation_reason_code IN (
+            'access_change','administrative_cleanup','role_retired','security_response','user_request'
+        )
+    ),
+    CONSTRAINT identity_user_roles_state_consistent CHECK (
+        (active AND revoked_at IS NULL AND revoked_by IS NULL AND revocation_reason_code IS NULL)
+        OR (NOT active AND revoked_at IS NOT NULL AND revoked_by IS NOT NULL
+            AND revocation_reason_code IS NOT NULL)
+    ),
     FOREIGN KEY (tenant_id, user_id) REFERENCES reconforge.identity_users(tenant_id, id) ON DELETE CASCADE,
     FOREIGN KEY (tenant_id, role_id) REFERENCES reconforge.identity_roles(tenant_id, id) ON DELETE CASCADE
 );
@@ -571,7 +643,25 @@ CREATE TABLE IF NOT EXISTS reconforge.identity_role_permissions (
     tenant_id TEXT NOT NULL,
     role_id TEXT NOT NULL,
     permission_name TEXT NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    lifecycle_version BIGINT NOT NULL DEFAULT 1,
+    granted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    granted_by TEXT,
+    revoked_at TIMESTAMPTZ,
+    revoked_by TEXT,
+    revocation_reason_code TEXT,
     PRIMARY KEY (tenant_id, role_id, permission_name),
+    CONSTRAINT identity_role_permissions_lifecycle_version_positive CHECK (lifecycle_version >= 1),
+    CONSTRAINT identity_role_permissions_revocation_reason_closed CHECK (
+        revocation_reason_code IS NULL OR revocation_reason_code IN (
+            'access_change','administrative_cleanup','role_retired','security_response','user_request'
+        )
+    ),
+    CONSTRAINT identity_role_permissions_state_consistent CHECK (
+        (active AND revoked_at IS NULL AND revoked_by IS NULL AND revocation_reason_code IS NULL)
+        OR (NOT active AND revoked_at IS NOT NULL AND revoked_by IS NOT NULL
+            AND revocation_reason_code IS NOT NULL)
+    ),
     FOREIGN KEY (tenant_id, role_id) REFERENCES reconforge.identity_roles(tenant_id, id) ON DELETE CASCADE,
     FOREIGN KEY (tenant_id, permission_name) REFERENCES reconforge.identity_permissions(tenant_id, name) ON DELETE CASCADE
 );
@@ -587,19 +677,43 @@ CREATE TABLE IF NOT EXISTS reconforge.identity_sessions (
     last_used_at TIMESTAMPTZ,
     client_ip TEXT,
     user_agent TEXT,
+    lifecycle_version BIGINT NOT NULL DEFAULT 1,
+    revocation_reason_code TEXT,
+    revoked_by TEXT,
     PRIMARY KEY (tenant_id, id),
     UNIQUE (tenant_id, token_hash),
+    CONSTRAINT identity_sessions_lifecycle_version_positive CHECK (lifecycle_version >= 1),
+    CONSTRAINT identity_sessions_revocation_reason_closed CHECK (
+        revocation_reason_code IS NULL OR revocation_reason_code IN (
+            'access_change','administrative_cleanup','legacy_or_user_logout',
+            'scim_deactivation','security_response','user_disabled','user_logout','user_request'
+        )
+    ),
+    CONSTRAINT identity_sessions_revocation_state_consistent CHECK (
+        (revoked_at IS NULL AND revocation_reason_code IS NULL AND revoked_by IS NULL)
+        OR (revoked_at IS NOT NULL AND revocation_reason_code IS NOT NULL)
+    ),
     FOREIGN KEY (tenant_id, user_id) REFERENCES reconforge.identity_users(tenant_id, id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_identity_sessions_active
     ON reconforge.identity_sessions (tenant_id, token_hash, expires_at, revoked_at);
+CREATE INDEX IF NOT EXISTS idx_identity_users_admin_page
+    ON reconforge.identity_users (tenant_id, username, id);
+CREATE INDEX IF NOT EXISTS idx_identity_sessions_admin_page
+    ON reconforge.identity_sessions (tenant_id, created_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS idx_identity_users_username
     ON reconforge.identity_users (tenant_id, username);
 CREATE INDEX IF NOT EXISTS idx_identity_user_roles_user
     ON reconforge.identity_user_roles (tenant_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_identity_role_permissions_role
     ON reconforge.identity_role_permissions (tenant_id, role_id, permission_name);
+CREATE INDEX IF NOT EXISTS idx_identity_roles_admin_page
+    ON reconforge.identity_roles (tenant_id, active, name, id);
+CREATE INDEX IF NOT EXISTS idx_identity_user_roles_active
+    ON reconforge.identity_user_roles (tenant_id, user_id, active, role_id);
+CREATE INDEX IF NOT EXISTS idx_identity_role_permissions_active
+    ON reconforge.identity_role_permissions (tenant_id, role_id, active, permission_name);
 
 ALTER TABLE reconforge.identity_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reconforge.identity_roles FORCE ROW LEVEL SECURITY;

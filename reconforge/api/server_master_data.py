@@ -8,7 +8,7 @@ from typing import TypeVar
 from fastapi import Request
 
 from reconforge.api.errors import APIError
-from reconforge.api.server_identity import request_tenant_id
+from reconforge.api.server_identity import request_execution_scope
 from reconforge.infrastructure.postgres import (
     PostgresConfigurationError,
     PostgresConnectionFactory,
@@ -48,10 +48,15 @@ def execute_postgres_master_data(request: Request, operation: MasterDataOperatio
             code="master_data_backend_not_configured",
             message="Server master-data backend is not configured.",
         )
-    tenant_id = request_tenant_id(request)
+    scope = request_execution_scope(request)
     try:
-        with PostgresTenantBoundary(factory).transaction(tenant_id) as connection:
-            return operation(PostgresMasterDataRepository(connection), tenant_id)
+        with PostgresTenantBoundary(factory).transaction(
+            scope.tenant_id,
+            organization_id=scope.organization_id,
+            workspace_id=scope.workspace_id,
+            legal_entity_id=scope.legal_entity_id,
+        ) as connection:
+            return operation(PostgresMasterDataRepository(connection), scope.tenant_id)
     except APIError:
         raise
     except PostgresMasterDataValidationError as exc:

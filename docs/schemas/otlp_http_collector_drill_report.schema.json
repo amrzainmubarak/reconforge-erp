@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/otlp_http_collector_drill_report.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile", "checks", "receiver_paths", "limitations"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "profile": {"const": "explicit-loopback-otlp-http-protobuf"},
+    "checks": {
+      "type": "object",
+      "minProperties": 11,
+      "maxProperties": 11,
+      "additionalProperties": {"const": true}
+    },
+    "receiver_paths": {"type": "array", "const": ["/v1/logs", "/v1/metrics", "/v1/traces"]},
+    "limitations": {"type": "array", "minItems": 4, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9_]+$"}}
+  }
+}

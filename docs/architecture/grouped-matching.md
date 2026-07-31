@@ -35,7 +35,9 @@ identity tie-break.
 
 - The v1 operation selects one group per request; batch non-overlap assignment
   is not implied.
-- Fees, FX, netting, carry-forward, and partial settlement are not modeled.
+- Fees and FX conversions are modeled via versioned grouped-request policy (`netting`
+  and `target_currency` + `fx_rates`). Carry-forward, partial settlement, and
+  throughput claims remain out-of-scope for this slice.
 - Throughput is not supported until reproducible grouped benchmarks exist.
 - The strategy has no persistence side effects and works without network
   access or a database.

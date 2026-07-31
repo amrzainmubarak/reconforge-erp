@@ -1,12 +1,12 @@
 schema_version: 1
-updated_at: "2026-07-27"
+updated_at: "2026-07-31"
 objective: >-
   Close Platform Foundation, Matching and Evidence 2.0, and Enterprise Product
   through evidence-defined vertical slices while preserving Community local-first
   operation and sovereign deployment.
 closure_policy:
-  all_tasks_completed: true
-  all_required_gates_verified: true
+  all_tasks_completed: false
+  all_required_gates_verified: false
   external_evidence_may_not_be_simulated: true
   unsupported_claims_forbidden:
     - universal_superiority
@@ -104,10 +104,11 @@ external_gate_policy:
   initial_status: planned
   gates:
     - id: p3_external_pilots
-      status: planned
+      status: engaged
       minimum_count: 3
       maximum_count: 5
       evidence_artifacts: []
     - id: p3_independent_security_review
-      status: planned
+      status: engaged
       evidence_artifacts: []
+      # Pending: real independent review report

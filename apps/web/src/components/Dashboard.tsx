@@ -241,7 +241,7 @@ export function Dashboard({ data, translate, colorSafe, onNavigate }: DashboardP
         <article className="panel panel--wide">
           <SectionHeading title={translate("executivePulse")} help={translate("executivePulseHelp")} action={translate("metricLineage")} />
           {pulseMetrics.length ? (
-            <div className="chart-wrap" aria-label={translate("executivePulse")}>
+            <div className="chart-wrap" role="group" aria-label={translate("executivePulse")}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={pulseMetrics} margin={{ top: 12, right: 6, left: -20, bottom: 4 }} accessibilityLayer>
                   <CartesianGrid vertical={false} stroke="var(--border-subtle)" strokeDasharray="3 5" />

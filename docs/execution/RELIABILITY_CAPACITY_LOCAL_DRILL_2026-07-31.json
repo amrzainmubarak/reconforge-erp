@@ -1,0 +1,33 @@
+{
+  "checks": {
+    "all_api_requests_succeeded": true,
+    "all_sources_available": true,
+    "api_window_complete": true,
+    "backlog_became_critical": true,
+    "backlog_recovered_to_normal": true,
+    "job_query_under_five_seconds": true,
+    "oldest_age_recovered_to_zero": true
+  },
+  "limitations": [
+    "single_process_in_memory_http_transport",
+    "synthetic_local_sqlite_data",
+    "single_run_not_production_slo",
+    "no_soak_or_distributed_capacity_claim"
+  ],
+  "measurements": {
+    "api_error_basis_points": 0,
+    "api_p95_milliseconds": 7,
+    "api_wall_milliseconds": 9767,
+    "job_aggregate_query_milliseconds": 0,
+    "process_memory_mebibytes": 146,
+    "queued_jobs": 1000,
+    "requests": 1000
+  },
+  "profile": "local-synthetic-capacity-and-backlog-recovery",
+  "runtime": {
+    "logical_cpus": 16,
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.14.6"
+  },
+  "schema_version": 1
+}

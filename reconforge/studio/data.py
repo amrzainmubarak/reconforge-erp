@@ -128,15 +128,26 @@ def _evidence_coverage_cards(exceptions: pd.DataFrame, output_path: Path) -> str
         high_critical = 0
     else:
         risk_score = pd.Series(
-            [_parse_amount_decimal(value) for value in exceptions.get("risk_score", pd.Series([None] * len(exceptions), index=exceptions.index))],
+            [
+                _parse_amount_decimal(value)
+                for value in exceptions.get("risk_score", pd.Series([None] * len(exceptions), index=exceptions.index))
+            ],
             index=exceptions.index,
         )
         risk_level = exceptions.get("risk_level", pd.Series([""] * len(exceptions))).astype(str).str.lower()
-        high_risk_score = pd.Series([value is not None and value >= Decimal("61") for value in risk_score], index=exceptions.index)
+        high_risk_score = pd.Series(
+            [value is not None and value >= Decimal("61") for value in risk_score], index=exceptions.index
+        )
         high_critical = int((high_risk_score | risk_level.isin({"high", "critical"})).sum())
     payload = _json_payload(output_path / "evidence" / "evidence_index.json")
     case_count_value = payload.get("case_count")
-    evidence_cases = int(case_count_value) if isinstance(case_count_value, int) else len(payload.get("cases", [])) if isinstance(payload.get("cases"), list) else 0
+    evidence_cases = (
+        int(case_count_value)
+        if isinstance(case_count_value, int)
+        else len(payload.get("cases", []))
+        if isinstance(payload.get("cases"), list)
+        else 0
+    )
     coverage = round((evidence_cases / high_critical) * 100, 2) if high_critical else 100.0
     return "".join(
         [
@@ -177,9 +188,13 @@ def _filter_exceptions(
     if severity:
         severity_values = pd.Series([""] * len(filtered), index=filtered.index)
         if "severity" in filtered.columns:
-            severity_values = severity_values.mask(filtered["severity"].astype(str).str.strip().ne(""), filtered["severity"].astype(str))
+            severity_values = severity_values.mask(
+                filtered["severity"].astype(str).str.strip().ne(""), filtered["severity"].astype(str)
+            )
         if "risk_level" in filtered.columns:
-            severity_values = severity_values.mask(severity_values.str.strip().eq(""), filtered["risk_level"].astype(str))
+            severity_values = severity_values.mask(
+                severity_values.str.strip().eq(""), filtered["risk_level"].astype(str)
+            )
         filtered = filtered[severity_values.str.lower().eq(severity.lower())]
     if exception_type and "exception_type" in filtered.columns:
         filtered = filtered[filtered["exception_type"].astype(str).str.lower().eq(exception_type.lower())]
@@ -196,27 +211,37 @@ def _filter_exceptions(
     if sort == "amount_impact":
         amount_series = _amount_series(filtered)
         tie_breaker = filtered.get("exception_id", pd.Series([""] * len(filtered))).astype(str)
-        filtered = filtered.assign(
-            _sort_amount=amount_series,
-            _sort_amount_valid=amount_series.notna(),
-            _sort_tie=tie_breaker,
-        ).sort_values(
-            ["_sort_amount_valid", "_sort_amount", "_sort_tie"],
-            ascending=[False, False, True],
-        ).drop(columns=["_sort_amount", "_sort_amount_valid", "_sort_tie"])
+        filtered = (
+            filtered.assign(
+                _sort_amount=amount_series,
+                _sort_amount_valid=amount_series.notna(),
+                _sort_tie=tie_breaker,
+            )
+            .sort_values(
+                ["_sort_amount_valid", "_sort_amount", "_sort_tie"],
+                ascending=[False, False, True],
+            )
+            .drop(columns=["_sort_amount", "_sort_amount_valid", "_sort_tie"])
+        )
     elif sort == "updated_at" and "updated_at" in filtered.columns:
         filtered = filtered.sort_values("updated_at", ascending=False)
     elif "risk_score" in filtered.columns:
-        risk_scores = pd.Series([_parse_amount_decimal(value) for value in filtered["risk_score"]], index=filtered.index)
+        risk_scores = pd.Series(
+            [_parse_amount_decimal(value) for value in filtered["risk_score"]], index=filtered.index
+        )
         tie_breaker = filtered.get("exception_id", pd.Series([""] * len(filtered))).astype(str)
-        filtered = filtered.assign(
-            _sort_risk=risk_scores,
-            _sort_risk_valid=risk_scores.notna(),
-            _sort_tie=tie_breaker,
-        ).sort_values(
-            ["_sort_risk_valid", "_sort_risk", "_sort_tie"],
-            ascending=[False, False, True],
-        ).drop(columns=["_sort_risk", "_sort_risk_valid", "_sort_tie"])
+        filtered = (
+            filtered.assign(
+                _sort_risk=risk_scores,
+                _sort_risk_valid=risk_scores.notna(),
+                _sort_tie=tie_breaker,
+            )
+            .sort_values(
+                ["_sort_risk_valid", "_sort_risk", "_sort_tie"],
+                ascending=[False, False, True],
+            )
+            .drop(columns=["_sort_risk", "_sort_risk_valid", "_sort_tie"])
+        )
     return filtered
 
 

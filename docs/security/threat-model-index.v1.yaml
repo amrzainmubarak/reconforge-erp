@@ -143,7 +143,7 @@ modules:
         test_evidence: [tests/test_api_auth.py, tests/test_api_dependencies.py, tests/test_policy_engine.py, tests/test_approval_sod.py, tests/test_approval_surface_inventory.py, tests/test_workflow_state_machine.py]
         residual_risk_ids: [R-007, R-011]
         limitations:
-          - Trusted-local labels cannot bypass the bounded inventoried no-self-approval property, but they are not enterprise principals; universal route/repository ABAC, governed emergency access, federation, and MFA are not implemented.
+          - Trusted-local labels cannot bypass the bounded inventoried no-self-approval property, but they are not enterprise principals; bounded federation, emergency review, and WebAuthn MFA now exist, while universal route/repository ABAC, recovery/attestation governance, hosted interoperability, and deployed effectiveness remain absent.
       - threat_id: TM-T-004
         status: partial
         attack_surface: Tenant header routing, database-per-tenant paths, PostgreSQL principal context, and optional server dependencies.
@@ -156,19 +156,19 @@ modules:
         status: partial
         attack_surface: Database mutations, audit append, outbox publication state, retry, backup, import, and restore transitions.
         controls: [SEC-C-005, SEC-C-006, SEC-C-007]
-        test_evidence: [tests/test_atomic_legacy_services.py, tests/test_audit_events.py, tests/test_db_backup_restore.py, tests/test_db_backup_structured_ingress.py, tests/test_db_import_structured_ingress.py, tests/test_outbox_delivery.py]
+        test_evidence: [tests/test_atomic_legacy_services.py, tests/test_audit_events.py, tests/test_db_backup_restore.py, tests/test_db_backup_structured_ingress.py, tests/test_db_import_structured_ingress.py, tests/test_outbox_delivery.py, tests/test_upgrade_orchestrator.py]
         residual_risk_ids: [R-003, R-008]
         limitations:
-          - Local DB import and backup/manifest JSON are bounded before mutation/allocation, but compatibility-record semantics remain permissive; atomic audit/outbox migration is incomplete across legacy services and external publisher idempotency is not proven.
+          - Local DB import and backup/manifest JSON are bounded before mutation/allocation. The upgrade saga distinguishes not-applied, recovered, and uncertain effects; tagged-wheel, SQLite, PostgreSQL 17.10 encrypted restore/Alembic, immutable-object-catalog, strict-configuration, signed-pack, and all-resource local composition drills pass. Host-loss, distributed cutover, production key custody, zero downtime, and external publisher idempotency are not proven; atomic audit/outbox migration remains incomplete across legacy services.
       - threat_id: TM-T-007
         status: deployment-dependent
         attack_surface: Python dependencies, workflows, build tools, container inputs, and optional service configuration.
         controls: [SEC-C-008, SEC-C-010]
         test_evidence: [tests/test_release_readiness_docs.py, tests/test_security_architecture.py]
-        residual_risk_ids: [R-009]
+        residual_risk_ids: [R-019]
         limitations:
           - Dependencies are not locked with hashes and no current clean-tree signed provenance is available.
-    module_test_evidence: [tests/test_api_foundation.py, tests/test_db_backup_structured_ingress.py, tests/test_db_export_import.py, tests/test_db_import_structured_ingress.py, tests/test_studio_auth.py]
+    module_test_evidence: [tests/test_api_foundation.py, tests/test_db_backup_structured_ingress.py, tests/test_db_export_import.py, tests/test_db_import_structured_ingress.py, tests/test_studio_auth.py, tests/test_upgrade_orchestrator.py]
     assumptions:
       - The operator protects the local operating-system account, database paths, backups, and process environment.
       - Enabled HTTP services are restricted to reviewed local or self-hosted network boundaries.
@@ -519,6 +519,48 @@ modules:
     out_of_scope:
       - Credential handling, live ERP access, writeback, vendor certification, and autonomous semantic mapping approval.
 
+  - module_id: packs.lifecycle
+    registry_maturity: experimental
+    capability_status: foundation
+    threat_model_status: evidence-bounded
+    owner: platform-security
+    interfaces: [library]
+    module_data_classifications: [control-policy-metadata, publisher-key-metadata]
+    architecture_boundaries: [TB-003, TB-005, TB-007]
+    assets:
+      - id: signed-pack-content-and-identity
+        description: Declarative control metadata, rules, golden expectations, dependencies, versions, publisher and content identity.
+        data_class: DC-002
+        objectives: [integrity, auditability]
+      - id: pack-lifecycle-authority-and-state
+        description: Trusted public keys, maker-checker actors, immutable versions, active state, and lifecycle events.
+        data_class: DC-006
+        objectives: [confidentiality, integrity, auditability]
+    actors: [ACT-001, ACT-003, ACT-005]
+    threat_cases:
+      - threat_id: TM-T-001
+        status: bounded
+        attack_surface: Bounded signed JSON envelope, declarative metadata/rules, exact financial literals, and golden expectation.
+        controls: [SEC-C-001, SEC-C-002]
+        test_evidence: [tests/test_signed_pack_lifecycle.py, tests/test_file_ingestion_inventory.py]
+        residual_risk_ids: [R-018]
+        limitations:
+          - Rule conformance proves schema and synthetic identity only, not business effectiveness or safe application to customer data.
+      - threat_id: TM-T-007
+        status: partial
+        attack_surface: Publisher key selection, package signature, dependency graph, approval, activation, upgrade, disable, and rollback.
+        controls: [SEC-C-003, SEC-C-008, SEC-C-010]
+        test_evidence: [tests/test_signed_pack_lifecycle.py, tests/test_p3_ent_008_exit_audit.py]
+        residual_risk_ids: [R-009, R-019]
+        limitations:
+          - Trust keys and actors are operator-provided; SQLite is local and no external publisher identity or multi-node authority is proven.
+    module_test_evidence: [tests/test_signed_pack_lifecycle.py, tests/test_p3_ent_008_exit_audit.py, tests/test_file_ingestion_inventory.py]
+    assumptions:
+      - Operators authenticate publisher keys out of band and assign distinct authorized maker, checker, and operator identities.
+      - Pack rules remain data-only and human-governed before they affect financial review decisions.
+    out_of_scope:
+      - Executable extensions, public marketplace, customer-data migrations, legal publisher identity, external assurance, compliance, certification, HA, and distributed activation.
+
   - module_id: plugins.export
     registry_maturity: experimental
     capability_status: foundation
@@ -533,7 +575,7 @@ modules:
         data_class: DC-003
         objectives: [confidentiality, integrity, availability]
       - id: adapter-registry-and-contracts
-        description: Built-in adapter names, supported formats, projection contracts, and activation boundaries.
+        description: Built-in adapter names, signed data-only manifests, network-read registrations, supported formats, projection contracts, and activation boundaries.
         data_class: DC-002
         objectives: [integrity, auditability]
     actors: [ACT-001, ACT-003, ACT-005]
@@ -547,13 +589,14 @@ modules:
         limitations:
           - Built-in adapters do not authenticate export origin or provide general malware scanning beyond the bounded tabular preflight.
       - threat_id: TM-T-007
-        status: partial
+        status: bounded
         attack_surface: Adapter registry, future extension packaging, dependencies, network capability, credentials, and undeclared egress.
         controls: [SEC-C-008, SEC-C-010]
-        test_evidence: [tests/test_v03_platform.py, tests/test_release_readiness_docs.py]
+        test_evidence: [tests/test_connector_sdk.py, tests/test_connector_package.py, tests/test_connector_network.py, tests/test_connector_durable_workload.py, tests/test_file_ingestion_inventory.py]
         residual_risk_ids: [R-009]
         limitations:
-          - No signed third-party connector package or sandbox exists; only built-in local adapters are currently allowed.
+          - Signed packages authenticate bounded manifest data only and cannot install executable code; trusted-key administration and production provider composition remain deployment-owned.
+          - Network evidence uses a synthetic transport and a local durable-job/object-store sandbox; no live vendor interoperability or distributed rate quota is established.
       - threat_id: TM-T-006
         status: deployment-dependent
         attack_surface: Canonical projected records, local intermediate files, logs, downstream reports, and operator-selected retention.
@@ -562,12 +605,12 @@ modules:
         residual_risk_ids: [R-014, R-017]
         limitations:
           - Adapters do not own downstream disclosure approval, encryption, deletion, or recipient access.
-    module_test_evidence: [tests/test_file_ingestion_inventory.py, tests/test_file_ingress_security.py, tests/test_v03_platform.py]
+    module_test_evidence: [tests/test_file_ingestion_inventory.py, tests/test_file_ingress_security.py, tests/test_connector_sdk.py, tests/test_connector_package.py, tests/test_connector_network.py, tests/test_connector_durable_workload.py, tests/test_v03_platform.py]
     assumptions:
       - Adapter inputs are local exports selected by an authorized workspace operator.
-      - Any future network or write capability requires a separate reviewed connector contract and threat model.
+      - Any provider registration is operator-approved and any credential resolver is tenant-scoped and non-disclosing.
     out_of_scope:
-      - Live credentials, network connectors, arbitrary plugin loading, writeback, signed packages, and sandbox execution.
+      - Live vendor interoperability, production credential-vault integration, arbitrary plugin loading, writeback, distributed quotas, and external executable connector installation.
 
   - module_id: studio.modern
     registry_maturity: experimental

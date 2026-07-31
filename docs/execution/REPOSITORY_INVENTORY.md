@@ -180,7 +180,7 @@ ADRs to 81; schemas remain 53 and workflows remain six.
 - `.github/workflows/`: CI, CodeQL, Docker, security, release candidate with integrated exact-subject SBOMs, and OpenSSF Scorecard workflows; action references observed in the workflows are pinned by full commit SHA.
 - `Dockerfile`: digest-pinned Python 3.11 slim base plus checksum/version-pinned uv and a locked non-editable runtime-only sync; local daemon verification is blocked in this environment.
 - `docker-compose.yml`: local report/dashboard services; image tag is mutable.
-- `pyproject.toml` + `uv.lock`: lower-bounded consumer metadata plus a universal hash-bearing repository resolution for 113 non-root runtime/server/observability/backup/build/tool packages, enforced with exact uv/cutoff policy; server includes boto3, observability pins OpenTelemetry API/SDK 1.44.0, and backup pins cryptography 49.0.0.
+- `pyproject.toml` + `uv.lock`: lower-bounded consumer metadata plus a universal hash-bearing repository resolution for 118 non-root runtime/server/observability/backup/federation/build/tool packages, enforced with exact uv/cutoff policy; server includes boto3, observability pins OpenTelemetry API/SDK 1.44.0, backup pins cryptography 49.0.0, and federation pins joserfc 1.7.4 plus python3-saml 1.16.0.
 - `apps/web/package-lock.json`: exact npm dependency versions for the web app; 155 non-root entries lack embedded `resolved`/`integrity` values and remain an explicit gap.
 
 ## Important inventory limitations

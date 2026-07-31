@@ -18,6 +18,7 @@ from reconforge.application.pagination import (
     SortDefinition,
     cursor_scope_digest,
 )
+from reconforge.auth import AuthServiceError, LocalAuthService
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.platform.common import PlatformError
@@ -53,9 +54,13 @@ def _cursor_page(
     scope = cursor_scope_digest({"resource": "evidence", "status": status.casefold(), "tenant": tenant})
     paginator = KeysetPaginator(codec, (SortDefinition("created", ("created_at",)),))
     try:
-        page = paginator.page(records, sort_key="created", direction="desc", scope_digest=scope, limit=limit, cursor=cursor)
+        page = paginator.page(
+            records, sort_key="created", direction="desc", scope_digest=scope, limit=limit, cursor=cursor
+        )
     except CursorError as exc:
-        raise APIError(status_code=400, code=exc.code, message="The pagination cursor is invalid for this request.") from exc
+        raise APIError(
+            status_code=400, code=exc.code, message="The pagination cursor is invalid for this request."
+        ) from exc
     return [dict(record) for record in page.items], page.next_cursor
 
 
@@ -121,6 +126,30 @@ def _server_record(record: dict[str, object]) -> dict[str, object]:
     return {**record, "source_backend": "postgresql-evidence-registry"}
 
 
+def _is_server_manage_authorized(request: Request) -> bool:
+    principal = getattr(request.state, "server_principal", None)
+    permissions: frozenset[str] = getattr(principal, "permissions", frozenset())
+    return "evidence.manage" in permissions
+
+
+def _require_evidence_manage_access(
+    request: Request, current_user: EvidenceRead, connection: sqlite3.Connection | None
+) -> None:
+    if server_evidence_enabled(request):
+        if not _is_server_manage_authorized(request):
+            raise APIError(status_code=403, code="permission_denied", message="Permission denied.")
+        return
+    if connection is None:
+        raise APIError(status_code=500, code="db_not_configured", message="Local auth database is not configured.")
+    try:
+        if not LocalAuthService(connection).user_has_permission(
+            username=current_user.username, permission="evidence.manage"
+        ):
+            raise APIError(status_code=403, code="permission_denied", message="Permission denied.")
+    except AuthServiceError as exc:
+        raise APIError(status_code=403, code="permission_denied", message=str(exc)) from exc
+
+
 @router.get("")
 def list_evidence(
     request: Request,
@@ -135,7 +164,9 @@ def list_evidence(
     """List evidence metadata without exposing artifact bytes."""
 
     if cursor is not None and pagination != "cursor":
-        raise APIError(status_code=400, code="cursor_mode_required", message="Set pagination=cursor when supplying a cursor.")
+        raise APIError(
+            status_code=400, code="cursor_mode_required", message="Set pagination=cursor when supplying a cursor."
+        )
     if pagination == "cursor" and offset != 0:
         raise APIError(status_code=400, code="pagination_mode_conflict", message="Offset is not valid in cursor mode.")
     if server_evidence_enabled(request):
@@ -206,12 +237,62 @@ def get_evidence(
         record = execute_postgres_evidence(
             request, lambda repository, tenant: repository.get(tenant_id=tenant, evidence_id=evidence_id)
         )
-        return {"evidence": _server_record(record), "source": {"kind": "postgresql-evidence-registry", "server_mode": True}}
+        return {
+            "evidence": _server_record(record),
+            "source": {"kind": "postgresql-evidence-registry", "server_mode": True},
+        }
     try:
         record = EvidenceRegistryService(_local_connection(connection)).get(evidence_id)
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=404, code="evidence_record_not_found", message=str(exc)) from exc
     return {"evidence": record}
+
+
+@router.get("/records/{evidence_id}/drill-down")
+def get_evidence_drill_down(
+    request: Request,
+    evidence_id: str,
+    current_user: EvidenceRead,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+    direction: Literal["up", "down", "both"] = "both",
+    max_depth: Annotated[int, Query(ge=1, le=8)] = 2,
+    include_sensitive: bool = False,
+    limit: Annotated[int, Query(ge=1, le=1_000)] = 250,
+    offset: Annotated[int, Query(ge=0, le=10_000_000)] = 0,
+) -> dict[str, object]:
+    """Return a governance-safe evidence relationship graph with optional sensitive fields."""
+
+    if include_sensitive:
+        _require_evidence_manage_access(request, current_user, connection)
+    if server_evidence_enabled(request):
+        result = execute_postgres_evidence(
+            request,
+            lambda repository, tenant: repository.drill_down(
+                tenant_id=tenant,
+                evidence_id=evidence_id,
+                direction=direction,
+                max_depth=max_depth,
+                include_sensitive=include_sensitive,
+                limit=limit,
+                offset=offset,
+                actor_id=current_user.id,
+                request_id=str(getattr(request.state, "request_id", "")),
+            ),
+        )
+        return {"drill_down": result, "source": {"kind": "postgresql-evidence-registry", "server_mode": True}}
+    try:
+        result = EvidenceRegistryService(_local_connection(connection)).drill_down(
+            evidence_id,
+            direction=direction,
+            max_depth=max_depth,
+            include_sensitive=include_sensitive,
+            limit=limit,
+            offset=offset,
+            actor_label=current_user.username,
+        )
+    except (DatabaseError, PlatformError) as exc:
+        raise APIError(status_code=400, code="evidence_drill_down_failed", message=str(exc)) from exc
+    return {"drill_down": result}
 
 
 @router.post("/records")
@@ -270,7 +351,9 @@ def link_evidence(
     """Link one evidence object to a tenant-scoped governed object."""
 
     if not server_evidence_enabled(request):
-        raise APIError(status_code=501, code="evidence_link_server_only", message="Server evidence linking is not enabled.")
+        raise APIError(
+            status_code=501, code="evidence_link_server_only", message="Server evidence linking is not enabled."
+        )
     link = execute_postgres_evidence(
         request,
         lambda repository, tenant: repository.link(
@@ -328,7 +411,9 @@ def verify_evidence(
     """Record a checksum calculated by a trusted storage verifier."""
 
     if not server_evidence_enabled(request):
-        raise APIError(status_code=501, code="evidence_verify_server_only", message="Server evidence verification is not enabled.")
+        raise APIError(
+            status_code=501, code="evidence_verify_server_only", message="Server evidence verification is not enabled."
+        )
     result = execute_postgres_evidence(
         request,
         lambda repository, tenant: repository.verify_checksum(

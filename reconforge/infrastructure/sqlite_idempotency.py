@@ -25,12 +25,18 @@ def _decode(row: sqlite3.Row) -> IdempotencyReservation:
     except ValueError as exc:
         raise RuntimeError("Stored idempotency response encoding is invalid.") from exc
     return IdempotencyReservation(
-        schema_version=int(row["schema_version"]), tenant_id=str(row["tenant_id"]),
-        scope=str(row["scope"]), key=str(row["idempotency_key"]),
-        request_digest=str(row["request_digest"]), owner_token=str(row["owner_token_digest"]),
-        status=str(row["status"]), response=response,
-        response_digest=str(row["response_digest"]), content_type=str(row["content_type"]),
-        created_at=str(row["created_at"]), expires_at=str(row["expires_at"]),
+        schema_version=int(row["schema_version"]),
+        tenant_id=str(row["tenant_id"]),
+        scope=str(row["scope"]),
+        key=str(row["idempotency_key"]),
+        request_digest=str(row["request_digest"]),
+        owner_token=str(row["owner_token_digest"]),
+        status=str(row["status"]),
+        response=response,
+        response_digest=str(row["response_digest"]),
+        content_type=str(row["content_type"]),
+        created_at=str(row["created_at"]),
+        expires_at=str(row["expires_at"]),
         completed_at=str(row["completed_at"]),
     )
 
@@ -63,9 +69,21 @@ class SQLiteIdempotencyRepository:
                     (schema_version,tenant_id,scope,idempotency_key,request_digest,owner_token_digest,status,
                      response_body,response_digest,content_type,created_at,expires_at,completed_at)
                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                    (reservation.schema_version, reservation.tenant_id, reservation.scope, reservation.key,
-                     reservation.request_digest, digest_bytes(reservation.owner_token.encode()), reservation.status, "", "", "",
-                     reservation.created_at, reservation.expires_at, ""),
+                    (
+                        reservation.schema_version,
+                        reservation.tenant_id,
+                        reservation.scope,
+                        reservation.key,
+                        reservation.request_digest,
+                        digest_bytes(reservation.owner_token.encode()),
+                        reservation.status,
+                        "",
+                        "",
+                        "",
+                        reservation.created_at,
+                        reservation.expires_at,
+                        "",
+                    ),
                 )
                 self.connection.commit()
                 return IdempotencyBeginResult(reservation, True, False)
@@ -81,8 +99,13 @@ class SQLiteIdempotencyRepository:
             raise
 
     def complete(
-        self, reservation: IdempotencyReservation, *, response: bytes,
-        response_digest: str, content_type: str, completed_at: str,
+        self,
+        reservation: IdempotencyReservation,
+        *,
+        response: bytes,
+        response_digest: str,
+        content_type: str,
+        completed_at: str,
     ) -> IdempotencyReservation:
         self._begin_transaction()
         try:
@@ -90,9 +113,18 @@ class SQLiteIdempotencyRepository:
                 """UPDATE idempotency_records SET status='completed',response_body=?,response_digest=?,
                    content_type=?,completed_at=? WHERE tenant_id=? AND scope=? AND idempotency_key=?
                    AND request_digest=? AND owner_token_digest=? AND status='pending' AND expires_at>?""",
-                (base64.b64encode(response).decode("ascii"), response_digest, content_type, completed_at, reservation.tenant_id,
-                 reservation.scope, reservation.key, reservation.request_digest,
-                 digest_bytes(reservation.owner_token.encode()), completed_at),
+                (
+                    base64.b64encode(response).decode("ascii"),
+                    response_digest,
+                    content_type,
+                    completed_at,
+                    reservation.tenant_id,
+                    reservation.scope,
+                    reservation.key,
+                    reservation.request_digest,
+                    digest_bytes(reservation.owner_token.encode()),
+                    completed_at,
+                ),
             )
             if cursor.rowcount != 1:
                 raise IdempotencyOwnershipError("Idempotency reservation ownership is stale or invalid.")

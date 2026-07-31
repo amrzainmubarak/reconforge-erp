@@ -10,9 +10,11 @@ from reconforge.infrastructure.postgres import (
     POSTGRES_RLS_SCHEMA_SQL,
     PostgresConfigurationError,
     PostgresConnectionFactory,
+    PostgresExecutionScope,
     PostgresSettings,
     PostgresTenantBoundary,
     PostgresUnavailableError,
+    _hybrid_row_factory,
     _load_psycopg,
     install_postgres_rls_schema,
     normalize_scope_id,
@@ -71,12 +73,28 @@ def test_scope_ids_reject_traversal_and_normalize_safe_ids() -> None:
 def test_tenant_scope_uses_parameterized_transaction_local_settings() -> None:
     connection = _FakeConnection()
 
-    assert set_local_tenant_scope(connection, "Tenant_A", "Org_1") == ("tenant_a", "org_1")
+    assert set_local_tenant_scope(
+        connection,
+        "Tenant_A",
+        "Org_1",
+        workspace_id="Workspace_1",
+        legal_entity_id="Entity_1",
+    ) == PostgresExecutionScope("tenant_a", "org_1", "workspace_1", "entity_1")
     assert connection.executed == [
         ("SELECT set_config('app.tenant_id', %s, true)", ("tenant_a",)),
         ("SELECT set_config('app.organization_id', %s, true)", ("org_1",)),
+        ("SELECT set_config('app.workspace_id', %s, true)", ("workspace_1",)),
+        ("SELECT set_config('app.legal_entity_id', %s, true)", ("entity_1",)),
+        ("SELECT set_config('app.entity_id', %s, true)", ("entity_1",)),
     ]
     assert "tenant_a" not in connection.executed[0][0]
+
+
+def test_execution_scope_rejects_orphan_or_unsafe_children() -> None:
+    with pytest.raises(PostgresConfigurationError, match="requires organization_id"):
+        PostgresExecutionScope("tenant-a", legal_entity_id="entity-a")
+    with pytest.raises(PostgresConfigurationError, match="workspace_id"):
+        PostgresExecutionScope("tenant-a", workspace_id="../workspace")
 
 
 def test_tenant_boundary_scopes_and_closes_each_connection() -> None:
@@ -94,7 +112,13 @@ def test_tenant_boundary_scopes_and_closes_each_connection() -> None:
     assert len(connections) == 1
     assert connections[0].events == ["begin", "commit"]
     assert connections[0].closed is True
-    assert connections[0].executed[0][1] == ("tenant-a",)
+    assert connections[0].executed[:5] == [
+        ("SELECT set_config('app.tenant_id', %s, true)", ("tenant-a",)),
+        ("SELECT set_config('app.organization_id', %s, true)", ("",)),
+        ("SELECT set_config('app.workspace_id', %s, true)", ("",)),
+        ("SELECT set_config('app.legal_entity_id', %s, true)", ("",)),
+        ("SELECT set_config('app.entity_id', %s, true)", ("",)),
+    ]
 
 
 def test_tenant_boundary_rolls_back_and_closes_on_failure() -> None:
@@ -139,6 +163,7 @@ def test_connection_factory_configures_tls_and_timeout(monkeypatch: pytest.Monke
                 "connect_timeout": 7,
                 "application_name": "test-suite",
                 "options": "-c statement_timeout=1234",
+                "row_factory": _hybrid_row_factory,
                 "sslmode": "verify-full",
             },
         )

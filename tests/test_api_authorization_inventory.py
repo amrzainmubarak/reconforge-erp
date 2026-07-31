@@ -9,8 +9,8 @@ from reconforge.api import create_api_app
 from reconforge.api.authorization import build_route_authorization_inventory
 from reconforge.api.dependencies import require_any_permission, require_permission
 
-EXPECTED_ROUTE_COUNT = 156
-EXPECTED_DIGEST = "494c5a0d5cfe72a99b50737307099b8b901bc54e09d0fabbe063e164db043d40"
+EXPECTED_ROUTE_COUNT = 206
+EXPECTED_DIGEST = "fc4fe5e4a9ba708ef921e268a68850e8e68adc57d49283d8356b14790b9dd43c"
 
 
 def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Path) -> None:
@@ -19,7 +19,7 @@ def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Pa
 
     assert len(contracts) == EXPECTED_ROUTE_COUNT
     assert app.state.authorization_contract_digest == EXPECTED_DIGEST
-    assert {contract.mode for contract in contracts} == {"all", "any", "dynamic", "identity", "public"}
+    assert {contract.mode for contract in contracts} == {"all", "any", "dynamic", "identity", "public", "scim"}
     assert [contract for contract in contracts if contract.mode == "dynamic"] == [
         next(
             contract
@@ -29,6 +29,7 @@ def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Pa
         )
     ]
     assert all(contract.permissions for contract in contracts if contract.mode in {"all", "any"})
+    assert len([contract for contract in contracts if contract.mode == "scim"]) == 15
 
 
 def test_inventory_rejects_unclassified_and_stale_allowlisted_routes() -> None:

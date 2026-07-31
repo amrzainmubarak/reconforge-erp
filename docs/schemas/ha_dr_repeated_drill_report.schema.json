@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/ha_dr_repeated_drill_report.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "executed_at", "profile", "infrastructure", "runs", "summary", "limitations"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "executed_at": {"type": "string", "format": "date"},
+    "profile": {"const": "docker-single-host-primary-synchronous-standby-v1"},
+    "infrastructure": {
+      "type": "object", "additionalProperties": false,
+      "required": ["docker_server", "postgres_image", "node_count_per_run", "failure_domains_per_run"],
+      "properties": {
+        "docker_server": {"type": "string", "minLength": 1},
+        "postgres_image": {"const": "postgres:17.10-alpine"},
+        "node_count_per_run": {"const": 2},
+        "failure_domains_per_run": {"const": 1}
+      }
+    },
+    "runs": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"$ref": "#/$defs/run"}},
+    "summary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["run_count", "zero_acknowledged_transaction_loss_runs", "failover_rto_min_seconds", "failover_rto_median_seconds", "failover_rto_max_seconds", "failback_rto_min_seconds", "failback_rto_median_seconds", "failback_rto_max_seconds", "rto_ceiling_seconds", "all_runs_passed"],
+      "properties": {
+        "run_count": {"const": 3},
+        "zero_acknowledged_transaction_loss_runs": {"const": 3},
+        "failover_rto_min_seconds": {"type": "number", "exclusiveMinimum": 0},
+        "failover_rto_median_seconds": {"type": "number", "exclusiveMinimum": 0},
+        "failover_rto_max_seconds": {"type": "number", "exclusiveMinimum": 0},
+        "failback_rto_min_seconds": {"type": "number", "exclusiveMinimum": 0},
+        "failback_rto_median_seconds": {"type": "number", "exclusiveMinimum": 0},
+        "failback_rto_max_seconds": {"type": "number", "exclusiveMinimum": 0},
+        "rto_ceiling_seconds": {"const": 60.0},
+        "all_runs_passed": {"const": true}
+      }
+    },
+    "limitations": {
+      "type": "array", "minItems": 7, "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+      "contains": {"const": "single_host_not_host_loss"}
+    }
+  },
+  "$defs": {
+    "run": {
+      "type": "object", "additionalProperties": false,
+      "required": ["run", "failover_rpo_transactions", "failover_rto_seconds", "failback_rpo_transactions", "failback_rto_seconds", "final_sequence", "cleanup_passed"],
+      "properties": {
+        "run": {"type": "integer", "minimum": 1, "maximum": 3},
+        "failover_rpo_transactions": {"const": 0},
+        "failover_rto_seconds": {"type": "number", "exclusiveMinimum": 0, "maximum": 60.0},
+        "failback_rpo_transactions": {"const": 0},
+        "failback_rto_seconds": {"type": "number", "exclusiveMinimum": 0, "maximum": 60.0},
+        "final_sequence": {"const": 4},
+        "cleanup_passed": {"const": true}
+      }
+    }
+  }
+}

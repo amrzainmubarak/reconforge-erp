@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/otel_collector_drill_report.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile", "collector", "backend", "checks", "limitations"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "profile": {"const": "pinned-official-collector-file-backend"},
+    "collector": {
+      "type": "object", "additionalProperties": false, "required": ["image", "version_output"],
+      "properties": {
+        "image": {"const": "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib@sha256:93aad750175cbf1a973ae1c5886c3371f4d800f61be25cdd26870b8441ffe9fa"},
+        "version_output": {"const": "otelcol-contrib version 0.153.0"}
+      }
+    },
+    "backend": {
+      "type": "object", "additionalProperties": false, "required": ["bytes", "sha256"],
+      "properties": {"bytes": {"type": "integer", "minimum": 1}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+    },
+    "checks": {"type": "object", "minProperties": 9, "maxProperties": 9, "additionalProperties": {"const": true}},
+    "limitations": {"type": "array", "minItems": 4, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9_]+$"}}
+  }
+}

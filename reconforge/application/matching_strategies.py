@@ -10,6 +10,8 @@ from decimal import Decimal
 from types import MappingProxyType
 from typing import Literal, Protocol
 
+from reconforge.domain.grouped_matching import GroupedNettingMode
+
 StrategyMaturity = Literal["experimental", "beta", "stable"]
 
 
@@ -97,6 +99,11 @@ class MatchingStrategyRequest:
     mode: str = "one-to-one"
     currency_field: str = "currency"
     partition_field: str = "partition"
+    left_fee_field: str = "fee"
+    right_fee_field: str = "fee"
+    netting_mode: GroupedNettingMode = "gross"
+    target_currency: str = ""
+    fx_rates: tuple[Mapping[str, object], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -190,7 +197,12 @@ def request_digest(request: MatchingStrategyRequest, manifest_digest: str) -> st
             "partition_field": request.partition_field,
             "reference_field": request.reference_field,
             "right_id_field": request.right_id_field,
+            "right_fee_field": request.right_fee_field,
             "right_records": canonical_records(request.right_records),
+            "left_fee_field": request.left_fee_field,
+            "netting_mode": request.netting_mode,
+            "target_currency": request.target_currency,
+            "fx_rates": list(canonical_records(request.fx_rates)),
         }
     )
 

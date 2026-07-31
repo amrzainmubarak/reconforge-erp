@@ -16,7 +16,7 @@ risk_method:
     medium: [4, 7]
     high: [8, 11]
     critical: [12, 16]
-last_reviewed: "2026-07-26"
+last_reviewed: "2026-07-30"
 risks:
   - id: R-001
     title: Hosted tenant escape
@@ -161,18 +161,67 @@ risks:
     likelihood: possible
     impact: high
     inherent_risk: medium
-    status: open
+    status: partially_mitigated
     mitigations:
       - Tenant-scoped PostgreSQL password, RBAC, session, revocation, and bounded server-auth paths are tested.
+      - Static-JWKS OIDC and fixed-certificate SAML assertions use reviewed libraries, server-issued one-time challenges, durable replay, prelinked local authority, sanitized audit, and the existing revocable session.
+      - Authenticated SCIM User/Group HTTP and forced-RLS PostgreSQL lifecycle provide hash-only revocable client credentials, domain-scoped idempotency, role-free groups, conditional versions, sanitized audit, and atomic identity deactivation plus session revocation.
+      - Role-free service accounts use explicit direct least privilege, database-enforced human-only permission denial, hash-only bounded credentials, atomic rotation/revocation, forced RLS, append-only lifecycle events, and typed HTTP machine-principal composition without user roles.
+      - Privileged PostgreSQL permissions require a current role grant plus a short-lived forced-RLS append-only password-reauthentication assertion bound to the same human session; this is not represented as MFA.
+      - PostgreSQL role, role-permission, and user-role lifecycle is optimistic, tenant-scoped, audited, session-invalidating, retirement-safe, and protected against removing the final active roles.manage authority; the SQLite role shadow is disabled in server mode.
+      - Native federation links, SCIM credentials, service accounts, and notification routes have one human/MFA-governed optimistic disable surface whose transaction changes the runtime authority and appends bounded audit evidence.
+      - PostgreSQL audit administration is human/MFA-governed, cursor-bound, tenant-RLS-scoped, and redacted; domain and ledger-control chains verify separately without a global-chain claim.
       - Documentation explicitly withholds enterprise identity claims.
     evidence:
       - reconforge/infrastructure/postgres_identity.py
       - tests/test_api_server_identity.py
+      - tests/test_api_federation.py
+      - tests/test_oidc_verifier.py
+      - tests/test_saml_verifier.py
+      - reconforge/auth/scim.py
+      - reconforge/infrastructure/postgres_scim.py
+      - reconforge/infrastructure/postgres_scim_auth.py
+      - reconforge/api/routes/scim.py
+      - tests/test_api_scim.py
+      - tests/test_postgres_scim.py
+      - tests/test_postgres_scim_auth.py
+      - reconforge/infrastructure/postgres_service_accounts.py
+      - tests/test_postgres_service_accounts.py
+      - reconforge/api/server_identity.py
+      - tests/test_api_service_accounts.py
+      - reconforge/infrastructure/postgres_privileged_sessions.py
+      - tests/test_postgres_privileged_sessions.py
+      - tests/test_api_privileged_sessions.py
+      - reconforge/application/security_center.py
+      - reconforge/infrastructure/postgres_security_center.py
+      - reconforge/api/routes/security_center.py
+      - tests/test_postgres_security_center.py
+      - tests/test_api_security_center.py
+      - reconforge/application/identity_administration.py
+      - reconforge/infrastructure/postgres_identity_administration.py
+      - reconforge/api/routes/identity_administration.py
+      - tests/test_postgres_identity_administration.py
+      - tests/test_api_identity_administration.py
+      - reconforge/application/access_administration.py
+      - reconforge/infrastructure/postgres_access_administration.py
+      - reconforge/api/routes/access_administration.py
+      - tests/test_postgres_access_administration.py
+      - tests/test_api_access_administration.py
+      - reconforge/application/security_governance.py
+      - reconforge/infrastructure/postgres_security_governance.py
+      - reconforge/application/audit_browsing.py
+      - reconforge/infrastructure/postgres_audit_browsing.py
+      - reconforge/api/routes/audit_administration.py
+      - tests/test_audit_browsing.py
+      - tests/test_api_audit_administration.py
+      - reconforge/api/routes/security_governance.py
+      - tests/test_postgres_security_governance.py
+      - tests/test_api_security_governance.py
     residual_risk: medium
-    residual_rationale: Federation, MFA, provisioning, lifecycle administration, and multi-worker session integration are absent.
+    residual_rationale: Federation, SCIM, service accounts, privileged sessions, emergency review, WebAuthn, a count-only security overview, authoritative PostgreSQL user/session/role/policy lifecycle, and native integration disable are implemented. Workload federation, recovery and attestation governance, hosted interoperability, integration creation/enable/secret rotation, accessible UI, provider logout, and independent assurance remain absent.
     next_actions:
-      - Design provider-neutral federation and MFA boundaries.
-      - Add lifecycle, revocation, worker, UI, and principal-propagation tests.
+      - Implement recovery and attestation governance plus workload identity federation as separately governed slices.
+      - Add provider interoperability, integration creation/enable/secret-rotation governance, accessible UI, and independent security evidence.
     review_cadence_days: 60
     next_review: "2026-09-23"
   - id: R-008
@@ -187,14 +236,23 @@ risks:
     mitigations:
       - SQLite and PostgreSQL outboxes implement claim, lease, retry, dead-letter, and replay states.
       - Bounded workers use fresh connections and tested ownership transitions.
+      - The scheduler worker bounds tenant enumeration, uses one UTC instant per cycle, and opens fresh connections.
+      - Optional notification payloads are closed and redacted; destinations are digest-bound to immutable forced-RLS routes.
+      - HTTPS/SMTPS egress is default-off, exact-allowlisted, TLS-only, public-address checked, and pinned after DNS validation.
     evidence:
       - reconforge/infrastructure/postgres_outbox.py
+      - reconforge/workers/postgres_scheduler.py
+      - reconforge/application/notifications.py
+      - reconforge/infrastructure/notification_transports.py
+      - reconforge/infrastructure/postgres_notifications.py
       - tests/test_postgres_outbox.py
+      - tests/test_notifications.py
+      - tests/test_postgres_notifications.py
     residual_risk: medium
-    residual_rationale: No external transport, tenant enumerator, publisher idempotency contract, or managed deployment exists.
+    residual_rationale: Concrete transports and a bounded tenant enumerator now exist, but only injected synthetic transports are tested. A crash after provider acceptance and before outbox acknowledgement can still duplicate delivery; real provider interoperability, production secret custody, managed deployment, HA, and receiver-side idempotency evidence are absent.
     next_actions:
-      - Add transport/idempotency contracts and crash-after-publish recovery tests.
-      - Define tenant enumeration, observability, and deployment scheduling.
+      - Exercise approved real providers and receiver-side idempotency without customer data or repository secrets.
+      - Add crash-after-publish recovery, observability, capacity, HA, and managed deployment exercises.
     review_cadence_days: 60
     next_review: "2026-09-23"
   - id: R-009
@@ -320,14 +378,17 @@ risks:
     mitigations:
       - S3-compatible adapter verifies checksums, tenant keys, bounded reads, optional encryption/retention, and disables deletion by default.
       - Local/PostgreSQL registries preserve immutable artifact metadata and verification state.
+      - PostgreSQL retention policies and append-only assignments can extend but cannot shorten the versioned evidence metadata floor.
     evidence:
       - reconforge/infrastructure/object_storage.py
       - tests/test_evidence_object_storage.py
+      - reconforge/infrastructure/postgres_security_governance.py
+      - tests/test_postgres_security_governance.py
     residual_risk: high
-    residual_rationale: Worker upload, malware scanning, download authorization, retention enforcement, and restore replication remain open.
+    residual_rationale: Database retention metadata is monotonic, but propagation to object-store lock, backups, replicas, exports, restore workflows, and legal-hold authority remains open alongside worker upload, malware scanning, and download authorization.
     next_actions:
       - Implement trusted storage worker and malware-scanning hook.
-      - Add signed-download authorization, retention/versioning, restore, and tenant-escape tests.
+      - Add signed-download authorization and verified retention propagation across object storage, backup, replica, export, restore, and tenant-escape paths.
     review_cadence_days: 30
     next_review: "2026-08-24"
   - id: R-015
@@ -462,3 +523,35 @@ risks:
       - Add provider-neutral malware scanning and quarantine before any HTTP upload, evidence redistribution, or connector expansion.
     review_cadence_days: 30
     next_review: "2026-08-25"
+  - id: R-019
+    title: Network connector trust, egress, and replay failure
+    category: security
+    owner: platform-security
+    trigger: A connector package, destination, credential, response, cursor, retry, or resumed page crosses its declared trust and tenant boundary.
+    likelihood: possible
+    impact: critical
+    inherent_risk: high
+    status: partially_mitigated
+    mitigations:
+      - Closed read-only manifests and registrations reject write capability, undeclared endpoints, unsafe URL components, and unknown fields.
+      - Data-only 64 KiB packages use Ed25519 with a versioned active/revoked exact publisher-key registry and cannot declare executable entry points.
+      - HTTPS execution rejects any non-global DNS answer, pins one validated address while retaining TLS hostname verification, and never follows redirects.
+      - Secret values resolve only at execution through a disabled-by-default protocol and are absent from manifests, registrations, results, checkpoint artifacts, and safe errors.
+      - Cursor, idempotency key, timeout, response, rate, retry-attempt, and retry-delay bounds fail closed; policy and permanent failures are not retried.
+      - Immutable tenant page artifacts and generation-fenced durable-job effects bind registration, request, response, object, and output-chain digests for tested SQLite crash/resume.
+    evidence:
+      - reconforge/connectors/manifest.py
+      - reconforge/connectors/package.py
+      - reconforge/connectors/network.py
+      - reconforge/connectors/workload.py
+      - tests/test_connector_package.py
+      - tests/test_connector_network.py
+      - tests/test_connector_durable_workload.py
+      - docs/execution/P3_ENT_007_EXIT_AUDIT.yaml
+    residual_risk: high
+    residual_rationale: No live provider, production vault, persistent publisher approval service, distributed quota, executable-package sandbox, provider schema validation, external security review, or write-back compensation evidence exists.
+    next_actions:
+      - Validate one separately approved synthetic provider sandbox and production-class vault adapter without customer data before any live connector claim.
+      - Design distributed provider quotas, publisher approval and revocation operations, response malware/content controls, and independent security assessment.
+    review_cadence_days: 30
+    next_review: "2026-08-29"

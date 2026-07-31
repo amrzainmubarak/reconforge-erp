@@ -79,7 +79,9 @@ class RedisSettings:
         if parsed.scheme not in {"redis", "rediss"} or not parsed.netloc:
             raise RedisConfigurationError("Redis URL must use redis:// or rediss:// with a host.")
         if self.require_tls and parsed.scheme != "rediss":
-            raise RedisConfigurationError("Redis TLS is required; use a rediss:// URL or explicitly disable TLS for local development.")
+            raise RedisConfigurationError(
+                "Redis TLS is required; use a rediss:// URL or explicitly disable TLS for local development."
+            )
         if not _KEY_PREFIX_PATTERN.fullmatch(self.key_prefix):
             raise RedisConfigurationError("Redis key prefix contains unsafe characters or is too long.")
         if self.socket_timeout_seconds <= 0 or self.socket_connect_timeout_seconds <= 0:
@@ -93,8 +95,7 @@ def _load_redis() -> ModuleType:
         return importlib.import_module("redis")
     except ImportError as exc:
         raise RedisUnavailableError(
-            "Redis support is optional. Install the server extra with "
-            "`pip install 'reconforge-erp[server]'`."
+            "Redis support is optional. Install the server extra with `pip install 'reconforge-erp[server]'`."
         ) from exc
 
 
@@ -185,10 +186,10 @@ class TenantRedisStore:
         try:
             payload = encode_redis_session(
                 {
-                "session_id": record.session_id,
-                "user_id": record.user_id,
-                "token_hash": token_hash,
-                "expires_at": record.expires_at,
+                    "session_id": record.session_id,
+                    "user_id": record.user_id,
+                    "token_hash": token_hash,
+                    "expires_at": record.expires_at,
                 },
             ).text
         except PersistedJsonError as exc:
@@ -236,7 +237,10 @@ class TenantRedisStore:
     def is_session_revoked(self, tenant_id: str, session_id: str) -> bool:
         """Return whether a session has a live revocation marker."""
 
-        return self._call(lambda client: client.get(self._hashed_key(tenant_id, "revoked-session", session_id))) is not None
+        return (
+            self._call(lambda client: client.get(self._hashed_key(tenant_id, "revoked-session", session_id)))
+            is not None
+        )
 
     def revoke_token_hash(self, tenant_id: str, token_hash: str, *, ttl_seconds: int) -> None:
         """Store a token revocation marker without accepting the raw token."""

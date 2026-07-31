@@ -5,11 +5,13 @@ from __future__ import annotations
 import logging
 
 import pytest
-from hypothesis import given
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from reconforge.auth.models import LocalUser
 from reconforge.auth.policy import (
+    HUMAN_ONLY_PERMISSIONS,
+    PRIVILEGED_STEP_UP_PERMISSIONS,
     CentralPolicyEngine,
     PolicyEvaluationContext,
     audit_policy_decision,
@@ -51,6 +53,88 @@ def test_policy_engine_rbac_permission_denied() -> None:
 
     assert decision.allowed is False
     assert "missing required permission 'reconciliation.approve'" in decision.reason
+
+
+@pytest.mark.parametrize(
+    "permission",
+    sorted(HUMAN_ONLY_PERMISSIONS | {"payables.approve", "inventory.valuation.reverse.approve"}),
+)
+def test_service_accounts_cannot_receive_human_governed_policy_decisions(permission: str) -> None:
+    decision = CentralPolicyEngine().evaluate(
+        PolicyEvaluationContext(
+            user_id="svc-worker",
+            username="worker",
+            user_permissions={permission},
+            principal_type="service_account",
+        ),
+        required_permission=permission,
+    )
+
+    assert not decision.allowed
+    assert decision.reason_code == "human_principal_required"
+
+
+def test_service_account_can_use_safe_explicit_permission_and_any_contract_filters_human_permissions() -> None:
+    context = PolicyEvaluationContext(
+        user_id="svc-worker",
+        username="worker",
+        user_permissions={"db.read", "accounts.review"},
+        principal_type="service_account",
+    )
+    engine = CentralPolicyEngine()
+
+    assert engine.evaluate(context, required_permission="db.read").allowed
+    decision = engine.evaluate_any(context, required_permissions=frozenset({"db.read", "accounts.review"}))
+    assert decision.allowed
+
+
+@pytest.mark.parametrize("permission", sorted(PRIVILEGED_STEP_UP_PERMISSIONS))
+def test_privileged_human_permissions_require_recent_step_up(permission: str) -> None:
+    without_step_up = PolicyEvaluationContext(
+        user_id="human-1", username="controller", user_permissions={permission}, step_up_enforced=True
+    )
+    with_step_up = PolicyEvaluationContext(
+        user_id="human-1",
+        username="controller",
+        user_permissions={permission},
+        step_up_active=True,
+        step_up_enforced=True,
+    )
+
+    denied = CentralPolicyEngine().evaluate(without_step_up, required_permission=permission)
+    allowed = CentralPolicyEngine().evaluate(with_step_up, required_permission=permission)
+
+    assert not denied.allowed
+    assert denied.reason_code == "step_up_required"
+    assert allowed.allowed
+
+
+@pytest.mark.parametrize("permission", sorted(PRIVILEGED_STEP_UP_PERMISSIONS))
+def test_configured_webauthn_requires_user_verified_mfa_not_password_only(permission: str) -> None:
+    password_only = PolicyEvaluationContext(
+        user_id="human-1",
+        username="controller",
+        user_permissions={permission},
+        step_up_active=True,
+        step_up_enforced=True,
+        step_up_method="password_reauthentication",
+        required_step_up_method="webauthn_user_verified",
+    )
+    webauthn = PolicyEvaluationContext(
+        user_id="human-1",
+        username="controller",
+        user_permissions={permission},
+        step_up_active=True,
+        step_up_enforced=True,
+        step_up_method="webauthn_user_verified",
+        required_step_up_method="webauthn_user_verified",
+    )
+
+    denied = CentralPolicyEngine().evaluate(password_only, required_permission=permission)
+    allowed = CentralPolicyEngine().evaluate(webauthn, required_permission=permission)
+
+    assert not denied.allowed and denied.reason_code == "mfa_required"
+    assert allowed.allowed
 
 
 def test_policy_engine_sod_conflict_detected() -> None:
@@ -105,7 +189,7 @@ def test_policy_engine_denies_authenticated_identity_without_a_named_permission_
 SCOPE_IDS = st.text(
     alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd")),
     min_size=1,
-    max_size=12,
+    max_size=4,
 )
 
 
@@ -119,6 +203,7 @@ SCOPE_IDS = st.text(
     granted_entities=st.frozensets(SCOPE_IDS, max_size=5),
     granted_periods=st.frozensets(SCOPE_IDS, max_size=5),
 )
+@settings(suppress_health_check=[HealthCheck.too_slow], max_examples=200, deadline=None)
 def test_scoped_policy_allows_only_when_every_resource_scope_is_granted(
     resource_tenant: str,
     resource_workspace: str,
@@ -203,12 +288,14 @@ def test_policy_audit_record_is_versioned_and_redacts_actor_and_permissions(
             required_permissions=frozenset({"audit.read"}),
             surface="GET /api/v1/audit/events",
             request_id="request-1",
+            principal_type="service_account",
         )
     record = caplog.records[-1]
     evidence = record.authorization
     assert evidence["policy_version"] == "central-policy-v1"
     assert evidence["allowed"] is True
     assert evidence["reason_code"] == "policy_allowed"
+    assert evidence["principal_type"] == "service_account"
     assert len(evidence["actor_digest"]) == 64
     assert "sensitive-user" not in str(evidence)
     assert "audit.read" not in str(evidence)

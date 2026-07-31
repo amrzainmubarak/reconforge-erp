@@ -5,6 +5,86 @@
 
 ## Decisions
 
+### D-207: Access Changes Use Exact Sets and Never Restore Revoked Authority
+- **Date**: 2026-07-30
+- **Context**: The authoritative access API supports role creation, exact permission replacement, exact user-role replacement, retirement, and reactivation. Additive-looking checkbox UX can accidentally preserve authority unless current selections and exact replacement semantics are explicit.
+- **Decision**: Treat checked permissions and roles as the complete requested set, preload current assignments, and require the operator to explicitly remove anything no longer authorized. Reload all access, identity, and session views after every write. Keep retired roles visible for reactivation; reactivation never restores assignments or sessions. Hide current-operator assignment controls and retain server last-manager protection.
+- **Rationale**: Exact sets make the requested authority reproducible and auditable. Non-restoration prevents a retired policy from silently regaining users or authenticated sessions when reactivated.
+- **Reversibility**: Front-end/client-contract change only; no API, schema, migration, audit, or authentication change.
+
+### D-206: User Status Changes Preserve Revoked Sessions and Server Authority
+- **Date**: 2026-07-30
+- **Context**: The PostgreSQL identity service already atomically disables a user, revokes every active session, appends audit evidence, prevents self-disable and last-administrator loss, and supports re-enable without restoring sessions.
+- **Decision**: Expose only this existing status transition in the browser. Require the current step-up and CSRF boundary, exact `DISABLE` or `ENABLE` confirmation, and the lifecycle version. Hide the current operator's disable control, but retain all server guards. After mutation, replace only the closed returned user and reload sessions from the authoritative API; never infer session state or restore revoked sessions.
+- **Rationale**: Identity recovery and access removal must follow the same server transaction and lifecycle evidence as API clients. Treating re-enable as a new eligibility state rather than undoing revocation prevents silent session resurrection.
+- **Reversibility**: Front-end/client-contract change only. No API, database, migration, audit, authentication, or bearer compatibility change.
+
+### D-205: Browser Mutation Starts With One Explicitly Confirmed Session Revocation
+- **Date**: 2026-07-30
+- **Context**: The PostgreSQL identity lifecycle API already supports optimistic, audited single-session revocation, while broader browser mutations (user status, roles, integrations, and retention) have materially different consequences and unproved interaction paths.
+- **Decision**: Expose only active-session revocation first. Require `users.manage`, the existing human step-up and cookie-bound CSRF proof, a closed reason code, the exact literal `REVOKE`, and the server lifecycle version. Accept only the closed response, do not disclose its audit-event identifier or session digest, and clear local privileged state if the current session was revoked.
+- **Rationale**: This creates a narrow, reversible browser write vertical slice with explicit operator intent, stale-state protection, audit evidence, and a verifiable sign-out consequence without implying that broader identity or policy administration is safe to expose.
+- **Reversibility**: Front-end/client-contract change only. The existing API, persistence, audit event, migration, and bearer compatibility remain unchanged; the control can be removed without data migration.
+
+### D-204: Server Cookie Sessions Bind the Same Request Principal as Bearer Sessions
+- **Date**: 2026-07-30
+- **Context**: The PostgreSQL server middleware eagerly bound a `ServerPrincipal` only for Bearer credentials. Browser-cookie authentication could validate in a dependency but did not provide that context to synchronous step-up handlers, causing a real same-origin browser session to fail despite valid credentials.
+- **Decision**: Resolve the host-only browser session cookie in the server middleware after Bearer precedence, bind the resulting principal and transport to the request, and preserve CSRF enforcement in `get_current_user` whenever the bound transport is a browser cookie.
+- **Rationale**: A cookie session must be authorization-equivalent to the declared Bearer session without becoming a CSRF bypass. Request-level binding also prevents sync/async execution-context differences from silently removing the authenticated human principal.
+- **Reversibility**: Source-only compatibility fix. Bearer precedence, local mode, cookie attributes, API schemas, and database migrations remain unchanged.
+
+### D-203: Governance Metadata Is Read Before It Can Disable or Extend Retention
+- **Date**: 2026-07-30
+- **Context**: Integration disable and retention-policy APIs have immediate or monotonic operational consequences, while their browser disclosure and interaction boundaries had not yet been proved.
+- **Decision**: Present only independently authorized, closed-contract integration and retention metadata. Do not expose disable, policy lifecycle, or evidence-retention application controls until each has a tested confirmation, reason, optimistic conflict, audit, and retained-floor interaction.
+- **Rationale**: Read visibility does not justify operational authority. Keeping the browser surface read-only prevents accidental connector disruption or retention-state changes before an accountable human workflow is proved.
+- **Reversibility**: Fully reversible front-end/documentation slice; no API, persistence, migration, provider call, or financial calculation changes.
+
+### D-202: Access Policy Is Read Before It Is Mutable in the Browser
+- **Date**: 2026-07-30
+- **Context**: Server-side role lifecycle APIs are optimistic, audited, and session-revoking, but the browser had no proof that it could safely present a closed policy read model without coupling distinct permissions or exposing extra state.
+- **Decision**: Add only separately authorized, read-only role and permission snapshots. Reject expanded responses and isolate access-read failure from other administration views. Defer all role/permission/user-role mutations until their full authorization, confirmation, conflict, session invalidation, and audit-evidence interactions are testable together.
+- **Rationale**: Privileged policy changes require stronger proof than a list view; making a write button visible before that proof would weaken the human-governed control boundary.
+- **Reversibility**: Fully reversible front-end/documentation slice; no API, persistence, migration, or financial calculation changes.
+
+### D-201: Identity Read Model Remains Separate From Lifecycle Mutation
+- **Date**: 2026-07-30
+- **Context**: The server exposes optimistic, audited identity and session lifecycle writes, but the browser administration surface had not yet proved its read authorization, disclosure boundary, or accessibility behavior.
+- **Decision**: Add only independently authorized read-only user/session snapshots to the authenticated page. Their exact response contracts are rejected on disclosure expansion, and their failure does not gate audit or Security Center reads. Defer every identity, session, and role mutation until its confirmation, conflict, session-revocation, and audit-evidence UX can be tested as one vertical slice.
+- **Rationale**: A browser UI must not make privileged lifecycle changes merely because an API exists; read authorization and redaction are separate security boundaries that need proof first.
+- **Reversibility**: Fully reversible front-end/documentation slice; no API, persistence, migration, or financial calculation changes.
+
+### D-200: Security Snapshot Must Not Broaden or Gate Audit Disclosure
+- **Date**: 2026-07-30
+- **Context**: The Security Center endpoint has a distinct `security.center.read` permission and a declared count-only, non-assurance response. Reusing its result as an audit prerequisite or tolerating extra browser fields would create an authorization and disclosure coupling not present in the server contract.
+- **Decision**: Validate the complete browser response as a closed contract, including digest shapes and the audit-verification boundary literal. Request the snapshot after audit authorization succeeds, but isolate its failure from the independently authorized audit view; render only an allowlisted count summary and explicit attention items with the server's non-assurance boundary.
+- **Rationale**: Least privilege requires independent permissions to remain independent. Closed client validation prevents accidental presentation of newly disclosed fields before a reviewed UI and server contract change.
+- **Reversibility**: Fully reversible front-end/documentation slice; no API, persistence, migration, or financial calculation changes.
+
+### D-191: Deterministic Timezone Schedule v1
+- **Date**: 2026-07-29
+- **Context**: Scheduler correctness requires explicit DST, misfire, cursor, and occurrence-identity semantics before persistence or external effects.
+- **Decision**: Start with a closed daily/weekly IANA-timezone contract, explicit gap/ambiguity handling, three bounded misfire policies, review-boundary refusal, and digest-addressed occurrences.
+- **Rationale**: The same schedule version and cursor must produce the same dispatch identities without depending on host local time or an underspecified cron parser.
+- **Reversibility**: Fully reversible before a persistence migration; this slice has no call sites or network effects.
+- **ADR**: `docs/adr/0191-deterministic-timezone-schedule-v1.md`.
+
+### D-190: Runtime Schema Installers Cannot Weaken Composed RLS
+- **Date**: 2026-07-29
+- **Context**: PostgreSQL permissive policies compose with OR, so re-adding tenant-only `tenant_isolation` beside migrated `tenant_scope` bypassed workspace restrictions.
+- **Decision**: All 12 current business schema installers drop the compatibility policy and recreate it only when no composed `tenant_scope` exists; static and live regressions enforce the invariant.
+- **Rationale**: Isolation must not depend on whether a compatibility installer runs before or after migration 0044.
+- **Reversibility**: Reversible only for schemas predating composed RLS; weakening a current-head policy is not an allowed rollback.
+- **ADR**: `docs/adr/0190-schema-installers-preserve-composed-rls.md`.
+
+### D-189: API Scope Comes From Durable Principal Grants
+- **Date**: 2026-07-29
+- **Context**: Client hierarchy headers cannot be treated as authority, while tenant-only business transactions bypass workspace RLS.
+- **Decision**: Migration 0046 stores immutable user/service-account scope grants; authentication snapshots them and every PostgreSQL business boundary requires an authorized workspace before opening its transaction.
+- **Rationale**: Separating selector from authority prevents sibling header spoofing and accidental tenant-wide financial reads.
+- **Reversibility**: Reversible through migration 0046 downgrade; Community/SQLite behavior is unchanged.
+- **ADR**: `docs/adr/0189-api-scope-comes-from-durable-principal-grants.md`.
+
 ### D-001: Baseline-First Approach
 - **Date**: 2026-07-24
 - **Context**: Large prompt requests comprehensive transformation
@@ -896,5 +976,810 @@
 
 - **Decision**: Introduce `bounded-grouped-subset-sum@1.0.0` rather than relabeling the legacy pair-capacity flags. Enforce exact Decimal sums, currency/partition/date/cardinality constraints, stable tie-breaks, and a deterministic 25,000-evaluation fail-closed budget.
 - **Why**: Reusing individually equal edges is not grouped financial reconciliation, while unrestricted subset search is unsafe and non-operational.
-- **Consequence**: E-108 closes P1-REC-004 for one group per request. Batch group assignment, fee/FX/netting, governed ambiguity, and throughput evidence remain open.
+- **Consequence**: E-108 closes P1-REC-004 for one group per request. Batch group assignment, FX/netting governance, governed ambiguity, and throughput evidence remain open.
 - **ADR**: `docs/adr/0119-bounded-true-grouped-matching.md`
+
+### D-105: Make grouped matching fee- and netting-aware by explicit policy
+
+- **Decision**: Extend grouped matching through explicit `netting_mode` and explicit source fee fields, with `gross` preserving previous behavior and `net` comparing gross minus fees. Keep grouped strategy requests deterministic and stable by versioning new knobs.
+- **Reason**: Invoices, commissions, fees, and settlement drag are part of financial meaning. Ignoring them in group reconciliation breaks traceability and can create irreconcilable exceptions.
+- **Consequence**: E-109 enables fee totals and net totals in grouped decisions without changing public legacy pair-capacity flags. Strategy requests now require explicit fee field names in `net` mode and persist fee/net metrics in explainable outputs. FX-aware matching remains a separate planned slice.
+- **ADR**: `docs/adr/0120-fee-aware-netting-in-grouped-matching.md`
+
+### D-106: Make grouped matching FX-aware with explicit conversion contracts
+
+- **Decision**: Add `target_currency` and `fx_rates` to grouped matching requests, with
+  deterministic rate selection based on pair + effective date and strict, reversible failure when conversion is missing.
+- **Reason**: Currency-mixed records are common across reconciliation domains; without explicit FX policy, conversions are either implicitly assumed (silent) or non-reproducible.
+- **Consequence**: E-110 propagates FX-aware conversion from strategy contract to application service, parses versioned rate metadata (`base/quote/source/rate_type/rate/effective_at`) and enforces inversion for reverse pairs. Conversion mismatches now fail-closed instead of silently normalizing to record currency.
+- **ADR**: `docs/adr/0121-fx-aware-grouped-matching.md`
+
+### D-107: Govern tied grouped outcomes as ambiguity
+
+- **Decision**: For grouped matching, ties across equal minimum business-cost candidates must not be resolved automatically. Grouped matching now emits `status="ambiguous"` and `reason_code="GROUP_MATCH_AMBIGUOUS"` when multiple candidates share identical `difference`, `cardinality`, and `date-span`, and publishes every tied candidate set through `ambiguous_candidate_sets`.
+- **Reason**: Determinism is achieved by deterministic ordering, not by hidden automatic tie selection. Without explicit governed ambiguity, equal outcomes can still be operationally arbitrary and under-explained.
+- **Consequence**: E-111 introduces explicit ambiguity governance for grouped ties. Matched status remains single-selection only when exactly one minimum-cost candidate exists; bounded search-overflow still uses `GROUP_SEARCH_BUDGET_EXCEEDED`.
+- **ADR**: `docs/adr/0122-explicit-grouped-matching-ambiguity-governance.md`
+
+### D-108: Use grouped matching explanation schema v2 with explicit ambiguity evidence
+
+- **Decision**: Publish grouped matching explanation and runtime contract under `grouped-matching-explanation-v2`, and include `ambiguous_candidate_sets` in grouped outputs whenever governance review is required.
+- **Reason**: Without v2-aligned explainability, governance teams cannot trace all tied candidates from deterministic outputs.
+- **Consequence**: E-112 aligns the architecture strategy registry, runtime manifest, and grouped decision payload to v2 and surfaces concrete ambiguity sets in all tied-group governance outcomes while keeping backward-compatible fields intact.
+- **ADR**: `docs/adr/0123-grouped-matching-explanation-v2-and-ambiguous-candidate-evidence.md`
+
+### D-113: Add reproducible reconciliation benchmark tiers for 10K and 100K synthetic profiles
+
+- **Date**: 2026-07-27
+- **Context**: Phase 2 closure requires measured 10K and 100K hardware-scoped execution evidence rather than only functional correctness claims.
+- **Decision**: Extend the local deterministic benchmark stack with a profile-based suite API that emits checksummed per-profile artifacts and a suite-level digested manifest.
+- **Rationale**: Reproducible matching performance must be tied to the same deterministic core behavior used for correctness and compatibility gates before release claims about scale are accepted.
+- **Consequence**: E-113 adds `run_reconciliation_execution_benchmark_suite`, suite manifest emission, output SHA-256 inventory, and environment metadata capture for each profile. 10K and 100K synthetic executions are now measured and reproducible.
+- **Reversibility**: Suite format is additive and version-free from the perspective of existing behavior; profile IDs and metrics are explicit.
+- **ADR**: None.
+
+### D-114: Add deterministic regression assertions for benchmark outcomes
+
+- **Date**: 2026-07-27
+- **Context**: Performance tuning can change timing without visible correctness drift, and timing-only checks miss candidate/exhaustive-result regressions.
+- **Decision**: Add closed-form regression assertion helpers for reconciliation benchmark suites that verify result counts, match/exception counts, candidate counts/means, signature behavior, and bounded runtime/CPU/memory growth.
+- **Rationale**: A release gate must prevent silent correctness drift and unbounded resource growth while still allowing controlled threshold tuning through explicit policy.
+- **Consequence**: E-114 adds `assert_reconciliation_execution_regression` and profile-level invariant checks for matched/exception counts, candidate telemetry, signature equality (optional), and runtime/CPU/memory budgets.
+- **Reversibility**: Assertion thresholds are explicitly parameterized and can be widened for controlled re-baselines.
+- **ADR**: None.
+
+### D-115: Evidence Graph v1 schema, manifest integrity, and redaction contracts
+
+- **Date**: 2026-07-27
+- **Context**: P2-001 required a versioned evidence lineage envelope with deterministic integrity and safe redaction for sensitive payload fields before enabling downstream drill-down and audit exports.
+- **Decision**: Make Evidence Graph payloads explicitly versioned with fixed `artifact_type` and `schema_version`, enforce node data-classification/retention metadata, make manifest hashing deterministic over nodes and edge metadata, add tamper verification, and export redacted payload views using declared redaction masks.
+- **Rationale**: Financial and operational lineage cannot be trusted when graph hashes ignore edge context or can be altered without detection; sensitive fields must stay masked in constrained views while retaining audit continuity.
+- **Consequence**: E-115 adds `docs/schemas/evidence_graph.schema.json`, upgrades `reconforge/evidence/graph.py` with manifest verification and redaction, and extends `test_phase2_deliverables.py` with schema + tamper + redaction regressions.
+- **Reversibility**: Redaction policy and schema versioning are additive; any contract expansion must use a versioned manifest migration.
+- **ADR**: `docs/adr/0125-evidence-graph-manifest-schema.md`
+
+### D-116: Evidence drill-down uses bounded pages and audits successful reads
+
+- **Date**: 2026-07-28
+- **Context**: P2-002 required explainable evidence-to-object traversal without exposing local paths, checksums, or storage references to every evidence reader and without allowing an unbounded graph response.
+- **Decision**: Keep one additive `/api/v1/evidence/records/{evidence_id}/drill-down` contract across SQLite and PostgreSQL, fail closed above eight levels or 10,000 discovered nodes, expose deterministic offset pages of at most 1,000 nodes with incident-edge semantics, redact provenance by default, require `evidence.manage` for sensitive views, and append access-audit events without publishing business outbox messages.
+- **Rationale**: Graph traversal is operationally useful only when consumers can reason about page boundaries, authorization, and access history. A read audit is governance evidence but is not a domain event.
+- **Consequence**: E-117 closes the bounded code contract for P2-002. Cursor pagination, authenticated manifest serving, a graph explorer, live PostgreSQL evidence, and supported throughput remain separate gates.
+- **Reversibility**: The route is additive. Page defaults and ceilings can evolve through explicit API compatibility policy; removing masking or access auditing would require a security decision.
+- **ADR**: `docs/adr/0127-bounded-audited-evidence-drill-down.md`
+
+### D-117: Reconciliation-as-Code v1 is declarative and matching simulation is adapter-only
+
+- **Date**: 2026-07-28
+- **Context**: P2-003/P2-004 require versioned rule packs, deterministic review, golden cases, diff/simulation, and rollback without turning YAML into an arbitrary code execution surface or implying that unimplemented rule stages run.
+- **Decision**: Define a closed v1 schema with bounded YAML/JSON ingress, exact decimal strings, typed data-only steps, explicit human approval, canonical SHA-256 manifests, embedded synthetic fixtures, registered matching adapter execution, deterministic structural diff, no-side-effect simulation plans, and atomic validated file rollback. Validation/normalization declarations remain non-executable until separate adapters exist.
+- **Rationale**: A narrower honest execution boundary is safer and more reproducible than executing arbitrary expressions or reporting a simulated full pipeline that does not exist.
+- **Consequence**: E-118/E-119 close P2-003/P2-004 for `matching-adapter-only-v1`; Rule Studio publication, signatures, control-pack installation, and full validation/normalization execution remain planned.
+- **Reversibility**: Major contract changes require a new schema version and compatibility reader. The historical `normalization_rules` key is accepted and canonicalized to `normalization`.
+- **ADR**: `docs/adr/0126-reconciliation-as-code-v1-execution-boundary.md`
+
+### D-118: Bind PostgreSQL outbox repositories to one tenant at the application boundary
+
+- **Date**: 2026-07-28
+- **Context**: The shared outbox application service expects a tenant-free repository protocol, while PostgreSQL correctly requires an explicit tenant on every persistence operation.
+- **Decision**: Add a tenant-bound PostgreSQL adapter that validates and captures one tenant, delegates every operation with that scope, maps event/status fields, and translates repository errors. Preserve the existing low-level PostgreSQL repository and SQLite compatibility facade.
+- **Reason**: Capturing scope once prevents accidental tenant omission or mixing while allowing one application orchestration path across backends.
+- **Consequence**: E-120 advances P1-PLAT-001/002 without claiming live PostgreSQL parity. Because PostgreSQL has no dead-letter transition timestamp column, the optional shared field remains null rather than receiving invented evidence.
+- **Reversibility**: The adapter is additive. It can be removed without changing the low-level repository or persisted schema.
+
+### D-119: Extract the shared exception queue without changing its public local API
+
+- **Date**: 2026-07-28
+- **Context**: One direct-SQLite queue is called from four finance/control services plus CLI, API, Studio, and demos, making it a central coupling point.
+- **Decision**: Introduce a complete typed application port and delegation service, move SQLite behavior into infrastructure, and retain `ExceptionQueueService(connection, autocommit=...)` as a SQL-free compatibility facade.
+- **Reason**: This establishes one stable use-case contract before adding PostgreSQL and avoids simultaneously rewriting all existing callers.
+- **Consequence**: E-121 reduces direct-SQLite Platform services from 14 to 13 while preserving behavior. PostgreSQL parity remains explicitly unproven.
+- **Reversibility**: The facade preserves imports, constructor arguments, methods, return shapes, error type, and constants; reverting the wiring requires no data migration.
+
+### D-120: Keep approval SoD inventory attached to the enforcing implementation
+
+- **Date**: 2026-07-28
+- **Context**: Extracting ApprovalService behind an application port would leave its compatibility facade without the `same_actor` calls that the AST security inventory historically inspected.
+- **Decision**: Move SQLite behavior behind a typed application port, preserve the public facade, and explicitly route approval-surface discovery and guard inspection to `SQLiteApprovalRepository` for the extracted approval methods.
+- **Reason**: Security evidence must inspect the code that enforces requester/preparer separation, not a delegating wrapper.
+- **Consequence**: E-122 advances repository separation while keeping SoD regression evidence meaningful. PostgreSQL and central policy parity remain future gates.
+- **Reversibility**: Public APIs and persisted schemas are unchanged; inventory paths can move again when enforcement moves into a richer application policy service.
+
+### D-121: Keep Mapping Studio preview browser-local, bounded, and non-publishing
+
+- **Date**: 2026-07-28
+- **Context**: P2-005 needs a usable mapping workflow without creating an unbounded upload surface or hiding invalid financial text.
+- **Decision**: Parse bounded CSV/TSV previews in-browser, require explicit canonical mappings, preserve raw text, render invalid values as issues, and provide no persistence or publication action in this foundation.
+- **Reason**: A reviewable mapping is safer and more honest than an implicit import path without provenance, approval, or server-side validation.
+- **Consequence**: E-123 closes P2-005 while persistence, signed/versioned mapping artifacts, malware controls, source authentication, and execution remain later gates.
+- **Reversibility**: The route and parser are additive and store no data.
+- **ADR**: `docs/adr/0128-bounded-browser-local-mapping-preview.md`
+
+### D-122: Bind local Rule Studio approval to the exact tested digest
+
+- **Date**: 2026-07-28
+- **Context**: A rule editor can falsely imply governance if a user tests one draft and approves another or can self-approve without review evidence.
+- **Decision**: Use a local draft/tested/approved state machine; revoke evidence on edit; test exact amounts with scaled integers; bind approval to canonical SHA-256; require a different reviewer and reason; and expose no publication action.
+- **Reason**: Tested-content identity and fail-closed SoD are the minimum honest foundation for a future governed rule lifecycle.
+- **Consequence**: E-124 closes P2-006 locally while durable identity, audit, signatures, server execution, and publication remain explicitly absent.
+- **Reversibility**: The route and state module are additive and persist no data.
+- **ADR**: `docs/adr/0129-local-rule-studio-governance-state-machine.md`
+
+### D-123: Fail closed when the live Studio contract is unavailable
+
+- **Date**: 2026-07-28
+- **Context**: P2-007 requires a browser-visible live contract, but silently substituting synthetic showcase data after an authorization, network, or schema failure would misrepresent operational state.
+- **Decision**: Read the existing same-origin `metrics.read`-guarded dashboard endpoint, validate a closed envelope and allowlisted metric fields, preserve exact value text, calculate freshness client-side, and expose every failure as an explicit retryable state. Never request a synthetic artifact from the live loader.
+- **Reason**: Reviewers must be able to distinguish authorized current data, no data, stale data, and unavailable data without ambiguity.
+- **Consequence**: E-125 closes P2-007 locally; deployed identity/session behavior, live PostgreSQL execution, signed response provenance, and production availability remain unproven.
+- **Reversibility**: The route, loader, and types are additive and read-only.
+- **ADR**: `docs/adr/0130-live-studio-fail-closed-contract.md`
+
+### D-124: Make accessibility an executable cross-route release gate
+
+- **Date**: 2026-07-28
+- **Context**: Isolated RTL and preference tests did not prove semantic validity, contrast, focus containment/restoration, masking, or regressions across the new Mapping, Rule, and Live Studio routes.
+- **Decision**: Add axe-core WCAG 2 A/AA and WCAG 2.1 A/AA scans to Chromium E2E, exercise every native route in English and Arabic/RTL plus mobile landmarks in both directions, verify keyboard and preference behavior separately, and preserve a minimum visible focus indicator even when the optional strong-outline preference is disabled.
+- **Reason**: Accessibility behavior must fail the same executable gate as functional workflows; a user preference cannot disable the minimum keyboard focus requirement.
+- **Consequence**: E-126 closes P2-008 with automated evidence while manual assistive-technology, cognitive, zoom/reflow, and independent conformance assessment remain explicit limitations.
+- **Reversibility**: The gate and token changes are additive/revertible; no data migration is needed.
+- **ADR**: `docs/adr/0131-accessibility-localization-regression-gate.md`
+
+### D-125: Extract journal controls as one atomic application port
+
+- **Date**: 2026-07-28
+- **Context**: Journal import and policy execution mixed input normalization, exact financial comparisons, SQL, unified exceptions, audit, and outbox effects inside a connection-bound Platform service.
+- **Decision**: Define one complete application protocol for import, policy run, exception reads, and reports; move SQLite behavior to infrastructure; call the SQLite exception repository directly within the shared transaction; and retain a SQL-free historical Platform facade.
+- **Reason**: Splitting only reads or writes would leave transaction ownership and policy effects coupled. One complete port preserves atomic financial-control behavior while enabling a later PostgreSQL adapter.
+- **Consequence**: E-127 reduces direct-SQLite Platform services to 11 and adds explicit handled-failure rollback. It does not establish PostgreSQL journal parity or broaden the existing local authorization model.
+- **Reversibility**: Public constructor, methods, defaults, result type, persisted schema, policy codes, and output shapes remain unchanged; no migration is required.
+- **ADR**: `docs/adr/0132-journal-control-application-boundary.md`
+
+### D-126: Bind ineffective control exceptions to the test plan workspace
+
+- **Date**: 2026-07-28
+- **Context**: Control test plans persist a workspace ID, but ineffective-result handling historically passed the literal `default` workspace into the unified exception queue.
+- **Decision**: Extract the complete control-testing surface behind one application port, resolve the plan's persisted workspace name inside the SQLite adapter, and create the unified exception within that exact scope and transaction.
+- **Reason**: Cross-workspace exception leakage contradicts tenant/workspace boundaries and makes result evidence inconsistent with its plan.
+- **Consequence**: E-128 fixes the local scope defect and proves rollback across result, plan status, exception, and audit. PostgreSQL parity and stronger tenant authorization remain future gates.
+- **Reversibility**: Public methods and schemas are unchanged. Reverting the adapter would reintroduce the scope defect and is not an acceptable operational rollback.
+- **ADR**: `docs/adr/0133-control-testing-workspace-atomic-boundary.md`
+
+### D-127: Share journal policy semantics and keep PostgreSQL effects atomic
+
+- **Date**: 2026-07-28
+- **Context**: Implementing PostgreSQL journal persistence by copying SQLite policy logic would allow financial-control decisions to drift between backends, while separate exception/audit/outbox transactions could leave incomplete evidence.
+- **Decision**: Move deterministic policy evaluation to a database-free domain helper; make both adapters consume exact decimal text; bind the PostgreSQL adapter to one validated tenant; and persist journal exceptions, unified control exceptions, audit-chain evidence, and outbox messages inside the caller operation transaction under forced RLS.
+- **Reason**: Backend parity requires one decision function and one business-effect boundary, not merely similar table shapes.
+- **Consequence**: E-129 adds code and optional live parity coverage. Its build gate also makes the Alembic configuration, environment, template, and revisions explicit sdist/wheel data and tests those declarations. Live non-superuser RLS behavior remains unproven in this environment, so P1-PLAT-002 stays open.
+- **Reversibility**: Migration 0016 drops only the three additive tables; the SQLite schema and public application contract are unchanged.
+- **ADR**: `docs/adr/0134-postgres-journal-contract-parity.md`
+
+### D-128: Bind PostgreSQL control testing to tenant, workspace, and one effect boundary
+
+- **Date**: 2026-07-28
+- **Context**: The extracted control-testing application port had complete SQLite behavior but no server adapter; implementing only its primary rows would leave ineffective-result exceptions and evidence outside the business transaction.
+- **Decision**: Add four tenant-keyed PostgreSQL tables under forced RLS and implement all seven port methods. Resolve plans and controls inside the tenant scope, persist ineffective-result exceptions with the plan workspace, and append domain audit plus transactional outbox effects before committing each mutation. Package the shared migration SQL loader as an importable module and verify revision import from an installed wheel.
+- **Reason**: Backend parity is the equality of scoped business effects and failure behavior, not just compatible method signatures or row counts.
+- **Consequence**: E-130 supplies code-contract, post-write rollback, installed-artifact, and optional live parity coverage. Live non-superuser PostgreSQL evidence remains unavailable locally, so P1-PLAT-002 stays open.
+- **Reversibility**: Migration 0017 drops only its four additive tables. The shared control-exception table, SQLite schema, public application contract, and compatibility facade remain unchanged.
+- **ADR**: `docs/adr/0135-postgres-control-testing-contract-parity.md`
+
+### D-129: Treat constant durable-job identifiers as reviewed Bandit exceptions
+
+- **Date**: 2026-07-28
+- **Context**: Bandit B608 reported seven durable-job statements because fixed column identifiers are assembled from immutable module tuples. Row values, tenant IDs, job IDs, and timestamps already use driver placeholders.
+- **Decision**: Retain the fixed identifier construction, add narrowly scoped `nosec B608` annotations at only the reported expressions, and document why each exception cannot contain user-controlled identifiers. Keep the complete SQLite/PostgreSQL durable-job regression as behavioral evidence.
+- **Reason**: Replacing constant identifier lists with duplicated query literals increases column-order drift risk without reducing injection exposure; broad Bandit configuration exclusions would hide unrelated future findings.
+- **Consequence**: The repository-wide Bandit command returns exit 0 with no findings and visible reviewed-suppression notices. Any future dynamic identifier source requires a new security decision and validation.
+- **Reversibility**: Each annotation is local and can be replaced by a typed SQL composition API or literal statement without schema or application-contract changes.
+- **ADR**: `docs/adr/0136-durable-job-static-sql-identifiers.md`
+
+### D-130: Extract intercompany cases as one exact, atomic application boundary
+
+- **Date**: 2026-07-28
+- **Context**: Intercompany import, Decimal aggregation, imbalance case creation, unified exceptions, settlement, audit, and outbox effects were coupled to a SQLite connection in the Platform layer. Settlement of a missing case committed audit/outbox evidence before the subsequent read reported that no case existed.
+- **Decision**: Move all five public use cases behind one typed application port and SQLite adapter; use the extracted exception repository within the shared transaction; add stable transaction IDs to ordering; explicitly roll back handled failures; and require exactly one updated case before emitting settlement evidence.
+- **Reason**: Intercompany balances and case evidence must be reproducible and cannot claim a settlement for a nonexistent case. A complete boundary enables later PostgreSQL parity without splitting financial effects.
+- **Consequence**: E-132 reduces direct-SQLite Platform services to nine and removes the orphan-evidence path. PostgreSQL parity and richer entity/currency authorization remain open.
+- **Reversibility**: Public constructor, methods, defaults, result import, persisted schema, exact decimal text, case IDs, and CLI calls remain compatible. Reintroducing settlement evidence for a missing case is not an acceptable rollback.
+- **ADR**: `docs/adr/0137-intercompany-application-boundary.md`
+
+### D-131: Preserve exact intercompany effects under tenant-bound PostgreSQL
+
+- **Date**: 2026-07-28
+- **Context**: The complete intercompany application port had only a SQLite adapter. A partial server implementation could diverge in Decimal aggregation, case identity, exception scope, or settlement evidence while exposing cross-tenant rows.
+- **Decision**: Add migration 0018 and a complete PostgreSQL repository using NUMERIC plus canonical decimal text, composite tenant/workspace keys, forced RLS, stable grouping order, the shared control-exception queue, and one transaction for domain, audit, and outbox effects. Require a successful tenant-scoped case update before settlement evidence.
+- **Reason**: Backend parity means the same exact imbalance decision and atomic evidence effects, not merely compatible table or method names.
+- **Consequence**: E-133 supplies local schema, pre/post-write rollback, missing-case, packaging, and optional live parity coverage. Live non-superuser PostgreSQL behavior remains unavailable locally, so P1-PLAT-002 stays open.
+- **Reversibility**: Migration 0018 drops only the two additive tables. The SQLite adapter, application contract, compatibility facade, and shared exception table remain unchanged.
+- **ADR**: `docs/adr/0138-postgres-intercompany-contract-parity.md`
+
+### D-132: Make close dependencies acyclic and close evidence entity-bound
+
+- **Date**: 2026-07-28
+- **Context**: The local close service mixed 11 use cases, SQLite, readiness mutation, dependency policy, and audit commits. It allowed self/transitive dependency cycles and could append reopen audit evidence for a nonexistent period.
+- **Decision**: Extract the complete surface behind one application port and SQLite adapter; preserve exact Decimal readiness; reject a dependency when the proposed target already reaches the source; validate and update exactly one period before reopen evidence; and keep the historical facade SQL-free.
+- **Reason**: Cyclic close tasks can never satisfy completion prerequisites, and audit evidence must never state that a missing accounting period was reopened.
+- **Consequence**: E-134 reduces direct-SQLite Platform services to eight and closes both local invariant defects. The separate PostgreSQL close repository still does not implement this application contract.
+- **Reversibility**: Public methods, internal compatibility flags, defaults, result type, schema, task IDs, and readiness calculation remain compatible. Restoring cycles or orphan evidence is not an acceptable rollback.
+- **ADR**: `docs/adr/0139-close-management-application-boundary.md`
+
+### D-133: Keep account workflow and exact balances in one repository boundary
+
+- **Date**: 2026-07-28
+- **Context**: Trial-balance import, templates, exact balances/materiality, workflow transitions, SoD review, roll-forward, audit, and outbox effects were implemented directly in a SQLite-bound Platform service.
+- **Decision**: Extract the complete 11-use-case surface behind one application protocol and SQLite adapter; preserve the existing WorkflowService transaction participation and finalize each business operation only with its outbox and audit effects.
+- **Reason**: Separating only account rows from workflow or evidence would allow backend adapters to diverge in lifecycle state or commit partial financial-control effects.
+- **Consequence**: E-135 reduces direct-SQLite services to seven. Exact Decimal and transition rollback tests remain executable; PostgreSQL account parity remains open.
+- **Reversibility**: Public methods, constructor, result import, statuses, schema, IDs, CLI, and backup format remain compatible.
+- **ADR**: `docs/adr/0140-account-reconciliation-application-boundary.md`
+
+### D-134: Commit linked evidence and both evidence events atomically
+
+- **Date**: 2026-07-28
+- **Context**: Registering evidence with an object link committed the link audit/outbox before the evidence-registration audit. A failure in the second audit could leave a partially evidenced registration.
+- **Decision**: Extract all eight registry use cases behind an application port; define object storage structurally without infrastructure imports; append link audit/outbox without committing; and let the final registration audit commit the registry row, link, both audits, and both outbox effects together.
+- **Reason**: Evidence lineage is not trustworthy when a link or its audit can survive without the registration event that owns it.
+- **Consequence**: E-136 reduces direct-SQLite services to six and proves second-audit rollback across all four ledgers. Existing local/S3 behavior and sensitive drill-down controls remain compatible.
+- **Reversibility**: Public constants, result type, object-store behavior, service constructor, API/CLI/Studio imports, schemas, and graph response shapes remain unchanged. The split-commit defect must not be restored.
+- **ADR**: `docs/adr/0141-evidence-registry-application-boundary.md`
+
+### D-135: Keep all governed finance-core invariants behind one typed port
+
+- **Date**: 2026-07-28
+- **Context**: The 18 chart, account, dimension, journal, entry, and trial-balance use cases mixed their public contract with SQLite persistence and transaction ownership.
+- **Decision**: Extract the complete surface into a connection-free Application protocol and SQLite adapter; retain the historical constructor, constants, summary type, and atomic integrity-test seam through a SQL-free facade.
+- **Reason**: Backend substitution must preserve balance, exact currency precision, period, dimension, account, SoD, immutability, audit, and rollback rules as one contract rather than a partial CRUD abstraction.
+- **Consequence**: E-137 reduces direct-SQLite Platform services to four. PostgreSQL finance-core parity remains unproven and P1-PLAT-001/002 stay open.
+- **Reversibility**: No schema or stored data changed. The facade can be redirected without a data migration; weakening financial or atomicity invariants is not an acceptable rollback.
+- **ADR**: `docs/adr/0142-finance-core-application-boundary.md`
+
+### D-136: Keep inventory quantities and movement effects behind one typed port
+
+- **Date**: 2026-07-28
+- **Context**: Nineteen inventory-master, movement, balance, and control use cases mixed their public contract with SQLite persistence and transaction ownership.
+- **Decision**: Extract the complete surface into a connection-free Application protocol and SQLite adapter; preserve the historical constructor, constants, summary, and fault-injection seams through a SQL-free facade.
+- **Reason**: Backend substitution must preserve scaled quantities, stock direction, periods, locations, tracking, negative-stock policy, posting/voiding, audit, and rollback as one contract.
+- **Consequence**: E-138 reduces direct-SQLite Platform services to three. PostgreSQL inventory parity remains unproven and P1-PLAT-001/002 stay open.
+- **Reversibility**: No schema or stored data changed. The facade can be redirected without migration; weakening quantity or atomicity invariants is not an acceptable rollback.
+- **ADR**: `docs/adr/0143-inventory-core-application-boundary.md`
+
+### D-137: Keep purchase-to-pay financial effects behind one typed port
+
+- **Date**: 2026-07-28
+- **Context**: Fifteen supplier, PO, receipt, invoice, approval, match, and read use cases mixed their public contract with SQLite transactions.
+- **Decision**: Extract the complete surface into a connection-free Application protocol and SQLite adapter; move immutable input/result types to Application and preserve Platform imports through a SQL-free facade.
+- **Reason**: Backend substitution must preserve integer minor units, exact quantity, idempotency, optimistic concurrency, SoD, three-way-match exceptions, audit, and outbox as one contract.
+- **Consequence**: E-139 reduces direct-SQLite Platform services to two. PostgreSQL payables parity remains unproven and P1-PLAT-001/002 stay open.
+- **Reversibility**: No schema or stored data changed. The facade can be redirected without migration; weakening financial or atomicity invariants is not an acceptable rollback.
+- **ADR**: `docs/adr/0144-payables-application-boundary.md`
+
+### D-138: Keep receivable credit and allocation effects behind one typed port
+
+- **Date**: 2026-07-28
+- **Context**: Thirteen customer, invoice, receipt, allocation, exposure, aging, and approval use cases mixed their public contract with SQLite transactions.
+- **Decision**: Extract the complete surface into a connection-free Application protocol and SQLite adapter; move immutable inputs to Application and preserve Platform imports through a SQL-free facade.
+- **Reason**: Backend substitution must preserve minor units, exact quantity, idempotency, credit policy, optimistic concurrency, SoD, allocation, exposure, aging, audit, and outbox as one contract.
+- **Consequence**: E-140 leaves MatchingService as the only direct-SQLite Platform service. PostgreSQL receivables parity remains unproven and P1-PLAT-001/002 stay open.
+- **Reversibility**: No schema or stored data changed. The facade can be redirected without migration; weakening financial, credit, or atomicity invariants is not an acceptable rollback.
+- **ADR**: `docs/adr/0145-receivables-application-boundary.md`
+
+### D-139: Keep deterministic matching policy and persistence behind one typed port
+
+- **Date**: 2026-07-28
+- **Context**: Six matching execution/read methods mixed SQLite jobs/results with the pure indexed engine, candidate budgets, identity, normalization, ambiguity, and evidence policy.
+- **Decision**: Extract the complete surface into a connection-free Application protocol and SQLite adapter; move public immutable types to Application and preserve historical imports/read seams through a SQL-free facade.
+- **Reason**: Backend substitution must preserve exact financial inputs, candidate bounds, deterministic outcomes, ambiguity, lineage, rules, audit, and outbox as one contract.
+- **Consequence**: E-141 reduces direct-SQLite Platform services to zero. Three partial inventory repositories remain, so P1-PLAT-001/002 stay open.
+- **Reversibility**: No schema or stored data changed. The facade can be redirected without migration; weakening determinism, budgets, or evidence is not an acceptable rollback.
+- **ADR**: `docs/adr/0146-matching-application-boundary.md`
+
+### D-140: Keep valuation policy, layers, and Finance draft effects behind one typed port
+
+- **Date**: 2026-07-28
+- **Context**: Eleven valuation use cases had a partial row repository but retained SQLite schema, transaction, exact allocation, approval, audit, and outbox coordination in the Platform service.
+- **Decision**: Extract the complete use-case surface into a connection-free Application protocol and SQLite adapter; preserve the historical constructor, constants, summary, repository imports, and reversal connection seam through SQL-free facades.
+- **Reason**: Backend substitution must preserve FIFO ordering, integer minor units, scaled quantity, half-even allocation, period/policy controls, SoD, balanced Finance drafts, and atomic evidence as one contract.
+- **Consequence**: E-142 reduces partial repositories from three to two and raises compatibility adapters to eighteen. PostgreSQL valuation parity and P1-PLAT-001/002 remain open.
+- **Reversibility**: No schema or stored data changed. The facade can be redirected without migration; weakening financial or rollback invariants is not acceptable.
+- **ADR**: `docs/adr/0147-inventory-valuation-application-boundary.md`
+
+### D-141: Keep compensating valuation effects and lineage behind one typed port
+
+- **Date**: 2026-07-28
+- **Context**: Seven reversal use cases retained SQLite coordination around a partial persistence repository.
+- **Decision**: Extract the complete surface into a connection-free Application protocol and SQLite adapter while preserving historical imports through SQL-free facades.
+- **Reason**: Original lineage, opposite movement, layer restoration/removal, balanced reversing Finance drafts, SoD, and audit/outbox atomicity must not diverge by backend.
+- **Consequence**: E-143 leaves inventory planning as the sole partial repository. PostgreSQL reversal parity remains open.
+- **Reversibility**: No schema or data changed; weakening compensating or atomicity invariants is not acceptable.
+- **ADR**: `docs/adr/0148-inventory-valuation-reversal-application-boundary.md`
+
+### D-142: Keep count approval, adjustment, and reorder policy behind one typed port
+
+- **Date**: 2026-07-28
+- **Context**: Thirteen inventory-planning use cases retained SQLite coordination around a partial persistence repository.
+- **Decision**: Extract the complete surface into a connection-free Application protocol and SQLite adapter while preserving historical constructors, injection, constants, summaries, and imports through SQL-free facades.
+- **Reason**: Exact counts, lifecycle/SoD, adjustment movements, reorder policy, and audit/outbox atomicity must remain one substitutable contract.
+- **Consequence**: E-144 reduces both direct-SQLite and partial Platform services to zero. PostgreSQL parity remains separately open under P1-PLAT-002.
+- **Reversibility**: No schema or data changed; weakening quantity, approval, adjustment, or rollback invariants is not acceptable.
+- **ADR**: `docs/adr/0149-inventory-planning-application-boundary.md`
+
+### D-143: Measure PostgreSQL parity without inferring it from filenames
+
+- **Date**: 2026-07-28
+- **Decision**: Inventory every Application service with mutually exclusive current-live, live-test-available, contract-only, absent, or not-applicable status; validate coverage, adapter symbols, tests, evidence fields, and counts in CI.
+- **Reason**: A PostgreSQL-named class can implement an older or narrower contract, and a skipped live test is not current runtime proof.
+- **Consequence**: E-145 records 0 current-live, 9 live-test-available, 2 contract-only, 14 absent, and 1 pure boundary. Finance Core is prioritized next because its existing PostgreSQL components do not implement the current eighteen-use-case port.
+- **ADR**: `docs/adr/0150-measure-postgres-application-parity.md`
+
+### D-144: Store governed PostgreSQL Finance Core amounts as currency minor units
+
+- **Date**: 2026-07-28
+- **Decision**: Implement the complete eighteen-use-case Finance Core port in one tenant-bound adapter and store entry/line amounts as constrained `BIGINT` minor units, with lifecycle evidence in the same transaction.
+- **Reason**: The current port includes master governance, balanced drafts, maker-checker validation, voiding, dimensions, and trial balance; splitting these invariants across the older ledger/master-data adapters would create divergent semantics and retain `NUMERIC` conversion ambiguity.
+- **Consequence**: E-146 advances Finance Core from absent to live-test-available. No current-live claim is allowed until the optional non-superuser PostgreSQL test runs successfully in a configured environment.
+- **ADR**: `docs/adr/0151-postgres-finance-core-minor-units.md`
+
+### D-145: Scope PostgreSQL Master Data without duplicating financial masters
+
+- **Date**: 2026-07-28
+- **Decision**: Keep existing PostgreSQL currency, organization, entity, branch, and fiscal-period tables as the single source of truth; add optional Application workspace identity and forced-RLS ownership links for the complete thirteen-use-case port.
+- **Reason**: Copying masters into new Application-only tables would let Finance Core and Master Data disagree. Tenant-only reads would leak references between workspaces.
+- **Consequence**: Same-name periods may exist and overlap across different workspaces but not inside one workspace. Organization codes remain tenant-global for compatibility with existing server APIs. E-147 advances Master Data from absent to live-test-available, not current-live.
+- **ADR**: `docs/adr/0152-postgres-master-data-workspace-scope.md`
+
+### D-146: Run one deterministic engine on SQLite and hosted PostgreSQL paths
+
+- **Date**: 2026-07-28
+- **Decision**: Move the pure matcher into the reconciliation layer, inject currency precision and candidate budgets, and make SQLite persistence plus the PostgreSQL worker call the same engine.
+- **Reason**: The hosted worker previously created and migrated an in-memory SQLite database only to access the algorithm, leaving hidden cross-backend coupling despite the Application facade.
+- **Consequence**: Hosted calculation has no SQLite dependency and retains PostgreSQL-owned durable persistence. Full six-method PostgreSQL Matching Application parity and current-live execution remain open.
+- **ADR**: `docs/adr/0153-persistence-independent-deterministic-matching-engine.md`
+
+### D-147: Keep PostgreSQL Payables one exact governed aggregate
+
+- **Date**: 2026-07-28
+- **Decision**: Implement all 15 Payables methods over nine forced-RLS tables with BIGINT minor-unit money, exact NUMERIC quantities plus canonical text, composite tenant foreign keys, idempotency, lifecycle controls, three-way-match evidence, audit, and outbox.
+- **Reason**: Supplier, order, receipt, invoice, match, and approval invariants fail if implemented as unrelated CRUD tables. A `(38,12)` quantity typmod would also introduce an undocumented compatibility break.
+- **Consequence**: E-149 advances Payables from absent to live-test-available. Current-live parity remains unproven until the optional non-superuser lifecycle runs against configured PostgreSQL.
+- **ADR**: `docs/adr/0154-postgres-payables-aggregate-boundary.md`
+
+### D-136: Keep exact inventory state and movement governance in one port
+
+- **Date**: 2026-07-28
+- **Context**: Nineteen inventory master, movement, balance, and control operations mixed SQLite with scaled quantities, tracking, period, location, lifecycle, audit, and rollback policy.
+- **Decision**: Extract the complete surface behind a typed Application protocol and SQLite adapter; retain the historical constructor, constants, summary, connection, balance-read, and movement-integrity test seams through a SQL-free facade.
+- **Reason**: A partial CRUD repository could diverge on projected stock, serial uniqueness, quantity scale, negative-stock policy, or evidence atomicity.
+- **Consequence**: E-138 reduces direct-SQLite Platform services to three. PostgreSQL inventory parity remains unproven and P1-PLAT-001/002 stay open.
+- **Reversibility**: No schema or stored data changed. The facade can be redirected without data conversion; weakening inventory correctness is not an acceptable rollback.
+- **ADR**: `docs/adr/0143-inventory-core-application-boundary.md`
+### D-155: Keep Receivables credit and allocation in one serialized PostgreSQL aggregate
+
+- **Decision**: Implement all thirteen Receivables port methods over migration 0022, with customer locks during credit approval and receipt/invoice locks during allocation.
+- **Reason**: Credit-limit and outstanding-balance invariants require serialization across concurrent approvals and allocations; table presence alone cannot prove financial parity.
+- **Evidence**: ADR 0155, `tests/test_postgres_receivables.py`, and the focused Receivables/API/CLI/Application regression target.
+- **Boundary**: The available live test is skipped without PostgreSQL service credentials, so the adapter is not current-live or production-approved.
+### D-156: Bind persisted Matching runs to workspaces without duplicating the engine
+
+- **Decision**: Add a tenant-qualified run/workspace link and implement the six-method PostgreSQL Matching port as orchestration over the single deterministic engine and existing reconciliation integrity repository.
+- **Reason**: A second algorithm would create digest drift, while tenant-only runs leave workspace ownership unverifiable. Complete source registration is required before the existing completion verifier can prove coverage and allowed-use constraints.
+- **Evidence**: ADR 0156, migration 0023, `tests/test_postgres_matching_application.py`, and the existing deterministic/reconciliation regression suites.
+- **Boundary**: The live test is available but skipped without PostgreSQL credentials; no current-live, scale, or production claim follows.
+### D-157: Preserve scaled-integer Inventory quantities across PostgreSQL
+
+- **Decision**: Migration 0024 uses BIGINT scaled quantities plus explicit 0-6 unit precision across one tenant-bound seven-table aggregate, with database lifecycle and immutability guards.
+- **Reason**: Inventory posting, negative-stock prevention, serial uniqueness, valuation, and reversal must share one exact movement source of truth; floating point or split ownership would invalidate those controls.
+- **Evidence**: ADR 0157 and `tests/test_postgres_inventory_core.py`.
+- **Boundary**: The storage slice is not the eighteen-method adapter and does not establish parity or current-live behavior.
+
+### D-168: Require one inventory-derived live PostgreSQL gate
+
+- **Decision**: Close supported PostgreSQL Application parity only after every inventory-named live test, isolated migration downgrade/re-upgrade, and native encrypted backup/restore contract runs against a disposable service without boundary skips; CI derives the list from that inventory and pins the database image digest.
+- **Reason**: Adapter presence and optional tests concealed runtime defects in migration execution, row representations, schema drift, ordering, triggers, and test isolation.
+- **Evidence**: ADR 0168, E-163, `docs/execution/POSTGRES_PARITY_INVENTORY.yaml`, `tests/test_alembic_postgres.py`, and `tests/test_postgres_backup.py`.
+- **Boundary**: This is single-node synthetic Team evidence, not HA, host-loss, managed-key, RPO/RTO, production-readiness, compliance, scale, or external-assurance evidence.
+
+### D-169: Close foundation recovery at Community and Team scope
+
+- **Decision**: Define the Phase 1 P1-PLAT-010 exit as verified current Community SQLite and single-node Team PostgreSQL recovery; retain Enterprise HA, Regulated air gap, managed keys, host loss, upgrades, and operational objectives in their existing Phase 3 tasks.
+- **Reason**: Requiring Phase 3 outcomes inside a prerequisite Phase 1 task created a circular completion condition and blurred edition maturity.
+- **Evidence**: ADR 0169, E-164, `docs/execution/PHASE_1_EXIT_AUDIT.yaml`, and the verified/planned cells in `docs/operations/backup-restore-matrix.v1.yaml`.
+- **Boundary**: The overall recovery matrix correctly remains partial and no production-readiness or external-assurance claim follows.
+
+### D-170: Require artifact verification for the Phase 2 exit
+
+- **Decision**: Bind all normative Phase 2 tasks and gates in a machine-readable audit and verify retained benchmark profile bytes/digests plus environment and resource fields, rather than accepting task labels or Markdown alone.
+- **Reason**: Phase completion requires current evidence at the same scope as the deterministic, integrity, Reconciliation-as-Code, and 10K/100K performance claims.
+- **Evidence**: ADR 0170, E-165, `docs/execution/PHASE_2_EXIT_AUDIT.yaml`, and `tests/test_phase_2_exit_audit.py`.
+- **Boundary**: The measurements are local single-host/single-process evidence and support no 1M/10M, distributed, database, sustained-load, production-readiness, or external-assurance claim.
+
+### D-171: Keep federation cryptography outside the ReconForge policy core
+
+- **Decision**: Library adapters exclusively parse and cryptographically verify OIDC/SAML artifacts; the backend-neutral Federation service enforces exact trust configuration, time, correlation, replay, role mapping, sovereign-mode, and sanitized audit policy.
+- **Reason**: JOSE and XML Signature are security protocols, while provider-to-local authorization and deployment policy are ReconForge responsibilities. Combining them would encourage home-grown verification and make library replacement unsafe.
+- **Evidence**: ADR 0171, E-166, `reconforge/auth/federation.py`, and `tests/test_federation_application.py`.
+- **Boundary**: No OIDC or SAML login is supported until real library adapters, durable replay/link/session persistence, logout and route integration pass.
+
+### D-172: Verify OIDC only against bounded operator-owned JWKS
+
+- **Decision**: Use locked joserfc with provider-configured algorithm allowlists and static public JWKS; reject private keys, duplicate or missing key IDs and token-controlled key URLs, and require OIDC issuer/audience/time/nonce plus multi-audience azp.
+- **Reason**: Dynamic or token-directed key retrieval expands SSRF and key-substitution boundaries, while custom JOSE is prohibited.
+- **Evidence**: ADR 0172, E-167, `reconforge/infrastructure/oidc.py`, `tests/test_oidc_verifier.py`, and the locked federation extra.
+- **Boundary**: This verifies ID Tokens only; login routes, authorization-code exchange, SAML, durable replay/session linkage and logout remain absent.
+
+### D-173: Delegate SAML XML Signature to xmlsec with stricter local policy
+
+- **Decision**: Verify SAML Responses through locked python3-saml/xmlsec and fixed IdP certificates, then independently constrain signature/digest algorithms, issuer, audience, request correlation and bounded attribute projection.
+- **Reason**: XML Signature and wrapping defenses must not be reimplemented, while generic toolkit validity alone does not own ReconForge trust and role-mapping policy.
+- **Evidence**: ADR 0173, E-168, `reconforge/infrastructure/saml.py`, `tests/test_saml_verifier.py`, and the locked federation extra.
+- **Boundary**: Durable replay, identity links, sessions, logout and routes remain; the dependency deprecation warning requires upgrade monitoring.
+
+### D-174: Prelink federated subjects to local authority under forced RLS
+
+- **Date**: 2026-07-28
+- **Decision**: Persist only hashes of assertion identity and `issuer + NUL + subject`; consume assertion replay keys atomically; require an active pre-provisioned local identity whose existing roles contain every mapped external role; issue the existing hash-only PostgreSQL session inside the same tenant transaction.
+- **Reason**: An identity provider proves an external subject but must not silently provision local authority, widen roles, leak raw assertions, or permit cross-tenant replay.
+- **Evidence**: ADR 0174, E-169, migration 0034, `reconforge/infrastructure/postgres_federation.py`, `tests/test_postgres_federation.py`, and the fresh PostgreSQL 17.10 non-superuser lifecycle.
+- **Boundary**: Operator configuration, API integration, complete logout evidence, SCIM, MFA, and external assurance remain open; this is not an Enterprise-ready or production-approved claim.
+
+### D-175: Compose federation through one disabled-by-default public login route
+
+- **Date**: 2026-07-28
+- **Decision**: Register one strict public authentication route only when PostgreSQL identity can be used; require operator-owned provider/verifier maps, execute verification/replay/local binding/session/audit in one tenant transaction, and reuse the existing revocable session/logout contract.
+- **Reason**: A second token system or automatic identity provisioning would split revocation authority and permit external claims to become local permissions. Persisting only the final sanitized outcome prevents raw assertion disclosure while preserving denial evidence.
+- **Evidence**: ADR 0175, E-170, `tests/test_api_federation.py`, the updated closed API authorization digest, and the E-170 focused/live gates.
+- **Boundary**: The app factory seam is not yet an operator configuration loader, and real OIDC/SAML signatures have not yet traversed HTTP end to end; P3-ENT-001 remains open.
+
+### D-176: Require a server-issued one-time challenge before assertion verification
+
+- **Date**: 2026-07-28
+- **Decision**: Load only bounded versioned public verification configuration, issue tenant/provider/protocol-bound five-minute challenges, persist hashes under forced RLS, consume atomically before verification, and cap serialized active challenges.
+- **Reason**: Comparing a signed assertion to a nonce or request ID supplied by the same caller does not establish server correlation. The challenge must originate at ReconForge and be independently one-time.
+- **Evidence**: ADR 0176, E-171, `reconforge/auth/federation_config.py`, migration 0034, `tests/test_federation_config.py`, `tests/test_api_federation.py`, and `tests/test_postgres_federation.py`.
+- **Boundary**: This closes the bounded direct assertion-verification adapter task, not authorization-code exchange, discovery, IdP-initiated SAML, SCIM, MFA, provider single logout, hosted interoperability, independent assurance, or Enterprise readiness.
+### D-177 — SCIM provisioning groups cannot grant ReconForge authority
+
+- Date: 2026-07-28
+- Status: accepted
+- ADR: `docs/adr/0177-scim-provisioning-is-not-authorization.md`
+- Decision: scope SCIM resources by tenant and provisioning domain, treat external IDs as idempotency identities only inside that scope, deactivate rather than erase provisioned users, and prohibit implicit mapping from SCIM group labels to ReconForge roles or permissions.
+- Rationale: RFC 7643 does not define authorization semantics for groups. Local explicit approval must remain the authority boundary for financial and administrative permissions.
+
+### D-178 — SCIM deactivation and session revocation share one transaction
+
+- Date: 2026-07-28
+- Status: accepted
+- ADR: `docs/adr/0178-scim-forced-rls-lifecycle-storage.md`
+- Decision: store SCIM resources in forced-RLS tenant/domain tables, serialize concurrent external identities, keep provisioned identities role-free, and atomically disable the identity plus revoke sessions during deprovisioning.
+- Rationale: a shadow-only SCIM record would leave active access behind, while external group-to-role writes would allow upstream privilege escalation.
+
+### D-192 — Schedule occurrence dispatch and cursor advance share one transaction
+
+- Date: 2026-07-29
+- Status: accepted
+- ADR: `docs/adr/0192-postgres-scheduler-dispatch-is-atomic-and-versioned.md`
+- Decision: persist immutable schedule versions with initial-registration digests, claim due rows through bounded `SKIP LOCKED` discovery, narrow the same transaction to workspace/entity scope, and atomically create or resolve a digest-addressed durable job before appending dispatch/audit evidence and advancing the cursor.
+- Rationale: separate commits can lose an occurrence or duplicate its business effect after a crash. Versioned immutable configuration, durable idempotency, and cursor-after-dispatch ordering provide reproducible recovery without claiming exactly-once transport.
+- Rollback: empty scheduler schemas may downgrade to 0046. Non-empty downgrade is rejected before mutation and requires a verified backup plus approved data migration; scheduled durable jobs are never deleted by migration 0047.
+- Limits: hosted polling, email/webhook transports, egress allowlists, redaction, HA, operational UI, and P3-ENT-005 exit remain open.
+
+### D-193 — Notification egress is exact, redacted, pinned, and at-least-once
+
+- Date: 2026-07-29
+- Status: accepted
+- ADR: `docs/adr/0193-notifications-are-redacted-allowlisted-and-at-least-once.md`
+- Decision: make network delivery default-off; store immutable workspace/entity-scoped route versions and exact schedule subscriptions; enqueue only a closed digest-bound schema-v1 payload in the schedule transaction; require exact HTTPS/SMTPS/domain allowlists; validate every DNS answer and pin the selected public address to TLS; reuse bounded outbox retry/dead-letter/replay and append every state transition as immutable delivery evidence.
+- Rationale: arbitrary endpoints, a second DNS lookup, raw outbox forwarding, mutable destinations, or hidden exactly-once assumptions would create SSRF, exfiltration, audit, and duplicate-effect risks.
+- Rollback: empty 0048 may downgrade to 0047. Any route, subscription, notification outbox row, or delivery event blocks downgrade before mutation and requires a verified backup plus approved forward data migration.
+- Limits: provider tests are injected and synthetic; real email/webhook interoperability, production secret custody, receiver idempotency after crash-between-send-and-ack, HA, and external assurance remain unverified.
+
+### D-194 — Security overview is count-only, human-only, and not assurance
+
+- Date: 2026-07-29
+- Status: accepted
+- ADR: `docs/adr/0194-security-center-is-count-only-and-human-governed.md`
+- Decision: aggregate current tenant security state through one backend-neutral count contract and one static RLS-backed PostgreSQL projection; require `security.center.read`, a human principal, and current configured privileged assurance; return a closed tenant/digest-bound schema without subjects, credentials, destinations, financial data, free-form audit content, or cluster-global sequence values.
+- Rationale: joining identity/security tables in a browser or returning row details would create an excessive disclosure surface, while a generic green posture would misrepresent current assurance. Counts plus explicit attention codes support triage without pretending to certify security.
+- Migration: 0049 names and strengthens the service-account permission constraint so direct SQL cannot grant the overview permission to a machine principal. Downgrade restores the prior ceiling without changing data tables.
+- Limits: this slice is read-only and PostgreSQL-only; lifecycle mutation, accessible UI, hosted interoperability, complete disclosure testing, and independent security assurance remain open.
+# E-174 — SCIM request principals and hash-only credentials
+
+- Accepted ADR 0179. SCIM machine principals are separate from user sessions and RBAC. A routing tenant only selects the forced-RLS scope; authority comes from an unexpired, unrevoked credential hash found inside that scope.
+- Raw credentials are returned once by the operator CLI and are never retrievable. Rotation is one transaction that issues a successor and revokes its predecessor.
+- P3-ENT-002 closes at the advertised bounded RFC 7643/7644 subset. Unsupported capabilities remain explicit, and hosted interoperability or Enterprise readiness require separate evidence.
+# E-175 — Role-free service accounts with direct least privilege
+
+- Accepted ADR 0180. Machine identities are separate from users, sessions, and roles; their credentials are hash-only, bounded, revocable, and tenant scoped.
+- Human identity administration, policy administration, service-account administration, and emergency permissions cannot be delegated to a service account. Permission and TTL ceilings are enforced in PostgreSQL as well as Application code.
+- This closes only the service-account lifecycle slice. P3-ENT-003 remains open until machine HTTP principals and governed privileged human step-up/emergency review are implemented and verified.
+
+# E-176 — Machine principals cannot perform human-governed decisions
+
+- Accepted ADR 0181. Reserved `rfa_` credentials authenticate only as typed service-account principals inside a forced-RLS tenant transaction and never become user sessions or receive user roles.
+- Central policy is the second denial boundary: explicit human-governed permissions and every `.approve`, `.review`, or `.complete` suffix fail for machines. Dynamic workflow transitions are human-only.
+- Alembic must preserve existing loggers because disabling the authorization logger removes runtime policy-audit evidence. The discovered regression is now locked by test.
+- This completes HTTP machine composition only. P3-ENT-003 remains open for privileged human step-up and governed emergency access.
+
+# E-177 — Privileged server actions require session-bound reauthentication
+
+- Accepted ADR 0182. A closed registry of high-risk PostgreSQL permissions requires an existing human role grant plus a fresh assertion bound to the same tenant, user and session.
+- Password reauthentication uses the established lockout-aware verifier and produces a forced-RLS append-only assertion for at most ten minutes. It is deliberately not described as MFA.
+- Community/SQLite remains compatible because step-up enforcement is a server-session control, not a generic authorization prerequisite.
+- P3-ENT-003 remains open for emergency-access request, independent approval, bounded activation, expiry, and post-use review.
+
+# E-178 — Emergency authority requires maker-checker activation and independent review
+
+- Accepted ADR 0183. Emergency authority is human-only, self-requested, independently approved, session-bound, time-limited, and distinguishable from base RBAC.
+- Every emergency-derived authorization must append permission and surface evidence before the protected operation; end or expiry requires an independent post-use review.
+- The registry deliberately excludes identity, role, policy, service-account, and security administration. P3-ENT-003 remains open for true MFA, workload identity federation, hosted operational proof, and independent assurance.
+
+# E-179 — WebAuthn is the configured privileged MFA method
+
+- Accepted ADR 0184. User-verified WebAuthn provides a distinct origin-bound possession factor through a pinned standards library; no private authenticator key or shared MFA secret is stored.
+- Enabling the closed RP/origin configuration changes the privileged policy contract: password reauthentication remains sufficient for enrollment but not privileged execution, which requires `webauthn_user_verified` assurance.
+- P3-ENT-003 closes at its bounded exit contract. Recovery, attestation governance, workload federation, hosted operation, broad authenticator interoperability, and independent assurance remain explicit separate work.
+
+# E-180 — Hierarchical execution scope is transaction-local and database-enforced
+
+- Accepted ADR 0185. Tenant, workspace, organization, and legal-entity context is immutable, validated, and installed with transaction-local settings.
+- Empty child scope is an explicit tenant-wide operation; a supplied child adds an RLS constraint, and legal entity without organization is invalid.
+- Migration 0041 covers the authoritative hierarchy only. P3-ENT-004 remains open until jobs, exports, object storage, remaining domain tables, API composition, and failure paths pass equivalent isolation gates.
+
+# E-181 — Durable workers narrow after tenant-wide discovery
+
+- Accepted ADR 0186. Scheduler discovery is tenant-wide, but the selected job's workspace/entity becomes the active transaction scope before any state or evidence write.
+- Resume and read paths derive scope from the durable parent and re-query beneath RLS; child evidence is visible only through a visible parent job.
+- This closes the background-job portion of P3-ENT-004 only. Export, object-storage, API-authority, remaining-domain, and failure-path gates remain open.
+
+# E-182 — Object artifacts bind key and metadata to hierarchy
+
+- Accepted ADR 0187. Official object stores require validated tenant/workspace/entity hierarchy, place every supplied segment in the immutable key, and repeat that scope in integrity metadata.
+- Evidence registration verifies returned hierarchy before database persistence. Existing tenant-only providers remain compatible through an explicit capability boundary but provide no multi-workspace isolation evidence.
+- This closes the object-storage portion of P3-ENT-004 only. PostgreSQL export scope, remaining domain RLS, API authority, and full failure-path coverage remain open.
+
+# E-183 — Enterprise exports are authorized RLS snapshots
+
+- Accepted ADR 0188. A control-plane export requires explicit workspace scope, `reports.read`, exact contextual grants, bounded static queries under PostgreSQL RLS, canonical digests, and hierarchy-aware immutable publication.
+- Migration 0043 closes tenant-only Evidence Application reads and the workspace-parent gap for entities/branches. The transaction also sets the job engine's `app.entity_id` alias from the legal-entity scope.
+- Workspace-only Evidence is excluded from entity exports until an authoritative entity field exists. This closes the export portion of P3-ENT-004, not remaining domain/API/failure-path isolation.
+
+# E-191 — PostgreSQL is the authoritative server user/session lifecycle
+
+- Accepted ADR 0195. Server authentication and user/session administration must address one PostgreSQL authority; the historical SQLite `/api/v1/users` routes now fail closed only in the PostgreSQL profile.
+- User disable, all-session revocation, and bounded domain-audit evidence are one optimistic transaction. Self-disable, last-active-administrator removal, stale versions, sibling identifiers, and machine principals fail closed.
+- Public session administration exposes only metadata presence flags, never raw tokens, hashes, IP addresses, user-agent values, email, or passwords. Signed cursors bind tenant/resource/filter/order.
+- E-191 does not govern roles or policies. E-192 must replace or disable the remaining server `/api/v1/roles` shadow surface before P3-ENT-006 can close.
+
+# E-192 — PostgreSQL is the authoritative server role/policy lifecycle
+
+- Accepted ADR 0196. Server authorization reads and administration now address one PostgreSQL role, role-permission, and user-role authority; historical `/api/v1/roles` reads fail closed before SQLite opens in the server profile and remain compatible locally.
+- Role names are immutable, deletion is replaced by retirement, and reactivation never resurrects revoked assignments. Permission and user-role mutations replace exact sorted sets under optimistic versions and invalidate every affected active session.
+- The HTTP permission registry is read-only. Tenant-serialized final-manager checks prevent retiring the last management role, removing its final `roles.manage` policy, or stripping the last active human manager.
+- Audit append, assignment/policy state, user lifecycle increments, and session revocation share one transaction. Migration 0051 refuses downgrade when governed access evidence would be lost.
+- This slice does not implement full ABAC, policy approval workflows, integration/retention lifecycle, administration UI, HA, production IAM assurance, certification, or Enterprise readiness.
+
+# E-193 — Govern native integration state and monotonic evidence retention
+
+- Accepted ADR 0197. Integration administration projects the native federation-link, SCIM-credential, service-account, and notification-route tables instead of creating a generic shadow connector registry.
+- Human `security.policy.manage` plus current privileged assurance, an exact state digest, and a closed reason are required. Native disable/revocation, lifecycle evidence, and bounded domain audit share one tenant transaction.
+- Tenant retention policies are versioned and retired rather than deleted. Evidence assignments are append-only and idempotent by evidence, policy, and policy lifecycle version.
+- The evidence registry owns a monotonic retention floor and explicit retention version. The old metadata path preserves omitted retention and refuses explicit shortening before SQL; PostgreSQL independently enforces the floor.
+- Retention is metadata only. External object-lock propagation, legal approval, connector interoperability, secret rotation orchestration, accessible administration UI, HA, certification, and Enterprise readiness remain outside this slice.
+
+# E-194 — Consolidated audit browsing is redacted and source-specific
+
+- Accepted ADR 0198. The PostgreSQL administration view combines the domain and ledger-control audit sources only for deterministic browsing; it does not convert them into a global chain or sequence.
+- Browse returns one-way actor/object/metadata digests and existing integrity hashes, never raw actor labels or identifiers, object identifiers, request identifiers, reasons, or metadata. Every browse cursor is signed and tenant/resource/order/source/event-bound.
+- `audit.read` and `audit.verify` are human-only privileged permissions. Migration 0053 rejects future machine grants without deleting historic grants; central policy denies historic machine principals until explicitly remediated.
+- This slice does not govern the historical Local/SQLite audit API, a full audit UI/accessibility pass, external timestamping, legal/object-store retention, independent assurance, compliance, or Enterprise readiness.
+
+# E-195 — Browser administration must not manufacture bearer authority
+
+- The existing Studio's synthetic and read-only routes are not repurposed as an administration surface. The server administration APIs require an explicit Bearer principal and current privileged assurance; a browser client must not obtain that authority from a build variable, URL, fixture, or persistent browser storage.
+- Before any administrator view is implemented, define and test a browser-specific same-origin session, privileged-assurance, CSRF, logout/revocation, disclosure, and failure contract. The view may consume only the existing closed/redacted API responses and must fail closed when the contract is unavailable.
+- Current Chromium/Axe/RTL/keyboard evidence applies only to the named Studio routes. It is regression evidence, not a full accessibility-conformance or assistive-technology claim.
+
+# E-196 — Same-origin browser sessions keep bearer credentials out of JavaScript
+
+- Accepted ADR 0199. The existing bearer API remains the API/CLI contract. Browser login instead places the session bearer only in a host-only HttpOnly/Secure/SameSite=Strict cookie and returns a CSRF proof bound by HMAC to that exact session.
+- Cookie-authenticated unsafe requests require `X-ReconForge-CSRF`; explicit Bearer takes precedence and retains existing compatibility behavior. Logout revokes and clears only the session transport actually used.
+- This transport boundary requires same-origin HTTPS and is not a static-hosting topology, CSP policy, browser login/step-up UX, reverse-proxy proof, accessibility certification, or Enterprise readiness.
+
+# E-197 — Administration UI consumes only closed redacted contracts
+
+- The first Studio administration route is audit-only. It cannot browse or verify until browser login and the existing human step-up succeed; it keeps tenant and CSRF proof only in component memory and has no bearer or synthetic fallback path.
+- Browser rendering is constrained to the E-194 allowlisted fields. The client validator rejects a wider event response before rendering, so a server-side disclosure regression such as `actor_label` does not become an accidental browser disclosure.
+- This does not create identity, role, integration, retention, or security-center UI; it does not prove browser deployment topology, CSP, full accessibility conformance, or Enterprise readiness.
+## D208 - Browser governance writes use native concurrency tokens and transient evidence references
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: The administration UI may disable only already-authorized native integrations and may create, edit, retire, reactivate, and apply retention policies only through the existing human step-up and CSRF-bound API. Integration disable submits the returned state digest; policy updates submit the returned lifecycle version; evidence application submits an operator-provided retention version. Destructive transitions require typed literals. Evidence identifiers are transient form values cleared after success or cancellation and are never populated from list responses.
+- Consequence: The browser does not become a connector provisioning or evidence discovery surface, and no secret, destination, credential, or stored evidence reference is disclosed. PostgreSQL remains responsible for tenant scope, optimistic conflicts, append-only audit, and the non-shortening retention floor. Retired policies preserve prior assignments and reactivation does not rewrite evidence.
+- Rollback: Remove the mutation component and helpers while retaining the pre-existing read-only governance tables and all server-side enforcement. Existing integration disablement and retention assignments are deliberately not reversed by a UI rollback.
+## D209 - A deployed administration browser uses one exact-host HTTPS origin
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: Allow the API composition root to serve a pre-built Studio only when an exact Host allowlist is configured. Bind direct TLS certificate/key files together or require an explicit secure-transport assertion for reviewed upstream termination. Emit HSTS only in secure mode and apply the closed browser policy to API and static responses. Preserve asset 404s and use SPA fallback only for extensionless GET/HEAD paths.
+- Consequence: Secure browser cookies, CSRF, HTML, assets, and API calls can share a deployable origin without a development proxy or bearer-token persistence. Forwarded headers remain untrusted and external proxy/certificate policy remains an operator responsibility.
+- Rollback: Remove the web-root and secure-hosting options. API-only local operation resumes without schema or data changes.
+## D210 - Connector manifest v1 is data-only, static-allowlisted, and read-only
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: Add a strict immutable manifest and deterministic conformance boundary before any network or package loading. Preserve the historical registry API but classify SAP/Odoo adapters as export profiles. Reject write capability in v1 and keep discovery as a fixed source allowlist.
+- Consequence: Current local adapters gain auditable boundaries without creating live integration, credential, network, or arbitrary-code claims. The SHA-256 manifest digest is integrity metadata only and cannot substitute for publisher signature verification.
+- Rollback: Remove the manifest/conformance package and adapter declarations; no stored state or schema is affected.
+
+## D211 - Network connector pages are exact-egress durable read effects
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: Permit only schema-closed read-only HTTPS GET registrations over signed manifest data. Require exact endpoint allowlisting, public-only DNS answers, IP-pinned hostname-verified TLS, no redirects, runtime-only secret references, bounded idempotency/cursor/response/rate/retry policy, and one immutable object plus generation-fenced durable-job effect per page.
+- Consequence: Crash/reclaim resumes from a digest-verified committed cursor without replaying committed effects, while Community remains network-free by default. The runtime remains synthetic and vendor-neutral; process-local rate state, operator trust/vault composition, provider interoperability, and distributed quotas are explicit limitations. Write-back and executable third-party packages remain prohibited.
+- Rollback: Disable/remove network registrations and workers. Retain existing immutable page/job evidence according to governed retention; no schema downgrade is required.
+
+## D212 - Signed packs are approved declarative data, never executable extensions
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: Admit only bounded closed JSON packs whose complete manifest is Ed25519-authenticated under an operator-owned trust snapshot. Require strict declarative rule/golden conformance, platform and active dependency compatibility, distinct maker-checker approval, immutable version rows, one enabled version, and actor/digest events for install, disable, and rollback. Upgrade is a complete new data version; executable migration or module hooks are forbidden.
+- Consequence: Control and industry pack lifecycle is locally reproducible without granting publisher code execution. Existing repository YAML packs remain compatible and are not retroactively called signed. Legal publisher identity, public marketplace, production trust administration, customer-data migration, multi-node activation, and external assurance remain outside the evidence.
+- Rollback: Stop admissions and remove the local lifecycle database after governed event export/retention. Existing built-in YAML pack loading remains unchanged.
+
+## D213 - Multi-resource upgrades are approved sagas with explicit uncertainty
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: Bind application, database, object-store, configuration, and pack changes into one closed digest-addressed plan. Complete all rollback/compatibility preflights before mutation, require a distinct maker/checker, claim execution atomically, verify every receipt, and roll applied resources back in reverse. Interrupted adapters must report provably not applied, applied with a recoverable receipt, or unknown; unknown state fails into isolation rather than a false rollback claim.
+- Consequence: Upgrade coordination does not pretend that independent stores share a distributed transaction or exactly-once transport. Concrete adapters remain responsible for idempotency, backups, compatibility readers, and resource-specific integrity.
+- Rollback: Disable the orchestrator while retaining its journal. Existing resource-specific migration, backup, restore, configuration, object, and pack tools remain authoritative.
+
+## D214 - Operator tooling version is distinct from deployed resource versions
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: Bind the running operator version independently from the deployed application source and target. Publish only closed, schema-validated transitions whose named compatibility readers, target digests, and mandatory rollback drills pass. PostgreSQL preflight must authenticate an encrypted backup, migrate an isolated restore, and remove that drill database before source mutation; local object upgrades change only a verified catalog and never rewrite immutable evidence bytes.
+- Consequence: The v0.7.1 operator can truthfully upgrade a tagged v0.7.0 deployment, and a matrix cannot claim `supported` while any listed resource transition is blocked. This establishes bounded local/disposable operation, not zero downtime, distributed atomicity, production key custody, HA/DR, or Enterprise readiness.
+- Rollback: Mark the matrix `candidate`, reject new plans, and retain journals/backups/quarantines. Resource adapters restore only their verified predecessor state; unknown state remains isolated for manual investigation.
+
+## D215 - Promotion requires positive fencing and failure-domain disclosure
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: A standby may be promoted only after the controller proves the former writer's exact identity is stopped and fenced. Every HA/DR report must name infrastructure, independent failure domains, replication and commit mode, failure injection, RPO unit, RTO measurement boundaries, backup/restore integrity, and residual limitations.
+- Consequence: The synchronous two-container result is evidence for a controlled replication partition, process failure, rejoin, and failback, not host-loss HA. Zero missing acknowledged transactions follows only from remote-apply after streaming readiness; a timed-out/unacknowledged transaction remains uncertain. The recorded 11.117-second failover and 0.958-second failback are one development run, not production SLOs.
+- Rollback: Refuse promotion when fencing cannot be proven. Remove only resources bearing the current unique drill label and retain the report as bounded evidence.
+
+## D216 - Offline installation consumes a closed local hash-locked inventory
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: Air-gapped installation inputs must declare every local regular file by normalized relative path, role, size, and SHA-256. Requirements are exact and individually hashed; derived pip execution is argv-only with `--no-index` and `--require-hashes`. URLs, links, traversal, extras, and integrity drift fail before install.
+- Consequence: E-214 establishes local artifact-integrity input, not mirror completeness, signature trust, successful installation, OS egress isolation, or Air-gap readiness.
+- Rollback: Reject/quarantine the whole bundle without partial installation; removing the verifier restores the task to planned and changes no deployment.
+
+## D217 - Offline install proof separates connected assembly from disconnected consumption
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: Dependency acquisition occurs only in an explicit connected assembly stage under `uv.lock` hashes. The consumption stage receives a digest-closed wheel inventory and runs with Docker network mode none, read-only root/bundle, bounded writable tmpfs, and pip no-index/no-deps/require-hashes. A successful doctor check is required.
+- Consequence: E-215 proves one Linux no-network installation of the current wheel. It does not prove physical transfer controls, offline signature trust, identity/recovery ceremonies, repeated platforms, or production readiness.
+- Rollback: Remove the disposable container and tmpfs state, preserve only the closed report, and reject the bundle on any verification/install/doctor failure.
+
+## D218 - Offline attestation trust is pinned and OCI-bounded
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: Pin the verifier binary and trusted-root snapshot by digest, verify release checksum inventories before signatures, and enforce exact repository/workflow/signer/source/ref/runner constraints with no shell and no network fallback. Treat OCI bundle integrity separately from OCI subject verification.
+- Consequence: E-216 proves offline cryptographic identity for regular-file provenance and file-artifact SBOM attestations. Because gh 2.78.0 resolves OCI subjects at the registry, the image bundles are integrity-only in this drill and no offline OCI signature claim is allowed.
+- Rollback: Quarantine the evidence directory on any digest, identity, signature, or trust-root failure; no runtime or publication is mutated.
+
+## D219 - Sovereign fallback uses pre-provisioned local identity and invalidates sessions on restore
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: An isolated deployment must test local identities before disconnection and protect them through authenticated encrypted backup. Restore carries verifier material and roles but never active bearer sessions; wrong-key recovery is atomic and fail-closed. Runtime credentials and keys are generated ephemerally for drills.
+- Consequence: E-217 proves local login and encrypted SQLite identity recovery in one no-network Linux runtime. It does not create self-service forgotten-password recovery, a permanent bypass account, or hardware-backed key custody.
+- Rollback: Delete the isolated restored database and runtime tmpfs; preserve the encrypted artifact only under operator custody. No external identity or published asset is mutated.
+
+## D220 - Signed installation evidence must bind the exact verified subject digest
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: A signed-air-gap claim is permitted only when the application wheel accepted by the offline installer has the exact SHA-256 subject verified by the provenance and SBOM attestations. Locally rebuilt wheels remain valid test inputs but cannot inherit another artifact's signature evidence.
+- Consequence: E-219 installs the exact signed candidate wheel and closes the prior evidence-composition gap. Dependency wheels remain hash-locked rather than individually attested, and OCI is a distinct profile.
+- Rollback: Reject the bundle before install on any external-wheel digest or metadata mismatch; deleting the disposable runtime reverses the drill without remote mutation.
+
+## D221 - Air-gap task exit is profile-specific, not a universal deployment claim
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: P3-ENT-011 may exit for the Python-wheel Linux sovereign profile once closed bundle, mirror, same-signed-artifact install, no-network enforcement, local identity, encrypted recovery, and exact upgrade/rollback gates pass. OCI and physical-transfer assurance remain explicitly separate.
+- Consequence: E-220 is a bounded task completion, not an air-gap certification, multi-platform guarantee, OCI signature claim, or Enterprise readiness statement.
+- Rollback: Reopen P3-ENT-011 if any bound report, digest, runtime gate, or compatibility transition becomes invalid or unsupported.
+
+## D222 - Reliability signals are closed, dimension-free, and fail explicit on no data
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: Operational alerts consume only named bounded integer measurements. Tenant, workspace, actor, record, amount, and currency dimensions are forbidden. Missing input is `no_data`, never healthy; each threshold must bind a stable SLO identifier and an operator runbook.
+- Consequence: Local evaluation and telemetry are deterministic and resistant to high-cardinality or financial-data disclosure. Initial thresholds are operator defaults, not measured production SLOs, and a local in-memory exporter does not establish collector or alert-manager operation.
+- Rollback: Disable reliability recording/evaluation while retaining the prior no-export-by-default tracing boundary; remove the policy only after preserving drill evidence and reverting its documentation claims.
+
+## D223 - Measurement-source failure must remove the metric, not manufacture zero
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: Operational collectors may publish a metric only after its source succeeds and validates. Database, schema, timestamp, or provider failure produces a closed source-category marker and omits the affected value; downstream policy therefore reports `no_data`. Aggregate collectors must not return tenant, workspace, job, actor, record, amount, or currency identifiers.
+- Consequence: Zero means an observed zero, while unavailable remains distinguishable and cannot create false green health. Local SQLite, API-window, audit, dependency, and capacity sources are implemented; PostgreSQL parity and external delivery remain separate gates.
+- Rollback: Stop injecting the explicit reliability window or collector. Existing API and no-export observability behavior remains compatible; retained reports must be downgraded if the source contract becomes invalid.
+
+## D224 - OTLP egress requires explicit origin and ignores ambient discovery
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: Use the official version-matched OTLP HTTP/protobuf exporter only when an operator supplies a path-free explicit origin. Permit plaintext only on loopback; require exact allowlisting for remote HTTPS; validate CA and paired mTLS files; set exporter sessions to ignore environment proxies and accept no header credentials.
+- Consequence: Traces, metrics, and closed operational events can reach a vendor-neutral receiver while default Community/API operation retains no exporter or network egress. Arbitrary application-log forwarding, a full Collector distribution, backend retention, and alert delivery remain open.
+- ADR: `docs/adr/0208-otlp-export-is-explicit-allowlisted-and-no-env.md`.
+- Rollback: Omit the endpoint and remove the optional exporter factory/dependency after downgrading E-223 evidence; existing disabled observability behavior remains intact.
+
+## D225 - Server reliability collection is tenant-scoped at the database boundary
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: PostgreSQL operational aggregation must run as a non-superuser inside transaction-local tenant scope with forced RLS. It may return only aggregate depth, age, audit-issue count, and closed source-availability categories; sibling identifiers and values never enter the snapshot.
+- Consequence: E-224 establishes SQLite/PostgreSQL source parity for the current job/audit signals without weakening tenant isolation. A database failure removes both database-derived metrics and yields `no_data`; it never manufactures zero.
+- Rollback: Disable the PostgreSQL collector and retain the SQLite/local policy. Reopen the parity gate if migration, RLS, or live sibling-exclusion evidence no longer passes.
+
+## D226 - Capacity claims bind the exact environment and measurement boundary
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: Record hardware/runtime profile, sample count, transport boundary, wall time, p95, error basis points, resident memory, queue size, query time, recovery state, and limitations together. A single in-process run may validate alert/recovery mechanics but cannot define a production SLO or sizing promise.
+- Consequence: E-225 can support the bounded 1,000-request/1,000-job local result only. Network load, soak, repeated variance, distributed capacity, and production sizing remain separate gates.
+- Rollback: Remove the benchmark claim and retained report if its script, environment identity, or closed schema no longer reproduces; reliability correctness remains independent of the performance number.
+
+## D227 - The reference Collector is pinned, least-privileged, and backend-bounded
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: Pin the official Collector distribution by digest, expose OTLP only on an operator-selected private interface, mount configuration read-only, use a read-only root, drop capabilities, set no-new-privileges, and treat the file exporter as an ephemeral sovereign reference backend only.
+- Consequence: E-226 proves the complete local traces, metrics, and closed-events pipeline plus artifact persistence without granting a durable retention, alert-manager, multi-node Collector, or production SLO claim.
+- Rollback: Stop and remove the labelled Collector and output mount, omit the application OTLP endpoint, and retain no egress. Any replacement backend requires a new explicit allowlist, retention policy, recovery test, and evidence update.
+
+## D228 - Incident recovery requires a closed ordered evidence chain
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: Reliability incidents use five non-skippable monotonic states, safe identifiers, digest-only evidence, prior-event hash linkage, and a final deterministic manifest. Recovery requires a complete all-normal policy evaluation and should use a validator distinct from the mitigating operator.
+- Consequence: E-227 proves local lifecycle mechanics and tamper detection without accepting raw commands, credentials, customer identifiers, or financial rows. Synthetic actor separation is not evidence of a staffed on-call function or external acknowledgement.
+- ADR: `docs/adr/0209-reliability-incidents-are-ordered-hash-chained-and-closed.md`.
+- Rollback: Remove the optional module and drill artifacts. No database, API, CLI, financial schema, or existing telemetry contract changes.
+
+## D229 - HA repetition retains every result and does not widen topology claims
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: Run the complete HA/DR drill exactly three times, retain all RPO/RTO values, compute min/median/max without discarding outliers, and require labelled-resource cleanup after every child run.
+- Consequence: E-228 closes the bounded repetition gap and reports the observed distribution, but it does not change the explicit single-host/failure-domain status or satisfy quorum, automatic failover, or production SLO gates.
+- Rollback: Remove the aggregate report if any child result, resource-cleanup check, schema, or calculation becomes unreproducible; retain the earlier single-run E-213 evidence at its narrower maturity.
+
+## D230 - Competitive claims must stay evidence-bounded and explicit on unknowns
+
+- Date: 2026-07-30
+- Status: accepted
+- Decision: Competitive capability statements must use dated primary sources, explicit feature-level boundaries, and explicit cost/scale/assurance unknowns. Competitor comparison is only allowed to map what is implemented, what is bounded, and what remains unproven.
+- Consequence: E-229 introduces `docs/strategy/competitive-capability-matrix.md` as a bounded evidence-led matrix for `P3-ENT-013` and blocks claims that imply certification, compliance superiority, or external commercial readiness without external pilots and security review gates.
+- Rollback: Delete or replace the matrix before publication and retain a “planned” status for any comparative public claim until `P3-EXT-001` and `P3-EXT-002` evidence are present.
+
+## D231 - Docker runtime must be operational before closing HA/DR evidence gates
+
+- Date: 2026-07-31
+- Status: accepted
+- Context: Three production-dependent evidence runs are blocked in the current environment by Docker runtime connectivity (`npipe:////./pipe/dockerDesktopLinuxEngine`) before exercise assertions execute.
+- Decision: Treat `verify_postgres_reliability.py`, `verify_postgres_ha_dr.py`, and `verify_otel_collector_distribution.py` as environment-blocked for this run context. Do not move `P3-ENT-010` or `P3-ENT-012` to closed status from this evidence set until reruns succeed with a healthy Docker API and unchanged cleanup/infrastructure checks.
+- Consequence: Local evidence remains valid for `E-221` / `E-222` / `E-223` / `E-224` / `E-225` / `E-226` / `E-227`, but production-recovery and live-op resilience claims remain open and are not promoted.
+- Rollback: When Docker connectivity is restored, rerun those scripts and only then update closure logic; if any rerun check changes, revise this decision and retain prior claims by historical scope.

@@ -1,0 +1,58 @@
+schema_version: 1
+audit_id: E-164
+executed_at: "2026-07-28"
+phase: phase_1
+status: verified
+scope: Community SQLite and single-node Team PostgreSQL 17.10 at Alembic 0033
+task_ids:
+  - P1-PLAT-001
+  - P1-PLAT-002
+  - P1-PLAT-003
+  - P1-PLAT-004
+  - P1-PLAT-005
+  - P1-PLAT-006
+  - P1-PLAT-007
+  - P1-PLAT-008
+  - P1-PLAT-009
+  - P1-PLAT-010
+gates:
+  - id: p1_backend_neutrality
+    status: verified
+    evidence:
+      - docs/execution/REPOSITORY_BOUNDARY_INVENTORY.yaml
+      - docs/execution/POSTGRES_PARITY_INVENTORY.yaml
+      - E-144
+      - E-163
+  - id: p1_durable_execution
+    status: verified
+    evidence:
+      - tests/test_durable_job_domain.py
+      - tests/test_durable_job_application.py
+      - tests/test_durable_job_workload_recovery.py
+      - tests/test_postgres_durable_jobs.py
+      - E-092
+      - E-093
+      - E-094
+      - E-095
+  - id: p1_secure_operations
+    status: verified
+    evidence:
+      - docs/operations/backup-restore-matrix.v1.yaml
+      - tests/test_backup_restore_matrix.py
+      - tests/test_postgres_backup.py
+      - tests/test_object_storage_foundation.py
+      - tests/test_policy_engine.py
+      - tests/test_observability.py
+      - E-098
+      - E-101
+      - E-102
+      - E-103
+      - E-104
+      - E-163
+limitations:
+  - enterprise_ha_is_phase_3
+  - regulated_air_gap_is_phase_3
+  - no_managed_key_claim
+  - no_host_loss_or_rpo_rto_claim
+  - no_production_readiness_claim
+  - no_external_assurance_claim

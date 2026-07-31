@@ -1,0 +1,23 @@
+{
+  "checks": {
+    "audit_verification_aggregate": true,
+    "cleanup_complete": true,
+    "fresh_migration_to_head": true,
+    "job_depth_and_age_exact": true,
+    "non_superuser_forced_rls_test_passed": true,
+    "sibling_tenant_excluded": true
+  },
+  "limitations": [
+    "single_postgresql_node",
+    "synthetic_data_and_credentials_only",
+    "no_repeated_load_or_capacity_measurement",
+    "no_production_slo_or_ha_claim"
+  ],
+  "profile": "disposable-postgresql-reliability-source-parity",
+  "runtime": {
+    "docker_server": "29.6.2",
+    "image": "postgres@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193",
+    "migration_head": "0053_audit_administration_acl"
+  },
+  "schema_version": 1
+}

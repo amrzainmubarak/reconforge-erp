@@ -11,7 +11,9 @@ from itertools import combinations
 from typing import Literal
 
 GroupedMatchMode = Literal["one-to-many", "many-to-one", "many-to-many"]
+GroupedNettingMode = Literal["gross", "net"]
 GroupedMatchStatus = Literal["matched", "unmatched", "ambiguous"]
+GroupedMatchCandidateSet = tuple[tuple[str, ...], tuple[str, ...]]
 
 
 class GroupedMatchingError(ValueError):
@@ -22,6 +24,7 @@ class GroupedMatchingError(ValueError):
 class GroupedRecord:
     record_id: str
     amount: Decimal
+    fee: Decimal
     currency: str
     business_date: date
     partition_key: str
@@ -31,6 +34,10 @@ class GroupedRecord:
             raise GroupedMatchingError("Grouped records require identity, currency, and partition key.")
         if not isinstance(self.amount, Decimal) or not self.amount.is_finite():
             raise GroupedMatchingError("Grouped record amounts must be finite Decimal values.")
+        if not isinstance(self.fee, Decimal) or not self.fee.is_finite():
+            raise GroupedMatchingError("Grouped record fees must be finite Decimal values.")
+        if self.fee < 0:
+            raise GroupedMatchingError("Grouped record fees must be non-negative.")
 
 
 @dataclass(frozen=True)
@@ -41,6 +48,7 @@ class GroupedMatchPolicy:
     max_left_cardinality: int = 4
     max_right_cardinality: int = 4
     max_search_evaluations: int = 25_000
+    netting_mode: GroupedNettingMode = "gross"
 
     def __post_init__(self) -> None:
         if self.mode not in {"one-to-many", "many-to-one", "many-to-many"}:
@@ -60,6 +68,8 @@ class GroupedMatchPolicy:
             raise GroupedMatchingError("Many-to-one matching requires left cardinality of at least two.")
         if self.mode == "many-to-many" and (self.max_left_cardinality < 2 or self.max_right_cardinality < 2):
             raise GroupedMatchingError("Many-to-many matching requires cardinality of at least two on each side.")
+        if self.netting_mode not in {"gross", "net"}:
+            raise GroupedMatchingError("Grouped-match netting mode is not supported.")
 
 
 @dataclass(frozen=True)
@@ -73,11 +83,17 @@ class GroupedMatchDecision:
     left_total: Decimal
     right_total: Decimal
     amount_difference: Decimal
+    left_fee_total: Decimal
+    right_fee_total: Decimal
+    left_net_total: Decimal
+    right_net_total: Decimal
     candidate_count: int
     search_evaluations: int
     reason_code: str
+    netting_mode: str
     explanation: str
     tie_break: str
+    ambiguous_candidate_sets: tuple[GroupedMatchCandidateSet, ...]
     decision_digest: str
 
 
@@ -87,6 +103,10 @@ class _CandidateGroup:
     right: tuple[GroupedRecord, ...]
     left_total: Decimal
     right_total: Decimal
+    left_fee_total: Decimal
+    right_fee_total: Decimal
+    left_net_total: Decimal
+    right_net_total: Decimal
     difference: Decimal
     date_span: int
 
@@ -118,6 +138,15 @@ def _canonical_records(records: tuple[GroupedRecord, ...]) -> tuple[GroupedRecor
     if len({record.record_id for record in ordered}) != len(ordered):
         raise GroupedMatchingError("Grouped record identities must be unique on each side.")
     return ordered
+
+
+def _aggregate_totals(
+    records: tuple[GroupedRecord, ...], netting_mode: GroupedNettingMode
+) -> tuple[Decimal, Decimal, Decimal]:
+    gross = sum((record.amount for record in records), Decimal("0"))
+    fees = sum((record.fee for record in records), Decimal("0"))
+    net = gross - fees if netting_mode == "net" else gross
+    return gross, fees, net
 
 
 def _digest(payload: object) -> str:
@@ -155,6 +184,7 @@ def find_grouped_match(
                             evaluations=evaluations,
                             reason_code="GROUP_SEARCH_BUDGET_EXCEEDED",
                             explanation="Grouped search exceeded its deterministic evaluation budget; no group was selected.",
+                            ambiguous_candidates=(),
                         )
                     all_records = left_group + right_group
                     if {record.currency for record in all_records} != left_currencies:
@@ -165,9 +195,9 @@ def find_grouped_match(
                     date_span = (max(dates) - min(dates)).days
                     if date_span > policy.date_window_days:
                         continue
-                    left_total = sum((record.amount for record in left_group), Decimal("0"))
-                    right_total = sum((record.amount for record in right_group), Decimal("0"))
-                    difference = abs(left_total - right_total)
+                    left_total, left_fee_total, left_net_total = _aggregate_totals(left_group, policy.netting_mode)
+                    right_total, right_fee_total, right_net_total = _aggregate_totals(right_group, policy.netting_mode)
+                    difference = abs(left_net_total - right_net_total)
                     if difference <= policy.amount_tolerance:
                         candidates.append(
                             _CandidateGroup(
@@ -175,6 +205,10 @@ def find_grouped_match(
                                 right=right_group,
                                 left_total=left_total,
                                 right_total=right_total,
+                                left_fee_total=left_fee_total,
+                                right_fee_total=right_fee_total,
+                                left_net_total=left_net_total,
+                                right_net_total=right_net_total,
                                 difference=difference,
                                 date_span=date_span,
                             )
@@ -188,8 +222,30 @@ def find_grouped_match(
             evaluations=evaluations,
             reason_code="NO_GROUP_SATISFIED_CONSTRAINTS",
             explanation="No bounded group satisfied currency, partition, date, cardinality, and sum constraints.",
+            ambiguous_candidates=(),
         )
     selected = min(candidates, key=lambda candidate: (candidate.business_cost, candidate.stable_key))
+    tied_candidates = tuple(
+        candidate.stable_key
+        for candidate in sorted(
+            (candidate for candidate in candidates if candidate.business_cost == selected.business_cost),
+            key=lambda candidate: candidate.stable_key,
+        )
+    )
+    if len(tied_candidates) > 1:
+        return _decision(
+            status="ambiguous",
+            policy=policy,
+            candidate=None,
+            candidate_count=len(candidates),
+            evaluations=evaluations,
+            reason_code="GROUP_MATCH_AMBIGUOUS",
+            explanation=(
+                f"Found {len(tied_candidates)} equivalent bounded-group matches with identical minimum cost; "
+                "selection is intentionally unresolved pending governed review."
+            ),
+            ambiguous_candidates=tied_candidates,
+        )
     equivalent_count = sum(candidate.business_cost == selected.business_cost for candidate in candidates)
     return _decision(
         status="matched",
@@ -202,6 +258,7 @@ def find_grouped_match(
             "Selected the lowest-cost bounded group; "
             f"stable record identities broke a tie across {equivalent_count} equivalent candidate(s)."
         ),
+        ambiguous_candidates=(),
     )
 
 
@@ -214,12 +271,17 @@ def _decision(
     evaluations: int,
     reason_code: str,
     explanation: str,
+    ambiguous_candidates: tuple[GroupedMatchCandidateSet, ...],
 ) -> GroupedMatchDecision:
     left_ids = candidate.stable_key[0] if candidate else ()
     right_ids = candidate.stable_key[1] if candidate else ()
     currency = candidate.left[0].currency if candidate else ""
     left_total = candidate.left_total if candidate else Decimal("0")
     right_total = candidate.right_total if candidate else Decimal("0")
+    left_fee_total = candidate.left_fee_total if candidate else Decimal("0")
+    right_fee_total = candidate.right_fee_total if candidate else Decimal("0")
+    left_net_total = candidate.left_net_total if candidate else Decimal("0")
+    right_net_total = candidate.right_net_total if candidate else Decimal("0")
     difference = candidate.difference if candidate else Decimal("0")
     payload = {
         "amount_difference": format(difference, "f"),
@@ -227,6 +289,8 @@ def _decision(
         "currency": currency,
         "left_record_ids": left_ids,
         "left_total": format(left_total, "f"),
+        "left_fee_total": format(left_fee_total, "f"),
+        "left_net_total": format(left_net_total, "f"),
         "mode": policy.mode,
         "policy": {
             "amount_tolerance": format(policy.amount_tolerance, "f"),
@@ -234,13 +298,18 @@ def _decision(
             "max_left_cardinality": policy.max_left_cardinality,
             "max_right_cardinality": policy.max_right_cardinality,
             "max_search_evaluations": policy.max_search_evaluations,
+            "netting_mode": policy.netting_mode,
         },
+        "netting_mode": policy.netting_mode,
         "reason_code": reason_code,
         "right_record_ids": right_ids,
         "right_total": format(right_total, "f"),
+        "right_fee_total": format(right_fee_total, "f"),
+        "right_net_total": format(right_net_total, "f"),
         "search_evaluations": evaluations,
         "status": status,
         "tie_break": "difference-cardinality-date-span-stable-record-identities-v1",
+        "ambiguous_candidate_sets": ambiguous_candidates,
     }
     digest = _digest(payload)
     return GroupedMatchDecision(
@@ -252,11 +321,17 @@ def _decision(
         currency=currency,
         left_total=left_total,
         right_total=right_total,
+        left_fee_total=left_fee_total,
+        right_fee_total=right_fee_total,
+        left_net_total=left_net_total,
+        right_net_total=right_net_total,
         amount_difference=difference,
         candidate_count=candidate_count,
         search_evaluations=evaluations,
         reason_code=reason_code,
+        netting_mode=policy.netting_mode,
         explanation=explanation,
         tie_break="difference-cardinality-date-span-stable-record-identities-v1",
+        ambiguous_candidate_sets=ambiguous_candidates,
         decision_digest=digest,
     )

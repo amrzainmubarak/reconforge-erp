@@ -37,7 +37,9 @@ class LocalAuthService:
             if self.roles.get_role(role) is None:
                 raise AuthRepositoryError("Role not found.")
             password_hash = hash_password(password)
-            user = self.users.create(username=username, password_hash=password_hash, display_name=display_name, email=email)
+            user = self.users.create(
+                username=username, password_hash=password_hash, display_name=display_name, email=email
+            )
             self.roles.assign_role(username=username, role_name=role)
             self._audit(
                 actor_label=actor_label,
@@ -58,7 +60,9 @@ class LocalAuthService:
         return user
 
     def init_admin(self, *, username: str, password: str, actor_label: str = "local-cli") -> LocalUser:
-        return self.create_user(username=username, password=password, role="admin", actor_label=actor_label, display_name=username)
+        return self.create_user(
+            username=username, password=password, role="admin", actor_label=actor_label, display_name=username
+        )
 
     def disable_user(self, *, username: str, actor_label: str = "local-cli") -> LocalUser:
         try:
@@ -210,7 +214,9 @@ class LocalAuthService:
             raise AuthRepositoryError("User not found.")
         return user
 
-    def _audit(self, *, actor_label: str, object_type: str, object_id: str, action: str, metadata: dict[str, object]) -> None:
+    def _audit(
+        self, *, actor_label: str, object_type: str, object_id: str, action: str, metadata: dict[str, object]
+    ) -> None:
         append_audit_event(
             self.connection,
             actor_label=actor_label,

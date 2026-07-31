@@ -26,7 +26,7 @@
     {
       "algorithm": "bounded-partitioned-subset-sum-enumeration-v1",
       "deterministic_tie_break": "difference-cardinality-date-span-stable-record-identities-v1",
-      "explanation_schema": "grouped-matching-explanation-v1",
+      "explanation_schema": "grouped-matching-explanation-v2",
       "id": "bounded-grouped-subset-sum",
       "limits": {
         "max_amount_text_characters": 128,

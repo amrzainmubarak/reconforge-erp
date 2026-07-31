@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import sqlite3
+from importlib import import_module
 from pathlib import Path
 
 import pytest
 
-import reconforge.platform.matching as matching_module
 from reconforge.db import connect, run_migrations
 from reconforge.platform.matching import MatchingService
+
+matching_module = import_module("reconforge.infrastructure.sqlite_matching")
 
 
 def _service(tmp_path: Path) -> tuple[MatchingService, sqlite3.Connection]:

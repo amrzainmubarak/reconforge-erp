@@ -74,9 +74,7 @@ def load_safe_yaml(
     input_policy = validate_financial_input_policy(financial_input_policy)
     if input_policy == STRICT_FINANCIAL_INPUT_POLICY:
         loader_type = (
-            _ExactUniqueFinancialScalarSafeLoader
-            if reject_duplicate_keys
-            else _ExactFinancialScalarSafeLoader
+            _ExactUniqueFinancialScalarSafeLoader if reject_duplicate_keys else _ExactFinancialScalarSafeLoader
         )
         exact_loader = loader_type(stream)
         try:

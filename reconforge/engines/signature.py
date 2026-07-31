@@ -15,23 +15,15 @@ from pandas.api.types import is_float
 from reconforge.reconciliation.matching import RECORD_IDENTITY_POLICY
 from reconforge.utils.money import InvalidAmountError, parse_exact_amount
 
-RECONCILIATION_SIGNATURE_V1: Literal["reconciliation-signature-v1"] = (
-    "reconciliation-signature-v1"
-)
-RECONCILIATION_SIGNATURE_V2: Literal["reconciliation-signature-v2"] = (
-    "reconciliation-signature-v2"
-)
-RECONCILIATION_SIGNATURE_V3: Literal["reconciliation-signature-v3"] = (
-    "reconciliation-signature-v3"
-)
+RECONCILIATION_SIGNATURE_V1: Literal["reconciliation-signature-v1"] = "reconciliation-signature-v1"
+RECONCILIATION_SIGNATURE_V2: Literal["reconciliation-signature-v2"] = "reconciliation-signature-v2"
+RECONCILIATION_SIGNATURE_V3: Literal["reconciliation-signature-v3"] = "reconciliation-signature-v3"
 ReconciliationSignatureVersion = Literal[
     "reconciliation-signature-v1",
     "reconciliation-signature-v2",
     "reconciliation-signature-v3",
 ]
-CURRENT_RECONCILIATION_SIGNATURE_VERSION: ReconciliationSignatureVersion = (
-    RECONCILIATION_SIGNATURE_V3
-)
+CURRENT_RECONCILIATION_SIGNATURE_VERSION: ReconciliationSignatureVersion = RECONCILIATION_SIGNATURE_V3
 
 _FINANCIAL_MATCH_COLUMNS = frozenset({"stock_amount", "gl_amount", "value_difference"})
 
@@ -225,5 +217,7 @@ def build_reconciliation_signature(
         payload["signature_version"] = signature_version
     if signature_version == RECONCILIATION_SIGNATURE_V3:
         payload["record_identity_policy"] = RECORD_IDENTITY_POLICY
-    digest = hashlib.sha256(json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(
+        json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
     return digest

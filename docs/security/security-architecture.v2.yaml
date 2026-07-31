@@ -1,7 +1,7 @@
 schema_version: 2
 architecture_id: reconforge-security-architecture
 status: evidence-bounded
-last_reviewed: "2026-07-26"
+last_reviewed: "2026-07-30"
 claim_boundary: >-
   This registry describes implemented or partial repository controls and explicit
   deployment responsibilities. It is not a compliance certification, security
@@ -13,7 +13,7 @@ control_owners:
     accountability_boundary: Repository design and tests; operators own deployment configuration and access.
   - id: identity-security
     responsibility: Authentication, session, principal binding, authorization, and segregation of duties.
-    accountability_boundary: Implemented local and bounded server paths only; federation and MFA are absent.
+    accountability_boundary: Implemented local and bounded server identity includes OIDC/SAML assertions, authenticated SCIM, machine principals, emergency review, and optional user-verified WebAuthn MFA; hosted provider/authenticator interoperability, recovery, attestation governance, and deployed effectiveness remain absent.
   - id: financial-integrity
     responsibility: Exact financial input, data-quality, and deterministic decision controls.
     accountability_boundary: Declared current paths only; public legacy readers remain migration surfaces.
@@ -50,7 +50,7 @@ editions:
     enforced_controls: [SEC-C-001, SEC-C-002, SEC-C-003, SEC-C-004, SEC-C-005, SEC-C-006, SEC-C-007, SEC-C-008, SEC-C-009, SEC-C-010]
     limitations:
       - Most domain persistence is not covered by one end-to-end PostgreSQL/Redis/object-storage isolation proof.
-      - OIDC, SAML, SCIM, MFA, malware scanning, and managed external event delivery are absent.
+      - OIDC/SAML assertion verification, authenticated SCIM, and user-verified WebAuthn MFA are evidence-bounded; hosted provider/authenticator interoperability, recovery, attestation governance, malware scanning, and managed external event delivery are absent.
   - id: regulated
     maturity: planned-only
     deployment_model: Customer-controlled on-premises or air-gapped profile with customer-managed keys, WORM evidence, HA, and DR.
@@ -183,15 +183,20 @@ trust_boundaries:
   - id: TB-005
     name: optional-network-dependencies
     source: Explicit server adapters and workers.
-    destination: Redis, S3-compatible object storage, and configured external publisher boundary.
+    destination: Redis, S3-compatible object storage, exact allowlisted HTTPS webhooks, SMTPS relays, and configured external publisher boundary.
     assets: [DC-003, DC-004, DC-005, DC-006]
     threats: [Credential leakage, wrong-tenant key, insecure transport, SSRF-like endpoint misuse, duplicate or lost delivery]
     controls: [SEC-C-004, SEC-C-005, SEC-C-009, SEC-C-010]
     evidence:
       - reconforge/infrastructure/redis.py
       - reconforge/infrastructure/object_storage.py
+      - reconforge/application/notifications.py
+      - reconforge/infrastructure/notification_transports.py
+      - reconforge/infrastructure/postgres_notifications.py
       - tests/test_redis_foundation.py
       - tests/test_object_storage_foundation.py
+      - tests/test_notifications.py
+      - tests/test_postgres_notifications.py
   - id: TB-006
     name: artifact-disclosure
     source: Local reports, evidence binders, client packs, anonymized exports, and backups.
@@ -245,12 +250,12 @@ controls:
     name: authentication-principal-and-rbac
     status: partial
     owner: identity-security
-    purpose: Hash local credentials and sessions, bind server principals, require named permissions and supplied scope grants in the central policy primitive, and prohibit creator self-approval across inventoried platform approval/review services.
+    purpose: Hash local credentials and sessions, bind typed human and machine server principals, persist role-free domain-scoped SCIM lifecycle with atomic deactivation/session revocation, govern PostgreSQL user/session/role/policy/assignment lifecycle with optimistic versions and affected-session invalidation, govern optimistic runtime disable over native federation/SCIM/service-account/notification resources, require recent session-bound password reauthentication for a closed privileged PostgreSQL permission registry, require named permissions and supplied scope grants in the central policy primitive, and prohibit creator self-approval across inventoried platform approval/review services.
     boundaries: [TB-002, TB-004]
     data_classes: [DC-003, DC-004, DC-005, DC-006]
-    code_evidence: [reconforge/auth/passwords.py, reconforge/auth/policy.py, reconforge/auth/rbac.py, reconforge/api/dependencies.py, reconforge/platform/approvals.py, reconforge/infrastructure/postgres_identity.py]
-    test_evidence: [tests/test_auth_passwords.py, tests/test_api_dependencies.py, tests/test_api_server_identity.py, tests/test_policy_engine.py, tests/test_approval_sod.py, tests/test_approval_surface_inventory.py, tests/test_workflow_state_machine.py]
-    limitations: [Trusted-local labels are covered by the bounded no-self-approval comparator but are not enterprise principals; universal route/repository ABAC, amount/region/data-class rules, delegated or emergency access, OIDC, SAML, SCIM, and MFA are absent.]
+    code_evidence: [reconforge/auth/passwords.py, reconforge/auth/policy.py, reconforge/auth/rbac.py, reconforge/auth/scim.py, reconforge/api/dependencies.py, reconforge/api/server_identity.py, reconforge/application/approvals.py, reconforge/application/identity_administration.py, reconforge/application/access_administration.py, reconforge/application/security_governance.py, reconforge/infrastructure/sqlite_approvals.py, reconforge/platform/approvals.py, reconforge/infrastructure/postgres_identity.py, reconforge/infrastructure/postgres_identity_administration.py, reconforge/infrastructure/postgres_access_administration.py, reconforge/infrastructure/postgres_security_governance.py, reconforge/infrastructure/postgres_scim.py, reconforge/infrastructure/postgres_service_accounts.py, reconforge/infrastructure/postgres_privileged_sessions.py]
+    test_evidence: [tests/test_auth_passwords.py, tests/test_api_dependencies.py, tests/test_api_server_identity.py, tests/test_api_service_accounts.py, tests/test_api_privileged_sessions.py, tests/test_api_identity_administration.py, tests/test_api_access_administration.py, tests/test_api_security_governance.py, tests/test_postgres_identity_administration.py, tests/test_postgres_access_administration.py, tests/test_postgres_security_governance.py, tests/test_scim_application.py, tests/test_postgres_scim.py, tests/test_postgres_privileged_sessions.py, tests/test_policy_engine.py, tests/test_approval_sod.py, tests/test_approval_surface_inventory.py, tests/test_workflow_state_machine.py]
+    limitations: [Trusted-local labels are covered by the bounded no-self-approval comparator but are not enterprise principals; password reauthentication is not MFA; WebAuthn and emergency controls have synthetic evidence only; universal route/repository ABAC, amount/region/data-class rules, WebAuthn recovery and attestation governance, workload federation, hosted identity/authenticator interoperability, independent assurance, and deployed effectiveness are absent.]
   - id: SEC-C-004
     name: tenant-and-dependency-isolation
     status: partial
@@ -298,19 +303,19 @@ controls:
     purpose: Exclude known credential/session material from sanitized exports, scan repository history/tree with redacted output, and prevent unsupported public maturity claims.
     boundaries: [TB-003, TB-006, TB-007]
     data_classes: [DC-001, DC-002, DC-004, DC-006]
-    code_evidence: [reconforge/db/exporter.py, reconforge/modules/registry.py, .gitleaks.toml, .github/workflows/security.yml, .github/workflows/release.yml]
-    test_evidence: [tests/test_db_export_import.py, tests/test_maturity_policy.py, tests/test_supply_chain_policy.py]
-    limitations: [Local repository scans do not prove hosted enforcement, credential rotation, historical absence, or safe arbitrary customer uploads.]
+    code_evidence: [reconforge/db/exporter.py, reconforge/modules/registry.py, reconforge/connectors/manifest.py, reconforge/connectors/package.py, reconforge/connectors/network.py, .gitleaks.toml, .github/workflows/security.yml, .github/workflows/release.yml]
+    test_evidence: [tests/test_db_export_import.py, tests/test_connector_package.py, tests/test_connector_network.py, tests/test_maturity_policy.py, tests/test_supply_chain_policy.py]
+    limitations: [Local repository scans and synthetic connector secret-reference tests do not prove hosted enforcement, production vault integration, persistent publisher administration, credential rotation, historical absence, or safe arbitrary customer uploads.]
   - id: SEC-C-009
     name: bounded-object-storage-and-sharing
     status: partial
     owner: evidence-security
-    purpose: Use explicit tenant keys, TLS defaults, checksums, retention metadata, bounded staged client-pack redistribution, and opt-in redaction/anonymization boundaries.
+    purpose: Use explicit tenant keys, TLS defaults, checksums, monotonic versioned PostgreSQL retention metadata with append-only policy assignment, bounded staged client-pack redistribution, and opt-in redaction/anonymization boundaries.
     boundaries: [TB-005, TB-006]
     data_classes: [DC-003, DC-005, DC-006]
-    code_evidence: [reconforge/infrastructure/object_storage.py, reconforge/anonymizer/engine.py, reconforge/reports/client_pack.py]
-    test_evidence: [tests/test_object_storage_foundation.py, tests/test_anonymizer.py, tests/test_client_pack_redaction_ingress.py, tests/test_client_pack_csv_redaction_ingress.py, tests/test_client_pack_copy_publication.py, tests/test_client_pack_publication_recovery.py]
-    limitations: [Client-pack JSON/CSV/text and non-redacted copying are resource-bounded and handled-failure rollback-safe, but redaction completeness, crash-atomic existing-directory replacement, malware scanning, authorized delivery, disclosure approval, and KMS integration remain absent.]
+    code_evidence: [reconforge/infrastructure/object_storage.py, reconforge/infrastructure/postgres_evidence.py, reconforge/infrastructure/postgres_security_governance.py, reconforge/connectors/workload.py, reconforge/anonymizer/engine.py, reconforge/reports/client_pack.py]
+    test_evidence: [tests/test_object_storage_foundation.py, tests/test_connector_durable_workload.py, tests/test_postgres_evidence.py, tests/test_postgres_security_governance.py, tests/test_anonymizer.py, tests/test_client_pack_redaction_ingress.py, tests/test_client_pack_csv_redaction_ingress.py, tests/test_client_pack_copy_publication.py, tests/test_client_pack_publication_recovery.py]
+    limitations: [PostgreSQL prevents metadata-floor shortening and retains append-only assignments, and synthetic connector pages bind immutable object digests to fenced job effects, but legal hold/WORM propagation, production provider object storage, response malware scanning, authorized delivery, disclosure approval, KMS integration, and broad crash-atomic publication remain absent.]
   - id: SEC-C-010
     name: pinned-ci-and-build-gates
     status: partial
@@ -321,6 +326,16 @@ controls:
     code_evidence: [uv.lock, docs/security/supply-chain-policy.v1.json, docs/security/supply-chain-exceptions.v1.json, .github/workflows/ci.yml, .github/workflows/security.yml, .github/workflows/release.yml, .github/scripts/validate_supply_chain_policy.py, .github/scripts/build_release_sboms.py]
     test_evidence: [tests/test_supply_chain_policy.py, tests/test_release_readiness_docs.py, tests/test_engine_parity_matrix.py]
     limitations: [Hosted locked Python 3.11/3.12, npm SRI completeness, clean reproducible image builds, signatures, provenance verification, and an executed four-cell engine matrix remain open.]
+  - id: SEC-C-011
+    name: human-governed-security-overview
+    status: implemented-bounded
+    owner: identity-security
+    purpose: Provide one tenant-scoped count-only operational security view without exposing identity subjects, credentials, destinations, financial rows, or unsupported assurance claims.
+    boundaries: [TB-003, TB-004, TB-006]
+    data_classes: [DC-001, DC-002, DC-006]
+    code_evidence: [reconforge/application/security_center.py, reconforge/infrastructure/postgres_security_center.py, reconforge/api/routes/security_center.py, alembic/versions/0049_security_center_acl.py]
+    test_evidence: [tests/test_security_center.py, tests/test_postgres_security_center.py, tests/test_api_security_center.py, tests/test_postgres_service_accounts.py]
+    limitations: [Count aggregates remain sensitive organization metadata; integration and retention mutation exist as a separate governed API, while accessible UI, consolidated audit browsing, hosted interoperability, complete lifecycle administration, and independent security assurance remain absent.]
 
 residual_risks:
   - risk_id: R-001
@@ -341,8 +356,8 @@ residual_risks:
   - risk_id: R-007
     owner: identity-security
     residual_risk: medium
-    controls: [SEC-C-003]
-    rationale: Federation, MFA, provisioning, and full lifecycle controls are absent.
+    controls: [SEC-C-003, SEC-C-011]
+    rationale: Bounded OIDC/SAML verification, authenticated SCIM, user-verified WebAuthn MFA, human/MFA-governed count-only security overview, and governed PostgreSQL user/session/role/policy lifecycle exist, while provider single logout, recovery, attestation governance, integration/retention lifecycle and accessible administration UI, hosted interoperability, and full lifecycle controls remain absent.
   - risk_id: R-008
     owner: platform-operations
     residual_risk: medium
@@ -378,3 +393,8 @@ residual_risks:
     residual_risk: high
     controls: [SEC-C-001, SEC-C-002, SEC-C-009]
     rationale: Bounded tabular/structured preflight, bounded FI-005 evidence/review CSV, FI-006 reports, FI-007 Studio, FI-008 business-record, FI-009 DB JSON, FI-014 review-state JSON, FI-015 generated compatibility JSON, FI-016 local explanation JSON, AP/AR, PostgreSQL reconciliation, SQLite matching/export, and Redis session FI-013 JSON, exact direct tabular/JSON/YAML AST allowlists, and staged resource-bounded FI-012 copies cover selected JSON/CSV/text and non-redacted paths with handled-failure rollback plus explicit integrity-checked local interruption recovery, but not legacy XLS internals, observer/crash-atomic replacement, real host/filesystem-loss durability, malware quarantine, authenticated manifest/template/state provenance, actor/disclosure authorization, or future upload and connector surfaces.
+  - risk_id: R-019
+    owner: platform-security
+    residual_risk: high
+    controls: [SEC-C-008, SEC-C-009, SEC-C-010]
+    rationale: Signed data-only manifests, exact HTTPS egress, public-address pinned TLS, runtime-only secret references, bounded retry/cursor/idempotency/rate/response, and local fenced crash-resume are tested synthetically, but live provider interoperability, production vault and publisher administration, distributed quotas, response-content controls, executable-package sandboxing, write-back, and independent assurance remain absent.

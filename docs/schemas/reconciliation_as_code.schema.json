@@ -1,0 +1,545 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/reconciliation_as_code.schema.json",
+  "title": "ReconForge Reconciliation-as-Code v1",
+  "description": "Versioned declarative reconciliation definition. Executable hooks and arbitrary code are intentionally outside this contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "reconciliation_id",
+    "title"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "reconciliation_id": {
+      "$ref": "#/$defs/slug"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 5000
+    },
+    "sources": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "canonical_mapping": {
+      "type": "object",
+      "maxProperties": 5000,
+      "propertyNames": {
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "validation_rules": {
+      "$ref": "#/$defs/rule_steps"
+    },
+    "normalization": {
+      "$ref": "#/$defs/rule_steps"
+    },
+    "blocking": {
+      "$ref": "#/$defs/rule_steps"
+    },
+    "matching_strategies": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "#/$defs/matching_strategy"
+      }
+    },
+    "tolerances": {
+      "$ref": "#/$defs/tolerances"
+    },
+    "currency_policy": {
+      "$ref": "#/$defs/currency_policy"
+    },
+    "risk_policy": {
+      "$ref": "#/$defs/risk_policy"
+    },
+    "workflow": {
+      "$ref": "#/$defs/workflow"
+    },
+    "evidence_requirements": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "$ref": "#/$defs/evidence_requirement"
+      }
+    },
+    "test_cases": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "$ref": "#/$defs/test_case"
+      }
+    },
+    "expected_results": {
+      "type": "object",
+      "maxProperties": 1000,
+      "propertyNames": {
+        "$ref": "#/$defs/slug"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/expected_result"
+      }
+    }
+  },
+  "$defs": {
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*$",
+      "maxLength": 100
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "plain_non_negative_decimal": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^(?:[A-Z]{3})?$"
+    },
+    "record_scalar": {
+      "type": [
+        "string",
+        "integer",
+        "boolean",
+        "null"
+      ]
+    },
+    "record_value": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/record_scalar"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/record_scalar"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/record_scalar"
+          }
+        }
+      ]
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/record_value"
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "format",
+        "schema_version",
+        "required_columns",
+        "identifier_column"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/slug"
+        },
+        "format": {
+          "enum": [
+            "csv",
+            "xlsx",
+            "json",
+            "xml",
+            "fixed_width",
+            "parquet"
+          ]
+        },
+        "schema_version": {
+          "$ref": "#/$defs/semver"
+        },
+        "required_columns": {
+          "type": "array",
+          "maxItems": 1000,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "identifier_column": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      }
+    },
+    "rule_steps": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "$ref": "#/$defs/rule_step"
+      }
+    },
+    "rule_step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "field",
+        "parameters",
+        "on_failure"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/slug"
+        },
+        "kind": {
+          "enum": [
+            "required",
+            "type",
+            "regex",
+            "date",
+            "currency",
+            "amount",
+            "trim",
+            "casefold",
+            "replace",
+            "reference_normalize",
+            "expression"
+          ]
+        },
+        "field": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/record_value"
+          }
+        },
+        "on_failure": {
+          "enum": [
+            "reject",
+            "exception",
+            "warn"
+          ]
+        }
+      }
+    },
+    "matching_strategy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "strategy_type",
+        "strategy_version",
+        "mode",
+        "amount_tolerance",
+        "date_tolerance_days",
+        "confidence_weight",
+        "exact_fields",
+        "reference_field",
+        "partition_field",
+        "netting_mode"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/slug"
+        },
+        "strategy_type": {
+          "enum": [
+            "exact_1to1",
+            "normalized_ref",
+            "fuzzy_ref",
+            "amount_date_proximity",
+            "value_difference",
+            "one_to_many",
+            "many_to_one",
+            "many_to_many"
+          ]
+        },
+        "strategy_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "indexed-composite-one-to-one",
+            "bounded-grouped-subset-sum",
+            null
+          ]
+        },
+        "strategy_version": {
+          "$ref": "#/$defs/semver"
+        },
+        "mode": {
+          "enum": [
+            "one-to-one",
+            "one-to-many",
+            "many-to-one",
+            "many-to-many"
+          ]
+        },
+        "amount_tolerance": {
+          "$ref": "#/$defs/plain_non_negative_decimal"
+        },
+        "date_tolerance_days": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3660
+        },
+        "confidence_weight": {
+          "$ref": "#/$defs/plain_non_negative_decimal"
+        },
+        "exact_fields": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "reference_field": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "partition_field": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "netting_mode": {
+          "enum": [
+            "gross",
+            "net"
+          ]
+        }
+      }
+    },
+    "tolerances": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "amount",
+        "date_days"
+      ],
+      "properties": {
+        "amount": {
+          "$ref": "#/$defs/plain_non_negative_decimal"
+        },
+        "date_days": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3660
+        }
+      }
+    },
+    "currency_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "base_currency",
+        "strict",
+        "require_same_currency",
+        "target_currency",
+        "fx_source"
+      ],
+      "properties": {
+        "base_currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "strict": {
+          "type": "boolean"
+        },
+        "require_same_currency": {
+          "type": "boolean"
+        },
+        "target_currency": {
+          "$ref": "#/$defs/currency"
+        },
+        "fx_source": {
+          "type": "string",
+          "maxLength": 200
+        }
+      }
+    },
+    "risk_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "high_risk_threshold",
+        "unresolved_ambiguity"
+      ],
+      "properties": {
+        "high_risk_threshold": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "unresolved_ambiguity": {
+          "enum": [
+            "exception",
+            "reject"
+          ]
+        }
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requires_human_approval",
+        "autonomous_financial_approval",
+        "maker_checker"
+      ],
+      "properties": {
+        "requires_human_approval": {
+          "type": "boolean"
+        },
+        "autonomous_financial_approval": {
+          "const": false
+        },
+        "maker_checker": {
+          "type": "boolean"
+        }
+      }
+    },
+    "evidence_requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "node_types",
+        "minimum_count",
+        "required_for_status"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/slug"
+        },
+        "node_types": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "minimum_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "required_for_status": {
+          "enum": [
+            "matched",
+            "ambiguous",
+            "unmatched",
+            "all"
+          ]
+        }
+      }
+    },
+    "test_case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "description",
+        "strategy",
+        "left_records",
+        "right_records",
+        "expected_result"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/slug"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "strategy": {
+          "$ref": "#/$defs/slug"
+        },
+        "left_records": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "$ref": "#/$defs/record"
+          }
+        },
+        "right_records": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "$ref": "#/$defs/record"
+          }
+        },
+        "expected_result": {
+          "$ref": "#/$defs/slug"
+        }
+      }
+    },
+    "expected_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "matched_count",
+        "unmatched_left_count",
+        "unmatched_right_count",
+        "ambiguous_count",
+        "decision_digest"
+      ],
+      "properties": {
+        "matched_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unmatched_left_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unmatched_right_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ambiguous_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "decision_digest": {
+          "type": "string",
+          "pattern": "^(?:[a-f0-9]{64})?$"
+        }
+      }
+    }
+  }
+}

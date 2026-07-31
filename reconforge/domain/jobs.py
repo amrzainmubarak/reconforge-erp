@@ -202,7 +202,9 @@ class DurableJob:
         object.__setattr__(self, "entity_id", _identifier(self.entity_id, "entity_id", optional=True))
         object.__setattr__(self, "input_digest", _digest(self.input_digest, "input_digest"))
         object.__setattr__(self, "config_digest", _digest(self.config_digest, "config_digest"))
-        object.__setattr__(self, "checkpoint_digest", _digest(self.checkpoint_digest, "checkpoint_digest", optional=True))
+        object.__setattr__(
+            self, "checkpoint_digest", _digest(self.checkpoint_digest, "checkpoint_digest", optional=True)
+        )
         object.__setattr__(self, "created_at", _utc_timestamp(self.created_at, "created_at"))
         object.__setattr__(self, "updated_at", _utc_timestamp(self.updated_at, "updated_at"))
         for field in ("started_at", "completed_at"):
@@ -234,13 +236,17 @@ class DurableJob:
             raise JobInvariantError("failed jobs require a safe error code.")
         if self.status is not JobStatus.FAILED and self.safe_error_code:
             raise JobInvariantError("only failed jobs may carry a safe error code.")
-        if self.status in {
-            JobStatus.RUNNING,
-            JobStatus.PAUSED,
-            JobStatus.RETRYING,
-            JobStatus.FAILED,
-            JobStatus.COMPLETED,
-        } and not self.started_at:
+        if (
+            self.status
+            in {
+                JobStatus.RUNNING,
+                JobStatus.PAUSED,
+                JobStatus.RETRYING,
+                JobStatus.FAILED,
+                JobStatus.COMPLETED,
+            }
+            and not self.started_at
+        ):
             raise JobInvariantError("started jobs require started_at.")
 
     @classmethod

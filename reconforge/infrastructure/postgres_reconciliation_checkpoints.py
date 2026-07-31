@@ -1,6 +1,5 @@
 """Schema for tenant-scoped, idempotent reconciliation partition checkpoints."""
 
-
 POSTGRES_RECONCILIATION_CHECKPOINT_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS reconforge.reconciliation_execution_checkpoints (
     tenant_id TEXT NOT NULL,

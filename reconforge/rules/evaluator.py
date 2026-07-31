@@ -99,7 +99,9 @@ def evaluate_rule(
                     entity_type=rule.entity_type,
                     source_file=rule.source_file,
                     source_row=source_row,
-                    affected_reference=_first_text(row, ["source_document", "reference", "po_number", "invoice_number", "return_id"]),
+                    affected_reference=_first_text(
+                        row, ["source_document", "reference", "po_number", "invoice_number", "return_id"]
+                    ),
                     affected_work_order=_first_text(row, ["work_order", "linked_work_order"]),
                     affected_product=_first_text(row, ["product_code", "product_code_stock", "product_code_po"]),
                     affected_customer=_first_text(row, ["customer_code"]),

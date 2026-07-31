@@ -1,0 +1,74 @@
+schema_version: 1
+updated_at: "2026-07-30"
+claim_boundary: >-
+  This inventory measures contract implementation and live-test availability.
+  adapter_present is not live parity. Boundary statuses describe repeatable test
+  availability; the current_live_gate below records the separate unskipped run.
+current_live_gate:
+  id: E-163
+  executed_at: "2026-07-28"
+  database: "PostgreSQL 17.10 Alpine"
+  database_image_digest: "sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
+  migration_path: "Alembic 0001 -> 0033 -> 0011 -> 0033 in an isolated database"
+  application_role: reconforge_app_non_superuser
+  application_and_migration_tests: 140
+  application_and_migration_result: passed
+  native_encrypted_backup_restore_tests: 1
+  native_encrypted_backup_restore_result: passed
+  covered_live_boundaries: 25
+  skipped_live_boundaries: 0
+  limitations: [single_node, synthetic_data, no_ha, no_host_loss, no_rpo_rto_claim]
+current_slice_gate:
+  id: E-193
+  executed_at: "2026-07-30"
+  database: "PostgreSQL 17.10 Alpine"
+  database_image_digest: "sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
+  application_role: reconforge_e193_app_non_superuser_nobypassrls
+  focused_tests: 18
+  focused_result: passed
+  skipped_focused_tests: 0
+  migration_paths: ["0001 -> 0052", "0052 -> 0051 -> 0052", "0052 -> 0011 -> 0052", "nonempty 0052 downgrade refusal"]
+  covered_live_boundaries: [SecurityGovernanceApplicationService]
+  limitations: [single_node, synthetic_data, metadata_retention_only, no_administration_ui, no_external_assurance]
+allowed_statuses: [live_verified_current, live_test_available, contract_only, absent, not_applicable]
+boundaries:
+  - {file: grouped_matching.py, service: GroupedMatchingApplicationService, status: not_applicable, reason: pure_strategy}
+  - {file: backup_restore.py, service: BackupRestoreApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_backup.PostgresNativeBackupAdapter, test: tests/test_postgres_backup.py, risk: recovery_critical}
+  - {file: idempotency.py, service: IdempotencyApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_idempotency.PostgresIdempotencyRepository, test: tests/test_postgres_idempotency.py}
+  - {file: workspace_periods.py, service: WorkspacePeriodApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_domain.PostgresDomainUnitOfWork, test: tests/test_postgres_workspace_period_uow.py}
+  - {file: operations.py, service: OperationsApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_operations.PostgresOperationsRepository, test: tests/test_postgres_operations.py}
+  - {file: jobs.py, service: DurableJobApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_jobs.PostgresDurableJobRepository, test: tests/test_postgres_durable_jobs.py}
+  - {file: jobs.py, service: DurableJobWorkerService, status: live_test_available, adapter: reconforge.infrastructure.postgres_jobs.PostgresDurableJobRepository, test: tests/test_postgres_durable_jobs.py}
+  - {file: metrics.py, service: MetricsApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_metrics.PostgresMetricsRepository, test: tests/test_application_metrics.py}
+  - {file: outbox.py, service: OutboxApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_outbox.TenantBoundPostgresOutboxRepository, test: tests/test_postgres_outbox.py, risk: delivery_critical}
+  - {file: scheduler.py, service: SchedulerApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_scheduler.PostgresScheduleRepository, test: tests/test_postgres_scheduler.py, risk: delivery_critical}
+  - {file: notifications.py, service: NotificationApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_notifications.PostgresNotificationRepository, test: tests/test_postgres_notifications.py, risk: delivery_critical}
+  - {file: security_center.py, service: SecurityCenterApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_security_center.PostgresSecurityCenterRepository, test: tests/test_postgres_security_center.py, risk: disclosure_high}
+  - {file: identity_administration.py, service: IdentityAdministrationApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_identity_administration.PostgresIdentityAdministrationRepository, test: tests/test_postgres_identity_administration.py, risk: identity_critical}
+  - {file: access_administration.py, service: AccessAdministrationApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_access_administration.PostgresAccessAdministrationRepository, test: tests/test_postgres_access_administration.py, risk: identity_critical}
+  - {file: security_governance.py, service: SecurityGovernanceApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_security_governance.PostgresSecurityGovernanceRepository, test: tests/test_postgres_security_governance.py, risk: governance_high}
+  - {file: audit_browsing.py, service: AuditBrowsingApplicationService, status: contract_only, adapter: reconforge.infrastructure.postgres_audit_browsing.PostgresAuditBrowsingRepository, test: tests/test_audit_browsing.py, risk: disclosure_high}
+  - {file: controls.py, service: ControlTestingApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_controls.PostgresControlTestingRepository, test: tests/test_postgres_controls.py}
+  - {file: intercompany.py, service: IntercompanyApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_intercompany.PostgresIntercompanyRepository, test: tests/test_postgres_intercompany.py}
+  - {file: journals.py, service: JournalControlApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_journals.PostgresJournalControlRepository, test: tests/test_postgres_journals.py}
+  - {file: accounts.py, service: AccountReconciliationApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_accounts.PostgresAccountReconciliationRepository, test: tests/test_postgres_accounts.py, risk: financial_high}
+  - {file: approvals.py, service: ApprovalApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_approvals.PostgresApprovalRepository, test: tests/test_postgres_approvals.py, risk: governance_high}
+  - {file: close.py, service: CloseManagementApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_close_application.PostgresCloseManagementRepository, test: tests/test_postgres_close_application.py, risk: financial_high}
+  - {file: evidence.py, service: EvidenceRegistryApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_evidence_application.PostgresEvidenceRegistryRepository, test: tests/test_postgres_evidence_application.py, risk: integrity_high}
+  - {file: exceptions.py, service: ExceptionQueueApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_exceptions.PostgresExceptionQueueRepository, test: tests/test_postgres_exceptions.py, risk: workflow_high}
+  - {file: finance_core.py, service: FinanceCoreApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_finance_core.PostgresFinanceCoreRepository, test: tests/test_postgres_finance_core.py, risk: financial_critical}
+  - {file: master_data.py, service: MasterDataApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_master_data_application.PostgresMasterDataApplicationRepository, test: tests/test_postgres_master_data_application.py, risk: scope_high}
+  - {file: inventory_core.py, service: InventoryCoreApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_core.PostgresInventoryCoreRepository, test: tests/test_postgres_inventory_core.py, risk: financial_high}
+  - {file: payables.py, service: PayablesApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_payables.PostgresPayablesRepository, test: tests/test_postgres_payables.py, risk: financial_critical}
+  - {file: receivables.py, service: ReceivablesApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_receivables.PostgresReceivablesRepository, test: tests/test_postgres_receivables.py, risk: financial_critical}
+  - {file: matching.py, service: MatchingApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_matching.PostgresMatchingRepository, test: tests/test_postgres_matching_application.py, risk: integrity_critical}
+  - {file: inventory_valuation.py, service: InventoryValuationApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_valuation.PostgresInventoryValuationRepository, test: tests/test_postgres_inventory_valuation.py, risk: financial_critical}
+  - {file: inventory_valuation_reversal.py, service: InventoryValuationReversalApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_valuation_reversal.PostgresInventoryValuationReversalRepository, test: tests/test_postgres_inventory_valuation_reversal.py, risk: financial_critical}
+  - {file: inventory_planning.py, service: InventoryPlanningApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_planning.PostgresInventoryPlanningRepository, test: tests/test_postgres_inventory_planning.py, risk: financial_high}
+summary:
+  total: 33
+  live_verified_current: 6
+  live_test_available: 25
+  contract_only: 1
+  absent: 0
+  not_applicable: 1

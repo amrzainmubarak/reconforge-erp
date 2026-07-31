@@ -248,7 +248,7 @@ def test_missing_policy_historical_rule_retains_legacy_replay_defaults(tmp_path:
 
 
 def test_matching_rule_call_sites_are_governed_without_direct_decoder() -> None:
-    path = ROOT / "reconforge/platform/matching.py"
+    path = ROOT / "reconforge/infrastructure/sqlite_matching.py"
     source = path.read_text("utf-8")
     tree = ast.parse(source, filename=str(path))
     direct = [

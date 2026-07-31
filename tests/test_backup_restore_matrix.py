@@ -18,5 +18,5 @@ def test_backup_restore_matrix_is_closed_unique_and_evidence_bounded() -> None:
     assert matrix["overall_status"] == "partial"
     assert {cell["status"] for cell in cells} == {"verified", "planned"}
     assert any(cell["backend"] == "sqlite" and cell["status"] == "verified" for cell in cells)
-    assert any(cell["backend"] == "postgresql" and cell["status"] == "verified" for cell in cells)
+    assert any(cell["id"] == "team-postgresql-17-current" and cell["status"] == "verified" for cell in cells)
     assert all(cell["limitations"] for cell in cells)

@@ -138,7 +138,9 @@ class DurableJobApplicationService:
             result = "created" if created else "replayed"
             if span is not None:
                 span.set_attribute("reconforge.result", result)
-            self._observability.record_job({**attributes, "job.status": persisted.status.value, "reconforge.result": result})
+            self._observability.record_job(
+                {**attributes, "job.status": persisted.status.value, "reconforge.result": result}
+            )
             return persisted, created
 
     def requeue(self, *, tenant_id: str, job_id: str, actor_id: str, occurred_at: str) -> DurableJob:

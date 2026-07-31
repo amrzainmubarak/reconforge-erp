@@ -112,3 +112,39 @@ def test_metric_snapshots_reject_non_finite_stored_readiness(tmp_path: Path) -> 
             MetricsService(connection).compute(period_name="2026-07")
     finally:
         connection.close()
+
+
+def test_close_dependencies_reject_self_and_transitive_cycles(tmp_path: Path) -> None:
+    db_path = tmp_path / "close-cycles.db"
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        close = CloseManagementService(connection)
+        period = close.period_init(
+            period_name="2026-08", start_date="2026-08-01", end_date="2026-08-31",
+            with_default_tasks=False,
+        )
+        first = close.task_add(period_id=str(period["id"]), task_code="A", name="A")
+        second = close.task_add(period_id=str(period["id"]), task_code="B", name="B")
+        third = close.task_add(period_id=str(period["id"]), task_code="C", name="C")
+        with pytest.raises(PlatformError, match="cycle"):
+            close.task_dependency(task_id=str(first["id"]), depends_on_task_id=str(first["id"]))
+        close.task_dependency(task_id=str(first["id"]), depends_on_task_id=str(second["id"]))
+        close.task_dependency(task_id=str(second["id"]), depends_on_task_id=str(third["id"]))
+        with pytest.raises(PlatformError, match="cycle"):
+            close.task_dependency(task_id=str(third["id"]), depends_on_task_id=str(first["id"]))
+        assert connection.execute("SELECT COUNT(*) AS count FROM close_task_dependencies").fetchone()["count"] == 2
+    finally:
+        connection.close()
+
+
+def test_missing_close_reopen_produces_no_audit_evidence(tmp_path: Path) -> None:
+    db_path = tmp_path / "close-missing-reopen.db"
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        with pytest.raises(PlatformError, match="period not found"):
+            CloseManagementService(connection).reopen_period("P-missing", reason="Correction")
+        assert connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"] == 0
+    finally:
+        connection.close()

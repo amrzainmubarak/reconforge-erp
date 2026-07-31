@@ -202,7 +202,8 @@ class SQLiteDurableJobRepository:
 
             placeholders = ", ".join("?" for _ in _JOB_COLUMNS)
             self.connection.execute(
-                f"INSERT INTO durable_jobs ({', '.join(_JOB_COLUMNS)}) VALUES ({placeholders})",  # noqa: S608
+                # SQL identifiers come only from the immutable module-level _JOB_COLUMNS tuple.
+                f"INSERT INTO durable_jobs ({', '.join(_JOB_COLUMNS)}) VALUES ({placeholders})",  # nosec B608
                 _job_values(job),
             )
             self.connection.execute(
@@ -297,7 +298,8 @@ class SQLiteDurableJobRepository:
         assignments = ", ".join(f"{column} = ?" for column in _JOB_COLUMNS[1:])
         values = _job_values(changed)[1:]
         cursor = self.connection.execute(
-            f"UPDATE durable_jobs SET {assignments} WHERE tenant_id = ? AND id = ? AND version = ?",  # noqa: S608
+            # SQL identifiers come only from the immutable module-level _JOB_COLUMNS tuple.
+            f"UPDATE durable_jobs SET {assignments} WHERE tenant_id = ? AND id = ? AND version = ?",  # nosec B608
             (*values, previous.tenant_id, previous.id, previous.version),
         )
         if cursor.rowcount != 1:

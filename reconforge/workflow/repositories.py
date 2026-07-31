@@ -18,19 +18,21 @@ def ensure_workflow_schema(connection: sqlite3.Connection) -> None:
 
     try:
         object_columns = {
-            str(row["name"])
-            for row in connection.execute("PRAGMA table_info(workflow_objects)").fetchall()
+            str(row["name"]) for row in connection.execute("PRAGMA table_info(workflow_objects)").fetchall()
         }
         transition_columns = {
-            str(row["name"])
-            for row in connection.execute("PRAGMA table_info(workflow_transitions)").fetchall()
+            str(row["name"]) for row in connection.execute("PRAGMA table_info(workflow_transitions)").fetchall()
         }
         events_table = connection.execute(
             "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'workflow_transition_events'",
         ).fetchone()
     except sqlite3.DatabaseError as exc:
         raise DatabaseError("Unable to read ReconForge database. Run 'reconforge db init' first.") from exc
-    if not {"id", "created_at", "updated_at"} <= object_columns or not {"reason_required", "active"} <= transition_columns or events_table is None:
+    if (
+        not {"id", "created_at", "updated_at"} <= object_columns
+        or not {"reason_required", "active"} <= transition_columns
+        or events_table is None
+    ):
         raise DatabaseError("ReconForge workflow schema is not initialized. Run 'reconforge db migrate' first.")
 
 

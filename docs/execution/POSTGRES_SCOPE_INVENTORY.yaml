@@ -1,0 +1,112 @@
+schema_version: 1
+captured_at: "2026-07-29"
+slice: P3-ENT-004-E184
+source:
+  engine: PostgreSQL 17.10 alpine
+  migration_head: 0046_postgres_scope_authority
+  catalog_schema: reconforge
+  query_basis:
+    - information_schema.columns
+    - pg_policies
+    - pg_constraint
+counts:
+  rls_policies: 130
+  tables_with_direct_business_scope_columns: 64
+  policies_referencing_a_direct_scope_setting: 65
+  policies_resolving_scope_through_parent_exists: 32
+  tenant_only_policies_without_parent_resolution: 35
+closed_in_0044:
+  direct_scope_rule: >-
+    Every tenant table present at migration time with workspace_id,
+    application_workspace_id, organization_id, legal_entity_id, entity_id, or
+    branch_id composes each present dimension into USING and WITH CHECK.
+  authoritative_child_relationships: 21
+  child_groups:
+    - account_reconciliation
+    - payables
+    - receivables
+    - close
+    - control_testing
+    - exception_queue
+    - finance_entries
+    - inventory
+    - ledger
+  exclusions_with_stronger_purpose_built_policies:
+    - branches
+    - domain_periods
+    - domain_workspaces
+    - durable_jobs
+    - legal_entities
+    - master_data_workspace_organizations
+    - organizations
+closed_in_0045:
+  compatibility_rule: >-
+    Eight legacy business roots receive nullable workspace attribution whose
+    default is the trusted transaction setting. Existing NULL rows remain
+    tenant-global and are hidden whenever a workspace scope is active.
+  attributed_roots:
+    - ap_idempotency_keys
+    - approval_requests
+    - ar_idempotency_keys
+    - certification_records
+    - evidence_registry
+    - evidence_requirements
+    - reconciliation_runs
+    - remediation_plans
+  parent_scoped_children:
+    - evidence_links
+    - reconciliation_inputs
+    - reconciliation_results
+    - reconciliation_exceptions
+    - reconciliation_execution_checkpoints
+live_hostile_evidence:
+  role: non_superuser_nobypassrls
+  read_result: sibling workspace row excluded
+  write_result: sibling workspace insert rejected by WITH CHECK
+  legacy_row_result: visible tenant-wide and hidden in workspace-scoped session
+  child_result: sibling reconciliation child excluded through parent RLS
+  downgrade_upgrade:
+    - 0044_to_0043_to_0044_passed
+    - 0045_to_0044_to_0045_passed
+remaining_tenant_only_classification:
+  tenant_global_reference_or_identity:
+    - currencies
+    - tenants
+    - identity_permissions
+    - identity_role_permissions
+    - identity_roles
+    - identity_sessions
+    - identity_step_up_assertions
+    - identity_user_roles
+    - identity_users
+    - identity_webauthn_challenges
+    - identity_webauthn_credentials
+    - identity_webauthn_events
+    - tenant_memberships
+    - federation_assertion_replays
+    - federation_identity_events
+    - federation_identity_links
+    - federation_login_challenges
+    - scim_credentials
+    - scim_events
+    - scim_group_members
+    - scim_groups
+    - scim_users
+    - service_account_credentials
+    - service_account_events
+    - service_account_permissions
+    - service_accounts
+  tenant_operational_or_audit:
+    - audit_events
+    - domain_audit_events
+    - domain_audit_ledger_state
+    - emergency_access_events
+    - emergency_access_permissions
+    - emergency_access_requests
+    - idempotency_records
+    - outbox_events
+    - principal_scope_grants
+  missing_authoritative_workspace_attribution_requires_schema_evolution: []
+stop_rule: >-
+  P3-ENT-004 remains in progress until API authority is composed with database
+  scope and the final hostile route and failure-path inventory passes.

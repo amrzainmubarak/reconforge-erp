@@ -12,12 +12,23 @@ from fastapi import Depends, Header, Query, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
+from reconforge.api.browser_session import (
+    BROWSER_CSRF_HEADER,
+    BROWSER_SESSION_COOKIE,
+    browser_csrf_token_is_valid,
+)
 from reconforge.api.errors import APIError
 from reconforge.api.security import SessionError, authenticate_token
-from reconforge.api.server_identity import authenticate_server_request, server_identity_enabled
+from reconforge.api.server_identity import (
+    authenticate_server_request,
+    record_emergency_authority_use,
+    server_identity_enabled,
+    server_principal_from_authentication,
+)
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService
 from reconforge.auth.models import LocalUser
 from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext, audit_policy_decision
+from reconforge.auth.webauthn_config import WebAuthnRuntime
 from reconforge.db import DatabaseError, connect
 from reconforge.db.tenancy import (
     InvalidTenantIdError,
@@ -31,9 +42,19 @@ bearer_scheme = HTTPBearer(auto_error=False)
 _PERMISSION_PATTERN = re.compile(r"^[a-z][a-z0-9_.:-]{0,127}$")
 
 
+def _required_step_up_method(request: Request) -> str | None:
+    return (
+        "webauthn_user_verified"
+        if isinstance(getattr(request.app.state, "webauthn_runtime", None), WebAuthnRuntime)
+        else None
+    )
+
+
 def _permission_contract(values: set[str] | frozenset[str]) -> frozenset[str]:
     normalized = frozenset(values)
-    if not normalized or any(not isinstance(value, str) or not _PERMISSION_PATTERN.fullmatch(value) for value in normalized):
+    if not normalized or any(
+        not isinstance(value, str) or not _PERMISSION_PATTERN.fullmatch(value) for value in normalized
+    ):
         raise ValueError("Permission dependency requires valid non-empty permission names.")
     return normalized
 
@@ -72,7 +93,9 @@ def get_idempotency_key(
     if key is not None:
         cleaned = key.strip()
         if not cleaned:
-            raise APIError(status_code=400, code="invalid_idempotency_key", message="Idempotency key must not be blank.")
+            raise APIError(
+                status_code=400, code="invalid_idempotency_key", message="Idempotency key must not be blank."
+            )
         return cleaned
     return None
 
@@ -94,9 +117,13 @@ def get_db_path(request: Request) -> Path:
         except InvalidTenantIdError as exc:
             raise APIError(status_code=400, code="invalid_tenant", message=str(exc)) from exc
         except TenantDatabaseNotFoundError as exc:
-            raise APIError(status_code=503, code="tenant_unavailable", message="Tenant database is unavailable.") from exc
+            raise APIError(
+                status_code=503, code="tenant_unavailable", message="Tenant database is unavailable."
+            ) from exc
         except TenantRoutingError as exc:
-            raise APIError(status_code=503, code="tenant_unavailable", message="Tenant database is unavailable.") from exc
+            raise APIError(
+                status_code=503, code="tenant_unavailable", message="Tenant database is unavailable."
+            ) from exc
     value = getattr(request.app.state, "db_path", None)
     if value is None:
         raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
@@ -134,10 +161,28 @@ def get_auth_db(request: Request) -> Iterator[sqlite3.Connection | None]:
     yield from get_db(request)
 
 
-def _token_from_credentials(credentials: HTTPAuthorizationCredentials | None) -> str:
-    if credentials is None or credentials.scheme.lower() != "bearer" or not credentials.credentials:
-        raise APIError(status_code=401, code="auth_required", message="Authentication required.")
-    return credentials.credentials
+def session_token_from_request(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None,
+) -> tuple[str, str]:
+    """Resolve an explicit bearer token or a same-origin HttpOnly browser cookie."""
+
+    if credentials is not None and credentials.scheme.lower() == "bearer" and credentials.credentials:
+        return credentials.credentials, "bearer"
+    browser_token = request.cookies.get(BROWSER_SESSION_COOKIE, "")
+    if browser_token:
+        return browser_token, "browser_cookie"
+    raise APIError(status_code=401, code="auth_required", message="Authentication required.")
+
+
+def _enforce_browser_csrf(request: Request, *, session_token: str, transport: str) -> None:
+    if transport != "browser_cookie" or request.method.upper() in {"GET", "HEAD", "OPTIONS", "TRACE"}:
+        return
+    if not browser_csrf_token_is_valid(
+        session_token=session_token,
+        candidate=request.headers.get(BROWSER_CSRF_HEADER),
+    ):
+        raise APIError(status_code=403, code="csrf_required", message="Browser request verification is required.")
 
 
 def get_current_user(
@@ -147,10 +192,15 @@ def get_current_user(
 ) -> Iterator[LocalUser]:
     """Authenticate the bearer token against the configured identity backend."""
 
-    token = _token_from_credentials(credentials)
+    token, transport = session_token_from_request(request, credentials)
     if server_identity_enabled(request):
         request_principal = getattr(request.state, "server_principal", None)
         if isinstance(request_principal, ServerPrincipal):
+            _enforce_browser_csrf(
+                request,
+                session_token=token,
+                transport=str(getattr(request.state, "reconforge_auth_transport", transport)),
+            )
             yield request_principal.user
             return
         try:
@@ -159,9 +209,11 @@ def get_current_user(
             raise
         if authenticated is None:
             raise APIError(status_code=401, code="invalid_token", message="Invalid or expired token.")
-        user, permissions = authenticated
-        principal = ServerPrincipal(user=user, permissions=permissions)
+        principal = server_principal_from_authentication(authenticated)
+        user = principal.user
         request.state.server_principal = principal
+        request.state.reconforge_auth_transport = transport
+        _enforce_browser_csrf(request, session_token=token, transport=transport)
         with server_principal_context(principal):
             yield user
         return
@@ -173,14 +225,20 @@ def get_current_user(
         raise APIError(status_code=401, code="invalid_token", message="Invalid or expired token.") from exc
     if local_user is None:
         raise APIError(status_code=401, code="invalid_token", message="Invalid or expired token.")
+    request.state.reconforge_auth_transport = transport
+    _enforce_browser_csrf(request, session_token=token, transport=transport)
     yield local_user
 
 
 def require_dynamic_policy_user(
+    request: Request,
     current_user: LocalUser = Depends(get_current_user),
 ) -> LocalUser:
     """Mark a route whose exact permission is resolved by a governed domain transition."""
 
+    principal = getattr(request.state, "server_principal", None)
+    if isinstance(principal, ServerPrincipal) and principal.principal_type == "service_account":
+        raise APIError(status_code=403, code="human_principal_required", message="Human authentication is required.")
     return current_user
 
 
@@ -200,8 +258,7 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
         current_user: LocalUser = Depends(get_current_user),
         connection: sqlite3.Connection | None = Depends(get_auth_db),
     ) -> LocalUser:
-        route = request.scope.get("route")
-        surface = f"{request.method} {getattr(route, 'path', '<unresolved-route>')}"
+        surface = f"{request.method} {request.url.path}"
         if server_identity_enabled(request):
             principal = getattr(request.state, "server_principal", None)
             if not isinstance(principal, ServerPrincipal):
@@ -211,6 +268,11 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
                     user_id=current_user.id if principal is not None else "",
                     username=current_user.username,
                     user_permissions=principal.permissions if principal is not None else frozenset(),
+                    principal_type=principal.principal_type if principal is not None else "user",
+                    step_up_active=principal.step_up_active if principal is not None else False,
+                    step_up_enforced=True,
+                    required_step_up_method=_required_step_up_method(request),
+                    step_up_method=principal.step_up_method if principal is not None else None,
                 ),
                 required_permission=required_permission,
             )
@@ -221,9 +283,23 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
                 required_permissions=contract,
                 surface=surface,
                 request_id=str(getattr(request.state, "request_id", "")),
+                principal_type=principal.principal_type if principal is not None else "user",
             )
             if not allowed:
-                raise APIError(status_code=403, code="permission_denied", message="Permission denied.")
+                code = decision.reason_code if decision.reason_code in {"step_up_required", "mfa_required"} else "permission_denied"
+                message = {
+                    "step_up_required": "Recent human reauthentication is required.",
+                    "mfa_required": "User-verified WebAuthn MFA is required.",
+                }.get(code, "Permission denied.")
+                raise APIError(status_code=403, code=code, message=message)
+            if principal is not None and decision.granted_permission is not None:
+                record_emergency_authority_use(
+                    request,
+                    principal,
+                    permission=decision.granted_permission,
+                    surface=surface,
+                    request_id=str(getattr(request.state, "request_id", "")),
+                )
             return current_user
         if connection is None:
             raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
@@ -267,8 +343,7 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
         current_user: LocalUser = Depends(get_current_user),
         connection: sqlite3.Connection | None = Depends(get_auth_db),
     ) -> LocalUser:
-        route = request.scope.get("route")
-        surface = f"{request.method} {getattr(route, 'path', '<unresolved-route>')}"
+        surface = f"{request.method} {request.url.path}"
         if server_identity_enabled(request):
             principal = getattr(request.state, "server_principal", None)
             if not isinstance(principal, ServerPrincipal):
@@ -278,6 +353,11 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
                     user_id=current_user.id if principal is not None else "",
                     username=current_user.username,
                     user_permissions=principal.permissions if principal is not None else frozenset(),
+                    principal_type=principal.principal_type if principal is not None else "user",
+                    step_up_active=principal.step_up_active if principal is not None else False,
+                    step_up_enforced=True,
+                    required_step_up_method=_required_step_up_method(request),
+                    step_up_method=principal.step_up_method if principal is not None else None,
                 ),
                 required_permissions=contract,
             )
@@ -288,9 +368,23 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
                 required_permissions=contract,
                 surface=surface,
                 request_id=str(getattr(request.state, "request_id", "")),
+                principal_type=principal.principal_type if principal is not None else "user",
             )
             if not allowed:
-                raise APIError(status_code=403, code="permission_denied", message="Permission denied.")
+                code = decision.reason_code if decision.reason_code in {"step_up_required", "mfa_required"} else "permission_denied"
+                message = {
+                    "step_up_required": "Recent human reauthentication is required.",
+                    "mfa_required": "User-verified WebAuthn MFA is required.",
+                }.get(code, "Permission denied.")
+                raise APIError(status_code=403, code=code, message=message)
+            if principal is not None and decision.granted_permission is not None:
+                record_emergency_authority_use(
+                    request,
+                    principal,
+                    permission=decision.granted_permission,
+                    surface=surface,
+                    request_id=str(getattr(request.state, "request_id", "")),
+                )
             return current_user
         if connection is None:
             raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")

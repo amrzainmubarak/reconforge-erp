@@ -66,7 +66,15 @@ class PeriodRepository:
             INSERT INTO periods (id, workspace_id, name, start_date, end_date, status, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (period.id, period.workspace_id, period.name, period.start_date, period.end_date, period.status, period.created_at),
+            (
+                period.id,
+                period.workspace_id,
+                period.name,
+                period.start_date,
+                period.end_date,
+                period.status,
+                period.created_at,
+            ),
         )
         if self.autocommit:
             self.connection.commit()

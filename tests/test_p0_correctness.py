@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from importlib import import_module
 from pathlib import Path
 
 import pandas as pd
@@ -10,7 +11,6 @@ from reconforge.audit import AuditLedgerError, append_audit_event, list_audit_ev
 from reconforge.config import ReconForgeConfig
 from reconforge.db import connect, database_status, run_migrations
 from reconforge.db.migrations import MIGRATIONS
-from reconforge.platform import matching as matching_module
 from reconforge.platform.common import (
     PlatformError,
     date_diff_days,
@@ -26,25 +26,31 @@ from reconforge.utils.money import (
     round_money,
 )
 
+matching_module = import_module("reconforge.infrastructure.sqlite_matching")
+
 
 def test_invalid_dates_are_exceptions_and_record_accounting_remains_balanced() -> None:
     stock = pd.DataFrame(
-        [{
-            "move_id": "MOVE-BAD-DATE",
-            "date": "not-a-date",
-            "source_document": "INV-1",
-            "work_order": "WO-1",
-            "total_cost": "10.00",
-        }],
+        [
+            {
+                "move_id": "MOVE-BAD-DATE",
+                "date": "not-a-date",
+                "source_document": "INV-1",
+                "work_order": "WO-1",
+                "total_cost": "10.00",
+            }
+        ],
     )
     gl = pd.DataFrame(
-        [{
-            "entry_id": "GL-1",
-            "date": "2026-01-01",
-            "reference": "INV-1",
-            "work_order": "WO-1",
-            "amount": "10.00",
-        }],
+        [
+            {
+                "entry_id": "GL-1",
+                "date": "2026-01-01",
+                "reference": "INV-1",
+                "work_order": "WO-1",
+                "amount": "10.00",
+            }
+        ],
     )
 
     result = reconcile_stock_gl(stock, gl, ReconForgeConfig())
@@ -172,9 +178,12 @@ def test_outbox_is_a_formal_migration_and_legacy_upgrade_is_visible(tmp_path: Pa
     assert legacy.current_version == 12
     connection = connect(db_path, require_exists=True)
     try:
-        assert connection.execute(
-            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'outbox_events'",
-        ).fetchone() is None
+        assert (
+            connection.execute(
+                "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'outbox_events'",
+            ).fetchone()
+            is None
+        )
     finally:
         connection.close()
 
@@ -185,12 +194,18 @@ def test_outbox_is_a_formal_migration_and_legacy_upgrade_is_visible(tmp_path: Pa
     assert upgraded_to_outbox.applied_versions == [13]
     connection = connect(db_path, require_exists=True)
     try:
-        assert connection.execute(
-            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'outbox_events'",
-        ).fetchone() is not None
-        assert connection.execute(
-            "SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = 'idx_outbox_events_pending'",
-        ).fetchone() is not None
+        assert (
+            connection.execute(
+                "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'outbox_events'",
+            ).fetchone()
+            is not None
+        )
+        assert (
+            connection.execute(
+                "SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = 'idx_outbox_events_pending'",
+            ).fetchone()
+            is not None
+        )
     finally:
         connection.close()
 
@@ -199,8 +214,7 @@ def test_outbox_is_a_formal_migration_and_legacy_upgrade_is_visible(tmp_path: Pa
     connection = connect(db_path, require_exists=True)
     try:
         delivery_columns = {
-            str(row["name"])
-            for row in connection.execute("PRAGMA table_info(outbox_events)").fetchall()
+            str(row["name"]) for row in connection.execute("PRAGMA table_info(outbox_events)").fetchall()
         }
         assert {"available_at", "locked_at", "locked_by", "dead_lettered_at"} <= delivery_columns
     finally:
@@ -262,16 +276,56 @@ def test_config_amount_tolerance_serialization() -> None:
 
 def test_matching_engine_row_permutation_invariance() -> None:
     """Reconciling shuffled inputs must produce identical match pairs and match IDs."""
-    stock = pd.DataFrame([
-        {"move_id": "MOVE-101", "date": "2026-01-05", "source_document": "INV-1001", "work_order": "WO-A", "total_cost": "500.00"},
-        {"move_id": "MOVE-102", "date": "2026-01-06", "source_document": "INV-1002", "work_order": "WO-B", "total_cost": "750.50"},
-        {"move_id": "MOVE-103", "date": "2026-01-07", "source_document": "INV-1003", "work_order": "WO-C", "total_cost": "1200.00"},
-    ])
-    gl = pd.DataFrame([
-        {"entry_id": "GL-201", "date": "2026-01-05", "reference": "INV-1001", "work_order": "WO-A", "amount": "500.00"},
-        {"entry_id": "GL-202", "date": "2026-01-06", "reference": "INV-1002", "work_order": "WO-B", "amount": "750.50"},
-        {"entry_id": "GL-203", "date": "2026-01-07", "reference": "INV-1003", "work_order": "WO-C", "amount": "1200.00"},
-    ])
+    stock = pd.DataFrame(
+        [
+            {
+                "move_id": "MOVE-101",
+                "date": "2026-01-05",
+                "source_document": "INV-1001",
+                "work_order": "WO-A",
+                "total_cost": "500.00",
+            },
+            {
+                "move_id": "MOVE-102",
+                "date": "2026-01-06",
+                "source_document": "INV-1002",
+                "work_order": "WO-B",
+                "total_cost": "750.50",
+            },
+            {
+                "move_id": "MOVE-103",
+                "date": "2026-01-07",
+                "source_document": "INV-1003",
+                "work_order": "WO-C",
+                "total_cost": "1200.00",
+            },
+        ]
+    )
+    gl = pd.DataFrame(
+        [
+            {
+                "entry_id": "GL-201",
+                "date": "2026-01-05",
+                "reference": "INV-1001",
+                "work_order": "WO-A",
+                "amount": "500.00",
+            },
+            {
+                "entry_id": "GL-202",
+                "date": "2026-01-06",
+                "reference": "INV-1002",
+                "work_order": "WO-B",
+                "amount": "750.50",
+            },
+            {
+                "entry_id": "GL-203",
+                "date": "2026-01-07",
+                "reference": "INV-1003",
+                "work_order": "WO-C",
+                "amount": "1200.00",
+            },
+        ]
+    )
 
     config = ReconForgeConfig()
     res1 = reconcile_stock_gl(stock, gl, config)
@@ -284,8 +338,22 @@ def test_matching_engine_row_permutation_invariance() -> None:
     assert len(res1.matched_transactions) == len(res2.matched_transactions) == 3
 
     # Compare matched IDs and digests
-    m1_pairs = set(zip(res1.matched_transactions["move_id"], res1.matched_transactions["entry_id"], res1.matched_transactions["match_id"], strict=True))
-    m2_pairs = set(zip(res2.matched_transactions["move_id"], res2.matched_transactions["entry_id"], res2.matched_transactions["match_id"], strict=True))
+    m1_pairs = set(
+        zip(
+            res1.matched_transactions["move_id"],
+            res1.matched_transactions["entry_id"],
+            res1.matched_transactions["match_id"],
+            strict=True,
+        )
+    )
+    m2_pairs = set(
+        zip(
+            res2.matched_transactions["move_id"],
+            res2.matched_transactions["entry_id"],
+            res2.matched_transactions["match_id"],
+            strict=True,
+        )
+    )
 
     assert m1_pairs == m2_pairs, f"Permutation mismatch: {m1_pairs} vs {m2_pairs}"
     assert res1.invariants["record_accounting_ok"] is True
@@ -294,12 +362,22 @@ def test_matching_engine_row_permutation_invariance() -> None:
 
 def test_stable_match_id_format() -> None:
     """Match IDs must be SHA-256 derived hashes prefixed with MATCH-, independent of row index."""
-    stock = pd.DataFrame([
-        {"move_id": "MOVE-X", "date": "2026-01-10", "source_document": "DOC-X", "work_order": "WO-X", "total_cost": "100.00"},
-    ])
-    gl = pd.DataFrame([
-        {"entry_id": "GL-Y", "date": "2026-01-10", "reference": "DOC-X", "work_order": "WO-X", "amount": "100.00"},
-    ])
+    stock = pd.DataFrame(
+        [
+            {
+                "move_id": "MOVE-X",
+                "date": "2026-01-10",
+                "source_document": "DOC-X",
+                "work_order": "WO-X",
+                "total_cost": "100.00",
+            },
+        ]
+    )
+    gl = pd.DataFrame(
+        [
+            {"entry_id": "GL-Y", "date": "2026-01-10", "reference": "DOC-X", "work_order": "WO-X", "amount": "100.00"},
+        ]
+    )
 
     res = reconcile_stock_gl(stock, gl, ReconForgeConfig())
     match_id = res.matched_transactions.iloc[0]["match_id"]

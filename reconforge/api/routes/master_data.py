@@ -161,7 +161,13 @@ def _server_entity(record: dict[str, object]) -> dict[str, object]:
 
 
 def _server_branch(record: dict[str, object]) -> dict[str, object]:
-    return {**record, "entity_code": None, "workspace": None, "workspace_id": None, "source_backend": "postgresql-master-data"}
+    return {
+        **record,
+        "entity_code": None,
+        "workspace": None,
+        "workspace_id": None,
+        "source_backend": "postgresql-master-data",
+    }
 
 
 def _server_period(record: dict[str, object]) -> dict[str, object]:
@@ -232,9 +238,7 @@ def snapshot(
                     "source": summary_record["source"],
                     "unsupported_collections": summary_record["unsupported_collections"],
                 },
-                "currencies": [
-                    _server_currency(record) for record in repository.list_currencies(tenant_id=tenant)
-                ],
+                "currencies": [_server_currency(record) for record in repository.list_currencies(tenant_id=tenant)],
                 "organizations": [
                     _server_organization(record) for record in repository.list_organizations(tenant_id=tenant)
                 ],
@@ -267,12 +271,15 @@ def list_currencies(
     """List governed currency references; no exchange-rate feed is implied."""
 
     if server_master_data_enabled(request):
+
         def operation(repository: PostgresMasterDataRepository, tenant: str) -> list[dict[str, object]]:
             records = repository.list_currencies(tenant_id=tenant, active_only=active_only)
             return [_server_currency(record) for record in records]
 
         records = execute_postgres_master_data(request, operation)
-        return _list_response("currencies", _server_page(records, limit=limit, offset=offset), limit=limit, offset=offset)
+        return _list_response(
+            "currencies", _server_page(records, limit=limit, offset=offset), limit=limit, offset=offset
+        )
     try:
         records = MasterDataService(_local_connection(connection)).list_currencies(
             active_only=active_only,
@@ -340,7 +347,9 @@ def list_organizations(
             return [_server_organization(record) for record in repository.list_organizations(tenant_id=tenant)]
 
         records = execute_postgres_master_data(request, operation)
-        return _list_response("organizations", _server_page(records, limit=limit, offset=offset), limit=limit, offset=offset)
+        return _list_response(
+            "organizations", _server_page(records, limit=limit, offset=offset), limit=limit, offset=offset
+        )
     try:
         records = MasterDataService(_local_connection(connection)).list_organizations(
             workspace=workspace,
@@ -370,9 +379,7 @@ def upsert_organization(
             if base_currency is not None:
                 active_currencies = repository.list_currencies(tenant_id=tenant, active_only=True)
                 if not any(str(currency["code"]) == base_currency for currency in active_currencies):
-                    raise PostgresMasterDataValidationError(
-                        "Organizations require an active base-currency reference."
-                    )
+                    raise PostgresMasterDataValidationError("Organizations require an active base-currency reference.")
             return repository.upsert_organization(
                 tenant_id=tenant,
                 organization_id=_server_id("org", tenant, payload.organization_code),

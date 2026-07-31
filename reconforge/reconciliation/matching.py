@@ -585,12 +585,10 @@ def _candidate(
     stock_move_id = _string(stock_row.get("move_id"))
     gl_entry_id = _string(gl_row.get("entry_id"))
     stock_sort_key = str(
-        stock_row.get(RECORD_INSTANCE_ID_COLUMN)
-        or _stable_row_key(stock_row, identifier="move_id", kind="stock")
+        stock_row.get(RECORD_INSTANCE_ID_COLUMN) or _stable_row_key(stock_row, identifier="move_id", kind="stock")
     )
     gl_sort_key = str(
-        gl_row.get(RECORD_INSTANCE_ID_COLUMN)
-        or _stable_row_key(gl_row, identifier="entry_id", kind="gl")
+        gl_row.get(RECORD_INSTANCE_ID_COLUMN) or _stable_row_key(gl_row, identifier="entry_id", kind="gl")
     )
     amount_difference = (stock_money - gl_money).amount if stock_money.currency == gl_money.currency else Decimal("0")
     return MatchCandidate(
@@ -746,6 +744,7 @@ def _candidate_components(candidates: list[MatchCandidate]) -> list[list[MatchCa
 
     if not candidates:
         return []
+
     def candidate_order(item: MatchCandidate) -> tuple[str, int, str, str]:
         return (
             item.stock_sort_key,
@@ -753,6 +752,7 @@ def _candidate_components(candidates: list[MatchCandidate]) -> list[list[MatchCa
             item.gl_sort_key,
             item.match_id,
         )
+
     stock_candidates: dict[int, list[int]] = {}
     gl_candidates: dict[int, list[int]] = {}
     for index, candidate in enumerate(candidates):
@@ -800,13 +800,13 @@ def _ambiguity_group(
         "optimal_cardinality": len(selected),
         "optimal_cost": optimal_cost,
         "reason": reason,
-        "stock_record_instance_ids": sorted(
-            {candidate.stock_record_instance_id for candidate in component}
-        ),
+        "stock_record_instance_ids": sorted({candidate.stock_record_instance_id for candidate in component}),
     }
-    digest = hashlib.sha256(
-        json.dumps(payload, ensure_ascii=True, separators=(",", ":"), sort_keys=True).encode("utf-8")
-    ).hexdigest()[:20].upper()
+    digest = (
+        hashlib.sha256(json.dumps(payload, ensure_ascii=True, separators=(",", ":"), sort_keys=True).encode("utf-8"))
+        .hexdigest()[:20]
+        .upper()
+    )
     return MatchAmbiguity(
         ambiguity_group_id=f"AMB-{digest}",
         reason=reason,
@@ -847,10 +847,7 @@ def _resolve_candidate_component(
     selected = _minimum_cost_assignment(component)
     if ambiguity_policy == "stable-tie-break-v1":
         return selected, None
-    if (
-        len(component) > AMBIGUITY_MAX_CANDIDATES
-        or len(selected) > AMBIGUITY_MAX_ASSIGNMENT_CHECKS
-    ):
+    if len(component) > AMBIGUITY_MAX_CANDIDATES or len(selected) > AMBIGUITY_MAX_ASSIGNMENT_CHECKS:
         return [], _ambiguity_group(component, selected, reason="search_budget_exceeded")
     if _has_equal_cost_alternative(component, selected):
         return [], _ambiguity_group(component, selected, reason="equal_cost_alternative")
@@ -873,9 +870,7 @@ def assign_stock_to_gl(
     if strategy not in {"standard", "strict", "aggressive", "audit-safe"}:
         raise ValueError("matching strategy must be one of: standard, strict, aggressive, audit-safe")
     if ambiguity_policy not in {"stable-tie-break-v1", "unresolved-equal-cost-v1"}:
-        raise ValueError(
-            "ambiguity policy must be one of: stable-tie-break-v1, unresolved-equal-cost-v1"
-        )
+        raise ValueError("ambiguity policy must be one of: stable-tie-break-v1, unresolved-equal-cost-v1")
     stock_moves = prepare_record_lineage(
         stock_moves,
         identifier="move_id",

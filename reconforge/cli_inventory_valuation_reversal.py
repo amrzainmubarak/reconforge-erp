@@ -42,9 +42,7 @@ def _fail(exc: Exception) -> None:
 def summary_command(
     workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
     actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
-    db_path: Annotated[
-        Path, typer.Option("--db", help="Local SQLite database path.")
-    ] = DEFAULT_DB_PATH,
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = DEFAULT_DB_PATH,
 ) -> None:
     """Print bounded reversal lifecycle counts."""
 
@@ -60,9 +58,7 @@ def summary_command(
 def snapshot_command(
     workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
     actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
-    db_path: Annotated[
-        Path, typer.Option("--db", help="Local SQLite database path.")
-    ] = DEFAULT_DB_PATH,
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = DEFAULT_DB_PATH,
 ) -> None:
     """Print the path-free valuation-reversal snapshot."""
 
@@ -80,13 +76,9 @@ def create_command(
     valuation_document_id: Annotated[
         str, typer.Option("--valuation-document-id", help="Approved original valuation ID.")
     ],
-    movement_id: Annotated[
-        str, typer.Option("--movement-id", help="Separately Posted exact mirror movement ID.")
-    ],
+    movement_id: Annotated[str, typer.Option("--movement-id", help="Separately Posted exact mirror movement ID.")],
     actor: Annotated[str, typer.Option(help="Preparer username or local label.")] = "local-cli",
-    db_path: Annotated[
-        Path, typer.Option("--db", help="Local SQLite database path.")
-    ] = DEFAULT_DB_PATH,
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = DEFAULT_DB_PATH,
 ) -> None:
     """Create a Draft linked to an exact Posted mirror movement."""
 
@@ -110,9 +102,7 @@ def list_command(
     limit: Annotated[int, typer.Option(min=1, max=100_000)] = 500,
     offset: Annotated[int, typer.Option(min=0, max=10_000_000)] = 0,
     actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
-    db_path: Annotated[
-        Path, typer.Option("--db", help="Local SQLite database path.")
-    ] = DEFAULT_DB_PATH,
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = DEFAULT_DB_PATH,
 ) -> None:
     """List local valuation reversals."""
 
@@ -139,9 +129,7 @@ def list_command(
 def show_command(
     reversal_id: Annotated[str, typer.Option("--reversal-id", help="Valuation reversal ID.")],
     actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
-    db_path: Annotated[
-        Path, typer.Option("--db", help="Local SQLite database path.")
-    ] = DEFAULT_DB_PATH,
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = DEFAULT_DB_PATH,
 ) -> None:
     """Show one reversal with immutable layer effects."""
 
@@ -153,9 +141,7 @@ def show_command(
     _print_json({"reversal": record})
 
 
-def _reason_action(
-    action: str, *, reversal_id: str, reason: str, actor: str, db_path: Path
-) -> dict[str, object]:
+def _reason_action(action: str, *, reversal_id: str, reason: str, actor: str, db_path: Path) -> dict[str, object]:
     with _service(db_path) as service:
         if action == "approve":
             return service.approve_reversal(reversal_id, reason=reason, actor_label=actor)
@@ -167,16 +153,12 @@ def approve_command(
     reversal_id: Annotated[str, typer.Option("--reversal-id", help="Draft reversal ID.")],
     reason: Annotated[str, typer.Option(help="Documented independent approval reason.")],
     actor: Annotated[str, typer.Option(help="Approver username or local label.")] = "local-cli",
-    db_path: Annotated[
-        Path, typer.Option("--db", help="Local SQLite database path.")
-    ] = DEFAULT_DB_PATH,
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = DEFAULT_DB_PATH,
 ) -> None:
     """Approve exact layer effects and prepare a mirror Finance Core Draft."""
 
     try:
-        record = _reason_action(
-            "approve", reversal_id=reversal_id, reason=reason, actor=actor, db_path=db_path
-        )
+        record = _reason_action("approve", reversal_id=reversal_id, reason=reason, actor=actor, db_path=db_path)
     except (DatabaseError, PlatformError) as exc:
         _fail(exc)
     _print_json({"reversal": record})
@@ -187,16 +169,12 @@ def cancel_command(
     reversal_id: Annotated[str, typer.Option("--reversal-id", help="Draft reversal ID.")],
     reason: Annotated[str, typer.Option(help="Documented cancellation reason.")],
     actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
-    db_path: Annotated[
-        Path, typer.Option("--db", help="Local SQLite database path.")
-    ] = DEFAULT_DB_PATH,
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = DEFAULT_DB_PATH,
 ) -> None:
     """Cancel a Draft without changing layers or finance."""
 
     try:
-        record = _reason_action(
-            "cancel", reversal_id=reversal_id, reason=reason, actor=actor, db_path=db_path
-        )
+        record = _reason_action("cancel", reversal_id=reversal_id, reason=reason, actor=actor, db_path=db_path)
     except (DatabaseError, PlatformError) as exc:
         _fail(exc)
     _print_json({"reversal": record})

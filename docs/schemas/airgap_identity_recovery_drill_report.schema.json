@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/airgap_identity_recovery_drill_report.schema.json",
+  "title": "ReconForge no-network local identity recovery drill report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "executed_at", "runtime", "installation", "identity_recovery", "scope_status", "limitations"],
+  "properties": {
+    "schema": {"const": "reconforge-airgap-identity-recovery-drill-report-v1"},
+    "executed_at": {"const": "2026-07-30"},
+    "runtime": {
+      "type": "object", "additionalProperties": false,
+      "required": ["container_image", "container_image_digest", "network_mode", "root_filesystem", "bundle_mount", "writable_state"],
+      "properties": {
+        "container_image": {"const": "python:3.14.1-slim"},
+        "container_image_digest": {"const": "sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e"},
+        "network_mode": {"const": "none"},
+        "root_filesystem": {"const": "read-only"},
+        "bundle_mount": {"const": "read-only"},
+        "writable_state": {"const": "bounded-tmpfs-only"}
+      }
+    },
+    "installation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["application_version", "entry_count", "total_bytes", "bundle_manifest_sha256", "doctor_exit_zero"],
+      "properties": {
+        "application_version": {"const": "0.7.1"},
+        "entry_count": {"const": 60},
+        "total_bytes": {"const": 98913160},
+        "bundle_manifest_sha256": {"const": "1213726ff418f7f84781832e45f24f33cc21ebe69dd01687d8343a8dafa1fa03"},
+        "doctor_exit_zero": {"const": true}
+      }
+    },
+    "identity_recovery": {
+      "type": "object", "additionalProperties": false,
+      "required": ["local_users_restored", "admin_permission_restored", "encrypted_backup", "wrong_key_rejected_atomically", "old_sessions_restored", "audit_chain_valid", "source_schema_version", "restored_schema_version", "cleanup_complete"],
+      "properties": {
+        "local_users_restored": {"const": 2},
+        "admin_permission_restored": {"const": true},
+        "encrypted_backup": {"const": "AES-256-GCM"},
+        "wrong_key_rejected_atomically": {"const": true},
+        "old_sessions_restored": {"const": 0},
+        "audit_chain_valid": {"const": true},
+        "source_schema_version": {"const": 24},
+        "restored_schema_version": {"const": 24},
+        "cleanup_complete": {"const": true}
+      }
+    },
+    "scope_status": {"const": "verified-single-runtime-local-identity-encrypted-recovery"},
+    "limitations": {
+      "type": "array", "minItems": 5, "uniqueItems": true,
+      "items": {"enum": ["no_forgotten_password_ceremony", "no_hardware_backed_key_custody", "single_runtime_single_run", "no_physical_airgap_claim", "no_production_readiness_claim"]}
+    }
+  }
+}

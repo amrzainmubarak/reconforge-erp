@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/reliability_incident_drill_report.schema.json",
+  "title": "ReconForge local reliability incident drill report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile", "incident", "measurements", "checks", "limitations"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "profile": {"const": "local-synthetic-incident-lifecycle"},
+    "incident": {"$ref": "#/$defs/incident"},
+    "measurements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["initial_queue_depth", "recovered_queue_depth", "acknowledgement_seconds", "recovery_seconds", "closure_seconds"],
+      "properties": {
+        "initial_queue_depth": {"const": 1000},
+        "recovered_queue_depth": {"const": 0},
+        "acknowledgement_seconds": {"type": "integer", "minimum": 0},
+        "recovery_seconds": {"type": "integer", "minimum": 0},
+        "closure_seconds": {"type": "integer", "minimum": 0}
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["critical_alert_detected", "runbook_bound", "independent_recovery_validation_actor", "all_recovery_alerts_normal", "backlog_recovered_to_zero", "incident_chain_verified", "all_sources_available"],
+      "properties": {
+        "critical_alert_detected": {"const": true},
+        "runbook_bound": {"const": true},
+        "independent_recovery_validation_actor": {"const": true},
+        "all_recovery_alerts_normal": {"const": true},
+        "backlog_recovered_to_zero": {"const": true},
+        "incident_chain_verified": {"const": true},
+        "all_sources_available": {"const": true}
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 5,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+      "contains": {"const": "no_external_alert_manager_or_pager_acknowledgement"}
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "safeId": {"type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]+$"},
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "state", "occurred_at", "operator_ref", "action_code", "evidence_sha256", "previous_event_sha256", "event_sha256"],
+      "properties": {
+        "sequence": {"type": "integer", "minimum": 1, "maximum": 5},
+        "state": {"enum": ["detected", "acknowledged", "mitigating", "recovered", "closed"]},
+        "occurred_at": {"type": "string", "format": "date-time"},
+        "operator_ref": {"$ref": "#/$defs/safeId"},
+        "action_code": {"$ref": "#/$defs/safeId"},
+        "evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "previous_event_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "event_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "incident": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "incident_id", "policy_id", "policy_version", "runbook", "correlation_id", "initial_alert_state", "initial_observed", "final_state", "events", "manifest_sha256"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "incident_id": {"$ref": "#/$defs/safeId"},
+        "policy_id": {"$ref": "#/$defs/safeId"},
+        "policy_version": {"$ref": "#/$defs/safeId"},
+        "runbook": {"$ref": "#/$defs/safeId"},
+        "correlation_id": {"$ref": "#/$defs/safeId"},
+        "initial_alert_state": {"enum": ["warning", "critical"]},
+        "initial_observed": {"type": "integer", "minimum": 0},
+        "final_state": {"const": "closed"},
+        "events": {"type": "array", "minItems": 5, "maxItems": 5, "items": {"$ref": "#/$defs/event"}},
+        "manifest_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

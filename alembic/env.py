@@ -11,7 +11,9 @@ from alembic import context
 
 config = context.config
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # Migrations can run inside the API/operator process. Preserve application
+    # audit loggers instead of letting dictConfig disable every existing logger.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 
 def _database_url() -> str:

@@ -13,6 +13,7 @@ from reconforge.application.matching_strategies import (
     MatchingStrategyRegistry,
     MatchingStrategyRequest,
     canonical_payload,
+    request_digest,
 )
 from reconforge.db import connect, run_migrations
 from reconforge.infrastructure.grouped_matching_strategy import (
@@ -34,7 +35,7 @@ def _strategy(tmp_path: Path) -> tuple[IndexedOneToOneStrategy, MatchingService,
     return IndexedOneToOneStrategy(service), service, connection
 
 
-def _request(*, reverse: bool = False) -> MatchingStrategyRequest:
+def _request(*, reverse: bool = False, mode: str = "one-to-one") -> MatchingStrategyRequest:
     left = (
         {"id": "L-2", "reference": "INV-002", "amount": "200.00", "date": "2026-01-02"},
         {"id": "L-1", "reference": "INV-001", "amount": "100.00", "date": "2026-01-01"},
@@ -48,6 +49,7 @@ def _request(*, reverse: bool = False) -> MatchingStrategyRequest:
         right_records=tuple(reversed(right)) if reverse else right,
         amount_tolerance="0",
         date_window_days=0,
+        mode=mode,
     )
 
 
@@ -186,3 +188,155 @@ def test_grouped_strategy_is_registered_versioned_and_permutation_invariant() ->
     assert first.results[0]["left_record_ids"] == ("L1",)
     registry = MatchingStrategyRegistry((strategy,))
     assert registry.get(strategy.manifest.id, strategy.manifest.version) is strategy
+
+
+def test_grouped_strategy_supports_fee_aware_netting_fields_and_request_digest_variants() -> None:
+    strategy = GroupedSubsetSumStrategy()
+    request = MatchingStrategyRequest(
+        left_records=({"id": "L1", "amount": "120.00", "currency": "USD", "date": "2026-01-10", "partition": "AR", "left_fee": "20.00"},),
+        right_records=(
+            {"id": "R1", "amount": "80.00", "currency": "USD", "date": "2026-01-10", "partition": "AR", "right_fee": "10.00"},
+            {"id": "R2", "amount": "40.00", "currency": "USD", "date": "2026-01-10", "partition": "AR", "right_fee": "10.00"},
+        ),
+        mode="one-to-many",
+        netting_mode="net",
+        left_fee_field="left_fee",
+        right_fee_field="right_fee",
+    )
+    result = strategy.execute(request)
+
+    assert result.results[0]["status"] == "matched"
+    assert result.results[0]["netting_mode"] == "net"
+    assert result.results[0]["left_fee_total"] == Decimal("20.00")
+    assert result.results[0]["right_fee_total"] == Decimal("20.00")
+    assert result.results[0]["left_net_total"] == Decimal("100.00")
+    assert result.results[0]["right_net_total"] == Decimal("100.00")
+
+
+def test_grouped_strategy_reports_ambiguity_for_equal_cost_candidates() -> None:
+    strategy = GroupedSubsetSumStrategy()
+    result = strategy.execute(
+        MatchingStrategyRequest(
+            left_records=({"id": "L1", "amount": "100.00", "currency": "USD", "date": "2026-01-10", "partition": "AR"},),
+            right_records=(
+                {"id": "R1", "amount": "60.00", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+                {"id": "R2", "amount": "40.00", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+                {"id": "R3", "amount": "70.00", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+                {"id": "R4", "amount": "30.00", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+            ),
+            mode="one-to-many",
+            amount_tolerance="0",
+        )
+    )
+
+    assert result.results[0]["status"] == "ambiguous"
+    assert result.results[0]["reason_code"] == "GROUP_MATCH_AMBIGUOUS"
+    assert tuple(result.results[0]["ambiguous_candidate_sets"]) == (
+        (("L1",), ("R1", "R2")),
+        (("L1",), ("R3", "R4")),
+    )
+    assert result.exceptions == (
+        {
+            "reason_code": "GROUP_MATCH_AMBIGUOUS",
+            "decision_digest": result.results[0]["decision_digest"],
+        },
+    )
+
+
+def test_grouped_strategy_rejects_netting_without_fee_fields() -> None:
+    strategy = GroupedSubsetSumStrategy()
+
+    with pytest.raises(MatchingStrategyContractError, match="fee field names"):
+        strategy.execute(
+            MatchingStrategyRequest(
+                left_records=(),
+                right_records=(),
+                mode="one-to-many",
+                netting_mode="net",
+                left_fee_field="",
+                right_fee_field="fee",
+            )
+        )
+
+
+def test_request_digest_covers_fee_and_netting_fields() -> None:
+    base = _request(mode="one-to-many")
+    netting = MatchingStrategyRequest(
+        left_records=base.left_records,
+        right_records=base.right_records,
+        amount_tolerance=base.amount_tolerance,
+        date_window_days=base.date_window_days,
+        left_fee_field="fee",
+        right_fee_field="fee",
+        netting_mode="net",
+        mode="one-to-many",
+    )
+    gross = _request(mode="one-to-many")
+    assert request_digest(gross, "manifest") != request_digest(netting, "manifest")
+
+
+def test_grouped_strategy_supports_fx_rates_and_target_currency() -> None:
+    strategy = GroupedSubsetSumStrategy()
+    request = MatchingStrategyRequest(
+        left_records=(
+            {"id": "L1", "amount": "60.00", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+            {"id": "L2", "amount": "40.00", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+        ),
+        right_records=(
+            {"id": "R1", "amount": "200.00", "currency": "EUR", "date": "2026-01-10", "partition": "AR"},
+        ),
+        mode="many-to-one",
+        target_currency="USD",
+        fx_rates=(
+            {
+                "base_currency": "EUR",
+                "quote_currency": "USD",
+                "rate": "0.5",
+                "rate_type": "spot",
+                "source": "ECB",
+                "effective_at": "2026-01-01",
+            },
+        ),
+    )
+    result = strategy.execute(request)
+    assert result.results[0]["status"] == "matched"
+    assert result.results[0]["currency"] == "USD"
+
+
+def test_request_digest_includes_fx_rate_definitions() -> None:
+    base = _request(mode="one-to-many")
+    with_fx = MatchingStrategyRequest(
+        left_records=base.left_records,
+        right_records=base.right_records,
+        amount_tolerance=base.amount_tolerance,
+        date_window_days=base.date_window_days,
+        mode="one-to-many",
+        target_currency="USD",
+        fx_rates=(
+            {
+                "base_currency": "USD",
+                "quote_currency": "EUR",
+                "rate": "1",
+                "rate_type": "spot",
+                "source": "MANUAL",
+            },
+        ),
+    )
+    no_fx = _request(mode="one-to-many")
+    assert request_digest(with_fx, "manifest") != request_digest(no_fx, "manifest")
+
+
+def test_grouped_strategy_rejects_cross_currency_target_without_fx_rates() -> None:
+    strategy = GroupedSubsetSumStrategy()
+
+    with pytest.raises(MatchingStrategyContractError, match="requires FX rate data"):
+        strategy.execute(
+            MatchingStrategyRequest(
+                left_records=({"id": "L1", "amount": "100.00", "currency": "USD", "date": "2026-01-10", "partition": "AR"},),
+                right_records=(
+                    {"id": "R1", "amount": "80.00", "currency": "EUR", "date": "2026-01-10", "partition": "AR"},
+                ),
+                mode="one-to-many",
+                target_currency="USD",
+            )
+        )

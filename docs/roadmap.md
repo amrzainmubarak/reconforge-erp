@@ -59,7 +59,7 @@ Completed in the current working phase:
 
 - Connector SDK with tested local connectors and separately tested vendor adapters.
 - Chunked/Parquet execution, resumable jobs, cancellation, worker recovery, and 10k/100k/1m reproducible benchmarks.
-- Hosted deployment profiles, read replicas/warehouse reporting, SSO/SCIM/MFA, and production DR exercises.
+- Hosted deployment profiles, read replicas/warehouse reporting, SSO/SCIM interoperability, WebAuthn recovery/attestation governance, workload federation, and production DR exercises.
 
 ## Release gates
 

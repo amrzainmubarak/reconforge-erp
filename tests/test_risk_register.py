@@ -40,7 +40,7 @@ def test_risk_register_schema_ids_and_ratings_are_normalized() -> None:
 
     risks = register["risks"]
     ids = [risk["id"] for risk in risks]
-    assert ids == [f"R-{number:03d}" for number in range(1, 19)]
+    assert ids == [f"R-{number:03d}" for number in range(1, 20)]
     assert len({risk["title"] for risk in risks}) == len(risks)
 
     likelihood = register["risk_method"]["likelihood_scale"]

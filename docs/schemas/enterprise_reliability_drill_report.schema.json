@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/enterprise_reliability_drill_report.schema.json",
+  "title": "ReconForge enterprise reliability drill report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "policy_version", "profile", "failure", "recovery", "checks", "metric_names", "limitations"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "policy_version": {"const": "reconforge-reliability-policy-v1"},
+    "profile": {"const": "local-synthetic-single-process"},
+    "failure": {"$ref": "#/$defs/states"},
+    "recovery": {"$ref": "#/$defs/states"},
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dependency_became_critical", "capacity_became_critical", "all_signals_recovered", "all_metrics_exported", "trace_exported", "log_correlated"],
+      "properties": {
+        "dependency_became_critical": {"const": true},
+        "capacity_became_critical": {"const": true},
+        "all_signals_recovered": {"const": true},
+        "all_metrics_exported": {"const": true},
+        "trace_exported": {"const": true},
+        "log_correlated": {"const": true}
+      }
+    },
+    "metric_names": {"type": "array", "minItems": 7, "maxItems": 7, "uniqueItems": true, "items": {"type": "string", "pattern": "^reconforge\\.operations\\.[a-z0-9_]+$"}},
+    "limitations": {"type": "array", "minItems": 4, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9_]+$"}}
+  },
+  "$defs": {
+    "states": {
+      "type": "object",
+      "additionalProperties": {"enum": ["normal", "warning", "critical", "no_data"]},
+      "minProperties": 7,
+      "maxProperties": 7
+    }
+  }
+}

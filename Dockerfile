@@ -20,6 +20,8 @@ COPY config ./config
 COPY examples ./examples
 COPY control-packs ./control-packs
 COPY docs ./docs
+COPY alembic.ini .
+COPY alembic ./alembic
 
 RUN uv sync --locked --no-dev --no-editable --python 3.11 --link-mode copy \
     && rm -rf /root/.cache/uv

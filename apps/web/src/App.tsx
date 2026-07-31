@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 import { MobileDock, Sidebar } from "./components/Navigation";
 import { AccessibilityPanel, CommandPalette } from "./components/Overlays";
@@ -14,12 +14,20 @@ const Dashboard = lazy(() => import("./components/Dashboard").then((module) => (
 const ExceptionQueue = lazy(() => import("./components/ExceptionQueue").then((module) => ({ default: module.ExceptionQueue })));
 const EvidenceBinder = lazy(() => import("./components/EvidenceBinder").then((module) => ({ default: module.EvidenceBinder })));
 const InventoryControl = lazy(() => import("./components/InventoryControl").then((module) => ({ default: module.InventoryControl })));
+const MappingStudio = lazy(() => import("./components/MappingStudio").then((module) => ({ default: module.MappingStudio })));
+const RuleStudio = lazy(() => import("./components/RuleStudio").then((module) => ({ default: module.RuleStudio })));
+const LiveStudio = lazy(() => import("./components/LiveStudio").then((module) => ({ default: module.LiveStudio })));
+const AdminAudit = lazy(() => import("./components/AdminAudit").then((module) => ({ default: module.AdminAudit })));
 
 function pageFromPath(pathname: string): StudioPage {
   const normalized = pathname.replace(/\/+$/, "");
   if (normalized.endsWith("/exceptions")) return "exceptions";
   if (normalized.endsWith("/evidence")) return "evidence";
   if (normalized.endsWith("/inventory")) return "inventory";
+  if (normalized.endsWith("/mapping")) return "mapping";
+  if (normalized.endsWith("/rules")) return "rules";
+  if (normalized.endsWith("/live")) return "live";
+  if (normalized.endsWith("/admin-audit")) return "adminAudit";
   return "dashboard";
 }
 
@@ -37,6 +45,7 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const commandReturnFocus = useRef<HTMLElement | null>(null);
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
   const [activePage, setActivePage] = useState<StudioPage>(() => pageFromPath(window.location.pathname));
 
@@ -57,11 +66,13 @@ export default function App() {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
+        commandReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
         setCommandOpen(true);
         setOpenPanel(null);
       }
       if (event.key === "Escape") {
         setCommandOpen(false);
+        window.requestAnimationFrame(() => commandReturnFocus.current?.focus());
         setOpenPanel(null);
         setMobileMenuOpen(false);
       }
@@ -87,6 +98,17 @@ export default function App() {
     preferences.setTheme(themes[(index + 1) % themes.length]);
   };
 
+  const openCommandPalette = () => {
+    commandReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setCommandOpen(true);
+    setOpenPanel(null);
+  };
+
+  const closeCommandPalette = () => {
+    setCommandOpen(false);
+    window.requestAnimationFrame(() => commandReturnFocus.current?.focus());
+  };
+
   return (
     <div className={`app-shell ${sidebarCollapsed ? "app-shell--collapsed" : ""}`}>
       <a className="skip-link" href="#main-content">Skip to main content</a>
@@ -110,10 +132,7 @@ export default function App() {
           onPanel={setOpenPanel}
           onLocale={() => preferences.setLocale(preferences.locale === "en" ? "ar" : "en")}
           onTheme={cycleTheme}
-          onCommand={() => {
-            setCommandOpen(true);
-            setOpenPanel(null);
-          }}
+          onCommand={openCommandPalette}
           onMobileMenu={() => setMobileMenuOpen(true)}
           noticeCount={data?.notices.length ?? 0}
           activePage={activePage}
@@ -150,6 +169,18 @@ export default function App() {
         {activePage === "inventory" ? (
           <Suspense fallback={<LoadingView translate={t} />}><InventoryControl translate={t} /></Suspense>
         ) : null}
+        {activePage === "mapping" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><MappingStudio translate={t} /></Suspense>
+        ) : null}
+        {activePage === "rules" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><RuleStudio translate={t} /></Suspense>
+        ) : null}
+        {activePage === "live" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><LiveStudio translate={t} /></Suspense>
+        ) : null}
+        {activePage === "adminAudit" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><AdminAudit translate={t} /></Suspense>
+        ) : null}
       </div>
 
       <MobileDock
@@ -159,7 +190,7 @@ export default function App() {
         activePage={activePage}
         onNavigate={navigate}
       />
-      {commandOpen ? <CommandPalette translate={t} onClose={() => setCommandOpen(false)} onNavigate={navigate} /> : null}
+      {commandOpen ? <CommandPalette translate={t} onClose={closeCommandPalette} onNavigate={navigate} /> : null}
     </div>
   );
 }

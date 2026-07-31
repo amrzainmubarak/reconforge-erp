@@ -20,9 +20,7 @@ from reconforge.platform.common import PlatformError
 from reconforge.platform.inventory_valuation_reversal import InventoryValuationReversalService
 from reconforge.platform.inventory_values import DEFAULT_LIST_LIMIT
 
-router = APIRouter(
-    prefix="/inventory-valuation/reversals", tags=["inventory-valuation-reversals"]
-)
+router = APIRouter(prefix="/inventory-valuation/reversals", tags=["inventory-valuation-reversals"])
 MAX_API_LIST_LIMIT = 1_000
 
 ReversalRead = Annotated[
@@ -37,12 +35,8 @@ ReversalRead = Annotated[
         )
     ),
 ]
-ReversalManage = Annotated[
-    LocalUser, Depends(require_permission("inventory.valuation.reverse.manage"))
-]
-ReversalApprove = Annotated[
-    LocalUser, Depends(require_permission("inventory.valuation.reverse.approve"))
-]
+ReversalManage = Annotated[LocalUser, Depends(require_permission("inventory.valuation.reverse.manage"))]
+ReversalApprove = Annotated[LocalUser, Depends(require_permission("inventory.valuation.reverse.approve"))]
 PageLimit = Annotated[int, Query(ge=1, le=MAX_API_LIST_LIMIT)]
 PageOffset = Annotated[int, Query(ge=0, le=10_000_000)]
 
@@ -66,9 +60,7 @@ def _error(code: str, exc: Exception, *, status_code: int = 400) -> APIError:
     return APIError(status_code=status_code, code=code, message=message)
 
 
-def _list_response(
-    records: list[dict[str, object]], *, limit: int, offset: int
-) -> dict[str, object]:
+def _list_response(records: list[dict[str, object]], *, limit: int, offset: int) -> dict[str, object]:
     return {
         "reversals": records,
         "pagination": {"limit": limit, "offset": offset, "returned": len(records)},

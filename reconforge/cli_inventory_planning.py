@@ -14,9 +14,7 @@ from reconforge.db import DatabaseError, connect
 from reconforge.platform.common import PlatformError
 from reconforge.platform.inventory_planning import InventoryPlanningService
 
-inventory_planning_app = typer.Typer(
-    help="Run governed counts and deterministic local reorder controls."
-)
+inventory_planning_app = typer.Typer(help="Run governed counts and deterministic local reorder controls.")
 DEFAULT_DB_PATH = Path("output/reconforge.db")
 
 
@@ -218,9 +216,7 @@ def count_submit_command(
     """Submit a completed count for independent review."""
 
     try:
-        record = _count_reason_action(
-            "submit", session_id=session_id, reason=reason, actor=actor, db_path=db_path
-        )
+        record = _count_reason_action("submit", session_id=session_id, reason=reason, actor=actor, db_path=db_path)
     except (DatabaseError, PlatformError) as exc:
         _fail(exc)
     _print_json({"count_session": record})
@@ -236,9 +232,7 @@ def count_approve_command(
     """Approve a submitted count and prepare a Draft adjustment if needed."""
 
     try:
-        record = _count_reason_action(
-            "approve", session_id=session_id, reason=reason, actor=actor, db_path=db_path
-        )
+        record = _count_reason_action("approve", session_id=session_id, reason=reason, actor=actor, db_path=db_path)
     except (DatabaseError, PlatformError) as exc:
         _fail(exc)
     _print_json({"count_session": record})
@@ -254,9 +248,7 @@ def count_cancel_command(
     """Cancel a Draft, Counting, or Submitted count."""
 
     try:
-        record = _count_reason_action(
-            "cancel", session_id=session_id, reason=reason, actor=actor, db_path=db_path
-        )
+        record = _count_reason_action("cancel", session_id=session_id, reason=reason, actor=actor, db_path=db_path)
     except (DatabaseError, PlatformError) as exc:
         _fail(exc)
     _print_json({"count_session": record})

@@ -103,8 +103,8 @@ def test_repository_policy_closes_resolution_and_exception_inputs() -> None:
     assert policy["python_resolution"]["manager_version"] == "0.11.32"
     assert policy["secret_scanning"]["version"] == "8.30.1"
     assert active == []
-    assert python_packages == 113
-    assert npm_packages == 209
+    assert python_packages == 128
+    assert npm_packages == 211
     assert npm_gap == 0
 
 

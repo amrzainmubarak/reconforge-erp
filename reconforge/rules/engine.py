@@ -106,12 +106,7 @@ def _input_fingerprints(input_dir: Path) -> tuple[InputFileFingerprint, ...]:
 
 def _decision_records(results: list[RuleResult]) -> list[dict[str, Any]]:
     return [
-        {
-            key: value
-            for key, value in record.items()
-            if key != "triggered_at"
-        }
-        for record in results_to_records(results)
+        {key: value for key, value in record.items() if key != "triggered_at"} for record in results_to_records(results)
     ]
 
 
@@ -318,13 +313,9 @@ def verify_rule_results_payload(
         raise ValueError("Rule results artifact type is invalid")
     results = _require_results(payload.get("results"))
     rule_pack = _require_mapping(payload.get("rule_pack"), "rule_pack")
-    input_policy = validate_financial_input_policy(
-        payload.get("financial_input_policy")
-    )
+    input_policy = validate_financial_input_policy(payload.get("financial_input_policy"))
     input_files = payload.get("input_files")
-    if not isinstance(input_files, list) or not all(
-        isinstance(item, dict) for item in input_files
-    ):
+    if not isinstance(input_files, list) or not all(isinstance(item, dict) for item in input_files):
         raise ValueError("Rule results input_files must be an array of objects")
     input_names: list[str] = []
     for item in input_files:
@@ -359,10 +350,7 @@ def verify_rule_results_payload(
                 "digest": rule_pack.get("digest"),
             },
             "input_files": input_files,
-            "results": [
-                {key: value for key, value in record.items() if key != "triggered_at"}
-                for record in results
-            ],
+            "results": [{key: value for key, value in record.items() if key != "triggered_at"} for record in results],
         }
     )
     decision_digest = payload.get("decision_digest")
@@ -371,9 +359,7 @@ def verify_rule_results_payload(
         expected_decision_digest,
     ):
         raise ValueError("Rule results decision digest verification failed")
-    artifact_without_digest = {
-        key: value for key, value in payload.items() if key != "artifact_digest"
-    }
+    artifact_without_digest = {key: value for key, value in payload.items() if key != "artifact_digest"}
     artifact_digest = payload.get("artifact_digest")
     if not isinstance(artifact_digest, str) or not hmac.compare_digest(
         artifact_digest,
@@ -381,9 +367,7 @@ def verify_rule_results_payload(
     ):
         raise ValueError("Rule results artifact digest verification failed")
     if input_dir is not None:
-        current_inputs = [
-            item.to_record() for item in _input_fingerprints(Path(input_dir))
-        ]
+        current_inputs = [item.to_record() for item in _input_fingerprints(Path(input_dir))]
         if input_files != current_inputs:
             raise ValueError("Rule results input fingerprint verification failed")
     if pack_path is not None:

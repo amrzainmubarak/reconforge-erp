@@ -273,7 +273,7 @@ export interface InventoryControlContract {
   notices: string[];
 }
 
-export type StudioPage = "dashboard" | "exceptions" | "evidence" | "inventory";
+export type StudioPage = "dashboard" | "exceptions" | "evidence" | "inventory" | "mapping" | "rules" | "live" | "adminAudit";
 
 export interface StudioOverview {
   schema_version: 1;
@@ -311,3 +311,125 @@ export interface AccessibilityPreferences {
   reducedMotion: boolean;
   focusOutlines: boolean;
 }
+
+export interface LiveStudioMetric {
+  metric_key: string;
+  period_name: string;
+  value_text: string;
+  lineage: string;
+  computed_at: string;
+  name: string;
+  description: string;
+}
+
+export interface LiveStudioContract {
+  mode: "live";
+  endpoint: "/api/v1/metrics/dashboard";
+  fetched_at: string;
+  generated_at: string | null;
+  stale_after_seconds: number;
+  stale: boolean;
+  empty: boolean;
+  metrics: LiveStudioMetric[];
+}
+
+export interface BrowserAdminSession {
+  csrfToken: string;
+  expiresAt: string;
+  tenantId: string;
+}
+
+export interface AdminAuditEvent {
+  source: "domain" | "ledger_control";
+  event_id: string;
+  sequence: number;
+  occurred_at: string;
+  action: string;
+  object_type: string;
+  actor_digest: string;
+  object_digest: string;
+  metadata_digest: string;
+  previous_event_hash: string;
+  event_hash: string;
+  before_state_hash: string | null;
+  after_state_hash: string | null;
+}
+
+export interface AdminAuditPage {
+  events: AdminAuditEvent[];
+  nextCursor: string | null;
+}
+
+export interface AdminAuditVerification {
+  source: "domain" | "ledger_control";
+  ok: boolean;
+  checked_events: number;
+  head_hash: string;
+  issue_codes: string[];
+}
+
+export interface AdminSecurityAttention {
+  severity: "medium" | "high";
+  code: string;
+  count: number;
+}
+
+export interface AdminSecuritySnapshot {
+  asOf: string;
+  posture: "attention_required" | "observed_no_count_based_attention";
+  attention: AdminSecurityAttention[];
+  sections: Array<{ id: "identity" | "sessions" | "integrations" | "policy" | "retention" | "audit"; values: Record<string, number | boolean | string> }>;
+}
+
+export interface AdminIdentityUser {
+  id: string;
+  username: string;
+  displayName: string;
+  disabled: boolean;
+  lifecycleVersion: number;
+  roles: string[];
+  activeSessions: number;
+  createdAt: string;
+  disabledAt: string | null;
+  stateDigest: string;
+}
+
+export interface AdminIdentitySession {
+  id: string;
+  userId: string;
+  username: string;
+  status: "active" | "expired" | "revoked";
+  lifecycleVersion: number;
+  createdAt: string;
+  expiresAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+  revocationReasonCode: string | null;
+  clientIpRecorded: boolean;
+  userAgentRecorded: boolean;
+  stateDigest: string;
+}
+
+export interface AdminSessionRevocation {
+  session: AdminIdentitySession;
+  transitioned: boolean;
+  revokedCurrentSession: boolean;
+  auditEventId: string | null;
+}
+
+export interface AdminIdentityUserStatusChange {
+  user: AdminIdentityUser;
+  transitioned: boolean;
+  revokedSessions: number;
+  auditEventId: string | null;
+}
+
+export interface AdminAccessPermission { name: string; description: string; activeRoleCount: number; stateDigest: string; }
+export interface AdminAccessRole { id: string; name: string; description: string; active: boolean; lifecycleVersion: number; permissions: string[]; activeUserCount: number; createdAt: string; updatedAt: string; retiredAt: string | null; stateDigest: string; }
+export interface AdminAccessRoleChange { role: AdminAccessRole; transitioned: boolean; revokedSessions: number; auditEventId: string | null; }
+export interface AdminUserRoleAssignment { userId: string; username: string; lifecycleVersion: number; roleIds: string[]; roleNames: string[]; transitioned: boolean; revokedSessions: number; auditEventId: string | null; stateDigest: string; }
+export interface AdminIntegration { kind: "federation_link" | "notification_route" | "scim_credential" | "service_account"; id: string; status: "active" | "disabled" | "expired"; lifecycleVersion: number; credentialCount: number; activeCredentialCount: number; createdAt: string; expiresAt: string | null; lastUsedAt: string | null; scopeDigest: string; stateDigest: string; }
+export interface AdminRetentionPolicy { id: string; name: string; description: string; dataClassification: "public" | "internal" | "confidential" | "restricted"; durationDays: number; active: boolean; lifecycleVersion: number; createdAt: string; updatedAt: string; retiredAt: string | null; stateDigest: string; }
+export interface AdminIntegrationDisable { integration: AdminIntegration; transitioned: boolean; revokedCredentials: number; auditEventId: string | null; }
+export interface AdminRetentionPolicyChange { policy: AdminRetentionPolicy; transitioned: boolean; auditEventId: string | null; }
+export interface AdminEvidenceRetentionChange { retentionVersion: number; retentionExtended: boolean; transitioned: boolean; auditEventId: string | null; stateDigest: string; }

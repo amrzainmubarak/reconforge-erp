@@ -50,10 +50,18 @@ def autosize_columns(workbook_path: Path) -> None:
         if risk_column is not None and worksheet.max_row > 1:
             col = get_column_letter(risk_column)
             rng = f"{col}2:{col}{worksheet.max_row}"
-            worksheet.conditional_formatting.add(rng, CellIsRule(operator="lessThanOrEqual", formula=["30"], fill=LOW_FILL))
-            worksheet.conditional_formatting.add(rng, CellIsRule(operator="between", formula=["31", "60"], fill=MEDIUM_FILL))
-            worksheet.conditional_formatting.add(rng, CellIsRule(operator="between", formula=["61", "80"], fill=HIGH_FILL))
-            worksheet.conditional_formatting.add(rng, CellIsRule(operator="greaterThan", formula=["80"], fill=CRITICAL_FILL))
+            worksheet.conditional_formatting.add(
+                rng, CellIsRule(operator="lessThanOrEqual", formula=["30"], fill=LOW_FILL)
+            )
+            worksheet.conditional_formatting.add(
+                rng, CellIsRule(operator="between", formula=["31", "60"], fill=MEDIUM_FILL)
+            )
+            worksheet.conditional_formatting.add(
+                rng, CellIsRule(operator="between", formula=["61", "80"], fill=HIGH_FILL)
+            )
+            worksheet.conditional_formatting.add(
+                rng, CellIsRule(operator="greaterThan", formula=["80"], fill=CRITICAL_FILL)
+            )
 
     workbook.save(workbook_path)
 

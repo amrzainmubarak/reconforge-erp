@@ -26,6 +26,43 @@ POSTGRES_MIGRATION_REVISIONS = (
     "0013_postgres_domain_uow",
     "0014_postgres_operations",
     "0015_postgres_idempotency",
+    "0016_postgres_journals",
+    "0017_postgres_control_testing",
+    "0018_postgres_intercompany",
+    "0019_postgres_finance_core",
+    "0020_postgres_master_data_app",
+    "0021_postgres_payables",
+    "0022_postgres_receivables",
+    "0023_postgres_matching_app",
+    "0024_postgres_inventory_core",
+    "0025_postgres_inventory_value",
+    "0026_postgres_inventory_reverse",
+    "0027_postgres_inventory_planning",
+    "0028_postgres_accounts",
+    "0029_postgres_approvals",
+    "0030_postgres_close_app",
+    "0031_postgres_evidence_app",
+    "0032_postgres_exceptions",
+    "0033_postgres_outbox_app",
+    "0034_postgres_federation",
+    "0035_postgres_scim",
+    "0036_postgres_scim_auth",
+    "0037_postgres_service_accounts",
+    "0038_postgres_step_up",
+    "0039_postgres_emergency_access",
+    "0040_postgres_webauthn_mfa",
+    "0041_postgres_execution_scope",
+    "0042_postgres_job_scope",
+    "0043_postgres_export_scope",
+    "0044_postgres_business_scope",
+    "0045_postgres_workspace_scope",
+    "0046_postgres_scope_authority",
+    "0047_postgres_scheduler",
+    "0048_postgres_notifications",
+    "0049_security_center_acl",
+    "0050_identity_admin_lifecycle",
+    "0051_access_policy_lifecycle",
+    "0052_security_governance",
 )
 
 
@@ -35,10 +72,7 @@ class PostgresOperationsError(RuntimeError):
 
 def _records(cursor: Any, columns: tuple[str, ...]) -> list[dict[str, Any]]:
     rows = cursor.fetchall()
-    return [
-        dict(row) if isinstance(row, Mapping) else dict(zip(columns, row, strict=True))
-        for row in rows
-    ]
+    return [dict(row) if isinstance(row, Mapping) else dict(zip(columns, row, strict=True)) for row in rows]
 
 
 @dataclass(frozen=True)

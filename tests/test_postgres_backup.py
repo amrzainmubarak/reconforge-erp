@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import hashlib
+import os
+import shutil
 from collections.abc import Sequence
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 
@@ -13,6 +17,7 @@ from reconforge.application.backup_restore import (
 )
 from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.infrastructure.postgres_backup import (
+    NativeCommandRunner,
     PostgresBackupError,
     PostgresBackupSettings,
     PostgresNativeBackupAdapter,
@@ -147,6 +152,18 @@ def test_failed_post_restore_verification_rolls_back_new_database(tmp_path: Path
     ]
 
 
+def test_explicit_restore_cleanup_targets_only_configured_isolated_database(tmp_path: Path) -> None:
+    runner = _Runner()
+    adapter = _adapter(tmp_path, runner)
+    adapter.drop_restored_database()
+    assert Path(runner.calls[0][0]).stem == "dropdb"
+    assert runner.calls[0][1:] == (
+        "--if-exists",
+        "--maintenance-db=service=reconforge_admin",
+        "reconforge_restore_drill",
+    )
+
+
 def test_wrong_key_and_tamper_fail_before_native_restore_calls(tmp_path: Path) -> None:
     output = tmp_path / "postgres.rfpgbackup"
     _adapter(tmp_path / "create-tools", _Runner()).create_backup(output, key=KEY)
@@ -177,6 +194,7 @@ def test_application_service_denies_before_adapter_and_allows_exact_permissions(
     service.create_backup(_context(BACKUP_CREATE_PERMISSION), output, key=KEY)
     restored = service.restore_backup(_context(RESTORE_EXECUTE_PERMISSION), output, key=KEY)
     assert restored.target == "reconforge_restore_drill"
+    assert restored.artifact_sha256 == hashlib.sha256(output.read_bytes()).hexdigest()
 
 
 def test_tool_paths_and_database_names_fail_closed(tmp_path: Path) -> None:
@@ -198,3 +216,51 @@ def test_tool_paths_and_database_names_fail_closed(tmp_path: Path) -> None:
             restore_database="postgres;drop",
             tools=_tools(tmp_path),
         )
+
+
+_LIVE_BACKUP_ENV = (
+    "RECONFORGE_TEST_POSTGRES_SOURCE_SERVICE",
+    "RECONFORGE_TEST_POSTGRES_MAINTENANCE_SERVICE",
+)
+
+
+@pytest.mark.skipif(
+    not all(os.environ.get(name) for name in _LIVE_BACKUP_ENV),
+    reason="requires disposable PostgreSQL source and maintenance services",
+)
+def test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup(tmp_path: Path) -> None:
+    resolved_tools = {name: shutil.which(name) for name in ("pg_dump", "pg_restore", "createdb", "dropdb", "psql")}
+    if not all(resolved_tools.values()):
+        pytest.skip("requires PostgreSQL native client tools on PATH")
+    tools = PostgresNativeTools(
+        **{name: Path(path).resolve(strict=True) for name, path in resolved_tools.items() if path is not None}
+    )
+    maintenance = os.environ["RECONFORGE_TEST_POSTGRES_MAINTENANCE_SERVICE"]
+    restore_database = "reconforge_restore_" + uuid4().hex[:20]
+    settings = PostgresBackupSettings(
+        source_service=os.environ["RECONFORGE_TEST_POSTGRES_SOURCE_SERVICE"],
+        maintenance_service=maintenance,
+        restore_database=restore_database,
+        tools=tools,
+        timeout_seconds=1800,
+    )
+    adapter = PostgresNativeBackupAdapter(settings)
+    service = BackupRestoreApplicationService(adapter)
+    artifact_path = tmp_path / "live-postgres.rfpgbackup"
+    restored = False
+    try:
+        artifact = service.create_backup(_context(BACKUP_CREATE_PERMISSION), artifact_path, key=KEY)
+        assert artifact.sha256 == hashlib.sha256(artifact_path.read_bytes()).hexdigest()
+        outcome = service.restore_backup(_context(RESTORE_EXECUTE_PERMISSION), artifact_path, key=KEY)
+        restored = True
+        assert outcome.target == restore_database
+        assert outcome.artifact_sha256 == artifact.sha256
+        assert outcome.rollback_performed is False
+    finally:
+        if restored:
+            dropdb = tools.validated()[3]
+            result = NativeCommandRunner().run(
+                (dropdb, "--if-exists", f"--maintenance-db=service={maintenance}", restore_database),
+                timeout_seconds=1800,
+            )
+            assert result == 0, f"isolated PostgreSQL restore database requires manual cleanup: {restore_database}"

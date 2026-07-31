@@ -406,8 +406,16 @@ def _summary_frame(frame: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(
         [
             {"metric": "metrics_compared", "value": len(frame), "meaning": "Numeric local summary metrics compared."},
-            {"metric": "threshold_flags", "value": flagged, "meaning": "Metrics exceeding configured amount or percentage thresholds."},
-            {"metric": "analysis_boundary", "value": "workflow_support", "meaning": "No savings, audit opinion, or financial statement conclusion is inferred."},
+            {
+                "metric": "threshold_flags",
+                "value": flagged,
+                "meaning": "Metrics exceeding configured amount or percentage thresholds.",
+            },
+            {
+                "metric": "analysis_boundary",
+                "value": "workflow_support",
+                "meaning": "No savings, audit opinion, or financial statement conclusion is inferred.",
+            },
         ],
     )
 
@@ -415,7 +423,15 @@ def _summary_frame(frame: pd.DataFrame) -> pd.DataFrame:
 def _html_table(frame: pd.DataFrame) -> str:
     if frame.empty:
         return "<p>No variance metrics found.</p>"
-    columns = ["metric", "previous_value", "current_value", "amount_variance", "percentage_variance", "threshold_flag", "explanation"]
+    columns = [
+        "metric",
+        "previous_value",
+        "current_value",
+        "amount_variance",
+        "percentage_variance",
+        "threshold_flag",
+        "explanation",
+    ]
     visible = frame[[column for column in columns if column in frame.columns]]
     header = "".join(f"<th>{escape(column.replace('_', ' ').title())}</th>" for column in visible.columns)
     rows = []
@@ -523,7 +539,9 @@ def analyze_variance(
     )
     summary = _summary_frame(variances)
     output_dir = ensure_output_dir(output_path)
-    workbook_path = write_excel_workbook({"Variance Summary": summary, "Variance Register": variances}, output_dir / "variance_analysis.xlsx")
+    workbook_path = write_excel_workbook(
+        {"Variance Summary": summary, "Variance Register": variances}, output_dir / "variance_analysis.xlsx"
+    )
     csv_path = output_dir / "variance_analysis.csv"
     variances.to_csv(csv_path, index=False)
     json_path = output_dir / "variance_analysis.json"

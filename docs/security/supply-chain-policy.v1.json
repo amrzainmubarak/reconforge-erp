@@ -24,6 +24,8 @@
       "dev",
       "docs",
       "duckdb",
+      "federation",
+      "mfa",
       "observability",
       "server"
     ]
@@ -97,7 +99,7 @@
   },
   "limitations": [
     "A lock or clean vulnerability scan does not establish package safety, provenance, reachability, or license suitability.",
-    "The npm lock records registry resolution and SRI for all 209 non-root entries; registry availability, package provenance, and package safety remain separate trust concerns.",
+    "The npm lock records registry resolution and SRI for all 211 non-root entries; registry availability, package provenance, and package safety remain separate trust concerns.",
     "Local scans do not prove that hosted branch protection or release gates executed."
   ]
 }

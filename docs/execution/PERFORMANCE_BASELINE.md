@@ -1,6 +1,7 @@
 # Performance Baseline
 
-Measured 2026-07-24. This is a smoke benchmark, not a capacity claim.
+Measured 2026-07-27. This is a deterministic reconciliation harness baseline, not
+a full production capacity claim.
 
 ## Environment
 
@@ -12,37 +13,61 @@ Measured 2026-07-24. This is a smoke benchmark, not a capacity claim.
 
 ## Dataset
 
-- Directory: `benchmarks/small_1k`.
-- 1,000 stock rows and 1,144 GL rows.
-- Canonical directory digest: SHA-256 `a520b37ed7086c9f5a350f34de2333b945273331492dfa615465ae1bc19f3ac4` over sorted `filename:file_sha256` lines encoded as UTF-8.
-- Key file hashes:
-  - `stock_moves.csv`: `3cc43501c4fe8b3d55f2bec69f222569870595a65806fe23d42df0939845f964`
-  - `gl_entries.csv`: `0a2f42f1e7e73b0cf0ad4cdb20001a4a2788aa6df23641ee10585a37262cdda2`
+- Deterministic synthetic reconciliation profiles:
+  - `10k`: 10,000 total rows (5,000 left + 5,000 right), 2 partitions.
+  - `100k`: 100,000 total rows (50,000 left + 50,000 right), 20 partitions.
+- Engine: `local-deterministic-partitioned` (single-process, local algorithm path).
+- Seed: `7`, partition max rows: `10,000`, amount fractional digits: `2`.
+- Suite output:
+  - `output/reconforge-plan-benchmarks/plan1-3/reconciliation-execution-benchmark-suite.json`
+  - `output/reconforge-plan-benchmarks/plan1-3/reconciliation-execution-benchmark-suite.md`
+- Per-profile output:
+  - `output/reconforge-plan-benchmarks/plan1-3/10k/reconciliation-execution.json`
+  - `output/reconforge-plan-benchmarks/plan1-3/100k/reconciliation-execution.json`
 
 ## Results
 
-| Engine | CLI runtime metric | Command wall time | Matched | Exceptions | Report generation | Memory metric |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Pandas | 0.9930s | 3.356s | 996 | 369 | 0.0037s | 0.0 MB |
-| DuckDB | 1.1568s | 3.515s | 996 | 369 | 0.0040s | 0.0 MB |
+| Profile | Runtime (s) | CPU time (s) | Peak MB | Results | Matched | Exceptions | Signature | Candidate total | Candidate max | Candidate mean |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | ---: | ---: | ---: |
+| 10k | 10.3894 | 10.4219 | 44.27 | 5,000 | 5,000 | 0 | `4d1a8c3469e4c4a266c0cbcfc4ff57dc93addc2ff078cbcad677045f5b3ca2ea` | 5,000 | 1 | 1.0 |
+| 100k | 141.8710 | 142.6562 | 354.43 | 50,000 | 50,000 | 0 | `9e10d8d7ce5d6e280811a505de78607840c72117045636b461cde984434f10cc` | 50,000 | 1 | 1.0 |
 
-Commands:
+Baseline signatures and file digests:
+
+- Suite signature: `f370bf114f1d7414642068ba555c94fe7c8ef076d6934a3a2d8c93acead48344`
+- 10k output SHA-256: `53ab682fea85e428507b26f0e315e34d69bfd71982f0c36315ce66cbcdc9c8f8`
+- 100k output SHA-256: `40927c53c39c24cc271278ecd54fdc970e801cbc7a2df1b71e6b4e225d1a6220`
+
+Command:
 
 ```text
-reconforge benchmark --input benchmarks/small_1k --engine pandas --output output/baseline-benchmark-current-pandas
-reconforge benchmark --input benchmarks/small_1k --engine duckdb --output output/baseline-benchmark-current-duckdb
+python - <<'PY'
+from pathlib import Path
+from reconforge.benchmark.reconciliation_execution import (
+    ReconciliationExecutionBenchmarkProfile,
+    run_reconciliation_execution_benchmark_suite,
+)
+
+run_reconciliation_execution_benchmark_suite(
+    (
+        ReconciliationExecutionBenchmarkProfile(profile_id="10k", total_records=10_000, partition_count=2, seed=7),
+        ReconciliationExecutionBenchmarkProfile(profile_id="100k", total_records=100_000, partition_count=20, seed=7),
+    ),
+    output_dir=Path("output/reconforge-plan-benchmarks/plan1-3"),
+)
+PY
 ```
 
 ## Interpretation limits
 
-- Equal counts do not prove equal decisions. The separate forced-partition order-invariance test fails.
-- The `0.0 MB` memory result is not credible peak-memory evidence and must be treated as an instrumentation gap.
-- This run does not measure CPU utilization, candidates, ambiguity/false outcomes, crash/resume, multi-currency, or sustained load.
-- No 10K, 100K, 1M, or 10M result was measured. No scale wording beyond this exact 1K dataset/environment is allowed.
+- Equal counts do not prove equal decisions; signature equality is also validated at the same profile boundary in this slice.
+- This table now includes deterministic candidate counters and suite digests for profile closure; it does not prove database-backed durability, distributed worker behavior, 1M/10M scale, or sustained load.
+- This is local single-host and single-process evidence with explicit CPU/peak-memory capture; no network/database connector, crash-restart replay, or air-gap network-dispersed execution effects are included.
+- No 1M/10M profile claims are made.
 
 ## Next performance gates
 
-1. Repair deterministic partition replay before comparing engine performance.
-2. Add reliable peak-RSS measurement and output decision digest.
-3. Publish generated, checksummed tiers at 10K and 100K before considering 1M.
-4. Record dense duplicates, high ambiguity, bad data, grouped matching, and memory ceilings.
+1. Add `match`/`exception` and ambiguity outcome percentages in a normalized format.
+2. Add crash/restart replay benchmarks for this deterministic suite.
+3. Add 1M synthetic profile benchmark under controlled memory budget.
+4. Add grouped-matching, grouped ambiguity, and high-ambiguity candidate-density profiles to close throughput completeness.

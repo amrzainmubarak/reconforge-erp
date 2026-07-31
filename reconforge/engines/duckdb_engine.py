@@ -332,15 +332,13 @@ class DuckDBEngine:
             pd.DataFrame({DuckDBEngine._FILTER_WORK_ORDER_VALUE: normalized_values}).drop_duplicates(),
         )
         try:
-            source = (
-                DuckDBEngine._relation_by_name(connection, relation).project(
-                    f"COALESCE(TRIM(CAST(work_order AS VARCHAR)), '') AS {DuckDBEngine._RELATION_WORK_ORDER_VALUE}, *"
-                )
+            source = DuckDBEngine._relation_by_name(connection, relation).project(
+                f"COALESCE(TRIM(CAST(work_order AS VARCHAR)), '') AS {DuckDBEngine._RELATION_WORK_ORDER_VALUE}, *"
             )
-            filtered = (
-                DuckDBEngine._relation_by_name(connection, DuckDBEngine._PARTITION_WORK_ORDER_FILTER_RELATION).project(
-                    DuckDBEngine._FILTER_WORK_ORDER_VALUE,
-                )
+            filtered = DuckDBEngine._relation_by_name(
+                connection, DuckDBEngine._PARTITION_WORK_ORDER_FILTER_RELATION
+            ).project(
+                DuckDBEngine._FILTER_WORK_ORDER_VALUE,
             )
             joined = source.join(
                 filtered,

@@ -1,0 +1,10 @@
+﻿git : warning: in the working copy of '.gitignore', LF will be replaced by CRLF the next time Git touches it
+At line:1 char:411
++ ... t.txt 2>&1; git diff --check > docs\execution\git_diff_output.txt 2>& ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: in the... Git touches it:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+docs/execution/EVIDENCE.md:9: trailing whitespace.
++**Date**: 2026-07-24  
+reconforge/utils/money.py:445: new blank line at EOF.

@@ -93,7 +93,9 @@ def create_studio_app(
     logout_csrf_token = token_urlsafe(24)
     resolved_db_path = _validate_auth_database(db_path) if require_auth else _optional_studio_database(db_path)
     output_registry = build_download_registry(output_path, allowed_suffixes=DOWNLOAD_SUFFIXES)
-    evidence_registry = build_download_registry(output_path / "evidence", allowed_suffixes=DOWNLOAD_SUFFIXES, recursive=True)
+    evidence_registry = build_download_registry(
+        output_path / "evidence", allowed_suffixes=DOWNLOAD_SUFFIXES, recursive=True
+    )
     docs_registry = build_download_registry(Path("docs"), allowed_suffixes=DOC_SUFFIXES)
     app = FastAPI(title="ReconForge Studio", version=__version__)
     app.state.studio_require_auth = require_auth
@@ -115,7 +117,9 @@ def create_studio_app(
         return _layout(title, body, auth_nav=auth_nav)
 
     def _login_page(*, message: str = "", status_code: int = 200) -> HTMLResponse:
-        return HTMLResponse(_layout("Studio Sign In", _login_form(login_csrf_token, message=message)), status_code=status_code)
+        return HTMLResponse(
+            _layout("Studio Sign In", _login_form(login_csrf_token, message=message)), status_code=status_code
+        )
 
     def _auth_denial(title: str, message: str, *, status_code: int) -> HTMLResponse:
         return _safe_denial_page(title, message, status_code=status_code, auth_nav=auth_nav)
@@ -190,7 +194,9 @@ def create_studio_app(
         if user is None:
             if request.method.upper() == "GET":
                 return RedirectResponse("/login", status_code=303)
-            return _safe_denial_page("Authentication Required", "Sign in to ReconForge Studio and try again.", status_code=401)
+            return _safe_denial_page(
+                "Authentication Required", "Sign in to ReconForge Studio and try again.", status_code=401
+            )
         request.state.studio_user = user
         return await call_next(request)
 
@@ -236,8 +242,12 @@ def create_studio_app(
             },
             key=lambda item: str(item),
         )
-        exception_values = sorted(set(exceptions_frame.get("exception_type", pd.Series(dtype=str)).astype(str).str.strip()) - {""})
-        source_values = sorted(set(exceptions_frame.get("source_file", pd.Series(dtype=str)).astype(str).str.strip()) - {""})
+        exception_values = sorted(
+            set(exceptions_frame.get("exception_type", pd.Series(dtype=str)).astype(str).str.strip()) - {""}
+        )
+        source_values = sorted(
+            set(exceptions_frame.get("source_file", pd.Series(dtype=str)).astype(str).str.strip()) - {""}
+        )
         filtered = _filter_exceptions(
             exceptions_frame,
             severity=_allowed_choice(severity, severity_values),
@@ -290,7 +300,9 @@ def create_studio_app(
     @app.get("/login", response_class=HTMLResponse)
     def login_page() -> HTMLResponse:
         if not require_auth:
-            return HTMLResponse(_layout("Studio Sign In", "<h2>Studio Sign In</h2><p>Studio is running in trusted local mode.</p>"))
+            return HTMLResponse(
+                _layout("Studio Sign In", "<h2>Studio Sign In</h2><p>Studio is running in trusted local mode.</p>")
+            )
         return _login_page()
 
     @app.post("/login", response_class=HTMLResponse, response_model=None)
@@ -387,7 +399,9 @@ def create_studio_app(
 
     @app.get("/validation", response_class=HTMLResponse)
     def validation() -> str:
-        return _render("Validation", "<h2>Validation Results</h2>" + _table(issues_to_frame(validate_input_directory(input_path))))
+        return _render(
+            "Validation", "<h2>Validation Results</h2>" + _table(issues_to_frame(validate_input_directory(input_path)))
+        )
 
     @app.get("/reconciliation", response_class=HTMLResponse)
     def reconciliation() -> str:
@@ -440,7 +454,9 @@ def create_studio_app(
             )
         form = parse_qs((await request.body()).decode("utf-8", errors="replace"), keep_blank_values=True)
         if _form_value(form, "csrf_token", max_length=200) != csrf_token:
-            return _render_exceptions_page(message="Review update rejected. Refresh Studio and try again.", message_type="error")
+            return _render_exceptions_page(
+                message="Review update rejected. Refresh Studio and try again.", message_type="error"
+            )
         state_path = output_path / "review_state.json"
         try:
             state = load_review_state(state_path)
@@ -507,7 +523,9 @@ def create_studio_app(
             return _render("Close", "<h2>Close Checklist</h2><p>No close checklist has been generated yet.</p>")
         summary = close_summary_frame(checklist)
         tasks = close_tasks_frame(checklist)
-        return _render("Close", "<h2>Close Checklist</h2>" + _table(summary) + "<h2>Tasks</h2>" + _table(tasks, limit=100))
+        return _render(
+            "Close", "<h2>Close Checklist</h2>" + _table(summary) + "<h2>Tasks</h2>" + _table(tasks, limit=100)
+        )
 
     @app.get("/variance", response_class=HTMLResponse)
     def variance() -> str:
@@ -619,7 +637,10 @@ def create_studio_app(
                 connection.close()
         except (DatabaseError, PlatformError):
             logger.warning("Unable to render DB account reconciliation page")
-            return _render("DB Account Reconciliations", "<h2>DB Account Reconciliations</h2><p>Unable to read local account reconciliations.</p>")
+            return _render(
+                "DB Account Reconciliations",
+                "<h2>DB Account Reconciliations</h2><p>Unable to read local account reconciliations.</p>",
+            )
         filters = """
 <form class="filters" method="get" action="/db/accounts">
   <label>Status<input name="status"></label>
@@ -630,13 +651,20 @@ def create_studio_app(
   <button type="submit">Apply</button>
 </form>
 """
-        body = "<h2>DB Account Reconciliations</h2>" + _account_action_form() + filters + _table(pd.DataFrame(records), limit=100)
+        body = (
+            "<h2>DB Account Reconciliations</h2>"
+            + _account_action_form()
+            + filters
+            + _table(pd.DataFrame(records), limit=100)
+        )
         return _render("DB Account Reconciliations", body)
 
     @app.post("/db/accounts/action", response_class=HTMLResponse, response_model=None)
     async def db_accounts_action(request: Request) -> str | Response:
         if resolved_db_path is None:
-            return _auth_denial("DB Unavailable", "No current local DB is available for account actions.", status_code=503)
+            return _auth_denial(
+                "DB Unavailable", "No current local DB is available for account actions.", status_code=503
+            )
         form = parse_qs((await request.body()).decode("utf-8", errors="replace"), keep_blank_values=True)
         reconciliation_id = _form_value(form, "reconciliation_id", max_length=100)
         action = _form_value(form, "action", max_length=40).lower()
@@ -647,7 +675,9 @@ def create_studio_app(
             "complete": "accounts.complete",
         }.get(action)
         if permission is None or not _request_has_permission(request, permission):
-            return _auth_denial("Permission Denied", "Your local role does not allow this account action.", status_code=403)
+            return _auth_denial(
+                "Permission Denied", "Your local role does not allow this account action.", status_code=403
+            )
         try:
             connection = connect(resolved_db_path, require_exists=True)
             try:
@@ -658,14 +688,20 @@ def create_studio_app(
                 elif action == "submit":
                     service.submit(reconciliation_id, actor_label=actor)
                 elif action == "review":
-                    service.review(reconciliation_id, reviewer=_form_value(form, "reviewer", max_length=120), actor_label=actor)
+                    service.review(
+                        reconciliation_id, reviewer=_form_value(form, "reviewer", max_length=120), actor_label=actor
+                    )
                 elif action == "complete":
                     service.complete(reconciliation_id, actor_label=actor)
             finally:
                 connection.close()
         except (DatabaseError, PlatformError):
             logger.warning("Rejected DB account action")
-            return _auth_denial("Action Failed", "Unable to apply the account action. Verify the status and permissions.", status_code=400)
+            return _auth_denial(
+                "Action Failed",
+                "Unable to apply the account action. Verify the status and permissions.",
+                status_code=400,
+            )
         return RedirectResponse("/db/accounts", status_code=303)
 
     @app.get("/db/close", response_class=HTMLResponse)
@@ -683,7 +719,13 @@ def create_studio_app(
         except (DatabaseError, PlatformError):
             logger.warning("Unable to render DB close page")
             return _render("DB Close", "<h2>DB Close</h2><p>Unable to read local close records.</p>")
-        return _render("DB Close", "<h2>DB Close</h2><h3>Periods</h3>" + _table(pd.DataFrame(periods)) + "<h3>Tasks</h3>" + _table(pd.DataFrame(tasks), limit=100))
+        return _render(
+            "DB Close",
+            "<h2>DB Close</h2><h3>Periods</h3>"
+            + _table(pd.DataFrame(periods))
+            + "<h3>Tasks</h3>"
+            + _table(pd.DataFrame(tasks), limit=100),
+        )
 
     @app.get("/db/evidence", response_class=HTMLResponse)
     def db_evidence() -> str:
@@ -704,7 +746,10 @@ def create_studio_app(
             f'<section class="card"><span>Coverage</span><strong>{escape(str(coverage["coverage_pct"]))}%</strong></section>'
             f'<section class="card"><span>Requirements</span><strong>{escape(str(coverage["requirement_count"]))}</strong></section>'
         )
-        return _render("DB Evidence", f"<h2>DB Evidence</h2><div class='grid'>{cards}</div>" + _table(pd.DataFrame(evidence_records), limit=100))
+        return _render(
+            "DB Evidence",
+            f"<h2>DB Evidence</h2><div class='grid'>{cards}</div>" + _table(pd.DataFrame(evidence_records), limit=100),
+        )
 
     @app.get("/db/exceptions", response_class=HTMLResponse)
     def db_exceptions(status: str = "", owner: str = "", risk: str = "") -> str:
@@ -748,16 +793,26 @@ def create_studio_app(
         except (DatabaseError, PlatformError):
             logger.warning("Unable to render DB metrics page")
             return _render("DB Metrics", "<h2>DB Metrics</h2><p>Unable to read local metrics.</p>")
-        return _render("DB Metrics", "<h2>DB Metrics</h2>" + _table(pd.DataFrame(metrics), limit=100) + "<h3>Lineage</h3>" + _table(pd.DataFrame(lineage), limit=100))
+        return _render(
+            "DB Metrics",
+            "<h2>DB Metrics</h2>"
+            + _table(pd.DataFrame(metrics), limit=100)
+            + "<h3>Lineage</h3>"
+            + _table(pd.DataFrame(lineage), limit=100),
+        )
 
     @app.get("/downloads", response_class=HTMLResponse)
     def downloads() -> str:
-        links = "".join(f'<li><a href="{_href("/download", key)}">{escape(key)}</a></li>' for key in sorted(output_registry))
+        links = "".join(
+            f'<li><a href="{_href("/download", key)}">{escape(key)}</a></li>' for key in sorted(output_registry)
+        )
         return _render("Downloads", f"<h2>Downloads</h2><ul>{links}</ul>")
 
     @app.get("/docs", response_class=HTMLResponse)
     def docs() -> str:
-        links = "".join(f'<li><a href="{_href("/download-doc", key)}">{escape(key)}</a></li>' for key in sorted(docs_registry))
+        links = "".join(
+            f'<li><a href="{_href("/download-doc", key)}">{escape(key)}</a></li>' for key in sorted(docs_registry)
+        )
         return _render("Docs", f"<h2>Documentation</h2><ul>{links}</ul>")
 
     @app.get("/download/{filename}")

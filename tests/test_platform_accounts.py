@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-import reconforge.platform.accounts as accounts_module
+import reconforge.infrastructure.sqlite_accounts as accounts_module
 import reconforge.platform.common as common_module
 from reconforge.audit import AuditLedgerError, list_audit_events
 from reconforge.auth import LocalAuthService
@@ -239,6 +239,39 @@ def test_account_reconciliation_rolls_back_business_workflow_audit_and_outbox_on
             )
         assert connection.execute("SELECT COUNT(*) AS count FROM account_reconciliation_records").fetchone()["count"] == 0
         assert connection.execute("SELECT COUNT(*) AS count FROM workflow_objects").fetchone()["count"] == 0
+    finally:
+        connection.close()
+
+
+def test_account_transition_rolls_back_workflow_record_and_outbox_when_audit_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db_path = _db_with_users(tmp_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        service = AccountReconciliationService(connection)
+        record = service.create_reconciliation(
+            period_name="2026-05", entity_code="US01", account_code="1000",
+            balance="10.00", actor_label="prep",
+        )
+        service.prepare(reconciliation_id=str(record["id"]), actor_label="prep")
+        outbox_count = connection.execute("SELECT COUNT(*) AS count FROM outbox_events").fetchone()["count"]
+        monkeypatch.setattr(common_module, "audit", _fail_audit)
+
+        with pytest.raises(PlatformError, match="audit evidence"):
+            service.submit(str(record["id"]), actor_label="prep")
+
+        stored = connection.execute(
+            "SELECT status FROM account_reconciliation_records WHERE id = ?", (record["id"],)
+        ).fetchone()
+        workflow = connection.execute(
+            "SELECT status FROM workflow_objects WHERE object_type = 'reconciliation' AND object_id = ?",
+            (record["id"],),
+        ).fetchone()
+        assert stored["status"] == "Prepared"
+        assert workflow["status"] == "Prepared"
+        assert connection.execute("SELECT COUNT(*) AS count FROM outbox_events").fetchone()["count"] == outbox_count
     finally:
         connection.close()
 

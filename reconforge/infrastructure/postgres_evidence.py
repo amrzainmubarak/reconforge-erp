@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections import deque
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -66,30 +67,47 @@ _LIST_EVIDENCE_BASE_QUERY = (
     "WHERE tenant_id = %s "
 )
 _LIST_EVIDENCE_BY_STATUS: dict[str, str] = {
-    "all": (
-        _LIST_EVIDENCE_BASE_QUERY
-        + "ORDER BY created_at DESC, id "
-        + "LIMIT %s OFFSET %s"
-    ),
+    "all": (_LIST_EVIDENCE_BASE_QUERY + "ORDER BY created_at DESC, id " + "LIMIT %s OFFSET %s"),
     "available": (
-        _LIST_EVIDENCE_BASE_QUERY
-        + "AND evidence_status = %s "
-        + "ORDER BY created_at DESC, id "
-        + "LIMIT %s OFFSET %s"
+        _LIST_EVIDENCE_BASE_QUERY + "AND evidence_status = %s " + "ORDER BY created_at DESC, id " + "LIMIT %s OFFSET %s"
     ),
     "quarantined": (
-        _LIST_EVIDENCE_BASE_QUERY
-        + "AND evidence_status = %s "
-        + "ORDER BY created_at DESC, id "
-        + "LIMIT %s OFFSET %s"
+        _LIST_EVIDENCE_BASE_QUERY + "AND evidence_status = %s " + "ORDER BY created_at DESC, id " + "LIMIT %s OFFSET %s"
     ),
     "superseded": (
-        _LIST_EVIDENCE_BASE_QUERY
-        + "AND evidence_status = %s "
-        + "ORDER BY created_at DESC, id "
-        + "LIMIT %s OFFSET %s"
+        _LIST_EVIDENCE_BASE_QUERY + "AND evidence_status = %s " + "ORDER BY created_at DESC, id " + "LIMIT %s OFFSET %s"
     ),
 }
+_ALLOWED_DRILL_DIRECTIONS = ("up", "down", "both")
+_MAX_DRILL_DEPTH = 8
+_MAX_DRILL_GRAPH_NODES = 10_000
+_MAX_DRILL_PAGE_SIZE = 1_000
+
+
+def _as_node_id(object_type: str, object_id: str) -> str:
+    """Return a deterministic governed-object node identifier."""
+
+    return f"object:{object_type}:{object_id}"
+
+
+def _redact_evidence_payload(record: Mapping[str, object]) -> dict[str, object]:
+    """Return a redacted copy of an evidence record."""
+
+    redacted = dict(record)
+    for field in (
+        "source_path",
+        "evidence_id",
+        "checksum_sha256",
+        "storage_tenant_id",
+        "storage_key",
+        "storage_version_id",
+    ):
+        if field in redacted:
+            redacted[field] = "***redacted***"
+    for field in ("byte_size", "retention_until", "content_type"):
+        if field in redacted:
+            redacted[field] = "***redacted***"
+    return redacted
 
 
 class PostgresEvidenceValidationError(ValueError):
@@ -355,7 +373,9 @@ class PostgresEvidenceRepository:
                 metadata_json,
             ),
         )
-        outbox_event_id = _hash_payload({"tenant_id": tenant, "event_type": f"evidence.{action}", "resource_id": resource_id})
+        outbox_event_id = _hash_payload(
+            {"tenant_id": tenant, "event_type": f"evidence.{action}", "resource_id": resource_id}
+        )
         self.connection.execute(
             """
             INSERT INTO reconforge.outbox_events
@@ -364,6 +384,84 @@ class PostgresEvidenceRepository:
             ON CONFLICT (tenant_id, event_id) DO NOTHING
             """,
             (tenant, outbox_event_id, f"evidence.{action}", resource_type, resource_id, payload_json),
+        )
+
+    def _append_access_audit(
+        self,
+        *,
+        tenant: str,
+        action: str,
+        resource_id: str,
+        actor_id: str,
+        request_id: str,
+        metadata: Mapping[str, object],
+    ) -> None:
+        """Append one read-access event without publishing a business outbox event."""
+
+        actor = _text(actor_id, "actor_id", maximum=160)
+        request = _text(request_id, "request_id", maximum=160, allow_blank=True)
+        metadata_json = _json_text(metadata, "metadata")
+        occurred_at = utc_now_text()
+        state_hash = _hash_payload({"tenant_id": tenant, "resource_id": resource_id})
+        self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (tenant,))
+        previous_cursor = self.connection.execute(
+            "SELECT event_hash FROM reconforge.audit_events WHERE tenant_id = %s ORDER BY event_sequence DESC LIMIT 1",
+            (tenant,),
+        )
+        previous_row = previous_cursor.fetchone()
+        previous_hash = "" if previous_row is None else str(_row_value(previous_row, "event_hash", 0) or "")
+        audit_event_id = _hash_payload(
+            {
+                "tenant_id": tenant,
+                "action": action,
+                "resource_id": resource_id,
+                "actor_id": actor,
+                "request_id": request,
+                "occurred_at": occurred_at,
+            }
+        )
+        reason = "Evidence drill-down metadata read."
+        event_hash = _hash_payload(
+            {
+                "tenant_id": tenant,
+                "event_id": audit_event_id,
+                "actor_id": actor,
+                "action": action,
+                "resource_type": "evidence",
+                "resource_id": resource_id,
+                "occurred_at": occurred_at,
+                "request_id": request,
+                "before_state_hash": state_hash,
+                "after_state_hash": state_hash,
+                "previous_event_hash": previous_hash,
+                "reason": reason,
+                "metadata": metadata_json,
+            }
+        )
+        self.connection.execute(
+            """
+            INSERT INTO reconforge.audit_events
+                (tenant_id, event_id, actor_id, action, resource_type, resource_id, occurred_at,
+                 request_id, before_state_hash, after_state_hash, previous_event_hash, event_hash,
+                 reason, metadata)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CAST(%s AS jsonb))
+            """,
+            (
+                tenant,
+                audit_event_id,
+                actor,
+                action,
+                "evidence",
+                resource_id,
+                occurred_at,
+                request,
+                state_hash,
+                state_hash,
+                previous_hash,
+                event_hash,
+                reason,
+                metadata_json,
+            ),
         )
 
     def register(
@@ -432,7 +530,9 @@ class PostgresEvidenceRepository:
         before = None if before_row is None else _record(before_row, self._COLUMNS)
         if before is not None:
             if str(before["id"]) != identifier or str(before["checksum_sha256"]) != digest:
-                raise PostgresEvidenceIntegrityError("Evidence code or identifier already refers to different artifact content.")
+                raise PostgresEvidenceIntegrityError(
+                    "Evidence code or identifier already refers to different artifact content."
+                )
             immutable_pairs = (
                 ("storage_backend", backend),
                 ("storage_tenant_id", storage_tenant),
@@ -441,12 +541,26 @@ class PostgresEvidenceRepository:
             )
             if any(str(before[field]) != value for field, value in immutable_pairs):
                 raise PostgresEvidenceIntegrityError("Stored evidence artifact references are immutable.")
+            previous_retention = _timestamp(before["retention_until"])
+            if previous_retention is not None:
+                if retention is None:
+                    # Existing callers use ``None`` for an omitted optional field.  Preserve the
+                    # governed floor instead of turning an unrelated metadata update into a
+                    # retention-removal attempt.
+                    retention = previous_retention
+                elif datetime.fromisoformat(retention.replace("Z", "+00:00")) < datetime.fromisoformat(
+                    previous_retention.replace("Z", "+00:00")
+                ):
+                    raise PostgresEvidenceIntegrityError("Evidence retention cannot be shortened.")
             cursor = self.connection.execute(
                 """
                 UPDATE reconforge.evidence_registry
                 SET source_name = %s, source_reference = %s, provenance_type = %s,
                     redaction_status = %s, evidence_status = %s, content_type = %s,
-                    byte_size = %s, retention_until = %s, registered_by = %s, updated_at = now()
+                    byte_size = %s,
+                    retention_version = retention_version
+                      + CASE WHEN retention_until IS DISTINCT FROM %s THEN 1 ELSE 0 END,
+                    retention_until = %s, registered_by = %s, updated_at = now()
                 WHERE tenant_id = %s AND id = %s
                 RETURNING tenant_id, id, evidence_code, source_name, source_reference, checksum_sha256,
                           provenance_type, redaction_status, evidence_status, storage_backend,
@@ -454,7 +568,20 @@ class PostgresEvidenceRepository:
                           retention_until, last_verified_at, last_verified_sha256, verification_status,
                           registered_by, created_at, updated_at
                 """,
-                (name, source, provenance, redaction, status, content, size, retention, actor_id, tenant, identifier),
+                (
+                    name,
+                    source,
+                    provenance,
+                    redaction,
+                    status,
+                    content,
+                    size,
+                    retention,
+                    retention,
+                    actor_id,
+                    tenant,
+                    identifier,
+                ),
             )
             action = "evidence_metadata_updated"
         else:
@@ -507,7 +634,12 @@ class PostgresEvidenceRepository:
             request_id=request_id,
             reason=reason,
             metadata=metadata,
-            payload={"evidence_id": identifier, "checksum_sha256": digest, "storage_backend": backend, "after_state_hash": after_hash},
+            payload={
+                "evidence_id": identifier,
+                "checksum_sha256": digest,
+                "storage_backend": backend,
+                "after_state_hash": after_hash,
+            },
         )
         return self.get(tenant_id=tenant, evidence_id=identifier)
 
@@ -529,7 +661,185 @@ class PostgresEvidenceRepository:
         record["links"] = [_record(row, self._LINK_COLUMNS) for row in links_cursor.fetchall()]
         return record
 
-    def list_evidence(self, *, tenant_id: str, status: str = "all", limit: int = 500, offset: int = 0) -> list[dict[str, Any]]:
+    def drill_down(
+        self,
+        *,
+        tenant_id: str,
+        evidence_id: str,
+        direction: str = "both",
+        max_depth: int = 2,
+        include_sensitive: bool = False,
+        limit: int = 250,
+        offset: int = 0,
+        actor_id: str = "",
+        request_id: str = "",
+    ) -> dict[str, Any]:
+        """Return a deterministic evidence-to-object lineage graph for governance review."""
+
+        tenant = _tenant_id(tenant_id)
+        normalized_direction = str(direction).strip().lower()
+        if normalized_direction not in _ALLOWED_DRILL_DIRECTIONS:
+            raise PostgresEvidenceValidationError("direction must be up, down, or both.")
+        if not 1 <= int(max_depth) <= _MAX_DRILL_DEPTH:
+            raise PostgresEvidenceValidationError("depth must be between 1 and 8.")
+        if not 1 <= int(limit) <= _MAX_DRILL_PAGE_SIZE:
+            raise PostgresEvidenceValidationError("limit must be between 1 and 1000.")
+        if not 0 <= int(offset) <= 10_000_000:
+            raise PostgresEvidenceValidationError("offset must be between 0 and 10000000.")
+        include_up = normalized_direction in {"up", "both"}
+        root_record = self.get(tenant_id=tenant, evidence_id=evidence_id)
+        root_id = str(root_record["id"])
+
+        visited_evidence: set[str] = {root_id}
+        nodes: dict[str, dict[str, Any]] = {
+            root_id: {
+                "node_type": "evidence",
+                "id": root_id,
+                "record": root_record if include_sensitive else _redact_evidence_payload(root_record),
+                "depth": 0,
+            }
+        }
+        edges: list[dict[str, Any]] = []
+        queue: deque[tuple[str, int]] = deque([(root_id, 0)])
+
+        while queue:
+            current_id, depth = queue.popleft()
+            if depth >= int(max_depth):
+                continue
+            next_depth = depth + 1
+            forward = self.connection.execute(
+                "SELECT object_type, object_id, link_type, id "
+                "FROM reconforge.evidence_links WHERE tenant_id = %s AND evidence_id = %s ORDER BY object_type, object_id, link_type, id",
+                (tenant, current_id),
+            ).fetchall()
+            for row in forward:
+                object_type = str(_row_value(row, "object_type", 0))
+                object_id = str(_row_value(row, "object_id", 1))
+                object_node_id = _as_node_id(object_type, object_id)
+                if object_node_id not in nodes:
+                    if len(nodes) >= _MAX_DRILL_GRAPH_NODES:
+                        raise PostgresEvidenceValidationError("drill-down graph exceeds the 10000-node safety ceiling.")
+                    nodes[object_node_id] = {
+                        "node_type": "governed_object",
+                        "id": object_node_id,
+                        "object_type": object_type,
+                        "object_id": object_id,
+                        "depth": next_depth,
+                    }
+                edges.append(
+                    {
+                        "from": current_id,
+                        "to": object_node_id,
+                        "relationship": "evidence:linked-object",
+                        "direction": "down",
+                        "link_type": str(_row_value(row, "link_type", 2)),
+                        "object_link_id": str(_row_value(row, "id", 3)),
+                        "depth": next_depth,
+                    }
+                )
+                if not include_up:
+                    continue
+                reverse = self.connection.execute(
+                    "SELECT evidence_id, link_type, id "
+                    "FROM reconforge.evidence_links WHERE tenant_id = %s AND object_type = %s AND object_id = %s "
+                    "ORDER BY evidence_id, link_type, id",
+                    (tenant, object_type, object_id),
+                ).fetchall()
+                for item in reverse:
+                    peer_id = str(_row_value(item, "evidence_id", 0))
+                    if peer_id == current_id:
+                        continue
+                    edges.append(
+                        {
+                            "from": object_node_id,
+                            "to": peer_id,
+                            "relationship": "object:linked-evidence",
+                            "direction": "up",
+                            "link_type": str(_row_value(item, "link_type", 1)),
+                            "object_link_id": str(_row_value(item, "id", 2)),
+                            "depth": next_depth,
+                        }
+                    )
+                    if peer_id in visited_evidence:
+                        continue
+                    if len(nodes) >= _MAX_DRILL_GRAPH_NODES:
+                        raise PostgresEvidenceValidationError("drill-down graph exceeds the 10000-node safety ceiling.")
+                    visited_evidence.add(peer_id)
+                    peer_record = self.get(tenant_id=tenant, evidence_id=peer_id)
+                    nodes[peer_id] = {
+                        "node_type": "evidence",
+                        "id": peer_id,
+                        "record": peer_record if include_sensitive else _redact_evidence_payload(peer_record),
+                        "depth": next_depth,
+                    }
+                    queue.append((peer_id, next_depth))
+
+        ordered_nodes = sorted(nodes.values(), key=lambda node: (int(node["depth"]), str(node["id"])))
+        ordered_edges = sorted(
+            {
+                (
+                    str(edge["from"]),
+                    str(edge["to"]),
+                    str(edge["relationship"]),
+                    str(edge["link_type"]),
+                    str(edge["object_link_id"]),
+                    int(edge["depth"]),
+                ): edge
+                for edge in edges
+            }.values(),
+            key=lambda edge: (
+                int(edge["depth"]),
+                str(edge["from"]),
+                str(edge["to"]),
+                str(edge["relationship"]),
+                str(edge["object_link_id"]),
+            ),
+        )
+        page_nodes = ordered_nodes[int(offset) : int(offset) + int(limit)]
+        page_node_ids = {str(node["id"]) for node in page_nodes}
+        page_edges = [
+            edge for edge in ordered_edges if str(edge["from"]) in page_node_ids or str(edge["to"]) in page_node_ids
+        ]
+        next_offset = int(offset) + len(page_nodes)
+        result = {
+            "evidence_id": root_id,
+            "direction": normalized_direction,
+            "max_depth": int(max_depth),
+            "include_sensitive": bool(include_sensitive),
+            "nodes": page_nodes,
+            "edges": page_edges,
+            "nodes_count": len(ordered_nodes),
+            "edges_count": len(ordered_edges),
+            "pagination": {
+                "limit": int(limit),
+                "offset": int(offset),
+                "returned_nodes": len(page_nodes),
+                "returned_incident_edges": len(page_edges),
+                "next_offset": next_offset if next_offset < len(ordered_nodes) else None,
+                "edge_scope": "incident-to-returned-nodes",
+            },
+        }
+        if actor_id:
+            self._append_access_audit(
+                tenant=tenant,
+                action="evidence_drill_down_viewed",
+                resource_id=root_id,
+                actor_id=actor_id,
+                request_id=request_id,
+                metadata={
+                    "direction": normalized_direction,
+                    "max_depth": int(max_depth),
+                    "include_sensitive": bool(include_sensitive),
+                    "limit": int(limit),
+                    "offset": int(offset),
+                    "returned_nodes": len(page_nodes),
+                },
+            )
+        return result
+
+    def list_evidence(
+        self, *, tenant_id: str, status: str = "all", limit: int = 500, offset: int = 0
+    ) -> list[dict[str, Any]]:
         """List tenant evidence in deterministic order."""
 
         tenant = _tenant_id(tenant_id)
@@ -576,9 +886,18 @@ class PostgresEvidenceRepository:
         target_type = _text(object_type, "object_type", maximum=100)
         target_id = _text(object_id, "object_id", maximum=160)
         selected_link_type = _text(link_type, "link_type", maximum=64)
-        link_id = "evl-" + _hash_payload(
-            {"tenant_id": tenant, "evidence_id": evidence, "object_type": target_type, "object_id": target_id, "link_type": selected_link_type}
-        )[:48]
+        link_id = (
+            "evl-"
+            + _hash_payload(
+                {
+                    "tenant_id": tenant,
+                    "evidence_id": evidence,
+                    "object_type": target_type,
+                    "object_id": target_id,
+                    "link_type": selected_link_type,
+                }
+            )[:48]
+        )
         cursor = self.connection.execute(
             """
             INSERT INTO reconforge.evidence_links
@@ -613,7 +932,12 @@ class PostgresEvidenceRepository:
             request_id=request_id,
             reason=reason,
             metadata=metadata,
-            payload={"evidence_id": evidence, "object_type": target_type, "object_id": target_id, "after_state_hash": link_hash},
+            payload={
+                "evidence_id": evidence,
+                "object_type": target_type,
+                "object_id": target_id,
+                "after_state_hash": link_hash,
+            },
         )
         return link_record
 
@@ -639,9 +963,12 @@ class PostgresEvidenceRepository:
         code = _code(requirement_code, "requirement_code")
         details = _text(description, "description", maximum=2_000)
         status = _text(required_status, "required_status", maximum=64)
-        requirement_id = "evreq-" + _hash_payload(
-            {"tenant_id": tenant, "object_type": target_type, "object_id": target_id, "requirement_code": code}
-        )[:48]
+        requirement_id = (
+            "evreq-"
+            + _hash_payload(
+                {"tenant_id": tenant, "object_type": target_type, "object_id": target_id, "requirement_code": code}
+            )[:48]
+        )
         before_cursor = self.connection.execute(
             """
             SELECT tenant_id, id, object_type, object_id, requirement_code, description,
@@ -680,7 +1007,12 @@ class PostgresEvidenceRepository:
             request_id=request_id,
             reason=reason,
             metadata=metadata,
-            payload={"object_type": target_type, "object_id": target_id, "requirement_code": code, "after_state_hash": after_hash},
+            payload={
+                "object_type": target_type,
+                "object_id": target_id,
+                "requirement_code": code,
+                "after_state_hash": after_hash,
+            },
         )
         return record
 
@@ -730,9 +1062,17 @@ class PostgresEvidenceRepository:
             request_id=request_id,
             reason=reason,
             metadata={**dict(metadata or {}), "ok": ok, "actual_sha256": actual},
-            payload={"evidence_id": identifier, "ok": ok, "expected_sha256": expected, "actual_sha256": actual, "after_state_hash": after_hash},
+            payload={
+                "evidence_id": identifier,
+                "ok": ok,
+                "expected_sha256": expected,
+                "actual_sha256": actual,
+                "after_state_hash": after_hash,
+            },
         )
-        return PostgresEvidenceVerification(evidence_id=identifier, ok=ok, expected_sha256=expected, actual_sha256=actual)
+        return PostgresEvidenceVerification(
+            evidence_id=identifier, ok=ok, expected_sha256=expected, actual_sha256=actual
+        )
 
     def coverage(self, *, tenant_id: str) -> dict[str, Any]:
         """Return tenant-scoped evidence requirement coverage."""
@@ -793,6 +1133,7 @@ CREATE TABLE IF NOT EXISTS reconforge.evidence_registry (
     content_type TEXT NOT NULL DEFAULT 'application/octet-stream',
     byte_size BIGINT NOT NULL DEFAULT 0 CHECK (byte_size >= 0),
     retention_until TIMESTAMPTZ,
+    retention_version BIGINT NOT NULL DEFAULT 1 CHECK (retention_version >= 1),
     last_verified_at TIMESTAMPTZ,
     last_verified_sha256 TEXT,
     verification_status TEXT NOT NULL DEFAULT 'Unverified',
@@ -857,6 +1198,17 @@ BEGIN
        OR OLD.storage_key <> NEW.storage_key
        OR OLD.storage_version_id <> NEW.storage_version_id THEN
         RAISE EXCEPTION 'Evidence artifact identity is immutable' USING ERRCODE = '55000';
+    END IF;
+    IF NEW.retention_until IS DISTINCT FROM OLD.retention_until THEN
+        IF OLD.retention_until IS NOT NULL
+           AND (NEW.retention_until IS NULL OR NEW.retention_until < OLD.retention_until) THEN
+            RAISE EXCEPTION 'Evidence retention cannot be shortened' USING ERRCODE = '23514';
+        END IF;
+        IF NEW.retention_version <> OLD.retention_version + 1 THEN
+            RAISE EXCEPTION 'Evidence retention version transition is invalid' USING ERRCODE = '23514';
+        END IF;
+    ELSIF NEW.retention_version <> OLD.retention_version THEN
+        RAISE EXCEPTION 'Evidence retention version changed without retention change' USING ERRCODE = '23514';
     END IF;
     RETURN NEW;
 END

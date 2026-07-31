@@ -1,0 +1,52 @@
+schema_version: 1
+audit_id: E-234
+executed_at: "2026-07-31"
+task_id: P3-ENT-012
+status: verified
+scope: Bounded enterprise observability and operations stack with closed local policy, real sources, optional OTLP export, collector/file backend, capacity/reliability recovery, and incident lineage.
+gates:
+  - {id: reliability_policy_and_recovery_path, status: verified_focused, evidence: [reconforge/reliability.py, .github/scripts/verify_enterprise_reliability.py, docs/execution/ENTERPRISE_RELIABILITY_LOCAL_DRILL_2026-07-31.json, tests/test_enterprise_reliability_drill.py]}
+  - {id: operational_source_and_cli_collection, status: verified_runtime, evidence: [reconforge/reliability_sources.py, tests/test_reliability_sources.py, docs/execution/RELIABILITY_CAPACITY_LOCAL_DRILL_2026-07-31.json]}
+  - {id: capacity_and_recovery_exercise, status: verified_runtime, evidence: [docs/execution/RELIABILITY_CAPACITY_LOCAL_DRILL_2026-07-31.json, tests/test_reliability_capacity_drill.py]}
+  - {id: postgres_reliability_parity, status: verified_disposable_runtime, evidence: [docs/execution/POSTGRES_RELIABILITY_DOCKER_DRILL_2026-07-31.json, .github/scripts/verify_postgres_reliability.py, tests/test_postgres_reliability_drill.py, tests/test_reliability_sources.py]}
+  - {id: explicit_otlp_export_runtime, status: verified_focused, evidence: [docs/execution/OTLP_HTTP_COLLECTOR_LOCAL_DRILL_2026-07-31.json, .github/scripts/verify_otlp_http_collector.py, tests/test_otlp_http_collector_drill.py]}
+  - {id: collector_distribution_to_file_backend, status: verified_focused, evidence: [docs/execution/OTEL_COLLECTOR_DISTRIBUTION_LOCAL_DRILL_2026-07-31.json, .github/scripts/verify_otel_collector_distribution.py, tests/test_otel_collector_drill.py]}
+  - {id: ordered_incident_lifecycle, status: verified_runtime, evidence: [docs/execution/RELIABILITY_INCIDENT_LOCAL_DRILL_2026-07-31.json, reconforge/incident_response.py, tests/test_reliability_incident_drill.py]}
+  - {id: production_observability_runbook_coverage, status: verified_focused, evidence: [docs/operations/enterprise-reliability.md, tests/test_enterprise_reliability_docs.py]}
+runtime_evidence:
+  policy:
+    profile: local-synthetic-single-process
+    policy_version: reconforge-reliability-policy-v1
+  checks:
+    local_reliability_passed: true
+    capacity_recovery_passed: true
+    incident_lifecycle_closed: true
+    postgres_parity_passed: true
+    collector_runtime_passed: true
+  measurements:
+    capacity_requests: 1000
+    capacity_queued_jobs: 1000
+    capacity_api_p95_ms: 7
+    capacity_runtime_wall_ms: 9767
+    incident_initial_queue_depth: 1000
+    incident_recovered_queue_depth: 0
+    incident_ack_seconds: 15
+    incident_closure_seconds: 60
+    postgres_job_depth: 1
+    postgres_oldest_job_age_seconds: 600
+  collector_profiles:
+    otlp_http_profile: explicit-loopback-otlp-http-protobuf
+    collector_profile: pinned-official-collector-file-backend
+  export_and_signal_profile:
+    policy_profile: local-synthetic-and-collector-closed
+  external_network_calls: 0
+  production_keys_secrets_or_customer_data: 0
+limitations:
+  - no_external_collector_or_alert_manager_delivery
+  - no_independent_host_ha_evidence
+  - no_repeated_network_load_or_soak
+  - no_durable_incident_retention
+  - no_real_staffing_or_oncall_separation
+  - no_ha_retention_or_ha_alerting_assertion
+  - no_production_slo_or_external_assurance_claim
+publication: {commit: false, push: false, pull_request: false, release: false}

@@ -1,0 +1,91 @@
+{
+  "checks": {
+    "all_recovery_alerts_normal": true,
+    "all_sources_available": true,
+    "backlog_recovered_to_zero": true,
+    "critical_alert_detected": true,
+    "incident_chain_verified": true,
+    "independent_recovery_validation_actor": true,
+    "runbook_bound": true
+  },
+  "incident": {
+    "correlation_id": "corr-rf-local-0001",
+    "events": [
+      {
+        "action_code": "alert-detected",
+        "event_sha256": "77ad718a7d2752fe991dfab74de18ff6475501958ccd51ba8cb3376e144173a3",
+        "evidence_sha256": "7809e7ff817194d65bcfe8ce2b54dcaafd0c72adc8883c08e94418f6a53c78f6",
+        "occurred_at": "2026-07-30T14:00:00Z",
+        "operator_ref": "system-reliability",
+        "previous_event_sha256": null,
+        "sequence": 1,
+        "state": "detected"
+      },
+      {
+        "action_code": "incident-acknowledged",
+        "event_sha256": "261dab6f1bb012c470edef5654cafef7ba5ecbd1a87deb3e95cfeed6cb8c296b",
+        "evidence_sha256": "0a9565ead8d50dc7d14a9cf9df269f67412c99f3b8bd0910322796d609b3e032",
+        "occurred_at": "2026-07-30T14:00:15Z",
+        "operator_ref": "operator-primary",
+        "previous_event_sha256": "77ad718a7d2752fe991dfab74de18ff6475501958ccd51ba8cb3376e144173a3",
+        "sequence": 2,
+        "state": "acknowledged"
+      },
+      {
+        "action_code": "producer-paused-worker-restored",
+        "event_sha256": "a342fda43cda4172427c1a69209af75e432e0ad3f1f9605e2907038eba12fd2a",
+        "evidence_sha256": "2727f6409b3a7d42d913aa1defceeae739510669897a8c37326b82e2ab8fd0cc",
+        "occurred_at": "2026-07-30T14:00:30Z",
+        "operator_ref": "operator-primary",
+        "previous_event_sha256": "261dab6f1bb012c470edef5654cafef7ba5ecbd1a87deb3e95cfeed6cb8c296b",
+        "sequence": 3,
+        "state": "mitigating"
+      },
+      {
+        "action_code": "synthetic-check-passed",
+        "event_sha256": "b9a9f62c7246ff53d3e096da41e9378a606d6f4bf8696fe82b145b75c79471cb",
+        "evidence_sha256": "c8e2928f313ca5b0b590407133a3053df64308392f1097f5946df753c51aa4d8",
+        "occurred_at": "2026-07-30T14:00:45Z",
+        "operator_ref": "operator-validator",
+        "previous_event_sha256": "a342fda43cda4172427c1a69209af75e432e0ad3f1f9605e2907038eba12fd2a",
+        "sequence": 4,
+        "state": "recovered"
+      },
+      {
+        "action_code": "residual-risk-local-only",
+        "event_sha256": "22957179c29ea7b61d4a515bed2a7f9ecbf02e9e38664099c4365b6de60aca9e",
+        "evidence_sha256": "7ff134b72c49dcae9d2af343fd383e19fc9912efdaf4bf3e2b7415f9e2348c6b",
+        "occurred_at": "2026-07-30T14:01:00Z",
+        "operator_ref": "operator-validator",
+        "previous_event_sha256": "b9a9f62c7246ff53d3e096da41e9378a606d6f4bf8696fe82b145b75c79471cb",
+        "sequence": 5,
+        "state": "closed"
+      }
+    ],
+    "final_state": "closed",
+    "incident_id": "INC-RF-LOCAL-0001",
+    "initial_alert_state": "critical",
+    "initial_observed": 1000,
+    "manifest_sha256": "3aed82bb1213910bd1c3cd8a7e6c09f69f1aa5add32f5d65c0807776ff2d6e31",
+    "policy_id": "job-backlog",
+    "policy_version": "reconforge-reliability-policy-v1",
+    "runbook": "RF-OPS-002",
+    "schema_version": 1
+  },
+  "limitations": [
+    "synthetic_local_sqlite_incident",
+    "operators_are_synthetic_role_references",
+    "no_external_alert_manager_or_pager_acknowledgement",
+    "single_run_not_production_slo",
+    "no_independent_host_ha_or_external_assurance"
+  ],
+  "measurements": {
+    "acknowledgement_seconds": 15,
+    "closure_seconds": 60,
+    "initial_queue_depth": 1000,
+    "recovered_queue_depth": 0,
+    "recovery_seconds": 45
+  },
+  "profile": "local-synthetic-incident-lifecycle",
+  "schema_version": 1
+}

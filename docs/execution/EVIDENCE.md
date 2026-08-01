@@ -10609,3 +10609,31 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - No commit, push, pull request, merge, tag, GitHub Release, package publication,
   deployment, production mutation, or repository-setting change had occurred on
   `codex/consolidation-close-lifecycle` at this evidence boundary.
+
+## E-255: P4-FIN-002 worksheet stacked Draft PR publication boundary
+
+- Date/timezone: 2026-08-01, Africa/Cairo.
+- Dependency base: exact green Draft PR #67 branch
+  `codex/consolidation-translation-core` at
+  `836bdc5f75041a2967a51eecfd51dad6c94cb3e6`.
+- Published branch: `codex/consolidation-close-lifecycle`.
+- Initially published head:
+  `c5f23834a2546a29874164d7447f2b258bbe2350`, containing implementation commit
+  `cafc6b7445d347ac8fd2e4e5fe16dd0dd4b444cf` plus the E-254 evidence binding.
+- Review surface: stacked Draft PR #68,
+  `https://github.com/amrzainmubarak/reconforge-erp/pull/68`, targeting
+  `codex/consolidation-translation-core` rather than `main` while PR #67 remains
+  open. Connector-reported initial diff: 21 changed files, 2,498 additions, and
+  28 deletions.
+- GitHub reported 15/15 successful checks for that exact initial head: Python
+  3.11/3.12 tests, four engine-parity cells, server boundaries, Docker build and
+  parity, two locked Python audits, secret/npm policy, Python security, Analyze
+  Python, and CodeQL. GitHub reported `CLEAN` and `MERGEABLE`.
+- The PR remains Draft and `P4-FIN-002` remains `in_progress`. A successful
+  worksheet candidate does not prove the missing persisted journal/period/
+  statement/database lifecycle and is not approval to merge either stacked PR.
+- This E-255 evidence-binding change is necessarily later than the observed
+  candidate. Any later PR head must pass its own remote checks; success is never
+  inherited from `c5f23834a2546a29874164d7447f2b258bbe2350`.
+- No merge, tag, GitHub Release, package publication, deployment, production
+  mutation, repository-setting change, or readiness/superiority claim occurred.

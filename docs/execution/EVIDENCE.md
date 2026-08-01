@@ -10294,8 +10294,8 @@ security review, and unresolved production-collection/distributed HA evidence.
 ## E-248: Governed real public-financial-data experiment on 2026-08-01
 
 - Date/timezone: 2026-08-01, Africa/Cairo; retained report timestamp
-  `2026-08-01T07:40:02.901367+00:00`.
-- Source revision: `d792477deb5bbeb1591a8c7bf9c730594b551d0c`.
+  `2026-08-01T07:51:13.045001+00:00`.
+- Source revision: `5eeb4e751a9d4361b3cea7bf7587da502b564d9e`.
 - Environment: Windows 11, AMD64, Python 3.14.6.
 - Scope: explicit read-only network retrieval of eleven checksum-pinned responses
   from U.S. Treasury Fiscal Data, World Bank Finances One, and Northern Ireland
@@ -10314,7 +10314,7 @@ security review, and unresolved production-collection/distributed HA evidence.
 | `python -m mypy reconforge` | 0 | 1.1s | No issues in 374 source files. |
 | `python -m bandit -q -r reconforge/benchmark/public_financial.py .github/scripts/verify_public_financial_evidence.py` | 0 | 0.8s | No findings. |
 | `python .github/scripts/verify_public_financial_evidence.py --artifact-dir .tmp/public-evidence-inputs --execution-scope offline-replay --output .tmp/public-evidence-offline-report-clean.json` | 0 | 40.1s | Passed from a clean commit. |
-| `python .github/scripts/verify_public_financial_evidence.py --allow-network --execution-scope maintainer-local --output docs/execution/PUBLIC_FINANCIAL_EVIDENCE_RUN_2026-08-01.json` | 0 | 52.6s | Eleven live HTTPS responses verified; report passed with platform-stable LF bytes. |
+| `python .github/scripts/verify_public_financial_evidence.py --allow-network --execution-scope maintainer-local --output docs/execution/PUBLIC_FINANCIAL_EVIDENCE_RUN_2026-08-01.json` | 0 | 49.7s | Eleven live HTTPS responses verified after the parser-inventory fix; report passed with platform-stable LF bytes. |
 
 ### Financial and reproducibility evidence
 
@@ -10330,7 +10330,7 @@ security review, and unresolved production-collection/distributed HA evidence.
 - Retained report:
   `docs/execution/PUBLIC_FINANCIAL_EVIDENCE_RUN_2026-08-01.json`.
 - Retained report SHA-256:
-  `bcc1147b98997dd2d8149f5b060e66638ea483d939037d87e0a6f5b402251859`.
+  `be71deea074786457b7e5a368fece18b14953d2fcdc0f3ffdea94beb3b9ebd21`.
 - Raw `supplier`, `invoice_number`, and `postcode` fields are absent from the
   retained report.
 
@@ -10360,3 +10360,37 @@ security review, and unresolved production-collection/distributed HA evidence.
   evidence are reviewer inputs only.
 - P3-EXT-002 remains `engaged`; no independent reviewer, findings report, retest,
   or risk acceptance exists. Security findings must not enter a public issue.
+
+## E-250: Full-suite parser-inventory regression and fail-closed repair
+
+- Date/timezone: 2026-08-01, Africa/Cairo.
+- Collection: 2,088 tests across 295 test files.
+- First full-run duration: 280.6s.
+- First result: four failures. Three were actionable exact-AST inventory failures
+  for the new `csv.DictReader`, `json.loads`, and `yaml.safe_load` call sites; the
+  fourth was the expected Phase 3 external-evidence closure guard.
+- Repair: route public manifest YAML and downloaded JSON through
+  `reconforge.io.structured` with smaller explicit policies, retain exact Decimal
+  lexemes, and register only the unavoidable mixed-encoding CSV call under FI-023.
+  No allowlist wildcard, test exclusion, skip, retry, or `continue-on-error` was
+  introduced.
+- Focused command:
+  `python -m pytest tests/test_file_ingestion_inventory.py tests/test_public_financial_evidence.py tests/test_public_financial_evidence_workflow.py -q`.
+- Focused result: 18/18 passed in 13.1s before final report refresh; the refreshed
+  retained-report target passed 18/18 in 8.1s and the final documentation state
+  passed the same 18/18 target in 17.2s.
+- Execution-ledger target: 14 checks passed and exactly the external-closure guard
+  failed because `all_tasks_completed=false`; no documentation-consistency test
+  regressed.
+- Repeated full-run duration: 333.8s.
+- Repeated result: exactly one failure,
+  `tests/test_phase_1_3_execution_contract.py::test_phase_three_has_no_unsupported_completion_shortcut`;
+  every other executed test passed or was a declared environment skip.
+- Static/release-adjacent gates: repository Ruff passed; mypy passed 374 source
+  files; Bandit passed with no findings; pip-audit reported no known dependency
+  vulnerabilities and explicitly could not resolve the unpublished local package;
+  wheel/sdist build passed; `git diff --check` passed.
+- Boundary: the remaining red guard is correct because accepted external operators
+  remain zero and no independent security report exists. It is not a regression
+  and was not bypassed. No push, tag, release, or repository-setting mutation
+  occurred.

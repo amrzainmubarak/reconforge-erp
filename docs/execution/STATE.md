@@ -1763,13 +1763,13 @@ occurred.
 
 P3-EXT-001 remains in progress. A closed manifest now pins eleven exact responses
 from three official open-data publishers and drives three independent financial
-experiments. The clean-commit live run at `d792477deb5bbeb1591a8c7bf9c730594b551d0c`
+experiments. The final clean-commit live run at `5eeb4e751a9d4361b3cea7bf7587da502b564d9e`
 matched 967/967 records with zero unmatched records or exceptions, preserved
 Treasury and World Bank cross-format/equation invariants, detected the governed UK
 mixed encodings, reversal, and repeated references, and produced reproducibility
 SHA-256 `890a4aa8f7b362981bfdd1f0f333d3bad55a886d842c0ff0a82ff165c48e26c5`.
 Offline replay produced the same digest. The retained report is redacted and its
-SHA-256 is `bcc1147b98997dd2d8149f5b060e66638ea483d939037d87e0a6f5b402251859`.
+SHA-256 is `be71deea074786457b7e5a368fece18b14953d2fcdc0f3ffdea94beb3b9ebd21`.
 
 A manual least-privilege GitHub workflow can run the exact experiment on an
 independently controlled fork, checksum the report, issue and reverify a GitHub
@@ -1788,3 +1788,15 @@ reporting. No setting was changed. Open-source scanners remain supporting eviden
 not an independent review; solicitation is blocked until the repository owner
 enables and harmlessly verifies a private channel and a qualified independent
 reviewer accepts the scope.
+
+## E-250 — Parser-inventory regression closed without bypass
+
+The first full 2,088-test collection exposed three real failures in the exact
+production parser inventory plus the expected external-closure guard. Instead of
+adding three direct-parser exceptions, the public manifest and JSON paths now use
+the central bounded structured-ingress implementation. The sole necessary direct
+mixed-encoding CSV parser is registered under new bounded surface FI-023 with its
+entrypoints, controls, tests, residual risks, and claim limits. The focused
+inventory/public-evidence target passes 18/18. The repeated full run has exactly
+one failure: the intentional Phase 3 guard while external operator and independent
+review evidence remain absent. No parser-inventory test was skipped or weakened.

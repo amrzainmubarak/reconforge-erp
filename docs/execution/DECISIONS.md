@@ -1808,3 +1808,11 @@
 - Decision: Treat CodeQL, Scorecard, Bandit, dependency/secret scans, hostile tests, and public-data evidence as inputs to a qualified independent human reviewer. Require a private disclosure channel, conflict declaration, exact scope/commit, reproducible findings, remediation and retest state, plus residual-risk acceptance by a human distinct from the implementer/reviewer. Do not solicit public testing while no private channel operates.
 - Consequence: Read-only API evidence that GitHub private vulnerability reporting is disabled keeps P3-EXT-002 blocked. No automated green result, maintainer self-review, or public issue may close it or imply certification/compliance/security assurance.
 - Rollback: Withdraw solicitation and retain the gate as engaged. Replacing the intake channel requires an equally private, verified, documented route and does not alter historical findings.
+
+## D235 - Public evidence parsers remain centrally bounded and exactly inventoried
+
+- Date: 2026-08-01
+- Status: accepted
+- Decision: Route the public-evidence manifest YAML and downloaded JSON through the existing `reconforge.io.structured` bounded ingress with explicit size, depth, node, string, number, and duplicate-key policies. Preserve exact numeric lexemes for `Decimal` validation. Keep only the mixed-encoding CSV reader as a direct parser and register that exact call site as FI-023 with named entrypoints, controls, tests, residual risks, and claim limits.
+- Consequence: The parser inventory remains fail closed and the public-data experiment cannot expand accepted formats or parser surfaces silently. The full-suite regression was repaired without wildcard allowlists, test exclusions, skips, retries, or `continue-on-error`; the only remaining failure is the intentional Phase 3 external-evidence guard.
+- Rollback: Remove the public-data experiment and FI-023 together, or replace the CSV path with a central bounded adapter and delete FI-023 only after the exact inventory and hostile-input tests pass. Do not retain an orphaned parser exception.

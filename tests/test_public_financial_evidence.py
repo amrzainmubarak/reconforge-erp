@@ -432,10 +432,10 @@ def test_retained_live_public_financial_report_is_exact_redacted_and_claim_bound
     content = RETAINED_REPORT.read_bytes()
     report = json.loads(content)
 
-    assert hashlib.sha256(content).hexdigest() == "bcc1147b98997dd2d8149f5b060e66638ea483d939037d87e0a6f5b402251859"
+    assert hashlib.sha256(content).hexdigest() == "be71deea074786457b7e5a368fece18b14953d2fcdc0f3ffdea94beb3b9ebd21"
     assert report["status"] == "passed"
     assert report["execution"]["scope"] == "maintainer-local"
-    assert report["execution"]["source_revision"] == "d792477deb5bbeb1591a8c7bf9c730594b551d0c"
+    assert report["execution"]["source_revision"] == "5eeb4e751a9d4361b3cea7bf7587da502b564d9e"
     assert report["execution"]["network_calls"] == 11
     assert len(report["artifact_receipts"]) == 11
     assert sum(value["matching"]["matched_count"] for value in report["experiments"]) == 967

@@ -10290,3 +10290,73 @@ security review, and unresolved production-collection/distributed HA evidence.
 - `p3_external_pilots` and `p3_independent_security_review` remain `engaged` with empty `evidence_artifacts`.
 - `all_tasks_completed=false`, `all_required_gates_verified=false`, and `external_evidence_may_not_be_simulated=true` remain unchanged.
 - This evidence closes the locally reproducible CI-defect slice only. It does not close any of the six publication conditions and does not authorize a push, tag, release, or public readiness claim.
+
+## E-248: Governed real public-financial-data experiment on 2026-08-01
+
+- Date/timezone: 2026-08-01, Africa/Cairo; retained report timestamp
+  `2026-08-01T07:40:02.901367+00:00`.
+- Source revision: `d792477deb5bbeb1591a8c7bf9c730594b551d0c`.
+- Environment: Windows 11, AMD64, Python 3.14.6.
+- Scope: explicit read-only network retrieval of eleven checksum-pinned responses
+  from U.S. Treasury Fiscal Data, World Bank Finances One, and Northern Ireland
+  OpenDataNI, followed by closed-schema exact-Decimal verification and the existing
+  deterministic matcher.
+- Raw source files remain ignored disposable inputs. The committed report contains
+  only publisher/dataset attribution, byte counts, digests, aggregate outcomes,
+  and runtime provenance.
+
+### Commands and outcomes
+
+| Command | Exit | Duration | Result |
+| --- | ---: | ---: | --- |
+| `python -m pytest tests/test_public_financial_evidence.py tests/test_public_financial_evidence_workflow.py tests/test_supply_chain_policy.py tests/test_signed_release_pipeline.py -q` | 0 | 6.6s | 39/39 passed before the retained-report assertion was added. |
+| `python -m ruff check reconforge/benchmark/public_financial.py .github/scripts/verify_public_financial_evidence.py tests/test_public_financial_evidence.py tests/test_public_financial_evidence_workflow.py` | 0 | 0.5s | Passed. |
+| `python -m mypy reconforge` | 0 | 1.1s | No issues in 374 source files. |
+| `python -m bandit -q -r reconforge/benchmark/public_financial.py .github/scripts/verify_public_financial_evidence.py` | 0 | 0.8s | No findings. |
+| `python .github/scripts/verify_public_financial_evidence.py --artifact-dir .tmp/public-evidence-inputs --execution-scope offline-replay --output .tmp/public-evidence-offline-report-clean.json` | 0 | 40.1s | Passed from a clean commit. |
+| `python .github/scripts/verify_public_financial_evidence.py --allow-network --execution-scope maintainer-local --output docs/execution/PUBLIC_FINANCIAL_EVIDENCE_RUN_2026-08-01.json` | 0 | 52.6s | Eleven live HTTPS responses verified; report passed with platform-stable LF bytes. |
+
+### Financial and reproducibility evidence
+
+| Experiment | Source rows | Selected/matched | Unmatched | Exceptions | Governed checks |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Treasury Debt to the Penny, July 2025 | 22 | 22 | 0 | 0 | JSON/CSV parity; zero debt-equation violations |
+| World Bank IBRD commitments/disbursements | 2,890 | 382 FY24 | 0 | 0 | Three-page JSON/CSV parity; zero component-total violations; unique selected business identities |
+| Northern Ireland DfE spending, Q1 2026 | 563 | 563 | 0 | 0 | CP1252 plus UTF-8-SIG; one negative reversal; nine repeated-reference groups; zero absolute GBP 25,000 threshold violations |
+
+- Total matched: `967`.
+- Network and offline reproducibility SHA-256:
+  `890a4aa8f7b362981bfdd1f0f333d3bad55a886d842c0ff0a82ff165c48e26c5`.
+- Retained report:
+  `docs/execution/PUBLIC_FINANCIAL_EVIDENCE_RUN_2026-08-01.json`.
+- Retained report SHA-256:
+  `bcc1147b98997dd2d8149f5b060e66638ea483d939037d87e0a6f5b402251859`.
+- Raw `supplier`, `invoice_number`, and `postcode` fields are absent from the
+  retained report.
+
+### Security and claim boundary
+
+- Network is explicit only; hosts, TLS scheme/port, redirect target, content type,
+  bytes, hashes, schemas, encodings, and clean source revision fail closed.
+- Ambient proxies and credentials are not used. Duplicate JSON keys, non-finite
+  constants, missing CSV cells, tampering, missing/extra inputs, hostile URLs,
+  invalid dates, and excess currency precision have regression coverage.
+- `claim_boundary.real_public_financial_data=true`.
+- `external_operator_count=0`.
+- `qualifies_as_external_pilot_without_operator_attestation=false`.
+- `qualifies_as_independent_security_review=false`.
+- Therefore P3-EXT-001 remains `engaged`, and no publication action is authorized.
+
+## E-249: Open-source independent security-review intake protocol
+
+- Date/timezone: 2026-08-01, Africa/Cairo.
+- Read-only command: `gh api repos/amrzainmubarak/reconforge-erp/private-vulnerability-reporting`.
+- Result: exit 0, `{"enabled":false}`; no repository setting was changed.
+- Protocol: `docs/security/open-source-independent-review-protocol.md`.
+- The protocol binds a qualified independent human reviewer, conflict statement,
+  exact scope/commit, private finding lifecycle, remediation/retest, and separate
+  residual-risk acceptance. Existing CodeQL, Scorecard, Bandit, dependency,
+  secret, hostile-input, tenant, authorization, release, upgrade, and public-data
+  evidence are reviewer inputs only.
+- P3-EXT-002 remains `engaged`; no independent reviewer, findings report, retest,
+  or risk acceptance exists. Security findings must not enter a public issue.

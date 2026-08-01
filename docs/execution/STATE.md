@@ -1758,3 +1758,33 @@ frontend type/test/build/E2E, CLI, and Docker gates passed. The full suite still
 intentional failure: the Phase 3 closure guard rejects the absent real external pilots and
 independent review. The remediation is unpublished; no push, tag, release, or external claim
 occurred.
+
+## E-248 — Governed real public-financial-data evidence
+
+P3-EXT-001 remains in progress. A closed manifest now pins eleven exact responses
+from three official open-data publishers and drives three independent financial
+experiments. The clean-commit live run at `d792477deb5bbeb1591a8c7bf9c730594b551d0c`
+matched 967/967 records with zero unmatched records or exceptions, preserved
+Treasury and World Bank cross-format/equation invariants, detected the governed UK
+mixed encodings, reversal, and repeated references, and produced reproducibility
+SHA-256 `890a4aa8f7b362981bfdd1f0f333d3bad55a886d842c0ff0a82ff165c48e26c5`.
+Offline replay produced the same digest. The retained report is redacted and its
+SHA-256 is `bcc1147b98997dd2d8149f5b060e66638ea483d939037d87e0a6f5b402251859`.
+
+A manual least-privilege GitHub workflow can run the exact experiment on an
+independently controlled fork, checksum the report, issue and reverify a GitHub
+artifact attestation, and retain an artifact identity. No external operator has
+run or attested it yet, so the accepted operator count is zero and this evidence
+does not close the pilot gate. No push, tag, release, customer-data use, or public
+readiness claim occurred.
+
+## E-249 — Independent security-review intake remains externally blocked
+
+P3-EXT-002 remains in progress. The new review protocol defines independent-human
+qualification and conflict boundaries, private disclosure, scope, finding,
+remediation, retest, and residual-risk acceptance requirements. Read-only GitHub
+API verification on 2026-08-01 returned `enabled=false` for private vulnerability
+reporting. No setting was changed. Open-source scanners remain supporting evidence,
+not an independent review; solicitation is blocked until the repository owner
+enables and harmlessly verifies a private channel and a qualified independent
+reviewer accepts the scope.

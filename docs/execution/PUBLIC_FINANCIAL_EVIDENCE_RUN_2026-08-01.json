@@ -1,0 +1,299 @@
+{
+  "artifact_receipts": [
+    {
+      "bytes": 9001,
+      "dataset": "Debt to the Penny, July 2025 fixed date range",
+      "id": "treasury-july-2025-json",
+      "license": "U.S. federal public data under the Fiscal Service Open Data Policy",
+      "metadata_url": "https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/",
+      "publisher": "U.S. Department of the Treasury, Bureau of the Fiscal Service",
+      "sha256": "74770d8def15abc5da9bee1a5d3b57b89d218ac0eee58043a634e60e32e80ce5"
+    },
+    {
+      "bytes": 2611,
+      "dataset": "Debt to the Penny, July 2025 fixed date range",
+      "id": "treasury-july-2025-csv",
+      "license": "U.S. federal public data under the Fiscal Service Open Data Policy",
+      "metadata_url": "https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/",
+      "publisher": "U.S. Department of the Treasury, Bureau of the Fiscal Service",
+      "sha256": "d17b14d616f27aedb9c687cb0ec09934b9f0880caf116ee8a90d29511894a7f5"
+    },
+    {
+      "bytes": 343305,
+      "dataset": "IBRD Commitments and Disbursements - Country / Economy Summary",
+      "id": "world-bank-page-0000-json",
+      "license": "Creative Commons Attribution 4.0 International",
+      "metadata_url": "https://financesone.worldbank.org/ibrd-commitments-and-disbursements-country-economy-summary/DS01556",
+      "publisher": "World Bank Group",
+      "sha256": "0df1b1f92230735d4076148a999ae93adf2681bc63643d09178631525d932f6e"
+    },
+    {
+      "bytes": 345349,
+      "dataset": "IBRD Commitments and Disbursements - Country / Economy Summary",
+      "id": "world-bank-page-1000-json",
+      "license": "Creative Commons Attribution 4.0 International",
+      "metadata_url": "https://financesone.worldbank.org/ibrd-commitments-and-disbursements-country-economy-summary/DS01556",
+      "publisher": "World Bank Group",
+      "sha256": "e513f5fce20bc917909e6cba1cbbe9a56abb6db8d55f9caece79b45e4a3fe260"
+    },
+    {
+      "bytes": 304489,
+      "dataset": "IBRD Commitments and Disbursements - Country / Economy Summary",
+      "id": "world-bank-page-2000-json",
+      "license": "Creative Commons Attribution 4.0 International",
+      "metadata_url": "https://financesone.worldbank.org/ibrd-commitments-and-disbursements-country-economy-summary/DS01556",
+      "publisher": "World Bank Group",
+      "sha256": "75d93cabd274986a09777ed9afd4606b8ab7f9558ee187738a386b3610278393"
+    },
+    {
+      "bytes": 110510,
+      "dataset": "IBRD Commitments and Disbursements - Country / Economy Summary",
+      "id": "world-bank-page-0000-csv",
+      "license": "Creative Commons Attribution 4.0 International",
+      "metadata_url": "https://financesone.worldbank.org/ibrd-commitments-and-disbursements-country-economy-summary/DS01556",
+      "publisher": "World Bank Group",
+      "sha256": "b0171e370e526e5369148a814c9d32faf4c92fd6af24bf20e0d6ab5c5b3ff9a8"
+    },
+    {
+      "bytes": 112449,
+      "dataset": "IBRD Commitments and Disbursements - Country / Economy Summary",
+      "id": "world-bank-page-1000-csv",
+      "license": "Creative Commons Attribution 4.0 International",
+      "metadata_url": "https://financesone.worldbank.org/ibrd-commitments-and-disbursements-country-economy-summary/DS01556",
+      "publisher": "World Bank Group",
+      "sha256": "b184d2a8843a01fde1423fc4659420a6c820ae9b278c89eb6615522caf6d63a2"
+    },
+    {
+      "bytes": 97308,
+      "dataset": "IBRD Commitments and Disbursements - Country / Economy Summary",
+      "id": "world-bank-page-2000-csv",
+      "license": "Creative Commons Attribution 4.0 International",
+      "metadata_url": "https://financesone.worldbank.org/ibrd-commitments-and-disbursements-country-economy-summary/DS01556",
+      "publisher": "World Bank Group",
+      "sha256": "13a40ad32cdf3a7631d5618ba6e3f185bbf1f29f05042dbbaa20547b9eecb291"
+    },
+    {
+      "bytes": 26184,
+      "dataset": "Departmental payments over GBP 25,000 - January 2026",
+      "id": "uk-dfe-2026-01-csv",
+      "license": "UK Open Government Licence",
+      "metadata_url": "https://ckan.publishing.service.gov.uk/dataset/department-for-the-economy-departmental-spend-over-f25-000-may-2023",
+      "publisher": "Northern Ireland Department for the Economy via OpenDataNI",
+      "sha256": "d55a2b18624ecd164fd598a4493c30016ce75b9839086b545ac110a895504b7c"
+    },
+    {
+      "bytes": 26935,
+      "dataset": "Departmental payments over GBP 25,000 - February 2026",
+      "id": "uk-dfe-2026-02-csv",
+      "license": "UK Open Government Licence",
+      "metadata_url": "https://ckan.publishing.service.gov.uk/dataset/department-for-the-economy-departmental-spend-over-f25-000-may-2023",
+      "publisher": "Northern Ireland Department for the Economy via OpenDataNI",
+      "sha256": "63c4ba5454e547a3abef59fde37c927dad494a305ee73114de4841f1df43ac07"
+    },
+    {
+      "bytes": 37765,
+      "dataset": "Departmental payments over GBP 25,000 - March 2026",
+      "id": "uk-dfe-2026-03-csv",
+      "license": "UK Open Government Licence",
+      "metadata_url": "https://ckan.publishing.service.gov.uk/dataset/department-for-the-economy-departmental-spend-over-f25-000-may-2023",
+      "publisher": "Northern Ireland Department for the Economy via OpenDataNI",
+      "sha256": "145683f5752f392f00695e4f1fc87474bebea2a9b4ab52d7b9179fa6b44991f8"
+    }
+  ],
+  "checks": {
+    "artifact_integrity": true,
+    "closed_schema": true,
+    "cross_format_semantic_parity": true,
+    "deterministic_matching": true,
+    "exact_decimal_financial_inputs": true,
+    "financial_equations": true,
+    "raw_identifiers_excluded_from_report": true,
+    "row_permutation_stability": true
+  },
+  "claim_boundary": {
+    "external_operator_count": 0,
+    "qualifies_as_external_pilot_without_operator_attestation": false,
+    "qualifies_as_independent_security_review": false,
+    "real_public_financial_data": true
+  },
+  "execution": {
+    "executed_at": "2026-08-01T07:40:02.901367+00:00",
+    "fetch_receipts": [
+      {
+        "bytes": 9001,
+        "content_type": "application/json",
+        "id": "treasury-july-2025-json",
+        "status": 200
+      },
+      {
+        "bytes": 2611,
+        "content_type": "text/csv",
+        "id": "treasury-july-2025-csv",
+        "status": 200
+      },
+      {
+        "bytes": 343305,
+        "content_type": "application/json",
+        "id": "world-bank-page-0000-json",
+        "status": 200
+      },
+      {
+        "bytes": 345349,
+        "content_type": "application/json",
+        "id": "world-bank-page-1000-json",
+        "status": 200
+      },
+      {
+        "bytes": 304489,
+        "content_type": "application/json",
+        "id": "world-bank-page-2000-json",
+        "status": 200
+      },
+      {
+        "bytes": 110510,
+        "content_type": "text/plain",
+        "id": "world-bank-page-0000-csv",
+        "status": 200
+      },
+      {
+        "bytes": 112449,
+        "content_type": "text/plain",
+        "id": "world-bank-page-1000-csv",
+        "status": 200
+      },
+      {
+        "bytes": 97308,
+        "content_type": "text/plain",
+        "id": "world-bank-page-2000-csv",
+        "status": 200
+      },
+      {
+        "bytes": 26184,
+        "content_type": "text/csv",
+        "id": "uk-dfe-2026-01-csv",
+        "status": 200
+      },
+      {
+        "bytes": 26935,
+        "content_type": "text/csv",
+        "id": "uk-dfe-2026-02-csv",
+        "status": 200
+      },
+      {
+        "bytes": 37765,
+        "content_type": "text/csv",
+        "id": "uk-dfe-2026-03-csv",
+        "status": 200
+      }
+    ],
+    "machine": "AMD64",
+    "network_calls": 11,
+    "operating_system": "Windows",
+    "operating_system_release": "11",
+    "python": "3.14.6",
+    "scope": "maintainer-local",
+    "source_revision": "d792477deb5bbeb1591a8c7bf9c730594b551d0c"
+  },
+  "experiments": [
+    {
+      "canonical_sha256": "05156b90be73daddf72b232808c2648083cbd6e52d52109fa564f3250f0685b5",
+      "cross_format_equal": true,
+      "debt_equation_violations": 0,
+      "id": "treasury-debt-july-2025",
+      "kind": "treasury-debt-cross-format",
+      "matching": {
+        "decision_sha256": "0dff24f6f1916af9f1fdb39f99b1b8ccb77974217e5a88cc35ff599ad4ba201d",
+        "exception_count": 0,
+        "matched_count": 22,
+        "permutation_equal": true,
+        "unmatched_count": 0
+      },
+      "record_count": 22,
+      "status": "passed"
+    },
+    {
+      "canonical_sha256": "0ca6bf2395f36737bdf679a81405a0de1054a393c59cd3f4d42a7544015d4dbc",
+      "component_equation_violations": 0,
+      "cross_format_equal": true,
+      "id": "world-bank-fy24",
+      "kind": "world-bank-cross-format",
+      "matching": {
+        "decision_sha256": "24ce4556f66a310ea161dbe8e68cdbb0a6cc5de85f812cf4c466d02046998bda",
+        "exception_count": 0,
+        "matched_count": 382,
+        "permutation_equal": true,
+        "unmatched_count": 0
+      },
+      "selected_record_count": 382,
+      "selected_time_period": "FY24",
+      "source_record_count": 2890,
+      "status": "passed"
+    },
+    {
+      "canonical_sha256": "ab0e9930b1195419837e1abd9762b47f6973dc74b765d02a7ee3c4d6f08ed153",
+      "encoding_counts": {
+        "cp1252": 1,
+        "utf-8-sig": 2
+      },
+      "id": "uk-dfe-q1-2026",
+      "kind": "uk-spending-ingress-replay",
+      "matching": {
+        "decision_sha256": "2e4a3a84ee14ca6e1f942a457bda66c76a83ee0f21049a2c589a268c954f823e",
+        "exception_count": 0,
+        "matched_count": 563,
+        "permutation_equal": true,
+        "unmatched_count": 0
+      },
+      "negative_amount_count": 1,
+      "periods": [
+        {
+          "artifact_id": "uk-dfe-2026-01-csv",
+          "canonical_sha256": "4a1ee93c7c1ec4feb3b28095b843f25882645ad9ec4ed67f87acdd387daacab6",
+          "encoding": "cp1252",
+          "negative_amount_count": 0,
+          "period": "2026-01",
+          "record_count": 166,
+          "reference_collision_groups": 2,
+          "threshold_violations": 0,
+          "total": "83778974.17"
+        },
+        {
+          "artifact_id": "uk-dfe-2026-02-csv",
+          "canonical_sha256": "96be0c5cd8155e8d1c709258a40a67056f5db0a133f56bf49580b360a102e9ad",
+          "encoding": "utf-8-sig",
+          "negative_amount_count": 0,
+          "period": "2026-02",
+          "record_count": 166,
+          "reference_collision_groups": 4,
+          "threshold_violations": 0,
+          "total": "56989857.45"
+        },
+        {
+          "artifact_id": "uk-dfe-2026-03-csv",
+          "canonical_sha256": "b3e68cf3dc4c2d2747cc1382a02f055193cadb69b9355279bce4dae7f73775a4",
+          "encoding": "utf-8-sig",
+          "negative_amount_count": 1,
+          "period": "2026-03",
+          "record_count": 231,
+          "reference_collision_groups": 3,
+          "threshold_violations": 0,
+          "total": "91378180.51"
+        }
+      ],
+      "record_count": 563,
+      "reference_collision_groups": 9,
+      "status": "passed",
+      "threshold_violations": 0
+    }
+  ],
+  "limitations": [
+    "Public-data verification is not a customer production deployment or audit opinion.",
+    "A maintainer-run report does not satisfy the independent external-operator gate.",
+    "Automated security tooling does not replace a qualified independent security reviewer."
+  ],
+  "manifest_captured_at": "2026-08-01T09:45:00+03:00",
+  "manifest_id": "public-financial-evidence-2026-08-01",
+  "reproducibility_sha256": "890a4aa8f7b362981bfdd1f0f333d3bad55a886d842c0ff0a82ff165c48e26c5",
+  "schema_version": "reconforge-public-financial-evidence-report-v1",
+  "status": "passed"
+}

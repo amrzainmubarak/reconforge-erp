@@ -761,6 +761,7 @@ tasks:
     exit_evidence: At least three approved, scoped, real pilot records include environment, workflow, data authorization, outcomes, failures, user feedback, and allowed public wording; synthetic rehearsals do not qualify.
     completed_slices:
       - Awaiting three completed pilot records in `docs/execution/P3_EXT_001_PILOT_###.md`.
+      - E-248 adds a real-public-data candidate path without claiming external validation. Eleven exact responses from three official open-data publishers feed three closed experiments: Treasury debt JSON/CSV parity and debt equation, World Bank three-page JSON/CSV parity and FY24 component equation, and mixed-encoding UK public spending/reversal/reference observations. A clean-commit Windows/Python 3.14.6 live run matched 967/967 records with zero unmatched or exceptions; offline replay produced the same reproducibility digest. SHA-pinned manual GitHub workflow, provenance verification, redacted reports, and an operator attestation template are ready, but the accepted external-operator count is zero. P3-EXT-001 remains in progress until three distinct independent humans run, attest, provide feedback, and pass upstream review.
   - id: P3-EXT-002
     priority: P3
     area: external_validation
@@ -770,3 +771,4 @@ tasks:
     exit_evidence: An independent qualified reviewer delivers a dated scoped report; findings have reproducible references, remediation state, retest evidence, and explicit residual-risk acceptance by an authorized human.
     completed_slices:
       - Awaiting independent review report in `docs/execution/P3_EXT_002_REVIEW_REPORT.md`.
+      - E-249 adds a bounded open-source independent-review intake protocol and preserves the human-review gate. It inventories automated evidence and defines reviewer independence, private disclosure, scope, finding, remediation, retest, and residual-risk requirements. Live GitHub API verification on 2026-08-01 reported private vulnerability reporting disabled, so solicitation remains blocked until the repository owner enables and harmlessly tests that channel. No reviewer or report exists; P3-EXT-002 remains in progress.

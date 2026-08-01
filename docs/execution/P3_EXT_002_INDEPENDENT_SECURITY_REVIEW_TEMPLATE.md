@@ -11,6 +11,7 @@
 
 ## Scope
 
+- Private disclosure channel verified (channel and harmless test reference):
 - Scope version/date:
 - Systems / modules in scope:
 - Method used (document review, code review, targeted test, interview):
@@ -62,6 +63,7 @@
 
 ## Completion check (before attaching to `P3-EXT-002`)
 
+- A private disclosure channel was operational throughout the review.
 - Reviewer identity and scope are explicit.
 - Findings and residual risks are linked to reproducible evidence.
 - Remediation and retest status are explicitly bounded.

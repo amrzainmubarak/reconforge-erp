@@ -8,6 +8,9 @@
 1. **P3-EXT-001 — Real controlled pilots (3–5)**
    - Evidence files: add in `docs/execution/` at least three pilot records with environment, data authorization, workflow, outcomes, failures, user feedback, and allowed wording.
    - Pilot record template: `docs/execution/P3_EXT_001_CONTROLLED_PILOT_EVIDENCE_TEMPLATE.md`
+   - Reproducible real-public-data path: `docs/validation/public-financial-evidence.md`
+   - Independent operator template: `docs/execution/P3_EXT_001_OPEN_SOURCE_OPERATOR_ATTESTATION_TEMPLATE.md`
+   - Current accepted external operator count: `0`; the retained maintainer run is technical evidence only.
    - Evidence index: `docs/execution/P3_EXTERNAL_GATE_EVIDENCE_INDEX.md`
    - Required status in matrix: `external_gate_policy.gates.p3_external_pilots.status = verified`.
    - Required evidence list in matrix/task state:
@@ -18,6 +21,8 @@
 2. **P3-EXT-002 — Independent security review**
    - Evidence files: add named reviewer identity, scope, date, findings, remediation status, and residual-risk acceptance.
    - Review template: `docs/execution/P3_EXT_002_INDEPENDENT_SECURITY_REVIEW_TEMPLATE.md`
+   - Review intake protocol: `docs/security/open-source-independent-review-protocol.md`
+   - Current intake blocker: GitHub private vulnerability reporting was disabled when checked on 2026-08-01; enable and harmlessly verify it before soliciting findings.
    - Evidence index: `docs/execution/P3_EXTERNAL_GATE_EVIDENCE_INDEX.md`
    - Required status in matrix: `external_gate_policy.gates.p3_independent_security_review.status = verified`.
    - Scope must remain explicit:

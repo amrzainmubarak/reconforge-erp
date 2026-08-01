@@ -26,6 +26,7 @@ from reconforge.benchmark.public_financial import (
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNNER_PATH = ROOT / ".github" / "scripts" / "verify_public_financial_evidence.py"
+RETAINED_REPORT = ROOT / "docs" / "execution" / "PUBLIC_FINANCIAL_EVIDENCE_RUN_2026-08-01.json"
 
 
 def _load_runner() -> ModuleType:
@@ -425,3 +426,27 @@ def test_governed_public_manifest_is_closed_real_data_but_not_external_attestati
     }
     assert all(artifact.url.startswith("https://") for artifact in manifest.artifacts)
     assert all(artifact.expected_sha256 != "0" * 64 for artifact in manifest.artifacts)
+
+
+def test_retained_live_public_financial_report_is_exact_redacted_and_claim_bounded() -> None:
+    content = RETAINED_REPORT.read_bytes()
+    report = json.loads(content)
+
+    assert hashlib.sha256(content).hexdigest() == "bcc1147b98997dd2d8149f5b060e66638ea483d939037d87e0a6f5b402251859"
+    assert report["status"] == "passed"
+    assert report["execution"]["scope"] == "maintainer-local"
+    assert report["execution"]["source_revision"] == "d792477deb5bbeb1591a8c7bf9c730594b551d0c"
+    assert report["execution"]["network_calls"] == 11
+    assert len(report["artifact_receipts"]) == 11
+    assert sum(value["matching"]["matched_count"] for value in report["experiments"]) == 967
+    assert report["reproducibility_sha256"] == (
+        "890a4aa8f7b362981bfdd1f0f333d3bad55a886d842c0ff0a82ff165c48e26c5"
+    )
+    assert report["claim_boundary"] == {
+        "external_operator_count": 0,
+        "qualifies_as_external_pilot_without_operator_attestation": False,
+        "qualifies_as_independent_security_review": False,
+        "real_public_financial_data": True,
+    }
+    lowered = content.lower()
+    assert all(marker not in lowered for marker in (b'"supplier"', b'"invoice_number"', b'"postcode"'))

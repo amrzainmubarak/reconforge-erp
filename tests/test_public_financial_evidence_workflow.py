@@ -71,6 +71,7 @@ def test_public_evidence_workflow_is_exact_fail_closed_and_provenance_bound() ->
         assert required in raw
     assert "build_opener(ProxyHandler({}), _SameOriginRedirectHandler())" in runner
     assert '"git", "status", "--porcelain=v1", "--untracked-files=all"' in runner
+    assert 'args.output.write_bytes(serialized.encode("utf-8"))' in runner
 
 
 def test_public_evidence_protocols_preserve_external_and_security_gates() -> None:

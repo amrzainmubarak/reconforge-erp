@@ -1792,3 +1792,19 @@
 - Decision: Full-suite CI installs all locked feature extras; the PostgreSQL registry must equal the parsed linear Alembic chain; live harnesses grant only named required reads and resolve real versioned native clients; secret-scan exceptions must be exact fingerprints and generated-path allowlists must remain bounded. The Phase 3 closure guard is never skipped, excluded, retried away, or changed to accommodate these repairs.
 - Consequence: E-247 can repair the remote CI failure fingerprints reproducibly while the absent external pilots and independent security review continue to fail closed. A green remediation does not imply publication readiness, Enterprise readiness, certification, or completion of the six closure conditions.
 - Rollback: Revert the CI-remediation slice and restore the prior test harness/configuration. No production data, schema, API, migration, or public-release mutation is required; the external closure state remains unchanged either way.
+
+## D233 - Public-data evidence is real but never self-approving
+
+- Date: 2026-08-01
+- Status: accepted
+- Decision: Use only fixed, officially published, openly licensed financial-data slices under an exact manifest. Bind raw SHA-256, closed schemas, exact Decimal semantics, source equations, deterministic matching, row-permutation parity, clean source revision, redacted output, and runtime provenance. A maintainer run is technical evidence only. A public-data run may count toward P3-EXT-001 only after a distinct independent human controls the run, provides environment/failure/feedback evidence, signs the operator statement, and passes upstream verification; three accepted records from three independent operators are required.
+- Consequence: E-248 strengthens real-data reproducibility without relabeling a maintainer, bot, repeated account, or successful workflow as an external pilot. The report permanently records zero accepted external operators and cannot mutate the external gate.
+- Rollback: Remove the workflow, manifest, runner, protocol, and report, then downgrade the public-data claim. No API, database, production system, or customer data is mutated.
+
+## D234 - Automated security evidence cannot replace independent human review
+
+- Date: 2026-08-01
+- Status: accepted
+- Decision: Treat CodeQL, Scorecard, Bandit, dependency/secret scans, hostile tests, and public-data evidence as inputs to a qualified independent human reviewer. Require a private disclosure channel, conflict declaration, exact scope/commit, reproducible findings, remediation and retest state, plus residual-risk acceptance by a human distinct from the implementer/reviewer. Do not solicit public testing while no private channel operates.
+- Consequence: Read-only API evidence that GitHub private vulnerability reporting is disabled keeps P3-EXT-002 blocked. No automated green result, maintainer self-review, or public issue may close it or imply certification/compliance/security assurance.
+- Rollback: Withdraw solicitation and retain the gate as engaged. Replacing the intake channel requires an equally private, verified, documented route and does not alter historical findings.

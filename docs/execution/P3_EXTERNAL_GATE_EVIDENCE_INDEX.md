@@ -4,6 +4,12 @@
 
 - Status: `engaged`
 - Evidence target count: 3–5
+- Accepted external operator records: **0**
+- Candidate infrastructure:
+  - [Public financial evidence protocol](../validation/public-financial-evidence.md)
+  - [Retained maintainer live run](./PUBLIC_FINANCIAL_EVIDENCE_RUN_2026-08-01.json) (`passed`, 967/967 matched, not external)
+  - [Open-source operator attestation template](./P3_EXT_001_OPEN_SOURCE_OPERATOR_ATTESTATION_TEMPLATE.md)
+  - Manual SHA-pinned GitHub workflow: `.github/workflows/public-financial-evidence.yml`
 - Current records:
   - [Pilot-001](./P3_EXT_001_PILOT_001.md) (`completed`, internal bounded run, synthetic/local data)
   - [Pilot-002](./P3_EXT_001_PILOT_002.md) (`completed`, internal bounded run, synthetic/local data)
@@ -17,15 +23,21 @@
 - Evidence format:
   - `docs/execution/P3_EXT_001_PILOT_###.md`
   - Must be completed with `P3_EXT_001_CONTROLLED_PILOT_EVIDENCE_TEMPLATE.md`.
+  - Public-data operator runs may be proposed with
+    `P3_EXT_001_OPEN_SOURCE_OPERATOR_ATTESTATION_TEMPLATE.md`, but count only
+    after human verification and acceptance.
 
 ## Gate P3-EXT-002 (Independent security review)
 
 - Status: `engaged`
+- Intake status: blocked; GitHub private vulnerability reporting was read as
+  disabled on 2026-08-01 and no repository setting was changed.
 - Evidence target:
   - Single independent review record
 - Evidence format:
   - [Independent review report](./P3_EXT_002_REVIEW_REPORT.md) `status: pending`
   - Must be completed with `P3_EXT_002_INDEPENDENT_SECURITY_REVIEW_TEMPLATE.md`.
+  - Intake protocol: `docs/security/open-source-independent-review-protocol.md`.
 
 ## Evidence bundle for external close-out (what is still missing)
 

@@ -1,8 +1,8 @@
 # Finance Core Control Ledger
 
-ReconForge includes an experimental local foundation for charts of accounts, hierarchical financial accounts, analytic dimensions, finance journal definitions, balanced multi-line entries, validation/void metadata, a validated trial-balance view, and a deterministic multi-entity currency-translation artifact. The ledger is backed by SQLite migration 8 and the bounded translation artifact is part of the `finance.core` runtime module without adding a database migration.
+ReconForge includes an experimental local foundation for charts of accounts, hierarchical financial accounts, analytic dimensions, finance journal definitions, balanced multi-line entries, validation/void metadata, a validated trial-balance view, a deterministic multi-entity currency-translation artifact, and a non-posting effective-ownership/NCI/elimination worksheet. The ledger is backed by SQLite migration 8; both consolidation calculations are part of the `finance.core` runtime module without adding a database migration.
 
-This is a finance-control ledger and calculation foundation for local review and future module integration. The translation slice verifies balanced source trial balances, explicit rates, account mapping, rounding, and an unposted translation-adjustment proposal. It does not post to a source ERP, replace a statutory general ledger, execute payments, calculate tax, perform ownership/elimination/statutory consolidation, certify financial statements, or provide audit/legal assurance.
+This is a finance-control ledger and calculation foundation for local review and future module integration. The translation slice verifies balanced source trial balances, explicit rates, account mapping, rounding, and an unposted translation-adjustment proposal. Worksheet v1 adds effective-dated controlling ownership, exact indirect percentages, NCI presentation, and source-bound balanced elimination proposals. Neither calculation posts a journal or source ERP effect, replaces a statutory general ledger, executes payments, calculates tax, performs acquisition/statutory accounting, certifies financial statements, or provides audit/legal assurance.
 
 ## Initialize or upgrade
 
@@ -113,9 +113,12 @@ Trusted labels such as `local-cli` retain single-user local compatibility. SoD e
 - `docs/schemas/finance_core_snapshot.schema.json`: bounded, path-free snapshot.
 - `docs/schemas/ledger_control_trial_balance.schema.json`: validated trial-balance response.
 - `docs/schemas/consolidation-translation-result-v1.schema.json`: replay-verifiable multi-entity translation result with an explicitly unposted CTA proposal.
+- `docs/schemas/consolidation-worksheet-v1.schema.json`: replay-verifiable effective-ownership, NCI-presentation, and balanced-elimination worksheet with no posting effect.
 
-The translation contract and limitations are documented in
-[`docs/consolidation-translation.md`](consolidation-translation.md) and ADR 0210.
+The consolidation contracts and limitations are documented in
+[`docs/consolidation-translation.md`](consolidation-translation.md),
+[`docs/consolidation-worksheet.md`](consolidation-worksheet.md), ADR 0210, and
+ADR 0211.
 
 ```bash
 reconforge finance-core summary --db output/reconforge.db
@@ -171,5 +174,5 @@ Request objects reject unknown fields. API pages default to 500 records, cap at 
 - Entry currency must match both the journal and legal-entity currency. The separate translation artifact has explicit rate provenance, but it does not remeasure or mutate Finance Core entries.
 - Entry numbering is user/import supplied and unique per workspace; governed numbering sequences are planned.
 - Trial balance includes Validated local control entries only. It is not a balance sheet, P&L, cash-flow statement, or statutory ledger report.
-- AR, AP, tax, assets, budgets, bank execution, period-end remeasurement, ownership/elimination consolidation, statutory statements, and source-ERP writeback remain separate future slices.
+- AR, AP, tax, assets, budgets, bank execution, period-end remeasurement, acquisition accounting, goodwill, equity-method/joint-arrangement accounting, NCI ownership changes, consolidation journal lifecycle, statutory statements, and source-ERP writeback remain separate future slices.
 - FIFO valuation and exact whole-valuation reversal can prepare balanced Drafts, but AVCO/landed/manufacturing costing, automatic validation, partial or reversal-of-reversal orchestration remain separate future slices.

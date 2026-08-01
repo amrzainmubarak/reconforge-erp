@@ -5,7 +5,7 @@ ReconForge uses explicit local contracts rather than claiming a single universal
 1. User-selected CSV/XLSX/JSON exports and generated report/evidence files remain the core reconciliation boundary.
 2. SQLite stores local identity, workflow, audit, master-data, finance-control, and operational foundations.
 3. The experimental React Studio reads bounded versioned synthetic artifacts; browser preferences remain browser-local.
-4. Immutable object storage can retain replay-verifiable consolidation-translation results under explicit tenant/workspace scope; this does not create a ledger posting or a statutory statement.
+4. Immutable object storage can retain replay-verifiable consolidation-translation results under explicit tenant/workspace scope. A derived ownership/NCI/elimination worksheet is currently an in-memory artifact contract only; neither calculation creates a ledger posting or statutory statement.
 
 No state boundary performs cloud upload, telemetry, source-ERP writeback, or hidden external API calls by default.
 
@@ -208,6 +208,7 @@ Migration 8 does not reinterpret, aggregate, or delete the older policy-control 
 - Browser contracts project allowlisted values and omit database/evidence paths.
 - JSON contracts under `docs/schemas/` are versioned independently of SQLite migration numbers.
 - Consolidation translation v1 accepts balanced entity trial-balance lines and explicit approved rate lineage as immutable calculation inputs. It aggregates mapped group accounts and exposes an unposted translation-adjustment proposal; no database table or ledger status is added.
+- Consolidation worksheet v1 embeds a verified translation result, approved effective-dated ownership history, exact active root paths, NCI presentation, and balanced source-bound elimination proposals. It remains migration-free and non-posting; no ownership master, run, journal, approval, or period state is persisted.
 
 ## Portability direction
 
@@ -217,5 +218,5 @@ SQLite is implemented and verified. PostgreSQL readiness is an architectural dir
 
 - The legacy workspace-wide unique account-code constraint limits reuse of the same code across multiple charts.
 - Foreign keys have not replaced every free-text entity, period, account, and currency field in older finance-control tables.
-- The translation artifact now retains explicit exchange-rate source/effective-time/digest and an operator-supplied adjustment account. Live rate feeds, functional-currency remeasurement, ownership/effective-date models, eliminations, non-controlling interest, consolidation journals, numbering sequences, tax, assets, budgets, broader inventory costing/accounting beyond the bounded FIFO foundation, and statutory statements require later bounded modules.
+- Translation and worksheet artifacts now retain rate/source lineage, effective-dated controlling ownership, exact path percentages, NCI presentation, and balanced elimination evidence. Live rates, functional-currency remeasurement, persisted ownership/run state, acquisition/fair-value/goodwill/equity-method policy, ownership changes, journal approval/posting/reversal, locks/reopens, numbering, tax, assets, budgets, broader inventory costing/accounting beyond the bounded FIFO foundation, and statutory statements require later bounded modules.
 - SQLite databases are local trust-boundary artifacts and do not provide tenant isolation for a hosted service.

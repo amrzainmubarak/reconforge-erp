@@ -794,9 +794,11 @@ tasks:
     area: financial_consolidation
     goal_workstream: deep_close_and_consolidation
     title: Governed close and full consolidation lifecycle
-    status: planned
+    status: in_progress
     depends_on: [P4-FIN-001, P3-ENT-009]
     exit_evidence: Versioned ownership, effective dates, eliminations, NCI, consolidation journals, maker-checker, locks/reopens, reversal, statements, SQLite/PostgreSQL parity, migrations, restore, and deterministic replay pass published synthetic contracts.
+    completed_slices:
+      - E-254 closes only the non-posting consolidation-worksheet v1 slice. It adds approved non-overlapping effective ownership, rooted/acyclic controlling-parent selection, exact indirect ownership, NCI presentation allocation, source-bound balanced eliminations, canonical digests, closed schema, and calculation replay. P4-FIN-002 remains in progress for persisted lifecycle state, acquisition accounting, governed journals, maker-checker, posting/reversal, locks/reopens, statements, database parity/migrations/restore, live rates, and write-back.
 
   - id: P4-MAT-001
     priority: P4

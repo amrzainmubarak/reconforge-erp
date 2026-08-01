@@ -8,11 +8,11 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 
 ## Snapshot boundary
 
-- Branch: `codex/consolidation-translation-core`, created from the verified Phase 1–3 head `dbbeaae9fb765835b9179f338b1443e9f15d52c0`.
+- Branch: `codex/consolidation-translation-core`, rebased onto merged `main` commit `5d401e70c3a0e3cf507c2c7cf635dfc99b01a9af`; that merge contains the verified Phase 1–3 source head `dbbeaae9fb765835b9179f338b1443e9f15d52c0`.
 - Phase 1 base: `1c633eea53a2f11c9a90af57edfc80a36faeef82` (merged atomic application-boundary PR #62)
 - Phase 0 signed-candidate source remains `d47edd845e6aef3bae16e05698e07878086d690b`; its evidence is immutable historical baseline, not evidence for Phase 1 changes.
 - Publication scope: PR #54 merged the evidence-bounded Phase 0 implementation. Signed Release Candidate run `30243819239` is non-publishing: it retained review artifact `8644255664` and pushed only the digest-addressed candidate image required for verification; no GitHub Release, PyPI publication, compliance claim, or production migration occurred.
-- PR #66 contains the Phase 1–3 head `dbbeaae9fb765835b9179f338b1443e9f15d52c0`; its latest required remote checks were green when Phase 4 work began. The new Phase 4 branch and completed `P4-FIN-001` candidate remain local and unpublished pending intentional commit, push, Draft PR creation, and green required remote checks.
+- PR #66 merged the Phase 1–3 head `dbbeaae9fb765835b9179f338b1443e9f15d52c0` into `main` at `5d401e70c3a0e3cf507c2c7cf635dfc99b01a9af` with green required checks. The completed `P4-FIN-001` implementation is committed locally as `5bf734b46744b39821714a3984cda7db447c2969`; push, Draft PR creation, and required checks for this exact candidate remain pending.
 - GitHub Actions run `30239994946` closes P0-009; runs `30240642293`, `30240642306`, `30240642321`, and `30240642386` close P0-SEC-008. Exact-main CI `30242293585`, Security `30242293659`, Docker `30242293668`, CodeQL `30242293667`, and OpenSSF Scorecard `30242293599` pass on `d47edd8`. E-087 closes P0-SEC-006/007 through the GitHub-verified signed tag and independently verified retained provenance/SBOM bundles. All 22 evidence-defined Phase 0 tasks are complete.
 
 ## Plan status at 2026-08-01

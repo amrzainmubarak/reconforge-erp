@@ -10444,9 +10444,14 @@ because no push or PR mutation has occurred.
 ## E-252: Deterministic consolidation translation artifact foundation
 
 - Date/timezone: 2026-08-01, Africa/Cairo.
-- Candidate base: `dbbeaae9fb765835b9179f338b1443e9f15d52c0` on local branch
-  `codex/consolidation-translation-core`; the evidence entry is part of the
-  candidate working tree and no publication action had occurred at this boundary.
+- Original evidence base: Phase 1–3 source head
+  `dbbeaae9fb765835b9179f338b1443e9f15d52c0`. After PR #66 merged, the candidate
+  was rebased without conflict onto `main` parent
+  `5d401e70c3a0e3cf507c2c7cf635dfc99b01a9af`.
+- Exact implementation commit:
+  `5bf734b46744b39821714a3984cda7db447c2969` on local branch
+  `codex/consolidation-translation-core`. No push, PR creation, tag, release, or
+  deployment had occurred at this post-commit evidence boundary.
 - Environment: Windows NT 10.0.26200.0 x64, Python 3.14.6, Node 26.3.0,
   npm 11.16.0, Git 2.54.0.windows.1.
 - Scope: one bounded, non-posting consolidation-translation result for at least
@@ -10509,6 +10514,7 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   rates, distributed execution, ERP/bank connectivity, or write-back.
 - It proves no customer use, independent validation, certification, compliance,
   production readiness, unmeasured scale, or global superiority.
-- At this evidence boundary the branch had not been committed, pushed, merged,
-  tagged, released, or deployed. Required GitHub checks for the exact candidate
-  remained unexecuted.
+- The initial measurement boundary preceded the implementation commit. The
+  post-commit closeout identifies `5bf734b46744b39821714a3984cda7db447c2969`;
+  the branch still had not been pushed, merged, tagged, released, or deployed,
+  and required GitHub checks for the exact candidate remained unexecuted.

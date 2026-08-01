@@ -168,6 +168,9 @@ include .github/scripts/verify_reliability_incident.py
 include docs/execution/RELIABILITY_INCIDENT_LOCAL_DRILL_2026-07-30.json
 include docs/schemas/reliability_incident_drill_report.schema.json
 include docs/adr/0209-reliability-incidents-are-ordered-hash-chained-and-closed.md
+include docs/schemas/consolidation-translation-result-v1.schema.json
+include docs/adr/0210-consolidation-translation-is-balanced-explicit-and-non-posting.md
+include docs/consolidation-translation.md
 include tests/test_incident_response.py
 include tests/test_reliability_incident_drill.py
 include docs/security/deployment-boundaries.md

@@ -26,6 +26,12 @@ schema, ADR 0068, and one repository-only SBOM builder/normalizer. It integrates
 SBOMs into the candidate workflow and removes the separate legacy SBOM workflow,
 so runtime source remains 208 while workflow count decreases by one.
 
+E-252 adds three runtime files for the deterministic consolidation domain,
+application port, and immutable object adapter; two focused execution/test
+modules; one closed artifact schema; ADR 0210; and bounded Finance Core,
+threat-model, claims, gap, and operator documentation. It adds no database
+migration, network call, UI route, API route, CLI command, or source write-back.
+
 E-054 adds one test module with 13 collected contracts, two supply-chain
 schemas, ADR 0069, the universal `uv.lock`, closed policy/exception registries,
 one repository-only validator, Gitleaks configuration, Dependabot definitions,

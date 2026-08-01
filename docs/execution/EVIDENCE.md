@@ -10440,3 +10440,75 @@ because `wslpath` received stripped Windows separators. The already checksum-
 verified archive was then addressed through an explicit `/mnt/c/...` path; both
 actual scans passed. Remote GitHub checks remain unexecuted for these local commits
 because no push or PR mutation has occurred.
+
+## E-252: Deterministic consolidation translation artifact foundation
+
+- Date/timezone: 2026-08-01, Africa/Cairo.
+- Candidate base: `dbbeaae9fb765835b9179f338b1443e9f15d52c0` on local branch
+  `codex/consolidation-translation-core`; the evidence entry is part of the
+  candidate working tree and no publication action had occurred at this boundary.
+- Environment: Windows NT 10.0.26200.0 x64, Python 3.14.6, Node 26.3.0,
+  npm 11.16.0, Git 2.54.0.windows.1.
+- Scope: one bounded, non-posting consolidation-translation result for at least
+  two exactly balanced entity trial balances. Inputs bind entity functional
+  currency, source trial-balance SHA-256, source-to-group account mapping,
+  account/rate type, explicit rate bucket, period, exact positive Decimal rate,
+  source/rate digests, and timezone-aware effective time.
+
+### Financial correctness, integrity, and storage evidence
+
+- Currency-specific `Money` precision and rounding are applied only after exact
+  unrounded translation. Every line retains unrounded value and rounding delta;
+  totals retain pre-adjustment balance, unrounded translation difference, total
+  rounding delta, and an explicit operator-policy-named CTA proposal.
+- The CTA proposal is always `posted=false`. The slice has no ledger mutation,
+  journal approval, elimination, close, ERP, bank, network, or write-back effect.
+- Canonical ordering makes request/result identity stable under balance and rate
+  permutations. Multiple historical layers in one currency are disambiguated by
+  exact rate buckets. Missing, duplicate, unused, mismatched, mixed-currency,
+  binary-float, excess-precision, unbalanced, and ambiguous inputs fail closed.
+- Closed schema v1 and calculation replay reject output tampering even when an
+  attacker recomputes the outer payload hash. The backend-neutral application
+  port has no SQLite or infrastructure import. The local immutable object adapter
+  verifies content hashes, permits identical retry, rejects conflicting overwrite,
+  and isolates tenant/workspace scopes.
+
+### Commands and outcomes
+
+| Gate | Exit | Duration | Result |
+| --- | ---: | ---: | --- |
+| Focused consolidation, boundary/parity inventory, Phase 1/4 contract, module, maturity, and threat-model target | 0 | 12.638s wall | 47/47 passed; zero failures, errors, or skips. |
+| Fresh full `python -m pytest --no-header --tb=short -q` rerun | 0 | 459.303s wall; 453.337s JUnit | 2,104 tests; zero failures/errors; 64 declared skips. |
+| `python -m ruff check .` | 0 | 0.180s | All checks passed. |
+| `python -m mypy reconforge` | 0 | 0.817s | No issues in 377 source files. |
+| `python -m bandit -q -r reconforge` | 0 | 8.970s | Passed; existing `nosec` and comment-parser warnings remained visible. |
+| `python -m pip_audit` | 0 | 19.126s | No known vulnerabilities; the unpublished local package could not be resolved from PyPI. |
+| `python -m build --no-isolation` | 0 | 33.730s | Built `reconforge_erp-0.7.1` wheel and sdist; setuptools overwrite warnings remained visible. |
+| Archive membership verification | 0 | 0.6s | sdist contains 7/7 required runtime/test/schema/ADR/operator files; wheel contains 3/3 runtime modules. |
+| Supply-chain policy validator | 0 | 0.195s | Valid; zero active exceptions and zero npm integrity-gap entries. |
+| Checksum-pinned Gitleaks 8.30.1 full-history and checked-tree scans | 0 | 1.358s + 1.122s | 123 commits / 17.69 MB and 22.56 MB tree scanned; no leaks found. |
+| `npm --prefix apps/web ci` | 0 | 8.998s | 160 packages installed; zero reported vulnerabilities. |
+| Web typecheck / Vitest / production build | 0 | 1.512s / 9.446s / 3.126s | Passed; Vitest 55/55 and Vite build succeeded. |
+| Playwright Chromium E2E | 0 | 28.091s | 11 passed; five explicitly live-only tests skipped. |
+| `git diff --check` before evidence closeout | 0 | 0.5s | Passed; line-ending conversion warnings only. |
+
+The first full regression run found one exact-inventory failure after all other
+cases passed: the new backend-neutral service was absent from the repository
+boundary inventory. Adding the truthful boundary row exposed the corresponding
+PostgreSQL parity inventory gap; it was recorded as not applicable because this
+artifact uses the scoped immutable object-store repository, not a SQL adapter.
+The focused target then passed 47/47 and the fresh full rerun passed completely.
+No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
+
+### Claim and publication boundary
+
+- E-252 closes only `P4-FIN-001`. It does not implement or prove ownership and
+  effective-date consolidation, intercompany eliminations, non-controlling
+  interest, remeasurement, governed journal posting/reversal, maker-checker,
+  period locks/reopens, statutory statements, PostgreSQL run lifecycle, live
+  rates, distributed execution, ERP/bank connectivity, or write-back.
+- It proves no customer use, independent validation, certification, compliance,
+  production readiness, unmeasured scale, or global superiority.
+- At this evidence boundary the branch had not been committed, pushed, merged,
+  tagged, released, or deployed. Required GitHub checks for the exact candidate
+  remained unexecuted.

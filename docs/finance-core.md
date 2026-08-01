@@ -1,8 +1,8 @@
 # Finance Core Control Ledger
 
-ReconForge includes an experimental local foundation for charts of accounts, hierarchical financial accounts, analytic dimensions, finance journal definitions, balanced multi-line entries, validation/void metadata, and a validated trial-balance view. It is backed by SQLite migration 8 and the `finance.core` runtime module.
+ReconForge includes an experimental local foundation for charts of accounts, hierarchical financial accounts, analytic dimensions, finance journal definitions, balanced multi-line entries, validation/void metadata, a validated trial-balance view, and a deterministic multi-entity currency-translation artifact. The ledger is backed by SQLite migration 8 and the bounded translation artifact is part of the `finance.core` runtime module without adding a database migration.
 
-This is a finance-control ledger for local review and future module integration. It does not post to a source ERP, replace a statutory general ledger, execute payments, calculate tax, perform consolidation, certify financial statements, or provide audit/legal assurance.
+This is a finance-control ledger and calculation foundation for local review and future module integration. The translation slice verifies balanced source trial balances, explicit rates, account mapping, rounding, and an unposted translation-adjustment proposal. It does not post to a source ERP, replace a statutory general ledger, execute payments, calculate tax, perform ownership/elimination/statutory consolidation, certify financial statements, or provide audit/legal assurance.
 
 ## Initialize or upgrade
 
@@ -112,6 +112,10 @@ Trusted labels such as `local-cli` retain single-user local compatibility. SoD e
 - `docs/schemas/ledger_entry_lines.schema.json`: CLI line input.
 - `docs/schemas/finance_core_snapshot.schema.json`: bounded, path-free snapshot.
 - `docs/schemas/ledger_control_trial_balance.schema.json`: validated trial-balance response.
+- `docs/schemas/consolidation-translation-result-v1.schema.json`: replay-verifiable multi-entity translation result with an explicitly unposted CTA proposal.
+
+The translation contract and limitations are documented in
+[`docs/consolidation-translation.md`](consolidation-translation.md) and ADR 0210.
 
 ```bash
 reconforge finance-core summary --db output/reconforge.db
@@ -164,8 +168,8 @@ Request objects reject unknown fields. API pages default to 500 records, cap at 
 ## Current limitations
 
 - One workspace-level account code remains unique for backward compatibility, even when more than one chart is defined.
-- Entry currency must match both the journal and legal-entity currency; FX conversion and rate provenance are planned.
+- Entry currency must match both the journal and legal-entity currency. The separate translation artifact has explicit rate provenance, but it does not remeasure or mutate Finance Core entries.
 - Entry numbering is user/import supplied and unique per workspace; governed numbering sequences are planned.
 - Trial balance includes Validated local control entries only. It is not a balance sheet, P&L, cash-flow statement, or statutory ledger report.
-- AR, AP, tax, assets, budgets, bank execution, period-end FX, consolidation, and source-ERP writeback remain separate future slices.
+- AR, AP, tax, assets, budgets, bank execution, period-end remeasurement, ownership/elimination consolidation, statutory statements, and source-ERP writeback remain separate future slices.
 - FIFO valuation and exact whole-valuation reversal can prepare balanced Drafts, but AVCO/landed/manufacturing costing, automatic validation, partial or reversal-of-reversal orchestration remain separate future slices.

@@ -5,6 +5,7 @@ ReconForge uses explicit local contracts rather than claiming a single universal
 1. User-selected CSV/XLSX/JSON exports and generated report/evidence files remain the core reconciliation boundary.
 2. SQLite stores local identity, workflow, audit, master-data, finance-control, and operational foundations.
 3. The experimental React Studio reads bounded versioned synthetic artifacts; browser preferences remain browser-local.
+4. Immutable object storage can retain replay-verifiable consolidation-translation results under explicit tenant/workspace scope; this does not create a ledger posting or a statutory statement.
 
 No state boundary performs cloud upload, telemetry, source-ERP writeback, or hidden external API calls by default.
 
@@ -206,6 +207,7 @@ Migration 8 does not reinterpret, aggregate, or delete the older policy-control 
 - Public DB exports omit password verifiers and session material; full backups may contain credential verifiers and must be protected.
 - Browser contracts project allowlisted values and omit database/evidence paths.
 - JSON contracts under `docs/schemas/` are versioned independently of SQLite migration numbers.
+- Consolidation translation v1 accepts balanced entity trial-balance lines and explicit approved rate lineage as immutable calculation inputs. It aggregates mapped group accounts and exposes an unposted translation-adjustment proposal; no database table or ledger status is added.
 
 ## Portability direction
 
@@ -215,5 +217,5 @@ SQLite is implemented and verified. PostgreSQL readiness is an architectural dir
 
 - The legacy workspace-wide unique account-code constraint limits reuse of the same code across multiple charts.
 - Foreign keys have not replaced every free-text entity, period, account, and currency field in older finance-control tables.
-- Exchange-rate sources, conversion dates, rounding accounts, numbering sequences, consolidation, tax, AR/AP, assets, budgets, broader inventory costing/accounting beyond the bounded FIFO foundation, and statutory statements require later bounded modules.
+- The translation artifact now retains explicit exchange-rate source/effective-time/digest and an operator-supplied adjustment account. Live rate feeds, functional-currency remeasurement, ownership/effective-date models, eliminations, non-controlling interest, consolidation journals, numbering sequences, tax, assets, budgets, broader inventory costing/accounting beyond the bounded FIFO foundation, and statutory statements require later bounded modules.
 - SQLite databases are local trust-boundary artifacts and do not provide tenant isolation for a hosted service.

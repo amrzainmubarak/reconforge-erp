@@ -1824,3 +1824,12 @@
 - Decision: Make the repository owner and authorized project team the release authority. Treat `P3-EXT-001` controlled pilots and `P3-EXT-002` independent review as optional assurance items with `deferred` status, not prerequisites for Phase 1–3 owner/team publication. Close required work only from retained internal/team code, test, runtime, build, security, migration, restore, and rollback evidence.
 - Consequence: Phase 1–3 contains 41 required tasks and two optional assurance items. External participants, accountants, engineers, customers, or an independent reviewer are not staffing requirements for owner/team release. Internal evidence still cannot be described as customer validation, an external pilot, an independent review, certification, compliance, universal superiority, or unqualified Enterprise readiness. Known unaccepted Critical/High findings and failed required technical gates remain release blockers.
 - Rollback: Restore the two assurance items as release-blocking gates, set required closure false, and rerun the exact contract and release gates. Historical external-evidence records remain intact under either policy.
+
+## D237 - Financial consolidation starts with explicit balanced translation, not automatic posting
+
+- Date: 2026-08-01
+- Status: accepted
+- Decision: Start Phase 4 with a versioned deterministic translation artifact over at least two exactly balanced entity trial balances. Require one functional currency and source digest per entity, explicit source-to-group account mapping, explicit rate type and bucket per line, one source-bound rate per period/currency/type/bucket key, versioned Money policy, canonical ordering, complete rounding/CTA evidence, replay verification, and immutable tenant/workspace artifact scope. Treat the CTA only as an unposted proposal.
+- Consequence: The slice creates a reliable financial primitive for later consolidation workflows without claiming ownership consolidation, eliminations, NCI, statutory statements, journal approval, remeasurement, live rate feeds, source write-back, accounting-standard compliance, Enterprise readiness, or global superiority. Full close/consolidation remains `P4-FIN-002`.
+- ADR: `docs/adr/0210-consolidation-translation-is-balanced-explicit-and-non-posting.md`.
+- Rollback: Remove the optional domain/application/object adapter, schema, module metadata, and documentation. No SQLite/PostgreSQL migration, ledger mutation, API/CLI compatibility change, source call, tag, release, or production rollback is required.

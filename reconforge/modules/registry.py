@@ -204,7 +204,10 @@ _MODULES = (
         version=__version__,
         maturity="experimental",
         capability_status="foundation",
-        summary="Governed charts, account hierarchy, dimensions, journals, balanced entries, and trial-balance controls.",
+        summary=(
+            "Governed charts, account hierarchy, dimensions, journals, balanced entries, trial-balance controls, "
+            "and deterministic multi-entity translation artifacts."
+        ),
         network_requirement="loopback-optional",
         default_enabled=True,
         dependencies=("platform.core", "platform.master-data"),
@@ -220,15 +223,27 @@ _MODULES = (
             "ledger_entry_validated",
             "ledger_entry_voided",
         ),
-        interfaces=("api", "cli", "library"),
+        interfaces=("api", "artifacts", "cli", "library"),
         import_contracts=("ledger-entry-lines.v1",),
-        export_contracts=("finance-core-snapshot.v1", "ledger-control-trial-balance.v1"),
-        data_classification=("financial-master-data", "financial-transaction-control-data"),
+        export_contracts=(
+            "consolidation-translation-result.v1",
+            "finance-core-snapshot.v1",
+            "ledger-control-trial-balance.v1",
+        ),
+        data_classification=(
+            "consolidation-financial-control-data",
+            "financial-master-data",
+            "financial-transaction-control-data",
+        ),
         retention_note="Records remain in the operator-selected local SQLite database and controlled local exports.",
         activation_note=(
-            "Requires migrations 7-8; entries are a local validation/control ledger and never post to a source ERP."
+            "Requires migrations 7-8 for the ledger. Translation artifacts are immutable, propose an explicit "
+            "unposted CTA, and never create elimination entries or write back to a source ERP."
         ),
-        test_evidence=("tests/test_finance_core.py",),
+        test_evidence=(
+            "tests/test_consolidation_translation.py",
+            "tests/test_finance_core.py",
+        ),
     ),
     ModuleDescriptor(
         module_id="inventory.core",

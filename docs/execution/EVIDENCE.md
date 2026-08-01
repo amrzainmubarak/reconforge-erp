@@ -2,6 +2,25 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-257: Reproducible durable-job multi-worker load profile (first P4-SCL-001 slice)
+
+- Date/timezone: 2026-08-01, Africa/Cairo.
+- Scope: local SQLite ThreadPoolExecutor harness only; no PostgreSQL, API/CLI/UI, schema mutation, domain change, repository change, tag, release, deployment, production run, or external service was used. The harness reuses the existing durable-job worker loop exactly as callers already use it.
+- Boundary: drives the existing `SQLiteDurableJobRepository` + `DurableJobApplicationService` + `DurableJobWorkerService` under real concurrent contention over a declared small tier (8 workers, 64 jobs, 4 partitions per job, 4 tenants = 256 declared partition effects). The closed schema-v1 manifest carries only the structural outcome and excludes observed runtime/peak-memory/throughput from the manifest digest, so it is reproducible across runs and hardware. It does not claim a scale tier, SLO, backpressure behaviour, soak result, cancellation-under-load, distributed capacity, PostgreSQL load parity, or 10K/100K/1M/10M tier publication. SQLite serializes writes under `BEGIN IMMEDIATE`, so measured contention bounds multi-worker coordination, not database partition parallelism.
+
+| Command | Exit | Duration | Result |
+| --- | ---: | ---: | --- |
+| `python -m ruff check reconforge/benchmark/durable_job_load.py tests/test_durable_job_load_profile.py` | 0 | combined gate | All checks passed; no diagnostics. |
+| `python -m mypy reconforge/benchmark/durable_job_load.py` | 0 | combined gate | Success: no issues found in 1 source file. |
+| `python -m mypy reconforge` | 0 | combined gate | Success: no issues found in 381 source files (up from the 380-file E-256 baseline). |
+| `python -m bandit -q -r reconforge/benchmark/durable_job_load.py` | 0 | combined gate | No findings; `hashlib.sha256` use is intentional canonical digesting over structured JSON and partition-effect fingerprints, not credential hashing. |
+| `python -m pytest tests/test_durable_job_load_profile.py -q` | 0 | 2.65s | 8/8 passed: profile validation, default-tier shape, small-tier drain/complete/no-duplicate/queue-empty, structural digest reproducibility across two runs (effect_set_digest + manifest_digest match; timing varies honestly), closed schema-v1 manifest JSON with limitations, manifest-digest excludes observed timings, no-duplicate partition-effect rows under 8-worker/32-job/3-partition/4-tenant fair contention (all 32 jobs complete; GROUP BY occurrences max == 1; statuses == {completed: 32}), and default tier (64 jobs/4 partitions/4 tenants) drains in bounded local time <60s without a scale claim. |
+| `python -m pytest tests/test_sqlite_durable_jobs.py tests/test_durable_job_load_profile.py tests/test_sqlite_consolidation_close.py -q` | 0 | combined gate | 27/27 passed; E-256 migration-25 regression in `test_sqlite_durable_jobs.py` (hardcoded `current_version == 24` and `applied_versions == [21,22,23,24]`) corrected to the repo's `MIGRATIONS[-1].version` convention. |
+| `python -m pytest tests/test_durable_job_workload_recovery.py tests/test_durable_job_application.py tests/test_durable_job_domain.py tests/test_module_registry.py tests/test_repository_boundary_inventory.py tests/test_db_backup_restore.py tests/test_db_backup_structured_ingress.py tests/test_domain_repository_contracts.py tests/test_generator_benchmark_engines.py -q` | 0 | combined gate | 94/94 passed; no regression in durable-job domain/application/recovery, module registry, repository boundary inventory, backup/restore, structured ingress, or generator benchmark engines. |
+| `git diff --check` | 0 | combined gate | Passed; Git emitted only existing CRLF conversion notices. |
+
+Residual boundary: this proves a reproducible local SQLite multi-worker load profile only. It does not prove backpressure, soak, retry/backoff coupling, cancellation-under-load, PostgreSQL load parity, distributed capacity, named-hardware 10K/100K/1M/10M tier publication, SLO/RPO/RTO, or production readiness. P4-SCL-001 remains in progress.
+
 ## E-256: Local SQLite consolidation close lifecycle
 
 - Date/timezone: 2026-08-01, Africa/Cairo.

@@ -41,6 +41,16 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 
 ## Task status
 
+## P4-SCL-001 in progress: high-volume concurrent operations and backpressure
+
+### E-257 complete: reproducible durable-job multi-worker load profile (first slice)
+
+- `reconforge/benchmark/durable_job_load.py` drives the existing durable-job worker loop (claim/commit_partition/complete_partition) under real ThreadPoolExecutor contention on a shared SQLite database over a declared small tier (8 workers, 64 jobs, 4 partitions per job, 4 tenants = 256 declared partition effects). It reuses `SQLiteDurableJobRepository`, `DurableJobApplicationService`, and `DurableJobWorkerService` exactly as callers already use them; no new persistence primitive, domain type, repository method, or migration is introduced.
+- Each worker is statically pinned to one tenant so per-tenant contention is fair (workers-per-tenant must be an exact multiple); a worker that has handled its fair share exits. The closed schema-v1 manifest carries only the structural outcome (declared shape, completed jobs, committed partition effects, duplicate count, final queue/running depth, per-tenant completions, deterministic effect-set digest, environment, explicit limitations) and excludes observed runtime/peak-memory/throughput from the manifest digest, so the digest is reproducible across runs and hardware while timing varies honestly.
+- `verify_load_manifest` asserts completed jobs equal the declared count, duplicate partition effects are zero, the queue drains to zero, committed effects equal completed * partitions_per_job, per-tenant completions sum to the declared count, and limitations retain honest non-claim wording. ADR 0213 documents scope, consequences, and rollback.
+- E-257 records 8/8 focused contracts and a 94-test integration matrix (durable-job domain/application/recovery, sqlite durable jobs, consolidation close, module registry, repository boundary, backup/restore, structured ingress, domain repository, generator benchmark) with zero failures. Ruff and Mypy across 381 source files, Bandit, and exact MANIFEST.in membership pass. An E-256 migration-25 regression in `test_sqlite_durable_jobs.py` (hardcoded `current_version == 24` and `applied_versions == [21,22,23,24]`) was discovered by the focused gate and corrected to the repo's `MIGRATIONS[-1].version` convention as part of the E-256 amend.
+- P4-SCL-001 remains open: backpressure, soak, retry/backoff coupling, cancellation-under-load, PostgreSQL load parity, and 10K/100K/1M/10M named-hardware tier publication are not implemented by this slice. SQLite serializes writes under `BEGIN IMMEDIATE`, so measured contention bounds multi-worker coordination, not database partition parallelism.
+
 ## P4-FIN-002 in progress: governed consolidation close lifecycle
 
 ### E-256 complete: local SQLite consolidation close lifecycle (control-journal foundation)

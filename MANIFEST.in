@@ -181,6 +181,9 @@ include docs/consolidation-close-lifecycle.md
 include reconforge/application/consolidation_close.py
 include reconforge/infrastructure/sqlite_consolidation_close.py
 include tests/test_sqlite_consolidation_close.py
+include docs/adr/0213-durable-job-load-profile-is-structural-and-non-claim.md
+include reconforge/benchmark/durable_job_load.py
+include tests/test_durable_job_load_profile.py
 include tests/test_incident_response.py
 include tests/test_reliability_incident_drill.py
 include docs/security/deployment-boundaries.md

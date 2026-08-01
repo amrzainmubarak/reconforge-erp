@@ -26,6 +26,20 @@ schema, ADR 0068, and one repository-only SBOM builder/normalizer. It integrates
 SBOMs into the candidate workflow and removes the separate legacy SBOM workflow,
 so runtime source remains 208 while workflow count decreases by one.
 
+E-252 adds three runtime files for the deterministic consolidation domain,
+application port, and immutable object adapter; two focused execution/test
+modules; one closed artifact schema; ADR 0210; and bounded Finance Core,
+threat-model, claims, gap, and operator documentation. It adds no database
+migration, network call, UI route, API route, CLI command, or source write-back.
+
+E-254 adds one deterministic consolidation-lifecycle domain file, extends the
+existing consolidation application service and Finance Core manifest, adds one
+focused test module, one closed worksheet schema, ADR 0211, and one operator
+document. It adds no database migration or adapter, persisted ownership/run
+state, journal/posting surface, network call, UI/API/CLI route, live rate, or
+ERP/bank write-back. NCI is a non-posting presentation allocation rather than
+acquisition accounting or a statutory statement.
+
 E-054 adds one test module with 13 collected contracts, two supply-chain
 schemas, ADR 0069, the universal `uv.lock`, closed policy/exception registries,
 one repository-only validator, Gitleaks configuration, Dependabot definitions,

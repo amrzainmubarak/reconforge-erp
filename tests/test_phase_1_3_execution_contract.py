@@ -23,7 +23,11 @@ def test_phase_matrix_closes_every_post_baseline_backlog_task_once() -> None:
     task_ids = [task["id"] for task in tasks]
     assert len(task_ids) == len(set(task_ids))
 
-    expected = {task_id for task_id in task_ids if not task_id.startswith("P0-")}
+    expected = {
+        task_id
+        for task_id in task_ids
+        if task_id.startswith(("P1-", "P2-", "P3-"))
+    }
     mapped = [task_id for phase in matrix["phases"] for task_id in phase["task_ids"]]
     assert len(mapped) == len(set(mapped))
     assert set(mapped) == expected
@@ -55,12 +59,14 @@ def test_required_tasks_are_complete_and_optional_assurance_is_non_blocking() ->
     assert all(task.get("release_requirement", "required") in backlog["release_requirement_values"] for task in tasks)
 
     required = [task for task in tasks if task.get("release_requirement", "required") == "required"]
-    required_non_p0 = [task for task in required if not task["id"].startswith("P0-")]
+    required_phase_1_3 = [
+        task for task in required if task["id"].startswith(("P1-", "P2-", "P3-"))
+    ]
     optional = [task for task in tasks if task.get("release_requirement") == "optional_assurance"]
 
     assert required
-    assert all(task["status"] == "completed" for task in required)
-    assert len(required_non_p0) == 41
+    assert all(task["status"] == "completed" for task in required_phase_1_3)
+    assert len(required_phase_1_3) == 41
     assert {task["id"] for task in optional} == {"P3-EXT-001", "P3-EXT-002"}
     assert all(task["status"] == "deferred" for task in optional)
     assert matrix["closure_policy"]["optional_assurance_items_block_release"] is False

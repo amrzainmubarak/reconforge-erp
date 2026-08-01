@@ -1,0 +1,256 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/consolidation-translation-result-v1.schema.json",
+  "title": "ReconForge Consolidation Translation Result v1",
+  "description": "Deterministic multi-entity trial-balance translation with explicit rate lineage, rounding evidence, and an unposted balancing-adjustment proposal.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "algorithm_version",
+    "run_id",
+    "request_digest",
+    "result_digest",
+    "group_code",
+    "period_id",
+    "reporting_currency",
+    "actor_id",
+    "calculated_at",
+    "policy",
+    "policy_digest",
+    "currency_registry",
+    "line_count",
+    "entity_count",
+    "account_count",
+    "lines",
+    "account_totals",
+    "pre_adjustment_balance",
+    "translation_adjustment",
+    "post_adjustment_balance",
+    "unrounded_translation_difference",
+    "rounding_delta",
+    "posting_effect"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "algorithm_version": {"const": "consolidation-translation-v1"},
+    "run_id": {"type": "string", "pattern": "^CON-[A-F0-9]{20}$"},
+    "request_digest": {"$ref": "#/$defs/sha256"},
+    "result_digest": {"$ref": "#/$defs/sha256"},
+    "group_code": {"$ref": "#/$defs/identifier"},
+    "period_id": {"$ref": "#/$defs/identifier"},
+    "reporting_currency": {"$ref": "#/$defs/currency"},
+    "actor_id": {"$ref": "#/$defs/identifier"},
+    "calculated_at": {"$ref": "#/$defs/timestamp"},
+    "policy": {"$ref": "#/$defs/policy"},
+    "policy_digest": {"$ref": "#/$defs/sha256"},
+    "currency_registry": {"$ref": "#/$defs/currency_registry"},
+    "line_count": {"type": "integer", "minimum": 1, "maximum": 100000},
+    "entity_count": {"type": "integer", "minimum": 2, "maximum": 100000},
+    "account_count": {"type": "integer", "minimum": 1, "maximum": 100000},
+    "lines": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100000,
+      "items": {"$ref": "#/$defs/line"}
+    },
+    "account_totals": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100000,
+      "items": {"$ref": "#/$defs/account_total"}
+    },
+    "pre_adjustment_balance": {"$ref": "#/$defs/money"},
+    "translation_adjustment": {"$ref": "#/$defs/translation_adjustment"},
+    "post_adjustment_balance": {"$ref": "#/$defs/money"},
+    "unrounded_translation_difference": {"$ref": "#/$defs/decimal"},
+    "rounding_delta": {"$ref": "#/$defs/decimal"},
+    "posting_effect": {"const": "none"}
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "decimal": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "account_type": {
+      "enum": ["Asset", "Liability", "Equity", "Income", "Expense"]
+    },
+    "rate_type": {
+      "enum": ["closing", "average", "historical"]
+    },
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "amount",
+        "currency",
+        "minor_units",
+        "rounding_policy",
+        "currency_policy_digest",
+        "currency_registry_version",
+        "currency_registry_digest"
+      ],
+      "properties": {
+        "schema_version": {"const": 1},
+        "amount": {"$ref": "#/$defs/decimal"},
+        "currency": {"$ref": "#/$defs/currency"},
+        "minor_units": {"type": "integer", "minimum": 0, "maximum": 8},
+        "rounding_policy": {"const": "ROUND_HALF_UP"},
+        "currency_policy_digest": {"$ref": "#/$defs/sha256"},
+        "currency_registry_version": {"type": "string", "minLength": 1, "maxLength": 128},
+        "currency_registry_digest": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "version",
+        "translation_adjustment_account_code",
+        "translation_adjustment_account_type"
+      ],
+      "properties": {
+        "policy_id": {"$ref": "#/$defs/identifier"},
+        "version": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
+        "translation_adjustment_account_code": {"$ref": "#/$defs/identifier"},
+        "translation_adjustment_account_type": {"$ref": "#/$defs/account_type"}
+      }
+    },
+    "currency_registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "registry_version",
+        "source",
+        "source_url",
+        "published_at",
+        "digest",
+        "currency_count"
+      ],
+      "properties": {
+        "schema_version": {"const": 1},
+        "registry_version": {"type": "string", "minLength": 1, "maxLength": 128},
+        "source": {"type": "string", "minLength": 1, "maxLength": 500},
+        "source_url": {"type": "string", "maxLength": 2000},
+        "published_at": {"type": "string", "maxLength": 64},
+        "digest": {"$ref": "#/$defs/sha256"},
+        "currency_count": {"type": "integer", "minimum": 1, "maximum": 1000}
+      }
+    },
+    "line": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_line_id",
+        "source_trial_balance_digest",
+        "entity_code",
+        "source_account_code",
+        "group_account_code",
+        "account_type",
+        "period_id",
+        "rate_type",
+        "rate_bucket",
+        "original_amount",
+        "translated_amount",
+        "unrounded_translated_amount",
+        "rounding_delta",
+        "rate_id",
+        "rate",
+        "rate_source",
+        "rate_source_digest",
+        "rate_effective_at",
+        "selection_reason"
+      ],
+      "properties": {
+        "source_line_id": {"$ref": "#/$defs/identifier"},
+        "source_trial_balance_digest": {"$ref": "#/$defs/sha256"},
+        "entity_code": {"$ref": "#/$defs/identifier"},
+        "source_account_code": {"$ref": "#/$defs/identifier"},
+        "group_account_code": {"$ref": "#/$defs/identifier"},
+        "account_type": {"$ref": "#/$defs/account_type"},
+        "period_id": {"$ref": "#/$defs/identifier"},
+        "rate_type": {"$ref": "#/$defs/rate_type"},
+        "rate_bucket": {"$ref": "#/$defs/identifier"},
+        "original_amount": {"$ref": "#/$defs/money"},
+        "translated_amount": {"$ref": "#/$defs/money"},
+        "unrounded_translated_amount": {"$ref": "#/$defs/decimal"},
+        "rounding_delta": {"$ref": "#/$defs/decimal"},
+        "rate_id": {"$ref": "#/$defs/identifier"},
+        "rate": {"$ref": "#/$defs/decimal"},
+        "rate_source": {"type": "string", "minLength": 1, "maxLength": 240},
+        "rate_source_digest": {"$ref": "#/$defs/sha256"},
+        "rate_effective_at": {
+          "oneOf": [
+            {"const": ""},
+            {"$ref": "#/$defs/timestamp"}
+          ]
+        },
+        "selection_reason": {
+          "enum": ["same-currency-identity-v1", "exact-period-currency-rate-type-v1"]
+        }
+      }
+    },
+    "account_total": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "group_account_code",
+        "account_type",
+        "amount",
+        "contributing_line_ids",
+        "contributing_entity_codes"
+      ],
+      "properties": {
+        "group_account_code": {"$ref": "#/$defs/identifier"},
+        "account_type": {"$ref": "#/$defs/account_type"},
+        "amount": {"$ref": "#/$defs/money"},
+        "contributing_line_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100000,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        },
+        "contributing_entity_codes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100000,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        }
+      }
+    },
+    "translation_adjustment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["account_code", "account_type", "amount", "required", "posted", "reason_code"],
+      "properties": {
+        "account_code": {"$ref": "#/$defs/identifier"},
+        "account_type": {"$ref": "#/$defs/account_type"},
+        "amount": {"$ref": "#/$defs/money"},
+        "required": {"type": "boolean"},
+        "posted": {"const": false},
+        "reason_code": {"const": "TRANSLATION_BALANCING_ADJUSTMENT"}
+      }
+    }
+  }
+}

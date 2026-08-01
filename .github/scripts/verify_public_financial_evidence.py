@@ -229,7 +229,8 @@ def main(argv: list[str] | None = None) -> int:
             execution_scope=args.execution_scope,
         )
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        serialized = json.dumps(report, indent=2, sort_keys=True) + "\n"
+        args.output.write_bytes(serialized.encode("utf-8"))
     except (OSError, PublicFinancialEvidenceError) as exc:
         print(f"public financial evidence failed: {exc}", file=sys.stderr)
         return 1

@@ -4,7 +4,7 @@ phase: "Phase 4 — Global Capability Expansion"
 snapshot:
   evidence_base_commit: "5d401e70c3a0e3cf507c2c7cf635dfc99b01a9af"
   policy_change_commit: "the commit containing this file"
-  published: false
+  published: true
 status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 

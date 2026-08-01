@@ -10518,3 +10518,21 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   post-commit closeout identifies `5bf734b46744b39821714a3984cda7db447c2969`;
   the branch still had not been pushed, merged, tagged, released, or deployed,
   and required GitHub checks for the exact candidate remained unexecuted.
+
+## E-253: P4-FIN-001 Draft PR publication boundary
+
+- Date/timezone: 2026-08-01, Africa/Cairo.
+- Base: merged `main` commit
+  `5d401e70c3a0e3cf507c2c7cf635dfc99b01a9af`.
+- Published branch: `codex/consolidation-translation-core`.
+- Published head at PR creation:
+  `205d7ce319c5c0eef3cbb001e828db4177f98ccc`, containing exact implementation
+  commit `5bf734b46744b39821714a3984cda7db447c2969` plus its evidence binding.
+- Review surface: Draft PR #67,
+  `https://github.com/amrzainmubarak/reconforge-erp/pull/67`, targeting `main`.
+- Connector-reported initial diff: two commits, 25 changed files, 2,287
+  additions, and 39 deletions.
+- The branch push and Draft PR creation succeeded. At this boundary required
+  GitHub checks had not completed and no remote pass was claimed.
+- No merge, tag, GitHub Release, package publication, deployment, production
+  mutation, repository-setting change, or readiness/superiority claim occurred.

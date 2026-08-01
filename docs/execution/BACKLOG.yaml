@@ -1,10 +1,10 @@
 schema_version: 2
 updated_at: "2026-08-01"
-phase: "Phase 3 — Enterprise Product"
+phase: "Phase 4 — Global Capability Expansion"
 snapshot:
-  evidence_base_commit: "37fdb5c48ad5ebce879045fba8712fe7b2cc49c0"
+  evidence_base_commit: "5d401e70c3a0e3cf507c2c7cf635dfc99b01a9af"
   policy_change_commit: "the commit containing this file"
-  published: false
+  published: true
 status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
@@ -777,3 +777,79 @@ tasks:
     completed_slices:
       - Deferred by owner decision in E-251; an independent reviewer is not required for owner/team release.
       - E-249 adds a bounded open-source independent-review intake protocol for optional future assurance. It inventories automated evidence and defines reviewer independence, private disclosure, scope, finding, remediation, retest, and residual-risk requirements. Live GitHub API verification on 2026-08-01 reported private vulnerability reporting disabled. No reviewer or report exists, and none is required for owner/team release under E-251.
+
+  - id: P4-FIN-001
+    priority: P4
+    area: financial_consolidation
+    goal_workstream: deep_close_and_consolidation
+    title: Deterministic consolidation translation artifact foundation
+    status: completed
+    depends_on: [P0-004, P1-PLAT-001, P1-PLAT-005]
+    exit_evidence: Balanced multi-entity trial balances, explicit account/rate/bucket policy, currency-specific translation, visible CTA/rounding, permutation-stable digests, closed schema, replay verification, and immutable scoped artifact tests pass without ledger posting.
+    completed_slices:
+      - E-252 closes the bounded translation-artifact foundation with exact Decimal/Money arithmetic, explicit rate lineage and historical buckets, fail-closed balanced multi-entity inputs, visible rounding and unposted CTA proposal, permutation-stable request/result digests, schema/replay verification, immutable tenant/workspace object retention, and complete local regression/security/package gates. Ownership, eliminations, NCI, posting, statements, live rates, and write-back remain P4-FIN-002 or later work.
+
+  - id: P4-FIN-002
+    priority: P4
+    area: financial_consolidation
+    goal_workstream: deep_close_and_consolidation
+    title: Governed close and full consolidation lifecycle
+    status: in_progress
+    depends_on: [P4-FIN-001, P3-ENT-009]
+    exit_evidence: Versioned ownership, effective dates, eliminations, NCI, consolidation journals, maker-checker, locks/reopens, reversal, statements, SQLite/PostgreSQL parity, migrations, restore, and deterministic replay pass published synthetic contracts.
+    completed_slices:
+      - E-254 closes only the non-posting consolidation-worksheet v1 slice. It adds approved non-overlapping effective ownership, rooted/acyclic controlling-parent selection, exact indirect ownership, NCI presentation allocation, source-bound balanced eliminations, canonical digests, closed schema, and calculation replay. P4-FIN-002 remains in progress for persisted lifecycle state, acquisition accounting, governed journals, maker-checker, posting/reversal, locks/reopens, statements, database parity/migrations/restore, live rates, and write-back.
+
+  - id: P4-MAT-001
+    priority: P4
+    area: advanced_matching
+    goal_workstream: advanced_matching
+    title: Optimization-grade advanced matching portfolio
+    status: planned
+    depends_on: [P1-REC-004, P1-REC-006, P1-REC-010]
+    exit_evidence: Bounded optimized grouped/netting/sequence/carry-forward/partial/reversal strategies beat declared baselines without losing deterministic ambiguity, explanation, engine parity, crash resume, or financial correctness.
+
+  - id: P4-CON-001
+    priority: P4
+    area: connectors
+    goal_workstream: live_connectors_and_writeback
+    title: Live ERP and banking connectors with governed write-back
+    status: planned
+    depends_on: [P1-PLAT-003, P1-PLAT-006, P3-ENT-007, P3-ENT-008]
+    exit_evidence: Named sandbox/live-read connectors and separately gated write-back pass credential, egress, schema, cursor, idempotency, reconciliation, approval, compensation, audit, replay, conformance, and provider-version tests; export profiles are never counted as live connectors.
+
+  - id: P4-SCL-001
+    priority: P4
+    area: scale
+    goal_workstream: high_volume_concurrency
+    title: High-volume concurrent operations and backpressure
+    status: planned
+    depends_on: [P1-PLAT-002, P1-PLAT-003, P1-PLAT-004, P1-REC-010]
+    exit_evidence: Reproducible multi-worker load, contention, queue, retry, checkpoint, no-duplicate-effect, memory, backpressure, cancellation, and soak profiles pass on named hardware at each published scale tier.
+
+  - id: P4-REL-001
+    priority: P4
+    area: reliability
+    goal_workstream: high_availability_and_disaster_recovery
+    title: Independent-failure-domain HA and disaster recovery
+    status: planned
+    depends_on: [P3-ENT-009, P3-ENT-010, P3-ENT-012]
+    exit_evidence: Independent-host quorum/fencing, automatic failover, split-brain refusal, backup/restore, regional or site-loss, repeated integrity, and declared RPO/RTO drills pass with every run retained and no single-host widening claim.
+
+  - id: P4-IAM-001
+    priority: P4
+    area: enterprise_policy
+    goal_workstream: enterprise_identity_and_policy
+    title: Complex enterprise authorization and policy administration
+    status: planned
+    depends_on: [P1-PLAT-008, P3-ENT-001, P3-ENT-002, P3-ENT-003, P3-ENT-006]
+    exit_evidence: Central versioned RBAC/ABAC covers entity, period, amount, region, data class, delegation, emergency authority, service identity, field restrictions, policy approval, cache invalidation, conflict analysis, tenant isolation, and no self-approval across API/jobs/exports/UI.
+
+  - id: P4-PLAT-001
+    priority: P4
+    area: platform_breadth
+    goal_workstream: coherent_platform_breadth
+    title: Coherent modular platform breadth
+    status: planned
+    depends_on: [P4-FIN-002, P4-MAT-001, P4-CON-001, P4-SCL-001, P4-REL-001, P4-IAM-001]
+    exit_evidence: Every delivered bounded context has a versioned runtime manifest, invariants, ports/adapters, migrations where stateful, permissions, audit/evidence, synthetic fixtures, UI/API/CLI where needed, rollback, performance/security tests, and evidence-bounded claims without weakening Community local-first operation.

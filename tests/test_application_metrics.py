@@ -52,6 +52,13 @@ def test_live_postgres_metrics_and_sqlite_parity(tmp_path: Path) -> None:
                 f"reconforge.domain_audit_events, reconforge.metric_definitions, "
                 f"reconforge.metric_snapshots TO {app_user}"
             )
+            admin.execute(
+                f"GRANT SELECT ON reconforge.close_application_tasks, "
+                f"reconforge.close_application_periods, reconforge.exception_queue_records, "
+                f"reconforge.evidence_application_requirements, reconforge.evidence_application_links, "
+                f"reconforge.control_test_results, reconforge.control_test_plans, "
+                f"reconforge.reconciliation_results, reconforge.matching_run_workspaces TO {app_user}"
+            )
             admin.execute("INSERT INTO reconforge.tenants (id, name) VALUES (%s, %s)", (tenant_a, tenant_a))
 
         # Create workspace and period

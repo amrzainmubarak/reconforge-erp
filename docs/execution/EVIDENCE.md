@@ -10247,3 +10247,46 @@ security review, and unresolved production-collection/distributed HA evidence.
 ### Residual boundary
 
 - E-245 remains the controlling evidence for objective completion; phase-3 still cannot be marked publish-ready until real external pilot records and an independent review report are attached.
+
+## E-247: Fail-closed remediation of PR #66 CI failures on 2026-08-01
+
+- Date/timezone: 2026-08-01, Africa/Cairo.
+- Remote baseline: PR #66 head `fd69fc23fbec1a08751ec26d9e7268fdf9f80bb8`.
+- Scope: diagnose and repair the failed `test (3.11)`, cancelled `test (3.12)`, `server-boundaries`, `Secret and npm policy gates`, and aggregate `python-security` checks without weakening the Phase 1–3 closure contract.
+- Boundary: the changes and evidence in this entry are local and unpublished. No external-pilot or independent-review evidence was created or simulated.
+
+### Failure fingerprints and repairs
+
+| Failure | Root cause | Fail-closed repair |
+| --- | --- | --- |
+| Python 3.11/3.12 collection | The matrix installed only the `dev` extra while collected feature tests directly import `cryptography`, `cbor2`, and OpenTelemetry SDK modules. | Install the complete locked extras set for the full-suite matrix on both supported Python versions. Lock resolution was checked for 3.11 and 3.12. |
+| PostgreSQL migration status | `POSTGRES_MIGRATION_REVISIONS` stopped at `0052` while Alembic head was `0053`. | Add `0053_audit_administration_acl` and a regression that parses every revision and proves the registry equals the linear Alembic chain. |
+| PostgreSQL live metrics | The non-superuser integration role lacked `SELECT` on the exact source tables read by the complete metrics aggregation. | Grant read access only to the nine required source tables in the disposable test role; tenant/RLS and existing write boundaries remain unchanged. |
+| PostgreSQL native backup | Resolving Debian client symlinks converted `pg_dump` into command-name-sensitive `pg_wrapper`, so no dump was produced. | Resolve the versioned native client directory through `pg_config --bindir`, with a PATH fallback and a command-identity regression. |
+| Gitleaks full history | Default `generic-api-key` detection classified the literal test keyword `idempotency_scope` in historical commit `11a033c650e6947f3454181e6043868e6db19430` as a secret. | Suppress only its exact history/tree fingerprints, reject wildcard ignore entries, and keep path exclusions limited to cross-platform generated/tool-owned directories. |
+
+### Verification evidence
+
+| Gate | Result |
+| --- | --- |
+| Focused CI-regression tests | Passed, including migration-chain parity, native-client identity, metric-role setup, and supply-chain-policy hostile mutations; live tests without explicit service variables remained declared skips. |
+| `python -m ruff check .` | Passed. |
+| `python -m mypy reconforge` | Passed for 373 source files. |
+| `python -m bandit -q -r reconforge` | Passed with no findings. |
+| `python -m pip_audit` | Passed with no known dependency vulnerabilities; the local unpublished package was not resolved from PyPI. |
+| `python -m build --no-isolation` | Wheel and sdist built successfully. |
+| Gitleaks 8.30.1 history and checked-tree scans | Both passed with no leaks after scanning the full history and current tree under the bounded policy. |
+| `npm --prefix apps/web ci` | Passed; 160 packages and zero reported vulnerabilities. |
+| Web typecheck / Vitest / build | Passed; Vitest reported 55/55. |
+| Playwright Chromium E2E | 11 passed and 5 explicitly live-only specs were skipped. |
+| CLI doctor / sample validation / demo | Passed; doctor and validation reported zero errors and ten expected warnings, and the demo generated its ignored output bundle. |
+| Docker image build / container doctor | Passed with image `reconforge:ci-fix-validation`; container doctor reported zero errors and ten expected warnings. |
+| Full `python -m pytest -q` | Exactly one failure remained: `test_phase_three_has_no_unsupported_completion_shortcut`; every other executed case passed or was a declared skip. The failure is the required external-evidence closure guard, not a CI-remediation regression. |
+| `git diff --check` | Passed. |
+
+### Closure and publication boundary
+
+- `P3-ENT-013`, `P3-EXT-001`, and `P3-EXT-002` remain `in_progress`.
+- `p3_external_pilots` and `p3_independent_security_review` remain `engaged` with empty `evidence_artifacts`.
+- `all_tasks_completed=false`, `all_required_gates_verified=false`, and `external_evidence_may_not_be_simulated=true` remain unchanged.
+- This evidence closes the locally reproducible CI-defect slice only. It does not close any of the six publication conditions and does not authorize a push, tag, release, or public readiness claim.

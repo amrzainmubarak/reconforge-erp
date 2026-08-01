@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import os
 import shutil
+import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 from uuid import uuid4
@@ -224,17 +225,64 @@ _LIVE_BACKUP_ENV = (
 )
 
 
+def _live_native_tools() -> PostgresNativeTools | None:
+    """Resolve real versioned binaries instead of Debian's command-name-sensitive pg_wrapper."""
+    names = ("pg_dump", "pg_restore", "createdb", "dropdb", "psql")
+    candidates: dict[str, Path] = {}
+    pg_config = shutil.which("pg_config")
+    if pg_config is not None:
+        completed = subprocess.run(  # nosec B603
+            (pg_config, "--bindir"),
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=30,
+        )
+        if completed.returncode == 0:
+            bindir = Path(completed.stdout.strip())
+            candidates = {name: bindir / name for name in names}
+    if not candidates or not all(path.is_file() for path in candidates.values()):
+        resolved = {name: shutil.which(name) for name in names}
+        if not all(resolved.values()):
+            return None
+        candidates = {name: Path(path) for name, path in resolved.items() if path is not None}
+    return PostgresNativeTools(**{name: path.resolve(strict=True) for name, path in candidates.items()})
+
+
+def test_live_native_tools_preserve_command_identity_via_pg_config(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    bindir = tmp_path / "versioned-bin"
+    bindir.mkdir()
+    names = ("pg_dump", "pg_restore", "createdb", "dropdb", "psql")
+    for name in names:
+        (bindir / name).write_bytes(b"native-tool")
+    pg_config = tmp_path / "pg_config"
+    pg_config.write_bytes(b"config-tool")
+
+    monkeypatch.setattr(shutil, "which", lambda name: str(pg_config) if name == "pg_config" else None)
+
+    def _pg_config_result(argv: Sequence[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        assert tuple(argv) == (str(pg_config), "--bindir")
+        return subprocess.CompletedProcess(argv, 0, stdout=str(bindir), stderr="")
+
+    monkeypatch.setattr(subprocess, "run", _pg_config_result)
+    tools = _live_native_tools()
+
+    assert tools is not None
+    assert tools.validated() == tuple(str((bindir / name).resolve()) for name in names)
+
+
 @pytest.mark.skipif(
     not all(os.environ.get(name) for name in _LIVE_BACKUP_ENV),
     reason="requires disposable PostgreSQL source and maintenance services",
 )
 def test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup(tmp_path: Path) -> None:
-    resolved_tools = {name: shutil.which(name) for name in ("pg_dump", "pg_restore", "createdb", "dropdb", "psql")}
-    if not all(resolved_tools.values()):
+    tools = _live_native_tools()
+    if tools is None:
         pytest.skip("requires PostgreSQL native client tools on PATH")
-    tools = PostgresNativeTools(
-        **{name: Path(path).resolve(strict=True) for name, path in resolved_tools.items() if path is not None}
-    )
     maintenance = os.environ["RECONFORGE_TEST_POSTGRES_MAINTENANCE_SERVICE"]
     restore_database = "reconforge_restore_" + uuid4().hex[:20]
     settings = PostgresBackupSettings(

@@ -1783,3 +1783,12 @@
 - Decision: Treat `verify_postgres_reliability.py`, `verify_postgres_ha_dr.py`, and `verify_otel_collector_distribution.py` as environment-blocked for this run context. Do not move `P3-ENT-010` or `P3-ENT-012` to closed status from this evidence set until reruns succeed with a healthy Docker API and unchanged cleanup/infrastructure checks.
 - Consequence: Local evidence remains valid for `E-221` / `E-222` / `E-223` / `E-224` / `E-225` / `E-226` / `E-227`, but production-recovery and live-op resilience claims remain open and are not promoted.
 - Rollback: When Docker connectivity is restored, rerun those scripts and only then update closure logic; if any rerun check changes, revise this decision and retain prior claims by historical scope.
+
+## D232 - CI remediation repairs execution fidelity and never bypasses external closure
+
+- Date: 2026-08-01
+- Status: accepted
+- Context: PR #66 exposed missing optional test dependencies, a stale PostgreSQL migration registry, insufficient disposable-role reads for the complete metrics query, Debian PostgreSQL wrapper command-identity loss, and one historical Gitleaks false positive.
+- Decision: Full-suite CI installs all locked feature extras; the PostgreSQL registry must equal the parsed linear Alembic chain; live harnesses grant only named required reads and resolve real versioned native clients; secret-scan exceptions must be exact fingerprints and generated-path allowlists must remain bounded. The Phase 3 closure guard is never skipped, excluded, retried away, or changed to accommodate these repairs.
+- Consequence: E-247 can repair the remote CI failure fingerprints reproducibly while the absent external pilots and independent security review continue to fail closed. A green remediation does not imply publication readiness, Enterprise readiness, certification, or completion of the six closure conditions.
+- Rollback: Revert the CI-remediation slice and restore the prior test harness/configuration. No production data, schema, API, migration, or public-release mutation is required; the external closure state remains unchanged either way.

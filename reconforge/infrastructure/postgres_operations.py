@@ -63,6 +63,7 @@ POSTGRES_MIGRATION_REVISIONS = (
     "0050_identity_admin_lifecycle",
     "0051_access_policy_lifecycle",
     "0052_security_governance",
+    "0053_audit_administration_acl",
 )
 
 

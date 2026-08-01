@@ -33,7 +33,7 @@ jobs:
           cache-dependency-glob: uv.lock
 
       - name: Install locked dependencies
-        run: uv sync --locked --extra dev --no-editable --python "${{ matrix.python-version }}"
+        run: uv sync --locked --all-extras --no-editable --python "${{ matrix.python-version }}"
 
       - name: Ruff
         run: uv run --no-sync ruff check .

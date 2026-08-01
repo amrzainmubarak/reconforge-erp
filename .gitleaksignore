@@ -1,0 +1,3 @@
+# False-positive fingerprint for the literal idempotency_scope test keyword.
+11a033c650e6947f3454181e6043868e6db19430:tests/test_reliability_sources.py:generic-api-key:32
+tests/test_reliability_sources.py:generic-api-key:32

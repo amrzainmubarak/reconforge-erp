@@ -1,6 +1,6 @@
 # Execution State
 
-Updated: 2026-07-31
+Updated: 2026-08-01
 
 ## Current phase
 
@@ -12,7 +12,7 @@ Phase 3 — Enterprise Product (in progress)
 - Phase 1 base: `1c633eea53a2f11c9a90af57edfc80a36faeef82` (merged atomic application-boundary PR #62)
 - Phase 0 signed-candidate source remains `d47edd845e6aef3bae16e05698e07878086d690b`; its evidence is immutable historical baseline, not evidence for Phase 1 changes.
 - Publication scope: PR #54 merged the evidence-bounded Phase 0 implementation. Signed Release Candidate run `30243819239` is non-publishing: it retained review artifact `8644255664` and pushed only the digest-addressed candidate image required for verification; no GitHub Release, PyPI publication, compliance claim, or production migration occurred.
-- Worktree is currently clean at this checkpoint (`git status --short` returns no local entries).
+- The local branch contains an unpublished CI-remediation slice recorded in E-247. The remote PR #66 head remains `fd69fc23fbec1a08751ec26d9e7268fdf9f80bb8` until the external publication gates authorize a push.
 - GitHub Actions run `30239994946` closes P0-009; runs `30240642293`, `30240642306`, `30240642321`, and `30240642386` close P0-SEC-008. Exact-main CI `30242293585`, Security `30242293659`, Docker `30242293668`, CodeQL `30242293667`, and OpenSSF Scorecard `30242293599` pass on `d47edd8`. E-087 closes P0-SEC-006/007 through the GitHub-verified signed tag and independently verified retained provenance/SBOM bundles. All 22 evidence-defined Phase 0 tasks are complete.
 
 ## Plan status at 2026-07-31
@@ -21,6 +21,7 @@ Phase 3 — Enterprise Product (in progress)
 - **Phase 2 (Matching & Evidence 2.0)**: `docs/execution/PHASE_2_EXIT_AUDIT.yaml` remains `verified`. Deterministic matching, evidence graph, reconciliation-as-code, and benchmark evidence are closed within the declared single-process/declared benchmark limits.
 - **Phase 3 (Enterprise Product)**: still in progress by design. `P3-ENT-007`, `P3-ENT-008`, `P3-ENT-009`, `P3-ENT-010`, `P3-ENT-011`, and `P3-ENT-012` are verified and closed at their current bounded scope. `P3-ENT-013` (competitive capability publishability), and both external gates (`P3-EXT-001`, `P3-EXT-002`) are still in progress.
 - `P3-ENT-013` is dependency-gated by `P3-ENT-012` and external validation (`P3-EXT-001`, `P3-EXT-002`), so it cannot be closed yet.
+- PR #66's missing optional test dependencies, PostgreSQL live-test harness drift, migration-registry drift, and one Gitleaks false positive now have locally verified fail-closed remediations (E-247). These repairs do not satisfy either external evidence gate and do not authorize publication.
 - A historical Docker-API connectivity block was recorded on 2026-07-31 for one run of `verify_postgres_reliability.py`, `verify_postgres_ha_dr.py`, and `verify_otel_collector_distribution.py`; later reruns in the same session completed successfully (`E-227` to `E-228`, `E-224` to `E-226`). P3 remains blocked by `P3-ENT-013` plus unresolved external gate evidence and explicit production-readiness limits.
 
 ## Phase 1–3 Publication Readiness Gate
@@ -33,8 +34,8 @@ Phase 3 — Enterprise Product (in progress)
 `P3_EXT_002_REVIEW_REPORT.md` remains pending because no qualified independent review artifact has been attached yet.
 - No claims of complete Phase 1–3 publication are valid until both `P3-EXT-001` and `P3-EXT-002` are verified with evidence artifacts.
 - **Publication action remains blocked** while `all_tasks_completed` and `all_required_gates_verified` are false.
-- PR #66 is now marked `ready for review`.
-- Working tree at this checkpoint is clean (`git status --short` empty), and no tags/releases were performed while blocked. A single PR remains open for gated publication decisions.
+- PR #66 remains `ready for review`; its remote checks still reflect the pre-remediation head until publication is authorized.
+- The E-247 slice is retained locally only. No push, tag, release, or external claim was performed while blocked. A single PR remains open for the eventual gated publication decision.
 
 ## Task status
 
@@ -1743,3 +1744,17 @@ evidence lineage, matching breadth, scale evidence, connectors, AI governance, s
 UX accessibility, and extensibility. Every row is explicitly bounded to bounded local
 or synthetic ReconForge evidence and lists what remains unknown. This file does not claim
 enterprise certification or competitive superiority. No publication occurred.
+
+## E-247 — Fail-closed PR #66 CI remediation
+
+The four failing/cancelled PR #66 check families were reproduced and repaired locally without
+changing any Phase 1–3 closure assertion. The full Python jobs now install every locked optional
+feature extra used by collected tests; the PostgreSQL migration registry is checked against the
+complete linear Alembic chain through `0053`; live metric and backup harnesses preserve least
+privilege and native PostgreSQL command identity; and Gitleaks suppresses the single historical
+`idempotency_scope` false positive only by exact fingerprints while retaining generated-directory
+scope. Targeted regression, Ruff, mypy, Bandit, pip-audit, package build, two Gitleaks scans,
+frontend type/test/build/E2E, CLI, and Docker gates passed. The full suite still has exactly one
+intentional failure: the Phase 3 closure guard rejects the absent real external pilots and
+independent review. The remediation is unpublished; no push, tag, release, or external claim
+occurred.

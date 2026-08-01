@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import os
 from pathlib import Path
 from uuid import uuid4
@@ -27,12 +28,32 @@ from reconforge.infrastructure.postgres_operations import (
 )
 from reconforge.infrastructure.sqlite_operations import SQLiteOperationsRepository, sqlite_migration_status
 
+ROOT = Path(__file__).resolve().parents[1]
+
 
 def test_postgres_operations_schema_and_revision_registry_are_explicit() -> None:
     assert POSTGRES_OPERATIONS_SCHEMA_SQL.count("FORCE ROW LEVEL SECURITY") == 2
     assert "FOREIGN KEY (tenant_id, workspace_id)" in POSTGRES_OPERATIONS_SCHEMA_SQL
-    assert POSTGRES_MIGRATION_REVISIONS[-1] == "0052_security_governance"
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 52
+    assert POSTGRES_MIGRATION_REVISIONS[-1] == "0053_audit_administration_acl"
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 53
+
+
+def test_postgres_operations_revision_registry_matches_the_linear_alembic_chain() -> None:
+    discovered: list[str] = []
+    previous: str | None = None
+    for path in sorted((ROOT / "alembic" / "versions").glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        assignments = {
+            target.id: ast.literal_eval(node.value)
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            for target in node.targets
+            if isinstance(target, ast.Name) and target.id in {"revision", "down_revision"}
+        }
+        assert assignments["down_revision"] == previous, f"{path.name} breaks the linear migration chain"
+        previous = str(assignments["revision"])
+        discovered.append(previous)
+    assert tuple(discovered) == POSTGRES_MIGRATION_REVISIONS
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")

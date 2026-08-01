@@ -44,6 +44,7 @@ def _copy_policy_project(tmp_path: Path) -> Path:
         ".github/dependabot.yml",
         ".github/workflows/release.yml",
         ".github/workflows/security.yml",
+        ".gitleaksignore",
         ".gitleaks.toml",
         "Dockerfile",
         "apps/web/package-lock.json",
@@ -143,6 +144,11 @@ def _mutate_gitleaks(root: Path) -> None:
     path.write_text(path.read_text(encoding="utf-8") + '\ncommits = ["deadbeef"]\n', encoding="utf-8")
 
 
+def _mutate_gitleaks_ignore(root: Path) -> None:
+    path = root / ".gitleaksignore"
+    path.write_text(path.read_text(encoding="utf-8") + "\ntests/**\n", encoding="utf-8")
+
+
 def _mutate_npm_root(root: Path) -> None:
     path = root / "apps" / "web" / "package-lock.json"
     document = _json(path)
@@ -163,6 +169,7 @@ def _mutate_release_fail_open(root: Path) -> None:
         _mutate_docker_base,
         _mutate_dependabot,
         _mutate_gitleaks,
+        _mutate_gitleaks_ignore,
         _mutate_npm_root,
         _mutate_release_fail_open,
     ],

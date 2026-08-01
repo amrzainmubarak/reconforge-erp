@@ -51,7 +51,12 @@ gitleaks dir --config .gitleaks.toml \
 
 Do not publish raw secret reports. Output remains redacted. The checked-tree
 scan includes source, tests, fixtures, documentation, examples, and lockfiles.
-Only generated/tool-owned directories in `.gitleaks.toml` are excluded.
+Only generated/tool-owned directories in `.gitleaks.toml` are excluded. The
+bounded path expressions accept both POSIX and Windows separators so the same
+checked-out-tree policy is reproducible on hosted Linux and local Windows.
+Exact historical false positives may be suppressed only by their full
+commit/path/rule/line fingerprint in `.gitleaksignore`; broad commit, path,
+rule, regex, or stopword exclusions remain forbidden.
 
 ## Dependency update workflow
 

@@ -1,5 +1,7 @@
 # P3-EXT-002: Independent Security Review Evidence Template
 
+Status: optional assurance template; deferred by owner decision E-251
+
 ## Reviewer Identity
 
 - Reviewer/firm:

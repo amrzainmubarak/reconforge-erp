@@ -1,5 +1,9 @@
 # ReconForge Baseline Audit
 
+> Historical command snapshot. Its external-gate closure failure was superseded
+> by the owner/team release policy in E-251/D236; recorded command outcomes remain
+> historical evidence rather than current release state.
+
 ## Environment & Commands Execution Log
 
 - Date: 2026-07-31

@@ -4,7 +4,7 @@ Updated: 2026-08-01
 
 ## Current phase
 
-Phase 3 — Enterprise Product (in progress)
+Phase 3 — Enterprise Product (required owner/team scope complete; optional assurance deferred)
 
 ## Snapshot boundary
 
@@ -12,30 +12,30 @@ Phase 3 — Enterprise Product (in progress)
 - Phase 1 base: `1c633eea53a2f11c9a90af57edfc80a36faeef82` (merged atomic application-boundary PR #62)
 - Phase 0 signed-candidate source remains `d47edd845e6aef3bae16e05698e07878086d690b`; its evidence is immutable historical baseline, not evidence for Phase 1 changes.
 - Publication scope: PR #54 merged the evidence-bounded Phase 0 implementation. Signed Release Candidate run `30243819239` is non-publishing: it retained review artifact `8644255664` and pushed only the digest-addressed candidate image required for verification; no GitHub Release, PyPI publication, compliance claim, or production migration occurred.
-- The local branch contains an unpublished CI-remediation slice recorded in E-247. The remote PR #66 head remains `fd69fc23fbec1a08751ec26d9e7268fdf9f80bb8` until the external publication gates authorize a push.
+- The local branch contains unpublished CI-remediation and release-governance slices recorded in E-247 through E-251. The remote PR #66 head remains `fd69fc23fbec1a08751ec26d9e7268fdf9f80bb8` until the owner/team authorizes a push and the exact candidate completes remote verification.
 - GitHub Actions run `30239994946` closes P0-009; runs `30240642293`, `30240642306`, `30240642321`, and `30240642386` close P0-SEC-008. Exact-main CI `30242293585`, Security `30242293659`, Docker `30242293668`, CodeQL `30242293667`, and OpenSSF Scorecard `30242293599` pass on `d47edd8`. E-087 closes P0-SEC-006/007 through the GitHub-verified signed tag and independently verified retained provenance/SBOM bundles. All 22 evidence-defined Phase 0 tasks are complete.
 
-## Plan status at 2026-07-31
+## Plan status at 2026-08-01
 
 - **Phase 1 (Foundation)**: `docs/execution/PHASE_1_EXIT_AUDIT.yaml` remains `verified`. All required gates and backend-neutrality/operational evidence are closed within the declared scope.
 - **Phase 2 (Matching & Evidence 2.0)**: `docs/execution/PHASE_2_EXIT_AUDIT.yaml` remains `verified`. Deterministic matching, evidence graph, reconciliation-as-code, and benchmark evidence are closed within the declared single-process/declared benchmark limits.
-- **Phase 3 (Enterprise Product)**: still in progress by design. `P3-ENT-007`, `P3-ENT-008`, `P3-ENT-009`, `P3-ENT-010`, `P3-ENT-011`, and `P3-ENT-012` are verified and closed at their current bounded scope. `P3-ENT-013` (competitive capability publishability), and both external gates (`P3-EXT-001`, `P3-EXT-002`) are still in progress.
-- `P3-ENT-013` is dependency-gated by `P3-ENT-012` and external validation (`P3-EXT-001`, `P3-EXT-002`), so it cannot be closed yet.
-- PR #66's missing optional test dependencies, PostgreSQL live-test harness drift, migration-registry drift, and one Gitleaks false positive now have locally verified fail-closed remediations (E-247). These repairs do not satisfy either external evidence gate and do not authorize publication.
-- A historical Docker-API connectivity block was recorded on 2026-07-31 for one run of `verify_postgres_reliability.py`, `verify_postgres_ha_dr.py`, and `verify_otel_collector_distribution.py`; later reruns in the same session completed successfully (`E-227` to `E-228`, `E-224` to `E-226`). P3 remains blocked by `P3-ENT-013` plus unresolved external gate evidence and explicit production-readiness limits.
+- **Phase 3 (Enterprise Product)**: required owner/team scope is `13/13` completed at its documented bounded maturity. `P3-ENT-013` is closed by E-251. `P3-EXT-001` and `P3-EXT-002` are deferred optional assurance items and are not release blockers.
+- The complete required Phase 1–3 scope is `41/41`; external evidence remains unverified and must not be claimed.
+- PR #66's missing optional test dependencies, PostgreSQL live-test harness drift, migration-registry drift, and one Gitleaks false positive have locally verified fail-closed remediations (E-247). Publication still requires the exact candidate to pass required local and remote gates under owner/team approval.
+- A historical Docker-API connectivity block was recorded on 2026-07-31 for one run of `verify_postgres_reliability.py`, `verify_postgres_ha_dr.py`, and `verify_otel_collector_distribution.py`; later reruns in the same session completed successfully (`E-227` to `E-228`, `E-224` to `E-226`). Explicit production-readiness and claim limits remain, but optional external assurance does not block the owner/team release path.
 
 ## Phase 1–3 Publication Readiness Gate
 
 - New execution checklist is recorded in `docs/execution/PHASE_1_3_PUBLICATION_READINESS.md`.
-- External pilot template: `docs/execution/P3_EXT_001_CONTROLLED_PILOT_EVIDENCE_TEMPLATE.md`.
-- External security-review template: `docs/execution/P3_EXT_002_INDEPENDENT_SECURITY_REVIEW_TEMPLATE.md`.
-- External gate evidence index: `docs/execution/P3_EXTERNAL_GATE_EVIDENCE_INDEX.md`.
+- Optional pilot template: `docs/execution/P3_EXT_001_CONTROLLED_PILOT_EVIDENCE_TEMPLATE.md`.
+- Optional independent-review template: `docs/execution/P3_EXT_002_INDEPENDENT_SECURITY_REVIEW_TEMPLATE.md`.
+- Optional assurance index: `docs/execution/P3_EXTERNAL_GATE_EVIDENCE_INDEX.md`.
 - Controlled-pilot evidence holders now exist at `docs/execution/P3_EXT_001_PILOT_001.md` through `docs/execution/P3_EXT_001_PILOT_003.md`; `PILOT-001` to `PILOT-003` are now completed as internal bounded runs with synthetic/local scope.
-`P3_EXT_002_REVIEW_REPORT.md` remains pending because no qualified independent review artifact has been attached yet.
-- No claims of complete Phase 1–3 publication are valid until both `P3-EXT-001` and `P3-EXT-002` are verified with evidence artifacts.
-- **Publication action remains blocked** while `all_tasks_completed` and `all_required_gates_verified` are false.
+`P3_EXT_002_REVIEW_REPORT.md` remains pending as an optional assurance artifact.
+- Required Phase 1–3 completion may be claimed only as owner/team evidence-bounded completion; external-pilot and independent-review claims remain invalid.
+- **Publication action requires a fresh exact-candidate local pass, clean worktree, owner/team approval, push, and green required GitHub checks.**
 - PR #66 remains `ready for review`; its remote checks still reflect the pre-remediation head until publication is authorized.
-- The E-247 slice is retained locally only. No push, tag, release, or external claim was performed while blocked. A single PR remains open for the eventual gated publication decision.
+- The E-247 slice is retained locally only. No push, tag, release, or external claim has been performed. A single PR remains open for the eventual owner/team-gated publication decision.
 
 ## Task status
 
@@ -1800,3 +1800,24 @@ entrypoints, controls, tests, residual risks, and claim limits. The focused
 inventory/public-evidence target passes 18/18. The repeated full run has exactly
 one failure: the intentional Phase 3 guard while external operator and independent
 review evidence remain absent. No parser-inventory test was skipped or weakened.
+
+## E-251 — Owner/team release authority supersedes mandatory external staffing
+
+By explicit repository-owner decision, Phase 1–3 release closure no longer
+requires recruiting external operators, profession-specific participants, or an
+independent security reviewer. The 41 internal/team tasks are the required scope;
+`P3-EXT-001` and `P3-EXT-002` remain truthfully unverified but are reclassified as
+deferred optional assurance. `P3-ENT-013` is completed from the dated bounded
+competitive matrix and retained technical evidence. External evidence may not be
+simulated or claimed, and unsupported customer, independent-review, certification,
+compliance, superiority, scale, or Enterprise-ready wording remains prohibited.
+Actual publication still requires the exact candidate to pass the required local
+and GitHub gates and receive owner/team approval. No push, tag, or release occurred
+as part of this policy change.
+
+The E-251 local verification replay is green: the complete 2,089-test collection
+passed in 520.4 seconds; closure contracts pass 5/5; Ruff, mypy across 374 source
+files, Bandit, dependency audit, wheel/sdist build, supply-chain validation,
+frontend typecheck, 55/55 Vitest, production build, 11-pass/5-skip Chromium E2E,
+and checksum-pinned Gitleaks history/tree scans all pass. The branch still requires
+publication and remote GitHub verification before a release Go decision.

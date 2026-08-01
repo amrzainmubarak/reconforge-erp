@@ -1,5 +1,9 @@
 # P3 External Blocker Handoff (Plan 1–3 Completion Gate)
 
+> Archived historical handoff. External pilots and independent review were
+> reclassified as deferred optional assurance by E-251/D236 and no longer block
+> owner/team publication.
+
 Date: 2026-07-31
 Branch: feature/phase123-exec-restart
 

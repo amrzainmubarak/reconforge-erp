@@ -1816,3 +1816,11 @@
 - Decision: Route the public-evidence manifest YAML and downloaded JSON through the existing `reconforge.io.structured` bounded ingress with explicit size, depth, node, string, number, and duplicate-key policies. Preserve exact numeric lexemes for `Decimal` validation. Keep only the mixed-encoding CSV reader as a direct parser and register that exact call site as FI-023 with named entrypoints, controls, tests, residual risks, and claim limits.
 - Consequence: The parser inventory remains fail closed and the public-data experiment cannot expand accepted formats or parser surfaces silently. The full-suite regression was repaired without wildcard allowlists, test exclusions, skips, retries, or `continue-on-error`; the only remaining failure is the intentional Phase 3 external-evidence guard.
 - Rollback: Remove the public-data experiment and FI-023 together, or replace the CSV path with a central bounded adapter and delete FI-023 only after the exact inventory and hostile-input tests pass. Do not retain an orphaned parser exception.
+
+## D236 - Owner and project team control release approval; external assurance is optional
+
+- Date: 2026-08-01
+- Status: accepted by repository owner
+- Decision: Make the repository owner and authorized project team the release authority. Treat `P3-EXT-001` controlled pilots and `P3-EXT-002` independent review as optional assurance items with `deferred` status, not prerequisites for Phase 1–3 owner/team publication. Close required work only from retained internal/team code, test, runtime, build, security, migration, restore, and rollback evidence.
+- Consequence: Phase 1–3 contains 41 required tasks and two optional assurance items. External participants, accountants, engineers, customers, or an independent reviewer are not staffing requirements for owner/team release. Internal evidence still cannot be described as customer validation, an external pilot, an independent review, certification, compliance, universal superiority, or unqualified Enterprise readiness. Known unaccepted Critical/High findings and failed required technical gates remain release blockers.
+- Rollback: Restore the two assurance items as release-blocking gates, set required closure false, and rerun the exact contract and release gates. Historical external-evidence records remain intact under either policy.

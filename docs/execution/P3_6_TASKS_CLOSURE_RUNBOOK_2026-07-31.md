@@ -1,5 +1,9 @@
 # 6-Task Closure Runbook for Phase 1–3 Publication-Safe Exit
 
+> Archived historical runbook. E-251/D236 supersedes its mandatory external
+> staffing and gate assumptions. Use `PHASE_1_3_PUBLICATION_READINESS.md` for the
+> current owner/team release policy.
+
 ## الهدف
 
 تفعيل نشر نهائي آمن لمرحلة 1–3 بعد تحقق جميع الأدلة المطلوبة، بدون claims غير مبرهنة.

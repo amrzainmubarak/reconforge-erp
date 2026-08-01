@@ -1,8 +1,10 @@
 # P3-EXT-001: Controlled Pilot Evidence Template (3–5 pilots)
 
+Status: optional assurance template; deferred by owner decision E-251
+
 ## Purpose
 
-Use this file format for each real pilot record required by `P3-EXT-001`.
+Use this file format only if optional `P3-EXT-001` assurance is resumed.
 Each record must be bounded to scoped, authorized access and synthetic/real business
 evidence without exposing secrets, customer identifiers, or unrestricted raw records.
 

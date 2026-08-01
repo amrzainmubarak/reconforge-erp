@@ -1,6 +1,6 @@
 # Public Financial Evidence Protocol
 
-Status: governed candidate; maintainer execution is not external validation
+Status: governed owner/team evidence; optional external assurance is deferred
 
 Protocol version: 1
 
@@ -13,13 +13,13 @@ financial data without committing the raw records. It tests exact ingestion,
 cross-format parity, financial equations, deterministic matching, permutation
 stability, tamper detection, and report redaction.
 
-One successful maintainer run proves only that the named code revision processed
-the pinned public inputs as reported. It does not automatically close
-`P3-EXT-001`, establish a customer deployment, or support a production-readiness
-claim. The same workflow must be run by at least three distinct independent
-operators, and each result must pass the human acceptance procedure below before
-it may count as a controlled public-data pilot. Automated runs do not satisfy
-`P3-EXT-002`; that gate still requires a qualified independent human reviewer.
+One successful owner/team run proves only that the named code revision processed
+the pinned public inputs as reported. It does not establish a customer deployment,
+independent assurance, or a production-readiness claim. Owner/team execution is
+sufficient for the current team-controlled release policy. If optional external
+assurance is pursued later, at least three distinct independent operators must pass
+the acceptance procedure before the result may be described as an external pilot;
+automated or owner/team runs must never be relabeled as an independent review.
 
 ## Official sources
 
@@ -82,7 +82,7 @@ For a no-network replay, place the exact eleven responses in one directory as
 `<artifact-id>.<format>` and run with `--artifact-dir` plus
 `--execution-scope offline-replay`. Extra, missing, or changed files are rejected.
 
-## Independent operator procedure
+## Optional independent operator procedure
 
 1. Use a personal fork or independently controlled public fork and retain the
    exact source commit. Do not edit the manifest, runner, test, or workflow.
@@ -100,10 +100,10 @@ For a no-network replay, place the exact eleven responses in one directory as
    candid user feedback. Never attach the downloaded raw public files or a
    security vulnerability.
 
-An upstream maintainer must independently verify the run and record acceptance.
+An upstream maintainer must verify any optional submission and record acceptance.
 Three runs by one person, a maintainer, a bot, or accounts under common control
-do not meet the three-operator condition. A passing workflow candidate is not
-self-approving and does not automatically close `P3-EXT-001`.
+do not meet the optional three-operator assurance condition. This procedure is
+not a prerequisite for owner/team release.
 
 ## Dataset drift and rollback
 

@@ -10394,3 +10394,49 @@ security review, and unresolved production-collection/distributed HA evidence.
   remain zero and no independent security report exists. It is not a regression
   and was not bypassed. No push, tag, release, or repository-setting mutation
   occurred.
+
+## E-251: Owner/team release-governance decision
+
+- Date/timezone: 2026-08-01, Africa/Cairo.
+- Authority: explicit repository-owner instruction.
+- Required scope: 41 non-P0 tasks; Phase 1 `10/10`, Phase 2 `18/18`, and
+  Phase 3 `13/13` required tasks.
+- Optional scope: `P3-EXT-001` and `P3-EXT-002`, both `deferred` with
+  `release_requirement=optional_assurance` and zero external evidence artifacts.
+- `P3-ENT-013` is completed from the dated primary-source competitive matrix and
+  its bounded claim policy; optional assurance is not a dependency.
+- The execution contract now verifies required-task completion, required-gate
+  evidence, optional-item non-blocking state, and the continued prohibition on
+  simulating or claiming external evidence.
+- Claim boundary: the decision authorizes owner/team release governance only. It
+  does not prove customer use, independent review, certification, compliance,
+  universal superiority, unmeasured scale, or unqualified Enterprise readiness.
+- Publication boundary: no commit, push, tag, release, PR mutation, or repository
+  setting change occurred in adopting this policy. The exact candidate must still
+  pass all required local and remote technical gates before a Go decision.
+
+### E-251 verification replay
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest --no-header --tb=short -q` | 0 | Full 2,089-test / 295-file collection completed in 520.4s with no failures; declared environment/live-only skips and warnings remained visible. |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py -q` | 0 | 5/5 owner/team closure, mapping, dependency, required-task, optional-assurance, and claim-boundary contracts passed. |
+| Public-evidence and workflow target | 0 | 11/11 passed after the optional-assurance wording update. |
+| Maturity plus Phase 1/2 exit target | 0 | 11/11 passed. |
+| `python -m ruff check .` | 0 | Passed. |
+| `python -m mypy reconforge` | 0 | Passed for 374 source files. |
+| `python -m bandit -q -r reconforge` | 0 | Passed with no findings; existing comment-parsing warnings remained visible. |
+| `python -m pip_audit` | 0 | No known dependency vulnerabilities; the unpublished local package could not be resolved from PyPI. |
+| `python -m build --no-isolation` | 0 | Wheel and sdist built successfully. |
+| Supply-chain policy validator | 0 | Valid; zero active exceptions and zero npm integrity-gap entries. |
+| `npm --prefix apps/web ci` | 0 | 160 packages installed; zero reported vulnerabilities. |
+| Web typecheck / Vitest / build | 0 | Passed; Vitest 55/55 and production Vite build succeeded. |
+| Playwright Chromium E2E | 0 | 11 passed; five explicitly live-only tests skipped. |
+| Gitleaks 8.30.1 history and tree scans | 0 | Checksum-pinned tool scanned 120 commits / 17.66 MB and the 22.44 MB tree; no leaks found. |
+| `git diff --check` | 0 | Passed after removing one Markdown trailing-space finding. |
+
+The first local Gitleaks orchestration attempt failed before scanner execution
+because `wslpath` received stripped Windows separators. The already checksum-
+verified archive was then addressed through an explicit `/mnt/c/...` path; both
+actual scans passed. Remote GitHub checks remain unexecuted for these local commits
+because no push or PR mutation has occurred.

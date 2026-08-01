@@ -31,7 +31,7 @@ enterprise-grade guarantees, or competitive superiority.
 | Scale evidence | Public platforms publish scale indicators in marketing and operational literature. | ReconForge has reproducible benchmark files and measured local profile evidence up to 100K/1M synthetic runs in previous plan slices. | 1M and 10M enterprise-level external workload claims are not yet proven in production network environments. | Reproducibility evidence in `docs/execution/PERFORMANCE_BASELINE.md` and `E-113`. |
 | Connector ecosystem | Vendors advertise broad native connectors and integration catalogs. | ReconForge currently uses explicit local/CSV-led connectors, manifests, and a read-only connector model as closed policy (`P3-ENT-007`, `E-208`). | Direct live read/write integrations and connector conformance at scale remain a planned Phase 3/4 task. | Connector policy evidence in `docs/execution/EVIDENCE.md` and `docs/execution/BACKLOG.yaml`. |
 | AI governance | Vendors position AI assistance at varying autonomy. | ReconForge keeps AI constrained, optional, and non-authoritative with explicit local/offline-first posture in security/reliability architecture docs. | Full AI quality, prompt injection, and operator-policy validation at enterprise depth remain bounded and still expanding. | AI governance notes in the architecture/ADR set and `P3-ENT-012` runbook scope. |
-| Security posture | Vendor trust pages combine controls, certifications, and enterprise assurance claims. | ReconForge documents security architecture, ASVS/SSDF mappings, and signed-candidate hardening with dependency policy in local evidence (`E-001` through `E-087`, `E-103`–`E-104`). | No independent certification, no official SOC/ISO/PCI claim from this repo, and no external assurance report yet. | Internal control evidence is extensive; external attestation remains open (`P3-EXT-002`). |
+| Security posture | Vendor trust pages combine controls, certifications, and enterprise assurance claims. | ReconForge documents security architecture, ASVS/SSDF mappings, and signed-candidate hardening with dependency policy in local evidence (`E-001` through `E-087`, `E-103`–`E-104`). | No independent certification, no official SOC/ISO/PCI claim from this repo, and no external assurance report yet. | Internal control evidence is extensive; optional external attestation remains deferred (`P3-EXT-002`) and does not block owner/team publication. |
 | UX and accessibility | Many suites are broad and full-service, but often assume enterprise onboarding, admin structure, and remote identity. | ReconForge tracks RTL/localization direction and exposes lightweight review/exception and studio primitives in documented phases. | Deep accessibility automation across every path and multilingual workflow is still in progression. | Documented as bounded in `docs/execution/CLAIMS_EVIDENCE_MATRIX.md` and `P3-ENT-012` evidence. |
 | Extensibility | Vendor ecosystems are commercially controlled and extension-heavy. | ReconForge supports pack + manifest patterns and explicit modularity in code and packaging, with explicit boundaries on what is currently local-only. | Industrial pack authoring depth and third-party plugin ecosystem are bounded and evidence-driven. | Evidence in `P1-PLAT-001`→`P1-REC-009`, `P3-ENT-007`, and module descriptors. |
 
@@ -43,7 +43,7 @@ enterprise-grade guarantees, or competitive superiority.
 - Stronger for global platform breadth:
   - Broad native connector catalogs and high-scale managed controls are materially broader in established commercial products.
 - Missing for ReconForge (before production claim):
-  - Independent external security review (`P3-EXT-002`), verified enterprise pilots (`P3-EXT-001`), broader connector trust programs, and true multi-node HA/DR production evidence.
+  - Optional independent external security review (`P3-EXT-002`), optional verified enterprise pilots (`P3-EXT-001`), broader connector trust programs, and true multi-node HA/DR production evidence.
 
 ## Required Evidence Before Marketing Wording Claims
 
@@ -57,4 +57,3 @@ This document must be updated with exact dates, public-source snapshots, and evi
 - New reconforge enterprise slices close.
 - A pilot produces approved, scoped business outcomes.
 - Independent security review closes open high-risk claims.
-

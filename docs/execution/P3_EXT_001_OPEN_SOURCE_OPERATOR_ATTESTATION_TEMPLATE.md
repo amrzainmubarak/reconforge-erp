@@ -1,6 +1,6 @@
 # P3-EXT-001 Open-Source Operator Attestation
 
-Status: candidate until accepted by an upstream human reviewer
+Status: optional assurance template; deferred by owner decision E-251
 
 This form records one real public-data technical pilot. It contains no customer
 data and is not a security-review report.
@@ -90,7 +90,8 @@ data and is not a security-review report.
 - Acceptance status (`accepted`, `rejected`, `needs-information`):
 - Reason:
 
-This record counts toward `P3-EXT-001` only when it is `accepted`. Closure
-requires three accepted attestations from three independent operators plus an
-upstream review of combined outcomes and allowed wording. It never counts toward
+If this optional assurance item is resumed, a record counts toward `P3-EXT-001`
+only when it is `accepted`, and optional closure requires three accepted
+attestations from three independent operators plus an upstream review. No such
+record is required for owner/team release, and it never counts toward
 `P3-EXT-002`.

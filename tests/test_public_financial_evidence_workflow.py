@@ -74,19 +74,22 @@ def test_public_evidence_workflow_is_exact_fail_closed_and_provenance_bound() ->
     assert 'args.output.write_bytes(serialized.encode("utf-8"))' in runner
 
 
-def test_public_evidence_protocols_preserve_external_and_security_gates() -> None:
+def test_public_evidence_protocols_keep_optional_assurance_honest_and_non_blocking() -> None:
     protocol = PROTOCOL.read_text(encoding="utf-8")
     attestation = ATTESTATION_TEMPLATE.read_text(encoding="utf-8")
     security = SECURITY_PROTOCOL.read_text(encoding="utf-8")
 
-    assert "three distinct independent" in protocol
-    assert "operators" in protocol
-    assert "does not automatically close `P3-EXT-001`" in protocol
-    assert re.search(r"do not satisfy\s+`P3-EXT-002`", protocol)
+    assert "Owner/team execution is\nsufficient" in protocol
+    assert "three distinct independent operators" in protocol
+    assert "not a prerequisite for owner/team release" in protocol
+    assert "must never be relabeled as an independent review" in protocol
     assert "Workflow run URL" in attestation
     assert "Reproducibility SHA-256" in attestation
     assert "Conflict-of-interest declaration" in attestation
-    assert "three accepted attestations" in attestation
+    assert "optional assurance template" in attestation
+    assert "No such\nrecord is required for owner/team release" in attestation
     assert "Private vulnerability reporting is currently disabled" in security
     assert "must not be filed in a public issue" in security
     assert "qualified independent human reviewer" in security
+    assert "obtaining an independent review is optional" in security
+    assert "does not block an\nowner/team release" in security

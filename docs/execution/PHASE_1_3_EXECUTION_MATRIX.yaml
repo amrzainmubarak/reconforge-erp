@@ -1,12 +1,14 @@
-schema_version: 1
-updated_at: "2026-07-31"
+schema_version: 2
+updated_at: "2026-08-01"
 objective: >-
   Close Platform Foundation, Matching and Evidence 2.0, and Enterprise Product
   through evidence-defined vertical slices while preserving Community local-first
   operation and sovereign deployment.
 closure_policy:
-  all_tasks_completed: false
-  all_required_gates_verified: false
+  all_required_tasks_completed: true
+  all_required_gates_verified: true
+  owner_team_release_authority: true
+  optional_assurance_items_block_release: false
   external_evidence_may_not_be_simulated: true
   unsupported_claims_forbidden:
     - universal_superiority
@@ -91,24 +93,19 @@ phases:
         evidence: Scheduler, notifications, administration, HA/DR, air-gap, observability, upgrade, and rollback drills.
       - id: p3_ecosystem
         evidence: Connector conformance, signed-pack, read-only default, egress, secret, and failure-contract results.
-      - id: p3_external_pilots
-        evidence: Three to five approved real controlled-pilot records with scoped outcomes and publishable wording.
-        external: true
-      - id: p3_independent_security_review
-        evidence: Independent reviewer identity, scope, dated report, findings, remediation status, and accepted residual risk.
-        external: true
       - id: p3_competitive_evidence
         evidence: Dated primary-source capability comparison with reproducible ReconForge evidence and explicit unknowns.
-external_gate_policy:
-  allowed_statuses: [planned, engaged, verified]
-  initial_status: planned
+optional_assurance_policy:
+  release_blocking: false
+  allowed_statuses: [available, deferred, verified]
+  initial_status: deferred
   gates:
     - id: p3_external_pilots
-      status: engaged
+      status: deferred
       minimum_count: 3
       maximum_count: 5
       evidence_artifacts: []
     - id: p3_independent_security_review
-      status: engaged
+      status: deferred
       evidence_artifacts: []
-      # Pending: real independent review report
+      # Optional: real independent review report

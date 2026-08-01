@@ -1,10 +1,12 @@
-schema_version: 1
-updated_at: "2026-07-31"
+schema_version: 2
+updated_at: "2026-08-01"
 phase: "Phase 3 — Enterprise Product"
 snapshot:
-  commit: "0fa2c5b06af68d301cce561b5d71ed4c496c561e"
-  dirty_worktree: false
-status_values: [planned, in_progress, blocked, completed]
+  evidence_base_commit: "37fdb5c48ad5ebce879045fba8712fe7b2cc49c0"
+  policy_change_commit: "the commit containing this file"
+  published: false
+status_values: [planned, in_progress, blocked, deferred, completed]
+release_requirement_values: [required, optional_assurance]
 
 tasks:
   - id: P0-001
@@ -747,28 +749,31 @@ tasks:
     priority: P3
     area: enterprise
     title: Evidence-based competitive capability assessment
-    status: in_progress
+    status: completed
     depends_on: [P3-ENT-006, P3-ENT-007, P3-ENT-012]
     exit_evidence: Dated primary-source comparison maps like-for-like capabilities, measured ReconForge evidence, deployment sovereignty, costs left unknown, limitations, and prohibited claims.
     completed_slices:
       - E-229 publishes a date-stamped, primary-source competitor map with explicit limitations for 13 dimensions, maps each row to bounded ReconForge evidence IDs, leaves unsupported cost assumptions explicit, and adds no superiority claims. It adds `docs/strategy/competitive-capability-matrix.md` for Phase 3 external-facing evidence discipline, while all compliance/commercial/pilot claims remain pending through `P3-EXT-001` and `P3-EXT-002`.
+      - E-251 closes the owner/team release requirement from the dated primary-source matrix and retained technical evidence. Optional external pilots or an independent review may strengthen later assurance wording but do not block team-controlled publication; unsupported independent, compliance, certification, universal-superiority, and Enterprise-ready claims remain prohibited.
   - id: P3-EXT-001
     priority: P3
     area: external_validation
     title: Three to five real controlled pilots
-    status: in_progress
+    status: deferred
+    release_requirement: optional_assurance
     depends_on: [P3-ENT-009, P3-ENT-012]
-    exit_evidence: At least three approved, scoped, real pilot records include environment, workflow, data authorization, outcomes, failures, user feedback, and allowed public wording; synthetic rehearsals do not qualify.
+    exit_evidence: Optional assurance only. If pursued later, at least three approved, scoped, real pilot records include environment, workflow, data authorization, outcomes, failures, user feedback, and allowed public wording; synthetic rehearsals do not qualify as external evidence.
     completed_slices:
-      - Awaiting three completed pilot records in `docs/execution/P3_EXT_001_PILOT_###.md`.
-      - E-248 adds a real-public-data candidate path without claiming external validation. Eleven exact responses from three official open-data publishers feed three closed experiments: Treasury debt JSON/CSV parity and debt equation, World Bank three-page JSON/CSV parity and FY24 component equation, and mixed-encoding UK public spending/reversal/reference observations. A clean-commit Windows/Python 3.14.6 live run matched 967/967 records with zero unmatched or exceptions; offline replay produced the same reproducibility digest. Manifest YAML and downloaded JSON use the central bounded structured-ingress policies; only the unavoidable mixed-encoding CSV reader remains a direct parser under exact inventory surface FI-023. SHA-pinned manual GitHub workflow, provenance verification, redacted reports, and an operator attestation template are ready, but the accepted external-operator count is zero. P3-EXT-001 remains in progress until three distinct independent humans run, attest, provide feedback, and pass upstream review.
+      - Deferred by owner decision in E-251; no external operator or profession-specific participant is required for owner/team release.
+      - E-248 adds a real-public-data candidate path without claiming external validation. Eleven exact responses from three official open-data publishers feed three closed experiments: Treasury debt JSON/CSV parity and debt equation, World Bank three-page JSON/CSV parity and FY24 component equation, and mixed-encoding UK public spending/reversal/reference observations. A clean-commit Windows/Python 3.14.6 live run matched 967/967 records with zero unmatched or exceptions; offline replay produced the same reproducibility digest. Manifest YAML and downloaded JSON use the central bounded structured-ingress policies; only the unavoidable mixed-encoding CSV reader remains a direct parser under exact inventory surface FI-023. SHA-pinned manual GitHub workflow, provenance verification, redacted reports, and an operator attestation template remain available if the optional assurance item is resumed; the accepted external-operator count is zero.
   - id: P3-EXT-002
     priority: P3
     area: external_validation
     title: Independent security review
-    status: in_progress
+    status: deferred
+    release_requirement: optional_assurance
     depends_on: [P3-ENT-004, P3-ENT-007, P3-ENT-009, P3-ENT-011]
-    exit_evidence: An independent qualified reviewer delivers a dated scoped report; findings have reproducible references, remediation state, retest evidence, and explicit residual-risk acceptance by an authorized human.
+    exit_evidence: Optional assurance only. If pursued later, an independent qualified reviewer delivers a dated scoped report; findings have reproducible references, remediation state, retest evidence, and explicit residual-risk acceptance by an authorized human.
     completed_slices:
-      - Awaiting independent review report in `docs/execution/P3_EXT_002_REVIEW_REPORT.md`.
-      - E-249 adds a bounded open-source independent-review intake protocol and preserves the human-review gate. It inventories automated evidence and defines reviewer independence, private disclosure, scope, finding, remediation, retest, and residual-risk requirements. Live GitHub API verification on 2026-08-01 reported private vulnerability reporting disabled, so solicitation remains blocked until the repository owner enables and harmlessly tests that channel. No reviewer or report exists; P3-EXT-002 remains in progress.
+      - Deferred by owner decision in E-251; an independent reviewer is not required for owner/team release.
+      - E-249 adds a bounded open-source independent-review intake protocol for optional future assurance. It inventories automated evidence and defines reviewer independence, private disclosure, scope, finding, remediation, retest, and residual-risk requirements. Live GitHub API verification on 2026-08-01 reported private vulnerability reporting disabled. No reviewer or report exists, and none is required for owner/team release under E-251.

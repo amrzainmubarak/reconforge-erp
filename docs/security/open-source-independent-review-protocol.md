@@ -1,6 +1,6 @@
 # Open-Source Independent Security Review Protocol
 
-Status: intake blocked until a private disclosure channel is operational
+Status: optional assurance protocol; deferred by owner decision E-251
 
 Protocol version: 1
 
@@ -9,15 +9,15 @@ Date checked: 2026-08-01
 ## Boundary
 
 Open-source scanners and reproducible public-data runs provide useful technical
-evidence, but they do not constitute an independent security review. Closing
-`P3-EXT-002` requires a qualified independent human reviewer, an explicit scope,
+evidence, but they do not constitute an independent security review. If optional
+`P3-EXT-002` assurance is resumed, it requires a qualified independent human reviewer, an explicit scope,
 a dated report, reproducible findings, remediation/retest state, and residual
 risk acceptance by an authorized human.
 
 Private vulnerability reporting is currently disabled for
 `amrzainmubarak/reconforge-erp`; this was read through GitHub's repository API on
 2026-08-01 and no setting was changed. The repository owner must enable it before
-public review solicitation. Until a private channel is verified end to end,
+any optional public review solicitation. Until a private channel is verified end to end,
 vulnerability details must not be filed in a public issue, pull request,
 discussion, operator attestation, or public-data artifact.
 
@@ -81,25 +81,27 @@ remains unverified.
 
 ## Finding lifecycle and fail-closed exit
 
-Each finding must include a stable ID, severity rationale, affected exact commit
+Each finding received through any channel must include a stable ID, severity rationale, affected exact commit
 and artifact, safe reproduction, impact, remediation owner, target state, and
 disclosure classification. Critical/high unresolved findings keep publication
 blocked unless an authorized human documents time-bounded risk acceptance with
-compensating controls; acceptance is not remediation.
+compensating controls; acceptance is not remediation. This known-finding rule
+remains a release control even though obtaining an independent review is optional.
 
 Retest must reference the fixing commit, repeat the original reproduction, state
 the result, and identify regression tests. The final report must use
 `docs/execution/P3_EXT_002_INDEPENDENT_SECURITY_REVIEW_TEMPLATE.md` and be signed
 or linked to a verifiable formal statement. An upstream maintainer verifies the
 artifact and a separate authorized human accepts residual risk. Only then may
-`P3-EXT-002` move to `verified`.
+optional `P3-EXT-002` move to `verified`. Its deferred state does not block an
+owner/team release and must not be represented as independent assurance.
 
-## Current next action
+## Next action if optional assurance is resumed
 
 1. Repository owner enables GitHub private vulnerability reporting.
 2. Maintainer performs a harmless private test report and closes it, proving the
    channel works without public disclosure.
 3. A qualified independent reviewer accepts the scope and conflict statement.
 4. The reviewer works from an exact commit and returns the dated report privately.
-5. Findings are remediated/retested or explicitly accepted before any closure or
-   publication claim.
+5. Findings are remediated/retested or explicitly accepted before claiming the
+   optional independent assurance item.

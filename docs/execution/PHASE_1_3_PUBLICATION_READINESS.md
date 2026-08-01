@@ -1,86 +1,75 @@
-# Phase 1-3 Publication Readiness Checklist
+# Phase 1-3 Owner/Team Publication Readiness
 
-> Status at generation time: `docs/execution/PHASE_1_3_EXECUTION_MATRIX.yaml` remains
-`all_tasks_completed: false` and `all_required_gates_verified: false` until external gates are fulfilled.
+> Governing decision: E-251 / D236. The repository owner and project team are
+> the release authority. External operators and an independent security review
+> are optional assurance items and do not block a team-controlled publication.
 
-## 1) External gates that must be closed first
+## 1) Required scope
 
-1. **P3-EXT-001 — Real controlled pilots (3–5)**
-   - Evidence files: add in `docs/execution/` at least three pilot records with environment, data authorization, workflow, outcomes, failures, user feedback, and allowed wording.
-   - Pilot record template: `docs/execution/P3_EXT_001_CONTROLLED_PILOT_EVIDENCE_TEMPLATE.md`
-   - Reproducible real-public-data path: `docs/validation/public-financial-evidence.md`
-   - Independent operator template: `docs/execution/P3_EXT_001_OPEN_SOURCE_OPERATOR_ATTESTATION_TEMPLATE.md`
-   - Current accepted external operator count: `0`; the retained maintainer run is technical evidence only.
-   - Evidence index: `docs/execution/P3_EXTERNAL_GATE_EVIDENCE_INDEX.md`
-   - Required status in matrix: `external_gate_policy.gates.p3_external_pilots.status = verified`.
-   - Required evidence list in matrix/task state:
-      - `completed_slices` for `P3-ENT-013` must include one bounded, de-identified pilot evidence map.
-   - Guard to re-check:
-     - `P3-ENT-013` cannot be set `completed` before this is verified.
+- Required non-P0 tasks: `41/41` completed.
+- Phase 1 required tasks: `10/10` completed.
+- Phase 2 required tasks: `18/18` completed.
+- Phase 3 required tasks: `13/13` completed.
+- Required phase gates: verified from retained code, test, runtime, build,
+  migration, restore, security, deterministic-replay, and operational evidence.
+- Release authority: repository owner and authorized project team.
 
-2. **P3-EXT-002 — Independent security review**
-   - Evidence files: add named reviewer identity, scope, date, findings, remediation status, and residual-risk acceptance.
-   - Review template: `docs/execution/P3_EXT_002_INDEPENDENT_SECURITY_REVIEW_TEMPLATE.md`
-   - Review intake protocol: `docs/security/open-source-independent-review-protocol.md`
-   - Current intake blocker: GitHub private vulnerability reporting was disabled when checked on 2026-08-01; enable and harmlessly verify it before soliciting findings.
-   - Evidence index: `docs/execution/P3_EXTERNAL_GATE_EVIDENCE_INDEX.md`
-   - Required status in matrix: `external_gate_policy.gates.p3_independent_security_review.status = verified`.
-   - Scope must remain explicit:
-     - no certified/compliance/production-claims without independent evidence.
+`P3-EXT-001` and `P3-EXT-002` are retained as `optional_assurance` items with
+`deferred` status. No accountant, external operator, profession-specific
+participant, or independent reviewer is required for this release policy.
 
-## 2) Internal blockers before publish
+## 2) Required pre-publication gates
 
-Keep these as hard blockers even after external gates:
+Run on the exact candidate commit:
 
-- `P3-ENT-013` remains an internal blocker:
-  - `P3-ENT-013` is publication-safe only after bounded pilot + security-gate verification.
-- `P3-ENT-013` must remain dependent on:
-  - completion of its published competitive evidence mapping,
-  - both external gates above.
-- `P3-ENT-013` should only close after publication-safe competitive matrix evidence is complete and bounded.
+- `python -m ruff check .`
+- `python -m mypy reconforge`
+- `python -m pytest`
+- `python -m bandit -q -r reconforge`
+- `python -m pip_audit`
+- `python -m build --no-isolation`
+- `git diff --check`
+- `npm --prefix apps/web ci`
+- `npm --prefix apps/web run typecheck`
+- `npm --prefix apps/web run test:run`
+- `npm --prefix apps/web run build`
+- `npm --prefix apps/web run e2e`
+- `python -m pytest tests/test_phase_1_3_execution_contract.py`
+- `python -m pytest tests/test_phase_1_exit_audit.py tests/test_phase_2_exit_audit.py`
 
-## 3) Release readiness commands (exact minimum for final gating pass)
+Publishing also requires a clean worktree, reviewed release diff, rollback plan,
+and green required GitHub checks on the published candidate. A failed required
+technical gate, a known unaccepted Critical/High vulnerability, or a dirty
+release tree remains a hard blocker.
 
-Re-run before final claim:
+## 3) Optional assurance
 
-- Python:
-  - `python -m ruff check .`
-  - `python -m mypy reconforge`
-  - `python -m pytest`
-  - `python -m bandit -q -r reconforge`
-  - `python -m pip_audit`
-  - `python -m build --no-isolation`
-  - `git diff --check`
-- Web:
-  - `npm --prefix apps/web ci`
-  - `npm --prefix apps/web run typecheck`
-  - `npm --prefix apps/web run test:run`
-  - `npm --prefix apps/web run build`
-- Release contract tests:
-  - `python -m pytest tests/test_phase_1_3_execution_contract.py`
-  - `python -m pytest tests/test_phase_1_exit_audit.py`
-  - `python -m pytest tests/test_phase_2_exit_audit.py`
+- External public-data pilots may be collected later under `P3-EXT-001`.
+- An independent security review may be commissioned later under `P3-EXT-002`.
+- These items can support only the extra claims their evidence proves. Their
+  absence does not block owner/team publication.
+- Internal or automated evidence must never be relabeled as customer evidence,
+  an independent review, certification, or compliance assessment.
 
-## 4) Pre-publish hard gates (must be true before PR merge/push)
+## 4) Claim boundary
 
-1. Update `docs/execution/PHASE_1_3_EXECUTION_MATRIX.yaml`:
-   - `all_tasks_completed: true`
-   - `all_required_gates_verified: true`
-   - both external gates status to `verified`
-   - evidence references in `completed_slices` and `external_gate_policy.evidence_artifacts` are current.
-2. Re-open `docs/execution/STATE.md` for the same state with no stale historical-only blocker notes.
-3. Re-open `docs/execution/EVIDENCE.md` and keep historical rerun failures only as historical context (non-blocking), with current successful reruns explicitly present.
-4. Re-run test: `tests/test_phase_1_3_execution_contract.py` and confirm
-   `test_phase_three_has_no_unsupported_completion_shortcut` passes.
-5. Confirm git/workspace conditions from AGENTS:
-   - clean rationale for final branch,
-   - no publication from dirty worktree,
-   - explicit draft PR and rollback plan,
-   - no unsupported marketing claims.
+Publication may describe only the bounded features and measurements present in
+`CLAIMS_EVIDENCE_MATRIX.md`. The following remain prohibited without separate
+evidence:
 
-## 5) Publication decision
+- universal superiority or "best in the world";
+- unqualified `Enterprise-ready` or `Bank-grade`;
+- certification or compliance claims;
+- customer, external-pilot, or independent-review claims;
+- scale, SLO, HA, DR, provider, or interoperability claims outside the measured
+  environments.
 
-After all above are verified, set publication status as:
+## 5) Decision rule
 
-- **No-Go**: if any one item above is missing or stale.
-- **Go**: only when external pilots, independent security review, and matrix closure are all recorded as deterministic evidence and command gates are green.
+- **Go:** exact candidate passes every required local and GitHub gate; owner/team
+  approves the diff, wording, version, and rollback plan.
+- **No-Go:** any required technical gate fails, a release blocker is unresolved,
+  the candidate differs from the tested commit, or public wording exceeds the
+  evidence matrix.
+
+Optional external assurance status does not change this decision rule.

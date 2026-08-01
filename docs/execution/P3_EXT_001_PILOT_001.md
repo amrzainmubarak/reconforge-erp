@@ -1,5 +1,8 @@
 # P3-EXT-001: Controlled Pilot Record (Pilot-001)
 
+> Historical internal run. E-251/D236 reclassifies external pilots as optional
+> assurance; this record does not block owner/team release and is not external.
+
 Status: completed  
 Required status for closure: `completed`
 

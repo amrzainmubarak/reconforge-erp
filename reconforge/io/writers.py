@@ -145,8 +145,9 @@ def write_json(payload: dict[str, Any], output_dir: Path | str, name: str) -> Pa
     """Write structured JSON."""
 
     output_path = ensure_output_dir(output_dir) / f"{name}.json"
-    with output_path.open("w", encoding="utf-8") as handle:
+    with output_path.open("w", encoding="utf-8", newline="\n") as handle:
         json.dump(payload, handle, indent=2, default=json_default)
+        handle.write("\n")
     return output_path
 
 

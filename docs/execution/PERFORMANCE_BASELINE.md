@@ -18,12 +18,12 @@ a full production capacity claim.
   - `100k`: 100,000 total rows (50,000 left + 50,000 right), 20 partitions.
 - Engine: `local-deterministic-partitioned` (single-process, local algorithm path).
 - Seed: `7`, partition max rows: `10,000`, amount fractional digits: `2`.
-- Suite output:
-  - `output/reconforge-plan-benchmarks/plan1-3/reconciliation-execution-benchmark-suite.json`
-  - `output/reconforge-plan-benchmarks/plan1-3/reconciliation-execution-benchmark-suite.md`
-- Per-profile output:
-  - `output/reconforge-plan-benchmarks/plan1-3/10k/reconciliation-execution.json`
-  - `output/reconforge-plan-benchmarks/plan1-3/100k/reconciliation-execution.json`
+- Version-controlled suite evidence:
+  - `docs/execution/benchmarks/phase2/reconciliation-execution-benchmark-suite.json`
+  - `docs/execution/benchmarks/phase2/reconciliation-execution-benchmark-suite.md`
+- Version-controlled per-profile evidence:
+  - `docs/execution/benchmarks/phase2/10k/reconciliation-execution.json`
+  - `docs/execution/benchmarks/phase2/100k/reconciliation-execution.json`
 
 ## Results
 
@@ -34,9 +34,10 @@ a full production capacity claim.
 
 Baseline signatures and file digests:
 
-- Suite signature: `f370bf114f1d7414642068ba555c94fe7c8ef076d6934a3a2d8c93acead48344`
-- 10k output SHA-256: `53ab682fea85e428507b26f0e315e34d69bfd71982f0c36315ce66cbcdc9c8f8`
-- 100k output SHA-256: `40927c53c39c24cc271278ecd54fdc970e801cbc7a2df1b71e6b4e225d1a6220`
+- Suite signature: `ae0fd0bae04630491c25d0dc9756121ae9e9a457b0ebfab94fdcdba6b659e59e`
+- 10k output SHA-256: `6dd61519ffdc9f8e63dcc18dadfe203a288a4c5cc6d57ef321e0dfbf2e3c586f`
+- 100k output SHA-256: `343408e5fa82c47b4a523ff06dfe09af48bc0f614d5ab47e7d075ddae0bbc584`
+- Published JSON uses canonical LF newlines and a final newline, so the file digests are stable across supported operating systems.
 
 Command:
 
@@ -53,7 +54,7 @@ run_reconciliation_execution_benchmark_suite(
         ReconciliationExecutionBenchmarkProfile(profile_id="10k", total_records=10_000, partition_count=2, seed=7),
         ReconciliationExecutionBenchmarkProfile(profile_id="100k", total_records=100_000, partition_count=20, seed=7),
     ),
-    output_dir=Path("output/reconforge-plan-benchmarks/plan1-3"),
+    output_dir=Path("docs/execution/benchmarks/phase2"),
 )
 PY
 ```

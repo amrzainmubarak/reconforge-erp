@@ -501,8 +501,10 @@ def _write_execution_metrics(
     (target / "reconciliation-execution.md").write_text(
         "# Reconciliation Execution Benchmark\n\n"
         "| Metric | Value |\n| --- | --- |\n"
-        + "\n".join(f"| {key} | {value} |" for key, value in metrics.to_dict().items()),
+        + "\n".join(f"| {key} | {value} |" for key, value in metrics.to_dict().items())
+        + "\n",
         encoding="utf-8",
+        newline="\n",
     )
 
 
@@ -550,7 +552,9 @@ def run_reconciliation_execution_benchmark_suite(
         else:
             output_json_path = profile_output_dir / "reconciliation-execution.json"
             output_json = (
-                str(output_json_path.relative_to(base_output)) if base_output is not None else str(output_json_path)
+                output_json_path.relative_to(base_output).as_posix()
+                if base_output is not None
+                else output_json_path.as_posix()
             )
             output_json_bytes = output_json_path.stat().st_size
             output_json_sha256 = _sha256_for_file(output_json_path)
@@ -596,19 +600,23 @@ def run_reconciliation_execution_benchmark_suite(
     if base_output is not None:
         suite_payload["suite_signature"] = suite_result.suite_signature
         write_json(suite_payload, base_output, "reconciliation-execution-benchmark-suite")
+        suite_rows = (
+            f"| {profile_result.profile_id} | {profile_result.metrics.result_signature[:16]} | "
+            f"{profile_result.metrics.runtime_seconds} | {profile_result.metrics.peak_memory_mb} | "
+            f"{profile_result.metrics.candidate_count_max} | {profile_result.metrics.candidate_count_total} |"
+            for profile_result in suite_profiles
+        )
         suite_summary = "\n".join(
-            "| Profile | Signature | Runtime (s) | Peak MB | Candidate max | Candidate count total |\n"
-            "| --- | --- | --- | --- | --- | --- |\n"
-            + "\n".join(
-                f"| {profile_result.profile_id} | {profile_result.metrics.result_signature[:16]} | "
-                f"{profile_result.metrics.runtime_seconds} | {profile_result.metrics.peak_memory_mb} | "
-                f"{profile_result.metrics.candidate_count_max} | {profile_result.metrics.candidate_count_total} |\n"
-                for profile_result in suite_profiles
+            (
+                "| Profile | Signature | Runtime (s) | Peak MB | Candidate max | Candidate count total |",
+                "| --- | --- | --- | --- | --- | --- |",
+                *suite_rows,
             )
         )
         (base_output / "reconciliation-execution-benchmark-suite.md").write_text(
-            "# Reconciliation Execution Benchmark Suite\n\n" + suite_summary,
+            "# Reconciliation Execution Benchmark Suite\n\n" + suite_summary + "\n",
             encoding="utf-8",
+            newline="\n",
         )
     return suite_result
 

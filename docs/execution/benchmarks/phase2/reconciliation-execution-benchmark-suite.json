@@ -1,0 +1,86 @@
+{
+  "suite_signature": "ae0fd0bae04630491c25d0dc9756121ae9e9a457b0ebfab94fdcdba6b659e59e",
+  "profile_count": 2,
+  "profiles": [
+    {
+      "profile_id": "10k",
+      "profile": {
+        "profile_id": "10k",
+        "total_records": 10000,
+        "partition_count": 2,
+        "partition_max_records": 10000,
+        "seed": 7,
+        "amount_fractional_digits": 2,
+        "streaming": false
+      },
+      "output_json": "10k/reconciliation-execution.json",
+      "output_json_bytes": 962,
+      "output_json_sha256": "6dd61519ffdc9f8e63dcc18dadfe203a288a4c5cc6d57ef321e0dfbf2e3c586f",
+      "result_signature": "4d1a8c3469e4c4a266c0cbcfc4ff57dc93addc2ff078cbcad677045f5b3ca2ea",
+      "result_count": 5000,
+      "matched_rows": 5000,
+      "exception_count": 0,
+      "runtime_seconds": 10.3894,
+      "peak_memory_mb": 44.27,
+      "candidate_count_total": 5000,
+      "candidate_count_max": 1,
+      "candidate_count_mean": 1.0,
+      "cpu_time_seconds": 10.4219,
+      "environment_metadata": {
+        "collected_at_utc": "2026-07-27T19:16:28.026359Z",
+        "python_version": "3.14.6",
+        "python_implementation": "CPython",
+        "platform": "Windows-11-10.0.26200-SP0",
+        "machine": "AMD64",
+        "processor": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+        "cpu_count": 16,
+        "working_directory": "F:\\reconforge-erp"
+      }
+    },
+    {
+      "profile_id": "100k",
+      "profile": {
+        "profile_id": "100k",
+        "total_records": 100000,
+        "partition_count": 20,
+        "partition_max_records": 10000,
+        "seed": 7,
+        "amount_fractional_digits": 2,
+        "streaming": false
+      },
+      "output_json": "100k/reconciliation-execution.json",
+      "output_json_bytes": 971,
+      "output_json_sha256": "343408e5fa82c47b4a523ff06dfe09af48bc0f614d5ab47e7d075ddae0bbc584",
+      "result_signature": "9e10d8d7ce5d6e280811a505de78607840c72117045636b461cde984434f10cc",
+      "result_count": 50000,
+      "matched_rows": 50000,
+      "exception_count": 0,
+      "runtime_seconds": 141.871,
+      "peak_memory_mb": 354.43,
+      "candidate_count_total": 50000,
+      "candidate_count_max": 1,
+      "candidate_count_mean": 1.0,
+      "cpu_time_seconds": 142.6562,
+      "environment_metadata": {
+        "collected_at_utc": "2026-07-27T19:18:51.450250Z",
+        "python_version": "3.14.6",
+        "python_implementation": "CPython",
+        "platform": "Windows-11-10.0.26200-SP0",
+        "machine": "AMD64",
+        "processor": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+        "cpu_count": 16,
+        "working_directory": "F:\\reconforge-erp"
+      }
+    }
+  ],
+  "environment_metadata": {
+    "collected_at_utc": "2026-07-27T19:16:28.026359Z",
+    "python_version": "3.14.6",
+    "python_implementation": "CPython",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "processor": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+    "cpu_count": 16,
+    "working_directory": "F:\\reconforge-erp"
+  }
+}

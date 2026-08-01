@@ -7488,15 +7488,15 @@ Scope:
 - Partitioning: 2 and 20 partitions respectively (`partition_max_records=10,000`).
 - Seed: 7; amount fractional digits: 2.
 - Engine: local-deterministic-partitioned (`LocalDeterministicMatcherAdapter`).
-- Profile output files: `output/reconforge-plan-benchmarks/plan1-3/10k/reconciliation-execution.json` and `.../100k/reconciliation-execution.json`.
+- Version-controlled profile output files: `docs/execution/benchmarks/phase2/10k/reconciliation-execution.json` and `.../100k/reconciliation-execution.json`.
 
 Suite artifact:
 
-- Suite signature: `f370bf114f1d7414642068ba555c94fe7c8ef076d6934a3a2d8c93acead48344`.
-- Manifest: `output/reconforge-plan-benchmarks/plan1-3/reconciliation-execution-benchmark-suite.json`.
+- Suite signature: `ae0fd0bae04630491c25d0dc9756121ae9e9a457b0ebfab94fdcdba6b659e59e`.
+- Manifest: `docs/execution/benchmarks/phase2/reconciliation-execution-benchmark-suite.json`.
 - Output file hashes:
-  - `10k/reconciliation-execution.json`: `53ab682fea85e428507b26f0e315e34d69bfd71982f0c36315ce66cbcdc9c8f8`
-  - `100k/reconciliation-execution.json`: `40927c53c39c24cc271278ecd54fdc970e801cbc7a2df1b71e6b4e225d1a6220`
+  - `10k/reconciliation-execution.json`: `6dd61519ffdc9f8e63dcc18dadfe203a288a4c5cc6d57ef321e0dfbf2e3c586f`
+  - `100k/reconciliation-execution.json`: `343408e5fa82c47b4a523ff06dfe09af48bc0f614d5ab47e7d075ddae0bbc584`
 
 | Profile | Runtime (s) | CPU (s) | Peak MB | Rows | Matched | Exceptions | Result signature |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |

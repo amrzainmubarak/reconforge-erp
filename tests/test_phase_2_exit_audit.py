@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from pathlib import Path, PureWindowsPath
+from pathlib import Path
 from typing import Any
 
 import yaml
@@ -38,15 +38,35 @@ def test_phase_two_exit_audit_file_evidence_exists() -> None:
 
 
 def test_phase_two_benchmark_artifacts_are_hash_bound_and_hardware_scoped() -> None:
-    suite_path = ROOT / "output/reconforge-plan-benchmarks/plan1-3/reconciliation-execution-benchmark-suite.json"
+    suite_path = ROOT / "docs/execution/benchmarks/phase2/reconciliation-execution-benchmark-suite.json"
     suite = json.loads(suite_path.read_text(encoding="utf-8"))
     profiles = {item["profile_id"]: item for item in suite["profiles"]}
+    signature_payload = {
+        "profiles": [
+            {
+                "profile_id": profile["profile_id"],
+                "result_signature": profile["result_signature"],
+                "output_json_sha256": profile["output_json_sha256"],
+            }
+            for profile in suite["profiles"]
+        ]
+    }
+    canonical_signature_payload = json.dumps(
+        signature_payload,
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
 
     assert set(profiles) == {"10k", "100k"}
+    assert hashlib.sha256(canonical_signature_payload).hexdigest() == suite["suite_signature"]
     assert profiles["10k"]["profile"]["total_records"] == 10_000
     assert profiles["100k"]["profile"]["total_records"] == 100_000
     for profile in profiles.values():
-        relative = Path(*PureWindowsPath(profile["output_json"]).parts)
+        relative = Path(profile["output_json"])
+        assert not relative.is_absolute()
+        assert ".." not in relative.parts
+        assert "\\" not in profile["output_json"]
         payload = (suite_path.parent / relative).read_bytes()
         assert len(payload) == profile["output_json_bytes"]
         assert hashlib.sha256(payload).hexdigest() == profile["output_json_sha256"]

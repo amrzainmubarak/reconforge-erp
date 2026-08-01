@@ -8,6 +8,8 @@ build/
 dist/
 *.egg-info/
 benchmarks/
+!docs/execution/benchmarks/
+!docs/execution/benchmarks/**
 output/
 demo_workspace/
 .DS_Store

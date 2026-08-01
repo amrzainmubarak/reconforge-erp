@@ -413,19 +413,35 @@ def test_reconciliation_execution_benchmark_suite_writes_manifest_and_file_diges
 
     assert suite.suite_signature
     assert suite.output_dir is not None
-    assert (tmp_path / "execution-suite" / "reconciliation-execution-benchmark-suite.json").exists()
-    manifest = json.loads(
-        (tmp_path / "execution-suite" / "reconciliation-execution-benchmark-suite.json").read_text(encoding="utf-8")
-    )
+    manifest_path = tmp_path / "execution-suite" / "reconciliation-execution-benchmark-suite.json"
+    manifest_bytes = manifest_path.read_bytes()
+    assert manifest_bytes.endswith(b"}\n")
+    assert b"\r\n" not in manifest_bytes
+    manifest = json.loads(manifest_bytes)
     assert manifest["suite_signature"] == suite.suite_signature
     assert manifest["profile_count"] == 2
     assert len(manifest["profiles"]) == 2
     assert len(suite.profiles) == 2
     for profile in suite.profiles:
+        assert "\\" not in profile.output_json
         output_path = Path(suite.output_dir) / profile.output_json
         assert output_path.exists()
-        digest = hashlib.sha256(output_path.read_bytes()).hexdigest()
+        output_bytes = output_path.read_bytes()
+        assert output_bytes.endswith(b"}\n")
+        assert b"\r\n" not in output_bytes
+        digest = hashlib.sha256(output_bytes).hexdigest()
         assert profile.output_json_sha256 == digest
+
+    summary_lines = (
+        tmp_path / "execution-suite" / "reconciliation-execution-benchmark-suite.md"
+    ).read_text(encoding="utf-8").splitlines()
+    assert summary_lines[:4] == [
+        "# Reconciliation Execution Benchmark Suite",
+        "",
+        "| Profile | Signature | Runtime (s) | Peak MB | Candidate max | Candidate count total |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    assert len(summary_lines) == 6
 
 
 def test_reconciliation_execution_regression_gate_detects_signature_and_runtime_delta() -> None:

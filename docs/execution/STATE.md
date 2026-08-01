@@ -642,12 +642,12 @@ for 10K and 100K synthetic profile outputs:
 
 - `run_reconciliation_execution_benchmark_suite` executes profile-based runs and
   writes a suite manifest with per-profile SHA-256/digest and metadata.
-- 10K and 100K outputs are persisted at
-  `output/reconforge-plan-benchmarks/plan1-3/10k/reconciliation-execution.json`
+- 10K and 100K outputs are retained as version-controlled evidence at
+  `docs/execution/benchmarks/phase2/10k/reconciliation-execution.json`
   and
-  `output/reconforge-plan-benchmarks/plan1-3/100k/reconciliation-execution.json`.
+  `docs/execution/benchmarks/phase2/100k/reconciliation-execution.json`.
 - Suite signature:
-  `f370bf114f1d7414642068ba555c94fe7c8ef076d6934a3a2d8c93acead48344`.
+  `ae0fd0bae04630491c25d0dc9756121ae9e9a457b0ebfab94fdcdba6b659e59e`.
 - Environment for these runs is a closed Windows 11 local boundary:
   `Python 3.14.6`, 16 CPU cores, `AMD64` platform metadata, and UTC timestamps
   in each payload.

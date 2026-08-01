@@ -52,7 +52,7 @@ gates:
     status: verified
     evidence:
       - docs/execution/PERFORMANCE_BASELINE.md
-      - output/reconforge-plan-benchmarks/plan1-3/reconciliation-execution-benchmark-suite.json
+      - docs/execution/benchmarks/phase2/reconciliation-execution-benchmark-suite.json
       - tests/test_generator_benchmark_engines.py
 limitations:
   - benchmark_is_single_host_single_process

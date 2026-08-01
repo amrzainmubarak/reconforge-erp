@@ -339,7 +339,7 @@ def test_public_financial_evidence_rejects_duplicate_json_keys_and_truncated_csv
     duplicate_manifest = deepcopy(manifest.model_dump(mode="json"))
     duplicate_manifest["artifacts"][0]["expected_sha256"] = hashlib.sha256(duplicate_json).hexdigest()
     duplicate_manifest["artifacts"][0]["max_bytes"] = len(duplicate_json) + 100
-    with pytest.raises(PublicFinancialEvidenceError, match="duplicate object key"):
+    with pytest.raises(PublicFinancialEvidenceError, match="not valid declared JSON"):
         run_public_financial_evidence(
             PublicFinancialEvidenceManifest.model_validate(duplicate_manifest),
             {**contents, "treasury-json": duplicate_json},

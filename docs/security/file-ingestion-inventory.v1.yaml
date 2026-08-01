@@ -1,6 +1,6 @@
 schema_version: 1
 inventory_id: reconforge-file-ingestion
-reviewed_on: "2026-07-26"
+reviewed_on: "2026-08-01"
 owner: platform-security
 claim_boundary: >-
   This inventory proves repository-visible parser coverage and bounded controls only. It does not prove
@@ -490,6 +490,27 @@ surfaces:
       - Local directory symlinks and path traversal are rejected, but filesystem-level provenance and host-loss durability are out of scope of this parser contract.
     next_action: Bind offline-bundle trust to operator-reviewed signature and host-loss/retention evidence before treating this as a production sovereign-readiness claim.
     next_action: Add authenticated operator key custody and host-loss durability drills without weakening fail-isolate recovery.
+  - id: FI-023
+    name: Pinned public financial evidence inputs
+    module_ids: [reconciliation.core]
+    trust: untrusted-local
+    entrypoints:
+      - reconforge/benchmark/public_financial.py::load_public_financial_manifest
+      - reconforge/benchmark/public_financial.py::_strict_csv_rows
+      - reconforge/benchmark/public_financial.py::_strict_json
+      - reconforge/benchmark/public_financial.py::run_public_financial_evidence
+    formats: [csv, json, yaml]
+    parser_families: [csv-stdlib, json-stdlib, pyyaml]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_public_financial_evidence.py, tests/test_public_financial_evidence_workflow.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - Exact HTTPS hosts, response ceilings, media types, raw hashes, schemas, encodings, and Decimal rules bound the downloaded public snapshots but do not cryptographically authenticate the publisher or prevent an upstream correction from failing the run.
+      - The report excludes raw supplier and invoice identifiers, but local disposable downloads remain operator-controlled files and must not be committed or treated as customer or audit evidence.
+      - A successful maintainer or automated run is not an external pilot, independent security review, production deployment, certification, or compliance assessment.
+    next_action: Obtain three accepted independent operator attestations and a separately scoped human security review without weakening the parser or claim boundaries.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader
@@ -526,6 +547,11 @@ direct_tabular_parser_allowlist:
     call_count: 2
     surface_id: FI-012
     rationale: Client-pack CSV redaction performs a bounded duplicate-header preflight and then streams generated rows into a controlled temporary copy.
+  - path: reconforge/benchmark/public_financial.py
+    parser: csv.DictReader
+    call_count: 1
+    surface_id: FI-023
+    rationale: Parses only size- and hash-verified public responses after strict decoding, then requires an exact unique header set and complete rows before financial normalization.
 direct_json_parser_allowlist:
   - path: reconforge/upgrade/application_adapter.py
     parser: json.loads

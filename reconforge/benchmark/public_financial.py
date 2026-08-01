@@ -15,9 +15,14 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 from urllib.parse import urlsplit
 
-import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from reconforge.io.structured import (
+    StructuredDocumentError,
+    StructuredDocumentPolicy,
+    parse_json_document,
+    read_yaml_document,
+)
 from reconforge.reconciliation.deterministic_engine import DeterministicMatchingEngine
 from reconforge.reconciliation.matching import RECORD_IDENTITY_POLICY
 
@@ -40,6 +45,22 @@ REPORT_SCHEMA = "reconforge-public-financial-evidence-report-v1"
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _SAFE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{2,79}$")
 _MONEY = re.compile(r"^-?[0-9]+(?:\.[0-9]{1,2})?$")
+_PUBLIC_MANIFEST_POLICY = StructuredDocumentPolicy(
+    max_file_bytes=256 * 1024,
+    max_nodes=20_000,
+    max_depth=32,
+    max_collection_items=5_000,
+    max_scalar_characters=8_192,
+    max_yaml_aliases=8,
+)
+_PUBLIC_JSON_POLICY = StructuredDocumentPolicy(
+    max_file_bytes=5_000_000,
+    max_nodes=300_000,
+    max_depth=32,
+    max_collection_items=100_000,
+    max_scalar_characters=1_000_000,
+    max_yaml_aliases=1,
+)
 _WORLD_BANK_NUMERIC_FIELDS = frozenset(
     {
         "development_policy",
@@ -306,9 +327,9 @@ def load_public_financial_manifest(path: Path | str) -> PublicFinancialEvidenceM
     """Safely parse and close one public-evidence manifest."""
 
     try:
-        raw = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+        raw = read_yaml_document(path, policy=_PUBLIC_MANIFEST_POLICY)
         return PublicFinancialEvidenceManifest.model_validate(raw)
-    except (OSError, yaml.YAMLError, ValueError) as exc:
+    except (OSError, StructuredDocumentError, ValueError) as exc:
         raise PublicFinancialEvidenceError("Public financial evidence manifest is invalid.") from exc
 
 
@@ -388,29 +409,15 @@ def _strict_csv_rows(content: bytes, spec: ArtifactSpec, expected_fields: Sequen
     return [{key: str(value) for key, value in row.items()} for row in rows], encoding
 
 
-def _closed_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    value: dict[str, Any] = {}
-    for key, item in pairs:
-        if key in value:
-            raise PublicFinancialEvidenceError("Public financial JSON contains a duplicate object key.")
-        value[key] = item
-    return value
-
-
-def _reject_json_constant(value: str) -> object:
-    raise PublicFinancialEvidenceError(f"Public financial JSON contains prohibited constant {value}.")
-
-
 def _strict_json(content: bytes, spec: ArtifactSpec) -> dict[str, Any]:
     try:
         decoded = content.decode(spec.encoding, errors="strict")
-        value = json.loads(
+        value = parse_json_document(
             decoded,
-            parse_float=Decimal,
-            parse_constant=_reject_json_constant,
-            object_pairs_hook=_closed_json_object,
+            preserve_float_lexemes=True,
+            policy=_PUBLIC_JSON_POLICY,
         )
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+    except (UnicodeDecodeError, StructuredDocumentError) as exc:
         raise PublicFinancialEvidenceError(f"Artifact {spec.id} is not valid declared JSON.") from exc
     if not isinstance(value, dict):
         raise PublicFinancialEvidenceError(f"Artifact {spec.id} must contain a JSON object.")

@@ -10536,3 +10536,104 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   GitHub checks had not completed and no remote pass was claimed.
 - No merge, tag, GitHub Release, package publication, deployment, production
   mutation, repository-setting change, or readiness/superiority claim occurred.
+
+## E-254: Non-posting consolidation ownership, NCI, and elimination worksheet
+
+- Date/timezone: 2026-08-01, Africa/Cairo.
+- Base: exact green Draft PR #67 head
+  `836bdc5f75041a2967a51eecfd51dad6c94cb3e6` on branch
+  `codex/consolidation-translation-core`.
+- Candidate branch: `codex/consolidation-close-lifecycle`. It remained local
+  and unpublished at this evidence boundary; no remote check is inferred.
+- Scope: a deterministic worksheet-v1 calculation over a replay-valid
+  P4-FIN-001 translation result. It has no posting effect and makes no database,
+  ledger, source-system, ERP, bank, or production mutation.
+
+### Financial correctness and governance evidence
+
+- Ownership interests use exact finite `Decimal`, explicit inclusive effective
+  dates, source digests, and distinct preparer/approver identities. Active
+  interests may not overlap, every non-root entity has exactly one controlling
+  parent above 50 percent, and the active graph must be rooted and acyclic.
+  Ownership approval and elimination preparation may not postdate worksheet
+  preparation.
+- Effective ownership is the exact product of the unique path from group root
+  to entity. The result retains direct/effective/NCI percentages and the exact
+  interest path so indirect ownership is reproducible rather than inferred from
+  row order.
+- NCI v1 presents translated net assets as `Asset + Liability` and current-period
+  profit as `-(Income + Expense)`. It retains unrounded allocation, currency-
+  policy rounded allocation, and rounding delta. This is presentation evidence,
+  not acquisition accounting, goodwill, equity-method accounting, an ownership-
+  change policy, a journal, or a statutory statement.
+- Each elimination proposal binds at least two group entities, explicit source
+  references and digests, reporting-currency `Money`, unique line identities,
+  and account-type-consistent group accounts. Its lines must sum to exact zero;
+  pre- and post-elimination worksheet balances must also be exact zero.
+- Canonical ordering stabilizes request/result identity across ownership and
+  elimination permutations. Closed schema v1 plus replay from the embedded
+  request and translation result rejects altered output even if an attacker
+  recomputes the outer digest. Every result declares `posting_effect=none` and
+  every elimination/NCI allocation declares `posted=false`.
+
+### Commands and outcomes
+
+| Gate | Exit | Duration | Result |
+| --- | ---: | ---: | --- |
+| Focused lifecycle/translation, module, threat, maturity, Phase 1/4, exit, and repository-boundary target | 0 | 8.7s wall final closeout | 60/60 passed; zero failures, errors, or skips. |
+| Fresh full `python -m pytest --no-header --tb=short -q` rerun | 0 | 264.150s wall; 259.828s JUnit | 2,116 tests; zero failures/errors; 64 declared skips. |
+| `python -m ruff check .` | 0 | 0.6s wall | All checks passed. |
+| `python -m mypy reconforge` | 0 | 1.5s wall | No issues in 378 source files. |
+| `python -m bandit -q -r reconforge` | 0 | 10.3s wall | Passed; existing `nosec` and comment-parser warnings remained visible. |
+| `python -m pip_audit` | 0 | 18.9s wall | No known vulnerabilities; the unpublished local package could not be resolved from PyPI. |
+| `uv lock --check` | 0 | 0.5s | Resolved the current 129-package lock. |
+| Supply-chain policy validator | 0 | 0.6s | Valid: 128 Python packages, 211 npm packages, zero active exceptions, and zero npm integrity-gap entries. |
+| Checksum-pinned Gitleaks 8.30.1 full-history and checked-tree scans | 0 | 1.69s + 1.16s | 126 commits / 17.81 MB and 22.68 MB tree scanned; no leaks found. |
+| `python -m build --no-isolation` plus archive membership | 0 | 31.873s build | Built `reconforge_erp-0.7.1`; sdist contains 5/5 required lifecycle schema/source/test/ADR/operator files and wheel contains 2/2 lifecycle/application runtime files. |
+| `npm --prefix apps/web ci` | 0 | 7.691s | 160 packages installed; zero reported vulnerabilities. |
+| Web typecheck / Vitest / production build | 0 | 1.253s / 7.987s / 1.776s | Passed; Vitest 55/55 and Vite build succeeded. |
+| Playwright Chromium E2E | 0 | 27.755s | 11 passed; five explicitly live-only tests skipped. |
+
+### Claim and lifecycle boundary
+
+- E-254 closes only this internal non-posting worksheet slice. `P4-FIN-002`
+  remains `in_progress`; it is not a completed close/consolidation lifecycle.
+- No migration, SQLite/PostgreSQL persistence or parity, persisted ownership/run
+  state, consolidation journal, maker-checker approval, posting, reversal,
+  period lock/reopen, statement, UI/API/CLI route, live rate, or ERP/bank
+  write-back is implemented or proved here.
+- The 64 declared full-suite skips are not counted as passes. No test was skipped,
+  weakened, retried until green, or converted to `xfail` for this slice.
+- This evidence proves no customer use, independent validation, certification,
+  compliance, production readiness, unmeasured scale, or global superiority.
+- No commit, push, pull request, merge, tag, GitHub Release, package publication,
+  deployment, production mutation, or repository-setting change had occurred on
+  `codex/consolidation-close-lifecycle` at this evidence boundary.
+
+## E-255: P4-FIN-002 worksheet stacked Draft PR publication boundary
+
+- Date/timezone: 2026-08-01, Africa/Cairo.
+- Dependency base: exact green Draft PR #67 branch
+  `codex/consolidation-translation-core` at
+  `836bdc5f75041a2967a51eecfd51dad6c94cb3e6`.
+- Published branch: `codex/consolidation-close-lifecycle`.
+- Initially published head:
+  `c5f23834a2546a29874164d7447f2b258bbe2350`, containing implementation commit
+  `cafc6b7445d347ac8fd2e4e5fe16dd0dd4b444cf` plus the E-254 evidence binding.
+- Review surface: stacked Draft PR #68,
+  `https://github.com/amrzainmubarak/reconforge-erp/pull/68`, targeting
+  `codex/consolidation-translation-core` rather than `main` while PR #67 remains
+  open. Connector-reported initial diff: 21 changed files, 2,498 additions, and
+  28 deletions.
+- GitHub reported 15/15 successful checks for that exact initial head: Python
+  3.11/3.12 tests, four engine-parity cells, server boundaries, Docker build and
+  parity, two locked Python audits, secret/npm policy, Python security, Analyze
+  Python, and CodeQL. GitHub reported `CLEAN` and `MERGEABLE`.
+- The PR remains Draft and `P4-FIN-002` remains `in_progress`. A successful
+  worksheet candidate does not prove the missing persisted journal/period/
+  statement/database lifecycle and is not approval to merge either stacked PR.
+- This E-255 evidence-binding change is necessarily later than the observed
+  candidate. Any later PR head must pass its own remote checks; success is never
+  inherited from `c5f23834a2546a29874164d7447f2b258bbe2350`.
+- No merge, tag, GitHub Release, package publication, deployment, production
+  mutation, repository-setting change, or readiness/superiority claim occurred.

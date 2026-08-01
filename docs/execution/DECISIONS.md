@@ -1833,3 +1833,12 @@
 - Consequence: The slice creates a reliable financial primitive for later consolidation workflows without claiming ownership consolidation, eliminations, NCI, statutory statements, journal approval, remeasurement, live rate feeds, source write-back, accounting-standard compliance, Enterprise readiness, or global superiority. Full close/consolidation remains `P4-FIN-002`.
 - ADR: `docs/adr/0210-consolidation-translation-is-balanced-explicit-and-non-posting.md`.
 - Rollback: Remove the optional domain/application/object adapter, schema, module metadata, and documentation. No SQLite/PostgreSQL migration, ledger mutation, API/CLI compatibility change, source call, tag, release, or production rollback is required.
+
+## D238 - Effective ownership and NCI remain replayable presentation until governed posting exists
+
+- Date: 2026-08-01
+- Status: accepted
+- Decision: Build worksheet v1 only from a replay-valid translation artifact. Require exact effective-dated non-overlapping direct ownership with distinct preparer/approver, one active controlling parent per non-root entity, an acyclic rooted graph, exact path multiplication, visible NCI net-assets/current-profit presentation and rounding, and explicit source-bound elimination proposals that balance to zero. Keep every NCI/elimination result unposted and the complete worksheet at `posting_effect=none`.
+- Consequence: The first P4-FIN-002 slice can explain historical selection, indirect ownership, NCI percentage, and elimination effects without fabricating an acquisition model or bypassing a future journal/period lifecycle. It does not close P4-FIN-002 and cannot be described as statutory consolidation, posted books, accounting-standard compliance, or production readiness.
+- ADR: `docs/adr/0211-consolidation-ownership-is-effective-dated-and-worksheets-do-not-post.md`.
+- Rollback: Remove the optional lifecycle domain contract, application method, schema, test, and metadata/docs. No database, journal, network, source system, tag, release, or deployment rollback is required.

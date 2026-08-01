@@ -40,8 +40,9 @@ def test_phase4_goal_covers_all_seven_workstreams_without_relabeling_old_closure
         "P4-IAM-001",
         "P4-PLAT-001",
     ]
-    assert phase4[0]["status"] in {"in_progress", "completed"}
-    assert all(task["status"] == "planned" for task in phase4[1:])
+    assert phase4[0]["status"] == "completed"
+    assert phase4[1]["status"] == "in_progress"
+    assert all(task["status"] == "planned" for task in phase4[2:])
 
 
 def test_phase4_dependencies_exist_and_final_breadth_waits_for_every_workstream() -> None:

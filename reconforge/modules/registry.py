@@ -206,7 +206,7 @@ _MODULES = (
         capability_status="foundation",
         summary=(
             "Governed charts, account hierarchy, dimensions, journals, balanced entries, trial-balance controls, "
-            "and deterministic multi-entity translation artifacts."
+            "deterministic multi-entity translation artifacts, and non-posting effective-ownership worksheets."
         ),
         network_requirement="loopback-optional",
         default_enabled=True,
@@ -227,6 +227,7 @@ _MODULES = (
         import_contracts=("ledger-entry-lines.v1",),
         export_contracts=(
             "consolidation-translation-result.v1",
+            "consolidation-worksheet.v1",
             "finance-core-snapshot.v1",
             "ledger-control-trial-balance.v1",
         ),
@@ -238,9 +239,11 @@ _MODULES = (
         retention_note="Records remain in the operator-selected local SQLite database and controlled local exports.",
         activation_note=(
             "Requires migrations 7-8 for the ledger. Translation artifacts are immutable, propose an explicit "
-            "unposted CTA, and never create elimination entries or write back to a source ERP."
+            "unposted CTA, and never write back to a source ERP. Worksheet v1 applies only explicit balanced "
+            "elimination proposals, reports effective ownership and NCI presentation, and has no posting effect."
         ),
         test_evidence=(
+            "tests/test_consolidation_lifecycle.py",
             "tests/test_consolidation_translation.py",
             "tests/test_finance_core.py",
         ),

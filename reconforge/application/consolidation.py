@@ -11,6 +11,11 @@ from reconforge.domain.consolidation import (
     ConsolidationTranslationResult,
     translate_consolidation,
 )
+from reconforge.domain.consolidation_lifecycle import (
+    ConsolidationWorksheetRequest,
+    ConsolidationWorksheetResult,
+    prepare_consolidation_worksheet,
+)
 
 
 @dataclass(frozen=True)
@@ -62,6 +67,12 @@ class ConsolidationApplicationService:
     @staticmethod
     def calculate(request: ConsolidationRequest) -> ConsolidationTranslationResult:
         return translate_consolidation(request)
+
+    @staticmethod
+    def prepare_worksheet(request: ConsolidationWorksheetRequest) -> ConsolidationWorksheetResult:
+        """Prepare an ownership/NCI/elimination worksheet without a posting effect."""
+
+        return prepare_consolidation_worksheet(request)
 
     def calculate_and_store(
         self,

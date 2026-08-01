@@ -171,6 +171,11 @@ include docs/adr/0209-reliability-incidents-are-ordered-hash-chained-and-closed.
 include docs/schemas/consolidation-translation-result-v1.schema.json
 include docs/adr/0210-consolidation-translation-is-balanced-explicit-and-non-posting.md
 include docs/consolidation-translation.md
+include docs/schemas/consolidation-worksheet-v1.schema.json
+include reconforge/domain/consolidation_lifecycle.py
+include tests/test_consolidation_lifecycle.py
+include docs/adr/0211-consolidation-ownership-is-effective-dated-and-worksheets-do-not-post.md
+include docs/consolidation-worksheet.md
 include tests/test_incident_response.py
 include tests/test_reliability_incident_drill.py
 include docs/security/deployment-boundaries.md

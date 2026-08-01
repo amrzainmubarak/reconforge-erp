@@ -206,13 +206,14 @@ _MODULES = (
         capability_status="foundation",
         summary=(
             "Governed charts, account hierarchy, dimensions, journals, balanced entries, trial-balance controls, "
-            "deterministic multi-entity translation artifacts, and non-posting effective-ownership worksheets."
+            "deterministic multi-entity translation artifacts, non-posting effective-ownership worksheets, and a "
+            "governed local consolidation control-journal lifecycle."
         ),
         network_requirement="loopback-optional",
         default_enabled=True,
         dependencies=("platform.core", "platform.master-data"),
         permissions=("finance_core.manage", "finance_core.read", "finance_core.validate"),
-        migration_versions=(8,),
+        migration_versions=(8, 25),
         domain_events=(
             "accounting_dimension_upserted",
             "accounting_dimension_value_upserted",
@@ -222,6 +223,14 @@ _MODULES = (
             "ledger_entry_draft_saved",
             "ledger_entry_validated",
             "ledger_entry_voided",
+            "consolidation_period_created",
+            "consolidation_period_locked",
+            "consolidation_period_reopened",
+            "consolidation_reversal_prepared",
+            "consolidation_run_approved",
+            "consolidation_run_posted",
+            "consolidation_run_prepared",
+            "consolidation_run_reversed",
         ),
         interfaces=("api", "artifacts", "cli", "library"),
         import_contracts=("ledger-entry-lines.v1",),
@@ -238,14 +247,17 @@ _MODULES = (
         ),
         retention_note="Records remain in the operator-selected local SQLite database and controlled local exports.",
         activation_note=(
-            "Requires migrations 7-8 for the ledger. Translation artifacts are immutable, propose an explicit "
-            "unposted CTA, and never write back to a source ERP. Worksheet v1 applies only explicit balanced "
-            "elimination proposals, reports effective ownership and NCI presentation, and has no posting effect."
+            "Requires migrations 7-8 for the local ledger and 25 for the optional consolidation lifecycle. "
+            "Translation and worksheet artifacts remain non-posting. Migration 25 persists only verified "
+            "worksheets and exact balanced control-journal effects through maker-checker, posting, reversal, and "
+            "period locks. It has a local SQLite/library boundary only and never mutates Finance Core entries, "
+            "legal books, or a source ERP."
         ),
         test_evidence=(
             "tests/test_consolidation_lifecycle.py",
             "tests/test_consolidation_translation.py",
             "tests/test_finance_core.py",
+            "tests/test_sqlite_consolidation_close.py",
         ),
     ),
     ModuleDescriptor(

@@ -1,7 +1,7 @@
 schema_version: 1
 index_id: reconforge-module-threat-model-index
 status: evidence-bounded
-last_reviewed: "2026-07-25"
+last_reviewed: "2026-08-01"
 claim_boundary: >-
   This index links active repository modules to bounded threat evidence. It is
   not a security guarantee, not a compliance assessment or certification, not
@@ -258,48 +258,53 @@ modules:
         description: Effective-dated ownership lineage, controlling paths, exact NCI presentation, balanced elimination sources, and the replayable non-posting group worksheet.
         data_class: DC-003
         objectives: [confidentiality, integrity, availability, auditability]
+      - id: consolidation-close-control-journal
+        description: Verified worksheet snapshots, exact balanced journal/effect lines, maker-checker attribution, optimistic lifecycle versions, and immutable period-transition history in local SQLite.
+        data_class: DC-003
+        objectives: [confidentiality, integrity, availability, auditability]
     actors: [ACT-001, ACT-002, ACT-004, ACT-006, ACT-007]
     threat_cases:
       - threat_id: TM-T-002
         status: bounded
-        attack_surface: Money construction, currency precision, balanced-entry validation, trial-balance aggregation, explicit rate-bucket selection, translation/rounding, effective ownership graphs, exact NCI allocation, balanced elimination proposals, and JSON/CSV boundaries.
+        attack_surface: Money construction, currency precision, balanced-entry validation, trial-balance aggregation, explicit rate-bucket selection, translation/rounding, effective ownership graphs, exact NCI allocation, balanced elimination proposals, persisted minor-unit journals/effects, bounded worksheet replay, and JSON/CSV boundaries.
         controls: [SEC-C-002, SEC-C-005]
-        test_evidence: [tests/test_money_currency.py, tests/test_finance_core.py, tests/test_consolidation_translation.py, tests/test_consolidation_lifecycle.py, tests/test_postgres_ledger.py, tests/test_business_record_ingress.py]
+        test_evidence: [tests/test_money_currency.py, tests/test_finance_core.py, tests/test_consolidation_translation.py, tests/test_consolidation_lifecycle.py, tests/test_sqlite_consolidation_close.py, tests/test_postgres_ledger.py, tests/test_business_record_ingress.py]
         residual_risk_ids: [R-004]
         limitations:
           - Remaining explicit legacy financial readers outside this module retain a versioned compatibility boundary.
       - threat_id: TM-T-003
         status: partial
-        attack_surface: Finance manage/read/validate permissions, preparer-validator separation, ownership preparer-approver separation, actor identity, and API routing.
+        attack_surface: Finance manage/read/validate permissions, worksheet and ownership actor separation, consolidation prepare/approve/post/reversal/lock/reopen separation, actor identity, and API routing.
         controls: [SEC-C-003, SEC-C-005]
-        test_evidence: [tests/test_finance_core.py, tests/test_consolidation_lifecycle.py, tests/test_policy_engine.py]
+        test_evidence: [tests/test_finance_core.py, tests/test_consolidation_lifecycle.py, tests/test_sqlite_consolidation_close.py, tests/test_policy_engine.py]
         residual_risk_ids: [R-011]
         limitations:
           - Trusted-local compatibility is not an enterprise identity or complete amount/period ABAC policy.
       - threat_id: TM-T-005
         status: partial
-        attack_surface: Draft save, validation, void, immutability, audit/outbox, backup, and optional PostgreSQL commit boundaries.
+        attack_surface: Draft save, validation, void, consolidation lifecycle/effect immutability, atomic audit rollback, event replay, backup/restore, and optional PostgreSQL commit boundaries.
         controls: [SEC-C-005, SEC-C-006]
-        test_evidence: [tests/test_finance_core.py, tests/test_postgres_ledger.py, tests/test_atomic_legacy_services.py]
+        test_evidence: [tests/test_finance_core.py, tests/test_sqlite_consolidation_close.py, tests/test_postgres_ledger.py, tests/test_atomic_legacy_services.py]
         residual_risk_ids: [R-003, R-015]
         limitations:
           - The ledger is a control ledger and does not perform statutory posting or source-ERP writeback.
       - threat_id: TM-T-006
         status: deployment-dependent
-        attack_surface: Trial-balance, snapshot, translation, and ownership/NCI/elimination worksheet artifacts; tenant/workspace object keys; local database copies; backups; and external recipients.
+        attack_surface: Trial-balance, snapshot, translation, ownership/NCI/elimination worksheets, consolidation lifecycle/effect records, tenant/workspace object keys, local database copies, backups, and external recipients.
         controls: [SEC-C-007, SEC-C-008]
-        test_evidence: [tests/test_finance_core.py, tests/test_consolidation_translation.py, tests/test_consolidation_lifecycle.py, tests/test_db_backup_restore.py]
+        test_evidence: [tests/test_finance_core.py, tests/test_consolidation_translation.py, tests/test_consolidation_lifecycle.py, tests/test_sqlite_consolidation_close.py, tests/test_db_backup_restore.py]
         residual_risk_ids: [R-014]
         limitations:
           - Artifact scope and checksum verification do not prove disclosure approval, WORM retention, production key custody, or recipient authorization.
-    module_test_evidence: [tests/test_consolidation_lifecycle.py, tests/test_consolidation_translation.py, tests/test_finance_core.py]
+    module_test_evidence: [tests/test_consolidation_lifecycle.py, tests/test_consolidation_translation.py, tests/test_finance_core.py, tests/test_sqlite_consolidation_close.py]
     assumptions:
       - Currency registry selection and source master data are reviewed before financial control use.
       - Operators approve source trial balances, group mappings, rate buckets, rate sources, and the CTA account before using a translation result.
       - Legal-entity administrators and group controllers approve exact effective-dated ownership inputs, and preparers source every elimination from reviewed evidence.
+      - Local consolidation lifecycle actors are attributable operator-controlled identities; trusted labels are not federated identity assurance.
       - Validated entries mean validated inside the local control ledger only.
     out_of_scope:
-      - Acquisition accounting, goodwill or bargain purchase, equity-method or joint-arrangement accounting, historical FX recycling, NCI ownership changes, consolidation journal approval/posting/reversal, statutory accounting/statements, tax, payment execution, ERP posting, legal books, and independent financial assurance.
+      - Acquisition accounting, goodwill or bargain purchase, equity-method or joint-arrangement accounting, historical FX recycling, NCI ownership changes, statutory accounting/statements, tax, payment execution, source-ERP posting, legal books, PostgreSQL consolidation-lifecycle parity, hosted APIs/UI, and independent financial assurance.
 
   - module_id: inventory.core
     registry_maturity: experimental

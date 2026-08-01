@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from reconforge.db import connect, run_migrations
+from reconforge.db.migrations import MIGRATIONS
 from reconforge.domain.jobs import DurableJob, JobOutputManifest, JobStatus
 from reconforge.infrastructure.sqlite_jobs import (
     SQLiteDurableJobRepository,
@@ -40,7 +41,7 @@ def _job(*, job_id: str = "JOB-001", input_digest: str = DIGEST_A) -> DurableJob
 def repository(tmp_path: Path) -> tuple[SQLiteDurableJobRepository, sqlite3.Connection]:
     database_path = tmp_path / "jobs.db"
     result = run_migrations(database_path)
-    assert result.current_version == 24
+    assert result.current_version == MIGRATIONS[-1].version
     connection = connect(database_path)
     return SQLiteDurableJobRepository(connection), connection
 
@@ -242,7 +243,8 @@ def test_version_20_upgrade_applies_durable_job_and_idempotency_migrations(tmp_p
     before = run_migrations(database_path, target_version=20)
     assert before.current_version == 20
     upgraded = run_migrations(database_path)
-    assert upgraded.applied_versions == [21, 22, 23, 24]
+    assert upgraded.applied_versions[:4] == [21, 22, 23, 24]
+    assert upgraded.current_version == MIGRATIONS[-1].version
     connection = connect(database_path, require_exists=True)
     tables = {
         str(row["name"])

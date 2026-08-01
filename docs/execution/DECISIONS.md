@@ -1842,3 +1842,12 @@
 - Consequence: The first P4-FIN-002 slice can explain historical selection, indirect ownership, NCI percentage, and elimination effects without fabricating an acquisition model or bypassing a future journal/period lifecycle. It does not close P4-FIN-002 and cannot be described as statutory consolidation, posted books, accounting-standard compliance, or production readiness.
 - ADR: `docs/adr/0211-consolidation-ownership-is-effective-dated-and-worksheets-do-not-post.md`.
 - Rollback: Remove the optional lifecycle domain contract, application method, schema, test, and metadata/docs. No database, journal, network, source system, tag, release, or deployment rollback is required.
+
+## D239 - Local consolidation close state is replayable control-journal evidence, not legal-book posting
+
+- Date: 2026-08-01
+- Status: accepted
+- Decision: Persist verified consolidation worksheets only through a local SQLite migration-25 lifecycle with close periods, immutable run lines, exact posting/reversal control-journal effects, and period lock/reopen events. Require permissioned maker-checker approval, actor-attributed SoD, bounded worksheet JSON persistence, trigger-enforced lifecycle transitions, atomic audit rollback, backup/restore replay through the same triggers, and integrity verification over worksheet/result/effect/period-event digests.
+- Consequence: P4-FIN-002 gains a governed local close-lifecycle foundation without claiming statutory consolidation, legal-book posting, acquisition accounting, PostgreSQL parity, API/CLI/UI operation, live provider integration, source-ERP/bank mutation, independent assurance, or production readiness. Source systems and Finance Core legal books remain outside the mutation boundary.
+- ADR: `docs/adr/0212-consolidation-close-lifecycle-is-local-and-replayable.md`.
+- Rollback: Restore from a verified pre-migration backup, or remove migration-25/application/repository/schema/manifest/docs/test changes before adoption. No source ERP, bank, hosted service, tag, release, or production system is mutated by this slice.

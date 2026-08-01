@@ -2,8 +2,10 @@
 
 This experimental Finance Core contract turns one verified translation-result
 v1 artifact into a deterministic, balanced, non-posting group worksheet. It is
-a programmatic library/application boundary; no CLI, API, UI, or database run
-lifecycle is claimed by this slice.
+a programmatic library/application boundary; the separate local SQLite
+lifecycle in `docs/consolidation-close-lifecycle.md` can persist and approve a
+verified worksheet, but the worksheet contract itself still has no posting
+effect.
 
 ## Required inputs
 
@@ -64,10 +66,12 @@ pre/post-acquisition reserves, ownership changes, equity-method or joint
 arrangement accounting, historical FX recycling, tax, statutory disclosures,
 or accounting-standard conclusions.
 
-The slice does not persist ownership or a run, create or approve a journal,
-lock/reopen a consolidation period, reverse a posting, generate statutory
-statements, call a rate/ERP/bank provider, or write back. Those remain later
-`P4-FIN-002` gates.
+The worksheet slice itself does not persist ownership or mutate a source
+ledger. Migration 25 adds a separate local SQLite control-journal lifecycle for
+verified worksheets, maker-checker approval, exact local posting/reversal
+effects, and period lock/reopen evidence. PostgreSQL parity, statutory
+statements, acquisition accounting, live rates, API/CLI/UI exposure, ERP/bank
+provider calls, and write-back remain later `P4-FIN-002` gates.
 
 ## Verification
 

@@ -2,6 +2,25 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-256: Local SQLite consolidation close lifecycle
+
+- Date/timezone: 2026-08-01, Africa/Cairo.
+- Scope: local SQLite migration-25 lifecycle only; no PostgreSQL, API/CLI/UI, source ERP/bank write-back, production migration, publication, live rate provider, or external service was used.
+- Boundary: persists only verified non-posting consolidation worksheet v1 artifacts through a governed `Prepared -> Approved -> Posted -> ReversalPrepared -> Reversed` control-journal lifecycle. `Posted` means an immutable balanced effect in ReconForge's local consolidation control journal only; it does not create Finance Core entries, statutory books, source-ERP postings, payments, tax effects, or statements. Trusted local actor labels are attributable operator labels, not federated identity assurance.
+
+| Command | Exit | Duration | Result |
+| --- | ---: | ---: | --- |
+| `python -m ruff check reconforge tests` | 0 | combined gate | All checks passed; no diagnostics across the new application/infrastructure/test sources. |
+| `python -m mypy reconforge` | 0 | combined gate | Success: no issues found in 380 source files (up from the 378-file Phase 4 baseline). |
+| `python -m bandit -q -r reconforge/infrastructure/sqlite_consolidation_close.py reconforge/application/consolidation_close.py` | 0 | combined gate | No findings; one `hashlib.sha256` use is intentional canonical digesting over structured JSON, not credential hashing. |
+| `python -m pip_audit` | 0 | combined gate | No known vulnerabilities found; `reconforge-erp 0.7.0` self-skip is expected for a not-yet-published project. |
+| `python -m build --no-isolation` | 0 | combined gate | Built `reconforge_erp-0.7.1.tar.gz` and wheel; sdist contains all five new slice files (ADR 0212, operator doc, application, infrastructure, test). |
+| `python -m pytest tests/test_sqlite_consolidation_close.py -q` | 0 | 2.56s | 8/8 passed: migration-25 additivity/pre-migration refusal; full exact/attributable/immutable/post/reverse/lock/reopen replay verification; locked-period blocking until independent reopen; database guard rejection (immutable event/line/effect, self-approval SoD) plus audit-failure rollback; at-rest worksheet-payload and effect-line tamper detection; backup/restore replay through triggers plus rehashed-payload rejection; bounded worksheet JSON profile fractional/oversized refusal; MANIFEST.in membership. |
+| `python -m pytest tests/test_module_registry.py tests/test_repository_boundary_inventory.py tests/test_db_backup_restore.py tests/test_db_backup_structured_ingress.py tests/test_domain_repository_contracts.py -q` | 0 | combined gate | 43/43 passed; new migration-25/tables registered in the module registry, repository boundary inventory, backup table set, and structured-ingress profiles without weakening prior contracts. |
+| `git diff --check` | 0 | combined gate | Passed; Git emitted only existing CRLF conversion notices. |
+
+Residual boundary: this proves a local SQLite library boundary only. It does not prove PostgreSQL parity, API/CLI/UI exposure, statutory statement generation, acquisition/fair-value/goodwill/equity-method policy, ownership-change accounting, live rate provider integration, source-ERP/bank write-back, publisher authentication, legal retention, host-loss DR, independent assurance, compliance, certification, or production readiness. P4-FIN-002 remains in progress.
+
 ## E-198: Browser Security Center snapshot contract and UI
 
 - Date/timezone: 2026-07-30, Africa/Cairo.

@@ -28,7 +28,7 @@ from reconforge.io.structured import (
     StructuredDocumentPolicy,
     read_json_document,
 )
-from reconforge.platform.common import ensure_outbox_schema
+from reconforge.platform.common import PlatformError, ensure_outbox_schema
 
 BACKUP_FORMAT_VERSION = 1
 BACKUP_WARNING = (
@@ -57,6 +57,12 @@ BACKUP_TABLES = [
     "workspaces",
     "organizations",
     "currencies",
+    "consolidation_close_periods",
+    "consolidation_period_events",
+    "consolidation_runs",
+    "consolidation_run_lines",
+    "consolidation_effects",
+    "consolidation_effect_lines",
     "legal_entities",
     "branches",
     "periods",
@@ -155,12 +161,40 @@ BACKUP_TABLES = [
     "audit_ledger_state",
 ]
 
+CONSOLIDATION_BACKUP_TABLES = (
+    "consolidation_close_periods",
+    "consolidation_period_events",
+    "consolidation_runs",
+    "consolidation_run_lines",
+    "consolidation_effects",
+    "consolidation_effect_lines",
+)
+
 EXCLUDED_BACKUP_TABLES = ["api_sessions"]
 
 BACKUP_SELECT_QUERIES = {
     "workspaces": "SELECT * FROM workspaces ORDER BY created_at, id",
     "organizations": "SELECT * FROM organizations ORDER BY created_at, id",
     "currencies": "SELECT * FROM currencies ORDER BY code",
+    "consolidation_close_periods": (
+        "SELECT * FROM consolidation_close_periods "
+        "ORDER BY workspace_id, period_start_date, group_code, period_name, id"
+    ),
+    "consolidation_period_events": (
+        "SELECT * FROM consolidation_period_events ORDER BY period_id, event_sequence, id"
+    ),
+    "consolidation_runs": (
+        "SELECT * FROM consolidation_runs ORDER BY workspace_id, prepared_at, run_number, id"
+    ),
+    "consolidation_run_lines": (
+        "SELECT * FROM consolidation_run_lines ORDER BY run_id, ordinal, id"
+    ),
+    "consolidation_effects": (
+        "SELECT * FROM consolidation_effects ORDER BY run_id, effect_type, id"
+    ),
+    "consolidation_effect_lines": (
+        "SELECT * FROM consolidation_effect_lines ORDER BY effect_id, ordinal, id"
+    ),
     "legal_entities": "SELECT * FROM legal_entities ORDER BY entity_code, id",
     "branches": "SELECT * FROM branches ORDER BY organization_id, branch_code, id",
     "periods": "SELECT * FROM periods ORDER BY start_date, id",
@@ -263,6 +297,12 @@ BACKUP_DELETE_QUERIES = {
     "workspaces": "DELETE FROM workspaces",
     "organizations": "DELETE FROM organizations",
     "currencies": "DELETE FROM currencies",
+    "consolidation_close_periods": "DELETE FROM consolidation_close_periods",
+    "consolidation_period_events": "DELETE FROM consolidation_period_events",
+    "consolidation_runs": "DELETE FROM consolidation_runs",
+    "consolidation_run_lines": "DELETE FROM consolidation_run_lines",
+    "consolidation_effects": "DELETE FROM consolidation_effects",
+    "consolidation_effect_lines": "DELETE FROM consolidation_effect_lines",
     "legal_entities": "DELETE FROM legal_entities",
     "branches": "DELETE FROM branches",
     "periods": "DELETE FROM periods",
@@ -365,6 +405,102 @@ BACKUP_INSERT_COLUMNS = {
     "workspaces": ("id", "name", "local_first_note", "created_at"),
     "organizations": ("id", "workspace_id", "name", "created_at", "organization_code", "active", "updated_at"),
     "currencies": ("code", "name", "minor_units", "active", "created_at", "updated_at"),
+    "consolidation_close_periods": (
+        "id",
+        "workspace_id",
+        "group_code",
+        "period_name",
+        "reporting_currency",
+        "period_start_date",
+        "period_end_date",
+        "reporting_date",
+        "status",
+        "row_version",
+        "created_by",
+        "created_at",
+        "locked_by",
+        "locked_at",
+        "lock_reason",
+        "reopened_by",
+        "reopened_at",
+        "reopen_reason",
+    ),
+    "consolidation_period_events": (
+        "id",
+        "period_id",
+        "event_sequence",
+        "from_status",
+        "to_status",
+        "actor_label",
+        "occurred_at",
+        "reason",
+    ),
+    "consolidation_runs": (
+        "id",
+        "period_id",
+        "workspace_id",
+        "run_number",
+        "worksheet_id",
+        "worksheet_request_digest",
+        "worksheet_result_digest",
+        "translation_result_digest",
+        "worksheet_payload",
+        "worksheet_payload_digest",
+        "reporting_currency",
+        "journal_line_count",
+        "journal_digest",
+        "status",
+        "row_version",
+        "prepared_by",
+        "prepared_at",
+        "approved_by",
+        "approved_at",
+        "approval_reason",
+        "posted_by",
+        "posted_at",
+        "posting_reason",
+        "reversal_requested_by",
+        "reversal_requested_at",
+        "reversal_request_reason",
+        "reversed_by",
+        "reversed_at",
+        "reversal_reason",
+    ),
+    "consolidation_run_lines": (
+        "id",
+        "run_id",
+        "ordinal",
+        "elimination_id",
+        "source_line_id",
+        "entity_code",
+        "group_account_code",
+        "account_type",
+        "amount_decimal",
+        "amount_minor",
+        "currency_code",
+        "source_reference",
+        "source_digest",
+    ),
+    "consolidation_effects": (
+        "id",
+        "run_id",
+        "effect_type",
+        "source_effect_id",
+        "status",
+        "line_count",
+        "effect_digest",
+        "created_by",
+        "created_at",
+    ),
+    "consolidation_effect_lines": (
+        "id",
+        "effect_id",
+        "run_line_id",
+        "ordinal",
+        "amount_decimal",
+        "amount_minor",
+        "currency_code",
+    ),
     "legal_entities": (
         "id",
         "organization_id",
@@ -1468,6 +1604,49 @@ BACKUP_INSERT_QUERIES = {
         INSERT INTO currencies (code, name, minor_units, active, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?)
     """,
+    "consolidation_close_periods": """
+        INSERT INTO consolidation_close_periods (
+            id, workspace_id, group_code, period_name, reporting_currency,
+            period_start_date, period_end_date, reporting_date, status, row_version,
+            created_by, created_at, locked_by, locked_at, lock_reason,
+            reopened_by, reopened_at, reopen_reason
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "consolidation_period_events": """
+        INSERT INTO consolidation_period_events (
+            id, period_id, event_sequence, from_status, to_status,
+            actor_label, occurred_at, reason
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "consolidation_runs": """
+        INSERT INTO consolidation_runs (
+            id, period_id, workspace_id, run_number, worksheet_id,
+            worksheet_request_digest, worksheet_result_digest, translation_result_digest,
+            worksheet_payload, worksheet_payload_digest, reporting_currency,
+            journal_line_count, journal_digest, status, row_version, prepared_by, prepared_at,
+            approved_by, approved_at, approval_reason, posted_by, posted_at, posting_reason,
+            reversal_requested_by, reversal_requested_at, reversal_request_reason,
+            reversed_by, reversed_at, reversal_reason
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "consolidation_run_lines": """
+        INSERT INTO consolidation_run_lines (
+            id, run_id, ordinal, elimination_id, source_line_id, entity_code,
+            group_account_code, account_type, amount_decimal, amount_minor,
+            currency_code, source_reference, source_digest
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "consolidation_effects": """
+        INSERT INTO consolidation_effects (
+            id, run_id, effect_type, source_effect_id, status, line_count,
+            effect_digest, created_by, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "consolidation_effect_lines": """
+        INSERT INTO consolidation_effect_lines (
+            id, effect_id, run_line_id, ordinal, amount_decimal, amount_minor, currency_code
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    """,
     "legal_entities": """
         INSERT INTO legal_entities (
             id, organization_id, entity_code, name, currency, created_at, active, updated_at
@@ -2295,7 +2474,20 @@ def create_backup(
                 "excluded_tables": EXCLUDED_BACKUP_TABLES,
             },
         )
-        payload = _backup_payload(connection, created_at=created_at, schema_version=schema_version)
+        connection.execute("BEGIN")
+        try:
+            if schema_version >= 25:
+                from reconforge.infrastructure.sqlite_consolidation_close import (  # noqa: PLC0415
+                    verify_consolidation_close_integrity,
+                )
+
+                try:
+                    verify_consolidation_close_integrity(connection)
+                except PlatformError as exc:
+                    raise DBBridgeError("Consolidation close integrity failed before backup.") from exc
+            payload = _backup_payload(connection, created_at=created_at, schema_version=schema_version)
+        finally:
+            connection.rollback()
         write_json_file(backup_path, payload)
         checksum = checksum_file(backup_path)
         manifest = {
@@ -2476,6 +2668,294 @@ def _insert_rows(connection: sqlite3.Connection, *, table: str, rows: object) ->
         connection.execute(query, values)
 
 
+def _consolidation_rows(tables: dict[str, Any], table: str) -> list[dict[str, Any]]:
+    rows = tables.get(table, [])
+    if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+        raise DBBridgeError("Backup consolidation table rows are invalid.")
+    return [dict(row) for row in rows]
+
+
+def _restore_consolidation_effect(
+    connection: sqlite3.Connection,
+    *,
+    effect: dict[str, Any],
+    effect_lines: list[dict[str, Any]],
+) -> None:
+    if effect.get("status") != "Committed":
+        raise DBBridgeError("Backup contains an incomplete consolidation effect.")
+    _insert_rows(
+        connection,
+        table="consolidation_effects",
+        rows=[{**effect, "status": "Building"}],
+    )
+    _insert_rows(
+        connection,
+        table="consolidation_effect_lines",
+        rows=sorted(effect_lines, key=lambda row: (row.get("ordinal", 0), str(row.get("id", "")))),
+    )
+    updated = connection.execute(
+        "UPDATE consolidation_effects SET status='Committed' WHERE id=? AND status='Building'",
+        (effect.get("id"),),
+    )
+    if updated.rowcount != 1:
+        raise DBBridgeError("Backup consolidation effect could not be committed.")
+    restored = connection.execute(
+        "SELECT * FROM consolidation_effects WHERE id=?",
+        (effect.get("id"),),
+    ).fetchone()
+    if restored is None or dict(restored) != effect:
+        raise DBBridgeError("Backup consolidation effect did not restore exactly.")
+
+
+def _restore_consolidation_tables(
+    connection: sqlite3.Connection,
+    *,
+    tables: dict[str, Any],
+    backup_schema_version: int,
+) -> None:
+    if backup_schema_version >= 25 and any(table not in tables for table in CONSOLIDATION_BACKUP_TABLES):
+        raise DBBridgeError("Backup omits required consolidation lifecycle tables.")
+    payload = {table: _consolidation_rows(tables, table) for table in CONSOLIDATION_BACKUP_TABLES}
+    if backup_schema_version < 25:
+        if any(payload.values()):
+            raise DBBridgeError("Backup contains consolidation data before its schema version.")
+        return
+    if any(not _table_exists(connection, table) for table in CONSOLIDATION_BACKUP_TABLES):
+        raise DBBridgeError("Backup consolidation schema is unavailable.")
+
+    period_rows = payload["consolidation_close_periods"]
+    event_rows = payload["consolidation_period_events"]
+    run_rows = payload["consolidation_runs"]
+    run_line_rows = payload["consolidation_run_lines"]
+    effect_rows = payload["consolidation_effects"]
+    effect_line_rows = payload["consolidation_effect_lines"]
+
+    final_periods = {str(row.get("id", "")): row for row in period_rows}
+    final_runs = {str(row.get("id", "")): row for row in run_rows}
+    if len(final_periods) != len(period_rows) or len(final_runs) != len(run_rows):
+        raise DBBridgeError("Backup contains duplicate consolidation identifiers.")
+
+    base_periods: list[dict[str, Any]] = []
+    for row in period_rows:
+        status = str(row.get("status", ""))
+        version = _strict_positive_int(row.get("row_version"))
+        if status not in {"Open", "Locked", "Reopened"} or version is None:
+            raise DBBridgeError("Backup contains an invalid consolidation period state.")
+        base_periods.append(
+            {
+                **row,
+                "status": "Open",
+                "row_version": 1,
+                "locked_by": "",
+                "locked_at": "",
+                "lock_reason": "",
+                "reopened_by": "",
+                "reopened_at": "",
+                "reopen_reason": "",
+            }
+        )
+    _insert_rows(connection, table="consolidation_close_periods", rows=base_periods)
+
+    transitions = {
+        "Prepared": 0,
+        "Approved": 1,
+        "Posted": 2,
+        "ReversalPrepared": 3,
+        "Reversed": 4,
+    }
+    base_runs: list[dict[str, Any]] = []
+    for row in run_rows:
+        status = str(row.get("status", ""))
+        version = _strict_positive_int(row.get("row_version"))
+        transition_count = transitions.get(status)
+        if transition_count is None or version != transition_count + 1:
+            raise DBBridgeError("Backup contains an invalid consolidation run version.")
+        base_runs.append(
+            {
+                **row,
+                "status": "Prepared",
+                "row_version": 1,
+                "approved_by": "",
+                "approved_at": "",
+                "approval_reason": "",
+                "posted_by": "",
+                "posted_at": "",
+                "posting_reason": "",
+                "reversal_requested_by": "",
+                "reversal_requested_at": "",
+                "reversal_request_reason": "",
+                "reversed_by": "",
+                "reversed_at": "",
+                "reversal_reason": "",
+            }
+        )
+    _insert_rows(connection, table="consolidation_runs", rows=base_runs)
+    _insert_rows(connection, table="consolidation_run_lines", rows=run_line_rows)
+
+    effects_by_key: dict[tuple[str, str], dict[str, Any]] = {}
+    lines_by_effect: dict[str, list[dict[str, Any]]] = {}
+    for effect in effect_rows:
+        key = (str(effect.get("run_id", "")), str(effect.get("effect_type", "")))
+        if key in effects_by_key:
+            raise DBBridgeError("Backup contains duplicate consolidation effects.")
+        effects_by_key[key] = effect
+    for line in effect_line_rows:
+        lines_by_effect.setdefault(str(line.get("effect_id", "")), []).append(line)
+
+    consumed_effect_ids: set[str] = set()
+    consumed_line_ids: set[str] = set()
+    for run_id, run in sorted(
+        final_runs.items(),
+        key=lambda item: (str(item[1].get("prepared_at", "")), str(item[1].get("run_number", "")), item[0]),
+    ):
+        status = str(run["status"])
+        stage = transitions[status]
+        if stage >= 1:
+            updated = connection.execute(
+                """
+                UPDATE consolidation_runs
+                SET status='Approved',row_version=row_version+1,
+                    approved_by=?,approved_at=?,approval_reason=?
+                WHERE id=? AND status='Prepared' AND row_version=1
+                """,
+                (run["approved_by"], run["approved_at"], run["approval_reason"], run_id),
+            )
+            if updated.rowcount != 1:
+                raise DBBridgeError("Backup consolidation approval could not be replayed.")
+        if stage >= 2:
+            posting = effects_by_key.get((run_id, "Posting"))
+            if posting is None:
+                raise DBBridgeError("Backup posted consolidation run has no posting effect.")
+            posting_id = str(posting.get("id", ""))
+            posting_lines = lines_by_effect.get(posting_id, [])
+            _restore_consolidation_effect(connection, effect=posting, effect_lines=posting_lines)
+            consumed_effect_ids.add(posting_id)
+            consumed_line_ids.update(str(line.get("id", "")) for line in posting_lines)
+            updated = connection.execute(
+                """
+                UPDATE consolidation_runs
+                SET status='Posted',row_version=row_version+1,
+                    posted_by=?,posted_at=?,posting_reason=?
+                WHERE id=? AND status='Approved' AND row_version=2
+                """,
+                (run["posted_by"], run["posted_at"], run["posting_reason"], run_id),
+            )
+            if updated.rowcount != 1:
+                raise DBBridgeError("Backup consolidation posting could not be replayed.")
+        if stage >= 3:
+            updated = connection.execute(
+                """
+                UPDATE consolidation_runs
+                SET status='ReversalPrepared',row_version=row_version+1,
+                    reversal_requested_by=?,reversal_requested_at=?,reversal_request_reason=?
+                WHERE id=? AND status='Posted' AND row_version=3
+                """,
+                (
+                    run["reversal_requested_by"],
+                    run["reversal_requested_at"],
+                    run["reversal_request_reason"],
+                    run_id,
+                ),
+            )
+            if updated.rowcount != 1:
+                raise DBBridgeError("Backup consolidation reversal request could not be replayed.")
+        if stage >= 4:
+            reversal = effects_by_key.get((run_id, "Reversal"))
+            if reversal is None:
+                raise DBBridgeError("Backup reversed consolidation run has no reversal effect.")
+            reversal_id = str(reversal.get("id", ""))
+            reversal_lines = lines_by_effect.get(reversal_id, [])
+            _restore_consolidation_effect(connection, effect=reversal, effect_lines=reversal_lines)
+            consumed_effect_ids.add(reversal_id)
+            consumed_line_ids.update(str(line.get("id", "")) for line in reversal_lines)
+            updated = connection.execute(
+                """
+                UPDATE consolidation_runs
+                SET status='Reversed',row_version=row_version+1,
+                    reversed_by=?,reversed_at=?,reversal_reason=?
+                WHERE id=? AND status='ReversalPrepared' AND row_version=4
+                """,
+                (run["reversed_by"], run["reversed_at"], run["reversal_reason"], run_id),
+            )
+            if updated.rowcount != 1:
+                raise DBBridgeError("Backup consolidation reversal could not be replayed.")
+        restored = connection.execute("SELECT * FROM consolidation_runs WHERE id=?", (run_id,)).fetchone()
+        if restored is None or dict(restored) != run:
+            raise DBBridgeError("Backup consolidation run did not restore exactly.")
+
+    all_effect_ids = {str(effect.get("id", "")) for effect in effect_rows}
+    all_effect_line_ids = {str(line.get("id", "")) for line in effect_line_rows}
+    if consumed_effect_ids != all_effect_ids or consumed_line_ids != all_effect_line_ids:
+        raise DBBridgeError("Backup contains effects outside the consolidation run lifecycle.")
+
+    events_by_period: dict[str, list[dict[str, Any]]] = {}
+    for event in event_rows:
+        events_by_period.setdefault(str(event.get("period_id", "")), []).append(event)
+    for period_id, period in sorted(final_periods.items()):
+        events = sorted(
+            events_by_period.pop(period_id, []),
+            key=lambda row: (row.get("event_sequence", 0), str(row.get("id", ""))),
+        )
+        version = _strict_positive_int(period.get("row_version"))
+        if version is None or len(events) != version - 1:
+            raise DBBridgeError("Backup consolidation period history is incomplete.")
+        for event in events:
+            _insert_rows(connection, table="consolidation_period_events", rows=[event])
+            if event.get("to_status") == "Locked":
+                updated = connection.execute(
+                    """
+                    UPDATE consolidation_close_periods
+                    SET status='Locked',row_version=row_version+1,
+                        locked_by=?,locked_at=?,lock_reason=?
+                    WHERE id=? AND status IN ('Open','Reopened') AND row_version=?
+                    """,
+                    (
+                        event["actor_label"],
+                        event["occurred_at"],
+                        event["reason"],
+                        period_id,
+                        int(event["event_sequence"]) - 1,
+                    ),
+                )
+            elif event.get("to_status") == "Reopened":
+                updated = connection.execute(
+                    """
+                    UPDATE consolidation_close_periods
+                    SET status='Reopened',row_version=row_version+1,
+                        reopened_by=?,reopened_at=?,reopen_reason=?
+                    WHERE id=? AND status='Locked' AND row_version=?
+                    """,
+                    (
+                        event["actor_label"],
+                        event["occurred_at"],
+                        event["reason"],
+                        period_id,
+                        int(event["event_sequence"]) - 1,
+                    ),
+                )
+            else:
+                raise DBBridgeError("Backup contains an invalid consolidation period event.")
+            if updated.rowcount != 1:
+                raise DBBridgeError("Backup consolidation period event could not be replayed.")
+        restored = connection.execute(
+            "SELECT * FROM consolidation_close_periods WHERE id=?",
+            (period_id,),
+        ).fetchone()
+        if restored is None or dict(restored) != period:
+            raise DBBridgeError("Backup consolidation period did not restore exactly.")
+    if events_by_period:
+        raise DBBridgeError("Backup contains orphan consolidation period events.")
+
+    from reconforge.infrastructure.sqlite_consolidation_close import (  # noqa: PLC0415
+        verify_consolidation_close_integrity,
+    )
+
+    try:
+        verify_consolidation_close_integrity(connection)
+    except PlatformError as exc:
+        raise DBBridgeError("Backup consolidation integrity verification failed.") from exc
+
+
 def restore_backup(
     db_path: Path | str,
     input_path: Path | str,
@@ -2522,6 +3002,9 @@ def restore_backup(
                 raise DBBridgeError("Backup table payload is invalid.")
             for table in BACKUP_TABLES:
                 rows = tables.get(table, [])
+                if table in CONSOLIDATION_BACKUP_TABLES:
+                    restored_tables.append(table)
+                    continue
                 if table == "ledger_entries" and isinstance(rows, list):
                     draft_rows: list[object] = []
                     for row in rows:
@@ -2642,6 +3125,11 @@ def restore_backup(
                     rows = draft_rows
                 _insert_rows(connection, table=table, rows=rows)
                 restored_tables.append(table)
+            _restore_consolidation_tables(
+                connection,
+                tables=tables,
+                backup_schema_version=backup_schema_version,
+            )
             protected_finance_ids = {
                 str(finance_entry_id)
                 for _id, _status, _total, finance_entry_id, _date, _number in (valuation_statuses + reversal_statuses)

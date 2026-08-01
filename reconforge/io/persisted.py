@@ -34,6 +34,8 @@ SQLITE_LEGACY_IMPORT_SUMMARY_JSON_PROFILE = "sqlite-legacy-import-summary-json-v
 SQLITE_LEGACY_IMPORT_SUMMARY_SCHEMA = "sqlite-legacy-import-summary-object-v1"
 SQLITE_MATCHING_LINEAGE_JSON_PROFILE = "sqlite-matching-lineage-json-v1"
 SQLITE_MATCHING_LINEAGE_SCHEMA = "sqlite-matching-lineage-object-v1"
+CONSOLIDATION_WORKSHEET_JSON_PROFILE = "consolidation-worksheet-json-v1"
+CONSOLIDATION_WORKSHEET_SCHEMA = "consolidation-worksheet-v1"
 FINANCIAL_IDEMPOTENCY_JSON_POLICY = StructuredDocumentPolicy(
     max_file_bytes=4 * 1024 * 1024,
     max_nodes=100_000,
@@ -121,6 +123,14 @@ SQLITE_MATCHING_LINEAGE_JSON_POLICY = StructuredDocumentPolicy(
     max_depth=32,
     max_collection_items=25_000,
     max_scalar_characters=256 * 1024,
+    max_yaml_aliases=1,
+)
+CONSOLIDATION_WORKSHEET_JSON_POLICY = StructuredDocumentPolicy(
+    max_file_bytes=32 * 1024 * 1024,
+    max_nodes=1_000_000,
+    max_depth=64,
+    max_collection_items=150_000,
+    max_scalar_characters=1024 * 1024,
     max_yaml_aliases=1,
 )
 _REDIS_SESSION_FIELDS = frozenset({"session_id", "user_id", "token_hash", "expires_at"})
@@ -420,6 +430,42 @@ def encode_financial_idempotency_response(payload: Mapping[str, Any]) -> Persist
         policy=FINANCIAL_IDEMPOTENCY_JSON_POLICY,
         profile_id=FINANCIAL_IDEMPOTENCY_JSON_PROFILE,
         schema_id=FINANCIAL_IDEMPOTENCY_RESPONSE_SCHEMA,
+        reject_fractional_numbers=True,
+    )
+
+
+def decode_consolidation_worksheet(value: object) -> PersistedJsonObjectDocument:
+    """Decode one persisted worksheet under the bounded v1 profile."""
+
+    return _document(
+        str(value),
+        policy=CONSOLIDATION_WORKSHEET_JSON_POLICY,
+        profile_id=CONSOLIDATION_WORKSHEET_JSON_PROFILE,
+        schema_id=CONSOLIDATION_WORKSHEET_SCHEMA,
+        reject_fractional_numbers=True,
+    )
+
+
+def encode_consolidation_worksheet(payload: Mapping[str, Any]) -> PersistedJsonObjectDocument:
+    """Canonicalize a replay-valid worksheet before database persistence."""
+
+    value = dict(payload)
+    _preflight_value(value, CONSOLIDATION_WORKSHEET_JSON_POLICY, reject_floats=True)
+    try:
+        text = json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        )
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise PersistedJsonError("persisted_json_encoding_invalid") from exc
+    return _document(
+        text,
+        policy=CONSOLIDATION_WORKSHEET_JSON_POLICY,
+        profile_id=CONSOLIDATION_WORKSHEET_JSON_PROFILE,
+        schema_id=CONSOLIDATION_WORKSHEET_SCHEMA,
         reject_fractional_numbers=True,
     )
 

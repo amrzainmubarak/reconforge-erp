@@ -35,6 +35,12 @@ Partially implemented:
 - Schema 10 backups include count sessions/lines and reorder rules. Restore loads counts as Draft, restores immutable snapshot/result lines, then replays valid lifecycle transitions so count-integrity triggers remain active.
 - Schema 11 backups include FIFO policies, valuation documents, input costs, valuation lines, cost layers, and layer consumptions. Restore loads valuation evidence without trusting final status/total/link fields, rebuilds movement and Finance Core lifecycle state, replays valuations chronologically, and verifies global layer balances before replacing the target database.
 - Schema 12 backups include valuation-reversal headers and immutable layer effects. Restore loads reversal headers as Draft, defers protected mirror Finance statuses, restores effects, replays reversal lifecycle after original valuations, and verifies each layer against both consumptions and `Restore`/`Remove` effects before replacing the target database.
+- Schema 25 backups include consolidation close periods, period events, verified
+  worksheet runs, derived journal lines, committed posting/reversal effects, and
+  effect lines. Restore loads periods/runs from safe base states, replays
+  approval/post/reversal and lock/reopen transitions through SQLite triggers,
+  then verifies worksheet payloads, line/effect digests, and period-event replay
+  before replacing the target database.
 
 Roadmap:
 

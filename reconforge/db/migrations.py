@@ -12,6 +12,7 @@ from reconforge.db.schema import (
     ACCOUNT_RECONCILIATION_MONEY_MIGRATION_SQL,
     API_SESSIONS_SCHEMA_SQL,
     AUTH_RBAC_SCHEMA_SQL,
+    CONSOLIDATION_CLOSE_SCHEMA_SQL,
     DB_BRIDGE_SCHEMA_SQL,
     DURABLE_JOB_EFFECTS_SCHEMA_SQL,
     DURABLE_JOB_LEASES_SCHEMA_SQL,
@@ -99,6 +100,7 @@ MIGRATIONS = [
     Migration(version=22, name="durable_job_worker_leases", sql=DURABLE_JOB_LEASES_SCHEMA_SQL),
     Migration(version=23, name="durable_job_partition_effects", sql=DURABLE_JOB_EFFECTS_SCHEMA_SQL),
     Migration(version=24, name="generic_idempotency_service", sql=IDEMPOTENCY_RECORDS_SCHEMA_SQL),
+    Migration(version=25, name="consolidation_close_lifecycle", sql=CONSOLIDATION_CLOSE_SCHEMA_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """

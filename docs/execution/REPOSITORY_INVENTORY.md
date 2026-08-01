@@ -40,6 +40,14 @@ state, journal/posting surface, network call, UI/API/CLI route, live rate, or
 ERP/bank write-back. NCI is a non-posting presentation allocation rather than
 acquisition accounting or a statutory statement.
 
+E-256 adds one backend-neutral consolidation-close application boundary, one
+local SQLite consolidation-close repository, migration 25 with six local
+control-journal lifecycle tables and trigger guards, one focused SQLite/restore
+test module, ADR 0212, one operator document, and backup/restore membership for
+the new lifecycle tables. It adds no PostgreSQL parity, hosted API, CLI command,
+UI route, live ERP/bank connector, live rate provider, legal-book posting,
+statutory statement, tag, release, deployment, or write-back surface.
+
 E-054 adds one test module with 13 collected contracts, two supply-chain
 schemas, ADR 0069, the universal `uv.lock`, closed policy/exception registries,
 one repository-only validator, Gitleaks configuration, Dependabot definitions,

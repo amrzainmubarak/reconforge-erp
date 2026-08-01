@@ -81,10 +81,13 @@ def _read_yaml(path: Path, checks: list[MappingValidationCheck]) -> dict[str, An
         _add_check(checks, f"{path.name} YAML", False, f"Missing required file: {path}")
         return None
     try:
-        payload = read_yaml_document(
-            path,
-            financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
-        ) or {}
+        payload = (
+            read_yaml_document(
+                path,
+                financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+            )
+            or {}
+        )
     except StructuredDocumentError as exc:
         _add_check(checks, f"{path.name} YAML", False, f"Malformed YAML: {exc}")
         return None
@@ -122,7 +125,9 @@ def _check_required_files(pack_path: Path, checks: list[MappingValidationCheck])
             _add_check(checks, f"{filename} exists", True, "Required YAML file found.")
         else:
             text = path.read_text(encoding="utf-8").strip()
-            _add_check(checks, f"{filename} exists", bool(text), "Required documentation file is present and non-empty.")
+            _add_check(
+                checks, f"{filename} exists", bool(text), "Required documentation file is present and non-empty."
+            )
 
 
 def _check_mapping_payload(mapping: dict[str, Any] | None, checks: list[MappingValidationCheck]) -> None:
@@ -148,7 +153,9 @@ def _check_mapping_payload(mapping: dict[str, Any] | None, checks: list[MappingV
         checks,
         "required source files",
         not missing_core,
-        "Core source files are documented." if not missing_core else f"Missing canonical datasets: {', '.join(missing_core)}",
+        "Core source files are documented."
+        if not missing_core
+        else f"Missing canonical datasets: {', '.join(missing_core)}",
     )
 
     undocumented_sources = []
@@ -187,7 +194,9 @@ def _check_mapping_payload(mapping: dict[str, Any] | None, checks: list[MappingV
     )
 
 
-def _check_rule_payload(pack: dict[str, Any] | None, rules: dict[str, Any] | None, checks: list[MappingValidationCheck]) -> None:
+def _check_rule_payload(
+    pack: dict[str, Any] | None, rules: dict[str, Any] | None, checks: list[MappingValidationCheck]
+) -> None:
     if pack is not None:
         try:
             PackMetadata.model_validate(pack)
@@ -237,7 +246,9 @@ def _check_rule_payload(pack: dict[str, Any] | None, rules: dict[str, Any] | Non
         checks,
         "rule severities",
         not invalid_severities,
-        "Rule severities are valid." if not invalid_severities else f"Invalid severities: {', '.join(invalid_severities)}",
+        "Rule severities are valid."
+        if not invalid_severities
+        else f"Invalid severities: {', '.join(invalid_severities)}",
     )
     _add_check(
         checks,
@@ -251,7 +262,9 @@ def _check_rule_payload(pack: dict[str, Any] | None, rules: dict[str, Any] | Non
         checks,
         "rule schema",
         not schema_errors,
-        "Rules conform to the rule schema." if not schema_errors else "Rule schema errors: " + " | ".join(schema_errors),
+        "Rules conform to the rule schema."
+        if not schema_errors
+        else "Rule schema errors: " + " | ".join(schema_errors),
     )
 
 
@@ -261,7 +274,12 @@ def _check_sample_commands(pack_path: Path, checks: list[MappingValidationCheck]
         return
     repo_root = _infer_repo_root(pack_path)
     if repo_root is None:
-        _add_check(checks, "sample command paths", True, "Sample command path checks skipped; repository root could not be inferred safely.")
+        _add_check(
+            checks,
+            "sample command paths",
+            True,
+            "Sample command path checks skipped; repository root could not be inferred safely.",
+        )
         return
     text = sample_path.read_text(encoding="utf-8")
     missing_paths = []

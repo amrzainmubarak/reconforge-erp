@@ -1,5 +1,5 @@
 import { Check, Command, MoonStar, Search, Sun, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { MessageKey } from "../i18n";
 import type { AccessibilityPreferences, Density, StudioPage, ThemePreference } from "../types";
@@ -98,6 +98,7 @@ interface CommandPaletteProps {
 
 export function CommandPalette({ translate, onClose, onNavigate }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
+  const dialogRef = useRef<HTMLElement>(null);
   const commands = useMemo(
     () =>
       navigationGroups.flatMap((group) =>
@@ -113,14 +114,31 @@ export function CommandPalette({ translate, onClose, onNavigate }: CommandPalett
     `${command.translatedLabel} ${command.group}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
   );
 
+  useEffect(() => {
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    return () => previouslyFocused?.focus();
+  }, []);
+
+  const trapFocus = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key !== "Tab") return;
+    const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])') ?? [])];
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  };
+
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={onClose}>
       <section
+        ref={dialogRef}
         className="command-dialog"
         role="dialog"
         aria-modal="true"
         aria-label={translate("commandPalette")}
         onMouseDown={(event) => event.stopPropagation()}
+        onKeyDown={trapFocus}
       >
         <div className="command-search-row">
           <Search size={19} aria-hidden="true" />
@@ -132,7 +150,7 @@ export function CommandPalette({ translate, onClose, onNavigate }: CommandPalett
             aria-label={translate("search")}
           />
           <button className="icon-button" type="button" onClick={onClose} aria-label={translate("closeDialog")}>
-            <X size={17} />
+            <X size={17} aria-hidden="true" />
           </button>
         </div>
         <div className="command-results">
@@ -141,7 +159,7 @@ export function CommandPalette({ translate, onClose, onNavigate }: CommandPalett
               const Icon = item.icon;
               const content = (
                 <>
-                  <span className="command-icon"><Icon size={17} /></span>
+                  <span className="command-icon"><Icon size={17} aria-hidden="true" /></span>
                   <span>
                     <strong>{item.translatedLabel}</strong>
                     <small>{item.group}</small>
@@ -173,7 +191,7 @@ export function CommandPalette({ translate, onClose, onNavigate }: CommandPalett
             })
           ) : (
             <div className="command-empty">
-              <Command size={22} />
+              <Command size={22} aria-hidden="true" />
               <p>{translate("commandEmpty")}</p>
             </div>
           )}

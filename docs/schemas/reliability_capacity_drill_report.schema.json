@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/reliability_capacity_drill_report.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile", "runtime", "measurements", "checks", "limitations"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "profile": {"const": "local-synthetic-capacity-and-backlog-recovery"},
+    "runtime": {"type": "object", "minProperties": 3, "maxProperties": 3, "additionalProperties": {"type": ["string", "integer"]}},
+    "measurements": {
+      "type": "object", "minProperties": 7, "maxProperties": 7,
+      "additionalProperties": {"type": "integer", "minimum": 0},
+      "properties": {"requests": {"const": 1000}, "queued_jobs": {"const": 1000}}
+    },
+    "checks": {"type": "object", "minProperties": 7, "maxProperties": 7, "additionalProperties": {"const": true}},
+    "limitations": {"type": "array", "minItems": 4, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9_]+$"}}
+  }
+}

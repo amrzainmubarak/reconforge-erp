@@ -58,7 +58,9 @@ def audit_verify(
     """Verify the configured tenant-scoped audit event hash chain."""
 
     if server_ledger_enabled(request):
-        return execute_postgres_ledger(request, lambda repository, tenant: repository.verify_audit_events(tenant_id=tenant))
+        return execute_postgres_ledger(
+            request, lambda repository, tenant: repository.verify_audit_events(tenant_id=tenant)
+        )
 
     try:
         if connection is None:

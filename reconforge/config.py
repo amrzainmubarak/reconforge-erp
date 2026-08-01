@@ -85,6 +85,7 @@ class ReconForgeConfig(BaseModel):
         if parsed < Decimal("0"):
             raise ValueError("amount_tolerance must be non-negative")
         return parsed
+
     date_tolerance_days: int = Field(default=3, ge=0)
     aging_buckets: list[AgingBucket] = Field(
         default_factory=lambda: [
@@ -147,10 +148,13 @@ def load_config(
         return ReconForgeConfig.model_validate({}, context=validation_context)
 
     try:
-        raw = read_yaml_document(
-            config_path,
-            financial_input_policy=input_policy,
-        ) or {}
+        raw = (
+            read_yaml_document(
+                config_path,
+                financial_input_policy=input_policy,
+            )
+            or {}
+        )
     except StructuredDocumentError as exc:
         raise ValueError(f"Invalid ReconForge config YAML ({exc.code})") from exc
 

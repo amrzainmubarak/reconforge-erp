@@ -32,6 +32,7 @@ dependencies = [
   "pydantic>=2.7",
   "pyyaml>=6.0",
   "rich>=13.7",
+  "tzdata>=2026.3",
   "typer>=0.12",
   "uvicorn>=0.30",
 ]
@@ -62,9 +63,28 @@ duckdb = [
 ]
 server = [
   "alembic>=1.16",
+  "boto3>=1.43.56",
   "psycopg[binary]>=3.2",
   "redis>=6.4",
   "sqlalchemy>=2.0",
+]
+observability = [
+    "opentelemetry-api==1.44.0",
+    "opentelemetry-exporter-otlp-proto-http==1.44.0",
+    "opentelemetry-sdk==1.44.0",
+]
+backup = [
+    "cryptography==49.0.0",
+]
+connectors = [
+    "cryptography==49.0.0",
+]
+federation = [
+    "joserfc==1.7.4",
+    "python3-saml==1.16.0",
+]
+mfa = [
+    "webauthn==3.0.0",
 ]
 
 [project.scripts]
@@ -73,8 +93,16 @@ reconforge = "reconforge.cli:app"
 [tool.setuptools.packages.find]
 include = ["reconforge*"]
 
+[tool.setuptools]
+py-modules = ["reconforge_migration_sql"]
+
 [tool.setuptools.package-data]
 "reconforge.data" = ["*.json"]
+
+[tool.setuptools.data-files]
+"." = ["alembic.ini"]
+"alembic" = ["alembic/env.py", "alembic/script.py.mako"]
+"alembic/versions" = ["alembic/versions/*.py"]
 
 [tool.uv]
 # Keep application resolution reproducible and fail when an unreviewed uv

@@ -1,0 +1,174 @@
+schema_version: reconforge-public-financial-evidence-manifest-v1
+manifest_id: public-financial-evidence-2026-08-01
+captured_at: "2026-08-01T09:45:00+03:00"
+
+artifacts:
+  - id: treasury-july-2025-json
+    publisher: U.S. Department of the Treasury, Bureau of the Fiscal Service
+    dataset: Debt to the Penny, July 2025 fixed date range
+    license: U.S. federal public data under the Fiscal Service Open Data Policy
+    metadata_url: https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/
+    url: https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny?filter=record_date:gte:2025-07-01,record_date:lte:2025-07-31&page[size]=100&format=json
+    format: json
+    encoding: utf-8
+    expected_sha256: 74770d8def15abc5da9bee1a5d3b57b89d218ac0eee58043a634e60e32e80ce5
+    max_bytes: 20000
+    allowed_content_types: [application/json]
+  - id: treasury-july-2025-csv
+    publisher: U.S. Department of the Treasury, Bureau of the Fiscal Service
+    dataset: Debt to the Penny, July 2025 fixed date range
+    license: U.S. federal public data under the Fiscal Service Open Data Policy
+    metadata_url: https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/
+    url: https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny?filter=record_date:gte:2025-07-01,record_date:lte:2025-07-31&page[size]=100&format=csv
+    format: csv
+    encoding: utf-8-sig
+    expected_sha256: d17b14d616f27aedb9c687cb0ec09934b9f0880caf116ee8a90d29511894a7f5
+    max_bytes: 10000
+    allowed_content_types: [text/csv]
+
+  - id: world-bank-page-0000-json
+    publisher: World Bank Group
+    dataset: IBRD Commitments and Disbursements - Country / Economy Summary
+    license: Creative Commons Attribution 4.0 International
+    metadata_url: https://financesone.worldbank.org/ibrd-commitments-and-disbursements-country-economy-summary/DS01556
+    url: https://datacatalogapi.worldbank.org/dexapps/fone/api/apiservice?datasetId=DS01556&resourceId=RS00963&top=1000&skip=0&type=json
+    format: json
+    encoding: utf-8
+    expected_sha256: 0df1b1f92230735d4076148a999ae93adf2681bc63643d09178631525d932f6e
+    max_bytes: 400000
+    allowed_content_types: [application/json]
+  - id: world-bank-page-1000-json
+    publisher: World Bank Group
+    dataset: IBRD Commitments and Disbursements - Country / Economy Summary
+    license: Creative Commons Attribution 4.0 International
+    metadata_url: https://financesone.worldbank.org/ibrd-commitments-and-disbursements-country-economy-summary/DS01556
+    url: https://datacatalogapi.worldbank.org/dexapps/fone/api/apiservice?datasetId=DS01556&resourceId=RS00963&top=1000&skip=1000&type=json
+    format: json
+    encoding: utf-8
+    expected_sha256: e513f5fce20bc917909e6cba1cbbe9a56abb6db8d55f9caece79b45e4a3fe260
+    max_bytes: 400000
+    allowed_content_types: [application/json]
+  - id: world-bank-page-2000-json
+    publisher: World Bank Group
+    dataset: IBRD Commitments and Disbursements - Country / Economy Summary
+    license: Creative Commons Attribution 4.0 International
+    metadata_url: https://financesone.worldbank.org/ibrd-commitments-and-disbursements-country-economy-summary/DS01556
+    url: https://datacatalogapi.worldbank.org/dexapps/fone/api/apiservice?datasetId=DS01556&resourceId=RS00963&top=1000&skip=2000&type=json
+    format: json
+    encoding: utf-8
+    expected_sha256: 75d93cabd274986a09777ed9afd4606b8ab7f9558ee187738a386b3610278393
+    max_bytes: 400000
+    allowed_content_types: [application/json]
+  - id: world-bank-page-0000-csv
+    publisher: World Bank Group
+    dataset: IBRD Commitments and Disbursements - Country / Economy Summary
+    license: Creative Commons Attribution 4.0 International
+    metadata_url: https://financesone.worldbank.org/ibrd-commitments-and-disbursements-country-economy-summary/DS01556
+    url: https://datacatalogapi.worldbank.org/dexapps/fone/api/apiservice?datasetId=DS01556&resourceId=RS00963&top=1000&skip=0&type=csv
+    format: csv
+    encoding: utf-8-sig
+    expected_sha256: b0171e370e526e5369148a814c9d32faf4c92fd6af24bf20e0d6ab5c5b3ff9a8
+    max_bytes: 150000
+    allowed_content_types: [text/plain]
+  - id: world-bank-page-1000-csv
+    publisher: World Bank Group
+    dataset: IBRD Commitments and Disbursements - Country / Economy Summary
+    license: Creative Commons Attribution 4.0 International
+    metadata_url: https://financesone.worldbank.org/ibrd-commitments-and-disbursements-country-economy-summary/DS01556
+    url: https://datacatalogapi.worldbank.org/dexapps/fone/api/apiservice?datasetId=DS01556&resourceId=RS00963&top=1000&skip=1000&type=csv
+    format: csv
+    encoding: utf-8-sig
+    expected_sha256: b184d2a8843a01fde1423fc4659420a6c820ae9b278c89eb6615522caf6d63a2
+    max_bytes: 150000
+    allowed_content_types: [text/plain]
+  - id: world-bank-page-2000-csv
+    publisher: World Bank Group
+    dataset: IBRD Commitments and Disbursements - Country / Economy Summary
+    license: Creative Commons Attribution 4.0 International
+    metadata_url: https://financesone.worldbank.org/ibrd-commitments-and-disbursements-country-economy-summary/DS01556
+    url: https://datacatalogapi.worldbank.org/dexapps/fone/api/apiservice?datasetId=DS01556&resourceId=RS00963&top=1000&skip=2000&type=csv
+    format: csv
+    encoding: utf-8-sig
+    expected_sha256: 13a40ad32cdf3a7631d5618ba6e3f185bbf1f29f05042dbbaa20547b9eecb291
+    max_bytes: 150000
+    allowed_content_types: [text/plain]
+
+  - id: uk-dfe-2026-01-csv
+    publisher: Northern Ireland Department for the Economy via OpenDataNI
+    dataset: Departmental payments over GBP 25,000 - January 2026
+    license: UK Open Government Licence
+    metadata_url: https://ckan.publishing.service.gov.uk/dataset/department-for-the-economy-departmental-spend-over-f25-000-may-2023
+    url: https://admin.opendatani.gov.uk/dataset/4028b473-7c36-49db-bcf9-7ca2b1132b64/resource/a19f000f-8eb2-456e-b0e4-afb73aa325a8/download/dfe-payments-over-25000-january-2026.csv
+    format: csv
+    encoding: auto-strict
+    expected_sha256: d55a2b18624ecd164fd598a4493c30016ce75b9839086b545ac110a895504b7c
+    max_bytes: 50000
+    allowed_content_types: [text/csv]
+  - id: uk-dfe-2026-02-csv
+    publisher: Northern Ireland Department for the Economy via OpenDataNI
+    dataset: Departmental payments over GBP 25,000 - February 2026
+    license: UK Open Government Licence
+    metadata_url: https://ckan.publishing.service.gov.uk/dataset/department-for-the-economy-departmental-spend-over-f25-000-may-2023
+    url: https://admin.opendatani.gov.uk/dataset/4028b473-7c36-49db-bcf9-7ca2b1132b64/resource/78525f45-3026-43a4-a07c-32ef61e4e4fe/download/dfe-payments-over-25000-february-2026-.csv
+    format: csv
+    encoding: auto-strict
+    expected_sha256: 63c4ba5454e547a3abef59fde37c927dad494a305ee73114de4841f1df43ac07
+    max_bytes: 50000
+    allowed_content_types: [text/csv]
+  - id: uk-dfe-2026-03-csv
+    publisher: Northern Ireland Department for the Economy via OpenDataNI
+    dataset: Departmental payments over GBP 25,000 - March 2026
+    license: UK Open Government Licence
+    metadata_url: https://ckan.publishing.service.gov.uk/dataset/department-for-the-economy-departmental-spend-over-f25-000-may-2023
+    url: https://admin.opendatani.gov.uk/dataset/4028b473-7c36-49db-bcf9-7ca2b1132b64/resource/71b7e65b-5f58-400f-bf4c-d543c2c8ac03/download/dfe-payments-over-25000-march-2026.csv
+    format: csv
+    encoding: auto-strict
+    expected_sha256: 145683f5752f392f00695e4f1fc87474bebea2a9b4ab52d7b9179fa6b44991f8
+    max_bytes: 50000
+    allowed_content_types: [text/csv]
+
+experiments:
+  - id: treasury-debt-july-2025
+    kind: treasury-debt-cross-format
+    artifact_ids: [treasury-july-2025-json, treasury-july-2025-csv]
+    expected_record_count: 22
+    expected_canonical_sha256: 05156b90be73daddf72b232808c2648083cbd6e52d52109fa564f3250f0685b5
+    expected_equation_violations: 0
+  - id: world-bank-fy24
+    kind: world-bank-cross-format
+    json_artifact_ids: [world-bank-page-0000-json, world-bank-page-1000-json, world-bank-page-2000-json]
+    csv_artifact_ids: [world-bank-page-0000-csv, world-bank-page-1000-csv, world-bank-page-2000-csv]
+    selected_time_period: FY24
+    accounting_date: 2024-06-30
+    expected_source_record_count: 2890
+    expected_selected_record_count: 382
+    expected_canonical_sha256: 0ca6bf2395f36737bdf679a81405a0de1054a393c59cd3f4d42a7544015d4dbc
+    expected_component_equation_violations: 0
+  - id: uk-dfe-q1-2026
+    kind: uk-spending-ingress-replay
+    artifact_ids: [uk-dfe-2026-01-csv, uk-dfe-2026-02-csv, uk-dfe-2026-03-csv]
+    period_by_artifact:
+      uk-dfe-2026-01-csv: 2026-01
+      uk-dfe-2026-02-csv: 2026-02
+      uk-dfe-2026-03-csv: 2026-03
+    expected_encoding_by_artifact:
+      uk-dfe-2026-01-csv: cp1252
+      uk-dfe-2026-02-csv: utf-8-sig
+      uk-dfe-2026-03-csv: utf-8-sig
+    expected_rows_by_artifact:
+      uk-dfe-2026-01-csv: 166
+      uk-dfe-2026-02-csv: 166
+      uk-dfe-2026-03-csv: 231
+    expected_totals_by_artifact:
+      uk-dfe-2026-01-csv: "83778974.17"
+      uk-dfe-2026-02-csv: "56989857.45"
+      uk-dfe-2026-03-csv: "91378180.51"
+    expected_digests_by_artifact:
+      uk-dfe-2026-01-csv: 4a1ee93c7c1ec4feb3b28095b843f25882645ad9ec4ed67f87acdd387daacab6
+      uk-dfe-2026-02-csv: 96be0c5cd8155e8d1c709258a40a67056f5db0a133f56bf49580b360a102e9ad
+      uk-dfe-2026-03-csv: b3e68cf3dc4c2d2747cc1382a02f055193cadb69b9355279bce4dae7f73775a4
+    expected_record_count: 563
+    expected_canonical_sha256: ab0e9930b1195419837e1abd9762b47f6973dc74b765d02a7ee3c4d6f08ed153
+    expected_negative_amount_count: 1
+    expected_reference_collision_groups: 9
+    expected_threshold_violations: 0

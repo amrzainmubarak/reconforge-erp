@@ -121,6 +121,7 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
             tenant_db_root=tenant_root,
             postgres_dsn="postgresql://evidence.test/postgres",
             postgres_require_tls=False,
+            cursor_signing_key=b"evidence-cursor-test-key-32-bytes-minimum",
         )
     )
     headers = {"X-ReconForge-Tenant": "tenant-a", "Authorization": "Bearer server-token"}

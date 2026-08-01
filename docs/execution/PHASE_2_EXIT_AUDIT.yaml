@@ -1,0 +1,63 @@
+schema_version: 1
+audit_id: E-165
+executed_at: "2026-07-28"
+phase: phase_2
+status: verified
+scope: Deterministic Matching and Evidence 2.0 on the declared local benchmark and application contracts
+task_ids:
+  - P1-REC-001
+  - P1-REC-002
+  - P1-REC-003
+  - P1-REC-004
+  - P1-REC-005
+  - P1-REC-006
+  - P1-REC-007
+  - P1-REC-008
+  - P1-REC-009
+  - P1-REC-010
+  - P2-001
+  - P2-002
+  - P2-003
+  - P2-004
+  - P2-005
+  - P2-006
+  - P2-007
+  - P2-008
+gates:
+  - id: p2_deterministic_matching
+    status: verified
+    evidence:
+      - tests/test_matching_strategy_contract.py
+      - tests/test_matching_candidate_budgets.py
+      - tests/test_grouped_matching.py
+      - tests/test_grouped_matching_application.py
+      - docs/architecture/grouped-matching.md
+      - docs/architecture/matching-strategies.v1.json
+  - id: p2_evidence_integrity
+    status: verified
+    evidence:
+      - docs/schemas/evidence_graph.schema.json
+      - tests/test_phase2_deliverables.py
+      - tests/test_api_server_evidence.py
+      - tests/test_evidence_object_storage.py
+      - tests/test_application_evidence.py
+  - id: p2_reconciliation_as_code
+    status: verified
+    evidence:
+      - docs/schemas/reconciliation_as_code.schema.json
+      - tests/test_phase2_deliverables.py
+      - tests/test_cli_and_studio.py
+      - reconforge/rules/recon_as_code.py
+  - id: p2_measured_performance
+    status: verified
+    evidence:
+      - docs/execution/PERFORMANCE_BASELINE.md
+      - docs/execution/benchmarks/phase2/reconciliation-execution-benchmark-suite.json
+      - tests/test_generator_benchmark_engines.py
+limitations:
+  - benchmark_is_single_host_single_process
+  - no_1m_or_10m_claim
+  - no_database_or_distributed_throughput_claim
+  - evidence_redaction_is_not_disclosure_approval
+  - no_production_readiness_claim
+  - no_external_assurance_claim

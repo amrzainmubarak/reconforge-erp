@@ -1,0 +1,38 @@
+{
+  "schema": "reconforge-signed-airgap-install-drill-report-v1",
+  "executed_at": "2026-07-30",
+  "release_identity": {
+    "version": "0.7.1",
+    "tag": "v0.7.1",
+    "revision": "d47edd845e6aef3bae16e05698e07878086d690b",
+    "wheel_sha256": "210e69770fe1ad55227173349ee22ca7f16e4f5270c093f12c78460c14b66f33",
+    "actions_run_id": 30243819239,
+    "artifact_id": 8644255664
+  },
+  "signature_evidence": {
+    "offline_provenance_verified": true,
+    "offline_cyclonedx_attestation_verified": true,
+    "repository_workflow_ref_commit_runner_constrained": true
+  },
+  "installation": {
+    "container_image": "python:3.14.1-slim",
+    "container_image_digest": "sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e",
+    "network_mode": "none",
+    "root_filesystem": "read-only",
+    "bundle_mount": "read-only",
+    "pip_policy": "--no-index --no-deps --require-hashes",
+    "entry_count": 60,
+    "total_bytes": 98398601,
+    "bundle_manifest_sha256": "7f0193e5d5b3cf0a1b6c20c6b4bda79ff480bbc405d89b070c13589f3e1829b2",
+    "doctor_exit_zero": true,
+    "cleanup_complete": true
+  },
+  "scope_status": "verified-same-signed-wheel-installed-without-network",
+  "limitations": [
+    "python_wheel_profile_only",
+    "dependency_wheels_hash_verified_not_individually_attested",
+    "single_runtime_single_run",
+    "no_physical_transfer_custody_claim",
+    "no_production_readiness_claim"
+  ]
+}

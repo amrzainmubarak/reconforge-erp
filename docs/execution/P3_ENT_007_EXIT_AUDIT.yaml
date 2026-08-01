@@ -1,0 +1,121 @@
+schema_version: 1
+audit_id: E-209
+executed_at: "2026-07-30"
+task_id: P3-ENT-007
+status: verified
+scope: Manifest-driven built-in local/export adapters plus a data-only signed-package and synthetic read-only HTTPS/durable-job connector SDK boundary
+gates:
+  - id: versioned_closed_manifests
+    status: verified
+    evidence: [reconforge/connectors/manifest.py, tests/test_connector_sdk.py]
+  - id: truthful_builtin_classification
+    status: verified
+    evidence: [reconforge/plugins/registry.py, reconforge/plugins/generic_csv.py, reconforge/plugins/odoo_export.py, reconforge/plugins/sap_export.py, tests/test_connector_sdk.py]
+  - id: read_only_default
+    status: verified
+    evidence: [reconforge/connectors/manifest.py, tests/test_connector_sdk.py, tests/test_connector_network.py]
+  - id: data_only_signature_and_trust
+    status: verified
+    evidence: [reconforge/connectors/package.py, tests/test_connector_package.py]
+  - id: no_arbitrary_code_loading
+    status: verified
+    evidence: [reconforge/connectors/package.py, reconforge/plugins/registry.py, tests/test_connector_package.py, tests/test_connector_sdk.py]
+  - id: local_synthetic_conformance
+    status: verified
+    evidence: [reconforge/connectors/conformance.py, tests/test_connector_sdk.py]
+  - id: secret_reference_and_non_disclosure
+    status: verified_synthetic
+    evidence: [reconforge/connectors/network.py, tests/test_connector_network.py]
+  - id: exact_https_egress_and_ssrf
+    status: verified_synthetic
+    evidence: [reconforge/connectors/network.py, tests/test_connector_network.py]
+  - id: rate_and_bounded_retry
+    status: verified_process_local
+    evidence: [reconforge/connectors/manifest.py, reconforge/connectors/network.py, tests/test_connector_network.py]
+  - id: cursor_and_idempotent_replay
+    status: verified_synthetic
+    evidence: [reconforge/connectors/conformance.py, reconforge/connectors/network.py, tests/test_connector_network.py]
+  - id: durable_checkpoint_and_crash_resume
+    status: verified_local_sqlite
+    evidence: [reconforge/connectors/workload.py, tests/test_connector_durable_workload.py]
+  - id: threat_model_and_operator_boundaries
+    status: verified_documented
+    evidence: [docs/adr/0201-connector-sdk-starts-from-closed-data-manifests.md, docs/adr/0202-network-connectors-are-data-only-read-jobs.md, docs/connectors/sdk-foundation.md, docs/connectors/network-runtime.md, docs/security/threat-model-index.v1.yaml]
+failure_matrix:
+  - threat: arbitrary_module_or_entrypoint_loading
+    result: static_registry_and_closed_package_schema_reject
+    evidence: tests/test_connector_package.py
+  - threat: package_manifest_publisher_or_signature_tampering
+    result: ed25519_verification_rejects
+    evidence: tests/test_connector_package.py
+  - threat: revoked_or_ambiguous_publisher_key
+    result: versioned_registry_rejects
+    evidence: tests/test_connector_package.py
+  - threat: oversized_binary_or_schema_expanded_package
+    result: bounded_closed_parser_rejects
+    evidence: tests/test_connector_package.py
+  - threat: write_capability_in_manifest_v1
+    result: manifest_validation_rejects
+    evidence: tests/test_connector_sdk.py
+  - threat: unsafe_or_undeclared_egress
+    result: exact_https_destination_validation_rejects
+    evidence: tests/test_connector_network.py
+  - threat: private_link_local_or_mixed_dns_answer
+    result: every_answer_must_be_global_before_ip_pinning
+    evidence: tests/test_connector_network.py
+  - threat: redirect_to_unapproved_destination
+    result: redirect_is_returned_and_executor_treats_as_permanent_failure
+    evidence: tests/test_connector_network.py
+  - threat: secret_missing_malformed_persisted_or_returned
+    result: disabled_default_and_bounded_runtime_only_reference
+    evidence: tests/test_connector_network.py
+  - threat: retry_amplification_on_policy_or_permanent_failure
+    result: only_selected_transport_and_http_failures_retry_with_ceiling
+    evidence: tests/test_connector_network.py
+  - threat: cursor_oversize_or_unsupported_cursor
+    result: bounded_manifest_aware_validation_rejects
+    evidence: tests/test_connector_network.py
+  - threat: idempotent_replay_changes_request_or_response_identity
+    result: formal_conformance_rejects_digest_or_cursor_change
+    evidence: tests/test_connector_network.py
+  - threat: registration_changes_after_job_submission
+    result: config_digest_mismatch_rejects_before_network
+    evidence: tests/test_connector_durable_workload.py
+  - threat: process_crash_replays_committed_page
+    result: generation_fenced_resume_loads_latest_committed_cursor_and_skips_effect
+    evidence: tests/test_connector_durable_workload.py
+  - threat: uncertain_object_write_or_tampered_checkpoint
+    result: identical_object_is_reverified_and_all_digests_must_match_before_effect
+    evidence: tests/test_connector_durable_workload.py
+runtime_evidence:
+  locked_full_regression: 1915_passed_62_declared_external_skips
+  locked_full_regression_duration_seconds: 263.19
+  focused_connector_exit_target: 57_passed
+  repository_ruff: passed
+  repository_mypy_source_files: 358
+  external_network_calls: 0
+  production_secrets_or_customer_data: 0
+  python_package_build: wheel_and_sdist_passed
+  wheel_bytes: 1136795
+  wheel_sha256: abb2bf912f05ffcaf887bd770ffba98b4c6cf3a675a0156185fcd9fd7f70c9fd
+  wheel_entries: 422
+  sdist_bytes: 1523008
+  sdist_sha256: 6f37204f4e4cad03e51b0e2390bf80da185d8ab2bf6f2a3e9df8dd96a4f3f5f0
+  sdist_entries: 836
+  package_membership: five_connector_runtime_files_once_in_wheel_and_sdist_and_five_sdk_audit_docs_once_in_sdist
+  bandit: zero_findings_existing_reviewed_nosec_warnings_only
+  pip_audit: zero_known_third_party_vulnerabilities_local_unpublished_package_skipped
+  supply_chain_policy: valid_zero_active_exceptions
+limitations:
+  - no_live_vendor_connector_or_provider_interoperability
+  - sap_and_odoo_are_export_profiles_only
+  - no_production_secret_vault_or_persistent_trust_administration
+  - no_executable_external_connector_installation
+  - no_writeback_oauth_exchange_mtls_client_sftp_database_event_stream_or_webhook_receiver
+  - rate_limit_state_is_process_local_not_distributed
+  - no_external_security_assurance_ha_dr_compliance_certification_or_enterprise_ready_claim
+publication:
+  commit: false
+  push: false
+  pull_request: false
+  release: false

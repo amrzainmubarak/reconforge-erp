@@ -1,0 +1,39 @@
+schema_version: 2
+audit_id: E-251
+executed_at: "2026-08-01"
+task_id: P3-ENT-013
+status: completed
+scope: Evidence-based competitive capability assessment for publication-facing claims and competitor comparison.
+summary:
+  current_evidence: Competitive capability matrix is bounded and published at docs/strategy/competitive-capability-matrix.md.
+  publication_blocks: []
+  closure_precondition: Owner/team release requires green repository gates and bounded claims; optional external assurance does not block release.
+gates:
+  - id: p3_competitive_evidence
+    status: verified
+    evidence: [docs/strategy/competitive-capability-matrix.md]
+  - id: p3_ext_pilot_optional_assurance
+    status: deferred
+    evidence: [docs/execution/P3_EXT_001_PILOT_001.md, docs/execution/P3_EXT_001_PILOT_002.md, docs/execution/P3_EXT_001_PILOT_003.md, docs/execution/P3_EXT_001_CONTROLLED_PILOT_EVIDENCE_TEMPLATE.md, docs/execution/P3_EXTERNAL_GATE_EVIDENCE_INDEX.md]
+  - id: p3_independent_review_optional_assurance
+    status: deferred
+    evidence: [docs/execution/P3_EXT_002_REVIEW_REPORT.md, docs/execution/P3_EXT_002_INDEPENDENT_SECURITY_REVIEW_TEMPLATE.md]
+runtime_evidence:
+  competitive_matrix_present: true
+  synthetic_vs_external_scope:
+    internal_repro_runs: true
+    external_customer_scope: false
+  unsupported_claims_marked:
+    - enterprise_ready
+    - compliant
+    - certified
+    - superior_to_competitors
+  owner_team_release_requirement_complete: true
+  optional_external_assurance_complete: false
+  publication_block: false
+limitations:
+  - Real external controlled pilots are not attached and no claim may imply that they are.
+  - Independent security review is absent and no claim may imply independent assurance.
+  - Owner/team publication does not convert internal evidence into customer, independent, certification, or compliance evidence.
+  - No pricing, scale, or SLO claims were added from synthetic run evidence.
+publication: {commit: false, push: false, pull_request: false, release: false}

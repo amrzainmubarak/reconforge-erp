@@ -1,0 +1,28 @@
+{
+  "checks": {
+    "clean_shutdown": true,
+    "closed_alert_event_present": true,
+    "closed_attribute_present": true,
+    "force_flush_succeeded": true,
+    "health_request_succeeded": true,
+    "log_receiver_observed": true,
+    "metric_receiver_observed": true,
+    "proxy_environment_ignored": true,
+    "request_window_observed": true,
+    "sensitive_markers_absent": true,
+    "trace_receiver_observed": true
+  },
+  "limitations": [
+    "local_loopback_receiver_not_full_collector_distribution",
+    "no_alert_manager_delivery",
+    "operational_events_only_not_arbitrary_application_logs",
+    "no_production_slo_or_ha_claim"
+  ],
+  "profile": "explicit-loopback-otlp-http-protobuf",
+  "receiver_paths": [
+    "/v1/logs",
+    "/v1/metrics",
+    "/v1/traces"
+  ],
+  "schema_version": 1
+}

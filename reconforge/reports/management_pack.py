@@ -195,7 +195,10 @@ def _to_optional_decimal(value: object) -> Decimal | None:
 
 def _risk_score_series(frame: pd.DataFrame) -> pd.Series:
     return pd.Series(
-        [_to_optional_decimal(value) for value in frame.get("risk_score", pd.Series([None] * len(frame), index=frame.index))],
+        [
+            _to_optional_decimal(value)
+            for value in frame.get("risk_score", pd.Series([None] * len(frame), index=frame.index))
+        ],
         index=frame.index,
     )
 
@@ -207,7 +210,9 @@ def _high_risk_exceptions(frame: pd.DataFrame) -> pd.DataFrame:
     return frame[mask].copy()
 
 
-def _risk_scoring(stock_result: StockGLReconciliationResult, workorder_result: WorkorderReconciliationResult) -> pd.DataFrame:
+def _risk_scoring(
+    stock_result: StockGLReconciliationResult, workorder_result: WorkorderReconciliationResult
+) -> pd.DataFrame:
     combined = pd.concat([stock_result.all_exceptions, workorder_result.all_exceptions], ignore_index=True, sort=False)
     if combined.empty or "risk_level" not in combined.columns:
         return pd.DataFrame(columns=["risk_level", "exception_count"])
@@ -218,7 +223,15 @@ def _amount_impact_series(frame: pd.DataFrame) -> pd.Series:
     if frame.empty:
         return pd.Series([None] * len(frame), index=frame.index, dtype=object)
     amount = pd.Series([None] * len(frame), index=frame.index, dtype=object)
-    for field in ("amount_impact", "total_cost", "amount", "total_price", "actual_cost", "estimated_cost", "invoice_amount"):
+    for field in (
+        "amount_impact",
+        "total_cost",
+        "amount",
+        "total_price",
+        "actual_cost",
+        "estimated_cost",
+        "invoice_amount",
+    ):
         if field not in frame.columns:
             continue
         values = pd.Series(
@@ -248,7 +261,13 @@ def _top_control_themes(combined: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(
             columns=["control_theme", "exception_count", "amount_impact", "unquantified_amount_count"],
         )
-    theme_column = "exception_type" if "exception_type" in combined.columns else "rule_name" if "rule_name" in combined.columns else ""
+    theme_column = (
+        "exception_type"
+        if "exception_type" in combined.columns
+        else "rule_name"
+        if "rule_name" in combined.columns
+        else ""
+    )
     if not theme_column:
         return pd.DataFrame(
             columns=["control_theme", "exception_count", "amount_impact", "unquantified_amount_count"],
@@ -348,7 +367,9 @@ def _control_value_summary(
     high_critical_mask = severity.isin({"high", "critical"})
     high_critical = int(high_critical_mask.sum())
     unresolved = int((~status.isin({"Resolved", "Accepted Risk"})).sum()) if total_exceptions else 0
-    unresolved_high_risk = int((high_critical_mask & ~status_lower.isin({"resolved", "accepted risk"})).sum()) if total_exceptions else 0
+    unresolved_high_risk = (
+        int((high_critical_mask & ~status_lower.isin({"resolved", "accepted risk"})).sum()) if total_exceptions else 0
+    )
     accepted_risk = int(status.eq("Accepted Risk").sum())
     escalated = int(status.eq("Escalated").sum())
     reviewed = int(status.ne("New").sum())
@@ -378,11 +399,31 @@ def _control_value_summary(
         wip_exposure = _quantize_report_amount(Decimal("0"), policy)
     return pd.DataFrame(
         [
-            {"metric": "total_exceptions", "value": total_exceptions, "meaning": "All detected reconciliation and operational exceptions."},
-            {"metric": "high_or_critical_exceptions", "value": high_critical, "meaning": "Exceptions requiring priority finance, audit, or operations review."},
-            {"metric": "unresolved_exceptions", "value": unresolved, "meaning": "Exceptions not yet resolved or formally accepted as risk."},
-            {"metric": "unresolved_high_risk_count", "value": unresolved_high_risk, "meaning": "High or Critical exceptions not yet resolved or accepted as risk."},
-            {"metric": "accepted_risk_count", "value": accepted_risk, "meaning": "Exceptions explicitly accepted with documented rationale."},
+            {
+                "metric": "total_exceptions",
+                "value": total_exceptions,
+                "meaning": "All detected reconciliation and operational exceptions.",
+            },
+            {
+                "metric": "high_or_critical_exceptions",
+                "value": high_critical,
+                "meaning": "Exceptions requiring priority finance, audit, or operations review.",
+            },
+            {
+                "metric": "unresolved_exceptions",
+                "value": unresolved,
+                "meaning": "Exceptions not yet resolved or formally accepted as risk.",
+            },
+            {
+                "metric": "unresolved_high_risk_count",
+                "value": unresolved_high_risk,
+                "meaning": "High or Critical exceptions not yet resolved or accepted as risk.",
+            },
+            {
+                "metric": "accepted_risk_count",
+                "value": accepted_risk,
+                "meaning": "Exceptions explicitly accepted with documented rationale.",
+            },
             {"metric": "escalated_count", "value": escalated, "meaning": "Exceptions assigned for escalation."},
             {
                 "metric": "unquantified_exception_count",
@@ -406,11 +447,31 @@ def _control_value_summary(
                 "meaning": "Available WIP cost exposure from open work-order aging data.",
                 **_amount_policy_fields(policy),
             },
-            {"metric": "review_completion_rate_pct", "value": review_completion_rate, "meaning": "Percent of exceptions with a status other than New."},
-            {"metric": "certified_review_count", "value": certified_count, "meaning": "Exceptions with workflow certification metadata. This is not a legal sign-off."},
-            {"metric": "recurring_exception_count", "value": _recurring_exception_count(output_dir), "meaning": "Recurring exceptions from a local period comparison report when available."},
-            {"metric": "close_checklist_completion_pct", "value": _close_completion_rate(output_dir), "meaning": "Local close checklist completion when a close checklist exists."},
-            {"metric": "evidence_coverage_high_critical_pct", "value": _evidence_coverage_pct(high_critical, output_dir), "meaning": "High/Critical evidence coverage when a local evidence index exists."},
+            {
+                "metric": "review_completion_rate_pct",
+                "value": review_completion_rate,
+                "meaning": "Percent of exceptions with a status other than New.",
+            },
+            {
+                "metric": "certified_review_count",
+                "value": certified_count,
+                "meaning": "Exceptions with workflow certification metadata. This is not a legal sign-off.",
+            },
+            {
+                "metric": "recurring_exception_count",
+                "value": _recurring_exception_count(output_dir),
+                "meaning": "Recurring exceptions from a local period comparison report when available.",
+            },
+            {
+                "metric": "close_checklist_completion_pct",
+                "value": _close_completion_rate(output_dir),
+                "meaning": "Local close checklist completion when a close checklist exists.",
+            },
+            {
+                "metric": "evidence_coverage_high_critical_pct",
+                "value": _evidence_coverage_pct(high_critical, output_dir),
+                "meaning": "High/Critical evidence coverage when a local evidence index exists.",
+            },
         ],
     )
 
@@ -434,15 +495,29 @@ def _risk_matrix(combined: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def _control_effectiveness(stock_result: StockGLReconciliationResult, workorder_result: WorkorderReconciliationResult) -> pd.DataFrame:
+def _control_effectiveness(
+    stock_result: StockGLReconciliationResult, workorder_result: WorkorderReconciliationResult
+) -> pd.DataFrame:
     total_stock = len(stock_result.matched_transactions) + len(stock_result.stock_without_gl)
     match_rate = len(stock_result.matched_transactions) / total_stock if total_stock else 0.0
     return pd.DataFrame(
         [
             {"control": "Stock to GL matching", "metric": "match_rate", "value": round(match_rate, 4)},
-            {"control": "Stock to GL matching", "metric": "unmatched_stock_count", "value": len(stock_result.stock_without_gl)},
-            {"control": "Stock to GL matching", "metric": "unmatched_gl_count", "value": len(stock_result.gl_without_stock)},
-            {"control": "Work order governance", "metric": "exception_count", "value": len(workorder_result.all_exceptions)},
+            {
+                "control": "Stock to GL matching",
+                "metric": "unmatched_stock_count",
+                "value": len(stock_result.stock_without_gl),
+            },
+            {
+                "control": "Stock to GL matching",
+                "metric": "unmatched_gl_count",
+                "value": len(stock_result.gl_without_stock),
+            },
+            {
+                "control": "Work order governance",
+                "metric": "exception_count",
+                "value": len(workorder_result.all_exceptions),
+            },
         ],
     )
 
@@ -478,13 +553,40 @@ def _certification_register(combined: pd.DataFrame, output_dir: Path) -> pd.Data
     return merged[columns].copy()
 
 
-def _recommended_actions(stock_result: StockGLReconciliationResult, workorder_result: WorkorderReconciliationResult, wip_aging: pd.DataFrame) -> pd.DataFrame:
+def _recommended_actions(
+    stock_result: StockGLReconciliationResult, workorder_result: WorkorderReconciliationResult, wip_aging: pd.DataFrame
+) -> pd.DataFrame:
     actions = [
-        {"priority": "High", "owner": "Finance", "action": "Clear stock movements without GL postings before period close.", "trigger_count": len(stock_result.stock_without_gl)},
-        {"priority": "High", "owner": "Stores", "action": "Investigate GL expenses without matching stock movement evidence.", "trigger_count": len(stock_result.gl_without_stock)},
-        {"priority": "High", "owner": "Workshop", "action": "Resolve direct purchase-and-fit cases with receipt, issue, and approval evidence.", "trigger_count": len(workorder_result.direct_purchase_fitting_risk)},
-        {"priority": "Medium", "owner": "Workshop", "action": "Collect or document old-part returns for controlled categories.", "trigger_count": len(workorder_result.old_part_return_missing)},
-        {"priority": "Medium", "owner": "Finance Controller", "action": "Review WIP older than 90 days and agree closure or provisioning actions.", "trigger_count": int(wip_aging["aging_days"].gt(90).sum()) if not wip_aging.empty else 0},
+        {
+            "priority": "High",
+            "owner": "Finance",
+            "action": "Clear stock movements without GL postings before period close.",
+            "trigger_count": len(stock_result.stock_without_gl),
+        },
+        {
+            "priority": "High",
+            "owner": "Stores",
+            "action": "Investigate GL expenses without matching stock movement evidence.",
+            "trigger_count": len(stock_result.gl_without_stock),
+        },
+        {
+            "priority": "High",
+            "owner": "Workshop",
+            "action": "Resolve direct purchase-and-fit cases with receipt, issue, and approval evidence.",
+            "trigger_count": len(workorder_result.direct_purchase_fitting_risk),
+        },
+        {
+            "priority": "Medium",
+            "owner": "Workshop",
+            "action": "Collect or document old-part returns for controlled categories.",
+            "trigger_count": len(workorder_result.old_part_return_missing),
+        },
+        {
+            "priority": "Medium",
+            "owner": "Finance Controller",
+            "action": "Review WIP older than 90 days and agree closure or provisioning actions.",
+            "trigger_count": int(wip_aging["aging_days"].gt(90).sum()) if not wip_aging.empty else 0,
+        },
     ]
     return pd.DataFrame(actions)
 
@@ -614,10 +716,16 @@ def generate_management_pack(
         "stock_gl_summary": frame_to_records(stock_result.summary),
         "workorder_summary": frame_to_records(workorder_result.summary),
         "wip_aging": frame_to_records(wip_aging),
-        "top_exceptions": frame_to_records(combined_exceptions.sort_values("risk_score", ascending=False).head(25)) if not combined_exceptions.empty and "risk_score" in combined_exceptions.columns else [],
+        "top_exceptions": frame_to_records(combined_exceptions.sort_values("risk_score", ascending=False).head(25))
+        if not combined_exceptions.empty and "risk_score" in combined_exceptions.columns
+        else [],
     }
     json_path = write_json(payload, output_dir, "management_pack")
-    critical_count = int(combined_exceptions.get("risk_level", pd.Series(dtype=str)).astype(str).eq("Critical").sum()) if not combined_exceptions.empty else 0
+    critical_count = (
+        int(combined_exceptions.get("risk_level", pd.Series(dtype=str)).astype(str).eq("Critical").sum())
+        if not combined_exceptions.empty
+        else 0
+    )
     markdown_path = write_markdown_summary(
         output_dir / "summary.md",
         config,
@@ -638,7 +746,9 @@ def generate_management_pack(
         output_dir / "dashboard.html",
         config,
         management_summary_dict(executive_summary),
-        combined_exceptions.sort_values("risk_score", ascending=False) if not combined_exceptions.empty and "risk_score" in combined_exceptions.columns else combined_exceptions,
+        combined_exceptions.sort_values("risk_score", ascending=False)
+        if not combined_exceptions.empty and "risk_score" in combined_exceptions.columns
+        else combined_exceptions,
         wip_aging,
         control_value_summary=control_value_summary,
         top_control_themes=top_control_themes,
@@ -648,7 +758,9 @@ def generate_management_pack(
         output_dir / "executive_report.html",
         config,
         management_summary_dict(executive_summary),
-        combined_exceptions.sort_values("risk_score", ascending=False) if not combined_exceptions.empty and "risk_score" in combined_exceptions.columns else combined_exceptions,
+        combined_exceptions.sort_values("risk_score", ascending=False)
+        if not combined_exceptions.empty and "risk_score" in combined_exceptions.columns
+        else combined_exceptions,
         wip_aging,
         control_value_summary=control_value_summary,
         top_control_themes=top_control_themes,

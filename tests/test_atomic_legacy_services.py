@@ -17,6 +17,7 @@ from reconforge.platform.controls import ControlTestingService
 from reconforge.platform.evidence import EvidenceRegistryService
 from reconforge.platform.exceptions import ExceptionQueueService
 from reconforge.platform.intercompany import IntercompanyService
+from reconforge.platform.journals import JournalControlService
 from reconforge.platform.master_data import MasterDataService
 from reconforge.platform.metrics import MetricsService
 
@@ -130,6 +131,32 @@ def test_control_library_import_rolls_back_when_audit_append_fails(
         connection.close()
 
 
+def test_control_result_and_exception_roll_back_when_audit_append_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db_path = tmp_path / "control-result-atomic.db"
+    controls = tmp_path / "controls.csv"
+    controls.write_text("control_code,name,risk_rating\nCTRL-1,Synthetic control,high\n", encoding="utf-8")
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        service = ControlTestingService(connection)
+        service.import_library(controls)
+        service.plan_tests(period_name="2026-07")
+        plan_id = str(service.list_plans(period_name="2026-07")[0]["id"])
+        monkeypatch.setattr(common_module, "audit", _fail_audit)
+        with pytest.raises(PlatformError, match="audit evidence"):
+            service.record_result(
+                plan_id=plan_id, result_status="Completed", effectiveness_status="Ineffective"
+            )
+        assert connection.execute("SELECT COUNT(*) AS count FROM control_test_results").fetchone()["count"] == 0
+        assert connection.execute("SELECT status FROM control_test_plans WHERE id = ?", (plan_id,)).fetchone()["status"] == "Planned"
+        assert connection.execute("SELECT COUNT(*) AS count FROM exceptions_queue").fetchone()["count"] == 0
+    finally:
+        connection.close()
+
+
 def test_intercompany_import_rolls_back_when_audit_append_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -148,6 +175,70 @@ def test_intercompany_import_rolls_back_when_audit_append_fails(
         with pytest.raises(PlatformError, match="audit evidence"):
             IntercompanyService(connection).import_transactions(transactions)
         assert connection.execute("SELECT COUNT(*) AS count FROM intercompany_transactions").fetchone()["count"] == 0
+    finally:
+        connection.close()
+
+
+def test_intercompany_match_rolls_back_case_exception_and_outbox_when_audit_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db_path = tmp_path / "intercompany-match-atomic.db"
+    transactions = tmp_path / "intercompany.csv"
+    transactions.write_text(
+        "transaction_id,period_name,entity_code,counterparty_code,amount,currency,reference\n"
+        "IC-1,2026-08,A,B,10.00,USD,REF-1\n",
+        encoding="utf-8",
+    )
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        service = IntercompanyService(connection)
+        service.import_transactions(transactions)
+        connection.execute("DELETE FROM outbox_events")
+        connection.commit()
+        monkeypatch.setattr(common_module, "audit", _fail_audit)
+        with pytest.raises(PlatformError, match="audit evidence"):
+            service.match(period_name="2026-08", tolerance="0.01")
+        assert connection.execute("SELECT COUNT(*) AS count FROM intercompany_cases").fetchone()["count"] == 0
+        assert connection.execute("SELECT COUNT(*) AS count FROM exceptions_queue").fetchone()["count"] == 0
+        assert connection.execute("SELECT COUNT(*) AS count FROM outbox_events").fetchone()["count"] == 0
+    finally:
+        connection.close()
+
+
+def test_intercompany_missing_settlement_has_no_audit_or_outbox_effect(tmp_path: Path) -> None:
+    db_path = tmp_path / "intercompany-missing-settlement.db"
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        with pytest.raises(PlatformError, match="case not found"):
+            IntercompanyService(connection).settle("ICC-missing")
+        assert connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"] == 0
+        assert connection.execute("SELECT COUNT(*) AS count FROM outbox_events").fetchone()["count"] == 0
+    finally:
+        connection.close()
+
+
+def test_journal_import_rolls_back_when_audit_append_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db_path = tmp_path / "journal-atomic.db"
+    journals = tmp_path / "journals.csv"
+    journals.write_text(
+        "journal_id,period_name,entity_code,posting_date,account_code,amount,currency\n"
+        "J-1,2026-07,EG01,2026-07-10,1000,10.00,EGP\n",
+        encoding="utf-8",
+    )
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    monkeypatch.setattr(common_module, "audit", _fail_audit)
+    try:
+        with pytest.raises(PlatformError, match="audit evidence"):
+            JournalControlService(connection).import_journals(journals)
+        assert connection.execute("SELECT COUNT(*) AS count FROM journal_entries").fetchone()["count"] == 0
+        assert connection.execute("SELECT COUNT(*) AS count FROM outbox_events").fetchone()["count"] == 0
     finally:
         connection.close()
 
@@ -190,6 +281,39 @@ def test_evidence_registration_rolls_back_when_audit_append_fails(
         with pytest.raises(PlatformError, match="audit evidence"):
             EvidenceRegistryService(connection).register(evidence_file, evidence_code="EV-1")
         assert connection.execute("SELECT COUNT(*) AS count FROM evidence_registry").fetchone()["count"] == 0
+    finally:
+        connection.close()
+
+
+def test_linked_evidence_registration_rolls_back_all_effects_when_final_audit_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db_path = tmp_path / "linked-evidence-atomic.db"
+    evidence_file = tmp_path / "linked-evidence.txt"
+    evidence_file.write_text("synthetic linked evidence\n", encoding="utf-8")
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    original_audit = common_module.audit
+    calls = 0
+
+    def fail_second_audit(*args: object, **kwargs: object) -> object:
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise AuditLedgerError("synthetic final audit failure")
+        return original_audit(*args, **kwargs)
+
+    monkeypatch.setattr(common_module, "audit", fail_second_audit)
+    try:
+        with pytest.raises(PlatformError, match="audit evidence"):
+            EvidenceRegistryService(connection).register(
+                evidence_file, evidence_code="EV-LINK", object_type="control", object_id="CTRL-1"
+            )
+        assert connection.execute("SELECT COUNT(*) AS count FROM evidence_registry").fetchone()["count"] == 0
+        assert connection.execute("SELECT COUNT(*) AS count FROM evidence_links").fetchone()["count"] == 0
+        assert connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"] == 0
+        assert connection.execute("SELECT COUNT(*) AS count FROM outbox_events").fetchone()["count"] == 0
     finally:
         connection.close()
 

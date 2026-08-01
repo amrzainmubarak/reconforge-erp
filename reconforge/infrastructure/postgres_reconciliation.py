@@ -562,7 +562,9 @@ class PostgresReconciliationRepository:
         metadata_json = self._audit_metadata_text(metadata)
         outbox_payload_json = self._outbox_payload_text(payload)
         self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (tenant,))
-        event_id = self._hash_payload({"tenant_id": tenant, "action": action, "resource_id": resource_id, "after": after_state_hash})
+        event_id = self._hash_payload(
+            {"tenant_id": tenant, "action": action, "resource_id": resource_id, "after": after_state_hash}
+        )
         previous = self.connection.execute(
             "SELECT event_hash FROM reconforge.audit_events WHERE tenant_id = %s ORDER BY event_sequence DESC LIMIT 1",
             (tenant,),
@@ -595,9 +597,25 @@ class PostgresReconciliationRepository:
             VALUES (%s, %s, %s, %s, 'reconciliation_run', %s, %s, %s, %s, %s, %s, %s, %s, CAST(%s AS jsonb))
             ON CONFLICT (tenant_id, event_id) DO NOTHING
             """,
-            (tenant, event_id, actor, action, resource_id, occurred_at, request, before_state_hash, after_state_hash, previous_hash, event_hash, audit_reason, metadata_json),
+            (
+                tenant,
+                event_id,
+                actor,
+                action,
+                resource_id,
+                occurred_at,
+                request,
+                before_state_hash,
+                after_state_hash,
+                previous_hash,
+                event_hash,
+                audit_reason,
+                metadata_json,
+            ),
         )
-        outbox_id = self._hash_payload({"tenant_id": tenant, "event_type": f"reconciliation.{action}", "resource_id": resource_id})
+        outbox_id = self._hash_payload(
+            {"tenant_id": tenant, "event_type": f"reconciliation.{action}", "resource_id": resource_id}
+        )
         self.connection.execute(
             """
             INSERT INTO reconforge.outbox_events
@@ -634,24 +652,34 @@ class PostgresReconciliationRepository:
         algorithm = self._text(algorithm_version, "algorithm_version", maximum=64)
         rules = self._json_text(rule, "rule")
         source_hash = self._text(input_hash, "input_hash", maximum=128)
-        idem = None if idempotency_key is None or not str(idempotency_key).strip() else self._text(idempotency_key, "idempotency_key", maximum=160)
+        idem = (
+            None
+            if idempotency_key is None or not str(idempotency_key).strip()
+            else self._text(idempotency_key, "idempotency_key", maximum=160)
+        )
         if idem is None:
             existing = self.connection.execute(
-                _RUN_SELECT_PREFIX
-                + " FROM reconforge.reconciliation_runs "
-                "WHERE tenant_id = %s AND id = %s FOR UPDATE",
+                _RUN_SELECT_PREFIX + " FROM reconforge.reconciliation_runs WHERE tenant_id = %s AND id = %s FOR UPDATE",
                 (tenant, identifier),
             ).fetchone()
         else:
             existing = self.connection.execute(
-                _RUN_SELECT_PREFIX
-                + " FROM reconforge.reconciliation_runs "
+                _RUN_SELECT_PREFIX + " FROM reconforge.reconciliation_runs "
                 "WHERE tenant_id = %s AND (id = %s OR idempotency_key = %s) FOR UPDATE",
                 (tenant, identifier, idem),
             ).fetchone()
         if existing is not None:
             record = self._record(existing, self._RUN_COLUMNS)
-            fingerprint = self._hash_payload({"name": run_name, "left_source": left, "right_source": right, "algorithm_version": algorithm, "rule": rules, "input_hash": source_hash})
+            fingerprint = self._hash_payload(
+                {
+                    "name": run_name,
+                    "left_source": left,
+                    "right_source": right,
+                    "algorithm_version": algorithm,
+                    "rule": rules,
+                    "input_hash": source_hash,
+                }
+            )
             existing_fingerprint = self._hash_payload(
                 {
                     "name": record["name"],
@@ -663,11 +691,24 @@ class PostgresReconciliationRepository:
                 }
             )
             if (idem is None and str(record["id"]) != identifier) or fingerprint != existing_fingerprint:
-                raise PostgresReconciliationIntegrityError("Run identifier or idempotency key already refers to different content.")
+                raise PostgresReconciliationIntegrityError(
+                    "Run identifier or idempotency key already refers to different content."
+                )
             return self.get_run(tenant_id=tenant, run_id=str(record["id"]))
         cursor = self.connection.execute(
             _RUN_CREATE_QUERY,
-            (tenant, identifier, run_name, left, right, algorithm, rules, source_hash, idem, self._text(actor_id, "actor_id", maximum=160)),
+            (
+                tenant,
+                identifier,
+                run_name,
+                left,
+                right,
+                algorithm,
+                rules,
+                source_hash,
+                idem,
+                self._text(actor_id, "actor_id", maximum=160),
+            ),
         )
         record = self._record(cursor.fetchone(), self._RUN_COLUMNS)
         after_hash = self._hash_payload(record)
@@ -984,7 +1025,23 @@ class PostgresReconciliationRepository:
                       attributes_json,
                       valid, allowed_uses, created_at
             """,
-            (tenant, run, selected_side, source, fingerprint, amount_decimal, original_amount, currency, original_date, parsed_date, original_reference, normalized_reference, attributes_json, bool(valid), int(allowed_uses)),
+            (
+                tenant,
+                run,
+                selected_side,
+                source,
+                fingerprint,
+                amount_decimal,
+                original_amount,
+                currency,
+                original_date,
+                parsed_date,
+                original_reference,
+                normalized_reference,
+                attributes_json,
+                bool(valid),
+                int(allowed_uses),
+            ),
         )
         row = cursor.fetchone()
         if row is None:
@@ -1002,7 +1059,9 @@ class PostgresReconciliationRepository:
             existing = self._record(row, self._INPUT_COLUMNS)
             expected = {"record_hash": fingerprint, "amount_decimal": amount_decimal, "allowed_uses": int(allowed_uses)}
             if any(str(existing[key]) != str(value) for key, value in expected.items()):
-                raise PostgresReconciliationIntegrityError("Input source identifier already refers to different content.")
+                raise PostgresReconciliationIntegrityError(
+                    "Input source identifier already refers to different content."
+                )
             return existing
         return self._record(row, self._INPUT_COLUMNS)
 
@@ -1063,7 +1122,19 @@ class PostgresReconciliationRepository:
             raise PostgresReconciliationIntegrityError("Result references an unregistered left input record.")
         if right and int(self._row_value(references, "right_exists", 1) or 0) != 1:
             raise PostgresReconciliationIntegrityError("Result references an unregistered right input record.")
-        result_id = "result-" + self._hash_payload({"tenant_id": tenant, "run_id": run, "left_id": left, "right_id": right, "match_type": selected_type, "status": selected_status})[:48]
+        result_id = (
+            "result-"
+            + self._hash_payload(
+                {
+                    "tenant_id": tenant,
+                    "run_id": run,
+                    "left_id": left,
+                    "right_id": right,
+                    "match_type": selected_type,
+                    "status": selected_status,
+                }
+            )[:48]
+        )
         cursor = self.connection.execute(
             """
             INSERT INTO reconforge.reconciliation_results
@@ -1074,7 +1145,21 @@ class PostgresReconciliationRepository:
             RETURNING tenant_id, id, run_id, left_id, right_id, match_type, confidence, explanation,
                       amount_difference, date_difference_days, status, reason_code, lineage_json, created_at
             """,
-            (tenant, result_id, run, left, right, selected_type, confidence_text, explanation_text, difference, day_difference, selected_status, reason, lineage_json),
+            (
+                tenant,
+                result_id,
+                run,
+                left,
+                right,
+                selected_type,
+                confidence_text,
+                explanation_text,
+                difference,
+                day_difference,
+                selected_status,
+                reason,
+                lineage_json,
+            ),
         )
         row = cursor.fetchone()
         if row is None:
@@ -1122,7 +1207,19 @@ class PostgresReconciliationRepository:
         owner = self._text(owner_id, "owner_id", maximum=160, allow_blank=True)
         evidence_json = self._json_text(evidence, "evidence")
         self._run_row(tenant, run, lock=True)
-        exception_id = "exception-" + self._hash_payload({"tenant_id": tenant, "run_id": run, "exception_type": selected_type, "source_side": side, "source_id": source, "reason_code": reason})[:48]
+        exception_id = (
+            "exception-"
+            + self._hash_payload(
+                {
+                    "tenant_id": tenant,
+                    "run_id": run,
+                    "exception_type": selected_type,
+                    "source_side": side,
+                    "source_id": source,
+                    "reason_code": reason,
+                }
+            )[:48]
+        )
         cursor = self.connection.execute(
             """
             INSERT INTO reconforge.reconciliation_exceptions
@@ -1134,7 +1231,21 @@ class PostgresReconciliationRepository:
                       severity, risk_score, workflow_status, owner_id, reason_code, evidence_json,
                       created_at, updated_at
             """,
-            (tenant, exception_id, run, selected_type, side, source, selected_title, details, selected_severity, score, owner, reason, evidence_json),
+            (
+                tenant,
+                exception_id,
+                run,
+                selected_type,
+                side,
+                source,
+                selected_title,
+                details,
+                selected_severity,
+                score,
+                owner,
+                reason,
+                evidence_json,
+            ),
         )
         return self._record(cursor.fetchone(), self._EXCEPTION_COLUMNS)
 
@@ -1231,8 +1342,13 @@ class PostgresReconciliationRepository:
         }
         output_hash = self._hash_payload(output_payload)
         before = self._run_row(tenant, run, lock=True)
-        if str(before.get("status")) != "Running" or str(before.get("execution_status") or "Queued") not in {"Queued", "Running"}:
-            raise PostgresReconciliationIntegrityError("Only an active reconciliation can receive a partition checkpoint.")
+        if str(before.get("status")) != "Running" or str(before.get("execution_status") or "Queued") not in {
+            "Queued",
+            "Running",
+        }:
+            raise PostgresReconciliationIntegrityError(
+                "Only an active reconciliation can receive a partition checkpoint."
+            )
         if str(before.get("execution_worker_id") or "") != worker:
             raise PostgresReconciliationIntegrityError("Reconciliation execution is not leased by this worker.")
         existing_row = self.connection.execute(
@@ -1385,7 +1501,9 @@ class PostgresReconciliationRepository:
             (tenant, run),
         ).fetchone()
         if int(self._row_value(overused, "count", 0) or 0) > 0:
-            raise PostgresReconciliationIntegrityError("Reconciliation cannot complete: an input record exceeded its allowed use count.")
+            raise PostgresReconciliationIntegrityError(
+                "Reconciliation cannot complete: an input record exceeded its allowed use count."
+            )
         inputs = self.list_inputs(tenant_id=tenant, run_id=run)
         results = self.list_results(tenant_id=tenant, run_id=run)
         input_manifest_hash = self._hash_payload(inputs)
@@ -1418,8 +1536,19 @@ class PostgresReconciliationRepository:
             actor_id=actor_id,
             request_id=request_id,
             reason=reason,
-            metadata={"left_input_count": left_count, "right_input_count": right_count, "result_count": result_count, "matched_count": matched_count, "exception_count": exception_count},
-            payload={"run_id": run, "result_set_hash": result_set_hash, "input_manifest_hash": input_manifest_hash, "after_state_hash": after_hash},
+            metadata={
+                "left_input_count": left_count,
+                "right_input_count": right_count,
+                "result_count": result_count,
+                "matched_count": matched_count,
+                "exception_count": exception_count,
+            },
+            payload={
+                "run_id": run,
+                "result_set_hash": result_set_hash,
+                "input_manifest_hash": input_manifest_hash,
+                "after_state_hash": after_hash,
+            },
         )
         return self.get_run(tenant_id=tenant, run_id=run)
 
@@ -1446,9 +1575,7 @@ class PostgresReconciliationRepository:
         run = self._id(run_id, "run_id")
         fields = tuple(self._text(value, "partition_field", maximum=128) for value in partition_fields)
         if not 1 <= len(fields) <= 8 or len(set(fields)) != len(fields):
-            raise PostgresReconciliationValidationError(
-                "partition_fields must contain between 1 and 8 unique names."
-            )
+            raise PostgresReconciliationValidationError("partition_fields must contain between 1 and 8 unique names.")
         if isinstance(batch_size, bool) or not 1 <= int(batch_size) <= 100_000:
             raise PostgresReconciliationValidationError("batch_size must be between 1 and 100000.")
         amount_name = self._text(amount_field, "amount_field", maximum=128)
@@ -1461,17 +1588,14 @@ class PostgresReconciliationRepository:
         for position, field in enumerate(fields):
             partition_alias = "partition_value_" + str(position)
             expressions.append(
-                
-                    "CASE\n"
-                    "    WHEN %s IN ('id', 'source_id') THEN source_id\n"
-                    "    WHEN %s = 'currency_code' THEN currency_code\n"
-                    "    WHEN %s = %s THEN COALESCE(amount_decimal::text, amount_original)\n"
-                    "    WHEN %s = %s THEN COALESCE(date_value::text, date_original)\n"
-                    "    WHEN %s = %s THEN COALESCE(NULLIF(reference_normalized, ''), reference_original)\n"
-                    "    ELSE attributes_json ->> %s\n"
-                    "END AS "
-                    + partition_alias
-                
+                "CASE\n"
+                "    WHEN %s IN ('id', 'source_id') THEN source_id\n"
+                "    WHEN %s = 'currency_code' THEN currency_code\n"
+                "    WHEN %s = %s THEN COALESCE(amount_decimal::text, amount_original)\n"
+                "    WHEN %s = %s THEN COALESCE(date_value::text, date_original)\n"
+                "    WHEN %s = %s THEN COALESCE(NULLIF(reference_normalized, ''), reference_original)\n"
+                "    ELSE attributes_json ->> %s\n"
+                "END AS " + partition_alias
             )
             parameters.extend(
                 (
@@ -1485,7 +1609,7 @@ class PostgresReconciliationRepository:
                     reference_name,
                     field,
                 )
-        )
+            )
         parameters.extend((tenant, run))
         partition_columns = ", ".join(expressions)
         partition_order = ", ".join("partition_value_" + str(index) + " NULLS FIRST" for index in range(len(fields)))
@@ -1516,15 +1640,16 @@ class PostgresReconciliationRepository:
                     if isinstance(row, Mapping):
                         input_row = {column: row.get(column) for column in self._INPUT_COLUMNS}
                         values = tuple(
-                            None if row.get(f"partition_value_{index}") is None else str(row.get(f"partition_value_{index}"))
+                            None
+                            if row.get(f"partition_value_{index}") is None
+                            else str(row.get(f"partition_value_{index}"))
                             for index in range(len(fields))
                         )
                     else:
                         row_values = tuple(row)
                         input_row = dict(zip(self._INPUT_COLUMNS, row_values[: len(self._INPUT_COLUMNS)], strict=True))
                         values = tuple(
-                            None if item is None else str(item)
-                            for item in row_values[len(self._INPUT_COLUMNS) :]
+                            None if item is None else str(item) for item in row_values[len(self._INPUT_COLUMNS) :]
                         )
                     if len(values) != len(fields):
                         raise PostgresReconciliationIntegrityError(

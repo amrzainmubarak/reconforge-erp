@@ -48,12 +48,32 @@ _BEFORE_STATE_HASH_QUERIES: dict[str, tuple[str, tuple[str, ...]]] = {
     "legal_entities": (
         "SELECT tenant_id, id, organization_id, entity_code, name, currency_code, active, created_at, updated_at "
         "FROM reconforge.legal_entities WHERE tenant_id = %s AND id = %s",
-        ("tenant_id", "id", "organization_id", "entity_code", "name", "currency_code", "active", "created_at", "updated_at"),
+        (
+            "tenant_id",
+            "id",
+            "organization_id",
+            "entity_code",
+            "name",
+            "currency_code",
+            "active",
+            "created_at",
+            "updated_at",
+        ),
     ),
     "branches": (
         "SELECT tenant_id, id, organization_id, legal_entity_id, branch_code, name, active, created_at, updated_at "
         "FROM reconforge.branches WHERE tenant_id = %s AND id = %s",
-        ("tenant_id", "id", "organization_id", "legal_entity_id", "branch_code", "name", "active", "created_at", "updated_at"),
+        (
+            "tenant_id",
+            "id",
+            "organization_id",
+            "legal_entity_id",
+            "branch_code",
+            "name",
+            "active",
+            "created_at",
+            "updated_at",
+        ),
     ),
     "fiscal_periods": (
         "SELECT tenant_id, id, name, start_date, end_date, status, created_at, fiscal_year, period_number, "
@@ -113,9 +133,7 @@ def _iso_date(value: str, field_name: str) -> str:
     try:
         parsed = date.fromisoformat(normalized)
     except ValueError as exc:
-        raise PostgresMasterDataValidationError(
-            f"{field_name} must be an ISO date in YYYY-MM-DD format."
-        ) from exc
+        raise PostgresMasterDataValidationError(f"{field_name} must be an ISO date in YYYY-MM-DD format.") from exc
     if parsed.isoformat() != normalized:
         raise PostgresMasterDataValidationError(f"{field_name} must be an ISO date in YYYY-MM-DD format.")
     return normalized
@@ -124,9 +142,7 @@ def _iso_date(value: str, field_name: str) -> str:
 def _period_status(value: str) -> str:
     normalized = " ".join(str(value or "").strip().title().split())
     if normalized not in _PERIOD_STATUSES:
-        raise PostgresMasterDataValidationError(
-            f"Period status must be one of: {', '.join(_PERIOD_STATUSES)}."
-        )
+        raise PostgresMasterDataValidationError(f"Period status must be one of: {', '.join(_PERIOD_STATUSES)}.")
     return normalized
 
 
@@ -178,9 +194,9 @@ def _records(rows: list[Any], columns: tuple[str, ...]) -> list[dict[str, Any]]:
 
 
 def _hash_payload(payload: Mapping[str, object]) -> str:
-    encoded = json.dumps(
-        dict(payload), sort_keys=True, separators=(",", ":"), ensure_ascii=True, default=str
-    ).encode("utf-8")
+    encoded = json.dumps(dict(payload), sort_keys=True, separators=(",", ":"), ensure_ascii=True, default=str).encode(
+        "utf-8"
+    )
     return hashlib.sha256(encoded).hexdigest()
 
 
@@ -271,7 +287,11 @@ class PostgresMasterDataRepository:
             (tenant,),
         )
         previous_row = previous_cursor.fetchone()
-        previous_hash = "" if previous_row is None else str(previous_row[0] if not isinstance(previous_row, Mapping) else previous_row.get("event_hash") or "")
+        previous_hash = (
+            ""
+            if previous_row is None
+            else str(previous_row[0] if not isinstance(previous_row, Mapping) else previous_row.get("event_hash") or "")
+        )
         occurred_at = utc_now_text()
         event_hash = _hash_payload(
             {
@@ -428,8 +448,7 @@ class PostgresMasterDataRepository:
                 parameters=(tenant, identifier),
             )
         cursor = self.connection.execute(
-            """
-            INSERT INTO reconforge.organizations
+            """INSERT INTO reconforge.organizations
                 (tenant_id, id, organization_code, name, base_currency, active)
             VALUES (%s, %s, %s, %s, %s, %s)
             ON CONFLICT (tenant_id, organization_code) WHERE organization_code IS NOT NULL DO UPDATE SET
@@ -767,7 +786,9 @@ class PostgresMasterDataRepository:
         )
         name_row = name_cursor.fetchone()
         if name_row is not None:
-            identifier = _scope_id(str(name_row[0] if not isinstance(name_row, Mapping) else name_row.get("id")), "period_id")
+            identifier = _scope_id(
+                str(name_row[0] if not isinstance(name_row, Mapping) else name_row.get("id")), "period_id"
+            )
         before_state_hash = ""
         if actor_id is not None:
             before_state_hash = self._before_state_hash(

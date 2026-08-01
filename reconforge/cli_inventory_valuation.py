@@ -14,9 +14,7 @@ from reconforge.db import DatabaseError, connect
 from reconforge.platform.common import PlatformError
 from reconforge.platform.inventory_valuation import InventoryValuationService
 
-inventory_valuation_app = typer.Typer(
-    help="Run governed FIFO valuation and prepare balanced Finance Core drafts."
-)
+inventory_valuation_app = typer.Typer(help="Run governed FIFO valuation and prepare balanced Finance Core drafts.")
 DEFAULT_DB_PATH = Path("output/reconforge.db")
 
 
@@ -131,9 +129,7 @@ def policies_command(
 
     try:
         with _service(db_path) as service:
-            records = service.list_policies(
-                workspace=workspace, limit=limit, offset=offset, actor_label=actor
-            )
+            records = service.list_policies(workspace=workspace, limit=limit, offset=offset, actor_label=actor)
     except (DatabaseError, PlatformError) as exc:
         _fail(exc)
     _print_json({"policies": records, "pagination": _pagination(limit, offset, records)})
@@ -148,9 +144,7 @@ def create_command(
         list[str] | None,
         typer.Option("--cost", help="Inbound LINE=AMOUNT; repeat once for each inbound line."),
     ] = None,
-    valuation_date: Annotated[
-        str, typer.Option("--date", help="Optional date; must equal the movement date.")
-    ] = "",
+    valuation_date: Annotated[str, typer.Option("--date", help="Optional date; must equal the movement date.")] = "",
     actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
     db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = DEFAULT_DB_PATH,
 ) -> None:
@@ -213,9 +207,7 @@ def show_command(
     _print_json({"document": record})
 
 
-def _reason_action(
-    action: str, *, document_id: str, reason: str, actor: str, db_path: Path
-) -> dict[str, Any]:
+def _reason_action(action: str, *, document_id: str, reason: str, actor: str, db_path: Path) -> dict[str, Any]:
     with _service(db_path) as service:
         if action == "approve":
             return service.approve_document(document_id, reason=reason, actor_label=actor)
@@ -232,9 +224,7 @@ def approve_command(
     """Approve FIFO valuation and create a balanced Finance Core Draft."""
 
     try:
-        record = _reason_action(
-            "approve", document_id=document_id, reason=reason, actor=actor, db_path=db_path
-        )
+        record = _reason_action("approve", document_id=document_id, reason=reason, actor=actor, db_path=db_path)
     except (DatabaseError, PlatformError) as exc:
         _fail(exc)
     _print_json({"document": record})
@@ -250,9 +240,7 @@ def cancel_command(
     """Cancel a Draft valuation without deleting its evidence."""
 
     try:
-        record = _reason_action(
-            "cancel", document_id=document_id, reason=reason, actor=actor, db_path=db_path
-        )
+        record = _reason_action("cancel", document_id=document_id, reason=reason, actor=actor, db_path=db_path)
     except (DatabaseError, PlatformError) as exc:
         _fail(exc)
     _print_json({"document": record})

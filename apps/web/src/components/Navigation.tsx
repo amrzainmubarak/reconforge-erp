@@ -10,6 +10,7 @@ import {
   FileChartColumn,
   FileInput,
   Gauge,
+  RadioTower,
   Layers3,
   PackageSearch,
   PanelLeftClose,
@@ -65,7 +66,10 @@ export const navigationGroups: NavigationGroup[] = [
     items: [
       { key: "reports", label: "reports", icon: FileChartColumn, href: `${currentStudio}/downloads`, status: "foundation" },
       { key: "packs", label: "packs", icon: PackageSearch, href: `${currentStudio}/control-packs`, status: "foundation" },
-      { key: "import", label: "import", icon: FileInput, href: `${currentStudio}/validation`, status: "foundation" },
+      { key: "mapping", label: "mappingStudio", icon: FileInput, page: "mapping", status: "foundation" },
+      { key: "rules", label: "ruleStudio", icon: Code2, page: "rules", status: "foundation" },
+      { key: "live", label: "liveStudio", icon: RadioTower, page: "live", status: "foundation" },
+      { key: "admin-audit", label: "adminAudit", icon: ShieldCheck, page: "adminAudit", status: "foundation" },
       { key: "settings", label: "settings", icon: Settings, status: "planned" },
       { key: "developer", label: "developer", icon: Code2, href: `${currentStudio}/docs`, status: "foundation" },
     ],
@@ -119,7 +123,7 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
         </div>
       </details>
 
-      <nav className="desktop-navigation" aria-label="Primary navigation">
+      <nav className="desktop-navigation" aria-label={translate("primaryNavigation")}>
         {navigationGroups.map((group) => (
           <div className="nav-group" key={group.label}>
             <p className="nav-group-label">{translate(group.label)}</p>
@@ -173,9 +177,9 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
             <small>{translate("localNote")}</small>
           </span>
         </div>
-        <button className="collapse-button" type="button" onClick={onCollapse} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
+        <button className="collapse-button" type="button" onClick={onCollapse} aria-label={translate(collapsed ? "expandSidebar" : "collapseSidebar")}>
           {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
-          <span>{collapsed ? "" : "Collapse"}</span>
+          <span>{collapsed ? "" : translate("collapseSidebar")}</span>
         </button>
       </div>
     </aside>

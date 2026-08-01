@@ -1,4 +1,4 @@
-"""Base interface for future ERP connector plugins."""
+"""Compatibility interface for built-in local-file adapters and export profiles."""
 
 from __future__ import annotations
 
@@ -7,11 +7,14 @@ from typing import Protocol
 
 import pandas as pd
 
+from reconforge.connectors.manifest import ConnectorManifest
+
 
 class ConnectorPlugin(Protocol):
-    """Read-only export adapter interface."""
+    """Read-only source adapter plus local canonical-export compatibility interface."""
 
     name: str
+    manifest: ConnectorManifest
 
     def load_data(self, input_path: Path) -> dict[str, pd.DataFrame]:
         """Load source data from a local path."""

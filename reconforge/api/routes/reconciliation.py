@@ -288,7 +288,11 @@ def _list_children(
             offset=offset,
         ),
     )
-    return {"records": records, "pagination": {"limit": limit, "offset": offset, "returned": len(records)}, "source": _source()}
+    return {
+        "records": records,
+        "pagination": {"limit": limit, "offset": offset, "returned": len(records)},
+        "source": _source(),
+    }
 
 
 @router.get("/runs/{run_id}/inputs")
@@ -301,7 +305,9 @@ def list_inputs(
 ) -> dict[str, object]:
     """List canonical source inputs for a persisted run."""
 
-    result = _list_children(request, run_id, lambda repository, **values: repository.list_inputs(**values), limit=limit, offset=offset)
+    result = _list_children(
+        request, run_id, lambda repository, **values: repository.list_inputs(**values), limit=limit, offset=offset
+    )
     result["inputs"] = result.pop("records")
     return result
 
@@ -316,7 +322,9 @@ def list_results(
 ) -> dict[str, object]:
     """List explainable deterministic results for a persisted run."""
 
-    result = _list_children(request, run_id, lambda repository, **values: repository.list_results(**values), limit=limit, offset=offset)
+    result = _list_children(
+        request, run_id, lambda repository, **values: repository.list_results(**values), limit=limit, offset=offset
+    )
     result["results"] = result.pop("records")
     return result
 
@@ -331,6 +339,8 @@ def list_exceptions(
 ) -> dict[str, object]:
     """List typed, risk-scored exceptions for a persisted run."""
 
-    result = _list_children(request, run_id, lambda repository, **values: repository.list_exceptions(**values), limit=limit, offset=offset)
+    result = _list_children(
+        request, run_id, lambda repository, **values: repository.list_exceptions(**values), limit=limit, offset=offset
+    )
     result["exceptions"] = result.pop("records")
     return result

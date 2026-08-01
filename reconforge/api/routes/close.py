@@ -76,7 +76,9 @@ def periods(
 
     try:
         if connection is None:
-            raise APIError(status_code=500, code="local_database_not_configured", message="Local close database is not configured.")
+            raise APIError(
+                status_code=500, code="local_database_not_configured", message="Local close database is not configured."
+            )
         records = CloseManagementService(connection).list_periods()
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="close_periods_failed", message=str(exc)) from exc
@@ -102,7 +104,9 @@ def period_init(
             )
 
         def operation(repository: PostgresCloseRepository, tenant: str) -> dict[str, object]:
-            organization = repository.organization_by_code(tenant_id=tenant, organization_code=payload.organization_code)
+            organization = repository.organization_by_code(
+                tenant_id=tenant, organization_code=payload.organization_code
+            )
             period = repository.create_period(
                 tenant_id=tenant,
                 period_id=_server_id(tenant, organization["id"], payload.fiscal_period_id),
@@ -133,7 +137,9 @@ def period_init(
 
     try:
         if connection is None:
-            raise APIError(status_code=500, code="local_database_not_configured", message="Local close database is not configured.")
+            raise APIError(
+                status_code=500, code="local_database_not_configured", message="Local close database is not configured."
+            )
         period = CloseManagementService(connection).period_init(
             period_name=payload.period_name,
             start_date=payload.start_date,
@@ -171,7 +177,9 @@ def tasks(
 
     try:
         if connection is None:
-            raise APIError(status_code=500, code="local_database_not_configured", message="Local close database is not configured.")
+            raise APIError(
+                status_code=500, code="local_database_not_configured", message="Local close database is not configured."
+            )
         records = CloseManagementService(connection).list_tasks(period_id=period_id, status=status, owner=owner)
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="close_tasks_failed", message=str(exc)) from exc
@@ -204,7 +212,9 @@ def task_status(
 
     try:
         if connection is None:
-            raise APIError(status_code=500, code="local_database_not_configured", message="Local close database is not configured.")
+            raise APIError(
+                status_code=500, code="local_database_not_configured", message="Local close database is not configured."
+            )
         task = CloseManagementService(connection).task_status(
             task_id=task_id,
             status=payload.status,
@@ -226,13 +236,19 @@ def readiness(
     """Return close readiness."""
 
     if server_close_enabled(request):
-        value = execute_postgres_close(request, lambda repository, tenant: repository.readiness(tenant_id=tenant, period_id=period_id))
+        value = execute_postgres_close(
+            request, lambda repository, tenant: repository.readiness(tenant_id=tenant, period_id=period_id)
+        )
         return {"readiness": value, "source": {"kind": "postgresql-close-control", "server_mode": True}}
 
     try:
         if connection is None:
-            raise APIError(status_code=500, code="local_database_not_configured", message="Local close database is not configured.")
-        readiness_value = CloseManagementService(connection).readiness(period_id=period_id, actor_label=current_user.username)
+            raise APIError(
+                status_code=500, code="local_database_not_configured", message="Local close database is not configured."
+            )
+        readiness_value = CloseManagementService(connection).readiness(
+            period_id=period_id, actor_label=current_user.username
+        )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="close_readiness_failed", message=str(exc)) from exc
     return {"readiness": readiness_value.__dict__}
@@ -262,7 +278,9 @@ def lock_period(
 
     try:
         if connection is None:
-            raise APIError(status_code=500, code="local_database_not_configured", message="Local close database is not configured.")
+            raise APIError(
+                status_code=500, code="local_database_not_configured", message="Local close database is not configured."
+            )
         period = CloseManagementService(connection).lock_period(period_id, actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="close_lock_failed", message=str(exc)) from exc
@@ -295,8 +313,12 @@ def reopen_period(
 
     try:
         if connection is None:
-            raise APIError(status_code=500, code="local_database_not_configured", message="Local close database is not configured.")
-        period = CloseManagementService(connection).reopen_period(period_id, reason=payload.reason, actor_label=current_user.username)
+            raise APIError(
+                status_code=500, code="local_database_not_configured", message="Local close database is not configured."
+            )
+        period = CloseManagementService(connection).reopen_period(
+            period_id, reason=payload.reason, actor_label=current_user.username
+        )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="close_reopen_failed", message=str(exc)) from exc
     return {"period": period}

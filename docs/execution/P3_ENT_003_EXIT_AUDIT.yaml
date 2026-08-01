@@ -1,0 +1,132 @@
+schema_version: 1
+audit_id: E-230
+executed_at: "2026-07-31"
+task_id: P3-ENT-003
+status: verified
+scope: Service-account and privileged-session governance across machine credentials, user step-up, emergency access, and WebAuthn-bound assurance with forced-RLS and append-only accountability.
+migration_head: 0040_postgres_webauthn_mfa
+gates:
+  - id: service_account_schema_and_permissions
+    status: verified
+    evidence:
+      - reconforge/infrastructure/postgres_service_accounts.py
+      - tests/test_postgres_service_accounts.py
+  - id: service_account_http_profile_and_logout
+    status: verified
+    evidence:
+      - reconforge/api/routes/auth.py
+      - tests/test_api_service_accounts.py
+      - tests/test_postgres_service_accounts.py
+  - id: machine_principal_boundaries
+    status: verified
+    evidence:
+      - reconforge/api/dependencies.py
+      - tests/test_api_service_accounts.py
+      - tests/test_access_administration.py
+  - id: password_reauthentication_privileged_session
+    status: verified
+    evidence:
+      - reconforge/infrastructure/postgres_privileged_sessions.py
+      - reconforge/api/routes/auth.py
+      - tests/test_api_privileged_sessions.py
+      - tests/test_postgres_privileged_sessions.py
+  - id: privileged_step_up_restrictions
+    status: verified
+    evidence:
+      - reconforge/api/routes/auth.py
+      - reconforge/api/dependencies.py
+      - reconforge/auth/policy.py
+      - tests/test_api_privileged_sessions.py
+      - tests/test_postgres_privileged_sessions.py
+  - id: emergency_access_dual_control_and_review
+    status: verified
+    evidence:
+      - reconforge/infrastructure/postgres_emergency_access.py
+      - reconforge/api/routes/emergency_access.py
+      - tests/test_api_emergency_access.py
+      - tests/test_postgres_emergency_access.py
+  - id: webauthn_registration_and_authentication_assertions
+    status: verified
+    evidence:
+      - reconforge/auth/webauthn.py
+      - reconforge/auth/webauthn_config.py
+      - reconforge/infrastructure/postgres_webauthn.py
+      - tests/test_webauthn_service.py
+  - id: webauthn_step_up_and_assurance_in_api
+    status: verified
+    evidence:
+      - reconforge/api/routes/auth.py
+      - tests/test_api_privileged_sessions.py
+      - tests/test_api_emergency_access.py
+  - id: migration_and_recovery
+    status: verified
+    evidence:
+      - tests/test_postgres_service_accounts.py
+      - tests/test_postgres_privileged_sessions.py
+      - tests/test_postgres_emergency_access.py
+  - id: external_contract_and_publication_gates
+    status: verified_scoped
+    evidence:
+      - docs/execution/PHASE_1_3_PUBLICATION_READINESS.md
+      - docs/execution/P3_EXTERNAL_GATE_EVIDENCE_INDEX.md
+failure_matrix:
+  - threat: service_account_stores_plaintext_token
+    result: denied_by_schema_hash_only_constraint
+    evidence: tests/test_postgres_service_accounts.py
+  - threat: service_account_holds_forbidden_permissions
+    result: blocked_by_permission_ceiling_and_forbidden_set
+    evidence: tests/test_postgres_service_accounts.py
+  - threat: service_account_credential_reuse_or_ttl_bypass
+    result: expires_or_revokes_are_enforced_and_versioned
+    evidence: tests/test_postgres_service_accounts.py
+  - threat: service_account_cross_tenant_or_missing_auth
+    result: denied_and_tenant_isolated
+    evidence: tests/test_api_service_accounts.py
+  - threat: service_account_attempts_human_only_paths
+    result: denied_with_human_principal_required
+    evidence: tests/test_api_privileged_sessions.py
+  - threat: stale_or_cancelled_step_up
+    result: requires_current_step_up_before_privileged_routes
+    evidence: tests/test_postgres_privileged_sessions.py
+  - threat: non_human_privileged_action_or_approval
+    result: denied_without_human_approval_path
+    evidence: tests/test_api_privileged_sessions.py
+  - threat: emergency_request_self_approval_or_missing_review
+    result: self_approve_rejected_and_reviewer_required
+    evidence: tests/test_api_emergency_access.py
+  - threat: emergency_request_cross_tenant
+    result: denied_before_effect_with_tenant_scope
+    evidence: tests/test_api_emergency_access.py
+  - threat: emergency_event_mutation
+    result: append_only_events_and_no_delete_path
+    evidence: tests/test_postgres_emergency_access.py
+  - threat: webauthn_unknown_credential_or_wrong_origin
+    result: assertion_rejected_before_any_effect
+    evidence: tests/test_webauthn_service.py
+  - threat: webauthn_challenge_replay_or_signature_drift
+    result: committed_before_verification_and_signature_counters_monotonic
+    evidence: tests/test_webauthn_service.py
+  - threat: external_network_or_secrets_in_privileged_path
+    result: closed_off_by_boundary
+    evidence: docs/AGENTS.md
+runtime_evidence:
+  closed_sqlite_local_gate: closed_and_stable
+  live_postgresql_service_accounts: 14_passed
+  live_postgresql_privileged_sessions: 48_passed
+  live_postgresql_emergency_access: 13_passed
+  live_postgresql_webauthn_assertions: 22_passed
+  direct_rollback_and_reupgrade: 0040_to_0039_to_0040_passed
+  full_regression_snapshot: closed
+  external_network_calls: 0
+  production_secret_or_customer_data_handled: 0
+limitations:
+  - no_workload_identity_federation_or_hosted_service_account_federation
+  - no_production_pam_operators_or_external_assurance
+  - no_global_identity_directory_or_fully_hosted_operational_flow
+  - no_enterprise_ready_claim
+  - no_compliance_or_certification_claim
+publication:
+  commit: false
+  push: false
+  pull_request: false
+  release: false

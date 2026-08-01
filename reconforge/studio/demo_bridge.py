@@ -294,9 +294,7 @@ def _build_inventory_control_payload(payloads: dict[str, dict[str, Any]]) -> dic
         valuation_reversals,
         cost_layers,
     ) = _project_inventory_records(records)
-    _validate_inventory_valuation_reversals(
-        valuations, valuation_reversals, cost_layers
-    )
+    _validate_inventory_valuation_reversals(valuations, valuation_reversals, cost_layers)
     warehouses: dict[str, dict[str, Any]] = {}
     for record in on_hand:
         warehouse_code = str(record["warehouse_code"])
@@ -695,7 +693,11 @@ def _project_inventory_records(
             ):
                 raise StudioDemoBridgeError("Synthetic inventory reorder signal quantities are inconsistent.")
             lead_time_days = source.get("lead_time_days")
-            if isinstance(lead_time_days, bool) or not isinstance(lead_time_days, int) or not 0 <= lead_time_days <= 3650:
+            if (
+                isinstance(lead_time_days, bool)
+                or not isinstance(lead_time_days, int)
+                or not 0 <= lead_time_days <= 3650
+            ):
                 raise StudioDemoBridgeError("Synthetic inventory reorder lead time is invalid.")
             signal_record["lead_time_days"] = lead_time_days
             signal_record["signal_id"] = _inventory_signal_identifier(signal_record)
@@ -741,8 +743,7 @@ def _project_inventory_records(
             if valuation_record["finance_entry_status"] not in {"", "Draft", "Validated", "Voided"}:
                 raise StudioDemoBridgeError("Synthetic Finance Draft status is invalid.")
             if valuation_record["status"] == "Approved" and (
-                not valuation_record["finance_entry_number"]
-                or not valuation_record["finance_entry_status"]
+                not valuation_record["finance_entry_number"] or not valuation_record["finance_entry_status"]
             ):
                 raise StudioDemoBridgeError("Approved synthetic valuations require a Finance Draft reference.")
             valuation_record["total_value"] = _inventory_amount(
@@ -782,18 +783,14 @@ def _project_inventory_records(
                     "layer_effect",
                 )
             ):
-                raise StudioDemoBridgeError(
-                    "Synthetic valuation reversal identity fields are required."
-                )
+                raise StudioDemoBridgeError("Synthetic valuation reversal identity fields are required.")
             expected_type = {
                 "Receipt": "Delivery",
                 "Delivery": "Receipt",
                 "Adjustment": "Adjustment",
             }.get(str(reversal_record["original_movement_type"]))
             if expected_type is None or reversal_record["reversal_movement_type"] != expected_type:
-                raise StudioDemoBridgeError(
-                    "Synthetic valuation reversal movement types are inconsistent."
-                )
+                raise StudioDemoBridgeError("Synthetic valuation reversal movement types are inconsistent.")
             if reversal_record["status"] not in {"Draft", "Approved", "Cancelled"}:
                 raise StudioDemoBridgeError("Synthetic valuation reversal status is invalid.")
             if reversal_record["layer_effect"] not in {"Restore", "Remove"}:
@@ -803,21 +800,16 @@ def _project_inventory_records(
             if reversal_record["finance_entry_status"] not in {"", "Draft", "Validated", "Voided"}:
                 raise StudioDemoBridgeError("Synthetic reversal Finance Draft status is invalid.")
             if reversal_record["status"] == "Approved" and (
-                not reversal_record["finance_entry_number"]
-                or not reversal_record["finance_entry_status"]
+                not reversal_record["finance_entry_number"] or not reversal_record["finance_entry_status"]
             ):
-                raise StudioDemoBridgeError(
-                    "Approved synthetic valuation reversals require a Finance Draft reference."
-                )
+                raise StudioDemoBridgeError("Approved synthetic valuation reversals require a Finance Draft reference.")
             layer_effect_count = source.get("layer_effect_count")
             if (
                 isinstance(layer_effect_count, bool)
                 or not isinstance(layer_effect_count, int)
                 or not 1 <= layer_effect_count <= 100_000
             ):
-                raise StudioDemoBridgeError(
-                    "Synthetic valuation reversal layer-effect count is invalid."
-                )
+                raise StudioDemoBridgeError("Synthetic valuation reversal layer-effect count is invalid.")
             reversal_record["layer_effect_count"] = layer_effect_count
             reversal_record["total_value"] = _inventory_amount(
                 source.get("total_value"), field="total_value", positive=True
@@ -859,9 +851,7 @@ def _project_inventory_records(
             layer_record["original_value"] = _inventory_amount(
                 source.get("original_value"), field="original_value", positive=True
             )
-            layer_record["remaining_value"] = _inventory_amount(
-                source.get("remaining_value"), field="remaining_value"
-            )
+            layer_record["remaining_value"] = _inventory_amount(source.get("remaining_value"), field="remaining_value")
             original_quantity = Decimal(str(layer_record["original_quantity"]))
             remaining_quantity = Decimal(str(layer_record["remaining_quantity"]))
             original_value = Decimal(str(layer_record["original_value"]))
@@ -913,9 +903,7 @@ def _project_inventory_records(
         key=lambda record: (str(record["reversal_date"]), str(record["reversal_number"])),
         reverse=True,
     )
-    cost_layers.sort(
-        key=lambda record: (str(record["entity_code"]), str(record["item_code"]), str(record["layer_id"]))
-    )
+    cost_layers.sort(key=lambda record: (str(record["entity_code"]), str(record["item_code"]), str(record["layer_id"])))
     return (
         on_hand,
         movements,
@@ -963,9 +951,7 @@ def _validate_inventory_valuation_reversals(
         reversal_numbers.add(number)
         original = valuations_by_number.get(str(reversal["original_valuation_number"]))
         if original is None or original["status"] != "Approved":
-            raise StudioDemoBridgeError(
-                "Synthetic valuation reversals require a linked Approved valuation."
-            )
+            raise StudioDemoBridgeError("Synthetic valuation reversals require a linked Approved valuation.")
         if any(
             str(reversal[field]) != str(original[original_field])
             for field, original_field in (
@@ -979,9 +965,7 @@ def _validate_inventory_valuation_reversals(
                 "Synthetic valuation reversal must match its original valuation scope and value."
             )
         if str(reversal["reversal_date"]) < str(original["valuation_date"]):
-            raise StudioDemoBridgeError(
-                "Synthetic valuation reversal cannot predate its original valuation."
-            )
+            raise StudioDemoBridgeError("Synthetic valuation reversal cannot predate its original valuation.")
         expected_effect = {
             "Receipt": "Remove",
             "Delivery": "Restore",
@@ -992,18 +976,13 @@ def _validate_inventory_valuation_reversals(
             )
         if original["movement_type"] == "Receipt":
             original_layers = [
-                layer
-                for layer in cost_layers
-                if layer["valuation_number"] == original["valuation_number"]
+                layer for layer in cost_layers if layer["valuation_number"] == original["valuation_number"]
             ]
             if not original_layers or any(
-                Decimal(str(layer["remaining_quantity"])) != 0
-                or Decimal(str(layer["remaining_value"])) != 0
+                Decimal(str(layer["remaining_quantity"])) != 0 or Decimal(str(layer["remaining_value"])) != 0
                 for layer in original_layers
             ):
-                raise StudioDemoBridgeError(
-                    "Synthetic reversed receipt layers must be closed after a Remove effect."
-                )
+                raise StudioDemoBridgeError("Synthetic reversed receipt layers must be closed after a Remove effect.")
 
 
 def _inventory_exception_identifier(record: dict[str, object]) -> str:
@@ -1084,15 +1063,10 @@ def _executive_brief(
     exceptions: list[dict[str, Any]],
 ) -> dict[str, object]:
     readiness = float(_metric_record(metrics, "period_readiness")["value"])
-    high_risk = sum(
-        record["risk_rating"] in {"critical", "high"} for record in exceptions
-    )
+    high_risk = sum(record["risk_rating"] in {"critical", "high"} for record in exceptions)
     blocked = sum(str(task["status"]).lower() == "blocked" for task in tasks)
     completed = sum(str(task["status"]).lower() == "complete" for task in tasks)
-    open_exceptions = sum(
-        str(record["status"]).lower() not in {"closed", "resolved"}
-        for record in exceptions
-    )
+    open_exceptions = sum(str(record["status"]).lower() not in {"closed", "resolved"} for record in exceptions)
     status = _score_status(readiness)
     if high_risk or blocked:
         status = "attention"
@@ -1135,16 +1109,9 @@ def _entity_health(
     records: list[dict[str, object]] = []
     for entity in entities:
         entity_code = str(entity["entity_code"])
-        scoped = [
-            record for record in exceptions if record["entity_code"] == entity_code
-        ]
-        high_risk = sum(
-            record["risk_rating"] in {"critical", "high"} for record in scoped
-        )
-        open_exceptions = sum(
-            str(record["status"]).lower() not in {"closed", "resolved"}
-            for record in scoped
-        )
+        scoped = [record for record in exceptions if record["entity_code"] == entity_code]
+        high_risk = sum(record["risk_rating"] in {"critical", "high"} for record in scoped)
+        open_exceptions = sum(str(record["status"]).lower() not in {"closed", "resolved"} for record in scoped)
         status = "strong"
         if high_risk >= 3:
             status = "attention"

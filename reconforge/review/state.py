@@ -252,7 +252,15 @@ def _amount_impact(
     *,
     financial_input_policy: FinancialInputPolicy,
 ) -> Decimal | None:
-    for field in ("amount_impact", "amount", "total_cost", "actual_cost", "estimated_cost", "invoice_amount", "total_price"):
+    for field in (
+        "amount_impact",
+        "amount",
+        "total_cost",
+        "actual_cost",
+        "estimated_cost",
+        "invoice_amount",
+        "total_price",
+    ):
         value = row.get(field)
         try:
             return abs(
@@ -286,11 +294,7 @@ def collect_exception_frame(
         path = base / filename
         if not path.exists():
             continue
-        mode: GeneratedCsvMode = (
-            "exact-text"
-            if input_policy == STRICT_FINANCIAL_INPUT_POLICY
-            else "display"
-        )
+        mode: GeneratedCsvMode = "exact-text" if input_policy == STRICT_FINANCIAL_INPUT_POLICY else "display"
         frame = read_generated_csv_document(path, mode=mode).frame
         if frame.empty:
             continue

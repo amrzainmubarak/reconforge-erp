@@ -4,12 +4,13 @@ import os
 import re
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
-from reconforge.api.server_identity import request_tenant_id
+from reconforge.api.server_identity import AuthenticatedServerRequest, request_tenant_id
 from reconforge.auth.models import LocalUser
 from reconforge.db import connect, run_migrations
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings, PostgresTenantBoundary
@@ -18,6 +19,7 @@ from reconforge.infrastructure.postgres_identity import (
     PostgresIdentityRepository,
     PostgresSession,
 )
+from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
 from reconforge.platform.common import ServerPrincipal, require_permission, server_principal_context, trusted_local_mode
 
 
@@ -432,10 +434,21 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
     def execute(_request: Any, operation: Any) -> Any:
         return operation(fake, request_tenant_id(_request))
 
-    def authenticate(_request: Any, token: str) -> tuple[LocalUser, frozenset[str]] | None:
+    def authenticate(_request: Any, token: str) -> AuthenticatedServerRequest | None:
         request_tenant_id(_request)
         user = fake.authenticate_token(tenant_id="tenant-a", token=token)
-        return (user, fake.permissions) if user is not None else None
+        return (
+            AuthenticatedServerRequest(
+                user=user,
+                permissions=fake.permissions,
+                principal_type="user",
+                session_id="ses-a",
+                step_up_active=True,
+                step_up_expires_at="2026-01-01T00:10:00Z",
+            )
+            if user is not None
+            else None
+        )
 
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
@@ -607,7 +620,8 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
     assert login.json()["access_token"] == "server-token"
     assert me.status_code == 200
     assert me.json()["roles"] == ["server-admin"]
-    assert roles.status_code == 200
+    assert roles.status_code == 409
+    assert roles.json()["error"]["code"] == "local_identity_surface_disabled"
     assert finance_summary.status_code == 200
     assert master_currency.status_code == 200
     assert master_organization.status_code == 200
@@ -679,6 +693,7 @@ def test_server_principal_binds_permission_to_actor_and_never_uses_local_fallbac
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires a live PostgreSQL service")
 def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path) -> None:
     psycopg = pytest.importorskip("psycopg")
+    from reconforge.api.routes.master_data import _server_id
     from reconforge.infrastructure.postgres import install_postgres_rls_schema
     from reconforge.infrastructure.postgres_close import POSTGRES_CLOSE_SCHEMA_SQL
     from reconforge.infrastructure.postgres_ledger import (
@@ -690,6 +705,7 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
         POSTGRES_MASTER_DATA_SCHEMA_SQL,
         PostgresMasterDataRepository,
     )
+    from reconforge.infrastructure.postgres_privileged_sessions import POSTGRES_PRIVILEGED_SESSION_SCHEMA_SQL
 
     dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
     admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
@@ -698,8 +714,10 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
         pytest.fail("RECONFORGE_TEST_POSTGRES_APP_USER contains unsafe characters")
     factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))
     admin_factory = PostgresConnectionFactory(PostgresSettings(dsn=admin_dsn, require_tls=False))
-    tenant_a = "api_identity_a"
-    tenant_b = "api_identity_b"
+    token = uuid4().hex[:8]
+    tenant_a = f"api_identity_a_{token}"
+    tenant_b = f"api_identity_b_{token}"
+    organization_id = _server_id("org", tenant_a, "ORG-A")
     admin = admin_factory.connect()
     root = tmp_path / "tenants"
     root.mkdir()
@@ -713,6 +731,7 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
             admin.execute(POSTGRES_CLOSE_SCHEMA_SQL)
             admin.execute(POSTGRES_IDENTITY_SCHEMA_SQL)
+            admin.execute(POSTGRES_PRIVILEGED_SESSION_SCHEMA_SQL)
             admin.execute(
                 f"GRANT USAGE ON SCHEMA reconforge TO {app_user}" if app_user else "SELECT 1"
             )
@@ -722,11 +741,20 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                     f"reconforge.identity_roles, reconforge.identity_permissions, reconforge.identity_users, "
                     f"reconforge.identity_user_roles, reconforge.identity_role_permissions, "
                     f"reconforge.identity_sessions, reconforge.currencies, reconforge.organizations, "
+                    f"reconforge.identity_step_up_assertions, "
+                    f"reconforge.emergency_access_requests, reconforge.emergency_access_permissions, "
+                    f"reconforge.emergency_access_events, "
                     f"reconforge.legal_entities, reconforge.branches, reconforge.fiscal_periods, "
                     f"reconforge.ledger_accounts, "
                     f"reconforge.ledger_entries, reconforge.ledger_lines, reconforge.audit_events, "
                     f"reconforge.outbox_events, reconforge.close_periods, reconforge.close_tasks, "
                     f"reconforge.close_task_dependencies TO {app_user}"
+                )
+                admin.execute(
+                    f"GRANT SELECT, INSERT, UPDATE ON reconforge.principal_scope_grants TO {app_user}"
+                )
+                admin.execute(
+                    f"GRANT SELECT, INSERT ON reconforge.domain_workspaces TO {app_user}"
                 )
                 admin.execute(f"GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA reconforge TO {app_user}")
         app_role = factory.connect()
@@ -743,19 +771,28 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                     (tenant_id, tenant_id),
                 )
         with PostgresTenantBoundary(factory).transaction(tenant_a) as connection:
+            connection.execute(
+                "INSERT INTO reconforge.domain_workspaces(tenant_id,id,name) VALUES(%s,'workspace-a','Workspace A')",
+                (tenant_a,),
+            )
             master_data = PostgresMasterDataRepository(connection)
             master_data.upsert_currency(tenant_id=tenant_a, code="USD", name="US Dollar")
             master_data.upsert_organization(
                 tenant_id=tenant_a,
-                organization_id="org-a",
+                organization_id=organization_id,
                 organization_code="ORG-A",
                 name="API Organization",
                 base_currency="USD",
             )
+            connection.execute(
+                "UPDATE reconforge.organizations SET application_workspace_id='workspace-a' "
+                "WHERE tenant_id=%s AND id=%s",
+                (tenant_a, organization_id),
+            )
             ledger = PostgresLedgerRepository(connection)
             ledger.upsert_account(
                 tenant_id=tenant_a,
-                organization_id="org-a",
+                organization_id=organization_id,
                 account_id="cash-a",
                 account_code="1000",
                 name="Cash",
@@ -771,6 +808,7 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             repository.create_permission(tenant_id=tenant_a, permission_name="audit.verify")
             repository.create_permission(tenant_id=tenant_a, permission_name="close.read")
             repository.create_permission(tenant_id=tenant_a, permission_name="close.manage")
+            repository.create_permission(tenant_id=tenant_a, permission_name="roles.manage")
             repository.grant_permission(tenant_id=tenant_a, role_name="admin", permission_name="db.read")
             repository.grant_permission(
                 tenant_id=tenant_a,
@@ -812,12 +850,36 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                 role_name="admin",
                 permission_name="close.manage",
             )
+            repository.grant_permission(
+                tenant_id=tenant_a,
+                role_name="admin",
+                permission_name="roles.manage",
+            )
             repository.create_user(
                 tenant_id=tenant_a,
                 user_id="api-user-a",
                 username="Alice",
                 password="Strong-password-123",
                 role_name="admin",
+            )
+            scope_authority = PostgresScopeAuthorityRepository(connection)
+            scope_authority.grant(
+                tenant_id=tenant_a,
+                grant_id="scope-user-workspace-a",
+                principal_type="user",
+                principal_id="api-user-a",
+                scope_type="workspace",
+                scope_id="workspace-a",
+                actor_id="api-user-a",
+            )
+            scope_authority.grant(
+                tenant_id=tenant_a,
+                grant_id="scope-user-org-a",
+                principal_type="user",
+                principal_id="api-user-a",
+                scope_type="organization",
+                scope_id=organization_id,
+                actor_id="api-user-a",
             )
         client = TestClient(
             create_api_app(
@@ -835,9 +897,64 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
         )
         assert login.status_code == 200
         token = login.json()["access_token"]
+        headers = {
+            **headers,
+            "X-ReconForge-Workspace": "workspace-a",
+            "X-ReconForge-Organization": organization_id,
+        }
+        authenticated_headers = {
+            **headers,
+            "Authorization": f"Bearer {token}",
+        }
+        missing_scope = client.get(
+            "/api/v1/finance-core/summary",
+            headers={"X-ReconForge-Tenant": tenant_a, "Authorization": f"Bearer {token}"},
+        )
+        sibling_scope = client.get(
+            "/api/v1/finance-core/summary",
+            headers={
+                "X-ReconForge-Tenant": tenant_a,
+                "X-ReconForge-Workspace": "workspace-b",
+                "Authorization": f"Bearer {token}",
+            },
+        )
+        me_scoped = client.get("/api/v1/auth/me", headers=authenticated_headers)
+        finance_before_step_up = client.post(
+            "/api/v1/finance-core/accounts",
+            headers=authenticated_headers,
+            json={"organization_code": "ORG-A", "account_code": "4999", "name": "Denied before step-up"},
+        )
+        step_up = client.post(
+            "/api/v1/auth/step-up",
+            headers=authenticated_headers,
+            json={"password": "Strong-password-123"},
+        )
+        assert finance_before_step_up.status_code == 403
+        assert finance_before_step_up.json()["error"]["code"] == "step_up_required"
+        assert step_up.status_code == 200
+        assert step_up.json()["method"] == "password_reauthentication"
+        missing_scope = client.get(
+            "/api/v1/finance-core/summary",
+            headers={"X-ReconForge-Tenant": tenant_a, "Authorization": f"Bearer {token}"},
+        )
+        sibling_scope = client.get(
+            "/api/v1/finance-core/summary",
+            headers={
+                "X-ReconForge-Tenant": tenant_a,
+                "X-ReconForge-Workspace": "workspace-b",
+                "Authorization": f"Bearer {token}",
+            },
+        )
+        assert missing_scope.status_code == 400
+        assert missing_scope.json()["error"]["code"] == "workspace_scope_required"
+        assert sibling_scope.status_code == 403
+        assert sibling_scope.json()["error"]["code"] == "workspace_scope_denied"
+        assert me_scoped.status_code == 200
+        assert me_scoped.json()["authorized_scopes"]["workspaces"] == ["workspace-a"]
+        assert me_scoped.json()["authorized_scopes"]["organizations"] == [organization_id]
         authorized = client.get(
             "/api/v1/roles",
-            headers={**headers, "Authorization": f"Bearer {token}"},
+            headers=authenticated_headers,
         )
         finance_summary = client.get(
             "/api/v1/finance-core/summary",
@@ -950,7 +1067,8 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             "/api/v1/auth/me",
             headers={"X-ReconForge-Tenant": tenant_b, "Authorization": f"Bearer {token}"},
         )
-        assert authorized.status_code == 200
+        assert authorized.status_code == 409
+        assert authorized.json()["error"]["code"] == "local_identity_surface_disabled"
         assert finance_summary.status_code == 200
         assert finance_account.status_code == 200
         assert finance_entry.status_code == 200
@@ -979,7 +1097,23 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
     finally:
         try:
             with admin.transaction():
+                admin.execute(
+                    "ALTER TABLE reconforge.identity_step_up_assertions "
+                    "DISABLE TRIGGER identity_step_up_assertions_append_only"
+                )
+                admin.execute(
+                    "ALTER TABLE reconforge.principal_scope_grants "
+                    "DISABLE TRIGGER principal_scope_grants_guard"
+                )
                 admin.execute("DELETE FROM reconforge.tenants WHERE id IN (%s, %s)", (tenant_a, tenant_b))
+                admin.execute(
+                    "ALTER TABLE reconforge.principal_scope_grants "
+                    "ENABLE TRIGGER principal_scope_grants_guard"
+                )
+                admin.execute(
+                    "ALTER TABLE reconforge.identity_step_up_assertions "
+                    "ENABLE TRIGGER identity_step_up_assertions_append_only"
+                )
         except psycopg.Error:
             pass
         admin.close()

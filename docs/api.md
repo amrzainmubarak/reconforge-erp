@@ -99,8 +99,28 @@ and a non-superuser, non-`BYPASSRLS` database role in deployment.
 Implemented endpoints:
 
 - `POST /api/v1/auth/login`
+- `POST /api/v1/auth/federation/challenge` (only with bounded federation configuration)
+- `POST /api/v1/auth/federated-login` (requires the server-issued challenge)
 - `POST /api/v1/auth/logout`
 - `GET /api/v1/auth/me`
+
+Federation is disabled by default. To enable the bounded OIDC/SAML verification
+profile, install the `federation` extra and pass a versioned JSON file containing
+operator-owned public JWKS or public IdP certificates:
+
+```powershell
+$env:RECONFORGE_POSTGRES_DSN = "postgresql://reconforge_app@db.example/reconforge"
+$env:RECONFORGE_FEDERATION_CONFIG = "C:\secure-config\federation.json"
+reconforge api serve --tenant-db-root output/tenants
+```
+
+The challenge endpoint returns an OIDC `nonce` or SAML `request_id`; the login
+request must return that correlation plus `challenge_id`. The server stores only
+their hashes and consumes them once. This direct assertion-verification profile
+does not itself implement authorization-code exchange, dynamic discovery,
+IdP-initiated SAML, SCIM, provider single logout, or hosted IdP certification.
+Authenticated SCIM and WebAuthn MFA are separate explicitly configured server
+boundaries documented below.
 
 In this profile, the following Finance Core operations are also backed by the
 tenant-scoped PostgreSQL ledger boundary:
@@ -168,6 +188,18 @@ In the explicit PostgreSQL server profile these endpoints read and verify the
 tenant-scoped PostgreSQL audit chain produced by the supported server
 boundaries. They never fall back to the legacy SQLite audit ledger. The local
 profile retains the SQLite audit event schema and verification behavior.
+
+PostgreSQL audit administration:
+
+- `GET /api/v1/admin/audit/events`
+- `GET /api/v1/admin/audit/verify`
+
+These server-only routes require human `audit.read` or `audit.verify`, current
+privileged assurance, and (for browse) an operator-owned cursor signing key.
+They page a redacted union of the independent `domain` and `ledger_control`
+chains. They never return raw actor/object identifiers, reasons, request IDs,
+or metadata, and they do not claim a global cross-source hash chain. See the
+audit-administration runbook for the precise incident boundary.
 
 Workflow state machine foundation:
 
@@ -375,3 +407,203 @@ Responses must not include raw tracebacks, password hashes, salts, raw persisted
 - The PostgreSQL server profile additionally provides `reconforge.infrastructure.postgres_outbox.PostgresOutboxRepository` and `reconforge.workers.postgres_outbox.PostgresOutboxWorker` for tenant-scoped claim, lease, acknowledgement, retry, dead-letter, and replay delivery. The worker publishes outside the database transaction and acknowledges by `(tenant_id, event_id, worker_id)`; publishers must treat the event ID as an idempotency key because a crash after publishing can require a safe duplicate retry. No public outbox API or external transport is claimed.
 - `reconforge.infrastructure.postgres_reconciliation.PostgresReconciliationRepository` is a tenant-scoped persistence contract for matcher workers: it records canonical inputs, deterministic results, explainable exceptions, completion hashes, cardinality invariants, and idempotent partition checkpoints. In the authenticated PostgreSQL server profile, `POST /api/v1/reconciliations/runs` atomically accepts a bounded run manifest and canonical left/right inputs with `Idempotency-Key`, while read routes expose paginated run metadata and child input/result/exception records and manage routes request cancellation or explicit retry. `reconforge.workers.postgres_reconciliation.PostgresReconciliationWorker` provides durable claims, leases, heartbeats, cooperative cancellation, retryable failure, and atomic persistence for the explicit `LocalDeterministicMatcherAdapter`, which uses only a schema-only in-memory SQLite dependency and never writes hosted financial data there. Hard-key partitioning, PostgreSQL server-cursor input streaming, checkpoint resume, and the multi-worker scheduler are implemented; global relation-native assignment and million-row hosted execution are not claimed.
 - This is not production enterprise identity, public cloud readiness, SOC/ISO/SOX compliance, legal sign-off, audit opinion, or digital signature support.
+
+## SCIM 2.0 provisioning (PostgreSQL profile)
+
+The bounded SCIM surface is `/scim/v2`. It is disabled unless the API is started with the explicit PostgreSQL server profile. Every request requires `Authorization: Bearer <opaque-token>` and `X-ReconForge-Tenant`; discovery is authenticated too. The routing tenant is not authority by itself: the token hash must authenticate inside that tenant's forced-RLS transaction.
+
+Supported resources are Users and role-free Groups. Discovery, create, exact equality filters, pagination, get, conditional PUT/PATCH, User deactivation, and Group deletion are supported. Mutations require the current weak ETag in `If-Match`. Bulk, sorting, arbitrary attributes/schemas/filters/PATCH paths, password provisioning, and Group-to-RBAC mapping are not supported.
+
+Operators create credentials with `reconforge scim credential-issue`, replace them atomically with `credential-rotate`, and invalidate them with `credential-revoke`. Prefer `RECONFORGE_POSTGRES_DSN` over a command-line DSN. The issue/rotate response contains the bearer value exactly once; only its SHA-256 digest is persisted. The current `oauthbearertoken` discovery label describes bearer transport compatibility and does not claim an OAuth authorization server.
+
+## Service-account authentication (PostgreSQL profile)
+
+Service credentials use the reserved `rfa_` bearer prefix and authenticate only
+inside the selected tenant's forced-RLS transaction. They become typed machine
+principals, never user sessions: user roles are not loaded and only the active
+account's current direct permissions participate in authorization. `GET
+/api/v1/auth/me` exposes `principal_type: service_account`, an empty role list,
+and the bounded direct permission set. `POST /api/v1/auth/logout` revokes the
+presented service credential.
+
+The central policy boundary rejects all configured human-governed permissions
+and every permission ending in `.approve`, `.review`, or `.complete` for a
+service principal. Dynamic workflow transitions also require a human principal.
+This contract does not provide workload identity federation, privileged human
+step-up, emergency access, hosted operation, or Enterprise readiness.
+
+## Privileged human session step-up (PostgreSQL profile)
+
+Selected high-risk permissions require recent human reauthentication in
+addition to the existing role grant. A denied request returns the structured
+`step_up_required` code. The authenticated human may call `POST
+/api/v1/auth/step-up` with a closed JSON body containing `password`; success
+returns `method: password_reauthentication` and the expiry timestamp. `GET
+/api/v1/auth/me` reports the current step-up state without credential material.
+
+The assertion is bound to the current tenant, user, and bearer session and is
+valid for at most ten minutes. Logout/session revocation or session expiry
+invalidates it. This route is unavailable in Community/SQLite mode and rejects
+service accounts. It is password reauthentication, not MFA, and currently does
+not provide external-IdP ACR/AMR validation, phishing resistance, emergency
+access, or independent assurance.
+
+## Same-origin browser administration session
+
+`POST /api/v1/auth/browser/login` accepts the same closed username/password
+payload as bearer login but returns only `csrf_token` and `expires_at`. It sets
+the bearer session only as the host-only `__Host-reconforge_session` cookie
+with `HttpOnly`, `Secure`, `Path=/`, and `SameSite=Strict`. It never exposes an
+`access_token` in the browser-login response.
+
+Safe cookie-authenticated requests need no extra header. Every unsafe request
+using that cookie must send the current `X-ReconForge-CSRF` proof from the
+browser-login response. The proof is bound to that exact session; a proof from
+another session fails. The explicit `Authorization: Bearer` API/CLI contract
+is unchanged and takes precedence when both transports are presented. Browser
+logout requires the proof, revokes the server session, and clears the cookie.
+
+This is a same-origin HTTPS transport boundary, not a hosted browser UI,
+cross-origin credential facility, CSP configuration, accessibility claim, or
+complete WebAuthn/step-up experience. See
+`docs/operations/browser-administration-sessions.md`.
+
+## Emergency access (PostgreSQL profile)
+
+`/api/v1/auth/emergency-access/requests` exposes a human-only, forced-RLS
+lifecycle: self-request and list, independent stepped-up approve/reject,
+requester activation from the same stepped-up session, explicit end, and
+independent stepped-up review. Authority is limited to a closed five-permission
+financial/operational registry and 5–60 minutes. It never grants identity,
+role, policy, service-account, or security administration.
+
+Every authorization that depends on an emergency permission appends the exact
+permission and externally addressed HTTP path before the operation proceeds.
+End or expiry enters `ReviewPending`; it is not silently treated as reviewed.
+The surface is unavailable in Community/SQLite and rejects service accounts.
+This is a bounded emergency control, not MFA, production PAM, hosted readiness,
+or independent assurance.
+
+## WebAuthn MFA (PostgreSQL profile)
+
+Install the optional `mfa` extra and pass `--webauthn-config` (or
+`RECONFORGE_WEBAUTHN_CONFIG`) containing the closed v1 RP ID/name/exact-origin
+object. Without that explicit configuration all WebAuthn routes remain
+unavailable. HTTPS is mandatory outside matching loopback origins.
+
+An authenticated human first performs password step-up, then calls
+`POST /api/v1/auth/webauthn/registration/options` and submits the browser result
+to `/registration/verify`. Later `/authentication/options` and
+`/authentication/verify` complete user-verified WebAuthn step-up. Challenges
+last five minutes, are bound to the current tenant/user/session/ceremony, and
+are consumed once before verification. Credential private keys never reach the
+server.
+
+When configured, the closed privileged permission registry requires the
+`webauthn_user_verified` method; password-only assurance returns
+`mfa_required`. This evidence does not cover every browser/authenticator,
+recovery ceremony, attestation policy, hosted deployment, or independent review.
+
+## Administration security overview (PostgreSQL profile)
+
+`GET /api/v1/admin/security/overview` requires a human principal with
+`security.center.read` and current privileged assurance. With WebAuthn enabled,
+user-verified WebAuthn is required. Service accounts are denied by Application,
+central policy, and migration 0049's database constraint.
+
+The closed v1 response reports count-only identity, session, integration,
+policy, evidence-retention/verification, and audit observations. It contains a
+tenant-scope digest, whole-second `as_of`, deterministic snapshot digest, and
+bounded attention codes. It does not expose identity rows, credentials,
+destinations, source financial data, or free-form audit content. Audit-chain
+verification remains a separate `audit.verify` operation. This read-only
+surface is not a security assessment, certification, or complete
+administration center.
+
+## Identity and session administration (PostgreSQL profile)
+
+The authoritative server routes are:
+
+- `GET /api/v1/admin/identity/users`
+- `POST /api/v1/admin/identity/users/{user_id}/status`
+- `GET /api/v1/admin/identity/sessions`
+- `POST /api/v1/admin/identity/sessions/{session_id}/revoke`
+
+Every route requires a human principal with `users.manage` and current
+privileged assurance. With WebAuthn enabled, user-verified WebAuthn is
+required. List routes use 1–200 item signed cursor pages; the cursor is bound
+to tenant, resource, filter, sort, and direction.
+
+User status and session revocation requests require the exact positive
+`expected_lifecycle_version`. A stale version returns
+`identity_lifecycle_version_conflict`. User disable revokes every current
+session atomically; enabling does not resurrect old sessions. Self-disable and
+disabling the last active identity administrator are refused.
+
+Session reasons are closed to `access_change`, `administrative_cleanup`,
+`security_response`, and `user_request`. Responses include only presence flags
+for recorded client IP/user agent and exclude credentials, tokens, token
+hashes, raw IP/user-agent values, password fields, and email.
+
+In the PostgreSQL profile, historical `/api/v1/users` endpoints return
+`local_identity_surface_disabled` because they address the Community SQLite
+identity store. Those endpoints remain backward compatible in local mode.
+
+## Role and access-policy administration (PostgreSQL profile)
+
+The authoritative server routes are:
+
+- `GET /api/v1/admin/access/permissions`
+- `GET /api/v1/admin/access/roles`
+- `POST /api/v1/admin/access/roles`
+- `PATCH /api/v1/admin/access/roles/{role_id}`
+- `PUT /api/v1/admin/access/roles/{role_id}/permissions`
+- `PUT /api/v1/admin/access/users/{user_id}/roles`
+
+Every route requires a human `roles.manage` principal and current privileged
+assurance. Role list cursors are signed and bound to the tenant, retirement
+filter, sort direction, and tie-breaker. Mutations use optimistic lifecycle
+versions and exact permission/role sets. Unknown permissions are rejected;
+the permission registry is read-only over HTTP.
+
+Role names are immutable. Retirement revokes its active user assignments and
+all affected live sessions; reactivation does not resurrect assignments.
+Changing a role policy or a user's exact role set also invalidates affected
+sessions. The final effective active `roles.manage` authority cannot be
+removed. Responses omit credentials, tokens, hashes, email, network address,
+and user-agent values.
+
+In the PostgreSQL profile, both historical `/api/v1/roles` reads return
+`local_identity_surface_disabled` before opening SQLite. They remain backward
+compatible in Community/local mode. See
+`docs/operations/access-administration.md` for recovery and claim limits.
+
+## Integration and retention administration (PostgreSQL profile)
+
+The authoritative server routes are:
+
+- `GET /api/v1/admin/security/integrations`
+- `POST /api/v1/admin/security/integrations/{kind}/{integration_id}/disable`
+- `GET|POST /api/v1/admin/security/retention-policies`
+- `PATCH /api/v1/admin/security/retention-policies/{policy_id}`
+- `POST /api/v1/admin/security/retention-policies/{policy_id}/evidence/{evidence_id}`
+
+Every route requires a human `security.policy.manage` principal and current
+privileged assurance. Signed cursors bind tenant, resource, inactive/retired
+filter, ordering, and tie-breaker. Integration kinds are limited to real
+federation links, SCIM credentials, service accounts, and notification routes;
+no shadow connector registry is created.
+
+Disable requests carry the current state digest and a closed reason code. The
+native runtime transition, credential revocation where applicable, native
+lifecycle evidence, and bounded domain-audit event commit atomically. Responses
+exclude tokens and hashes, external-subject hashes, destinations, secret
+references, raw actor identifiers, email, IP, and user-agent values.
+
+Retention policies have immutable names, optimistic lifecycle versions, closed
+classifications/reasons, and retirement instead of deletion. Applying one
+creates append-only assignment evidence and can extend but never shorten the
+evidence retention floor. Exact replay is idempotent. This is database metadata
+governance only; it does not prove legal validity or propagate WORM locks to
+object stores, backups, replicas, or exports. See
+`docs/operations/security-governance.md` for incident and recovery procedures.

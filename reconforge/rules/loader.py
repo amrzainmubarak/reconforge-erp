@@ -26,10 +26,13 @@ def _read_yaml(
     if not path.exists():
         raise FileNotFoundError(f"Missing control pack file: {path}")
     try:
-        payload = read_yaml_document(
-            path,
-            financial_input_policy=financial_input_policy,
-        ) or {}
+        payload = (
+            read_yaml_document(
+                path,
+                financial_input_policy=financial_input_policy,
+            )
+            or {}
+        )
     except StructuredDocumentError as exc:
         raise ValueError(f"Control pack YAML is invalid ({exc.code})") from exc
     if not isinstance(payload, dict):
@@ -102,10 +105,7 @@ def load_rule_pack(
         if not isinstance(raw_rule, dict):
             raise ValueError("Each rule must be a YAML object")
         _validate_condition_operators(raw_rule.get("condition", {}), str(raw_rule.get("rule_id", "<unknown>")))
-    rules = [
-        RuleDefinition.model_validate(raw_rule, context=validation_context)
-        for raw_rule in raw_rules
-    ]
+    rules = [RuleDefinition.model_validate(raw_rule, context=validation_context) for raw_rule in raw_rules]
     return ControlPack(
         root_path=str(root),
         metadata=metadata,

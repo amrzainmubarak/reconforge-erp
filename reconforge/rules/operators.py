@@ -246,10 +246,7 @@ def evaluate_condition(
             return False
         source_value = row.get(source_key)
         raw_values = target[target[target_key].astype(str).eq(str(source_value))][aggregate_field]
-        parsed_values = [
-            _as_decimal(value, financial_input_policy=input_policy)
-            for value in raw_values
-        ]
+        parsed_values = [_as_decimal(value, financial_input_policy=input_policy) for value in raw_values]
         expected = _as_decimal(
             left if condition.field else condition.value,
             financial_input_policy=input_policy,

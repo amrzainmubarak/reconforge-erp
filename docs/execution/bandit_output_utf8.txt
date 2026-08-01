@@ -1,0 +1,9 @@
+﻿python : [tester]	WARNING	nosec encountered (B608), but no failed test on file reconforge\db\backup.py:1478
+At line:1 char:336
++ ... t.txt 2>&1; python -m bandit -q -r reconforge > docs\execution\bandit ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([tester]	WARNIN...\backup.py:1478:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[tester]	WARNING	nosec encountered (B608), but no failed test on file reconforge\db\backup.py:1478
+[tester]	WARNING	nosec encountered (B608), but no failed test on file reconforge\db\backup.py:1478

@@ -18,7 +18,10 @@ from reconforge.platform.common import PlatformError
 
 router = APIRouter(prefix="/accounts", tags=["accounts"])
 
-AccountRead = Annotated[LocalUser, Depends(require_any_permission({"accounts.read", "accounts.prepare", "accounts.review", "accounts.complete"}))]
+AccountRead = Annotated[
+    LocalUser,
+    Depends(require_any_permission({"accounts.read", "accounts.prepare", "accounts.review", "accounts.complete"})),
+]
 AccountPrepare = Annotated[LocalUser, Depends(require_permission("accounts.prepare"))]
 AccountReview = Annotated[LocalUser, Depends(require_permission("accounts.review"))]
 AccountComplete = Annotated[LocalUser, Depends(require_permission("accounts.complete"))]
@@ -125,7 +128,9 @@ def prepare_reconciliation(
     """Prepare one account reconciliation."""
 
     try:
-        record = AccountReconciliationService(connection).prepare(reconciliation_id=reconciliation_id, actor_label=current_user.username)
+        record = AccountReconciliationService(connection).prepare(
+            reconciliation_id=reconciliation_id, actor_label=current_user.username
+        )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="account_prepare_failed", message=str(exc)) from exc
     return {"reconciliation": record}

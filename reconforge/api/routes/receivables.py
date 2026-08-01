@@ -20,7 +20,11 @@ PageLimit = Annotated[int, Query(ge=1, le=1_000)]
 PageOffset = Annotated[int, Query(ge=0, le=10_000_000)]
 ReceivablesRead = Annotated[
     LocalUser,
-    Depends(require_any_permission({"receivables.read", "receivables.manage", "receivables.approve", "receivables.credit_override"})),
+    Depends(
+        require_any_permission(
+            {"receivables.read", "receivables.manage", "receivables.approve", "receivables.credit_override"}
+        )
+    ),
 ]
 ReceivablesManage = Annotated[LocalUser, Depends(require_permission("receivables.manage"))]
 ReceivablesApprove = Annotated[LocalUser, Depends(require_permission("receivables.approve"))]
@@ -133,7 +137,10 @@ def list_customers(
         records = ReceivablesService(connection).list_customers(workspace=workspace, status=status)
     except (DatabaseError, PlatformError) as exc:
         raise _error("receivables_customer_list_failed", exc) from exc
-    return {"customers": records[offset : offset + limit], "pagination": {"limit": limit, "offset": offset, "total": len(records)}}
+    return {
+        "customers": records[offset : offset + limit],
+        "pagination": {"limit": limit, "offset": offset, "total": len(records)},
+    }
 
 
 @router.post("/invoices")
@@ -165,7 +172,10 @@ def list_invoices(
         records = ReceivablesService(connection).list_invoices(workspace=workspace, status=status)
     except (DatabaseError, PlatformError) as exc:
         raise _error("receivables_invoice_list_failed", exc) from exc
-    return {"invoices": records[offset : offset + limit], "pagination": {"limit": limit, "offset": offset, "total": len(records)}}
+    return {
+        "invoices": records[offset : offset + limit],
+        "pagination": {"limit": limit, "offset": offset, "total": len(records)},
+    }
 
 
 @router.post("/invoices/{invoice_id}/submit")

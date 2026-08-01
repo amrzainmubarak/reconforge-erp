@@ -205,9 +205,7 @@ def _server_entry(
         # represented by the bounded PostgreSQL ledger schema.  Rejecting them
         # avoids silently dropping accounting dimensions from a posted entry.
         raise _server_unsupported("legal entities, fiscal periods, and finance journals")
-    organization = repository.organization_by_code(
-        tenant_id=tenant_id, organization_code=payload.organization_code
-    )
+    organization = repository.organization_by_code(tenant_id=tenant_id, organization_code=payload.organization_code)
     if not bool(organization["active"]):
         raise PostgresLedgerValidationError("Ledger entries require an active organization.")
     currency = payload.currency_code.strip().upper() or str(organization.get("base_currency") or "").upper()
@@ -261,7 +259,9 @@ def summary(
 ) -> dict[str, object]:
     if server_ledger_enabled(request):
         _server_workspace(workspace)
-        server_result = execute_postgres_ledger(request, lambda repository, tenant: repository.summary(tenant_id=tenant))
+        server_result = execute_postgres_ledger(
+            request, lambda repository, tenant: repository.summary(tenant_id=tenant)
+        )
         return {
             "summary": {
                 "workspace": None,
@@ -619,9 +619,7 @@ def list_entries(
         def operation(repository: PostgresLedgerRepository, tenant: str) -> list[dict[str, object]]:
             organization_id = None
             if organization:
-                organization_record = repository.organization_by_code(
-                    tenant_id=tenant, organization_code=organization
-                )
+                organization_record = repository.organization_by_code(tenant_id=tenant, organization_code=organization)
                 organization_id = str(organization_record["id"])
             return repository.list_entries(
                 tenant_id=tenant,

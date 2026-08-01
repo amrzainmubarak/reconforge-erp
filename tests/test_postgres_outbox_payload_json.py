@@ -236,7 +236,7 @@ def test_all_postgres_audit_insert_functions_use_bounded_metadata_encoder() -> N
         "reconforge/infrastructure/postgres_ledger.py": 2,
         "reconforge/infrastructure/postgres_master_data.py": 1,
         "reconforge/infrastructure/postgres_close.py": 1,
-        "reconforge/infrastructure/postgres_evidence.py": 1,
+        "reconforge/infrastructure/postgres_evidence.py": 2,
         "reconforge/infrastructure/postgres_reconciliation.py": 1,
     }
     for relative in expected:

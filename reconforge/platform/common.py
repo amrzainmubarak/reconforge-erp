@@ -13,11 +13,12 @@ from datetime import date
 from decimal import Decimal
 from hashlib import sha256
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from reconforge.audit import AuditLedgerError, append_audit_event
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService
 from reconforge.auth.models import LocalUser
+from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext, audit_policy_decision
 from reconforge.db.connection import DatabaseError
 from reconforge.db.exporter import resolve_input_file
 from reconforge.domain.models import DEFAULT_LOCAL_FIRST_NOTE, AuditEventReference, utc_now_text
@@ -43,6 +44,18 @@ class ServerPrincipal:
 
     user: LocalUser
     permissions: frozenset[str]
+    principal_type: Literal["user", "service_account"] = "user"
+    credential_id: str | None = None
+    session_id: str | None = None
+    step_up_active: bool = False
+    step_up_expires_at: str | None = None
+    step_up_method: str | None = None
+    base_permissions: frozenset[str] = frozenset()
+    emergency_permissions: frozenset[str] = frozenset()
+    emergency_access_id_by_permission: tuple[tuple[str, str], ...] = ()
+    authorized_workspace_ids: frozenset[str] = frozenset()
+    authorized_organization_ids: frozenset[str] = frozenset()
+    authorized_legal_entity_ids: frozenset[str] = frozenset()
 
 
 _SERVER_PRINCIPAL: ContextVar[ServerPrincipal | None] = ContextVar("reconforge_server_principal", default=None)
@@ -456,14 +469,46 @@ def require_permission(connection: sqlite3.Connection, *, actor_label: str, perm
         return None
     principal = current_server_principal()
     if principal is not None:
-        if permission not in principal.permissions:
+        decision = CentralPolicyEngine().evaluate(
+                PolicyEvaluationContext(
+                    user_id=principal.user.id,
+                    username=principal.user.username,
+                    user_permissions=principal.permissions,
+                    principal_type=principal.principal_type,
+                    step_up_active=principal.step_up_active,
+                    step_up_enforced=True,
+                ),
+            required_permission=permission,
+        )
+        audit_policy_decision(
+            decision,
+            actor_id=user.id,
+            required_permissions=frozenset({permission}),
+            surface=f"platform:{permission}",
+        )
+        if not decision.allowed:
             raise PlatformError("Permission denied for this server workflow action.")
         return user
     try:
-        allowed = LocalAuthService(connection).user_has_permission(username=user.username, permission=permission)
+        service = LocalAuthService(connection)
+        permissions = service.roles.user_permissions(user.username)
+        decision = CentralPolicyEngine().evaluate(
+            PolicyEvaluationContext(
+                user_id=user.id,
+                username=user.username,
+                user_permissions=permissions,
+            ),
+            required_permission=permission,
+        )
     except (DatabaseError, AuthRepositoryError, AuthServiceError) as exc:
         raise PlatformError("Unable to check local permission.") from exc
-    if not allowed:
+    audit_policy_decision(
+        decision,
+        actor_id=user.id,
+        required_permissions=frozenset({permission}),
+        surface=f"platform:{permission}",
+    )
+    if not decision.allowed:
         raise PlatformError("Permission denied for this local workflow action.")
     return user
 

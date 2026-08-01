@@ -42,7 +42,9 @@ def _movement_types(config: ReconForgeConfig, group: str) -> set[str]:
     return {value.upper() for value in config.movement_type_mapping.get(group, [])}
 
 
-def _add_risk(frame: pd.DataFrame, exception_type: str, config: ReconForgeConfig, amount_column: str | None = None) -> pd.DataFrame:
+def _add_risk(
+    frame: pd.DataFrame, exception_type: str, config: ReconForgeConfig, amount_column: str | None = None
+) -> pd.DataFrame:
     enriched = frame.copy()
     scores: list[int] = []
     levels: list[str] = []
@@ -81,7 +83,9 @@ def _to_decimal_or_none(value: object) -> Decimal | None:
         return None
 
 
-def find_parts_issued_without_work_order(stock_moves: pd.DataFrame, work_orders: pd.DataFrame, config: ReconForgeConfig) -> pd.DataFrame:
+def find_parts_issued_without_work_order(
+    stock_moves: pd.DataFrame, work_orders: pd.DataFrame, config: ReconForgeConfig
+) -> pd.DataFrame:
     """Find stock issues that do not reference a valid work order."""
 
     issue_types = _movement_types(config, "issue") | _movement_types(config, "direct_fit")
@@ -92,13 +96,17 @@ def find_parts_issued_without_work_order(stock_moves: pd.DataFrame, work_orders:
     return stock[movement_mask & invalid_wo].copy()
 
 
-def find_closed_work_orders_with_pending_stock(stock_moves: pd.DataFrame, work_orders: pd.DataFrame, config: ReconForgeConfig) -> pd.DataFrame:
+def find_closed_work_orders_with_pending_stock(
+    stock_moves: pd.DataFrame, work_orders: pd.DataFrame, config: ReconForgeConfig
+) -> pd.DataFrame:
     """Find stock issues posted after work-order closure."""
 
     issue_types = _movement_types(config, "issue") | _movement_types(config, "direct_fit")
     closed = work_orders[work_orders["status"].map(_clean_status).eq("closed")].copy()
     stock = stock_moves[stock_moves["movement_type"].astype(str).str.upper().isin(issue_types)].copy()
-    merged = stock.merge(closed[["work_order", "closed_date", "status"]], on="work_order", how="inner", suffixes=("", "_wo"))
+    merged = stock.merge(
+        closed[["work_order", "closed_date", "status"]], on="work_order", how="inner", suffixes=("", "_wo")
+    )
     late = merged[(merged["closed_date"].notna()) & (merged["date"] > merged["closed_date"])].copy()
     return late
 
@@ -110,13 +118,19 @@ def find_work_orders_with_cost_but_no_invoice(work_orders: pd.DataFrame, invoice
     invoice_status = invoices[["work_order", "status", "invoice_amount"]].copy()
     invoice_status["is_valid_invoice"] = invoice_status["status"].map(_clean_status).isin(posted_status)
     valid_invoiced = set(invoice_status[invoice_status["is_valid_invoice"]]["work_order"].astype(str))
-    actual_cost = pd.Series([_to_decimal_or_none(value) for value in work_orders["actual_cost"]], index=work_orders.index)
+    actual_cost = pd.Series(
+        [_to_decimal_or_none(value) for value in work_orders["actual_cost"]], index=work_orders.index
+    )
     positive_cost = actual_cost.map(lambda value: value is not None and value > Decimal("0"))
     missing_or_invalid_cost = actual_cost.isna()
-    return work_orders[(positive_cost | missing_or_invalid_cost) & ~work_orders["work_order"].astype(str).isin(valid_invoiced)].copy()
+    return work_orders[
+        (positive_cost | missing_or_invalid_cost) & ~work_orders["work_order"].astype(str).isin(valid_invoiced)
+    ].copy()
 
 
-def find_direct_purchase_fitting_risk(stock_moves: pd.DataFrame, purchase_orders: pd.DataFrame, config: ReconForgeConfig) -> pd.DataFrame:
+def find_direct_purchase_fitting_risk(
+    stock_moves: pd.DataFrame, purchase_orders: pd.DataFrame, config: ReconForgeConfig
+) -> pd.DataFrame:
     """Find direct purchase-and-fit cases without a normal stores process."""
 
     direct_types = _movement_types(config, "direct_fit")
@@ -135,7 +149,9 @@ def find_direct_purchase_fitting_risk(stock_moves: pd.DataFrame, purchase_orders
     return po_risk
 
 
-def find_old_part_return_missing(stock_moves: pd.DataFrame, old_parts_returns: pd.DataFrame, config: ReconForgeConfig) -> pd.DataFrame:
+def find_old_part_return_missing(
+    stock_moves: pd.DataFrame, old_parts_returns: pd.DataFrame, config: ReconForgeConfig
+) -> pd.DataFrame:
     """Find issues where an old-part return is required but missing."""
 
     required_categories = {category.lower() for category in config.required_old_part_categories}
@@ -157,7 +173,9 @@ def find_cancelled_po_linked_to_movement(stock_moves: pd.DataFrame, purchase_ord
     cancelled = purchase_orders[purchase_orders["status"].map(_clean_status).eq("cancelled")].copy()
     if cancelled.empty:
         return cancelled
-    linked = stock_moves.merge(cancelled, left_on="source_document", right_on="po_number", how="inner", suffixes=("_stock", "_po"))
+    linked = stock_moves.merge(
+        cancelled, left_on="source_document", right_on="po_number", how="inner", suffixes=("_stock", "_po")
+    )
     return linked
 
 

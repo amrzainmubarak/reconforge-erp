@@ -145,7 +145,10 @@ def list_suppliers(
         records = PayablesService(connection).list_suppliers(workspace=workspace, status=status)
     except (DatabaseError, PlatformError) as exc:
         raise _error("payables_supplier_list_failed", exc) from exc
-    return {"suppliers": records[offset : offset + limit], "pagination": {"limit": limit, "offset": offset, "total": len(records)}}
+    return {
+        "suppliers": records[offset : offset + limit],
+        "pagination": {"limit": limit, "offset": offset, "total": len(records)},
+    }
 
 
 @router.post("/purchase-orders")
@@ -239,7 +242,10 @@ def list_supplier_invoices(
         records = PayablesService(connection).list_supplier_invoices(workspace=workspace, status=status)
     except (DatabaseError, PlatformError) as exc:
         raise _error("payables_invoice_list_failed", exc) from exc
-    return {"invoices": records[offset : offset + limit], "pagination": {"limit": limit, "offset": offset, "total": len(records)}}
+    return {
+        "invoices": records[offset : offset + limit],
+        "pagination": {"limit": limit, "offset": offset, "total": len(records)},
+    }
 
 
 @router.post("/invoices/{invoice_id}/submit")

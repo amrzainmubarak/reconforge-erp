@@ -98,15 +98,22 @@ def scan_input_headers(input_path: Path | str) -> list[HeaderScan]:
     base = Path(input_path)
     if not base.exists() or not base.is_dir():
         return []
-    return [_read_headers(path) for path in sorted(base.iterdir()) if path.is_file() and path.suffix.lower() in SUPPORTED_INPUT_SUFFIXES]
+    return [
+        _read_headers(path)
+        for path in sorted(base.iterdir())
+        if path.is_file() and path.suffix.lower() in SUPPORTED_INPUT_SUFFIXES
+    ]
 
 
 def _load_mapping(pack_path: Path) -> dict[str, Any]:
     mapping_path = pack_path / "mapping.yml"
-    payload = read_yaml_document(
-        mapping_path,
-        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
-    ) or {}
+    payload = (
+        read_yaml_document(
+            mapping_path,
+            financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+        )
+        or {}
+    )
     if not isinstance(payload, dict):
         raise ValueError("mapping.yml must contain an object")
     return payload
@@ -171,7 +178,11 @@ def _suggestions(
             continue
         ratio = max((SequenceMatcher(None, header_norm, norm).ratio() for norm in target_norms), default=0.0)
         header_tokens = _tokenize(header)
-        token_overlap = len(target_tokens & header_tokens) / len(target_tokens | header_tokens) if target_tokens or header_tokens else 0.0
+        token_overlap = (
+            len(target_tokens & header_tokens) / len(target_tokens | header_tokens)
+            if target_tokens or header_tokens
+            else 0.0
+        )
         score = max(ratio, token_overlap)
         if score >= 0.72 or token_overlap >= 0.5:
             reason = "normalized name similarity" if ratio >= token_overlap else "shared field-name tokens"
@@ -210,7 +221,9 @@ def _inspect_dataset(filename: str, field_mapping: object, scans: list[HeaderSca
     candidates = _all_header_candidates(scans) if scan is None else [(scan.path.name, header) for header in headers]
     suggestions: list[FieldSuggestion] = []
     for field_name in [*missing_required, *missing_optional]:
-        suggestions.extend(_suggestions(target_field=field_name, aliases=mapping.get(field_name, []), candidates=candidates))
+        suggestions.extend(
+            _suggestions(target_field=field_name, aliases=mapping.get(field_name, []), candidates=candidates)
+        )
 
     return DatasetInspection(
         dataset=filename,
@@ -230,7 +243,13 @@ def _result_payload(result: MappingInspectionResult) -> dict[str, Any]:
         "profile_id": result.profile_id,
         "summary": result.summary,
         "files": [
-            {"file": scan.path.name, "path": str(scan.path), "status": scan.status, "headers": scan.headers, "error": scan.error}
+            {
+                "file": scan.path.name,
+                "path": str(scan.path),
+                "status": scan.status,
+                "headers": scan.headers,
+                "error": scan.error,
+            }
             for scan in result.files
         ],
         "datasets": [
@@ -310,7 +329,9 @@ def _write_markdown_report(result: MappingInspectionResult) -> None:
     result.report_markdown_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def inspect_mapping_inputs(input_path: Path | str, pack_path: Path | str, output_path: Path | str) -> MappingInspectionResult:
+def inspect_mapping_inputs(
+    input_path: Path | str, pack_path: Path | str, output_path: Path | str
+) -> MappingInspectionResult:
     """Compare local export headers against a mapping profile and write reports."""
 
     input_dir = Path(input_path)
@@ -326,7 +347,10 @@ def inspect_mapping_inputs(input_path: Path | str, pack_path: Path | str, output
         pack_path=pack_dir,
         profile_id=str(mapping.get("profile_id", pack_dir.name)),
         files=scans,
-        datasets=[_inspect_dataset(str(filename), field_mapping, scans) for filename, field_mapping in sorted(field_mappings.items())],
+        datasets=[
+            _inspect_dataset(str(filename), field_mapping, scans)
+            for filename, field_mapping in sorted(field_mappings.items())
+        ],
         report_json_path=output_dir / "mapping_report.json",
         report_markdown_path=output_dir / "mapping_report.md",
     )

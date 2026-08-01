@@ -1,0 +1,34 @@
+schema_version: 1
+audit_id: E-220
+executed_at: "2026-07-30"
+task_id: P3-ENT-011
+status: verified
+scope: Evidence-bounded Python-wheel sovereign deployment on one no-network Linux runtime
+gates:
+  - {id: closed_local_bundle, status: verified_focused, evidence: [reconforge/sovereign/offline_bundle.py, docs/schemas/offline_bundle.schema.json, tests/test_offline_bundle.py]}
+  - {id: complete_dependency_mirror, status: verified_runtime, evidence: [.github/scripts/verify_airgap_install.py, docs/execution/OFFLINE_INSTALL_DOCKER_DRILL_2026-07-30.json, tests/test_offline_install_drill.py]}
+  - {id: signed_artifact_identity, status: verified_offline, evidence: [.github/scripts/verify_offline_attestations.py, docs/execution/OFFLINE_ATTESTATION_DOCKER_DRILL_2026-07-30.json, tests/test_offline_attestation_drill.py]}
+  - {id: same_signed_wheel_install, status: verified_runtime, evidence: [docs/execution/SIGNED_AIRGAP_INSTALL_DOCKER_DRILL_2026-07-30.json, tests/test_signed_airgap_install_drill.py]}
+  - {id: os_no_network_enforcement, status: verified_runtime, evidence: [docs/execution/SIGNED_AIRGAP_INSTALL_DOCKER_DRILL_2026-07-30.json, docs/execution/AIRGAP_IDENTITY_RECOVERY_DOCKER_DRILL_2026-07-30.json]}
+  - {id: local_identity_fallback, status: verified_runtime, evidence: [.github/scripts/verify_airgap_identity_recovery.py, docs/execution/AIRGAP_IDENTITY_RECOVERY_DOCKER_DRILL_2026-07-30.json, tests/test_airgap_identity_recovery.py]}
+  - {id: encrypted_backup_restore, status: verified_runtime, evidence: [reconforge/db/encrypted_backup.py, docs/execution/AIRGAP_IDENTITY_RECOVERY_DOCKER_DRILL_2026-07-30.json, tests/test_airgap_identity_recovery_drill.py]}
+  - {id: offline_upgrade_rollback, status: verified_runtime, evidence: [.github/scripts/verify_airgap_upgrade_rollback.py, docs/execution/AIRGAP_UPGRADE_ROLLBACK_DOCKER_DRILL_2026-07-30.json, tests/test_airgap_upgrade_rollback_drill.py]}
+runtime_evidence:
+  signed_release_run: 30243819239
+  signed_wheel_sha256: 210e69770fe1ad55227173349ee22ca7f16e4f5270c093f12c78460c14b66f33
+  installed_signed_wheel_sha256: 210e69770fe1ad55227173349ee22ca7f16e4f5270c093f12c78460c14b66f33
+  dependency_wheel_count: 59
+  docker_network_mode: none
+  local_users_restored: 2
+  old_sessions_restored: 0
+  upgrade_transition: v0.7.0_to_v0.7.1_to_v0.7.0_exact
+  production_keys_secrets_or_customer_data: 0
+limitations:
+  - python_wheel_sovereign_profile_only
+  - OCI_subject_offline_verification_blocked_by_gh_2_78_registry_resolution
+  - dependency_wheels_hash_verified_not_individually_attested
+  - no_physical_media_transfer_or_custody_exercise
+  - no_hardware_backed_key_custody_or_forgotten_password_recovery
+  - single_linux_amd64_runtime_and_single_execution
+  - no_compliance_certification_external_assurance_or_enterprise_ready_claim
+publication: {commit: false, push: false, pull_request: false, release: false}

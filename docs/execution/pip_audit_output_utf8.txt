@@ -1,0 +1,10 @@
+﻿python : No known vulnerabilities found
+At line:1 char:93
++ ... TTP_PROXY); python -m pip_audit > docs\execution\pip_audit_output.txt ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (No known vulnerabilities found:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Name           Skip Reason
+-------------- -----------------------------------------------------------------------------
+reconforge-erp Dependency not found on PyPI and could not be audited: reconforge-erp (0.7.0)

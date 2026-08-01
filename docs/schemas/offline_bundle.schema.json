@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/offline_bundle.schema.json",
+  "title": "ReconForge closed offline installation bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "bundle_id", "application_version", "python_tag", "platform_tag", "install", "entries", "claim_boundary"],
+  "properties": {
+    "schema": {"const": "reconforge-offline-bundle-v1"},
+    "bundle_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{7,63}$"},
+    "application_version": {"$ref": "#/$defs/semver"},
+    "python_tag": {"enum": ["cp311", "cp312", "cp313", "cp314"]},
+    "platform_tag": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{1,63}$"},
+    "install": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["installer", "requirements_path", "application_requirement", "network_policy", "index_policy"],
+      "properties": {
+        "installer": {"const": "pip-no-index-v1"},
+        "requirements_path": {"type": "string", "pattern": "^[^\\\\/](?:[^\\\\]*[^\\\\/])?$", "maxLength": 240},
+        "application_requirement": {"type": "string", "pattern": "^reconforge-erp(?:\\[[a-z,]+\\])?==[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "network_policy": {"const": "deny-all"},
+        "index_policy": {"const": "no-index"}
+      }
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 2000,
+      "items": {"$ref": "#/$defs/entry"}
+    },
+    "claim_boundary": {"const": "Local artifact integrity only; external signature trust, installation success, and production readiness require separate evidence."}
+  },
+  "$defs": {
+    "semver": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "role", "size", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1, "maxLength": 240, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*$"},
+        "role": {"enum": ["application-wheel", "dependency-wheel", "requirements-lock", "release-manifest", "release-checksums", "provenance-bundle", "sbom", "operator-documentation"]},
+        "size": {"type": "integer", "minimum": 1, "maximum": 2147483648},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    }
+  }
+}

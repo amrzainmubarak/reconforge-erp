@@ -252,12 +252,7 @@ def _validated_redis_session_payload(payload: Mapping[str, Any]) -> dict[str, An
         _reject("persisted_redis_session_token_hash_invalid")
 
     expires_at = value["expires_at"]
-    if (
-        not expires_at
-        or len(expires_at) > 64
-        or "T" not in expires_at
-        or not expires_at.endswith(("Z", "+00:00"))
-    ):
+    if not expires_at or len(expires_at) > 64 or "T" not in expires_at or not expires_at.endswith(("Z", "+00:00")):
         _reject("persisted_redis_session_expiry_invalid")
     try:
         parsed_expiry = datetime.fromisoformat(

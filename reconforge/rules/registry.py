@@ -51,7 +51,10 @@ _DESCRIPTIONS: dict[str, str] = {
 def list_operators() -> list[OperatorInfo]:
     """Return supported operators with descriptions."""
 
-    return [OperatorInfo(name=name, description=_DESCRIPTIONS.get(name, "Supported rule operator.")) for name in sorted(SUPPORTED_OPERATORS)]
+    return [
+        OperatorInfo(name=name, description=_DESCRIPTIONS.get(name, "Supported rule operator."))
+        for name in sorted(SUPPORTED_OPERATORS)
+    ]
 
 
 def operator_names() -> set[str]:

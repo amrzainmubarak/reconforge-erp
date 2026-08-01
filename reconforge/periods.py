@@ -139,7 +139,15 @@ def _amount_value(
     input_policy = validate_financial_input_policy(financial_input_policy)
     saw_invalid = False
     saw_zero = False
-    for name in ["amount_impact", "amount", "total_cost", "actual_cost", "estimated_cost", "invoice_amount", "total_price"]:
+    for name in [
+        "amount_impact",
+        "amount",
+        "total_cost",
+        "actual_cost",
+        "estimated_cost",
+        "invoice_amount",
+        "total_price",
+    ]:
         if name not in row.index or not _clean(row.get(name)):
             continue
         value = row.get(name)
@@ -213,7 +221,9 @@ def _load_period(
     )
     merged = merge_review_state_with_exceptions(exceptions, load_review_state(period_path / "review_state.json"))
     if merged.empty:
-        return merged.assign(period=f"period_{period_index}", period_path=str(period_path), comparison_key=pd.Series(dtype=str))
+        return merged.assign(
+            period=f"period_{period_index}", period_path=str(period_path), comparison_key=pd.Series(dtype=str)
+        )
     output = merged.copy()
     output["period"] = f"period_{period_index}"
     output["period_path"] = str(period_path)
@@ -251,13 +261,41 @@ def _summary_frame(
     current_trend = trend.iloc[-1].to_dict() if not trend.empty else {}
     return pd.DataFrame(
         [
-            {"metric": "periods_compared", "value": len(periods), "meaning": "Number of local output folders compared."},
-            {"metric": "current_period_exceptions", "value": len(frames[-1]) if frames else 0, "meaning": "Exceptions found in the final input period."},
-            {"metric": "new_exceptions", "value": len(new_keys), "meaning": "Current-period exceptions not seen in earlier periods."},
-            {"metric": "recurring_exceptions", "value": len(recurring_keys), "meaning": "Current-period exceptions also seen in at least one earlier period."},
-            {"metric": "resolved_exceptions", "value": len(resolved_keys), "meaning": "Earlier-period exceptions not present in the current period."},
-            {"metric": "escalated_exceptions", "value": len(escalated_keys), "meaning": "Current-period exceptions marked Escalated in review state."},
-            {"metric": "accepted_risk_items", "value": len(accepted_risk_keys), "meaning": "Current-period exceptions marked Accepted Risk in review state."},
+            {
+                "metric": "periods_compared",
+                "value": len(periods),
+                "meaning": "Number of local output folders compared.",
+            },
+            {
+                "metric": "current_period_exceptions",
+                "value": len(frames[-1]) if frames else 0,
+                "meaning": "Exceptions found in the final input period.",
+            },
+            {
+                "metric": "new_exceptions",
+                "value": len(new_keys),
+                "meaning": "Current-period exceptions not seen in earlier periods.",
+            },
+            {
+                "metric": "recurring_exceptions",
+                "value": len(recurring_keys),
+                "meaning": "Current-period exceptions also seen in at least one earlier period.",
+            },
+            {
+                "metric": "resolved_exceptions",
+                "value": len(resolved_keys),
+                "meaning": "Earlier-period exceptions not present in the current period.",
+            },
+            {
+                "metric": "escalated_exceptions",
+                "value": len(escalated_keys),
+                "meaning": "Current-period exceptions marked Escalated in review state.",
+            },
+            {
+                "metric": "accepted_risk_items",
+                "value": len(accepted_risk_keys),
+                "meaning": "Current-period exceptions marked Accepted Risk in review state.",
+            },
             {
                 "metric": "current_high_or_critical",
                 "value": current_trend.get("high_or_critical_count", 0),
@@ -276,7 +314,9 @@ def _period_counts(frames: list[pd.DataFrame]) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
     for frame in frames:
         if frame.empty:
-            period = _clean(frame.get("period", pd.Series([""])).iloc[0]) if "period" in frame.columns and len(frame) else ""
+            period = (
+                _clean(frame.get("period", pd.Series([""])).iloc[0]) if "period" in frame.columns and len(frame) else ""
+            )
             rows.append({"period": period, "exception_count": 0, "high_or_critical_count": 0})
             continue
         severity = frame.get("risk_level", frame.get("severity", pd.Series([""] * len(frame)))).astype(str).str.lower()
@@ -313,7 +353,9 @@ def _trend_frame(frames: list[pd.DataFrame]) -> pd.DataFrame:
             period = _clean(frame["period"].iloc[0])
             period_path = _clean(frame["period_path"].iloc[0])
             current_keys = set(frame["comparison_key"].astype(str))
-            severity = frame.get("risk_level", frame.get("severity", pd.Series([""] * len(frame)))).astype(str).str.lower()
+            severity = (
+                frame.get("risk_level", frame.get("severity", pd.Series([""] * len(frame)))).astype(str).str.lower()
+            )
             statuses = frame.get("status", pd.Series([""] * len(frame))).astype(str).str.lower()
         reviewed = _reviewed_count(frame)
         exception_count = len(frame)
@@ -367,10 +409,7 @@ def _require_records(value: object, field_name: str) -> list[dict[str, Any]]:
 
 def _without_period_path(records: object) -> list[dict[str, Any]]:
     validated = _require_records(records, "records")
-    return [
-        {key: value for key, value in record.items() if key != "period_path"}
-        for record in validated
-    ]
+    return [{key: value for key, value in record.items() if key != "period_path"} for record in validated]
 
 
 def _comparison_keys(records: object) -> list[str]:
@@ -393,18 +432,10 @@ def _decision_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "top_recurring_themes": trend.get("top_recurring_themes"),
         },
         "new_exception_keys": _comparison_keys(payload.get("new_exceptions", [])),
-        "recurring_exception_keys": _comparison_keys(
-            payload.get("recurring_exceptions", [])
-        ),
-        "resolved_exception_keys": _comparison_keys(
-            payload.get("resolved_exceptions", [])
-        ),
-        "escalated_exception_keys": _comparison_keys(
-            payload.get("escalated_exceptions", [])
-        ),
-        "accepted_risk_keys": _comparison_keys(
-            payload.get("accepted_risk_items", [])
-        ),
+        "recurring_exception_keys": _comparison_keys(payload.get("recurring_exceptions", [])),
+        "resolved_exception_keys": _comparison_keys(payload.get("resolved_exceptions", [])),
+        "escalated_exception_keys": _comparison_keys(payload.get("escalated_exceptions", [])),
+        "accepted_risk_keys": _comparison_keys(payload.get("accepted_risk_items", [])),
     }
 
 
@@ -431,7 +462,9 @@ def _trend_chart_html(trend: pd.DataFrame) -> str:
             bars.append(
                 f"<div class='bar-row'><span>{escape(label)}</span><div class='bar-track'><div class='bar' style='width:{width}%;background:{color}'></div></div><strong>{value}</strong></div>",
             )
-        rows.append(f"<article class='trend-card'><h3>{escape(_clean(row.get('period', '')))}</h3>{''.join(bars)}</article>")
+        rows.append(
+            f"<article class='trend-card'><h3>{escape(_clean(row.get('period', '')))}</h3>{''.join(bars)}</article>"
+        )
     return "<div class='trend-grid'>" + "".join(rows) + "</div>"
 
 
@@ -480,7 +513,9 @@ def _write_html(
     )
     trend_html = f"<section><h2>Trend Summary</h2>{_trend_chart_html(trend)}{_html_table(trend)}</section>"
     themes_html = f"<section><h2>Top Recurring Themes</h2>{_html_table(top_themes)}</section>"
-    section_html = "".join(f"<section><h2>{escape(title)}</h2>{_html_table(frame)}</section>" for title, frame in sections.items())
+    section_html = "".join(
+        f"<section><h2>{escape(title)}</h2>{_html_table(frame)}</section>" for title, frame in sections.items()
+    )
     path.write_text(
         f"""<!doctype html>
 <html lang="en">
@@ -600,8 +635,24 @@ def compare_period_outputs(
     new_keys = current_keys - prior_keys
     recurring_keys = current_keys & prior_keys
     resolved_keys = prior_keys - current_keys
-    escalated_keys = set(current[current.get("status", pd.Series(dtype=str)).astype(str).str.lower().eq("escalated")]["comparison_key"]) if not current.empty else set()
-    accepted_risk_keys = set(current[current.get("status", pd.Series(dtype=str)).astype(str).str.lower().eq("accepted risk")]["comparison_key"]) if not current.empty else set()
+    escalated_keys = (
+        set(
+            current[current.get("status", pd.Series(dtype=str)).astype(str).str.lower().eq("escalated")][
+                "comparison_key"
+            ]
+        )
+        if not current.empty
+        else set()
+    )
+    accepted_risk_keys = (
+        set(
+            current[current.get("status", pd.Series(dtype=str)).astype(str).str.lower().eq("accepted risk")][
+                "comparison_key"
+            ]
+        )
+        if not current.empty
+        else set()
+    )
 
     new_frame = _representative_rows(current, new_keys, "new", "current")
     recurring_frame = _representative_rows(current, recurring_keys, "recurring", "current")
@@ -641,9 +692,7 @@ def compare_period_outputs(
             "amount_rounding_policy": "ROUND_HALF_UP",
             "amount_fractional_digits": 2,
             "invalid_amount_policy": (
-                "legacy-zero-v1"
-                if input_policy == LEGACY_FINANCIAL_INPUT_POLICY
-                else "explicit-invalid-or-missing-v2"
+                "legacy-zero-v1" if input_policy == LEGACY_FINANCIAL_INPUT_POLICY else "explicit-invalid-or-missing-v2"
             ),
         },
         "input_periods": input_periods,
@@ -657,10 +706,18 @@ def compare_period_outputs(
                 "labels": trend["period"].tolist() if "period" in trend.columns else [],
                 "new": trend["new_count"].tolist() if "new_count" in trend.columns else [],
                 "recurring": trend["recurring_count"].tolist() if "recurring_count" in trend.columns else [],
-                "resolved": trend["resolved_since_previous_count"].tolist() if "resolved_since_previous_count" in trend.columns else [],
-                "high_or_critical": trend["high_or_critical_count"].tolist() if "high_or_critical_count" in trend.columns else [],
-                "review_completion_percent": trend["review_completion_percent"].tolist() if "review_completion_percent" in trend.columns else [],
-                "accepted_risk": trend["accepted_risk_count"].tolist() if "accepted_risk_count" in trend.columns else [],
+                "resolved": trend["resolved_since_previous_count"].tolist()
+                if "resolved_since_previous_count" in trend.columns
+                else [],
+                "high_or_critical": trend["high_or_critical_count"].tolist()
+                if "high_or_critical_count" in trend.columns
+                else [],
+                "review_completion_percent": trend["review_completion_percent"].tolist()
+                if "review_completion_percent" in trend.columns
+                else [],
+                "accepted_risk": trend["accepted_risk_count"].tolist()
+                if "accepted_risk_count" in trend.columns
+                else [],
                 "escalated": trend["escalated_count"].tolist() if "escalated_count" in trend.columns else [],
             },
             "top_recurring_themes": frame_to_records(top_themes),
@@ -763,17 +820,13 @@ def verify_period_comparison_payload(
         raise ValueError("Only current v2 period comparisons have verifiable digests")
     if payload.get("artifact_type") != _PERIOD_COMPARISON_ARTIFACT_TYPE:
         raise ValueError("Period comparison artifact type is invalid")
-    input_policy = validate_financial_input_policy(
-        payload.get("financial_input_policy")
-    )
+    input_policy = validate_financial_input_policy(payload.get("financial_input_policy"))
     comparison_policy = _require_mapping(
         payload.get("comparison_policy"),
         "comparison_policy",
     )
     expected_invalid_policy = (
-        "legacy-zero-v1"
-        if input_policy == LEGACY_FINANCIAL_INPUT_POLICY
-        else "explicit-invalid-or-missing-v2"
+        "legacy-zero-v1" if input_policy == LEGACY_FINANCIAL_INPUT_POLICY else "explicit-invalid-or-missing-v2"
     )
     if comparison_policy != {
         "algorithm_version": PERIOD_COMPARISON_ALGORITHM_VERSION,
@@ -792,9 +845,7 @@ def verify_period_comparison_payload(
         expected_decision_digest,
     ):
         raise ValueError("Period comparison decision digest verification failed")
-    artifact_without_digest = {
-        key: value for key, value in payload.items() if key != "artifact_digest"
-    }
+    artifact_without_digest = {key: value for key, value in payload.items() if key != "artifact_digest"}
     artifact_digest = payload.get("artifact_digest")
     if not isinstance(artifact_digest, str) or not hmac.compare_digest(
         artifact_digest,

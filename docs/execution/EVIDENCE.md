@@ -2,6 +2,157 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-198: Browser Security Center snapshot contract and UI
+
+- Date/timezone: 2026-07-30, Africa/Cairo.
+- Scope: local `apps/web` source and mocked same-origin browser contract only; no deployment, database migration, publication, or external service was used.
+- Boundary: the client validates only the declared count-only `GET /api/v1/admin/security/overview` response, keeps its failure separate from redacted audit browsing, and labels the result as an operational snapshot rather than security assurance.
+
+| Command | Exit | Duration | Result |
+| --- | ---: | ---: | --- |
+| `npm --prefix apps/web run typecheck` | 0 | included in 23.5s combined gate | Passed with no TypeScript diagnostics after the closed-contract narrowing fix. |
+| `npm --prefix apps/web run test:run` | 0 | 6.05s | 8 files / 48 tests passed; expanded root, identity, and attention fields are rejected. |
+| `npm --prefix apps/web run build` | 0 | 0.573s | Production Vite build passed; lazy `AdminAudit` chunk emitted. |
+| `npm --prefix apps/web run e2e` | 0 | 17.2s | 11 Chromium paths passed, including the same-origin sign-in, step-up, closed Security Center snapshot, RTL, and automated Axe route coverage. |
+| `git diff --check` | 0 | included in combined gate | Passed; Git emitted only existing CRLF conversion notices. |
+
+Residual boundary: mocked browser routes prove client behavior only. They do not prove a deployed TLS/reverse-proxy/CSP configuration, live PostgreSQL authorization, assistive-technology compatibility, or an independent security assessment.
+
+## E-199: Browser identity and session read model
+
+- Date/timezone: 2026-07-30, Africa/Cairo.
+- Scope: local `apps/web` authenticated administration view and mocked same-origin contracts only; no identity lifecycle mutation, database migration, publication, or external service was used.
+- Boundary: the client renders only allowlisted lifecycle fields after separate `users.manage` authorization and rejects email/raw-IP contract expansion. A failed identity read leaves independently authorized audit and Security Center views available.
+
+| Command | Exit | Duration | Result |
+| --- | ---: | ---: | --- |
+| `npm --prefix apps/web run typecheck` | 0 | included in 20.3s combined gate | Passed with no TypeScript diagnostics. |
+| `npm --prefix apps/web run test:run` | 0 | 6.05s | 8 files / 49 tests passed; expanded identity email and raw client-IP fields are rejected. |
+| `npm --prefix apps/web run build` | 0 | 0.588s | Production Vite build passed. |
+| `npm --prefix apps/web run e2e` | 0 | 17.5s | 11 Chromium paths passed, including mocked same-origin sign-in, step-up, identity/session rendering, non-disclosure, RTL, and automated Axe route coverage. |
+| `git diff --check` | 0 | combined gate | Passed; only existing CRLF conversion notices were emitted. |
+
+Residual boundary: this proves a local mocked browser contract, not live PostgreSQL `users.manage` authorization, browser deployment/security headers, session lifecycle mutation safety, complete assistive-technology testing, or external assurance.
+
+## E-200: Browser access-policy read model
+
+- Date/timezone: 2026-07-30, Africa/Cairo.
+- Scope: local `apps/web` authenticated administration view and mocked same-origin contracts only; no role or permission mutation, database migration, publication, or external service was used.
+- Boundary: the client renders only allowlisted role/permission metadata after separate `roles.manage` authorization and rejects expanded disclosure. A failed access read leaves independently authorized audit, Security Center, and identity views available.
+
+| Command | Exit | Duration | Result |
+| --- | ---: | ---: | --- |
+| `npm --prefix apps/web run typecheck` | 0 | included in 20.0s combined gate | Passed with no TypeScript diagnostics. |
+| `npm --prefix apps/web run test:run` | 0 | 5.87s | 8 files / 50 tests passed; expanded permission and role fields are rejected. |
+| `npm --prefix apps/web run build` | 0 | 0.691s | Production Vite build passed. |
+| `npm --prefix apps/web run e2e` | 0 | 17.1s | 11 Chromium paths passed, including mocked same-origin sign-in, step-up, access-policy rendering, RTL, and automated Axe route coverage. |
+| `git diff --check` | 0 | combined gate | Passed; only existing CRLF conversion notices were emitted. |
+
+Residual boundary: this proves a local mocked browser contract, not live PostgreSQL `roles.manage` authorization, policy mutation safety, browser deployment/security headers, complete assistive-technology testing, or external assurance.
+
+## E-201: Browser integration and retention read model
+
+- Date/timezone: 2026-07-30, Africa/Cairo.
+- Scope: local `apps/web` authenticated administration view and mocked same-origin contracts only; no integration disable, retention-policy/evidence mutation, provider call, database migration, publication, or external service was used.
+- Boundary: the client renders only allowlisted integration/retention metadata after separate `security.policy.manage` authorization and rejects secret/evidence disclosure expansion. A failed governance read leaves independently authorized administration views available.
+
+| Command | Exit | Duration | Result |
+| --- | ---: | ---: | --- |
+| `npm --prefix apps/web run typecheck` | 0 | included in 19.9s combined gate | Passed with no TypeScript diagnostics. |
+| `npm --prefix apps/web run test:run` | 0 | 5.93s | 8 files / 51 tests passed; secret-reference and evidence-ID expansions are rejected. |
+| `npm --prefix apps/web run build` | 0 | 0.585s | Production Vite build passed. |
+| `npm --prefix apps/web run e2e` | 0 | 17.0s | 11 Chromium paths passed, including mocked same-origin sign-in, step-up, governance rendering, RTL, and automated Axe route coverage. |
+
+Residual boundary: this proves a local mocked browser contract, not live PostgreSQL `security.policy.manage` authorization, provider disable/retention propagation, browser deployment/security headers, complete assistive-technology testing, or external assurance.
+
+## E-202: P3-ENT-006 exit-audit checkpoint
+
+- Date/timezone: 2026-07-30, Africa/Cairo.
+- Artifact: `docs/execution/P3_ENT_006_EXIT_AUDIT.yaml`, intentionally `in_progress`.
+- Result: all declared read-only view categories have scoped local browser evidence. The audit does not close P3-ENT-006 because it lacks a deployed same-origin host, full assistive-technology testing, and reviewed mutation workflow evidence.
+- Live-server supplement: a fresh synthetic PostgreSQL 17.10 database migrated from `0001` through `0053_audit_administration_acl` under a separate `NOSUPERUSER`/`NOBYPASSRLS` application role. The focused server/API matrix passed 13/13 after a regression fix that makes the governed non-empty downgrade assertion preserve the actual pre-attempt Alembic head rather than a stale hard-coded revision. This is live backend evidence, not browser-to-database evidence.
+- Live-browser/PostgreSQL supplement: a fresh synthetic PostgreSQL 17.10 head-0053 service and a same-origin localhost Vite proxy passed one Chromium flow. Browser login, cookie-bound CSRF step-up, redacted audit browse/verification, Security Center, identity/session, access-policy, integration, retention, and `/auth/me` all returned 200 through the real proxy with no bearer token. The browser observed the `__Host-reconforge_session` cookie as `HttpOnly`, `Secure`, `SameSite=Strict`, and `Path=/`. The first attempt exposed a server-profile flaw: bearer-only middleware binding left cookie principals unavailable to synchronous step-up routes. Middleware now binds a validated cookie principal too, while the dependency still rejects unsafe cookie calls without CSRF; a focused no-PostgreSQL regression protects both paths.
+
+| Command | Exit | Duration | Result |
+| --- | ---: | ---: | --- |
+| `rg -n "localStorage|sessionStorage|Bearer|Authorization|disable|revoke|retention-policies/.+POST|secret_reference|evidence_id" apps/web/src/components/AdminAudit.tsx apps/web/src/data.ts` | 0 | included in combined gate | No persisted browser credential or broad mutation hit; the later E-203 slice adds only explicit single-session revocation. Listed response-field names are validator allowlists, not rendered disclosure. |
+| `python -c "... yaml.safe_load(P3_ENT_006_EXIT_AUDIT.yaml) ..."` | 0 | included in combined gate | Exit-audit and backlog YAML parsed. |
+| `npm --prefix apps/web run typecheck` | 0 | included in 20.4s combined gate | Passed. |
+| `npm --prefix apps/web run test:run` | 0 | 6.08s | 8 files / 51 tests passed. |
+| `npm --prefix apps/web run build` | 0 | 0.645s | Production Vite build passed. |
+| `npm --prefix apps/web run e2e` | 0 | 25.6s | 11 Chromium paths passed and one explicitly opt-in local-live path skipped; administration requests in the standard audit view remain mocked by design. |
+| `RECONFORGE_API_PROXY_TARGET=http://127.0.0.1:2412 RECONFORGE_LIVE_BROWSER_SESSION=1 npm --prefix apps/web run e2e -- e2e/browser-session-live.spec.ts` | 0 | 2.8s | 1 Chromium path passed against a real same-origin localhost API; cookie attributes and cookie-authenticated `/auth/me` verified. |
+| `RECONFORGE_API_PROXY_TARGET=http://127.0.0.1:2414 RECONFORGE_LIVE_BROWSER_SESSION=1 ... npm --prefix apps/web run e2e -- e2e/browser-session-live.spec.ts` | 0 | 3.6s | 1 Chromium path passed against synthetic PostgreSQL 17.10; all declared read-only administration requests and `/auth/me` returned 200 through the real same-origin proxy. |
+| `uv run --no-sync pytest tests/test_api_server_cookie_principal.py -q -rs` | 0 | included in 4.8s focused gate | Cookie principal reaches a synchronous server route; missing CSRF is denied and valid CSRF succeeds. |
+| `uv run --no-sync alembic upgrade head && uv run --no-sync alembic current` with disposable PostgreSQL DSN | 0 | 6.2s | Fresh migration reached `0053_audit_administration_acl (head)`. |
+| `uv run --no-sync pytest tests/test_postgres_security_center.py tests/test_postgres_identity_administration.py tests/test_postgres_access_administration.py tests/test_postgres_security_governance.py tests/test_api_server_identity.py::test_live_server_api_uses_postgres_identity_and_tenant_scope -q -rs` | 0 | 9.1s rerun | 13 passed; live server/API, tenant/RLS, lifecycle, redaction, guarded downgrade, and audit-rollback contracts. |
+
+The audit does not treat the localhost browser/PostgreSQL path as proof of a deployed TLS/reverse-proxy/CSP boundary, complete assistive-technology interoperability, mutation safety, HA/DR, or external assurance.
+The localhost browser server was stopped and port `2412` was verified closed. The exact synthetic SQLite file remains at `.codex-test-tmp/e203-live-browser/control.db` because the execution environment rejected a scoped deletion command; it contains only the generated test account and no customer data.
+The disposable runtime was identity-checked as `reconforge-e202-postgres` (full ID `581afbb2214ed355336ccc918a658251847e1c8388b3a3507b19493eaafee411`), image `postgres:17.10-alpine`, auto-remove enabled, and bound only to `127.0.0.1:2411`. It was stopped and confirmed absent after the gate; no pre-existing container, volume, image, repository publication, commit, push, pull request, tag, or release was changed.
+The PostgreSQL browser runtime was separately identity-checked as `reconforge-e203-postgres` (full ID `334e64199310be1f4274ab3e5b876b5bbfa9e18e0e77635ed8abcc5feee8b7d7`), image `postgres:17.10-alpine`, auto-remove enabled, and bound only to `127.0.0.1:2413`. Its local API port `2414` and the container were stopped and confirmed absent after the Chromium gate. The generated tenant-router files remain under `.codex-test-tmp/e203-live-postgres-browser/` because the environment rejects deletion commands; all records are synthetic.
+
+## E-203: Explicit browser session revocation
+
+- Date/timezone: 2026-07-30, Africa/Cairo.
+- Scope: one synthetic active browser session only; no user status, role, policy, integration, retention, production, commit, push, PR, tag, or release action.
+- Boundary: the interface requires existing human step-up, cookie-bound CSRF, `users.manage`, a closed reason, exact `REVOKE` confirmation, and the server lifecycle version. Its exact response validator rejects added session fields; it does not render IDs, digests, audit-event IDs, raw IP, user-agent data, email, or credentials. A current-session revocation clears local privileged state and returns to sign-in.
+
+| Command | Exit | Duration | Result |
+| --- | ---: | ---: | --- |
+| `npm --prefix apps/web run typecheck` | 0 | 1.2s | Passed with no TypeScript diagnostics after the revocation client and UI. |
+| `npm --prefix apps/web run test:run` | 0 | 6.14s | 8 files / 52 tests passed; request CSRF/version/reason, exact response acceptance, expanded disclosure rejection, and conflict mapping are covered. |
+| `npm --prefix apps/web run build` | 0 | 0.70s | Production Vite build passed. |
+| `npm --prefix apps/web run e2e` | 0 | 26.5s | 11 standard Chromium paths passed; two explicitly opt-in local-live paths were skipped. |
+| `npm --prefix apps/web run e2e -- --grep "Administration audit requires sign-in"` | 0 | 3.4s | Mocked Chromium flow passed the reason/typed-confirmation gate, CSRF request, safe status update, and audit-event-ID non-disclosure. |
+| `RECONFORGE_API_PROXY_TARGET=http://127.0.0.1:2416 RECONFORGE_LIVE_BROWSER_SESSION=1 RECONFORGE_LIVE_BROWSER_SESSION_REVOCATION=1 ... npm --prefix apps/web run e2e -- e2e/browser-session-live.spec.ts --grep "revokes its current"` | 0 | 3.7s | Chromium passed against fresh synthetic PostgreSQL 17.10 at Alembic head `0053`; it revoked only its current session after confirmation and returned to sign-in. |
+| `docker ps -a --filter name=reconforge-e204-postgres` plus `Get-NetTCPConnection -LocalPort 2416` | 0 | 1.7s | Synthetic API port was closed and the auto-remove PostgreSQL container was absent. |
+
+The initial combined live run had one passing read flow and one failed mutation flow because the second test did not wait for the step-up form before attempting its submit; no mutation request was issued. The test now waits for that form before input, and the isolated explicitly opted-in mutation rerun passed. This is a test synchronization correction, not a server authorization claim.
+The local files under `output/e204_live/` remain as synthetic disposable SQLite/API-log artifacts; only the live API process and auto-remove PostgreSQL container were stopped and verified absent. No customer or production data was used.
+
+## E-204: Explicit browser user disable and enable lifecycle
+
+- Date/timezone: 2026-07-30, Africa/Cairo.
+- Scope: one synthetic observer identity with one synthetic session; no role/policy, integration, retention, production, commit, push, PR, tag, or release action.
+- Boundary: the UI requires the existing human step-up, session-bound CSRF proof, `users.manage`, exact `DISABLE`/`ENABLE` confirmation, and lifecycle version. It does not offer self-disable, while the server remains authoritative for self-disable and last-administrator protection. The exact response rejects added fields before rendering and hides IDs, state digests, audit IDs, email, credentials, IP, and user-agent data.
+
+| Command | Exit | Duration | Result |
+| --- | ---: | ---: | --- |
+| `npm --prefix apps/web run typecheck` | 0 | 1.2s | Passed after the user-status client and UI were added. |
+| `npm --prefix apps/web run test:run` | 0 | 6.14s | 8 files / 53 tests passed; CSRF/version payload, exact response, disclosure rejection, and protected-error propagation are covered. |
+| `npm --prefix apps/web run build` | 0 | 0.57s | Production Vite build passed. |
+| `npm --prefix apps/web run e2e` | 0 | 25.6s | 11 standard Chromium paths passed; three explicit localhost-live paths were skipped by default. |
+| `npm --prefix apps/web run e2e -- --grep "Administration audit requires sign-in"` | 0 | 3.8s | Mocked Chromium passed disable, revoked-session reporting/reload, enable, non-restoration, confirmation gates, current-operator boundary, and audit-ID non-disclosure. |
+| `RECONFORGE_API_PROXY_TARGET=http://127.0.0.1:2418 RECONFORGE_LIVE_BROWSER_SESSION=1 RECONFORGE_LIVE_BROWSER_USER_STATUS=1 ... npm --prefix apps/web run e2e -- e2e/browser-session-live.spec.ts --grep "disables and re-enables"` | 0 | 4.5s | Chromium passed through the real same-origin proxy and fresh PostgreSQL 17.10 API for one synthetic target. |
+| PostgreSQL final-state query | 0 | 0.4s | Target finished enabled at lifecycle version 3; zero active/one revoked session remained; one disable and one enable domain-audit action existed. |
+| `Get-NetTCPConnection -LocalPort 2418` and `docker ps -a --filter name=reconforge-e205-postgres` | 0 | 1.9s | API port closed and auto-remove PostgreSQL container absent. |
+| `uv run --no-sync pytest tests/test_api_browser_sessions.py tests/test_api_server_cookie_principal.py tests/test_api_identity_administration.py tests/test_identity_administration.py -q -rs` | 0 | included in 8.4s combined gate | 19 focused API/application tests passed; one upstream Starlette/httpx deprecation warning remains. |
+| focused Ruff, mypy, YAML parse, and `git diff --check` | 0 | included in 8.4s combined gate | Static and document gates passed; diff check emitted only existing line-ending conversion warnings. |
+
+The local files under `output/e205_live/` remain synthetic disposable SQLite/API-log artifacts. No customer or production data was used. This local proof does not establish deployed TLS/CSP, provider identity interoperability, independent security review, or Enterprise readiness.
+
+## E-205: Governed browser role and assignment lifecycle
+
+- Date/timezone: 2026-07-30, Africa/Cairo.
+- Scope: one synthetic custom role and one synthetic non-current target. No production, external identity provider, commit, push, PR, tag, or release action.
+- Boundary: five browser writes reuse the existing `roles.manage`, human step-up, session-bound CSRF, optimistic version, last-manager, session-revocation, and audit transaction controls. Checked roles and permissions are exact replacement sets. Current-operator assignment is absent. Responses are exact and do not render IDs, digests, audit IDs, credentials, email, IP, or user-agent data.
+
+| Command | Exit | Duration | Result |
+| --- | ---: | ---: | --- |
+| `npm --prefix apps/web run typecheck` | 0 | 1.3s | Passed with the access mutation component and client contracts. |
+| `npm --prefix apps/web run test:run` | 0 | 7.12s | 8 files / 54 tests passed; all four API shapes, CSRF payloads, exact responses, and hostile response expansion are covered. |
+| `npm --prefix apps/web run build` | 0 | 0.58s | Production Vite build passed. |
+| `npm --prefix apps/web run e2e` | 0 | 26.5s | 11 standard Chromium paths passed; four explicit localhost-live paths were skipped by default. |
+| `npm --prefix apps/web run e2e -- --grep "Administration audit requires sign-in"` | 0 | 4.8s | Mocked Chromium passed role creation, permission replacement, user-role replacement, retirement, reactivation, and audit-ID non-disclosure. |
+| `RECONFORGE_API_PROXY_TARGET=http://127.0.0.1:2420 RECONFORGE_LIVE_BROWSER_SESSION=1 RECONFORGE_LIVE_BROWSER_ACCESS_MUTATIONS=1 ... npm --prefix apps/web run e2e -- e2e/browser-session-live.spec.ts --grep "governs a synthetic role"` | 0 | 6.0s | Fresh PostgreSQL 17.10/Chromium exact-set lifecycle passed after explicitly unchecking the pre-existing observer role. |
+| PostgreSQL final-state query | 0 | 0.4s | `browser_reviewer` active at lifecycle 4 with `audit.read` and `audit.verify`; zero target assignments; zero active/one revoked target session; create, permission-replace, assignment, and two update audit events recorded. |
+| `Get-NetTCPConnection -LocalPort 2420` and `docker ps -a --filter name=reconforge-e206b-postgres` | 0 | 2.1s | API port closed and disposable PostgreSQL container absent. |
+| `uv run --no-sync pytest tests/test_api_access_administration.py tests/test_access_administration.py tests/test_api_identity_administration.py tests/test_identity_administration.py tests/test_api_server_cookie_principal.py -q -rs` | 0 | included in 6.9s combined gate | 23 focused access/identity/application/API tests passed; one upstream Starlette/httpx deprecation warning remains. |
+| focused Ruff, mypy, YAML parse, and `git diff --check` | 0 | included in 6.9s combined gate | Static and document gates passed; diff check emitted only existing line-ending conversion warnings. |
+
+The first live attempt intentionally remained recorded as a failed assertion: because the exact-set form correctly preloaded `observer`, checking a second role preserved both. The corrected test explicitly unchecks `observer`; a completely fresh database rerun then proves replacement and non-restoration. Local files under `output/e206_live/` remain synthetic SQLite/API-log artifacts. This is not deployed TLS/CSP, external assurance, or Enterprise-readiness evidence.
+
 ## Snapshot E-20260724-01
 
 - Date/timezone: 2026-07-24, Africa/Cairo.
@@ -6645,3 +6796,3647 @@ Packaging boundary: runtime application, port, and SQLite adapter code is in
 both wheel and sdist; the dedicated transaction/rollback test and ADR remain
 sdist/repository evidence. Package presence does not prove PostgreSQL parity,
 live concurrency, cross-process recovery, or broader service migration.
+
+## E-089: Closed Phase 1–3 execution and external-gate contract
+
+The prior backlog contained ten Platform tasks and eighteen Matching/Evidence
+tasks, but no Phase 3 tasks and no normative phase mapping. The new schema-v1
+execution matrix maps every post-Phase-0 task exactly once and adds fifteen
+Phase 3 tasks: thirteen technical enterprise tasks, three-to-five real
+controlled pilots, and independent security review.
+
+Four contract tests parse the normative matrix and backlog and enforce unique
+task identity, complete mapping, closed dependencies, non-forward phase order,
+non-empty gate evidence, explicit external-gate status, artifacts before
+external verification, and the six prohibited unsupported claim categories.
+
+| Command | Result |
+| --- | --- |
+| `python -m pytest -q tests/test_phase_1_3_execution_contract.py` | 4 passed |
+| `python -m ruff check tests/test_phase_1_3_execution_contract.py` | Pass after import-order correction |
+| `python -m mypy tests/test_phase_1_3_execution_contract.py` | Pass |
+
+Claim boundary: this evidence proves that requested scope can no longer silently
+omit a represented task or external gate. It does not implement any newly listed
+capability and does not prove enterprise readiness, production operation,
+customer validation, independent assurance, compliance, certification, scale,
+or competitive superiority.
+
+## E-090: Exact runtime repository-boundary inventory
+
+AST inspection finds twenty `*Service` classes under `reconforge/platform`.
+Seventeen import SQLite directly. Inventory planning, inventory valuation, and
+inventory valuation reversal accept repository protocols but retain direct
+SQLite dependencies and are therefore `partial_repository`, not backend
+neutral. `WorkspacePeriodApplicationService` is the sole current application
+service and imports only domain ports/models.
+
+The normative inventory and three contract tests require exact discovery,
+unique classifications and counts, SQLite imports for coupled classes,
+repository-module imports for partial classes, and no SQLite/infrastructure
+imports for backend-neutral application classes.
+
+| Command | Result |
+| --- | --- |
+| `python -m pytest -q tests/test_repository_boundary_inventory.py tests/test_phase_1_3_execution_contract.py` | 7 passed |
+| `python -m ruff check tests/test_repository_boundary_inventory.py` | Pass after import-order correction |
+| `python -m mypy tests/test_repository_boundary_inventory.py` | Pass |
+| `git diff --check` | Pass |
+
+Claim boundary: this is a closed source-coupling measurement and migration
+regression gate. It is not behavioral backend parity, proof that an adapter is
+correct, live PostgreSQL evidence, or completion of P1-PLAT-001.
+
+## E-091: Operational diagnostics application-port migration
+
+`OperationsApplicationService` now composes the existing health dictionary and
+delegates job/error reads through `OperationsRepositoryProtocol` plus a callable
+migration-status port. It imports neither SQLite nor infrastructure. The SQLite
+adapter owns schema validation, audit-chain verification, migration-status
+adaptation, record counts, and stable ordered reads. The historical
+`OperationsService(connection)` API delegates only and contains no SQL execute
+call.
+
+The fake-port test proves exact health output, count placement, and job/error
+delegation without a database. A fully migrated temporary SQLite file proves
+the compatibility adapter retains job/error row shapes and returns current
+migration, audit, and count health fields.
+
+| Command | Result |
+| --- | --- |
+| `python -m pytest -q tests/test_operations_application.py tests/test_repository_boundary_inventory.py` | 5 passed |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 218 source files |
+| `python -m pytest` | 1,300 passed, 10 live-service skips, 7 expected warnings in 194.80s |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 649,678-byte wheel and 917,130-byte sdist |
+| `git diff --check` | Pass |
+
+Inventory movement: direct-SQLite Platform services `17 -> 16`; compatibility
+adapters `0 -> 1`; backend-neutral Application services `1 -> 2`. This proves
+one migrated local read boundary, not PostgreSQL parity, cross-backend health,
+live operability, or P1-PLAT-001 completion.
+
+## E-092: Versioned local durable-job state, checkpoint, and recovery foundation
+
+`DurableJob` is a pure schema-v1 aggregate covering exactly queued, running,
+paused, retrying, failed, completed, and cancelled. Its transition matrix is
+closed. It uses integer completed/total units, lowercase SHA-256 input/config/
+checkpoint/output identities, canonical whole-second UTC timestamps, a fixed
+retry ceiling, safe error-code syntax, and immutable output-manifest identity.
+Completed jobs require full progress plus the manifest; terminal states cannot
+transition; checkpoint progress cannot reverse or equal full completion.
+
+Migration 21 adds tenant-scoped `durable_jobs` and append-only
+`durable_job_transitions`. The SQLite repository owns `BEGIN IMMEDIATE`, binds
+tenant/scope/idempotency key atomically, rejects changed replays, compares the
+prior state version, and writes state plus transition in one transaction. An
+injected transition trigger failure proves the state update rolls back; a stale
+version fails; stored invalid digest state fails at the repository boundary.
+Transition UPDATE and DELETE are blocked by database triggers.
+
+The backend-neutral application service exposes submit, start, pause, requeue,
+retry, fail, cancel, checkpoint, and complete use cases without importing a
+database adapter. Cross-tenant lookup returns the same not-found boundary.
+Backup/restore round-trips a running checkpoint and all transition versions;
+public export contains safe codes and no hidden error-message field. Migration
+20-to-21 applies only version 21.
+
+| Command | Result |
+| --- | --- |
+| durable job domain, SQLite, application, backup/export, and boundary focus | 26 passed |
+| migration, backup, export, receivables compatibility focus | 36 passed |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 221 source files |
+| `git diff --check` | Pass |
+| `python -m pytest` | 1,323 passed, 10 live-service skips, 7 expected warnings in 190.65s |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 658,187-byte wheel and 929,372-byte sdist |
+| wheel membership assertion | Application, domain, and SQLite durable-job modules present |
+
+Claim boundary: the evidence is local SQLite and pure application/domain proof.
+It is not PostgreSQL parity, a leased generic worker, real process/host-loss
+recovery, distributed exactly-once transport, throughput, HA/DR, or completion
+of P1-PLAT-003/P1-PLAT-004.
+
+## E-093: Generation-fenced worker claim, takeover, and process restart
+
+Migration 22 adds current leases and immutable lease-event history. Claim runs
+under `BEGIN IMMEDIATE`, selects expired running work before retrying and queued
+work, advances the job version, derives the next generation from history, and
+persists transition, lease, and lease event atomically. An injected lease-event
+failure leaves the job queued with no lease or additional transition.
+
+Heartbeat requires the exact owner/generation before expiry and must extend the
+expiry. Worker checkpoint and terminal methods verify that same unexpired token
+in the state-write transaction. Completion, pause, retry, failure, and running
+cancellation delete the current lease and append `released`; queued cancellation
+never allocates one. Ordinary application transitions cannot enter worker-owned
+states. An old generation is rejected after takeover before any state change.
+
+A process-restart regression commits six of ten units plus the checkpoint
+digest, closes the first SQLite connection without releasing its lease, opens a
+new connection at exact expiry, and claims as another worker. The resumed job
+retains six units/digest, increments generation, and has ordered CREATED,
+CLAIMED, CHECKPOINTED, LEASE_TAKEOVER evidence. Backup/restore and public export
+also preserve current leases and lease events.
+
+| Command | Result |
+| --- | --- |
+| durable job domain/SQLite/application/backup/boundary focus | 31 passed |
+| durable job plus migration/backup/export compatibility focus | 61 passed |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 221 source files |
+| `python -m pytest` | 1,328 passed, 10 live-service skips, 7 expected warnings in 190.58s |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 660,956-byte wheel and 934,012-byte sdist |
+
+P1-PLAT-003 is complete for its defined local foundation exit. P1-PLAT-004 is
+only in progress: there is not yet a real workload whose checkpoint, output,
+audit, and business effect are committed together and proven duplicate-free
+across injected termination. PostgreSQL parity and host/filesystem loss are also
+outside this evidence.
+
+## E-094: Atomic workload effects and duplicate-free restart
+
+Migration 23 adds immutable partition effects with deterministic key/ordinal,
+cumulative integer units, input/output SHA-256 identities, effect reference,
+commit time, and exact job version. The repository requires the active fencing
+generation and next contiguous ordinal. It inserts the effect before the job
+transition, but both remain inside one owned transaction; an injected
+CHECKPOINTED transition failure proves neither effect nor progress commits and
+the lease remains usable.
+
+The executable workload uses two partitions. The uninterrupted path claims,
+commits partition one, then atomically commits partition two plus completion,
+manifest, and lease release. The restart path commits partition one, closes the
+connection without release, reopens at lease expiry, records takeover with a
+new generation, enumerates partition one as completed, and commits only
+partition two. Both paths finish with exactly two effects, identical ordered
+partition/input/output/progress/reference semantics, and the same output
+manifest. The restarted transition history adds only LEASE_TAKEOVER.
+
+Backup/restore and public export preserve effect rows; database triggers reject
+effect UPDATE and DELETE.
+
+| Command | Result |
+| --- | --- |
+| durable jobs, leases, effects, restart, backup, and governance focus | 39 passed |
+| durable jobs plus migration/backup/export compatibility focus | 65 passed |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 221 source files |
+| `python -m pytest` | 1,332 passed, 10 live-service skips, 7 expected warnings |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 662,213-byte wheel and 936,894-byte sdist |
+| `git diff --check` | Pass |
+
+P1-PLAT-004 is complete for this bounded local safe-partition-workload contract.
+Arbitrary external side effects, PostgreSQL parity, host/filesystem loss,
+distributed exactly-once transport, and HA/DR remain unclaimed and assigned to
+their specific later gates.
+
+## E-095: Live PostgreSQL durable-job contract parity
+
+Alembic revision 0012 installs tenant-scoped durable jobs, transitions, leases,
+lease events, and partition effects. RLS is forced on every table. Transition,
+lease-event, and effect rows are append-only. The adapter owns a transaction per
+Application operation, uses optimistic versions, claims with `FOR UPDATE SKIP
+LOCKED`, and requires the exact unexpired fencing generation for worker writes.
+
+On PostgreSQL 17.10, two independent connections submit the same scoped key
+concurrently: exactly one creates and one replays the identical aggregate.
+Live non-superuser tests prove cross-tenant invisibility, idempotency conflict,
+stale-version rejection, heartbeat, connection close, takeover generation 2,
+old-worker rejection, committed-partition enumeration, and exactly two final
+effects. The normalized partition/input/output/progress/reference tuples and
+final manifest equal the SQLite execution. A fresh database passes migration
+upgrade, downgrade from 0012 to 0011 while preserving the predecessor table,
+and re-upgrade to 0012.
+
+A clean-database sweep of all PostgreSQL contract modules plus the server API
+identity boundary passes 119 tests. It also exposed and fixed an order-dependent
+evidence test setup that omitted the master-data prerequisite.
+
+| Command | Result |
+| --- | --- |
+| live PostgreSQL durable-job contract | 2 passed |
+| all live PostgreSQL modules plus server identity on a fresh database | 119 passed |
+| Alembic forward/downgrade/re-upgrade on a fresh database | 2 passed |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 222 source files |
+| `python -m pytest` without live-service environment | 1,333 passed, 11 live-service skips, 7 expected warnings |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 668,213-byte wheel and 945,233-byte sdist |
+| `git diff --check` | Pass |
+
+P1-PLAT-002 remains in progress because live SQLite/PostgreSQL parity has not
+yet been established for every supported Application repository boundary.
+
+## E-096: PostgreSQL workspace-period unit-of-work parity
+
+Alembic revision 0013 adds tenant-scoped compatibility persistence for the
+current local-first Workspace and Period ports. `PostgresDomainUnitOfWork`
+owns one connection and transaction, sets transaction-local tenant scope, and
+commits workspace, period, both audit events, and the chain head together.
+Forced RLS covers all four tables and a database trigger rejects audit UPDATE
+or DELETE. SQLite and PostgreSQL call the same pure canonical audit-hash
+function, so parity does not depend on two copied implementations staying equal.
+
+On PostgreSQL 17.10 with a non-superuser/non-BYPASSRLS role, the unchanged
+Application service creates the same normalized business fields, event order,
+and metadata shape as SQLite. Another tenant cannot read any object. Exiting
+without commit persists nothing. An injected failure on `period.created`
+rolls back workspace, period, first event, second event, and ledger head.
+Two concurrent units of work on one tenant serialize through the chain-head
+row lock and finish with unique contiguous sequences 1–6 and a verified chain.
+
+A fresh-database sweep of all PostgreSQL modules plus server identity now
+passes 121 tests. Migration 0013 passes initial upgrade, downgrade through
+0012/0011, and re-upgrade, with both domain and durable-job tables restored.
+
+| Command | Result |
+| --- | --- |
+| live workspace-period PostgreSQL contract | 2 passed |
+| SQLite workspace contract plus live PostgreSQL contract | 12 passed |
+| all live PostgreSQL modules plus server identity on a fresh database | 121 passed |
+| Alembic forward/downgrade/re-upgrade on a fresh database | 2 passed |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 224 source files |
+| `python -m pytest` without live-service environment | 1,334 passed, 12 live-service skips, 7 expected warnings |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 673,224-byte wheel and 950,975-byte sdist |
+| `git diff --check` | Pass |
+
+P1-PLAT-001 and P1-PLAT-002 remain in progress because the measured inventory
+still contains direct-SQLite Platform services and their parity is not proven.
+
+## E-097: Backend-aware operational diagnostics parity
+
+The operational repository port now reports whether its backend is local-only;
+the Application service no longer hard-codes that claim. SQLite returns true
+and PostgreSQL false. `MigrationStatus` accepts the integer local migration
+sequence and explicit Alembic revision strings without converting either into
+misleading values.
+
+Migration 0014 adds tenant-scoped operational job/error records with forced
+RLS and workspace foreign keys. Live PostgreSQL 17.10 tests under a
+non-superuser role prove exact SQLite-compatible job/error shapes, counts,
+verified audit health, cross-tenant emptiness, and correct `local_only=false`.
+The PostgreSQL migration provider reads the real Alembic head on a newly
+upgraded database and reports no pending revision. Downgrade to 0011 and
+re-upgrade restores the operations table at head.
+
+A fresh-database sweep of all PostgreSQL modules plus server identity passes
+123 tests. No raw-row writer or universal redaction claim is made by this
+read-only diagnostic slice.
+
+| Command | Result |
+| --- | --- |
+| operational Application/SQLite/live PostgreSQL focus | 5 passed |
+| all live PostgreSQL modules plus server identity on a fresh database | 123 passed |
+| Alembic forward/downgrade/re-upgrade plus live status provider | 2 passed |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 225 source files |
+| `python -m pytest` without live-service environment | 1,336 passed, 13 live-service skips, 7 expected warnings |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 675,437-byte wheel and 954,139-byte sdist |
+| `git diff --check` | Pass |
+
+P1-PLAT-002 remains in progress for remaining supported repository boundaries.
+
+## E-098: Immutable local and S3-compatible object-store contract
+
+`ObjectStoreProtocol` now binds tenant-scoped keys, immutable put, verified
+get, and guarded delete. Local storage uses bounded sidecar manifests and
+rejects traversal, reserved names, links where supported, overwrite, tamper,
+oversize content, missing manifests, and unexpired retention. Evidence
+registration/verification runs end to end through that local adapter after the
+source file is removed. S3 uses conditional create, bounded reads, mandatory
+checksum/tenant metadata, and exact version deletion.
+
+Real MinIO tests prove tenant separation, immutable conflict, provider-side
+tamper detection, and governance-retained version deletion failure. The local
+MinIO endpoint is an explicit HTTP development fixture without KMS; production
+defaults remain TLS plus AES256. The server extra and universal lock now include
+boto3 1.43.56 and its four-package dependency expansion (107 policy packages).
+
+| Command | Result |
+| --- | --- |
+| local/fake object-store plus evidence focus | Pass; three environment branches skipped |
+| same focus against live MinIO standard and object-lock buckets | Pass; only Windows symlink privilege branch skipped |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 225 source files |
+| `python -m pytest` without live-service environment | 1,343 passed, 15 skipped, 7 expected warnings |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 677,473-byte wheel and 958,135-byte sdist |
+| exact uv 0.11.32 `lock --check`, hash-exported pip-audit 2.10.1, policy validation, and `git diff --check` | Pass; 107 policy packages, zero known findings, zero active exceptions |
+
+This proves the bounded adapter contract only. It does not prove local
+manifest authenticity, crash-atomic content/manifest pairing, WORM semantics
+for local files, replication, backup, malware scanning, authorized downloads,
+host-loss durability, supported throughput, compliance, certification, or
+production readiness.
+
+## E-099: Atomic scoped request idempotency
+
+Migration 24 and Alembic revision 0015 add the same tenant/scope/key identity
+to SQLite and PostgreSQL. `IdempotencyApplicationService` hashes bounded
+request bytes before persistence, requires a short-lived owner capability for
+completion, bounds response bytes, and verifies the replay digest. Adapters
+store only the capability digest and strict bounded base64 response text.
+
+SQLite thread concurrency produces exactly one reservation owner and seven
+in-progress results. Tests cover changed-input conflict, scope separation,
+completion, exact replay, expiry/rebind, stale owner, request/response limits,
+and binary response backup/restore. Live PostgreSQL concurrency produces one
+owner and five in-progress results; it also proves conflict, completion,
+replay, expiry/rebind, stale-owner rejection, and cross-tenant invisibility
+under a non-superuser role. A fresh PostgreSQL database passes upgrade to
+0015, downgrade through 0011, and re-upgrade.
+
+| Command | Result |
+| --- | --- |
+| SQLite application/concurrency/backup focus | Pass |
+| live PostgreSQL idempotency contract | 2 passed |
+| fresh PostgreSQL Alembic forward/downgrade/re-upgrade | 2 passed |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 228 source files |
+| `python -m pytest` without live-service environment | 1,349 passed, 16 skipped, 7 expected warnings |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 683,714-byte wheel and 965,336-byte sdist |
+| `python -m bandit -q -r reconforge` | No new idempotency finding after removing the optimized-away assertion; existing reviewed fixed-identifier SQL notices remain |
+
+This proves an application/storage primitive, not automatic coverage of every
+HTTP route, connector, or external side effect. Owner-token unpredictability,
+caller authorization, transport authentication, rate limiting, external
+exactly-once effects, hosted enforcement, compliance, certification, and
+production readiness are not inferred.
+
+## E-100: Signed context-bound cursor pagination
+
+`CursorCodec` authenticates a closed, bounded schema-v1 keyset position with
+HMAC-SHA-256 and rejects keys shorter than 32 bytes. `KeysetPaginator` accepts
+only registered sort definitions, includes a stable string ID tie-breaker,
+and binds tokens to direction plus a digest of the request scope. Strict
+base64url, signature, UTF-8, JSON shape, type, size, depth, and collection
+checks run before a position is used.
+
+The local evidence list integrates the contract through explicit
+`pagination=cursor`, with tenant/resource/status scope binding and durable
+operator key configuration. Existing offset responses remain unchanged.
+PostgreSQL cursor mode returns a stable unsupported response until its native
+keyset query is implemented; no bounded full-scan result is presented as
+complete.
+
+| Command | Result |
+| --- | --- |
+| Cursor/application/API focused tests | 20 passed |
+| `python -m pytest` without live-service environment | 1,361 passed, 16 skipped, 7 expected warnings |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 229 source files |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 687,327-byte wheel and 970,329-byte sdist |
+| `git diff --check` | Pass |
+
+This evidence proves token integrity and
+bounded local traversal, not confidentiality, multi-key rotation, PostgreSQL
+keyset performance, hosted enforcement, compliance, certification, or
+production readiness.
+
+## E-101: Central policy enforcement and closed route map
+
+All API permission dependencies now snapshot validated immutable contracts and
+call `CentralPolicyEngine`; platform `require_permission`, authenticated Studio
+actions, and table-driven workflow transitions use the same evaluator. The
+engine retains deny-by-default RBAC, all-supplied-scope ABAC, SoD conflict, and
+self-approval rules, adds stable reason codes and immutable any-of evaluation,
+and emits sanitized `central-policy-v1` decision records.
+
+Application construction derives 156 normalized API operation contracts:
+74 single/all, 76 any-of, one dynamic workflow transition, two identity-only,
+and three public. The canonical inventory digest is
+`494c5a0d5cfe72a99b50737307099b8b901bc54e09d0fabbe063e164db043d40`.
+Tests reject unclassified routes, stale allowlists, malformed permission names,
+and caller mutation of permission sets. The dynamic route remains protected by
+the transition table's required permission and SoD rule through the same
+engine.
+
+| Command | Result |
+| --- | --- |
+| Central policy/API/workflow/Studio focused tests | 48 passed, 1 live-service skip |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 230 source files |
+| `python -m pytest` without live-service environment | 1,366 passed, 16 skipped, 7 expected warnings |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 690,665-byte wheel and 974,562-byte sdist |
+| `python -m pip_audit` | No known third-party dependency vulnerabilities; the local package is not a PyPI audit subject |
+| `git diff --check` | Pass |
+
+This proves current in-process enforcement and route-map closure. Structured
+logs require deployment collection, access control, retention, and integrity
+controls; they are not an append-only authorization ledger. Amount/region/data
+classification ABAC, emergency-access workflows, external identity policy,
+hosted enforcement, compliance, certification, and production readiness are
+not inferred.
+
+## E-102: No-export-by-default OpenTelemetry baseline
+
+The optional `observability` extra pins OpenTelemetry API/SDK 1.44.0 in the
+universal lock. `ObservabilityRuntime` constructs isolated trace and metric
+providers and accepts exporters/readers only through explicit injection; the
+default application uses a no-op runtime, imports no SDK, and configures no
+network destination. OpenTelemetry's official Python status and PyPI release
+records were reviewed on 2026-07-27; traces/metrics are stable while its logs
+signal remains development and is not adopted here.
+
+API instrumentation records method, normalized route template, status, and
+integer duration. Durable jobs record only low-cardinality operation/status/
+result values. The closed schema rejects unknown attributes, floats, control
+characters, and oversized values. In-memory SDK tests inspect emitted spans and
+metrics and prove tenant, workspace, entity, actor, worker, idempotency, and job
+identifiers are absent. Standard logging handlers attach bounded request IDs
+and active trace/span IDs without changing message content.
+
+| Command | Result |
+| --- | --- |
+| OpenTelemetry/API/job/privacy and supply-chain focus | 19 passed |
+| exact uv 0.11.32 `lock --check` and closed supply-chain policy | Pass; 110 policy packages and zero active exceptions |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 231 source files |
+| `python -m pytest` without live-service environment | 1,371 passed, 16 skipped, 7 expected warnings |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 693,702-byte wheel and 978,576-byte sdist |
+| `python -m pip_audit` | No known third-party dependency vulnerabilities; the local package is not a PyPI audit subject |
+| `git diff --check` | Pass; uv.lock reports its existing Windows line-ending notice |
+
+This is a code-level, in-memory instrumentation proof. It does not prove an
+exporter, collector, network path, TLS/authentication, sampling/cardinality
+operation, durable telemetry retention, dashboard, alert, SLO, hosted
+enforcement, compliance, certification, or production readiness.
+
+## E-103: Operator-keyed encrypted Community backup
+
+The optional `backup` extra pins cryptography 49.0.0. The local backup command
+can place the established `backup.json` and `manifest.json` bytes inside one
+AES-256-GCM envelope without publishing plaintext siblings. An exact 32-byte
+raw key or 64-character hexadecimal key is read from a bounded ordinary local
+file and never accepted as a CLI value. Restore authenticates format, key
+fingerprint, ciphertext digest, associated data, and GCM tag before invoking
+the existing version/schema/invariant verifier or mutating the target.
+
+| Command | Result |
+| --- | --- |
+| Encrypted backup, legacy restore, and supply-chain focus | 28 passed |
+| `python -m pytest` without live-service environment | 1,376 passed, 16 skipped, 7 expected warnings |
+| Closed supply-chain policy | Pass; 113 Python packages and zero active exceptions |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 232 source files |
+| `python -m pip_audit` | No known third-party dependency vulnerabilities; the local package is not a PyPI audit subject |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 697,140-byte wheel and 982,789-byte sdist |
+| `git diff --check` | Pass; uv.lock reports its existing Windows line-ending notice |
+
+This proves a bounded Community SQLite envelope and fail-safe target behavior
+for tested local failures. It does not prove secure deletion of temporary
+plaintext, key generation/escrow/rotation, centralized restore authorization,
+PostgreSQL or cross-edition recovery, host/filesystem-loss durability, RPO/RTO,
+compliance, certification, or production readiness. P1-PLAT-010 remains open.
+
+## E-104: Authorized isolated PostgreSQL restore
+
+`BackupRestoreApplicationService` requires the exact
+`operations.backup.create` or `operations.restore.execute` permission before
+calling an adapter. `PostgresNativeBackupAdapter` accepts only prevalidated
+absolute ordinary tool paths and conservative service/database names, launches
+no shell, emits no child output, places no credential in argv, and uses a
+bounded timeout. The PostgreSQL custom dump is streamed through AES-256-GCM;
+its authenticated header binds format, key fingerprint, nonce, plaintext byte
+count, and SHA-256. Restore authenticates first, validates with `pg_restore
+--list`, creates a new database, restores without ownership/ACL replay, verifies
+Alembic and the ReconForge schema, and drops the target after restore or
+verification failure.
+
+| Evidence | Result |
+| --- | --- |
+| PostgreSQL adapter authorization/encryption/rollback tests | 7 passed |
+| Backup/restore matrix contract | Pass; five unique cells, two backends, four editions, explicit partial status |
+| PostgreSQL 17.10 native success drill | Alembic `0015_postgres_idempotency`; 41/41 ReconForge tables restored; dump SHA-256 `64c21881856409202b6e4be08d86ffcb99cf697d34baa484d5e8d110ccb82529` |
+| PostgreSQL 17.10 corrupt-dump drill | `pg_restore` exit 1; partial target dropped; zero drill databases remained after cleanup |
+| `python -m pytest` without live-service environment | 1,384 passed, 16 skipped, 7 expected warnings |
+| `python -m ruff check .` and `python -m mypy reconforge` | Pass over 234 source files |
+| `python -m pip_audit` | No known third-party dependency vulnerabilities; the local package is not a PyPI audit subject |
+| `python -m build --no-isolation` to a new temporary directory | Pass; matrix/schema/tests included in sdist; 702,843-byte wheel and 991,262-byte sdist |
+
+The live drill proves native PostgreSQL tool behavior in the current local
+container, while unit contracts prove adapter composition; it is not a live
+cross-platform execution of the adapter. It does not establish service-file
+custody, production identity provisioning, managed key rotation/KMS, object
+storage scheduling/retention, HA/cutover, host loss, cross-version restore,
+RPO/RTO, compliance, certification, or production readiness. The governed
+matrix remains `partial` and P1-PLAT-010 remains open.
+
+## E-105: Versioned matching strategy contract
+
+The backend-neutral contract defines immutable strategy manifests, explicit
+limits, exact ID/version registry lookup, normalized requests, and results bound
+to manifest/input/decision SHA-256 digests. Canonicalization accepts exact
+Decimal text but rejects binary floats, non-finite values, unsupported types,
+and string-key collisions. Input fingerprints sort canonical records as a
+multiset, so row permutation does not change replay identity.
+
+`IndexedOneToOneStrategy` declares the existing range-indexed candidate and
+deterministic min-cost assignment algorithm as beta `1.0.0`. It fixes grouped
+flags off, validates its declared 250,000-record/3,660-day/128-character
+ceilings before execution, and delegates to the existing pure matcher. The
+published JSON manifest validates against its closed schema and is mechanically
+compared with the runtime declaration.
+
+| Evidence | Result |
+| --- | --- |
+| Strategy manifest/registry/limit/digest/compatibility tests | 6 passed |
+| Existing Platform matching compatibility focus | 40 passed |
+| `python -m pytest` without live-service environment | 1,390 passed, 16 skipped, 7 expected warnings |
+| `python -m ruff check .` and `python -m mypy reconforge` | Pass over 236 source files |
+| `python -m pip_audit` | No known third-party dependency vulnerabilities; the local package is not a PyPI audit subject |
+| `python -m build --no-isolation` to a new temporary directory | Pass; manifest/schema included in sdist; 706,333-byte wheel and 995,926-byte sdist |
+
+This proves the first typed strategy boundary and current-output compatibility,
+not candidate-count instrumentation, grouped matching, search budgets,
+explanation schema v2, backend performance parity, or supported scale.
+
+## E-106: Exact Decimal range-indexed tolerance lookup
+
+The matcher replaces its positive-tolerance loop over all amount buckets with
+immutable currency/precision partitions sorted by exact Decimal values and the
+existing stable record key. Inclusive lower and upper positions use Python's
+binary-search primitives. Each compatible partition performs logarithmic
+boundary discovery, after which work is proportional only to the returned
+candidate slice. Explicit unequal currencies remain excluded; a missing
+currency retains the historical compatibility path across partitions.
+
+| Evidence | Result |
+| --- | --- |
+| Range-index algorithm/boundary/invalid-state tests | 3 passed |
+| Billion-position lazy index boundary lookup | Exact three-position window with no more than 64 indexed reads |
+| Existing Platform/property/strategy matching focus | Pass with unchanged decisions |
+| `python -m pytest` without live-service environment | 1,393 passed, 16 skipped, 7 expected warnings |
+| `python -m ruff check .` and `python -m mypy reconforge` | Pass over 236 source files |
+| `python -m pip_audit` | No known third-party dependency vulnerabilities; the local package is not a PyPI audit subject |
+| `python -m build --no-isolation` to a new temporary directory | Pass; 706,645-byte wheel and 996,965-byte sdist |
+
+This proves exact range-bound lookup and current-output compatibility. It does
+not establish a total candidate cap, timeout/search budget, memory ceiling,
+grouped matching, or supported throughput.
+
+## E-107: Deterministic candidate budgets and safe ambiguity
+
+`indexed-candidate-budget-v1` counts the deduplicated reference, exact-key, and
+exact-Decimal-window candidates before scoring. A left record exceeding 10,000
+candidates, or a run crossing 1,000,000 candidate evaluations, receives no
+selected match. Instead the pure output contains `status=Ambiguous`, reason
+`CANDIDATE_BUDGET_EXCEEDED`, lineage with observed count/policy/limit/rejection,
+and a matching-ambiguity exception with inclusion and exclusion evidence. The
+strategy manifest publishes both ceilings.
+
+| Evidence | Result |
+| --- | --- |
+| Per-record dense candidate overflow | No matched result; explicit three-candidate ambiguity under a test ceiling of two |
+| Total search-budget overflow | Stable result under left/right row permutation; later record unresolved rather than truncated |
+| Existing matching/property/strategy compatibility focus | Pass |
+| Repository Ruff and mypy | Pass over 236 source files |
+| `python -m pytest` | Pass: 1,395 passed, 16 environment-dependent skips, 7 warnings in 200.57 seconds |
+| `python -m build --no-isolation` to a new temporary directory | Pass: 707,337-byte wheel and 998,536-byte sdist |
+| `python -m pip_audit` | Pass: no known vulnerabilities; the local `reconforge-erp` distribution is not published on PyPI and is explicitly unauditable by that lookup |
+| `git diff --check` | Pass |
+
+This is a deterministic candidate-evaluation budget, not a wall-clock or memory
+benchmark. It does not prove grouped-search bounds, configurable tenant policy,
+supported throughput, or explanation schema v2.
+
+## E-108: Bounded true grouped matching
+
+`bounded-grouped-subset-sum@1.0.0` adds a pure domain model, backend-neutral
+application boundary, and versioned strategy adapter for true one-to-many,
+many-to-one, and many-to-many sums. Candidate groups require exact Decimal
+amounts, one currency and partition, a bounded date span, and published
+cardinality ceilings. Selection records sums, difference, candidate and search
+counts, stable tie-break, explanation, group identity, and decision digest.
+
+The enumerator sorts stable record identities and evaluates no more than 25,000
+group pairs. Crossing that ceiling returns
+`GROUP_SEARCH_BUDGET_EXCEEDED` with no selected record IDs. The published
+manifest distinguishes this experimental strategy from the unchanged legacy
+pair-capacity flags.
+
+| Evidence | Result |
+| --- | --- |
+| True one-to-many, many-to-one, and many-to-many exact sums | Pass |
+| Currency, partition, date, tolerance, and cardinality constraints | Pass |
+| Right-side permutation and equal-business-cost tie-break | Pass |
+| Search-budget exhaustion | Explicit Ambiguous result; no selected group |
+| Strict application ingress | Binary float, NaN, Infinity, malformed amount, noncanonical date, and missing fields rejected |
+| Published strategy manifest/schema parity | Pass |
+| Focused domain/application/strategy tests | Pass: 21 tests |
+| Repository mypy | Pass over 239 source files |
+| Repository boundary inventory | New connection-free Application Service registered; exact-inventory gate passes with 7 backend-neutral services |
+| `python -m pytest` after inventory and compatibility corrections | Pass: 1,410 passed, 16 environment-dependent skips, 7 warnings in 201.43 seconds |
+| Bandit on all E-108 Python files | Pass: no findings |
+| Repository-wide Bandit baseline | Non-zero: 7 pre-existing Medium/Medium B608 findings in PostgreSQL/SQLite durable-job SQL assembly; no High findings and no E-108 findings |
+| Final `python -m build --no-isolation` to a new temporary directory | Pass: 713,349-byte wheel and 1,004,993-byte sdist |
+| `python -m pip_audit --timeout 60` | Pass on retry: no known vulnerabilities; local unpublished `reconforge-erp` distribution explicitly skipped |
+| `git diff --check` | Pass |
+
+This evidence proves one bounded group decision per request. It does not prove
+batch non-overlap assignment, netting, fees, FX, partial settlement, grouped
+throughput, or persistence/API/CLI exposure.
+
+## E-111: Explicit grouped ambiguity governance
+
+Grouped ties across minimum-cost candidate solutions now produce `ambiguous`
+instead of an arbitrary deterministic choice. `find_grouped_match` records
+all equivalent minimal groups in `ambiguous_candidate_sets`, and the decision
+reason code becomes `GROUP_MATCH_AMBIGUOUS`.
+
+| Evidence | Result |
+| --- | --- |
+| Domain group tests for tied minima | Pass: 6 cases |
+| Application policy and FX/fee compatibility tests | Pass: new coverage on grouped fee parsing, fee totals, currency conversion, and missing-fee netting behavior |
+| Matching-strategy contract tests and request-digest coverage | Pass: ambiguity and request-hash variant tests for grouped mode |
+| Focused grouped domain/application/strategy suite | Pass: 36 tests |
+| `python -m pytest tests/test_grouped_matching.py tests/test_grouped_matching_application.py tests/test_matching_strategy_contract.py` | Pass: 36 passed |
+| `python -m build --no-isolation` | Pass (same baseline artifact sizes as E-108 when run from this branch) |
+
+This resolves grouped tie governance for the current v1 grouped strategy and
+closes P1-REC-007. It does not yet establish batch assignment, persistence
+policy defaults, or review SLAs for ambiguous workloads.
+
+## E-112: Grouped explainability v2 and ambiguity evidence
+
+`grouped-matching-explanation-v2` is now published in both architecture and
+runtime strategy manifests. Grouped ambiguous outcomes include explicit
+`ambiguous_candidate_sets` in explainable result payloads for traceable review
+before approval.
+
+| Evidence | Result |
+| --- | --- |
+| Strategy manifest and architecture registry check | Pass: `grouped-matching-explanation-v2` aligned in `docs/architecture/matching-strategies.v1.json` and runtime strategy manifest |
+| Domain/application/strategy result payload checks | Pass: grouped explainability includes reason code, tie-break text, candidate sets, and decision digest |
+| Contract and compatibility tests | Pass: explanation schema compatibility remains deterministic for existing grouped clients while adding v2 fields |
+| Focused grouped test suite | Pass: 36 tests |
+| Documentation consistency checks | Pass: deliberate-terms and limits updated in `docs/architecture/grouped-matching.md` |
+
+This makes explainability and review evidence explicit for grouped ambiguous
+outcomes and closes P1-REC-008. Throughput, batch assignment, and full
+evidence-graph drill-down integration remain outside this slice.
+
+## E-113: Reconciliation benchmark harness tiers (10K/100K)
+
+`run_reconciliation_execution_benchmark_suite` now executes reproducible synthetic
+profile runs (local deterministic matching engine) and writes per-profile and suite
+manifests with environment metadata and checksums.
+
+Scope:
+
+- Synthetic total records: 10,000 and 100,000.
+- Partitioning: 2 and 20 partitions respectively (`partition_max_records=10,000`).
+- Seed: 7; amount fractional digits: 2.
+- Engine: local-deterministic-partitioned (`LocalDeterministicMatcherAdapter`).
+- Version-controlled profile output files: `docs/execution/benchmarks/phase2/10k/reconciliation-execution.json` and `.../100k/reconciliation-execution.json`.
+
+Suite artifact:
+
+- Suite signature: `ae0fd0bae04630491c25d0dc9756121ae9e9a457b0ebfab94fdcdba6b659e59e`.
+- Manifest: `docs/execution/benchmarks/phase2/reconciliation-execution-benchmark-suite.json`.
+- Output file hashes:
+  - `10k/reconciliation-execution.json`: `6dd61519ffdc9f8e63dcc18dadfe203a288a4c5cc6d57ef321e0dfbf2e3c586f`
+  - `100k/reconciliation-execution.json`: `343408e5fa82c47b4a523ff06dfe09af48bc0f614d5ab47e7d075ddae0bbc584`
+
+| Profile | Runtime (s) | CPU (s) | Peak MB | Rows | Matched | Exceptions | Result signature |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 10k | 10.3894 | 10.4219 | 44.27 | 10,000 | 5,000 | 0 | `4d1a8c3469e4c4a266c0cbcfc4ff57dc93addc2ff078cbcad677045f5b3ca2ea` |
+| 100k | 141.8710 | 142.6562 | 354.43 | 100,000 | 50,000 | 0 | `9e10d8d7ce5d6e280811a505de78607840c72117045636b461cde984434f10cc` |
+
+Environment:
+
+- OS: `Windows-11-10.0.26200-SP0`
+- CPU: 16 logical processors, `AMD64` (`AMD64 Family 25 Model 68 Stepping 1`)
+- Python: `3.14.6` (CPython), UTC timestamp collection captured in suite payload.
+
+This evidence validates reproducibility, deterministic signatures, and candidate
+counter fields for the benchmark slice. It is still one local algorithm benchmark
+boundary and does not claim deployment throughput, hosted scaling, crash-atomic
+cluster behavior, or external-postgres/connector effects.
+
+## E-114: Reconciliation performance regression gate assertions
+
+Deterministic helper assertions now verify regression behavior before benchmark
+acceptance:
+
+- Exact result identity checks (`result_count`, `matched_rows`, `exception_count`, `candidate_count_total`, `candidate_count_max`, `candidate_count_mean`, `profile_id`, optional `result_signature`).
+- Runtime and CPU growth ceilings.
+- Peak-memory increase ceiling.
+- Profile set parity (`profile_id` match between baseline and candidate).
+
+A regression test run validates:
+
+- Signature changes are detected and fail when `allow_signature_change=False`.
+- Large runtime inflation is rejected above the default regression ceiling.
+
+| Command/evidence | Result |
+| --- | --- |
+| `assert_reconciliation_execution_regression` (baseline vs same candidate) | Pass |
+| `assert_reconciliation_execution_regression` with signature mutation | Caught via `result_signature changed` |
+| `assert_reconciliation_execution_regression` with 100x runtime mutation | Caught via `runtime regression ratio` |
+
+The helper is now exported for suite-level reuse and is covered by the dedicated
+generator benchmark tests for P1-REC-010 exit evidence.
+
+## E-117: Authorized bounded Evidence Graph drill-down
+
+The evidence drill-down contract is implemented consistently for Community
+SQLite and tenant-scoped PostgreSQL metadata repositories:
+
+- direction is closed to `up`, `down`, or `both` and depth to 1-8;
+- graph discovery fails closed above 10,000 nodes;
+- node pages are deterministic, offset-addressed, and limited to 1,000 nodes;
+- returned edges are explicitly scoped to edges incident to returned nodes;
+- provenance/checksum/storage fields are masked by default;
+- sensitive metadata requires `evidence.manage` in both local and server modes;
+- successful reads append audit-chain events without business outbox emission.
+
+| Evidence | Result |
+| --- | --- |
+| Local API integration | Pass: traversal, masking, sensitive-role denial/allow, invalid direction/depth, two-page retrieval, and exactly four successful access audits |
+| PostgreSQL repository contract | Pass: tenant-scoped redacted page, next offset, and bounded metadata access-audit encoder |
+| Authorization inventory | Pass: 157 classified routes; digest `442a537f4e88dd200d63fb23e5a55a1e4d86e18e53babb2f6585f3a7c0875992` |
+| Full repository suite | Pass to 100% across 1,450 collected tests; environment-dependent service cases remain explicitly skipped |
+
+This proves the code-level SQLite/PostgreSQL contract and local runtime API. It
+does not prove live PostgreSQL operations, authenticated evidence-manifest
+serving, graph-UI usability, or supported graph throughput.
+
+## E-118: Reconciliation-as-Code v1 schema, manifest, and rollback
+
+`reconciliation-as-code-v1` is a closed declarative boundary with no arbitrary
+code loading. Its schema and Pydantic model cover versioned sources, canonical
+mapping, typed data-only rule steps, matching adapters, exact tolerance and
+currency policies, human workflow rules, evidence requirements, synthetic test
+cases, and expected results. The reader accepts the historical
+`normalization_rules` key but emits canonical `normalization` output.
+
+| Evidence | Result |
+| --- | --- |
+| JSON Schema validation | Canonical model payload validates under Draft 2020-12 |
+| Safe ingress | Duplicate/unsafe YAML uses bounded shared ingress; executable hook keys and scientific tolerance text are rejected |
+| Deterministic replay identity | YAML-to-JSON round trip preserves the exact content SHA-256 |
+| Golden case | One exact USD pair executes twice with the same decision digest and expected counts |
+| Rollback | CLI atomically writes a previously validated contract; existing output is refused without explicit `--overwrite`; revalidation preserves the target digest |
+| Package membership | `reconciliation_as_code.schema.json` appears in both the built sdist and wheel inputs through `MANIFEST.in` |
+
+The SHA-256 manifest is an integrity/change identifier, not a signature or
+producer-authentication claim. Rollback governs one local contract file; it is
+not a control-pack installation or database rollback mechanism.
+
+## E-119: Reconciliation-as-Code lint/test/diff/simulate tooling
+
+The `rules recon-as-code` CLI exposes validation, semantic lint, embedded test,
+structural diff, no-side-effect simulation, bounded explanation, and rollback.
+Diff paths are deterministic down to list indices. Test outcomes include the
+strategy identity, actual counts, manifest/input/decision digests and explicit
+mismatches. Fuzzy suggestions are lint errors for autonomous decision use.
+
+| Command/evidence | Result |
+| --- | --- |
+| `python -m pytest tests/test_phase2_deliverables.py tests/test_workflow_schemas.py tests/test_cli_and_studio.py tests/test_api_platform_routes.py tests/test_postgres_evidence.py tests/test_structured_ingress_security.py -q` | Pass |
+| `python -m pytest -q` | Pass to 100%; 1,450 tests collected, no failures, seven expected warning summaries |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass: 245 source files |
+| Focused Bandit on CLI/rules/evidence surfaces | Pass: no findings |
+| `python -m pip_audit --timeout 60` | No known third-party vulnerabilities; unpublished local `reconforge-erp` lookup explicitly skipped |
+| `python -m build --no-isolation --outdir .codex-test-tmp/build-rac-final` | Pass: 740,659-byte wheel and 1,043,462-byte sdist |
+| `git diff --check` | Pass |
+
+The runtime execution scope is deliberately `matching-adapter-only-v1`.
+Validation and normalization declarations are not executed, and simulation
+does not approve financial decisions, publish rules, mutate evidence, or claim
+full control-pack lifecycle readiness.
+
+## E-120: Tenant-bound PostgreSQL outbox application contract
+
+The existing backend-neutral `OutboxApplicationService` can now use PostgreSQL
+through `TenantBoundPostgresOutboxRepository`. Tenant scope is validated and
+captured once at adapter construction, then supplied to every claim, transition,
+replay, and listing query. PostgreSQL event snapshots are mapped to the shared
+application model, `dead_letter` is translated to PostgreSQL `Dead`, and
+persistence validation/integrity failures become safe `OutboxError` values.
+
+| Command/evidence | Result |
+| --- | --- |
+| `python -m pytest tests/test_postgres_outbox.py tests/test_outbox_delivery.py tests/test_repository_boundary_inventory.py -q` | Pass: 15 tests |
+| `python -m mypy reconforge/infrastructure/postgres_outbox.py` | Pass: no issues |
+| `python -m ruff check reconforge/infrastructure/postgres_outbox.py tests/test_postgres_outbox.py` | Pass |
+| `python -m pytest -q` | Pass to 100%, exit code 0; 1,453 collected by prior count plus three added tests; environment-dependent skips and seven known warning summaries remain visible |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass: 245 source files |
+| `git diff --check` | Pass; existing Git line-ending warning for `MANIFEST.in` only |
+
+The Platform outbox facade is now truthfully classified as a SQL-free
+compatibility adapter, reducing the inventory to 14 direct-SQLite services and
+raising compatibility adapters to three. This is not live PostgreSQL evidence.
+The current PostgreSQL schema records `Dead` but no dead-letter transition
+timestamp, so the shared optional `dead_lettered_at` remains null rather than
+being fabricated; schema parity remains an explicit P1-PLAT-002 limitation.
+
+## E-121: Backend-neutral exception queue boundary
+
+The unified exception queue now has a typed
+`ExceptionQueueRepositoryProtocol` and connection-free
+`ExceptionQueueApplicationService`. SQLite schema initialization, permissions,
+queries, audited commits, rollback translation, and row conversion live in
+`SQLiteExceptionQueueRepository`. The historical `ExceptionQueueService`
+constructor remains a SQL-free compatibility facade, preserving its use from
+Controls, Payables, Journals, Intercompany, CLI, API, Studio, and demos.
+
+| Command/evidence | Result |
+| --- | --- |
+| `python -m pytest tests/test_application_exceptions.py tests/test_platform_controls_matching_exceptions.py tests/test_atomic_legacy_services.py tests/test_repository_boundary_inventory.py -q` | Pass: 18 tests |
+| Focused Ruff | Pass |
+| Focused mypy | Pass: 3 source files |
+| `python -m pytest -q` | Pass to 100%, exit code 0; environment-dependent skips and seven known warning summaries remain visible |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass: 249 source files |
+| `python -m pytest tests/test_asvs_mapping.py tests/test_security_architecture.py tests/test_repository_boundary_inventory.py tests/test_approval_surface_inventory.py -q` | Pass: 14 tests |
+| `git diff --check` | Pass; existing `MANIFEST.in` line-ending warning only |
+| `python -m pytest -q` | Pass to 100%, exit code 0; environment-dependent skips and seven known warning summaries remain visible |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass: 247 source files |
+| `git diff --check` | Pass; existing `MANIFEST.in` line-ending warning only |
+
+The exact AST inventory now records 13 direct-SQLite Platform services, four
+SQL-free compatibility adapters, and ten backend-neutral application services.
+This proves SQLite compatibility and application-layer separation only. No
+PostgreSQL exception repository, cross-backend parity, or Team Edition runtime
+claim is made by this slice.
+
+## E-122: Backend-neutral approval and certification boundary
+
+Approval and certification workflows now expose a complete typed
+`ApprovalRepositoryProtocol` through connection-free
+`ApprovalApplicationService`. SQLite persistence, permission enforcement,
+requester/preparer separation-of-duties guards, audit commits, and rollback
+behavior live in `SQLiteApprovalRepository`. The historical
+`ApprovalService(connection)` facade preserves CLI and Python callers.
+
+The AST security inventory was deliberately moved to the real implementation:
+it scans `SQLiteApprovalRepository.approve`, `_decide`, and
+`review_certification`, while continuing to enumerate all other Platform
+approval/review surfaces. This prevents a green security test from inspecting a
+delegating facade instead of the guard that enforces SoD.
+
+| Command/evidence | Result |
+| --- | --- |
+| `python -m pytest tests/test_application_approvals.py tests/test_approval_sod.py tests/test_approval_surface_inventory.py tests/test_atomic_legacy_services.py tests/test_repository_boundary_inventory.py -q` | Pass: 22 tests |
+| Focused Ruff | Pass |
+| Focused mypy | Pass: 3 source files |
+
+The exact boundary inventory now records 12 direct-SQLite services, five
+compatibility adapters, and eleven backend-neutral application services. This
+does not prove PostgreSQL approval storage, central-policy parity, external
+identity assurance, or legal/digital signatures.
+
+## E-123: Bounded browser-local Mapping Studio foundation
+
+P2-005 is closed by an additive `/mapping` React Studio route. CSV/TSV preview
+bytes stay inside the browser and are bounded to 256 KiB, 100 columns, and 200
+rows. The parser preserves source text, including empty amounts, and rejects
+null bytes, duplicate/blank headers, unclosed quoted fields, oversized shapes,
+unsupported file types, duplicate source mappings, malformed exact amounts,
+invalid three-letter currencies, and impossible calendar dates. Missing or
+malformed financial values render as explicit issues and are never zero-filled.
+
+The four canonical fields use labelled native select controls. Load, error,
+truncation, unmapped, invalid, and valid states are exposed with semantic
+headings, table headers, alerts/status, visible focus, responsive layout,
+English/Arabic translations, and RTL behavior.
+
+| Command/evidence | Result |
+| --- | --- |
+| `npm --prefix apps/web run typecheck` | Pass |
+| `npm --prefix apps/web run test:run` | Pass: 3 files, 24 tests |
+| `npm --prefix apps/web run build` | Pass: Vite production build; MappingStudio chunk 6.62 kB (2.47 kB gzip) |
+| Initial `npm --prefix apps/web run e2e` | Blocked before browser launch: Playwright Chromium v1234 absent |
+| `npx --prefix apps/web playwright install chromium` | Pass: matching Chrome and headless shell installed locally |
+| Repeated `npm --prefix apps/web run e2e` | Pass: 3/3 Chromium tests, including Mapping keyboard focus, visible amount errors, Arabic, and RTL |
+| `npm --prefix apps/web audit --omit=dev` | Pass: 0 vulnerabilities reported |
+| `python -m pytest tests/test_phase2_deliverables.py tests/test_maturity_policy.py tests/test_phase_1_3_execution_contract.py -q` | Pass: 15 tests |
+| `python -m pytest -q` | Pass to 100%, exit code 0; environment-dependent skips and seven known warning summaries remain visible |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass: 249 source files |
+| `git diff --check` | Pass; existing line-ending warnings only |
+
+The preview is not a persisted mapping, ingestion pipeline, malware scanner,
+source-authentication control, or approval/publication workflow. E2E screenshot
+artifacts were regenerated by the declared Chromium version and remain local;
+no update was published.
+
+## E-124: Local Rule Studio governed draft lifecycle
+
+P2-006 is closed for a deliberately local, non-publishing foundation. The
+additive `/rules` route exposes draft, tested, and approved states; a structural
+diff from the baseline; bounded synthetic test execution; independent-reviewer
+approval; and explicit next-version creation. Editing the JSON clears both test
+and approval evidence. There is no publish, install, network-write, filesystem-
+write, or persistence action.
+
+The closed v1 browser contract rejects unsupported top-level/test-case fields,
+non-string or scientific financial inputs, invalid IDs, duplicate case IDs, and
+more than 100 cases or 64 KiB. Exact/tolerance comparisons use scaled `BigInt`
+minor values, including amounts beyond IEEE-754 integer precision. Passing tests
+produce a canonical SHA-256 digest; approval requires the same digest, a reason,
+and a reviewer whose normalized identity differs from the author.
+
+| Command/evidence | Result |
+| --- | --- |
+| `npm --prefix apps/web run typecheck` | Pass |
+| `npm --prefix apps/web run test:run` | Pass: 5 files, 30 tests |
+| `npm --prefix apps/web run build` | Pass; RuleStudio chunk 9.71 kB (3.42 kB gzip) |
+| First four-test E2E run | Rule workflow passed; legacy documentation screenshot write hit a Windows file lock |
+| E2E capture hardening | Routine screenshots now verify in-memory bytes; documentation writes require `RECONFORGE_UPDATE_SCREENSHOTS=1` |
+| Repeated `npm --prefix apps/web run e2e` | Pass: 4/4 Chromium tests |
+| `npm --prefix apps/web audit --omit=dev` | Pass: 0 vulnerabilities reported |
+| `python -m pytest tests/test_phase2_deliverables.py tests/test_maturity_policy.py tests/test_phase_1_3_execution_contract.py -q` | Pass: 15 tests |
+| `python -m pytest -q` | Pass to 100%, exit code 0; environment-dependent skips and seven known warning summaries remain visible |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass: 249 source files |
+| `git diff --check` | Pass; existing line-ending warnings only |
+
+This foundation does not detect duplicate JSON members, persist drafts, bind an
+authenticated identity, append a durable approval audit, sign a pack, execute
+server-side Reconciliation-as-Code, or publish/install rules. Those remain hard
+requirements for the later signed pack lifecycle.
+
+## E-125: Authorized live read-only Studio contract
+
+P2-007 is closed by an additive `/live` route over the existing
+`/api/v1/metrics/dashboard` contract. The backend route is already guarded by
+`metrics.read`; the browser sends a same-origin, no-store request and has no
+write action. Its loader accepts only the `metrics` envelope and known metric
+fields, requires exact decimal `value_text`, validates timestamps, sorts by
+period/key, and derives a configurable 30-second-to-24-hour freshness state.
+
+Loading, empty, ready, stale, 401, 403, other HTTP failure, malformed contract,
+and retry states are distinct. Unit/component tests assert that permission
+failure makes exactly one guarded request and never asks for any synthetic
+artifact. Chromium E2E first returns 403, verifies the visible refusal, then
+retries the same endpoint and renders exact value plus lineage.
+
+| Command/evidence | Result |
+| --- | --- |
+| `npm --prefix apps/web run typecheck` | Pass |
+| `npm --prefix apps/web run test:run` | Pass: 7 files, 42 tests |
+| `npm --prefix apps/web run build` | Pass; LiveStudio chunk 3.39 kB (1.12 kB gzip) |
+| `npm --prefix apps/web run e2e` | Pass: 5/5 Chromium tests, including fail-closed 403 and authorized retry |
+
+This browser-local proof does not establish that a deployed reverse proxy has
+correct session cookies, that live PostgreSQL is available, that metric source
+records are authentic, or that the service meets an availability objective.
+No publication was attempted.
+
+## E-126: Arabic, RTL, and accessibility regression gate
+
+P2-008 is closed by a new Playwright/axe-core gate. It evaluates WCAG 2 A/AA
+and WCAG 2.1 A/AA rules on all seven native routes in English and Arabic with
+asserted `lang="ar"` and `dir="rtl"`; mobile Dashboard landmarks are scanned
+in both directions. The first run failed on an invalid `aria-label`
+attached to a roleless chart container and multiple sub-AA light-theme tokens;
+the implementation adds valid group semantics and raises tertiary, critical,
+warning, positive, and color-safe contrast. Mobile expansion then caught and
+fixed a collapsed search button without an accessible name and a sub-AA active
+dock label.
+
+Dedicated keyboard evidence covers the skip link, focus wrapping within the
+modal command palette, Escape closure, and restoration to the invoking search
+button. High contrast, color-safe colors, reduced motion, persistent data
+attributes, and a minimum visible focus indicator remain verified even if the
+optional strong-outline setting is disabled. The Evidence route asserts its
+redaction state while rejecting Windows/Unix source paths and raw-record/source-
+path/secret data attributes.
+
+| Command/evidence | Result |
+| --- | --- |
+| Initial accessibility E2E | Failed with actionable invalid-ARIA and contrast findings; focus/masking test assumptions also corrected |
+| `npm --prefix apps/web run typecheck` | Pass |
+| `npm --prefix apps/web run test:run` | Pass: 7 files, 42 tests in 7.33s |
+| `npm --prefix apps/web run build` | Pass: Vite production build in 0.858s |
+| `npm --prefix apps/web run e2e` before mobile expansion | Pass: 9/9 Chromium paths in 20.3s |
+| Focused mobile accessibility rerun | Pass: 1/1 after accessible-name and active-token remediation |
+| Final expanded `npm --prefix apps/web run e2e` | Pass: 10/10 Chromium paths in 32.6s; 16 Axe page scans across desktop/mobile language directions |
+| `npm --prefix apps/web audit --omit=dev` | Pass: 0 vulnerabilities reported |
+| `python -m pytest tests/test_supply_chain_policy.py -q` after lock inventory update | Pass: 14 tests; policy recognizes 211 SRI-bearing npm registry entries |
+| Final `python -m pytest -q` | Pass to 100%, exit code 0; environment-dependent skips and seven disclosed warning summaries remain visible |
+
+Axe-core and scripted keyboard behavior do not prove complete WCAG conformance,
+screen-reader quality across products, cognitive accessibility, 200–400% zoom/
+reflow, voice control, or usability by disabled reviewers. Those require
+separate manual and independent evaluation. No publication was attempted.
+
+## E-127: Backend-neutral journal control application boundary
+
+P1-PLAT-001 advances by moving the four JournalControlService use cases behind
+`JournalControlRepositoryProtocol` and `JournalControlApplicationService`.
+`SQLiteJournalControlRepository` owns schema setup, authorization, stable local
+record ingestion, exact Decimal persistence, deterministic policies, unified
+exception writes, audit/outbox effects, reads, and transaction rollback. The
+Platform class is now a SQL-free compatibility facade, so existing CLI and demo
+callers keep their connection constructor and result import.
+
+The application contract test exercises every argument and return shape through
+a database-free fake. Existing integration/CLI tests retain exact decimal text,
+invalid-value rejection, high-value threshold behavior, policy counts, queue
+effects, and report output. A new forced-audit failure test proves journal and
+outbox inserts both roll back. The repository AST inventory closes the new
+classification at 11 direct-SQLite, six compatibility, and 12 backend-neutral
+application services.
+
+| Command/evidence | Result |
+| --- | --- |
+| Focused Ruff | Pass |
+| Focused mypy | Pass: 3 source files |
+| `python -m pytest tests/test_application_journals.py tests/test_platform_controls_matching_exceptions.py tests/test_atomic_legacy_services.py tests/test_repository_boundary_inventory.py -q` | Pass: 20 tests |
+| Focused plus phase-governance regression | Pass: 35 tests |
+| `python -m pytest -q` | Pass to 100%, exit code 0; environment-dependent skips and seven disclosed warnings remain visible |
+| Repository Ruff and mypy | Pass; mypy checks 251 source files |
+| Focused Bandit | Pass: no findings |
+| `python -m build --no-isolation` | Pass: wheel and sdist; both new journal modules included |
+| `git diff --check` | Pass; line-ending warnings only |
+
+This is local SQLite contract evidence only. No PostgreSQL journal adapter,
+live-service parity, tenant RLS proof, or scale benchmark exists. The wider
+repository-contract task remains in progress and no publication was attempted.
+
+## E-128: Workspace-safe backend-neutral control-testing boundary
+
+P1-PLAT-001 advances by moving all seven public ControlTestingService use cases
+behind `ControlTestingRepositoryProtocol` and a connection-free application
+service. `SQLiteControlTestingRepository` owns local schema setup,
+authorization, bounded library ingestion, plans, results, remediation, unified
+exceptions, audit, reads, and transaction rollback. The Platform facade retains
+the historical constructor, methods, defaults, and result import.
+
+The extraction identified a concrete scope defect. A plan created in workspace
+`finance` previously produced its ineffective-result exception in workspace
+`default`. The adapter now resolves the immutable plan workspace ID back to its
+stored name and passes that exact scope to the exception repository. A dedicated
+integration test proves `finance` remains the only queue scope. A forced audit
+failure proves the result insert, Tested status, and exception all roll back to
+the pre-action state.
+
+| Command/evidence | Result |
+| --- | --- |
+| Focused Ruff | Pass |
+| Focused mypy | Pass: 3 source files |
+| `python -m pytest tests/test_application_controls.py tests/test_platform_controls_matching_exceptions.py tests/test_atomic_legacy_services.py tests/test_repository_boundary_inventory.py -q` | Pass: 22 tests |
+| Focused plus phase-governance regression | Pass: 37 tests |
+| `python -m pytest -q` | Pass to 100%, exit code 0; environment-dependent skips and seven disclosed warnings remain visible |
+| Repository Ruff and mypy | Pass; mypy checks 255 source files |
+| Focused Bandit | Pass: no findings |
+| `python -m build --no-isolation` | Pass: wheel and sdist; application, SQLite adapter, and compatibility facade are included in both artifacts |
+| `git diff --check` | Pass; line-ending warnings only |
+
+This is local SQLite evidence only. No PostgreSQL adapter, tenant RLS runtime,
+or supported-scale proof exists. P1-PLAT-001 remains open and no publication
+was attempted.
+
+## E-129: Tenant-bound PostgreSQL journal contract
+
+P1-PLAT-002 advances through `PostgresJournalControlRepository` and Alembic
+0016. Both SQLite and PostgreSQL use `evaluate_journal_policies`; a seven-policy
+fixture fixes deterministic ordering and proves strict binary-float rejection.
+PostgreSQL stores NUMERIC and canonical decimal text, forces tenant RLS, and
+links workspaces with composite tenant keys. Import and policy operations place
+journal exceptions, reusable control exceptions, domain audit-chain events,
+and outbox events in the same transaction.
+
+The local fake-driver test proves transaction-local tenant setup and rollback
+before any insert when the tenant workspace is absent. The optional live test
+installs the additive schema, uses a non-privileged role, compares all seven
+policy codes/counts and report output with SQLite, verifies queue/outbox
+effects, and checks that a second tenant sees no records.
+
+| Command/evidence | Result |
+| --- | --- |
+| Focused Ruff | Pass after one mechanical import-order fix |
+| Focused mypy | Pass: 4 source files |
+| Journal/application/atomic/migration/operations focus | Pass; optional PostgreSQL service cases skipped because no DSN/application role is configured |
+| Live PostgreSQL journal parity | Not run locally; declared skip remains visible |
+| `python -m pytest -q` | Pass to 100%, exit code 0; environment-dependent skips and seven disclosed warning summaries remain visible |
+| Repository Ruff and mypy | Pass; mypy checks 256 source files |
+| Focused Bandit | Pass: no findings |
+| `python -m build --no-isolation` | Pass: 1,066,904-byte sdist and 770,335-byte wheel |
+| Distribution membership inspection | Pass: Alembic config, environment, template, and migration 0016 are present in both sdist and wheel; a packaging contract test protects the declarations |
+| `git diff --check` | Pass; line-ending warnings only |
+
+This is migration, code-contract, and SQLite parity evidence—not live
+PostgreSQL RLS or operational evidence. P1-PLAT-002 remains open and no
+publication was attempted.
+
+## E-130: Tenant-bound PostgreSQL control-testing contract
+
+Migration 0017 and `PostgresControlTestingRepository` implement the complete
+seven-method application contract. The schema adds tenant-keyed library, plan,
+result, and remediation tables with forced RLS and composite workspace/control
+foreign keys. Result recording resolves the plan and control under the active
+tenant, places an ineffective-result exception in the plan workspace, updates
+the plan, and appends audit/outbox evidence inside one transaction.
+
+One local fake-driver test proves a missing workspace aborts before the first
+business insert. A second permits the library insert and fails during Outbox
+insertion; the transaction reports rollback, proving the prior write cannot
+commit independently. The optional live test installs the additive schema, uses a
+non-privileged application role, compares the four report counts with SQLite,
+checks exact workspace exception scope and audit/outbox effects, and proves a
+second tenant sees neither plans nor report counts.
+
+| Command/evidence | Result |
+| --- | --- |
+| Focused Ruff | Pass |
+| Focused mypy | Pass: application contract and PostgreSQL adapter |
+| PostgreSQL controls/application/migration/operations/journal/atomic focus | Pass; four declared live-service cases skipped because no PostgreSQL service/application role is configured |
+| Repository `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass: 258 source files in the current worktree |
+| Focused Bandit on the new adapter | Pass: no findings |
+| Repository Bandit | Initial E-130 audit exposed seven medium B608 findings; E-131 reviewed/remediated them, and the current full rerun passes with visible suppression notices |
+| `python -m pytest -q` | Pass to 100%, exit code 0; declared environment skips and seven warning summaries remain visible |
+| `python -m build --no-isolation` | Pass: 1,068,148-byte sdist and 771,566-byte wheel |
+| Distribution inspection | Pass: migration 0017 and `reconforge_migration_sql.py` exist in both artifacts |
+| Isolated wheel installation/import | Pass: installed migration 0017 imports and resolves its PostgreSQL schema SQL |
+| `git diff --check` | Pass; line-ending warnings only |
+
+This is code-contract, rollback, migration, installed-package, and SQLite evidence only. The live
+PostgreSQL test is defined but not executed here, so RLS behavior and runtime
+parity remain unproven. No publication was attempted.
+
+## E-131: Reviewed durable-job SQL identifier boundary
+
+The full Bandit run after E-130 surfaced seven B608 findings in the two durable-
+job repositories. Each expression interpolates only column names generated
+from the immutable module-level `_JOB_COLUMNS` tuple; all business, tenant,
+worker, timestamp, digest, and status values remain placeholders. Narrow
+expression annotations replace the previously ineffective Ruff-only comments.
+No Bandit rule, directory, or file was excluded.
+
+| Command/evidence | Result |
+| --- | --- |
+| `python -m bandit -q -r reconforge` | Pass: exit 0, no findings; reviewed B608 suppression notices remain visible |
+| Durable-job SQLite/PostgreSQL/domain/application/recovery/export focus | Pass; one declared live PostgreSQL service skip |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass: 256 source files |
+
+These annotations establish that the present identifier sources are fixed; they
+do not authorize future user-selected table or column names. No publication
+was attempted.
+
+## E-132: Backend-neutral exact intercompany workflow
+
+`IntercompanyApplicationService` exposes the complete historical five-use-case
+surface through `IntercompanyRepositoryProtocol` without SQLite or
+infrastructure imports. `SQLiteIntercompanyRepository` owns authorization,
+bounded ingestion, exact Decimal parsing, canonical text persistence,
+deterministic grouping, imbalance cases, unified exceptions, settlement,
+audit/outbox effects, reads, and rollback. The Platform class is a SQL-free
+compatibility facade.
+
+The extraction identified that a missing case settlement previously appended
+an outbox event and committed audit evidence before `get_case` failed. The
+adapter now requires exactly one updated row before creating evidence. A new
+test proves the missing case leaves both ledgers empty. Another forced-audit
+test proves a match failure rolls back its case, unified exception, and outbox.
+
+| Command/evidence | Result |
+| --- | --- |
+| Focused Ruff and mypy | Pass: three production modules |
+| Application/integration/CLI/atomicity/inventory focus | Pass: 29 tests |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass: 258 source files |
+| `python -m bandit -q -r reconforge` | Pass: no findings; reviewed B608 notices remain visible |
+| `python -m pytest -q` | Pass to 100%, exit code 0; declared environment skips and seven warning summaries remain visible |
+| `python -m build --no-isolation` | Pass: wheel and sdist |
+| Distribution membership inspection | Pass: application port, SQLite adapter, and compatibility facade present in both artifacts |
+| `git diff --check` | Pass; line-ending warnings only |
+
+This is local SQLite contract evidence. No PostgreSQL adapter, multi-process
+case contention proof, or supported-scale benchmark exists. No publication was
+attempted.
+
+## E-133: Tenant-bound exact PostgreSQL intercompany contract
+
+Migration 0018 and `PostgresIntercompanyRepository` implement all five methods
+of the extracted application port. Transactions and cases store `NUMERIC` plus
+canonical decimal text. Composite tenant/workspace keys and forced RLS protect
+both tables. Stable period/reference/entity/transaction ordering and exact
+Decimal aggregation preserve the SQLite decision boundary.
+
+The local fake-driver suite proves four failure properties: binary-float
+tolerance is rejected before transaction start; a missing workspace aborts
+before insertion; an Outbox failure after all three synthetic imports rolls the
+transaction back; and a missing case settlement creates neither Outbox nor
+audit evidence. Optional live coverage uses a non-owner role, compares the exact
+case tuple with SQLite, verifies exception workspace and delivery effects, and
+proves a second tenant reads no cases. It is not run without the required DSN
+and application-role inputs.
+
+| Command/evidence | Result |
+| --- | --- |
+| Focused intercompany/application/atomic/migration/operations/governance tests | Pass; declared live PostgreSQL cases remain skipped |
+| Focused Bandit | Pass: no findings |
+| Repository Ruff | Pass |
+| Repository mypy | Pass: 261 source files in the current worktree |
+| `python -m pytest -q` | Pass to 100%, exit code 0; declared environment skips and seven warning summaries remain visible |
+| `python -m build --no-isolation` | Pass: 1,076,107-byte sdist and 779,825-byte wheel |
+| Distribution membership inspection | Pass: adapter and migration 0018 are present in both artifacts |
+| `git diff --check` | Pass; line-ending warnings only |
+
+This is exact code-contract, failure, migration, package, and SQLite-semantic
+evidence—not live PostgreSQL RLS or operational parity. P1-PLAT-002 remains open
+and no publication was attempted.
+
+## E-134: Acyclic backend-neutral close management
+
+`CloseManagementApplicationService` delegates the complete 11-method historical
+surface through a typed repository protocol with no database imports.
+`SQLiteCloseManagementRepository` retains authorization, periods, default and
+custom tasks, readiness, dependencies, lock/reopen, reads, audit effects, and
+transaction ownership. `CloseManagementService(connection)` is now a SQL-free
+compatibility facade.
+
+Two financial-control defects are now executable invariants. A recursive CTE
+rejects both self-dependencies and a proposed edge whose target already reaches
+the source. Reopen validates period existence and requires one updated row
+before committing audit evidence. Tests prove a rejected cycle leaves only the
+two valid edges and a missing period leaves the audit ledger empty.
+
+| Command/evidence | Result |
+| --- | --- |
+| Focused Ruff and mypy | Pass: three production modules |
+| Application/close/readiness/atomicity/inventory focus | Pass: 25 tests |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass: 261 source files in the current worktree |
+| `python -m bandit -q -r reconforge` | Pass: no findings; reviewed B608 notices remain visible |
+| Refreshed `python -m pytest -q` | Pass to 100%, exit code 0; declared environment skips and seven warning summaries remain visible |
+| `python -m build --no-isolation` | Pass: wheel and sdist |
+| Distribution membership inspection | Pass: application port, SQLite adapter, and compatibility facade present in both artifacts |
+| `git diff --check` | Pass; line-ending warnings only |
+
+This is local SQLite contract evidence. The existing PostgreSQL close adapter
+has a different route-oriented contract; backend convergence, concurrent task
+updates, and live database parity remain open. No publication was attempted.
+
+## E-135: Backend-neutral exact account reconciliation
+
+`AccountReconciliationApplicationService` delegates all 11 historical use cases
+through a typed repository protocol. The SQLite adapter retains strict Decimal
+parsing, canonical balance/materiality text, workflow state, SoD review,
+roll-forward, audit/outbox effects, reads, and transaction rollback. The
+Platform class is a SQL-free compatibility facade.
+
+| Command/evidence | Result |
+| --- | --- |
+| Application/account/atomicity/inventory focus | Pass: 29 tests |
+| Exact amount, workflow, SoD, CLI, schema, backup/restore regressions | Pass within the focused and full suites |
+| Forced audit during submit | Pass: business/workflow status remains Prepared and outbox count is unchanged |
+| Full repository gates | Pass in the E-136 refreshed run below |
+
+This is local SQLite contract evidence; PostgreSQL account parity is not proven.
+
+## E-136: Atomic backend-neutral evidence registry
+
+`EvidenceRegistryApplicationService` exposes registration, requirements, links,
+checksum verification, coverage, listing, retrieval, and governed drill-down
+through a connection-free port. A structural object-store contract supports the
+existing Local/S3 adapters without importing infrastructure into Application.
+
+Linked registration now appends its first audit/outbox effects without commit.
+The final registration audit owns the transaction commit. A synthetic failure
+on the second audit proves zero surviving rows in `evidence_registry`,
+`evidence_links`, `audit_events`, and `outbox_events`.
+
+| Command/evidence | Result |
+| --- | --- |
+| Application/storage/API/close/atomicity/inventory focus | Pass: 35 tests; one disclosed Starlette warning |
+| Extended account plus evidence focus | Pass: 44 tests; one disclosed Starlette warning |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass: 265 source files |
+| `python -m bandit -q -r reconforge` | Pass: no findings; reviewed B608 notices remain visible |
+| `python -m pytest -q` | Pass to 100%, exit code 0; declared environment skips and seven warning summaries remain visible |
+| `python -m build --no-isolation` | Pass: wheel and sdist |
+| Distribution membership inspection | Pass: account and evidence application/SQLite modules are present in both artifacts |
+| `git diff --check` | Pass; line-ending warnings only |
+
+PostgreSQL evidence adapter convergence, live object-store retention operation,
+and independent tamper validation remain separate gates. No publication was
+attempted.
+
+## E-137: Governed finance-core application boundary
+
+`FinanceCoreApplicationService` exposes all 18 historical use cases through an
+explicit typed protocol. `SQLiteFinanceCoreRepository` retains financial and
+transaction policy, while `FinanceCoreService(connection)` remains a SQL-free
+compatibility facade. A boundary test proves large fractional amount strings,
+workspace, and actor identity are passed without conversion and prohibits
+SQLite or Infrastructure imports from Application.
+
+The existing finance regression remains the primary invariant proof: balanced
+entries, currency precision, required dimensions, account cycles, periods,
+maker/checker validation, validated-entry immutability, void constraints,
+trial-balance exactness, database write locking, and forced integrity rollback.
+
+| Command/evidence | Result |
+| --- | --- |
+| Focused Ruff and mypy | Pass after extraction for the three production modules |
+| Application/finance/atomicity/API/CLI/inventory focus | Pass: 32 tests |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass: 269 source files |
+| `python -m bandit -q -r reconforge` | Pass: no findings; reviewed B608 notices remain visible |
+| `python -m pytest -q` | Pass to 100%, exit code 0; declared environment skips remain visible |
+| `python -m build --no-isolation` | Pass: wheel and sdist |
+| Distribution membership inspection | Pass: Application port, SQLite adapter, and facade in both artifacts |
+| `git diff --check` | Pass; line-ending warnings only |
+
+This is SQLite contract evidence, not PostgreSQL finance-core parity. No schema,
+migration, external service, or publication action is part of E-137.
+
+## E-138: Exact governed inventory-core application boundary
+
+`InventoryCoreApplicationService` exposes all 19 historical use cases through
+an explicit typed protocol. `SQLiteInventoryCoreRepository` retains quantity
+scaling and transaction policy, while `InventoryCoreService(connection)` is a
+SQL-free compatibility facade. Boundary tests prove large fractional quantity
+text, workspace, and actor identity pass unchanged and prohibit SQLite or
+Infrastructure imports from Application.
+
+Existing regressions continue to prove UOM scale, lot/serial tracking, period
+and movement direction, projected/negative stock, posting and void lifecycle,
+on-hand/control results, redacted database failures, audit/outbox rollback,
+planning, valuation, reversal, API, CLI, and backup compatibility.
+
+| Command/evidence | Result |
+| --- | --- |
+| Focused Ruff and mypy | Pass: three production modules |
+| Application/inventory/planning/valuation/reversal/atomicity/API/CLI focus | Pass: 79 tests; one disclosed Starlette warning |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass: 271 source files |
+| `python -m bandit -q -r reconforge` | Pass: no findings; reviewed B608 notices remain visible |
+| `python -m pytest -q` | Pass to 100%, exit code 0; declared environment skips remain visible |
+| `python -m build --no-isolation` | Pass: wheel and sdist |
+| Distribution membership inspection | Pass: Application port, SQLite adapter, and facade in both artifacts |
+| `git diff --check` | Pass; line-ending warnings only |
+
+This is SQLite contract evidence, not PostgreSQL inventory parity. No schema,
+migration, external service, or publication action is part of E-138.
+
+## E-139: Exact governed purchase-to-pay application boundary
+
+`PayablesApplicationService` exposes all 15 historical use cases through an
+explicit typed protocol. `SQLitePayablesRepository` retains financial,
+lifecycle, matching, exception, and transaction policy, while
+`PayablesService(connection)` is a SQL-free compatibility facade.
+
+Application tests prove large integer minor units and fractional quantity text
+pass unchanged with workspace/actor/idempotency context. Existing regressions
+prove supplier and PO/invoice lifecycles, optimistic versions, maker/checker,
+receipts, deterministic three-way match, idempotent replay, exception effects,
+backup/restore, API shapes, approval inventory, and audit/outbox rollback.
+
+| Command/evidence | Result |
+| --- | --- |
+| Focused Ruff and mypy | Pass: three production modules |
+| Application/payables/idempotency/API/approval focus | Pass: 37 tests; one disclosed Starlette warning |
+| File-ingestion/idempotency governance regression | Pass: 38 tests |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass: 273 source files |
+| `python -m bandit -q -r reconforge` | Pass: no findings; reviewed B608 notices remain visible |
+| `python -m pytest -q` | Pass to 100%, exit code 0; seven warning summaries and declared environment skips remain visible |
+| `python -m build --no-isolation` | Pass: wheel and sdist |
+| Distribution membership inspection | Pass: Application port, SQLite adapter, and facade in both artifacts |
+| `git diff --check` | Pass; line-ending warnings only |
+
+This is SQLite contract evidence, not PostgreSQL payables parity. No schema,
+migration, external service, or publication action is part of E-139.
+
+## E-140: Exact governed accounts-receivable application boundary
+
+`ReceivablesApplicationService` exposes all 13 historical use cases through an
+explicit typed protocol. `SQLiteReceivablesRepository` retains financial,
+credit, lifecycle, allocation, reporting, and transaction policy, while
+`ReceivablesService(connection)` is a SQL-free compatibility facade.
+
+Application tests prove large integer minor units, allocations, workspace,
+actor, idempotency, override reason, row version, and aging date pass unchanged.
+Existing regressions prove customer/invoice/receipt lifecycles, credit hold and
+limit behavior, maker/checker, allocations, exposure, aging, replay,
+backup/restore, API/CLI, approval inventory, and audit/outbox rollback.
+
+| Command/evidence | Result |
+| --- | --- |
+| Focused Ruff and mypy | Pass: three production modules |
+| Application/receivables/idempotency/API/approval/security focus | Pass: 42 tests; one disclosed Starlette warning |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass: 275 source files |
+| `python -m bandit -q -r reconforge` | Pass: no findings; reviewed B608 notices remain visible |
+| `python -m pytest -q` | Pass to 100%, exit code 0; seven warning summaries and declared environment skips remain visible |
+| `python -m build --no-isolation` | Pass: wheel and sdist |
+| Distribution membership inspection | Pass: Application port, SQLite adapter, and facade in both artifacts |
+| `git diff --check` | Pass; line-ending warnings only |
+
+This is SQLite contract evidence, not PostgreSQL receivables parity. No schema,
+migration, external service, or publication action is part of E-140.
+
+## E-141: Deterministic matching application boundary
+
+`MatchingApplicationService` exposes all six historical use cases through an
+explicit typed protocol. `SQLiteMatchingRepository` retains the indexed engine,
+persistence, job, evidence, and transaction policy, while
+`MatchingService(connection)` is a SQL-free compatibility facade.
+
+Application tests prove exact Decimal tolerance, normalization rules, record
+objects, identity policy, workspace, actor, and idempotency context cross the
+port unchanged. Existing regressions prove permutation stability, currency and
+strict-input behavior, range indexing, per-record/total candidate ceilings,
+deterministic ties, ambiguity, grouped permissions, lineage, rule JSON,
+exceptions, audit rollback, jobs, results, strategy contracts, and CLI-facing
+outputs.
+
+| Command/evidence | Result |
+| --- | --- |
+| Focused Ruff and mypy | Pass: three production modules |
+| Application/properties/budgets/range/strategy/platform/rule/security focus | Pass: 120 tests collected and executed |
+| Matching-rule/security/boundary regression | Pass: 24 tests |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass: 277 source files |
+| `python -m bandit -q -r reconforge` | Pass: no findings; reviewed B608 notices remain visible |
+| `python -m pytest -q` | Pass to 100%, exit code 0; seven warning summaries and declared environment skips remain visible |
+| `python -m build --no-isolation` | Pass: wheel and sdist |
+| Distribution membership inspection | Pass: Application port, SQLite adapter, and facade in both artifacts |
+| `git diff --check` | Pass; line-ending warnings only |
+
+This is SQLite contract evidence, not PostgreSQL matching execution parity. No
+schema, migration, external service, or publication action is part of E-141.
+
+## E-142: Governed inventory valuation application boundary
+
+`InventoryValuationApplicationService` exposes all eleven historical use cases
+through an explicit typed protocol. `SQLiteInventoryValuationRepositoryAdapter`
+retains schema, transaction, FIFO allocation, Finance-draft, audit, and outbox
+policy, while `InventoryValuationService(connection)` is a SQL-free facade.
+
+Application tests prove large integer minor-unit costs, immutable summaries,
+actor identity, and approval reason cross the port unchanged. Existing
+regressions prove policy/document lifecycle, FIFO and deterministic half-even
+allocation, maker-checker, balanced Finance drafts, reversal compatibility,
+API/CLI/backup behavior, approval inventory, and audit/outbox rollback.
+
+| Command/evidence | Result |
+| --- | --- |
+| Focused Ruff and mypy | Pass: production boundary modules |
+| Application/valuation/reversal/approval/inventory focus | Pass: 25 tests; one disclosed Starlette warning |
+| Repository boundary inventory | Pass: 0 direct, 2 partial, 18 compatibility, 24 Application |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass: 280 source files |
+| `python -m bandit -q -r reconforge` | Pass: no findings; reviewed B608 notices remain visible |
+| `python -m pytest -q` | Pass to 100%, exit code 0; seven warning summaries and declared environment skips remain visible |
+| `python -m build --no-isolation` | Pass: current 0.7.1 wheel and sdist |
+| Current distribution membership inspection | Pass: Application port, both SQLite modules, and both facades in wheel and sdist |
+| `git diff --check` | Pass; line-ending warnings only |
+
+This is SQLite contract evidence, not PostgreSQL valuation parity. No schema,
+migration, external service, or publication action is part of E-142.
+
+## E-143: Governed inventory valuation reversal application boundary
+
+`InventoryValuationReversalApplicationService` exposes all seven historical use
+cases through a typed port. The SQLite adapter retains compensating movement,
+layer, Finance draft, transaction, audit, and outbox policy; the Platform class
+is a SQL-free facade.
+
+Application tests prove original lineage, actor/reviewer context, approval
+reason, large integer minor units, and immutable summary output cross the port
+unchanged. Existing valuation/reversal regressions prove exact opposite
+movements, cost-layer restoration/removal, concurrency refusal, balanced
+reversing Finance drafts, maker-checker, API/CLI/backup, and tamper detection.
+
+| Command/evidence | Result |
+| --- | --- |
+| Focused application/valuation/reversal/approval/inventory suite | Pass: 25 tests; one disclosed Starlette warning |
+| Repository boundary inventory | Pass: 0 direct, 1 partial, 19 compatibility, 25 Application |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass: 283 source files |
+| `python -m bandit -q -r reconforge` | Pass: no findings; reviewed B608 notices remain visible |
+| `python -m pytest -q` | Pass to 100%, exit code 0; seven warning summaries and declared environment skips remain visible |
+| `python -m build --no-isolation` | Pass: current 0.7.1 wheel and sdist |
+| Current distribution membership inspection | Pass: Application port, both SQLite modules, and both facades in wheel and sdist |
+| `git diff --check` | Pass; line-ending warnings only |
+
+This is SQLite contract evidence, not PostgreSQL reversal parity. No publication
+action is part of E-143.
+
+## E-144: Inventory planning application boundary
+
+`InventoryPlanningApplicationService` exposes all thirteen historical count and
+reorder use cases through an explicit typed port. The SQLite adapter owns schema,
+transactions, quantity validation, adjustment movements, reorder calculation,
+audit, and outbox policy; the Platform class is a SQL-free facade.
+
+Application tests prove fractional quantity text, counter/checker identities,
+approval reason, and immutable summary output cross the port unchanged. Existing
+regressions prove count lifecycle, adjustments, maker-checker, reorder signals,
+API/CLI/backup, repository injection, redaction, and audit/outbox rollback.
+
+| Command/evidence | Result |
+| --- | --- |
+| Focused application/planning/approval/inventory suite | Pass: 17 tests; one disclosed Starlette warning |
+| Repository boundary inventory | Pass: 0 direct, 0 partial, 20 compatibility, 26 Application |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass: 286 source files |
+| `python -m bandit -q -r reconforge` | Pass: no findings; reviewed B608 notices remain visible |
+| `python -m pytest -q` | Pass to 100%, exit code 0; seven warning summaries and declared environment skips remain visible |
+| `python -m build --no-isolation` | Pass: current 0.7.1 wheel and sdist |
+| Current distribution membership inspection | Pass: Application port, both SQLite modules, and both facades in wheel and sdist |
+| `git diff --check` | Pass; line-ending warnings only |
+
+This closes the measured P1-PLAT-001 SQLite repository-contract exit evidence.
+It is not PostgreSQL parity. No publication action is part of E-144.
+
+## E-145: Exact PostgreSQL Application parity inventory
+
+`POSTGRES_PARITY_INVENTORY.yaml` covers the same exact 26-service set as the
+repository-boundary inventory. Tests require every claimed adapter class and
+test file to exist, every absent boundary to carry risk, and all summary counts
+to match. The claim language explicitly refuses to equate an available skipped
+live test or adapter filename with current runtime parity.
+
+| Status | Count |
+| --- | ---: |
+| live_verified_current | 0 |
+| live_test_available | 11 |
+| contract_only | 2 |
+| absent | 12 |
+| not_applicable | 1 |
+
+Six focused inventory tests pass. No `RECONFORGE_TEST_POSTGRES_*` environment
+configuration exists in this run, so P1-PLAT-002 remains open.
+
+## E-146 in progress: PostgreSQL Finance Core foundation
+
+Migration 0019 is linear after 0018 and loads an additive eight-table schema
+from `postgres_finance_core.py`. Focused tests prove exact table coverage,
+minor-unit `BIGINT` amounts without float storage, balanced-entry and one-sided
+line checks, closed Draft/Validated/Voided states, forced tenant RLS, and safe
+dependency-ordered downgrade. The existing Alembic tests also pass.
+
+The adapter implements all eighteen Application methods. Every operation uses a
+transaction-local tenant scope. Mutations preserve deterministic identity and
+write their outbox and audit evidence in the same transaction. Account cycles,
+referenced-master deactivation, currency mismatch, binary floats, excess
+currency precision, unbalanced or one-sided lines, missing required dimensions,
+self-validation, concurrent lifecycle transitions, and mutation of validated
+entries are explicitly refused. Trial-balance output is aggregated only from
+Validated entries using integer minor units.
+
+`python -m pytest tests/test_postgres_finance_core.py
+tests/test_postgres_parity_inventory.py -q -rs` passes fifteen focused tests and
+skips one declared live test because `RECONFORGE_TEST_POSTGRES_DSN` is absent.
+The optional test provisions two tenants under a non-superuser role and covers
+three-decimal KWD exactness, balanced Draft creation, maker-checker validation,
+Validated trial balance, transactional evidence, and cross-tenant invisibility.
+This makes Finance Core `live_test_available`, not `live_verified_current`.
+
+Locked completion gates after the adapter implementation:
+
+- `python -m ruff check .`: passed.
+- `python -m mypy reconforge`: passed across 287 source files.
+- `python -m bandit -q -r reconforge`: passed with no findings; declared
+  `nosec` warnings remain visible.
+- `python -m pytest`: 1516 passed, 21 declared environment skips, 7 warning
+  summaries, 238.12 seconds on CPython 3.14.6 / Windows.
+- `python -m build --no-isolation`: built wheel and sdist; both include
+  migration 0019 and the PostgreSQL Finance Core module.
+- `git diff --check`: passed with existing LF-to-CRLF warnings only.
+
+## E-149 in progress: PostgreSQL Payables aggregate
+
+Migration 0021 and `POSTGRES_PAYABLES_SCHEMA_SQL` cover all nine supplier,
+purchase-order, receipt, invoice, match, and idempotency tables. Tests prohibit
+floating storage, require BIGINT minor-unit columns, exact quantity text,
+tenant-qualified parent foreign keys, forced RLS, a linear migration, and
+child-first downgrade. The first three supplier operations execute under a
+transaction-local tenant scope; missing workspace rolls back before a supplier
+write.
+
+- Ruff passes on the new schema, migration, Alembic, and Payables tests.
+- mypy passes on the PostgreSQL Payables source.
+- Focused Payables/Alembic/parity-inventory tests pass; one live migration test
+  is declared skipped because no PostgreSQL DSN is configured.
+- `git diff --check` passes with line-ending warnings only.
+
+This is foundation evidence only. Payables remains absent from parity until all
+15 port signatures and lifecycle, matching, idempotency, evidence, and live RLS
+behavior are implemented.
+
+The second E-149 slice adds purchase-order and goods-receipt behavior. An exact
+signature test covers all nine implemented methods. Focused tests prove
+currency mismatch rolls back before an order write and a 13-decimal-place
+quantity is preserved exactly rather than rounded by a PostgreSQL typmod.
+Ruff, mypy, 20 Payables/Application/SQLite compatibility tests, and diff check
+pass. Invoice creation/lifecycle, deterministic three-way matching, invoice
+approval, invoice reads, and live non-superuser execution remain open.
+
+## E-149 completion: PostgreSQL Payables application parity
+
+All fifteen signatures now match `PayablesRepositoryProtocol`. The optional
+live test defines a complete supplier -> exact purchase order -> independent
+approval -> exact receipt -> supplier invoice -> submission -> passed
+three-way match -> independent approval lifecycle, then proves tenant B cannot
+read tenant A supplier or invoice data. It is skipped here because no live
+PostgreSQL DSN and non-superuser role are configured.
+
+Locked completion gates:
+
+- `python -m ruff check .`: passed.
+- `python -m mypy reconforge`: passed across 290 source files.
+- `python -m bandit -q -r reconforge`: passed with no findings; declared review
+  warnings remain visible.
+- `python -m pytest -q`: 1533 passed, 23 declared environment skips, and seven
+  warning summaries on CPython 3.14.6 / Windows.
+- `python -m build --no-isolation`: wheel and sdist built successfully.
+- Artifact inspection: PostgreSQL Payables adapter and migration 0021 are in
+  both distributions.
+- `git diff --check`: passed with existing LF-to-CRLF warnings only.
+
+This is `live_test_available`, not a current live pass.
+- Live PostgreSQL: blocked because no `RECONFORGE_TEST_POSTGRES_DSN` is
+  configured and Docker Desktop's Linux engine pipe is unavailable. This is
+  not counted as a live pass.
+
+## E-147: PostgreSQL Master Data application parity
+
+Inspection rejected a superficial Matching adapter because the deterministic
+algorithm and SQLite persistence remain physically interleaved. Master Data is
+the next shared dependency. `postgres_master_data_application.py` implements all
+thirteen current Application signatures while reusing the existing currency,
+organization, legal-entity, branch, and fiscal-period records. Migration 0020
+adds workspace identity and two forced-RLS ownership tables. Organization codes
+remain tenant-global for compatibility with existing PostgreSQL callers, while
+records are owned and read through exactly one workspace.
+
+Focused evidence passes Ruff, mypy, Bandit, sixteen tests, and records three
+declared PostgreSQL skips without a configured DSN. The new optional
+non-superuser test provisions two tenants and two workspaces per tenant,
+verifies same-name overlapping periods across workspaces, scoped organizations,
+summary counts, audit evidence, and cross-tenant invisibility. The parity
+inventory advances Master Data to `live_test_available`; no current-live claim
+is made.
+
+Locked completion evidence:
+
+- `python -m ruff check .`: passed.
+- `python -m mypy reconforge`: passed across 288 source files.
+- `python -m bandit -q -r reconforge`: passed with no findings and visible
+  declared `nosec` warnings.
+- `python -m pytest`: 1520 passed, 22 declared environment skips, 7 warning
+  summaries, 246.03 seconds on CPython 3.14.6 / Windows.
+- `python -m build --no-isolation`: wheel and sdist built and include migration
+  0020 plus the Master Data Application adapter.
+- `git diff --check`: passed with existing LF-to-CRLF warnings only.
+- Live PostgreSQL remains unexecuted because no DSN is configured; this is not
+  a live pass.
+
+## E-148 in progress: Matching currency-registry port
+
+The first extraction seam replaces the deterministic match path's direct
+currency-table lookup with the typed Application `CurrencyPrecisionResolver`
+port. SQLite remains the default compatibility implementation. An injected
+resolver can execute the calculation path without issuing a `FROM currencies`
+statement, while unknown currencies remain visible data-quality exceptions.
+
+- `python -m ruff check reconforge/application/matching.py
+  reconforge/infrastructure/sqlite_matching.py
+  tests/test_matching_currency_resolver_port.py`: passed.
+- `python -m mypy reconforge/application/matching.py
+  reconforge/infrastructure/sqlite_matching.py`: passed with no issues in two
+  source files.
+- `python -m pytest tests/test_matching_currency_resolver_port.py
+  tests/test_application_matching.py tests/test_matching_strategy_contract.py
+  -q`: 19 passed.
+- `git diff --check`: passed with existing LF-to-CRLF warnings only.
+
+This evidence does not claim a persistence-independent engine yet. The
+algorithm remains in `SQLiteMatchingRepository`; delegation/parity and the
+PostgreSQL reconciliation store are subsequent gates.
+
+## E-148 completion: one engine across local and hosted execution
+
+The deterministic implementation now resides in
+`reconforge/reconciliation/deterministic_engine.py`. AST guards prove that
+module imports neither `sqlite3` nor any Infrastructure module, and the hosted
+worker imports neither SQLite nor local migrations. A direct engine run equals
+SQLite delegation and remains equal after reversing both input orders.
+
+- Ruff passes across the Application contract, engine, SQLite adapter,
+  PostgreSQL worker, and new architecture/parity tests.
+- mypy passes across the four affected source modules.
+- The combined matching, input-policy, and PostgreSQL reconciliation test set
+  reaches 100%; one optional PostgreSQL service test remains declared skipped.
+- Legacy financial-input warnings remain visible only in explicit compatibility
+  tests.
+
+No migration is required. This is hosted execution binding, not complete
+six-method PostgreSQL `MatchingRepositoryProtocol` parity and not current-live
+PostgreSQL evidence.
+
+Locked repository evidence after E-148:
+
+- `python -m ruff check .`: passed.
+- `python -m mypy reconforge`: passed across 289 source files.
+- `python -m bandit -q -r reconforge`: passed with no findings; declared
+  manual-review warnings remain visible.
+- `python -m pytest -q`: reached 100%; only declared environment skips and
+  seven warning summaries remain.
+- `python -m build --no-isolation`: wheel and sdist built successfully.
+- Artifact inspection: `reconforge/reconciliation/deterministic_engine.py` is
+  present in both distributions.
+- BACKLOG YAML validation: passed.
+- `git diff --check`: passed with existing LF-to-CRLF warnings only.
+
+## E-150 completion: PostgreSQL Receivables application parity
+
+Migration 0022 and `PostgresReceivablesRepository` implement all thirteen
+signatures exactly. Six tenant-keyed forced-RLS tables preserve BIGINT
+minor-unit money and arbitrary-scale NUMERIC quantities with canonical text.
+Credit approval locks the customer before exposure calculation; allocation
+locks the receipt and invoice before outstanding and unallocated checks.
+Maker-checker, optimistic versions, final-record immutability, deterministic
+aging, safe idempotency, and audit/outbox writes share business transactions.
+
+- Focused Receivables/Application/API/CLI/Alembic/parity target: 23 passed and
+  two declared PostgreSQL skips.
+- `python -m ruff check .`: passed in 0.13 seconds.
+- `python -m mypy reconforge`: passed across 291 source files in 0.62 seconds.
+- `python -m bandit -q -r reconforge`: passed with zero findings in 5.96
+  seconds; existing declared manual-review warnings remain visible.
+- `python -m pytest -q -rs`: 1540 passed, 24 declared environment skips, seven
+  warning summaries, 210.59 seconds on CPython 3.14.6 / Windows.
+- `python -m build --no-isolation`: passed in 22.03 seconds; wheel and sdist
+  both contain the adapter and migration 0022.
+- `git diff --check`: passed in 0.12 seconds with existing LF-to-CRLF warnings.
+- The optional non-superuser lifecycle test covers exact 13-decimal quantity,
+  creator-approval refusal, approval, receipt allocation, outstanding balance,
+  aging, and cross-tenant invisibility. It did not execute because no
+  PostgreSQL DSN/application role is configured; maturity is therefore
+  `live_test_available`, not a current live pass.
+
+## E-151 completion: PostgreSQL Matching Application parity
+
+Migration 0023 supplies a forced-RLS tenant/workspace ownership link for the
+existing reconciliation runs. `PostgresMatchingRepository` implements the six
+Application signatures, uses bounded record ingress and the one deterministic
+engine, resolves currency precision from PostgreSQL, registers complete input
+fingerprints and trusted positions, appends all results/exceptions through the
+existing integrity verifier, and completes atomically. Runtime and architecture
+tests prove no SQLite dependency. Workspace identity is part of the run
+fingerprint, preventing cross-workspace idempotency replay.
+
+- Focused Matching/Application/engine/reconciliation/parity/Alembic target:
+  29 passed and three declared PostgreSQL skips; one explicit legacy-policy
+  warning remained visible.
+- `python -m ruff check .`: passed.
+- `python -m mypy reconforge`: passed across 292 source files.
+- `python -m bandit -q -r reconforge`: passed with zero findings in 6.09
+  seconds; existing declared manual-review warnings remained visible.
+- `python -m pytest -q -rs`: 1545 passed, 25 declared environment skips, seven
+  warning summaries, 208.44 seconds on CPython 3.14.6 / Windows.
+- `python -m build --no-isolation`: passed in 22.10 seconds; wheel and sdist
+  both contain the adapter and migration 0023.
+- `git diff --check`: passed in 0.11 seconds with existing LF-to-CRLF warnings.
+- The optional non-superuser lifecycle test covers exact matching, complete
+  persisted job/results, workspace ownership, idempotency, and cross-tenant
+  invisibility. It did not execute because no PostgreSQL DSN/application role
+  is configured; maturity is `live_test_available`, not current-live.
+
+## E-152 in progress: PostgreSQL Inventory Core storage
+
+Protocol inspection on 2026-07-28 found 19 repository operations (not the
+previously recorded 18). The first ten PostgreSQL operations now cover UOM,
+item, warehouse, hierarchical-location, and lot/serial upsert/list behavior.
+Draft creation/read validates complete input before atomic header/line
+replacement. Post/void/list use sorted advisory transaction locks to serialize
+affected location/item/lot and serial keys
+before projected-balance validation. On-hand, deterministic control exceptions,
+bounded summary, and snapshot complete all nineteen operations. Focused evidence
+is 12 passed and 2 declared PostgreSQL environment skips across Inventory Core,
+its Application contract, and Alembic tests, with Ruff and mypy green.
+
+Migration 0024 defines seven tenant-keyed forced-RLS tables for units, items,
+warehouses, hierarchical locations, lots/serials, governed movements, and exact
+scaled movement lines. Composite foreign keys prevent cross-tenant parents;
+BIGINT quantity plus explicit 0-6 precision avoids floating point. Database
+guards enforce Draft-only line mutation, valid posting directions and metadata,
+Draft-to-Posted-to-Voided lifecycle, final header immutability, and safe void
+metadata. Downgrade is child-first.
+
+- Ruff and mypy pass for the new runtime and migration boundary.
+- Focused schema/Application/Alembic target: twelve passed and two declared live
+  PostgreSQL skips.
+- BACKLOG YAML validation and `git diff --check` pass; existing line-ending
+  warnings remain visible.
+- Approved-valuation dependency integration, packaging/full gates, and current
+  live execution remain open. Inventory Core implements all nineteen signatures and is
+  `live_test_available`; current live verification remains unproven.
+
+Locked E-152 gates on 2026-07-28:
+
+- `python -m ruff check .`: passed.
+- `python -m mypy reconforge`: passed over 293 source files.
+- `python -m pytest -q --disable-warnings`: passed all runnable tests; 1,581
+  tests collected, with 1,555 passed and 26 declared environment skips.
+- `python -m bandit -q -r reconforge`: zero findings after replacing five
+  static active/locking query variants that Bandit conservatively flagged.
+- `python -m pip_audit`: no known third-party vulnerabilities; the local
+  `reconforge-erp` distribution is correctly reported as unavailable on PyPI.
+- `python -m build --no-isolation`: wheel and sdist built successfully and both
+  include the Inventory Core adapter and migration 0024.
+- Execution YAML validation and `git diff --check`: passed; existing line-ending
+  warnings remain visible.
+
+## E-164: Phase 1 exit audit
+
+`docs/execution/PHASE_1_EXIT_AUDIT.yaml` records all ten normative Platform
+Foundation tasks and the backend-neutrality, durable-execution, and
+secure-operations gates as verified. Its regression test binds those claims to
+the normative phase matrix, completed backlog states, 26 backend-neutral
+Application services, zero direct/partial SQLite boundaries, the 25-boundary
+unskipped PostgreSQL gate, and three verified current recovery cells.
+
+| Gate | Result |
+| --- | --- |
+| Phase 1 exit, execution-contract, recovery-matrix, repository and PostgreSQL inventory tests | Passed: 14 tests |
+| Ruff for the new audit regression | Passed |
+| mypy for the new audit regression | Passed |
+| Execution YAML parsing | Passed |
+
+Enterprise HA and Regulated air-gap cells remain planned and keep the overall
+recovery matrix partial. E-164 closes only Phase 1; it does not authorize
+publication or establish production readiness, compliance, certification, or
+external assurance.
+
+## E-165: Phase 2 exit audit
+
+The machine-readable audit matches all eighteen normative Phase 2 task IDs and
+all four required gate IDs. It checks completed backlog state and existence of
+each file-backed evidence reference. The performance verifier reads the retained
+suite and profile files, verifies exact byte counts and SHA-256 values, and
+requires 10K/100K record counts, environment identity, CPU/runtime/peak-memory,
+candidate counts, and deterministic signatures.
+
+| Gate | Result |
+| --- | --- |
+| Phase 2 focused matching, evidence, Reconciliation-as-Code, API, object storage, and benchmark regressions | Passed: 104 tests |
+| Ruff for Phase 2 audit regression | Passed |
+| mypy for Phase 2 audit regression | Passed |
+
+The result remains bounded to the published local profiles and application
+contracts. No publication action occurred.
+
+## E-166: Provider-neutral federation policy boundary
+
+The new boundary contains no JWT, XML, signature or key parser. A verifier port
+returns a closed assertion only after a future library adapter verifies it.
+ReconForge applies its own exact trust, time, correlation, replay, mapping,
+air-gap and audit rules without persisting or logging provider payloads.
+
+| Gate | Result |
+| --- | --- |
+| OIDC/SAML policy, invalid issuer/audience/signature/algorithm/nonce/time, replay, SAML request correlation, role overgrant, air-gap and sanitization | Passed: 13 tests |
+| Ruff | Passed after combining the bounded not-before check |
+| mypy | Passed after narrowing the test protocol type |
+| Targeted Bandit | Zero findings |
+
+This is an Application-policy slice, not functioning SSO. Cryptographic adapters,
+durable persistence, logout and API/session integration remain required.
+
+## E-167: Real static-JWKS OIDC verification
+
+The adapter uses joserfc 1.7.4 from the locked optional federation profile. Tests
+generate an RSA-2048 key, sign compact RS256 ID Tokens, export only the public
+JWK, and verify through the production adapter.
+
+| Gate | Result |
+| --- | --- |
+| Real RS256 plus invalid issuer/audience/nonce/expiry/future-issued-at, wrong key, HS/RS confusion, azp, jku, private JWKS and duplicate kid | Passed: 9 tests |
+| OIDC adapter plus Federation policy | Passed: 22 tests |
+| Ruff and mypy | Passed |
+| Targeted Bandit | Zero findings |
+| pip-audit after lock update | No known third-party vulnerabilities; local package unavailable on PyPI |
+
+No discovery request, provider secret, raw token persistence, login route, SAML,
+session binding, logout, commit, push, PR or publication occurred.
+
+## E-168: Strict real-signature SAML verification
+
+Tests generate a synthetic RSA-2048 key and X.509 IdP certificate, build a SAML
+2.0 Response/Assertion, sign the Response with RSA-SHA256 through python3-saml,
+and verify through the production adapter and xmlsec.
+
+| Gate | Result |
+| --- | --- |
+| Real signed SAML success plus wrong issuer/audience/request, tamper, wrong certificate and unsafe endpoint cases | Passed: 6 tests |
+| Federation policy plus OIDC plus SAML | Passed: 28 tests |
+| Ruff and mypy | Passed |
+| Targeted Bandit | Zero findings; comment-parser warnings only |
+| pip-audit on 118-package lock | No known third-party vulnerabilities; local package unavailable on PyPI |
+
+The toolkit emits an internal timezone-naive `utcnow()` deprecation warning on
+Python 3.14; this is monitored and not hidden. No provider secret, customer data,
+login route, session, logout, commit, push, PR or publication occurred.
+
+## E-163: Current-live PostgreSQL contract and recovery gate
+
+Environment: Docker Engine 29.6.2; digest-pinned PostgreSQL 17.10 Alpine
+`sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193`;
+fresh synthetic database; non-superuser `reconforge_app`; CPython 3.14.6 for
+the Application/migration gate and CPython 3.12 Alpine with PostgreSQL 17 native
+clients for the backup/restore gate.
+
+| Gate | Result |
+| --- | --- |
+| Inventory-derived 25-boundary Application tests plus isolated Alembic upgrade/downgrade/re-upgrade | Passed: 140 tests, zero skipped live boundaries |
+| Encrypted native backup, authenticated artifact identity, random isolated restore, Alembic/ReconForge schema verification, exact cleanup | Passed: 1 test |
+| Fresh Alembic 0001 through 0033 migration | Passed |
+
+The live run found and regression-covered PL/pgSQL execution escaping, one SQL
+syntax defect, overlong Alembic revision identifiers, stale migration-head
+metadata, incompatible tuple/mapping rows, missing domain defaults,
+nondeterministic account-history order, inventory planning/valuation SQL defects,
+stale metrics schemas, and shared-database migration-test coupling. The Team
+single-node cell is verified; HA, host loss, KMS, air gap, cross-version restore,
+scheduled retention, and measured RPO/RTO remain unproven. No publication
+action occurred.
+
+## E-162: PostgreSQL backup and isolated restore live contract
+
+The existing Application port and native adapter retain exact create/restore
+signatures, deny-by-default permissions, conservative service/database names,
+absolute ordinary native tools, shell-free bounded execution, custom dump
+format, AES-256-GCM, authenticated header metadata, restore-list validation,
+new-database-only restore, schema verification, and tested rollback.
+
+E-162 removes the separate pre-read artifact digest. The restore outcome now
+hashes the stored magic/header, ciphertext chunks, and GCM tag in order while
+processing the authenticated envelope, and is returned only after both GCM and
+plaintext digest/size verification succeed. The focused round-trip asserts that
+create and restore identify the same artifact bytes.
+
+| Evidence | Result |
+| --- | --- |
+| PostgreSQL backup/application/inventory/matrix/execution focus | 15 passed, 1 declared live-service skip |
+| Live native-adapter contract | Available; skipped because disposable source and maintenance services are not configured |
+| PostgreSQL parity inventory | 25 live-test-available, 0 contract-only, 0 absent, 1 not-applicable |
+| `python -m ruff check .` | Pass |
+| `python -m mypy reconforge` | Pass over 301 source files |
+| Full `python -m pytest -q -rs` | Pass to 100%; 36 declared environment/service skips and 7 warning summaries |
+| `python -m bandit -q -r reconforge` | Pass with zero findings; reviewed suppression notices remain visible |
+| `python -m pip_audit` | No known third-party vulnerabilities; local project unavailable on PyPI |
+| `python -m build --no-isolation` | Pass; 939,334-byte wheel and 1,242,418-byte sdist; both contain the PostgreSQL backup adapter |
+| Execution YAML and `git diff --check` | Pass; pre-existing line-ending warnings only |
+| Publication | None; no commit, push, PR, tag, or release |
+
+This closes test-path availability, not current execution. It does not prove
+production service-file custody, managed keys, scheduled immutable storage,
+host-loss or HA recovery, cross-version restoration, air-gap procedures, or
+measured RPO/RTO. The current Team PostgreSQL matrix cell was therefore
+corrected from stale `verified` at Alembic 0015 to honest `partial` at current
+Alembic 0033. The broader Phase 1 exit audit remains next.
+
+## E-155: PostgreSQL inventory planning contract
+
+Migration 0027 defines three tenant-qualified forced-RLS tables for governed
+count sessions, immutable count lines, and exact reorder rules. Database guards
+enforce lifecycle metadata, complete submission, maker-checker approval, and an
+exact zero-or-one Draft Adjustment contract. Each non-zero variance must map to
+one movement line with matching item, UOM, lot, precision, absolute quantity,
+and inbound/outbound location direction. Approved adjustment movement evidence
+cannot be altered or voided; normal Draft-to-Posted movement approval remains
+available. ADR 0160 records that reorder outputs are advisory only.
+
+- All thirteen Application signatures are implemented by the PostgreSQL adapter.
+  Approval serializes a location snapshot, revalidates posted stock, enforces
+  maker-checker, generates an exact Draft Adjustment for non-zero variances, and
+  commits audit/outbox evidence atomically. Reorder controls remain exact scaled
+  integers and bounded deterministic reads make no external calls.
+- Focused planning/Alembic/parity evidence passes; the optional live tests are
+  declared skipped because no PostgreSQL DSN and non-superuser role are configured.
+- The complete optional non-superuser lifecycle covers a 2.500 KG receipt, a
+  2.000 KG approved count, exact -0.500 KG Draft Adjustment evidence, self-approval
+  rejection, a deterministic 2.500 KG reorder suggestion, and cross-tenant
+  invisibility.
+- Inventory Planning is `live_test_available`, not `live_verified_current`.
+  Parity is now 18 available, 2 contract-only, 5 absent, and 1 not-applicable.
+
+Locked E-155 gates on 2026-07-28:
+
+- `python -m ruff check .`: passed.
+- `python -m mypy reconforge`: passed over 296 source files.
+- `python -m pytest -q`: passed to 100% with only declared environment-service
+  skips and seven expected warning summaries; no retry was used.
+- `python -m bandit -q -r reconforge`: passed with zero findings; existing
+  reviewed suppression notices remain visible.
+- `python -m pip_audit`: no known third-party vulnerabilities; local
+  `reconforge-erp` is not available on PyPI and was explicitly unaudited.
+- `python -m build --no-isolation --outdir <new temporary directory>`: passed;
+  wheel 904,510 bytes and sdist 1,206,471 bytes. Both artifacts contain
+  `postgres_inventory_planning.py` and migration 0027.
+- Execution YAML parsing and `git diff --check`: passed; pre-existing line-ending
+  warnings remain visible. No commit, push, pull request, or publication occurred.
+
+## E-157: PostgreSQL approval and certification metadata contract
+
+Migration 0029 defines tenant-qualified forced-RLS approval-request and
+certification-metadata tables. Database guards independently require complete
+Submitted metadata, one-way final decisions, immutable submission evidence,
+requester/checker separation on approval, a reason on rejection, an empty
+override reason, Prepared-before-Reviewed certification, distinct preparer and
+reviewer, and immutable final history.
+
+All eight Application signatures are implemented. Successful submission,
+approval, rejection, preparation, and review mutations lock their aggregate and
+write tenant-scoped audit/outbox evidence atomically. Request and certification
+lists are deterministically ordered and capped at 10,000 records; no external
+call or target financial-object mutation occurs. The optional non-superuser test
+covers self-approval refusal, override refusal, independent approval, requester
+withdrawal by reasoned rejection, certification SoD, six audit/outbox effects,
+and cross-tenant invisibility. It skips without PostgreSQL credentials.
+
+Focused adapter/Application/Alembic/SoD/inventory evidence passes with only two
+declared PostgreSQL service skips. Ruff, mypy, and targeted Bandit pass.
+Approvals is `live_test_available`, not `live_verified_current`; parity is now
+20 available, 2 contract-only, 3 absent, and 1 not-applicable. Delegation, legal
+signature, compliance certification, and current-live behavior remain unclaimed.
+Locked E-157 gates on 2026-07-28:
+
+- `python -m ruff check .`: passed.
+- `python -m mypy reconforge`: passed over 298 source files.
+- `python -m pytest -q`: passed to 100% with only declared environment-service
+  skips and seven expected warning summaries; no retry was used.
+- `python -m bandit -q -r reconforge`: passed with zero findings; existing
+  reviewed suppression notices remain visible.
+- `python -m pip_audit`: no known third-party vulnerabilities; local
+  `reconforge-erp` is not available on PyPI and was explicitly unaudited.
+- `python -m build --no-isolation --outdir <new temporary directory>`: passed;
+  wheel 917,455 bytes and sdist 1,220,462 bytes. Both artifacts contain
+  `postgres_approvals.py` and migration 0029.
+- Execution YAML parsing and `git diff --check`: passed; pre-existing line-ending
+  warnings remain visible. No commit, push, pull request, or publication occurred.
+
+## E-161: PostgreSQL Outbox Application semantic parity
+
+The tenant-bound adapter already matched all five repository signatures. E-161
+closes the recorded behavioral gaps: migration 0033 adds a real
+`dead_lettered_at`, Dead transitions set it, replay clears it, and the shared
+event model receives the stored value. Application `pending` now includes both
+Pending and Claimed rows, matching SQLite's unpublished/non-dead semantics.
+
+The additive database guard freezes event type, aggregate identity, payload,
+and creation time. Pending must have no lease/publish/dead metadata; Claimed
+requires an exclusive owner and lease; Published requires only its publish
+timestamp; and newly transitioned Dead rows require only a dead-letter
+timestamp. Historical Dead rows are not backfilled with a fabricated time.
+Claims remain bounded, tenant-scoped, deterministically ordered, and use
+`FOR UPDATE SKIP LOCKED`; publish/failure requires the owning worker. Payload
+decoding remains canonical and bounded. External delivery is explicitly
+at-least-once and consumers must use the event ID idempotently.
+
+Focused repository, Application orchestration, SQLite delivery, worker,
+payload-governance, ledger, Alembic, schema guard, dead timestamp, and semantic
+pending tests pass with declared service skips. Ruff, mypy, and targeted Bandit
+pass. The optional live non-superuser lifecycle installs the complete schema,
+has two workers claim disjoint rows, proves pending includes both leases,
+dead-letters with a real timestamp, replays and publishes, and proves RLS. It
+skips without configured PostgreSQL credentials. Outbox is therefore
+`live_test_available`, not `live_verified_current`; parity is 24 available,
+1 contract-only, 0 absent, and 1 not-applicable.
+
+Locked local gates completed without retry:
+
+- `python -m pytest`: 1,600 passed, 35 declared service/environment skips,
+  7 expected warning summaries, 0 failures in 203.67 seconds.
+- `python -m ruff check .`: passed.
+- `python -m mypy reconforge`: passed over 301 source files.
+- `python -m bandit -q -r reconforge`: passed with zero findings; reviewed
+  suppression notices remain visible.
+- `python -m pip_audit`: no known third-party vulnerabilities; the local
+  `reconforge-erp` distribution is not on PyPI and was explicitly unaudited.
+- `python -m build --no-isolation --outdir <fresh temporary directory>`:
+  passed; wheel 939,310 bytes and sdist 1,241,718 bytes. Direct archive
+  inspection confirms both the adapter and migration 0033 are included.
+- Execution YAML parsing, one-contract-only assertion, summary arithmetic,
+  and `git diff --check`: passed; pre-existing line-ending warnings remain
+  visible. No commit, push, pull request, or publication occurred.
+
+No exactly-once transport, broker durability, external publisher availability,
+supported throughput, commit, push, pull request, or publication claim is made.
+
+## E-160: Contract-compatible PostgreSQL exception queue
+
+Migration 0032 defines tenant/workspace exception records plus append-only
+transition history under forced RLS. Database guards retain records, freeze
+workspace/source/creator identity, reject history mutation, and verify every
+inserted transition's resulting status and owner against the current queue row.
+Child-first rollback removes history before records and the guard function.
+
+All six Application signatures match exactly. Upsert retains the stable source
+identity while updating queue attributes. Assignment and status updates lock the
+record. Bulk input is bounded to 1,000 unique non-empty identifiers, rejects a
+plain string, deterministically locks every target before the first mutation,
+and rolls back as one transaction when any target is missing. Each per-record
+effect appends history, while the aggregate audit/outbox identity includes the
+resulting row versions so repeat requests cannot suppress a new outbox event.
+List and history reads cap at 10,000; statuses, risk, SLA dates, identifiers,
+owners, dimensions, actors, and descriptions are validated or bounded.
+
+Focused adapter, Application, Alembic, validation, atomicity, history,
+idempotency, and security tests pass with declared live-service skips. Ruff,
+mypy, and targeted Bandit pass. The optional non-superuser lifecycle installs
+the prerequisite schemas, creates isolated workspaces, creates two exceptions,
+assigns and bulk-updates them, verifies transition history, and proves
+cross-tenant invisibility; it skips without configured PostgreSQL credentials.
+Exceptions is therefore `live_test_available`, not `live_verified_current`.
+Measured parity is 23 available, 2 contract-only, 0 absent, and 1 not-applicable.
+
+Locked local gates completed without retry:
+
+- `python -m pytest`: 1,599 passed, 34 declared service/environment skips,
+  7 expected warning summaries, 0 failures in 203.71 seconds.
+- `python -m ruff check .`: passed.
+- `python -m mypy reconforge`: passed over 301 source files.
+- `python -m bandit -q -r reconforge`: passed with zero findings; reviewed
+  suppression notices remain visible.
+- `python -m pip_audit`: no known third-party vulnerabilities; the local
+  `reconforge-erp` distribution is not on PyPI and was explicitly unaudited.
+- `python -m build --no-isolation --outdir <fresh temporary directory>`:
+  passed; wheel 938,116 bytes and sdist 1,240,158 bytes. Direct archive
+  inspection confirms both the adapter and migration 0032 are included.
+- Execution YAML parsing, zero-absent assertion, summary arithmetic, and
+  `git diff --check`: passed; pre-existing line-ending warnings remain visible.
+  No commit, push, pull request, or publication occurred.
+
+The v1 contract has no reason/comment, accepted-risk approval, escalation-event,
+business-calendar SLA, or maker-checker parameters. This slice does not invent
+those claims; an additive workflow contract is required. Zero absent inventory
+entries does not establish Phase 1 exit or production readiness. No commit,
+push, pull request, or publication occurred.
+
+## E-159: Contract-compatible PostgreSQL evidence registry
+
+Migration 0031 defines separate tenant/workspace registry, append-only link,
+and requirement tables under forced RLS. It preserves the historical
+tenant-wide PostgreSQL evidence repository and migration 0008. Registry rows
+carry a lowercase SHA-256 constraint, explicit local/object storage mode,
+tenant/key/version metadata, retention, governance status, and immutable
+artifact identity. Links reject update and deletion; rollback is child-first.
+
+All eight Application signatures match exactly. Registration hashes the
+resolved input file, requires explicit object-store configuration, validates
+the storage tenant, verifies returned bytes and provider checksum, and checks an
+existing immutable identity before any upload. Same-identity retries avoid a
+second upload. Requirements and links are workspace bound. Verification reads
+the configured backend and emits checksum evidence. Coverage, list, link scans,
+reverse traversal, depth, node count, page size, and offset are bounded;
+sensitive paths/checksums/storage references are redacted by default.
+
+Focused Application, new adapter, legacy PostgreSQL evidence, Alembic, parity,
+object-store ordering, security, and migration tests pass with declared live
+service skips. Ruff, mypy, and targeted Bandit pass. The optional live test
+installs prerequisite schemas, uses a non-superuser role, registers and verifies
+a real temporary file, links and drills down, and tests cross-tenant invisibility;
+it skips without configured PostgreSQL credentials. Evidence is therefore
+`live_test_available`, not `live_verified_current`; parity is 22 available,
+2 contract-only, 1 absent, and 1 not-applicable.
+
+Locked local gates completed without retry:
+
+- `python -m pytest`: 1,595 passed, 33 declared service/environment skips,
+  7 expected warning summaries, 0 failures in 205.53 seconds.
+- `python -m ruff check .`: passed.
+- `python -m mypy reconforge`: passed over 300 source files.
+- `python -m bandit -q -r reconforge`: passed with zero findings; reviewed
+  suppression notices remain visible.
+- `python -m pip_audit`: no known third-party vulnerabilities; the local
+  `reconforge-erp` distribution is not on PyPI and was explicitly unaudited.
+- `python -m build --no-isolation --outdir <fresh temporary directory>`:
+  passed; wheel 932,483 bytes and sdist 1,235,253 bytes. Direct archive
+  inspection confirms both the adapter and migration 0031 are included.
+- Execution YAML summary arithmetic and parsing plus `git diff --check`:
+  passed; pre-existing line-ending warnings remain visible. No commit, push,
+  pull request, or publication occurred.
+
+An object-store upload and PostgreSQL commit are not a distributed transaction.
+New objects use content-addressed keys by default, but deployment lifecycle
+cleanup remains responsible for an orphan candidate if a database commit fails
+after a successful provider write. No signature, WORM, legal-retention,
+non-repudiation, commit, push, pull-request, or publication claim is made.
+
+## E-158: Contract-compatible PostgreSQL close management
+
+Migration 0030 adds three explicitly named tenant/workspace Close Application
+tables under forced RLS while preserving the historical PostgreSQL
+organization/fiscal-period tables and API. Database guards require valid
+Open/Locked/Reopened transitions, complete actor evidence, exact 100 readiness
+and complete tasks for locking, a reason for reopening, immutable locked scope,
+exclusive blocker reasons, immutable task identity, one-period dependencies,
+and an acyclic dependency graph.
+
+All eleven Application signatures are implemented. Workspace advisory locking
+serializes overlap checks; deterministic IDs and default tasks remain local-first.
+The adapter computes exact two-decimal readiness from integer counts, blocks
+task completion behind incomplete dependencies, locks only at 100.00, and writes
+audit/outbox evidence atomically. Lists are deterministically ordered and capped
+at 10,000. The optional non-superuser test covers overlap rejection, transitive
+cycle rejection, C-before-B-before-A completion, readiness 100.00, lock-time task
+immutability, reasoned reopen, twelve audit/outbox effects, and cross-tenant
+invisibility; it skips without PostgreSQL credentials.
+
+Focused new-adapter, legacy-PostgreSQL, Application, SQLite, Alembic, exact-score,
+and security tests pass with two declared service skips. Ruff, mypy, and targeted
+Bandit pass. Close is `live_test_available`, not `live_verified_current`; parity
+is now 21 available, 2 contract-only, 2 absent, and 1 not-applicable. The close
+lock is ReconForge workflow metadata, not a source-ERP or statutory close.
+
+Locked local gates completed without retry:
+
+- `python -m pytest`: 1,590 passed, 32 declared service/environment skips,
+  7 expected warning summaries, 0 failures in 203.32 seconds.
+- `python -m ruff check .`: passed.
+- `python -m mypy reconforge`: passed over 299 source files.
+- `python -m bandit -q -r reconforge`: passed with zero findings; reviewed
+  suppression notices remain visible.
+- `python -m pip_audit`: no known third-party vulnerabilities; the local
+  `reconforge-erp` distribution is not on PyPI and was explicitly unaudited.
+- `python -m build --no-isolation --outdir <fresh temporary directory>`:
+  passed; wheel 924,582 bytes and sdist 1,226,965 bytes. Build output confirms
+  both `postgres_close_application.py` and migration 0030 are included.
+- Execution YAML parsing and `git diff --check`: passed; pre-existing
+  line-ending warnings remain visible. No commit, push, pull request, or
+  publication occurred.
+
+## E-156: PostgreSQL account-reconciliation contract
+
+Migration 0028 defines five tenant-qualified forced-RLS tables for templates,
+source rows, reconciliation records, support items, and append-only transition
+evidence. PostgreSQL NUMERIC and canonical decimal text preserve arbitrary-scale
+exact inputs including the compatibility currency `LOCAL`; no floating-point
+financial column exists. Database guards independently enforce the exact Draft,
+Prepared, In Review, Reviewed, Complete lifecycle, actor evidence, preparer and
+reviewer separation, Draft-only financial changes, item immutability after
+preparation, completed-record immutability, and transition-history consistency.
+
+All eleven Application signatures are implemented. Trial-balance import uses
+the bounded record-document ingress and records checksum, safe filename, row,
+size, and profile lineage before atomic reconciliation creation. Templates,
+reconciliation creation, transition paths, deterministic zero-balance
+roll-forward, filters, details, audit, and outbox are tenant-scoped and perform
+no external calls. The optional non-superuser test covers an exact
+`125000.250000000000001` balance, exact materiality, SoD rejection, four
+transition records, roll-forward, audit/outbox counts, and cross-tenant
+invisibility; it is declared skipped without PostgreSQL credentials.
+
+Focused adapter/application/Alembic evidence passes with only the two declared
+PostgreSQL service skips. Accounts is `live_test_available`, not
+`live_verified_current`; parity is now 19 available, 2 contract-only, 4 absent,
+and 1 not-applicable.
+
+Locked E-156 gates on 2026-07-28:
+
+- `python -m ruff check .`: passed.
+- `python -m mypy reconforge`: passed over 297 source files.
+- `python -m pytest -q`: passed to 100% with only declared environment-service
+  skips and seven expected warning summaries; no retry was used.
+- `python -m bandit -q -r reconforge`: passed with zero findings; existing
+  reviewed suppression notices remain visible.
+- `python -m pip_audit`: no known third-party vulnerabilities; local
+  `reconforge-erp` is not available on PyPI and was explicitly unaudited.
+- `python -m build --no-isolation --outdir <new temporary directory>`: passed;
+  wheel 912,790 bytes and sdist 1,216,125 bytes. Both artifacts contain
+  `postgres_accounts.py` and migration 0028.
+- Execution YAML parsing and `git diff --check`: passed; pre-existing line-ending
+  warnings remain visible. No commit, push, pull request, or publication occurred.
+
+## E-154 in progress: PostgreSQL inventory valuation reversal storage
+
+Migration 0026 defines tenant-qualified reversal and immutable layer-effect
+tables with exact BIGINT minor values/scaled quantities and forced RLS. Guards
+require Draft-only creation, maker/checker-ready final metadata, an Approved
+original, a separately Posted mirror movement, complete exact effects, and a
+balanced Finance Draft. Approved reversal movement and Finance evidence are
+protected, while the cost-layer equation includes immutable Restore/Remove
+effects. Downgrade deletes children first and reinstalls migration 0025's layer
+guard. ADR 0159 records the compensation-only design.
+
+- Focused schema/Alembic target: six passed and one declared live PostgreSQL
+  migration skip.
+- Ruff and mypy pass for the new source/migration/tests; targeted Bandit reports
+  zero findings.
+- All seven protocol operations are implemented. Draft preparation validates an
+  Approved original, active-workflow uniqueness, Open-period Posted mirror
+  movement, exact swapped locations/quantities, scope, type, date, and currency.
+  Approval enforces maker-checker, advisory and row locks, cumulative layer
+  bounds, complete immutable effects, a debit/credit-and-dimension mirrored
+  Finance Draft, audit, and outbox in one transaction. Cancellation and bounded
+  reads/summary/snapshot are present.
+- Combined Application/schema/Alembic evidence is thirteen passed with one
+  declared migration-service skip; Ruff, mypy, and targeted Bandit are green.
+- A complete optional non-superuser lifecycle/RLS test now proves Draft
+  cancellation and active-key reuse, maker-checker refusal/approval, an exact
+  2.500 KG / 12.34 USD Remove effect, zero residual layer, a mirrored Finance
+  Draft, exclusion of the compensating movement from normal valuation and
+  unvalued counts, protected movement voiding, bounded summaries, and
+  cross-tenant invisibility. It skips without PostgreSQL credentials.
+- E-154 is therefore `live_test_available`, not a current-live claim. The parity
+  inventory is now 17 available, 2 contract-only, 6 absent, and 1 not-applicable;
+  locked full gates remain.
+
+Locked E-154 gates on 2026-07-28:
+
+- `python -m ruff check .`: passed.
+- `python -m mypy reconforge`: passed over 295 source files.
+- `python -m pytest -q --disable-warnings`: all runnable tests passed; only
+  declared service/browser/platform skips remain. The focused E-154 dependency
+  target is 35 passed with four declared PostgreSQL skips.
+- `python -m bandit -q -r reconforge`: zero findings.
+- `python -m pip_audit`: no known third-party vulnerabilities; the local
+  `reconforge-erp` package is correctly unavailable on PyPI.
+- `python -m build --no-isolation`: wheel and sdist built successfully and both
+  include migration 0026 and the PostgreSQL reversal adapter.
+- Execution YAML validation and `git diff --check`: passed; existing line-ending
+  warnings remain visible.
+
+## E-153 in progress: PostgreSQL FIFO inventory valuation storage
+
+Migration 0025 and `POSTGRES_INVENTORY_VALUATION_SCHEMA_SQL` define six
+tenant-keyed forced-RLS tables. Exact `BIGINT` minor values and scaled quantities
+avoid binary floating point. Database guards require Draft-only detail changes,
+a Posted movement and balanced Finance draft for approval, immutable final
+headers/lines/consumptions, and cost-layer balances equal to accumulated
+immutable consumption records. Initial schema/Alembic evidence was six passed
+and one declared live migration skip; storage alone did not change maturity.
+
+Seven adapter operations now cover policy and Draft document governance. The
+adapter validates active workspace scope, journal/chart/currency alignment,
+posting-enabled accounts, unsupported required dimensions, Posted non-Transfer
+movements, inventory-account chart alignment, and exact inbound input costs.
+Focused evidence is eight passed and one declared live migration skip; Ruff,
+mypy, targeted Bandit, and diff checking pass. Approval/layer/reporting behavior
+remains incomplete, so valuation is still `absent`.
+
+All eleven adapter signatures are now implemented. Approval uses document and
+FIFO layer row locks plus an advisory item/lot key, chronological movement
+guards, maker-checker, half-even partial allocation, immutable consumptions,
+consumption-equal layer updates, and balanced Finance Draft creation in one
+transaction. Reporting and Inventory Core's Approved-valuation void guard are
+also present. Combined valuation/core/Application/Alembic focused evidence is
+22 passed with two declared environment skips; Ruff, mypy, and targeted Bandit
+are green. A complete optional live valuation lifecycle test now installs all
+prerequisite schemas, uses a non-privileged application role, and proves tenant
+isolation, maker-checker approval, receipt cost 12.34 over 2.500 KG, half-even
+FIFO issue cost 4.94 for 1.000 KG, residual 1.500 KG / 7.40 USD, balanced
+Finance Draft creation, and rejection of voiding the valued receipt. It skips
+because no PostgreSQL DSN/application role is configured. E-153 is therefore
+`live_test_available`, not a current-live claim; locked full gates remain.
+
+Locked E-153 gates on 2026-07-28:
+
+- `python -m ruff check .`: passed.
+- `python -m mypy reconforge`: passed over 294 source files.
+- `python -m pytest -q --disable-warnings`: 1,555 passed and 27 declared
+  environment skips from 1,582 collected tests.
+- `python -m bandit -q -r reconforge`: zero findings; existing reviewed `nosec`
+  annotations emitted warnings only.
+- `python -m pip_audit`: no known third-party vulnerabilities; the local
+  `reconforge-erp` package is correctly unavailable on PyPI.
+- `python -m build --no-isolation`: wheel and sdist built successfully and
+  include migration 0025 and the PostgreSQL valuation adapter.
+- Execution YAML validation and `git diff --check`: passed; existing line-ending
+  warnings remain visible.
+
+## E-169: Durable PostgreSQL federation replay, links, and sessions
+
+- Environment: Windows 11 host; locked Python 3.12 environment; disposable `postgres:17.10-alpine` container `reconforge-e169-postgres`; synthetic database credentials; separate non-superuser, non-BYPASSRLS application role.
+- Fresh Alembic upgrade executed every revision from 0001 through head `0034_postgres_federation` successfully.
+- `uv run --no-sync pytest tests/test_postgres_federation.py tests/test_alembic_postgres.py -q -rs` with the live DSNs: 10 passed, no service skips or failures; only Alembic's existing `path_separator` deprecation warnings.
+- The live lifecycle proves atomic one-time replay, SHA-256 subject identity storage without the raw subject, explicit prelink to an active local user, no external role widening, creation/authentication of the existing hash-only session, and tenant-B invisibility under forced RLS.
+- `uv run --no-sync pytest tests/test_postgres_federation.py tests/test_postgres_operations.py tests/test_alembic_postgres.py -q -rs`: focused local regression passed; the optional live cases correctly skipped when their DSN variables were absent in that separate command.
+- `uv run --no-sync ruff check reconforge/infrastructure/postgres_federation.py tests/test_postgres_federation.py alembic/versions/0034_postgres_federation.py`: passed.
+- `uv run --no-sync mypy reconforge`: passed.
+- `uv run --no-sync bandit -q -r reconforge/infrastructure/postgres_federation.py`: passed with zero findings.
+- `uv run --no-sync pip-audit`: no known third-party vulnerabilities in the 118-package lock; the unpublished local package is correctly not audited through PyPI.
+- Limit: API configuration/login/logout integration, SCIM, MFA, hosted cross-version evidence, and independent review remain open. No publication action occurred.
+
+## E-170: Fail-closed federated login API
+
+- `uv run --no-sync ruff check <federation API and test files>`: passed.
+- `uv run --no-sync mypy reconforge`: passed with no issues across 305 source files.
+- `uv run --no-sync pytest tests/test_api_federation.py tests/test_postgres_federation.py tests/test_federation_application.py tests/test_api_authorization_inventory.py tests/test_api_server_identity.py -q -rs`: all 30 runnable cases passed; two explicitly declared live-service cases skipped in the no-DSN command; one Starlette/httpx deprecation warning remains.
+- `uv run --no-sync bandit -q -r <federation API boundary>`: passed with zero findings.
+- `uv run --no-sync pytest tests/test_supply_chain_policy.py tests/test_api_federation.py tests/test_postgres_federation.py tests/test_api_authorization_inventory.py -q -rs`: 27 passed, one declared live-service skip.
+- `git diff --check`: passed; existing LF-to-CRLF warnings remain visible.
+- Live correction evidence: migration 0034 downgraded to 0033 and re-upgraded successfully. The first live rerun then failed before lifecycle execution because the reused synthetic application-role password no longer matched; after explicitly resetting that disposable role, a second run exposed retained synthetic tenant state from the failed cleanup. The exact synthetic tenant cleanup was retried, then the final run with both admin and non-superuser DSNs passed all 11 federation/Alembic cases with no skips. Only four existing Alembic `path_separator` deprecation warnings remained.
+- Limit: operator configuration loading and real signed OIDC/SAML through HTTP remain open. No commit, push, PR, tag, release, external write, or publication occurred.
+
+## E-175: Role-free service-account lifecycle foundation
+
+- Fresh disposable `postgres:17.10-alpine` container `reconforge-e175-postgres` migrated from 0001 through head 0037. The application role was separate, non-superuser, non-owner, non-BYPASSRLS, and all data/credentials were synthetic.
+- The final live target passed 14/14 service-account, Alembic, and operational-migration cases with no service skips. It covers direct least-privilege grants, forbidden human permissions, database TTL and version guards, hash-only issuance, permission replacement, atomic rotation, individual/all revocation, disable, append-only events, cross-tenant RLS, fresh migration, isolated rollback/recovery, and head reporting.
+- Direct 0037-to-0036 downgrade and 0036-to-0037 re-upgrade passed. Head inspection returned `0037_postgres_service_accounts` and four service-account RLS policies.
+- Operator CLI smoke passed create, credential issue, rotation, revocation, and account disable. Database inspection found two credentials, both revoked, both represented only by lowercase 64-character SHA-256 digests. Raw synthetic tokens were captured only in-process for the smoke and were not written to repository evidence.
+- Complete non-service repository regression passed after E-175. `uv run --no-sync ruff check .`, mypy across 312 source files, full Bandit, pip-audit, and wheel/sdist build all exited zero. The archives include the service-account module and migration 0037.
+- P3-ENT-003 remains open for HTTP machine authentication, privileged human sessions, step-up, emergency-access expiry/review, and broader operational/independent evidence. No publication, commit, push, PR, tag, release, production approval, or Enterprise-readiness claim occurred.
+
+## E-176: Typed HTTP machine-principal composition
+
+- Environment: Windows 11 host; locked Python 3.12 environment; disposable `postgres:17.10-alpine` container `reconforge-e176-postgres`; synthetic database and credentials; separate non-superuser, non-owner, non-BYPASSRLS application role.
+- Fresh Alembic migration from 0001 through head 0037 passed. Reserved `rfa_` tokens traversed the real FastAPI middleware and authenticated only through the forced-RLS service-account repository.
+- The final live service/API/policy target passed 35/35. It proves typed `/me` output with no roles, safe direct-permission access, missing-permission denial and audit, explicit human-action denial, dynamic-workflow denial, cross-tenant denial, presented-token logout revocation, and post-revocation authentication failure.
+- A broader live target first passed 40 cases and failed the policy-audit assertion because Alembic's default logging configuration had disabled the existing `reconforge.authorization` logger. `alembic/env.py` now calls `fileConfig(..., disable_existing_loggers=False)` and a regression assertion locks that behavior. The unchanged broader target then passed 41/41. The failed attempt is not counted as green evidence.
+- Complete non-service repository regression passed after the correction; all runnable tests passed and only declared service/platform skips remained. Ruff passed repository-wide; mypy passed across 312 source files; Bandit found no issues beyond existing reviewed suppression warnings; pip-audit found no known third-party vulnerabilities and correctly skipped the unpublished local package.
+- `uv run --no-sync python -m build --no-isolation` exited 0 in 24.93 seconds and produced the 0.7.1 wheel and sdist. Independent archive inspection confirms both contain the typed server identity, central policy, service-account repository, and migration 0037.
+- Execution backlog/risk/security YAML safe-loaded, the E-176 focused local governance target passed with only two declared absent-service skips, targeted Ruff passed, and `git diff --check` passed with existing line-ending conversion warnings only.
+- The exact disposable container identity `c88030375b8f00cc7ea8ea3f9c7239c7d5136da34406bff1259f9e131fb152c0` was verified before stop. Its `--rm` lifecycle removed the container and all synthetic runtime data; no matching container remains.
+- ADR 0181 records that service credentials never become user sessions, direct permissions cannot widen through roles, central policy independently rejects human-governed permissions and approval/review/completion suffixes, and dynamic workflow transitions remain human-only.
+- P3-ENT-003 remains open for privileged human sessions, step-up, emergency-access expiry/review, workload identity federation, hosted operation, and independent assurance. All runtime identities and data were synthetic. No publication, commit, push, PR, tag, release, production approval, or Enterprise-readiness claim occurred.
+
+## E-177: Session-bound privileged human reauthentication
+
+- Migration 0038 (`0038_postgres_step_up`) installs one forced-RLS, append-only assertion table bound by foreign keys to the existing tenant human user and revocable session. The Application TTL is ten minutes and PostgreSQL refuses assertions beyond fifteen minutes.
+- The PostgreSQL middleware snapshots active assurance on every request. The central policy requires both the existing role permission and current step-up for the closed privileged registry. Service accounts fail closed; session expiry/revocation invalidates the assertion; Community/SQLite remains compatible and has no false step-up claim.
+- `POST /api/v1/auth/step-up` uses the existing PBKDF2 password verifier and lockout counters for the same current user/session. Responses contain only method and expiry. It is explicitly password reauthentication, not MFA.
+- The first migration-focused run rejected the 33-character revision identifier because Alembic version storage is capped at 32; the identifier was shortened to `0038_postgres_step_up` and the unchanged gate passed. This failed attempt is not counted green.
+- The first complete repository regression found six failures because step-up enforcement had leaked into Community/SQLite authorization. An explicit `step_up_enforced` server-profile boundary restored local compatibility; all six exact regressions and the full suite reran green.
+- Disposable runtime: exact container `c5415eb029c3bb1df01deddbd3b0420ff0deaf37f6fe7be301db1c7a4a14bec3`, image `postgres:17.10-alpine`, synthetic database/credentials, and a separate non-superuser, non-owner, non-BYPASSRLS application role. The database was recreated before the final gate to remove retained synthetic state from an earlier failed historical cleanup.
+- Fresh migration 0001 through 0038 passed. The final combined privileged-session/API/server-identity/service-account/policy/operational/Alembic target passed 48/48 with no live-service skips. It covers pre-step-up denial and structured code, real password reauthentication, privileged success, wrong-password denial, machine denial, append-only evidence, TTL ceiling, session revocation, tenant isolation, migration recovery, and operational head.
+- The complete non-service repository suite passed after the final correction. Repository-wide Ruff passed; mypy passed across 313 source files; Bandit exited zero with only existing reviewed suppression warnings; pip-audit found no known third-party vulnerabilities and correctly skipped the unpublished local package.
+- A direct 0038-to-0037 downgrade and 0037-to-0038 re-upgrade passed on the disposable database; Alembic reported `0038_postgres_step_up (head)` afterward.
+- `uv run --no-sync python -m build --no-isolation` exited zero and produced the 0.7.1 wheel and sdist. Independent archive inspection confirms both include the privileged-session repository, typed server identity, central policy, and migration 0038.
+- The governance/API focus passed every runnable test with two declared absent-service skips. Backlog, risk and security YAML safe-loaded; `git diff --check` passed with existing line-ending conversion warnings only.
+- The exact E-177 container identity was verified before stop. Its `--rm` lifecycle removed the container and all synthetic database state; no matching container remains.
+- Authorization inventory is 175 operations with digest `0f40f44ca8efa7e58e09ae44ff708e9f842e19fb8d0c2efa07b1aa827d624bdc`.
+- P3-ENT-003 remains open for governed emergency-access request, independent approval, bounded activation, expiry and post-use review, plus true MFA/workload federation/independent evidence. No publication, commit, push, PR, tag, release, production approval, or Enterprise-readiness claim occurred.
+
+## E-174: Authenticated SCIM HTTP and credential lifecycle
+
+- Disposable runtime: `postgres:17.10-alpine`, container `reconforge-e174-postgres`, synthetic database and separate non-superuser/non-BYPASSRLS application role. Fresh Alembic 0001-to-0036 migration passed; direct 0036-to-0035-to-0036 and isolated 0036-to-0011-to-0036 recovery passed with only the existing Alembic path-separator warning.
+- Live target: 21/21 SCIM API, persistence, credential, and Alembic tests passed with no service skips. It proves hash-only credential storage, issue/rotation/revocation/expiry, authenticated discovery, User/Group lifecycle, exact filters, ETag conflict refusal, User session revocation, role-free provisioning, client-attributed audit, and cross-tenant forced-RLS denial.
+- Manual operator CLI smoke passed with synthetic data: issue returned the raw token once, rotation atomically revoked its predecessor, revoke invalidated the successor, and database inspection found two SHA-256 hashes and two revoked credentials with no raw token column.
+- Local SCIM/API/application target passed. The complete repository run initially failed one signed-SAML case because its module-level five-minute fixture expired during the long suite. Per-test certificate/assertion time generation received a regression fix; the six signed-SAML tests and the entire repository suite then passed.
+- `uv run --no-sync ruff check .`, `uv run --no-sync mypy reconforge` across 311 source files, `uv run --no-sync bandit -q -r reconforge`, and `uv run --no-sync pip-audit` all exited zero. Bandit emitted only existing reviewed suppression-comment warnings; pip-audit found no known third-party vulnerabilities and correctly skipped the unpublished local package.
+- Authorization inventory: 174 operations, including 15 request-scoped SCIM operations, digest `5cd4a4f6d40493abda9cf0c18d607ce51013363088b0c8073d161aeb075c1651`.
+- All tenants, users, groups, credentials, and assertions were synthetic. No customer data, publication, commit, push, PR, tag, release, OAuth-server claim, hosted IdP interoperability, compliance claim, or production approval was used.
+
+## E-173: Forced-RLS SCIM lifecycle persistence
+
+- `uv run --no-sync ruff check reconforge/auth/scim.py reconforge/infrastructure/postgres_scim.py tests/test_scim_application.py tests/test_postgres_scim.py alembic/versions/0035_postgres_scim.py tests/test_alembic_postgres.py`: passed.
+- `uv run --no-sync mypy reconforge/auth/scim.py reconforge/infrastructure/postgres_scim.py`: passed.
+- Local SCIM/PostgreSQL/Alembic target: 15 runnable tests passed with the declared live service tests skipped when credentials were absent.
+- Disposable `postgres:17.10-alpine` container `reconforge-e173-postgres` received a fresh Alembic 0001-to-0035 migration. Direct 0035-to-0034 downgrade and re-upgrade passed. The isolated migration contract then passed a full 0035-to-0011 rollback and 0011-to-0035 re-upgrade, verified the SCIM tables and operational head status, with only the existing Alembic `path_separator` deprecation warning.
+- The non-superuser live lifecycle passed after regression repair. Two concurrent deliveries of one external User produced exactly one creation, one replay, one stable ID, and version 1. Identical User and Group replay did not advance versions; a real change did. Same-domain membership succeeded, no RBAC role was created, deactivation advanced the version, disabled the local identity, revoked the issued session, and tenant B observed zero SCIM Users, Groups, and events.
+- First live attempt failed before SQL because strict tuple-backed fields rejected JSON-list shapes. A JSON-array regression was added and the model now converts arrays at the validation boundary. A later migration drill reached 0035 but failed operational status because the 34-revision registry was stale; revision 0035 and its count regression were added. Neither failure is counted green; the changed paths were rerun and passed.
+- Final non-service regression: `uv run --no-sync pytest -q -rs` exited 0 after collecting 1,712 tests; every runnable test passed and 39 explicitly service/platform-dependent cases remained declared skips. Existing Starlette/httpx, python3-saml `utcnow`, and explicit legacy-financial-input warnings remain visible and are not treated as controls.
+- Repository-wide `uv run --no-sync ruff check .` passed; `uv run --no-sync mypy reconforge` passed across 308 source files. The SCIM/Alembic/operations/security/risk focus passed all runnable cases with three expected absent-service skips. All three changed YAML registries safe-loaded and `git diff --check` passed with line-ending conversion warnings only.
+- The first repository-wide Bandit run correctly failed with seven B608 findings caused by f-string insertion of constant projection lists in the new repository. The queries were converted to fully static SQL literals rather than adding suppressions. The changed target reran green, then `uv run --no-sync bandit -q -r reconforge` exited 0 in 7.21 s with only pre-existing reviewed `nosec` parser warnings. `uv run --no-sync pip-audit` exited 0 in 16.42 s with no known vulnerabilities and the expected local-project skip.
+- `uv run --no-sync python -m build --no-isolation` exited 0 in 22.8 s and produced the 0.7.1 wheel and sdist. Independent archive inspection confirms both contain `reconforge/auth/scim.py`, `reconforge/infrastructure/postgres_scim.py`, and migration 0035.
+- The exact disposable container identity `c6e8bd6c65280cc19f4fa7a33742ca3d7acb9ad92503eba51f3ffcbb28ac1fc6` (`reconforge-e173-postgres`, `postgres:17.10-alpine`) was verified before stop. Its `--rm` lifecycle removed the container and all synthetic data; no matching container remains.
+- After the Bandit-driven static-SQL rewrite, a second clean container `ff26b33a90df2d6720bf4fda54146c509e85548714193eef535d2eedebe136e5` repeated fresh migration, direct 0035 downgrade/re-upgrade, and the non-superuser concurrent SCIM lifecycle successfully on the final SQL. Its identity was verified before stop and its `--rm` lifecycle removed it; no matching container remains.
+- All data, credentials, tenants, and identities were synthetic. No customer data, external identity provider, publication, commit, push, PR, tag, or release was used.
+
+## E-187: Deterministic timezone schedule semantics
+
+- `reconforge/domain/scheduling.py` adds the pure v1 daily/weekly IANA-timezone model, explicit DST gap/fold behavior, skip/fire-once/bounded-catch-up misfire evaluation, bounded lookback refusal, stable cursor semantics, and SHA-256 occurrence identity. It performs no persistence, network, email, webhook, financial decision, or autonomous approval effect.
+- `tests/test_scheduler_domain.py` passes 5/5. It covers Cairo timezone conversion, deterministic replay, skip/fire-once/catch-up differences, catch-up resume without duplicate keys, weekly weekday canonicalization, naive/unknown timezone rejection, outage review boundaries, the New York DST spring gap, and both fall ambiguity folds.
+- Focused Ruff passed, focused mypy reported no issues, and the focused pytest target passed in a combined 2.476 seconds. `uv lock --offline` resolved the existing dependency graph after `tzdata>=2026.3` became direct; the locked timezone registry remains 2026.3.
+- This is only schedule semantics. PostgreSQL storage/locking, idempotent durable-job dispatch, retries, optional transports, allowlists, redaction, audit, and full P3-ENT-005 exit evidence remain open. No publication, commit, push, PR, tag, release, production schedule, customer data, or external call occurred.
+
+## E-186: Consolidated multi-entity isolation exit audit
+
+- `docs/execution/P3_ENT_004_EXIT_AUDIT.yaml` machine-checks eight gates and 14 hostile or policy-preservation paths across hierarchy, durable workers, authorized exports, object artifacts, business RLS, durable API authority, failure atomicity, and migration/recovery. It retains explicit single-node, localhost, no-HA/DR, no-compliance, no-external-assurance, and no-Enterprise-readiness limitations.
+- A clean disposable `postgres:17.10-alpine` database migrated 0001-to-0046. The application role was verified `NOSUPERUSER` and `NOBYPASSRLS`. The expanded consolidated target passed 63/63 in 22.409 seconds with zero skips. It includes the prior isolation matrix plus emergency-access and WebAuthn HTTP compatibility, Evidence Application reinstall behavior, and all current business schema reinstallers.
+- The first complete live repository run correctly failed three cases and is not counted green. Emergency-access and WebAuthn fixtures authenticated successfully but lacked the new durable workspace authority. Later in the same run, Evidence Application reinstallation created a tenant-only policy beside `tenant_scope`; because PostgreSQL permissive policies compose with OR, a sibling workspace entered an export.
+- The two privileged HTTP fixtures now create real workspace records and durable grants and send the selected workspace header. ADR 0190 makes all 12 current business schema installers remove tenant-only compatibility policies whenever a composed `tenant_scope` exists. Static coverage inventories all 12; live reinstallation proves zero tables carry both policy names. Focused regression passed 23/23.
+- After those repairs, the complete repository suite ran against the live PostgreSQL service and exited zero in 280.391 seconds. Five environment/service skips remained explicit: unavailable Windows symlink creation, live S3 service, object-lock S3 bucket, separate PostgreSQL maintenance service for native backup, and live Redis. The post-suite catalog remained at migration 0046 with zero duplicate-scope policies and zero `tenant_isolation` policies. A test-only metrics installer accounts for the post-suite 131st forced-RLS table; the clean migrated product head remains 130 policies on 130 forced-RLS tables.
+- Migration evidence includes fresh 0001-to-0046, direct 0046-to-0045-to-0046, and isolated 0046-to-0011-to-0046 success. The clean-head catalog reports exactly 130 policies, 130 RLS-enabled tables, 130 forced-RLS tables, and zero duplicate strong/compatibility policy pairs.
+- Repository-wide Ruff passed in 0.171 seconds. Mypy reported no issues across 328 source files in 1.946 seconds. Bandit exited zero in 8.549 seconds with only the existing reviewed suppression-parser warnings. Pip-audit exited zero in 14.345 seconds with no known third-party vulnerabilities and skipped only the unpublished local project.
+- `python -m build --no-isolation` produced the 0.7.1 wheel and sdist in 32.533 seconds. Independent archive inspection found the 12 guarded installers, scope-authority module, and migration 0046 in the expected artifacts. All nine execution YAML files safe-load and `git diff --check` exits zero with line-ending conversion warnings only.
+- All identities, hierarchy, records, credentials, artifacts, and service state were synthetic and localhost-only. No customer data, publication, commit, push, PR, tag, release, production migration, or external system was used.
+- Cleanup was identity-scoped. The first investigation container `ecc867769a9a756b86389bac65222c490755c957c13ea4196bb9d310214d5aa8` was removed before the final clean rerun. The final evidence container `3ad9ee97b5ca33149cd2d8debca78f231fc18bc9ece532c09fb08ff2780d79db` was verified by exact ID, removed with all synthetic state, and the exact name `reconforge-e186-postgres` was confirmed absent.
+
+## E-185: Durable principal scope authority and API composition
+
+- ADR 0189 separates client selectors from authority. Migration 0046 stores active and revoked user/service-account workspace, organization, and legal-entity grants under forced RLS. Targets are checked against authoritative tenant hierarchy; grant identity is immutable; revocation requires actor, timestamp, and reason.
+- Authentication snapshots active grants into `ServerPrincipal`. Reconciliation, Evidence, Master Data, Ledger, and Close require an authorized workspace and pass only the selected authorized hierarchy into transaction-local RLS. Missing, malformed, sibling, and entity-without-organization selections fail before the business database transaction opens.
+- Human-only, stepped-up `roles.manage` HTTP routes create, list, and revoke grants. `/auth/me` exposes only the caller's current authorized IDs. Community/SQLite paths remain unchanged; principals without grants fail closed on PostgreSQL business routes.
+- A real non-superuser/non-BYPASSRLS HTTP test covers login, grant snapshot, missing workspace denial, sibling workspace denial, scoped Finance/Master Data/Ledger/Close operations, privileged step-up, scope disclosure, and cross-tenant denial. The combined current PostgreSQL 17.10 target passes 32/32 across hierarchy, jobs, business attribution, grant lifecycle, API boundaries, HTTP, Alembic, and operational-head tests.
+- Fresh 0001-to-0046 migration passes. Direct 0046-to-0045 downgrade/re-upgrade and the isolated head-to-0011-to-head drill pass. A multi-revision rollback defect between 0044 and 0043 was exposed and fixed before the green rerun.
+- Complete `uv run --no-sync python -m pytest -q` passes with declared service/platform skips only. Ruff passes; mypy passes across 328 source files; Bandit exits zero with existing reviewed suppressions only; pip-audit finds no known third-party vulnerabilities and skips only the unpublished local project; execution YAML and `git diff --check` pass.
+- `python -m build --no-isolation` exits zero. The current 0.7.1 wheel and sdist contain migration 0046, `postgres_scope_authority.py`, and the scope-grant API route. All users, grants, scopes, records, and credentials were synthetic and localhost-only. No publication, commit, push, PR, tag, release, customer data, or production action occurred.
+- The final disposable container `reconforge-e184-postgres` was verified as exact ID `853affb21935984c9ce5aa15d9eff9d2c7989020a935d72bea9217418cd7eff4`, removed with its synthetic database, and confirmed absent. Two earlier replacement containers were likewise identity-checked and removed after failed live attempts so no failed-fixture state was reused as evidence.
+- This closes the API-authority slice, not P3-ENT-004. A consolidated exit audit must still prove the combined failure matrix across every earlier hierarchy/job/export/object/business/API slice.
+
+## E-184: Catalog-backed business-domain RLS closure
+
+- The PostgreSQL catalog inventory is stored in `docs/execution/POSTGRES_SCOPE_INVENTORY.yaml`. At migration 0045 it records 129 RLS policies, 64 tables with direct business-scope columns, 65 policies referencing direct scope settings, 32 parent-resolved policies, and 34 reviewed tenant-global identity/audit/reference policies.
+- Migration 0044 composes every direct workspace/application-workspace/organization/legal-entity/entity/branch dimension present on a business table into both `USING` and `WITH CHECK`. Twenty-one dependent tables resolve scope through their authoritative operational parent instead of an arbitrary reference FK.
+- Migration 0045 adds nullable, transaction-defaulted workspace attribution to eight legacy business roots and parent-derived scope to five children. Existing NULL rows remain visible only in explicit tenant-wide sessions; workspace-scoped sessions hide them. Organization and fiscal-period compatibility adapters inherit `application_workspace_id` from the trusted transaction setting.
+- Live `NOBYPASSRLS` tests prove sibling direct rows and reconciliation children are hidden, sibling writes are rejected, legacy rows follow the documented compatibility rule, and unregistered grant targets fail. Direct 0044/0045 rollback/re-upgrade and long rollback paths pass.
+- The initial catalog query mistakenly inspected `public`, which contains only Alembic metadata; the evidence was rejected and rerun against the authoritative `reconforge` schema. Later live HTTP testing exposed the missing default on legacy Master Data columns; migration 0045 was corrected and the database recreated before final green evidence.
+- P3-ENT-004 remained open after E184 for API authority; E185 supplies that slice. Consolidated exit audit remains mandatory.
+
+## E-178: Governed emergency authority and post-use review
+
+- Migration 0039 creates forced-RLS emergency request, permission, and append-only event tables. PostgreSQL constrains lifecycle states, 5–60 minute TTL, closed permission membership, immutable grants, no-delete requests, deterministic event sequence, and tenant-scoped foreign keys.
+- Repository and HTTP composition prove self-only request, independent stepped-up approval, current-session activation, per-use evidence, explicit end, mandatory independent review, machine denial, and cross-tenant denial. The authorization inventory is 182 operations with digest `43e9906932c12492d41eadc5273b6eedb8f152b324df93d4478876151d4d7992`.
+- Initial live runs are not counted green: one exposed nondeterministic ordering from transaction-stable timestamps and retained fixture references; another exposed an empty base-permission snapshot incorrectly falling back to effective emergency permissions. Database sequence ordering, isolated cleanup, and an explicit optional base snapshot fixed those defects.
+- Final disposable PostgreSQL 17.10 non-superuser target passed 13/13 repository, HTTP, Alembic, and operational-head cases. Direct downgrade from 0039 to 0038 and re-upgrade to 0039 passed.
+- Container `f6499e150bdb9290cdf9ecd5d568a607e93bd0d8fe9c740f3bf9e368660a3403` (`reconforge-e178-postgres`, `postgres:17.10-alpine`) was identity-checked before removal. The exact container and its synthetic database were removed, and an exact-name query confirmed no remainder.
+- Full non-service repository regression passed with only declared environment/service skips. Ruff passed; mypy passed across 315 source files; Bandit exited 0 with reviewed existing parser warnings; pip-audit found no known dependency vulnerabilities and skipped only the local package; wheel/sdist build and `git diff --check` passed. Archive inspection confirms migration 0039, the emergency route, and repository are packaged.
+- All credentials, tenants, incidents, and records were synthetic. The control is not described as MFA, production PAM, Enterprise readiness, or independent assurance. No publication, commit, push, PR, tag, release, or production action occurred.
+
+## E-181: Durable worker workspace/entity isolation
+
+- ADR 0186 separates tenant-wide scheduler discovery from workspace/entity-scoped execution. The selected row is locked before narrowing, and every later heartbeat, transition, checkpoint, completion, release, crash/resume, and evidence read restores scope from the immutable parent job.
+- Migration 0042 adds direct workspace/entity RLS to `durable_jobs`; transitions, leases, lease events, and partition effects require a parent visible under the current scope.
+- The first hostile live run reached and passed its isolation assertions but failed fixture cleanup because append-only evidence correctly rejected deletion. A second run exposed pending trigger events when disabling and re-enabling inside one transaction. Cleanup was split across bounded admin transactions with exact trigger names; the final hostile job pair passes 4/4.
+- The final PostgreSQL 17.10 non-superuser job/hierarchy/operations/Alembic target passes 12/12. Sibling job and transition reads are hidden; a transition insert targeting the sibling job fails with RLS insufficient privilege. Existing idempotent submission, lease fencing, partition effects, and crash/resume remain covered.
+- Fresh 0001-to-0042 migration and direct 0042-to-0041 downgrade/re-upgrade pass. P3-ENT-004 remains open for exports, object storage, remaining domain tables, API authority, and failure paths.
+- The exact-snapshot complete pytest regression passes with only declared service/platform skips. Ruff passes repository-wide; Mypy reports no issues across 321 source files; Bandit exits zero with existing reviewed suppression warnings only; pip-audit reports no known third-party vulnerabilities and correctly excludes the unpublished local package; governance focus, wheel/sdist build, and `git diff --check` pass.
+- Archive inspection confirms migration 0042, `postgres_job_scope.py`, and the narrowed `postgres_jobs.py` are present in both wheel and sdist.
+- Cleanup was identity-scoped: `reconforge-e181-postgres` was verified as full ID `272302aca0ff964f0f4e2b0d6e6a672d2f34c3a18caa104343f70956dd4f1996`, force-removed with its synthetic data, and confirmed absent. No unrelated container, volume, or image was changed.
+
+## E-182: Hierarchical object-artifact isolation
+
+- ADR 0187 introduces immutable validated tenant/workspace/entity storage scope. Official S3-compatible and local stores include supplied hierarchy segments in keys and bind tenant, workspace, entity, and SHA-256 into verified metadata.
+- Focused Object Storage, Evidence Application, SQLite, and PostgreSQL-adapter tests pass with only declared service/platform skips. They cover sibling workspace/entity separation, wrong-scope absence, hierarchy-metadata tampering, scoped presigned URLs, local parity, tenant-only provider compatibility, and refusal to create an Evidence registry row after returned workspace mismatch.
+- Ruff passes all changed runtime/tests and mypy passes the five-source compatibility target. The protocol separates the historical tenant-string contract from an advertised hierarchical capability so existing providers are not silently broken.
+- Live S3 proof used MinIO source tag `RELEASE.2025-10-15T17-29-55Z`, commit `9e49d5e7a648f00e26f2246f4dc28e6b07f8c84a`, built under pinned `golang:1.24-alpine@sha256:8bee1901f1e530bfb4a7850aa7a479d17ae3a18beb6e09064ed54cfd245b7191`. The official release Dockerfile was not trusted after its downloaded binary failed minisign verification; the server binary was compiled directly from the checked-out commit instead.
+- The live target passed every runnable Object Storage test. Only Windows symlink creation and a separately configured object-lock bucket remained declared skips; neither is counted as passed. Container `e9df7095ecdbdbf8cfe783ba8fb3b7a022ca147f4478d644e2ca018f07c2309a` and image `b736db64a640139abf8dc7b72f6a58f9283fff27bfc7d63db5a2538696cc2ba7` were removed. Windows rejected direct recursive removal of the exact verified source checkout; it was moved out of the workspace to the user Temp directory, and the workspace source path was confirmed absent. The Temp copy is test residue, not a product or release artifact.
+- Final exact-snapshot gates pass: the complete runnable pytest suite exits zero with declared service/platform skips only; repository-wide Ruff passes; mypy passes across 321 source files; Bandit exits zero with existing reviewed suppression warnings only; pip-audit reports no known third-party vulnerabilities and skips only the unpublished local package; both execution YAML registries safe-load; package build and `git diff --check` pass. The 0.7.1 wheel and sdist both contain the four changed application/storage adapters.
+- All buckets, credentials, scopes, and bytes were synthetic and localhost-only. No customer data, publication, commit, push, PR, tag, release, or production action occurred. This closes only object storage; P3-ENT-004 remains open.
+
+## E-183: Authorized RLS-backed Enterprise export
+
+- ADR 0188 defines a schema-v1 bounded control-plane snapshot rather than a generic database dump. The Application contract canonicalizes scope, sorted datasets/rows, per-dataset digests, and one artifact digest. The PostgreSQL adapter uses seven static allowlisted queries, a 10,000-row ceiling per dataset, a 32 MiB artifact ceiling, and excludes raw source paths and idempotency keys.
+- Central policy requires `reports.read` and exact tenant/workspace/entity grants before the repository or object store is called. Snapshot and provider exceptions are converted to safe failures; tests prove authorization, query, and storage failures leave no object. Immutable digest replay verifies existing bytes and tampered replay fails.
+- Migration 0043 replaces all three Evidence Application tenant-only policies with workspace-aware policies and constrains legal entities/branches through their workspace-owned organization. `set_local_tenant_scope` now sets both `app.legal_entity_id` and the job-policy alias `app.entity_id`. Entity exports omit Evidence because that aggregate currently has workspace but no authoritative entity attribution.
+- Disposable `postgres:17.10-alpine` container `reconforge-e183-postgres` migrated fresh from 0001 through 0043. A non-superuser live export contained only workspace/entity A hierarchy, job, and workspace Evidence and contained none of the sibling workspace, organization, entity, job, or Evidence identifiers. Entity mode excluded workspace-only Evidence and published exact verified bytes beneath the matching local tenant/workspace/entity object path.
+- The combined PostgreSQL export/hierarchy/job/foundation/operations/Alembic target passed 28/28. Direct 0043-to-0042 downgrade and re-upgrade passed, and the operational head reports 0043.
+- Final exact-snapshot gates pass: the complete runnable pytest suite exits zero with declared service/platform skips only; Ruff passes; mypy passes across 324 source files; Bandit exits zero with existing reviewed suppression warnings only; pip-audit finds no known third-party vulnerabilities and skips only the unpublished local package; execution YAML, package build, and `git diff --check` pass. The wheel and sdist contain migration 0043 and all three new export modules.
+- Container `63f74d29310c7e437122d299fa6cacb9e0a9f40bafefbefbf1b38331ca5d9b99` and its synthetic database were force-removed after exact identity verification and confirmed absent. No customer data, publication, commit, push, PR, tag, release, or production action occurred.
+
+## E-180: Explicit hierarchical PostgreSQL execution scope
+
+- ADR 0185 defines one immutable tenant/workspace/organization/legal-entity scope installed through transaction-local settings; malformed IDs and an entity without organization fail closed.
+- Migration 0041 replaces tenant-only policies for the authoritative workspace/master hierarchy with optional-child constraints. Tenant-wide administration remains explicit; constrained transactions cannot read sibling workspaces, organizations, entities, periods, or branches.
+- Focused non-service PostgreSQL compatibility passes with only declared live skips. The disposable PostgreSQL 17.10 non-superuser hierarchy/foundation/operations/Alembic target passes 19/19; sibling reads are hidden and a sibling-workspace period insert raises RLS insufficient privilege.
+- Fresh 0001-to-0041 migration and direct 0041-to-0040 downgrade/re-upgrade pass. The first live run correctly remains recorded as failed because test savepoint ordering and one stale head expectation were wrong; both were corrected before the clean rerun.
+- The exact-snapshot complete pytest regression passes with only declared service/platform skips. Ruff passes repository-wide; Mypy reports no issues across 320 source files; Bandit exits zero with existing reviewed suppression warnings only; pip-audit reports no known third-party vulnerabilities and correctly excludes the unpublished local package; governance focus, wheel/sdist build, and `git diff --check` pass.
+- Archive inspection confirms migration 0041 and `postgres_execution_scope.py` are present in both wheel and sdist. ADR 0185 remains repository documentation under the existing package boundary and is not claimed as an installed artifact.
+- Docker Desktop was restarted locally for test cleanup. Container `reconforge-e180-postgres` was rechecked against full ID `d83a21ac1da071610d23ad2e9ddf26a51bba4aa93a621cf61c8e6a298c47b6a9`, force-removed only after that match because Docker had automatically restarted it, and confirmed absent before E181 infrastructure was created.
+- This does not close P3-ENT-004. Background jobs, exports, object storage, remaining domain tables, API scope authority, and failure-path isolation remain required.
+
+## E-179: User-verified WebAuthn MFA
+
+- Standards basis was checked against W3C Web Authentication Level 3 and the py_webauthn registration/authentication contracts. Optional `webauthn==3.0.0` is pinned in the universal lock; supply-chain policy now covers the `mfa` profile and all 123 non-root Python packages.
+- Migration 0040 creates forced-RLS challenge, public credential, and append-only event tables and extends step-up assertions with a credential-bound `webauthn_user_verified` method. Challenges use 256 random bits, five-minute TTL, exact tenant/user/session/ceremony scope, an eight-active ceiling, and committed single consumption before verification.
+- Real synthetic P-256 registration and authentication traverse the live HTTP endpoints with exact origin/RP verification and authenticator User Verification. The database stores the credential ID and COSE public key, not a private key or shared secret. Authentication advances the signature counter and appends current-session assurance.
+- With WebAuthn configured, the live privileged Finance Core route denies password-only step-up with `mfa_required` and succeeds after WebAuthn verification. Replay of the registration challenge and cross-tenant use fail closed. The authorization inventory is 186 operations with digest `66677b53c74d2de0ec968cb3f37721770da94ed5af12b479edd056647ee78f4d`.
+- First live repository execution exposed PostgreSQL's bounded-repeat regex limitation and transaction-stable `now()` preceding the Python creation timestamp; canonical length-plus-character constraints and `clock_timestamp()` consumption fixed both. The first downgrade exposed append-only assertion cleanup; transactional disable/delete/enable of the exact trigger fixed rollback without weakening runtime immutability.
+- Final PostgreSQL 17.10 non-superuser WebAuthn/API/Alembic/operations target passes 22/22. Direct 0040-to-0039 downgrade and re-upgrade pass. All identities, credentials, keys, origins, and data were synthetic.
+- Full regression initially failed because exact JSON-parser and dependency inventories detected the new code and five locked packages. WebAuthn parsing now routes through the bounded central JSON parser, and normative supply-chain profile/count evidence was updated before rerun. No publication, commit, push, PR, tag, release, customer data, or production action occurred.
+- Final exact-snapshot gates pass after the bounded-parser correction: the complete runnable pytest regression passes with only declared service/platform skips; Ruff passes repository-wide; Mypy reports no issues across 319 source files; Bandit exits zero with only pre-existing reviewed suppression warnings; pip-audit reports no known third-party vulnerabilities and correctly excludes the unpublished local package; wheel/sdist build and `git diff --check` pass.
+- The final current-code PostgreSQL 17.10 target was rerun after the parser correction and passes 22/22. Archive inspection confirms `0040_postgres_webauthn_mfa.py`, `auth/webauthn.py`, `auth/webauthn_config.py`, `api/routes/webauthn.py`, and `infrastructure/postgres_webauthn.py` are present in both wheel and sdist.
+- Cleanup was identity-scoped: container `reconforge-e179-postgres` was verified as ID `896fc38ee479dfd185c7089129452520b4f9f4ed26b9ed5be11d9dfe39ad5e96` using image `postgres:17.10-alpine`, removed, and confirmed absent. No unrelated container, volume, or image was changed.
+
+## E-190: Human-governed count-only security overview
+
+- ADR 0194 establishes the disclosure boundary: the administration overview is a tenant-scoped operational count snapshot, never a raw identity inventory, green security verdict, compliance claim, or independent assurance result. `SecurityCenterApplicationService` is backend-neutral and rejects invalid tenant/time/count relationships before serialization.
+- `GET /api/v1/admin/security/overview` requires the dedicated `security.center.read` permission, a human principal, and the configured privileged assurance method. The closed response schema exposes identity, session, integration, policy, retention, and audit counts; tenant and full snapshot identities are SHA-256 bound. Audit chain state explicitly remains `not_evaluated_use_audit_verify_endpoint`.
+- `PostgresSecurityCenterRepository` performs one static two-parameter aggregate query under transaction-local tenant RLS. It never selects password/token hashes, email, IP, user agent, destination, secret reference, external subject, financial record, free-form audit content, or `event_sequence`. The initially implemented tenant-filtered maximum was removed because the underlying sequence is cluster-global and would create an avoidable cross-tenant activity side channel. The response uses the global no-store and browser security headers.
+- Migration 0049 adds a named human-only constraint for `security.center.read`. Central policy and service-account Application validation deny the same permission. The hostile live SQL insert reached PostgreSQL and failed on `service_account_permissions_human_only`.
+- Fresh PostgreSQL 17.10 migrated 0001-to-0049 in 3.878 seconds. The synthetic application role is non-superuser and NOBYPASSRLS; 136 PostgreSQL RLS policies remain installed. Direct 0049-to-0048 rollback passed in 2.013 seconds and restored the distinct legacy constraint, then 0048-to-0049 upgrade passed in 1.982 seconds and restored `service_account_permissions_human_only`. The final expanded focused target passed 92/92 with zero skips in 13.582 seconds, including real server login, password step-up, HTTP overview, sibling-tenant exclusion, schema/redaction, service-account denial, policy/inventory governance, migrations, operations, and long 0049-to-0011-to-0049 downgrade/re-upgrade.
+- The first live focused run failed two existing/recovery assertions: one expected the superseded automatic constraint name, and 0049 downgrade attempted to reuse the automatic name already held by the regex constraint. The failures were not treated as passes. The migration now locates the legacy policy constraint by its definition and uses a distinct rollback name; the old test names the new stable constraint.
+- The first full live regression failed one historical P3-ENT-005 exit-audit assertion because it incorrectly required its recorded 0048 migration to remain the last repository revision after 0049. The audit remains immutably scoped to 0048; its test now verifies that revision is still registered and precedes the current head. After adding the package-membership regression, the final exact-snapshot run collected 1,876 tests and passed all 1,871 runnable tests in 296.893 seconds. Five declared skips require Windows symbolic-link capability, live S3, object-lock, disposable backup services, and live Redis; none is counted as a pass.
+- Repository-wide Ruff passed in 2.246 seconds; Mypy passed 338 source files in 3.400 seconds; Bandit exited zero in 12.880 seconds with reviewed static-SQL suppression warnings; pip-audit found no known third-party vulnerabilities in 5.835 seconds and skipped only the unpublished local project. `uv lock --check`, safe-load of 17 YAML files and 68 JSON schemas, and `git diff --check` passed.
+- The first package build exposed that `security_center_overview.schema.json` was absent from the sdist and was not accepted as complete. `MANIFEST.in` and a regression test now require it. The post-manifest verification build passed in 26.838 seconds: the 398-entry wheel and 771-entry sdist each contain the four E-190 runtime/migration paths exactly once, and the sdist contains the JSON Schema exactly once. Final exact-snapshot artifact hashes remain in execution output rather than a self-referential sdist input.
+- P3-ENT-006 remains in progress. Identity/role/policy mutation, session termination, integration and retention administration, detailed audit browsing, accessible English/Arabic UI, full disclosure matrix, and task exit audit are not implemented by this slice. No customer data, external provider, commit, push, PR, tag, release, or publication was used.
+
+## E-189: Hosted scheduler and redacted allowlisted notifications
+
+- `reconforge/workers/postgres_scheduler.py` adds bounded hosted polling over a validated, deduplicated, stably sorted tenant set. Each cycle captures one whole-second UTC instant and opens a fresh PostgreSQL connection for each tenant. The worker delegates only to the atomic scheduler boundary and performs no email, webhook, or other network delivery.
+- `reconforge/application/notifications.py` defines immutable versioned routes, a closed 12-field schema-v1 event envelope, default-deny exact egress policy, destination normalization, and delivery-time route/scope/digest revalidation. `OutboxPublisherRouter` delegates unrelated domain events instead of consuming them as notifications.
+- `reconforge/infrastructure/notification_transports.py` supplies HTTPS webhook and SMTPS email transports with exact allowlists, no redirects, no URL credentials/query/fragment, complete DNS-answer validation, public-address-only policy, pinned connections with hostname certificate verification, bounded timeouts and responses, and injected secrets. Webhooks sign the canonical redacted body with HMAC-SHA-256 and send the stable notification ID as the provider idempotency key.
+- Migration 0048 stores immutable routes, explicit schedule subscriptions, and append-only notification delivery transitions under forced tenant/workspace/entity RLS. Atomic schedule dispatch inserts one deterministic notification outbox event per exact active subscription in the same transaction as the durable job, occurrence dispatch, cursor, and audit evidence. Existing outbox leases provide bounded retry, dead-letter, and explicit replay; semantics remain at-least-once.
+- The first live route insertion exposed an invalid PostgreSQL regular-expression repetition bound in the secret-reference constraint. It was not counted as a pass. The constraint was replaced with an explicit 256-character length limit plus a portable character-class expression, and the clean target was rerun.
+- Fresh PostgreSQL 17.10 migrated 0001-to-0048 in 3.827808 seconds under a synthetic application role verified as non-superuser and NOBYPASSRLS. The current catalog contains 136 policies on 136 RLS-enabled and forced-RLS tables, including exactly three notification policies. Empty 0048-to-0047-to-0048 rollback passed in 7.561 seconds. A non-empty downgrade failed before mutation and preserved migration head 0048, four routes, and 52 delivery-transition rows.
+- The focused current-code live target passes 50/50 with zero skips across schedule semantics, hosted polling, atomic dispatch/enqueue, route/subscription versioning, idempotent replay, sibling RLS, retry/dead-letter/replay, append-only audit, outbox behavior, migration, and operations. Transport tests use injected synthetic HTTPS/TLS and SMTPS connections; no external provider was contacted and no message was sent.
+- `docs/execution/P3_ENT_005_EXIT_AUDIT.yaml` binds nine exit gates and 14 hostile/failure paths to source, operations guidance, migrations, and real tests. It prohibits claims of external interoperability, exactly-once delivery, production secret custody, HA/DR, compliance/certification, external assurance, or Enterprise readiness.
+- Repository-wide Ruff passed in 0.236 seconds. Mypy passed across 335 source files in 0.831 seconds. Bandit exited zero in 8.327 seconds with reviewed static-SQL suppressions. Pip-audit reported no known dependency vulnerabilities in 34.957 seconds and skipped only the unpublished local project. `uv lock --check`, safe-load of ten execution YAML files plus the notification JSON Schema, and `git diff --check` passed; line-ending warnings are not counted as control failures.
+- Final current-tree live regression collected 1,863 tests and passed all 1,858 runnable tests in 289.979 seconds. The five declared skips require Windows symbolic-link capability, a live S3 service, a live object-lock bucket, disposable PostgreSQL backup services, and a live Redis service respectively; none is counted as a pass. Warnings remain the documented Starlette/httpx and Alembic transitions, dependency SAML `utcnow()`, and deliberately exercised legacy binary-financial-input warnings.
+- The first closing package build completed in 29.038 seconds; the post-audit documentation rebuild completed in 25.652 seconds. Both produced a 394-entry wheel and 763-entry sdist. Independent archive inspection found each of the five required E-189 application, transport, PostgreSQL repository, hosted-worker, and migration paths exactly once in each artifact. Artifact digests are retained in the execution output rather than embedded into an input file that would make the sdist digest self-referential.
+- All tenants, workspaces, entities, schedules, routes, destinations, secrets, jobs, and delivery results were synthetic localhost or injected test data. No customer data, external notification, commit, push, pull request, tag, release, or publication occurred. P3-ENT-005 closes only at the documented single-node bounded contract; P3-ENT-006 is next.
+- Cleanup was identity-scoped: the PostgreSQL container was verified by its full ID and image, stopped, auto-removed with its synthetic database, and confirmed absent. Policy rejected the combined recursive build-directory cleanup before execution; three reproducible E-189 artifact directories therefore remain under the operating-system temporary directory. No unrelated path, container, volume, or image was changed.
+
+## E-188: Atomic PostgreSQL schedule dispatch
+
+- ADR 0192 and migration 0047 bind immutable schedule versions, retained initial cursors, advancing current cursors, registration digests, append-only occurrence-to-job dispatches, and bounded count-only audit events under forced workspace/entity RLS. The Application service contains no infrastructure import; repository and PostgreSQL parity inventories classify the new boundary explicitly.
+- Each ADR 0191 occurrence digest becomes both the stable dispatch identity and durable-job idempotency key. Tenant-wide `FOR UPDATE SKIP LOCKED` discovery narrows to the selected workspace/generic entity before job, dispatch, cursor, or event writes. Durable-job resolution and cursor advance share the outer transaction; a deliberately incompatible pre-existing job rolls the whole operation back without a dispatch or cursor change.
+- Fresh disposable PostgreSQL 17.10 (`postgres@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193`) migrated 0001-to-0047 in 3.789 seconds. The application role was `NOSUPERUSER` and `NOBYPASSRLS`. The clean migrated head contained 133 policies on 133 RLS-enabled and forced-RLS tables, including all three scheduler policies; the full suite adds one test-only metrics table and therefore measures 134.
+- The current-code focused live target passes 14/14 in 4.216 seconds with zero skips. It covers daily catch-up, two concurrent workers, stable job/dispatch identity, post-advance registration replay, immutable configuration/evidence, monotonic versions/cursors, tenant and sibling workspace/entity exclusion, safe audit counts, and atomic conflict rollback.
+- Empty 0047-to-0046-to-0047 direct rollback passed in 4.354 seconds before the non-empty guard was added. The current guarded code passes an isolated 0047-to-0011-to-0047 migration test in 7.359 seconds. A non-empty downgrade exits 1 with the explicit backup/data-migration requirement and leaves the database at 0047 with all rows intact.
+- The first ambient-Python full attempt was blocked at collection because Python 3.14 lacked optional `cbor2`; it is not counted as a test failure. The locked Python 3.12 environment then exposed two exact inventory omissions, both fixed and covered by their drift tests. A later full run exposed a real pre-existing WebAuthn assurance tie: assertions sharing a second were ordered by random IDs. Active assurance now deterministically prefers a valid user-verified WebAuthn assertion, then verification time and ID; the real HTTP WebAuthn flow passed five consecutive runs.
+- Final exact-snapshot locked live regression collected 1,852 tests and passed every runnable test in 287.394 seconds; five declared service/platform cases remained skips. Warnings were the existing Starlette/httpx transition, Alembic path-separator deprecation, dependency SAML `utcnow()`, and declared legacy financial-input warnings; none is counted as a passing control.
+- Repository-wide Ruff passed in 0.221 seconds. Mypy passed across 331 source files in 4.725 seconds. Bandit exited zero in 8.319 seconds with existing reviewed `nosec` warnings only. Pip-audit reported no known third-party vulnerabilities in 30.437 seconds and skipped only the unpublished local package. `uv lock --check`, safe-load of nine execution YAML files, and `git diff --check` passed.
+- The initial `python -m build --no-isolation` completed in 32.802 seconds. The final guarded-migration/documentation snapshot rebuilt in 28.538 seconds; archive inspection found all five required scheduler/migration/assurance paths in both artifacts (389 wheel entries; 754 sdist entries).
+- All tenants, workspaces, entities, credentials, schedules, and jobs were synthetic localhost data. No commit, push, pull request, tag, release, external message, customer-data access, or publication occurred. P3-ENT-005 remains open for a hosted polling runtime, optional email/webhook notifications, egress allowlists, redaction, operator surfaces, and its exit audit.
+- Cleanup was identity-scoped for the disposable service: container `reconforge-e188-postgres` was verified as `3aa154b5081b85b366ddef249aab99eb47eaf9e034aaa32f78c8455b82596fca` using `postgres:17.10-alpine`, stopped, automatically removed with its synthetic database, and confirmed absent. The sandbox rejected both recursive and verified item-by-item removal of `.codex-test-tmp/e188-build` and `.codex-test-tmp/e188-build-final` before execution; those two generated, reproducible build directories remain local test residue inside the already-existing untracked test root.
+
+## E-191: Authoritative PostgreSQL identity and session lifecycle
+
+- ADR 0195 establishes PostgreSQL as the only authoritative user/session administration plane in the server profile. `IdentityAdministrationApplicationService` is backend-neutral; `PostgresIdentityAdministrationRepository` executes tenant-bound lifecycle operations inside the existing transaction wrapper. The four `/api/v1/admin/identity/*` routes require human `users.manage` and current central step-up/MFA.
+- Migration 0050 adds positive lifecycle versions, consistent user-disable and session-revocation metadata, closed reason codes, and bounded pagination indexes. The current-schema installer names each constraint, and a fresh catalog check found each lifecycle constraint exactly once.
+- Live HTTP evidence under a synthetic `NOSUPERUSER`/`NOBYPASSRLS` role proves signed user/session cursor pagination, tenant/filter cursor mismatch rejection, sibling user/session exclusion, no email/password/token/hash/raw-IP/raw-user-agent disclosure, service-account and missing-assurance denial, stale-version conflict, self-disable refusal, last-active-admin refusal, all-session invalidation on disable, disabled login denial, enable without session resurrection, current-session revocation, and bounded audit IDs.
+- An injected domain-audit append failure rolls back the user status and every session effect. SCIM deactivation records `scim_deactivation`, actor attribution, lifecycle increments, and session invalidation; reactivation clears disable metadata and increments again. Creation of an initially inactive SCIM identity satisfies the same closed constraint.
+- The historical `/api/v1/users` SQLite routes return `local_identity_surface_disabled` only in the PostgreSQL profile; all Community/local user-route regressions pass unchanged. The `/api/v1/roles` server shadow surface remains assigned to E-192 and is not claimed complete.
+- Fresh disposable `postgres:17.10-alpine` container `reconforge-e191-postgres`, full ID `299c871f20f7f648829fcb9c8cfb3d5ee02e694a484c17b161a0147f6e434174`, migrated 0001-to-0050 in 16.932 seconds after Docker restart. The focused target passed 38 runnable tests; one separately declared Alembic migration-service test remained skipped.
+- On the final container, empty 0050-to-0049-to-0050 recovery passed in 4.163 seconds and empty 0050-to-0011-to-0050 recovery passed in 6.758 seconds. A non-empty downgrade exited 1 with the explicit evidence-loss refusal and preserved head 0050 plus two lifecycle-mutated users.
+- The first ambient Python 3.14 full attempt stopped at collection because optional `cbor2` was absent; it is blocked environment evidence, not a pass or functional failure. A later locked run exposed a historical Security Center fixture that set `disabled` without the new metadata; the fixture was corrected and its live test reran green. A subsequent exact-snapshot run was externally terminated at 30% when Docker Desktop stopped, with no pytest failure; Docker was restarted and all evidence was recreated on a new disposable database.
+- Final locked Python 3.12 exact-snapshot regression collected 1,890 tests and passed every 1,884 runnable test in 379.616 seconds. Six declared skips require a separate migration service, Windows symbolic-link capability, live S3, live object-lock S3, disposable PostgreSQL backup services, and live Redis; none is counted as a pass.
+- Final static/security gates: Ruff passed in 2.248 seconds; mypy passed across 341 source files in 15.931 seconds; Bandit exited zero in 11.151 seconds with existing reviewed static-SQL notices; pip-audit reported no known third-party vulnerabilities in 53.571 seconds and skipped only the unpublished local package; `uv lock --check`, 20 governance tests, safe-load of four changed YAML files, and `git diff --check` passed in 6.438 seconds. LF-to-CRLF notices are not failures.
+- Final package build completed in 32.252 seconds. The 1,084,401-byte wheel has SHA-256 `c03c023b9f13ef9c45dadb444666d47bd09c2e46ea39be72ba8014cf61c55d8a`; the 1,434,288-byte sdist has SHA-256 `5c00b2a230989e62076c71560aef719a1b9140afc58b4f5f4088b04b2fb09b85`. Archive inspection found the Application, PostgreSQL adapter, API route, and migration exactly once in both 402-entry wheel and 781-entry sdist; ADR 0195, the runbook, and all E-191 tests occur exactly once in the sdist.
+- All identities, tenants, credentials, sessions, and audit events were synthetic localhost test data. No customer data, commit, push, pull request, tag, release, external message, or publication occurred. P3-ENT-006 remains open for E-192 role/policy lifecycle, integration/retention administration, consolidated audit browsing, accessible UI, and the exit audit.
+
+## E-172: SCIM provisioning is not authorization
+
+- Official design basis: RFC 7643 User/Group resource semantics and tenant/domain privacy guidance; RFC 7644 resource, filter, PATCH, error, discovery, and ETag protocol requirements. The initial slice intentionally stops below HTTP conformance.
+- `uv run --no-sync pytest tests/test_scim_application.py -q`: 11 passed. Coverage includes closed schemas, normalization, hostile usernames/control characters, duplicate schemas/members, multiple primary email rejection, external-ID idempotency, provisioning-domain isolation, deactivation with denial audit, group-member scope, and absence of implicit role/permission fields.
+- `uv run --no-sync ruff check reconforge/auth/scim.py tests/test_scim_application.py`: passed.
+- `uv run --no-sync mypy reconforge/auth/scim.py`: passed with no issues.
+- No database, network, external identity provider, customer data, publication, commit, push, PR, tag, or release was used. PostgreSQL and HTTP evidence remain mandatory before P3-ENT-002 can close.
+
+## E-171: Server-issued challenges and bounded federation exit
+
+- `uv run --no-sync ruff check <federation configuration/API/persistence/tests>`: passed.
+- `uv run --no-sync mypy reconforge`: passed with no issues across 306 source files.
+- `uv run --no-sync pytest tests/test_federation_config.py tests/test_api_federation.py tests/test_oidc_verifier.py tests/test_saml_verifier.py -q -rs`: 29 passed and one declared PostgreSQL skip. Real RSA OIDC and real xmlsec SAML signatures traverse the HTTP route; exact OIDC replay and air-gap provider denial return the uniform authentication failure.
+- Fresh disposable `postgres:17.10-alpine` container `reconforge-e171-postgres` migrated 0001 through 0034. Migration 0034 then downgraded to 0033 and re-upgraded successfully after the challenge table was added.
+- Live non-superuser HTTP proof: `tests/test_api_federation.py::test_live_http_oidc_session_logout_replay_and_tenant_isolation` passed. It covers server challenge, signed OIDC login, prelinked role/session, `/me`, logout and post-revocation 401, consumed-challenge replay denial, cross-tenant denial, sanitized audit, and absence of raw subject storage.
+- Final federation live pair (`test_live_http_oidc_session_logout_replay_and_tenant_isolation` plus `test_live_postgres_federation_replay_link_session_and_rls`) passed 2/2. The combined API/persistence/Alembic target passed 20/20 before the final challenge-capacity hardening; the subsequent live pair covers that exact runtime code.
+- A broader live focus later encountered retained synthetic rows in the unrelated historical `test_live_server_api_uses_postgres_identity_and_tenant_scope`; the failure was a duplicate fixture identity after that test's earlier incomplete cleanup, not a federation assertion failure. It is not counted as a green gate. The isolated federation gates above were rerun cleanly and passed.
+- Challenge storage uses a tenant/provider advisory transaction lock, deletes expired/consumed rows, caps 100 active entries, stores only challenge/correlation SHA-256 hashes, and consumes by one conditional update before verification.
+- Temporary container identity was verified before stop; `reconforge-e171-postgres` and its synthetic data were removed and are unrecoverable. No commit, push, PR, tag, release, external write, or publication occurred.
+- Known warnings: Starlette's TestClient/httpx transition and python3-saml's internal `datetime.utcnow()` use remain dependency-upgrade items. No warning is treated as a passing security control.
+- Final non-service regression: `uv run --no-sync pytest` collected 1,696 tests and every runnable test passed; declared service/platform skips remained skips. The first collection attempt exposed an unsynchronized optional OpenTelemetry extra, and the first complete run exposed a wall-clock-dependent OIDC fixture; the locked extras were synchronized, the fixture was changed to derive time at test execution, and the complete suite was rerun to green rather than retried unchanged.
+- Final static/security gates: `uv run --no-sync ruff check .` passed in 0.43 s; `uv run --no-sync mypy reconforge` passed across 306 source files in 1.69 s; `uv run --no-sync bandit -q -r reconforge` exited 0 in 8.37 s with reviewed `nosec` warnings only; `uv run --no-sync pip-audit` reported no known vulnerabilities in 18.99 s, with only cache-deserialization warnings and the local project skipped.
+- Governance focus covering risk, security architecture, ASVS, SSDF, SLSA, threat models, maturity, API inventory, and federation produced 57 runnable passes and two declared live-service skips.
+- `python -m build --no-isolation` produced `reconforge_erp-0.7.1-py3-none-any.whl` and `reconforge_erp-0.7.1.tar.gz`. Independent archive inspection confirms both contain `reconforge/auth/federation_config.py` and migration `0034_postgres_federation.py` (the wheel installs the migration under its `.data/data/alembic` payload). Safe-load validation passed for all three changed YAML control files, and `git diff --check` passed with line-ending conversion warnings only. The original combined build session's final process code was not retained, so archive inspection is recorded instead of inventing that missing exit code.
+
+## E-192: Authoritative PostgreSQL role and access-policy lifecycle
+
+- ADR 0196 makes PostgreSQL the only role and access-policy authority in the server profile. `AccessAdministrationApplicationService` is backend-neutral; `PostgresAccessAdministrationRepository` executes static parameterized SQL beneath tenant RLS. Six `/api/v1/admin/access/*` routes require a human `roles.manage` principal and current central step-up/MFA.
+- Permission discovery is read-only. Role creation, role lifecycle, role-permission replacement, and user-role replacement validate bounded exact sets and optimistic versions. A tenant advisory transaction lock protects the last active `roles.manage` authority. A cross-service identity guard also prevents disabling the last active holder of either `users.manage` or `roles.manage`.
+- Each effective-access mutation increments affected user lifecycle versions, revokes active sessions with the closed `access_change` reason, and appends a bounded state-digest audit event in the same transaction. Injected audit failure rolls back the entire mutation. Retiring a role revokes active assignments; reactivation never resurrects them.
+- Migration 0051 adds positive role/assignment/policy lifecycle versions, attributable grant/revoke/retirement metadata, paired reason/state constraints, and indexes. Authorization projections require active users, assignments, roles, and policies. Bootstrap conflict handling returns existing definitions without mutating descriptions or reactivating revoked policy.
+- The historical `/api/v1/roles` SQLite surface returns `local_identity_surface_disabled` in the PostgreSQL profile and still passes Community/local regressions. Signed role cursors bind tenant, resource, retired-state filter, sort, and tie-break identity. API responses contain no email, credential, token, hash, raw IP, raw user-agent, or arbitrary audit text.
+- Disposable `postgres:17.10-alpine` container `reconforge-e192-postgres`, full ID `89977b57d21edd27f9cbd415e675309e6227fb0199c87ef730745afb432c818a`, exposed localhost port 32768. Fresh 0001-to-0051 migration passed in 4.215 seconds under synthetic credentials. The application role `reconforge_e192_app` is `NOSUPERUSER`, `NOCREATEDB`, `NOCREATEROLE`, `NOINHERIT`, and `NOBYPASSRLS`.
+- The final focused Application/API/PostgreSQL/operations/Alembic target passed 19/19 with zero skips in 13.932 seconds. Live hostile evidence covers sibling tenants, forced-RLS direct reads, duplicate roles, stale versions, exact set replacement, retirement without resurrection, session invalidation, last-manager denial through both access and identity services, immutable audit actions, and deliberate audit-write rollback.
+- Empty direct 0051-to-0050-to-0051 recovery passed in 4.087 seconds; empty long 0051-to-0011-to-0051 recovery passed in 6.986 seconds. A non-empty downgrade exited 1 with the explicit evidence-loss refusal, preserved head 0051, and retained four governed roles. The separate recovery database remains synthetic and disposable.
+- The first full regression exposed three historical HTTP assertions that treated `/api/v1/roles` as a valid server-mode safe read after the shadow plane was intentionally closed. The tests now prove the 409 boundary after successful step-up and use an independently authorized workflow read for machine-principal policy. All three corrected tests pass; no implementation rollback reopened the shadow plane. A separately isolated OIDC fixture passed 9/9.
+- Final locked regression collected 1,903 tests and passed all 1,898 runnable tests in 308.338 seconds. Five declared skips require Windows symbolic-link capability, live S3, live object-lock S3, disposable PostgreSQL backup services, and live Redis; none is counted as a pass. Warnings remain the documented Starlette/httpx and Alembic transitions, dependency SAML `utcnow()`, and deliberately exercised legacy financial-input warnings.
+- Repository-wide Ruff passed in 0.182 seconds. Mypy passed across 344 source files in 0.711 seconds. Bandit exited zero in 8.425 seconds with reviewed static-SQL notices. The hash-locked all-extras pip-audit found zero known vulnerabilities across 123 third-party packages in 13.921 seconds; the supply-chain policy reported `valid` with zero active exceptions and `uv lock --check` passed.
+- The final build produced a 1,097,400-byte wheel with SHA-256 `4595ba5ab50bae60893dba754180859abb91970a7933b845dbe41ed1741003d6` and a 1,454,289-byte sdist with SHA-256 `db1b97bd0e1738994def5d1b4814d968f47a6e5bd982468754dc359f57298743`. Independent inspection found 406 wheel entries and 790 sdist entries; the Application contract, PostgreSQL adapter, API route, and migration occur exactly once in both, while ADR 0196, the access-administration runbook, and all three E-192 test modules occur exactly once in the sdist.
+- All users, tenants, roles, permissions, assignments, sessions, credentials, and audit events were synthetic localhost data. No customer data, external message, commit, push, pull request, tag, release, or publication occurred. P3-ENT-006 remains open for integration/retention administration, consolidated audit browsing, accessible UI, and the exit audit.
+- Cleanup was identity-scoped: container `reconforge-e192-postgres` was matched to full ID `89977b57d21edd27f9cbd415e675309e6227fb0199c87ef730745afb432c818a`, image `postgres:17.10-alpine`, and auto-remove mode before stop. It and both synthetic databases were removed and confirmed absent; no unrelated container, volume, or image was changed.
+
+## E-193: Native integration disable and monotonic evidence-retention governance
+
+- ADR 0197 rejects a shadow connector registry. `SecurityGovernanceApplicationService` is backend-neutral, while `PostgresSecurityGovernanceRepository` projects and changes the authoritative federation-link, SCIM-credential, service-account, notification-route, and evidence-registry tables inside the caller's tenant transaction.
+- Six `/api/v1/admin/security/*` routes require a human `security.policy.manage` principal and current central step-up/MFA. Signed keyset cursors bind tenant, resource, inactive/retired filter, ordering, and tie-break identity. Response models exclude bearer values, token hashes, external-subject hashes, notification destinations, secret references, raw actors, email, IP, user-agent, and evidence source-reference fields.
+- Native disable, credential revocation, native lifecycle evidence where applicable, and bounded domain audit are atomic. Injected audit failure rolls back a retention-policy mutation. Live post-disable checks prove service-account and SCIM authentication return no principal, federation login refuses the disabled link, and notification resolution refuses the disabled route.
+- Migration 0052 adds forced-RLS versioned retention policies and append-only assignments, plus an explicit evidence retention version and monotonic floor. Exact assignment replay is idempotent; shorter later policies retain the existing floor; stale evidence versions and retired policies fail closed; direct SQL and the historical evidence writer cannot shorten retention. Omitted old-API retention preserves the current value.
+- Disposable PostgreSQL 17.10 used image `postgres@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193`. Container `reconforge-e193-postgres`, full ID `b4a74c5c628f68124beef5591ee0b3815cedf66dff9f42f7b18f5fd727aa1a47`, exposed localhost port 2409 with auto-remove enabled. The application role `reconforge_e193_app` was `NOSUPERUSER`, `NOCREATEDB`, `NOCREATEROLE`, `NOINHERIT`, and `NOBYPASSRLS`.
+- Fresh migration 0001-to-0052 passed. `tests/test_alembic_postgres.py` passed 4/4 in 17.532 seconds and exercised direct 0052-to-0051-to-0052 plus long 0052-to-0011-to-0052 recovery. The live non-empty downgrade refused before evidence loss and preserved head 0052 plus both policies.
+- The final focused Application/API/PostgreSQL/evidence target passed 18/18 in 14.681 seconds. The exact-snapshot full regression collected 1,920 tests and passed every 1,915 runnable test in about 247.7 seconds. Five declared skips require Windows symbolic-link creation, live S3, live object-lock S3, disposable PostgreSQL backup services, and live Redis; none is counted as a pass.
+- Repository-wide Ruff passed. Mypy passed across 347 source files. Bandit exited zero after dynamic `FOR UPDATE` SQL composition was replaced by static locked statements; existing reviewed warnings remain warnings only. Pip-audit found no known third-party vulnerabilities and skipped only the unpublished local package. `uv lock --check`, the supply-chain policy (`valid`, zero active exceptions), YAML/governance tests, and `git diff --check` passed.
+- The final build completed in about 11.1 seconds. The 1,113,337-byte wheel has SHA-256 `3780e26d1ed853cb79a05a7d1ff7f21601c1714ec9fdda01c0f3cef8bbe170e1`; the 1,478,173-byte sdist has SHA-256 `2c0a47fa7738f5f11ce58e645b482d3ba5cd2fd4c098826168b345681c37ebe5`. Independent inspection found 410 wheel entries and 799 sdist entries. The Application contract, PostgreSQL adapter, API route, and migration occur exactly once in both; ADR 0197, the runbook, and all three E-193 test modules occur exactly once in the sdist.
+- All tenants, users, integrations, credentials, destinations, policies, evidence, and audit rows were synthetic localhost data. Retention is database metadata only; no legal approval or object-store/backup/replica/export WORM propagation is claimed. No customer data, external provider/message, commit, push, pull request, tag, release, or publication occurred. P3-ENT-006 remains open for consolidated audit browsing, accessible English/Arabic UI, disclosure/accessibility consolidation, and its exit audit.
+- Cleanup was identity-scoped: `reconforge-e193-postgres` was matched to full ID `b4a74c5c628f68124beef5591ee0b3815cedf66dff9f42f7b18f5fd727aa1a47`, image `postgres:17.10-alpine`, and auto-remove mode before stop. The container and its synthetic database were removed and confirmed absent; no unrelated container, image, or volume was changed.
+
+## E-194: Redacted consolidated PostgreSQL audit browsing
+
+- ADR 0198, `AuditBrowsingApplicationService`, and `PostgresAuditBrowsingRepository` add a bounded view across the current `domain` and `ledger_control` append-only chains. The static parameterized union runs inside one transaction-local tenant RLS scope. It returns event identity, tenant-local sequence, timestamp, action/type, one-way actor/object/metadata digests, and chain/state hashes; raw subjects, object IDs, request IDs, reasons, and metadata never enter the response.
+- `GET /api/v1/admin/audit/events` requires human `audit.read`, current privileged assurance, and an operator-owned signing key. Cursor context binds tenant/resource/order/timestamp/source/event. `GET /api/v1/admin/audit/verify` requires human `audit.verify` and reports each chain separately with stable issue codes. The API labels the model `independent_source_chains_no_global_chain`.
+- Migration 0053 makes future `audit.read`/`audit.verify` service-account grants database-invalid while preserving historic rows via `NOT VALID`; application validation and central policy independently reject machine principals. The direct recovery path 0053-to-0052-to-0053 retained synthetic audit data and returned head 0053.
+- Isolated synthetic PostgreSQL 17.10 proof used `postgres:17.10-alpine`, container ID `322928d507603547c3e9c0c79f95ddb31da7128bbf98f17344ed35e4dc9f701d`, port 2410, and a `NOSUPERUSER`/`NOBYPASSRLS` application role. Fresh 0001-to-0053 migration passed. The application role saw zero audit rows without scope, saw exactly its tenant's two independently verified source events with no inserted sensitive strings after scope, and HTTP proof passed password step-up, signed cursor paging, redaction, and source-specific verification. The exact container was stopped and auto-removed; no existing container, volume, or database was changed.
+- Focused inventory/API/audit tests passed 13/13. Final JUnit regression recorded 1,930 tests, zero failures, zero errors, 62 declared external-capability skips, and 342.681 seconds. Ruff passed; mypy passed 351 source files; Bandit exited zero with existing reviewed `nosec` warnings; pip-audit found no known dependency vulnerability and skipped only unpublished `reconforge-erp`; `uv lock --check` and `git diff --check` passed.
+- Isolated build artifacts: wheel `F:\reconforge-erp\.codex-test-tmp\e194-build\reconforge_erp-0.7.1-py3-none-any.whl` (1,121,277 bytes, SHA-256 `5ad822935be738c42f40d4c6be7ce57c3e0889d72804cde833e01f911f364d80`, 415 entries) and sdist `F:\reconforge-erp\.codex-test-tmp\e194-build\reconforge_erp-0.7.1.tar.gz` (1,486,846 bytes, SHA-256 `46b9761d7c4725920b88ce7e522b891c2d69d81131d33b0794bd305c98b625f6`, 808 entries). Application/adapter/route each occur once in both; migration occurs once in the wheel data payload and sdist; ADR/runbook occur once in sdist.
+- All audit rows, identities, roles, credentials, and databases were synthetic. No customer data, commit, push, PR, tag, release, external message, or publication was used. The work does not claim a global chain, accessibility-complete administration UI, legal or object-store evidence retention, compliance, certification, external assurance, or Enterprise readiness.
+
+## E-195: Administration UI readiness audit
+
+- `npm --prefix apps/web run typecheck` passed in 4.355 seconds; `npm --prefix apps/web run test:run` passed 42 tests in seven files in 19.979 seconds wall time; and `npm --prefix apps/web run build` passed in 7.102 seconds. The production bundle is a local build artifact only.
+- `npm --prefix apps/web run e2e` passed 10 Chromium tests in 41.2 seconds. The declared coverage includes automated Axe scans of the seven critical Studio routes in English and Arabic, `lang`/`dir` verification, keyboard skip/focus trapping/restoration, persisted contrast/color-safe/reduced-motion preferences, evidence source-path redaction, and mobile landmarks. Browser output contained only the existing `NO_COLOR`/`FORCE_COLOR` environment warning.
+- Inspection of `apps/web/src/data.ts`, `LiveStudio.tsx`, server auth routes, dependencies, and E-190--E-194 route contracts found that Studio's existing live route is deliberately read-only and that no browser server-session or privileged step-up flow exists. The server administration APIs require Bearer authentication and central step-up. No browser token was stored, embedded, or fabricated, and no deceptive administration UI was introduced.
+- `docs/execution/P3_ENT_006_UI_READINESS_AUDIT.md` limits this conclusion and defines the required next boundary. This is not evidence of an accessible administration UI, full WCAG conformance, production browser authentication, CSRF protection, accessibility certification, or Enterprise readiness. No customer data, external interaction, commit, push, pull request, tag, release, or publication occurred.
+
+## E-196: Same-origin browser administration session boundary
+
+- The final expanded focused target (`tests/test_api_browser_sessions.py`, authentication, audit/identity/access/security administration, and authorization inventory) passed 21/21 in 14.687 seconds. It proves the browser-login response omits `access_token`, the host-only session cookie is `HttpOnly`, `Secure`, and `SameSite=Strict`, cookie authentication reads the redacted PostgreSQL audit route, missing/malformed CSRF proofs fail closed, a proof from another session fails, logout revokes the session, invalid login sets no cookie or password echo, bearer behavior remains covered, and authorization inventory is closed.
+- An initial FastAPI collection attempt failed because `Response | None` was mistakenly interpreted as a response model. The parameter was made explicit and the affected 12-test rerun passed. A subsequent PostgreSQL-profile cookie-read test first used the wrong TestClient cookie domain and returned 401; it was corrected to a host cookie and the final 14-test target passed. Neither failed attempt is counted as a passing gate.
+- Focused Ruff passed; `mypy reconforge/api` passed 46 source files. ADR 0199 and the browser-session operator runbook are explicitly included in `MANIFEST.in` and locked by the test.
+- The final JUnit regression recorded 1,935 tests, zero failures, zero errors, 62 declared external-capability skips, and 291.534 seconds. Repository-wide Ruff passed; mypy passed 352 source files; Bandit exited zero with existing reviewed `nosec` notices; `uv lock --check` passed; and pip-audit found no known third-party vulnerability, skipping only unpublished `reconforge-erp`.
+- Isolated build artifacts are `.codex-test-tmp/e196-build/reconforge_erp-0.7.1-py3-none-any.whl` (1,122,751 bytes, SHA-256 `d92b83a17489cb6049aa169c14cecd6888d1e146550a2997881caa917c1be6de`, 416 entries) and `.codex-test-tmp/e196-build/reconforge_erp-0.7.1.tar.gz` (1,491,038 bytes, SHA-256 `bf5f98be2a328387f35add7d6ea38c86d27f7b272dcd62b16d6349dd6ca14fe9`, 812 entries). `reconforge/api/browser_session.py` occurs exactly once in each; ADR 0199 and the browser-session runbook occur exactly once in the sdist. `git diff --check` passed with existing line-ending conversion notices only.
+- The CSRF proof is session-bound but intentionally stateless; it is not a one-time nonce. No production reverse-proxy/static-host behavior, CSP, browser login/step-up UI, complete mutation UI, accessibility certification, customer data, external interaction, commit, push, pull request, tag, release, or publication is claimed.
+
+## E-197: Accessible same-origin redacted audit administration UI
+
+- `npm --prefix apps/web run typecheck` passed in 1.328 seconds. `npm --prefix apps/web run test:run` passed 47 tests across eight files in 8.426 seconds wall time. `npm --prefix apps/web run build` passed in 3.163 seconds and emitted a separately lazy-loaded `AdminAudit` chunk.
+- The new data-contract tests prove browser login uses same-origin/no-store transport without an access-token response, step-up includes the memory-only CSRF header, audit reads do not include that header, HTTP 401/403 error codes remain distinct, and an event expanded with `actor_label` is rejected instead of rendered. The first attempt exposed that missing closed-key validation; it was fixed and is now a regression test.
+- Final `npm --prefix apps/web run e2e` passed 11/11 Chromium paths in 26.8 seconds. It covers mocked same-origin sign-in, privileged step-up, redacted event/verification rendering, absence of password/actor-label text, Arabic RTL switch, and Axe scans of all eight critical routes in English and Arabic. The first E2E attempt reached the rendered event but used `cell` instead of the correct row-header locator; the test was corrected and rerun green. `NO_COLOR`/`FORCE_COLOR` was the only runtime warning.
+- No bearer token, customer data, production identity provider, external service, commit, push, pull request, tag, release, or publication was used. This evidence does not prove an unmocked browser-to-PostgreSQL deployment, CSP/reverse-proxy handling, full WCAG conformance, or Enterprise readiness.
+## E-206: Browser integration and evidence-retention governance
+
+- The same-origin administration surface now exposes the existing native security-governance lifecycle without creating a shadow integration registry. Operators can disable an active integration, create or version a retention policy, retire/reactivate it, and apply it to a supplied evidence identifier. Each action requires the existing step-up session, CSRF proof, server permission, native concurrency token, and a typed confirmation literal.
+- Client response validators remain schema-closed. Integration lists never return destinations or secrets; policy lists never return evidence references. The evidence identifier is a transient form value cleared after success or cancellation. Audit event IDs, state digests, and evidence identifiers are not rendered.
+- Vitest passes 55/55 including exact paths, payloads, CSRF headers, concurrency fields, and rejection of expanded integration/evidence responses. The focused Chromium administration scenario passes 1/1 and exercises disable, policy create, evidence application, retirement, reactivation, refresh, and non-disclosure. TypeScript and the production build pass.
+- A clean PostgreSQL 17.10 database migrated 0001-to-0053 and the current security-governance target passed 4/4. The non-superuser/NOBYPASSRLS lifecycle proves native credential disablement, tenant isolation, stale-state rejection, policy versioning, idempotent evidence assignment, non-shortening after a shorter policy update, retired-policy denial, audit rollback, database triggers, and guarded downgrade. The first attempt against an older ambient schema was not counted as a pass; a clean migrated database was required.
+- No customer data, external provider, commit, push, pull request, release, or publication was used. The browser flow is locally contract-mocked and the identical HTTP/PostgreSQL contract is independently live-tested; deployed TLS/CSP and assistive-technology interoperability remain unproven.
+## E-207: Host-bounded same-origin HTTPS foundation
+
+- ADR 0200 adds an optional one-origin composition: the built Studio mounts after API routes, an exact Host allowlist is mandatory for the web root, and direct certificate/key configuration is distinct from an asserted reviewed upstream TLS boundary. The Community/API-only default is unchanged.
+- The CSP allows only same-origin scripts, styles, fonts, network calls, forms, manifests, and workers; it denies objects, frames, and base rewriting. Dynamic style attributes are the only inline-style allowance required by the current React visualizations. HSTS is emitted only for declared secure transport. Missing asset-like paths remain 404 and cannot become executable SPA HTML.
+- The focused test target passes 16/16 across API hosting, real Uvicorn TLS, browser-session cookie, and server cookie-principal/CSRF contracts. The live test uses a short-lived synthetic localhost certificate trusted only by its test client, validates hostname, negotiates TLS 1.2 or 1.3, serves `/admin-audit` and `/api/v1/health` on one origin, verifies headers, rejects a hostile Host with 400, and shuts down cleanly.
+- The first opt-in browser attempt was blocked before serving because Windows reserved port 2443 (`WinError 10013`); it is not counted as a pass or product failure. The port became an explicit test input. Chromium then passed 1/1 in 7.7 seconds on 24443: the actual production Vite bundle loaded under the server CSP, emitted zero `securitypolicyviolation` events, contained no inline script/style elements, rendered the administration route, and fetched health from the identical HTTPS origin.
+- The ambient Python 3.14 full attempt stopped at collection because optional `cbor2` was absent; it is not counted as a pass or functional failure. The locked Python 3.12 snapshot then passed 1,879 tests with 62 declared external-service/platform skips in 271.38 seconds. After the snapshot, the package-membership documentation test and a Bandit-driven credential-variable rename both passed their complete focused boundaries.
+- Ruff and mypy pass across 352 source files. Bandit exits zero after removing its one low-confidence credential-name false positive; pip-audit reports no known third-party vulnerabilities and only skips the unpublished local package; `uv lock --check` passes. The web passes typecheck, 55 Vitest tests, production build, and 11 Chromium tests with four explicitly opt-in live skips. Wheel/sdist build succeeds; archive inspection finds both runtime files exactly once in the wheel and ADR 0200, the runbook, and the deployment boundary exactly once in the sdist. YAML and diff checks pass with existing CRLF warnings only.
+- The runbook records direct-TLS and reviewed-upstream modes, certificate/key custody, proxy requirements, verification, and rollback. No external proxy, public certificate, DNS, customer data, commit, push, pull request, release, or publication was used. Assistive-technology interoperability and internet-facing assurance remain open.
+- The complete mocked privileged administration workflow now passes Axe WCAG 2 A/AA and 2.1 A/AA checks in English and Arabic after identity, session, access, integration, and retention mutations. The P3-ENT-006 exit audit is therefore marked verified at its explicit evidence-bounded scope. Its dedicated regression requires all fourteen gates, every referenced file, authority/disclosure/retention hostile coverage, zero publication flags, and retained external-assurance limitations.
+## E-208: Closed connector manifest and local synthetic conformance
+
+- `connector-manifest-v1` declares identity/version, truthful kind, capability, authentication,
+  network use, classification, rate limit, cursor/idempotency behavior, retry bounds, schema
+  versions, sandbox, threat model, secret handling, egress, and support level. Unknown fields fail.
+- Version 1 requires read capability and rejects write capability. Network/authentication/rate-limit/
+  egress combinations fail closed. Canonical JSON SHA-256 is deterministic integrity metadata, not
+  a package signature or install authorization.
+- The registry remains a fixed source allowlist. Generic CSV is `local_file`; SAP/Odoo are
+  `export_profile`. Hostile names cannot select a module or path.
+- A closed 64 KiB JSON envelope verifies Ed25519 against one exact caller-trusted publisher/key.
+  Manifest/publisher/signature tampering, executable entry-point fields, binary or oversized input,
+  and duplicate matching trust keys fail closed. It authenticates data and never loads code.
+- The final focused target passed 32/32 across SDK, signed packages, and existing file-ingress
+  security. Mypy passed ten connector/plugin source files. Ruff found only two import-order errors
+  in the first attempt; they were corrected and the final Ruff gate passed.
+- No network, secret, vendor system, customer data, commit, push, pull request, release, or
+  publication was used. Persistent publisher approval, executable package installation, network
+  sandbox, secret resolver, cursor/job integration, and retry execution remain open.
+
+## E-209: Read-only network conformance and durable connector recovery
+
+- A versioned trust registry accepts only unique canonically ordered public keys and distinguishes active from revoked keys. Ed25519 verifies the closed 64 KiB data envelope; private keys and executable entry points are never accepted.
+- `network-connector-registration-v1` binds one manifest, exact endpoint, credential reference, timeout, and response ceiling. Manifest egress accepts exact HTTPS URLs without userinfo/query/fragment. DNS resolves once, rejects any private/link-local/mixed answer, pins the selected public IP, and preserves TLS hostname verification. Redirects and policy failures are permanent and are never retried.
+- Secret resolution is disabled by default. The injected synthetic resolver returns a bounded runtime credential used only for the request header; results, artifacts, digests, errors, registrations, and manifests contain no credential value. Retry is restricted to transport failures and HTTP 408/425/429/5xx under the manifest ceiling and bounded exponential delays. Rate control is process-local and explicitly not a distributed quota.
+- Formal conformance runs the identical idempotency key/cursor twice and requires identical request, response, and next-cursor identities. Hostile tests cover unsafe/undeclared egress, SSRF DNS answers, redirects, oversize/malformed secrets/cursors/responses, unknown registration fields, permanent failure, retry exhaustion, and non-retry policy failures.
+- Each page response/cursor is a closed canonical artifact in tenant-scoped immutable storage. The existing durable-job worker atomically binds its digest to one fenced partition effect. A real SQLite connection close after page one, lease expiry, generation-incremented reclaim, artifact validation, and page-two completion produces the same effects/output digest as uninterrupted execution. An uncertain identical object write is recovered by re-read and digest/content comparison.
+- The final governance/connector target passes 57/57. Repository Ruff passes; mypy passes 358 source files. The locked current-tree regression passes 1,915 tests with 62 declared external skips and 23 warnings in 263.19 seconds.
+- Final isolated build produced a 1,136,795-byte wheel with SHA-256 `abb2bf912f05ffcaf887bd770ffba98b4c6cf3a675a0156185fcd9fd7f70c9fd` and 422 entries, plus a 1,523,008-byte sdist with SHA-256 `6f37204f4e4cad03e51b0e2390bf80da185d8ab2bf6f2a3e9df8dd96a4f3f5f0` and 836 entries. All five connector runtime files occur exactly once in both; ADRs 0201/0202, both connector guides, the E-209 audit, and Security Architecture v2 occur exactly once in the sdist.
+- Bandit exits zero with existing reviewed `nosec` warnings only. Pip-audit reports no known third-party vulnerability and skips only the unpublished local package. The lock resolves 124 packages, `uv lock --check` passes, and the supply-chain policy is `valid` with zero active exceptions.
+- All provider responses, credentials, databases, object bytes, DNS answers, and keys are synthetic. No external network, vendor system, production secret, customer data, commit, push, pull request, release, or publication was used. E-209 is not vendor interoperability, distributed quota, write-back, executable package, external assurance, compliance, certification, HA/DR, or Enterprise readiness.
+
+## E-210: Signed control and industry pack lifecycle
+
+- `signed-data-pack-v1` authenticates a strict data-only manifest with Ed25519 and the exact versioned operator trust snapshot. The schema rejects unknown fields and executable entry points; metadata identity, supported ReconForge range, sorted dependencies, supported declarative operators, exact financial inputs, unique rule IDs, and synthetic golden count/IDs are checked before admission.
+- A different checker must approve a maker submission. Immutable SQLite versions retain publisher-signed content and content digests; install atomically disables the previous active version, dependency failure preserves approved state, rollback can reactivate only a previously approved disabled version, and explicit disable/rollback/install events retain actor and digest.
+- The focused lifecycle tests pass 8/8 and the expanded governance target passes 34/34. The final locked regression passes 1,924 tests with 62 declared external skips and 23 warnings in 272.73 seconds. Ruff passes; mypy passes 360 source files; Bandit exits zero with existing reviewed `nosec` warnings; pip-audit finds no known published dependency vulnerability and skips only the unpublished local package; the 124-package lock and diff check pass.
+- The isolated final-snapshot wheel is 1,141,864 bytes, SHA-256 `9861d779c7779d2e8b943646129b03155c399d56787d9e5dbba7b466717ff8af`, with 424 entries. The sdist is 1,532,617 bytes, SHA-256 `7902b4557c4bde098aadd4683d0205759f5f634136edcd124db178067dd488b4`, with 845 entries. Both runtime pack files occur in the wheel; ADR 0203, the guide, audit, and two tests occur in the sdist. These identify the retained E-210 build snapshot produced before recording its hashes in included documentation; they are not a reproducible-build claim.
+- All keys, packages, actors, rules, and SQLite data are synthetic. No network, production key, customer data, commit, push, pull request, release, or publication was used. This does not prove a marketplace, external publisher identity, business effectiveness, customer-data migration, HA, distributed activation, compliance, certification, external assurance, or Enterprise readiness.
+
+## E-211: Approved multi-resource upgrade saga foundation
+
+- `reconforge-upgrade-plan-v1` is schema-closed and digest-addressed. It binds the current runtime, target application, release-manifest digest, fixed resource ordering, exact source/target versions, target digests, mandatory rollback, and named compatibility readers without commands or executable hooks.
+- Preparation completes every adapter preflight before any mutation. A distinct checker approves the maker's plan; one execution actor claims it atomically. The synchronous SQLite journal records plan/step evidence and actor actions. Apply receipts verify before progression and rollback reverses only applied resources.
+- Recovery explicitly distinguishes no effect, an applied effect with a receipt, and an unknown effect. A recoverable uncertain effect is rolled back once; an unclassifiable result moves the run to failed/isolate instead of claiming success.
+- Nine tests pass. Eight cover the synthetic saga boundary; the ninth creates a real schema-23 Community SQLite database, produces an online rollback copy, migrates an isolated compatibility copy to schema 24, applies schema 24, injects a later configuration failure, and atomically restores the exact canonical source digest and schema 23 while retaining the rollback artifact. Ruff and mypy pass for the new package and tests. This slice uses no production data, network, commit, push, pull request, release, or publication and does not close P3-ENT-009.
+
+## E-212: Supported-version concrete upgrade adapters and drills
+
+- The plan now binds `operator_application_version` separately from deployed source/target versions. The closed matrix is `supported` only when every application/database/object/configuration/pack transition is `verified`; exact compatibility-reader names are enforced by each adapter.
+- `.github/scripts/verify_application_upgrade.py` built the actual Git tags v0.7.0 and v0.7.1, installed v0.7.0 offline, staged/smoke-imported v0.7.1, cut over, and restored the exact source tree digest `802cd8c9bb969216373f4aab8b538af4d1f1e0e664e605af7408a7688a7481c1`. Target wheel SHA-256 was `0507719f160bd3b3c4c01dd947aa16eb128ecefc0beb71b19156be107880b0f4` for that isolated tag build; this is test evidence, not a published artifact or reproducible-build claim.
+- `.github/scripts/verify_postgres_upgrade.py` passed against disposable `postgres:17.10-alpine`: source Alembic 0052, AES-256-GCM native backup, isolated restore, compatibility migration to 0053, isolated cleanup, source migration to 0053, receipt verification, downgrade to 0052, and exact container cleanup. All data, password, key, database, and container identity were synthetic and temporary.
+- The expanded focused target passes 26 tests with one declared pre-existing service-environment skip. It covers deterministic saga execution, preflight no-effect, reverse rollback, uncertain isolation, closed schemas/matrix, exact parser inventory, real SQLite/object/configuration/application/pack effects, PostgreSQL backup receipt tamper, native argv secret exclusion, signed-pack rollback, and one successful five-resource local plan. The explicit PostgreSQL drill above is unskipped separate runtime evidence.
+- Initial full regression found two governance failures: four new direct JSON parser locations were absent from the exact inventory and three configuration reads omitted the explicit strict financial-input policy. FI-021, byte ceilings, and explicit strict policy calls corrected both; the 41-test regression target then passed. Final full/static/security/package results are recorded with the E-212 exit run below.
+- Final locked regression collected 2,006 tests and exited zero with only declared external-capability skips and 23 existing dependency/legacy-policy warnings. A separate 55-test upgrade/security/module/financial-governance target passed. Ruff passes repository-wide; mypy passes 368 source files. Bandit exits zero with existing reviewed `nosec` notices; pip-audit reports no known third-party vulnerability and skips only unpublished local `reconforge-erp`; the 124-package lock and `git diff --check` pass. Web typecheck, 55 Vitest tests, and the production Vite build pass.
+- The isolated final-snapshot wheel is 1,161,568 bytes with SHA-256 `6b74cc4a910fbf330844d3a35d4f0f8e92893ce86b1751c912ee445e0ed506c0` and contains all eight `reconforge/upgrade/*.py` modules. The sdist is 1,561,970 bytes with SHA-256 `cb34f2664b411013bbe9f5d94a101ccb5a34d2345e239a96b06f2db1b18cc035`; it contains the supported-matrix schema/document, E-212 exit audit, both tagged/live drill scripts, and the exit-audit test. These hashes identify the retained E-212 build snapshot made before recording them in included documentation; they are not reproducible-build or published-release claims.
+
+## E-213: Named single-host PostgreSQL synchronous failover drill
+
+- `.github/scripts/verify_postgres_ha_dr.py` created two labelled `postgres:17.10-alpine` nodes on Docker Engine 29.6.2. `pg_basebackup` plus a physical slot established streaming replication; `synchronous_commit=remote_apply` and `synchronous_standby_names='*'` were active before the measured transaction.
+- The committed sequence-1 sentinel was digest-identical on standby. The existing AES-256-GCM native adapter backed up the primary, restored an isolated database, reproduced the one-row digest, and removed the restore target.
+- Separate control and replication networks kept the published management path stable while the controller disconnected only replication. A synchronous sequence-99 write received no client acknowledgement; its outcome is treated as uncertain. The controller then fenced the exact inspected writer before promotion. The promoted node contained only sequence 1 and committed sequence 2, yielding zero missing acknowledged transactions and an 11.117-second failover RTO.
+- The former primary volume was re-seeded with `pg_basebackup`, joined as an exact read-only standby, and remote-applied sequence 3. The current writer was then fenced by exact identity before the rejoined node was promoted and committed sequence 4. Failback measured zero missing acknowledged transactions and 0.958-second RTO under the same 60-second ceiling.
+- Three failed development runs are retained in the narrative: `ALTER SYSTEM` inside a transaction, a Docker CLI absence-output assumption, and `pg_ctl` portability through exec. Every run's label-checked finalizer removed its containers, volumes, and network; a post-run inventory showed none remaining. The final report stores only SHA-256 of the former container ID.
+- This proves a controlled replication-network partition, container/process failure, rejoin, and failback on one development host only. It does not prove host, zone, region, quorum/witness, automatic failover, capacity, production key custody, repeated SLO, HA/DR, compliance, or Enterprise readiness. P3-ENT-010 remains open.
+
+## E-214: Closed offline installation input contract
+
+- `python -m pytest tests/test_offline_bundle.py -q` passed seven schema, integrity, and hostile-input tests; one symlink-creation test is explicitly skipped on Windows while runtime link rejection remains active.
+- Ruff passed `reconforge/sovereign` and the focused test. Mypy passed three source files. Bandit exited zero for the new runtime package.
+- The runtime rejects open inventories, URLs, unhashed or non-exact requirements, tampering, duplicate paths, traversal, links, and schema expansion before returning a non-shell local-only pip argv.
+- This is local input-integrity evidence only. A real dependency mirror, isolated offline install, Sigstore trust verification, OS egress enforcement, identity fallback, backup, upgrade, rollback, and Air-gap task exit remain unproven. No publication occurred.
+
+## E-215: Real no-network Linux installation drill
+
+- `.github/scripts/verify_airgap_install.py` built ReconForge v0.7.1, selected runtime extras from `uv.lock`, and downloaded Linux wheels while pip enforced the exported hashes. It then generated a closed lock from the actual 60 wheels and verified every file against the offline manifest.
+- A distinct `python:3.14.1-slim@sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e` container ran with network mode none, read-only root and bundle, and bounded tmpfs. Pip used no-index, no-deps, and require-hashes. Installation passed and `reconforge doctor` reported package/config/output/validation OK; sample data was an expected warning because the wheel-only runtime does not bundle examples.
+- Final runtime output: 60 entries, 98,913,160 bytes, manifest SHA-256 `845f7190510e31e6ec651dad4201c30b4279f01b7580f61289cab6facac596ce`, network mode none, offline install true. The exact labelled container was removed; inventory showed no residue.
+- This is one logical no-network Linux run. It is not offline signature trust, local identity recovery, backup/restore, upgrade/rollback, repeated/cross-platform, physical-air-gap, compliance, or production-readiness evidence. P3-ENT-011 remains open and no publication occurred.
+
+## E-216: Disconnected file-attestation verification
+
+- Source evidence was the successful `Signed Release Candidate` run `30243819239`, tag `v0.7.1`, revision `d47edd845e6aef3bae16e05698e07878086d690b`, artifact id `8644255664`, size 8,642,971 bytes, and artifact-storage digest `sha256:0a59e3dd6a5e66118b44be5680e5abc312a44ad7b299579b7e16b64d35f42d63`. This was downloaded read-only; no publication or remote mutation occurred.
+- The GitHub CLI 2.78.0 Linux AMD64 release archive matched its published SHA-256 `ac309f70c5d6b122c82e6138ce82cb65ca5d8595cc09d11751fbc4e3907e1a05`; the extracted verifier binary SHA-256 was `3f0fece58992daefd439cdc64444879a8dce911ec3bcff16078304e20d7d3dca`. The local trusted-root snapshot SHA-256 was `65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c`.
+- `.github/scripts/verify_offline_attestations.py` ran inside digest-pinned `python:3.14.1-slim` with Docker network mode none, read-only root/evidence/tool mounts, and bounded tmpfs. It matched 15 checksum subjects and all six bundle hashes, then cryptographically verified 11 regular-file provenance subjects and three file-artifact CycloneDX attestations with exact repository, workflow, signer commit, source tag, source commit, and hosted-runner restrictions.
+- Attempting the local image-provenance bundle with the exact `oci://ghcr.io/...@sha256:89c598...` subject failed before signature evaluation because gh 2.78.0 tried `https://ghcr.io/v2/` and the container network was unavailable. The verifier therefore makes zero offline OCI subject claims while preserving integrity evidence for the two image bundles. This is a tool/interface limitation, not a passed or failed image signature result.
+- The closed report is `docs/execution/OFFLINE_ATTESTATION_DOCKER_DRILL_2026-07-30.json`. Local identity recovery, backup/restore, upgrade/rollback composition, repeated/cross-platform runs, physical transfer custody, OCI offline verification, compliance, and production readiness remain open. P3-ENT-011 remains in progress and no publication occurred.
+
+## E-217: No-network local identity and encrypted recovery
+
+- `.github/scripts/verify_airgap_install.py` rebuilt the locked 60-file Linux mirror and installed it in digest-pinned Python 3.14.1 slim with Docker network mode none, read-only root/bundle, bounded tmpfs, no-index, no-deps, and require-hashes. The new closed manifest SHA-256 was `1213726ff418f7f84781832e45f24f33cc21ebe69dd01687d8343a8dafa1fa03`; 98,913,160 bytes were selected and doctor exited zero.
+- The installed runtime executed `.github/scripts/verify_airgap_identity_recovery.py`. Two generated local users authenticated; admin permission and the source/restored audit chains passed. AES-256-GCM backup ciphertext SHA-256 was `91c5cd27282597c50ea505ffff354fcdd04a7cfa021eafcb72d4644002c08aa6`. A random wrong key was rejected without a partial restore; the correct key restored schema 24 and both users, while zero old API sessions were restored.
+- Credentials and the 32-byte operator key were generated inside tmpfs and were not emitted. The ciphertext digest and a non-secret truncated key fingerprint were emitted for run correlation. The labelled container and temporary state were removed.
+- The closed report is `docs/execution/AIRGAP_IDENTITY_RECOVERY_DOCKER_DRILL_2026-07-30.json`. This is pre-provisioned local fallback and encrypted Community recovery, not forgotten-password recovery, HSM/KMS custody, offline upgrade/rollback composition, physical transfer evidence, compliance, or production readiness. P3-ENT-011 remains open and no publication occurred.
+
+## E-218: No-network tagged application upgrade and exact rollback
+
+- The connected preparation stage safely archived and built immutable Git tags v0.7.0 and v0.7.1. Their run-specific wheel SHA-256 values were `7ec21a8fe7cb299857414f10d98f94743274054a937a7fa910d1ae3cb0ca86ef` and `55d0bbc93d2493409ea38c7d7de45bc901ab70587087cec45fdeb7fb3c5c2fc4`.
+- The wheels were mounted read-only into the existing Python 3.14.1 slim runtime with Docker network mode none. `.github/scripts/verify_airgap_upgrade_rollback.py` invoked the real `PythonWheelApplicationAdapter`: offline stage, source/target identity and content digest verification, cutover, target smoke import, rollback, and source smoke import all passed.
+- Target content SHA-256 was `be1890980fadc829aaddc43ea927567226fde0b8b3bc9dce8190205f3477ee3a`; the exact restored source content SHA-256 was `5de3b0a06852daa97666aadb939bc0daca0254d7363208ec0a8da2420edd347b`. This is application-resource evidence, not database/object/config/pack composition or zero downtime.
+
+## E-219 and E-220: Same signed wheel installation and bounded task exit
+
+- E-219 supplied the exact signed release-candidate wheel from run `30243819239` to the installer with mandatory expected SHA-256 `210e69770fe1ad55227173349ee22ca7f16e4f5270c093f12c78460c14b66f33`. The verifier checked wheel metadata and digest before copying it into the mirror.
+- The resulting 60-entry mirror contained 98,398,601 bytes and manifest SHA-256 `7f0193e5d5b3cf0a1b6c20c6b4bda79ff480bbc405d89b070c13589f3e1829b2`. Under Docker network mode none, read-only root/bundle, bounded tmpfs, no-index, no-deps, and require-hashes, the same wheel installed and doctor exited zero. Cleanup completed.
+- `docs/execution/P3_ENT_011_EXIT_AUDIT.yaml` closes only the Python-wheel sovereign profile. OCI subject verification remains blocked by gh 2.78.0 registry resolution; dependency wheels are hash-locked but not each attested; physical media custody, hardware keys, password recovery, repeated platforms, compliance, and production readiness are not claimed. No publication occurred.
+
+## E-221: Closed reliability policy and synthetic recovery drill
+
+- `reconforge.reliability` accepts only seven named, bounded, non-negative integer measurements. Unknown dimensions and non-integer, negative, Boolean, or oversized values fail closed; absent signals emit `no_data` rather than normal.
+- Every policy binds a stable SLO identifier and RF-OPS runbook. OpenTelemetry exports dimension-free histograms only, while the existing closed attribute policy continues to reject tenant, workspace, financial, record, and actor values.
+- The local drill made dependency readiness and process memory critical, exported all seven operational metrics, correlated one recovery log with one trace/request identifier, then returned all signals to normal. Seventeen focused tests passed; Ruff passed; mypy passed the three source/script files; Bandit exited zero.
+- The report is `docs/execution/ENTERPRISE_RELIABILITY_LOCAL_DRILL_2026-07-30.json`. It is local synthetic single-process evidence, not an external collector/alert manager, independent failure domain, repeated capacity result, production SLO, HA, compliance, certification, or external assurance. P3-ENT-012 remains open and no publication occurred.
+- The rerun on 2026-07-31 produced `docs/execution/ENTERPRISE_RELIABILITY_LOCAL_DRILL_2026-07-31.json` with the same closed policy profile, transitions, limitations, and pass/fail boundaries.
+
+## E-222: Real local operational sources and fail-closed availability
+
+- `HttpReliabilityWindow` is capacity-bounded and lock-protected. A real FastAPI health request enters the window; error basis points use integer division and p95 uses deterministic nearest rank without floating-point arithmetic.
+- `SQLiteReliabilityCollector` reads only aggregate queued/retrying count and oldest timestamp, verifies the actual audit ledger, counts explicit dependency probe failures, and accepts a bounded integer memory provider. Its output contains no job, tenant, workspace, actor, record, amount, or currency identifiers.
+- A missing jobs table, empty HTTP window, or failed memory provider removes only the affected measurement and emits a closed safe source category. Downstream alerts are `no_data`, not green. A deliberately corrupted synthetic audit event produces a real critical audit-integrity alert.
+- The retained E-221 drill was rerun through a freshly migrated real SQLite database and actual source adapters; its closed report remains semantically identical. A new local CLI reports only aggregate state and `--require-complete` fails on any non-normal or unavailable signal. Standard Windows/Unix APIs supply resident-memory MiB. The expanded focused suite passes 24 tests; Ruff, mypy, and Bandit pass after source integration.
+- PostgreSQL collection parity, deployed external collector/alert manager, repeated capacity/load and incident exercises, independent-host HA, production SLOs, compliance, and external assurance remain unproven. No publication occurred.
+
+## E-223: Explicit OTLP/HTTP protocol delivery
+
+- The optional observability extra pins the official OTLP HTTP/protobuf exporter 1.44.0 to the existing API/SDK version. `uv.lock` now resolves 129 packages total (128 non-root), adding five exporter/protobuf packages.
+- `OTLPHTTPConfiguration` rejects implicit ports, paths, queries, fragments, credentials, non-allowlisted remote hosts, remote plaintext, missing certificate files, and half-configured mTLS. Requests sessions set `trust_env=False`; header credentials are not accepted.
+- The independent local receiver drill sent a real FastAPI health trace and request/reliability metrics to `/v1/traces` and `/v1/metrics`, ignored a hostile proxy environment, force-flushed, and shut down its runtime/receiver thread. Closed telemetry policy was present and prohibited sensitive marker names were absent from the protobuf bodies.
+- The retained report is `docs/execution/OTLP_HTTP_COLLECTOR_LOCAL_DRILL_2026-07-30.json`. This is OTLP protocol delivery of traces, metrics, and closed operational events to a synthetic loopback receiver, not a complete OpenTelemetry Collector distribution, backend retention, alert delivery, arbitrary application-log forwarding, production SLO, HA, compliance, or external assurance. No publication occurred.
+- A second local rerun produced `docs/execution/OTLP_HTTP_COLLECTOR_LOCAL_DRILL_2026-07-31.json` with identical checks and the same production-limitation scope.
+
+## E-224: PostgreSQL reliability-source parity
+
+- `.github/scripts/verify_postgres_reliability.py` starts a uniquely labelled disposable `postgres:17.10-alpine`, waits on an actual TCP readiness result, creates a non-superuser role, migrates a new database from zero to Alembic `0053`, runs one exact live test, records bounded evidence, and removes the container in `finally`.
+- The live test inserts queued jobs for two sibling tenants through the synthetic administrator. The application-role collector enters a transaction-local forced-RLS tenant scope and observes only one job, an exact 600-second oldest age, and a clean tenant audit aggregate. It receives no tenant/job identifiers in its snapshot.
+- The final repeat passed with Docker Engine 29.6.2 and image `postgres@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193`; cleanup was true. During harness development, a manual attempt exposed premature Unix-socket readiness, a script attempt exposed unsupported `psql -v` substitution in the selected stdin form, and a following attempt exposed missing interactive stdin forwarding through `docker exec`. Every attempt removed its disposable container in `finally`; the retained script now uses TCP readiness, generates a fresh synthetic password, and passes SQL only through `docker exec -i` stdin rather than process arguments.
+- The retained report is `docs/execution/POSTGRES_RELIABILITY_DOCKER_DRILL_2026-07-30.json`. This is synthetic single-node parity, not repeated capacity/load, alert delivery, independent-host HA, production SLO, compliance, or external assurance. No publication occurred.
+
+## E-225: Local capacity and backlog recovery exercise
+
+- `.github/scripts/verify_reliability_capacity.py` creates a freshly migrated disposable SQLite database, records 1,000 actual in-process FastAPI health requests in the bounded window, inserts 1,000 synthetic queued jobs, evaluates the closed policy, performs disposable recovery, and re-evaluates it.
+- On Windows 11 build 26200, Python 3.12.13, and 16 logical CPUs: all 1,000 requests returned 200; observed error basis points were zero; p95 was 16 ms; aggregate wall time was 10,460 ms; process resident memory was 130 MiB. The job aggregate query measured 0 ms at integer millisecond resolution.
+- Exactly 1,000 queued jobs produced a critical `job-backlog` alert. After setting the disposable jobs complete, backlog state returned to normal and oldest queued age returned to zero. All sources were available.
+- The retained report is `docs/execution/RELIABILITY_CAPACITY_LOCAL_DRILL_2026-07-30.json`. Values apply only to the named single run and are not network throughput, soak, distributed capacity, production sizing, SLO, HA, compliance, or external assurance. No publication occurred.
+- The rerun on 2026-07-31 produced `docs/execution/RELIABILITY_CAPACITY_LOCAL_DRILL_2026-07-31.json` with the same bounded profile and non-production limitations.
+
+## E-226: Official Collector distribution and local backend
+
+- The official release source identified Collector Contrib v0.153.0. Docker resolved the GHCR subject to `sha256:93aad750175cbf1a973ae1c5886c3371f4d800f61be25cdd26870b8441ffe9fa`; the binary reported `otelcol-contrib version 0.153.0`.
+- `docs/operations/otel-collector.v1.yaml` defines only OTLP/HTTP input, bounded batch processing, and a local file exporter for traces, metrics, and logs. The drill ran the image with read-only root, 16 MiB noexec/nosuid tmpfs, all capabilities dropped, no-new-privileges, read-only config, loopback-only published port, and a disposable output mount.
+- A real API health request, `job_queue_depth` metric, closed critical `reliability.alert`, `RF-OPS-002`, and telemetry policy were found in the 5,426-byte backend artifact with SHA-256 `e611ce9c957d8de2500590dbffa7d22d11187b3bdde434b470e53c55c3c1c748`. Prohibited sensitive marker names were absent. Flush and cleanup passed.
+- The retained report is `docs/execution/OTEL_COLLECTOR_DOCKER_DRILL_2026-07-30.json`. This closes only a local Collector distribution/file-backend exercise, not durable retention, independent alert-manager acknowledgement, Collector HA, production SLO, compliance, certification, or external assurance. No publication occurred.
+
+## E-227: Closed incident acknowledgement and recovery chain
+
+- `reconforge.incident_response` permits only the ordered states `detected`, `acknowledged`, `mitigating`, `recovered`, and `closed`; transitions cannot be skipped or reversed and timestamps must be timezone-aware and strictly increasing.
+- Operator/action/correlation references accept only bounded safe identifiers. Evidence is SHA-256-only, every event commits to its predecessor, and the final deterministic manifest verifier rejects mutation. Arbitrary commands, raw logs, reasons, financial rows, credentials, and customer identifiers are not accepted.
+- `.github/scripts/verify_reliability_incident.py` migrated a disposable SQLite database, inserted 1,000 synthetic queued jobs, observed a real critical `job-backlog` alert bound to RF-OPS-002, recorded synthetic acknowledgement/mitigation, completed the jobs, required every alert to evaluate `normal`, used a distinct validator reference, and closed the verified chain in 60 synthetic seconds.
+- The retained report is `docs/execution/RELIABILITY_INCIDENT_LOCAL_DRILL_2026-07-30.json`. It is a local synthetic lifecycle exercise, not external pager acknowledgement, real staff separation, durable incident retention, repeated production exercise, HA, production SLO, compliance, certification, or external assurance. P3-ENT-012 remains open and no publication occurred.
+- The rerun on 2026-07-31 produced `docs/execution/RELIABILITY_INCIDENT_LOCAL_DRILL_2026-07-31.json` and preserved the exact same policy gates, manifest chain discipline, and synthetic-only limitation scope.
+
+## E-228: Repeated bounded PostgreSQL HA/DR drill
+
+- The complete E-213 drill ran three consecutive times without selecting a preferred result. Each run used uniquely named/labelled nodes, volumes, and networks, then verified no labelled Docker resources remained.
+- All three runs preserved acknowledged sequences 1-4 with failover and failback RPO of zero transactions. Failover RTO values were 11.117, 11.094, and 11.075 seconds; failback values were 0.958, 0.912, and 0.945 seconds. The retained report derives min/median/max directly from all runs and enforces the 60-second development ceiling.
+- `.github/scripts/verify_postgres_ha_dr_repeated.py` provides the no-cherry-pick reproducer and fails on any child failure or resource residue. `docs/execution/HA_DR_REPEATED_DOCKER_DRILL_2026-07-30.json` remains explicitly one Docker host/failure domain.
+- This closes repetition only. Independent host/zone loss, quorum or witness fencing, automatic failover, production key custody, production SLO, compliance, certification, and external assurance remain unproven. P3-ENT-010 stays in progress and no publication occurred.
+
+## E-229: Competitive capability matrix for Phase 3 planning
+
+- `docs/strategy/competitive-capability-matrix.md` maps public primary-source observations against bounded ReconForge evidence for 13 enterprise-relevant dimensions, including deployment sovereignty, determinism, evidence lineage, matching breadth, scale evidence, connector depth, AI governance, security posture, UX/RTL direction, and extensibility.
+- The matrix explicitly maps every row to bounded local evidence IDs or bounded drill artifacts, and marks every unsupported production/commercial claim as unknown or pending.
+- The file was created with no superiority, certification, or compliance claim language, and preserves explicit gaps for enterprise pilots, independent review, and production SLO/HA readiness.
+
+## E-230: Docker-runtime environment blocker (historical)
+
+- A read-only baseline rerun on 2026-07-31 observed one early attempt where
+`python .github/scripts/verify_postgres_reliability.py`,
+`python .github/scripts/verify_postgres_ha_dr.py`, and
+`python .github/scripts/verify_otel_collector_distribution.py` failed before policy
+execution with runtime error
+`failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; check if the path is correct and if the daemon is running`.
+- The same session recorded successful reruns later the same date for HA/DR, PostgreSQL
+reliability, and OTLP collector drills (`E-227`, `E-224` to `E-226`, and `E-228`), with the same environment-bounded limitations explicitly documented in each report.
+- The remaining production-readiness boundaries are no longer Docker-connectivity-limited
+for reruns, but the Phase 3 exit is still gated by external pilots, independent
+security review, and unresolved production-collection/distributed HA evidence.
+
+## E-231: Dirty-tree baseline gate run on feature/phase123-exec-restart (2026-07-31)
+
+- Scope: read-only gate runs only. No git add/commit/tag/push/release/publication was performed. The working tree on `feature/phase123-exec-restart` (HEAD `dc888f3`) carries the Phase 1-3 uncommitted delta described in `STATE.md`; this entry does NOT convert a dirty worktree into release evidence and explicitly does not satisfy the master prompt's "no release from dirty tree" or Phase 0/1/2/3 publication gates. It is recorded so the gate state of the current tree is reproducible and not silently treated as pass or fail.
+- Environment: Windows 11, Python 3.14.6 (`C:\Python314\python.exe`), mypy 2.3.0, GitHub `amrzainmubarak/reconforge-erp` branch `feature/phase123-exec-restart`. node_modules and `dist/` artifacts pre-existed; no network `npm ci` was performed.
+- Boundary: these results prove the gate outcomes for the tree scanned at this instant. They are not Phase 3 exit evidence, not external security review, not deployed TLS/CSP proof, not assistive-technology certification, not a production readiness claim, and not a reproduction of the previously-committed `feature/phase123-execution-contract` evidence (which lives on a different branch and is not represented by HEAD `dc888f3`).
+
+| Command | Exit | Duration | Result |
+| --- | ---: | ---: | --- |
+| `python -m ruff check .` | 0 | 0.42s | All checks passed. |
+| `python -m mypy reconforge` | 0 | 1.95s | Success: no issues found in 373 source files. |
+| `python -m bandit -q -r reconforge` | 0 | 15.85s | No failed tests. Only `nosec`/`# type:` comment parse warnings on parameterized SQL modules (db/backup.py, infrastructure/postgres_*.py, sqlite_jobs.py); no vulnerability finding and no `B608` test failure. |
+| `python -m pip_audit` | 0 | 19.76s | No known vulnerabilities found. `reconforge-erp` itself skipped (not on PyPI), expected. |
+| `python -m pytest --no-header --tb=no -rN` | 1 | 300.54s | 2005 passed, 64 skipped, 1 failed, 23 warnings. |
+| `python -m build` | 0 | 45.38s | Built `reconforge_erp-0.7.1-py3-none-any.whl` (1,171,209 bytes) and `reconforge_erp-0.7.1.tar.gz` (1,633,799 bytes). A pre-existing `0.7.0` pair was already in `dist/` and was not regenerated. |
+| `git diff --check` | 0 | n/a | No conflict/whitespace errors; only existing CRLF-conversion notices on 14 tracked files. |
+| `npm --prefix apps/web run typecheck` | 0 | 2.38s | `tsc -b` clean. |
+| `npm --prefix apps/web run build` | 0 | 2.56s | Vite 8.1.5 production build succeeded in 892ms; main `Dashboard` chunk 389.40 kB / gzip 110.97 kB, `index` 309.76 kB / gzip 92.23 kB. |
+| `npm --prefix apps/web run test:run` | 0 | 8.72s | 8 files / 55 Vitest tests passed. |
+
+### Single deterministic test failure
+
+- `tests/test_phase_1_3_execution_contract.py::test_phase_three_has_no_unsupported_completion_shortcut` — `AssertionError` at line 70: `assert closure["all_tasks_completed"] is True` failed because `docs/execution/PHASE_1_3_EXECUTION_MATRIX.yaml` declares `all_tasks_completed: false` and `all_required_gates_verified: false`, which is the honest state since P3-ENT-010/012/013 remain open. The test is a guard that refuses to let Phase 3 be declared complete by shortcut; it is red because Phase 3 is genuinely not yet closed, not because of a code regression introduced in this tree.
+- A transient `tests/test_policy_engine.py::test_scoped_policy_allows_only_when_every_resource_scope_is_granted` failure (Hypothesis `FailedHealthCheck: Input generation is slow`) appeared on the first run only and did not reproduce on the clean second run; it is recorded as a known flaky-environment artifact under Windows/Python 3.14, not a code defect.
+
+### Gates not run in this environment
+
+- `npm --prefix apps/web run e2e` — not run; Playwright Chromium E2E and `https_runtime.py` require the local Studio/API server plus Chromium dispatch and are outside the read-only static gate scope captured here. Not counted as pass or fail.
+- `reconforge doctor`, `reconforge validate examples/sample_data`, `reconforge demo run`, and the Docker-dependent live drills — not run; Docker daemon unavailable (see E-230) and runtime/CLI instrumented drills require disposable infrastructure. Not counted as pass or fail.
+
+### Residual boundary
+
+- This entry proves only that the static quality and static build gates of the current uncommitted tree are green except for the one expected Phase-3-closure guard. It does not change publication status, does not re-verify committed-history evidence, does not authorize a release, and cannot be reused as exit evidence for any Phase until the working tree is committed under a reviewed slice and re-run from a clean tree.
+
+## E-232: Phase 1–3 external publication gates set to engaged
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: execution controlplane evidence tracking only; no functional change to matching, finance, or runtime behavior.
+- Boundary: no synthetic pilot/review data was created; only placeholder evidence holders were added so publication gates remain fail-closed.
+
+### Command/Verification
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py -q -rs` | 1 | `test_phase_three_has_no_unsupported_completion_shortcut` fails intentionally because `all_tasks_completed` and `all_required_gates_verified` are still `false` by design while `P3-EXT-001` and `P3-EXT-002` are unverified. |
+| `python -m pytest tests/test_phase_1_exit_audit.py tests/test_phase_2_exit_audit.py -q -rs` | 0 | `docs/execution/PHASE_1_EXIT_AUDIT.yaml` and `docs/execution/PHASE_2_EXIT_AUDIT.yaml` remain verified. |
+
+### State updates
+
+- `docs/execution/PHASE_1_3_EXECUTION_MATRIX.yaml`
+  - `external_gate_policy.gates.p3_external_pilots.status` moved to `engaged`.
+  - `external_gate_policy.gates.p3_independent_security_review.status` moved to `engaged`.
+  - `all_tasks_completed` and `all_required_gates_verified` remain `false` until real external evidence is linked and verified.
+- `docs/execution/BACKLOG.yaml`
+  - `P3-EXT-001` and `P3-EXT-002` status set to `in_progress`.
+- Added evidence-holder files:
+  - `docs/execution/P3_EXT_001_PILOT_001.md`
+  - `docs/execution/P3_EXT_001_PILOT_002.md`
+  - `docs/execution/P3_EXT_001_PILOT_003.md`
+  - `docs/execution/P3_EXT_002_REVIEW_REPORT.md`
+- `docs/execution/P3_EXTERNAL_GATE_EVIDENCE_INDEX.md` set to `engaged`.
+
+### Residual boundary
+
+- This step closes the "scaffold" portion of the final publication readiness preparation for external gates; it does not satisfy any external gate, and no project publication claim should be made until real pilot and independent review records are attached and verified.
+
+## E-233: Backlog schema normalization for phase-closure guard integrity
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: execution-control consistency only; no runtime feature behavior changed.
+- Outcome: reconciled a status schema inconsistency in `docs/execution/BACKLOG.yaml` to keep the backlog health model internally deterministic.
+
+### Command/Verification
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -c "import yaml; ..."` (backlog status inventory) | 0 | Invalid status values normalized to the declared schema; `complete` changed to `in_progress` for `P3-ENT-003`, and `status_values` are now fully respected. |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py::test_phase_three_has_no_unsupported_completion_shortcut -q -rs` | 1 | Still fails intentionally because `all_tasks_completed` and `all_required_gates_verified` are legitimately `false` while `P3-ENT-010`, `P3-ENT-012`, `P3-ENT-013`, `P3-EXT-001`, and `P3-EXT-002` remain open. |
+
+### State updates
+
+- `docs/execution/BACKLOG.yaml`
+  - `P3-ENT-003` status normalized from `complete` to `in_progress` (single schema-correctness correction; this task remains in progress by design).
+  - Remaining non-P0 Phase/enterprise tasks now count as: `37 completed`, `6 in_progress`, `0 blocked`.
+- Residual boundary: Phase 3 publication guard remains closed by design in `PHASE_1_3_EXECUTION_MATRIX.yaml`; external and production-readiness gates are still incomplete.
+
+## E-234: Phase 3 internal completion revalidation after status normalization
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: evidence-control consistency check only; no runtime feature behavior changed.
+- Outcome: confirmed that the system remains internally consistent after the backlog status normalization, and that only externally scoped blockers remain for Phase 3 global completion.
+
+### Command/Verification
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -c ..._validate_exec.py` (phase/matrix sanity script) | 0 | Parsed `docs/execution/PHASE_1_3_EXECUTION_MATRIX.yaml` and `docs/execution/BACKLOG.yaml` successfully. `all_tasks_completed=false`, `all_required_gates_verified=false` (expected), Phase 3 has 9/15 completed, and pending IDs are: `P3-ENT-003`, `P3-ENT-010`, `P3-ENT-012`, `P3-ENT-013`, `P3-EXT-001`, `P3-EXT-002`. External gate statuses are both `engaged` with zero evidence artifacts pending real files. |
+| `python -m pytest tests/test_p3_ent_006_exit_audit.py tests/test_p3_ent_007_exit_audit.py tests/test_p3_ent_008_exit_audit.py tests/test_p3_ent_009_exit_audit.py tests/test_p3_ent_011_exit_audit.py -q -rs` | 0 | All requested Phase 3 slice exit audits passed after the doc-level correction. |
+
+### Residual boundary
+
+- `test_phase_1_3_execution_contract.py::test_phase_three_has_no_unsupported_completion_shortcut` still fails intentionally because `PHASE_1_3_EXECUTION_MATRIX.yaml` gate flags stay false by design.
+- Remaining blockers for phase-closure are external/operational:
+  - `P3-EXT-001` (3–5 real controlled pilots),
+  - `P3-EXT-002` (independent security review),
+  - plus `P3-ENT-010`, `P3-ENT-012`, `P3-ENT-013` dependencies.
+
+## E-235: Phase 3 operational-readiness drill re-run (bounded local)
+
+- Date/timezone: 2026-07-31 07:20:12 +03:00, Africa/Cairo.
+- Scope: bounded operational readiness verification commands that gate parts of Phase 3 readiness claims.
+
+### Command/Verification
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_enterprise_reliability_drill.py tests/test_ha_dr_drill.py tests/test_ha_dr_repeated_drill.py tests/test_reliability_sources.py tests/test_reliability_capacity_drill.py tests/test_reliability_incident_drill.py tests/test_postgres_reliability_drill.py tests/test_otel_collector_drill.py tests/test_otlp_http_collector_drill.py tests/test_signed_airgap_install_drill.py tests/test_offline_install_drill.py tests/test_offline_attestation_drill.py tests/test_airgap_upgrade_rollback_drill.py tests/test_airgap_identity_recovery_drill.py tests/test_enterprise_reliability_docs.py -q -rs` | 0 | All executable checks passed. `tests/test_reliability_sources.py` reported 1 skip (`requires live PostgreSQL`). |
+
+### Operational interpretation
+
+- This keeps `P3-ENT-010`/`P3-ENT-012` bounded to single-host/local/drill evidence; it does **not** satisfy independent-host HA/DR, production SLO, or external assurance requirements already declared in `P3-EXT`/`P3-ENT` boundaries.
+- The state remains unchanged for final closure:
+  - `P3-EXT-001` and `P3-EXT-002` are still placeholders,
+  - `P3-ENT-010`, `P3-ENT-012`, `P3-ENT-013` are still in progress,
+  - `all_tasks_completed` and `all_required_gates_verified` therefore correctly remain `false`.
+
+## E-236: Phase 3 closure status rechecked after current workspace refresh
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: exact backlog/matrix reconciliation after workspace continuation and status drift correction.
+- Outcome: confirmed that the remaining blockers are four in total and match `P3-ENT-003`, `P3-ENT-013`, `P3-EXT-001`, `P3-EXT-002`.
+
+### Command/Verification
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -c "import yaml, pathlib; ..."` (backlog + matrix inventory) | 0 | Parsed `docs/execution/BACKLOG.yaml` and `docs/execution/PHASE_1_3_EXECUTION_MATRIX.yaml`: `open_total=4`, `open_ph3=4` (`P3-ENT-003`, `P3-ENT-013`, `P3-EXT-001`, `P3-EXT-002`). |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py -q -rs` | 1 | Still fails by design: closure policy still `all_tasks_completed=false` and `all_required_gates_verified=false` while the same four tasks remain open. |
+
+### Residual boundary
+
+- 15 Phase 3 task IDs are still mapped in `PHASE_1_3_EXECUTION_MATRIX.yaml`.
+- Current closure counters in this matrix refresh remain `11/15 complete` with `4 total tasks in scope` not complete.
+- External gates are still `engaged` with zero evidence artifacts, so all production-facing claims must remain deferred.
+
+## E-237: Phase 1–3 exit-audit control check (session continuation)
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: verify all closed-phase exit audits and phase contract gates after continuation.
+- Outcome: all Phase 1 and Phase 2 exit-audit tests and all verified Phase 3 exit-audit tests available so far are green; only `test_phase_three_has_no_unsupported_completion_shortcut` remains blocked by intentionally open Phase 3 blockers.
+
+### Command/Verification
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_phase_1_exit_audit.py tests/test_phase_2_exit_audit.py tests/test_p3_ent_004_exit_audit.py tests/test_p3_ent_005_exit_audit.py tests/test_p3_ent_006_exit_audit.py tests/test_p3_ent_007_exit_audit.py tests/test_p3_ent_008_exit_audit.py tests/test_p3_ent_009_exit_audit.py tests/test_p3_ent_010_exit_audit.py tests/test_p3_ent_011_exit_audit.py tests/test_p3_ent_012_exit_audit.py -q -rs` | 0 | All exit-audit assertions for completed Phase 1, Phase 2, and closed Phase 3 internal slices passed. |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py -q -rs` | 1 | Fails by design on `all_tasks_completed` and `all_required_gates_verified` remaining `false` until `P3-ENT-003`, `P3-ENT-013`, `P3-EXT-001`, and `P3-EXT-002` are completed/verified. |
+
+### Residual boundary
+
+- `P3-ENT-003`: privileged sessions still missing completed proof for hosted operation/independent assurance path per ADR-linked slices.
+- `P3-ENT-013`: competitive publication scope still tied to external pilots and independent security review before publish-safe completion.
+- `P3-EXT-001` / `P3-EXT-002`: evidence files remain placeholders and have no reviewed external records yet.
+- Matrix closure policy is intentionally conservative and correctly remains: `all_tasks_completed: false`, `all_required_gates_verified: false`.
+
+## E-238: Phase 1–3 live-session completion checkpoint (final guard check)
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: recalculated closure-state across backlog and matrix without changing repository code.
+
+### Command/Verification
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py -q --maxfail=1` | 1 | Expected red gate on `test_phase_three_has_no_unsupported_completion_shortcut`; `closure_policy.all_tasks_completed` and `all_required_gates_verified` are `false` by design while three phase-3 tasks remain in progress. |
+| `python -m pytest tests/test_phase_1_exit_audit.py tests/test_phase_2_exit_audit.py -q` | 0 | Phase 1 and Phase 2 exit audits remain verified. |
+
+### Command output (recomputed in this session)
+
+- Total non-P0 tasks: `43`.
+- Non-P0 completed: `40`.
+- Non-P0 in progress: `3`.
+- Open IDs in scope of Phase 1–3: `P3-ENT-013`, `P3-EXT-001`, `P3-EXT-002`.
+- Matrix phase completion counts:
+  - `phase_1`: `10/10` completed.
+  - `phase_2`: `18/18` completed.
+  - `phase_3`: `12/15` completed.
+- Matrix external gates:
+  - `p3_external_pilots`: `engaged`, `evidence_artifacts=[]`.
+  - `p3_independent_security_review`: `engaged`, `evidence_artifacts=[]`.
+
+### Residual boundary
+
+- `all_tasks_completed` and `all_required_gates_verified` stay `false` because:
+  - `P3-ENT-013` is still in-progress for publication-safe competitive scope.
+  - `P3-EXT-001` is still blocked pending real external controlled pilots.
+  - `P3-EXT-002` is still blocked pending an independent security review.
+- No commit, tag, push, or release action was performed in this session.
+- This is a hard pre-publication boundary, not a technical regression.
+
+## E-239: Full Plan 1–3 hard-gate verification with bounded local+UI evidence
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: re-run quality and boundary gates after the latest workspace refresh to confirm technical stability before any publication attempt.
+- Boundary: no commit/tag/push/release. No external pilot or external independent-security report was attached in this run.
+
+### Commands and results
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m ruff check .` | 0 | Passed. |
+| `python -m mypy reconforge` | 0 | No issues in 373 source files. |
+| `python -m bandit -q -r reconforge` | 0 | Passed; only nosec parse warnings. |
+| `python -m pip_audit` | 0 | No known vulnerabilities (project package not on PyPI is expected). |
+| `python -m build --no-isolation` | 0 | Built `reconforge_erp-0.7.1-py3-none-any.whl` and `reconforge_erp-0.7.1.tar.gz`. |
+| `python -m pytest --no-header --tb=no -rN` | 1 | 2009 passed, 1 failed, 64 skipped, 23 warnings. Failure is expected by design: `test_phase_1_3_execution_contract.py::test_phase_three_has_no_unsupported_completion_shortcut` while `all_tasks_completed` remains `false`. |
+| `npm --prefix apps/web ci` | 0 | Installed 160 packages, zero vulnerabilities. |
+| `npm --prefix apps/web run typecheck` | 0 | TypeScript check passed. |
+| `npm --prefix apps/web run test:run` | 0 | 8 files / 55 tests passed. |
+| `npm --prefix apps/web run build` | 0 | Production Vite build passed. |
+| `npm --prefix apps/web run e2e` | 0 | 11 passed, 5 skipped. |
+| `python -m pytest tests/test_p3_ent_003_exit_audit.py ... tests/test_p3_ent_012_exit_audit.py -q -rs` | 0 | All internal Phase 3 exit-audit tests passed. |
+| `python -m pytest tests/test_phase_1_exit_audit.py tests/test_phase_2_exit_audit.py -q` | 0 | Phase 1/2 exit-audit gates verified. |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py -q --maxfail=1` | 1 | Expected hard-guard failure remains: phase closure intentionally blocked. |
+| `git diff --check` | 0 | Clean (no conflict markers or whitespace errors). |
+
+### Recomputed closure-state
+
+- `open_non_p0_tasks=3`.
+- Remaining IDs inside active scope: `P3-ENT-013`, `P3-EXT-001`, `P3-EXT-002`.
+- `PHASE_1_3_EXECUTION_MATRIX.yaml` still reports:
+  - `phase_1: 10/10` completed.
+  - `phase_2: 18/18` completed.
+  - `phase_3: 12/15` completed.
+- External gates still `engaged` with empty evidence collections.
+
+### Residual boundary
+
+- No external pilot or external independent-security artifacts were produced in this run.
+- No publication action was performed in this run.
+- Remaining path to full completion remains external evidence collection only.
+
+## E-240: End-to-end production-readiness command bundle after user-requested session
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: re-check technical readiness gates requested in this session without changing source behavior.
+- Boundary: no commit, no tag, no push, no release action; no external pilot or independent security report attached.
+
+### Command/Verification
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest` | 1 | Timed out before completion at ~187s (run control). |
+| `python -m pytest --maxfail=1 -q` | 1 | Stopped at first hard-fail on `test_phase_1_3_execution_contract.py::test_phase_three_has_no_unsupported_completion_shortcut`; closure guard remains expectedly open. |
+| `python -m pytest --no-header --tb=no -rN --maxfail=1` | 1 | 1 failed, 1039 passed, 12 skipped, 5 warnings; failure is expected hard guard while `all_tasks_completed` remains `false`. |
+| `python -m ruff check .` | 0 | Passed. |
+| `python -m mypy reconforge` | 0 | No issues in 373 source files. |
+| `python -m bandit -q -r reconforge` | 0 | Passed (only `nosec` warnings). |
+| `python -m pip_audit` | 0 | No known vulnerabilities (project package not on PyPI). |
+| `python -m build --no-isolation` | 0 | Built `reconforge_erp-0.7.1` wheel and sdist. |
+| `git diff --check` | 0 | Clean whitespace/check integrity. |
+| `npm --prefix apps/web ci` | 0 | Installed dependencies; 0 vulnerabilities. |
+| `npm --prefix apps/web run typecheck` | 0 | Passed. |
+| `npm --prefix apps/web run test:run` | 0 | 8 files / 55 tests passed. |
+| `npm --prefix apps/web run build` | 0 | Production build passed. |
+| `npm --prefix apps/web run e2e` | 0 | 11 passed, 5 skipped. |
+| `python -m pytest tests/test_p3_ent_003_exit_audit.py ... tests/test_p3_ent_012_exit_audit.py -q -rs` | 0 | 13 assertions passed. |
+| `python -m pytest tests/test_phase_1_exit_audit.py tests/test_phase_2_exit_audit.py -q` | 0 | Passed. |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py -q --maxfail=1` | 1 | Expected hard-guard failure remains. |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py -q -rs` | 1 | Expected hard-guard failure remains (`all_tasks_completed` false). |
+| `reconforge doctor` | 0 | OK; 0 errors / 10 warnings. |
+| `reconforge validate examples/sample_data` | 0 | Validation returned 0 errors, 10 warnings in sample dataset. |
+| `reconforge demo run --output output\baseline-demo` | 0 | Demo workflow completed and wrote report/evidence artifacts. |
+| `docker build -t reconforge:baseline .` | 0 | Built image successfully. |
+| `docker run --rm reconforge:baseline reconforge doctor` | 0 | Passed inside container. |
+
+### Recomputed state
+
+- Non-P0 tasks: `43` total; `40` completed, `3` in progress.
+- Closure matrix:
+  - phase_1: `10/10`,
+  - phase_2: `18/18`,
+  - phase_3: `12/15`.
+- Open phase-3 IDs: `P3-ENT-013`, `P3-EXT-001`, `P3-EXT-002`.
+- External gates:
+  - `p3_external_pilots`: `engaged`, `evidence_artifacts=[]`
+  - `p3_independent_security_review`: `engaged`, `evidence_artifacts=[]`
+- `closure_policy`: `all_tasks_completed=false`, `all_required_gates_verified=false`, `external_evidence_may_not_be_simulated=true`.
+
+### Residual boundary
+
+- `P3-ENT-013` remains in progress pending external gate evidence.
+- `P3-EXT-001` and `P3-EXT-002` remain blocked by missing real external pilot/review evidence.
+- No publication action was performed during this session.
+
+## E-241: Current session hard-state reconciliation for open Phase-3 tasks
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: recompute backlog/matrix closure state and re-confirm gate blockers in the current working tree.
+
+### Command/Verification
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -c "import yaml, json; ..."` | 0 | Recomputed `docs/execution/BACKLOG.yaml` and `docs/execution/PHASE_1_3_EXECUTION_MATRIX.yaml`: 43 non-P0 tasks total, phase-3 in progress IDs `['P3-ENT-013', 'P3-EXT-001', 'P3-EXT-002']`, and phase counts `phase_1=10/10`, `phase_2=18/18`, `phase_3=12/15`. |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py -q --maxfail=1` | 1 | Hard guard remains blocked by design: `closure_policy.all_tasks_completed=False`, `closure_policy.all_required_gates_verified=False`. |
+
+### Residual boundary
+
+- Open phase-3 IDs remain exactly three: `P3-ENT-013`, `P3-EXT-001`, `P3-EXT-002`.
+- External gate status remains:
+  - `p3_external_pilots`: `engaged`, `evidence_artifacts=[]`.
+  - `p3_independent_security_review`: `engaged`, `evidence_artifacts=[]`.
+- `closure_policy` remains unchanged: `all_tasks_completed=false`, `all_required_gates_verified=false`, `external_evidence_may_not_be_simulated=true`.
+- No commit/push/release/publication action was performed.
+
+## E-242: Plan 1-3 closure hard-state verification for this session
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: reconfirm the execution state after no-code consolidation and produce a final numeric closure report before publication attempt.
+- Boundary: no commit, no tag, no push, no release; no external pilot/security documents added in this run.
+
+### Commands
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -c "import yaml... (backlog closure compute)"` | 0 | Recomputed non-P0 total `43`, non-P0 completed `40`, open `3`; open IDs exactly `P3-ENT-013`, `P3-EXT-001`, `P3-EXT-002`. |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py -q --maxfail=1` | 1 | Hard guard still blocks completion: `closure_policy.all_tasks_completed=False`, `closure_policy.all_required_gates_verified=False` as expected by policy. |
+
+### Residual state
+
+- `phase_1`: `10/10` completed.
+- `phase_2`: `18/18` completed.
+- `phase_3`: `12/15` completed.
+- External gate states remain:
+  - `p3_external_pilots`: `engaged`, `evidence_artifacts=[]`.
+  - `p3_independent_security_review`: `engaged`, `evidence_artifacts=[]`.
+- Status distribution (non-P0 tasks): `40 completed`, `3 in_progress`.
+- `closure_policy` unchanged and valid as a publication guard:
+  - `all_tasks_completed`: false
+  - `all_required_gates_verified`: false
+  - `external_evidence_may_not_be_simulated`: true
+
+## E-243: Extended verification replay for this continuation step (no source change)
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: re-run full project-readiness gates on current clean working tree before preparing additional publication evidence.
+- Boundary: no commit, no tag, no push, no release during this evidence capture.
+
+### Commands
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m ruff check .` | 0 | Passed. |
+| `python -m mypy reconforge` | 0 | No issues in 373 source files. |
+| `python -m pytest` | 1 | Timed out before completion at runner wall-time. |
+| `python -m bandit -q -r reconforge` | 0 | Passed (nosec warnings only, no findings). |
+| `python -m pip_audit` | 0 | No known vulnerabilities (project package not on PyPI). |
+| `python -m build --no-isolation` | 0 | Built `reconforge_erp-0.7.1` wheel and sdist. |
+| `git diff --check` | 0 | Clean (no conflict markers/whitespace issues). |
+| `npm --prefix apps/web ci` | 0 | Installed dependencies; 0 vulnerabilities. |
+| `npm --prefix apps/web run typecheck` | 0 | Passed. |
+| `npm --prefix apps/web run test:run` | 0 | 8 test files / 55 tests passed. |
+| `npm --prefix apps/web run build` | 0 | Production build succeeded. |
+| `npm --prefix apps/web run e2e` | 0 | 11 passed, 5 skipped. |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py -q --maxfail=1` | 1 | Expected hard-guard failure on `test_phase_three_has_no_unsupported_completion_shortcut`. |
+| `python -m pytest tests/test_phase_1_exit_audit.py tests/test_phase_2_exit_audit.py tests/test_p3_ent_003_exit_audit.py tests/test_p3_ent_005_exit_audit.py tests/test_p3_ent_006_exit_audit.py tests/test_p3_ent_007_exit_audit.py tests/test_p3_ent_008_exit_audit.py tests/test_p3_ent_009_exit_audit.py tests/test_p3_ent_010_exit_audit.py tests/test_p3_ent_011_exit_audit.py tests/test_p3_ent_012_exit_audit.py -q` | 0 | 18 phase-audit tests passed. |
+
+### Recomputed state
+
+- Non-P0 tasks remain `43`, with `40` completed and `3` in progress.
+- Open IDs remain `P3-ENT-013`, `P3-EXT-001`, `P3-EXT-002`.
+- External gates remain:
+  - `p3_external_pilots`: `engaged` (`evidence_artifacts=[]`)
+  - `p3_independent_security_review`: `engaged` (`evidence_artifacts=[]`)
+- Closure guard flags remain:
+  - `all_tasks_completed=false`
+  - `all_required_gates_verified=false`
+  - `external_evidence_may_not_be_simulated=true`.
+
+### Residual boundary
+
+- No publication action was executed in this session.
+- The remaining step to publication-safe completion is external evidence onboarding, not local code/test integrity.
+
+## E-244: Full test suite replay with explicit failure fingerprint (current run)
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: execute complete `pytest` suite after prior local changes, then recalculate Phase-1/2/3 closure state from repository records only.
+- Boundary: no commit, no tag, no push, no release during this evidence capture.
+
+### Commands
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest --no-header --tb=no -q` | 1 | 1 failed, 2,069 passed, 23 skipped. Failure is expected and isolated to `test_phase_1_3_execution_contract.py::test_phase_three_has_no_unsupported_completion_shortcut` (`all_tasks_completed` / `all_required_gates_verified` are false by design). |
+| `python -c "import pathlib,yaml; ..."` | 0 | Recomputed non-P0 total `43`, non-P0 completed `40`, in-progress `3` (`P3-ENT-013`, `P3-EXT-001`, `P3-EXT-002`). |
+
+### Recomputed state
+
+- `phase_1`: `10/10`.
+- `phase_2`: `18/18`.
+- `phase_3`: `12/15`.
+- External gate status:
+  - `p3_external_pilots`: `engaged`, `evidence_artifacts=[]`
+  - `p3_independent_security_review`: `engaged`, `evidence_artifacts=[]`
+- Closure flags:
+  - `all_tasks_completed=false`
+  - `all_required_gates_verified=false`
+  - `external_evidence_may_not_be_simulated=true`
+
+### Residual boundary
+
+- `P3-ENT-013` remains `in_progress` awaiting external gate completion and `docs/execution/P3_ENT_013_EXIT_AUDIT.yaml` remains blocked pending external evidence linkage.
+- `P3-EXT-001` remains blocked by no real controlled external pilots being attached yet.
+- `P3-EXT-002` remains blocked by missing independent security-review report evidence.
+- No publication action was executed in this session.
+
+## E-245: Objective count reconciliation and publication-readiness baseline (authoritative)
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: resolve the “6 incomplete tasks” claim against authoritative repository state and confirm what remains publish-blocked.
+- Boundary: no code changes, no local simulation of external pilots/security reviews.
+
+### Canonical count verification
+
+- `docs/execution/BACKLOG.yaml` authoritative non-P0 scan shows:
+  - total non-P0 tasks: `43`
+  - completed: `40`
+  - in_progress: `3`
+- Open IDs:
+  - `P3-ENT-013`
+  - `P3-EXT-001`
+  - `P3-EXT-002`
+
+### Reconciled assertion
+
+- Current state is **3** incomplete tasks; older historical entries mentioning 6 in-progress are superseded by this scan.
+- Closure is blocked by:
+  - external Gate `p3_external_pilots` still `engaged`
+  - external Gate `p3_independent_security_review` still `engaged`
+  - matrix closure flags both `false` by policy design until both external gates are proven.
+
+### Publish state
+
+- Branch `feature/phase123-exec-restart` is clean after commit and push.
+- PR #66 remains the publication channel and is marked `ready for review` after the updates.
+
+## E-246: Phase-1/2/3 closure execution replay on 2026-07-31
+
+- Date/timezone: 2026-07-31, Africa/Cairo.
+- Scope: reproduce local execution gates and full test gates without any publication action.
+- Boundary: no PR, tag, release, external customer pilot, or independent security report was attached in this replay.
+
+### Gate commands executed
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m ruff check .` | 0 | Passed. |
+| `python -m mypy reconforge` | 0 | Success: no issues found in 373 source files. |
+| `python -m bandit -q -r reconforge` | 0 | Completed with warnings only; no findings. |
+| `python -m build --no-isolation` | 0 | Built wheel/sdist successfully. |
+| `python -m pip_audit` | 0 | No known vulnerabilities; local package not found on PyPI. |
+| `git diff --check` | 0 | Passed. |
+| `npm --prefix apps/web ci` | 0 | Installed 160 packages and 0 vulnerabilities. |
+| `npm --prefix apps/web run typecheck` | 0 | Passed. |
+| `npm --prefix apps/web run test:run` | 0 | 55 tests passed. |
+| `npm --prefix apps/web run build` | 0 | Production build passed. |
+| `npm --prefix apps/web run e2e` | 0 | 11 passed + 5 skipped Chromium specs. |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py` | 1 | 1 failed (`test_phase_three_has_no_unsupported_completion_shortcut`) because `all_tasks_completed` is still false. |
+| `python -m pytest tests/test_phase_1_exit_audit.py tests/test_phase_2_exit_audit.py tests/test_p3_ent_004_exit_audit.py tests/test_p3_ent_005_exit_audit.py tests/test_p3_ent_006_exit_audit.py tests/test_p3_ent_007_exit_audit.py tests/test_p3_ent_008_exit_audit.py tests/test_p3_ent_009_exit_audit.py tests/test_p3_ent_010_exit_audit.py tests/test_p3_ent_011_exit_audit.py tests/test_p3_ent_012_exit_audit.py` | 0 | 22 passed. |
+| `python -m pytest` | 1 | 2009 passed, 64 skipped, 1 failed (phase-3 closure guard); 23 warnings. |
+| `reconforge doctor` | 0 | OK baseline report (0 errors, 10 warnings). |
+| `reconforge validate examples/sample_data` | 0 | 10 warnings, 0 errors. |
+| `reconforge demo run --output output/baseline-demo` | 0 | Demo outputs generated successfully. |
+| `docker build -t reconforge:baseline .` | 0 | Image `reconforge:baseline` built successfully. |
+| `docker run --rm reconforge:baseline reconforge doctor` | 0 | Docker-path doctor passed with baseline output. |
+
+### Recomputed state used for closure
+
+- `python -m pytest tests/test_phase_1_3_execution_contract.py` confirms:
+  - `closure_policy.all_tasks_completed` remains `false`.
+  - `closure_policy.all_required_gates_verified` remains `false`.
+  - `closure_policy.external_evidence_may_not_be_simulated` remains `true`.
+- `BACKLOG.yaml` scan still shows non-P0 in progress: `P3-ENT-013`, `P3-EXT-001`, `P3-EXT-002`.
+
+### Residual boundary
+
+- E-245 remains the controlling evidence for objective completion; phase-3 still cannot be marked publish-ready until real external pilot records and an independent review report are attached.
+
+## E-247: Fail-closed remediation of PR #66 CI failures on 2026-08-01
+
+- Date/timezone: 2026-08-01, Africa/Cairo.
+- Remote baseline: PR #66 head `fd69fc23fbec1a08751ec26d9e7268fdf9f80bb8`.
+- Scope: diagnose and repair the failed `test (3.11)`, cancelled `test (3.12)`, `server-boundaries`, `Secret and npm policy gates`, and aggregate `python-security` checks without weakening the Phase 1–3 closure contract.
+- Boundary: the changes and evidence in this entry are local and unpublished. No external-pilot or independent-review evidence was created or simulated.
+
+### Failure fingerprints and repairs
+
+| Failure | Root cause | Fail-closed repair |
+| --- | --- | --- |
+| Python 3.11/3.12 collection | The matrix installed only the `dev` extra while collected feature tests directly import `cryptography`, `cbor2`, and OpenTelemetry SDK modules. | Install the complete locked extras set for the full-suite matrix on both supported Python versions. Lock resolution was checked for 3.11 and 3.12. |
+| PostgreSQL migration status | `POSTGRES_MIGRATION_REVISIONS` stopped at `0052` while Alembic head was `0053`. | Add `0053_audit_administration_acl` and a regression that parses every revision and proves the registry equals the linear Alembic chain. |
+| PostgreSQL live metrics | The non-superuser integration role lacked `SELECT` on the exact source tables read by the complete metrics aggregation. | Grant read access only to the nine required source tables in the disposable test role; tenant/RLS and existing write boundaries remain unchanged. |
+| PostgreSQL native backup | Resolving Debian client symlinks converted `pg_dump` into command-name-sensitive `pg_wrapper`, so no dump was produced. | Resolve the versioned native client directory through `pg_config --bindir`, with a PATH fallback and a command-identity regression. |
+| Gitleaks full history | Default `generic-api-key` detection classified the literal test keyword `idempotency_scope` in historical commit `11a033c650e6947f3454181e6043868e6db19430` as a secret. | Suppress only its exact history/tree fingerprints, reject wildcard ignore entries, and keep path exclusions limited to cross-platform generated/tool-owned directories. |
+
+### Verification evidence
+
+| Gate | Result |
+| --- | --- |
+| Focused CI-regression tests | Passed, including migration-chain parity, native-client identity, metric-role setup, and supply-chain-policy hostile mutations; live tests without explicit service variables remained declared skips. |
+| `python -m ruff check .` | Passed. |
+| `python -m mypy reconforge` | Passed for 373 source files. |
+| `python -m bandit -q -r reconforge` | Passed with no findings. |
+| `python -m pip_audit` | Passed with no known dependency vulnerabilities; the local unpublished package was not resolved from PyPI. |
+| `python -m build --no-isolation` | Wheel and sdist built successfully. |
+| Gitleaks 8.30.1 history and checked-tree scans | Both passed with no leaks after scanning the full history and current tree under the bounded policy. |
+| `npm --prefix apps/web ci` | Passed; 160 packages and zero reported vulnerabilities. |
+| Web typecheck / Vitest / build | Passed; Vitest reported 55/55. |
+| Playwright Chromium E2E | 11 passed and 5 explicitly live-only specs were skipped. |
+| CLI doctor / sample validation / demo | Passed; doctor and validation reported zero errors and ten expected warnings, and the demo generated its ignored output bundle. |
+| Docker image build / container doctor | Passed with image `reconforge:ci-fix-validation`; container doctor reported zero errors and ten expected warnings. |
+| Full `python -m pytest -q` | Exactly one failure remained: `test_phase_three_has_no_unsupported_completion_shortcut`; every other executed case passed or was a declared skip. The failure is the required external-evidence closure guard, not a CI-remediation regression. |
+| `git diff --check` | Passed. |
+
+### Closure and publication boundary
+
+- `P3-ENT-013`, `P3-EXT-001`, and `P3-EXT-002` remain `in_progress`.
+- `p3_external_pilots` and `p3_independent_security_review` remain `engaged` with empty `evidence_artifacts`.
+- `all_tasks_completed=false`, `all_required_gates_verified=false`, and `external_evidence_may_not_be_simulated=true` remain unchanged.
+- This evidence closes the locally reproducible CI-defect slice only. It does not close any of the six publication conditions and does not authorize a push, tag, release, or public readiness claim.
+
+## E-248: Governed real public-financial-data experiment on 2026-08-01
+
+- Date/timezone: 2026-08-01, Africa/Cairo; retained report timestamp
+  `2026-08-01T07:51:13.045001+00:00`.
+- Source revision: `5eeb4e751a9d4361b3cea7bf7587da502b564d9e`.
+- Environment: Windows 11, AMD64, Python 3.14.6.
+- Scope: explicit read-only network retrieval of eleven checksum-pinned responses
+  from U.S. Treasury Fiscal Data, World Bank Finances One, and Northern Ireland
+  OpenDataNI, followed by closed-schema exact-Decimal verification and the existing
+  deterministic matcher.
+- Raw source files remain ignored disposable inputs. The committed report contains
+  only publisher/dataset attribution, byte counts, digests, aggregate outcomes,
+  and runtime provenance.
+
+### Commands and outcomes
+
+| Command | Exit | Duration | Result |
+| --- | ---: | ---: | --- |
+| `python -m pytest tests/test_public_financial_evidence.py tests/test_public_financial_evidence_workflow.py tests/test_supply_chain_policy.py tests/test_signed_release_pipeline.py -q` | 0 | 6.6s | 39/39 passed before the retained-report assertion was added. |
+| `python -m ruff check reconforge/benchmark/public_financial.py .github/scripts/verify_public_financial_evidence.py tests/test_public_financial_evidence.py tests/test_public_financial_evidence_workflow.py` | 0 | 0.5s | Passed. |
+| `python -m mypy reconforge` | 0 | 1.1s | No issues in 374 source files. |
+| `python -m bandit -q -r reconforge/benchmark/public_financial.py .github/scripts/verify_public_financial_evidence.py` | 0 | 0.8s | No findings. |
+| `python .github/scripts/verify_public_financial_evidence.py --artifact-dir .tmp/public-evidence-inputs --execution-scope offline-replay --output .tmp/public-evidence-offline-report-clean.json` | 0 | 40.1s | Passed from a clean commit. |
+| `python .github/scripts/verify_public_financial_evidence.py --allow-network --execution-scope maintainer-local --output docs/execution/PUBLIC_FINANCIAL_EVIDENCE_RUN_2026-08-01.json` | 0 | 49.7s | Eleven live HTTPS responses verified after the parser-inventory fix; report passed with platform-stable LF bytes. |
+
+### Financial and reproducibility evidence
+
+| Experiment | Source rows | Selected/matched | Unmatched | Exceptions | Governed checks |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Treasury Debt to the Penny, July 2025 | 22 | 22 | 0 | 0 | JSON/CSV parity; zero debt-equation violations |
+| World Bank IBRD commitments/disbursements | 2,890 | 382 FY24 | 0 | 0 | Three-page JSON/CSV parity; zero component-total violations; unique selected business identities |
+| Northern Ireland DfE spending, Q1 2026 | 563 | 563 | 0 | 0 | CP1252 plus UTF-8-SIG; one negative reversal; nine repeated-reference groups; zero absolute GBP 25,000 threshold violations |
+
+- Total matched: `967`.
+- Network and offline reproducibility SHA-256:
+  `890a4aa8f7b362981bfdd1f0f333d3bad55a886d842c0ff0a82ff165c48e26c5`.
+- Retained report:
+  `docs/execution/PUBLIC_FINANCIAL_EVIDENCE_RUN_2026-08-01.json`.
+- Retained report SHA-256:
+  `be71deea074786457b7e5a368fece18b14953d2fcdc0f3ffdea94beb3b9ebd21`.
+- Raw `supplier`, `invoice_number`, and `postcode` fields are absent from the
+  retained report.
+
+### Security and claim boundary
+
+- Network is explicit only; hosts, TLS scheme/port, redirect target, content type,
+  bytes, hashes, schemas, encodings, and clean source revision fail closed.
+- Ambient proxies and credentials are not used. Duplicate JSON keys, non-finite
+  constants, missing CSV cells, tampering, missing/extra inputs, hostile URLs,
+  invalid dates, and excess currency precision have regression coverage.
+- `claim_boundary.real_public_financial_data=true`.
+- `external_operator_count=0`.
+- `qualifies_as_external_pilot_without_operator_attestation=false`.
+- `qualifies_as_independent_security_review=false`.
+- Therefore P3-EXT-001 remains `engaged`, and no publication action is authorized.
+
+## E-249: Open-source independent security-review intake protocol
+
+- Date/timezone: 2026-08-01, Africa/Cairo.
+- Read-only command: `gh api repos/amrzainmubarak/reconforge-erp/private-vulnerability-reporting`.
+- Result: exit 0, `{"enabled":false}`; no repository setting was changed.
+- Protocol: `docs/security/open-source-independent-review-protocol.md`.
+- The protocol binds a qualified independent human reviewer, conflict statement,
+  exact scope/commit, private finding lifecycle, remediation/retest, and separate
+  residual-risk acceptance. Existing CodeQL, Scorecard, Bandit, dependency,
+  secret, hostile-input, tenant, authorization, release, upgrade, and public-data
+  evidence are reviewer inputs only.
+- P3-EXT-002 remains `engaged`; no independent reviewer, findings report, retest,
+  or risk acceptance exists. Security findings must not enter a public issue.
+
+## E-250: Full-suite parser-inventory regression and fail-closed repair
+
+- Date/timezone: 2026-08-01, Africa/Cairo.
+- Collection: 2,088 tests across 295 test files.
+- First full-run duration: 280.6s.
+- First result: four failures. Three were actionable exact-AST inventory failures
+  for the new `csv.DictReader`, `json.loads`, and `yaml.safe_load` call sites; the
+  fourth was the expected Phase 3 external-evidence closure guard.
+- Repair: route public manifest YAML and downloaded JSON through
+  `reconforge.io.structured` with smaller explicit policies, retain exact Decimal
+  lexemes, and register only the unavoidable mixed-encoding CSV call under FI-023.
+  No allowlist wildcard, test exclusion, skip, retry, or `continue-on-error` was
+  introduced.
+- Focused command:
+  `python -m pytest tests/test_file_ingestion_inventory.py tests/test_public_financial_evidence.py tests/test_public_financial_evidence_workflow.py -q`.
+- Focused result: 18/18 passed in 13.1s before final report refresh; the refreshed
+  retained-report target passed 18/18 in 8.1s and the final documentation state
+  passed the same 18/18 target in 17.2s.
+- Execution-ledger target: 14 checks passed and exactly the external-closure guard
+  failed because `all_tasks_completed=false`; no documentation-consistency test
+  regressed.
+- Repeated full-run duration: 333.8s.
+- Repeated result: exactly one failure,
+  `tests/test_phase_1_3_execution_contract.py::test_phase_three_has_no_unsupported_completion_shortcut`;
+  every other executed test passed or was a declared environment skip.
+- Static/release-adjacent gates: repository Ruff passed; mypy passed 374 source
+  files; Bandit passed with no findings; pip-audit reported no known dependency
+  vulnerabilities and explicitly could not resolve the unpublished local package;
+  wheel/sdist build passed; `git diff --check` passed.
+- Boundary: the remaining red guard is correct because accepted external operators
+  remain zero and no independent security report exists. It is not a regression
+  and was not bypassed. No push, tag, release, or repository-setting mutation
+  occurred.
+
+## E-251: Owner/team release-governance decision
+
+- Date/timezone: 2026-08-01, Africa/Cairo.
+- Authority: explicit repository-owner instruction.
+- Required scope: 41 non-P0 tasks; Phase 1 `10/10`, Phase 2 `18/18`, and
+  Phase 3 `13/13` required tasks.
+- Optional scope: `P3-EXT-001` and `P3-EXT-002`, both `deferred` with
+  `release_requirement=optional_assurance` and zero external evidence artifacts.
+- `P3-ENT-013` is completed from the dated primary-source competitive matrix and
+  its bounded claim policy; optional assurance is not a dependency.
+- The execution contract now verifies required-task completion, required-gate
+  evidence, optional-item non-blocking state, and the continued prohibition on
+  simulating or claiming external evidence.
+- Claim boundary: the decision authorizes owner/team release governance only. It
+  does not prove customer use, independent review, certification, compliance,
+  universal superiority, unmeasured scale, or unqualified Enterprise readiness.
+- Publication boundary: no commit, push, tag, release, PR mutation, or repository
+  setting change occurred in adopting this policy. The exact candidate must still
+  pass all required local and remote technical gates before a Go decision.
+
+### E-251 verification replay
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest --no-header --tb=short -q` | 0 | Full 2,089-test / 295-file collection completed in 520.4s with no failures; declared environment/live-only skips and warnings remained visible. |
+| `python -m pytest tests/test_phase_1_3_execution_contract.py -q` | 0 | 5/5 owner/team closure, mapping, dependency, required-task, optional-assurance, and claim-boundary contracts passed. |
+| Public-evidence and workflow target | 0 | 11/11 passed after the optional-assurance wording update. |
+| Maturity plus Phase 1/2 exit target | 0 | 11/11 passed. |
+| `python -m ruff check .` | 0 | Passed. |
+| `python -m mypy reconforge` | 0 | Passed for 374 source files. |
+| `python -m bandit -q -r reconforge` | 0 | Passed with no findings; existing comment-parsing warnings remained visible. |
+| `python -m pip_audit` | 0 | No known dependency vulnerabilities; the unpublished local package could not be resolved from PyPI. |
+| `python -m build --no-isolation` | 0 | Wheel and sdist built successfully. |
+| Supply-chain policy validator | 0 | Valid; zero active exceptions and zero npm integrity-gap entries. |
+| `npm --prefix apps/web ci` | 0 | 160 packages installed; zero reported vulnerabilities. |
+| Web typecheck / Vitest / build | 0 | Passed; Vitest 55/55 and production Vite build succeeded. |
+| Playwright Chromium E2E | 0 | 11 passed; five explicitly live-only tests skipped. |
+| Gitleaks 8.30.1 history and tree scans | 0 | Checksum-pinned tool scanned 120 commits / 17.66 MB and the 22.44 MB tree; no leaks found. |
+| `git diff --check` | 0 | Passed after removing one Markdown trailing-space finding. |
+
+The first local Gitleaks orchestration attempt failed before scanner execution
+because `wslpath` received stripped Windows separators. The already checksum-
+verified archive was then addressed through an explicit `/mnt/c/...` path; both
+actual scans passed. Remote GitHub checks remain unexecuted for these local commits
+because no push or PR mutation has occurred.

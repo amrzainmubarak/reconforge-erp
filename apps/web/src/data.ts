@@ -1,4 +1,4 @@
-import type { EvidenceBinderContract, ExceptionQueueContract, InventoryControlContract, StudioOverview } from "./types";
+import type { AdminAccessPermission, AdminAccessRole, AdminAccessRoleChange, AdminAuditEvent, AdminAuditPage, AdminAuditVerification, AdminIdentitySession, AdminIdentityUser, AdminIdentityUserStatusChange, AdminIntegration, AdminRetentionPolicy, AdminSecuritySnapshot, AdminSessionRevocation, AdminUserRoleAssignment, BrowserAdminSession, EvidenceBinderContract, ExceptionQueueContract, InventoryControlContract, LiveStudioContract, LiveStudioMetric, StudioOverview } from "./types";
 
 const OVERVIEW_URL = `${import.meta.env.BASE_URL}demo/studio-overview.json`;
 const EXCEPTIONS_URL = `${import.meta.env.BASE_URL}demo/studio-exceptions.json`;
@@ -485,3 +485,256 @@ async function loadContract<T>(
   }
   return value;
 }
+
+const LIVE_METRICS_PATH = "/api/v1/metrics/dashboard" as const;
+const exactMetricValue = /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/;
+
+function isLiveMetric(value: unknown): value is LiveStudioMetric {
+  const allowed = new Set(["id", "workspace_id", "metric_key", "period_name", "value", "value_text", "lineage", "computed_at", "name", "description"]);
+  return isObject(value) &&
+    Object.keys(value).every((key) => allowed.has(key)) &&
+    hasTextFields(value, ["metric_key", "period_name", "value_text", "lineage", "computed_at", "name", "description"]) &&
+    /^[a-z0-9][a-z0-9_]{0,79}$/.test(value.metric_key as string) &&
+    exactMetricValue.test(value.value_text as string) &&
+    Number.isFinite(Date.parse(value.computed_at as string));
+}
+
+export interface LiveStudioLoadOptions {
+  baseUrl?: string;
+  period?: string;
+  staleAfterSeconds?: number;
+  signal?: AbortSignal;
+  now?: Date;
+  fetcher?: typeof fetch;
+}
+
+export async function loadLiveStudioContract(options: LiveStudioLoadOptions = {}): Promise<LiveStudioContract> {
+  const staleAfterSeconds = options.staleAfterSeconds ?? 300;
+  if (!Number.isInteger(staleAfterSeconds) || staleAfterSeconds < 30 || staleAfterSeconds > 86_400) throw new Error("Live Studio stale threshold must be between 30 and 86400 seconds.");
+  const base = (options.baseUrl ?? "").replace(/\/$/, "");
+  const query = options.period ? `?period=${encodeURIComponent(options.period)}` : "";
+  const response = await (options.fetcher ?? fetch)(`${base}${LIVE_METRICS_PATH}${query}`, {
+    cache: "no-store",
+    credentials: "same-origin",
+    headers: { Accept: "application/json" },
+    signal: options.signal,
+  });
+  if (response.status === 401) throw new Error("Live Studio authentication is required.");
+  if (response.status === 403) throw new Error("Live Studio metrics.read permission is required.");
+  if (!response.ok) throw new Error(`Live Studio contract could not be loaded (${response.status}).`);
+  const payload: unknown = await response.json();
+  if (!isObject(payload) || Object.keys(payload).some((key) => key !== "metrics") || !Array.isArray(payload.metrics) || !payload.metrics.every(isLiveMetric)) throw new Error("Live Studio response does not match the authorized metrics contract.");
+  const metrics = [...payload.metrics].sort((left, right) => left.period_name.localeCompare(right.period_name) || left.metric_key.localeCompare(right.metric_key));
+  const now = options.now ?? new Date();
+  const newest = metrics.reduce<string | null>((current, metric) => current === null || Date.parse(metric.computed_at) > Date.parse(current) ? metric.computed_at : current, null);
+  const ageSeconds = newest === null ? 0 : Math.max(0, (now.getTime() - Date.parse(newest)) / 1_000);
+  return {
+    mode: "live",
+    endpoint: LIVE_METRICS_PATH,
+    fetched_at: now.toISOString(),
+    generated_at: newest,
+    stale_after_seconds: staleAfterSeconds,
+    stale: newest !== null && ageSeconds > staleAfterSeconds,
+    empty: metrics.length === 0,
+    metrics,
+  };
+}
+
+export class AdminApiError extends Error {
+  constructor(readonly status: number, readonly code: string) {
+    super(code);
+  }
+}
+
+const adminPaths = {
+  login: "/api/v1/auth/browser/login",
+  stepUp: "/api/v1/auth/step-up",
+  events: "/api/v1/admin/audit/events",
+  verify: "/api/v1/admin/audit/verify",
+  security: "/api/v1/admin/security/overview",
+  identityUsers: "/api/v1/admin/identity/users",
+  identitySessions: "/api/v1/admin/identity/sessions",
+  accessPermissions: "/api/v1/admin/access/permissions",
+  accessRoles: "/api/v1/admin/access/roles",
+  integrations: "/api/v1/admin/security/integrations",
+  retentionPolicies: "/api/v1/admin/security/retention-policies",
+} as const;
+
+async function adminResponse(response: Response): Promise<Response> {
+  if (response.ok) return response;
+  let code = `http_${response.status}`;
+  try { const body: unknown = await response.json(); if (isObject(body) && isObject(body.error) && isText(body.error.code)) code = body.error.code; } catch { /* closed fallback */ }
+  throw new AdminApiError(response.status, code);
+}
+
+function adminHeaders(tenantId: string, csrfToken?: string): HeadersInit {
+  return { Accept: "application/json", "X-ReconForge-Tenant": tenantId, ...(csrfToken ? { "X-ReconForge-CSRF": csrfToken } : {}) };
+}
+
+export async function beginBrowserAdminSession(input: { tenantId: string; username: string; password: string; fetcher?: typeof fetch }): Promise<BrowserAdminSession> {
+  const response = await (input.fetcher ?? fetch)(adminPaths.login, { method: "POST", cache: "no-store", credentials: "same-origin", headers: { ...adminHeaders(input.tenantId), "Content-Type": "application/json" }, body: JSON.stringify({ username: input.username, password: input.password }) });
+  const body: unknown = await (await adminResponse(response)).json();
+  if (!isObject(body) || !isText(body.csrf_token) || !isText(body.expires_at) || Object.keys(body).some((key) => key !== "csrf_token" && key !== "expires_at")) throw new Error("browser_session_contract_invalid");
+  return { csrfToken: body.csrf_token, expiresAt: body.expires_at, tenantId: input.tenantId };
+}
+
+export async function stepUpBrowserAdminSession(session: BrowserAdminSession, password: string, fetcher?: typeof fetch): Promise<string> {
+  const response = await (fetcher ?? fetch)(adminPaths.stepUp, { method: "POST", cache: "no-store", credentials: "same-origin", headers: { ...adminHeaders(session.tenantId, session.csrfToken), "Content-Type": "application/json" }, body: JSON.stringify({ password }) });
+  const body: unknown = await (await adminResponse(response)).json();
+  if (!isObject(body) || !isText(body.expires_at) || Object.keys(body).some((key) => key !== "method" && key !== "expires_at")) throw new Error("step_up_contract_invalid");
+  return body.expires_at;
+}
+
+function isAdminEvent(value: unknown): value is AdminAuditEvent {
+  const allowed = new Set(["source", "event_id", "sequence", "occurred_at", "action", "object_type", "actor_digest", "object_digest", "metadata_digest", "previous_event_hash", "event_hash", "before_state_hash", "after_state_hash"]);
+  return isObject(value) && Object.keys(value).every((key) => allowed.has(key)) && ["source", "event_id", "occurred_at", "action", "object_type", "actor_digest", "object_digest", "metadata_digest", "previous_event_hash", "event_hash"].every((key) => isText(value[key])) && ["domain", "ledger_control"].includes(String(value.source)) && Number.isInteger(value.sequence) && Number(value.sequence) >= 0 && ["before_state_hash", "after_state_hash"].every((key) => value[key] === null || isText(value[key]));
+}
+
+export async function loadAdminAuditPage(session: BrowserAdminSession, cursor?: string, fetcher?: typeof fetch): Promise<AdminAuditPage> {
+  const query = new URLSearchParams({ limit: "100" }); if (cursor) query.set("cursor", cursor);
+  const response = await (fetcher ?? fetch)(`${adminPaths.events}?${query}`, { cache: "no-store", credentials: "same-origin", headers: adminHeaders(session.tenantId) });
+  const body: unknown = await (await adminResponse(response)).json();
+  if (!isObject(body) || !Array.isArray(body.events) || !body.events.every(isAdminEvent) || !isObject(body.pagination) || (body.pagination.next_cursor !== null && !isText(body.pagination.next_cursor))) throw new Error("audit_contract_invalid");
+  return { events: body.events, nextCursor: body.pagination.next_cursor as string | null };
+}
+
+export async function verifyAdminAudit(session: BrowserAdminSession, fetcher?: typeof fetch): Promise<AdminAuditVerification[]> {
+  const response = await (fetcher ?? fetch)(adminPaths.verify, { cache: "no-store", credentials: "same-origin", headers: adminHeaders(session.tenantId) });
+  const body: unknown = await (await adminResponse(response)).json();
+  if (!isObject(body) || typeof body.ok !== "boolean" || !Array.isArray(body.chains) || !body.chains.every((chain) => isObject(chain) && ["domain", "ledger_control"].includes(String(chain.source)) && typeof chain.ok === "boolean" && Number.isInteger(chain.checked_events) && isText(chain.head_hash) && Array.isArray(chain.issue_codes) && chain.issue_codes.every(isText))) throw new Error("audit_verification_contract_invalid");
+  return body.chains as AdminAuditVerification[];
+}
+
+const securityNumberKeys = {
+  identity: ["total_users", "active_users", "disabled_users", "locked_users", "active_users_without_roles", "roles", "permissions", "role_permission_bindings"],
+  sessions: ["active_sessions", "revoked_sessions", "expired_unrevoked_sessions", "active_step_up_assertions", "active_webauthn_credentials", "users_with_active_webauthn"],
+  integrations: ["configured_federation_providers", "linked_federation_providers", "active_federation_links", "disabled_federation_links", "scim_domains", "active_scim_users", "active_scim_credentials", "enabled_service_accounts", "active_service_account_credentials", "enabled_notification_routes"],
+  policy: ["active_scope_grants", "pending_emergency_requests", "active_emergency_access", "overdue_emergency_reviews"],
+  retention: ["evidence_records", "evidence_with_retention", "evidence_retention_expired", "evidence_unverified", "evidence_verification_failed"],
+  audit: ["audit_events"],
+} as const;
+
+const securityRootKeys = new Set(["schema_version", "as_of", "tenant_scope_digest", "posture", "claim_boundary", "identity", "sessions", "integrations", "policy", "retention", "audit", "attention_items", "snapshot_digest"]);
+const sha256Digest = /^[a-f0-9]{64}$/;
+
+function isExactCountSection(value: unknown, keys: readonly string[], booleanKeys: readonly string[] = [], stringKeys: readonly string[] = []): value is Record<string, number | boolean | string> {
+  return isObject(value) && Object.keys(value).length === keys.length + booleanKeys.length + stringKeys.length && keys.every((key) => Number.isInteger(value[key]) && Number(value[key]) >= 0) && booleanKeys.every((key) => typeof value[key] === "boolean") && stringKeys.every((key) => isText(value[key]));
+}
+
+function isSecurityAttention(value: unknown): boolean {
+  return isObject(value) && Object.keys(value).length === 3 && ["medium", "high"].includes(String(value.severity)) && isText(value.code) && Number.isInteger(value.count) && Number(value.count) >= 0;
+}
+
+export async function loadAdminSecurityCenter(session: BrowserAdminSession, fetcher?: typeof fetch): Promise<AdminSecuritySnapshot> {
+  const response = await (fetcher ?? fetch)(adminPaths.security, { cache: "no-store", credentials: "same-origin", headers: adminHeaders(session.tenantId) });
+  const body: unknown = await (await adminResponse(response)).json();
+  const sections = ["identity", "sessions", "integrations", "policy", "retention", "audit"] as const;
+  if (!isObject(body) || Object.keys(body).length !== securityRootKeys.size || !Object.keys(body).every((key) => securityRootKeys.has(key)) || body.schema_version !== 1 || !isText(body.as_of) || !sha256Digest.test(String(body.tenant_scope_digest)) || !["attention_required", "observed_no_count_based_attention"].includes(String(body.posture)) || body.claim_boundary !== "operational_snapshot_not_security_assurance" || !Array.isArray(body.attention_items) || !body.attention_items.every(isSecurityAttention) || !sha256Digest.test(String(body.snapshot_digest)) || !sections.every((section) => isExactCountSection(body[section], securityNumberKeys[section], section === "integrations" ? ["federation_air_gap_mode", "webauthn_required_for_privileged_actions"] : [], section === "audit" ? ["chain_verification"] : [])) || !isObject(body.audit) || body.audit.chain_verification !== "not_evaluated_use_audit_verify_endpoint") throw new Error("security_center_contract_invalid");
+  return { asOf: body.as_of, posture: body.posture as AdminSecuritySnapshot["posture"], attention: body.attention_items as AdminSecuritySnapshot["attention"], sections: sections.map((id) => ({ id, values: body[id] as Record<string, number | boolean | string> })) };
+}
+
+function isExactIdentityUser(value: unknown): value is Record<string, unknown> {
+  const keys = ["id", "username", "display_name", "disabled", "lifecycle_version", "roles", "active_sessions", "created_at", "disabled_at", "state_digest"];
+  return isObject(value) && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key)) && ["id", "username", "display_name", "created_at", "state_digest"].every((key) => isText(value[key])) && typeof value.disabled === "boolean" && Number.isInteger(value.lifecycle_version) && Number(value.lifecycle_version) >= 1 && Array.isArray(value.roles) && value.roles.every(isText) && isCount(value.active_sessions) && (value.disabled_at === null || isText(value.disabled_at)) && sha256Digest.test(String(value.state_digest));
+}
+
+function isExactIdentitySession(value: unknown): value is Record<string, unknown> {
+  const keys = ["id", "user_id", "username", "status", "lifecycle_version", "created_at", "expires_at", "last_used_at", "revoked_at", "revocation_reason_code", "client_ip_recorded", "user_agent_recorded", "state_digest"];
+  return isObject(value) && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key)) && ["id", "user_id", "username", "created_at", "expires_at", "state_digest"].every((key) => isText(value[key])) && ["active", "expired", "revoked"].includes(String(value.status)) && Number.isInteger(value.lifecycle_version) && Number(value.lifecycle_version) >= 1 && ["last_used_at", "revoked_at", "revocation_reason_code"].every((key) => value[key] === null || isText(value[key])) && typeof value.client_ip_recorded === "boolean" && typeof value.user_agent_recorded === "boolean" && sha256Digest.test(String(value.state_digest));
+}
+
+function isIdentityPage(value: unknown, collection: "users" | "sessions", entry: (item: unknown) => boolean): boolean {
+  return isObject(value) && Object.keys(value).length === 2 && Array.isArray(value[collection]) && value[collection].every(entry) && isObject(value.pagination) && Object.keys(value.pagination).length === 3 && Number.isInteger(value.pagination.limit) && Number(value.pagination.limit) >= 1 && Number.isInteger(value.pagination.returned) && Number(value.pagination.returned) === value[collection].length && (value.pagination.next_cursor === null || isText(value.pagination.next_cursor));
+}
+
+export async function loadAdminIdentityUsers(session: BrowserAdminSession, fetcher?: typeof fetch): Promise<AdminIdentityUser[]> {
+  const response = await (fetcher ?? fetch)(`${adminPaths.identityUsers}?limit=100`, { cache: "no-store", credentials: "same-origin", headers: adminHeaders(session.tenantId) });
+  const body: unknown = await (await adminResponse(response)).json();
+  if (!isIdentityPage(body, "users", isExactIdentityUser)) throw new Error("identity_users_contract_invalid");
+  const page = body as { users: Record<string, unknown>[] };
+  return page.users.map((user) => ({ id: String(user.id), username: String(user.username), displayName: String(user.display_name), disabled: Boolean(user.disabled), lifecycleVersion: Number(user.lifecycle_version), roles: user.roles as string[], activeSessions: Number(user.active_sessions), createdAt: String(user.created_at), disabledAt: user.disabled_at as string | null, stateDigest: String(user.state_digest) }));
+}
+
+function userFromResponse(user: Record<string, unknown>): AdminIdentityUser {
+  return { id: String(user.id), username: String(user.username), displayName: String(user.display_name), disabled: Boolean(user.disabled), lifecycleVersion: Number(user.lifecycle_version), roles: user.roles as string[], activeSessions: Number(user.active_sessions), createdAt: String(user.created_at), disabledAt: user.disabled_at as string | null, stateDigest: String(user.state_digest) };
+}
+
+export async function setAdminIdentityUserDisabled(
+  session: BrowserAdminSession,
+  target: Pick<AdminIdentityUser, "id" | "lifecycleVersion">,
+  disabled: boolean,
+  fetcher?: typeof fetch,
+): Promise<AdminIdentityUserStatusChange> {
+  const response = await (fetcher ?? fetch)(`${adminPaths.identityUsers}/${encodeURIComponent(target.id)}/status`, {
+    method: "POST",
+    cache: "no-store",
+    credentials: "same-origin",
+    headers: { ...adminHeaders(session.tenantId, session.csrfToken), "Content-Type": "application/json" },
+    body: JSON.stringify({ disabled, expected_lifecycle_version: target.lifecycleVersion }),
+  });
+  const body: unknown = await (await adminResponse(response)).json();
+  if (!isObject(body) || Object.keys(body).length !== 4 || !isExactIdentityUser(body.user) || typeof body.transitioned !== "boolean" || !isCount(body.revoked_sessions) || (body.audit_event_id !== null && !isText(body.audit_event_id))) throw new Error("identity_user_status_contract_invalid");
+  return { user: userFromResponse(body.user), transitioned: body.transitioned, revokedSessions: Number(body.revoked_sessions), auditEventId: body.audit_event_id as string | null };
+}
+
+export async function loadAdminIdentitySessions(session: BrowserAdminSession, fetcher?: typeof fetch): Promise<AdminIdentitySession[]> {
+  const response = await (fetcher ?? fetch)(`${adminPaths.identitySessions}?limit=100`, { cache: "no-store", credentials: "same-origin", headers: adminHeaders(session.tenantId) });
+  const body: unknown = await (await adminResponse(response)).json();
+  if (!isIdentityPage(body, "sessions", isExactIdentitySession)) throw new Error("identity_sessions_contract_invalid");
+  const page = body as { sessions: Record<string, unknown>[] };
+  return page.sessions.map((item) => ({ id: String(item.id), userId: String(item.user_id), username: String(item.username), status: item.status as AdminIdentitySession["status"], lifecycleVersion: Number(item.lifecycle_version), createdAt: String(item.created_at), expiresAt: String(item.expires_at), lastUsedAt: item.last_used_at as string | null, revokedAt: item.revoked_at as string | null, revocationReasonCode: item.revocation_reason_code as string | null, clientIpRecorded: Boolean(item.client_ip_recorded), userAgentRecorded: Boolean(item.user_agent_recorded), stateDigest: String(item.state_digest) }));
+}
+
+function sessionFromResponse(item: Record<string, unknown>): AdminIdentitySession {
+  return { id: String(item.id), userId: String(item.user_id), username: String(item.username), status: item.status as AdminIdentitySession["status"], lifecycleVersion: Number(item.lifecycle_version), createdAt: String(item.created_at), expiresAt: String(item.expires_at), lastUsedAt: item.last_used_at as string | null, revokedAt: item.revoked_at as string | null, revocationReasonCode: item.revocation_reason_code as string | null, clientIpRecorded: Boolean(item.client_ip_recorded), userAgentRecorded: Boolean(item.user_agent_recorded), stateDigest: String(item.state_digest) };
+}
+
+export async function revokeAdminIdentitySession(
+  session: BrowserAdminSession,
+  target: Pick<AdminIdentitySession, "id" | "lifecycleVersion">,
+  reasonCode: "access_change" | "administrative_cleanup" | "security_response" | "user_request",
+  fetcher?: typeof fetch,
+): Promise<AdminSessionRevocation> {
+  const response = await (fetcher ?? fetch)(`${adminPaths.identitySessions}/${encodeURIComponent(target.id)}/revoke`, {
+    method: "POST",
+    cache: "no-store",
+    credentials: "same-origin",
+    headers: { ...adminHeaders(session.tenantId, session.csrfToken), "Content-Type": "application/json" },
+    body: JSON.stringify({ expected_lifecycle_version: target.lifecycleVersion, reason_code: reasonCode }),
+  });
+  const body: unknown = await (await adminResponse(response)).json();
+  if (!isObject(body) || Object.keys(body).length !== 4 || !isExactIdentitySession(body.session) || typeof body.transitioned !== "boolean" || typeof body.revoked_current_session !== "boolean" || (body.audit_event_id !== null && !isText(body.audit_event_id))) throw new Error("identity_session_revocation_contract_invalid");
+  return { session: sessionFromResponse(body.session), transitioned: body.transitioned, revokedCurrentSession: body.revoked_current_session, auditEventId: body.audit_event_id as string | null };
+}
+
+function isExactAccessPermission(value: unknown): value is Record<string, unknown> { const keys = ["name", "description", "active_role_count", "state_digest"]; return isObject(value) && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key)) && ["name", "description", "state_digest"].every((key) => isText(value[key])) && isCount(value.active_role_count) && sha256Digest.test(String(value.state_digest)); }
+function isExactAccessRole(value: unknown): value is Record<string, unknown> { const keys = ["id", "name", "description", "active", "lifecycle_version", "permissions", "active_user_count", "created_at", "updated_at", "retired_at", "state_digest"]; return isObject(value) && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key)) && ["id", "name", "description", "created_at", "updated_at", "state_digest"].every((key) => isText(value[key])) && typeof value.active === "boolean" && Number.isInteger(value.lifecycle_version) && Number(value.lifecycle_version) >= 1 && Array.isArray(value.permissions) && value.permissions.every(isText) && isCount(value.active_user_count) && (value.retired_at === null || isText(value.retired_at)) && sha256Digest.test(String(value.state_digest)); }
+
+export async function loadAdminAccessPermissions(session: BrowserAdminSession, fetcher?: typeof fetch): Promise<AdminAccessPermission[]> { const response = await (fetcher ?? fetch)(adminPaths.accessPermissions, { cache: "no-store", credentials: "same-origin", headers: adminHeaders(session.tenantId) }); const body: unknown = await (await adminResponse(response)).json(); if (!Array.isArray(body) || !body.every(isExactAccessPermission)) throw new Error("access_permissions_contract_invalid"); return body.map((item) => ({ name: String(item.name), description: String(item.description), activeRoleCount: Number(item.active_role_count), stateDigest: String(item.state_digest) })); }
+
+export async function loadAdminAccessRoles(session: BrowserAdminSession, fetcher?: typeof fetch): Promise<AdminAccessRole[]> { const response = await (fetcher ?? fetch)(`${adminPaths.accessRoles}?limit=100&include_retired=true`, { cache: "no-store", credentials: "same-origin", headers: adminHeaders(session.tenantId) }); const body: unknown = await (await adminResponse(response)).json(); if (!isObject(body) || Object.keys(body).length !== 2 || !Array.isArray(body.roles) || !body.roles.every(isExactAccessRole) || !isObject(body.pagination) || Object.keys(body.pagination).length !== 3 || !Number.isInteger(body.pagination.limit) || Number(body.pagination.limit) < 1 || !Number.isInteger(body.pagination.returned) || Number(body.pagination.returned) !== body.roles.length || (body.pagination.next_cursor !== null && !isText(body.pagination.next_cursor))) throw new Error("access_roles_contract_invalid"); return body.roles.map((item) => ({ id: String(item.id), name: String(item.name), description: String(item.description), active: Boolean(item.active), lifecycleVersion: Number(item.lifecycle_version), permissions: item.permissions as string[], activeUserCount: Number(item.active_user_count), createdAt: String(item.created_at), updatedAt: String(item.updated_at), retiredAt: item.retired_at as string | null, stateDigest: String(item.state_digest) })); }
+
+function roleFromResponse(item: Record<string, unknown>): AdminAccessRole { return { id: String(item.id), name: String(item.name), description: String(item.description), active: Boolean(item.active), lifecycleVersion: Number(item.lifecycle_version), permissions: item.permissions as string[], activeUserCount: Number(item.active_user_count), createdAt: String(item.created_at), updatedAt: String(item.updated_at), retiredAt: item.retired_at as string | null, stateDigest: String(item.state_digest) }; }
+async function accessRoleChange(response: Response): Promise<AdminAccessRoleChange> { const body: unknown = await (await adminResponse(response)).json(); if (!isObject(body) || Object.keys(body).length !== 4 || !isExactAccessRole(body.role) || typeof body.transitioned !== "boolean" || !isCount(body.revoked_sessions) || (body.audit_event_id !== null && !isText(body.audit_event_id))) throw new Error("access_role_change_contract_invalid"); return { role: roleFromResponse(body.role), transitioned: body.transitioned, revokedSessions: Number(body.revoked_sessions), auditEventId: body.audit_event_id as string | null }; }
+function accessMutation(session: BrowserAdminSession, method: "POST" | "PATCH" | "PUT", path: string, payload: object, fetcher?: typeof fetch): Promise<Response> { return (fetcher ?? fetch)(path, { method, cache: "no-store", credentials: "same-origin", headers: { ...adminHeaders(session.tenantId, session.csrfToken), "Content-Type": "application/json" }, body: JSON.stringify(payload) }); }
+
+export async function createAdminAccessRole(session: BrowserAdminSession, input: { name: string; description: string; permissions: string[] }, fetcher?: typeof fetch): Promise<AdminAccessRoleChange> { return accessRoleChange(await accessMutation(session, "POST", adminPaths.accessRoles, input, fetcher)); }
+export async function setAdminAccessRoleActive(session: BrowserAdminSession, role: Pick<AdminAccessRole, "id" | "lifecycleVersion">, active: boolean, fetcher?: typeof fetch): Promise<AdminAccessRoleChange> { return accessRoleChange(await accessMutation(session, "PATCH", `${adminPaths.accessRoles}/${encodeURIComponent(role.id)}`, { expected_lifecycle_version: role.lifecycleVersion, active }, fetcher)); }
+export async function replaceAdminAccessRolePermissions(session: BrowserAdminSession, role: Pick<AdminAccessRole, "id" | "lifecycleVersion">, permissions: string[], fetcher?: typeof fetch): Promise<AdminAccessRoleChange> { return accessRoleChange(await accessMutation(session, "PUT", `${adminPaths.accessRoles}/${encodeURIComponent(role.id)}/permissions`, { expected_lifecycle_version: role.lifecycleVersion, permissions }, fetcher)); }
+
+function isExactUserRoleAssignment(value: unknown): value is Record<string, unknown> { const keys = ["user_id", "username", "lifecycle_version", "role_ids", "role_names", "transitioned", "revoked_sessions", "audit_event_id", "state_digest"]; return isObject(value) && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key)) && ["user_id", "username", "state_digest"].every((key) => isText(value[key])) && Number.isInteger(value.lifecycle_version) && Number(value.lifecycle_version) >= 1 && Array.isArray(value.role_ids) && value.role_ids.every(isText) && Array.isArray(value.role_names) && value.role_names.every(isText) && typeof value.transitioned === "boolean" && isCount(value.revoked_sessions) && (value.audit_event_id === null || isText(value.audit_event_id)) && sha256Digest.test(String(value.state_digest)); }
+export async function replaceAdminUserRoles(session: BrowserAdminSession, user: Pick<AdminIdentityUser, "id" | "lifecycleVersion">, roleIds: string[], fetcher?: typeof fetch): Promise<AdminUserRoleAssignment> { const body: unknown = await (await adminResponse(await accessMutation(session, "PUT", `/api/v1/admin/access/users/${encodeURIComponent(user.id)}/roles`, { expected_user_lifecycle_version: user.lifecycleVersion, role_ids: roleIds }, fetcher))).json(); if (!isExactUserRoleAssignment(body)) throw new Error("access_user_roles_contract_invalid"); return { userId: String(body.user_id), username: String(body.username), lifecycleVersion: Number(body.lifecycle_version), roleIds: body.role_ids as string[], roleNames: body.role_names as string[], transitioned: Boolean(body.transitioned), revokedSessions: Number(body.revoked_sessions), auditEventId: body.audit_event_id as string | null, stateDigest: String(body.state_digest) }; }
+
+function isExactIntegration(value: unknown): value is Record<string, unknown> { const keys = ["kind", "id", "status", "lifecycle_version", "credential_count", "active_credential_count", "created_at", "expires_at", "last_used_at", "scope_digest", "state_digest"]; return isObject(value) && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key)) && ["id", "created_at", "scope_digest", "state_digest"].every((key) => isText(value[key])) && ["federation_link", "notification_route", "scim_credential", "service_account"].includes(String(value.kind)) && ["active", "disabled", "expired"].includes(String(value.status)) && Number.isInteger(value.lifecycle_version) && Number(value.lifecycle_version) >= 1 && isCount(value.credential_count) && isCount(value.active_credential_count) && ["expires_at", "last_used_at"].every((key) => value[key] === null || isText(value[key])) && sha256Digest.test(String(value.scope_digest)) && sha256Digest.test(String(value.state_digest)); }
+function isExactRetentionPolicy(value: unknown): value is Record<string, unknown> { const keys = ["id", "name", "description", "data_classification", "duration_days", "active", "lifecycle_version", "created_at", "updated_at", "retired_at", "state_digest"]; return isObject(value) && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key)) && ["id", "name", "description", "created_at", "updated_at", "state_digest"].every((key) => isText(value[key])) && ["public", "internal", "confidential", "restricted"].includes(String(value.data_classification)) && Number.isInteger(value.duration_days) && Number(value.duration_days) >= 1 && typeof value.active === "boolean" && Number.isInteger(value.lifecycle_version) && Number(value.lifecycle_version) >= 1 && (value.retired_at === null || isText(value.retired_at)) && sha256Digest.test(String(value.state_digest)); }
+function pageRecords(body: unknown, collection: string, entry: (value: unknown) => boolean): Record<string, unknown>[] | null { if (!isObject(body) || Object.keys(body).length !== 2 || !Array.isArray(body[collection]) || !body[collection].every(entry) || !isObject(body.pagination) || Object.keys(body.pagination).length !== 3 || !Number.isInteger(body.pagination.limit) || Number(body.pagination.limit) < 1 || !Number.isInteger(body.pagination.returned) || Number(body.pagination.returned) !== body[collection].length || (body.pagination.next_cursor !== null && !isText(body.pagination.next_cursor))) return null; return body[collection] as Record<string, unknown>[]; }
+function integrationFromResponse(item: Record<string, unknown>): AdminIntegration { return { kind: item.kind as AdminIntegration["kind"], id: String(item.id), status: item.status as AdminIntegration["status"], lifecycleVersion: Number(item.lifecycle_version), credentialCount: Number(item.credential_count), activeCredentialCount: Number(item.active_credential_count), createdAt: String(item.created_at), expiresAt: item.expires_at as string | null, lastUsedAt: item.last_used_at as string | null, scopeDigest: String(item.scope_digest), stateDigest: String(item.state_digest) }; }
+function retentionPolicyFromResponse(item: Record<string, unknown>): AdminRetentionPolicy { return { id: String(item.id), name: String(item.name), description: String(item.description), dataClassification: item.data_classification as AdminRetentionPolicy["dataClassification"], durationDays: Number(item.duration_days), active: Boolean(item.active), lifecycleVersion: Number(item.lifecycle_version), createdAt: String(item.created_at), updatedAt: String(item.updated_at), retiredAt: item.retired_at as string | null, stateDigest: String(item.state_digest) }; }
+export async function loadAdminIntegrations(session: BrowserAdminSession, fetcher?: typeof fetch): Promise<AdminIntegration[]> { const response = await (fetcher ?? fetch)(`${adminPaths.integrations}?limit=100&include_inactive=true`, { cache: "no-store", credentials: "same-origin", headers: adminHeaders(session.tenantId) }); const records = pageRecords(await (await adminResponse(response)).json(), "integrations", isExactIntegration); if (!records) throw new Error("integrations_contract_invalid"); return records.map(integrationFromResponse); }
+export async function loadAdminRetentionPolicies(session: BrowserAdminSession, fetcher?: typeof fetch): Promise<AdminRetentionPolicy[]> { const response = await (fetcher ?? fetch)(`${adminPaths.retentionPolicies}?limit=100&include_retired=true`, { cache: "no-store", credentials: "same-origin", headers: adminHeaders(session.tenantId) }); const records = pageRecords(await (await adminResponse(response)).json(), "policies", isExactRetentionPolicy); if (!records) throw new Error("retention_policies_contract_invalid"); return records.map(retentionPolicyFromResponse); }
+
+export async function disableAdminIntegration(session: BrowserAdminSession, integration: AdminIntegration, reasonCode: string, fetcher?: typeof fetch): Promise<import("./types").AdminIntegrationDisable> { const body: unknown = await (await adminResponse(await accessMutation(session, "POST", `${adminPaths.integrations}/${integration.kind}/${encodeURIComponent(integration.id)}/disable`, { expected_state_digest: integration.stateDigest, reason_code: reasonCode }, fetcher))).json(); if (!isObject(body) || Object.keys(body).length !== 4 || !isExactIntegration(body.integration) || typeof body.transitioned !== "boolean" || !isCount(body.revoked_credentials) || (body.audit_event_id !== null && !isText(body.audit_event_id))) throw new Error("integration_disable_contract_invalid"); return { integration: integrationFromResponse(body.integration), transitioned: body.transitioned, revokedCredentials: Number(body.revoked_credentials), auditEventId: body.audit_event_id as string | null }; }
+async function retentionPolicyChange(response: Response): Promise<import("./types").AdminRetentionPolicyChange> { const body: unknown = await (await adminResponse(response)).json(); if (!isObject(body) || Object.keys(body).length !== 3 || !isExactRetentionPolicy(body.policy) || typeof body.transitioned !== "boolean" || (body.audit_event_id !== null && !isText(body.audit_event_id))) throw new Error("retention_policy_change_contract_invalid"); return { policy: retentionPolicyFromResponse(body.policy), transitioned: body.transitioned, auditEventId: body.audit_event_id as string | null }; }
+export async function createAdminRetentionPolicy(session: BrowserAdminSession, input: { name: string; description: string; dataClassification: AdminRetentionPolicy["dataClassification"]; durationDays: number }, fetcher?: typeof fetch) { return retentionPolicyChange(await accessMutation(session, "POST", adminPaths.retentionPolicies, { name: input.name, description: input.description, data_classification: input.dataClassification, duration_days: input.durationDays }, fetcher)); }
+export async function updateAdminRetentionPolicy(session: BrowserAdminSession, policy: AdminRetentionPolicy, input: { description?: string; dataClassification?: AdminRetentionPolicy["dataClassification"]; durationDays?: number; active?: boolean }, fetcher?: typeof fetch) { return retentionPolicyChange(await accessMutation(session, "PATCH", `${adminPaths.retentionPolicies}/${encodeURIComponent(policy.id)}`, { expected_lifecycle_version: policy.lifecycleVersion, reason_code: "policy_change", ...(input.description === undefined ? {} : { description: input.description }), ...(input.dataClassification === undefined ? {} : { data_classification: input.dataClassification }), ...(input.durationDays === undefined ? {} : { duration_days: input.durationDays }), ...(input.active === undefined ? {} : { active: input.active }) }, fetcher)); }
+export async function applyAdminRetentionPolicy(session: BrowserAdminSession, policy: AdminRetentionPolicy, evidenceId: string, expectedRetentionVersion: number, fetcher?: typeof fetch): Promise<import("./types").AdminEvidenceRetentionChange> { const body: unknown = await (await adminResponse(await accessMutation(session, "POST", `${adminPaths.retentionPolicies}/${encodeURIComponent(policy.id)}/evidence/${encodeURIComponent(evidenceId)}`, { expected_retention_version: expectedRetentionVersion, reason_code: "policy_application" }, fetcher))).json(); const keys = ["evidence_id", "policy_id", "policy_lifecycle_version", "retention_version", "previous_retention_until", "policy_retention_until", "effective_retention_until", "retention_extended", "transitioned", "audit_event_id", "state_digest"]; if (!isObject(body) || Object.keys(body).length !== keys.length || !keys.every((key) => Object.hasOwn(body, key)) || !["evidence_id", "policy_id", "policy_retention_until", "effective_retention_until", "state_digest"].every((key) => isText(body[key])) || !Number.isInteger(body.policy_lifecycle_version) || !Number.isInteger(body.retention_version) || (body.previous_retention_until !== null && !isText(body.previous_retention_until)) || typeof body.retention_extended !== "boolean" || typeof body.transitioned !== "boolean" || (body.audit_event_id !== null && !isText(body.audit_event_id)) || !sha256Digest.test(String(body.state_digest))) throw new Error("evidence_retention_contract_invalid"); return { retentionVersion: Number(body.retention_version), retentionExtended: body.retention_extended, transitioned: body.transitioned, auditEventId: body.audit_event_id as string | null, stateDigest: String(body.state_digest) }; }

@@ -77,11 +77,29 @@ def write_html_dashboard(
     cards = "".join(_card(str(key).replace("_", " ").title(), str(value)) for key, value in summary.items())
     exception_table = _table(
         exceptions,
-        ["exception_type", "work_order", "source_document", "reference", "amount", "total_cost", "risk_score", "risk_level"],
+        [
+            "exception_type",
+            "work_order",
+            "source_document",
+            "reference",
+            "amount",
+            "total_cost",
+            "risk_score",
+            "risk_level",
+        ],
     )
     wip_table = _table(
         wip_aging,
-        ["work_order", "customer_name", "equipment_serial", "workshop", "aging_days", "aging_bucket", "actual_cost", "risk_level"],
+        [
+            "work_order",
+            "customer_name",
+            "equipment_serial",
+            "workshop",
+            "aging_days",
+            "aging_bucket",
+            "actual_cost",
+            "risk_level",
+        ],
     )
     value_summary = _value_summary_section(control_value_summary, top_control_themes, recommended_actions)
     html = f"""<!doctype html>

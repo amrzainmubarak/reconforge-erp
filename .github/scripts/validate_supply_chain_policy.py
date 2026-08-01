@@ -23,16 +23,20 @@ class SupplyChainPolicyError(ValueError):
 _SHA256 = re.compile(r"^sha256:[0-9a-f]{64}$")
 _EXACT_VERSION = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.!+_-]*$")
 _ISSUE_URL = re.compile(r"^https://github\.com/amrzainmubarak/reconforge-erp/issues/[1-9][0-9]*$")
+_GITLEAKS_FINGERPRINT = re.compile(
+    r"^(?:[0-9a-f]{40}:)?[A-Za-z0-9_.\-/]+:[a-z0-9-]+:[1-9][0-9]*$"
+)
 _ALLOWED_GITLEAKS_PATHS = {
-    "'''(^|/)\\.git/'''",
-    "'''(^|/)\\.venv/'''",
-    "'''(^|/)\\.codex-test-tmp/'''",
-    "'''(^|/)node_modules/'''",
-    "'''(^|/)__pycache__/'''",
-    "'''(^|/)\\.mypy_cache/'''",
-    "'''(^|/)\\.pytest_cache/'''",
-    "'''(^|/)\\.ruff_cache/'''",
-    "'''(^|/)(build|dist|output)/'''",
+    "'''(^|[\\\\/])\\.git[\\\\/]'''",
+    "'''(^|[\\\\/])\\.venv[\\\\/]'''",
+    "'''(^|[\\\\/])\\.codex-test-tmp[\\\\/]'''",
+    "'''(^|[\\\\/])\\.tmp[\\\\/]'''",
+    "'''(^|[\\\\/])node_modules[\\\\/]'''",
+    "'''(^|[\\\\/])__pycache__[\\\\/]'''",
+    "'''(^|[\\\\/])\\.mypy_cache[\\\\/]'''",
+    "'''(^|[\\\\/])\\.pytest_cache[\\\\/]'''",
+    "'''(^|[\\\\/])\\.ruff_cache[\\\\/]'''",
+    "'''(^|[\\\\/])(build|dist|output)[\\\\/]'''",
 }
 
 
@@ -96,7 +100,8 @@ def _validate_policy_document(policy: dict[str, Any]) -> None:
         or python_policy["lock"] != "uv.lock"
         or python_policy["manager"] != "uv"
         or python_policy["supported_python"] != ["3.11", "3.12"]
-        or python_policy["required_profiles"] != ["runtime", "dev", "docs", "duckdb", "server"]
+        or python_policy["required_profiles"]
+        != ["runtime", "backup", "dev", "docs", "duckdb", "federation", "mfa", "observability", "server"]
         or re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", python_policy["manager_version"]) is None
         or re.fullmatch(r"[0-9a-f]{40}", python_policy["manager_commit"]) is None
     ):
@@ -491,6 +496,15 @@ def _validate_gitleaks_config(root: Path) -> None:
     configured = {line.strip().rstrip(",") for line in text.splitlines() if line.strip().startswith("'''")}
     if configured != _ALLOWED_GITLEAKS_PATHS:
         raise SupplyChainPolicyError("Gitleaks path exclusions drifted from the bounded generated-directory set")
+    ignore_lines = [
+        line.strip()
+        for line in _required_path(root, ".gitleaksignore").read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    if not ignore_lines or len(ignore_lines) != len(set(ignore_lines)):
+        raise SupplyChainPolicyError("Gitleaks ignore fingerprints must be non-empty and unique")
+    if any(_GITLEAKS_FINGERPRINT.fullmatch(line) is None for line in ignore_lines):
+        raise SupplyChainPolicyError("Gitleaks ignores must be exact commit/path/rule/line fingerprints")
 
 
 def _validate_dockerfile(root: Path, policy: dict[str, Any]) -> None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from fastapi.testclient import TestClient
 from typer.testing import CliRunner
@@ -75,3 +76,144 @@ def test_api_serve_missing_db_fails_without_starting_server(tmp_path: Path) -> N
     assert result.exit_code == 1
     assert "Run 'reconforge db init' first" in result.output
     assert "Traceback" not in result.output
+
+
+def test_same_origin_web_root_is_host_bounded_and_security_header_closed(tmp_path: Path) -> None:
+    db_path = tmp_path / "hosted.db"
+    run_migrations(db_path)
+    web_root = tmp_path / "dist"
+    (web_root / "assets").mkdir(parents=True)
+    (web_root / "index.html").write_text("<!doctype html><title>ReconForge Studio</title>", encoding="utf-8")
+    (web_root / "assets" / "app.js").write_text("export {};", encoding="utf-8")
+    client = TestClient(
+        create_api_app(
+            db_path,
+            web_root=web_root,
+            allowed_hosts=("reconforge.test",),
+            secure_transport=True,
+        ),
+        base_url="https://reconforge.test",
+    )
+
+    spa = client.get("/admin-audit")
+    health = client.get("/api/v1/health")
+    asset = client.get("/assets/app.js")
+
+    assert spa.status_code == health.status_code == asset.status_code == 200
+    assert "ReconForge Studio" in spa.text
+    assert health.headers["content-type"].startswith("application/json")
+    assert asset.text == "export {};"
+    assert spa.headers["Strict-Transport-Security"] == "max-age=31536000; includeSubDomains"
+    assert spa.headers["Content-Security-Policy"] == (
+        "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; "
+        "form-action 'self'; script-src 'self'; style-src 'self'; style-src-elem 'self'; "
+        "style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; "
+        "connect-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests"
+    )
+    assert client.get("/assets/missing.js").status_code == 404
+    hostile = client.get("/", headers={"Host": "hostile.invalid"})
+    assert hostile.status_code == 400
+    assert hostile.headers["Content-Security-Policy"] == spa.headers["Content-Security-Policy"]
+    assert hostile.headers["Strict-Transport-Security"] == "max-age=31536000; includeSubDomains"
+
+
+def test_api_serve_binds_direct_tls_web_root_and_exact_hosts(monkeypatch: Any, tmp_path: Path) -> None:
+    db_path = tmp_path / "hosted-cli.db"
+    run_migrations(db_path)
+    web_root = tmp_path / "dist"
+    web_root.mkdir()
+    (web_root / "index.html").write_text("<!doctype html>", encoding="utf-8")
+    certificate = tmp_path / "tls.pem"
+    private_key = tmp_path / "tls-key.pem"
+    certificate.write_text("synthetic certificate path fixture", encoding="utf-8")
+    private_key.write_text("synthetic key path fixture", encoding="utf-8")
+    captured: dict[str, object] = {}
+
+    def run(application: Any, **kwargs: object) -> None:
+        captured["application"] = application
+        captured["kwargs"] = kwargs
+
+    monkeypatch.setattr("reconforge.cli.uvicorn.run", run)
+    result = runner.invoke(
+        app,
+        [
+            "api", "serve", "--db", str(db_path), "--web-root", str(web_root),
+            "--allowed-host", "reconforge.test", "--tls-certfile", str(certificate),
+            "--tls-keyfile", str(private_key),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    application = captured["application"]
+    assert application.state.web_root == web_root.resolve()  # type: ignore[union-attr]
+    assert application.state.allowed_hosts == ("reconforge.test",)  # type: ignore[union-attr]
+    assert application.state.secure_transport is True  # type: ignore[union-attr]
+    assert captured["kwargs"] == {
+        "host": "127.0.0.1", "port": 8765, "log_level": "info",
+        "ssl_certfile": str(certificate), "ssl_keyfile": str(private_key),
+    }
+
+
+def test_deployed_web_root_requires_host_and_complete_tls_pair(tmp_path: Path) -> None:
+    db_path = tmp_path / "hosted-invalid.db"
+    run_migrations(db_path)
+    web_root = tmp_path / "dist"
+    web_root.mkdir()
+    (web_root / "index.html").write_text("<!doctype html>", encoding="utf-8")
+    certificate = tmp_path / "tls.pem"
+    certificate.write_text("synthetic certificate path fixture", encoding="utf-8")
+
+    no_host = runner.invoke(app, ["api", "serve", "--db", str(db_path), "--web-root", str(web_root)])
+    half_tls = runner.invoke(
+        app,
+        ["api", "serve", "--db", str(db_path), "--allowed-host", "reconforge.test", "--tls-certfile", str(certificate)],
+    )
+
+    assert no_host.exit_code == half_tls.exit_code == 1
+    assert "requires at least one exact --allowed-host" in no_host.output
+    assert "certificate and key must be configured together" in half_tls.output
+
+
+def test_api_serve_rejects_unallowlisted_otlp_before_server_start(monkeypatch: Any, tmp_path: Path) -> None:
+    db_path = tmp_path / "otlp-invalid.db"
+    run_migrations(db_path)
+    started = False
+
+    def run(*args: object, **kwargs: object) -> None:
+        nonlocal started
+        started = True
+
+    monkeypatch.setattr("reconforge.cli.uvicorn.run", run)
+    result = runner.invoke(
+        app, ["api", "serve", "--db", str(db_path), "--otlp-http-endpoint", "https://collector.example:4318"]
+    )
+    assert result.exit_code == 1
+    assert "not explicitly allowlisted" in result.output
+    assert started is False
+
+
+def test_host_allowlist_rejects_wildcards_schemes_paths_and_ambiguous_names(tmp_path: Path) -> None:
+    db_path = tmp_path / "host-validation.db"
+    run_migrations(db_path)
+
+    for hostile in ("*", "*.example.com", "https://example.com", "example.com/path", "example..com"):
+        try:
+            create_api_app(db_path, allowed_hosts=(hostile,))
+        except ValueError as exc:
+            assert str(exc) == "allowed_hosts must contain exact DNS names or IPv4 addresses only."
+        else:
+            raise AssertionError(f"host allowlist accepted {hostile!r}")
+
+
+def test_same_origin_deployment_docs_are_in_source_distribution_and_keep_claim_boundary() -> None:
+    manifest = Path("MANIFEST.in").read_text(encoding="utf-8")
+    adr = Path("docs/adr/0200-studio-and-api-share-one-host-bounded-https-origin.md").read_text(
+        encoding="utf-8"
+    )
+    runbook = Path("docs/operations/same-origin-browser-hosting.md").read_text(encoding="utf-8")
+
+    assert "include docs/adr/0200-studio-and-api-share-one-host-bounded-https-origin.md" in manifest
+    assert "include docs/operations/same-origin-browser-hosting.md" in manifest
+    assert "include docs/security/deployment-boundaries.md" in manifest
+    assert "not internet-facing or Enterprise-readiness assurance" in " ".join(adr.split())
+    assert "does not certify an internet-facing topology" in " ".join(runbook.split())

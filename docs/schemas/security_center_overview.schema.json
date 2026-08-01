@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/security_center_overview.schema.json",
+  "title": "ReconForge Security Center Overview v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "as_of", "tenant_scope_digest", "posture", "claim_boundary",
+    "identity", "sessions", "integrations", "policy", "retention", "audit",
+    "attention_items", "snapshot_digest"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "as_of": {"type": "string", "format": "date-time"},
+    "tenant_scope_digest": {"$ref": "#/$defs/sha256"},
+    "posture": {"enum": ["attention_required", "observed_no_count_based_attention"]},
+    "claim_boundary": {"const": "operational_snapshot_not_security_assurance"},
+    "identity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["total_users", "active_users", "disabled_users", "locked_users", "active_users_without_roles", "roles", "permissions", "role_permission_bindings"],
+      "properties": {
+        "total_users": {"$ref": "#/$defs/count"}, "active_users": {"$ref": "#/$defs/count"},
+        "disabled_users": {"$ref": "#/$defs/count"}, "locked_users": {"$ref": "#/$defs/count"},
+        "active_users_without_roles": {"$ref": "#/$defs/count"}, "roles": {"$ref": "#/$defs/count"},
+        "permissions": {"$ref": "#/$defs/count"}, "role_permission_bindings": {"$ref": "#/$defs/count"}
+      }
+    },
+    "sessions": {
+      "type": "object", "additionalProperties": false,
+      "required": ["active_sessions", "revoked_sessions", "expired_unrevoked_sessions", "active_step_up_assertions", "active_webauthn_credentials", "users_with_active_webauthn"],
+      "properties": {
+        "active_sessions": {"$ref": "#/$defs/count"}, "revoked_sessions": {"$ref": "#/$defs/count"},
+        "expired_unrevoked_sessions": {"$ref": "#/$defs/count"}, "active_step_up_assertions": {"$ref": "#/$defs/count"},
+        "active_webauthn_credentials": {"$ref": "#/$defs/count"}, "users_with_active_webauthn": {"$ref": "#/$defs/count"}
+      }
+    },
+    "integrations": {
+      "type": "object", "additionalProperties": false,
+      "required": ["configured_federation_providers", "federation_air_gap_mode", "linked_federation_providers", "active_federation_links", "disabled_federation_links", "scim_domains", "active_scim_users", "active_scim_credentials", "enabled_service_accounts", "active_service_account_credentials", "enabled_notification_routes", "webauthn_required_for_privileged_actions"],
+      "properties": {
+        "configured_federation_providers": {"$ref": "#/$defs/count"}, "federation_air_gap_mode": {"type": "boolean"},
+        "linked_federation_providers": {"$ref": "#/$defs/count"}, "active_federation_links": {"$ref": "#/$defs/count"},
+        "disabled_federation_links": {"$ref": "#/$defs/count"}, "scim_domains": {"$ref": "#/$defs/count"},
+        "active_scim_users": {"$ref": "#/$defs/count"}, "active_scim_credentials": {"$ref": "#/$defs/count"},
+        "enabled_service_accounts": {"$ref": "#/$defs/count"}, "active_service_account_credentials": {"$ref": "#/$defs/count"},
+        "enabled_notification_routes": {"$ref": "#/$defs/count"}, "webauthn_required_for_privileged_actions": {"type": "boolean"}
+      }
+    },
+    "policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["active_scope_grants", "pending_emergency_requests", "active_emergency_access", "overdue_emergency_reviews"],
+      "properties": {
+        "active_scope_grants": {"$ref": "#/$defs/count"}, "pending_emergency_requests": {"$ref": "#/$defs/count"},
+        "active_emergency_access": {"$ref": "#/$defs/count"}, "overdue_emergency_reviews": {"$ref": "#/$defs/count"}
+      }
+    },
+    "retention": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidence_records", "evidence_with_retention", "evidence_retention_expired", "evidence_unverified", "evidence_verification_failed"],
+      "properties": {
+        "evidence_records": {"$ref": "#/$defs/count"}, "evidence_with_retention": {"$ref": "#/$defs/count"},
+        "evidence_retention_expired": {"$ref": "#/$defs/count"}, "evidence_unverified": {"$ref": "#/$defs/count"},
+        "evidence_verification_failed": {"$ref": "#/$defs/count"}
+      }
+    },
+    "audit": {
+      "type": "object", "additionalProperties": false,
+      "required": ["audit_events", "chain_verification"],
+      "properties": {
+        "audit_events": {"$ref": "#/$defs/count"},
+        "chain_verification": {"const": "not_evaluated_use_audit_verify_endpoint"}
+      }
+    },
+    "attention_items": {
+      "type": "array", "maxItems": 8,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["severity", "code", "count"],
+        "properties": {
+          "severity": {"enum": ["medium", "high"]},
+          "code": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,127}$"},
+          "count": {"$ref": "#/$defs/count"}
+        }
+      }
+    },
+    "snapshot_digest": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "count": {"type": "integer", "minimum": 0},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

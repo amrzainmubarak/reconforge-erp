@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/offline_attestation_drill_report.schema.json",
+  "title": "ReconForge disconnected attestation verification drill report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "executed_at", "release", "source_evidence", "runtime", "verification", "scope_status", "limitations"],
+  "properties": {
+    "schema": {"const": "reconforge-offline-attestation-drill-report-v1"},
+    "executed_at": {"const": "2026-07-30"},
+    "release": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "tag", "repository", "revision", "workflow"],
+      "properties": {
+        "version": {"const": "0.7.1"},
+        "tag": {"const": "v0.7.1"},
+        "repository": {"const": "amrzainmubarak/reconforge-erp"},
+        "revision": {"const": "d47edd845e6aef3bae16e05698e07878086d690b"},
+        "workflow": {"const": "amrzainmubarak/reconforge-erp/.github/workflows/release.yml"}
+      }
+    },
+    "source_evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["actions_run_id", "actions_run_url", "artifact_id", "artifact_storage_digest", "artifact_size", "artifact_expired"],
+      "properties": {
+        "actions_run_id": {"const": 30243819239},
+        "actions_run_url": {"const": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30243819239"},
+        "artifact_id": {"const": 8644255664},
+        "artifact_storage_digest": {"const": "sha256:0a59e3dd6a5e66118b44be5680e5abc312a44ad7b299579b7e16b64d35f42d63"},
+        "artifact_size": {"const": 8642971},
+        "artifact_expired": {"const": false}
+      }
+    },
+    "runtime": {
+      "type": "object", "additionalProperties": false,
+      "required": ["container_image", "container_image_digest", "network_mode", "root_filesystem", "evidence_mount", "gh_version", "gh_release_asset_sha256", "gh_binary_sha256", "trusted_root_sha256"],
+      "properties": {
+        "container_image": {"const": "python:3.14.1-slim"},
+        "container_image_digest": {"const": "sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e"},
+        "network_mode": {"const": "none"},
+        "root_filesystem": {"const": "read-only"},
+        "evidence_mount": {"const": "read-only"},
+        "gh_version": {"const": "2.78.0"},
+        "gh_release_asset_sha256": {"const": "ac309f70c5d6b122c82e6138ce82cb65ca5d8595cc09d11751fbc4e3907e1a05"},
+        "gh_binary_sha256": {"const": "3f0fece58992daefd439cdc64444879a8dce911ec3bcff16078304e20d7d3dca"},
+        "trusted_root_sha256": {"const": "65ca537f6ed8a47fd0e560c421baa1f6c1efb8b25fc200d8c5c02c0e92eb2b9c"}
+      }
+    },
+    "verification": {
+      "type": "object", "additionalProperties": false,
+      "required": ["checksum_subjects", "attestation_bundles", "file_provenance_subjects", "file_sbom_attestations", "oci_bundle_integrity", "offline_oci_attestations", "identity_constraints", "cleanup_complete"],
+      "properties": {
+        "checksum_subjects": {"const": 15},
+        "attestation_bundles": {"const": 6},
+        "file_provenance_subjects": {"const": 11},
+        "file_sbom_attestations": {"const": 3},
+        "oci_bundle_integrity": {"const": 2},
+        "offline_oci_attestations": {"const": 0},
+        "identity_constraints": {
+          "type": "array", "uniqueItems": true,
+          "items": {"enum": ["repository", "workflow", "signer_digest", "source_ref", "source_digest", "deny_self_hosted_runners"]},
+          "minItems": 6, "maxItems": 6
+        },
+        "cleanup_complete": {"const": true}
+      }
+    },
+    "scope_status": {"const": "verified-offline-file-artifacts-oci-integrity-only"},
+    "limitations": {
+      "type": "array", "minItems": 5, "uniqueItems": true,
+      "items": {"enum": ["oci_subject_verification_requires_registry_resolution_in_gh_2_78_0", "trusted_root_snapshot_requires_controlled_refresh", "single_release_candidate_single_run", "no_physical_airgap_claim", "no_production_readiness_claim"]}
+    }
+  }
+}

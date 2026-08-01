@@ -46,8 +46,12 @@ def create_app(output_dir: Path | str) -> FastAPI:
         dashboard_path = base_path / "dashboard.html"
         if dashboard_path.exists():
             html = dashboard_path.read_text(encoding="utf-8")
-            links = "".join(f'<li><a href="{_report_href(name)}">{escape(name)}</a></li>' for name in _report_links(report_registry))
-            return html.replace("</main>", f'<section class="report"><h2>Downloadable Reports</h2><ul>{links}</ul></section></main>')
+            links = "".join(
+                f'<li><a href="{_report_href(name)}">{escape(name)}</a></li>' for name in _report_links(report_registry)
+            )
+            return html.replace(
+                "</main>", f'<section class="report"><h2>Downloadable Reports</h2><ul>{links}</ul></section></main>'
+            )
 
         payload = _load_json(base_path / "management_pack.json")
         executive = payload.get("executive_summary", [])
@@ -55,7 +59,9 @@ def create_app(output_dir: Path | str) -> FastAPI:
             f"<section class='card'><span>{escape(str(item.get('metric', '')))}</span><strong>{escape(str(item.get('value', '')))}</strong></section>"
             for item in executive
         )
-        links = "".join(f'<li><a href="{_report_href(name)}">{escape(name)}</a></li>' for name in _report_links(report_registry))
+        links = "".join(
+            f'<li><a href="{_report_href(name)}">{escape(name)}</a></li>' for name in _report_links(report_registry)
+        )
         return f"""<!doctype html>
 <html lang="en">
 <head>

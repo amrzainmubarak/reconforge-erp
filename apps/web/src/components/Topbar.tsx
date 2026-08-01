@@ -17,6 +17,17 @@ import type { Locale, StudioPage, ThemePreference } from "../types";
 
 export type OpenPanel = "notifications" | "quick" | "profile" | "accessibility" | null;
 
+const pageLabels: Record<StudioPage, MessageKey> = {
+  dashboard: "dashboard",
+  exceptions: "exceptions",
+  evidence: "evidence",
+  inventory: "inventory",
+  mapping: "mappingStudio",
+  rules: "ruleStudio",
+  live: "liveStudio",
+  adminAudit: "adminAudit",
+};
+
 interface TopbarProps {
   translate: (key: MessageKey) => string;
   locale: Locale;
@@ -49,13 +60,13 @@ export function Topbar({
       <button className="icon-button mobile-menu-button" type="button" onClick={onMobileMenu} aria-label={translate("menu")}>
         <Menu size={20} />
       </button>
-      <div className="breadcrumbs" aria-label="Breadcrumb">
-        <span>{translate(activePage === "dashboard" ? "overview" : activePage === "inventory" ? "operations" : "finance")}</span>
+      <div className="breadcrumbs" aria-label={translate("breadcrumb")}>
+        <span>{translate(activePage === "dashboard" ? "overview" : activePage === "inventory" ? "operations" : activePage === "mapping" || activePage === "rules" || activePage === "live" ? "platform" : activePage === "adminAudit" ? "platform" : "finance")}</span>
         <span aria-hidden="true">/</span>
-        <strong>{translate(activePage)}</strong>
+        <strong>{translate(pageLabels[activePage])}</strong>
       </div>
 
-      <button className="global-search" type="button" onClick={onCommand} aria-haspopup="dialog">
+      <button className="global-search" type="button" onClick={onCommand} aria-haspopup="dialog" aria-label={translate("search")}>
         <Search size={17} aria-hidden="true" />
         <span>{translate("search")}</span>
         <kbd>
@@ -64,7 +75,7 @@ export function Topbar({
       </button>
 
       <div className="topbar-actions">
-        <button className="locale-button" type="button" data-testid="locale-toggle" onClick={onLocale} aria-label="Switch language">
+        <button className="locale-button" type="button" data-testid="locale-toggle" onClick={onLocale} aria-label={translate("switchLanguage")}>
           {locale === "en" ? "AR" : "EN"}
         </button>
         <button className="icon-button" type="button" onClick={onTheme} aria-label={`${translate("theme")}: ${translate(theme)}`}>

@@ -3241,6 +3241,161 @@ WHERE roles.name = 'reviewer'
   AND permissions.name IN ('receivables.read', 'receivables.approve');
 """
 
+DURABLE_JOBS_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS durable_jobs (
+    id TEXT PRIMARY KEY,
+    schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+    version INTEGER NOT NULL CHECK (version >= 1),
+    status TEXT NOT NULL CHECK (
+        status IN ('queued', 'running', 'paused', 'retrying', 'failed', 'completed', 'cancelled')
+    ),
+    idempotency_scope TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    tenant_id TEXT NOT NULL,
+    workspace_id TEXT NOT NULL,
+    entity_id TEXT NOT NULL DEFAULT '',
+    input_digest TEXT NOT NULL CHECK (length(input_digest) = 64),
+    config_digest TEXT NOT NULL CHECK (length(config_digest) = 64),
+    worker_version TEXT NOT NULL,
+    completed_units INTEGER NOT NULL CHECK (completed_units >= 0),
+    total_units INTEGER NOT NULL CHECK (total_units >= 0 AND completed_units <= total_units),
+    checkpoint_digest TEXT NOT NULL DEFAULT '' CHECK (
+        checkpoint_digest = '' OR length(checkpoint_digest) = 64
+    ),
+    retry_count INTEGER NOT NULL CHECK (retry_count >= 0),
+    retry_ceiling INTEGER NOT NULL CHECK (retry_ceiling >= 0 AND retry_count <= retry_ceiling),
+    safe_error_code TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    started_at TEXT NOT NULL DEFAULT '',
+    completed_at TEXT NOT NULL DEFAULT '',
+    output_manifest_schema_version INTEGER,
+    output_manifest_digest TEXT NOT NULL DEFAULT '',
+    output_manifest_reference TEXT NOT NULL DEFAULT '',
+    UNIQUE (tenant_id, idempotency_scope, idempotency_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_durable_jobs_scope_status
+ON durable_jobs (tenant_id, workspace_id, status, created_at, id);
+
+CREATE TABLE IF NOT EXISTS durable_job_transitions (
+    job_id TEXT NOT NULL REFERENCES durable_jobs(id) ON DELETE RESTRICT,
+    job_version INTEGER NOT NULL CHECK (job_version >= 1),
+    from_status TEXT NOT NULL,
+    to_status TEXT NOT NULL CHECK (
+        to_status IN ('queued', 'running', 'paused', 'retrying', 'failed', 'completed', 'cancelled')
+    ),
+    actor_id TEXT NOT NULL,
+    occurred_at TEXT NOT NULL,
+    reason_code TEXT NOT NULL,
+    PRIMARY KEY (job_id, job_version)
+);
+
+CREATE TRIGGER IF NOT EXISTS durable_job_transitions_immutable_update
+BEFORE UPDATE ON durable_job_transitions
+BEGIN
+    SELECT RAISE(ABORT, 'durable job transitions are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS durable_job_transitions_immutable_delete
+BEFORE DELETE ON durable_job_transitions
+BEGIN
+    SELECT RAISE(ABORT, 'durable job transitions are immutable');
+END;
+"""
+
+DURABLE_JOB_LEASES_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS durable_job_leases (
+    job_id TEXT PRIMARY KEY REFERENCES durable_jobs(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL,
+    owner_id TEXT NOT NULL,
+    generation INTEGER NOT NULL CHECK (generation >= 1),
+    acquired_at TEXT NOT NULL,
+    renewed_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_durable_job_leases_expiry
+ON durable_job_leases (tenant_id, expires_at, job_id);
+
+CREATE TABLE IF NOT EXISTS durable_job_lease_events (
+    job_id TEXT NOT NULL REFERENCES durable_jobs(id) ON DELETE RESTRICT,
+    event_sequence INTEGER NOT NULL CHECK (event_sequence >= 1),
+    generation INTEGER NOT NULL CHECK (generation >= 1),
+    action TEXT NOT NULL CHECK (action IN ('claimed', 'taken_over', 'renewed', 'released')),
+    owner_id TEXT NOT NULL,
+    occurred_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (job_id, event_sequence)
+);
+
+CREATE TRIGGER IF NOT EXISTS durable_job_lease_events_immutable_update
+BEFORE UPDATE ON durable_job_lease_events
+BEGIN
+    SELECT RAISE(ABORT, 'durable job lease events are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS durable_job_lease_events_immutable_delete
+BEFORE DELETE ON durable_job_lease_events
+BEGIN
+    SELECT RAISE(ABORT, 'durable job lease events are immutable');
+END;
+"""
+
+DURABLE_JOB_EFFECTS_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS durable_job_partition_effects (
+    job_id TEXT NOT NULL REFERENCES durable_jobs(id) ON DELETE RESTRICT,
+    partition_key TEXT NOT NULL,
+    ordinal INTEGER NOT NULL CHECK (ordinal >= 1),
+    completed_units INTEGER NOT NULL CHECK (completed_units >= 1),
+    input_digest TEXT NOT NULL CHECK (length(input_digest) = 64),
+    output_digest TEXT NOT NULL CHECK (length(output_digest) = 64),
+    effect_reference TEXT NOT NULL,
+    committed_at TEXT NOT NULL,
+    job_version INTEGER NOT NULL CHECK (job_version >= 2),
+    PRIMARY KEY (job_id, partition_key),
+    UNIQUE (job_id, ordinal),
+    UNIQUE (job_id, job_version)
+);
+
+CREATE TRIGGER IF NOT EXISTS durable_job_partition_effects_immutable_update
+BEFORE UPDATE ON durable_job_partition_effects
+BEGIN
+    SELECT RAISE(ABORT, 'durable job partition effects are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS durable_job_partition_effects_immutable_delete
+BEFORE DELETE ON durable_job_partition_effects
+BEGIN
+    SELECT RAISE(ABORT, 'durable job partition effects are immutable');
+END;
+"""
+
+IDEMPOTENCY_RECORDS_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS idempotency_records (
+    schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+    tenant_id TEXT NOT NULL,
+    scope TEXT NOT NULL CHECK (length(scope) BETWEEN 1 AND 160),
+    idempotency_key TEXT NOT NULL CHECK (length(idempotency_key) BETWEEN 1 AND 200),
+    request_digest TEXT NOT NULL CHECK (length(request_digest) = 64),
+    owner_token_digest TEXT NOT NULL CHECK (length(owner_token_digest) = 64),
+    status TEXT NOT NULL CHECK (status IN ('pending','completed')),
+    response_body TEXT NOT NULL DEFAULT '',
+    response_digest TEXT NOT NULL DEFAULT '',
+    content_type TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL CHECK (expires_at > created_at),
+    completed_at TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (tenant_id, scope, idempotency_key),
+    CHECK (
+      (status='pending' AND length(response_body)=0 AND response_digest='' AND completed_at='') OR
+      (status='completed' AND length(response_digest)=64 AND completed_at<>'')
+    )
+);
+CREATE INDEX IF NOT EXISTS idx_idempotency_expiry
+ON idempotency_records (expires_at, tenant_id);
+"""
+
 
 ACCOUNT_RECONCILIATION_MONEY_MIGRATION_SQL = """
 -- Add canonical Decimal text alongside legacy REAL compatibility columns. New

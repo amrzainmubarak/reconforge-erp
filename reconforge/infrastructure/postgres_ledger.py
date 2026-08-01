@@ -168,9 +168,7 @@ def _minor_amount(value: object, minor_units: int, field_name: str) -> int:
         raise PostgresLedgerValidationError(f"{field_name} is not an exact numeric amount.")
     scaled = amount * (Decimal(10) ** minor_units)
     if scaled != scaled.to_integral_value():
-        raise PostgresLedgerValidationError(
-            f"{field_name} exceeds the currency's {minor_units}-decimal precision."
-        )
+        raise PostgresLedgerValidationError(f"{field_name} exceeds the currency's {minor_units}-decimal precision.")
     return int(scaled)
 
 
@@ -211,9 +209,9 @@ def _record(row: Any, columns: tuple[str, ...]) -> dict[str, Any]:
 
 
 def _hash_payload(payload: Mapping[str, object]) -> str:
-    encoded = json.dumps(
-        dict(payload), sort_keys=True, separators=(",", ":"), ensure_ascii=True, default=str
-    ).encode("utf-8")
+    encoded = json.dumps(dict(payload), sort_keys=True, separators=(",", ":"), ensure_ascii=True, default=str).encode(
+        "utf-8"
+    )
     return hashlib.sha256(encoded).hexdigest()
 
 
@@ -415,7 +413,11 @@ class PostgresLedgerRepository:
 
     def list_accounts(self, *, tenant_id: str, organization_id: str | None = None) -> list[dict[str, Any]]:
         tenant = _tenant_id(tenant_id)
-        organization = None if organization_id is None or not str(organization_id).strip() else _scope_id(organization_id, "organization_id")
+        organization = (
+            None
+            if organization_id is None or not str(organization_id).strip()
+            else _scope_id(organization_id, "organization_id")
+        )
         query = (
             "SELECT tenant_id, id, organization_id, account_code, name, account_type, normal_balance, active, "
             "created_at, updated_at FROM reconforge.ledger_accounts WHERE tenant_id = %s"
@@ -587,7 +589,18 @@ class PostgresLedgerRepository:
                  description, status, source_type, source_id, entry_fingerprint)
             VALUES (%s, %s, %s, %s, %s, %s, %s, 'Draft', %s, %s, %s)
             """,
-            (tenant, identifier, number, organization, currency, posting, entry_description, selected_source, source, fingerprint),
+            (
+                tenant,
+                identifier,
+                number,
+                organization,
+                currency,
+                posting,
+                entry_description,
+                selected_source,
+                source,
+                fingerprint,
+            ),
         )
         for line_number, account, line_description, reference, debit_text, credit_text in line_values:
             self.connection.execute(
@@ -712,7 +725,16 @@ class PostgresLedgerRepository:
         entry["lines"] = [
             _record(
                 row,
-                ("tenant_id", "entry_id", "line_number", "account_id", "description", "reference", "debit_amount", "credit_amount"),
+                (
+                    "tenant_id",
+                    "entry_id",
+                    "line_number",
+                    "account_id",
+                    "description",
+                    "reference",
+                    "debit_amount",
+                    "credit_amount",
+                ),
             )
             for row in line_cursor.fetchall()
         ]
@@ -734,8 +756,10 @@ class PostgresLedgerRepository:
             raise PostgresLedgerValidationError("limit must be between 1 and 100000.")
         if not 0 <= int(offset) <= 10_000_000:
             raise PostgresLedgerValidationError("offset must be between 0 and 10000000.")
-        organization = None if organization_id is None or not str(organization_id).strip() else _scope_id(
-            organization_id, "organization_id"
+        organization = (
+            None
+            if organization_id is None or not str(organization_id).strip()
+            else _scope_id(organization_id, "organization_id")
         )
         query = """
             SELECT entries.tenant_id, entries.id, entries.entry_number, entries.organization_id,
@@ -830,9 +854,7 @@ class PostgresLedgerRepository:
             )
             base_currency_row = base_currency_cursor.fetchone()
             if base_currency_row is None:
-                raise PostgresLedgerValidationError(
-                    "A base currency is required to produce an empty trial balance."
-                )
+                raise PostgresLedgerValidationError("A base currency is required to produce an empty trial balance.")
             currency_code = _currency(_row_value(base_currency_row, "code", 0))
         minor_cursor = self.connection.execute(
             "SELECT minor_units FROM reconforge.currencies WHERE tenant_id = %s AND code = %s",
@@ -1010,13 +1032,9 @@ class PostgresLedgerRepository:
                 )
             metadata_text = str(record["metadata_text"] or "{}")
             try:
-                metadata_json = encode_audit_metadata(
-                    decode_audit_metadata(metadata_text).payload
-                ).text
+                metadata_json = encode_audit_metadata(decode_audit_metadata(metadata_text).payload).text
             except PersistedJsonError:
-                issues.append(
-                    {"sequence": sequence, "message": "Audit event metadata is invalid."}
-                )
+                issues.append({"sequence": sequence, "message": "Audit event metadata is invalid."})
                 metadata_json = metadata_text
             expected_hash = _hash_payload(
                 {
@@ -1168,6 +1186,7 @@ CREATE TABLE IF NOT EXISTS reconforge.outbox_events (
     claimed_by TEXT,
     published_at TIMESTAMPTZ,
     last_error TEXT,
+    dead_lettered_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (tenant_id, event_id),
     FOREIGN KEY (tenant_id) REFERENCES reconforge.tenants(id) ON DELETE CASCADE,

@@ -66,13 +66,9 @@ class Condition(BaseModel):
                 input_policy=validate_financial_input_policy(input_policy),
             )
         except (InvalidAmountError, TypeError) as exc:
-            raise ValueError(
-                f"condition {info.field_name} must be a finite non-negative decimal"
-            ) from exc
+            raise ValueError(f"condition {info.field_name} must be a finite non-negative decimal") from exc
         if parsed < 0:
-            raise ValueError(
-                f"condition {info.field_name} must be a finite non-negative decimal"
-            )
+            raise ValueError(f"condition {info.field_name} must be a finite non-negative decimal")
         return parsed
 
     @model_validator(mode="after")
@@ -81,14 +77,9 @@ class Condition(BaseModel):
 
         operator = self.operator.lower()
         should_parse = (
-            operator in _NUMERIC_VALUE_OPERATORS
-            and self.other_field is None
-        ) or (
-            operator == "sum_matches"
-            and self.field is None
-        ) or (
-            operator == "variance_above"
-            and self.threshold is None
+            (operator in _NUMERIC_VALUE_OPERATORS and self.other_field is None)
+            or (operator == "sum_matches" and self.field is None)
+            or (operator == "variance_above" and self.threshold is None)
         )
         if not should_parse:
             return self
@@ -105,9 +96,7 @@ class Condition(BaseModel):
                 input_policy=validate_financial_input_policy(input_policy),
             )
         except (InvalidAmountError, TypeError) as exc:
-            raise ValueError(
-                "numeric rule condition value must be a finite decimal"
-            ) from exc
+            raise ValueError("numeric rule condition value must be a finite decimal") from exc
         return self
 
 

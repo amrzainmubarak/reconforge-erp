@@ -1,0 +1,111 @@
+schema_version: 2
+updated_at: "2026-08-01"
+objective: >-
+  Close Platform Foundation, Matching and Evidence 2.0, and Enterprise Product
+  through evidence-defined vertical slices while preserving Community local-first
+  operation and sovereign deployment.
+closure_policy:
+  all_required_tasks_completed: true
+  all_required_gates_verified: true
+  owner_team_release_authority: true
+  optional_assurance_items_block_release: false
+  external_evidence_may_not_be_simulated: true
+  unsupported_claims_forbidden:
+    - universal_superiority
+    - enterprise_ready
+    - compliant
+    - certified
+    - unsupported_scale
+    - unverified_customer_validation
+phases:
+  - id: phase_1
+    name: Platform Foundation
+    task_ids:
+      - P1-PLAT-001
+      - P1-PLAT-002
+      - P1-PLAT-003
+      - P1-PLAT-004
+      - P1-PLAT-005
+      - P1-PLAT-006
+      - P1-PLAT-007
+      - P1-PLAT-008
+      - P1-PLAT-009
+      - P1-PLAT-010
+    required_gates:
+      - id: p1_backend_neutrality
+        evidence: Typed application ports plus SQLite and live PostgreSQL contract results.
+      - id: p1_durable_execution
+        evidence: State-machine, idempotency, crash/resume, and no-duplicate-effect tests.
+      - id: p1_secure_operations
+        evidence: Policy, object storage, telemetry-redaction, backup, restore, and rollback results.
+  - id: phase_2
+    name: Matching and Evidence 2.0
+    task_ids:
+      - P1-REC-001
+      - P1-REC-002
+      - P1-REC-003
+      - P1-REC-004
+      - P1-REC-005
+      - P1-REC-006
+      - P1-REC-007
+      - P1-REC-008
+      - P1-REC-009
+      - P1-REC-010
+      - P2-001
+      - P2-002
+      - P2-003
+      - P2-004
+      - P2-005
+      - P2-006
+      - P2-007
+      - P2-008
+    required_gates:
+      - id: p2_deterministic_matching
+        evidence: Permutation, backend parity, bounded-search, ambiguity, and explanation-contract results.
+      - id: p2_evidence_integrity
+        evidence: Graph traversal, authorization, tamper, retention, redaction, and verification results.
+      - id: p2_reconciliation_as_code
+        evidence: Safe schema, lint, test, diff, simulation, approval, rollback, and golden-pack results.
+      - id: p2_measured_performance
+        evidence: Reproducible hardware-scoped 10K and 100K results with time, memory, candidates, and digest.
+  - id: phase_3
+    name: Enterprise Product
+    task_ids:
+      - P3-ENT-001
+      - P3-ENT-002
+      - P3-ENT-003
+      - P3-ENT-004
+      - P3-ENT-005
+      - P3-ENT-006
+      - P3-ENT-007
+      - P3-ENT-008
+      - P3-ENT-009
+      - P3-ENT-010
+      - P3-ENT-011
+      - P3-ENT-012
+      - P3-ENT-013
+      - P3-EXT-001
+      - P3-EXT-002
+    required_gates:
+      - id: p3_identity_and_isolation
+        evidence: OIDC/SAML/SCIM, session, service-account, multi-entity, tenant-isolation, and SoD results.
+      - id: p3_operability
+        evidence: Scheduler, notifications, administration, HA/DR, air-gap, observability, upgrade, and rollback drills.
+      - id: p3_ecosystem
+        evidence: Connector conformance, signed-pack, read-only default, egress, secret, and failure-contract results.
+      - id: p3_competitive_evidence
+        evidence: Dated primary-source capability comparison with reproducible ReconForge evidence and explicit unknowns.
+optional_assurance_policy:
+  release_blocking: false
+  allowed_statuses: [available, deferred, verified]
+  initial_status: deferred
+  gates:
+    - id: p3_external_pilots
+      status: deferred
+      minimum_count: 3
+      maximum_count: 5
+      evidence_artifacts: []
+    - id: p3_independent_security_review
+      status: deferred
+      evidence_artifacts: []
+      # Optional: real independent review report

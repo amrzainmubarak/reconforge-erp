@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from importlib import import_module
 from pathlib import Path
 
 import pytest
 
 import reconforge.platform.common as common_module
-import reconforge.platform.payables as payables_module
 from reconforge.audit import AuditLedgerError
 from reconforge.db import connect, run_migrations
 from reconforge.db.backup import create_backup, restore_backup
@@ -15,6 +15,8 @@ from reconforge.platform.payables import (
     PurchaseOrderLineInput,
     SupplierInvoiceLineInput,
 )
+
+payables_module = import_module("reconforge.infrastructure.sqlite_payables")
 
 
 def _fail_audit(*_args: object, **_kwargs: object) -> None:

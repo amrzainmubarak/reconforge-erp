@@ -1,0 +1,43 @@
+﻿
+added 158 packages, and audited 159 packages in 29s
+
+27 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+> @reconforge/studio-web@0.1.0 typecheck
+> tsc -b --pretty false
+
+
+> @reconforge/studio-web@0.1.0 build
+> tsc -b && vite build
+
+[36mvite v8.1.5 [32mbuilding client environment for production...[36m[39m
+[2K
+transforming...✓ 2362 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                              0.63 kB │ gzip:   0.37 kB
+dist/assets/index-DZ-6b48P.css              49.20 kB │ gzip:   9.85 kB
+dist/assets/shield-alert-bP5OhfkM.js         0.39 kB │ gzip:   0.28 kB │ map:     1.14 kB
+dist/assets/building-2-MXeFFQuk.js           0.42 kB │ gzip:   0.26 kB │ map:     1.29 kB
+dist/assets/file-check-corner-BVKbZZBG.js    0.48 kB │ gzip:   0.32 kB │ map:     1.92 kB
+dist/assets/EvidenceBinder-D9H8rUTT.js       5.70 kB │ gzip:   1.88 kB │ map:    14.19 kB
+dist/assets/ExceptionQueue-D9XP6it3.js       5.91 kB │ gzip:   1.82 kB │ map:    15.65 kB
+dist/assets/InventoryControl-B72u4VNG.js    19.95 kB │ gzip:   3.81 kB │ map:    50.99 kB
+dist/assets/index-P48r7x9o.js              251.43 kB │ gzip:  78.53 kB │ map:   994.40 kB
+dist/assets/Dashboard-DJ4JAetN.js          388.91 kB │ gzip: 110.81 kB │ map: 1,935.59 kB
+
+[32m✓ built in 700ms[39m
+
+> @reconforge/studio-web@0.1.0 e2e
+> playwright test
+
+
+Running 2 tests using 1 worker
+
+  ok 1 [desktop-chromium] › e2e\screenshots.spec.ts:5:1 › captures the real desktop workspace pages and Arabic RTL mode (4.5s)
+  ok 2 [desktop-chromium] › e2e\screenshots.spec.ts:48:1 › captures the real mobile dashboard (846ms)
+
+  2 passed (7.4s)

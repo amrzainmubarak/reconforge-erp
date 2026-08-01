@@ -212,7 +212,7 @@ def test_finance_core_rejects_precision_imbalance_missing_dimensions_and_cycles(
                     {"account_code": "3000", "credit": "9.00", "dimensions": {"CC": "HQ"}},
                 ],
             )
-        with pytest.raises(PlatformError, match="2-decimal precision"):
+        with pytest.raises(PlatformError, match="decimal precision"):
             finance.create_entry(
                 entry_number="JE/BAD/PRECISION",
                 organization_code="SYN",

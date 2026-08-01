@@ -11,7 +11,7 @@ that hosted controls ran or that dependencies are safe.
 | Surface | Normative input | Installation boundary | Current limitation |
 | --- | --- | --- | --- |
 | Python runtime/server/tools | `pyproject.toml` + universal `uv.lock` | `uv sync --locked`; supported Python 3.11/3.12 | Lock applies to the application and repository workflows, not downstream library consumers |
-| Web client | `apps/web/package.json` + npm v3 lock | `npm ci` | 155 of 209 non-root records lack embedded SRI and are counted as a known integrity gap |
+| Web client | `apps/web/package.json` + npm v3 lock | `npm ci` | All 211 non-root records have HTTPS registry resolution and embedded SRI; the known integrity gap is zero |
 | Container | digest-pinned Python base + checksum-pinned uv archive + `uv.lock` | non-editable runtime-only sync | Docker is unavailable in the current local environment; no image build result exists |
 | Release build tools | `.github/release-build-requirements.txt` | pip `--require-hashes` | Separate from application resolution under ADR 0067 |
 
@@ -51,7 +51,12 @@ gitleaks dir --config .gitleaks.toml \
 
 Do not publish raw secret reports. Output remains redacted. The checked-tree
 scan includes source, tests, fixtures, documentation, examples, and lockfiles.
-Only generated/tool-owned directories in `.gitleaks.toml` are excluded.
+Only generated/tool-owned directories in `.gitleaks.toml` are excluded. The
+bounded path expressions accept both POSIX and Windows separators so the same
+checked-out-tree policy is reproducible on hosted Linux and local Windows.
+Exact historical false positives may be suppressed only by their full
+commit/path/rule/line fingerprint in `.gitleaksignore`; broad commit, path,
+rule, regex, or stopword exclusions remain forbidden.
 
 ## Dependency update workflow
 

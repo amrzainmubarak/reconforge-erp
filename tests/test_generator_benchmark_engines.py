@@ -5,6 +5,7 @@ import importlib.util
 import json
 import random
 from copy import deepcopy
+from dataclasses import replace
 from decimal import Decimal, localcontext
 from pathlib import Path
 
@@ -13,8 +14,11 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from reconforge.benchmark.reconciliation_execution import (
+    ReconciliationExecutionBenchmarkProfile,
     _synthetic_records,
+    assert_reconciliation_execution_regression,
     run_reconciliation_execution_benchmark,
+    run_reconciliation_execution_benchmark_suite,
     run_reconciliation_execution_streaming_benchmark,
 )
 from reconforge.benchmark.runner import run_benchmark
@@ -387,6 +391,90 @@ def test_streaming_reconciliation_execution_benchmark_is_reproducible(tmp_path: 
     assert first.matched_rows == 100
     assert first.exception_count == 0
     assert (tmp_path / "streaming" / "reconciliation-execution.json").exists()
+
+
+def test_reconciliation_execution_benchmark_suite_writes_manifest_and_file_digests(tmp_path: Path) -> None:
+    profiles = (
+        ReconciliationExecutionBenchmarkProfile(
+            profile_id="suite-single",
+            total_records=220,
+            partition_count=4,
+            seed=7,
+        ),
+        ReconciliationExecutionBenchmarkProfile(
+            profile_id="suite-single-stream",
+            total_records=260,
+            partition_count=5,
+            streaming=True,
+            seed=7,
+        ),
+    )
+    suite = run_reconciliation_execution_benchmark_suite(profiles, output_dir=tmp_path / "execution-suite")
+
+    assert suite.suite_signature
+    assert suite.output_dir is not None
+    manifest_path = tmp_path / "execution-suite" / "reconciliation-execution-benchmark-suite.json"
+    manifest_bytes = manifest_path.read_bytes()
+    assert manifest_bytes.endswith(b"}\n")
+    assert b"\r\n" not in manifest_bytes
+    manifest = json.loads(manifest_bytes)
+    assert manifest["suite_signature"] == suite.suite_signature
+    assert manifest["profile_count"] == 2
+    assert len(manifest["profiles"]) == 2
+    assert len(suite.profiles) == 2
+    for profile in suite.profiles:
+        assert "\\" not in profile.output_json
+        output_path = Path(suite.output_dir) / profile.output_json
+        assert output_path.exists()
+        output_bytes = output_path.read_bytes()
+        assert output_bytes.endswith(b"}\n")
+        assert b"\r\n" not in output_bytes
+        digest = hashlib.sha256(output_bytes).hexdigest()
+        assert profile.output_json_sha256 == digest
+
+    summary_lines = (
+        tmp_path / "execution-suite" / "reconciliation-execution-benchmark-suite.md"
+    ).read_text(encoding="utf-8").splitlines()
+    assert summary_lines[:4] == [
+        "# Reconciliation Execution Benchmark Suite",
+        "",
+        "| Profile | Signature | Runtime (s) | Peak MB | Candidate max | Candidate count total |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    assert len(summary_lines) == 6
+
+
+def test_reconciliation_execution_regression_gate_detects_signature_and_runtime_delta() -> None:
+    baseline = run_reconciliation_execution_benchmark(
+        160,
+        partition_count=4,
+        output_dir=None,
+    )
+    assert_reconciliation_execution_regression(
+        baseline={"single": baseline},
+        candidate={"single": baseline},
+    )
+
+    signature_mutation = replace(
+        baseline,
+        result_signature="0" * 64,
+    )
+    with pytest.raises(AssertionError, match="result_signature changed"):
+        assert_reconciliation_execution_regression(
+            baseline={"single": baseline},
+            candidate={"single": signature_mutation},
+        )
+
+    runtime_mutation = replace(
+        baseline,
+        runtime_seconds=baseline.runtime_seconds * 100.0,
+    )
+    with pytest.raises(AssertionError, match="runtime regression ratio"):
+        assert_reconciliation_execution_regression(
+            baseline={"single": baseline},
+            candidate={"single": runtime_mutation},
+            max_runtime_regression_ratio=1.1,
+        )
 
 
 def test_reconciliation_execution_benchmark_is_row_order_invariant() -> None:

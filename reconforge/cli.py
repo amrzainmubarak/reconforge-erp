@@ -7,7 +7,7 @@ import shutil
 import sqlite3
 import tempfile
 from dataclasses import asdict
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Annotated, cast
 
@@ -23,6 +23,9 @@ from reconforge.anonymizer.engine import anonymize_directory
 from reconforge.api import create_api_app
 from reconforge.audit import AuditLedgerError, list_audit_events, verify_audit_events
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService, RoleRepository
+from reconforge.auth.federation_config import FederationConfigurationError, load_federation_runtime
+from reconforge.auth.scim import SCIMError
+from reconforge.auth.webauthn_config import WebAuthnConfigurationError, load_webauthn_runtime
 from reconforge.benchmark.reconciliation_execution import (
     run_reconciliation_execution_benchmark,
     run_reconciliation_execution_streaming_benchmark,
@@ -52,6 +55,11 @@ from reconforge.db import (
     run_migrations,
 )
 from reconforge.db.backup import create_backup, restore_backup, verify_backup
+from reconforge.db.encrypted_backup import (
+    create_encrypted_backup,
+    read_operator_backup_key,
+    restore_encrypted_backup,
+)
 from reconforge.db.exporter import (
     DBBridgeError,
     export_database,
@@ -72,6 +80,19 @@ from reconforge.infrastructure.object_storage import (
     ObjectStorageSettings,
     S3ObjectStore,
 )
+from reconforge.infrastructure.postgres import (
+    PostgresConfigurationError,
+    PostgresConnectionFactory,
+    PostgresSettings,
+    PostgresTenantBoundary,
+    PostgresUnavailableError,
+)
+from reconforge.infrastructure.postgres_scim_auth import PostgresSCIMCredentialRepository
+from reconforge.infrastructure.postgres_service_accounts import (
+    IssuedServiceCredential,
+    PostgresServiceAccountRepository,
+    ServiceAccountError,
+)
 from reconforge.io.excel import audit_metadata, write_excel_workbook
 from reconforge.io.generated import GeneratedArtifactError
 from reconforge.io.readers import read_required_datasets
@@ -87,6 +108,12 @@ from reconforge.modules import (
     list_modules,
     registry_payload,
     validate_registry,
+)
+from reconforge.observability import (
+    ObservabilityConfigurationError,
+    ObservabilityRuntime,
+    OTLPHTTPConfiguration,
+    create_otlp_http_runtime,
 )
 from reconforge.periods import compare_period_outputs
 from reconforge.platform.accounts import AccountReconciliationService
@@ -111,6 +138,8 @@ from reconforge.reconciliation.stock_gl import reconcile_stock_gl
 from reconforge.reconciliation.stock_gl import result_frames as stock_gl_result_frames
 from reconforge.reconciliation.workorders import reconcile_workorders
 from reconforge.reconciliation.workorders import result_frames as workorder_result_frames
+from reconforge.reliability import AlertState, evaluate_alerts
+from reconforge.reliability_sources import HttpReliabilityWindow, SQLiteReliabilityCollector, process_memory_mib
 from reconforge.reports.client_pack import generate_client_pack, recover_client_pack_publication
 from reconforge.reports.management_pack import generate_management_pack
 from reconforge.reports.wip_aging import aging_summary, generate_wip_aging
@@ -126,6 +155,7 @@ from reconforge.review.state import (
 from reconforge.rules.engine import execute_rule_pack, write_rule_execution
 from reconforge.rules.explain import explain_rule
 from reconforge.rules.loader import load_rule_pack
+from reconforge.rules.recon_as_code import ReconciliationAsCodeSpec
 from reconforge.schemas import DatasetName
 from reconforge.studio.app import create_studio_app
 from reconforge.studio.demo_bridge import StudioDemoBridgeError, build_studio_demo_bundle
@@ -140,6 +170,7 @@ app = typer.Typer(help="ReconForge ERP reconciliation intelligence CLI.")
 reconcile_app = typer.Typer(help="Run reconciliation controls.")
 report_app = typer.Typer(help="Generate audit and management reports.")
 rules_app = typer.Typer(help="Validate, list, and run control-pack rules.")
+recon_as_code_app = typer.Typer(help="Validate, lint, test, diff, and simulate Reconciliation-as-Code packs.")
 mappings_app = typer.Typer(help="Validate ERP mapping profiles.")
 generate_app = typer.Typer(help="Generate synthetic ERP datasets.")
 explain_app = typer.Typer(help="Explain exceptions and controls deterministically.")
@@ -166,6 +197,8 @@ users_app = typer.Typer(help="Manage local users for DB-backed workflows.")
 roles_app = typer.Typer(help="Inspect local RBAC roles and permissions.")
 workflow_app = typer.Typer(help="Manage local workflow state machine foundations.")
 api_app = typer.Typer(help="Serve the local REST API foundation.")
+scim_app = typer.Typer(help="Manage PostgreSQL-backed SCIM client credentials.")
+service_accounts_app = typer.Typer(help="Manage least-privilege PostgreSQL service accounts.")
 modules_app = typer.Typer(help="Inspect deterministic local module capability metadata.")
 master_data_app = typer.Typer(help="Manage governed local organization and fiscal master data.")
 finance_core_app = typer.Typer(help="Manage local chart-of-accounts and balanced ledger-control foundations.")
@@ -175,6 +208,7 @@ outbox_app = typer.Typer(help="Inspect and replay local transactional outbox eve
 app.add_typer(reconcile_app, name="reconcile")
 app.add_typer(report_app, name="report")
 app.add_typer(rules_app, name="rules")
+rules_app.add_typer(recon_as_code_app, name="recon-as-code")
 app.add_typer(mappings_app, name="mappings")
 app.add_typer(generate_app, name="generate")
 app.add_typer(explain_app, name="explain")
@@ -201,6 +235,8 @@ app.add_typer(users_app, name="users")
 app.add_typer(roles_app, name="roles")
 app.add_typer(workflow_app, name="workflow")
 app.add_typer(api_app, name="api")
+app.add_typer(scim_app, name="scim")
+app.add_typer(service_accounts_app, name="service-accounts")
 app.add_typer(modules_app, name="modules")
 app.add_typer(master_data_app, name="master-data")
 app.add_typer(finance_core_app, name="finance-core")
@@ -2162,6 +2198,328 @@ def inventory_control_exceptions_command(
     typer.echo(json.dumps(payload, indent=2, sort_keys=True))
 
 
+def _postgres_operator_boundary(
+    postgres_dsn: str | None,
+    *,
+    require_tls: bool,
+) -> PostgresTenantBoundary:
+    if postgres_dsn is None:
+        raise PostgresConfigurationError(
+            "PostgreSQL DSN is required through RECONFORGE_POSTGRES_DSN or --postgres-dsn."
+        )
+    settings = PostgresSettings(
+        dsn=postgres_dsn,
+        application_name="reconforge-scim-operator",
+        require_tls=require_tls,
+    )
+    return PostgresTenantBoundary(PostgresConnectionFactory(settings))
+
+
+def _scim_operator_failure(exc: Exception) -> None:
+    if isinstance(exc, (PostgresConfigurationError, PostgresUnavailableError, SCIMError)):
+        console.print(f"[red]{exc}[/red]")
+    else:
+        console.print("[red]SCIM credential operation failed; inspect server logs using the request time.[/red]")
+    raise typer.Exit(code=1) from exc
+
+
+@scim_app.command("credential-issue")
+def scim_credential_issue_command(
+    tenant: Annotated[str, typer.Option(help="Tenant identifier owning the credential.")],
+    domain: Annotated[str, typer.Option(help="Provisioning-domain identifier.")],
+    client: Annotated[str, typer.Option(help="SCIM client identifier.")],
+    actor: Annotated[str, typer.Option(help="Operator identity recorded for the issuance.")],
+    ttl_hours: Annotated[int, typer.Option("--ttl-hours", min=1, max=8784, help="Credential lifetime in hours.")] = 24,
+    postgres_dsn: Annotated[
+        str | None,
+        typer.Option(
+            "--postgres-dsn",
+            envvar="RECONFORGE_POSTGRES_DSN",
+            help="PostgreSQL DSN; prefer RECONFORGE_POSTGRES_DSN.",
+        ),
+    ] = None,
+    require_tls: Annotated[
+        bool,
+        typer.Option("--require-tls/--no-require-tls", help="Require PostgreSQL TLS verification."),
+    ] = True,
+) -> None:
+    """Issue an opaque bearer credential and print its secret exactly once."""
+
+    try:
+        boundary = _postgres_operator_boundary(postgres_dsn, require_tls=require_tls)
+        with boundary.transaction(tenant) as connection:
+            issued = PostgresSCIMCredentialRepository(connection).issue(
+                tenant_id=tenant,
+                provisioning_domain=domain,
+                client_id=client,
+                actor_id=actor,
+                ttl=timedelta(hours=ttl_hours),
+            )
+    except Exception as exc:
+        _scim_operator_failure(exc)
+    typer.echo(
+        json.dumps(
+            {
+                "credential_id": issued.id,
+                "tenant_id": issued.tenant_id,
+                "provisioning_domain": issued.provisioning_domain,
+                "client_id": issued.client_id,
+                "expires_at": issued.expires_at.isoformat(),
+                "token": issued.token,
+                "warning": "Store this token now; ReconForge persists only its hash and cannot display it again.",
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+
+
+@scim_app.command("credential-rotate")
+def scim_credential_rotate_command(
+    credential_id: Annotated[str, typer.Option("--credential-id", help="Active credential to replace.")],
+    tenant: Annotated[str, typer.Option(help="Tenant identifier owning the credential.")],
+    domain: Annotated[str, typer.Option(help="Provisioning-domain identifier.")],
+    client: Annotated[str, typer.Option(help="SCIM client identifier.")],
+    actor: Annotated[str, typer.Option(help="Operator identity recorded for the rotation.")],
+    ttl_hours: Annotated[int, typer.Option("--ttl-hours", min=1, max=8784, help="New lifetime in hours.")] = 24,
+    postgres_dsn: Annotated[
+        str | None,
+        typer.Option(
+            "--postgres-dsn", envvar="RECONFORGE_POSTGRES_DSN", help="PostgreSQL DSN; prefer the environment."
+        ),
+    ] = None,
+    require_tls: Annotated[bool, typer.Option("--require-tls/--no-require-tls")] = True,
+) -> None:
+    """Atomically issue a successor and revoke the previous credential."""
+
+    try:
+        boundary = _postgres_operator_boundary(postgres_dsn, require_tls=require_tls)
+        with boundary.transaction(tenant) as connection:
+            issued = PostgresSCIMCredentialRepository(connection).issue(
+                tenant_id=tenant,
+                provisioning_domain=domain,
+                client_id=client,
+                actor_id=actor,
+                ttl=timedelta(hours=ttl_hours),
+                rotated_from_id=credential_id,
+            )
+    except Exception as exc:
+        _scim_operator_failure(exc)
+    typer.echo(
+        json.dumps(
+            {
+                "credential_id": issued.id,
+                "rotated_from_id": credential_id,
+                "tenant_id": issued.tenant_id,
+                "provisioning_domain": issued.provisioning_domain,
+                "client_id": issued.client_id,
+                "expires_at": issued.expires_at.isoformat(),
+                "token": issued.token,
+                "warning": "Store this token now; the previous credential is revoked and this token cannot be displayed again.",
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+
+
+@scim_app.command("credential-revoke")
+def scim_credential_revoke_command(
+    credential_id: Annotated[str, typer.Option("--credential-id", help="Credential to revoke.")],
+    tenant: Annotated[str, typer.Option(help="Tenant identifier owning the credential.")],
+    actor: Annotated[str, typer.Option(help="Operator identity recorded for the revocation.")],
+    postgres_dsn: Annotated[
+        str | None,
+        typer.Option(
+            "--postgres-dsn", envvar="RECONFORGE_POSTGRES_DSN", help="PostgreSQL DSN; prefer the environment."
+        ),
+    ] = None,
+    require_tls: Annotated[bool, typer.Option("--require-tls/--no-require-tls")] = True,
+) -> None:
+    """Revoke one active SCIM credential without revealing secret material."""
+
+    try:
+        boundary = _postgres_operator_boundary(postgres_dsn, require_tls=require_tls)
+        with boundary.transaction(tenant) as connection:
+            revoked = PostgresSCIMCredentialRepository(connection).revoke(
+                tenant_id=tenant,
+                credential_id=credential_id,
+                actor_id=actor,
+            )
+    except Exception as exc:
+        _scim_operator_failure(exc)
+    typer.echo(
+        json.dumps(
+            {"credential_id": credential_id, "tenant_id": tenant, "revoked": revoked},
+            indent=2,
+            sort_keys=True,
+        )
+    )
+
+
+def _service_account_operator_failure(exc: Exception) -> None:
+    if isinstance(exc, (PostgresConfigurationError, PostgresUnavailableError, ServiceAccountError)):
+        console.print(f"[red]{exc}[/red]")
+    else:
+        console.print("[red]Service-account operation failed; inspect server logs using the request time.[/red]")
+    raise typer.Exit(code=1) from exc
+
+
+@service_accounts_app.command("create")
+def service_account_create_command(
+    account_id: Annotated[str, typer.Option("--account-id", help="Stable svc-* account identifier.")],
+    name: Annotated[str, typer.Option(help="Stable machine-readable account name.")],
+    display_name: Annotated[str, typer.Option("--display-name", help="Operator-facing account name.")],
+    permission: Annotated[list[str], typer.Option("--permission", help="Explicit permission; repeat as needed.")],
+    tenant: Annotated[str, typer.Option(help="Tenant identifier owning the account.")],
+    actor: Annotated[str, typer.Option(help="Human operator identity recorded in audit.")],
+    max_ttl_hours: Annotated[
+        int, typer.Option("--max-ttl-hours", min=1, max=2160, help="Maximum credential lifetime in hours.")
+    ] = 720,
+    postgres_dsn: Annotated[
+        str | None,
+        typer.Option("--postgres-dsn", envvar="RECONFORGE_POSTGRES_DSN", help="Prefer the environment."),
+    ] = None,
+    require_tls: Annotated[bool, typer.Option("--require-tls/--no-require-tls")] = True,
+) -> None:
+    """Create a role-free service account with explicit direct permissions."""
+
+    try:
+        boundary = _postgres_operator_boundary(postgres_dsn, require_tls=require_tls)
+        with boundary.transaction(tenant) as connection:
+            account = PostgresServiceAccountRepository(connection).create_account(
+                tenant_id=tenant,
+                account_id=account_id,
+                name=name,
+                display_name=display_name,
+                permissions=frozenset(permission),
+                actor_id=actor,
+                max_credential_ttl=timedelta(hours=max_ttl_hours),
+            )
+    except Exception as exc:
+        _service_account_operator_failure(exc)
+    typer.echo(json.dumps(asdict(account), indent=2, sort_keys=True, default=list))
+
+
+def _service_credential_payload(
+    credential: IssuedServiceCredential, *, rotated_from_id: str | None = None
+) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "credential_id": credential.id,
+        "service_account_id": credential.service_account_id,
+        "expires_at": credential.expires_at.isoformat(),
+        "token": credential.token,
+        "warning": "Store this token now; ReconForge persists only its hash and cannot display it again.",
+    }
+    if rotated_from_id is not None:
+        payload["rotated_from_id"] = rotated_from_id
+    return payload
+
+
+@service_accounts_app.command("credential-issue")
+def service_account_credential_issue_command(
+    account_id: Annotated[str, typer.Option("--account-id")],
+    tenant: Annotated[str, typer.Option()],
+    actor: Annotated[str, typer.Option()],
+    ttl_hours: Annotated[int, typer.Option("--ttl-hours", min=1, max=2160)] = 24,
+    postgres_dsn: Annotated[
+        str | None, typer.Option("--postgres-dsn", envvar="RECONFORGE_POSTGRES_DSN", help="Prefer the environment.")
+    ] = None,
+    require_tls: Annotated[bool, typer.Option("--require-tls/--no-require-tls")] = True,
+) -> None:
+    """Issue a service credential and reveal its token exactly once."""
+
+    try:
+        boundary = _postgres_operator_boundary(postgres_dsn, require_tls=require_tls)
+        with boundary.transaction(tenant) as connection:
+            issued = PostgresServiceAccountRepository(connection).issue_credential(
+                tenant_id=tenant, account_id=account_id, actor_id=actor, ttl=timedelta(hours=ttl_hours)
+            )
+    except Exception as exc:
+        _service_account_operator_failure(exc)
+    typer.echo(json.dumps(_service_credential_payload(issued), indent=2, sort_keys=True))
+
+
+@service_accounts_app.command("credential-rotate")
+def service_account_credential_rotate_command(
+    credential_id: Annotated[str, typer.Option("--credential-id")],
+    account_id: Annotated[str, typer.Option("--account-id")],
+    tenant: Annotated[str, typer.Option()],
+    actor: Annotated[str, typer.Option()],
+    ttl_hours: Annotated[int, typer.Option("--ttl-hours", min=1, max=2160)] = 24,
+    postgres_dsn: Annotated[
+        str | None, typer.Option("--postgres-dsn", envvar="RECONFORGE_POSTGRES_DSN", help="Prefer the environment.")
+    ] = None,
+    require_tls: Annotated[bool, typer.Option("--require-tls/--no-require-tls")] = True,
+) -> None:
+    """Issue a successor and revoke the previous credential atomically."""
+
+    try:
+        boundary = _postgres_operator_boundary(postgres_dsn, require_tls=require_tls)
+        with boundary.transaction(tenant) as connection:
+            issued = PostgresServiceAccountRepository(connection).issue_credential(
+                tenant_id=tenant,
+                account_id=account_id,
+                actor_id=actor,
+                ttl=timedelta(hours=ttl_hours),
+                rotated_from_id=credential_id,
+            )
+    except Exception as exc:
+        _service_account_operator_failure(exc)
+    typer.echo(json.dumps(_service_credential_payload(issued, rotated_from_id=credential_id), indent=2, sort_keys=True))
+
+
+@service_accounts_app.command("credential-revoke")
+def service_account_credential_revoke_command(
+    credential_id: Annotated[str, typer.Option("--credential-id")],
+    tenant: Annotated[str, typer.Option()],
+    actor: Annotated[str, typer.Option()],
+    postgres_dsn: Annotated[
+        str | None, typer.Option("--postgres-dsn", envvar="RECONFORGE_POSTGRES_DSN", help="Prefer the environment.")
+    ] = None,
+    require_tls: Annotated[bool, typer.Option("--require-tls/--no-require-tls")] = True,
+) -> None:
+    """Revoke one service credential without revealing secret material."""
+
+    try:
+        boundary = _postgres_operator_boundary(postgres_dsn, require_tls=require_tls)
+        with boundary.transaction(tenant) as connection:
+            revoked = PostgresServiceAccountRepository(connection).revoke_credential(
+                tenant_id=tenant, credential_id=credential_id, actor_id=actor
+            )
+    except Exception as exc:
+        _service_account_operator_failure(exc)
+    typer.echo(json.dumps({"credential_id": credential_id, "tenant_id": tenant, "revoked": revoked}, sort_keys=True))
+
+
+@service_accounts_app.command("disable")
+def service_account_disable_command(
+    account_id: Annotated[str, typer.Option("--account-id")],
+    expected_version: Annotated[int, typer.Option("--expected-version", min=1)],
+    tenant: Annotated[str, typer.Option()],
+    actor: Annotated[str, typer.Option()],
+    postgres_dsn: Annotated[
+        str | None, typer.Option("--postgres-dsn", envvar="RECONFORGE_POSTGRES_DSN", help="Prefer the environment.")
+    ] = None,
+    require_tls: Annotated[bool, typer.Option("--require-tls/--no-require-tls")] = True,
+) -> None:
+    """Disable an account and revoke all of its active credentials atomically."""
+
+    try:
+        boundary = _postgres_operator_boundary(postgres_dsn, require_tls=require_tls)
+        with boundary.transaction(tenant) as connection:
+            account = PostgresServiceAccountRepository(connection).set_enabled(
+                tenant_id=tenant,
+                account_id=account_id,
+                enabled=False,
+                expected_version=expected_version,
+                actor_id=actor,
+            )
+    except Exception as exc:
+        _service_account_operator_failure(exc)
+    typer.echo(json.dumps(asdict(account), indent=2, sort_keys=True, default=list))
+
+
 @api_app.command("serve")
 def api_serve_command(
     db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
@@ -2197,10 +2555,76 @@ def api_serve_command(
         bool,
         typer.Option("--redis-require-tls/--redis-no-tls", help="Require Redis TLS."),
     ] = True,
+    federation_config: Annotated[
+        Path | None,
+        typer.Option(
+            "--federation-config",
+            envvar="RECONFORGE_FEDERATION_CONFIG",
+            help="Optional bounded JSON OIDC/SAML configuration containing public verification material only.",
+        ),
+    ] = None,
+    webauthn_config: Annotated[
+        Path | None,
+        typer.Option(
+            "--webauthn-config",
+            envvar="RECONFORGE_WEBAUTHN_CONFIG",
+            help="Optional closed JSON WebAuthn RP ID and exact-origin configuration.",
+        ),
+    ] = None,
+    web_root: Annotated[
+        Path | None,
+        typer.Option("--web-root", envvar="RECONFORGE_WEB_ROOT", help="Optional built Studio directory served from the API origin."),
+    ] = None,
+    allowed_host: Annotated[
+        list[str] | None,
+        typer.Option("--allowed-host", help="Repeatable exact Host allowlist for a deployed browser origin."),
+    ] = None,
+    tls_certfile: Annotated[
+        Path | None,
+        typer.Option("--tls-certfile", envvar="RECONFORGE_TLS_CERTFILE", help="PEM certificate chain for direct HTTPS."),
+    ] = None,
+    tls_keyfile: Annotated[
+        Path | None,
+        typer.Option("--tls-keyfile", envvar="RECONFORGE_TLS_KEYFILE", help="PEM private key for direct HTTPS."),
+    ] = None,
+    secure_transport: Annotated[
+        bool,
+        typer.Option("--secure-transport/--insecure-transport", help="Assert reviewed upstream TLS termination and emit HSTS."),
+    ] = False,
+    otlp_http_endpoint: Annotated[
+        str | None,
+        typer.Option("--otlp-http-endpoint", help="Explicit OTLP/HTTP collector origin; disabled when omitted."),
+    ] = None,
+    otlp_allowed_host: Annotated[
+        list[str] | None,
+        typer.Option("--otlp-allowed-host", help="Repeatable exact non-loopback OTLP host allowlist."),
+    ] = None,
+    otlp_certificate_file: Annotated[
+        Path | None,
+        typer.Option("--otlp-certificate-file", help="Optional collector CA certificate path."),
+    ] = None,
+    otlp_client_certificate_file: Annotated[
+        Path | None,
+        typer.Option("--otlp-client-certificate-file", help="Optional mTLS client certificate path."),
+    ] = None,
+    otlp_client_key_file: Annotated[
+        Path | None,
+        typer.Option("--otlp-client-key-file", help="Optional mTLS client key path."),
+    ] = None,
 ) -> None:
     """Start the local REST API or explicit PostgreSQL server-auth profile."""
 
+    runtime = ObservabilityRuntime.disabled()
     try:
+        if (tls_certfile is None) != (tls_keyfile is None):
+            raise ValueError("TLS certificate and key must be configured together.")
+        if tls_certfile is not None and (not tls_certfile.is_file() or not tls_keyfile or not tls_keyfile.is_file()):
+            raise ValueError("TLS certificate and key files must exist.")
+        direct_tls = tls_certfile is not None
+        if web_root is not None and not allowed_host:
+            raise ValueError("A deployed web root requires at least one exact --allowed-host.")
+        if secure_transport and direct_tls:
+            raise ValueError("Use direct TLS files or --secure-transport for upstream termination, not both.")
         if tenant_db_root is None:
             status = database_status(_db_option(db_path))
             if status.pending_versions:
@@ -2210,7 +2634,7 @@ def api_serve_command(
                 raise typer.Exit(code=1)
         else:
             TenantDatabaseRouter.from_root(tenant_db_root)
-    except (DatabaseError, TenantRoutingError) as exc:
+    except (DatabaseError, TenantRoutingError, ValueError) as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
     if host == ALL_INTERFACES_HOST:
@@ -2218,6 +2642,22 @@ def api_serve_command(
             f"[yellow]Warning:[/yellow] binding to {ALL_INTERFACES_HOST} exposes the local API beyond localhost. This is not a public internet deployment mode."
         )
     try:
+        if federation_config is not None and postgres_dsn is None:
+            raise ValueError("Federation configuration requires the PostgreSQL server-auth profile.")
+        if webauthn_config is not None and postgres_dsn is None:
+            raise ValueError("WebAuthn configuration requires the PostgreSQL server-auth profile.")
+        federation = load_federation_runtime(federation_config) if federation_config is not None else None
+        webauthn_runtime = load_webauthn_runtime(webauthn_config) if webauthn_config is not None else None
+        if otlp_http_endpoint is not None:
+            runtime = create_otlp_http_runtime(
+                OTLPHTTPConfiguration(
+                    endpoint=otlp_http_endpoint,
+                    allowed_hosts=tuple(otlp_allowed_host or ()),
+                    certificate_file=otlp_certificate_file,
+                    client_certificate_file=otlp_client_certificate_file,
+                    client_key_file=otlp_client_key_file,
+                )
+            )
         application = create_api_app(
             db_path,
             tenant_db_root=tenant_db_root,
@@ -2225,12 +2665,41 @@ def api_serve_command(
             postgres_require_tls=postgres_require_tls,
             redis_url=redis_url,
             redis_require_tls=redis_require_tls,
+            federation_providers=federation.providers if federation is not None else None,
+            federation_verifiers=federation.verifiers if federation is not None else None,
+            federation_air_gap_mode=federation.air_gap_mode if federation is not None else False,
+            webauthn_runtime=webauthn_runtime,
+            web_root=web_root,
+            allowed_hosts=tuple(allowed_host or ()),
+            secure_transport=direct_tls or secure_transport,
+            observability=runtime,
+            reliability_window=HttpReliabilityWindow() if runtime.enabled else None,
         )
-    except (DatabaseError, TenantRoutingError, ValueError) as exc:
+    except (
+        DatabaseError,
+        FederationConfigurationError,
+        WebAuthnConfigurationError,
+        ObservabilityConfigurationError,
+        TenantRoutingError,
+        ValueError,
+    ) as exc:
+        runtime.shutdown()
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
-    console.print(f"[green]Starting ReconForge local API:[/green] http://{host}:{port}")
-    uvicorn.run(application, host=host, port=port, log_level="info")
+    scheme = "https" if tls_certfile is not None else "http"
+    console.print(f"[green]Starting ReconForge local API:[/green] {scheme}://{host}:{port}")
+    try:
+        uvicorn.run(
+            application,
+            host=host,
+            port=port,
+            log_level="info",
+            ssl_certfile=str(tls_certfile) if tls_certfile is not None else None,
+            ssl_keyfile=str(tls_keyfile) if tls_keyfile is not None else None,
+        )
+    finally:
+        runtime.force_flush()
+        runtime.shutdown()
 
 
 @db_app.command("init")
@@ -2492,6 +2961,66 @@ def db_restore_command(
         "[yellow]Restore warning:[/yellow] restored data is local only and may include sensitive business data."
     )
     console.print(f"[green]Database restored:[/green] {result.db_path}")
+    console.print(f"Schema version: {result.schema_version} | Tables restored: {len(result.restored_tables)}")
+
+
+@db_app.command("backup-encrypted")
+def db_backup_encrypted_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    output_path: Annotated[Path, typer.Option("--output", help="Encrypted .rfbackup output file.")] = Path(
+        "output/backups/reconforge.rfbackup"
+    ),
+    key_file: Annotated[
+        Path,
+        typer.Option("--key-file", help="File containing a 32-byte raw or 64-character hexadecimal key."),
+    ] = Path("backup.key"),
+) -> None:
+    """Create an authenticated AES-256-GCM local backup envelope."""
+
+    try:
+        key = read_operator_backup_key(key_file)
+        result = create_encrypted_backup(_db_option(db_path), output_path, key=key)
+    except (DatabaseError, DBBridgeError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Encrypted database backup written:[/green] {result.path}")
+    console.print(f"Schema version: {result.source_schema_version} | Ciphertext SHA-256: {result.ciphertext_sha256}")
+    console.print(
+        "[yellow]Key custody:[/yellow] keep the operator key separate; loss of the key makes recovery impossible."
+    )
+
+
+@db_app.command("restore-encrypted")
+def db_restore_encrypted_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path to restore.")] = Path(
+        "output/reconforge.db"
+    ),
+    input_path: Annotated[Path, typer.Option("--input", help="Encrypted .rfbackup input file.")] = Path(
+        "output/backups/reconforge.rfbackup"
+    ),
+    key_file: Annotated[
+        Path,
+        typer.Option("--key-file", help="File containing the backup's operator-owned key."),
+    ] = Path("backup.key"),
+    force: Annotated[
+        bool, typer.Option("--force", help="Replace an existing local DB only after full authentication.")
+    ] = False,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Authenticate and validate without writing the target DB.")
+    ] = False,
+) -> None:
+    """Authenticate and restore an AES-256-GCM local backup envelope."""
+
+    try:
+        key = read_operator_backup_key(key_file)
+        result = restore_encrypted_backup(_db_option(db_path), input_path, key=key, force=force, dry_run=dry_run)
+    except (DatabaseError, DBBridgeError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    if result.dry_run:
+        console.print("[green]Encrypted restore dry-run passed:[/green] authentication and schema checks succeeded.")
+        return
+    console.print(f"[green]Encrypted database restored:[/green] {result.db_path}")
     console.print(f"Schema version: {result.schema_version} | Tables restored: {len(result.restored_tables)}")
 
 
@@ -4505,6 +5034,45 @@ def ops_errors_command(
     _print_records("Local Error Records", errors, max_rows=100)
 
 
+@ops_app.command("reliability")
+def ops_reliability_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    require_complete: Annotated[
+        bool,
+        typer.Option("--require-complete/--allow-no-data", help="Exit non-zero unless every required signal is observed and normal."),
+    ] = False,
+) -> None:
+    """Evaluate the closed local reliability policy without exposing identifiers."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            snapshot = SQLiteReliabilityCollector(connection, memory_mib=process_memory_mib).collect(
+                observed_at=datetime.now(UTC)
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, ValueError) as exc:
+        _safe_cli_error(exc)
+    rows: list[dict[str, object]] = [
+        {
+            "policy_id": result.policy_id,
+            "metric": result.metric.value,
+            "state": result.state.value,
+            "observed": result.observed,
+            "slo_id": result.slo_id,
+            "runbook": result.runbook,
+            "policy_version": result.policy_version,
+        }
+        for result in evaluate_alerts(snapshot.values)
+    ]
+    _print_records("Local Reliability Policy", rows, max_rows=20)
+    if snapshot.unavailable_sources:
+        console.print("Unavailable sources: " + ", ".join(snapshot.unavailable_sources))
+    if require_complete and any(row["state"] != AlertState.NORMAL for row in rows):
+        raise typer.Exit(code=1)
+
+
 @deployment_app.command("docker-verify")
 def deployment_docker_verify_command() -> None:
     """Verify local Docker files and tooling presence without claiming production readiness."""
@@ -4911,6 +5479,168 @@ def rules_validate_command(
         financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
     )
     console.print(f"[green]Control pack valid:[/green] {pack.metadata.pack_id} ({len(pack.rules)} rules)")
+
+
+def _load_reconciliation_as_code(path: Path) -> ReconciliationAsCodeSpec:
+    try:
+        return ReconciliationAsCodeSpec.from_file(path)
+    except (OSError, ValueError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+
+@recon_as_code_app.command("validate")
+def recon_as_code_validate_command(
+    file_path: Annotated[Path, typer.Option("--file", help="Reconciliation-as-Code YAML or JSON file.")],
+) -> None:
+    """Validate the versioned declarative contract and print its deterministic manifest."""
+
+    spec = _load_reconciliation_as_code(file_path)
+    typer.echo(json.dumps(spec.manifest(), ensure_ascii=False, indent=2, sort_keys=True))
+
+
+@recon_as_code_app.command("lint")
+def recon_as_code_lint_command(
+    file_path: Annotated[Path, typer.Option("--file", help="Reconciliation-as-Code YAML or JSON file.")],
+) -> None:
+    """Run fail-closed semantic lint checks without executing any data rule."""
+
+    spec = _load_reconciliation_as_code(file_path)
+    findings = spec.lint()
+    payload = {
+        "reconciliation_id": spec.reconciliation_id,
+        "content_sha256": spec.content_digest(),
+        "error_count": sum(1 for finding in findings if finding["severity"] == "error"),
+        "warning_count": sum(1 for finding in findings if finding["severity"] == "warning"),
+        "findings": findings,
+    }
+    typer.echo(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+    if payload["error_count"]:
+        raise typer.Exit(code=1)
+
+
+@recon_as_code_app.command("test")
+def recon_as_code_test_command(
+    file_path: Annotated[Path, typer.Option("--file", help="Reconciliation-as-Code YAML or JSON file.")],
+) -> None:
+    """Run embedded synthetic fixtures through registered deterministic matching adapters."""
+
+    spec = _load_reconciliation_as_code(file_path)
+    try:
+        payload = spec.run_embedded_tests()
+    except ValueError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+    if not payload["all_passed"]:
+        raise typer.Exit(code=1)
+
+
+@recon_as_code_app.command("simulate")
+def recon_as_code_simulate_command(
+    file_path: Annotated[Path, typer.Option("--file", help="Reconciliation-as-Code YAML or JSON file.")],
+) -> None:
+    """Produce a no-side-effect execution plan and matching-fixture outcomes."""
+
+    spec = _load_reconciliation_as_code(file_path)
+    try:
+        test_run = spec.run_embedded_tests()
+    except ValueError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    typer.echo(
+        json.dumps(
+            {"plan": spec.simulation_plan(), "test_run": test_run},
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+    )
+
+
+@recon_as_code_app.command("diff")
+def recon_as_code_diff_command(
+    left_path: Annotated[Path, typer.Option("--left", help="Baseline Reconciliation-as-Code file.")],
+    right_path: Annotated[Path, typer.Option("--right", help="Candidate Reconciliation-as-Code file.")],
+) -> None:
+    """Compare two validated contracts using canonical structural paths."""
+
+    left = _load_reconciliation_as_code(left_path)
+    right = _load_reconciliation_as_code(right_path)
+    changes = left.diff(right)
+    typer.echo(
+        json.dumps(
+            {
+                "left_content_sha256": left.content_digest(),
+                "right_content_sha256": right.content_digest(),
+                "change_count": len(changes),
+                "changes": changes,
+            },
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+    )
+
+
+@recon_as_code_app.command("explain")
+def recon_as_code_explain_command(
+    file_path: Annotated[Path, typer.Option("--file", help="Reconciliation-as-Code YAML or JSON file.")],
+) -> None:
+    """Explain the validated contract, human-governance boundary, and lint state."""
+
+    spec = _load_reconciliation_as_code(file_path)
+    findings = spec.lint()
+    typer.echo(
+        json.dumps(
+            {
+                "manifest": spec.manifest(),
+                "simulation_plan": spec.simulation_plan(),
+                "lint_findings": findings,
+                "financial_decision_boundary": "Matching outputs require the declared human approval workflow.",
+                "arbitrary_code_execution": "forbidden",
+            },
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+    )
+
+
+@recon_as_code_app.command("rollback")
+def recon_as_code_rollback_command(
+    current_path: Annotated[Path, typer.Option("--current", help="Currently active validated contract.")],
+    target_path: Annotated[Path, typer.Option("--to", help="Previously approved validated contract.")],
+    output_path: Annotated[Path, typer.Option("--output", help="Rollback output YAML or JSON file.")],
+    overwrite: Annotated[
+        bool,
+        typer.Option("--overwrite", help="Explicitly allow atomic replacement of an existing regular output file."),
+    ] = False,
+) -> None:
+    """Atomically restore a previously validated contract without executing it."""
+
+    current = _load_reconciliation_as_code(current_path)
+    target = _load_reconciliation_as_code(target_path)
+    try:
+        written = target.write_file(output_path, overwrite=overwrite)
+    except (OSError, ValueError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    typer.echo(
+        json.dumps(
+            {
+                "action": "reconciliation-as-code-rollback",
+                "from_content_sha256": current.content_digest(),
+                "to_content_sha256": target.content_digest(),
+                "change_count": len(current.diff(target)),
+                "output": str(written),
+                "executed": False,
+            },
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+    )
 
 
 @mappings_app.command("validate")

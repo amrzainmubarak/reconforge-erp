@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/ha_dr_drill_report.schema.json",
+  "title": "ReconForge bounded HA/DR drill report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "drill_id", "executed_at", "topology", "infrastructure", "failure", "replication", "backup_restore", "fencing", "measurement", "integrity", "scope_status", "limitations"],
+  "properties": {
+    "schema": {"const": "reconforge-ha-dr-drill-report-v1"},
+    "drill_id": {"type": "string", "pattern": "^DR-[A-Z0-9-]{8,64}$"},
+    "executed_at": {"type": "string", "format": "date"},
+    "topology": {"const": "docker-single-host-primary-synchronous-standby-v1"},
+    "infrastructure": {
+      "type": "object", "additionalProperties": false,
+      "required": ["docker_server", "container_os", "postgres_image", "node_count", "failure_domains"],
+      "properties": {
+        "docker_server": {"type": "string", "minLength": 1},
+        "container_os": {"const": "linux/amd64"},
+        "postgres_image": {"const": "postgres:17.10-alpine"},
+        "node_count": {"const": 2},
+        "failure_domains": {"const": 1}
+      }
+    },
+    "failure": {"const": "replication-network-partition-then-primary-container-stop-and-removal"},
+    "replication": {"const": "physical-streaming-synchronous-remote-apply"},
+    "backup_restore": {
+      "type": "object", "additionalProperties": false,
+      "required": ["format", "encrypted", "isolated_restore", "restored_rows", "digest_matches"],
+      "properties": {
+        "format": {"const": "reconforge-postgres-backup-v1"},
+        "encrypted": {"const": true},
+        "isolated_restore": {"const": true},
+        "restored_rows": {"type": "integer", "minimum": 1},
+        "digest_matches": {"const": true}
+      }
+    },
+    "fencing": {
+      "type": "object", "additionalProperties": false,
+      "required": ["method", "verified_absent_before_promotion", "old_primary_id_sha256", "failback_verified_absent_before_promotion", "failback_old_primary_id_sha256"],
+      "properties": {
+        "method": {"const": "exact-id-stop-remove-before-promotion"},
+        "verified_absent_before_promotion": {"const": true},
+        "old_primary_id_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "failback_verified_absent_before_promotion": {"const": true},
+        "failback_old_primary_id_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "measurement": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rpo_transactions", "rpo_ceiling_transactions", "rto_seconds", "rto_ceiling_seconds", "failback_rpo_transactions", "failback_rto_seconds"],
+      "properties": {
+        "rpo_transactions": {"const": 0},
+        "rpo_ceiling_transactions": {"const": 0},
+        "rto_seconds": {"type": "number", "exclusiveMinimum": 0},
+        "rto_ceiling_seconds": {"const": 60.0},
+        "failback_rpo_transactions": {"const": 0},
+        "failback_rto_seconds": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "integrity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pre_failure_sequence", "post_failover_sequence", "standby_pre_failure_match", "partition_write_not_acknowledged", "post_failover_write", "former_primary_rejoined_read_only", "pre_failback_sequence", "post_failback_sequence", "post_failback_write"],
+      "properties": {
+        "pre_failure_sequence": {"const": 1},
+        "post_failover_sequence": {"const": 2},
+        "standby_pre_failure_match": {"const": true},
+        "partition_write_not_acknowledged": {"const": true},
+        "post_failover_write": {"const": true},
+        "former_primary_rejoined_read_only": {"const": true},
+        "pre_failback_sequence": {"const": 3},
+        "post_failback_sequence": {"const": 4},
+        "post_failback_write": {"const": true}
+      }
+    },
+    "scope_status": {"const": "verified-development-single-failure-domain"},
+    "limitations": {
+      "type": "array", "minItems": 4, "uniqueItems": true,
+      "items": {"enum": ["single_host_not_host_loss", "no_cross_zone_or_cross_region", "synthetic_data_and_key_only", "manual_controller_not_automatic_failover", "no_production_rpo_rto_slo", "no_enterprise_ready_claim"]}
+    }
+  }
+}

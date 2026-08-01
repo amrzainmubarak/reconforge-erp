@@ -1,0 +1,48 @@
+schema_version: 1
+audit_id: E-230
+executed_at: "2026-07-31"
+task_id: P3-ENT-010
+status: verified
+scope: Bounded single-host PostgreSQL HA/DR with synchronous streaming, strict fencing, isolated backup/restore, and repeatability gates.
+gates:
+  - {id: synchronous_standby_topology, status: verified_disposable_runtime, evidence: [docs/execution/HA_DR_DOCKER_DRILL_2026-07-30.json, tests/test_ha_dr_drill.py, .github/scripts/verify_postgres_ha_dr.py]}
+  - {id: ha_dr_isolated_backup_restore, status: verified_runtime, evidence: [docs/execution/HA_DR_DOCKER_DRILL_2026-07-30.json, .github/scripts/verify_postgres_ha_dr.py]}
+  - {id: failover_failback_fencing, status: verified_runtime, evidence: [docs/execution/HA_DR_DOCKER_DRILL_2026-07-30.json, docs/execution/HA_DR_DOCKER_DRILL_2026-07-31-current.json, tests/test_ha_dr_drill.py]}
+  - {id: repeated_synchronous_runs, status: verified_disposable_runtime, evidence: [docs/execution/HA_DR_REPEATED_DOCKER_DRILL_2026-07-30.json, docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION.json, .github/scripts/verify_postgres_ha_dr_repeated.py, tests/test_ha_dr_repeated_drill.py]}
+  - {id: named_failure_domain_and_cleanup, status: verified_focused, evidence: [docs/execution/HA_DR_DOCKER_DRILL_2026-07-30.json, docs/execution/HA_DR_REPEATED_DOCKER_DRILL_2026-07-30.json, tests/test_ha_dr_repeated_drill.py]}
+  - {id: measured_rpo_rto_boundaries, status: verified_focused, evidence: [docs/execution/HA_DR_DOCKER_DRILL_2026-07-30.json, docs/execution/HA_DR_REPEATED_DOCKER_DRILL_2026-07-30.json, docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION.json]}
+runtime_evidence:
+  profile: docker-single-host-primary-synchronous-standby-v1
+  infrastructure:
+    docker_server: Docker Engine 29.6.2
+    failure_domains_per_run: 1
+    node_count_per_run: 2
+    postgres_image: postgres:17.10-alpine
+  backup_restore:
+    encrypted: true
+    restored_rows: 1
+    digest_preserved: true
+  run_characteristics:
+    failover_rto_min_seconds: 11.075
+    failover_rto_median_seconds: 11.094
+    failover_rto_max_seconds: 11.117
+    failback_rto_min_seconds: 0.912
+    failback_rto_median_seconds: 0.945
+    failback_rto_max_seconds: 0.958
+    rto_ceiling_seconds: 60.0
+  dependency_integrity:
+    zero_acknowledged_transaction_loss_runs: 3
+    sequence_persisted: 4
+    partition_write_not_acknowledged: true
+    former_primary_rejoined_read_only: true
+  external_network_calls: 0
+  production_keys_secrets_or_customer_data: 0
+limitations:
+  - single_host_not_host_loss
+  - no_cross_zone_or_cross_region
+  - no_quorum_or_witness
+  - no_automatic_failover_or_orchestration_controller
+  - no_production_key_custody_or_secret_rotation_evidence
+  - no_external_slo_or_enterprise_ready_claim
+  - no_production_datacenter_or_ha_assurance_claim
+publication: {commit: false, push: false, pull_request: false, release: false}

@@ -1,0 +1,140 @@
+schema_version: 1
+audit_id: E-186
+executed_at: "2026-07-29"
+task_id: P3-ENT-004
+status: verified
+scope: Multi-entity tenant isolation across current single-node PostgreSQL and official object stores
+migration_head: 0046_postgres_scope_authority
+gates:
+  - id: hierarchical_transaction_scope
+    status: verified
+    evidence:
+      - reconforge/infrastructure/postgres.py
+      - reconforge/infrastructure/postgres_execution_scope.py
+      - tests/test_postgres_execution_scope.py
+  - id: background_job_scope
+    status: verified
+    evidence:
+      - reconforge/infrastructure/postgres_job_scope.py
+      - tests/test_postgres_job_scope.py
+  - id: authorized_export_scope
+    status: verified
+    evidence:
+      - reconforge/infrastructure/postgres_scoped_exports.py
+      - tests/test_scoped_exports.py
+  - id: object_storage_scope
+    status: verified
+    evidence:
+      - reconforge/infrastructure/object_storage.py
+      - tests/test_evidence_object_storage.py
+      - docs/adr/0187-object-artifacts-carry-hierarchical-storage-scope.md
+  - id: business_domain_rls
+    status: verified
+    evidence:
+      - docs/execution/POSTGRES_SCOPE_INVENTORY.yaml
+      - reconforge/infrastructure/postgres_business_scope.py
+      - reconforge/infrastructure/postgres_workspace_attribution.py
+      - tests/test_postgres_business_scope.py
+      - tests/test_postgres_workspace_attribution.py
+  - id: durable_api_scope_authority
+    status: verified
+    evidence:
+      - reconforge/infrastructure/postgres_scope_authority.py
+      - reconforge/api/routes/scope_grants.py
+      - tests/test_postgres_scope_authority.py
+      - tests/test_api_execution_scope.py
+      - tests/test_api_server_scope_boundary.py
+      - tests/test_api_scope_grants.py
+      - docs/adr/0189-api-scope-comes-from-durable-principal-grants.md
+  - id: hostile_failure_paths
+    status: verified
+    evidence:
+      - tests/test_api_server_identity.py
+      - tests/test_scoped_exports.py
+      - tests/test_evidence_object_storage.py
+      - tests/test_postgres_job_scope.py
+  - id: migration_and_recovery
+    status: verified
+    evidence:
+      - tests/test_alembic_postgres.py
+      - tests/test_postgres_operations.py
+failure_matrix:
+  - threat: sibling_workspace_read
+    result: denied
+    evidence_test: test_live_business_scope_denies_sibling_workspace_read_and_write
+  - threat: sibling_workspace_write
+    result: denied
+    evidence_test: test_live_business_scope_denies_sibling_workspace_read_and_write
+  - threat: sibling_entity_hierarchy
+    result: denied
+    evidence_test: test_live_execution_scope_denies_sibling_workspace_organization_and_entity
+  - threat: sibling_job_and_child_evidence
+    result: denied
+    evidence_test: test_live_job_scope_hides_siblings_and_denies_child_evidence_write
+  - threat: sibling_export_disclosure
+    result: absent_from_artifact
+    evidence_test: test_live_scoped_export_excludes_sibling_workspace_and_entity
+  - threat: export_authorization_failure
+    result: no_artifact
+    evidence_test: test_publisher_denies_before_snapshot_or_object_effect
+  - threat: export_database_or_storage_failure
+    result: no_artifact
+    evidence_test: test_snapshot_and_storage_failures_publish_no_artifact
+  - threat: object_scope_metadata_tamper
+    result: rejected
+    evidence_test: test_hierarchical_scope_mismatch_does_not_create_a_registry_row
+  - threat: object_provider_failure
+    result: no_registry_row
+    evidence_test: test_object_storage_failure_does_not_create_a_registry_row
+  - threat: schema_reinstall_policy_weakening
+    result: prevented
+    evidence_test: test_live_schema_reinstall_preserves_composed_business_policies
+  - threat: missing_api_workspace
+    result: rejected_before_database
+    evidence_test: test_server_business_boundary_rejects_missing_or_sibling_scope_before_database
+  - threat: sibling_api_workspace
+    result: rejected_before_database
+    evidence_test: test_server_business_boundary_rejects_missing_or_sibling_scope_before_database
+  - threat: unregistered_scope_grant
+    result: rejected
+    evidence_test: test_live_scope_authority_validates_grants_snapshots_and_revocation
+  - threat: cross_tenant_bearer_reuse
+    result: denied
+    evidence_test: test_live_server_api_uses_postgres_identity_and_tenant_scope
+runtime_evidence:
+  postgres_image: postgres:17.10-alpine
+  app_role: non_superuser_nobypassrls
+  consolidated_live_result: 63_passed
+  consolidated_live_skips: 0
+  fresh_migration: 0001_to_0046_passed
+  direct_rollback: 0046_to_0045_to_0046_passed
+  long_rollback: 0046_to_0011_to_0046_passed
+  live_policy_count: 130
+  live_rls_table_count: 130
+  live_forced_rls_table_count: 130
+  current_object_store_contract: local_hierarchy_and_failure_paths_passed
+  prior_s3_contract: minio_commit_9e49d5e_passed_on_synthetic_localhost
+  full_regression: passed_with_declared_skips
+  full_live_regression: passed_with_5_declared_environment_skips
+  full_live_regression_duration_seconds: 280.391
+  post_full_suite_duplicate_scope_policies: 0
+  post_full_suite_tenant_isolation_policies: 0
+  ruff: passed
+  mypy: 328_source_files_passed
+  bandit: passed_with_reviewed_suppressions
+  pip_audit: no_known_vulnerabilities_local_project_skipped
+  package_build: wheel_and_sdist_passed
+  package_archive_required_paths: 14_present_in_wheel_and_sdist
+limitations:
+  - single_node_postgresql_evidence
+  - prior_minio_evidence_is_synthetic_localhost
+  - no_production_identity_assignments
+  - no_ha_or_dr_claim
+  - no_compliance_or_certification_claim
+  - no_external_penetration_or_assurance_claim
+  - no_enterprise_ready_claim
+publication:
+  commit: false
+  push: false
+  pull_request: false
+  release: false

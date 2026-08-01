@@ -2,6 +2,17 @@
 
 from __future__ import annotations
 
+from reconforge.domain.jobs import (
+    ALLOWED_TRANSITIONS,
+    JOB_SCHEMA_VERSION,
+    DurableJob,
+    JobInvariantError,
+    JobLease,
+    JobOutputManifest,
+    JobPartitionEffect,
+    JobStatus,
+    JobTransition,
+)
 from reconforge.domain.models import (
     AccountingDimension,
     AccountingDimensionValue,
@@ -42,6 +53,15 @@ from reconforge.domain.protocols import (
 )
 
 __all__ = [
+    "ALLOWED_TRANSITIONS",
+    "JOB_SCHEMA_VERSION",
+    "DurableJob",
+    "JobInvariantError",
+    "JobLease",
+    "JobOutputManifest",
+    "JobPartitionEffect",
+    "JobStatus",
+    "JobTransition",
     "AccountingDimension",
     "AccountingDimensionValue",
     "AuditEventReference",

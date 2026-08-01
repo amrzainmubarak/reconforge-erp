@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+from reconforge.auth.federation import (
+    FederatedPrincipal,
+    FederationError,
+    FederationProvider,
+    FederationRequest,
+    FederationService,
+    VerifiedFederationAssertion,
+)
 from reconforge.auth.models import LocalPermission, LocalRole, LocalUser, RolePermission, SoDAction
 from reconforge.auth.passwords import PasswordHash, hash_password, verify_password
 from reconforge.auth.policy import (
@@ -25,6 +33,11 @@ __all__ = [
     "AuthRepositoryError",
     "AuthServiceError",
     "CentralPolicyEngine",
+    "FederatedPrincipal",
+    "FederationError",
+    "FederationProvider",
+    "FederationRequest",
+    "FederationService",
     "LocalAuthService",
     "LocalPermission",
     "LocalRole",
@@ -37,6 +50,7 @@ __all__ = [
     "SoDAction",
     "SoDCheckResult",
     "UserRepository",
+    "VerifiedFederationAssertion",
     "check_object_action_permission",
     "check_sod_conflict",
     "evaluate_principal_access",

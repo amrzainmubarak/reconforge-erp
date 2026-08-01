@@ -1,5 +1,23 @@
 """Backend-neutral ReconForge application use cases."""
 
+from reconforge.application.grouped_matching import (
+    GroupedMatchingApplicationService,
+    GroupedMatchRequest,
+)
+from reconforge.application.jobs import (
+    DurableJobApplicationService,
+    DurableJobNotFoundError,
+    DurableJobRepositoryProtocol,
+    DurableJobWorkerRepositoryProtocol,
+    DurableJobWorkerService,
+    JobSubmission,
+    LeasedJob,
+)
+from reconforge.application.operations import (
+    MigrationStatus,
+    OperationsApplicationService,
+    OperationsRepositoryProtocol,
+)
 from reconforge.application.workspace_periods import (
     WorkspacePeriodApplicationService,
     WorkspacePeriodSetup,
@@ -7,6 +25,18 @@ from reconforge.application.workspace_periods import (
 )
 
 __all__ = [
+    "DurableJobApplicationService",
+    "DurableJobNotFoundError",
+    "DurableJobRepositoryProtocol",
+    "DurableJobWorkerRepositoryProtocol",
+    "DurableJobWorkerService",
+    "JobSubmission",
+    "GroupedMatchRequest",
+    "GroupedMatchingApplicationService",
+    "LeasedJob",
+    "MigrationStatus",
+    "OperationsApplicationService",
+    "OperationsRepositoryProtocol",
     "WorkspacePeriodApplicationService",
     "WorkspacePeriodSetup",
     "WorkspacePeriodValidationError",

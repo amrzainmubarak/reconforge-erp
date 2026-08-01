@@ -155,11 +155,7 @@ def _validate_csv_header(path: Path) -> None:
             header = next(csv.reader(handle, strict=True), None)
     except (OSError, UnicodeError, csv.Error) as exc:
         raise GeneratedArtifactError("generated_csv_invalid") from exc
-    if (
-        header is None
-        or any(not field.strip() for field in header)
-        or len(header) != len(set(header))
-    ):
+    if header is None or any(not field.strip() for field in header) or len(header) != len(set(header)):
         _reject("generated_csv_header_ambiguous")
 
 

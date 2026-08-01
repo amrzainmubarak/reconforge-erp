@@ -1,0 +1,147 @@
+"""Hosted single-node PostgreSQL scheduler polling runtime."""
+
+from __future__ import annotations
+
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from threading import Event
+from typing import Any
+
+from reconforge.application.scheduler import ScheduleProcessResult, SchedulerApplicationService
+from reconforge.infrastructure.postgres import validate_tenant_id
+from reconforge.infrastructure.postgres_scheduler import PostgresScheduleRepository
+
+
+class PostgresSchedulerWorkerError(RuntimeError):
+    """Raised when a scheduler polling cycle cannot complete safely."""
+
+
+def _utc_now() -> datetime:
+    return datetime.now(UTC).replace(microsecond=0)
+
+
+@dataclass(frozen=True)
+class PostgresSchedulerWorkerSettings:
+    worker_id: str
+    poll_interval_seconds: float = 5.0
+    batch_size: int = 50
+    max_tenants: int = 10_000
+
+    def __post_init__(self) -> None:
+        normalized = str(self.worker_id or "").strip()
+        if not normalized or len(normalized) > 160:
+            raise PostgresSchedulerWorkerError("worker_id must be a non-empty value of at most 160 characters.")
+        object.__setattr__(self, "worker_id", normalized)
+        if not 0 <= float(self.poll_interval_seconds) <= 3_600:
+            raise PostgresSchedulerWorkerError("poll_interval_seconds must be between 0 and 3600.")
+        if not 1 <= int(self.batch_size) <= 1_000:
+            raise PostgresSchedulerWorkerError("batch_size must be between 1 and 1000.")
+        if not 1 <= int(self.max_tenants) <= 100_000:
+            raise PostgresSchedulerWorkerError("max_tenants must be between 1 and 100000.")
+
+
+@dataclass(frozen=True)
+class SchedulerWorkerRunSummary:
+    cycles: int = 0
+    tenants_processed: int = 0
+    schedules_claimed: int = 0
+    schedules_evaluated: int = 0
+    occurrences_due: int = 0
+    dispatched: int = 0
+    replayed: int = 0
+    skipped: int = 0
+    deferred: int = 0
+    nonexistent_local_times: int = 0
+
+    def add_cycle(self, results: Iterable[ScheduleProcessResult]) -> SchedulerWorkerRunSummary:
+        items = tuple(results)
+        return SchedulerWorkerRunSummary(
+            cycles=self.cycles + 1,
+            tenants_processed=self.tenants_processed + len(items),
+            schedules_claimed=self.schedules_claimed + sum(item.schedules_claimed for item in items),
+            schedules_evaluated=self.schedules_evaluated + sum(item.schedules_evaluated for item in items),
+            occurrences_due=self.occurrences_due + sum(item.occurrences_due for item in items),
+            dispatched=self.dispatched + sum(item.dispatched for item in items),
+            replayed=self.replayed + sum(item.replayed for item in items),
+            skipped=self.skipped + sum(item.skipped for item in items),
+            deferred=self.deferred + sum(item.deferred for item in items),
+            nonexistent_local_times=self.nonexistent_local_times
+            + sum(item.nonexistent_local_times for item in items),
+        )
+
+
+class PostgresSchedulerWorker:
+    """Poll configured tenants with one fresh connection per tenant and cycle."""
+
+    def __init__(
+        self,
+        connection_factory: Any,
+        *,
+        tenant_supplier: Callable[[], Iterable[str]],
+        settings: PostgresSchedulerWorkerSettings,
+        clock: Callable[[], datetime] = _utc_now,
+    ) -> None:
+        self.connection_factory = connection_factory
+        self.tenant_supplier = tenant_supplier
+        self.settings = settings
+        self.clock = clock
+
+    def _tenant_ids(self) -> tuple[str, ...]:
+        try:
+            tenant_ids = tuple(sorted({validate_tenant_id(value) for value in self.tenant_supplier()}))
+        except Exception as exc:
+            raise PostgresSchedulerWorkerError("Unable to enumerate scheduler tenants.") from exc
+        if len(tenant_ids) > self.settings.max_tenants:
+            raise PostgresSchedulerWorkerError("Scheduler tenant enumeration exceeds its configured bound.")
+        return tenant_ids
+
+    def process_once(self) -> tuple[ScheduleProcessResult, ...]:
+        try:
+            now = self.clock()
+            if now.tzinfo is None or now.utcoffset() is None:
+                raise PostgresSchedulerWorkerError("Scheduler clock must return a timezone-aware timestamp.")
+            current = now.astimezone(UTC).replace(microsecond=0)
+            results: list[ScheduleProcessResult] = []
+            for tenant_id in self._tenant_ids():
+                connection = self.connection_factory.connect()
+                try:
+                    result = SchedulerApplicationService(PostgresScheduleRepository(connection)).process_due(
+                        tenant_id=tenant_id,
+                        worker_id=self.settings.worker_id,
+                        now=current,
+                        limit=self.settings.batch_size,
+                    )
+                    results.append(result)
+                finally:
+                    connection.close()
+            return tuple(results)
+        except PostgresSchedulerWorkerError:
+            raise
+        except Exception as exc:
+            raise PostgresSchedulerWorkerError("PostgreSQL scheduler worker cycle failed safely.") from exc
+
+    def run(
+        self,
+        *,
+        stop_event: Event | None = None,
+        max_cycles: int | None = None,
+    ) -> SchedulerWorkerRunSummary:
+        if max_cycles is not None and max_cycles < 1:
+            raise PostgresSchedulerWorkerError("max_cycles must be positive when supplied.")
+        event = stop_event or Event()
+        summary = SchedulerWorkerRunSummary()
+        while not event.is_set() and (max_cycles is None or summary.cycles < max_cycles):
+            summary = summary.add_cycle(self.process_once())
+            if max_cycles is not None and summary.cycles >= max_cycles:
+                break
+            event.wait(self.settings.poll_interval_seconds)
+        return summary
+
+
+__all__ = [
+    "PostgresSchedulerWorker",
+    "PostgresSchedulerWorkerError",
+    "PostgresSchedulerWorkerSettings",
+    "SchedulerWorkerRunSummary",
+]

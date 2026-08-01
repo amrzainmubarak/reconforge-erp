@@ -1,0 +1,200 @@
+schema_version: 1
+audit_id: E-207
+executed_at: "2026-07-30"
+task_id: P3-ENT-006
+status: verified
+scope: Same-origin, step-up-gated browser administration reads plus governed identity, session, role, permission, assignment, integration-disable, and evidence-retention lifecycle over PostgreSQL administration APIs
+gates:
+  - id: browser_session_boundary
+    status: verified
+    evidence:
+      - reconforge/api/browser_session.py
+      - tests/test_api_browser_sessions.py
+      - docs/adr/0199-browser-administration-sessions-are-same-origin-and-csrf-bound.md
+  - id: live_browser_cookie_session
+    status: verified_scoped
+    evidence:
+      - apps/web/vite.config.ts
+      - apps/web/e2e/browser-session-live.spec.ts
+      - tests/test_api_server_cookie_principal.py
+  - id: host_bounded_same_origin_https
+    status: verified_scoped_localhost_browser
+    evidence:
+      - reconforge/api/app.py
+      - reconforge/cli.py
+      - docs/adr/0200-studio-and-api-share-one-host-bounded-https-origin.md
+      - docs/operations/same-origin-browser-hosting.md
+      - tests/test_api_foundation.py
+      - tests/test_api_https_hosting.py
+      - tests/https_runtime.py
+      - apps/web/e2e/https-hosting-live.spec.ts
+  - id: audit_browse_and_verification_view
+    status: verified_local_mocked_browser
+    evidence:
+      - apps/web/src/components/AdminAudit.tsx
+      - apps/web/src/data.ts
+      - apps/web/e2e/screenshots.spec.ts
+  - id: security_center_view
+    status: verified_local_mocked_browser
+    evidence:
+      - reconforge/api/routes/security_center.py
+      - apps/web/src/data.admin.test.ts
+      - apps/web/e2e/screenshots.spec.ts
+  - id: identity_and_session_view
+    status: verified_local_mocked_browser
+    evidence:
+      - reconforge/api/routes/identity_administration.py
+      - apps/web/src/data.admin.test.ts
+      - apps/web/e2e/screenshots.spec.ts
+  - id: browser_session_revocation
+    status: verified_scoped
+    evidence:
+      - reconforge/api/routes/identity_administration.py
+      - apps/web/src/data.ts
+      - apps/web/src/components/AdminAudit.tsx
+      - apps/web/src/data.admin.test.ts
+      - apps/web/e2e/screenshots.spec.ts
+      - apps/web/e2e/browser-session-live.spec.ts
+  - id: browser_user_status_lifecycle
+    status: verified_scoped
+    evidence:
+      - reconforge/api/routes/identity_administration.py
+      - reconforge/infrastructure/postgres_identity_administration.py
+      - apps/web/src/data.ts
+      - apps/web/src/components/AdminAudit.tsx
+      - apps/web/src/data.admin.test.ts
+      - apps/web/e2e/screenshots.spec.ts
+      - apps/web/e2e/browser-session-live.spec.ts
+  - id: access_policy_view
+    status: verified_local_mocked_browser
+    evidence:
+      - reconforge/api/routes/access_administration.py
+      - apps/web/src/data.admin.test.ts
+      - apps/web/e2e/screenshots.spec.ts
+  - id: browser_access_policy_lifecycle
+    status: verified_scoped
+    evidence:
+      - reconforge/api/routes/access_administration.py
+      - reconforge/infrastructure/postgres_access_administration.py
+      - apps/web/src/data.ts
+      - apps/web/src/components/AdminAccessMutations.tsx
+      - apps/web/src/data.admin.test.ts
+      - apps/web/e2e/screenshots.spec.ts
+      - apps/web/e2e/browser-session-live.spec.ts
+  - id: integration_and_retention_view
+    status: verified_local_mocked_browser
+    evidence:
+      - reconforge/api/routes/security_governance.py
+      - apps/web/src/data.admin.test.ts
+      - apps/web/e2e/screenshots.spec.ts
+  - id: browser_integration_and_retention_lifecycle
+    status: verified_scoped
+    evidence:
+      - reconforge/api/routes/security_governance.py
+      - reconforge/infrastructure/postgres_security_governance.py
+      - apps/web/src/data.ts
+      - apps/web/src/components/AdminGovernanceMutations.tsx
+      - apps/web/src/data.admin.test.ts
+      - apps/web/e2e/screenshots.spec.ts
+      - tests/test_postgres_security_governance.py
+  - id: live_postgresql_server_authorization
+    status: verified_scoped
+    evidence:
+      - tests/test_postgres_security_center.py
+      - tests/test_postgres_identity_administration.py
+      - tests/test_postgres_access_administration.py
+      - tests/test_postgres_security_governance.py
+      - tests/test_api_server_identity.py
+  - id: localization_and_automated_accessibility
+    status: verified_scoped
+    evidence:
+      - apps/web/e2e/accessibility.spec.ts
+      - apps/web/e2e/screenshots.spec.ts
+failure_matrix:
+  - threat: bearer_credential_browser_persistence
+    result: absent_from_browser_contract
+    evidence: tests/test_api_browser_sessions.py
+  - threat: hostile_host_or_cross_origin_admin_surface
+    result: exact_host_allowlist_rejects_wildcards_and_runtime_hostile_host_returns_400
+    evidence: tests/test_api_https_hosting.py
+  - threat: missing_asset_falls_back_to_executable_html
+    result: asset_like_404_is_preserved_while_extensionless_spa_routes_use_index
+    evidence: tests/test_api_foundation.py
+  - threat: secure_cookie_origin_lacks_browser_response_policy
+    result: real_hostname_verified_tls_origin_emits_hsts_csp_and_existing_security_headers
+    evidence: tests/test_api_https_hosting.py
+  - threat: cookie_principal_missing_from_sync_server_route_or_csrf_bypass
+    result: denied_without_csrf_and_bound_with_valid_cookie_proof
+    evidence: tests/test_api_server_cookie_principal.py
+  - threat: expanded_audit_or_governance_disclosure
+    result: rejected_before_render
+    evidence: apps/web/src/data.admin.test.ts
+  - threat: raw_ip_email_secret_or_evidence_reference_display
+    result: absent_from_allowlisted_views
+    evidence: apps/web/src/components/AdminAudit.tsx
+  - threat: unavailable_secondary_permission_hides_audit
+    result: isolated_snapshot_failure
+    evidence: apps/web/src/components/AdminAudit.tsx
+  - threat: accidental_or_stale_session_revocation
+    result: denied_until_step_up_csrf_reason_literal_confirmation_and_lifecycle_version
+    evidence: apps/web/src/components/AdminAudit.tsx
+  - threat: current_session_revocation_leaves_privileged_browser_state
+    result: local_administration_state_is_cleared_and_sign_in_is_required
+    evidence: apps/web/e2e/browser-session-live.spec.ts
+  - threat: self_disable_or_last_administrator_loss
+    result: client_hides_current_operator_control_and_server_rejects_both_invariants
+    evidence: tests/test_postgres_identity_administration.py
+  - threat: user_reenable_restores_revoked_sessions
+    result: zero_active_and_one_revoked_session_after_live_disable_enable_cycle
+    evidence: apps/web/e2e/browser-session-live.spec.ts
+  - threat: additive_role_ui_preserves_unreviewed_authority
+    result: checkboxes_are_preloaded_and_submitted_as_one_exact_replacement_set
+    evidence: apps/web/src/components/AdminAccessMutations.tsx
+  - threat: role_reactivation_restores_assignments_or_sessions
+    result: live_cycle_finishes_with_zero_assignments_and_one_revoked_target_session
+    evidence: apps/web/e2e/browser-session-live.spec.ts
+  - threat: integration_disable_uses_stale_or_unconfirmed_state
+    result: denied_until_step_up_csrf_state_digest_reason_and_disable_literal_confirmation
+    evidence: apps/web/src/components/AdminGovernanceMutations.tsx
+  - threat: retention_policy_shortens_existing_evidence_retention
+    result: current_postgresql_trigger_and_application_cycle_preserve_the_longer_floor
+    evidence: tests/test_postgres_security_governance.py
+  - threat: evidence_reference_persists_in_browser_view
+    result: transient_input_is_cleared_after_apply_or_cancel_and_never_rendered_from_server_lists
+    evidence: apps/web/src/components/AdminGovernanceMutations.tsx
+runtime_evidence:
+  locked_full_regression: 1879_passed_62_declared_external_skips
+  locked_full_regression_duration_seconds: 271.38
+  ambient_python_full_collection: blocked_missing_optional_cbor2_not_counted_as_pass_or_failure
+  focused_same_origin_https_cookie_csrf: 16_passed
+  real_https_transport: hostname_verified_tls_1_2_or_1_3_spa_api_same_origin_hostile_host_rejected
+  web_playwright_https_production_bundle: 1_passed_no_csp_violations
+  web_playwright_https_production_bundle_duration_seconds: 7.7
+  python_package_build: wheel_and_sdist_passed
+  package_membership: wheel_runtime_paths_and_sdist_adr_runbook_boundary_each_present_once
+  web_typecheck: passed
+  web_vitest: 55_passed
+  web_build: passed
+  web_playwright: 11_passed_5_opt_in_live_tests_skipped
+  web_playwright_scope: mocked_same_origin_api_contracts_and_scoped_axe_regression
+  web_playwright_live_browser_session: 1_passed
+  web_playwright_live_browser_session_scope: localhost_vite_proxy_and_synthetic_postgresql_17_10_identity_and_administration_reads
+  web_playwright_live_browser_session_revocation: 1_passed
+  web_playwright_live_browser_session_revocation_scope: localhost_vite_proxy_synthetic_postgresql_17_10_current_session_only_with_explicit_confirmation
+  web_playwright_live_browser_user_status: 1_passed
+  web_playwright_live_browser_user_status_scope: localhost_vite_proxy_synthetic_postgresql_17_10_disable_enable_without_session_restoration
+  web_playwright_live_browser_access_lifecycle: 1_passed
+  web_playwright_live_browser_access_lifecycle_scope: localhost_vite_proxy_synthetic_postgresql_17_10_exact_role_permission_assignment_retire_reactivate_cycle
+  live_postgresql: 4_security_governance_tests_passed_current_fresh_schema
+  live_postgresql_scope: synthetic_postgresql_17_10_non_superuser_nobypassrls_integration_disable_policy_lifecycle_non_shortening_atomicity_and_tenant_isolation
+limitations:
+  - no_external_reverse_proxy_public_certificate_lifecycle_or_internet_facing_tls_evidence
+  - no_screen_reader_interoperability_or_accessibility_certification
+  - browser_integration_and_retention_flow_is_contract_mocked_while_the_same_http_contract_is_independently_live_verified_on_postgresql
+  - no_external_security_assurance
+  - no_ha_dr_or_enterprise_ready_claim
+publication:
+  commit: false
+  push: false
+  pull_request: false
+  release: false

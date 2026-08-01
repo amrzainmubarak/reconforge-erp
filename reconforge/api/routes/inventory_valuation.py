@@ -21,11 +21,7 @@ MAX_API_LIST_LIMIT = 1_000
 
 InventoryRead = Annotated[
     LocalUser,
-    Depends(
-        require_any_permission(
-            {"inventory.read", "inventory.valuation.manage", "inventory.valuation.approve"}
-        )
-    ),
+    Depends(require_any_permission({"inventory.read", "inventory.valuation.manage", "inventory.valuation.approve"})),
 ]
 ValuationManage = Annotated[LocalUser, Depends(require_permission("inventory.valuation.manage"))]
 ValuationApprove = Annotated[LocalUser, Depends(require_permission("inventory.valuation.approve"))]
@@ -74,9 +70,7 @@ def _error(code: str, exc: Exception) -> APIError:
     return APIError(status_code=400, code=code, message=str(exc))
 
 
-def _list_response(
-    key: str, records: list[dict[str, object]], *, limit: int, offset: int
-) -> dict[str, object]:
+def _list_response(key: str, records: list[dict[str, object]], *, limit: int, offset: int) -> dict[str, object]:
     return {key: records, "pagination": {"limit": limit, "offset": offset, "returned": len(records)}}
 
 
@@ -87,9 +81,7 @@ def summary(
     workspace: str = "default",
 ) -> dict[str, object]:
     try:
-        result = InventoryValuationService(connection).summary(
-            workspace=workspace, actor_label=current_user.username
-        )
+        result = InventoryValuationService(connection).summary(workspace=workspace, actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_summary_failed", exc) from exc
     return {"summary": result.to_dict()}
@@ -102,9 +94,7 @@ def snapshot(
     workspace: str = "default",
 ) -> dict[str, object]:
     try:
-        return InventoryValuationService(connection).snapshot(
-            workspace=workspace, actor_label=current_user.username
-        )
+        return InventoryValuationService(connection).snapshot(workspace=workspace, actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_snapshot_failed", exc) from exc
 
@@ -171,9 +161,7 @@ def create_document(
 ) -> dict[str, object]:
     values = payload.model_dump()
     try:
-        record = InventoryValuationService(connection).create_document(
-            **values, actor_label=current_user.username
-        )
+        record = InventoryValuationService(connection).create_document(**values, actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_document_create_failed", exc) from exc
     return {"document": record}
@@ -186,9 +174,7 @@ def get_document(
     connection: sqlite3.Connection = Depends(get_db),
 ) -> dict[str, object]:
     try:
-        record = InventoryValuationService(connection).get_document(
-            document_id, actor_label=current_user.username
-        )
+        record = InventoryValuationService(connection).get_document(document_id, actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_document_read_failed", exc) from exc
     return {"document": record}

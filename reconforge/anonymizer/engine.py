@@ -83,20 +83,14 @@ def verify_anonymization_manifest(
         raise ValueError(f"unsupported anonymization manifest schema_version: {schema_version}")
     if payload.get("policy_digest_algorithm") != "sha256" or payload.get("manifest_digest_algorithm") != "sha256":
         raise ValueError("unsupported anonymization manifest digest algorithm")
-    policy_fields = (
-        _MANIFEST_POLICY_FIELDS_V1
-        if schema_version == 1
-        else _MANIFEST_POLICY_FIELDS_V2
-    )
+    policy_fields = _MANIFEST_POLICY_FIELDS_V1 if schema_version == 1 else _MANIFEST_POLICY_FIELDS_V2
     if any(field not in payload for field in policy_fields):
         raise ValueError("anonymization manifest policy fields are incomplete")
     financial_input_policy: FinancialInputPolicy
     if schema_version == 1:
         financial_input_policy = LEGACY_FINANCIAL_INPUT_POLICY
     else:
-        financial_input_policy = validate_financial_input_policy(
-            payload.get("financial_input_policy")
-        )
+        financial_input_policy = validate_financial_input_policy(payload.get("financial_input_policy"))
     expected_policy = {
         "algorithm_version": AMOUNT_NOISE_ALGORITHM_VERSION,
         "prng": "python-random-mt19937-randint",
@@ -127,8 +121,10 @@ def verify_anonymization_manifest(
     if not isinstance(seed_fingerprint, str) or not _SHA256_PATTERN.fullmatch(seed_fingerprint):
         raise ValueError("anonymization manifest seed_fingerprint is invalid")
     source_files = payload.get("source_files")
-    if not isinstance(source_files, list) or not source_files or any(
-        not isinstance(item, str) or not item for item in source_files
+    if (
+        not isinstance(source_files, list)
+        or not source_files
+        or any(not isinstance(item, str) or not item for item in source_files)
     ):
         raise ValueError("anonymization manifest source_files are invalid")
     if not isinstance(payload.get("private_mapping_exported"), bool):
@@ -240,8 +236,7 @@ def _manifest_payload(
         "policy_digest": _sha256_payload(policy),
         "source_files": [path.name for path in source_files],
         "outputs": [
-            {"name": path.name, "bytes": path.stat().st_size, "sha256": _file_sha256(path)}
-            for path in output_files
+            {"name": path.name, "bytes": path.stat().st_size, "sha256": _file_sha256(path)} for path in output_files
         ],
         "private_mapping_exported": private_mapping_exported,
         "privacy_boundary": _PRIVACY_BOUNDARY,

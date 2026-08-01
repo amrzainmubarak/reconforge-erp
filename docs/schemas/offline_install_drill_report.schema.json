@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/offline_install_drill_report.schema.json",
+  "title": "ReconForge disconnected installation drill report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "executed_at", "application_version", "runtime", "bundle", "installation", "scope_status", "limitations"],
+  "properties": {
+    "schema": {"const": "reconforge-offline-install-drill-report-v1"},
+    "executed_at": {"type": "string", "format": "date"},
+    "application_version": {"const": "0.7.1"},
+    "runtime": {
+      "type": "object", "additionalProperties": false,
+      "required": ["image", "image_digest", "python", "platform"],
+      "properties": {
+        "image": {"const": "python:3.14.1-slim"},
+        "image_digest": {"const": "sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e"},
+        "python": {"const": "3.14.1"},
+        "platform": {"const": "linux/amd64"}
+      }
+    },
+    "bundle": {
+      "type": "object", "additionalProperties": false,
+      "required": ["manifest_sha256", "entry_count", "total_bytes", "source_lock", "wheel_only"],
+      "properties": {
+        "manifest_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "entry_count": {"const": 60},
+        "total_bytes": {"const": 98913160},
+        "source_lock": {"const": "uv.lock"},
+        "wheel_only": {"const": true}
+      }
+    },
+    "installation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["network_mode", "root_filesystem", "bundle_mount", "pip_no_index", "pip_no_deps", "pip_require_hashes", "doctor_exit_zero", "cleanup_complete"],
+      "properties": {
+        "network_mode": {"const": "none"},
+        "root_filesystem": {"const": "read-only"},
+        "bundle_mount": {"const": "read-only"},
+        "pip_no_index": {"const": true},
+        "pip_no_deps": {"const": true},
+        "pip_require_hashes": {"const": true},
+        "doctor_exit_zero": {"const": true},
+        "cleanup_complete": {"const": true}
+      }
+    },
+    "scope_status": {"const": "verified-single-linux-runtime-install"},
+    "limitations": {
+      "type": "array", "minItems": 6, "uniqueItems": true,
+      "items": {"enum": ["no_offline_signature_trust", "no_local_identity_recovery", "no_backup_restore_in_same_drill", "no_upgrade_rollback_in_same_drill", "single_platform_single_run", "no_physical_airgap_claim", "no_production_readiness_claim"]}
+    }
+  }
+}

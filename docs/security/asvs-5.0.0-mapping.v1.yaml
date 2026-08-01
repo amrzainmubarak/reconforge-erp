@@ -130,7 +130,7 @@ chapters:
         status: partial
         scope: Implemented preparer/reviewer/approval and high-risk local control workflows.
         owner: identity-security
-        evidence: [reconforge/auth/policy.py, reconforge/auth/rbac.py, reconforge/platform/approvals.py]
+        evidence: [reconforge/auth/policy.py, reconforge/auth/rbac.py, reconforge/application/approvals.py, reconforge/infrastructure/sqlite_approvals.py, reconforge/platform/approvals.py]
         test_evidence: [tests/test_policy_engine.py, tests/test_approval_sod.py, tests/test_approval_surface_inventory.py, tests/test_workflow_state_machine.py]
         assessment: The central primitive denies missing permissions and unauthorized supplied tenant/workspace/entity/period scopes; generated ownership properties and an exact inventory cover all nine current platform approve/review service methods, including trusted-local workflow labels.
         gap_or_limitation: The property primitive is not universally integrated at every route/repository, and amount/region/data-class rules, assignments/delegation, privileged emergency access, external identity governance, and deployed effectiveness remain incomplete.
@@ -281,7 +281,7 @@ chapters:
     chapter_name: Authentication
     official_requirement_count: 47
     chapter_assessment: partial
-    chapter_boundary: Selected password and login-abuse controls only; 43 requirements, including MFA, remain unassessed.
+    chapter_boundary: Selected password, login-abuse, and bounded user-verified WebAuthn controls only; remaining authentication requirements, including recovery and broad MFA lifecycle coverage, remain unassessed.
     mappings:
       - requirement_id: v5.0.0-6.1.1
         level: 1
@@ -321,7 +321,7 @@ chapters:
         evidence: []
         test_evidence: []
         assessment: No self-service password recovery capability is implemented.
-        gap_or_limitation: Operator/admin password change is not a complete secure recovery ceremony and MFA is absent.
+        gap_or_limitation: Operator/admin password change is not a complete secure recovery ceremony; bounded WebAuthn MFA exists but recovery and lifecycle governance remain absent.
         next_action: Design recovery only with identity proof, token lifetime/replay controls, audit, and MFA compatibility.
 
   - chapter_id: V7

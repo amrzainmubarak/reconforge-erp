@@ -8,7 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict
 
-from reconforge.api.dependencies import get_current_user, get_db, require_any_permission
+from reconforge.api.dependencies import get_db, require_any_permission, require_dynamic_policy_user
 from reconforge.api.errors import APIError
 from reconforge.auth import AuthRepositoryError
 from reconforge.auth.models import LocalUser
@@ -17,7 +17,14 @@ from reconforge.workflow import WorkflowRepositoryError, WorkflowService, Workfl
 
 router = APIRouter(prefix="/workflow", tags=["workflow"])
 
-WorkflowRead = Annotated[LocalUser, Depends(require_any_permission({"db.read", "reconciliation.prepare", "reconciliation.review", "reconciliation.approve", "controls.test"}))]
+WorkflowRead = Annotated[
+    LocalUser,
+    Depends(
+        require_any_permission(
+            {"db.read", "reconciliation.prepare", "reconciliation.review", "reconciliation.approve", "controls.test"}
+        )
+    ),
+]
 
 
 class CreateWorkflowObjectRequest(BaseModel):
@@ -44,7 +51,10 @@ def list_transitions(
     """List transition templates for a workflow object type."""
 
     try:
-        transitions = [transition.model_dump(mode="json") for transition in WorkflowService(connection).list_allowed_transitions(object_type=object_type)]
+        transitions = [
+            transition.model_dump(mode="json")
+            for transition in WorkflowService(connection).list_allowed_transitions(object_type=object_type)
+        ]
     except (DatabaseError, AuthRepositoryError, WorkflowRepositoryError, WorkflowServiceError) as exc:
         raise APIError(status_code=400, code="workflow_transitions_failed", message=str(exc)) from exc
     return {"transitions": transitions}
@@ -90,7 +100,7 @@ def transition_object(
     object_type: str,
     object_id: str,
     payload: TransitionRequest,
-    current_user: LocalUser = Depends(get_current_user),
+    current_user: LocalUser = Depends(require_dynamic_policy_user),
     connection: sqlite3.Connection = Depends(get_db),
 ) -> dict[str, object]:
     """Perform a local workflow transition as the authenticated user."""
@@ -118,7 +128,10 @@ def object_history(
     """List local workflow transition history."""
 
     try:
-        history = [event.model_dump(mode="json") for event in WorkflowService(connection).list_history(object_type=object_type, object_id=object_id)]
+        history = [
+            event.model_dump(mode="json")
+            for event in WorkflowService(connection).list_history(object_type=object_type, object_id=object_id)
+        ]
     except (DatabaseError, AuthRepositoryError, WorkflowRepositoryError, WorkflowServiceError) as exc:
         raise APIError(status_code=400, code="workflow_history_failed", message=str(exc)) from exc
     return {"history": history}

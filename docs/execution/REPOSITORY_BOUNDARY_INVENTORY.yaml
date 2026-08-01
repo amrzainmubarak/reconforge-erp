@@ -1,0 +1,167 @@
+schema_version: 1
+updated_at: "2026-07-30"
+claim_boundary: >-
+  This inventory measures source coupling. A partial repository does not prove
+  backend neutrality, and only a connection-free application service may be
+  classified backend_neutral.
+allowed_statuses: [direct_sqlite, partial_repository, compatibility_adapter, backend_neutral]
+platform_services:
+  - {file: accounts.py, service: AccountReconciliationService, status: compatibility_adapter}
+  - {file: approvals.py, service: ApprovalService, status: compatibility_adapter}
+  - {file: close.py, service: CloseManagementService, status: compatibility_adapter}
+  - {file: controls.py, service: ControlTestingService, status: compatibility_adapter}
+  - {file: evidence.py, service: EvidenceRegistryService, status: compatibility_adapter}
+  - {file: exceptions.py, service: ExceptionQueueService, status: compatibility_adapter}
+  - {file: finance_core.py, service: FinanceCoreService, status: compatibility_adapter}
+  - {file: intercompany.py, service: IntercompanyService, status: compatibility_adapter}
+  - {file: inventory_core.py, service: InventoryCoreService, status: compatibility_adapter}
+  - {file: inventory_planning.py, service: InventoryPlanningService, status: compatibility_adapter}
+  - {file: inventory_valuation.py, service: InventoryValuationService, status: compatibility_adapter}
+  - {file: inventory_valuation_reversal.py, service: InventoryValuationReversalService, status: compatibility_adapter}
+  - {file: journals.py, service: JournalControlService, status: compatibility_adapter}
+  - {file: master_data.py, service: MasterDataService, status: compatibility_adapter}
+  - {file: matching.py, service: MatchingService, status: compatibility_adapter}
+  - {file: metrics.py, service: MetricsService, status: compatibility_adapter}
+  - {file: operations.py, service: OperationsService, status: compatibility_adapter}
+  - {file: outbox.py, service: OutboxService, status: compatibility_adapter}
+  - {file: payables.py, service: PayablesService, status: compatibility_adapter}
+  - {file: receivables.py, service: ReceivablesService, status: compatibility_adapter}
+application_services:
+  - file: grouped_matching.py
+    service: GroupedMatchingApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.grouped_matching_strategy.GroupedSubsetSumStrategy
+  - file: backup_restore.py
+    service: BackupRestoreApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_backup.PostgresNativeBackupAdapter
+  - file: idempotency.py
+    service: IdempotencyApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_idempotency.SQLiteIdempotencyRepository
+  - file: workspace_periods.py
+    service: WorkspacePeriodApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_domain.SQLiteDomainUnitOfWork
+  - file: operations.py
+    service: OperationsApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_operations.SQLiteOperationsRepository
+  - file: jobs.py
+    service: DurableJobApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_jobs.SQLiteDurableJobRepository
+  - file: jobs.py
+    service: DurableJobWorkerService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_jobs.SQLiteDurableJobRepository
+  - file: metrics.py
+    service: MetricsApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_metrics.SQLiteMetricsRepository
+  - file: outbox.py
+    service: OutboxApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_outbox.SQLiteOutboxRepository
+  - file: scheduler.py
+    service: SchedulerApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_scheduler.PostgresScheduleRepository
+  - file: notifications.py
+    service: NotificationApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_notifications.PostgresNotificationRepository
+  - file: security_center.py
+    service: SecurityCenterApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_security_center.PostgresSecurityCenterRepository
+  - file: identity_administration.py
+    service: IdentityAdministrationApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_identity_administration.PostgresIdentityAdministrationRepository
+  - file: access_administration.py
+    service: AccessAdministrationApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_access_administration.PostgresAccessAdministrationRepository
+  - file: security_governance.py
+    service: SecurityGovernanceApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_security_governance.PostgresSecurityGovernanceRepository
+  - file: audit_browsing.py
+    service: AuditBrowsingApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_audit_browsing.PostgresAuditBrowsingRepository
+  - file: exceptions.py
+    service: ExceptionQueueApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_exceptions.SQLiteExceptionQueueRepository
+  - file: approvals.py
+    service: ApprovalApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_approvals.SQLiteApprovalRepository
+  - file: journals.py
+    service: JournalControlApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_journals.SQLiteJournalControlRepository
+  - file: controls.py
+    service: ControlTestingApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_controls.SQLiteControlTestingRepository
+  - file: intercompany.py
+    service: IntercompanyApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_intercompany.SQLiteIntercompanyRepository
+  - file: close.py
+    service: CloseManagementApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_close.SQLiteCloseManagementRepository
+  - file: accounts.py
+    service: AccountReconciliationApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_accounts.SQLiteAccountReconciliationRepository
+  - file: evidence.py
+    service: EvidenceRegistryApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_evidence.SQLiteEvidenceRegistryRepository
+  - file: master_data.py
+    service: MasterDataApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_master_data.SQLiteMasterDataRepository
+  - file: finance_core.py
+    service: FinanceCoreApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_finance_core.SQLiteFinanceCoreRepository
+  - file: inventory_core.py
+    service: InventoryCoreApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_inventory_core.SQLiteInventoryCoreRepository
+  - file: payables.py
+    service: PayablesApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_payables.SQLitePayablesRepository
+  - file: receivables.py
+    service: ReceivablesApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_receivables.SQLiteReceivablesRepository
+  - file: matching.py
+    service: MatchingApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_matching.SQLiteMatchingRepository
+  - file: inventory_valuation.py
+    service: InventoryValuationApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_inventory_valuation.SQLiteInventoryValuationRepositoryAdapter
+  - file: inventory_valuation_reversal.py
+    service: InventoryValuationReversalApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_inventory_valuation_reversal.SQLiteInventoryValuationReversalRepositoryAdapter
+  - file: inventory_planning.py
+    service: InventoryPlanningApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_inventory_planning.SQLiteInventoryPlanningRepositoryAdapter
+summary:
+  platform_total: 20
+  direct_sqlite: 0
+  partial_repository: 0
+  compatibility_adapter: 20
+  backend_neutral_application: 33

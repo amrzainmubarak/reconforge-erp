@@ -18,10 +18,7 @@ def ensure_auth_schema(connection: sqlite3.Connection) -> None:
     """Ensure the local database has the auth/RBAC migration applied."""
 
     try:
-        user_columns = {
-            str(row["name"])
-            for row in connection.execute("PRAGMA table_info(users)").fetchall()
-        }
+        user_columns = {str(row["name"]) for row in connection.execute("PRAGMA table_info(users)").fetchall()}
         role_permissions = connection.execute(
             "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'role_permissions'",
         ).fetchone()

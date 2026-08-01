@@ -139,7 +139,7 @@ ADRs to 81; schemas remain 53 and workflows remain six.
 
 ## Data, persistence, and jobs
 
-- `reconforge/db/`: SQLite schema/migrations, import/export, backup/restore, and tenant routing helpers. Database import and restore JSON use separate named, bounded, strict, duplicate-safe profiles; operational authorization, encryption, malware scanning, and DR remain gaps.
+- `reconforge/db/`: SQLite schema/migrations, import/export, backup/restore, optional authenticated backup encryption, and tenant routing helpers. Database import and restore JSON use separate named, bounded, strict, duplicate-safe profiles; malware scanning, managed key lifecycle, and complete DR remain gaps.
 - `alembic/versions/`: 11 optional PostgreSQL server-profile migrations.
 - `reconforge/infrastructure/`: PostgreSQL repositories, Redis coordination, and object-storage adapters.
 - `reconforge/workers/`: outbox and PostgreSQL reconciliation workers.
@@ -168,7 +168,7 @@ ADRs to 81; schemas remain 53 and workflows remain six.
 
 ## Contracts and delivery
 
-- `docs/schemas/`: 61 JSON schemas, including field-specific persisted JSON, database backup/import, file-ingestion, evidence/report compatibility, release/SBOM/supply-chain, golden-data, risk/maturity/engine, security/threat/ASVS/SSDF/SLSA, browser, and module contracts.
+- `docs/schemas/`: 64 JSON schemas, including matching-strategy and backup/restore manifests, field-specific persisted JSON, database backup/import, file-ingestion, evidence/report compatibility, release/SBOM/supply-chain, golden-data, risk/maturity/engine, security/threat/ASVS/SSDF/SLSA, browser, and module contracts.
 - `tests/golden/`: schema-validated synthetic finance registry and five frozen registry/input files with layered SHA-256 evidence, including bounded dense ambiguity; these are correctness fixtures, not performance datasets.
 - `docs/risk-register.yaml`: normalized 18-risk governance source with schema/rating/evidence/review validation; the Markdown register remains its readable narrative view.
 - `docs/execution/MATURITY_POLICY.yaml`: evidence-linked ceilings for all nine modules and seven designated publishing surfaces; all current modules are Experimental.
@@ -180,7 +180,7 @@ ADRs to 81; schemas remain 53 and workflows remain six.
 - `.github/workflows/`: CI, CodeQL, Docker, security, release candidate with integrated exact-subject SBOMs, and OpenSSF Scorecard workflows; action references observed in the workflows are pinned by full commit SHA.
 - `Dockerfile`: digest-pinned Python 3.11 slim base plus checksum/version-pinned uv and a locked non-editable runtime-only sync; local daemon verification is blocked in this environment.
 - `docker-compose.yml`: local report/dashboard services; image tag is mutable.
-- `pyproject.toml` + `uv.lock`: lower-bounded consumer metadata plus a universal hash-bearing repository resolution for 103 non-root runtime/server/build/tool packages, enforced with exact uv/cutoff policy.
+- `pyproject.toml` + `uv.lock`: lower-bounded consumer metadata plus a universal hash-bearing repository resolution for 118 non-root runtime/server/observability/backup/federation/build/tool packages, enforced with exact uv/cutoff policy; server includes boto3, observability pins OpenTelemetry API/SDK 1.44.0, backup pins cryptography 49.0.0, and federation pins joserfc 1.7.4 plus python3-saml 1.16.0.
 - `apps/web/package-lock.json`: exact npm dependency versions for the web app; 155 non-root entries lack embedded `resolved`/`integrity` values and remain an explicit gap.
 
 ## Important inventory limitations

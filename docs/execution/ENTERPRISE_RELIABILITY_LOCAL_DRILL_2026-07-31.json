@@ -1,0 +1,46 @@
+{
+  "checks": {
+    "all_metrics_exported": true,
+    "all_signals_recovered": true,
+    "capacity_became_critical": true,
+    "dependency_became_critical": true,
+    "log_correlated": true,
+    "trace_exported": true
+  },
+  "failure": {
+    "api-errors": "normal",
+    "api-latency": "normal",
+    "audit-integrity": "normal",
+    "dependency-readiness": "critical",
+    "job-age": "normal",
+    "job-backlog": "normal",
+    "process-memory": "critical"
+  },
+  "limitations": [
+    "synthetic_local_process_only",
+    "no_external_collector_or_alert_manager",
+    "no_production_slo_claim",
+    "no_ha_or_external_assurance_claim"
+  ],
+  "metric_names": [
+    "reconforge.operations.audit_verification_failures",
+    "reconforge.operations.dependency_readiness_failures",
+    "reconforge.operations.http_error_basis_points",
+    "reconforge.operations.http_p95_milliseconds",
+    "reconforge.operations.job_queue_depth",
+    "reconforge.operations.oldest_queued_job_age_seconds",
+    "reconforge.operations.process_memory_mebibytes"
+  ],
+  "policy_version": "reconforge-reliability-policy-v1",
+  "profile": "local-synthetic-single-process",
+  "recovery": {
+    "api-errors": "normal",
+    "api-latency": "normal",
+    "audit-integrity": "normal",
+    "dependency-readiness": "normal",
+    "job-age": "normal",
+    "job-backlog": "normal",
+    "process-memory": "normal"
+  },
+  "schema_version": 1
+}

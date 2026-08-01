@@ -9,6 +9,7 @@ from reconforge.audit import AuditLedgerError
 from reconforge.auth import LocalAuthService
 from reconforge.db import connect, run_migrations
 from reconforge.db.backup import create_backup, restore_backup
+from reconforge.db.migrations import MIGRATIONS
 from reconforge.platform.common import PlatformError
 from reconforge.platform.receivables import (
     ReceiptAllocationInput,
@@ -292,7 +293,7 @@ def test_receivables_reject_invalid_amount_and_roll_back_audit_failure(
 def test_receivables_backup_restore_and_migration_upgrade(tmp_path: Path) -> None:
     source = tmp_path / "source.db"
     run_migrations(source, target_version=19)
-    assert run_migrations(source).current_version == 20
+    assert run_migrations(source).current_version == MIGRATIONS[-1].version
     connection = connect(source, require_exists=True)
     try:
         service = ReceivablesService(connection)

@@ -1,0 +1,146 @@
+schema_version: 1
+audit_id: E-189
+executed_at: "2026-07-29"
+task_id: P3-ENT-005
+status: verified
+scope: Deterministic scheduling, atomic durable dispatch, and optional redacted allowlisted notifications
+migration_head: 0048_postgres_notifications
+gates:
+  - id: timezone_semantics
+    status: verified
+    evidence:
+      - reconforge/domain/scheduling.py
+      - tests/test_scheduler_domain.py
+  - id: misfire_policy
+    status: verified
+    evidence:
+      - reconforge/domain/scheduling.py
+      - tests/test_scheduler_domain.py
+  - id: hosted_polling_runtime
+    status: verified
+    evidence:
+      - reconforge/workers/postgres_scheduler.py
+      - tests/test_postgres_scheduler_worker.py
+      - docs/operations/durable-scheduler.md
+  - id: atomic_idempotent_dispatch_and_notification_enqueue
+    status: verified
+    evidence:
+      - reconforge/infrastructure/postgres_scheduler.py
+      - tests/test_postgres_scheduler.py
+      - tests/test_postgres_notifications.py
+  - id: forced_rls_route_and_subscription_scope
+    status: verified
+    evidence:
+      - reconforge/infrastructure/postgres_notifications.py
+      - tests/test_postgres_notifications.py
+  - id: default_deny_egress_and_ssrf_controls
+    status: verified
+    evidence:
+      - reconforge/application/notifications.py
+      - reconforge/infrastructure/notification_transports.py
+      - tests/test_notifications.py
+      - docs/adr/0193-notifications-are-redacted-allowlisted-and-at-least-once.md
+  - id: closed_redacted_payload
+    status: verified
+    evidence:
+      - docs/schemas/notification_request.schema.json
+      - tests/test_notifications.py
+      - tests/test_postgres_notifications.py
+  - id: retry_dead_letter_replay_and_append_only_audit
+    status: verified
+    evidence:
+      - reconforge/infrastructure/postgres_outbox.py
+      - reconforge/infrastructure/postgres_notifications.py
+      - tests/test_postgres_notifications.py
+      - docs/operations/notifications.md
+  - id: migration_and_recovery
+    status: verified
+    evidence:
+      - alembic/versions/0048_postgres_notifications.py
+      - tests/test_alembic_postgres.py
+      - tests/test_postgres_operations.py
+failure_matrix:
+  - threat: implicit_or_invalid_schedule_time
+    result: rejected
+    evidence_test: test_schedule_rejects_implicit_time_and_unbounded_or_ambiguous_shape
+  - threat: dst_gap_or_fold_nondeterminism
+    result: deterministic_policy
+    evidence_test: test_dst_gap_is_explicit_and_ambiguous_time_policy_is_reproducible
+  - threat: unbounded_misfire_replay
+    result: bounded_or_operator_review
+    evidence_test: test_misfire_skip_fire_once_and_bounded_catch_up_have_distinct_cursor_semantics
+  - threat: scheduler_connection_scope_leak
+    result: fresh_scoped_connection
+    evidence_test: test_scheduler_worker_uses_stable_tenant_order_one_clock_and_fresh_connections
+  - threat: invalid_tenant_or_polling_bounds
+    result: rejected
+    evidence_test: test_scheduler_worker_fails_closed_for_invalid_clock_enumeration_and_bounds
+  - threat: disabled_or_unlisted_egress
+    result: denied
+    evidence_test: test_notification_egress_is_default_deny_and_destinations_are_closed
+  - threat: arbitrary_or_sensitive_notification_payload
+    result: schema_rejected
+    evidence_test: test_notification_envelope_is_deterministic_redacted_and_rejects_extra_fields
+  - threat: route_scope_or_destination_substitution
+    result: denied
+    evidence_test: test_notification_publisher_rechecks_scope_digest_and_routes_unrelated_events
+  - threat: webhook_ssrf_dns_rebinding_or_unsigned_payload
+    result: denied_or_pinned_and_signed
+    evidence_test: test_webhook_transport_pins_validated_public_dns_and_signs_redacted_body
+  - threat: email_recipient_or_relay_substitution
+    result: denied_or_pinned
+    evidence_test: test_email_transport_uses_allowlisted_pinned_smtps_and_plain_redacted_message
+  - threat: sibling_route_or_subscription_access
+    result: denied
+    evidence_test: test_live_postgres_scheduler_notifications_are_atomic_scoped_retryable_and_audited
+  - threat: dispatch_notification_partial_commit
+    result: transaction_rolled_back
+    evidence_test: test_live_postgres_scheduler_notifications_are_atomic_scoped_retryable_and_audited
+  - threat: transient_delivery_failure
+    result: bounded_retry_dead_letter_and_explicit_replay
+    evidence_test: test_live_postgres_scheduler_notifications_are_atomic_scoped_retryable_and_audited
+  - threat: delivery_evidence_mutation
+    result: database_rejected
+    evidence_test: test_live_postgres_scheduler_notifications_are_atomic_scoped_retryable_and_audited
+runtime_evidence:
+  postgres_image: postgres:17.10-alpine
+  app_role: non_superuser_nobypassrls
+  focused_live_result: 50_passed
+  focused_live_skips: 0
+  fresh_migration: 0001_to_0048_passed
+  fresh_migration_duration_seconds: 3.827808
+  direct_empty_rollback: 0048_to_0047_to_0048_passed
+  direct_empty_rollback_duration_seconds: 7.561
+  nonempty_rollback: refused_before_mutation_head_and_evidence_preserved
+  live_policy_count: 136
+  live_rls_table_count: 136
+  live_forced_rls_table_count: 136
+  notification_policy_count: 3
+  external_delivery: injected_synthetic_transports_only
+  external_messages_sent: 0
+  full_live_regression: 1858_passed_5_declared_environment_skips
+  full_live_regression_duration_seconds: 289.979
+  ruff: passed
+  mypy: 335_source_files_passed
+  bandit: passed_with_reviewed_suppressions
+  pip_audit: no_known_vulnerabilities_local_project_skipped
+  dependency_lock: passed
+  package_build: wheel_and_sdist_passed
+  package_archive_entries: 394_wheel_763_sdist
+  package_archive_required_paths: 5_present_in_wheel_and_sdist
+limitations:
+  - single_node_postgresql_evidence
+  - injected_synthetic_notification_transports_only
+  - no_external_provider_interoperability_evidence
+  - at_least_once_delivery_receiver_idempotency_required
+  - no_production_secret_store_evidence
+  - no_ha_or_dr_claim
+  - no_compliance_or_certification_claim
+  - no_external_penetration_or_assurance_claim
+  - no_enterprise_ready_claim
+publication:
+  commit: false
+  push: false
+  pull_request: false
+  tag: false
+  release: false

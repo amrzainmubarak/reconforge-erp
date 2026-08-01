@@ -53,8 +53,7 @@ class StructuredDocumentPolicy:
             self.max_yaml_aliases,
         )
         if self.policy_id != CURRENT_STRUCTURED_DOCUMENT_POLICY or any(
-            isinstance(value, bool) or not isinstance(value, int) or value <= 0
-            for value in values
+            isinstance(value, bool) or not isinstance(value, int) or value <= 0 for value in values
         ):
             raise ValueError("Invalid structured document policy")
 
@@ -192,9 +191,7 @@ def parse_json_document(
             text,
             object_pairs_hook=_unique_json_object,
             parse_float=(
-                _reject_json_fraction
-                if reject_fractional_numbers
-                else str if preserve_float_lexemes else float
+                _reject_json_fraction if reject_fractional_numbers else str if preserve_float_lexemes else float
             ),
             parse_constant=_reject_json_constant,
         )

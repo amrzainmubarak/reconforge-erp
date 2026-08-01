@@ -187,9 +187,7 @@ def upsert_uom(
     connection: sqlite3.Connection = Depends(get_db),
 ) -> dict[str, object]:
     try:
-        record = InventoryCoreService(connection).upsert_uom(
-            **payload.model_dump(), actor_label=current_user.username
-        )
+        record = InventoryCoreService(connection).upsert_uom(**payload.model_dump(), actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_unit_save_failed", exc) from exc
     return {"unit_of_measure": record}
@@ -226,9 +224,7 @@ def upsert_item(
     connection: sqlite3.Connection = Depends(get_db),
 ) -> dict[str, object]:
     try:
-        record = InventoryCoreService(connection).upsert_item(
-            **payload.model_dump(), actor_label=current_user.username
-        )
+        record = InventoryCoreService(connection).upsert_item(**payload.model_dump(), actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_item_save_failed", exc) from exc
     return {"item": record}
@@ -341,9 +337,7 @@ def upsert_lot(
     connection: sqlite3.Connection = Depends(get_db),
 ) -> dict[str, object]:
     try:
-        record = InventoryCoreService(connection).upsert_lot(
-            **payload.model_dump(), actor_label=current_user.username
-        )
+        record = InventoryCoreService(connection).upsert_lot(**payload.model_dump(), actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_lot_save_failed", exc) from exc
     return {"lot_or_serial": record}
@@ -399,9 +393,7 @@ def get_movement(
     connection: sqlite3.Connection = Depends(get_db),
 ) -> dict[str, object]:
     try:
-        record = InventoryCoreService(connection).get_movement(
-            movement_id, actor_label=current_user.username
-        )
+        record = InventoryCoreService(connection).get_movement(movement_id, actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_movement_not_found", exc, status_code=404) from exc
     return {"movement": record}

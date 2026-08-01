@@ -100,9 +100,21 @@ def _summary_frame(matrix: pd.DataFrame) -> pd.DataFrame:
     severity_counts = matrix["severity"].astype(str).value_counts().to_dict() if not matrix.empty else {}
     rows: list[dict[str, object]] = [
         {"metric": "control_count", "value": len(matrix), "meaning": "Rules represented as control rows."},
-        {"metric": "high_or_critical_controls", "value": int(sum(severity_counts.get(level, 0) for level in ["high", "critical"])), "meaning": "Controls with high or critical severity."},
-        {"metric": "owner_placeholders", "value": int(matrix["owner_placeholder"].astype(str).eq("").sum()) if not matrix.empty else 0, "meaning": "Rows left for local owner assignment."},
-        {"metric": "frequency_placeholders", "value": int(matrix["frequency_placeholder"].astype(str).eq("").sum()) if not matrix.empty else 0, "meaning": "Rows left for local frequency assignment."},
+        {
+            "metric": "high_or_critical_controls",
+            "value": int(sum(severity_counts.get(level, 0) for level in ["high", "critical"])),
+            "meaning": "Controls with high or critical severity.",
+        },
+        {
+            "metric": "owner_placeholders",
+            "value": int(matrix["owner_placeholder"].astype(str).eq("").sum()) if not matrix.empty else 0,
+            "meaning": "Rows left for local owner assignment.",
+        },
+        {
+            "metric": "frequency_placeholders",
+            "value": int(matrix["frequency_placeholder"].astype(str).eq("").sum()) if not matrix.empty else 0,
+            "meaning": "Rows left for local frequency assignment.",
+        },
     ]
     for severity, count in sorted(severity_counts.items()):
         rows.append({"metric": f"severity_{severity}", "value": int(count), "meaning": f"Controls marked {severity}."})
@@ -149,7 +161,9 @@ def export_control_matrix(
     )
     summary = _summary_frame(matrix)
     output_dir = ensure_output_dir(output_path)
-    workbook_path = write_excel_workbook({"Control Matrix Summary": summary, "Control Matrix": matrix}, output_dir / "control_matrix.xlsx")
+    workbook_path = write_excel_workbook(
+        {"Control Matrix Summary": summary, "Control Matrix": matrix}, output_dir / "control_matrix.xlsx"
+    )
     csv_path = output_dir / "control_matrix.csv"
     matrix.to_csv(csv_path, index=False)
     json_path = output_dir / "control_matrix.json"

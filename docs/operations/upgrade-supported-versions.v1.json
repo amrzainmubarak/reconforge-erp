@@ -1,0 +1,67 @@
+{
+  "operator_version": "0.7.1",
+  "release_state": "supported",
+  "schema": "reconforge-upgrade-supported-versions-v1",
+  "transitions": [
+    {
+      "compatibility_reader": "wheel-import-v1",
+      "evidence": ".github/scripts/verify_application_upgrade.py builds Git tags v0.7.0 and v0.7.1, cuts over offline, verifies import identity, and restores the exact source content digest.",
+      "from_version": "0.7.0",
+      "resource_id": "application-main",
+      "resource_kind": "application",
+      "rollback": "required",
+      "status": "verified",
+      "to_version": "0.7.1"
+    },
+    {
+      "compatibility_reader": "sqlite-schema-reader-v1",
+      "evidence": "tests/test_upgrade_orchestrator.py performs an isolated schema 23 to 24 drill and restores the exact canonical source database digest after a later failure.",
+      "from_version": "0.0.23",
+      "resource_id": "community-db",
+      "resource_kind": "database",
+      "rollback": "required",
+      "status": "verified",
+      "to_version": "0.0.24"
+    },
+    {
+      "compatibility_reader": "postgres-alembic-restore-v1",
+      "evidence": ".github/scripts/verify_postgres_upgrade.py passed a composed disposable PostgreSQL 17.10 drill: encrypted native backup, isolated restore, 0052 to 0053 compatibility migration, source upgrade, and verified downgrade to 0052.",
+      "from_version": "0.0.52",
+      "resource_id": "postgres-main",
+      "resource_kind": "database",
+      "rollback": "required",
+      "status": "verified",
+      "to_version": "0.0.53"
+    },
+    {
+      "compatibility_reader": "local-object-catalog-v1",
+      "evidence": "tests/test_upgrade_orchestrator.py verifies every immutable content/sidecar pair, rejects tamper before effect, cuts over the deterministic catalog, and restores it without changing object bytes.",
+      "from_version": "1.0.0",
+      "resource_id": "objects-main",
+      "resource_kind": "object_store",
+      "rollback": "required",
+      "status": "verified",
+      "to_version": "2.0.0"
+    },
+    {
+      "compatibility_reader": "config-v1-reader",
+      "evidence": "tests/test_upgrade_orchestrator.py validates the existing reconforge.yml contract, performs atomic cutover, and restores the source digest while quarantining the target.",
+      "from_version": "0.7.0",
+      "resource_id": "configuration-main",
+      "resource_kind": "configuration",
+      "rollback": "required",
+      "status": "verified",
+      "to_version": "0.7.1"
+    },
+    {
+      "compatibility_reader": "signed-pack-v1-reader",
+      "evidence": "tests/test_upgrade_orchestrator.py uses the existing Ed25519 trust registry and PackLifecycleStore to enable a preapproved 1.1.0 pack and restore approved 1.0.0.",
+      "from_version": "1.0.0",
+      "resource_id": "upgrade-pack",
+      "resource_kind": "pack",
+      "rollback": "required",
+      "status": "verified",
+      "to_version": "1.1.0"
+    }
+  ]
+}

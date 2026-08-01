@@ -1,0 +1,44 @@
+schema_version: 1
+audit_id: E-212
+executed_at: "2026-07-30"
+task_id: P3-ENT-009
+status: verified
+scope: Evidence-bounded local and disposable supported-version upgrade and rollback automation
+gates:
+  - {id: closed_supported_matrix, status: verified_focused, evidence: [docs/schemas/upgrade_supported_versions.schema.json, docs/operations/upgrade-supported-versions.v1.json, tests/test_upgrade_orchestrator.py]}
+  - {id: application_upgrade, status: verified_tagged_drill, evidence: [reconforge/upgrade/application_adapter.py, .github/scripts/verify_application_upgrade.py]}
+  - {id: sqlite_upgrade, status: verified_focused, evidence: [reconforge/upgrade/sqlite_adapter.py, tests/test_upgrade_orchestrator.py]}
+  - {id: postgres_upgrade, status: verified_disposable_runtime, evidence: [reconforge/upgrade/postgres_adapter.py, reconforge/infrastructure/postgres_backup.py, .github/scripts/verify_postgres_upgrade.py]}
+  - {id: object_catalog_upgrade, status: verified_focused, evidence: [reconforge/upgrade/object_store_adapter.py, tests/test_upgrade_orchestrator.py]}
+  - {id: configuration_upgrade, status: verified_focused, evidence: [reconforge/upgrade/configuration_adapter.py, tests/test_upgrade_orchestrator.py]}
+  - {id: signed_pack_upgrade, status: verified_focused, evidence: [reconforge/upgrade/pack_adapter.py, tests/test_upgrade_orchestrator.py]}
+  - {id: five_resource_composition, status: verified_focused, evidence: [reconforge/upgrade/orchestrator.py, tests/test_upgrade_orchestrator.py]}
+  - {id: reverse_rollback_and_uncertain_isolation, status: verified_focused, evidence: [reconforge/upgrade/orchestrator.py, tests/test_upgrade_orchestrator.py]}
+runtime_evidence:
+  focused_tests: 26_passed_1_declared_external_service_skip
+  governance_regression: 41_passed
+  tagged_application_drill: v0.7.0_to_v0.7.1_and_exact_rollback_passed
+  disposable_postgres_drill: postgres_17.10_0052_to_0053_to_0052_passed
+  locked_full_regression: 2006_collected_exit_zero_with_declared_external_skips
+  repository_ruff: passed
+  repository_mypy_source_files: 368
+  bandit: zero_findings_existing_reviewed_nosec_warnings_only
+  pip_audit: zero_known_third_party_vulnerabilities_local_unpublished_package_skipped
+  lock_check: 124_packages_resolved
+  web_typecheck: passed
+  web_tests: 55_passed
+  web_build: passed
+  wheel_bytes: 1161568
+  wheel_sha256: 6b74cc4a910fbf330844d3a35d4f0f8e92893ce86b1751c912ee445e0ed506c0
+  wheel_upgrade_modules: 8
+  sdist_bytes: 1561970
+  sdist_sha256: cb34f2664b411013bbe9f5d94a101ccb5a34d2345e239a96b06f2db1b18cc035
+  sdist_required_upgrade_evidence_members: 6
+  production_keys_secrets_or_customer_data: 0
+limitations:
+  - no_zero_downtime_or_distributed_atomic_cutover_claim
+  - no_host_loss_ha_dr_rpo_rto_or_air_gap_evidence
+  - no_production_backup_key_or_service_credential_custody
+  - no_external_publisher_customer_data_or_production_resource_drill
+  - no_compliance_certification_external_assurance_or_enterprise_ready_claim
+publication: {commit: false, push: false, pull_request: false, release: false}

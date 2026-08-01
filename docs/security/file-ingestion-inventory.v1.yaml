@@ -1,6 +1,6 @@
 schema_version: 1
 inventory_id: reconforge-file-ingestion
-reviewed_on: "2026-07-26"
+reviewed_on: "2026-08-01"
 owner: platform-security
 claim_boundary: >-
   This inventory proves repository-visible parser coverage and bounded controls only. It does not prove
@@ -301,9 +301,9 @@ surfaces:
       - reconforge/infrastructure/postgres_ledger.py::PostgresLedgerRepository.verify_audit_events
       - reconforge/infrastructure/postgres_outbox.py::_metadata
       - reconforge/infrastructure/redis.py::TenantRedisStore.get_session
-      - reconforge/platform/matching.py::MatchingService._matching_rule_document
-      - reconforge/platform/payables.py::PayablesService._idempotent
-      - reconforge/platform/receivables.py::ReceivablesService._idempotent
+      - reconforge/infrastructure/sqlite_matching.py::SQLiteMatchingRepository._matching_rule_document
+      - reconforge/infrastructure/sqlite_payables.py::SQLitePayablesRepository._idempotent
+      - reconforge/infrastructure/sqlite_receivables.py::SQLiteReceivablesRepository._idempotent
     formats: [json]
     parser_families: [json-stdlib]
     policy_coverage: partial
@@ -398,6 +398,119 @@ surfaces:
     limitations:
       - This call parses package-resource text already loaded by the currency-registry contract rather than an operator-selected filesystem path; duplicate keys and registry digest/schema invariants are enforced separately.
     next_action: Preserve package-resource digest/schema tests and reassess classification if runtime registry upload or replacement is introduced.
+  - id: FI-018
+    name: Local immutable-object sidecar manifest
+    module_ids: [platform.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/object_storage.py::LocalObjectStore.get_bytes
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-005]
+    test_evidence: [tests/test_object_storage_foundation.py, tests/test_evidence_object_storage.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - The sidecar is limited to 64 KiB and must match the schema marker, object key, byte size, checksum, and tenant metadata before content is returned.
+      - The checksum is not keyed; an attacker able to rewrite both files can forge the local pair, and a crash between two filesystem renames can leave a fail-closed incomplete pair.
+    next_action: Add authenticated manifests or an external integrity anchor when the threat model includes malicious local filesystem writers.
+  - id: FI-019
+    name: Signed connector manifest envelope
+    module_ids: [plugins.export]
+    trust: untrusted-local
+    entrypoints: [reconforge/connectors/package.py::load_verified_package]
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002]
+    test_evidence: [tests/test_connector_package.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - The 64 KiB closed envelope authenticates manifest data only and never installs executable connector code.
+      - Caller-provided trusted keys do not constitute a governed persistent publisher approval lifecycle.
+    next_action: Integrate publisher approval and revocation before any external connector distribution is enabled.
+  - id: FI-020
+    name: Signed control and industry pack envelope
+    module_ids: [packs.lifecycle]
+    trust: untrusted-local
+    entrypoints: [reconforge/packs/lifecycle.py::load_verified_pack]
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-003, SEC-C-008]
+    test_evidence: [tests/test_signed_pack_lifecycle.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-018, R-019]
+    limitations:
+      - The 2 MiB closed envelope admits declarative metadata and rules only; it cannot load executable code or migrate customer data.
+      - Publisher identity, approval authority, retention, and SQLite custody remain operator responsibilities.
+    next_action: Add production trust administration and independent publisher assurance before external distribution.
+  - id: FI-021
+    name: Upgrade plan journal and local deployment metadata
+    module_ids: [platform.core]
+    trust: generated-local
+    entrypoints:
+      - reconforge/upgrade/orchestrator.py::UpgradeOrchestrator.execute
+      - reconforge/upgrade/application_adapter.py::_deployment_identity
+      - reconforge/upgrade/configuration_adapter.py::_identity
+      - reconforge/upgrade/object_store_adapter.py::_catalog_payload
+      - reconforge/upgrade/object_store_adapter.py::_catalog_identity
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: partial
+    status: bounded
+    controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_upgrade_orchestrator.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - Application and configuration markers are closed and limited to 16 KiB; object sidecars are limited to 64 KiB and catalogs to 64 MiB/100000 verified immutable pairs. Plan and receipt JSON is generated only after closed Pydantic validation and stored in the synchronous local journal.
+      - Local deployment/catalog hashes detect accidental or unpaired changes but are not keyed authentication against an attacker who controls both content and metadata. PostgreSQL backup receipts bind the encrypted artifact digest but key custody remains external.
+    next_action: Add signed operator approval evidence and host-loss keyed key-custody evidence before production sovereign deployment claims.
+  - id: FI-022
+    name: Offline installation bundle verification
+    module_ids: [platform.core]
+    trust: generated-local
+    entrypoints:
+      - reconforge/sovereign/offline_bundle.py::verify_offline_bundle
+      - reconforge/sovereign/offline_bundle.py::_safe_file
+      - reconforge/sovereign/offline_bundle.py::_verify_requirements
+      - reconforge/sovereign/offline_bundle.py::_sha256
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_offline_bundle.py, tests/test_offline_install_drill.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - Offline-bundle verification enforces a closed manifest, explicit roles, exact file digests/sizes, path immutability, and structured schema/grammar checks before reporting a verified bundle.
+      - The helper validates only local files and local requirements hashes; installation safety, signature trust, operator identity, and production DR/security posture remain separate evidence planes.
+      - Local directory symlinks and path traversal are rejected, but filesystem-level provenance and host-loss durability are out of scope of this parser contract.
+    next_action: Bind offline-bundle trust to operator-reviewed signature and host-loss/retention evidence before treating this as a production sovereign-readiness claim.
+    next_action: Add authenticated operator key custody and host-loss durability drills without weakening fail-isolate recovery.
+  - id: FI-023
+    name: Pinned public financial evidence inputs
+    module_ids: [reconciliation.core]
+    trust: untrusted-local
+    entrypoints:
+      - reconforge/benchmark/public_financial.py::load_public_financial_manifest
+      - reconforge/benchmark/public_financial.py::_strict_csv_rows
+      - reconforge/benchmark/public_financial.py::_strict_json
+      - reconforge/benchmark/public_financial.py::run_public_financial_evidence
+    formats: [csv, json, yaml]
+    parser_families: [csv-stdlib, json-stdlib, pyyaml]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_public_financial_evidence.py, tests/test_public_financial_evidence_workflow.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - Exact HTTPS hosts, response ceilings, media types, raw hashes, schemas, encodings, and Decimal rules bound the downloaded public snapshots but do not cryptographically authenticate the publisher or prevent an upstream correction from failing the run.
+      - The report excludes raw supplier and invoice identifiers, but local disposable downloads remain operator-controlled files and must not be committed or treated as customer or audit evidence.
+      - A successful maintainer or automated run is not an external pilot, independent security review, production deployment, certification, or compliance assessment.
+    next_action: Obtain three accepted independent operator attestations and a separately scoped human security review without weakening the parser or claim boundaries.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader
@@ -434,7 +547,47 @@ direct_tabular_parser_allowlist:
     call_count: 2
     surface_id: FI-012
     rationale: Client-pack CSV redaction performs a bounded duplicate-header preflight and then streams generated rows into a controlled temporary copy.
+  - path: reconforge/benchmark/public_financial.py
+    parser: csv.DictReader
+    call_count: 1
+    surface_id: FI-023
+    rationale: Parses only size- and hash-verified public responses after strict decoding, then requires an exact unique header set and complete rows before financial normalization.
 direct_json_parser_allowlist:
+  - path: reconforge/upgrade/application_adapter.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-021
+    rationale: Parses only a generated closed deployment marker bounded to 16 KiB before exact schema, version, artifact, and recomputed tree-digest checks.
+  - path: reconforge/upgrade/configuration_adapter.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-021
+    rationale: Parses only a generated closed marker bounded to 16 KiB before exact schema/version/digest checks and strict financial configuration validation.
+  - path: reconforge/upgrade/object_store_adapter.py
+    parser: json.loads
+    call_count: 2
+    surface_id: FI-021
+    rationale: Parses bounded local object sidecars and a deterministic catalog before exact closed-field, object-byte, manifest, inventory, count, and digest verification.
+  - path: reconforge/upgrade/orchestrator.py
+    parser: json.loads
+    call_count: 5
+    surface_id: FI-021
+    rationale: Parses only plan-derived preflight/receipt rows from the synchronous internal journal; plan fields and receipt token length are closed and bounded before persistence.
+  - path: reconforge/packs/lifecycle.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-020
+    rationale: Parses only a bounded strict UTF-8 closed data-only pack envelope before Pydantic, Ed25519, declarative rule, golden, platform, and dependency validation.
+  - path: reconforge/connectors/package.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-019
+    rationale: Parses only a 64 KiB strict UTF-8 data-only envelope before closed Pydantic validation and exact Ed25519 publisher-key verification; executable entry-point fields are forbidden.
+  - path: reconforge/infrastructure/object_storage.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-018
+    rationale: Parses only a bounded internal sidecar before closed field, checksum, key, size, and tenant verification.
   - path: reconforge/io/structured.py
     parser: json.loads
     call_count: 1
@@ -445,6 +598,11 @@ direct_json_parser_allowlist:
     call_count: 1
     surface_id: FI-017
     rationale: Parses package-resource currency registry text under separate duplicate-key, schema, and digest contracts.
+  - path: reconforge/sovereign/offline_bundle.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-022
+    rationale: Parses only the closed offline bundle manifest after strict size and path checks, before manifest/entry hash checks and deterministic install-argument derivation.
 direct_yaml_parser_allowlist:
   - path: reconforge/io/structured.py
     parser: yaml.parse

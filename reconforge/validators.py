@@ -292,9 +292,15 @@ def validate_references(datasets: dict[DatasetName, pd.DataFrame]) -> list[Valid
     products = datasets.get(DatasetName.PRODUCTS)
     customers = datasets.get(DatasetName.CUSTOMERS)
 
-    valid_work_orders = set(work_orders["work_order"].astype(str)) if work_orders is not None and "work_order" in work_orders else set()
-    valid_products = set(products["product_code"].astype(str)) if products is not None and "product_code" in products else set()
-    valid_customers = set(customers["customer_code"].astype(str)) if customers is not None and "customer_code" in customers else set()
+    valid_work_orders = (
+        set(work_orders["work_order"].astype(str)) if work_orders is not None and "work_order" in work_orders else set()
+    )
+    valid_products = (
+        set(products["product_code"].astype(str)) if products is not None and "product_code" in products else set()
+    )
+    valid_customers = (
+        set(customers["customer_code"].astype(str)) if customers is not None and "customer_code" in customers else set()
+    )
 
     if stock is not None:
         for index, row in stock.iterrows():

@@ -1,0 +1,24 @@
+# Reconciliation Execution Benchmark
+
+| Metric | Value |
+| --- | --- |
+| total_records | 10000 |
+| left_rows | 5000 |
+| right_rows | 5000 |
+| partition_count | 2 |
+| partition_max_records | 10000 |
+| seed | 7 |
+| runtime_seconds | 10.3894 |
+| peak_memory_mb | 44.27 |
+| result_count | 5000 |
+| matched_rows | 5000 |
+| exception_count | 0 |
+| candidate_count_total | 5000 |
+| candidate_count_max | 1 |
+| candidate_count_mean | 1.0 |
+| result_signature | 4d1a8c3469e4c4a266c0cbcfc4ff57dc93addc2ff078cbcad677045f5b3ca2ea |
+| cpu_time_seconds | 10.4219 |
+| environment_metadata | {'collected_at_utc': '2026-07-27T19:16:28.026359Z', 'python_version': '3.14.6', 'python_implementation': 'CPython', 'platform': 'Windows-11-10.0.26200-SP0', 'machine': 'AMD64', 'processor': 'AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD', 'cpu_count': 16, 'working_directory': 'F:\\reconforge-erp'} |
+| amount_fractional_digits | 2 |
+| engine_used | local-deterministic-partitioned |
+| profile_id | single |

@@ -8,13 +8,14 @@ useDefault = true
 [[allowlists]]
 description = "Exclude VCS metadata, dependency installs, and local generated output"
 paths = [
-  '''(^|/)\.git/''',
-  '''(^|/)\.venv/''',
-  '''(^|/)\.codex-test-tmp/''',
-  '''(^|/)node_modules/''',
-  '''(^|/)__pycache__/''',
-  '''(^|/)\.mypy_cache/''',
-  '''(^|/)\.pytest_cache/''',
-  '''(^|/)\.ruff_cache/''',
-  '''(^|/)(build|dist|output)/''',
+  '''(^|[\\/])\.git[\\/]''',
+  '''(^|[\\/])\.venv[\\/]''',
+  '''(^|[\\/])\.codex-test-tmp[\\/]''',
+  '''(^|[\\/])\.tmp[\\/]''',
+  '''(^|[\\/])node_modules[\\/]''',
+  '''(^|[\\/])__pycache__[\\/]''',
+  '''(^|[\\/])\.mypy_cache[\\/]''',
+  '''(^|[\\/])\.pytest_cache[\\/]''',
+  '''(^|[\\/])\.ruff_cache[\\/]''',
+  '''(^|[\\/])(build|dist|output)[\\/]''',
 ]

@@ -40,11 +40,16 @@ reconforge anonymize --input live_exports --output anonymized_exports --mask-amo
 
 ## Vulnerability Reports
 
-Report security issues privately through GitHub private vulnerability reporting:
+The preferred channel is GitHub private vulnerability reporting when the
+repository owner has enabled it:
 
 https://github.com/amrzainmubarak/reconforge-erp/security/advisories/new
 
-If private vulnerability reporting is unavailable, contact the repository owner privately through GitHub before sharing details. Do not open a public issue for an unpatched vulnerability.
+Live repository API verification on 2026-08-01 reported that private
+vulnerability reporting was disabled. Until the owner enables and tests it,
+contact the repository owner privately before sharing details. Do not open a
+public issue for an unpatched vulnerability. Review solicitation remains blocked
+if no private channel is operational.
 
 Maintainer response targets:
 

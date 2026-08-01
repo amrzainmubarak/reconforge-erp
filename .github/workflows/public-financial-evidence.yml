@@ -1,0 +1,108 @@
+name: Public Financial Evidence
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: public-financial-evidence-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify-public-data:
+    name: Verify pinned real public financial data
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Check out exact operator-selected revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up supported Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install the immutable development resolution
+        run: uv sync --locked --extra dev --no-editable --python 3.12
+
+      - name: Verify focused hostile and contract tests
+        run: >-
+          uv run --no-sync python -m pytest
+          tests/test_public_financial_evidence.py
+          tests/test_public_financial_evidence_workflow.py -q
+
+      - name: Fetch and verify the pinned public-data evidence
+        run: >-
+          uv run --no-sync python .github/scripts/verify_public_financial_evidence.py
+          --allow-network
+          --execution-scope external-operator-candidate
+          --output public-evidence/public-financial-evidence-report.json
+
+      - name: Create the exact report checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum public-evidence/public-financial-evidence-report.json \
+            > public-evidence/SHA256SUMS
+          sha256sum --check public-evidence/SHA256SUMS
+
+      - name: Attest the exact report and checksum
+        id: attest
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
+        with:
+          subject-path: |
+            public-evidence/public-financial-evidence-report.json
+            public-evidence/SHA256SUMS
+
+      - name: Preserve and verify the provenance bundle
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ATTESTATION_BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: |
+          set -euo pipefail
+          install -m 0644 -- "$ATTESTATION_BUNDLE" \
+            public-evidence/provenance.sigstore.json
+          for subject in \
+            public-evidence/public-financial-evidence-report.json \
+            public-evidence/SHA256SUMS
+          do
+            gh attestation verify "$subject" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/public-financial-evidence.yml" \
+              --signer-digest "$GITHUB_SHA" \
+              --source-ref "$GITHUB_REF" \
+              --source-digest "$GITHUB_SHA" \
+              --deny-self-hosted-runners \
+              --bundle public-evidence/provenance.sigstore.json >/dev/null
+          done
+          sha256sum public-evidence/provenance.sigstore.json \
+            > public-evidence/ATTESTATION_SHA256SUMS
+
+      - name: Upload the independently reproducible evidence candidate
+        id: upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: public-financial-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: public-evidence/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Record the immutable workflow artifact identity
+        run: |
+          echo "artifact_id=${{ steps.upload.outputs.artifact-id }}"
+          echo "artifact_digest=${{ steps.upload.outputs.artifact-digest }}"
+          echo "This candidate is not an accepted external pilot or independent security review."

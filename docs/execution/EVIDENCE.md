@@ -109,6 +109,9 @@ This file records commands and observed results. It does not convert a dirty wor
 - This proves only a synthetic provider-neutral SDK contract. Live ERP
   credentials, vendor interoperability, posting/write-back, and production
   deployment remain unverified.
+- CI run `30768935409` passed both Python versions, server-boundaries,
+  engine-parity, and docker-parity for `14f47cd`; CodeQL `30768935937`,
+  Security `30768935708`, and Docker `30768935748` also passed.
 
 ## E-292: Expiring delegation policy invariant
 

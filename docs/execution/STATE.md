@@ -35,6 +35,13 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - It is deliberately read-only and does not count as a live bank/ERP
   integration or write-back capability.
 
+## E-285 — Central policy amount and classification bounds
+
+- `central-policy-v1` now supports exact finite Decimal amount floors/ceilings,
+  region scope, and data-classification scope with deny-by-default behavior.
+- Existing callers remain compatible because the new attributes are optional;
+  surface-wide propagation and enterprise IAM administration remain open.
+
 ## Snapshot boundary
 
 - Branch: `codex/consolidation-journal-lifecycle`, current ownership-adjustment code head `bfb29d44ae025b338a8a5d0f8311619a8292462e`; Draft PR #71 remains deliberately unmerged.

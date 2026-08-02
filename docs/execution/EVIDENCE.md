@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-285: Central policy amount, region, and classification bounds
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Implementation: `reconforge/auth/policy.py` adds finite Decimal amount
+  floor/ceiling checks and deny-by-default region/data-classification scopes;
+  `evaluate_principal_access` forwards the additive attributes.
+- Evidence: `tests/test_policy_engine.py` passed 63 focused tests, including
+  exact boundary behavior, non-finite/inverted bound refusal, scope denial,
+  SoD, self-approval, step-up, service-account, and Hypothesis scope cases.
+  Ruff and mypy passed.
+- Boundary: this proves central evaluator behavior only. It does not prove
+  attribute propagation at every API/job/export/UI surface or full enterprise
+  identity administration/RLS.
+
 ## E-284: Reference payment-statement connector
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

@@ -2096,3 +2096,12 @@
   claim.
 - Boundary: no live bank contract, settlement proof, payment posting, or
   write-back is introduced.
+# E-285 — Add bounded amount, region, and data-class ABAC attributes
+
+- Date: 2026-08-02
+- Decision: extend the central policy context with optional exact Decimal
+  amount floors/ceilings and explicit region/data-classification scopes.
+- Rationale: these are additive, deny-by-default attributes needed for
+  enterprise authorization while preserving existing callers and local mode.
+- Boundary: policy-engine behavior is covered; broad surface migration and
+  identity-provider/RLS administration remain open.

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from decimal import Decimal
 
 import pytest
 from hypothesis import HealthCheck, given, settings
@@ -272,6 +273,68 @@ def test_any_permission_contract_still_enforces_abac_scope() -> None:
     )
     assert not decision.allowed
     assert decision.reason_code == "tenant_scope_denied"
+
+
+@pytest.mark.parametrize(
+    ("amount", "minimum", "maximum", "expected_code"),
+    [
+        (Decimal("99.99"), Decimal("100.00"), Decimal("500.00"), "amount_below_floor"),
+        (Decimal("500.01"), Decimal("100.00"), Decimal("500.00"), "amount_above_ceiling"),
+        (Decimal("250.00"), Decimal("100.00"), Decimal("500.00"), "policy_allowed"),
+    ],
+)
+def test_amount_policy_is_exact_and_fail_closed(
+    amount: Decimal, minimum: Decimal, maximum: Decimal, expected_code: str
+) -> None:
+    decision = CentralPolicyEngine().evaluate(
+        PolicyEvaluationContext(
+            user_id="U-amount",
+            username="controller",
+            user_permissions={"finance_core.validate"},
+            step_up_active=True,
+            step_up_enforced=True,
+            amount=amount,
+            minimum_amount=minimum,
+            maximum_amount=maximum,
+        ),
+        required_permission="finance_core.validate",
+    )
+    assert decision.reason_code == expected_code
+    assert decision.allowed is (expected_code == "policy_allowed")
+
+
+def test_region_and_data_classification_scopes_are_deny_by_default() -> None:
+    context = PolicyEvaluationContext(
+        user_id="U-scope",
+        username="analyst",
+        user_permissions={"evidence.read"},
+        region_id="eu",
+        data_classification="restricted",
+        authorized_region_ids=frozenset({"eu"}),
+        authorized_data_classifications=frozenset({"public"}),
+    )
+    denied = CentralPolicyEngine().evaluate(context, required_permission="evidence.read")
+    assert not denied.allowed and denied.reason_code == "data_classification_scope_denied"
+    allowed = CentralPolicyEngine().evaluate(
+        PolicyEvaluationContext(
+            **{**context.__dict__, "authorized_data_classifications": frozenset({"restricted"})}
+        ),
+        required_permission="evidence.read",
+    )
+    assert allowed.allowed
+
+
+def test_amount_policy_rejects_non_finite_or_inverted_bounds() -> None:
+    with pytest.raises(ValueError, match="finite Decimal"):
+        PolicyEvaluationContext(user_id="U", username="u", user_permissions=set(), amount=Decimal("NaN"))
+    with pytest.raises(ValueError, match="minimum_amount"):
+        PolicyEvaluationContext(
+            user_id="U",
+            username="u",
+            user_permissions=set(),
+            minimum_amount=Decimal("2"),
+            maximum_amount=Decimal("1"),
+        )
 
 
 def test_policy_audit_record_is_versioned_and_redacts_actor_and_permissions(

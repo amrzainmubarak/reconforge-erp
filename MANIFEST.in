@@ -245,6 +245,7 @@ include reconforge/connectors/payment_statement_reference.py
 include tests/test_connector_payment_statement.py
 include docs/connectors/reference-payment-statement-readonly.md
 include docs/adr/0237-reference-payment-statement-is-read-only.md
+include docs/adr/0238-central-policy-amount-region-classification-bounds.md
 include tests/test_incident_response.py
 include tests/test_reliability_incident_drill.py
 include docs/security/deployment-boundaries.md

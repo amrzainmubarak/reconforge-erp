@@ -875,6 +875,8 @@ tasks:
     status: planned
     depends_on: [P1-PLAT-008, P3-ENT-001, P3-ENT-002, P3-ENT-003, P3-ENT-006]
     exit_evidence: Central versioned RBAC/ABAC covers entity, period, amount, region, data class, delegation, emergency authority, service identity, field restrictions, policy approval, cache invalidation, conflict analysis, tenant isolation, and no self-approval across API/jobs/exports/UI.
+    completed_slices:
+      - E-285 extends `central-policy-v1` with exact finite Decimal amount floors/ceilings plus region and data-classification scopes. Missing scope grants deny by default; invalid numeric bounds fail before evaluation; existing callers remain compatible. Focused policy and Hypothesis suites pass under ADR 0238. Route/job/export/UI attribute coverage, policy administration/cache invalidation, OIDC/SAML/SCIM, and PostgreSQL RLS remain open.
 
   - id: P4-PLAT-001
     priority: P4

@@ -26,6 +26,7 @@ This file records commands and observed results. It does not convert a dirty wor
 - Boundary: runtimes and throughput are hardware observations, not sizing or
   SLO claims. PostgreSQL parity, queue backpressure, retry/backoff coupling,
   soak, cancellation-under-load, HA/DR, and 100K/1M/10M tiers remain open.
+- Remote verification: Draft PR #71 head `132770a719f3d0fb20601d75e05c77dd9b035c2b` reported 15/15 required checks successful and merge state `CLEAN`. No merge, tag, release, deployment, or production mutation occurred.
 
 ## E-267: Governed write-back intent lifecycle
 

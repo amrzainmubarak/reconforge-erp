@@ -104,6 +104,7 @@ class MatchingStrategyRequest:
     netting_mode: GroupedNettingMode = "gross"
     target_currency: str = ""
     fx_rates: tuple[Mapping[str, object], ...] = ()
+    allow_partial_settlement: bool = False
 
 
 @dataclass(frozen=True)
@@ -203,6 +204,7 @@ def request_digest(request: MatchingStrategyRequest, manifest_digest: str) -> st
             "netting_mode": request.netting_mode,
             "target_currency": request.target_currency,
             "fx_rates": list(canonical_records(request.fx_rates)),
+            "allow_partial_settlement": request.allow_partial_settlement,
         }
     )
 

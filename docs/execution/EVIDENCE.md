@@ -99,6 +99,19 @@ This file records commands and observed results. It does not convert a dirty wor
 - Boundary: journal mutation/approval, compensation, crash-resume, cross-engine parity, mutation testing, and 10K/100K/1M benchmarks remain open.
 - Remote verification: Draft PR #71 head `bb0a86df62ca764b65ca02d24ab462c9e405dcc7` reported 15/15 required checks successful and merge state `CLEAN`. No merge, tag, release, deployment, or production mutation occurred.
 
+## E-265: Explicit partial groups inside portfolio matching
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Scope: portfolio candidate generation now supports unequal positive groups only when `allow_partial_settlement` is explicitly enabled. Exact candidates retain priority through the objective, residual balances are visible, and the flag is included in request/policy digests. No posting, write-back, migration, or external call occurs.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_grouped_matching.py tests/test_matching_strategy_contract.py tests/test_grouped_matching_application.py -q` | 0 | 45 focused grouped/application/strategy tests passed, including opt-in partial portfolios, residuals, exact compatibility, ambiguity, and budget behavior. |
+| `python -m pytest -q` | 0 | Full repository suite passed with no failures or collection errors; existing environment-declared skips remain. |
+
+- ADR: `docs/adr/0220-portfolio-partial-settlement-requires-explicit-policy.md`.
+- Boundary: mutation/crash-resume, cross-engine parity, and 10K/100K/1M benchmarks remain open.
+
 ## E-259: Draft PR #71 remote verification
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

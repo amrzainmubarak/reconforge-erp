@@ -143,6 +143,31 @@ def test_portfolio_budget_is_fail_closed() -> None:
     assert result.decisions[0].reason_code == "GROUP_PORTFOLIO_SEARCH_BUDGET_EXCEEDED"
 
 
+def test_portfolio_can_explicitly_select_partial_group_and_expose_residuals() -> None:
+    result = find_grouped_match_portfolio(
+        (_record("L1", "100"), _record("L2", "40")),
+        (_record("R1", "75"), _record("R2", "40")),
+        GroupedMatchPolicy(
+            mode="portfolio",
+            max_left_cardinality=1,
+            max_right_cardinality=1,
+            portfolio_allow_partial_settlement=True,
+        ),
+    )
+    assert result.status == "matched"
+    assert len(result.decisions) == 2
+    partial = next(decision for decision in result.decisions if decision.left_record_ids == ("L1",))
+    assert partial.reason_code == "GROUP_PORTFOLIO_PARTIAL_SETTLEMENT"
+    assert partial.settled_amount == Decimal("75")
+    assert partial.left_residual == Decimal("25")
+    assert partial.right_residual == Decimal("0")
+
+
+def test_portfolio_partial_flag_is_required_and_digest_bound() -> None:
+    with pytest.raises(GroupedMatchingError, match="valid only in portfolio"):
+        GroupedMatchPolicy(mode="many-to-many", portfolio_allow_partial_settlement=True)
+
+
 def test_duplicate_identity_and_cross_partition_groups_fail_closed() -> None:
     duplicate = _record("same", "1")
     with pytest.raises(GroupedMatchingError, match="identities must be unique"):

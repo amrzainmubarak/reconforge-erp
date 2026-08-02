@@ -330,6 +330,28 @@ def test_grouped_strategy_supports_non_overlapping_portfolio_mode() -> None:
     assert {item["left_record_ids"] for item in result.results} == {("L1",), ("L2",)}
 
 
+def test_grouped_strategy_supports_explicit_partial_portfolio_mode() -> None:
+    result = GroupedSubsetSumStrategy().execute(
+        MatchingStrategyRequest(
+            left_records=(
+                {"id": "L1", "amount": "100", "currency": "USD", "date": "2026-01-01", "partition": "AR"},
+                {"id": "L2", "amount": "40", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+            ),
+            right_records=(
+                {"id": "R1", "amount": "75", "currency": "USD", "date": "2026-01-01", "partition": "AR"},
+                {"id": "R2", "amount": "40", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+            ),
+            mode="portfolio",
+            allow_partial_settlement=True,
+            date_window_days=2,
+        )
+    )
+    partial = next(item for item in result.results if item["left_record_ids"] == ("L1",))
+    assert partial["reason_code"] == "GROUP_PORTFOLIO_PARTIAL_SETTLEMENT"
+    assert partial["settled_amount"] == Decimal("75")
+    assert partial["left_residual"] == Decimal("25")
+
+
 def test_grouped_strategy_reports_ambiguity_for_equal_cost_candidates() -> None:
     strategy = GroupedSubsetSumStrategy()
     result = strategy.execute(

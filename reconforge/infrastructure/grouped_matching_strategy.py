@@ -76,6 +76,7 @@ class GroupedSubsetSumStrategy:
                         max_right_cardinality=max_right_group,
                         max_search_evaluations=max_group_evaluations,
                         netting_mode=request.netting_mode,
+                        portfolio_allow_partial_settlement=request.allow_partial_settlement,
                     ),
                     left_id_field=request.left_id_field,
                     right_id_field=request.right_id_field,
@@ -145,6 +146,10 @@ class GroupedSubsetSumStrategy:
             raise MatchingStrategyContractError("Grouped strategy amount tolerance is invalid.")
         if request.netting_mode not in {"gross", "net"}:
             raise MatchingStrategyContractError("Grouped strategy netting mode is invalid.")
+        if not isinstance(request.allow_partial_settlement, bool):
+            raise MatchingStrategyContractError("Grouped strategy partial-settlement flag must be boolean.")
+        if request.allow_partial_settlement and request.mode != "portfolio":
+            raise MatchingStrategyContractError("Grouped strategy partial-settlement flag requires portfolio mode.")
         if request.netting_mode != "gross" and (
             request.left_fee_field.strip() == "" or request.right_fee_field.strip() == ""
         ):

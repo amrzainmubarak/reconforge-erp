@@ -49,6 +49,7 @@ class GroupedMatchPolicy:
     max_right_cardinality: int = 4
     max_search_evaluations: int = 25_000
     netting_mode: GroupedNettingMode = "gross"
+    portfolio_allow_partial_settlement: bool = False
 
     def __post_init__(self) -> None:
         if self.mode not in {"one-to-many", "many-to-one", "many-to-many", "partial-settlement", "portfolio"}:
@@ -70,6 +71,10 @@ class GroupedMatchPolicy:
             raise GroupedMatchingError("Many-to-many matching requires cardinality of at least two on each side.")
         if self.netting_mode not in {"gross", "net"}:
             raise GroupedMatchingError("Grouped-match netting mode is not supported.")
+        if not isinstance(self.portfolio_allow_partial_settlement, bool):
+            raise GroupedMatchingError("Portfolio partial-settlement flag must be boolean.")
+        if self.mode != "portfolio" and self.portfolio_allow_partial_settlement:
+            raise GroupedMatchingError("Portfolio partial-settlement is valid only in portfolio mode.")
 
 
 @dataclass(frozen=True)
@@ -309,7 +314,7 @@ def _portfolio_candidates(
     right: tuple[GroupedRecord, ...],
     policy: GroupedMatchPolicy,
 ) -> tuple[list[_CandidateGroup], int, bool]:
-    """Enumerate exact candidate groups under the declared portfolio budget."""
+    """Enumerate exact and explicitly-enabled partial groups under the portfolio budget."""
 
     candidates: list[_CandidateGroup] = []
     evaluations = 0
@@ -336,7 +341,14 @@ def _portfolio_candidates(
                     left_total, left_fee_total, left_net_total = _aggregate_totals(left_group, policy.netting_mode)
                     right_total, right_fee_total, right_net_total = _aggregate_totals(right_group, policy.netting_mode)
                     difference = abs(left_net_total - right_net_total)
-                    if difference > policy.amount_tolerance:
+                    exact = difference <= policy.amount_tolerance
+                    partial = (
+                        policy.portfolio_allow_partial_settlement
+                        and not exact
+                        and left_net_total > 0
+                        and right_net_total > 0
+                    )
+                    if not exact and not partial:
                         continue
                     candidates.append(
                         _CandidateGroup(
@@ -351,9 +363,9 @@ def _portfolio_candidates(
                             difference=difference,
                             date_span=date_span,
                             settled_amount=min(left_net_total, right_net_total),
-                            left_residual=Decimal("0"),
-                            right_residual=Decimal("0"),
-                            partial=False,
+                            left_residual=(left_net_total - min(left_net_total, right_net_total)) if partial else Decimal("0"),
+                            right_residual=(right_net_total - min(left_net_total, right_net_total)) if partial else Decimal("0"),
+                            partial=partial,
                         )
                     )
     return candidates, evaluations, False
@@ -456,7 +468,7 @@ def find_grouped_match_portfolio(
 
     ordered = tuple(sorted(candidates, key=lambda candidate: candidate.stable_key))
     best: list[_CandidateGroup] = []
-    best_score: tuple[int, Decimal] | None = None
+    best_score: tuple[int, Decimal, Decimal] | None = None
     equal_optima = 0
     nodes = 0
     def visit(position: int, used_left: frozenset[str], used_right: frozenset[str], selected: list[_CandidateGroup]) -> None:
@@ -466,7 +478,8 @@ def find_grouped_match_portfolio(
             raise GroupedMatchingError("portfolio selection search exceeded its deterministic budget")
         covered = sum(len(candidate.left) + len(candidate.right) for candidate in selected)
         cost = sum((candidate.difference for candidate in selected), Decimal("0"))
-        score = (covered, -cost)
+        settled = sum((candidate.settled_amount for candidate in selected), Decimal("0"))
+        score = (covered, -cost, settled)
         if best_score is None or score > best_score:
             best_score = score
             best = list(selected)
@@ -542,8 +555,12 @@ def find_grouped_match_portfolio(
                 candidate=candidate,
                 candidate_count=len(candidates),
                 evaluations=evaluations + nodes,
-                reason_code="GROUP_PORTFOLIO_MATCH",
-                explanation="Selected a maximum-cover set of non-overlapping bounded groups.",
+                reason_code=("GROUP_PORTFOLIO_PARTIAL_SETTLEMENT" if candidate.partial else "GROUP_PORTFOLIO_MATCH"),
+                explanation=(
+                    "Selected a bounded partial-settlement portfolio; residual balances remain visible."
+                    if candidate.partial
+                    else "Selected a maximum-cover set of non-overlapping bounded groups."
+                ),
                 ambiguous_candidates=(),
             )
             for candidate in sorted(best, key=lambda item: item.stable_key)
@@ -593,7 +610,7 @@ def _decision(
     right_residual = candidate.right_residual if candidate else Decimal("0")
     tie_break = (
         "exact-first-settled-amount-difference-date-span-stable-record-identities-v1"
-        if policy.mode == "partial-settlement"
+        if candidate is not None and candidate.partial
         else "difference-cardinality-date-span-stable-record-identities-v1"
     )
     payload = {
@@ -612,6 +629,7 @@ def _decision(
             "max_right_cardinality": policy.max_right_cardinality,
             "max_search_evaluations": policy.max_search_evaluations,
             "netting_mode": policy.netting_mode,
+            "portfolio_allow_partial_settlement": policy.portfolio_allow_partial_settlement,
         },
         "netting_mode": policy.netting_mode,
         "reason_code": reason_code,

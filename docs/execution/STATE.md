@@ -67,7 +67,8 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - E-262 adds `portfolio` mode without changing the single-group compatibility API. It selects a bounded maximum-cover set of non-overlapping exact groups, minimizes aggregate difference, exposes unmatched IDs, and returns explicit ambiguity on equal portfolios or generation/selection budget exhaustion. Application, runtime manifest, Reconciliation-as-Code, schema, published strategy document, and focused contracts are aligned under ADR 0217.
 - E-263 adds the bounded FIFO carry-forward/sequence-window strategy. It allocates oldest eligible obligations within one currency/partition and date window, preserves Decimal residuals, is permutation-stable, and returns explicit ambiguity when ceilings are exhausted. No posting or write-back occurs.
 - E-264 adds bounded reversal pairing. Opposite-sign records are paired within a currency/partition/date window, explicit `reversal_of` links outrank inferred candidates, one-to-one consumption is enforced, and ambiguity/unmatched outcomes remain visible. No journal mutation or posting occurs.
-- P4-MAT-001 remains open for partial groups inside portfolios, mutation/crash-resume and cross-engine properties, and published 10K/100K/1M benchmarks.
+- E-265 adds explicit partial groups inside portfolio selection. Existing exact-only portfolio behavior is unchanged unless `allow_partial_settlement` is true; selected partial decisions carry settled amount and residuals, and the policy flag is digest-bound. No posting or write-back occurs.
+- P4-MAT-001 remains open for mutation/crash-resume and cross-engine properties, and published 10K/100K/1M benchmarks.
 
 ## P4-FIN-002 in progress: governed consolidation close lifecycle
 

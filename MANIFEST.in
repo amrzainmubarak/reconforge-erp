@@ -199,6 +199,7 @@ include reconforge/domain/reversal_matching.py
 include reconforge/infrastructure/reversal_matching_strategy.py
 include tests/test_reversal_matching.py
 include docs/adr/0219-bounded-reversal-pairing-is-explicit-and-non-posting.md
+include docs/adr/0220-portfolio-partial-settlement-requires-explicit-policy.md
 include tests/test_incident_response.py
 include tests/test_reliability_incident_drill.py
 include docs/security/deployment-boundaries.md

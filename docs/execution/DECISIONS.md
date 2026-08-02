@@ -1914,3 +1914,12 @@
 - Consequence: Reversal-specific matching becomes replayable and explainable without silently closing or mutating financial records. Approval, journal posting, compensation, crash resume, cross-engine parity, and scale evidence remain separate requirements.
 - ADR: `docs/adr/0219-bounded-reversal-pairing-is-explicit-and-non-posting.md`.
 - Rollback: Remove the reversal domain/strategy, tests, manifest entry, ADR, and execution records. No database or external state is changed.
+
+## D247 - Portfolio partial settlement is opt-in and residual-preserving
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Keep portfolio exact-only by default. Add a digest-bound `allow_partial_settlement` flag that enables positive unequal candidates; exact groups remain eligible, non-overlap and budgets remain enforced, and residuals are emitted in each selected decision.
+- Consequence: Portfolio callers cannot silently change from exact reconciliation to partial proposals. Equal-cost portfolios remain unresolved ambiguity; no posting or external mutation is performed.
+- ADR: `docs/adr/0220-portfolio-partial-settlement-requires-explicit-policy.md`.
+- Rollback: Remove the flag, candidate logic, tests, ADR, and execution records. No database or external state is changed.

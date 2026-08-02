@@ -23,6 +23,13 @@ tasks:
     status: completed
     depends_on: [E-289]
     exit_evidence: Adapter, migration, RLS schema, structural contract tests, and explicit contract-only claim boundary are recorded in EVIDENCE.md and POSTGRES_PARITY_INVENTORY.yaml.
+  - id: E-291
+    priority: P0
+    area: postgres-parity
+    title: Live PostgreSQL consolidation-close runtime gate
+    status: completed
+    depends_on: [E-290]
+    exit_evidence: CI run 30762214054 passed the unskipped PostgreSQL lifecycle test for ConsolidationCloseApplicationService; inventory promotes the boundary to live_verified_current with explicit control-journal limitations.
   - id: P0-001
     priority: P0
     area: correctness

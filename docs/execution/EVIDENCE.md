@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-291: Current-live PostgreSQL consolidation-close gate
+
+- CI run `30762214054` passed Docker/Alembic setup and the unskipped live
+  PostgreSQL server-boundary suite under `reconforge_app`.
+- The new lifecycle test passed for tenant isolation, deterministic replay of the
+  same run, maker-checker approve/post/reversal, immutable effect creation, and
+  period lock/reopen. The inventory now records this boundary as
+  `live_verified_current`.
+- Limits remain explicit: one PostgreSQL 16 Alpine node, synthetic data, no
+  restore drill, no HA/failover, no RPO/RTO, no ERP/bank write-back, and no
+  statutory consolidation claim.
+
 ## E-290: PostgreSQL consolidation-close adapter contract
 
 - Date: 2026-08-02, Africa/Cairo.

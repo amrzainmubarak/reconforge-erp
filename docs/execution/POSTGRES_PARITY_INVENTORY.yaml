@@ -52,9 +52,21 @@ close_runtime_gate:
   skipped_focused_tests: 0
   covered_live_boundaries: [CloseManagementApplicationService]
   limitations: [single_node, synthetic_data, no_restore_drill, no_ha, no_rpo_rto_claim]
+consolidation_close_runtime_gate:
+  id: E-291
+  executed_at: "2026-08-02"
+  database: "PostgreSQL 16 Alpine CI service"
+  database_image_digest: "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+  application_role: reconforge_app_non_superuser
+  focused_tests: 1
+  focused_result: passed
+  skipped_focused_tests: 0
+  covered_live_boundaries: [ConsolidationCloseApplicationService]
+  ci_run: "30762214054"
+  limitations: [single_node, synthetic_data, no_restore_drill, no_ha, no_rpo_rto_claim, control_journal_only_no_erp_writeback]
 allowed_statuses: [live_verified_current, live_test_available, contract_only, absent, not_applicable]
 boundaries:
-  - {file: consolidation_close.py, service: ConsolidationCloseApplicationService, status: contract_only, adapter: reconforge.infrastructure.postgres_consolidation_close.PostgresConsolidationCloseRepository, test: tests/test_postgres_consolidation_close.py, risk: control_journal_jsonb_boundary_not_live_verified_no_erp_writeback}
+  - {file: consolidation_close.py, service: ConsolidationCloseApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_close.PostgresConsolidationCloseRepository, test: tests/test_postgres_consolidation_close.py, risk: single_node_control_journal_only_no_erp_writeback_or_restore_ha_evidence}
   - {file: consolidation_ownership.py, service: ConsolidationOwnershipApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_ownership.PostgresConsolidationOwnershipRepository, test: tests/test_postgres_consolidation_ownership.py, risk: single_node_runtime_only_no_restore_or_ha_evidence}
   - {file: consolidation.py, service: ConsolidationApplicationService, status: not_applicable, reason: immutable_scoped_object_store_artifact_repository}
   - {file: grouped_matching.py, service: GroupedMatchingApplicationService, status: not_applicable, reason: pure_strategy}
@@ -92,8 +104,8 @@ boundaries:
   - {file: inventory_planning.py, service: InventoryPlanningApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_planning.PostgresInventoryPlanningRepository, test: tests/test_postgres_inventory_planning.py, risk: financial_high}
 summary:
   total: 36
-  live_verified_current: 8
+  live_verified_current: 9
   live_test_available: 24
-  contract_only: 2
+  contract_only: 1
   absent: 0
   not_applicable: 2

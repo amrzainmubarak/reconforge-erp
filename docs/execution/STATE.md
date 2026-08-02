@@ -18,6 +18,15 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   defect, not a database migration failure; it was corrected and covered by the
   PostgreSQL operations tests.
 
+## E-291 — Live PostgreSQL consolidation-close gate
+
+- CI run `30762214054` passed the unskipped live lifecycle test under the
+  non-privileged application role, including tenant isolation, idempotent replay,
+  maker-checker transitions, posting/reversal effects, and period lock/reopen.
+- The parity inventory now marks `ConsolidationCloseApplicationService` as
+  `live_verified_current`; this does not claim ERP write-back, statutory posting,
+  restore, HA, or RPO/RTO.
+
 ## E-282 — Published 100K durable-job profile
 
 - The durable-job harness now declares and verifies a hardware-scoped

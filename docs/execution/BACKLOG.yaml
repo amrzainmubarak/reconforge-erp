@@ -57,7 +57,7 @@ tasks:
     title: Governed durable-job PostgreSQL runtime boundary
     status: completed
     depends_on: [E-297]
-    exit_evidence: CI server-boundaries exercises the governed durable-job wrapper over PostgreSQL under the non-privileged role: denied permission creates no row, allowed scoped submit creates one tenant-bound row, governed cancellation completes, and sibling-tenant visibility is empty under ADR 0249.
+    exit_evidence: "CI server-boundaries exercises the governed durable-job wrapper over PostgreSQL under the non-privileged role: denied permission creates no row, allowed scoped submit creates one tenant-bound row, governed cancellation completes, and sibling-tenant visibility is empty under ADR 0249."
   - id: E-299
     priority: P0
     area: connectors

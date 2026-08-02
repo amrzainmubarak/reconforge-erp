@@ -108,9 +108,9 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   explicit evaluation instant, and are protected by forced RLS plus a trigger
   that permits only independent active-to-revoked transitions.
 - Focused schema, migration, validation, and repository contracts pass under
-  ADR 0253. The boundary is not yet `live_verified_current`: the CI
-  PostgreSQL runtime gate, federation, route coverage, and cache invalidation
-  wiring remain open.
+  ADR 0253. CI server-boundaries run `30771736208` passed the PostgreSQL
+  create/effective-read/revoke/isolation gate under the non-privileged role.
+  Federation, route coverage, and cache invalidation wiring remain open.
 
 ## E-292 — Explicit expiring delegation in central policy
 

@@ -16,10 +16,10 @@ keeps transaction ownership with its caller.
 
 ## Evidence and limits
 
-The schema, linear migration, safe row conversion, and focused contract tests
-are included in this slice.  A live PostgreSQL run is required before this
-boundary can be promoted to `live_verified_current`; federation, API/UI route
-coverage, cache invalidation wiring, and emergency-access policy remain open.
+The schema, linear migration, safe row conversion, focused contract tests, and
+CI server-boundaries run `30771736208` are included in this slice. The runtime
+evidence is synthetic and single-node; federation, API/UI route coverage,
+cache invalidation wiring, and emergency-access policy remain open.
 
 ## Rollback
 

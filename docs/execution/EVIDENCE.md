@@ -152,12 +152,12 @@ This file records commands and observed results. It does not convert a dirty wor
 - `python -m pytest tests/test_postgres_delegations.py -q`: passed (5 tests).
 - `tests/test_postgres_delegations_runtime.py` is present for the configured
   server-boundaries matrix and is skipped locally because no PostgreSQL DSN is
-  configured; this slice therefore remains contract-only until that gate runs.
+  configured.
 - `python -m ruff check reconforge/infrastructure/postgres_delegations.py tests/test_postgres_delegations.py`:
   passed. `python -m mypy reconforge/infrastructure/postgres_delegations.py`:
   passed.
-- Runtime evidence is currently contract-only. No live PostgreSQL promotion,
-  federation, API/UI route coverage, or cache invalidation claim is made.
+- Runtime evidence is now a bounded live PostgreSQL gate only; federation,
+  API/UI route coverage, and cache invalidation are not claimed.
 - CI run `30771354748` correctly ran Alembic migration `0056` but failed before
   the new runtime test because the explicit migration registry and Ruff import
   contract had not yet been updated. That failure is retained; the registry,
@@ -169,7 +169,10 @@ This file records commands and observed results. It does not convert a dirty wor
   status assertion and parser inventory also exposed stale compatibility
   registries. Cleanup now disables only that guard inside the admin-owned test
   teardown, and both registries are updated. This run is retained as a failed
-  diagnostic run; live promotion awaits the corrected CI run.
+  diagnostic run.
+- CI run `30771736208` passed the corrected live test, both Python suites, all
+  engine-parity cells, server-boundaries, Docker, Security, and CodeQL. The
+  PostgreSQL runtime evidence is limited to one synthetic single-node gate.
 
 ## E-292: Expiring delegation policy invariant
 

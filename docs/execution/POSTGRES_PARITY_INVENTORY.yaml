@@ -88,6 +88,17 @@ intercompany_runtime_gate:
   covered_live_boundaries: [IntercompanyApplicationService]
   ci_run: "30765662833"
   limitations: [single_node, synthetic_transactions, no_statutory_consolidation, no_erp_writeback, no_ha, no_rpo_rto_claim]
+delegation_runtime_gate:
+  id: E-302
+  executed_at: "2026-08-03"
+  database: "PostgreSQL 16 Alpine CI service"
+  database_image_digest: "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+  application_role: reconforge_app_non_superuser
+  focused_tests: 1
+  focused_result: passed
+  covered_live_boundaries: [PostgresDelegationRepository]
+  ci_run: "30771736208"
+  limitations: [single_node, synthetic_data, no_federation, no_route_coverage, no_cache_invalidation_claim]
 allowed_statuses: [live_verified_current, live_test_available, contract_only, absent, not_applicable]
 boundaries:
   - {file: consolidation_close.py, service: ConsolidationCloseApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_close.PostgresConsolidationCloseRepository, test: tests/test_postgres_consolidation_close.py, risk: single_node_control_journal_only_no_erp_writeback_or_restore_ha_evidence}

@@ -5,7 +5,7 @@ from __future__ import annotations
 from alembic import op
 from reconforge.infrastructure.postgres_consolidation_ownership import POSTGRES_CONSOLIDATION_OWNERSHIP_SCHEMA_SQL
 
-revision = "0054_postgres_consolidation_ownership"
+revision = "0054_pg_consol_ownership"
 down_revision = "0053_audit_administration_acl"
 branch_labels = None
 depends_on = None

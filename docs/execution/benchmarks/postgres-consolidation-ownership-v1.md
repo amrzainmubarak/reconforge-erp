@@ -2,7 +2,7 @@
 
 Date: 2026-08-02 (Africa/Cairo)
 
-Alembic revision `0054_postgres_consolidation_ownership` adds a tenant-scoped
+Alembic revision `0054_pg_consol_ownership` adds a tenant-scoped
 `reconforge.consolidation_ownership_interests` table. It stores exact
 `NUMERIC` percentages, effective dates, approval lineage, source digest, and
 workspace/group scope. Forced RLS uses transaction-local `app.tenant_id`, and

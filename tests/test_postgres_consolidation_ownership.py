@@ -50,7 +50,7 @@ def test_postgres_migration_is_linear_and_reversible() -> None:
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    assert module.revision == "0054_postgres_consolidation_ownership"
+    assert module.revision == "0054_pg_consol_ownership"
     assert module.down_revision == "0053_audit_administration_acl"
     source = path.read_text(encoding="utf-8")
     assert "DROP TABLE IF EXISTS reconforge.consolidation_ownership_interests CASCADE" in source

@@ -48,6 +48,26 @@
         "portfolio"
       ],
       "version": "1.0.0"
+    },
+    {
+      "algorithm": "partitioned-fifo-sequence-window-allocation-v1",
+      "deterministic_tie_break": "business-date-stable-record-identities-fifo-v1",
+      "explanation_schema": "carry-forward-explanation-v1",
+      "id": "bounded-carry-forward-fifo",
+      "limits": {
+        "max_amount_text_characters": 128,
+        "max_candidates_per_record": 10000,
+        "max_total_candidate_evaluations": 25000,
+        "max_date_window_days": 3660,
+        "max_left_records": 250000,
+        "max_right_records": 250000
+      },
+      "maturity": "experimental",
+      "supported_modes": [
+        "carry-forward",
+        "sequence-window"
+      ],
+      "version": "1.0.0"
     }
   ]
 }

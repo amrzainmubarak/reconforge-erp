@@ -55,6 +55,26 @@ This file records commands and observed results. It does not convert a dirty wor
 - Remote verification: Draft PR #71 head `a56fc30a545e1ac9a58f0b3c92a75e0c275bb2eb` reported 15/15 required checks successful. No merge, tag, release, deployment, or production mutation occurred.
 - Boundary: portfolio mode is exact-only; partial groups inside a portfolio, carry-forward/sequence/reversal-specific logic, mutation/crash-resume and cross-engine properties, and large benchmarks remain open.
 
+## E-263: Bounded FIFO carry-forward sequence/window allocation
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Scope: experimental `bounded-carry-forward-fifo` strategy. Inputs are one currency and partition; settlements allocate to oldest eligible obligations inside a date window using exact Decimal arithmetic. Residual obligations and settlements remain explicit, and search/allocation ceilings return ambiguity. No posting, write-back, migration, or external call occurs.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_carry_forward.py tests/test_matching_strategy_contract.py -q` | 0 | Domain and strategy contracts passed: FIFO allocation, residual visibility, date/partition isolation, permutation digest, budget ambiguity, invalid numeric rejection, and published manifest alignment. |
+| `python -m pytest -q` | 0 | Full repository suite passed with 64 declared skips; no failures or collection errors. |
+| `python -m ruff check .` | 0 | Ruff passed for the complete repository. |
+| `python -m mypy reconforge` | 0 | No issues found in 384 source files. |
+| `python -m bandit -q -r reconforge` | 0 | Bandit passed with the repository's existing narrowly-scoped nosec/parser warnings only. |
+| `python -m pip_audit` | 0 | No known vulnerabilities found; local `reconforge-erp` is not published on PyPI and is therefore not audited as a package. |
+| `uv lock --check` | 0 | Lockfile is consistent; 129 packages resolved. |
+| `python -m build --no-isolation` | 0 | sdist and wheel built successfully and include the carry-forward domain, strategy, tests, and ADR. |
+| `git diff --check` | 0 | No whitespace errors; existing MANIFEST newline normalization warning remains. |
+
+- ADR: `docs/adr/0218-bounded-carry-forward-fifo-keeps-residuals-visible.md`.
+- Boundary: reversal-specific matching, partial groups inside portfolios, mutation/crash-resume, cross-engine parity, and 10K/100K/1M benchmarks remain open.
+
 ## E-259: Draft PR #71 remote verification
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

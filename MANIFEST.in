@@ -191,6 +191,10 @@ include tests/test_grouped_matching.py
 include docs/adr/0215-bounded-grouped-matching-is-explainable-and-non-posting.md
 include docs/adr/0216-bounded-partial-settlement-keeps-residuals-visible.md
 include docs/adr/0217-bounded-non-overlapping-group-portfolio.md
+include reconforge/domain/carry_forward.py
+include reconforge/infrastructure/carry_forward_strategy.py
+include tests/test_carry_forward.py
+include docs/adr/0218-bounded-carry-forward-fifo-keeps-residuals-visible.md
 include tests/test_incident_response.py
 include tests/test_reliability_incident_drill.py
 include docs/security/deployment-boundaries.md

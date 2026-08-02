@@ -1896,3 +1896,12 @@
 - Consequence: Several disjoint settlements can be replayed from one partition without record reuse or call-order dependence. The existing single-group result remains backward compatible. Partial groups inside portfolios, carry-forward/sequence/reversal-specific policy, mutation/crash-resume, engine parity, and scale benchmarks remain open.
 - ADR: `docs/adr/0217-bounded-non-overlapping-group-portfolio.md`.
 - Rollback: Remove portfolio mode, application/strategy wiring, tests, manifest/schema/documentation entries, ADR, and execution records. No database or external state is changed.
+
+## D245 - Carry-forward is bounded FIFO with visible residuals
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Add an experimental `bounded-carry-forward-fifo` strategy for one currency/partition. Sort by business date and stable IDs, allocate exact Decimal amounts to the oldest eligible obligation within a declared date window, and expose every residual. Search/allocation ceilings fail closed with explicit ambiguity.
+- Consequence: Sequence/window matching now has a replayable non-posting contract. Reversal pairing, multi-currency conversion, crash resume, cross-engine parity, and scale performance remain unimplemented and unclaimed.
+- ADR: `docs/adr/0218-bounded-carry-forward-fifo-keeps-residuals-visible.md`.
+- Rollback: Remove the carry-forward domain/strategy, tests, manifest entry, ADR, and execution records. No database or external state is changed.

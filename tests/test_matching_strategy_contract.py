@@ -16,6 +16,10 @@ from reconforge.application.matching_strategies import (
     request_digest,
 )
 from reconforge.db import connect, run_migrations
+from reconforge.infrastructure.carry_forward_strategy import (
+    CARRY_FORWARD_FIFO_MANIFEST,
+    CarryForwardFifoStrategy,
+)
 from reconforge.infrastructure.grouped_matching_strategy import (
     GROUPED_SUBSET_SUM_MANIFEST,
     GroupedSubsetSumStrategy,
@@ -119,6 +123,40 @@ def test_strategy_rejects_limits_and_unsafe_numeric_payloads_before_matching(tmp
         assert canonical_payload({"amount": Decimal("1.2300")}) == {"amount": "1.23"}
     finally:
         connection.close()
+
+
+def test_carry_forward_strategy_is_published_bounded_and_permutation_invariant() -> None:
+    strategy = CarryForwardFifoStrategy()
+    request = MatchingStrategyRequest(
+        left_records=(
+            {"id": "O-2", "amount": "20", "date": "2026-01-02", "currency": "USD", "partition": "bank-1"},
+            {"id": "O-1", "amount": "100", "date": "2026-01-01", "currency": "USD", "partition": "bank-1"},
+        ),
+        right_records=({"id": "S-1", "amount": "120", "date": "2026-01-03", "currency": "USD", "partition": "bank-1"},),
+        mode="carry-forward",
+        date_window_days=30,
+    )
+    shuffled = MatchingStrategyRequest(
+        left_records=tuple(reversed(request.left_records)),
+        right_records=request.right_records,
+        mode=request.mode,
+        date_window_days=request.date_window_days,
+    )
+    first = strategy.execute(request)
+    second = strategy.execute(shuffled)
+    assert strategy.manifest == CARRY_FORWARD_FIFO_MANIFEST
+    assert first.input_digest == second.input_digest
+    assert first.results == second.results
+    assert first.results[0]["status"] == "allocated"
+
+
+def test_carry_forward_strategy_is_published_in_architecture_document() -> None:
+    document = json.loads(Path("docs/architecture/matching-strategies.v1.json").read_text(encoding="utf-8"))
+    published = document["strategies"][2]
+    assert published["id"] == CARRY_FORWARD_FIFO_MANIFEST.id
+    assert published["version"] == CARRY_FORWARD_FIFO_MANIFEST.version
+    assert published["supported_modes"] == list(CARRY_FORWARD_FIFO_MANIFEST.supported_modes)
+    assert published["limits"] == CARRY_FORWARD_FIFO_MANIFEST.limits.as_dict
 
 
 def test_registry_rejects_duplicate_or_unknown_strategy_identity(tmp_path: Path) -> None:

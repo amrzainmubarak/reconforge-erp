@@ -3,6 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from reconforge.benchmark.grouped_matching_scale import (
+    GROUPED_1M_PARTITIONS,
+    GROUPED_1M_PROFILE_ID,
+    GROUPED_1M_RECORDS,
     GROUPED_10K_PARTITIONS,
     GROUPED_10K_PROFILE_ID,
     GROUPED_10K_RECORDS,
@@ -40,9 +43,17 @@ def test_grouped_matching_10k_distribution_membership_is_explicit() -> None:
     assert "include docs/execution/benchmarks/grouped-matching-10k-tier-v1.md" in manifest
     assert "include docs/adr/0231-grouped-matching-100k-is-partitioned-and-bounded.md" in manifest
     assert "include docs/execution/benchmarks/grouped-matching-100k-tier-v1.md" in manifest
+    assert "include docs/adr/0232-grouped-matching-1m-is-partitioned-and-bounded.md" in manifest
+    assert "include docs/execution/benchmarks/grouped-matching-1m-tier-v1.md" in manifest
 
 
 def test_grouped_matching_100k_profile_shape_is_declared() -> None:
     assert GROUPED_100K_PROFILE_ID == "grouped-matching/100k-record-true-many-to-many-v1"
     assert GROUPED_100K_PARTITIONS == 25_000
     assert GROUPED_100K_RECORDS == 100_000
+
+
+def test_grouped_matching_1m_profile_shape_is_declared() -> None:
+    assert GROUPED_1M_PROFILE_ID == "grouped-matching/1m-record-true-many-to-many-v1"
+    assert GROUPED_1M_PARTITIONS == 250_000
+    assert GROUPED_1M_RECORDS == 1_000_000

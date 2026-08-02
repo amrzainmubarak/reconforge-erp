@@ -32,6 +32,9 @@ GROUPED_10K_RECORDS = GROUPED_10K_PARTITIONS * GROUPED_10K_RECORDS_PER_PARTITION
 GROUPED_100K_PROFILE_ID = "grouped-matching/100k-record-true-many-to-many-v1"
 GROUPED_100K_PARTITIONS = 25_000
 GROUPED_100K_RECORDS = GROUPED_100K_PARTITIONS * GROUPED_10K_RECORDS_PER_PARTITION
+GROUPED_1M_PROFILE_ID = "grouped-matching/1m-record-true-many-to-many-v1"
+GROUPED_1M_PARTITIONS = 250_000
+GROUPED_1M_RECORDS = GROUPED_1M_PARTITIONS * GROUPED_10K_RECORDS_PER_PARTITION
 
 
 @dataclass(frozen=True)
@@ -72,6 +75,12 @@ LIMITATIONS_100K = (
     "One Windows host and one Python process; this is a partitioned algorithm observation, not a distributed capacity or SLO claim.",
     "The workload uses exact USD true-many-to-many groups with four records per partition; FX, fee, partial-settlement, ambiguity density, and provider I/O are not represented in this tier.",
     "The grouped strategy remains bounded by its published per-partition record and search-evaluation ceilings; 1M records and PostgreSQL runtime parity remain unverified.",
+)
+
+LIMITATIONS_1M = (
+    "One Windows host and one Python process; this is a partitioned algorithm observation, not a distributed capacity or SLO claim.",
+    "The workload uses exact USD true-many-to-many groups with four records per partition; FX, fee, partial-settlement, ambiguity density, and provider I/O are not represented in this tier.",
+    "The grouped strategy remains bounded by its published per-partition record and search-evaluation ceilings; PostgreSQL runtime parity, soak, and distributed 1M capacity remain unverified.",
 )
 
 
@@ -163,7 +172,12 @@ def _run_grouped_matching_scale(
     _current, peak = tracemalloc.get_traced_memory()
     tracemalloc.stop()
     effect_digest = _digest(decisions)
-    limitations = LIMITATIONS_100K if profile_id == GROUPED_100K_PROFILE_ID else LIMITATIONS
+    if profile_id == GROUPED_1M_PROFILE_ID:
+        limitations = LIMITATIONS_1M
+    elif profile_id == GROUPED_100K_PROFILE_ID:
+        limitations = LIMITATIONS_100K
+    else:
+        limitations = LIMITATIONS
     document: dict[str, object] = {
         "schema_version": 1,
         "profile_id": profile_id,
@@ -222,6 +236,17 @@ def run_grouped_matching_100k(*, permutation_check: bool = True) -> GroupedMatch
     )
 
 
+def run_grouped_matching_1m(*, permutation_check: bool = True) -> GroupedMatchingScaleResult:
+    """Run the declared 1M-record partitioned matching profile."""
+
+    return _run_grouped_matching_scale(
+        profile_id=GROUPED_1M_PROFILE_ID,
+        partitions=GROUPED_1M_PARTITIONS,
+        permutation_stride=10_000,
+        permutation_check=permutation_check,
+    )
+
+
 def verify_grouped_matching_10k(result: GroupedMatchingScaleResult) -> None:
     """Verify the correctness and parity invariants of the 10K result."""
 
@@ -254,3 +279,20 @@ def verify_grouped_matching_100k(result: GroupedMatchingScaleResult) -> None:
         raise AssertionError("Grouped 100K parity or permutation invariance failed.")
     if not result.effect_digest or not result.manifest_digest:
         raise AssertionError("Grouped 100K digests are required.")
+
+
+def verify_grouped_matching_1m(result: GroupedMatchingScaleResult) -> None:
+    """Verify the correctness and parity invariants of the 1M result."""
+
+    if result.profile_id != GROUPED_1M_PROFILE_ID or result.records != GROUPED_1M_RECORDS:
+        raise AssertionError("Grouped 1M result does not match the declared profile.")
+    if result.matched_partitions != GROUPED_1M_PARTITIONS:
+        raise AssertionError("Every declared 1M partition must match.")
+    if result.ambiguous_partitions or result.unmatched_partitions:
+        raise AssertionError("The synthetic 1M tier contains an unresolved partition.")
+    if result.strategy_evaluations != GROUPED_1M_PARTITIONS:
+        raise AssertionError("Unexpected 1M bounded search-evaluation count.")
+    if result.cross_engine_mismatches or result.permutation_mismatches:
+        raise AssertionError("Grouped 1M parity or permutation invariance failed.")
+    if not result.effect_digest or not result.manifest_digest:
+        raise AssertionError("Grouped 1M digests are required.")

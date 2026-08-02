@@ -2,6 +2,29 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-277: Grouped matching 1M-record tier
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Scope: 250,000 independent true many-to-many partitions with four exact USD
+  records each (1,000,000 records total). Every partition ran through the public
+  `GroupedSubsetSumStrategy` and backend-neutral application service; every
+  10,000th partition was replayed with reversed input order.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_grouped_matching_scale.py -q` | 0 | 6/6 focused tests passed, including declared 1M shape and distribution membership. |
+| `python -m ruff check reconforge/benchmark/grouped_matching_scale.py tests/test_grouped_matching_scale.py` | 0 | Focused lint passed after import normalization. |
+| `python -m mypy reconforge/benchmark/grouped_matching_scale.py` | 0 | No issues found. |
+| `python -c "...run_grouped_matching_1m..."` (two complete runs) | 0 | Both runs matched 250,000/250,000 partitions; zero ambiguity/unmatched, zero cross-engine/permutation mismatches. Runtime 433.3014s / 427.1993s; peak traced memory 77.5718 / 77.5585 MiB. Effect digest `05c76d8c2d30dcf8e85893ce777f5edc27324beb0465538fc76c2e6ea1c4124f`; manifest digest `5da7ca5deeeddb1f8d4ee04c23b4d4f79a33b34c6cf2861bc1dbf50ccbc9f7be`; both digests identical across runs. |
+
+- Report: `docs/execution/benchmarks/grouped-matching-1m-tier-v1.md`.
+- ADR: `docs/adr/0232-grouped-matching-1m-is-partitioned-and-bounded.md`.
+- Boundary: exact-USD synthetic, one Windows host/process, partitioned work;
+  this does not establish PostgreSQL runtime parity, distributed capacity,
+  SLOs, soak, provider I/O, FX/fee/partial-settlement density, or domain-diverse
+  financial performance.
+- Remote verification: pending after implementation and documentation commits.
+
 ## E-276: Grouped matching 100K-record tier
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

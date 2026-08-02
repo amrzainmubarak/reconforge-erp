@@ -277,3 +277,5 @@ include docs/adr/0230-grouped-matching-10k-is-partitioned-and-bounded.md
 include docs/execution/benchmarks/grouped-matching-10k-tier-v1.md
 include docs/adr/0231-grouped-matching-100k-is-partitioned-and-bounded.md
 include docs/execution/benchmarks/grouped-matching-100k-tier-v1.md
+include docs/adr/0232-grouped-matching-1m-is-partitioned-and-bounded.md
+include docs/execution/benchmarks/grouped-matching-1m-tier-v1.md

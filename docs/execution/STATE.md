@@ -98,7 +98,8 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   tenant/workspace/global invalidation.
 - Focused tests prove denials and delegated authority bypass storage and that
   invalidating one tenant does not evict a sibling tenant. Existing routes are
-  intentionally uncached until each mutation path owns invalidation.
+  intentionally uncached until each mutation path owns invalidation. Full CI
+  run `30770651403` passed on `9582ac2`.
 
 ## E-292 — Explicit expiring delegation in central policy
 

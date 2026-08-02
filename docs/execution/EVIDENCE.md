@@ -137,7 +137,9 @@ This file records commands and observed results. It does not convert a dirty wor
   sibling-tenant retention and stale-entry reuse.
 - Existing routes do not adopt the cache implicitly; mutation wiring and
   distributed invalidation remain open. Focused policy-cache and policy-engine
-  tests, Ruff, and Mypy pass.
+  tests, Ruff, and Mypy pass. CI run `30770651403` passed on commit
+  `9582ac2` with the full compatibility, server-boundaries, engine-parity,
+  security, CodeQL, and Docker gates green.
 
 ## E-292: Expiring delegation policy invariant
 

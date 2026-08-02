@@ -188,6 +188,8 @@ include reconforge/benchmark/durable_job_cancellation.py
 include tests/test_durable_job_cancellation_profile.py
 include reconforge/benchmark/durable_job_retry.py
 include tests/test_durable_job_retry_profile.py
+include reconforge/benchmark/grouped_matching_replay.py
+include tests/test_grouped_matching_replay.py
 include docs/adr/0214-durable-job-cancellation-profile-is-structural-and-non-claim.md
 include tests/test_grouped_matching.py
 include docs/adr/0215-bounded-grouped-matching-is-explainable-and-non-posting.md

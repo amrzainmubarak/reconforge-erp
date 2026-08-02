@@ -10817,6 +10817,23 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - No merge, tag, GitHub Release, package publication, deployment, production
   mutation, repository-setting change, or readiness/superiority claim occurred.
 
+## E-272: Grouped matching crash/resume and cross-engine replay
+
+- Code: `reconforge/benchmark/grouped_matching_replay.py` covers four bounded
+  partitions across grouped matching modes. Each partition is evaluated by
+  `GroupedSubsetSumStrategy` and `GroupedMatchingApplicationService`; their
+  decision digests must agree before the durable effect is committed.
+- Tests: `python -m pytest tests/test_grouped_matching_replay.py -q` -> 5/5
+  passed. The injected post-checkpoint fault resumes once, reproduces the
+  uninterrupted effect digest, leaves zero duplicate effects, and drains queue
+  and running depth. A one-cent amount mutation changes the output digest.
+- Focused quality: Ruff, Mypy, and Bandit pass for the new harness; source and
+  test files are included in `MANIFEST.in`.
+- Decision/docs: ADR 0227 and
+  `docs/execution/benchmarks/grouped-matching-replay-synthetic-v1.md`.
+- Boundary: SQLite-only synthetic replay. No PostgreSQL parity, mutation-tool
+  score, or 10K/100K/1M scale claim is made.
+
 ## E-271: Durable-job retry and checkpoint failure injection
 
 - Code: `reconforge/benchmark/durable_job_retry.py` drives the existing

@@ -1894,3 +1894,16 @@ publication and remote GitHub verification before a release Go decision.
 - This remains a bounded SQLite evidence slice. Provider backoff/jitter,
   PostgreSQL parity, external compensation, soak, and 10K/100K/1M/10M scale
   publication remain open.
+
+## E-272 — Grouped matching crash/resume and cross-engine replay
+
+- `reconforge/benchmark/grouped_matching_replay.py` evaluates four synthetic
+  partitions across one-to-many, many-to-one, many-to-many, and portfolio
+  partial-settlement modes through both the strategy adapter and application
+  boundary. It persists each output as a durable-job effect.
+- A fault after the first committed partition forces one retry. The resumed
+  run matches an uninterrupted baseline digest, leaves zero duplicate effects,
+  drains the job state, and passes the one-cent adversarial mutation sentinel.
+- Focused contracts pass 5/5; ADR 0227, benchmark documentation, and package
+  membership are included. PostgreSQL parity, mutation-tool score, and scale
+  publication remain open.

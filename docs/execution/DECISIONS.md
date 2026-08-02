@@ -1977,3 +1977,12 @@
 - Consequence: SQLite evidence now covers retry/checkpoint coupling and retry ceilings under contention. Provider-specific backoff/jitter, PostgreSQL parity, external compensation, and scale/soak evidence remain unclaimed.
 - ADR: `docs/adr/0226-durable-job-retry-failure-injection.md`.
 - Rollback: Remove the retry harness, tests, benchmark document, ADR, and manifest/execution entries. No schema or production behavior changes.
+
+## D254 - Grouped matching replay is checkpointed and cross-engine compared
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Add a four-partition synthetic replay harness covering grouped strategy modes. Compare the public strategy adapter with the application boundary, persist effects through the existing durable-job checkpoint contract, inject a post-checkpoint fault, and require the resumed effect digest to equal an uninterrupted baseline.
+- Consequence: Advanced matching now has direct crash/resume and adapter/application parity evidence, plus an adversarial one-cent mutation sentinel. PostgreSQL parity, a mutation-testing tool score, and scale benchmarks remain unclaimed.
+- ADR: `docs/adr/0227-grouped-matching-replay-parity.md`.
+- Rollback: Remove the replay harness, tests, benchmark document, ADR, manifest, and execution entries. No schema or production behavior changes.

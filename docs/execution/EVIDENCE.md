@@ -35,6 +35,8 @@ This file records commands and observed results. It does not convert a dirty wor
   exposed a stale inventory arithmetic assertion (`covered_live_boundaries`
   remained 25 after two boundaries moved out of `live_test_available`). The
   inventory count is corrected to 23; the failed compatibility run is retained.
+- CI run `30765085941` then exposed one remaining Phase 1 audit assertion that
+  still expected 25; it is now aligned to the same 23-boundary inventory count.
 
 ## E-292: Expiring delegation policy invariant
 

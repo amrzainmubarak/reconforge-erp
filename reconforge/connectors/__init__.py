@@ -16,6 +16,14 @@ from reconforge.connectors.package import (
     TrustedPublisherRegistry,
     load_verified_package,
 )
+from reconforge.connectors.rest_reference import (
+    REFERENCE_REST_MANIFEST,
+    ReferenceRestConnector,
+    ReferenceRestPage,
+    ReferenceRestRead,
+    ReferenceRestRecord,
+    reference_rest_registration,
+)
 
 __all__ = [
     "AuthenticationMethod",
@@ -23,6 +31,12 @@ __all__ = [
     "ConnectorKind",
     "ConnectorManifest",
     "ConnectorPackageError",
+    "REFERENCE_REST_MANIFEST",
+    "ReferenceRestConnector",
+    "ReferenceRestPage",
+    "ReferenceRestRead",
+    "ReferenceRestRecord",
+    "reference_rest_registration",
     "DataClassification",
     "PublisherKeyStatus",
     "RetryPolicy",

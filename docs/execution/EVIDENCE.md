@@ -113,6 +113,20 @@ This file records commands and observed results. It does not convert a dirty wor
 - Boundary: mutation/crash-resume, cross-engine parity, and 10K/100K/1M benchmarks remain open.
 - Remote verification: Draft PR #71 head `3a08bf930fdd02dec5cac8c0747e51719a79c2ff` reported 15/15 required checks successful and merge state `CLEAN`. No merge, tag, release, deployment, or production mutation occurred.
 
+## E-266: Synthetic reference REST read-only connector
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Scope: executable `reference-rest-readonly` connector over the existing network executor. Closed JSON pages require exact finite Decimal text, unique IDs, ISO dates, bounded records/cursors, and declared egress. Request/response digests and attempts are returned; credentials are resolved by reference and never returned. No provider credential, customer data, write-back, or external deployment is included.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_connector_rest_reference.py tests/test_connector_network.py tests/test_connector_sdk.py -q` | 0 | 24 connector tests passed: canonical page parsing, duplicate/non-finite rejection, egress refusal, secret isolation, cursor/idempotency, retries, and existing network contracts. |
+| `python -m ruff check reconforge/connectors/rest_reference.py reconforge/connectors/__init__.py tests/test_connector_rest_reference.py` | 0 | Focused lint passed. |
+| `python -m mypy reconforge/connectors/rest_reference.py` | 0 | No issues found. |
+
+- ADR: `docs/adr/0221-reference-rest-connector-is-read-only-and-schema-closed.md`.
+- Boundary: no live ERP/bank provider, credential provisioning, write-back, acknowledgement/compensation, signed executable package, or production deployment claim.
+
 ## E-259: Draft PR #71 remote verification
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

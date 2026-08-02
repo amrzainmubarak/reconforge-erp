@@ -43,7 +43,7 @@ def test_phase4_goal_covers_all_seven_workstreams_without_relabeling_old_closure
     assert phase4[0]["status"] == "completed"
     assert phase4[1]["status"] == "in_progress"
     assert phase4[2]["status"] == "in_progress"
-    assert phase4[3]["status"] == "planned"
+    assert phase4[3]["status"] == "in_progress"
     assert phase4[4]["status"] == "in_progress"
     assert all(task["status"] == "planned" for task in phase4[5:])
 

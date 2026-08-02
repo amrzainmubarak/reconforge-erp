@@ -70,6 +70,11 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - E-265 adds explicit partial groups inside portfolio selection. Existing exact-only portfolio behavior is unchanged unless `allow_partial_settlement` is true; selected partial decisions carry settled amount and residuals, and the policy flag is digest-bound. No posting or write-back occurs.
 - P4-MAT-001 remains open for mutation/crash-resume and cross-engine properties, and published 10K/100K/1M benchmarks.
 
+## P4-CON-001 in progress: governed live connector foundation
+
+- E-266 adds the synthetic provider-neutral `reference-rest-readonly` connector. It validates a closed JSON record page with exact Decimal text, unique identities, bounded cursor, canonical response digest, and the existing SSRF/TLS/secret/rate/retry/idempotency boundary. No real provider, credential, customer data, or write-back is included.
+- P4-CON-001 remains open for named ERP/bank/SFTP/database/object-store providers, provider sandboxes, acknowledgement reconciliation, approval-gated write-back, compensation, signed executable packages, and production deployment evidence.
+
 ## P4-FIN-002 in progress: governed consolidation close lifecycle
 
 ### E-256 complete: local SQLite consolidation close lifecycle (control-journal foundation)

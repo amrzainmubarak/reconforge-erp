@@ -1923,3 +1923,12 @@
 - Consequence: Portfolio callers cannot silently change from exact reconciliation to partial proposals. Equal-cost portfolios remain unresolved ambiguity; no posting or external mutation is performed.
 - ADR: `docs/adr/0220-portfolio-partial-settlement-requires-explicit-policy.md`.
 - Rollback: Remove the flag, candidate logic, tests, ADR, and execution records. No database or external state is changed.
+
+## D248 - Reference REST integration is schema-closed and read-only
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Add a synthetic provider-neutral REST connector over the existing governed network executor. Require exact allowlisted HTTPS, operator secret references, bounded cursors/idempotency/retries, and a closed record page with exact Decimal text and unique IDs. Keep write capability absent.
+- Consequence: Connector SDK has one executable reference integration without claiming a live ERP/bank relationship. Provider credentials, acknowledgement reconciliation, compensation, and write-back remain separate gates.
+- ADR: `docs/adr/0221-reference-rest-connector-is-read-only-and-schema-closed.md`.
+- Rollback: Remove the connector, tests, docs, ADR, and manifest entries. No external or database state is changed.

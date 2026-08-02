@@ -10833,7 +10833,7 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   `docs/execution/benchmarks/grouped-matching-replay-synthetic-v1.md`.
 - Boundary: SQLite-only synthetic replay. No PostgreSQL parity, mutation-tool
   score, or 10K/100K/1M scale claim is made.
-- Remote verification: Draft PR #71 head `a4295a6b7fc31c0dbf9ca3aece05bd8c9789da49` reported 15/15 required checks successful and merge state `CLEAN`. No merge, tag, release, deployment, or production mutation occurred.
+- Remote verification: Draft PR #71 head `431069cb5b91d94e9e36e8ef0fc704bf2231c8e3` reported 15/15 required checks successful and merge state `CLEAN`. The full-history Gitleaks scan passed after recording the exact historical false-positive fingerprint in `.gitleaksignore`; no broad rule, path, or commit allowlist was added. No merge, tag, release, deployment, or production mutation occurred.
 
 ## E-273: PostgreSQL-worker grouped matching contract adapter
 

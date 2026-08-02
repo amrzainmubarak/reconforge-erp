@@ -76,6 +76,28 @@ This file records commands and observed results. It does not convert a dirty wor
 - Boundary: reversal-specific matching, partial groups inside portfolios, mutation/crash-resume, cross-engine parity, and 10K/100K/1M benchmarks remain open.
 - Remote verification: Draft PR #71 head `e7e5284ad35efca4164b934d9a314b49d7286ce8` reported 15/15 required checks successful and merge state `CLEAN`. No merge, tag, release, deployment, or production mutation occurred.
 
+## E-264: Bounded reversal pairing
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Scope: experimental `bounded-reversal-pairing` strategy. Opposite-sign records are paired within a date window and one currency/partition; explicit lineage outranks inferred candidates, each original is consumed once, and equal candidates/search exhaustion return ambiguity. No posting, write-back, migration, or external call occurs.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_reversal_matching.py tests/test_matching_strategy_contract.py -q` | 0 | 25 focused tests passed: explicit-link precedence, opposite-sign/date-window constraints, permutation digest, unmatched visibility, ambiguity, budget refusal, invalid inputs, and published manifest alignment. |
+| `python -m ruff check reconforge/domain/reversal_matching.py reconforge/infrastructure/reversal_matching_strategy.py tests/test_reversal_matching.py tests/test_matching_strategy_contract.py` | 0 | Focused lint passed. |
+| `python -m mypy reconforge/domain/reversal_matching.py reconforge/infrastructure/reversal_matching_strategy.py` | 0 | No issues found. |
+| `python -m pytest -q` | 0 | Full repository suite passed with no failures or collection errors; existing environment-declared skips remain. |
+| `python -m ruff check .` | 0 | Full repository lint passed. |
+| `python -m mypy reconforge` | 0 | Full repository type check passed with no issues. |
+| `python -m bandit -q -r reconforge` | 0 | Security scan passed with only existing narrowly-scoped nosec/parser warnings. |
+| `python -m pip_audit` | 0 | No known third-party vulnerabilities found; local package is not published on PyPI. |
+| `uv lock --check` | 0 | Lockfile consistency passed; 129 packages resolved. |
+| `python -m build --no-isolation` | 0 | Source and wheel builds passed with reversal strategy and ADR membership. |
+| `git diff --check` | 0 | No whitespace errors; existing MANIFEST newline normalization warning only. |
+
+- ADR: `docs/adr/0219-bounded-reversal-pairing-is-explicit-and-non-posting.md`.
+- Boundary: journal mutation/approval, compensation, crash-resume, cross-engine parity, mutation testing, and 10K/100K/1M benchmarks remain open.
+
 ## E-259: Draft PR #71 remote verification
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

@@ -1905,3 +1905,12 @@
 - Consequence: Sequence/window matching now has a replayable non-posting contract. Reversal pairing, multi-currency conversion, crash resume, cross-engine parity, and scale performance remain unimplemented and unclaimed.
 - ADR: `docs/adr/0218-bounded-carry-forward-fifo-keeps-residuals-visible.md`.
 - Rollback: Remove the carry-forward domain/strategy, tests, manifest entry, ADR, and execution records. No database or external state is changed.
+
+## D246 - Reversal pairing prefers explicit lineage and never posts
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Add an experimental bounded reversal-pairing strategy for one currency/partition. Require opposite signs, prefer `reversal_of` lineage, then rank amount difference/date span/stable identity; consume each original once and return ambiguity on equal candidates or budget exhaustion.
+- Consequence: Reversal-specific matching becomes replayable and explainable without silently closing or mutating financial records. Approval, journal posting, compensation, crash resume, cross-engine parity, and scale evidence remain separate requirements.
+- ADR: `docs/adr/0219-bounded-reversal-pairing-is-explicit-and-non-posting.md`.
+- Rollback: Remove the reversal domain/strategy, tests, manifest entry, ADR, and execution records. No database or external state is changed.

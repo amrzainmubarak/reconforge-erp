@@ -68,6 +68,25 @@
         "sequence-window"
       ],
       "version": "1.0.0"
+    },
+    {
+      "algorithm": "partitioned-opposite-sign-date-window-reversal-pairing-v1",
+      "deterministic_tie_break": "explicit-link-amount-difference-date-span-stable-record-identities-v1",
+      "explanation_schema": "reversal-matching-explanation-v1",
+      "id": "bounded-reversal-pairing",
+      "limits": {
+        "max_amount_text_characters": 128,
+        "max_candidates_per_record": 10000,
+        "max_total_candidate_evaluations": 25000,
+        "max_date_window_days": 3660,
+        "max_left_records": 250000,
+        "max_right_records": 250000
+      },
+      "maturity": "experimental",
+      "supported_modes": [
+        "reversal-pairing"
+      ],
+      "version": "1.0.0"
     }
   ]
 }

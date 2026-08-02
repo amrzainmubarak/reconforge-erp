@@ -28,6 +28,10 @@ from reconforge.infrastructure.indexed_matching_strategy import (
     INDEXED_ONE_TO_ONE_MANIFEST,
     IndexedOneToOneStrategy,
 )
+from reconforge.infrastructure.reversal_matching_strategy import (
+    REVERSAL_PAIRING_MANIFEST,
+    ReversalPairingStrategy,
+)
 from reconforge.platform.matching import MatchingService
 
 
@@ -157,6 +161,40 @@ def test_carry_forward_strategy_is_published_in_architecture_document() -> None:
     assert published["version"] == CARRY_FORWARD_FIFO_MANIFEST.version
     assert published["supported_modes"] == list(CARRY_FORWARD_FIFO_MANIFEST.supported_modes)
     assert published["limits"] == CARRY_FORWARD_FIFO_MANIFEST.limits.as_dict
+
+
+def test_reversal_strategy_is_bounded_and_permutation_invariant() -> None:
+    strategy = ReversalPairingStrategy()
+    request = MatchingStrategyRequest(
+        left_records=(
+            {"id": "J-1", "amount": "100", "date": "2026-01-01", "currency": "USD", "partition": "ledger-1"},
+            {"id": "J-2", "amount": "50", "date": "2026-01-02", "currency": "USD", "partition": "ledger-1"},
+        ),
+        right_records=({"id": "R-1", "amount": "-100", "date": "2026-01-03", "currency": "USD", "partition": "ledger-1", "reversal_of": "J-1"},),
+        mode="reversal-pairing",
+        date_window_days=30,
+    )
+    shuffled = MatchingStrategyRequest(
+        left_records=tuple(reversed(request.left_records)),
+        right_records=request.right_records,
+        mode=request.mode,
+        date_window_days=request.date_window_days,
+    )
+    first = strategy.execute(request)
+    second = strategy.execute(shuffled)
+    assert strategy.manifest == REVERSAL_PAIRING_MANIFEST
+    assert first.input_digest == second.input_digest
+    assert first.results == second.results
+    assert first.results[0]["status"] == "matched"
+
+
+def test_reversal_strategy_is_published_in_architecture_document() -> None:
+    document = json.loads(Path("docs/architecture/matching-strategies.v1.json").read_text(encoding="utf-8"))
+    published = document["strategies"][3]
+    assert published["id"] == REVERSAL_PAIRING_MANIFEST.id
+    assert published["version"] == REVERSAL_PAIRING_MANIFEST.version
+    assert published["supported_modes"] == list(REVERSAL_PAIRING_MANIFEST.supported_modes)
+    assert published["limits"] == REVERSAL_PAIRING_MANIFEST.limits.as_dict
 
 
 def test_registry_rejects_duplicate_or_unknown_strategy_identity(tmp_path: Path) -> None:

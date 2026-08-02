@@ -2,6 +2,17 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-292: Expiring delegation policy invariant
+
+- Added optional delegation fields to `PolicyEvaluationContext` and forwarded
+  them through `evaluate_principal_access`.
+- `python -m pytest tests/test_policy_engine.py -q`: passed (including explicit
+  pre-expiry, exact-expiry, missing-time, timezone, and identifier cases).
+- `python -m ruff check reconforge/auth/policy.py tests/test_policy_engine.py`:
+  passed.
+- Boundary: pure evaluation only; no delegation registry, provider federation,
+  emergency workflow replacement, or database/API/UI claim.
+
 ## E-291: Current-live PostgreSQL consolidation-close gate
 
 - CI run `30762214054` passed Docker/Alembic setup and the unskipped live

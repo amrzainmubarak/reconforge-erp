@@ -6,6 +6,7 @@ import hashlib
 import json
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Literal
 
@@ -90,6 +91,9 @@ class PolicyEvaluationContext:
     authorized_period_ids: frozenset[str] = field(default_factory=frozenset)
     authorized_region_ids: frozenset[str] = field(default_factory=frozenset)
     authorized_data_classifications: frozenset[str] = field(default_factory=frozenset)
+    delegation_id: str | None = None
+    delegation_expires_at: datetime | None = None
+    evaluation_time: datetime | None = None
     object_type: str | None = None
     object_id: str | None = None
     object_owner_id: str | None = None
@@ -101,8 +105,18 @@ class PolicyEvaluationContext:
             value = getattr(self, field_name)
             if value is not None and (not isinstance(value, Decimal) or not value.is_finite()):
                 raise ValueError(f"{field_name} must be a finite Decimal when supplied.")
-        if self.minimum_amount is not None and self.maximum_amount is not None and self.minimum_amount > self.maximum_amount:
+        if (
+            self.minimum_amount is not None
+            and self.maximum_amount is not None
+            and self.minimum_amount > self.maximum_amount
+        ):
             raise ValueError("minimum_amount cannot exceed maximum_amount.")
+        for field_name in ("delegation_expires_at", "evaluation_time"):
+            value = getattr(self, field_name)
+            if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+                raise ValueError(f"{field_name} must be timezone-aware when supplied.")
+        if self.delegation_expires_at is not None and not self.delegation_id:
+            raise ValueError("delegation_id is required when delegation_expires_at is supplied.")
 
 
 @dataclass(frozen=True)
@@ -169,6 +183,23 @@ class CentralPolicyEngine:
         if not ctx.user_id:
             return PolicyDecision(False, "Deny: missing authenticated user identity.", "identity_missing")
 
+        # Temporary delegated authority is explicit, replayable, and fail-closed.
+        # The caller must provide the evaluation instant; wall-clock reads are not
+        # hidden inside the policy engine.
+        if ctx.delegation_expires_at is not None:
+            if ctx.evaluation_time is None:
+                return PolicyDecision(
+                    False,
+                    "Deny: delegated authority requires an explicit evaluation time.",
+                    "delegation_evaluation_time_missing",
+                )
+            if ctx.evaluation_time >= ctx.delegation_expires_at:
+                return PolicyDecision(
+                    False,
+                    "Deny: delegated authority has expired.",
+                    "delegation_expired",
+                )
+
         # 2. A caller must name the permission contract. Identity alone never grants access.
         if not required_permission:
             return PolicyDecision(False, "Deny: no required permission was specified.", "permission_contract_missing")
@@ -222,7 +253,9 @@ class CentralPolicyEngine:
             if ctx.minimum_amount is not None and ctx.amount < ctx.minimum_amount:
                 return PolicyDecision(False, "Deny: amount is below the authorized policy floor.", "amount_below_floor")
             if ctx.maximum_amount is not None and ctx.amount > ctx.maximum_amount:
-                return PolicyDecision(False, "Deny: amount exceeds the authorized policy ceiling.", "amount_above_ceiling")
+                return PolicyDecision(
+                    False, "Deny: amount exceeds the authorized policy ceiling.", "amount_above_ceiling"
+                )
 
         # 4. Check Segregation of Duties (SoD) if object & action are specified
         if enforce_sod and ctx.object_type and ctx.object_id and ctx.action:
@@ -303,6 +336,9 @@ def evaluate_principal_access(
     authorized_region_ids: frozenset[str] = frozenset(),
     authorized_data_classifications: frozenset[str] = frozenset(),
     object_owner_id: str | None = None,
+    delegation_id: str | None = None,
+    delegation_expires_at: datetime | None = None,
+    evaluation_time: datetime | None = None,
 ) -> PolicyDecision:
     """Helper for evaluating ServerPrincipal authorization."""
 
@@ -328,6 +364,9 @@ def evaluate_principal_access(
         authorized_period_ids=authorized_period_ids,
         authorized_region_ids=authorized_region_ids,
         authorized_data_classifications=authorized_data_classifications,
+        delegation_id=delegation_id,
+        delegation_expires_at=delegation_expires_at,
+        evaluation_time=evaluation_time,
         object_type=object_type,
         object_id=object_id,
         object_owner_id=object_owner_id,

@@ -314,3 +314,4 @@ include docs/execution/benchmarks/grouped-matching-1m-tier-v1.md
 include reconforge/infrastructure/postgres_consolidation_close.py
 include tests/test_postgres_consolidation_close.py
 include alembic/versions/0055_postgres_consolidation_close.py
+include docs/adr/0243-expiring-delegation-is-explicit-and-replayable.md

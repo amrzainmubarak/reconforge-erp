@@ -6,6 +6,14 @@ Updated: 2026-08-02
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-292 — Explicit expiring delegation in central policy
+
+- The central policy engine now evaluates temporary delegated authority using a
+  stable delegation ID, timezone-aware expiry, and caller-supplied evaluation
+  instant. Missing evaluation time and expired authority deny by stable codes.
+- This closes only the pure policy invariant. Delegation administration storage,
+  federation, route/job/export/UI coverage, and PostgreSQL policy parity remain open.
+
 ## E-290 — PostgreSQL consolidation-close control journal boundary
 
 - Added a tenant-scoped PostgreSQL adapter and Alembic migration for verified

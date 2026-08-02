@@ -897,11 +897,12 @@ tasks:
     area: enterprise_policy
     goal_workstream: enterprise_identity_and_policy
     title: Complex enterprise authorization and policy administration
-    status: planned
+    status: in_progress
     depends_on: [P1-PLAT-008, P3-ENT-001, P3-ENT-002, P3-ENT-003, P3-ENT-006]
     exit_evidence: Central versioned RBAC/ABAC covers entity, period, amount, region, data class, delegation, emergency authority, service identity, field restrictions, policy approval, cache invalidation, conflict analysis, tenant isolation, and no self-approval across API/jobs/exports/UI.
     completed_slices:
       - E-285 extends `central-policy-v1` with exact finite Decimal amount floors/ceilings plus region and data-classification scopes. Missing scope grants deny by default; invalid numeric bounds fail before evaluation; existing callers remain compatible. Focused policy and Hypothesis suites pass under ADR 0238. Route/job/export/UI attribute coverage, policy administration/cache invalidation, OIDC/SAML/SCIM, and PostgreSQL RLS remain open.
+      - E-292 adds explicit, timezone-aware expiring delegation to the central policy context. Evaluation time is supplied by the caller for deterministic replay; missing evaluation time and at/after-expiry requests deny by stable reason codes. The helper forwards the fields and focused/Hypothesis policy gates remain green. Delegation administration storage, provider federation, route/job/export/UI coverage, and PostgreSQL RLS remain open.
 
   - id: P4-PLAT-001
     priority: P4

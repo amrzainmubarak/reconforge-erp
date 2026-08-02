@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -316,9 +317,7 @@ def test_region_and_data_classification_scopes_are_deny_by_default() -> None:
     denied = CentralPolicyEngine().evaluate(context, required_permission="evidence.read")
     assert not denied.allowed and denied.reason_code == "data_classification_scope_denied"
     allowed = CentralPolicyEngine().evaluate(
-        PolicyEvaluationContext(
-            **{**context.__dict__, "authorized_data_classifications": frozenset({"restricted"})}
-        ),
+        PolicyEvaluationContext(**{**context.__dict__, "authorized_data_classifications": frozenset({"restricted"})}),
         required_permission="evidence.read",
     )
     assert allowed.allowed
@@ -334,6 +333,48 @@ def test_amount_policy_rejects_non_finite_or_inverted_bounds() -> None:
             user_permissions=set(),
             minimum_amount=Decimal("2"),
             maximum_amount=Decimal("1"),
+        )
+
+
+def test_expiring_delegation_is_explicit_replayable_and_fail_closed() -> None:
+    expires_at = datetime(2026, 8, 2, 12, 0, tzinfo=UTC)
+    base = {
+        "user_id": "U-delegate",
+        "username": "delegate",
+        "user_permissions": {"close.manage"},
+        "delegation_id": "DEL-001",
+        "delegation_expires_at": expires_at,
+    }
+    engine = CentralPolicyEngine()
+
+    assert engine.evaluate(
+        PolicyEvaluationContext(**base, evaluation_time=datetime(2026, 8, 2, 11, 59, tzinfo=UTC)),
+        required_permission="close.manage",
+    ).allowed
+    expired = engine.evaluate(
+        PolicyEvaluationContext(**base, evaluation_time=expires_at),
+        required_permission="close.manage",
+    )
+    assert not expired.allowed and expired.reason_code == "delegation_expired"
+    missing_time = engine.evaluate(PolicyEvaluationContext(**base), required_permission="close.manage")
+    assert not missing_time.allowed and missing_time.reason_code == "delegation_evaluation_time_missing"
+
+
+def test_delegation_requires_timezone_aware_expiry_and_identifier() -> None:
+    with pytest.raises(ValueError, match="timezone-aware"):
+        PolicyEvaluationContext(
+            user_id="U",
+            username="u",
+            user_permissions={"close.manage"},
+            delegation_id="DEL-001",
+            delegation_expires_at=datetime(2026, 8, 2, 12, 0),
+        )
+    with pytest.raises(ValueError, match="delegation_id"):
+        PolicyEvaluationContext(
+            user_id="U",
+            username="u",
+            user_permissions={"close.manage"},
+            delegation_expires_at=datetime(2026, 8, 2, 12, 0, tzinfo=UTC),
         )
 
 

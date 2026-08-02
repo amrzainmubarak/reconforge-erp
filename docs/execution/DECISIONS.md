@@ -5,6 +5,13 @@
 
 ## Decisions
 
+### D-292: Delegated Authority Requires an Explicit Evaluation Instant
+- **Date**: 2026-08-02
+- **Context**: Enterprise policy needs expiring delegation without hidden wall-clock behavior that makes decisions non-replayable.
+- **Decision**: Carry a delegation ID, timezone-aware expiry, and caller-supplied evaluation instant in `PolicyEvaluationContext`; deny missing evaluation time and deny at/after expiry with stable reason codes.
+- **Rationale**: The decision is deterministic and auditable while preserving compatibility for callers without delegation.
+- **Reversibility**: Optional context fields only; no migration or provider contract changes.
+
 ### D-290: PostgreSQL Consolidation Close Is a Control-Journal Boundary
 - **Date**: 2026-08-02
 - **Context**: SQLite already carries the governed consolidation-close lifecycle, while PostgreSQL parity was absent.

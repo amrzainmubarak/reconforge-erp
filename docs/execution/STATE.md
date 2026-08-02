@@ -26,6 +26,8 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   `live_verified_current`.
 - Limits: one node, synthetic workload, no queue HA/failover, no soak,
   distributed capacity, or RPO/RTO evidence.
+- Final CI run `30765377133` passed both Python versions, server-boundaries,
+  parity, and Docker; CodeQL `30765377149` and Security `30765377138` passed.
 
 ## E-292 — Explicit expiring delegation in central policy
 

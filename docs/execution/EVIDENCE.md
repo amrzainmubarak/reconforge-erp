@@ -37,6 +37,9 @@ This file records commands and observed results. It does not convert a dirty wor
   inventory count is corrected to 23; the failed compatibility run is retained.
 - CI run `30765085941` then exposed one remaining Phase 1 audit assertion that
   still expected 25; it is now aligned to the same 23-boundary inventory count.
+- Final CI run `30765377133` passed Python 3.11/3.12, server-boundaries,
+  engine-parity, and docker-parity for `773cb63`; CodeQL `30765377149`,
+  Security `30765377138`, and Docker `30765377132` also passed.
 
 ## E-292: Expiring delegation policy invariant
 

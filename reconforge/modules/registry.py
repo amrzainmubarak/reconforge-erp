@@ -237,6 +237,7 @@ _MODULES = (
         export_contracts=(
             "consolidation-translation-result.v1",
             "consolidation-worksheet.v1",
+            "ownership-change-adjustment.v1",
             "finance-core-snapshot.v1",
             "ledger-control-trial-balance.v1",
         ),
@@ -256,6 +257,7 @@ _MODULES = (
         test_evidence=(
             "tests/test_consolidation_lifecycle.py",
             "tests/test_consolidation_translation.py",
+            "tests/test_consolidation_ownership_changes.py",
             "tests/test_finance_core.py",
             "tests/test_sqlite_consolidation_close.py",
         ),

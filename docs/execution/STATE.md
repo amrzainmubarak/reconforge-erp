@@ -6,6 +6,17 @@ Updated: 2026-08-02
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-282 — Published 100K durable-job profile
+
+- The durable-job harness now declares and verifies a hardware-scoped
+  `durable-job-load/100k-tier-v1` profile: 16 workers, 10,000 jobs, 10
+  partitions per job, four fair tenant lanes, and 100,000 committed effects.
+- Two Windows 11/Python 3.14.6 runs completed with zero duplicate effects,
+  drained queues/running depth, equal effect/manifest digests, and 2,500
+  completions per tenant.
+- This remains single-host SQLite evidence. PostgreSQL parity, distributed
+  throughput, backpressure, soak, HA/DR, and 1M/10M tiers remain open.
+
 ## Snapshot boundary
 
 - Branch: `codex/consolidation-journal-lifecycle`, current ownership-adjustment code head `bfb29d44ae025b338a8a5d0f8311619a8292462e`; Draft PR #71 remains deliberately unmerged.

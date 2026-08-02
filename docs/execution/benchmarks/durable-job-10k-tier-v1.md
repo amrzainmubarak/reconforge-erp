@@ -31,5 +31,5 @@ not sizing or SLO commitments.
 
 Limitations: one host and one SQLite writer domain; workers are statically
 tenant-pinned; PostgreSQL parity, queue backpressure, retry/backoff coupling,
-soak, cancellation-under-load, HA/DR, and 100K/1M/10M tiers remain
-unverified.
+soak, cancellation-under-load, HA/DR, and 1M/10M tiers remain unverified.
+The later E-282 report publishes a separate hardware-scoped 100K profile.

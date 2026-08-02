@@ -2,6 +2,26 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-282: Published 100K durable-job profile
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Command: `python -c "...run_hundred_k_profile(Path('.tmp-durable-100k-runN-611b.db'))..."`
+- Environment: Windows 11 `10.0.26200`, Python 3.14.6, AMD64, 16 logical CPUs.
+- Profile: 16 workers, 10,000 jobs, 10 partitions/job, 4 tenant lanes,
+  600-second lease, 300-second SQLite busy timeout.
+- Runs: 208.5061s / 47.9602 jobs/s / 0.1582 MiB and 218.8465s /
+  45.6941 jobs/s / 0.1445 MiB. Both completed 10,000 jobs and 100,000
+  effects, drained queues/running depth, produced 2,500 completions per
+  tenant, zero duplicates, effect digest
+  `f648511d960f00df0afd3f2545f6f1ae58a4a9056846a9a6a0f17754f00031f4`, and
+  manifest digest `298ccbbb6c10031fdbf84402b7f22c8d4bb566e4faefd8adb86c204081b9e423`.
+- Contention evidence: 32 workers and 16 workers with the default 60-second
+  busy timeout failed with SQLite lock errors; the published parameters are
+  therefore explicit benchmark bounds, not operational defaults.
+- Boundary: single-host SQLite only. PostgreSQL parity, distributed capacity,
+  backpressure, retry/soak, cancellation-under-load, HA/DR, and 1M/10M
+  tiers remain unverified.
+
 ## E-281: Ownership-change adjustment proposal
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

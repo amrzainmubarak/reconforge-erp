@@ -62,6 +62,7 @@ class DurableJobLoadProfile:
     partitions_per_job: int
     tenants: int
     lease_seconds: int
+    busy_timeout_seconds: int = 60
 
     def __post_init__(self) -> None:
         if self.workers < 1:
@@ -74,6 +75,8 @@ class DurableJobLoadProfile:
             raise ValueError("tenants must satisfy 1 <= tenants <= jobs.")
         if self.lease_seconds < 1:
             raise ValueError("lease_seconds must be at least 1.")
+        if self.busy_timeout_seconds < 1:
+            raise ValueError("busy_timeout_seconds must be at least 1.")
         if self.workers % self.tenants != 0:
             raise ValueError("workers must be an exact multiple of tenants for fair per-tenant contention.")
 
@@ -216,7 +219,11 @@ def _worker_loop(
     tenant_id = _tenant_id(tenant_index)
     remaining = profile.jobs // profile.tenants
     handled = 0
-    connection = connect(database_path, require_exists=True)
+    connection = connect(
+        database_path,
+        require_exists=True,
+        busy_timeout_ms=profile.busy_timeout_seconds * 1_000,
+    )
     try:
         repository = SQLiteDurableJobRepository(connection)
         worker = DurableJobWorkerService(repository)
@@ -380,6 +387,14 @@ def _limitations_for_profile(profile: DurableJobLoadProfile) -> tuple[str, ...]:
             LIMITATIONS[0],
             LIMITATIONS[1],
             "The declared tier is 10K (16 workers, 1,000 jobs, 10 partitions per job, 4 tenants = 10,000 committed partition effects); 100K/1M/10M tiers, backpressure, retry/backoff coupling, soak, cancellation-under-load, and PostgreSQL parity remain unverified.",
+            LIMITATIONS[3],
+            LIMITATIONS[4],
+        )
+    if profile.profile_id == "durable-job-load/100k-tier-v1":
+        return (
+            LIMITATIONS[0],
+            LIMITATIONS[1],
+            "The declared tier is 100K (16 workers, 10,000 jobs, 10 partitions per job, 4 tenants = 100,000 committed partition effects); 1M/10M tiers, backpressure, retry/backoff coupling, soak, cancellation-under-load, and PostgreSQL parity remain unverified.",
             LIMITATIONS[3],
             LIMITATIONS[4],
         )

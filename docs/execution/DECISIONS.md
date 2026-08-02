@@ -2064,3 +2064,14 @@
 - Boundary: The contract does not select statutory treatment, goodwill, purchase-price allocation, disposal accounting, or ledger posting. Those require separate approved policy and application slices.
 - Evidence: Eight focused domain/schema/tamper tests pass; package manifest and finance-core module evidence include the new contract.
 - Rollback: Remove the pure module, schema, test, manifest entry, registry evidence, ADR, and benchmark report. No migration or external data is touched.
+# E-282 — 100K durable-job tier is bounded SQLite evidence
+
+- Date: 2026-08-02
+- Decision: publish a 10,000-job/100,000-effect profile with 16 workers and
+  four statically tenant-pinned lanes. Keep the 600-second lease and
+  300-second busy timeout scoped to this benchmark only.
+- Rationale: 32 workers and the default 60-second timeout both produced
+  SQLite lock failures; the bounded profile completed twice without duplicate
+  effects or queue residue.
+- Boundary: this is not PostgreSQL, distributed-capacity, backpressure, soak,
+  HA/DR, or production-sizing evidence.

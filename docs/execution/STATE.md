@@ -1934,3 +1934,17 @@ publication and remote GitHub verification before a release Go decision.
 - Boundary: this is one-host SQLite evidence. PostgreSQL parity, backpressure,
   retry/backoff coupling, soak, HA/DR, SLOs, and 100K/1M/10M tiers remain
   unverified.
+
+## E-275 — Published 10K grouped-matching profile
+
+- `reconforge/benchmark/grouped_matching_scale.py` measures 10,000 records as
+  2,500 independent true many-to-many partitions. Each partition runs through
+  `GroupedSubsetSumStrategy` and the backend-neutral application service; every
+  100th partition is replayed with reversed input order.
+- Two Windows 11/Python 3.14.6 runs matched all 2,500 partitions with zero
+  ambiguity/unmatched results, zero cross-engine/permutation mismatches, and
+  identical effect digest `a6089d61b21e4b47ecff2554cd5116186c675be7b9aa5b0686ebba1974e1bc84`
+  and manifest digest `0568cc8472d85ce72e19bfb8ff119f03e5d1e8619dc77b4c3d7db3476c25e46f`.
+- Boundary: exact USD synthetic single-process evidence only. FX/fees/partial
+  density, PostgreSQL runtime parity, distributed load, soak, and 100K/1M
+  records remain unverified.

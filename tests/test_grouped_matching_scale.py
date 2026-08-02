@@ -1,0 +1,37 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from reconforge.benchmark.grouped_matching_scale import (
+    GROUPED_10K_PARTITIONS,
+    GROUPED_10K_PROFILE_ID,
+    GROUPED_10K_RECORDS,
+    run_grouped_matching_10k,
+    verify_grouped_matching_10k,
+)
+
+
+def test_grouped_matching_10k_profile_runs_with_parity_and_permutation_guards() -> None:
+    result = run_grouped_matching_10k()
+    verify_grouped_matching_10k(result)
+    assert result.profile_id == GROUPED_10K_PROFILE_ID
+    assert result.partitions == GROUPED_10K_PARTITIONS == 2_500
+    assert result.records == GROUPED_10K_RECORDS == 10_000
+    assert result.observed_runtime_seconds > 0
+    assert result.observed_peak_memory_mb > 0
+
+
+def test_grouped_matching_10k_structural_digest_is_reproducible() -> None:
+    first = run_grouped_matching_10k(permutation_check=False)
+    second = run_grouped_matching_10k(permutation_check=False)
+    verify_grouped_matching_10k(first)
+    verify_grouped_matching_10k(second)
+    assert first.effect_digest == second.effect_digest
+    assert first.manifest_digest == second.manifest_digest
+
+
+def test_grouped_matching_10k_distribution_membership_is_explicit() -> None:
+    manifest = Path("MANIFEST.in").read_text(encoding="utf-8").splitlines()
+    assert "include reconforge/benchmark/grouped_matching_scale.py" in manifest
+    assert "include docs/adr/0230-grouped-matching-10k-is-partitioned-and-bounded.md" in manifest
+    assert "include docs/execution/benchmarks/grouped-matching-10k-tier-v1.md" in manifest

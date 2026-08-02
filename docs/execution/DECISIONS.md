@@ -2004,3 +2004,12 @@
 - Consequence: ReconForge now has two reproducible 10K runs with 10,000 committed effects and identical structural/effect digests. The result is local SQLite evidence only; it does not establish PostgreSQL capacity, backpressure, soak, HA/DR, SLO, or larger tiers.
 - ADR: `docs/adr/0229-durable-job-10k-tier-is-hardware-scoped.md`.
 - Rollback: Remove the scale wrapper/report/tests, ADR, manifest entries, and revert the bounded busy-timeout change. No schema or external state is changed.
+
+## D257 - Publish a partitioned 10K grouped-matching tier
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Measure 10,000 records as 2,500 independent true many-to-many partitions. Run each partition through the public grouped strategy and application boundary, keep the published per-partition search ceilings, and sample reversed input order for permutation evidence.
+- Consequence: The matching workstream now has a reproducible 10K-record result with zero ambiguity/unmatched partitions, zero adapter/application mismatches, and stable digests. This is exact-USD synthetic single-process evidence; FX/fee/partial density, PostgreSQL runtime, distributed load, and larger tiers remain open.
+- ADR: `docs/adr/0230-grouped-matching-10k-is-partitioned-and-bounded.md`.
+- Rollback: Remove the benchmark module, tests, report, ADR, and manifest entries. No schema or external state is changed.

@@ -2,6 +2,24 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-281: Ownership-change adjustment proposal
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Scope: Pure-domain, policy-bound, non-posting ownership-change adjustment.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_consolidation_ownership_changes.py -q` | 0 | 9/9 tests passed for exact balance, digest replay, visible rounding, currency and maker-checker rejection, tamper detection, and JSON Schema validation. |
+| `python -m pytest tests/test_consolidation_ownership_changes.py tests/test_consolidation_lifecycle.py tests/test_sqlite_consolidation_ownership.py -q` | 0 | 23/23 related consolidation tests passed. |
+| `python -m ruff check reconforge/domain/consolidation_ownership_changes.py tests/test_consolidation_ownership_changes.py` | 0 | Static lint passed. |
+| `python -m mypy reconforge/domain/consolidation_ownership_changes.py` | 0 | Type check passed. |
+| `python -m build --no-isolation` | 0 | Wheel and sdist built; manifest includes module, test, schema, ADR, and benchmark report. |
+
+- Boundary: This is a deterministic proposal artifact only. It does not post
+  journals or prove statutory accounting treatment, goodwill, purchase-price
+  allocation, disposal accounting, PostgreSQL persistence, restore, HA/DR, or
+  production readiness.
+
 ## E-280: Live PostgreSQL consolidation ownership runtime
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

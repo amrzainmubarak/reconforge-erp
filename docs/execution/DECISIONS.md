@@ -2056,3 +2056,11 @@
 - Controls: Verify same-input replay returns the same immutable ID, effective resolution is tenant-scoped, overlapping effective intervals fail closed, and direct updates are rejected by the database trigger. No real credentials or customer data are used.
 - Evidence: GitHub Actions run `30755552134` passed the test on PostgreSQL 16 Alpine; the parity inventory records the boundary as `live_verified_current` with explicit single-node/no-restore/no-HA limits.
 - Rollback: Revert the test and inventory/docs changes. No production database or external provider is changed.
+
+## E-281 — Keep ownership-change accounting policy-bound and non-posting
+
+- Decision: Add a pure-domain `ownership-change-adjustment-v1` contract that calculates NCI delta from prior/new group ownership and balances a signed consideration effect with a parent-equity line.
+- Controls: Require one reporting currency, finite Decimal percentages, distinct preparer/approver with approval-before-preparation ordering, source digest, policy ID/version, visible rounding delta, exact three-line balance, deterministic request/result digests, and `posted: false`.
+- Boundary: The contract does not select statutory treatment, goodwill, purchase-price allocation, disposal accounting, or ledger posting. Those require separate approved policy and application slices.
+- Evidence: Eight focused domain/schema/tamper tests pass; package manifest and finance-core module evidence include the new contract.
+- Rollback: Remove the pure module, schema, test, manifest entry, registry evidence, ADR, and benchmark report. No migration or external data is touched.

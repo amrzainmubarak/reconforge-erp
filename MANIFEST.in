@@ -212,6 +212,10 @@ include reconforge/connectors/sftp_reference.py
 include tests/test_connector_sftp_reference.py
 include docs/connectors/reference-sftp-readonly.md
 include docs/adr/0223-reference-sftp-is-transport-injected-and-read-only.md
+include reconforge/connectors/object_reference.py
+include tests/test_connector_object_reference.py
+include docs/connectors/reference-object-storage-readonly.md
+include docs/adr/0224-reference-object-storage-is-tenant-scoped-and-read-only.md
 include tests/test_incident_response.py
 include tests/test_reliability_incident_drill.py
 include docs/security/deployment-boundaries.md

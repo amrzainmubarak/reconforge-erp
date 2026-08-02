@@ -9,6 +9,16 @@ from reconforge.connectors.manifest import (
     RetryPolicy,
     SupportLevel,
 )
+from reconforge.connectors.object_reference import (
+    OBJECT_REFERENCE_ENDPOINT,
+    OBJECT_REFERENCE_MANIFEST,
+    ObjectConnectorRegistration,
+    ObjectRead,
+    ObjectRemoteEntry,
+    ObjectStorageRead,
+    ReferenceObjectStorageConnector,
+    object_reference_registration,
+)
 from reconforge.connectors.package import (
     ConnectorPackageError,
     PublisherKeyStatus,
@@ -79,6 +89,14 @@ __all__ = [
     "SftpRead",
     "SftpRemoteFile",
     "sftp_reference_registration",
+    "OBJECT_REFERENCE_ENDPOINT",
+    "OBJECT_REFERENCE_MANIFEST",
+    "ObjectConnectorRegistration",
+    "ObjectRead",
+    "ObjectRemoteEntry",
+    "ObjectStorageRead",
+    "ReferenceObjectStorageConnector",
+    "object_reference_registration",
     "DataClassification",
     "PublisherKeyStatus",
     "RetryPolicy",

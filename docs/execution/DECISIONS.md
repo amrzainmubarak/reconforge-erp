@@ -1950,3 +1950,12 @@
 - Consequence: SFTP security/replay behavior is testable without external accounts; host-key policy, SSH implementation, provider conformance, credential rotation, and live evidence remain unclaimed. The connector is read-only.
 - ADR: `docs/adr/0223-reference-sftp-is-transport-injected-and-read-only.md`.
 - Rollback: Remove the SFTP module, tests, docs, ADR, exports, and manifest changes. No database or external state is changed.
+
+## D251 - Reference object storage is tenant-scoped and read-only
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Add a synthetic object-storage reader with exact HTTPS egress, runtime credential reference, explicit tenant ID, traversal-free key prefix, bounded objects/bytes, deterministic cursor, and SHA-256 verification. Keep it on a dedicated transport protocol so the existing immutable ObjectStoreProtocol and adapters remain compatible.
+- Consequence: Object-storage connector behavior is testable without cloud accounts; IAM, encryption, provider pagination/retry, and live evidence remain unclaimed. No write/delete/presign capability is added.
+- ADR: `docs/adr/0224-reference-object-storage-is-tenant-scoped-and-read-only.md`.
+- Rollback: Remove the object connector module, tests, docs, ADR, exports, and manifest entries. No database or external state is changed.

@@ -42,6 +42,24 @@ This file records commands and observed results. It does not convert a dirty wor
 - Boundary: this is not a live SFTP provider, host-key/SSH assurance, payment or ERP integration, write-back path, or production deployment claim. P4-CON-001 remains in progress.
 - Remote verification: Draft PR #71 head `05b64b18a083f290eb299835056cd3347d798af4` reported 15/15 required checks successful and merge state `CLEAN`. No merge, tag, release, deployment, or production mutation occurred.
 
+## E-269: Synthetic reference object-storage read-only connector
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Scope: transport-injected `reference-object-storage-readonly` integration. Exact HTTPS egress, explicit tenant, traversal-free key prefix, bounded object count/size, deterministic cursor ordering, per-object SHA-256, tenant metadata verification, and request/response digests are covered. The existing immutable ObjectStoreProtocol is unchanged; no cloud SDK, provider credential, write/delete/presign, customer data, or external deployment is included.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_connector_object_reference.py tests/test_connector_sftp_reference.py tests/test_connector_rest_reference.py tests/test_connector_network.py tests/test_connector_sdk.py tests/test_connector_writeback.py tests/test_phase4_execution_contract.py -q` | 0 | 47 focused connector/contract tests passed. |
+| `python -m ruff check reconforge/connectors/object_reference.py reconforge/connectors/sftp_reference.py reconforge/connectors/manifest.py reconforge/connectors/network.py reconforge/connectors/__init__.py tests/test_connector_object_reference.py` | 0 | Focused lint passed. |
+| `python -m mypy reconforge/connectors/object_reference.py reconforge/connectors/sftp_reference.py reconforge/connectors/manifest.py reconforge/connectors/network.py` | 0 | No issues found. |
+| `python -m bandit -q -r reconforge/connectors/object_reference.py` | 0 | No findings. |
+| `python -m ruff check .` / `python -m mypy reconforge` / `python -m bandit -q -r reconforge` / `python -m pip_audit` / `uv lock --check` / `git diff --check` | 0 | Full static, type, security, dependency, lock, and whitespace gates passed; 390 typed source files; no known third-party vulnerabilities; existing narrowly-scoped Bandit nosec/parser warnings only. |
+| `python -m build --no-isolation` | 0 | sdist and wheel built successfully; object-storage module, tests, docs, ADR, and manifest entries are present. |
+| `python -m pytest -q` | 0 | Full repository suite passed with zero failures/errors; existing environment-declared skips remain. |
+
+- ADR: `docs/adr/0224-reference-object-storage-is-tenant-scoped-and-read-only.md`.
+- Boundary: this is not a live S3/MinIO provider, IAM/encryption assurance, object-store HA/DR proof, write/delete/presign integration, or production deployment claim. P4-CON-001 remains in progress.
+
 ## E-260: Bounded grouped and netting matching slice
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

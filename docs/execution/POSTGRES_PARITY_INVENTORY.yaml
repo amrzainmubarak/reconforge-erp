@@ -15,7 +15,7 @@ current_live_gate:
   application_and_migration_result: passed
   native_encrypted_backup_restore_tests: 1
   native_encrypted_backup_restore_result: passed
-  covered_live_boundaries: 25
+  covered_live_boundaries: 23
   skipped_live_boundaries: 0
   limitations: [single_node, synthetic_data, no_ha, no_host_loss, no_rpo_rto_claim]
 current_slice_gate:

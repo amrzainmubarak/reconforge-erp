@@ -31,6 +31,10 @@ This file records commands and observed results. It does not convert a dirty wor
   durable-job application and worker boundaries to `live_verified_current`.
 - This remains a single-node synthetic gate; queue HA, failover, soak,
   distributed capacity, and RPO/RTO are not claimed.
+- CI run `30764782247` kept the live PostgreSQL server-boundary test green but
+  exposed a stale inventory arithmetic assertion (`covered_live_boundaries`
+  remained 25 after two boundaries moved out of `live_test_available`). The
+  inventory count is corrected to 23; the failed compatibility run is retained.
 
 ## E-292: Expiring delegation policy invariant
 

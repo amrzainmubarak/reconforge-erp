@@ -49,6 +49,15 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - CI `30766363953` passed both Python versions, server-boundaries, parity, and
   Docker; CodeQL `30766363941` and Security `30766363936` passed.
 
+## E-297 — Governed durable-job mutation boundary
+
+- Added `GovernedDurableJobApplicationService`: submit/cancel now have an
+  explicit path that requires actor identity match, central permission,
+  tenant/workspace scope, and SoD before repository mutation.
+- Denied requests are proven no-effect; the legacy lifecycle remains available
+  for callers with an independent authorization boundary. Route migration,
+  PostgreSQL policy parity, federation, and cache invalidation remain open.
+
 ## E-292 — Explicit expiring delegation in central policy
 
 - The central policy engine now evaluates temporary delegated authority using a

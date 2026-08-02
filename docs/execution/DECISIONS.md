@@ -33,6 +33,13 @@
 - **Rationale**: A single deterministic contract prevents one adapter from silently weakening the SDK safety boundary.
 - **Reversibility**: Additive conformance function and tests only; no provider or network behavior change.
 
+### D-297: Keep Governed Job Authorization Explicit and Opt-In
+- **Date**: 2026-08-02
+- **Context**: Durable jobs have internal lifecycle correctness but callers need a shared deny-before-mutation policy boundary.
+- **Decision**: Add a typed wrapper requiring policy context and explicit permission for submit/cancel while preserving the existing lifecycle service for callers with separate authorization.
+- **Rationale**: Explicit adoption avoids silently weakening compatibility while making the safe path testable and auditable.
+- **Reversibility**: Additive application class and tests; no schema change.
+
 ### D-292: Delegated Authority Requires an Explicit Evaluation Instant
 - **Date**: 2026-08-02
 - **Context**: Enterprise policy needs expiring delegation without hidden wall-clock behavior that makes decisions non-replayable.

@@ -319,3 +319,4 @@ include docs/adr/0244-local-delegation-administration-is-immutable-and-tenant-sc
 include docs/adr/0245-postgres-durable-job-runtime-gate.md
 include docs/adr/0246-postgres-intercompany-runtime-gate.md
 include docs/adr/0247-reference-connector-manifest-portfolio-conformance.md
+include docs/adr/0248-governed-job-mutation-policy-boundary.md

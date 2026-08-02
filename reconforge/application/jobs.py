@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
+from reconforge.auth.policy import CentralPolicyEngine, PolicyDecision, PolicyEvaluationContext
 from reconforge.domain.jobs import (
     DurableJob,
     JobLease,
@@ -195,6 +196,91 @@ class DurableJobApplicationService:
         if job is None:
             raise DurableJobNotFoundError("Durable job was not found in the requested tenant scope.")
         return job
+
+
+class JobAuthorizationError(PermissionError):
+    """Raised when a governed job mutation fails central policy evaluation."""
+
+
+class GovernedDurableJobApplicationService:
+    """Policy boundary for job mutations; the underlying lifecycle remains reusable."""
+
+    def __init__(
+        self,
+        service: DurableJobApplicationService,
+        *,
+        policy_engine: CentralPolicyEngine | None = None,
+    ) -> None:
+        self._service = service
+        self._policy = policy_engine or CentralPolicyEngine()
+
+    def submit(
+        self,
+        submission: JobSubmission,
+        *,
+        actor_id: str,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+    ) -> tuple[DurableJob, bool]:
+        self._authorize(
+            policy_context,
+            actor_id=actor_id,
+            required_permission=required_permission,
+            tenant_id=submission.tenant_id,
+            workspace_id=submission.workspace_id,
+            object_id=submission.job_id,
+            action="submit",
+        )
+        return self._service.submit(submission, actor_id=actor_id)
+
+    def cancel(
+        self,
+        *,
+        tenant_id: str,
+        workspace_id: str,
+        job_id: str,
+        actor_id: str,
+        occurred_at: str,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+    ) -> DurableJob:
+        self._authorize(
+            policy_context,
+            actor_id=actor_id,
+            required_permission=required_permission,
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+            object_id=job_id,
+            action="cancel",
+        )
+        return self._service.cancel(
+            tenant_id=tenant_id, job_id=job_id, actor_id=actor_id, occurred_at=occurred_at
+        )
+
+    def _authorize(
+        self,
+        context: PolicyEvaluationContext,
+        *,
+        actor_id: str,
+        required_permission: str,
+        tenant_id: str,
+        workspace_id: str,
+        object_id: str,
+        action: str,
+    ) -> PolicyDecision:
+        if actor_id != context.user_id:
+            raise JobAuthorizationError("job actor does not match policy identity")
+        decision = self._policy.evaluate(
+            context,
+            required_permission=required_permission,
+            enforce_sod=True,
+            enforce_ownership=True,
+        )
+        if not decision.allowed:
+            raise JobAuthorizationError(f"job policy denied: {decision.reason_code}")
+        if context.tenant_id != tenant_id or context.workspace_id != workspace_id:
+            raise JobAuthorizationError("job policy scope does not match mutation scope")
+        return decision
 
 
 class DurableJobWorkerService:

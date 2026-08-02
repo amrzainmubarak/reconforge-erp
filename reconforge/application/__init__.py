@@ -10,6 +10,8 @@ from reconforge.application.jobs import (
     DurableJobRepositoryProtocol,
     DurableJobWorkerRepositoryProtocol,
     DurableJobWorkerService,
+    GovernedDurableJobApplicationService,
+    JobAuthorizationError,
     JobSubmission,
     LeasedJob,
 )
@@ -26,6 +28,8 @@ from reconforge.application.workspace_periods import (
 
 __all__ = [
     "DurableJobApplicationService",
+    "GovernedDurableJobApplicationService",
+    "JobAuthorizationError",
     "DurableJobNotFoundError",
     "DurableJobRepositoryProtocol",
     "DurableJobWorkerRepositoryProtocol",

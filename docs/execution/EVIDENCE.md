@@ -66,6 +66,17 @@ This file records commands and observed results. It does not convert a dirty wor
   engine-parity, and docker-parity for `f4f96c9`; CodeQL `30766363941`,
   Security `30766363936`, and Docker `30766363939` also passed.
 
+## E-297: Governed durable-job mutation boundary
+
+- Added `GovernedDurableJobApplicationService` with explicit policy context,
+  actor identity matching, tenant/workspace scope checks, permission checks,
+  and centralized SoD evaluation before submit/cancel.
+- `tests/test_governed_jobs_policy.py` and the durable-job application suite
+  passed; Ruff and Mypy passed. A denied request is verified not to reach the
+  repository.
+- This is an opt-in application boundary; all API/export/scheduler callers are
+  not yet migrated and no federation/PostgreSQL parity claim is made.
+
 ## E-292: Expiring delegation policy invariant
 
 - Added optional delegation fields to `PolicyEvaluationContext` and forwarded

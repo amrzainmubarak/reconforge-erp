@@ -8,7 +8,10 @@ from pathlib import Path
 
 _ALLOWED_DB_SUFFIXES = {".db", ".sqlite", ".sqlite3"}
 _WINDOWS_DRIVE_PREFIX = re.compile(r"^[A-Za-z]:")
-SQLITE_BUSY_TIMEOUT_MS = 5_000
+# Durable partition workers may briefly contend on BEGIN IMMEDIATE.  A
+# bounded one-minute wait prevents transient lock storms from becoming lost
+# work while still surfacing a genuinely wedged local database.
+SQLITE_BUSY_TIMEOUT_MS = 60_000
 
 
 class DatabaseError(ValueError):

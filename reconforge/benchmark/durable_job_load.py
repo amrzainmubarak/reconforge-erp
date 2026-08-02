@@ -372,6 +372,20 @@ LIMITATIONS = (
 )
 
 
+def _limitations_for_profile(profile: DurableJobLoadProfile) -> tuple[str, ...]:
+    """Keep the declared tier in the manifest's non-claim boundary."""
+
+    if profile.profile_id == "durable-job-load/10k-tier-v1":
+        return (
+            LIMITATIONS[0],
+            LIMITATIONS[1],
+            "The declared tier is 10K (16 workers, 1,000 jobs, 10 partitions per job, 4 tenants = 10,000 committed partition effects); 100K/1M/10M tiers, backpressure, retry/backoff coupling, soak, cancellation-under-load, and PostgreSQL parity remain unverified.",
+            LIMITATIONS[3],
+            LIMITATIONS[4],
+        )
+    return LIMITATIONS
+
+
 def run_durable_job_load_profile(
     database_path: Path,
     *,
@@ -442,7 +456,7 @@ def run_durable_job_load_profile(
     observed_runtime = round(runtime, 4)
     observed_peak_mb = round(peak_current / (1024 * 1024), 4)
     environment = _environment()
-    limitations = LIMITATIONS
+    limitations = _limitations_for_profile(declared)
 
     document: dict[str, object] = {
         "schema_version": LOAD_PROFILE_SCHEMA_VERSION,

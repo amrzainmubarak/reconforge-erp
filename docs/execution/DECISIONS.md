@@ -1995,3 +1995,12 @@
 - Consequence: The PostgreSQL parity inventory now exposes the adapter as `contract_only`, avoiding a false live-parity claim while providing a stable integration point for a future real PostgreSQL drill.
 - ADR: `docs/adr/0228-postgres-grouped-matching-worker-boundary.md`.
 - Rollback: Remove the adapter, tests, ADR, manifest, inventory, and execution entries. No schema or production behavior changes.
+
+## D256 - Publish one hardware-scoped 10K durable-job tier
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Declare 1,000 durable jobs with ten partition effects each, 16 workers, and four tenant lanes as the first 10K scale profile. Reuse generation-fenced leases, checkpoints, idempotency, and duplicate-effect audits. Raise SQLite's bounded busy wait to 60 seconds so transient writer contention does not fail a valid local workload.
+- Consequence: ReconForge now has two reproducible 10K runs with 10,000 committed effects and identical structural/effect digests. The result is local SQLite evidence only; it does not establish PostgreSQL capacity, backpressure, soak, HA/DR, SLO, or larger tiers.
+- ADR: `docs/adr/0229-durable-job-10k-tier-is-hardware-scoped.md`.
+- Rollback: Remove the scale wrapper/report/tests, ADR, manifest entries, and revert the bounded busy-timeout change. No schema or external state is changed.

@@ -2,6 +2,31 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-274: Durable-job 10K scale profile
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Scope: declared 10K partitioned durable-job workload using the existing
+  SQLite generation-fenced lease/checkpoint worker. Profile shape is 16
+  workers, 1,000 jobs, 10 partitions/job, and four statically fair tenant
+  lanes. No PostgreSQL, external queue, customer data, or production system
+  was used.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_durable_job_scale.py tests/test_durable_job_load_profile.py -q` | 0 | 11/11 focused tests passed. |
+| `python -c "...run_ten_k_profile..."` (two complete runs) | 0 | Both runs completed 1,000/1,000 jobs and 10,000/10,000 effects; zero duplicate effects and zero queued/running depth. Structural and effect digests matched exactly: manifest `ef430b4033a81f93e3e5a38bd9c9773a346b48b29fe2d568a7c63049a23675ff`, effects `0e750959e9661f6f2c463dde311c87928bf53ad56facfdd9274b1feeca674dc3`. |
+| `python -m ruff check reconforge/benchmark/durable_job_scale.py tests/test_durable_job_scale.py` | 0 | Focused lint passed. |
+| `python -m mypy reconforge/benchmark/durable_job_scale.py` | 0 | No issues found. |
+
+- Report: `docs/execution/benchmarks/durable-job-10k-tier-v1.md`.
+- ADR: `docs/adr/0229-durable-job-10k-tier-is-hardware-scoped.md`.
+- The bounded SQLite busy wait was raised from 5 seconds to 60 seconds after
+  the first 10K attempt exposed transient `database is locked` contention;
+  the successful runs prove no lost effects under this declared local profile.
+- Boundary: runtimes and throughput are hardware observations, not sizing or
+  SLO claims. PostgreSQL parity, queue backpressure, retry/backoff coupling,
+  soak, cancellation-under-load, HA/DR, and 100K/1M/10M tiers remain open.
+
 ## E-267: Governed write-back intent lifecycle
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

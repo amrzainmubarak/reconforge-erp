@@ -1919,3 +1919,18 @@ publication and remote GitHub verification before a release Go decision.
   not counted as live parity. A future PostgreSQL runtime drill must still
   prove migration, RLS/tenant isolation, checkpoint replay, and failure
   recovery.
+
+## E-274 — Published 10K durable-job scale profile
+
+- `reconforge/benchmark/durable_job_scale.py` declares 16 workers, 1,000
+  jobs, ten partitions per job, and four tenant lanes (10,000 committed
+  partition effects). The existing generation-fenced worker/checkpoint and
+  idempotency contracts are reused; SQLite now waits up to a bounded 60
+  seconds for transient writer contention.
+- Two complete Windows 11/Python 3.14.6 runs drained all work with zero
+  duplicate effects and identical effect-set digest
+  `0e750959e9661f6f2c463dde311c87928bf53ad56facfdd9274b1feeca674dc3` and
+  manifest digest `ef430b4033a81f93e3e5a38bd9c9773a346b48b29fe2d568a7c63049a23675ff`.
+- Boundary: this is one-host SQLite evidence. PostgreSQL parity, backpressure,
+  retry/backoff coupling, soak, HA/DR, SLOs, and 100K/1M/10M tiers remain
+  unverified.

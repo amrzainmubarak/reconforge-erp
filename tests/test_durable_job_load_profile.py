@@ -193,8 +193,11 @@ def test_schema_runtime_docs_and_tests_are_in_distribution_manifest() -> None:
     manifest = Path("MANIFEST.in").read_text(encoding="utf-8")
     expected = {
         "include docs/adr/0213-durable-job-load-profile-is-structural-and-non-claim.md",
+        "include docs/adr/0229-durable-job-10k-tier-is-hardware-scoped.md",
+        "include docs/execution/benchmarks/durable-job-10k-tier-v1.md",
+        "include reconforge/benchmark/durable_job_scale.py",
+        "include tests/test_durable_job_scale.py",
         "include reconforge/benchmark/durable_job_load.py",
         "include tests/test_durable_job_load_profile.py",
     }
     assert expected <= set(manifest.splitlines())
-

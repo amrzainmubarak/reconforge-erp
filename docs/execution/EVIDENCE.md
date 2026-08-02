@@ -21,7 +21,12 @@ This file records commands and observed results. It does not convert a dirty wor
 - Boundary: local SQLite durable master only. It is not PostgreSQL parity,
   acquisition/fair-value/goodwill/equity-method accounting, ownership-change
   posting, statutory reporting, or API/CLI/UI publication.
-- Remote verification: pending after implementation and documentation commits.
+- Remote verification: implementation head
+  `1cf8be0bc9970475021930b1accd4a8af5b89ce2` passed all 15 reported PR #71
+  checks: Python analysis, CodeQL, locked audits 3.11/3.12, secret/npm policy,
+  Docker build/parity, four engine-parity cells, Python security, server
+  boundaries, and tests on Python 3.11/3.12. GitHub reported `CLEAN`. No merge,
+  tag, release, deployment, or production mutation occurred.
 
 ## E-277: Grouped matching 1M-record tier
 

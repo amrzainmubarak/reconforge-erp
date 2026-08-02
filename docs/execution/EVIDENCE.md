@@ -2,6 +2,24 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-283: Live PostgreSQL close-management lifecycle parity
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Runtime: CI server-boundaries job from run `30758604893`, PostgreSQL 16
+  Alpine, non-privileged `reconforge_app` role, current branch head
+  `306e956`.
+- Contract: `tests/test_postgres_close_application.py` exercised tenant-scoped
+  period/task/dependency writes, dependency-cycle refusal, readiness scoring,
+  lock and reopen SoD transitions, locked-period mutation refusal, audit and
+  outbox event counts, and cross-tenant isolation. The full server-boundaries
+  gate completed successfully.
+- Inventory boundary: the `CloseManagementApplicationService` row remains
+  `live_test_available`; this run is recorded as current runtime evidence but
+  is not promoted to the separate current-live gate.
+- Boundary: this is lifecycle parity only. Consolidation journal posting,
+  eliminations/NCI/statements, restore, HA/DR, RPO/RTO, and production capacity
+  remain unverified.
+
 ## E-282: Published 100K durable-job profile
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

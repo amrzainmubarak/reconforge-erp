@@ -2075,3 +2075,14 @@
   effects or queue residue.
 - Boundary: this is not PostgreSQL, distributed-capacity, backpressure, soak,
   HA/DR, or production-sizing evidence.
+# E-283 — PostgreSQL close-management lifecycle runtime evidence
+
+- Date: 2026-08-02
+- Decision: record the current CI non-privileged runtime contract as evidence,
+  while retaining the inventory's `live_test_available` status until a
+  dedicated current-live gate is recorded.
+- Evidence: tenant-scoped periods/tasks/dependencies, dependency-cycle refusal,
+  readiness and lock/reopen transitions, locked mutation refusal, audit/outbox
+  parity, and tenant isolation.
+- Boundary: this does not close consolidation posting, eliminations/NCI,
+  statutory statements, restore, HA/DR, or RPO/RTO.

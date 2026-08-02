@@ -17,6 +17,16 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - This remains single-host SQLite evidence. PostgreSQL parity, distributed
   throughput, backpressure, soak, HA/DR, and 1M/10M tiers remain open.
 
+## E-283 — Current PostgreSQL close-management runtime evidence
+
+- The current CI server-boundaries run exercised the existing close-management
+  PostgreSQL adapter for tenant isolation, dependency DAG guards, readiness,
+  lock/reopen lifecycle, audit/outbox evidence, and locked mutation refusal.
+- The parity inventory intentionally remains `live_test_available` until a
+  dedicated current-live gate promotes this boundary.
+- This is not full consolidation posting or statutory reporting evidence;
+  journals, eliminations/NCI, restore, HA/DR, and RPO/RTO remain open.
+
 ## Snapshot boundary
 
 - Branch: `codex/consolidation-journal-lifecycle`, current ownership-adjustment code head `bfb29d44ae025b338a8a5d0f8311619a8292462e`; Draft PR #71 remains deliberately unmerged.

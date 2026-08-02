@@ -27,7 +27,8 @@ from reconforge.api.server_identity import (
 )
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService
 from reconforge.auth.models import LocalUser
-from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext, audit_policy_decision
+from reconforge.auth.policy import CentralPolicyEngine, PolicyDecision, PolicyEvaluationContext, audit_policy_decision
+from reconforge.auth.policy_cache import PolicyDecisionCache
 from reconforge.auth.webauthn_config import WebAuthnRuntime
 from reconforge.db import DatabaseError, connect
 from reconforge.db.tenancy import (
@@ -247,6 +248,30 @@ dynamic_policy_dependency.__reconforge_permissions__ = frozenset()
 dynamic_policy_dependency.__reconforge_permission_mode__ = "dynamic"
 
 
+def _evaluate_policy(
+    request: Request,
+    context: PolicyEvaluationContext,
+    *,
+    required_permission: str,
+) -> PolicyDecision:
+    cache = getattr(request.app.state, "policy_decision_cache", None)
+    if isinstance(cache, PolicyDecisionCache):
+        return cache.evaluate(context, required_permission=required_permission)
+    return CentralPolicyEngine().evaluate(context, required_permission=required_permission)
+
+
+def _evaluate_any_policy(
+    request: Request,
+    context: PolicyEvaluationContext,
+    *,
+    required_permissions: frozenset[str],
+) -> PolicyDecision:
+    cache = getattr(request.app.state, "policy_decision_cache", None)
+    if isinstance(cache, PolicyDecisionCache):
+        return cache.evaluate_any(context, required_permissions=required_permissions)
+    return CentralPolicyEngine().evaluate_any(context, required_permissions=required_permissions)
+
+
 def require_permission(permission: str) -> Callable[..., LocalUser]:
     """Build a dependency requiring one local RBAC permission."""
 
@@ -263,7 +288,8 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
             principal = getattr(request.state, "server_principal", None)
             if not isinstance(principal, ServerPrincipal):
                 principal = current_server_principal()
-            decision = CentralPolicyEngine().evaluate(
+            decision = _evaluate_policy(
+                request,
                 PolicyEvaluationContext(
                     user_id=current_user.id if principal is not None else "",
                     username=current_user.username,
@@ -305,7 +331,8 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
             raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
         try:
             service = LocalAuthService(connection)
-            decision = CentralPolicyEngine().evaluate(
+            decision = _evaluate_policy(
+                request,
                 PolicyEvaluationContext(
                     user_id=current_user.id,
                     username=current_user.username,
@@ -348,7 +375,8 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
             principal = getattr(request.state, "server_principal", None)
             if not isinstance(principal, ServerPrincipal):
                 principal = current_server_principal()
-            decision = CentralPolicyEngine().evaluate_any(
+            decision = _evaluate_any_policy(
+                request,
                 PolicyEvaluationContext(
                     user_id=current_user.id if principal is not None else "",
                     username=current_user.username,
@@ -390,7 +418,8 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
             raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
         try:
             service = LocalAuthService(connection)
-            decision = CentralPolicyEngine().evaluate_any(
+            decision = _evaluate_any_policy(
+                request,
                 PolicyEvaluationContext(
                     user_id=current_user.id,
                     username=current_user.username,

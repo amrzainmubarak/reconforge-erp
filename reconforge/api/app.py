@@ -70,6 +70,7 @@ from reconforge.api.server_identity import (
 )
 from reconforge.application.pagination import CursorCodec
 from reconforge.auth.federation import FederationProvider, FederationVerifier
+from reconforge.auth.policy_cache import PolicyDecisionCache
 from reconforge.auth.webauthn_config import WebAuthnRuntime
 from reconforge.db import resolve_db_path
 from reconforge.db.tenancy import TenantDatabaseRouter
@@ -130,6 +131,7 @@ def create_api_app(
     web_root: Path | str | None = None,
     allowed_hosts: tuple[str, ...] = (),
     secure_transport: bool = False,
+    policy_cache_enabled: bool = False,
 ) -> FastAPI:
     """Create the API with local mode or an explicit server identity profile."""
 
@@ -181,6 +183,9 @@ def create_api_app(
     app.state.web_root = resolved_web_root
     app.state.secure_transport = secure_transport
     app.state.allowed_hosts = normalized_hosts
+    # Explicit opt-in only: the middleware below invalidates after every
+    # mutation, so callers do not inherit an invisible freshness dependency.
+    app.state.policy_decision_cache = PolicyDecisionCache() if policy_cache_enabled else None
     if normalized_hosts:
         # Register before decorator middleware so request IDs and the response
         # policy still wrap a Host rejection.
@@ -201,6 +206,9 @@ def create_api_app(
                 if span is not None:
                     span.set_attribute("error.type", type(exc).__name__)
                 raise
+            cache = getattr(request.app.state, "policy_decision_cache", None)
+            if cache is not None and method not in {"GET", "HEAD", "OPTIONS", "TRACE"}:
+                cache.invalidate()
             route = request.scope.get("route")
             local_template = str(getattr(route, "path", ""))
             candidate = local_template if local_template.startswith("/scim/v2") else "/api/v1" + local_template

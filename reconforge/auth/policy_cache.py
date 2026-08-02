@@ -16,7 +16,13 @@ from decimal import Decimal
 from threading import RLock
 from typing import Protocol
 
-from reconforge.auth.policy import POLICY_VERSION, CentralPolicyEngine, PolicyDecision, PolicyEvaluationContext
+from reconforge.auth.policy import (
+    POLICY_VERSION,
+    CentralPolicyEngine,
+    PolicyDecision,
+    PolicyEvaluationContext,
+    permission_requires_human,
+)
 
 
 class PolicyEvaluator(Protocol):
@@ -27,6 +33,13 @@ class PolicyEvaluator(Protocol):
         required_permission: str | None = None,
         enforce_sod: bool = True,
         enforce_ownership: bool = True,
+    ) -> PolicyDecision: ...
+
+    def evaluate_any(
+        self,
+        ctx: PolicyEvaluationContext,
+        *,
+        required_permissions: frozenset[str],
     ) -> PolicyDecision: ...
 
 
@@ -129,6 +142,36 @@ class PolicyDecisionCache:
             while len(self._entries) > self._max_entries:
                 self._entries.popitem(last=False)
         return decision
+
+    def evaluate_any(
+        self,
+        context: PolicyEvaluationContext,
+        *,
+        required_permissions: frozenset[str],
+        evaluator: PolicyEvaluator | None = None,
+    ) -> PolicyDecision:
+        """Evaluate an any-of contract while reusing the safe single-permission cache.
+
+        The selected permission follows ``CentralPolicyEngine.evaluate_any``:
+        the smallest eligible permission is evaluated with the full contextual
+        checks.  Empty or non-matching contracts stay on the engine so their
+        denials are never cached.
+        """
+
+        if not required_permissions or any(not value.strip() for value in required_permissions):
+            engine = evaluator or CentralPolicyEngine()
+            return engine.evaluate_any(context, required_permissions=required_permissions)
+        candidates = context.user_permissions.intersection(required_permissions)
+        if context.principal_type == "service_account":
+            candidates = frozenset(permission for permission in candidates if not permission_requires_human(permission))
+        if not candidates:
+            engine = evaluator or CentralPolicyEngine()
+            return engine.evaluate_any(context, required_permissions=required_permissions)
+        return self.evaluate(
+            context,
+            required_permission=min(candidates),
+            evaluator=evaluator,
+        )
 
     def invalidate(self, *, tenant_id: str | None = None, workspace_id: str | None = None) -> int:
         """Remove entries matching the supplied scope; no arguments clears all."""

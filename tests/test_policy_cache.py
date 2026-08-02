@@ -17,6 +17,11 @@ class _CountingEvaluator:
         self.calls += 1
         return self.decision
 
+    def evaluate_any(self, context: PolicyEvaluationContext, **_: object) -> PolicyDecision:
+        del context
+        self.calls += 1
+        return self.decision
+
 
 def _context(tenant: str, workspace: str = "workspace-a") -> PolicyEvaluationContext:
     return PolicyEvaluationContext(
@@ -74,3 +79,19 @@ def test_cache_rejects_unsafe_scope_and_capacity_configuration() -> None:
         pass
     else:
         raise AssertionError("workspace invalidation without tenant was accepted")
+
+
+def test_any_permission_uses_same_allowed_only_cache_and_preserves_denial() -> None:
+    cache = PolicyDecisionCache()
+    evaluator = _CountingEvaluator(PolicyDecision(True, "allowed", granted_permission="close.manage"))
+    context = _context("tenant-a")
+    required = frozenset({"close.manage", "reports.read"})
+    cache.evaluate_any(context, required_permissions=required, evaluator=evaluator)
+    cache.evaluate_any(context, required_permissions=required, evaluator=evaluator)
+    assert evaluator.calls == 1
+
+    denied = _CountingEvaluator(PolicyDecision(False, "denied", "permission_missing"))
+    missing = _context("tenant-a")
+    cache.evaluate_any(missing, required_permissions=frozenset({"reports.read"}), evaluator=denied)
+    cache.evaluate_any(missing, required_permissions=frozenset({"reports.read"}), evaluator=denied)
+    assert denied.calls == 2

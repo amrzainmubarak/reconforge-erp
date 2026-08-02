@@ -174,6 +174,18 @@ This file records commands and observed results. It does not convert a dirty wor
   engine-parity cells, server-boundaries, Docker, Security, and CodeQL. The
   PostgreSQL runtime evidence is limited to one synthetic single-node gate.
 
+## E-303: Explicit API policy cache adoption
+
+- Added the explicit `policy_cache_enabled` API option. Default app instances
+  keep `policy_decision_cache` disabled; enabled instances use the cache-backed
+  all/any permission dependencies.
+- Added global cache invalidation after every non-safe HTTP request, including
+  failed mutation responses. Delegated and denied decisions remain uncached.
+- `python -m pytest tests/test_policy_cache.py tests/test_api_foundation.py -q`:
+  passed (15 tests). Ruff and Mypy passed for the changed API/cache modules.
+- This is local API-instance evidence only; distributed invalidation and full
+  policy attribute coverage across every route/action/UI surface remain open.
+
 ## E-292: Expiring delegation policy invariant
 
 - Added optional delegation fields to `PolicyEvaluationContext` and forwarded

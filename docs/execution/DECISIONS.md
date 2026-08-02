@@ -69,6 +69,13 @@
 - **Rationale**: Authority history must remain replayable and tenant-isolated even when the application role is non-privileged. The contract stays additive until a live CI gate proves the migration and adapter together.
 - **Reversibility**: Downgrade refuses to discard retained rows; migration and repository are additive and can be retired through an evidence-preserving backup/restore process.
 
+### D-303: Make API Policy Caching Explicit and Mutation-Invalidated
+- **Date**: 2026-08-03
+- **Context**: The bounded decision cache was safe in isolation but had no adopted API path or freshness rule.
+- **Decision**: Add an opt-in API setting and use the cache for all/any permission dependencies only when enabled. Invalidate the instance cache after every non-safe HTTP request, including failed mutations; keep the default disabled.
+- **Rationale**: This provides a reversible performance path without allowing stale authorization decisions to survive an API mutation or changing existing deployments silently.
+- **Reversibility**: Set `policy_cache_enabled=False`; no schema or client contract migration is required.
+
 ### D-292: Delegated Authority Requires an Explicit Evaluation Instant
 - **Date**: 2026-08-02
 - **Context**: Enterprise policy needs expiring delegation without hidden wall-clock behavior that makes decisions non-replayable.

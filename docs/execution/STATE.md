@@ -112,6 +112,16 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   create/effective-read/revoke/isolation gate under the non-privileged role.
   Federation, route coverage, and cache invalidation wiring remain open.
 
+## E-303 — Explicit API policy cache adoption
+
+- `create_api_app(..., policy_cache_enabled=True)` now installs the bounded
+  allowed-only cache; the default remains uncached for compatibility.
+- `require_permission` and `require_any_permission` use the cache only when the
+  app explicitly enables it. Every non-safe HTTP request invalidates the cache,
+  including failed mutations. Focused API/cache tests pass under ADR 0254.
+- Distributed invalidation, workspace-specific optimization, and complete
+  route/action attribute coverage remain open.
+
 ## E-292 — Explicit expiring delegation in central policy
 
 - The central policy engine now evaluates temporary delegated authority using a

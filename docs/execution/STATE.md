@@ -8,7 +8,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 
 ## Snapshot boundary
 
-- Branch: `codex/consolidation-journal-lifecycle`, current 100K grouped-matching head `c22bd05` (full SHA recorded in EVIDENCE); Draft PR #71 remains deliberately unmerged.
+- Branch: `codex/consolidation-journal-lifecycle`, current 1M grouped-matching head `a367d3e9eaf9512efa45dd0acf132d62401f8f99`; Draft PR #71 remains deliberately unmerged.
 - Phase 1 base: `1c633eea53a2f11c9a90af57edfc80a36faeef82` (merged atomic application-boundary PR #62)
 - Phase 0 signed-candidate source remains `d47edd845e6aef3bae16e05698e07878086d690b`; its evidence is immutable historical baseline, not evidence for Phase 1 changes.
 - Publication scope: PR #54 merged the evidence-bounded Phase 0 implementation. Signed Release Candidate run `30243819239` is non-publishing: it retained review artifact `8644255664` and pushed only the digest-addressed candidate image required for verification; no GitHub Release, PyPI publication, compliance claim, or production migration occurred.

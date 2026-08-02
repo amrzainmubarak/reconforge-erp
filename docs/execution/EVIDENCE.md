@@ -23,7 +23,12 @@ This file records commands and observed results. It does not convert a dirty wor
   this does not establish PostgreSQL runtime parity, distributed capacity,
   SLOs, soak, provider I/O, FX/fee/partial-settlement density, or domain-diverse
   financial performance.
-- Remote verification: pending after implementation and documentation commits.
+- Remote verification: implementation head
+  `a367d3e9eaf9512efa45dd0acf132d62401f8f99` passed all 15 reported PR #71
+  checks: Python analysis, CodeQL, locked audits 3.11/3.12, secret/npm policy,
+  Docker build/parity, four engine-parity cells, Python security, server
+  boundaries, and tests on Python 3.11/3.12. GitHub reported `CLEAN`. No merge,
+  tag, release, deployment, or production mutation occurred.
 
 ## E-276: Grouped matching 100K-record tier
 

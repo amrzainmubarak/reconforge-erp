@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-260: Bounded grouped and netting matching slice
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Scope: persistence-independent exact grouped matching only. The existing `reconforge/domain/grouped_matching.py` and `reconforge/application/grouped_matching.py` contracts now have a dedicated domain regression slice proving one-to-many, many-to-one, and true many-to-many/netting groups, explicit Decimal amounts, sourced FX conversion, fee accounting, date-window/partition bounds, permutation-stable digests, visible unmatched outcomes, and explicit equal-optimum/search-budget ambiguity. No posting, connector, API, UI, migration, or production state was changed.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_grouped_matching.py tests/test_grouped_matching_application.py --no-header --tb=short -q` | 0 | 17/17 passed: grouped selection, true many-to-many permutation digest, fee/FX, netting, ambiguity, budget, partition/identity bounds, and application-contract compatibility. |
+| `python -m ruff check reconforge/domain/grouped_matching.py reconforge/application/grouped_matching.py tests/test_grouped_matching.py tests/test_grouped_matching_application.py` | 0 | All checks passed. |
+| `python -m mypy reconforge/domain/grouped_matching.py reconforge/application/grouped_matching.py` | 0 | No issues found. |
+| `python -m bandit -q -r reconforge/domain/grouped_matching.py reconforge/application/grouped_matching.py` | 0 | No findings. |
+| `python -m pytest --no-header --tb=short -q` | 0 | Full repository suite passed after the slice and flake repair; zero failures/errors and 64 declared skips. |
+
+- ADR: `docs/adr/0215-bounded-grouped-matching-is-explainable-and-non-posting.md`.
+- Boundary: this is a bounded algorithmic foundation, not proof of partial-settlement allocation, carry-forward/sequence strategies, mutation or crash/resume behavior, cross-engine parity, or 10K/100K/1M benchmark performance. P4-MAT-001 remains in progress.
+
 ## E-259: Draft PR #71 remote verification
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

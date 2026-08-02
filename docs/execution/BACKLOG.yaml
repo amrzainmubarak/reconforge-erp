@@ -806,9 +806,11 @@ tasks:
     area: advanced_matching
     goal_workstream: advanced_matching
     title: Optimization-grade advanced matching portfolio
-    status: planned
+    status: in_progress
     depends_on: [P1-REC-004, P1-REC-006, P1-REC-010]
     exit_evidence: Bounded optimized grouped/netting/sequence/carry-forward/partial/reversal strategies beat declared baselines without losing deterministic ambiguity, explanation, engine parity, crash resume, or financial correctness.
+    completed_slices:
+      - E-260 adds a dedicated regression/evidence slice over the existing persistence-independent grouped matcher in `reconforge/domain/grouped_matching.py` and `reconforge/application/grouped_matching.py`. Exact Decimal records support one-to-many, many-to-one, and true many-to-many/netting groups, sourced FX conversion, explicit fee accounting, date/partition bounds, permutation-stable digests, visible unmatched outcomes, equal-optimum ambiguity, and explicit search budgets. Seventeen focused contracts and package membership pass under ADR 0215. Multiple non-overlapping groups, partial settlement allocation, carry-forward/sequence strategies, mutation tests, crash/resume integration, cross-engine parity, and 10K/100K/1M benchmarks remain open.
 
   - id: P4-CON-001
     priority: P4

@@ -64,7 +64,9 @@ def test_queued_cancellation_drains_without_duplicate_effects(tmp_path: Path) ->
     assert result.committed_partition_effects == 12
     assert result.duplicate_partition_effects == 0
     assert result.final_queue_depth == result.final_running_depth == result.orphaned_leases == 0
-    assert result.observed_runtime_seconds > 0
+    # Runtime is an observation rounded to four decimals; a fast running path
+    # may legitimately round to zero and is excluded from structural evidence.
+    assert result.observed_runtime_seconds >= 0
     assert result.observed_peak_memory_mb > 0
 
 
@@ -86,7 +88,9 @@ def test_running_cancellation_releases_lease_without_duplicate_effects(tmp_path:
     assert result.committed_partition_effects == 1
     assert result.lease_released is True
     assert result.duplicate_partition_effects == result.orphaned_leases == 0
-    assert result.observed_runtime_seconds > 0
+    # Runtime is an observation rounded to four decimals; this deliberately
+    # tiny path may legitimately round to zero.
+    assert result.observed_runtime_seconds >= 0
 
 
 def test_manifest_text_is_closed_schema_and_retains_limitations(tmp_path: Path) -> None:

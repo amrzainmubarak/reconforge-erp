@@ -20,7 +20,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - **Phase 1 (Foundation)**: `docs/execution/PHASE_1_EXIT_AUDIT.yaml` remains `verified`. All required gates and backend-neutrality/operational evidence are closed within the declared scope.
 - **Phase 2 (Matching & Evidence 2.0)**: `docs/execution/PHASE_2_EXIT_AUDIT.yaml` remains `verified`. Deterministic matching, evidence graph, reconciliation-as-code, and benchmark evidence are closed within the declared single-process/declared benchmark limits.
 - **Phase 3 (Enterprise Product)**: required owner/team scope is `13/13` completed at its documented bounded maturity. `P3-ENT-013` is closed by E-251. `P3-EXT-001` and `P3-EXT-002` are deferred optional assurance items and are not release blockers.
-- **Phase 4 (Global Capability Expansion)**: eight tracked tasks cover the seven owner-requested workstreams. `P4-FIN-001` is complete at its bounded translation-artifact scope and remotely green on Draft PR #67. `P4-FIN-002` is active; advanced matching, live connectors/write-back, high-volume concurrency, independent-domain HA/DR, complex enterprise policy, and coherent platform breadth remain planned, not complete.
+- **Phase 4 (Global Capability Expansion)**: eight tracked tasks cover the seven owner-requested workstreams. `P4-FIN-001` is complete at its bounded translation-artifact scope and remotely green on Draft PR #67. `P4-FIN-002`, `P4-MAT-001`, and `P4-SCL-001` are active; live connectors/write-back, independent-domain HA/DR, complex enterprise policy, and coherent platform breadth remain planned, not complete.
 - The complete required Phase 1–3 scope is `41/41`; external evidence remains unverified and must not be claimed.
 - PR #66's earlier optional-dependency, PostgreSQL harness/registry, and Gitleaks failures were repaired and remotely verified on the Phase 1–3 head. P4-FIN-001 is remotely green on Draft PR #67. The initial P4-FIN-002 worksheet candidate is remotely green on stacked Draft PR #68; every later head still requires its own exact remote verification before merge consideration.
 - A historical Docker-API connectivity block was recorded on 2026-07-31 for one run of `verify_postgres_reliability.py`, `verify_postgres_ha_dr.py`, and `verify_otel_collector_distribution.py`; later reruns in the same session completed successfully (`E-227` to `E-228`, `E-224` to `E-226`). Explicit production-readiness and claim limits remain, but optional external assurance does not block the owner/team release path.
@@ -37,7 +37,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - **Publication action requires a fresh exact-candidate local pass, clean worktree, owner/team approval, push, and green required GitHub checks.**
 - PR #66 is merged into `main` at `5d401e70c3a0e3cf507c2c7cf635dfc99b01a9af`; no tag or release was created by this Phase 4 slice.
 - `codex/consolidation-translation-core` is pushed and Draft PR #67 targets `main`. It remains unmerged; no tag, release, deployment, production mutation, or repository-setting change occurred.
-- `codex/consolidation-close-lifecycle` was merged through PR #68; the current branch `codex/consolidation-journal-lifecycle` is pushed at `6e4434d10ca27258d1d0d6ffcdee8845c9825864` with Draft PR #71 targeting `main`. PR #71 is `OPEN/DRAFT/CLEAN` with 15/15 successful required checks; it remains deliberately unmerged.
+- `codex/consolidation-close-lifecycle` was merged through PR #68; the current branch `codex/consolidation-journal-lifecycle` is pushed at `6e4434d10ca27258d1d0d6ffcdee8845c9825864` with Draft PR #71 targeting `main`. PR #71 is `OPEN/DRAFT/CLEAN` with 15/15 successful required checks at the last verified head; this new slice requires a fresh exact-candidate verification before merge consideration.
 
 ## Task status
 
@@ -55,6 +55,15 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 
 - `reconforge/benchmark/durable_job_cancellation.py` reuses the existing application/worker/repository contracts. The small declared profile cancels a queued subset before claims, proves 48/64 completion with 16 cancellations and 192 exact partition effects, then separately proves running-owner cancellation after a committed prefix with clean lease release. Duplicate effects, queue/running depth, and orphaned leases are checked structurally; timing and peak memory are observations outside the manifest digest.
 - E-258 focused tests cover profile validation, queued-cancellation drain and no-duplicate effects, two-run structural digest reproducibility, running cancellation/lease release, closed manifest limitations, and distribution membership. P4-SCL-001 remains open for backpressure, soak, retry/backoff coupling, PostgreSQL load parity, distributed capacity, and named-hardware 10K/100K/1M/10M publication.
+
+## P4-MAT-001 in progress: optimization-grade advanced matching portfolio
+
+### E-260 complete: bounded grouped and netting matcher
+
+- Existing `reconforge/domain/grouped_matching.py` and `reconforge/application/grouped_matching.py` provide the persistence-independent exact matcher for one-to-many, many-to-one, and true many-to-many/netting groups. Records carry exact Decimal amounts, currency/partition identity, non-negative fees, date windows, and explicit sourced FX conversion through the application boundary.
+- Candidate subsets are bounded by declared cardinality and evaluation budgets. Minimum difference, cardinality, date span, and stable record identities define the deterministic tie-break. Equal optima and exhausted budgets return explicit `ambiguous` decisions; partition and identity violations fail closed.
+- E-260 adds five domain contracts to the existing 12 application contracts (17/17 focused tests), covering true many-to-many, permutation-stable digest, netting, budget ambiguity, and duplicate/partition boundaries. ADR 0215 and package membership are included.
+- P4-MAT-001 remains open for selecting multiple non-overlapping groups in one run, partial-settlement allocation, carry-forward/sequence strategies beyond the date bound, reversal-specific matching, mutation/crash-resume and cross-engine properties, and published 10K/100K/1M benchmarks.
 
 ## P4-FIN-002 in progress: governed consolidation close lifecycle
 

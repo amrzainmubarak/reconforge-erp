@@ -1869,3 +1869,12 @@
 - Consequence: P4-SCL-001 gains reproducible queued and running cancellation evidence without a new migration, repository primitive, API, CLI, UI, provider, or scale claim. Backpressure, soak, retry/backoff coupling, PostgreSQL parity, distributed capacity, and 10K/100K/1M/10M tiers remain open.
 - ADR: `docs/adr/0214-durable-job-cancellation-profile-is-structural-and-non-claim.md`.
 - Rollback: Remove the cancellation harness, tests, ADR, manifest entry, and execution evidence. No database, source system, hosted service, release, or production state is mutated.
+
+## D242 - Grouped matching is bounded, exact, and non-posting
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Add a pure grouped matcher with exact Decimal records, explicit settlement currency and sourced FX, signed fee adjustments, bounded subset enumeration, and non-overlapping maximum-cover selection. Equal-optimum groupings and exhausted budgets remain explicit ambiguity; stable IDs provide deterministic replay digests.
+- Consequence: P4-MAT-001 gains evidence for one-to-many, many-to-one, and true many-to-many/netting without hidden greedy choices or cross-currency coercion. Partial settlement, carry-forward/sequence strategies, mutation/crash-resume integration, engine parity, and scale benchmarks remain open. The slice performs no posting or connector write-back.
+- ADR: `docs/adr/0215-bounded-grouped-matching-is-explainable-and-non-posting.md`.
+- Rollback: Remove `reconforge/reconciliation/grouped_matching.py`, its tests, manifest entry, ADR, and execution records. No migration, source system, hosted service, release, or deployment state is changed.

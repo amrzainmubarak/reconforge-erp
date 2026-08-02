@@ -43,7 +43,7 @@ REFERENCE_REST_MANIFEST = ConnectorManifest(
     schema_versions=("reference-rest-record-v1",),
     synthetic_sandbox=True,
     threat_model=("ssrf", "credential-disclosure", "schema-confusion", "retry-amplification"),
-    secret_handling="Resolve credential_reference at runtime; never persist, log, or return the secret.",
+    secret_handling="Resolve credential_reference at runtime; never persist, log, or return the secret.",  # nosec B106
     egress_destinations=("https://api.example.test/v1/records",),
     support_level=SupportLevel.COMMUNITY,
 )

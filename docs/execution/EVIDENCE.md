@@ -123,6 +123,14 @@ This file records commands and observed results. It does not convert a dirty wor
 | `python -m pytest tests/test_connector_rest_reference.py tests/test_connector_network.py tests/test_connector_sdk.py -q` | 0 | 24 connector tests passed: canonical page parsing, duplicate/non-finite rejection, egress refusal, secret isolation, cursor/idempotency, retries, and existing network contracts. |
 | `python -m ruff check reconforge/connectors/rest_reference.py reconforge/connectors/__init__.py tests/test_connector_rest_reference.py` | 0 | Focused lint passed. |
 | `python -m mypy reconforge/connectors/rest_reference.py` | 0 | No issues found. |
+| `python -m pytest -q` | 0 | Full repository suite passed with no failures or collection errors; existing environment-declared skips remain. |
+| `python -m ruff check .` | 0 | Full repository lint passed. |
+| `python -m mypy reconforge` | 0 | Full repository type check passed with no issues. |
+| `python -m bandit -q -r reconforge` | 0 | Security scan passed with existing narrowly-scoped nosec/parser warnings only. |
+| `python -m pip_audit` | 0 | No known third-party vulnerabilities found; local package is not published on PyPI. |
+| `uv lock --check` | 0 | Lockfile consistency passed; 129 packages resolved. |
+| `python -m build --no-isolation` | 0 | Source and wheel builds passed with the reference connector and ADR membership. |
+| `git diff --check` | 0 | No whitespace errors; existing MANIFEST newline normalization warning only. |
 
 - ADR: `docs/adr/0221-reference-rest-connector-is-read-only-and-schema-closed.md`.
 - Boundary: no live ERP/bank provider, credential provisioning, write-back, acknowledgement/compensation, signed executable package, or production deployment claim.

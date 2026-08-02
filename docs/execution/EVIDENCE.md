@@ -19,6 +19,9 @@ This file records commands and observed results. It does not convert a dirty wor
 - A live PostgreSQL lifecycle test now exercises tenant isolation, idempotent
   replay, approve/post/reversal, lock, and reopen. It remains unpromoted until
   an unskipped CI run records its result.
+- The next CI run exposed a second stale-head assertion in
+  `tests/test_alembic_postgres.py`; it now expects `0055_pg_consol_close`, and
+  the focused Alembic/operations/close tests pass locally.
 
 ## E-289: Current-live PostgreSQL Close Management gate
 

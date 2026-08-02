@@ -1880,3 +1880,17 @@ files, Bandit, dependency audit, wheel/sdist build, supply-chain validation,
 frontend typecheck, 55/55 Vitest, production build, 11-pass/5-skip Chromium E2E,
 and checksum-pinned Gitleaks history/tree scans all pass. The branch still requires
 publication and remote GitHub verification before a release Go decision.
+
+## E-271 — Durable-job retry/failure-injection profile
+
+- `reconforge/benchmark/durable_job_retry.py` injects a synthetic transient
+  fault after at most one committed partition under concurrent SQLite workers.
+  The retry transition releases the lease; the next owner reads committed
+  effects, skips the checkpointed partition, and completes the remaining work.
+- Focused contracts pass 5/5. The profile proves exact retry count, retry
+  ceiling, zero duplicate partition effects, complete queue/running drain, and
+  deterministic effect/manifest digests. ADR 0226 and the benchmark document
+  are included in the package manifest.
+- This remains a bounded SQLite evidence slice. Provider backoff/jitter,
+  PostgreSQL parity, external compensation, soak, and 10K/100K/1M/10M scale
+  publication remain open.

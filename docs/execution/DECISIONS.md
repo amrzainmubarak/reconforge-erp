@@ -1968,3 +1968,12 @@
 - Consequence: SQL injection is structurally absent from the connector SDK and tests run without a live database. Prepared statements, least privilege, timeouts, cancellation, consistency, migration compatibility, and live provider evidence remain adapter responsibilities.
 - ADR: `docs/adr/0225-reference-database-is-named-query-and-tenant-scoped.md`.
 - Rollback: Remove the database connector module, tests, docs, ADR, exports, and manifest entries. No database or external state is changed.
+
+## D253 - Durable retries must resume committed checkpoints
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Add a bounded concurrent failure-injection harness that faults after at most one committed partition, schedules the existing `retrying` transition, and verifies that the next lease resumes from the checkpoint without duplicate partition effects. Keep retry eligibility immediate and provider-neutral for this slice.
+- Consequence: SQLite evidence now covers retry/checkpoint coupling and retry ceilings under contention. Provider-specific backoff/jitter, PostgreSQL parity, external compensation, and scale/soak evidence remain unclaimed.
+- ADR: `docs/adr/0226-durable-job-retry-failure-injection.md`.
+- Rollback: Remove the retry harness, tests, benchmark document, ADR, and manifest/execution entries. No schema or production behavior changes.

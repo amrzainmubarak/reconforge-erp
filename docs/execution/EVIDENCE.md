@@ -10817,6 +10817,25 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - No merge, tag, GitHub Release, package publication, deployment, production
   mutation, repository-setting change, or readiness/superiority claim occurred.
 
+## E-271: Durable-job retry and checkpoint failure injection
+
+- Code: `reconforge/benchmark/durable_job_retry.py` drives the existing
+  generation-fenced durable-job service with real thread contention. A
+  synthetic transient fault is injected after at most one committed
+  partition, then the retry owner resumes from the persisted effect set.
+- Tests: `python -m pytest tests/test_durable_job_retry_profile.py -q` -> 5/5
+  passed. The profile verifies `jobs * partitions` effects, exact injected
+  retry count, retry ceiling, zero duplicate `(job_id, partition_key)` effects,
+  and zero queued/retrying/running depth at completion. Repeated runs produce
+  the same effect and manifest digests.
+- Focused quality: Ruff, Mypy, and Bandit pass for the new module; the module
+  and test are explicitly included in `MANIFEST.in`.
+- Decision/docs: ADR 0226 and
+  `docs/execution/benchmarks/durable-job-retry-small-tier-v1.md`.
+- Boundary: this is SQLite-only synthetic evidence. It does not prove
+  exponential backoff/jitter, provider side-effect compensation, PostgreSQL
+  parity, soak behavior, SLOs, or any 10K/100K/1M/10M capacity tier.
+
 ## E-254: Non-posting consolidation ownership, NCI, and elimination worksheet
 
 - Date/timezone: 2026-08-01, Africa/Cairo.

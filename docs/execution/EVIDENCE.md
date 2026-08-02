@@ -22,6 +22,7 @@ This file records commands and observed results. It does not convert a dirty wor
 - Boundary: this is exact-USD synthetic, one-process evidence. FX/fee/partial
   density, PostgreSQL runtime parity, distributed capacity, soak, and 100K/1M
   tiers remain open.
+- Remote verification: Draft PR #71 head `dc09e3df6744066f11829677b215a87f64882626` reported 15/15 required checks successful and merge state `CLEAN`. No merge, tag, release, deployment, or production mutation occurred.
 
 ## E-274: Durable-job 10K scale profile
 

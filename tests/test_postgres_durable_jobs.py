@@ -104,6 +104,12 @@ def test_live_postgres_job_application_contract_and_rls(tmp_path: Path) -> None:
             )
             assert governed_created is True and governed_job.tenant_id == tenant_a
             assert repository.get(tenant_id=tenant_b, job_id=governed_submission.job_id) is None
+            governed_cancelled = governed.cancel(
+                tenant_id=tenant_a, workspace_id="workspace-a", job_id=governed_submission.job_id,
+                actor_id="governed-operator", occurred_at="2026-07-27T09:00:15Z",
+                policy_context=governed_context, required_permission="close.manage",
+            )
+            assert governed_cancelled.status.value == "cancelled"
             concurrent_submission = replace(
                 _submission(tenant_a), idempotency_key="concurrent-key"
             )

@@ -1,7 +1,6 @@
 """Add tenant-scoped immutable PostgreSQL policy delegations."""
 
 from alembic import op
-
 from reconforge.infrastructure.postgres_delegations import POSTGRES_DELEGATION_SCHEMA_SQL
 
 revision = "0056_pg_policy_delegations"

@@ -158,6 +158,11 @@ This file records commands and observed results. It does not convert a dirty wor
   passed.
 - Runtime evidence is currently contract-only. No live PostgreSQL promotion,
   federation, API/UI route coverage, or cache invalidation claim is made.
+- CI run `30771354748` correctly ran Alembic migration `0056` but failed before
+  the new runtime test because the explicit migration registry and Ruff import
+  contract had not yet been updated. That failure is retained; the registry,
+  import ordering, and server-boundaries invocation are corrected in the next
+  commit, so no live result is inferred from this run.
 
 ## E-292: Expiring delegation policy invariant
 

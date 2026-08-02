@@ -1,3 +1,5 @@
 # False-positive fingerprint for the literal idempotency_scope test keyword.
 11a033c650e6947f3454181e6043868e6db19430:tests/test_reliability_sources.py:generic-api-key:32
+# Synthetic partition fallback was flagged by the generic-api-key rule in the historical commit.
+b5eba23671fb4dddcebe87d3532c3ab6e00639cb:reconforge/workers/postgres_grouped_matching.py:generic-api-key:110
 tests/test_reliability_sources.py:generic-api-key:32

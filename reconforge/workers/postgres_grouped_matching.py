@@ -107,7 +107,7 @@ class PostgresGroupedMatchingAdapter:
             if supplier is not None
             else (
                 ReconciliationInputPartition(
-                    partition_key="partition/default",
+                    partition_key="default",
                     left_inputs=context.left_inputs,
                     right_inputs=context.right_inputs,
                 ),

@@ -213,6 +213,27 @@ def test_grouped_strategy_supports_fee_aware_netting_fields_and_request_digest_v
     assert result.results[0]["right_net_total"] == Decimal("100.00")
 
 
+def test_grouped_strategy_supports_bounded_partial_settlement_with_residuals() -> None:
+    result = GroupedSubsetSumStrategy().execute(
+        MatchingStrategyRequest(
+            left_records=(
+                {"id": "L1", "amount": "100.00", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+            ),
+            right_records=(
+                {"id": "R1", "amount": "60.00", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+                {"id": "R2", "amount": "20.00", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+            ),
+            mode="partial-settlement",
+        )
+    )
+
+    assert result.results[0]["status"] == "matched"
+    assert result.results[0]["reason_code"] == "PARTIAL_SETTLEMENT_PROPOSAL"
+    assert result.results[0]["settled_amount"] == Decimal("80.00")
+    assert result.results[0]["left_residual"] == Decimal("20.00")
+    assert result.results[0]["right_residual"] == Decimal("0")
+
+
 def test_grouped_strategy_reports_ambiguity_for_equal_cost_candidates() -> None:
     strategy = GroupedSubsetSumStrategy()
     result = strategy.execute(

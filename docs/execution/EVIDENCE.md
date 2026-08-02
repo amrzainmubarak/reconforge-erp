@@ -19,6 +19,23 @@ This file records commands and observed results. It does not convert a dirty wor
 - Remote verification: Draft PR #71 head `fc5e5e3bc91ed94aee119fadcc03efefdb3d48c1` reported 15/15 required checks successful (Python 3.11/3.12 tests, four engine-parity cells, server boundaries, Docker build/parity, locked audits, secret/npm policy, Python security, Analyze Python, and CodeQL). The PR remains open and draft; no merge, tag, release, deployment, or production mutation occurred.
 - Boundary: this is a bounded algorithmic foundation, not proof of partial-settlement allocation, carry-forward/sequence strategies, mutation or crash/resume behavior, cross-engine parity, or 10K/100K/1M benchmark performance. P4-MAT-001 remains in progress.
 
+## E-261: Bounded partial-settlement proposal
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Scope: explicit `partial-settlement` mode in the existing grouped domain/application/strategy surface. Exact equality remains preferred; a positive bounded unequal group settles the smaller net total and exposes immutable left/right residuals. The mode is wired through the runtime manifest, Reconciliation-as-Code model, JSON schema, and published strategy document. It performs no posting, write-back, migration, or external call.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_grouped_matching.py tests/test_grouped_matching_application.py tests/test_matching_strategy_contract.py tests/test_rules_engine.py --no-header --tb=short -q` | 0 | Focused suite passed, including partial-settlement reason, settled amount, residual balances, digest fields, strategy dispatch, and existing grouped/rule compatibility. |
+| `python -m ruff check reconforge/domain/grouped_matching.py reconforge/application/grouped_matching.py reconforge/infrastructure/grouped_matching_strategy.py reconforge/rules/recon_as_code.py tests/test_grouped_matching.py tests/test_matching_strategy_contract.py` | 0 | All checks passed. |
+| `python -m mypy reconforge/domain/grouped_matching.py reconforge/application/grouped_matching.py reconforge/infrastructure/grouped_matching_strategy.py reconforge/rules/recon_as_code.py` | 0 | No issues found. |
+| `python -m pytest --no-header --tb=short -q` | 0 | Full repository suite passed after the mode/schema extension; zero failures/errors and 64 declared skips. |
+| `python -m ruff check .` / `python -m mypy reconforge` / `python -m bandit -q -r reconforge` / `python -m pip_audit` / `uv lock --check` | 0 | Repository quality/security/lock gates passed; Bandit retained only pre-existing nosec/comment-parser warnings and pip-audit reported no known vulnerabilities. |
+| `python -m build --no-isolation` plus archive membership | 0 | sdist/wheel built successfully; partial-settlement ADR, grouped tests, and grouped domain runtime are present in the expected archives. |
+
+- ADR: `docs/adr/0216-bounded-partial-settlement-keeps-residuals-visible.md`.
+- Boundary: partial settlement is a proposal only. Multiple non-overlapping groups, carry-forward/sequence/reversal-specific strategies, mutation/crash-resume and cross-engine properties, and large benchmarks remain open.
+
 ## E-259: Draft PR #71 remote verification
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

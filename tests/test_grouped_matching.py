@@ -77,6 +77,21 @@ def test_netting_uses_explicit_non_negative_fees() -> None:
     assert decision.left_net_total == decision.right_net_total == Decimal("115")
 
 
+def test_partial_settlement_returns_settled_amount_and_visible_residual() -> None:
+    decision = find_grouped_match(
+        (_record("L1", "100"),),
+        (_record("R1", "60"), _record("R2", "20")),
+        GroupedMatchPolicy(mode="partial-settlement", max_right_cardinality=2),
+    )
+
+    assert decision.status == "matched"
+    assert decision.reason_code == "PARTIAL_SETTLEMENT_PROPOSAL"
+    assert decision.settled_amount == Decimal("80")
+    assert decision.left_residual == Decimal("20")
+    assert decision.right_residual == Decimal("0")
+    assert "residual" in decision.explanation
+
+
 def test_duplicate_identity_and_cross_partition_groups_fail_closed() -> None:
     duplicate = _record("same", "1")
     with pytest.raises(GroupedMatchingError, match="identities must be unique"):

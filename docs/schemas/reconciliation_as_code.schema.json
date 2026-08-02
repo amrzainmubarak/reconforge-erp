@@ -277,7 +277,8 @@
             "value_difference",
             "one_to_many",
             "many_to_one",
-            "many_to_many"
+            "many_to_many",
+            "partial_settlement"
           ]
         },
         "strategy_id": {
@@ -299,7 +300,8 @@
             "one-to-one",
             "one-to-many",
             "many-to-one",
-            "many-to-many"
+            "many-to-many",
+            "partial-settlement"
           ]
         },
         "amount_tolerance": {

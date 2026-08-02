@@ -1878,3 +1878,12 @@
 - Consequence: P4-MAT-001 gains evidence for one-to-many, many-to-one, and true many-to-many/netting without hidden greedy choices or cross-currency coercion. Partial settlement, carry-forward/sequence strategies, mutation/crash-resume integration, engine parity, and scale benchmarks remain open. The slice performs no posting or connector write-back.
 - ADR: `docs/adr/0215-bounded-grouped-matching-is-explainable-and-non-posting.md`.
 - Rollback: Remove `reconforge/reconciliation/grouped_matching.py`, its tests, manifest entry, ADR, and execution records. No migration, source system, hosted service, release, or deployment state is changed.
+
+## D243 - Partial settlement is a visible proposal, never silent closure
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Extend the existing bounded grouped matcher with an explicit `partial-settlement` mode. Enumerated exact groups win first; otherwise positive groups settle the smaller net total and carry immutable left/right residuals into the decision digest. Existing partition, date, cardinality, search-budget, and ambiguity rules remain mandatory.
+- Consequence: The matching portfolio can express fee/FX-aware partial settlement without pretending that an outstanding balance was reconciled. It does not post, write back, allocate across multiple runs, or implement carry-forward/sequence/reversal-specific policies.
+- ADR: `docs/adr/0216-bounded-partial-settlement-keeps-residuals-visible.md`.
+- Rollback: Remove the new mode, residual fields, tests, strategy/schema/manifest updates, ADR, and execution records. No database or external system state is changed.

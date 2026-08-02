@@ -189,6 +189,7 @@ include tests/test_durable_job_cancellation_profile.py
 include docs/adr/0214-durable-job-cancellation-profile-is-structural-and-non-claim.md
 include tests/test_grouped_matching.py
 include docs/adr/0215-bounded-grouped-matching-is-explainable-and-non-posting.md
+include docs/adr/0216-bounded-partial-settlement-keeps-residuals-visible.md
 include tests/test_incident_response.py
 include tests/test_reliability_incident_drill.py
 include docs/security/deployment-boundaries.md

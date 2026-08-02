@@ -10,7 +10,7 @@ from decimal import Decimal
 from itertools import combinations
 from typing import Literal
 
-GroupedMatchMode = Literal["one-to-many", "many-to-one", "many-to-many"]
+GroupedMatchMode = Literal["one-to-many", "many-to-one", "many-to-many", "partial-settlement"]
 GroupedNettingMode = Literal["gross", "net"]
 GroupedMatchStatus = Literal["matched", "unmatched", "ambiguous"]
 GroupedMatchCandidateSet = tuple[tuple[str, ...], tuple[str, ...]]
@@ -51,7 +51,7 @@ class GroupedMatchPolicy:
     netting_mode: GroupedNettingMode = "gross"
 
     def __post_init__(self) -> None:
-        if self.mode not in {"one-to-many", "many-to-one", "many-to-many"}:
+        if self.mode not in {"one-to-many", "many-to-one", "many-to-many", "partial-settlement"}:
             raise GroupedMatchingError("Grouped-match mode is not supported.")
         if not isinstance(self.amount_tolerance, Decimal) or not self.amount_tolerance.is_finite():
             raise GroupedMatchingError("Grouped-match tolerance must be a finite Decimal.")
@@ -95,6 +95,9 @@ class GroupedMatchDecision:
     tie_break: str
     ambiguous_candidate_sets: tuple[GroupedMatchCandidateSet, ...]
     decision_digest: str
+    settled_amount: Decimal = Decimal("0")
+    left_residual: Decimal = Decimal("0")
+    right_residual: Decimal = Decimal("0")
 
 
 @dataclass(frozen=True)
@@ -109,10 +112,16 @@ class _CandidateGroup:
     right_net_total: Decimal
     difference: Decimal
     date_span: int
+    settled_amount: Decimal
+    left_residual: Decimal
+    right_residual: Decimal
+    partial: bool
 
     @property
-    def business_cost(self) -> tuple[Decimal, int, int]:
-        return (self.difference, len(self.left) + len(self.right), self.date_span)
+    def business_cost(self) -> tuple[Decimal, Decimal, Decimal, int]:
+        if self.partial:
+            return (Decimal("0"), -self.settled_amount, self.difference, self.date_span)
+        return (Decimal("-1"), self.difference, Decimal(len(self.left) + len(self.right)), self.date_span)
 
     @property
     def stable_key(self) -> tuple[tuple[str, ...], tuple[str, ...]]:
@@ -127,6 +136,8 @@ def _cardinalities(policy: GroupedMatchPolicy) -> tuple[range, range]:
         return range(1, 2), range(2, policy.max_right_cardinality + 1)
     if policy.mode == "many-to-one":
         return range(2, policy.max_left_cardinality + 1), range(1, 2)
+    if policy.mode == "partial-settlement":
+        return range(1, policy.max_left_cardinality + 1), range(1, policy.max_right_cardinality + 1)
     return (
         range(2, policy.max_left_cardinality + 1),
         range(2, policy.max_right_cardinality + 1),
@@ -198,7 +209,15 @@ def find_grouped_match(
                     left_total, left_fee_total, left_net_total = _aggregate_totals(left_group, policy.netting_mode)
                     right_total, right_fee_total, right_net_total = _aggregate_totals(right_group, policy.netting_mode)
                     difference = abs(left_net_total - right_net_total)
-                    if difference <= policy.amount_tolerance:
+                    exact = difference <= policy.amount_tolerance
+                    partial = (
+                        policy.mode == "partial-settlement"
+                        and not exact
+                        and left_net_total > 0
+                        and right_net_total > 0
+                    )
+                    if exact or partial:
+                        settled_amount = min(left_net_total, right_net_total)
                         candidates.append(
                             _CandidateGroup(
                                 left=left_group,
@@ -211,6 +230,10 @@ def find_grouped_match(
                                 right_net_total=right_net_total,
                                 difference=difference,
                                 date_span=date_span,
+                                settled_amount=settled_amount,
+                                left_residual=left_net_total - settled_amount,
+                                right_residual=right_net_total - settled_amount,
+                                partial=partial,
                             )
                         )
     if not candidates:
@@ -247,17 +270,21 @@ def find_grouped_match(
             ambiguous_candidates=tied_candidates,
         )
     equivalent_count = sum(candidate.business_cost == selected.business_cost for candidate in candidates)
+    reason_code = "PARTIAL_SETTLEMENT_PROPOSAL" if selected.partial else "GROUP_SUM_CONSTRAINT_SATISFIED"
+    explanation = (
+        "Selected a bounded partial settlement proposal; residual balances remain visible for later settlement."
+        if selected.partial
+        else "Selected the lowest-cost bounded group; "
+        f"stable record identities broke a tie across {equivalent_count} equivalent candidate(s)."
+    )
     return _decision(
         status="matched",
         policy=policy,
         candidate=selected,
         candidate_count=len(candidates),
         evaluations=evaluations,
-        reason_code="GROUP_SUM_CONSTRAINT_SATISFIED",
-        explanation=(
-            "Selected the lowest-cost bounded group; "
-            f"stable record identities broke a tie across {equivalent_count} equivalent candidate(s)."
-        ),
+        reason_code=reason_code,
+        explanation=explanation,
         ambiguous_candidates=(),
     )
 
@@ -283,6 +310,14 @@ def _decision(
     left_net_total = candidate.left_net_total if candidate else Decimal("0")
     right_net_total = candidate.right_net_total if candidate else Decimal("0")
     difference = candidate.difference if candidate else Decimal("0")
+    settled_amount = candidate.settled_amount if candidate else Decimal("0")
+    left_residual = candidate.left_residual if candidate else Decimal("0")
+    right_residual = candidate.right_residual if candidate else Decimal("0")
+    tie_break = (
+        "exact-first-settled-amount-difference-date-span-stable-record-identities-v1"
+        if policy.mode == "partial-settlement"
+        else "difference-cardinality-date-span-stable-record-identities-v1"
+    )
     payload = {
         "amount_difference": format(difference, "f"),
         "candidate_count": candidate_count,
@@ -306,9 +341,12 @@ def _decision(
         "right_total": format(right_total, "f"),
         "right_fee_total": format(right_fee_total, "f"),
         "right_net_total": format(right_net_total, "f"),
+        "settled_amount": format(settled_amount, "f"),
+        "left_residual": format(left_residual, "f"),
+        "right_residual": format(right_residual, "f"),
         "search_evaluations": evaluations,
         "status": status,
-        "tie_break": "difference-cardinality-date-span-stable-record-identities-v1",
+        "tie_break": tie_break,
         "ambiguous_candidate_sets": ambiguous_candidates,
     }
     digest = _digest(payload)
@@ -331,7 +369,10 @@ def _decision(
         reason_code=reason_code,
         netting_mode=policy.netting_mode,
         explanation=explanation,
-        tie_break="difference-cardinality-date-span-stable-record-identities-v1",
+        tie_break=tie_break,
         ambiguous_candidate_sets=ambiguous_candidates,
         decision_digest=digest,
+        settled_amount=settled_amount,
+        left_residual=left_residual,
+        right_residual=right_residual,
     )

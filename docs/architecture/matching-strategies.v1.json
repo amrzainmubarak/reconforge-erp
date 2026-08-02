@@ -43,7 +43,8 @@
       "supported_modes": [
         "many-to-many",
         "many-to-one",
-        "one-to-many"
+        "one-to-many",
+        "partial-settlement"
       ],
       "version": "1.0.0"
     }

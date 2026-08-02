@@ -52,6 +52,7 @@ This file records commands and observed results. It does not convert a dirty wor
 | `python -m mypy reconforge/domain/grouped_matching.py reconforge/application/grouped_matching.py reconforge/infrastructure/grouped_matching_strategy.py reconforge/rules/recon_as_code.py` | 0 | No issues found. |
 
 - ADR: `docs/adr/0217-bounded-non-overlapping-group-portfolio.md`.
+- Remote verification: Draft PR #71 head `a56fc30a545e1ac9a58f0b3c92a75e0c275bb2eb` reported 15/15 required checks successful. No merge, tag, release, deployment, or production mutation occurred.
 - Boundary: portfolio mode is exact-only; partial groups inside a portfolio, carry-forward/sequence/reversal-specific logic, mutation/crash-resume and cross-engine properties, and large benchmarks remain open.
 
 ## E-259: Draft PR #71 remote verification

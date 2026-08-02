@@ -2049,3 +2049,10 @@
 - Consequence: Enterprise deployments now have a reviewed PostgreSQL schema/adapter path without falsely counting static tests as runtime parity. SQLite remains the locally executed persistence mode; live migration, RLS, isolation, rollback, and restore evidence remain explicit next gates.
 - ADR: `docs/adr/0234-postgres-consolidation-ownership-contract.md`.
 - Rollback: Downgrade Alembic 0054 and remove the adapter/schema/tests/docs; no customer data or external service is touched by the contract-only slice.
+
+## E-280 — Execute the PostgreSQL ownership adapter under a non-privileged role
+
+- Decision: Add one dedicated live runtime contract to the existing server-boundaries gate. The test provisions unique synthetic tenants, grants only the test application role's table/schema access, and exercises the adapter through the configured PostgreSQL connection factory.
+- Controls: Verify same-input replay returns the same immutable ID, effective resolution is tenant-scoped, overlapping effective intervals fail closed, and direct updates are rejected by the database trigger. No real credentials or customer data are used.
+- Evidence: GitHub Actions run `30755552134` passed the test on PostgreSQL 16 Alpine; the parity inventory records the boundary as `live_verified_current` with explicit single-node/no-restore/no-HA limits.
+- Rollback: Revert the test and inventory/docs changes. No production database or external provider is changed.

@@ -30,10 +30,21 @@ current_slice_gate:
   migration_paths: ["0001 -> 0052", "0052 -> 0051 -> 0052", "0052 -> 0011 -> 0052", "nonempty 0052 downgrade refusal"]
   covered_live_boundaries: [SecurityGovernanceApplicationService]
   limitations: [single_node, synthetic_data, metadata_retention_only, no_administration_ui, no_external_assurance]
+ownership_runtime_gate:
+  id: E-280
+  executed_at: "2026-08-02"
+  database: "PostgreSQL 16 Alpine CI service"
+  database_image_digest: "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+  application_role: reconforge_app_non_superuser
+  focused_tests: 1
+  focused_result: passed
+  skipped_focused_tests: 0
+  covered_live_boundaries: [ConsolidationOwnershipApplicationService]
+  limitations: [single_node, synthetic_data, no_restore_drill, no_ha, no_rpo_rto_claim]
 allowed_statuses: [live_verified_current, live_test_available, contract_only, absent, not_applicable]
 boundaries:
   - {file: consolidation_close.py, service: ConsolidationCloseApplicationService, status: absent, risk: local_sqlite_only_no_postgres_adapter_or_parity_evidence}
-  - {file: consolidation_ownership.py, service: ConsolidationOwnershipApplicationService, status: contract_only, adapter: reconforge.infrastructure.postgres_consolidation_ownership.PostgresConsolidationOwnershipRepository, test: tests/test_postgres_consolidation_ownership.py, risk: live_postgres_runtime_not_yet_executed}
+  - {file: consolidation_ownership.py, service: ConsolidationOwnershipApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_ownership.PostgresConsolidationOwnershipRepository, test: tests/test_postgres_consolidation_ownership.py, risk: single_node_runtime_only_no_restore_or_ha_evidence}
   - {file: consolidation.py, service: ConsolidationApplicationService, status: not_applicable, reason: immutable_scoped_object_store_artifact_repository}
   - {file: grouped_matching.py, service: GroupedMatchingApplicationService, status: not_applicable, reason: pure_strategy}
   - {file: backup_restore.py, service: BackupRestoreApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_backup.PostgresNativeBackupAdapter, test: tests/test_postgres_backup.py, risk: recovery_critical}
@@ -70,8 +81,8 @@ boundaries:
   - {file: inventory_planning.py, service: InventoryPlanningApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_planning.PostgresInventoryPlanningRepository, test: tests/test_postgres_inventory_planning.py, risk: financial_high}
 summary:
   total: 36
-  live_verified_current: 6
+  live_verified_current: 7
   live_test_available: 25
-  contract_only: 2
+  contract_only: 1
   absent: 1
   not_applicable: 2

@@ -14,7 +14,9 @@ rejects overlapping revisions, resolves one active interest per subsidiary,
 and emits an audit event on creation. Alembic downgrade drops the table and
 guard function.
 
-Evidence currently covers static schema/migration/adapter contracts only:
-4/4 focused tests and 6/6 inventory tests pass. No live PostgreSQL DSN was used
-for this slice, so this report is not runtime parity, RLS isolation, restore,
-rollback, SLO, or deployment evidence.
+Evidence includes a dedicated live CI runtime contract. The focused suite passed
+4/4 static/contract tests locally and the live test passed under the
+`reconforge_app_non_superuser` role in GitHub Actions run `30755552134` on
+PostgreSQL 16 Alpine. It proves idempotent replay, tenant isolation, overlap
+refusal, and immutable update refusal for synthetic data. It does not prove
+restore, HA, RPO/RTO, SLO, or deployment readiness.

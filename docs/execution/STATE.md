@@ -8,7 +8,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 
 ## Snapshot boundary
 
-- Branch: `codex/consolidation-journal-lifecycle`, current head `c80fcbd4d51ca41c21bac459f9e67b93cd0e987f`; Draft PR #71 remains deliberately unmerged.
+- Branch: `codex/consolidation-journal-lifecycle`, current head `6f22e5a84a16663d2c43c6c23ef3932cc514a614`; Draft PR #71 remains deliberately unmerged.
 - Phase 1 base: `1c633eea53a2f11c9a90af57edfc80a36faeef82` (merged atomic application-boundary PR #62)
 - Phase 0 signed-candidate source remains `d47edd845e6aef3bae16e05698e07878086d690b`; its evidence is immutable historical baseline, not evidence for Phase 1 changes.
 - Publication scope: PR #54 merged the evidence-bounded Phase 0 implementation. Signed Release Candidate run `30243819239` is non-publishing: it retained review artifact `8644255664` and pushed only the digest-addressed candidate image required for verification; no GitHub Release, PyPI publication, compliance claim, or production migration occurred.
@@ -1942,12 +1942,23 @@ publication and remote GitHub verification before a release Go decision.
   NUMERIC percentages, forced RLS, transaction-local `app.tenant_id`, and
   immutable update/delete triggers; the adapter performs locked overlap checks
   and emits audit evidence.
-- Four contract tests and six inventory tests pass. CI run `30754824673` passed
+- Four contract tests and six inventory tests pass at the E-279 head. CI run `30754824673` passed
   both Python suites, all four engine-parity jobs, live `server-boundaries`, and
   `docker-parity`; that live job migrated PostgreSQL through `0054_pg_consol_ownership`
   and exercised the Alembic downgrade/upgrade boundary. The parity inventory
-  remains `contract_only` because no dedicated live ownership-adapter runtime,
-  tenant-isolation, restore, or overlap test is wired yet.
+  was `contract_only` at that historical head because no dedicated live
+  ownership-adapter runtime was wired yet; E-280 records the subsequent gate.
+
+## E-280 — Live PostgreSQL ownership runtime
+
+- The dedicated ownership runtime contract passed in CI under the
+  non-privileged application role. It proves idempotent replay, tenant
+  isolation, overlap refusal, and database-trigger immutability for synthetic
+  ownership data. The parity inventory now records this boundary as
+  `live_verified_current`.
+- Boundary: one PostgreSQL 16 Alpine CI node only. Encrypted restore, PITR,
+  HA/DR, RPO/RTO, broader consolidation posting, and statutory statements
+  remain unverified.
 
 ## E-278 — Persisted effective-dated consolidation ownership
 

@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-280: Live PostgreSQL consolidation ownership runtime
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Scope: Dedicated synthetic runtime contract for the PostgreSQL consolidation
+  ownership adapter under the CI non-privileged application role.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_postgres_consolidation_ownership.py tests/test_postgres_parity_inventory.py tests/test_repository_boundary_inventory.py -q` | 0 | 10/10 local contract/inventory tests passed; the live test is correctly skipped without a DSN. |
+| GitHub Actions run `30755552134`, `server-boundaries` | 0 | Live ownership runtime passed on PostgreSQL 16 Alpine: idempotent replay, tenant isolation, overlap refusal, and immutable update refusal under `reconforge_app_non_superuser`. |
+| GitHub Actions run `30755552134`, full test matrix | 0 | Python 3.11/3.12, four engine-parity jobs, server-boundaries, and docker-parity passed. |
+
+- Boundary: this is synthetic single-node PostgreSQL runtime evidence. It does
+  not prove encrypted restore, PITR, HA/DR, RPO/RTO, SLO, statutory
+  consolidation, or production readiness.
+
 ## E-279: PostgreSQL consolidation ownership contract
 
 - Date/timezone: 2026-08-02, Africa/Cairo.
@@ -18,16 +34,15 @@ This file records commands and observed results. It does not convert a dirty wor
 
 - Report: `docs/execution/benchmarks/postgres-consolidation-ownership-v1.md`.
 - ADR: `docs/adr/0234-postgres-consolidation-ownership-contract.md`.
-- Boundary: no live PostgreSQL DSN was used in this slice. Migration execution,
-  RLS isolation, rollback, restore, and runtime overlap behavior remain pending;
-  no PostgreSQL parity or enterprise deployment claim is made.
+- Boundary at the E-279 slice head: no live PostgreSQL DSN was used in that
+  focused slice, so the adapter was not yet runtime parity evidence.
 - Remote verification: GitHub Actions run `30754824673` passed on implementation
   head `c80fcbd4d51ca41c21bac459f9e67b93cd0e987f`: Python 3.11 and 3.12 full
   suites, four engine-parity jobs, live `server-boundaries`, and `docker-parity`.
   The live boundary migrated to `0054_pg_consol_ownership`, reported that head,
-  and completed the existing Alembic downgrade/upgrade checks. This does not
-  promote the adapter from `contract_only`: dedicated live ownership CRUD,
-  tenant isolation, restore, and overlap-runtime evidence are still pending.
+  and completed the existing Alembic downgrade/upgrade checks. E-280
+  subsequently adds dedicated live ownership CRUD, tenant isolation, overlap,
+  and immutability runtime evidence; restore and HA/DR remain open.
 
 ## E-278: Persisted effective-dated consolidation ownership
 

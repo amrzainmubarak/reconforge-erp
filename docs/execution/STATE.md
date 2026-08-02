@@ -1935,6 +1935,22 @@ publication and remote GitHub verification before a release Go decision.
   retry/backoff coupling, soak, HA/DR, SLOs, and 100K/1M/10M tiers remain
   unverified.
 
+## E-276 — Published 100K grouped-matching profile
+
+- `reconforge/benchmark/grouped_matching_scale.py` now declares a 100,000
+  record profile as 25,000 independent true many-to-many partitions. Every
+  partition runs through `GroupedSubsetSumStrategy` and the backend-neutral
+  application service; every 1,000th partition is replayed with reversed input
+  order.
+- Two Windows 11/Python 3.14.6 runs matched all 25,000 partitions with zero
+  ambiguity/unmatched results, zero cross-engine/permutation mismatches, and
+  identical effect digest `dda82223212af64038094cc21d4a6fed08af76d86a5b9920c1f4bd187d33be41`
+  and manifest digest `60aad17ab30533964f61e1b5c64aeba58e56915ee62ac5a75325c25a7133981a`.
+  Runtime was 42.0286s / 40.7803s and peak traced memory was 7.7915 / 7.7700 MiB.
+- Boundary: exact USD synthetic, one-process partitioned evidence only.
+  PostgreSQL runtime parity, distributed load, soak/SLOs, financial-domain
+  diversity, and 1M records remain unverified.
+
 ## E-275 — Published 10K grouped-matching profile
 
 - `reconforge/benchmark/grouped_matching_scale.py` measures 10,000 records as

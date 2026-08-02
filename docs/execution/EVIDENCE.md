@@ -2,6 +2,29 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-276: Grouped matching 100K-record tier
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Scope: 25,000 independent true many-to-many partitions with four exact USD
+  records each (100,000 records total). Every partition ran through the public
+  `GroupedSubsetSumStrategy` and backend-neutral application service; every
+  1,000th partition was replayed with reversed input order.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_grouped_matching_scale.py -q` | 0 | 4/4 focused tests passed, including the 100K profile shape and 10K parity/digest guards. |
+| `python -m ruff check reconforge/benchmark/grouped_matching_scale.py tests/test_grouped_matching_scale.py` | 0 | Focused lint passed. |
+| `python -m mypy reconforge/benchmark/grouped_matching_scale.py` | 0 | No issues found. |
+| `python -c "...run_grouped_matching_100k..."` (two complete runs) | 0 | Both runs matched 25,000/25,000 partitions; zero ambiguity/unmatched, zero cross-engine/permutation mismatches. Runtime 42.0286s / 40.7803s; peak traced memory 7.7915 / 7.7700 MiB. Effect digest `dda82223212af64038094cc21d4a6fed08af76d86a5b9920c1f4bd187d33be41`; manifest digest `60aad17ab30533964f61e1b5c64aeba58e56915ee62ac5a75325c25a7133981a`; both digests identical across runs. |
+
+- Report: `docs/execution/benchmarks/grouped-matching-100k-tier-v1.md`.
+- ADR: `docs/adr/0231-grouped-matching-100k-is-partitioned-and-bounded.md`.
+- Boundary: exact-USD synthetic, one Windows host/process, partitioned work;
+  this does not establish distributed capacity, SLOs, PostgreSQL runtime parity,
+  FX/fee/partial-settlement density, soak, or 1M performance.
+- Remote verification: pending after the implementation and documentation
+  commits; no merge, tag, release, deployment, or production mutation occurred.
+
 ## E-275: Grouped matching 10K-record tier
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

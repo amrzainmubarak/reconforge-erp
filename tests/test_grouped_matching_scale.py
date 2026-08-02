@@ -6,6 +6,9 @@ from reconforge.benchmark.grouped_matching_scale import (
     GROUPED_10K_PARTITIONS,
     GROUPED_10K_PROFILE_ID,
     GROUPED_10K_RECORDS,
+    GROUPED_100K_PARTITIONS,
+    GROUPED_100K_PROFILE_ID,
+    GROUPED_100K_RECORDS,
     run_grouped_matching_10k,
     verify_grouped_matching_10k,
 )
@@ -35,3 +38,11 @@ def test_grouped_matching_10k_distribution_membership_is_explicit() -> None:
     assert "include reconforge/benchmark/grouped_matching_scale.py" in manifest
     assert "include docs/adr/0230-grouped-matching-10k-is-partitioned-and-bounded.md" in manifest
     assert "include docs/execution/benchmarks/grouped-matching-10k-tier-v1.md" in manifest
+    assert "include docs/adr/0231-grouped-matching-100k-is-partitioned-and-bounded.md" in manifest
+    assert "include docs/execution/benchmarks/grouped-matching-100k-tier-v1.md" in manifest
+
+
+def test_grouped_matching_100k_profile_shape_is_declared() -> None:
+    assert GROUPED_100K_PROFILE_ID == "grouped-matching/100k-record-true-many-to-many-v1"
+    assert GROUPED_100K_PARTITIONS == 25_000
+    assert GROUPED_100K_RECORDS == 100_000

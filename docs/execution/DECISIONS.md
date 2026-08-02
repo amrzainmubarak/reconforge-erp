@@ -2013,3 +2013,12 @@
 - Consequence: The matching workstream now has a reproducible 10K-record result with zero ambiguity/unmatched partitions, zero adapter/application mismatches, and stable digests. This is exact-USD synthetic single-process evidence; FX/fee/partial density, PostgreSQL runtime, distributed load, and larger tiers remain open.
 - ADR: `docs/adr/0230-grouped-matching-10k-is-partitioned-and-bounded.md`.
 - Rollback: Remove the benchmark module, tests, report, ADR, and manifest entries. No schema or external state is changed.
+
+## D258 - Publish a partitioned 100K grouped-matching tier
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Extend the bounded partitioned benchmark to 100,000 exact-USD records as 25,000 independent four-record true many-to-many partitions. Run every partition through the public strategy and application boundaries, sample reversed-order replay, and retain per-partition search ceilings.
+- Consequence: ReconForge now has a reproducible 100K algorithmic observation with zero ambiguity/unmatched partitions, zero adapter/application mismatches, stable permutation behavior, and identical structural/effect digests across two runs. The result is one-host single-process evidence only; it does not establish PostgreSQL parity, distributed capacity, SLOs, soak, or 1M performance.
+- ADR: `docs/adr/0231-grouped-matching-100k-is-partitioned-and-bounded.md`.
+- Rollback: Remove the 100K wrapper, tests, report, ADR, and manifest entries. No schema or external state is changed.

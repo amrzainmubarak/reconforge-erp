@@ -1,10 +1,10 @@
-"""Reproducible 10K-record grouped-matching benchmark.
+"""Reproducible partitioned grouped-matching scale benchmarks.
 
-The workload is intentionally partitioned into 2,500 independent true
-many-to-many groups (four records per partition).  Each group is executed
-through the public strategy adapter and the backend-neutral application
-service, so the measurement covers the explainable grouped contract without
-creating an unbounded cross-partition search.
+Each declared tier is intentionally partitioned into independent true
+many-to-many groups (four records per partition). Every group is executed
+through the public strategy adapter and backend-neutral application service,
+so the measurement covers the explainable grouped contract without creating
+an unbounded cross-partition search.
 """
 
 from __future__ import annotations
@@ -29,6 +29,9 @@ GROUPED_10K_PROFILE_ID = "grouped-matching/10k-record-true-many-to-many-v1"
 GROUPED_10K_PARTITIONS = 2_500
 GROUPED_10K_RECORDS_PER_PARTITION = 4
 GROUPED_10K_RECORDS = GROUPED_10K_PARTITIONS * GROUPED_10K_RECORDS_PER_PARTITION
+GROUPED_100K_PROFILE_ID = "grouped-matching/100k-record-true-many-to-many-v1"
+GROUPED_100K_PARTITIONS = 25_000
+GROUPED_100K_RECORDS = GROUPED_100K_PARTITIONS * GROUPED_10K_RECORDS_PER_PARTITION
 
 
 @dataclass(frozen=True)
@@ -65,6 +68,12 @@ LIMITATIONS = (
     "The grouped strategy remains bounded by its published per-partition record and search-evaluation ceilings; 100K/1M records and PostgreSQL runtime parity remain unverified.",
 )
 
+LIMITATIONS_100K = (
+    "One Windows host and one Python process; this is a partitioned algorithm observation, not a distributed capacity or SLO claim.",
+    "The workload uses exact USD true-many-to-many groups with four records per partition; FX, fee, partial-settlement, ambiguity density, and provider I/O are not represented in this tier.",
+    "The grouped strategy remains bounded by its published per-partition record and search-evaluation ceilings; 1M records and PostgreSQL runtime parity remain unverified.",
+)
+
 
 def _digest(value: object) -> str:
     encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True, default=str)
@@ -98,8 +107,10 @@ def _environment() -> dict[str, object]:
     }
 
 
-def run_grouped_matching_10k(*, permutation_check: bool = True) -> GroupedMatchingScaleResult:
-    """Run the declared 10K-record partitioned matching profile."""
+def _run_grouped_matching_scale(
+    *, profile_id: str, partitions: int, permutation_stride: int, permutation_check: bool
+) -> GroupedMatchingScaleResult:
+    """Run one declared partitioned grouped-matching profile."""
 
     strategy = GroupedSubsetSumStrategy()
     application = GroupedMatchingApplicationService()
@@ -108,7 +119,7 @@ def run_grouped_matching_10k(*, permutation_check: bool = True) -> GroupedMatchi
     started = time.perf_counter()
     matched = ambiguous = unmatched = evaluations = mismatches = permutation_mismatches = 0
     decisions: list[dict[str, object]] = []
-    for index in range(GROUPED_10K_PARTITIONS):
+    for index in range(partitions):
         request = _request(index)
         strategy_result = strategy.execute(request)
         direct = application.execute(
@@ -139,7 +150,7 @@ def run_grouped_matching_10k(*, permutation_check: bool = True) -> GroupedMatchi
                 "status": status,
             }
         )
-        if permutation_check and index % 100 == 0:
+        if permutation_check and index % permutation_stride == 0:
             permuted = MatchingStrategyRequest(
                 left_records=tuple(reversed(request.left_records)),
                 right_records=tuple(reversed(request.right_records)),
@@ -152,11 +163,12 @@ def run_grouped_matching_10k(*, permutation_check: bool = True) -> GroupedMatchi
     _current, peak = tracemalloc.get_traced_memory()
     tracemalloc.stop()
     effect_digest = _digest(decisions)
+    limitations = LIMITATIONS_100K if profile_id == GROUPED_100K_PROFILE_ID else LIMITATIONS
     document: dict[str, object] = {
         "schema_version": 1,
-        "profile_id": GROUPED_10K_PROFILE_ID,
-        "partitions": GROUPED_10K_PARTITIONS,
-        "records": GROUPED_10K_RECORDS,
+        "profile_id": profile_id,
+        "partitions": partitions,
+        "records": partitions * GROUPED_10K_RECORDS_PER_PARTITION,
         "matched_partitions": matched,
         "ambiguous_partitions": ambiguous,
         "unmatched_partitions": unmatched,
@@ -165,14 +177,14 @@ def run_grouped_matching_10k(*, permutation_check: bool = True) -> GroupedMatchi
         "permutation_mismatches": permutation_mismatches,
         "effect_digest": effect_digest,
         "environment": _environment(),
-        "limitations": list(LIMITATIONS),
+        "limitations": list(limitations),
     }
     manifest_digest = _digest(document)
     return GroupedMatchingScaleResult(
         schema_version=1,
-        profile_id=GROUPED_10K_PROFILE_ID,
-        partitions=GROUPED_10K_PARTITIONS,
-        records=GROUPED_10K_RECORDS,
+        profile_id=profile_id,
+        partitions=partitions,
+        records=partitions * GROUPED_10K_RECORDS_PER_PARTITION,
         matched_partitions=matched,
         ambiguous_partitions=ambiguous,
         unmatched_partitions=unmatched,
@@ -183,8 +195,30 @@ def run_grouped_matching_10k(*, permutation_check: bool = True) -> GroupedMatchi
         observed_runtime_seconds=round(runtime, 4),
         observed_peak_memory_mb=round(peak / (1024 * 1024), 4),
         environment=_environment(),
-        limitations=LIMITATIONS,
+        limitations=limitations,
         manifest_digest=manifest_digest,
+    )
+
+
+def run_grouped_matching_10k(*, permutation_check: bool = True) -> GroupedMatchingScaleResult:
+    """Run the declared 10K-record partitioned matching profile."""
+
+    return _run_grouped_matching_scale(
+        profile_id=GROUPED_10K_PROFILE_ID,
+        partitions=GROUPED_10K_PARTITIONS,
+        permutation_stride=100,
+        permutation_check=permutation_check,
+    )
+
+
+def run_grouped_matching_100k(*, permutation_check: bool = True) -> GroupedMatchingScaleResult:
+    """Run the declared 100K-record partitioned matching profile."""
+
+    return _run_grouped_matching_scale(
+        profile_id=GROUPED_100K_PROFILE_ID,
+        partitions=GROUPED_100K_PARTITIONS,
+        permutation_stride=1_000,
+        permutation_check=permutation_check,
     )
 
 
@@ -203,3 +237,20 @@ def verify_grouped_matching_10k(result: GroupedMatchingScaleResult) -> None:
         raise AssertionError("Grouped strategy parity or permutation invariance failed.")
     if not result.effect_digest or not result.manifest_digest:
         raise AssertionError("Grouped 10K digests are required.")
+
+
+def verify_grouped_matching_100k(result: GroupedMatchingScaleResult) -> None:
+    """Verify the correctness and parity invariants of the 100K result."""
+
+    if result.profile_id != GROUPED_100K_PROFILE_ID or result.records != GROUPED_100K_RECORDS:
+        raise AssertionError("Grouped 100K result does not match the declared profile.")
+    if result.matched_partitions != GROUPED_100K_PARTITIONS:
+        raise AssertionError("Every declared 100K partition must match.")
+    if result.ambiguous_partitions or result.unmatched_partitions:
+        raise AssertionError("The synthetic 100K tier contains an unresolved partition.")
+    if result.strategy_evaluations != GROUPED_100K_PARTITIONS:
+        raise AssertionError("Unexpected 100K bounded search-evaluation count.")
+    if result.cross_engine_mismatches or result.permutation_mismatches:
+        raise AssertionError("Grouped 100K parity or permutation invariance failed.")
+    if not result.effect_digest or not result.manifest_digest:
+        raise AssertionError("Grouped 100K digests are required.")

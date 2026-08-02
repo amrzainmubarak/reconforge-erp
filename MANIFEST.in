@@ -323,6 +323,10 @@ include docs/execution/benchmarks/grouped-matching-1m-tier-v1.md
 include reconforge/infrastructure/postgres_consolidation_close.py
 include tests/test_postgres_consolidation_close.py
 include alembic/versions/0055_postgres_consolidation_close.py
+include reconforge/infrastructure/postgres_delegations.py
+include tests/test_postgres_delegations.py
+include tests/test_postgres_delegations_runtime.py
+include alembic/versions/0056_postgres_policy_delegations.py
 include docs/adr/0243-expiring-delegation-is-explicit-and-replayable.md
 include docs/adr/0244-local-delegation-administration-is-immutable-and-tenant-scoped.md
 include docs/adr/0245-postgres-durable-job-runtime-gate.md
@@ -330,3 +334,4 @@ include docs/adr/0246-postgres-intercompany-runtime-gate.md
 include docs/adr/0247-reference-connector-manifest-portfolio-conformance.md
 include docs/adr/0248-governed-job-mutation-policy-boundary.md
 include docs/adr/0249-governed-job-postgres-runtime-boundary.md
+include docs/adr/0253-postgres-delegation-repository-is-immutable-and-rls-scoped.md

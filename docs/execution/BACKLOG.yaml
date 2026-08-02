@@ -79,6 +79,13 @@ tasks:
     status: completed
     depends_on: [E-297, E-298]
     exit_evidence: Opt-in bounded policy cache keys every policy context field, caches allowed non-delegated decisions only, and supports tenant/workspace/global invalidation with focused no-stale/no-cross-tenant tests under ADR 0252. No route adopts it implicitly.
+  - id: E-302
+    priority: P0
+    area: enterprise-policy
+    title: PostgreSQL immutable delegation repository and RLS boundary
+    status: in_progress
+    depends_on: [E-293, E-298]
+    exit_evidence: PostgreSQL migration 0056 and typed repository persist tenant/workspace-scoped DelegationGrant records, force RLS, reject deletion or field mutation, and permit only independent active-to-revoked transitions; focused contracts pass, while live runtime promotion remains pending.
   - id: E-292
     priority: P0
     area: enterprise-policy
@@ -983,6 +990,7 @@ tasks:
       - E-297 adds an opt-in governed durable-job application boundary. Submit/cancel require a matching actor identity, central permission, tenant/workspace scope, and centralized SoD evaluation before the existing lifecycle repository is touched; denied requests are tested as no-effect. Route migration, federation, and cache invalidation remain open.
       - E-298 runs the governed wrapper against the PostgreSQL durable-job repository in the live server-boundaries job. A denied permission produces no row, an allowed scoped submit produces one tenant-bound row, and sibling-tenant lookup remains empty under the non-privileged role. The wrapper remains opt-in and is not a claim that every surface is migrated.
       - E-301 adds an opt-in bounded `PolicyDecisionCache`. Cache keys include every policy context attribute and policy version; denials and delegated decisions bypass storage; explicit tenant/workspace/global invalidation is tested without sibling-tenant eviction. No API or mutation path adopts caching implicitly, so route migration and invalidation wiring remain open.
+      - E-302 adds migration 0056 and `PostgresDelegationRepository` with exact typed grant conversion, tenant/workspace scope validation, explicit evaluation instants, forced RLS, and database-enforced append-only revocation. Focused schema/migration/repository contracts pass under ADR 0253; a live PostgreSQL runtime gate, federation, route coverage, and cache invalidation wiring remain open.
 
   - id: P4-PLAT-001
     priority: P4

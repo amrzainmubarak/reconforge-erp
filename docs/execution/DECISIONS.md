@@ -62,6 +62,13 @@
 - **Rationale**: Adoption can be wired beside each mutation authority and audited without making cache freshness an invisible security dependency.
 - **Reversibility**: Additive module and tests only; current callers remain uncached.
 
+### D-302: Persist PostgreSQL Delegations as Immutable RLS-Scoped Grants
+- **Date**: 2026-08-03
+- **Context**: Temporary delegation evaluation was durable only in Community SQLite, leaving the enterprise identity boundary without a PostgreSQL representation.
+- **Decision**: Add a linear PostgreSQL migration and repository with forced tenant RLS. Database triggers reject deletes and all field changes except an independent active-to-revoked transition; effective reads always bind tenant, workspace, and an explicit instant.
+- **Rationale**: Authority history must remain replayable and tenant-isolated even when the application role is non-privileged. The contract stays additive until a live CI gate proves the migration and adapter together.
+- **Reversibility**: Downgrade refuses to discard retained rows; migration and repository are additive and can be retired through an evidence-preserving backup/restore process.
+
 ### D-292: Delegated Authority Requires an Explicit Evaluation Instant
 - **Date**: 2026-08-02
 - **Context**: Enterprise policy needs expiring delegation without hidden wall-clock behavior that makes decisions non-replayable.

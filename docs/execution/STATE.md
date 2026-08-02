@@ -101,6 +101,17 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   intentionally uncached until each mutation path owns invalidation. Full CI
   run `30770651403` passed on `9582ac2`.
 
+## E-302 — PostgreSQL immutable delegation repository
+
+- Added migration `0056_pg_policy_delegations` and a typed
+  `PostgresDelegationRepository`. Grants are tenant/workspace scoped, use an
+  explicit evaluation instant, and are protected by forced RLS plus a trigger
+  that permits only independent active-to-revoked transitions.
+- Focused schema, migration, validation, and repository contracts pass under
+  ADR 0253. The boundary is not yet `live_verified_current`: the CI
+  PostgreSQL runtime gate, federation, route coverage, and cache invalidation
+  wiring remain open.
+
 ## E-292 — Explicit expiring delegation in central policy
 
 - The central policy engine now evaluates temporary delegated authority using a

@@ -141,6 +141,24 @@ This file records commands and observed results. It does not convert a dirty wor
   `9582ac2` with the full compatibility, server-boundaries, engine-parity,
   security, CodeQL, and Docker gates green.
 
+## E-302: PostgreSQL immutable delegation repository
+
+- Added `POSTGRES_DELEGATION_SCHEMA_SQL`, migration `0056_pg_policy_delegations`,
+  and `PostgresDelegationRepository`.
+- The repository validates typed grants, tenant/workspace identifiers, and
+  timezone-aware evaluation/revocation instants. The schema forces RLS and
+  rejects deletion or field mutation; only independent active-to-revoked
+  updates are allowed.
+- `python -m pytest tests/test_postgres_delegations.py -q`: passed (5 tests).
+- `tests/test_postgres_delegations_runtime.py` is present for the configured
+  server-boundaries matrix and is skipped locally because no PostgreSQL DSN is
+  configured; this slice therefore remains contract-only until that gate runs.
+- `python -m ruff check reconforge/infrastructure/postgres_delegations.py tests/test_postgres_delegations.py`:
+  passed. `python -m mypy reconforge/infrastructure/postgres_delegations.py`:
+  passed.
+- Runtime evidence is currently contract-only. No live PostgreSQL promotion,
+  federation, API/UI route coverage, or cache invalidation claim is made.
+
 ## E-292: Expiring delegation policy invariant
 
 - Added optional delegation fields to `PolicyEvaluationContext` and forwarded

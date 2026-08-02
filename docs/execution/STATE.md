@@ -46,6 +46,8 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   contract.
 - This remains provider-neutral synthetic evidence; live vendors, vault
   provisioning, write-back, and interoperability remain open.
+- CI `30766363953` passed both Python versions, server-boundaries, parity, and
+  Docker; CodeQL `30766363941` and Security `30766363936` passed.
 
 ## E-292 — Explicit expiring delegation in central policy
 

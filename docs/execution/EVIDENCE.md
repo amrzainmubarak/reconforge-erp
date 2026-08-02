@@ -62,6 +62,9 @@ This file records commands and observed results. It does not convert a dirty wor
   contracts), Ruff and Mypy passed for the changed conformance module.
 - The result proves only a shared provider-neutral manifest contract; no live
   vendor, write-back, credential-vault, or production-network claim is made.
+- CI run `30766363953` passed both Python suites, server-boundaries,
+  engine-parity, and docker-parity for `f4f96c9`; CodeQL `30766363941`,
+  Security `30766363936`, and Docker `30766363939` also passed.
 
 ## E-292: Expiring delegation policy invariant
 

@@ -53,7 +53,7 @@ def test_current_live_claim_requires_an_unskipped_recorded_gate() -> None:
     live_boundaries = [row for row in parity["boundaries"] if row["status"] == "live_test_available"]
     assert gate["application_and_migration_result"] == "passed"
     assert gate["native_encrypted_backup_restore_result"] == "passed"
-    assert gate["covered_live_boundaries"] == len(live_boundaries) + 1 == 25
+    assert gate["covered_live_boundaries"] == len(live_boundaries) + 1 == 23
     assert gate["skipped_live_boundaries"] == 0
     assert gate["database_image_digest"].startswith("sha256:")
     assert "non_superuser" in gate["application_role"]

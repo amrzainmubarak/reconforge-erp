@@ -37,7 +37,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - **Publication action requires a fresh exact-candidate local pass, clean worktree, owner/team approval, push, and green required GitHub checks.**
 - PR #66 is merged into `main` at `5d401e70c3a0e3cf507c2c7cf635dfc99b01a9af`; no tag or release was created by this Phase 4 slice.
 - `codex/consolidation-translation-core` is pushed and Draft PR #67 targets `main`. It remains unmerged; no tag, release, deployment, production mutation, or repository-setting change occurred.
-- `codex/consolidation-close-lifecycle` was merged through PR #68; the current branch `codex/consolidation-journal-lifecycle` contains the remotely green retry/failure-injection head `92aa50bb5ac8e964b3ea3b2da9b8ba5e9aaaa794` with Draft PR #71 targeting `main`. No merge, tag, release, or deployment occurred.
+- `codex/consolidation-close-lifecycle` was merged through PR #68; the current branch `codex/consolidation-journal-lifecycle` contains the remotely green grouped-replay head `a4295a6b7fc31c0dbf9ca3aece05bd8c9789da49` with Draft PR #71 targeting `main`. No merge, tag, release, or deployment occurred.
 
 ## Task status
 

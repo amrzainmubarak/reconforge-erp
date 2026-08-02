@@ -57,11 +57,13 @@ def test_postgres_migration_is_linear_and_reversible() -> None:
 
 
 def test_postgres_adapter_exposes_the_backend_neutral_ownership_port() -> None:
-    methods = [name for name, value in vars(ConsolidationOwnershipRepositoryProtocol).items() if callable(value)]
+    methods = [
+        name
+        for name, value in vars(ConsolidationOwnershipRepositoryProtocol).items()
+        if callable(value) and not name.startswith("__")
+    ]
     assert {"save_interest", "resolve_effective"} <= set(methods)
     for name in methods:
-        if name == "__init__":
-            continue
         assert inspect.signature(getattr(PostgresConsolidationOwnershipRepository, name)) == inspect.signature(
             getattr(ConsolidationOwnershipRepositoryProtocol, name)
         )

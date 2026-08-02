@@ -16,6 +16,7 @@ This file records commands and observed results. It does not convert a dirty wor
 | `python -m pytest --no-header --tb=short -q` | 0 | Full repository suite passed after the slice and flake repair; zero failures/errors and 64 declared skips. |
 
 - ADR: `docs/adr/0215-bounded-grouped-matching-is-explainable-and-non-posting.md`.
+- Remote verification: Draft PR #71 head `fc5e5e3bc91ed94aee119fadcc03efefdb3d48c1` reported 15/15 required checks successful (Python 3.11/3.12 tests, four engine-parity cells, server boundaries, Docker build/parity, locked audits, secret/npm policy, Python security, Analyze Python, and CodeQL). The PR remains open and draft; no merge, tag, release, deployment, or production mutation occurred.
 - Boundary: this is a bounded algorithmic foundation, not proof of partial-settlement allocation, carry-forward/sequence strategies, mutation or crash/resume behavior, cross-engine parity, or 10K/100K/1M benchmark performance. P4-MAT-001 remains in progress.
 
 ## E-259: Draft PR #71 remote verification

@@ -255,6 +255,7 @@ include reconforge/benchmark/grouped_matching_mutation.py
 include tests/test_grouped_matching_mutation.py
 include docs/adr/0241-bounded-grouped-matching-mutation-campaign.md
 include docs/execution/benchmarks/grouped-matching-mutation-v1.md
+include docs/adr/0242-close-management-postgres-current-live-gate.md
 include tests/test_incident_response.py
 include tests/test_reliability_incident_drill.py
 include docs/security/deployment-boundaries.md

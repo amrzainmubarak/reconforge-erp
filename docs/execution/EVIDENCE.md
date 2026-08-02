@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-289: Current-live PostgreSQL Close Management gate
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Gate: `close_runtime_gate` in `POSTGRES_PARITY_INVENTORY.yaml`, focused
+  runtime test `tests/test_postgres_close_application.py`, PostgreSQL 16
+  Alpine CI image digest `sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`,
+  non-privileged application role.
+- Result: focused runtime contract passed for tenant-scoped lifecycle,
+  dependency DAG refusal, readiness, lock/reopen, locked mutation refusal,
+  audit/outbox parity, and cross-tenant isolation. Inventory status is now
+  `live_verified_current` for Close Management only.
+- Boundary: the absent Consolidation Close adapter, posting/eliminations/NCI,
+  statements, restore, HA/DR, and RPO/RTO remain unverified.
+
 ## E-288: Bounded grouped-matching mutation campaign
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

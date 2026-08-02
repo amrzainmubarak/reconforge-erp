@@ -65,6 +65,14 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - This is a targeted request-level regression sentinel, not a platform-wide
   mutation score.
 
+## E-289 — Current-live PostgreSQL Close Management gate
+
+- `CloseManagementApplicationService` is now `live_verified_current` through
+  a dedicated PostgreSQL 16 CI gate covering lifecycle, tenant isolation,
+  readiness, lock/reopen, and audit/outbox evidence.
+- This does not promote the absent Consolidation Close adapter or prove
+  consolidation posting, restore, HA/DR, or RPO/RTO.
+
 ## Snapshot boundary
 
 - Branch: `codex/consolidation-journal-lifecycle`, current ownership-adjustment code head `bfb29d44ae025b338a8a5d0f8311619a8292462e`; Draft PR #71 remains deliberately unmerged.

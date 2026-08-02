@@ -2131,3 +2131,11 @@
 - Evidence: 3/3 mutants killed, zero survivors.
 - Boundary: no source-code mutation engine score or whole-platform mutation
   coverage is claimed.
+# E-289 — Separate current-live gate for Close Management
+
+- Date: 2026-08-02
+- Decision: promote only `CloseManagementApplicationService` after its
+  current PostgreSQL runtime contract, keeping Consolidation Close separate.
+- Evidence: the gate records PostgreSQL 16 CI, non-privileged execution,
+  lifecycle/tenant/audit-outbox checks, and explicit single-node limits.
+- Boundary: no claim for consolidation posting, restore, HA/DR, or RPO/RTO.

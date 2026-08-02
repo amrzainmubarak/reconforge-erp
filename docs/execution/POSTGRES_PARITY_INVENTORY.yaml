@@ -41,6 +41,17 @@ ownership_runtime_gate:
   skipped_focused_tests: 0
   covered_live_boundaries: [ConsolidationOwnershipApplicationService]
   limitations: [single_node, synthetic_data, no_restore_drill, no_ha, no_rpo_rto_claim]
+close_runtime_gate:
+  id: E-289
+  executed_at: "2026-08-02"
+  database: "PostgreSQL 16 Alpine CI service"
+  database_image_digest: "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+  application_role: reconforge_app_non_superuser
+  focused_tests: 1
+  focused_result: passed
+  skipped_focused_tests: 0
+  covered_live_boundaries: [CloseManagementApplicationService]
+  limitations: [single_node, synthetic_data, no_restore_drill, no_ha, no_rpo_rto_claim]
 allowed_statuses: [live_verified_current, live_test_available, contract_only, absent, not_applicable]
 boundaries:
   - {file: consolidation_close.py, service: ConsolidationCloseApplicationService, status: absent, risk: local_sqlite_only_no_postgres_adapter_or_parity_evidence}
@@ -67,7 +78,7 @@ boundaries:
   - {file: journals.py, service: JournalControlApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_journals.PostgresJournalControlRepository, test: tests/test_postgres_journals.py}
   - {file: accounts.py, service: AccountReconciliationApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_accounts.PostgresAccountReconciliationRepository, test: tests/test_postgres_accounts.py, risk: financial_high}
   - {file: approvals.py, service: ApprovalApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_approvals.PostgresApprovalRepository, test: tests/test_postgres_approvals.py, risk: governance_high}
-  - {file: close.py, service: CloseManagementApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_close_application.PostgresCloseManagementRepository, test: tests/test_postgres_close_application.py, risk: financial_high}
+  - {file: close.py, service: CloseManagementApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_close_application.PostgresCloseManagementRepository, test: tests/test_postgres_close_application.py, risk: financial_high}
   - {file: evidence.py, service: EvidenceRegistryApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_evidence_application.PostgresEvidenceRegistryRepository, test: tests/test_postgres_evidence_application.py, risk: integrity_high}
   - {file: exceptions.py, service: ExceptionQueueApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_exceptions.PostgresExceptionQueueRepository, test: tests/test_postgres_exceptions.py, risk: workflow_high}
   - {file: finance_core.py, service: FinanceCoreApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_finance_core.PostgresFinanceCoreRepository, test: tests/test_postgres_finance_core.py, risk: financial_critical}
@@ -81,8 +92,8 @@ boundaries:
   - {file: inventory_planning.py, service: InventoryPlanningApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_planning.PostgresInventoryPlanningRepository, test: tests/test_postgres_inventory_planning.py, risk: financial_high}
 summary:
   total: 36
-  live_verified_current: 7
-  live_test_available: 25
+  live_verified_current: 8
+  live_test_available: 24
   contract_only: 1
   absent: 1
   not_applicable: 2

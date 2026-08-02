@@ -29,6 +29,9 @@ This file records commands and observed results. It does not convert a dirty wor
 | `python -m pytest tests/test_grouped_matching.py tests/test_grouped_matching_application.py tests/test_matching_strategy_contract.py tests/test_rules_engine.py --no-header --tb=short -q` | 0 | Focused suite passed, including partial-settlement reason, settled amount, residual balances, digest fields, strategy dispatch, and existing grouped/rule compatibility. |
 | `python -m ruff check reconforge/domain/grouped_matching.py reconforge/application/grouped_matching.py reconforge/infrastructure/grouped_matching_strategy.py reconforge/rules/recon_as_code.py tests/test_grouped_matching.py tests/test_matching_strategy_contract.py` | 0 | All checks passed. |
 | `python -m mypy reconforge/domain/grouped_matching.py reconforge/application/grouped_matching.py reconforge/infrastructure/grouped_matching_strategy.py reconforge/rules/recon_as_code.py` | 0 | No issues found. |
+| `python -m pytest --no-header --tb=short -q` | 0 | Full repository suite passed after portfolio wiring; zero failures/errors and 64 declared skips. |
+| `python -m ruff check .` / `python -m mypy reconforge` / `python -m bandit -q -r reconforge` / `python -m pip_audit` / `uv lock --check` | 0 | Repository quality/security/lock gates passed; no known dependency vulnerabilities. |
+| `python -m build --no-isolation` plus archive membership | 0 | sdist/wheel built successfully; portfolio ADR, grouped tests, and grouped domain runtime are present in the expected archives. |
 | `python -m pytest --no-header --tb=short -q` | 0 | Full repository suite passed after the mode/schema extension; zero failures/errors and 64 declared skips. |
 | `python -m ruff check .` / `python -m mypy reconforge` / `python -m bandit -q -r reconforge` / `python -m pip_audit` / `uv lock --check` | 0 | Repository quality/security/lock gates passed; Bandit retained only pre-existing nosec/comment-parser warnings and pip-audit reported no known vulnerabilities. |
 | `python -m build --no-isolation` plus archive membership | 0 | sdist/wheel built successfully; partial-settlement ADR, grouped tests, and grouped domain runtime are present in the expected archives. |
@@ -36,6 +39,20 @@ This file records commands and observed results. It does not convert a dirty wor
 - ADR: `docs/adr/0216-bounded-partial-settlement-keeps-residuals-visible.md`.
 - Remote verification: Draft PR #71 head `323a167314fab3829d6b1cd23a0ea9ce0f441996` reported 15/15 required checks successful. No merge, tag, release, deployment, or production mutation occurred.
 - Boundary: partial settlement is a proposal only. Multiple non-overlapping groups, carry-forward/sequence/reversal-specific strategies, mutation/crash-resume and cross-engine properties, and large benchmarks remain open.
+
+## E-262: Bounded non-overlapping grouped portfolio
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Scope: explicit `portfolio` mode over the existing grouped matcher. It enumerates exact candidate groups within currency/partition/date/cardinality/search ceilings, selects a non-overlapping maximum-cover set with aggregate-difference minimization, and exposes unmatched IDs. The single-group compatibility path is unchanged; no posting, write-back, migration, or external call occurs.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_grouped_matching.py tests/test_matching_strategy_contract.py tests/test_grouped_matching_application.py tests/test_phase4_execution_contract.py --no-header --tb=short -q` | 0 | Focused portfolio/partial/grouped/contract suite passed: multiple disjoint groups, permutation-stable portfolio digest, equal-optimum ambiguity, generation budget refusal, strategy dispatch, and compatibility contracts. |
+| `python -m ruff check reconforge/domain/grouped_matching.py reconforge/application/grouped_matching.py reconforge/infrastructure/grouped_matching_strategy.py reconforge/rules/recon_as_code.py tests/test_grouped_matching.py tests/test_matching_strategy_contract.py` | 0 | All checks passed. |
+| `python -m mypy reconforge/domain/grouped_matching.py reconforge/application/grouped_matching.py reconforge/infrastructure/grouped_matching_strategy.py reconforge/rules/recon_as_code.py` | 0 | No issues found. |
+
+- ADR: `docs/adr/0217-bounded-non-overlapping-group-portfolio.md`.
+- Boundary: portfolio mode is exact-only; partial groups inside a portfolio, carry-forward/sequence/reversal-specific logic, mutation/crash-resume and cross-engine properties, and large benchmarks remain open.
 
 ## E-259: Draft PR #71 remote verification
 

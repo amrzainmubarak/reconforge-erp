@@ -234,6 +234,26 @@ def test_grouped_strategy_supports_bounded_partial_settlement_with_residuals() -
     assert result.results[0]["right_residual"] == Decimal("0")
 
 
+def test_grouped_strategy_supports_non_overlapping_portfolio_mode() -> None:
+    result = GroupedSubsetSumStrategy().execute(
+        MatchingStrategyRequest(
+            left_records=(
+                {"id": "L1", "amount": "100.00", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+                {"id": "L2", "amount": "50.00", "currency": "USD", "date": "2026-01-11", "partition": "AR"},
+            ),
+            right_records=(
+                {"id": "R1", "amount": "100.00", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+                {"id": "R2", "amount": "50.00", "currency": "USD", "date": "2026-01-11", "partition": "AR"},
+            ),
+            mode="portfolio",
+        )
+    )
+
+    assert len(result.results) == 2
+    assert result.exceptions == ()
+    assert {item["left_record_ids"] for item in result.results} == {("L1",), ("L2",)}
+
+
 def test_grouped_strategy_reports_ambiguity_for_equal_cost_candidates() -> None:
     strategy = GroupedSubsetSumStrategy()
     result = strategy.execute(

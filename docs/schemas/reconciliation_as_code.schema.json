@@ -278,7 +278,8 @@
             "one_to_many",
             "many_to_one",
             "many_to_many",
-            "partial_settlement"
+            "partial_settlement",
+            "portfolio"
           ]
         },
         "strategy_id": {
@@ -301,7 +302,8 @@
             "one-to-many",
             "many-to-one",
             "many-to-many",
-            "partial-settlement"
+            "partial-settlement",
+            "portfolio"
           ]
         },
         "amount_tolerance": {

@@ -1887,3 +1887,12 @@
 - Consequence: The matching portfolio can express fee/FX-aware partial settlement without pretending that an outstanding balance was reconciled. It does not post, write back, allocate across multiple runs, or implement carry-forward/sequence/reversal-specific policies.
 - ADR: `docs/adr/0216-bounded-partial-settlement-keeps-residuals-visible.md`.
 - Rollback: Remove the new mode, residual fields, tests, strategy/schema/manifest updates, ADR, and execution records. No database or external system state is changed.
+
+## D244 - Portfolio matching is bounded set selection, not greedy repetition
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Add `portfolio` mode as a separate result contract. Enumerate exact grouped candidates under existing ceilings, select a maximum-cover non-overlapping set with minimum aggregate difference, and expose unmatched IDs. Equal optima and budget exhaustion remain unresolved ambiguity.
+- Consequence: Several disjoint settlements can be replayed from one partition without record reuse or call-order dependence. The existing single-group result remains backward compatible. Partial groups inside portfolios, carry-forward/sequence/reversal-specific policy, mutation/crash-resume, engine parity, and scale benchmarks remain open.
+- ADR: `docs/adr/0217-bounded-non-overlapping-group-portfolio.md`.
+- Rollback: Remove portfolio mode, application/strategy wiring, tests, manifest/schema/documentation entries, ADR, and execution records. No database or external state is changed.

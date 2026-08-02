@@ -10,6 +10,7 @@ from reconforge.domain.grouped_matching import (
     GroupedMatchPolicy,
     GroupedRecord,
     find_grouped_match,
+    find_grouped_match_portfolio,
 )
 
 
@@ -90,6 +91,56 @@ def test_partial_settlement_returns_settled_amount_and_visible_residual() -> Non
     assert decision.left_residual == Decimal("20")
     assert decision.right_residual == Decimal("0")
     assert "residual" in decision.explanation
+
+
+def test_portfolio_selects_multiple_non_overlapping_groups() -> None:
+    result = find_grouped_match_portfolio(
+        (_record("L1", "100"), _record("L2", "50")),
+        (_record("R1", "100"), _record("R2", "50")),
+        GroupedMatchPolicy(mode="portfolio", max_left_cardinality=1, max_right_cardinality=1),
+    )
+
+    assert result.status == "matched"
+    assert len(result.decisions) == 2
+    assert result.unmatched_left_record_ids == result.unmatched_right_record_ids == ()
+    assert {decision.left_record_ids for decision in result.decisions} == {("L1",), ("L2",)}
+
+
+def test_portfolio_permutation_digest_is_stable() -> None:
+    policy = GroupedMatchPolicy(mode="portfolio", max_left_cardinality=1, max_right_cardinality=1)
+    first = find_grouped_match_portfolio(
+        (_record("L1", "100"), _record("L2", "50")),
+        (_record("R1", "100"), _record("R2", "50")),
+        policy,
+    )
+    second = find_grouped_match_portfolio(
+        (_record("L2", "50"), _record("L1", "100")),
+        (_record("R2", "50"), _record("R1", "100")),
+        policy,
+    )
+    assert first.portfolio_digest == second.portfolio_digest
+    assert first.decisions == second.decisions
+
+
+def test_portfolio_equal_maximum_cover_is_unresolved() -> None:
+    result = find_grouped_match_portfolio(
+        (_record("L1", "100"),),
+        (_record("R1", "100"), _record("R2", "100")),
+        GroupedMatchPolicy(mode="portfolio", max_left_cardinality=1, max_right_cardinality=1),
+    )
+
+    assert result.status == "ambiguous"
+    assert result.decisions[0].reason_code == "GROUP_PORTFOLIO_AMBIGUOUS"
+
+
+def test_portfolio_budget_is_fail_closed() -> None:
+    result = find_grouped_match_portfolio(
+        tuple(_record(f"L{index}", "1") for index in range(4)),
+        tuple(_record(f"R{index}", "1") for index in range(4)),
+        GroupedMatchPolicy(mode="portfolio", max_left_cardinality=2, max_right_cardinality=2, max_search_evaluations=1),
+    )
+    assert result.status == "ambiguous"
+    assert result.decisions[0].reason_code == "GROUP_PORTFOLIO_SEARCH_BUDGET_EXCEEDED"
 
 
 def test_duplicate_identity_and_cross_partition_groups_fail_closed() -> None:

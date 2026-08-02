@@ -44,7 +44,8 @@
         "many-to-many",
         "many-to-one",
         "one-to-many",
-        "partial-settlement"
+        "partial-settlement",
+        "portfolio"
       ],
       "version": "1.0.0"
     }

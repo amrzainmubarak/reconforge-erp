@@ -180,10 +180,11 @@ class MatchingStrategySpec(_ContractModel):
         "many_to_one",
         "many_to_many",
         "partial_settlement",
+        "portfolio",
     ]
     strategy_id: Literal["indexed-composite-one-to-one", "bounded-grouped-subset-sum"] | None = None
     strategy_version: str = "1.0.0"
-    mode: Literal["one-to-one", "one-to-many", "many-to-one", "many-to-many", "partial-settlement"] = "one-to-one"
+    mode: Literal["one-to-one", "one-to-many", "many-to-one", "many-to-many", "partial-settlement", "portfolio"] = "one-to-one"
     amount_tolerance: str = "0"
     date_tolerance_days: int = Field(default=0, ge=0, le=3_660)
     confidence_weight: str = "1"
@@ -210,7 +211,7 @@ class MatchingStrategySpec(_ContractModel):
 
     @model_validator(mode="after")
     def validate_adapter_compatibility(self) -> MatchingStrategySpec:
-        grouped = self.strategy_type in {"one_to_many", "many_to_one", "many_to_many", "partial_settlement"}
+        grouped = self.strategy_type in {"one_to_many", "many_to_one", "many_to_many", "partial_settlement", "portfolio"}
         effective_id = self.strategy_id or ("bounded-grouped-subset-sum" if grouped else "indexed-composite-one-to-one")
         expected_mode = self.strategy_type.replace("_", "-") if grouped else "one-to-one"
         if self.mode != expected_mode:
@@ -225,7 +226,7 @@ class MatchingStrategySpec(_ContractModel):
     def effective_strategy_id(self) -> str:
         if self.strategy_id is not None:
             return self.strategy_id
-        if self.strategy_type in {"one_to_many", "many_to_one", "many_to_many", "partial_settlement"}:
+        if self.strategy_type in {"one_to_many", "many_to_one", "many_to_many", "partial_settlement", "portfolio"}:
             return "bounded-grouped-subset-sum"
         return "indexed-composite-one-to-one"
 

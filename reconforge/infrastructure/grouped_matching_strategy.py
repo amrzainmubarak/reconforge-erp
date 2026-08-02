@@ -25,7 +25,7 @@ GROUPED_SUBSET_SUM_MANIFEST = MatchingStrategyManifest(
     version="1.0.0",
     maturity="experimental",
     algorithm="bounded-partitioned-subset-sum-enumeration-v1",
-    supported_modes=("many-to-many", "many-to-one", "one-to-many", "partial-settlement"),
+    supported_modes=("many-to-many", "many-to-one", "one-to-many", "partial-settlement", "portfolio"),
     deterministic_tie_break="difference-cardinality-date-span-stable-record-identities-v1",
     explanation_schema="grouped-matching-explanation-v2",
     limits=StrategyLimits(
@@ -65,8 +65,7 @@ class GroupedSubsetSumStrategy:
         if max_left_group is None or max_right_group is None or max_group_evaluations is None:
             raise MatchingStrategyContractError("Grouped strategy manifest limits are incomplete.")
         try:
-            decision = self._service.execute(
-                GroupedMatchRequest(
+            grouped_request = GroupedMatchRequest(
                     left_records=request.left_records,
                     right_records=request.right_records,
                     policy=GroupedMatchPolicy(
@@ -89,15 +88,18 @@ class GroupedSubsetSumStrategy:
                     target_currency=request.target_currency,
                     fx_rates=request.fx_rates,
                 )
-            )
+            if request.mode == "portfolio":
+                portfolio = self._service.execute_portfolio(grouped_request)
+                decisions = portfolio.decisions
+            else:
+                decisions = (self._service.execute(grouped_request),)
         except GroupedMatchingError as exc:
             raise MatchingStrategyContractError(str(exc)) from exc
-        payload = asdict(decision)
-        results = (payload,)
-        exceptions = (
-            ({"reason_code": decision.reason_code, "decision_digest": decision.decision_digest},)
+        results = tuple(asdict(decision) for decision in decisions)
+        exceptions = tuple(
+            {"reason_code": decision.reason_code, "decision_digest": decision.decision_digest}
+            for decision in decisions
             if decision.status == "ambiguous"
-            else ()
         )
         manifest_digest = self.manifest.digest
         input_digest = request_digest(request, manifest_digest)

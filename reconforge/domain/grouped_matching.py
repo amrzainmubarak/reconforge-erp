@@ -10,7 +10,7 @@ from decimal import Decimal
 from itertools import combinations
 from typing import Literal
 
-GroupedMatchMode = Literal["one-to-many", "many-to-one", "many-to-many", "partial-settlement"]
+GroupedMatchMode = Literal["one-to-many", "many-to-one", "many-to-many", "partial-settlement", "portfolio"]
 GroupedNettingMode = Literal["gross", "net"]
 GroupedMatchStatus = Literal["matched", "unmatched", "ambiguous"]
 GroupedMatchCandidateSet = tuple[tuple[str, ...], tuple[str, ...]]
@@ -51,7 +51,7 @@ class GroupedMatchPolicy:
     netting_mode: GroupedNettingMode = "gross"
 
     def __post_init__(self) -> None:
-        if self.mode not in {"one-to-many", "many-to-one", "many-to-many", "partial-settlement"}:
+        if self.mode not in {"one-to-many", "many-to-one", "many-to-many", "partial-settlement", "portfolio"}:
             raise GroupedMatchingError("Grouped-match mode is not supported.")
         if not isinstance(self.amount_tolerance, Decimal) or not self.amount_tolerance.is_finite():
             raise GroupedMatchingError("Grouped-match tolerance must be a finite Decimal.")
@@ -101,6 +101,19 @@ class GroupedMatchDecision:
 
 
 @dataclass(frozen=True)
+class GroupedMatchPortfolioResult:
+    """Multiple non-overlapping grouped decisions with bounded replay evidence."""
+
+    status: GroupedMatchStatus
+    decisions: tuple[GroupedMatchDecision, ...]
+    candidate_count: int
+    search_evaluations: int
+    unmatched_left_record_ids: tuple[str, ...]
+    unmatched_right_record_ids: tuple[str, ...]
+    portfolio_digest: str
+
+
+@dataclass(frozen=True)
 class _CandidateGroup:
     left: tuple[GroupedRecord, ...]
     right: tuple[GroupedRecord, ...]
@@ -137,6 +150,8 @@ def _cardinalities(policy: GroupedMatchPolicy) -> tuple[range, range]:
     if policy.mode == "many-to-one":
         return range(2, policy.max_left_cardinality + 1), range(1, 2)
     if policy.mode == "partial-settlement":
+        return range(1, policy.max_left_cardinality + 1), range(1, policy.max_right_cardinality + 1)
+    if policy.mode == "portfolio":
         return range(1, policy.max_left_cardinality + 1), range(1, policy.max_right_cardinality + 1)
     return (
         range(2, policy.max_left_cardinality + 1),
@@ -286,6 +301,269 @@ def find_grouped_match(
         reason_code=reason_code,
         explanation=explanation,
         ambiguous_candidates=(),
+    )
+
+
+def _portfolio_candidates(
+    left: tuple[GroupedRecord, ...],
+    right: tuple[GroupedRecord, ...],
+    policy: GroupedMatchPolicy,
+) -> tuple[list[_CandidateGroup], int, bool]:
+    """Enumerate exact candidate groups under the declared portfolio budget."""
+
+    candidates: list[_CandidateGroup] = []
+    evaluations = 0
+    for left_size in range(1, policy.max_left_cardinality + 1):
+        for left_group in combinations(left, left_size):
+            left_currencies = {record.currency for record in left_group}
+            left_partitions = {record.partition_key for record in left_group}
+            if len(left_currencies) != 1 or len(left_partitions) != 1:
+                continue
+            for right_size in range(1, policy.max_right_cardinality + 1):
+                for right_group in combinations(right, right_size):
+                    evaluations += 1
+                    if evaluations > policy.max_search_evaluations:
+                        return candidates, evaluations, True
+                    all_records = left_group + right_group
+                    if {record.currency for record in all_records} != left_currencies:
+                        continue
+                    if {record.partition_key for record in all_records} != left_partitions:
+                        continue
+                    dates = [record.business_date for record in all_records]
+                    date_span = (max(dates) - min(dates)).days
+                    if date_span > policy.date_window_days:
+                        continue
+                    left_total, left_fee_total, left_net_total = _aggregate_totals(left_group, policy.netting_mode)
+                    right_total, right_fee_total, right_net_total = _aggregate_totals(right_group, policy.netting_mode)
+                    difference = abs(left_net_total - right_net_total)
+                    if difference > policy.amount_tolerance:
+                        continue
+                    candidates.append(
+                        _CandidateGroup(
+                            left=left_group,
+                            right=right_group,
+                            left_total=left_total,
+                            right_total=right_total,
+                            left_fee_total=left_fee_total,
+                            right_fee_total=right_fee_total,
+                            left_net_total=left_net_total,
+                            right_net_total=right_net_total,
+                            difference=difference,
+                            date_span=date_span,
+                            settled_amount=min(left_net_total, right_net_total),
+                            left_residual=Decimal("0"),
+                            right_residual=Decimal("0"),
+                            partial=False,
+                        )
+                    )
+    return candidates, evaluations, False
+
+
+def _portfolio_digest(
+    *,
+    status: GroupedMatchStatus,
+    decisions: tuple[GroupedMatchDecision, ...],
+    unmatched_left: tuple[str, ...],
+    unmatched_right: tuple[str, ...],
+    candidate_count: int,
+    search_evaluations: int,
+) -> str:
+    return _digest(
+        {
+            "candidate_count": candidate_count,
+            "decisions": [decision.decision_digest for decision in decisions],
+            "search_evaluations": search_evaluations,
+            "status": status,
+            "unmatched_left_record_ids": unmatched_left,
+            "unmatched_right_record_ids": unmatched_right,
+        }
+    )
+
+
+def find_grouped_match_portfolio(
+    left_records: tuple[GroupedRecord, ...],
+    right_records: tuple[GroupedRecord, ...],
+    policy: GroupedMatchPolicy,
+) -> GroupedMatchPortfolioResult:
+    """Select several disjoint exact groups by maximum covered-record objective.
+
+    The search is bounded by ``max_search_evaluations`` and leaves the whole
+    partition unresolved when generation or selection exceeds that ceiling.
+    """
+
+    if policy.mode != "portfolio":
+        raise GroupedMatchingError("Grouped portfolio matching requires portfolio mode.")
+    left = _canonical_records(left_records)
+    right = _canonical_records(right_records)
+    decisions: tuple[GroupedMatchDecision, ...]
+    candidates, evaluations, over_budget = _portfolio_candidates(left, right, policy)
+    if over_budget:
+        decision = _decision(
+            status="ambiguous",
+            policy=policy,
+            candidate=None,
+            candidate_count=len(candidates),
+            evaluations=evaluations,
+            reason_code="GROUP_PORTFOLIO_SEARCH_BUDGET_EXCEEDED",
+            explanation="Portfolio candidate generation exceeded its deterministic budget; no group was selected.",
+            ambiguous_candidates=(),
+        )
+        decisions = (decision,)
+        return GroupedMatchPortfolioResult(
+            status="ambiguous",
+            decisions=decisions,
+            candidate_count=len(candidates),
+            search_evaluations=evaluations,
+            unmatched_left_record_ids=tuple(record.record_id for record in left),
+            unmatched_right_record_ids=tuple(record.record_id for record in right),
+            portfolio_digest=_portfolio_digest(
+                status="ambiguous",
+                decisions=decisions,
+                unmatched_left=tuple(record.record_id for record in left),
+                unmatched_right=tuple(record.record_id for record in right),
+                candidate_count=len(candidates),
+                search_evaluations=evaluations,
+            ),
+        )
+    if not candidates:
+        decision = _decision(
+            status="unmatched",
+            policy=policy,
+            candidate=None,
+            candidate_count=0,
+            evaluations=evaluations,
+            reason_code="NO_PORTFOLIO_GROUP_SATISFIED_CONSTRAINTS",
+            explanation="No bounded non-overlapping portfolio group satisfied the partition, date, and sum constraints.",
+            ambiguous_candidates=(),
+        )
+        decisions = (decision,)
+        return GroupedMatchPortfolioResult(
+            status="unmatched",
+            decisions=decisions,
+            candidate_count=0,
+            search_evaluations=evaluations,
+            unmatched_left_record_ids=tuple(record.record_id for record in left),
+            unmatched_right_record_ids=tuple(record.record_id for record in right),
+            portfolio_digest=_portfolio_digest(
+                status="unmatched",
+                decisions=decisions,
+                unmatched_left=tuple(record.record_id for record in left),
+                unmatched_right=tuple(record.record_id for record in right),
+                candidate_count=0,
+                search_evaluations=evaluations,
+            ),
+        )
+
+    ordered = tuple(sorted(candidates, key=lambda candidate: candidate.stable_key))
+    best: list[_CandidateGroup] = []
+    best_score: tuple[int, Decimal] | None = None
+    equal_optima = 0
+    nodes = 0
+    def visit(position: int, used_left: frozenset[str], used_right: frozenset[str], selected: list[_CandidateGroup]) -> None:
+        nonlocal best, best_score, equal_optima, nodes
+        nodes += 1
+        if nodes > policy.max_search_evaluations:
+            raise GroupedMatchingError("portfolio selection search exceeded its deterministic budget")
+        covered = sum(len(candidate.left) + len(candidate.right) for candidate in selected)
+        cost = sum((candidate.difference for candidate in selected), Decimal("0"))
+        score = (covered, -cost)
+        if best_score is None or score > best_score:
+            best_score = score
+            best = list(selected)
+            equal_optima = 0
+        elif score == best_score and tuple(candidate.stable_key for candidate in selected) != tuple(
+            candidate.stable_key for candidate in best
+        ):
+            equal_optima += 1
+        for index in range(position, len(ordered)):
+            candidate = ordered[index]
+            if used_left.intersection(candidate.stable_key[0]) or used_right.intersection(candidate.stable_key[1]):
+                continue
+            visit(
+                index + 1,
+                used_left.union(candidate.stable_key[0]),
+                used_right.union(candidate.stable_key[1]),
+                [*selected, candidate],
+            )
+
+    try:
+        visit(0, frozenset(), frozenset(), [])
+    except GroupedMatchingError as exc:
+        decision = _decision(
+            status="ambiguous",
+            policy=policy,
+            candidate=None,
+            candidate_count=len(candidates),
+            evaluations=evaluations + nodes,
+            reason_code="GROUP_PORTFOLIO_SEARCH_BUDGET_EXCEEDED",
+            explanation=str(exc),
+            ambiguous_candidates=(),
+        )
+        decisions = (decision,)
+        return GroupedMatchPortfolioResult(
+            status="ambiguous",
+            decisions=decisions,
+            candidate_count=len(candidates),
+            search_evaluations=evaluations + nodes,
+            unmatched_left_record_ids=tuple(record.record_id for record in left),
+            unmatched_right_record_ids=tuple(record.record_id for record in right),
+            portfolio_digest=_portfolio_digest(
+                status="ambiguous",
+                decisions=decisions,
+                unmatched_left=tuple(record.record_id for record in left),
+                unmatched_right=tuple(record.record_id for record in right),
+                candidate_count=len(candidates),
+                search_evaluations=evaluations + nodes,
+            ),
+        )
+
+    used_left = {record.record_id for candidate in best for record in candidate.left}
+    used_right = {record.record_id for candidate in best for record in candidate.right}
+    unmatched_left = tuple(record.record_id for record in left if record.record_id not in used_left)
+    unmatched_right = tuple(record.record_id for record in right if record.record_id not in used_right)
+    if equal_optima:
+        decision = _decision(
+            status="ambiguous",
+            policy=policy,
+            candidate=None,
+            candidate_count=len(candidates),
+            evaluations=evaluations + nodes,
+            reason_code="GROUP_PORTFOLIO_AMBIGUOUS",
+            explanation="Several maximum-cover non-overlapping portfolios have equal cost; selection remains unresolved.",
+            ambiguous_candidates=tuple(candidate.stable_key for candidate in ordered),
+        )
+        decisions = (decision,)
+        status: GroupedMatchStatus = "ambiguous"
+    else:
+        decisions = tuple(
+            _decision(
+                status="matched",
+                policy=policy,
+                candidate=candidate,
+                candidate_count=len(candidates),
+                evaluations=evaluations + nodes,
+                reason_code="GROUP_PORTFOLIO_MATCH",
+                explanation="Selected a maximum-cover set of non-overlapping bounded groups.",
+                ambiguous_candidates=(),
+            )
+            for candidate in sorted(best, key=lambda item: item.stable_key)
+        )
+        status = "matched" if decisions else "unmatched"
+    return GroupedMatchPortfolioResult(
+        status=status,
+        decisions=decisions,
+        candidate_count=len(candidates),
+        search_evaluations=evaluations + nodes,
+        unmatched_left_record_ids=unmatched_left,
+        unmatched_right_record_ids=unmatched_right,
+        portfolio_digest=_portfolio_digest(
+            status=status,
+            decisions=decisions,
+            unmatched_left=unmatched_left,
+            unmatched_right=unmatched_right,
+            candidate_count=len(candidates),
+            search_evaluations=evaluations + nodes,
+        ),
     )
 
 

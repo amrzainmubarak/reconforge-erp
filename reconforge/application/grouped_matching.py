@@ -12,8 +12,10 @@ from reconforge.domain.grouped_matching import (
     GroupedMatchDecision,
     GroupedMatchingError,
     GroupedMatchPolicy,
+    GroupedMatchPortfolioResult,
     GroupedRecord,
     find_grouped_match,
+    find_grouped_match_portfolio,
 )
 from reconforge.utils.money import ExchangeRate, InvalidAmountError, Money, parse_exact_amount
 
@@ -231,6 +233,45 @@ class GroupedMatchingApplicationService:
             fx_rates=fx_rates,
         )
         return find_grouped_match(left, right, request.policy)
+
+    def execute_portfolio(self, request: GroupedMatchRequest) -> GroupedMatchPortfolioResult:
+        """Execute bounded non-overlapping portfolio matching through the same ports."""
+
+        if request.policy.mode != "portfolio":
+            raise GroupedMatchingError("Grouped portfolio execution requires portfolio mode.")
+        fields = (
+            request.left_id_field,
+            request.right_id_field,
+            request.amount_field,
+            request.left_fee_field,
+            request.right_fee_field,
+            request.currency_field,
+            request.date_field,
+            request.partition_field,
+        )
+        if any(not isinstance(field, str) or not field.strip() for field in fields):
+            raise GroupedMatchingError("Grouped-match field names cannot be empty.")
+        target_currency = request.target_currency.strip().upper() if isinstance(request.target_currency, str) else ""
+        fx_rates = _fx_rates_by_pair(request.fx_rates) if request.fx_rates else ()
+        left = self._records(
+            request.left_records,
+            id_field=request.left_id_field,
+            fee_field=request.left_fee_field,
+            policy=request.policy,
+            request=request,
+            target_currency=target_currency,
+            fx_rates=fx_rates,
+        )
+        right = self._records(
+            request.right_records,
+            id_field=request.right_id_field,
+            fee_field=request.right_fee_field,
+            policy=request.policy,
+            request=request,
+            target_currency=target_currency,
+            fx_rates=fx_rates,
+        )
+        return find_grouped_match_portfolio(left, right, request.policy)
 
     def _records(
         self,

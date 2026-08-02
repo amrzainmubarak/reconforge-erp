@@ -224,9 +224,9 @@ class PostgresConsolidationCloseRepository:
                     (self.tenant_id, effect_id, run_id, effect_kind, actor, effect_digest),
                 )
             self.connection.execute(
-                f"UPDATE reconforge.consolidation_close_runs SET status=%s,row_version=row_version+1,{actor_field}=%s,reasons=jsonb_set(reasons,%s,to_jsonb(%s::text),true) WHERE tenant_id=%s AND id=%s",
+                f"UPDATE reconforge.consolidation_close_runs SET status=%s,row_version=row_version+1,{actor_field}=%s,reasons=jsonb_set(reasons,%s,to_jsonb(%s::text),true) WHERE tenant_id=%s AND id=%s",  # nosec B608
                 (to_status, actor, "{" + to_status.lower() + "_reason}", reason, self.tenant_id, run_id),
-            )  # nosec B608 - actor_field is selected from a closed internal lifecycle set.
+            )
             return dict(
                 self.connection.execute(
                     "SELECT * FROM reconforge.consolidation_close_runs WHERE tenant_id=%s AND id=%s",

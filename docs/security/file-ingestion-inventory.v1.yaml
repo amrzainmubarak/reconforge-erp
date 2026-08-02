@@ -528,6 +528,23 @@ surfaces:
       - The JSON value is an internal canonical permission array, not an upload or executable document.
       - SQLite tenant/workspace scope and immutable triggers are local evidence only; PostgreSQL/RLS and federation remain open.
     next_action: Add equivalent provider-backed policy administration only after a reviewed PostgreSQL/RLS contract exists.
+  - id: FI-025
+    name: PostgreSQL policy delegation permission records
+    module_ids: [platform.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/postgres_delegations.py::_row_to_grant
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_postgres_delegations.py, tests/test_postgres_delegations_runtime.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The JSON value is an internal canonical permission array returned by PostgreSQL JSONB, not an upload or executable document.
+      - The live runtime gate is synthetic and single-node; federation, route coverage, and cache invalidation remain open.
+    next_action: Promote the PostgreSQL delegation boundary only after the unskipped CI runtime test passes and record the migration evidence.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader
@@ -575,6 +592,11 @@ direct_json_parser_allowlist:
     call_count: 1
     surface_id: FI-024
     rationale: Parses only the canonical permission array stored by the typed local delegation repository; the grant is schema-validated before persistence and invalid stored data fails closed.
+  - path: reconforge/infrastructure/postgres_delegations.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-025
+    rationale: Parses only the canonical permission array returned by PostgreSQL JSONB; the typed grant validator rejects malformed or unsafe stored authority before it can influence policy evaluation.
   - path: reconforge/upgrade/application_adapter.py
     parser: json.loads
     call_count: 1

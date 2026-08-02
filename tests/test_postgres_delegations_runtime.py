@@ -82,6 +82,8 @@ def test_live_postgres_delegation_is_rls_isolated_and_immutable() -> None:
             ) is None
     finally:
         with admin.transaction():
+            admin.execute("ALTER TABLE reconforge.policy_delegations DISABLE TRIGGER policy_delegation_guard")
             admin.execute("DELETE FROM reconforge.policy_delegations WHERE tenant_id IN (%s,%s)", (tenant_a, tenant_b))
+            admin.execute("ALTER TABLE reconforge.policy_delegations ENABLE TRIGGER policy_delegation_guard")
             admin.execute("DELETE FROM reconforge.tenants WHERE id IN (%s,%s)", (tenant_a, tenant_b))
         admin.close()

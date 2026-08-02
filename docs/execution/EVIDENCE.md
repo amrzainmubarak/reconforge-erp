@@ -163,6 +163,13 @@ This file records commands and observed results. It does not convert a dirty wor
   contract had not yet been updated. That failure is retained; the registry,
   import ordering, and server-boundaries invocation are corrected in the next
   commit, so no live result is inferred from this run.
+- CI run `30771495280` executed the new live test and proved create, effective
+  lookup, revocation, and sibling-tenant isolation, but the test cleanup was
+  incorrectly blocked by the intentional append-only trigger; the migration
+  status assertion and parser inventory also exposed stale compatibility
+  registries. Cleanup now disables only that guard inside the admin-owned test
+  teardown, and both registries are updated. This run is retained as a failed
+  diagnostic run; live promotion awaits the corrected CI run.
 
 ## E-292: Expiring delegation policy invariant
 

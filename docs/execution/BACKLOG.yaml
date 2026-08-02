@@ -9,6 +9,13 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-289
+    priority: P0
+    area: postgres-parity
+    title: Current PostgreSQL close-management runtime gate
+    status: completed
+    depends_on: []
+    exit_evidence: CloseManagementApplicationService is recorded as live_verified_current in POSTGRES_PARITY_INVENTORY.yaml with CI runtime evidence E-289.
   - id: E-290
     priority: P0
     area: postgres-parity

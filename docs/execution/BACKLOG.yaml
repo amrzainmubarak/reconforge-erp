@@ -51,6 +51,13 @@ tasks:
     status: completed
     depends_on: []
     exit_evidence: GovernedDurableJobApplicationService enforces actor identity, central permission, tenant/workspace scope, and SoD before submit/cancel repository effects; deny and allow tests pass under ADR 0248, and CI server-boundaries exercises the same wrapper against PostgreSQL under a non-privileged role per ADR 0249. Existing unwrapped routes, federation, and cache invalidation remain open.
+  - id: E-298
+    priority: P0
+    area: enterprise-policy
+    title: Governed durable-job PostgreSQL runtime boundary
+    status: completed
+    depends_on: [E-297]
+    exit_evidence: CI server-boundaries exercises the governed durable-job wrapper over PostgreSQL under the non-privileged role: denied permission creates no row, allowed scoped submit creates one tenant-bound row, governed cancellation completes, and sibling-tenant visibility is empty under ADR 0249.
   - id: E-299
     priority: P0
     area: connectors

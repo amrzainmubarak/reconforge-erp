@@ -99,6 +99,7 @@ boundaries:
   - {file: workspace_periods.py, service: WorkspacePeriodApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_domain.PostgresDomainUnitOfWork, test: tests/test_postgres_workspace_period_uow.py}
   - {file: operations.py, service: OperationsApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_operations.PostgresOperationsRepository, test: tests/test_postgres_operations.py}
   - {file: jobs.py, service: DurableJobApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_jobs.PostgresDurableJobRepository, test: tests/test_postgres_durable_jobs.py, risk: single_node_no_queue_ha_or_soak}
+  - {file: jobs.py, service: GovernedDurableJobApplicationService, status: contract_only, adapter: reconforge.infrastructure.postgres_jobs.PostgresDurableJobRepository, test: tests/test_governed_jobs_policy.py, risk: policy_wrapper_is_opt_in_and_postgres_policy_adapter_not_yet_exercised}
   - {file: jobs.py, service: DurableJobWorkerService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_jobs.PostgresDurableJobRepository, test: tests/test_postgres_durable_jobs.py, risk: single_node_no_queue_ha_or_soak}
   - {file: metrics.py, service: MetricsApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_metrics.PostgresMetricsRepository, test: tests/test_application_metrics.py}
   - {file: outbox.py, service: OutboxApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_outbox.TenantBoundPostgresOutboxRepository, test: tests/test_postgres_outbox.py, risk: delivery_critical}
@@ -127,9 +128,9 @@ boundaries:
   - {file: inventory_valuation_reversal.py, service: InventoryValuationReversalApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_valuation_reversal.PostgresInventoryValuationReversalRepository, test: tests/test_postgres_inventory_valuation_reversal.py, risk: financial_critical}
   - {file: inventory_planning.py, service: InventoryPlanningApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_planning.PostgresInventoryPlanningRepository, test: tests/test_postgres_inventory_planning.py, risk: financial_high}
 summary:
-  total: 36
+  total: 37
   live_verified_current: 12
   live_test_available: 21
-  contract_only: 1
+  contract_only: 2
   absent: 0
   not_applicable: 2

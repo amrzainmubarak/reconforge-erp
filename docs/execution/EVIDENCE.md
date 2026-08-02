@@ -16,6 +16,9 @@ This file records commands and observed results. It does not convert a dirty wor
   registry (`POSTGRES_MIGRATION_REVISIONS` ended at `0054`). The registry and
   its compatibility assertions were advanced to `0055_pg_consol_close`; the
   focused operations/parity tests then passed locally.
+- A live PostgreSQL lifecycle test now exercises tenant isolation, idempotent
+  replay, approve/post/reversal, lock, and reopen. It remains unpromoted until
+  an unskipped CI run records its result.
 
 ## E-289: Current-live PostgreSQL Close Management gate
 

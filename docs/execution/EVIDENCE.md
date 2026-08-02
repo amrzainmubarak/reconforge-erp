@@ -113,6 +113,17 @@ This file records commands and observed results. It does not convert a dirty wor
   engine-parity, and docker-parity for `14f47cd`; CodeQL `30768935937`,
   Security `30768935708`, and Docker `30768935748` also passed.
 
+## E-300: HA/DR operational profile and declared targets
+
+- Added a schema-validated `partial` operational profile bound to the retained
+  three-run PostgreSQL synchronous-standby report.
+- The profile declares zero acknowledged-transaction-loss and 60-second
+  failover/failback ceilings; observed maxima remain 11.117 seconds failover
+  and 0.958 seconds failback across all three runs.
+- It preserves a six-step runbook and the seven residual limitations,
+  including one failure domain, manual control, no quorum/witness, and no
+  production-SLO claim. The focused profile/repeated-drill tests pass.
+
 ## E-292: Expiring delegation policy invariant
 
 - Added optional delegation fields to `PolicyEvaluationContext` and forwarded

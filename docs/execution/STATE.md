@@ -82,6 +82,15 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - This is synthetic reference evidence only; live ERP onboarding and
   write-back remain open.
 
+## E-300 — HA/DR operational profile and declared targets
+
+- The retained three-run PostgreSQL synchronous-standby drill is now bound to
+  a closed operational profile with explicit zero-loss and 60-second
+  failover/failback targets, a reproducible runbook, and residual limitations.
+- Status is `partial`: all nodes still share one host/failure domain and the
+  controller is manual; quorum, automatic failover, site loss, and production
+  SLO evidence remain open.
+
 ## E-292 — Explicit expiring delegation in central policy
 
 - The central policy engine now evaluates temporary delegated authority using a

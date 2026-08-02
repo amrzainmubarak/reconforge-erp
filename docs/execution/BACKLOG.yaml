@@ -51,6 +51,20 @@ tasks:
     status: completed
     depends_on: []
     exit_evidence: GovernedDurableJobApplicationService enforces actor identity, central permission, tenant/workspace scope, and SoD before submit/cancel repository effects; deny and allow tests pass under ADR 0248, and CI server-boundaries exercises the same wrapper against PostgreSQL under a non-privileged role per ADR 0249. Existing unwrapped routes, federation, and cache invalidation remain open.
+  - id: E-299
+    priority: P0
+    area: connectors
+    title: Provider-neutral ERP read-only reference connector
+    status: completed
+    depends_on: [E-296]
+    exit_evidence: Entity-scoped ERP ledger-line schema, exact Decimal validation, cursor/idempotency, canonical digests, secret-reference isolation, endpoint allowlisting, focused tests, package build, and CI evidence are recorded under ADR 0250; live ERP interoperability and write-back remain open.
+  - id: E-300
+    priority: P4
+    area: reliability
+    title: HA/DR operational profile and declared RPO/RTO
+    status: completed
+    depends_on: [P3-ENT-010]
+    exit_evidence: A schema-validated operational profile binds the repeated three-run PostgreSQL synchronous-standby report to explicit RPO/RTO targets, runbook steps, and residual limitations; it does not claim independent failure domains or production HA.
   - id: E-292
     priority: P0
     area: enterprise-policy
@@ -934,9 +948,11 @@ tasks:
     area: reliability
     goal_workstream: high_availability_and_disaster_recovery
     title: Independent-failure-domain HA and disaster recovery
-    status: planned
+    status: in_progress
     depends_on: [P3-ENT-009, P3-ENT-010, P3-ENT-012]
     exit_evidence: Independent-host quorum/fencing, automatic failover, split-brain refusal, backup/restore, regional or site-loss, repeated integrity, and declared RPO/RTO drills pass with every run retained and no single-host widening claim.
+    completed_slices:
+      - E-300 adds `HA_DR_OPERATIONAL_PROFILE_2026-07-30.json` and its closed schema. The profile binds the retained three-run single-host synchronous-standby report to zero-transaction-loss and 60-second failover/failback targets, a six-step operator runbook, and explicit single-host/manual-controller/quorum/production-SLO limitations. Independent hosts, witness quorum, automatic failover, and site-loss remain open.
 
   - id: P4-IAM-001
     priority: P4

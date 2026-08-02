@@ -48,6 +48,13 @@
 - **Rationale**: An ERP-shaped exact Decimal contract makes the SDK useful for integration testing without confusing an export profile or synthetic endpoint with a live connector.
 - **Reversibility**: Additive module, manifest, documentation, and tests only; no schema or network default changes.
 
+### D-300: Publish HA/DR Targets Without Widening the Failure-Domain Claim
+- **Date**: 2026-08-03
+- **Context**: The repeated PostgreSQL synchronous-standby drill has measured single-host results, but operators need one machine-readable profile connecting those results to targets and a runbook.
+- **Decision**: Publish a `partial` operational profile with zero acknowledged-transaction-loss and 60-second failover/failback targets, bound to the retained report and explicit limitations.
+- **Rationale**: Operators can reproduce and review the bounded drill without mistaking one-host evidence for independent-domain HA or production SLO evidence.
+- **Reversibility**: Additive schema, profile, and tests only; no database or deployment behavior changes.
+
 ### D-292: Delegated Authority Requires an Explicit Evaluation Instant
 - **Date**: 2026-08-02
 - **Context**: Enterprise policy needs expiring delegation without hidden wall-clock behavior that makes decisions non-replayable.

@@ -123,6 +123,9 @@ This file records commands and observed results. It does not convert a dirty wor
 - It preserves a six-step runbook and the seven residual limitations,
   including one failure domain, manual control, no quorum/witness, and no
   production-SLO claim. The focused profile/repeated-drill tests pass.
+- CI run `30769771592` passed both Python versions, server-boundaries,
+  engine-parity, and docker-parity for `a4b763b`; CodeQL `30769771590`,
+  Security `30769771568`, and Docker `30769771622` also passed.
 
 ## E-292: Expiring delegation policy invariant
 

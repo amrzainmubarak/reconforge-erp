@@ -22,6 +22,10 @@ This file records commands and observed results. It does not convert a dirty wor
 - The next CI run exposed a second stale-head assertion in
   `tests/test_alembic_postgres.py`; it now expects `0055_pg_consol_close`, and
   the focused Alembic/operations/close tests pass locally.
+- The full Python 3.11 suite then exposed an execution-ledger dependency gap:
+  E-290 depended on the documented E-289 gate, but E-289 had not yet been
+  materialized as a backlog task. The task is now registered and
+  `tests/test_phase_1_3_execution_contract.py` passes locally.
 
 ## E-289: Current-live PostgreSQL Close Management gate
 

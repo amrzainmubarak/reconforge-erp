@@ -6,6 +6,15 @@ Updated: 2026-08-02
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-290 — PostgreSQL consolidation-close control journal boundary
+
+- Added a tenant-scoped PostgreSQL adapter and Alembic migration for verified
+  consolidation periods, worksheet runs, maker-checker transitions, immutable
+  posting/reversal effects, row-version concurrency guards, and RLS.
+- This is recorded as `contract_only`: the JSONB control-journal boundary is
+  implemented and structurally tested, but live runtime evidence, ERP/bank
+  write-back, statutory consolidation, HA/DR, and restore drills remain open.
+
 ## E-282 — Published 100K durable-job profile
 
 - The durable-job harness now declares and verifies a hardware-scoped

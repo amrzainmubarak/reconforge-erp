@@ -9,6 +9,13 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-290
+    priority: P0
+    area: postgres-parity
+    title: PostgreSQL consolidation-close control journal boundary
+    status: completed
+    depends_on: [E-289]
+    exit_evidence: Adapter, migration, RLS schema, structural contract tests, and explicit contract-only claim boundary are recorded in EVIDENCE.md and POSTGRES_PARITY_INVENTORY.yaml.
   - id: P0-001
     priority: P0
     area: correctness

@@ -54,7 +54,7 @@ close_runtime_gate:
   limitations: [single_node, synthetic_data, no_restore_drill, no_ha, no_rpo_rto_claim]
 allowed_statuses: [live_verified_current, live_test_available, contract_only, absent, not_applicable]
 boundaries:
-  - {file: consolidation_close.py, service: ConsolidationCloseApplicationService, status: absent, risk: local_sqlite_only_no_postgres_adapter_or_parity_evidence}
+  - {file: consolidation_close.py, service: ConsolidationCloseApplicationService, status: contract_only, adapter: reconforge.infrastructure.postgres_consolidation_close.PostgresConsolidationCloseRepository, test: tests/test_postgres_consolidation_close.py, risk: control_journal_jsonb_boundary_not_live_verified_no_erp_writeback}
   - {file: consolidation_ownership.py, service: ConsolidationOwnershipApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_ownership.PostgresConsolidationOwnershipRepository, test: tests/test_postgres_consolidation_ownership.py, risk: single_node_runtime_only_no_restore_or_ha_evidence}
   - {file: consolidation.py, service: ConsolidationApplicationService, status: not_applicable, reason: immutable_scoped_object_store_artifact_repository}
   - {file: grouped_matching.py, service: GroupedMatchingApplicationService, status: not_applicable, reason: pure_strategy}
@@ -94,6 +94,6 @@ summary:
   total: 36
   live_verified_current: 8
   live_test_available: 24
-  contract_only: 1
-  absent: 1
+  contract_only: 2
+  absent: 0
   not_applicable: 2

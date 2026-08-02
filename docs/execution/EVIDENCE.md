@@ -2,6 +2,17 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-290: PostgreSQL consolidation-close adapter contract
+
+- Date: 2026-08-02, Africa/Cairo.
+- Added `PostgresConsolidationCloseRepository`, migration `0055_pg_consol_close`,
+  tenant RLS, optimistic lifecycle transitions, and immutable effect storage.
+- `python -m pytest tests/test_postgres_consolidation_close.py -q`: 3 passed.
+- `python -m pytest tests/test_postgres_parity_inventory.py -q`: passed.
+- `python -m ruff check` on the changed adapter, migration, and tests: passed.
+- Boundary: status remains `contract_only` pending a live PostgreSQL runtime gate;
+  JSONB control journal is not ERP write-back or a statutory consolidation ledger.
+
 ## E-289: Current-live PostgreSQL Close Management gate
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

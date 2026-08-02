@@ -5,6 +5,13 @@
 
 ## Decisions
 
+### D-290: PostgreSQL Consolidation Close Is a Control-Journal Boundary
+- **Date**: 2026-08-02
+- **Context**: SQLite already carries the governed consolidation-close lifecycle, while PostgreSQL parity was absent.
+- **Decision**: Add a tenant-scoped PostgreSQL JSONB adapter with explicit lifecycle state, RLS, optimistic versions, maker-checker separation, and immutable effect records. Keep it `contract_only` until an unskipped CI runtime gate proves the adapter against the migration.
+- **Rationale**: This closes the persistence boundary without falsely claiming statutory posting, ERP write-back, HA/DR, or production readiness.
+- **Reversibility**: Migration is linear and has an explicit downgrade that removes only the new control-journal tables.
+
 ### D-207: Access Changes Use Exact Sets and Never Restore Revoked Authority
 - **Date**: 2026-07-30
 - **Context**: The authoritative access API supports role creation, exact permission replacement, exact user-role replacement, retirement, and reactivation. Additive-looking checkbox UX can accidentally preserve authority unless current selections and exact replacement semantics are explicit.

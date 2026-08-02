@@ -10835,6 +10835,22 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   score, or 10K/100K/1M scale claim is made.
 - Remote verification: Draft PR #71 head `a4295a6b7fc31c0dbf9ca3aece05bd8c9789da49` reported 15/15 required checks successful and merge state `CLEAN`. No merge, tag, release, deployment, or production mutation occurred.
 
+## E-273: PostgreSQL-worker grouped matching contract adapter
+
+- Code: `reconforge/workers/postgres_grouped_matching.py` keeps grouped
+  financial logic persistence-free while translating PostgreSQL streamed
+  partitions into the existing `ReconciliationPartitionResult` contract.
+- Tests: `python -m pytest tests/test_postgres_grouped_matching.py -q` -> 5/5
+  passed. Coverage includes partition permutation stability, checkpoint skip,
+  explicit mode validation, and binary-tolerance rejection.
+- Focused quality: Ruff, Mypy, and Bandit pass; source/test files are included
+  in `MANIFEST.in`. The PostgreSQL parity inventory deliberately does not
+  count this adapter as live parity.
+- Boundary: no live PostgreSQL grouped-match execution is claimed. RLS,
+  migration, runtime checkpoint/failure, restore, and production capacity
+  evidence remain required before changing the inventory status.
+- Remote verification: Draft PR #71 head `a4295a6b7fc31c0dbf9ca3aece05bd8c9789da49` reported 15/15 required checks successful and merge state `CLEAN`. No merge, tag, release, deployment, or production mutation occurred.
+
 ## E-271: Durable-job retry and checkpoint failure injection
 
 - Code: `reconforge/benchmark/durable_job_retry.py` drives the existing

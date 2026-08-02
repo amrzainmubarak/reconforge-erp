@@ -1907,3 +1907,15 @@ publication and remote GitHub verification before a release Go decision.
 - Focused contracts pass 5/5; ADR 0227, benchmark documentation, and package
   membership are included. PostgreSQL parity, mutation-tool score, and scale
   publication remain open.
+
+## E-273 — PostgreSQL worker grouped matching contract adapter
+
+- `reconforge/workers/postgres_grouped_matching.py` translates streamed
+  tenant-scoped partitions into the closed grouped strategy request. It
+  requires an explicit supported mode, exact non-binary tolerance, bounded
+  date window, checkpoint skipping, and deterministic JSON-safe output.
+- Focused contracts pass 5/5. The parity inventory deliberately continues to
+  classify the pure grouped service as `not_applicable`; this worker adapter is
+  not counted as live parity. A future PostgreSQL runtime drill must still
+  prove migration, RLS/tenant isolation, checkpoint replay, and failure
+  recovery.

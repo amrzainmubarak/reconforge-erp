@@ -1986,3 +1986,12 @@
 - Consequence: Advanced matching now has direct crash/resume and adapter/application parity evidence, plus an adversarial one-cent mutation sentinel. PostgreSQL parity, a mutation-testing tool score, and scale benchmarks remain unclaimed.
 - ADR: `docs/adr/0227-grouped-matching-replay-parity.md`.
 - Rollback: Remove the replay harness, tests, benchmark document, ADR, manifest, and execution entries. No schema or production behavior changes.
+
+## D255 - PostgreSQL grouped matching remains a worker adapter, not a second algorithm
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Add a persistence-free `PostgresGroupedMatchingAdapter` that translates streamed PostgreSQL worker partitions into the existing grouped strategy contract, enforces exact input boundaries, skips committed checkpoints, and returns JSON-safe deterministic output. Keep all database I/O and durable effects in the existing worker/repository.
+- Consequence: The PostgreSQL parity inventory now exposes the adapter as `contract_only`, avoiding a false live-parity claim while providing a stable integration point for a future real PostgreSQL drill.
+- ADR: `docs/adr/0228-postgres-grouped-matching-worker-boundary.md`.
+- Rollback: Remove the adapter, tests, ADR, manifest, inventory, and execution entries. No schema or production behavior changes.

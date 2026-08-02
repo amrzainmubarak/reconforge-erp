@@ -12,6 +12,13 @@
 - **Rationale**: The record can be replayed and audited, and revocation cannot silently rewrite the approved authority.
 - **Reversibility**: Additive local migration with linear rollback through the existing database backup/restore process; no provider contract change.
 
+### D-294: Promote Durable Jobs Only Through a Live PostgreSQL Gate
+- **Date**: 2026-08-02
+- **Context**: The durable-job adapter had a live-test contract but was not counted as current PostgreSQL parity.
+- **Decision**: Promote the application and worker boundaries only after the pinned CI PostgreSQL service exercises concurrency, idempotency, lease recovery, partition effects, stale-worker refusal, and reconnect resume under a non-privileged role.
+- **Rationale**: This provides stronger evidence for the high-volume workstream without widening a single-node result into HA or scale claims.
+- **Reversibility**: Inventory status and documentation only; no schema or runtime behavior change.
+
 ### D-292: Delegated Authority Requires an Explicit Evaluation Instant
 - **Date**: 2026-08-02
 - **Context**: Enterprise policy needs expiring delegation without hidden wall-clock behavior that makes decisions non-replayable.

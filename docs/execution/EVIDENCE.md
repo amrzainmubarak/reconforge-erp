@@ -20,6 +20,18 @@ This file records commands and observed results. It does not convert a dirty wor
   commit `30dfd06`; CodeQL `30764141410`, Security `30764141411`, and Docker
   `30764141415` also passed.
 
+## E-294: PostgreSQL durable-job runtime gate
+
+- CI server-boundaries run `30764427298` passed the unskipped
+  `tests/test_postgres_durable_jobs.py` live contract against the pinned
+  PostgreSQL 16 Alpine service and non-privileged application role.
+- The contract covers concurrent idempotent submission, tenant isolation,
+  cancellation, leases/heartbeats, partition effects, stale-worker refusal,
+  reconnect resume, and SQLite semantic parity. The inventory promotes both
+  durable-job application and worker boundaries to `live_verified_current`.
+- This remains a single-node synthetic gate; queue HA, failover, soak,
+  distributed capacity, and RPO/RTO are not claimed.
+
 ## E-292: Expiring delegation policy invariant
 
 - Added optional delegation fields to `PolicyEvaluationContext` and forwarded

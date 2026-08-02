@@ -18,6 +18,15 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   parity, server-boundaries, docker-parity), CodeQL `30764141410`, Security
   `30764141411`, and Docker `30764141415`.
 
+## E-294 — PostgreSQL durable-job runtime gate
+
+- CI server-boundaries run `30764427298` passed the existing live durable-job
+  application/worker contract against PostgreSQL 16 Alpine using the
+  non-privileged role. Inventory now records both boundaries as
+  `live_verified_current`.
+- Limits: one node, synthetic workload, no queue HA/failover, no soak,
+  distributed capacity, or RPO/RTO evidence.
+
 ## E-292 — Explicit expiring delegation in central policy
 
 - The central policy engine now evaluates temporary delegated authority using a

@@ -23,6 +23,13 @@ tasks:
     status: completed
     depends_on: [E-292]
     exit_evidence: Migration 27, typed grant validation, tenant/workspace-scoped effective lookup, independent revocation, immutable triggers, and focused migration/repository/domain tests are recorded in EVIDENCE.md and ADR 0244; federation, PostgreSQL/RLS, and surface coverage remain open.
+  - id: E-294
+    priority: P0
+    area: postgres-parity
+    title: PostgreSQL durable job runtime gate
+    status: completed
+    depends_on: []
+    exit_evidence: CI server-boundaries run 30764427298 passed the unskipped PostgreSQL durable-job application/worker contract under the non-privileged role; inventory promotion, limits, and ADR 0245 are recorded. Queue HA, failover, soak, and RPO/RTO remain open.
   - id: E-292
     priority: P0
     area: enterprise-policy
@@ -896,6 +903,7 @@ tasks:
       - E-274 publishes the first declared 10K durable-job tier: 16 workers, 1,000 jobs, 10 partitions per job, and four statically fair tenant lanes. Two complete Windows 11/Python 3.14.6 runs committed 10,000/10,000 effects with zero duplicate effects, drained queues/running depth, and identical structural/effect digests. A bounded 60-second SQLite busy wait prevents transient `BEGIN IMMEDIATE` lock storms from becoming lost work. This remains one-host SQLite evidence; PostgreSQL parity, backpressure, retry/backoff coupling, soak, HA/DR, and 100K/1M/10M tiers remain unverified.
       - E-282 publishes the declared 100K durable-job tier: 16 workers, 10,000 jobs, 10 partitions per job, and four statically fair tenant lanes. Two complete Windows 11/Python 3.14.6 runs committed 100,000/100,000 effects with zero duplicate effects, drained queues/running depth, 2,500 completions per tenant, and identical effect/manifest digests. The bounded benchmark parameters are a 600-second lease and 300-second SQLite busy timeout; they are not production defaults. A 32-worker attempt and a 16-worker/default-timeout attempt failed with SQLite lock contention, so this evidence remains one-host SQLite only; PostgreSQL parity, backpressure, retry/backoff coupling, soak, HA/DR, and 1M/10M tiers remain unverified.
       - E-286 adds a separate bounded producer/backpressure profile over the existing durable-job worker and SQLite repository. An eight-job queued cap is enforced while 8 workers drain 64 jobs across four tenants; two Windows 11/Python 3.14.6 runs observed maximum queue depth 8, completed 256 effects with zero duplicates, drained queue/running depth, and identical effect/manifest digests. This proves only a local producer cap; distributed backpressure, PostgreSQL queue parity, retry backoff, soak, cancellation-under-load, HA/DR, and SLO/capacity remain unverified.
+      - E-294 promotes the existing PostgreSQL durable-job application/worker runtime contract through CI server-boundaries. Concurrent idempotent submission, cancellation, leases/heartbeats, partition effects, stale-worker rejection, reconnect resume, and SQLite semantic parity passed under the non-privileged PostgreSQL role. Queue HA, failover, soak, multi-host capacity, and RPO/RTO remain open.
 
   - id: P4-REL-001
     priority: P4

@@ -64,6 +64,18 @@ consolidation_close_runtime_gate:
   covered_live_boundaries: [ConsolidationCloseApplicationService]
   ci_run: "30762214054"
   limitations: [single_node, synthetic_data, no_restore_drill, no_ha, no_rpo_rto_claim, control_journal_only_no_erp_writeback]
+durable_job_runtime_gate:
+  id: E-294
+  executed_at: "2026-08-02"
+  database: "PostgreSQL 16 Alpine CI service"
+  database_image_digest: "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+  application_role: reconforge_app_non_superuser
+  focused_tests: 1
+  focused_result: passed
+  skipped_focused_tests: 0
+  covered_live_boundaries: [DurableJobApplicationService, DurableJobWorkerService]
+  ci_run: "30764427298"
+  limitations: [single_node, synthetic_data, no_queue_ha, no_failover, no_soak, no_rpo_rto_claim]
 allowed_statuses: [live_verified_current, live_test_available, contract_only, absent, not_applicable]
 boundaries:
   - {file: consolidation_close.py, service: ConsolidationCloseApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_close.PostgresConsolidationCloseRepository, test: tests/test_postgres_consolidation_close.py, risk: single_node_control_journal_only_no_erp_writeback_or_restore_ha_evidence}
@@ -74,8 +86,8 @@ boundaries:
   - {file: idempotency.py, service: IdempotencyApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_idempotency.PostgresIdempotencyRepository, test: tests/test_postgres_idempotency.py}
   - {file: workspace_periods.py, service: WorkspacePeriodApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_domain.PostgresDomainUnitOfWork, test: tests/test_postgres_workspace_period_uow.py}
   - {file: operations.py, service: OperationsApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_operations.PostgresOperationsRepository, test: tests/test_postgres_operations.py}
-  - {file: jobs.py, service: DurableJobApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_jobs.PostgresDurableJobRepository, test: tests/test_postgres_durable_jobs.py}
-  - {file: jobs.py, service: DurableJobWorkerService, status: live_test_available, adapter: reconforge.infrastructure.postgres_jobs.PostgresDurableJobRepository, test: tests/test_postgres_durable_jobs.py}
+  - {file: jobs.py, service: DurableJobApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_jobs.PostgresDurableJobRepository, test: tests/test_postgres_durable_jobs.py, risk: single_node_no_queue_ha_or_soak}
+  - {file: jobs.py, service: DurableJobWorkerService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_jobs.PostgresDurableJobRepository, test: tests/test_postgres_durable_jobs.py, risk: single_node_no_queue_ha_or_soak}
   - {file: metrics.py, service: MetricsApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_metrics.PostgresMetricsRepository, test: tests/test_application_metrics.py}
   - {file: outbox.py, service: OutboxApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_outbox.TenantBoundPostgresOutboxRepository, test: tests/test_postgres_outbox.py, risk: delivery_critical}
   - {file: scheduler.py, service: SchedulerApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_scheduler.PostgresScheduleRepository, test: tests/test_postgres_scheduler.py, risk: delivery_critical}
@@ -104,8 +116,8 @@ boundaries:
   - {file: inventory_planning.py, service: InventoryPlanningApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_planning.PostgresInventoryPlanningRepository, test: tests/test_postgres_inventory_planning.py, risk: financial_high}
 summary:
   total: 36
-  live_verified_current: 9
-  live_test_available: 24
+  live_verified_current: 11
+  live_test_available: 22
   contract_only: 1
   absent: 0
   not_applicable: 2

@@ -23,6 +23,13 @@ tasks:
     status: completed
     depends_on: [E-292]
     exit_evidence: Migration 27, typed grant validation, tenant/workspace-scoped effective lookup, independent revocation, immutable triggers, and focused migration/repository/domain tests are recorded in EVIDENCE.md and ADR 0244; federation, PostgreSQL/RLS, and surface coverage remain open.
+  - id: E-292
+    priority: P0
+    area: enterprise-policy
+    title: Explicit expiring delegation evaluation
+    status: completed
+    depends_on: []
+    exit_evidence: Central policy accepts a stable delegation ID, timezone-aware expiry, and caller-supplied evaluation instant; missing/expired delegation denies and focused policy tests pass under ADR 0243.
   - id: E-290
     priority: P0
     area: postgres-parity

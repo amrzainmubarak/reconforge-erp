@@ -10,6 +10,11 @@ This file records commands and observed results. It does not convert a dirty wor
 - Ruff passed for the changed implementation and tests.
 - Runtime evidence is limited to local SQLite synthetic data. No PostgreSQL,
   federation, emergency workflow, or API/UI enforcement claim is made.
+- CI run `30763776857` initially failed two compatibility contracts because the
+  new `json.loads` call was not yet listed in the parser inventory and E-293
+  depended on a slice rather than a backlog task. Both inventory/task-ledger
+  defects were corrected before the next run; the failed run is retained as
+  evidence, not hidden.
 
 ## E-292: Expiring delegation policy invariant
 

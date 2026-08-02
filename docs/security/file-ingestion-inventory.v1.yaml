@@ -511,6 +511,23 @@ surfaces:
       - The report excludes raw supplier and invoice identifiers, but local disposable downloads remain operator-controlled files and must not be committed or treated as customer or audit evidence.
       - A successful maintainer or automated run is not an external pilot, independent security review, production deployment, certification, or compliance assessment.
     next_action: Obtain three accepted independent operator attestations and a separately scoped human security review without weakening the parser or claim boundaries.
+  - id: FI-024
+    name: Local policy delegation permission records
+    module_ids: [platform.core]
+    trust: generated-local
+    entrypoints:
+      - reconforge/auth/repositories.py::DelegationRepository._row_to_grant
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_delegation_repository.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The JSON value is an internal canonical permission array, not an upload or executable document.
+      - SQLite tenant/workspace scope and immutable triggers are local evidence only; PostgreSQL/RLS and federation remain open.
+    next_action: Add equivalent provider-backed policy administration only after a reviewed PostgreSQL/RLS contract exists.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader
@@ -553,6 +570,11 @@ direct_tabular_parser_allowlist:
     surface_id: FI-023
     rationale: Parses only size- and hash-verified public responses after strict decoding, then requires an exact unique header set and complete rows before financial normalization.
 direct_json_parser_allowlist:
+  - path: reconforge/auth/repositories.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-024
+    rationale: Parses only the canonical permission array stored by the typed local delegation repository; the grant is schema-validated before persistence and invalid stored data fails closed.
   - path: reconforge/upgrade/application_adapter.py
     parser: json.loads
     call_count: 1

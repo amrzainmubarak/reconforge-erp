@@ -38,7 +38,8 @@
 - **Context**: Durable jobs have internal lifecycle correctness but callers need a shared deny-before-mutation policy boundary.
 - **Decision**: Add a typed wrapper requiring policy context and explicit permission for submit/cancel while preserving the existing lifecycle service for callers with separate authorization.
 - **Rationale**: Explicit adoption avoids silently weakening compatibility while making the safe path testable and auditable.
-- **Reversibility**: Additive application class and tests; no schema change.
+- **Reversibility**: Additive application class and tests; no schema change. The
+  PostgreSQL runtime promotion is recorded separately in ADR 0249.
 
 ### D-292: Delegated Authority Requires an Explicit Evaluation Instant
 - **Date**: 2026-08-02

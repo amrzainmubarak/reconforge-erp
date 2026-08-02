@@ -11,8 +11,11 @@ import pytest
 from reconforge.application.jobs import (
     DurableJobApplicationService,
     DurableJobWorkerService,
+    GovernedDurableJobApplicationService,
+    JobAuthorizationError,
     JobSubmission,
 )
+from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.db import connect, run_migrations
 from reconforge.domain.jobs import JobOutputManifest, JobPartitionEffect
 from reconforge.infrastructure.postgres import (
@@ -78,6 +81,29 @@ def test_live_postgres_job_application_contract_and_rls(tmp_path: Path) -> None:
         try:
             repository = PostgresDurableJobRepository(connection)
             service = DurableJobApplicationService(repository)
+            governed = GovernedDurableJobApplicationService(service)
+            governed_submission = replace(
+                _submission(tenant_a), job_id="governed-postgres-job", idempotency_key="governed-postgres-key"
+            )
+            governed_context = PolicyEvaluationContext(
+                user_id="governed-operator", username="governed-operator",
+                user_permissions={"close.manage"}, tenant_id=tenant_a, workspace_id="workspace-a",
+                authorized_tenant_ids=frozenset({tenant_a}),
+                authorized_workspace_ids=frozenset({"workspace-a"}),
+            )
+            denied_context = replace(governed_context, user_permissions=set())
+            with pytest.raises(JobAuthorizationError, match="permission_missing"):
+                governed.submit(
+                    governed_submission, actor_id="governed-operator",
+                    policy_context=denied_context, required_permission="close.manage",
+                )
+            assert repository.get(tenant_id=tenant_a, job_id=governed_submission.job_id) is None
+            governed_job, governed_created = governed.submit(
+                governed_submission, actor_id="governed-operator",
+                policy_context=governed_context, required_permission="close.manage",
+            )
+            assert governed_created is True and governed_job.tenant_id == tenant_a
+            assert repository.get(tenant_id=tenant_b, job_id=governed_submission.job_id) is None
             concurrent_submission = replace(
                 _submission(tenant_a), idempotency_key="concurrent-key"
             )

@@ -50,7 +50,7 @@ tasks:
     title: Governed durable-job mutation boundary
     status: completed
     depends_on: []
-    exit_evidence: GovernedDurableJobApplicationService enforces actor identity, central permission, tenant/workspace scope, and SoD before submit/cancel repository effects; deny and allow tests pass under ADR 0248. Existing unwrapped routes and federation remain open.
+    exit_evidence: GovernedDurableJobApplicationService enforces actor identity, central permission, tenant/workspace scope, and SoD before submit/cancel repository effects; deny and allow tests pass under ADR 0248, and CI server-boundaries exercises the same wrapper against PostgreSQL under a non-privileged role per ADR 0249. Existing unwrapped routes, federation, and cache invalidation remain open.
   - id: E-292
     priority: P0
     area: enterprise-policy
@@ -949,7 +949,8 @@ tasks:
       - E-285 extends `central-policy-v1` with exact finite Decimal amount floors/ceilings plus region and data-classification scopes. Missing scope grants deny by default; invalid numeric bounds fail before evaluation; existing callers remain compatible. Focused policy and Hypothesis suites pass under ADR 0238. Route/job/export/UI attribute coverage, policy administration/cache invalidation, OIDC/SAML/SCIM, and PostgreSQL RLS remain open.
       - E-292 adds explicit, timezone-aware expiring delegation to the central policy context. Evaluation time is supplied by the caller for deterministic replay; missing evaluation time and at/after-expiry requests deny by stable reason codes. The helper forwards the fields and focused/Hypothesis policy gates remain green. Delegation administration storage, provider federation, route/job/export/UI coverage, and PostgreSQL RLS remain open.
       - E-293 adds migration 27 and a typed tenant/workspace-scoped SQLite delegation repository. Grant fields are immutable, only independent active-to-revoked transitions are allowed, and effective reads require an explicit timezone-aware instant. Local synthetic tests pass; federation, PostgreSQL/RLS, route/job/export/UI enforcement, cache invalidation, and emergency access remain open.
-      - E-297 adds an opt-in governed durable-job application boundary. Submit/cancel require a matching actor identity, central permission, tenant/workspace scope, and centralized SoD evaluation before the existing lifecycle repository is touched; denied requests are tested as no-effect. Route migration, federation, PostgreSQL policy parity, and cache invalidation remain open.
+      - E-297 adds an opt-in governed durable-job application boundary. Submit/cancel require a matching actor identity, central permission, tenant/workspace scope, and centralized SoD evaluation before the existing lifecycle repository is touched; denied requests are tested as no-effect. Route migration, federation, and cache invalidation remain open.
+      - E-298 runs the governed wrapper against the PostgreSQL durable-job repository in the live server-boundaries job. A denied permission produces no row, an allowed scoped submit produces one tenant-bound row, and sibling-tenant lookup remains empty under the non-privileged role. The wrapper remains opt-in and is not a claim that every surface is migrated.
 
   - id: P4-PLAT-001
     priority: P4

@@ -75,15 +75,25 @@ This file records commands and observed results. It does not convert a dirty wor
   passed; Ruff and Mypy passed. A denied request is verified not to reach the
   repository.
 - This is an opt-in application boundary; all API/export/scheduler callers are
-  not yet migrated and no federation/PostgreSQL parity claim is made.
+  not yet migrated and federation/cache invalidation remain open.
 - CI run `30766747083` first exposed two stale exact-inventory registries;
   those compatibility defects were corrected and retained as failure evidence.
   Final CI `30767365683` passed Python 3.11/3.12, server-boundaries,
   engine-parity, and docker-parity; CodeQL `30767365674`, Security
   `30767365673`, and Docker `30767365656` also passed.
-- PostgreSQL parity records this wrapper as `contract_only` until its policy
-  path has a live runtime gate; route migration, federation, and cache
-  invalidation remain open.
+
+## E-298: Governed durable-job PostgreSQL runtime boundary
+
+- The live `tests/test_postgres_durable_jobs.py` contract now creates a
+  `GovernedDurableJobApplicationService` over the PostgreSQL repository under
+  the non-privileged application role.
+- A missing `close.manage` permission is denied before repository mutation and
+  the row is absent; the allowed context creates exactly one tenant-scoped job
+  and a sibling tenant cannot read it. Local policy and PostgreSQL repository
+  semantics are exercised together.
+- The parity inventory promotes this wrapper to `live_verified_current` for
+  this bounded gate only. Route migration, federation, cache invalidation,
+  HA/DR, and multi-host claims remain outside the evidence.
 
 ## E-292: Expiring delegation policy invariant
 

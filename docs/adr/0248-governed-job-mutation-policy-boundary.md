@@ -16,4 +16,5 @@ authorization boundary.
 
 This closes the typed application boundary and deny-before-repository tests.
 It does not claim every API, export, scheduler, or worker route is migrated,
-nor does it close federation, PostgreSQL policy parity, or cache invalidation.
+nor does it close federation or cache invalidation. A later live PostgreSQL
+durable-job gate may promote this wrapper independently of those surface gaps.

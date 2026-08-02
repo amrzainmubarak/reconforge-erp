@@ -56,11 +56,19 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   tenant/workspace scope, and SoD before repository mutation.
 - Denied requests are proven no-effect; the legacy lifecycle remains available
   for callers with an independent authorization boundary. Route migration,
-  PostgreSQL policy parity, federation, and cache invalidation remain open.
-- Final CI `30767365683` passed both Python versions, server-boundaries,
+  federation, and cache invalidation remain open.
+- Final prior CI `30767365683` passed both Python versions, server-boundaries,
   engine-parity, and docker-parity; CodeQL `30767365674` and Security
   `30767365673` passed. PostgreSQL parity classifies the wrapper as
-  `contract_only` until its policy path has a live runtime gate.
+  `live_verified_current` only after the new E-298 live gate passes.
+
+## E-298 — Governed durable-job PostgreSQL runtime boundary
+
+- The live server-boundaries contract exercises the governed wrapper over the
+  non-privileged PostgreSQL durable-job repository: denied permission causes no
+  row, allowed scoped submit creates one row, and sibling-tenant visibility is
+  empty. The wrapper remains opt-in; routes, federation, and cache invalidation
+  are not yet fully migrated.
 
 ## E-292 — Explicit expiring delegation in central policy
 

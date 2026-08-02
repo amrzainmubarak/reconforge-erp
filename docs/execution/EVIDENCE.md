@@ -12,6 +12,10 @@ This file records commands and observed results. It does not convert a dirty wor
 - `python -m ruff check` on the changed adapter, migration, and tests: passed.
 - Boundary: status remains `contract_only` pending a live PostgreSQL runtime gate;
   JSONB control journal is not ERP write-back or a statutory consolidation ledger.
+- CI follow-up: the first server-boundaries run exposed a stale migration
+  registry (`POSTGRES_MIGRATION_REVISIONS` ended at `0054`). The registry and
+  its compatibility assertions were advanced to `0055_pg_consol_close`; the
+  focused operations/parity tests then passed locally.
 
 ## E-289: Current-live PostgreSQL Close Management gate
 

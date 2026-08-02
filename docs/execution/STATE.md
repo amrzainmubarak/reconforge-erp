@@ -14,6 +14,9 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - This is recorded as `contract_only`: the JSONB control-journal boundary is
   implemented and structurally tested, but live runtime evidence, ERP/bank
   write-back, statutory consolidation, HA/DR, and restore drills remain open.
+- The initial CI server-boundaries failure was a migration-registry compatibility
+  defect, not a database migration failure; it was corrected and covered by the
+  PostgreSQL operations tests.
 
 ## E-282 — Published 100K durable-job profile
 

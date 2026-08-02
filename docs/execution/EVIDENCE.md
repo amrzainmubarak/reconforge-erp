@@ -34,6 +34,7 @@ This file records commands and observed results. It does not convert a dirty wor
 | `python -m build --no-isolation` plus archive membership | 0 | sdist/wheel built successfully; partial-settlement ADR, grouped tests, and grouped domain runtime are present in the expected archives. |
 
 - ADR: `docs/adr/0216-bounded-partial-settlement-keeps-residuals-visible.md`.
+- Remote verification: Draft PR #71 head `323a167314fab3829d6b1cd23a0ea9ce0f441996` reported 15/15 required checks successful. No merge, tag, release, deployment, or production mutation occurred.
 - Boundary: partial settlement is a proposal only. Multiple non-overlapping groups, carry-forward/sequence/reversal-specific strategies, mutation/crash-resume and cross-engine properties, and large benchmarks remain open.
 
 ## E-259: Draft PR #71 remote verification

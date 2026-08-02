@@ -69,6 +69,9 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   row, allowed scoped submit creates one row, and sibling-tenant visibility is
   empty. The wrapper remains opt-in; routes, federation, and cache invalidation
   are not yet fully migrated.
+- Final CI `30768307123` passed both Python versions, server-boundaries,
+  engine-parity, and Docker; CodeQL `30768307156` and Security `30768307119`
+  also passed.
 
 ## E-292 — Explicit expiring delegation in central policy
 

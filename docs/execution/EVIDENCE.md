@@ -94,6 +94,9 @@ This file records commands and observed results. It does not convert a dirty wor
 - The parity inventory promotes this wrapper to `live_verified_current` for
   this bounded gate only. Route migration, federation, cache invalidation,
   HA/DR, and multi-host claims remain outside the evidence.
+- Final CI run `30768307123` passed Python 3.11/3.12, server-boundaries,
+  engine-parity, and docker-parity for `36efce5`; CodeQL `30768307156`,
+  Security `30768307119`, and Docker `30768307148` also passed.
 
 ## E-292: Expiring delegation policy invariant
 

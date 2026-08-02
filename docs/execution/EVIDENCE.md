@@ -10,6 +10,10 @@ This file records commands and observed results. It does not convert a dirty wor
   pre-expiry, exact-expiry, missing-time, timezone, and identifier cases).
 - `python -m ruff check reconforge/auth/policy.py tests/test_policy_engine.py`:
   passed.
+- CI run `30762890688` passed both Python 3.11 and 3.12 test jobs, all four
+  engine-parity matrices, server-boundaries, and docker-parity. CodeQL run
+  `30762890703`, Security run `30762890686`, and Docker run `30762890687` also
+  passed for commit `8dd94f4`.
 - Boundary: pure evaluation only; no delegation registry, provider federation,
   emergency workflow replacement, or database/API/UI claim.
 - The first CI run after this slice correctly rejected an over-eager backlog

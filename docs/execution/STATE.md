@@ -13,6 +13,9 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   instant. Missing evaluation time and expired authority deny by stable codes.
 - This closes only the pure policy invariant. Delegation administration storage,
   federation, route/job/export/UI coverage, and PostgreSQL policy parity remain open.
+- Commit `8dd94f4` passed CI run `30762890688` (Python 3.11/3.12, parity,
+  server-boundaries, docker-parity), CodeQL `30762890703`, Security
+  `30762890686`, and Docker `30762890687`.
 
 ## E-290 — PostgreSQL consolidation-close control journal boundary
 

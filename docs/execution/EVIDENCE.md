@@ -185,6 +185,8 @@ This file records commands and observed results. It does not convert a dirty wor
   passed (15 tests). Ruff and Mypy passed for the changed API/cache modules.
 - This is local API-instance evidence only; distributed invalidation and full
   policy attribute coverage across every route/action/UI surface remain open.
+- CI run `30772431595` passed both Python suites, server-boundaries,
+  engine-parity, Docker, Security, and CodeQL for the adopted API path.
 
 ## E-292: Expiring delegation policy invariant
 

@@ -90,9 +90,9 @@ tasks:
     priority: P0
     area: enterprise-policy
     title: Explicit API policy cache adoption and mutation invalidation
-    status: in_progress
+    status: completed
     depends_on: [E-301, E-302]
-    exit_evidence: API permission dependencies use the bounded allowed-only cache only when explicitly enabled, any-of contracts preserve deny semantics, and every non-safe request invalidates cached decisions; default deployments remain uncached under ADR 0254.
+    exit_evidence: API permission dependencies use the bounded allowed-only cache only when explicitly enabled, any-of contracts preserve deny semantics, and every non-safe request invalidates cached decisions; default deployments remain uncached under ADR 0254. CI run 30772431595 passed the full compatibility, server-boundaries, parity, Docker, Security, and CodeQL gates.
   - id: E-292
     priority: P0
     area: enterprise-policy

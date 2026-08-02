@@ -121,6 +121,8 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   including failed mutations. Focused API/cache tests pass under ADR 0254.
 - Distributed invalidation, workspace-specific optimization, and complete
   route/action attribute coverage remain open.
+- CI run `30772431595` passed the full compatibility, server-boundaries,
+  engine-parity, Docker, Security, and CodeQL gates.
 
 ## E-292 — Explicit expiring delegation in central policy
 

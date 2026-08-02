@@ -2105,3 +2105,13 @@
   enterprise authorization while preserving existing callers and local mode.
 - Boundary: policy-engine behavior is covered; broad surface migration and
   identity-provider/RLS administration remain open.
+# E-286 — Backpressure is measured as an explicit local producer cap
+
+- Date: 2026-08-02
+- Decision: keep the backpressure experiment in a separate benchmark module;
+  do not alter the published 10K/100K manifest contract or production queue
+  defaults.
+- Evidence: a producer cap of eight queued jobs held at depth 8 while workers
+  completed all 64 jobs and 256 effects without duplicates.
+- Boundary: this is local SQLite evidence, not distributed backpressure or an
+  SLO/capacity claim.

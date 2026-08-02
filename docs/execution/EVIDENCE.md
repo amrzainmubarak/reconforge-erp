@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-286: Bounded durable-job producer backpressure
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Command: `run_backpressure_profile(..., jobs=64, workers=8, tenants=4,
+  partitions_per_job=4, max_queued_jobs=8)` twice on isolated SQLite files.
+- Results: runtimes 1.3484s and 1.6830s; observed maximum queue depth 8 in
+  both runs; 64 jobs and 256 effects committed; zero duplicate effects; zero
+  queued/running residue. Effect digest
+  `08fc4c6c8f366be08ad21ff9b800886574bd0194010aa760377c2621d33718a5` and
+  manifest digest
+  `dce9cbddac76b1026fae417dc957a555d6edb2ba51f007ba7a6d2a3494dbc495` matched.
+- Boundary: one shared SQLite writer domain only; distributed backpressure,
+  PostgreSQL queue parity, retry/soak, cancellation-under-load, HA/DR, and
+  production SLO/capacity remain unverified.
+
 ## E-285: Central policy amount, region, and classification bounds
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

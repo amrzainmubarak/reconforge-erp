@@ -42,6 +42,14 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Existing callers remain compatible because the new attributes are optional;
   surface-wide propagation and enterprise IAM administration remain open.
 
+## E-286 — Bounded durable-job producer backpressure
+
+- A separate benchmark now enforces an eight-job queued cap while existing
+  workers drain 64 jobs. Two runs held the maximum queue at 8, committed 256
+  effects with zero duplicates, and produced matching digests.
+- Evidence is local SQLite only; distributed queue backpressure and SLOs
+  remain open.
+
 ## Snapshot boundary
 
 - Branch: `codex/consolidation-journal-lifecycle`, current ownership-adjustment code head `bfb29d44ae025b338a8a5d0f8311619a8292462e`; Draft PR #71 remains deliberately unmerged.

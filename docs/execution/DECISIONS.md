@@ -2086,3 +2086,13 @@
   parity, and tenant isolation.
 - Boundary: this does not close consolidation posting, eliminations/NCI,
   statutory statements, restore, HA/DR, or RPO/RTO.
+# E-284 — Payment-statement reference connector remains read-only
+
+- Date: 2026-08-02
+- Decision: add a synthetic payment-statement connector on the governed REST
+  executor, with a closed schema and read capability only.
+- Rationale: statement ingestion is a useful connector vertical slice while
+  preserving local-first operation and avoiding an unverified bank/provider
+  claim.
+- Boundary: no live bank contract, settlement proof, payment posting, or
+  write-back is introduced.

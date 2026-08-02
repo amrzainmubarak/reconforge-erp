@@ -36,6 +36,15 @@ from reconforge.connectors.package import (
     TrustedPublisherRegistry,
     load_verified_package,
 )
+from reconforge.connectors.payment_statement_reference import (
+    PAYMENT_STATEMENT_ENDPOINT,
+    PAYMENT_STATEMENT_MANIFEST,
+    PaymentStatementLine,
+    PaymentStatementPage,
+    PaymentStatementRead,
+    ReferencePaymentStatementConnector,
+    payment_statement_registration,
+)
 from reconforge.connectors.rest_reference import (
     REFERENCE_REST_MANIFEST,
     ReferenceRestConnector,
@@ -107,6 +116,13 @@ __all__ = [
     "ObjectStorageRead",
     "ReferenceObjectStorageConnector",
     "object_reference_registration",
+    "PAYMENT_STATEMENT_ENDPOINT",
+    "PAYMENT_STATEMENT_MANIFEST",
+    "PaymentStatementLine",
+    "PaymentStatementPage",
+    "PaymentStatementRead",
+    "ReferencePaymentStatementConnector",
+    "payment_statement_registration",
     "DATABASE_REFERENCE_ENDPOINT",
     "DATABASE_REFERENCE_MANIFEST",
     "DatabaseConnectorRegistration",

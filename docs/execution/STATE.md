@@ -27,6 +27,14 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - This is not full consolidation posting or statutory reporting evidence;
   journals, eliminations/NCI, restore, HA/DR, and RPO/RTO remain open.
 
+## E-284 — Reference payment-statement connector
+
+- Added a closed, synthetic `reference-payment-statement-readonly` connector
+  with exact Decimal amounts, unique IDs, booking/value-date validation,
+  cursor/idempotency reads, canonical digests, and allowlisted egress.
+- It is deliberately read-only and does not count as a live bank/ERP
+  integration or write-back capability.
+
 ## Snapshot boundary
 
 - Branch: `codex/consolidation-journal-lifecycle`, current ownership-adjustment code head `bfb29d44ae025b338a8a5d0f8311619a8292462e`; Draft PR #71 remains deliberately unmerged.

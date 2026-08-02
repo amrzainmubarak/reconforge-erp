@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-284: Reference payment-statement connector
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Scope: synthetic provider-neutral read-only statement page over the governed
+  HTTPS executor.
+- Evidence: 8 focused connector/package tests passed; Ruff and mypy passed.
+  Tests cover canonical response digesting, cursor/idempotency transport,
+  exact egress, secret-reference use, duplicate IDs, non-finite amounts,
+  booking/value-date ordering, and unallowlisted endpoints.
+- Boundary: this is not a live bank or ERP connector and does not prove
+  settlement reconciliation, payment posting, or write-back.
+
 ## E-283: Live PostgreSQL close-management lifecycle parity
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

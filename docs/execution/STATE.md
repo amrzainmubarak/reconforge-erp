@@ -58,6 +58,13 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - It remains synthetic and network-free; live providers and posting evidence
   are not claimed.
 
+## E-288 — Grouped matching mutation campaign
+
+- Added a bounded campaign for three critical financial mutants; all 3 were
+  killed and no survivor remained.
+- This is a targeted request-level regression sentinel, not a platform-wide
+  mutation score.
+
 ## Snapshot boundary
 
 - Branch: `codex/consolidation-journal-lifecycle`, current ownership-adjustment code head `bfb29d44ae025b338a8a5d0f8311619a8292462e`; Draft PR #71 remains deliberately unmerged.

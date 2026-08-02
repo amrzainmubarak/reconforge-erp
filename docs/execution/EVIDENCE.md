@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-288: Bounded grouped-matching mutation campaign
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Campaign: `grouped-matching-mutation/synthetic-v1` through the public
+  strategy/application boundary.
+- Result: 3/3 mutants killed, zero survivors, kill ratio 1: one-cent increase,
+  one-cent decrease, and disabling partial settlement each changed the
+  corresponding baseline decision digest. Focused test, Ruff, and mypy gates
+  passed.
+- Boundary: targeted request-level sentinel only; no source-code mutation
+  engine score, PostgreSQL runtime parity, fuzzing, or unrelated-module
+  mutation coverage is claimed.
+
 ## E-287: Governed write-back transport failure injection
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

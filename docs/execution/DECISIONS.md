@@ -2123,3 +2123,11 @@
 - Evidence: synthetic success, provider timeout, and idempotency mismatch
   tests pass; only digest-bound intent metadata crosses the boundary.
 - Boundary: no live network, credential, settlement, or posting evidence.
+# E-288 — Grouped matching mutation campaign is targeted, not universal
+
+- Date: 2026-08-02
+- Decision: publish three deterministic request-level financial mutants and
+  require every one to change its corresponding decision digest.
+- Evidence: 3/3 mutants killed, zero survivors.
+- Boundary: no source-code mutation engine score or whole-platform mutation
+  coverage is claimed.

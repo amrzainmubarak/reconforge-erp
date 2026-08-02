@@ -77,7 +77,7 @@ This file records commands and observed results. It does not convert a dirty wor
 
 - ADR: `docs/adr/0225-reference-database-is-named-query-and-tenant-scoped.md`.
 - Boundary: this is not a live PostgreSQL/SQL Server/Oracle connector, prepared-statement runtime proof, least-privilege database role proof, migration parity, or production deployment claim. P4-CON-001 remains in progress.
-- Remote verification: Draft PR #71 head `faa0064133402cb4265ba310cad98cdb9c26ddd0` reported 15/15 required checks successful and merge state `CLEAN`. No merge, tag, release, deployment, or production mutation occurred.
+- Remote verification: Draft PR #71 head `c6981392b0a99101f98a7509a1e35265de59de87` reported 15/15 required checks successful and merge state `CLEAN` (Docker passed after a transient Docker Hub metadata timeout was rerun). No merge, tag, release, deployment, or production mutation occurred.
 - Remote verification: Draft PR #71 head `b138fbe744b8008aeaae1972741f202d64c487ce` reported 15/15 required checks successful and merge state `CLEAN`. No merge, tag, release, deployment, or production mutation occurred.
 - Remote verification: Draft PR #71 head `b138fbe744b8008aeaae1972741f202d64c487ce` reported 15/15 required checks successful and merge state `CLEAN`. No merge, tag, release, deployment, or production mutation occurred.
 

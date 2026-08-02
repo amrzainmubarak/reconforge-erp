@@ -222,8 +222,10 @@ include tests/test_reversal_matching.py
 include docs/adr/0219-bounded-reversal-pairing-is-explicit-and-non-posting.md
 include docs/adr/0220-portfolio-partial-settlement-requires-explicit-policy.md
 include reconforge/connectors/rest_reference.py
+include reconforge/connectors/erp_reference.py
 include tests/test_connector_rest_reference.py
 include docs/connectors/reference-rest-readonly.md
+include docs/connectors/reference-erp-readonly.md
 include docs/adr/0221-reference-rest-connector-is-read-only-and-schema-closed.md
 include reconforge/connectors/writeback.py
 include tests/test_connector_writeback.py

@@ -10,6 +10,15 @@ from reconforge.connectors.database_reference import (
     ReferenceDatabaseConnector,
     database_reference_registration,
 )
+from reconforge.connectors.erp_reference import (
+    ERP_REFERENCE_ENDPOINT,
+    ERP_REFERENCE_MANIFEST,
+    ReferenceErpConnector,
+    ReferenceErpLedgerLine,
+    ReferenceErpLedgerPage,
+    ReferenceErpRead,
+    erp_reference_registration,
+)
 from reconforge.connectors.manifest import (
     AuthenticationMethod,
     ConnectorCapability,
@@ -133,6 +142,13 @@ __all__ = [
     "DatabaseRecordRow",
     "ReferenceDatabaseConnector",
     "database_reference_registration",
+    "ERP_REFERENCE_ENDPOINT",
+    "ERP_REFERENCE_MANIFEST",
+    "ReferenceErpConnector",
+    "ReferenceErpLedgerLine",
+    "ReferenceErpLedgerPage",
+    "ReferenceErpRead",
+    "erp_reference_registration",
     "DataClassification",
     "PublisherKeyStatus",
     "RetryPolicy",

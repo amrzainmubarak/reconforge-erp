@@ -98,6 +98,18 @@ This file records commands and observed results. It does not convert a dirty wor
   engine-parity, and docker-parity for `36efce5`; CodeQL `30768307156`,
   Security `30768307119`, and Docker `30768307148` also passed.
 
+## E-299: Provider-neutral ERP read-only connector
+
+- Added `reference-erp-readonly` with an entity-scoped ledger-line page schema,
+  exact finite Decimal amount text, duplicate/mixed-entity rejection,
+  cursor/idempotency behavior, canonical response digest, secret-reference
+  handling, and exact endpoint allowlisting.
+- Focused ERP connector tests and the shared manifest portfolio gate pass. The
+  portfolio now covers six read-only reference manifests.
+- This proves only a synthetic provider-neutral SDK contract. Live ERP
+  credentials, vendor interoperability, posting/write-back, and production
+  deployment remain unverified.
+
 ## E-292: Expiring delegation policy invariant
 
 - Added optional delegation fields to `PolicyEvaluationContext` and forwarded

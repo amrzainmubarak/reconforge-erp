@@ -73,6 +73,15 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   engine-parity, and Docker; CodeQL `30768307156` and Security `30768307119`
   also passed.
 
+## E-299 — Provider-neutral ERP read-only connector
+
+- `reference-erp-readonly` adds a closed entity-scoped ledger-line page
+  contract over the existing governed HTTPS executor. Exact Decimal amounts,
+  duplicate/mixed-entity rejection, cursor/idempotency, canonical digests,
+  secret references, and egress allowlisting are tested.
+- This is synthetic reference evidence only; live ERP onboarding and
+  write-back remain open.
+
 ## E-292 — Explicit expiring delegation in central policy
 
 - The central policy engine now evaluates temporary delegated authority using a

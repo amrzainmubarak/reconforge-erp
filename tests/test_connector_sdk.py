@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from reconforge.connectors import (
     DATABASE_REFERENCE_MANIFEST,
+    ERP_REFERENCE_MANIFEST,
     OBJECT_REFERENCE_MANIFEST,
     PAYMENT_STATEMENT_MANIFEST,
     REFERENCE_REST_MANIFEST,
@@ -57,9 +58,11 @@ def test_reference_manifest_portfolio_is_read_only_and_governed() -> None:
             OBJECT_REFERENCE_MANIFEST,
             DATABASE_REFERENCE_MANIFEST,
             PAYMENT_STATEMENT_MANIFEST,
+            ERP_REFERENCE_MANIFEST,
         )
     ) == (
         "reference-database-readonly",
+        "reference-erp-readonly",
         "reference-object-storage-readonly",
         "reference-payment-statement-readonly",
         "reference-rest-readonly",

@@ -41,6 +41,13 @@
 - **Reversibility**: Additive application class and tests; no schema change. The
   PostgreSQL runtime promotion is recorded separately in ADR 0249.
 
+### D-299: Add ERP as a Read-Only Reference Connector
+- **Date**: 2026-08-03
+- **Context**: The connector portfolio covered generic REST and payment statements but had no ERP-specific financial page contract.
+- **Decision**: Add a provider-neutral entity-scoped ERP ledger-line connector using the existing read-only HTTPS executor. Keep write-back, vendor credentials, and live provider claims outside the reference package.
+- **Rationale**: An ERP-shaped exact Decimal contract makes the SDK useful for integration testing without confusing an export profile or synthetic endpoint with a live connector.
+- **Reversibility**: Additive module, manifest, documentation, and tests only; no schema or network default changes.
+
 ### D-292: Delegated Authority Requires an Explicit Evaluation Instant
 - **Date**: 2026-08-02
 - **Context**: Enterprise policy needs expiring delegation without hidden wall-clock behavior that makes decisions non-replayable.

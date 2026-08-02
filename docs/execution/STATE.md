@@ -38,6 +38,15 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - This is an operational control workflow only; statutory consolidation,
   elimination posting, ERP write-back, HA/DR, and RPO/RTO remain open.
 
+## E-296 — Reference connector manifest portfolio conformance
+
+- Added `verify_manifest_portfolio` and a focused test over REST, payment
+  statement, SFTP, object-storage, and database reference manifests. All five
+  pass the shared read-only/synthetic/idempotent/schema-threat/secret-egress
+  contract.
+- This remains provider-neutral synthetic evidence; live vendors, vault
+  provisioning, write-back, and interoperability remain open.
+
 ## E-292 — Explicit expiring delegation in central policy
 
 - The central policy engine now evaluates temporary delegated authority using a

@@ -54,6 +54,15 @@ This file records commands and observed results. It does not convert a dirty wor
   additional boundary promotion; compatibility assertions were updated with
   the same evidence-bound count.
 
+## E-296: Reference connector manifest portfolio conformance
+
+- Added `verify_manifest_portfolio` and ran it over the five reference
+  manifests: REST, payment statement, SFTP, object storage, and database.
+- The focused connector suite passed (30 tests including network and writeback
+  contracts), Ruff and Mypy passed for the changed conformance module.
+- The result proves only a shared provider-neutral manifest contract; no live
+  vendor, write-back, credential-vault, or production-network claim is made.
+
 ## E-292: Expiring delegation policy invariant
 
 - Added optional delegation fields to `PolicyEvaluationContext` and forwarded

@@ -37,6 +37,13 @@ tasks:
     status: completed
     depends_on: []
     exit_evidence: CI server-boundaries run 30765662833 passed the unskipped PostgreSQL intercompany contract with Decimal import, matching, imbalance exception, settlement/outbox, RLS isolation, and SQLite parity; inventory and ADR 0246 record the bounded claim.
+  - id: E-296
+    priority: P0
+    area: connectors
+    title: Reference connector manifest portfolio conformance
+    status: completed
+    depends_on: []
+    exit_evidence: A deterministic conformance gate validates the five reference REST/payment/SFTP/object/database manifests for read-only capability, synthetic/idempotent reads, schema/threat declarations, secret-reference authentication, and explicit network egress; focused connector tests and ADR 0247 pass.
   - id: E-292
     priority: P0
     area: enterprise-policy
@@ -895,6 +902,7 @@ tasks:
       - E-270 adds a synthetic `reference-database-readonly` integration with two closed named-query profiles (`statement_lines_v1`, `trial_balance_v1`). Exact HTTPS egress, tenant scope, no-SQL boundary, exact Decimal row schema, bounded rows/cells, cursor ordering, duplicate rejection, and replay digests are tested without opening a database connection.
       - E-284 adds `reference-payment-statement-readonly`, a synthetic provider-neutral statement source. The closed page schema enforces exact finite Decimal text, unique line IDs, booking/value-date ordering, cursor/idempotency reads, canonical response digests, secret isolation, and exact HTTPS egress through the existing network executor. It is read-only and not counted as a live bank/ERP connector; provider contracts, licensed formats, settlement reconciliation, and write-back remain open.
       - E-287 adds an injected provider transport boundary for governed write-back. Approved/dispatched intents pass only identity, operation, idempotency key, and payload digest; provider acknowledgements must bind the original key, while transport failures and mismatches fail closed. Synthetic success, replay/mismatch, self-approval, and failure-injection contracts pass under ADR 0240. No network I/O, live provider, credential provisioning, or posting claim is introduced.
+      - E-296 adds `verify_manifest_portfolio`, a shared conformance gate over the five provider-neutral reference manifests. It rejects write capability, missing synthetic/idempotent guarantees, missing schema/threat declarations, and network manifests without secret-reference authentication or exact egress. Live vendors, write-back, and provider interoperability remain open.
 
   - id: P4-SCL-001
     priority: P4

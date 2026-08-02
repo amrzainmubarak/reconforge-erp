@@ -26,6 +26,13 @@
 - **Rationale**: It strengthens the close foundation without conflating an operational control case with legal-accounting treatment.
 - **Reversibility**: Inventory and documentation status only.
 
+### D-296: Gate the Reference Connector Portfolio as One Read-Only Contract
+- **Date**: 2026-08-02
+- **Context**: Five provider-neutral reference manifests had individual tests but no shared portfolio-level invariant.
+- **Decision**: Require every reference manifest to pass common read-only, synthetic/idempotent, schema/threat, secret-reference, and egress checks before counting the SDK slice.
+- **Rationale**: A single deterministic contract prevents one adapter from silently weakening the SDK safety boundary.
+- **Reversibility**: Additive conformance function and tests only; no provider or network behavior change.
+
 ### D-292: Delegated Authority Requires an Explicit Evaluation Instant
 - **Date**: 2026-08-02
 - **Context**: Enterprise policy needs expiring delegation without hidden wall-clock behavior that makes decisions non-replayable.

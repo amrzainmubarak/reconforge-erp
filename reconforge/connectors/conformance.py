@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -25,6 +26,34 @@ class ConformanceResult:
     connector_id: str
     manifest_digest: str
     checks: tuple[str, ...]
+
+
+def verify_manifest_portfolio(manifests: Iterable[ConnectorManifest]) -> tuple[str, ...]:
+    """Validate the shared safety contract for a set of reference manifests.
+
+    This is deliberately manifest-level evidence; connector transport and
+    provider interoperability require their own runtime gates.
+    """
+
+    ordered = tuple(manifests)
+    identifiers = [manifest.connector_id for manifest in ordered]
+    if not ordered or len(set(identifiers)) != len(identifiers):
+        raise ValueError("connector manifest identifiers must be non-empty and unique")
+    for manifest in ordered:
+        if manifest.capabilities != frozenset({ConnectorCapability.READ}):
+            raise ValueError(f"{manifest.connector_id} is not read-only")
+        if not manifest.synthetic_sandbox or not manifest.idempotent_reads:
+            raise ValueError(f"{manifest.connector_id} lacks synthetic/idempotent read guarantees")
+        if not manifest.schema_versions or not manifest.threat_model:
+            raise ValueError(f"{manifest.connector_id} lacks schema/threat declarations")
+        if manifest.kind is ConnectorKind.NETWORK_SOURCE:
+            if not manifest.network_required or not manifest.egress_destinations:
+                raise ValueError(f"{manifest.connector_id} lacks exact network egress")
+            if manifest.authentication.value != "secret_reference":
+                raise ValueError(f"{manifest.connector_id} lacks secret-reference authentication")
+        elif manifest.network_required or manifest.egress_destinations:
+            raise ValueError(f"{manifest.connector_id} has network fields without network kind")
+    return tuple(sorted(identifiers))
 
 
 def verify_read_only_connector(connector: ReadOnlyConnector, sandbox: Path) -> ConformanceResult:

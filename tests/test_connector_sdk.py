@@ -5,7 +5,14 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from reconforge.connectors.conformance import verify_read_only_connector
+from reconforge.connectors import (
+    DATABASE_REFERENCE_MANIFEST,
+    OBJECT_REFERENCE_MANIFEST,
+    PAYMENT_STATEMENT_MANIFEST,
+    REFERENCE_REST_MANIFEST,
+    SFTP_REFERENCE_MANIFEST,
+)
+from reconforge.connectors.conformance import verify_manifest_portfolio, verify_read_only_connector
 from reconforge.connectors.manifest import ConnectorCapability
 from reconforge.plugins.registry import get_connector, list_connectors
 
@@ -40,6 +47,24 @@ def test_manifest_digest_is_deterministic_and_sensitive() -> None:
     assert manifest.digest == manifest.digest
     changed = manifest.model_copy(update={"version": "1.0.1"})
     assert changed.digest != manifest.digest
+
+
+def test_reference_manifest_portfolio_is_read_only_and_governed() -> None:
+    assert verify_manifest_portfolio(
+        (
+            REFERENCE_REST_MANIFEST,
+            SFTP_REFERENCE_MANIFEST,
+            OBJECT_REFERENCE_MANIFEST,
+            DATABASE_REFERENCE_MANIFEST,
+            PAYMENT_STATEMENT_MANIFEST,
+        )
+    ) == (
+        "reference-database-readonly",
+        "reference-object-storage-readonly",
+        "reference-payment-statement-readonly",
+        "reference-rest-readonly",
+        "reference-sftp-readonly",
+    )
 
 
 def test_manifest_v1_rejects_write_capability() -> None:

@@ -76,6 +76,14 @@ This file records commands and observed results. It does not convert a dirty wor
   repository.
 - This is an opt-in application boundary; all API/export/scheduler callers are
   not yet migrated and no federation/PostgreSQL parity claim is made.
+- CI run `30766747083` first exposed two stale exact-inventory registries;
+  those compatibility defects were corrected and retained as failure evidence.
+  Final CI `30767365683` passed Python 3.11/3.12, server-boundaries,
+  engine-parity, and docker-parity; CodeQL `30767365674`, Security
+  `30767365673`, and Docker `30767365656` also passed.
+- PostgreSQL parity records this wrapper as `contract_only` until its policy
+  path has a live runtime gate; route migration, federation, and cache
+  invalidation remain open.
 
 ## E-292: Expiring delegation policy invariant
 

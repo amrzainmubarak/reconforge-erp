@@ -57,6 +57,7 @@ BACKUP_TABLES = [
     "workspaces",
     "organizations",
     "currencies",
+    "consolidation_ownership_interests",
     "consolidation_close_periods",
     "consolidation_period_events",
     "consolidation_runs",
@@ -162,6 +163,7 @@ BACKUP_TABLES = [
 ]
 
 CONSOLIDATION_BACKUP_TABLES = (
+    "consolidation_ownership_interests",
     "consolidation_close_periods",
     "consolidation_period_events",
     "consolidation_runs",
@@ -176,6 +178,10 @@ BACKUP_SELECT_QUERIES = {
     "workspaces": "SELECT * FROM workspaces ORDER BY created_at, id",
     "organizations": "SELECT * FROM organizations ORDER BY created_at, id",
     "currencies": "SELECT * FROM currencies ORDER BY code",
+    "consolidation_ownership_interests": (
+        "SELECT * FROM consolidation_ownership_interests "
+        "ORDER BY workspace_id, group_code, subsidiary_entity_code, effective_from, interest_id"
+    ),
     "consolidation_close_periods": (
         "SELECT * FROM consolidation_close_periods "
         "ORDER BY workspace_id, period_start_date, group_code, period_name, id"
@@ -297,6 +303,7 @@ BACKUP_DELETE_QUERIES = {
     "workspaces": "DELETE FROM workspaces",
     "organizations": "DELETE FROM organizations",
     "currencies": "DELETE FROM currencies",
+    "consolidation_ownership_interests": "DELETE FROM consolidation_ownership_interests",
     "consolidation_close_periods": "DELETE FROM consolidation_close_periods",
     "consolidation_period_events": "DELETE FROM consolidation_period_events",
     "consolidation_runs": "DELETE FROM consolidation_runs",
@@ -405,6 +412,12 @@ BACKUP_INSERT_COLUMNS = {
     "workspaces": ("id", "name", "local_first_note", "created_at"),
     "organizations": ("id", "workspace_id", "name", "created_at", "organization_code", "active", "updated_at"),
     "currencies": ("code", "name", "minor_units", "active", "created_at", "updated_at"),
+    "consolidation_ownership_interests": (
+        "id", "workspace_id", "group_code", "interest_id", "parent_entity_code",
+        "subsidiary_entity_code", "direct_ownership_percentage", "effective_from",
+        "effective_to", "version", "source_digest", "prepared_by", "approved_by",
+        "approved_at", "created_at",
+    ),
     "consolidation_close_periods": (
         "id",
         "workspace_id",
@@ -1604,6 +1617,14 @@ BACKUP_INSERT_QUERIES = {
         INSERT INTO currencies (code, name, minor_units, active, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?)
     """,
+    "consolidation_ownership_interests": """
+        INSERT INTO consolidation_ownership_interests (
+            id, workspace_id, group_code, interest_id, parent_entity_code,
+            subsidiary_entity_code, direct_ownership_percentage, effective_from,
+            effective_to, version, source_digest, prepared_by, approved_by,
+            approved_at, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
     "consolidation_close_periods": """
         INSERT INTO consolidation_close_periods (
             id, workspace_id, group_code, period_name, reporting_currency,
@@ -2713,16 +2734,27 @@ def _restore_consolidation_tables(
     tables: dict[str, Any],
     backup_schema_version: int,
 ) -> None:
-    if backup_schema_version >= 25 and any(table not in tables for table in CONSOLIDATION_BACKUP_TABLES):
+    if backup_schema_version >= 25 and any(
+        table not in tables for table in CONSOLIDATION_BACKUP_TABLES
+        if backup_schema_version >= 26 or table != "consolidation_ownership_interests"
+    ):
         raise DBBridgeError("Backup omits required consolidation lifecycle tables.")
     payload = {table: _consolidation_rows(tables, table) for table in CONSOLIDATION_BACKUP_TABLES}
+    if backup_schema_version < 26 and payload["consolidation_ownership_interests"]:
+        raise DBBridgeError("Backup contains consolidation ownership data before its schema version.")
     if backup_schema_version < 25:
         if any(payload.values()):
             raise DBBridgeError("Backup contains consolidation data before its schema version.")
         return
-    if any(not _table_exists(connection, table) for table in CONSOLIDATION_BACKUP_TABLES):
+    required_tables = tuple(
+        table
+        for table in CONSOLIDATION_BACKUP_TABLES
+        if backup_schema_version >= 26 or table != "consolidation_ownership_interests"
+    )
+    if any(not _table_exists(connection, table) for table in required_tables):
         raise DBBridgeError("Backup consolidation schema is unavailable.")
 
+    ownership_rows = payload["consolidation_ownership_interests"]
     period_rows = payload["consolidation_close_periods"]
     event_rows = payload["consolidation_period_events"]
     run_rows = payload["consolidation_runs"]
@@ -2734,6 +2766,9 @@ def _restore_consolidation_tables(
     final_runs = {str(row.get("id", "")): row for row in run_rows}
     if len(final_periods) != len(period_rows) or len(final_runs) != len(run_rows):
         raise DBBridgeError("Backup contains duplicate consolidation identifiers.")
+
+    if ownership_rows:
+        _insert_rows(connection, table="consolidation_ownership_interests", rows=ownership_rows)
 
     base_periods: list[dict[str, Any]] = []
     for row in period_rows:

@@ -2,6 +2,27 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-278: Persisted effective-dated consolidation ownership
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Scope: migration 26 (`consolidation_ownership_masters`), immutable local
+  ownership repository, application protocol, and backup/restore integration.
+  Records are exact Decimal domain objects with source digest, effective dates,
+  distinct preparer/approver, and workspace/group scope.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_sqlite_consolidation_ownership.py tests/test_sqlite_consolidation_close.py tests/test_consolidation_lifecycle.py -q` | 0 | 23/23 focused consolidation contracts passed: migration, effective-date resolution, overlap refusal, immutable SQL guards, workspace isolation, and backup/restore replay. |
+| `python -m ruff check ...` (ownership/schema/migration/backup/module/tests) | 0 | Focused lint passed. |
+| `python -m mypy reconforge/application/consolidation_ownership.py reconforge/infrastructure/sqlite_consolidation_ownership.py` | 0 | No issues found. |
+
+- Report: `docs/execution/benchmarks/consolidation-ownership-master-v1.md`.
+- ADR: `docs/adr/0233-persist-effective-dated-consolidation-ownership.md`.
+- Boundary: local SQLite durable master only. It is not PostgreSQL parity,
+  acquisition/fair-value/goodwill/equity-method accounting, ownership-change
+  posting, statutory reporting, or API/CLI/UI publication.
+- Remote verification: pending after implementation and documentation commits.
+
 ## E-277: Grouped matching 1M-record tier
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

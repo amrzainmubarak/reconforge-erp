@@ -2031,3 +2031,12 @@
 - Consequence: The advanced matching workstream now has a reproducible 1M algorithmic observation with zero ambiguity/unmatched partitions, zero adapter/application mismatches, stable permutation behavior, and identical digests across two runs. This remains one-host single-process evidence and does not establish PostgreSQL parity, distributed capacity, SLOs, soak, or domain-diverse financial performance.
 - ADR: `docs/adr/0232-grouped-matching-1m-is-partitioned-and-bounded.md`.
 - Rollback: Remove the 1M wrapper, tests, report, ADR, and manifest entries. No schema or external state is changed.
+
+## D260 - Persist effective-dated consolidation ownership masters
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Add SQLite migration 26 and a backend-neutral application port for immutable approved direct ownership interests. Store exact Decimal text, effective intervals, source digest, preparation/approval actors, and approval timestamp; reject overlapping intervals for one subsidiary within a group and resolve one active interest by reporting date.
+- Consequence: Consolidation close can now source its effective ownership inputs from a durable, tenant/workspace-isolated local master with deterministic replay and backup/restore coverage. This does not add acquisition accounting, ownership-change postings, statutory statements, PostgreSQL parity, or external write-back.
+- ADR: `docs/adr/0233-persist-effective-dated-consolidation-ownership.md`.
+- Rollback: Revert migration 26, adapter/application files, backup table wiring, tests, and documentation. Existing migration-25 databases remain readable before applying migration 26.

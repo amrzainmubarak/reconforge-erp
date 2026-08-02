@@ -35,6 +35,10 @@ application_services:
     service: ConsolidationCloseApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.sqlite_consolidation_close.SQLiteConsolidationCloseRepository
+  - file: consolidation_ownership.py
+    service: ConsolidationOwnershipApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_consolidation_ownership.SQLiteConsolidationOwnershipRepository
   - file: grouped_matching.py
     service: GroupedMatchingApplicationService
     status: backend_neutral
@@ -172,4 +176,4 @@ summary:
   direct_sqlite: 0
   partial_repository: 0
   compatibility_adapter: 20
-  backend_neutral_application: 35
+  backend_neutral_application: 36

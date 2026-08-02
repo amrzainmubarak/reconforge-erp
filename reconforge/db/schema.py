@@ -3930,5 +3930,43 @@ ALTER TABLE evidence_registry ADD COLUMN byte_size INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE evidence_registry ADD COLUMN retention_until TEXT NOT NULL DEFAULT '';
 
 CREATE INDEX IF NOT EXISTS idx_evidence_registry_storage
-    ON evidence_registry(workspace_id, storage_backend, storage_tenant_id, storage_key);
+ON evidence_registry(workspace_id, storage_backend, storage_tenant_id, storage_key);
+"""
+
+
+CONSOLIDATION_OWNERSHIP_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS consolidation_ownership_interests (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+    group_code TEXT NOT NULL,
+    interest_id TEXT NOT NULL,
+    parent_entity_code TEXT NOT NULL,
+    subsidiary_entity_code TEXT NOT NULL,
+    direct_ownership_percentage TEXT NOT NULL,
+    effective_from TEXT NOT NULL,
+    effective_to TEXT NOT NULL DEFAULT '',
+    version TEXT NOT NULL,
+    source_digest TEXT NOT NULL CHECK (length(source_digest)=64),
+    prepared_by TEXT NOT NULL,
+    approved_by TEXT NOT NULL,
+    approved_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (workspace_id, group_code, interest_id),
+    CHECK (parent_entity_code <> subsidiary_entity_code),
+    CHECK (length(direct_ownership_percentage) BETWEEN 1 AND 80),
+    CHECK (effective_to='' OR effective_from <= effective_to),
+    CHECK (prepared_by <> approved_by)
+);
+CREATE INDEX IF NOT EXISTS idx_consolidation_ownership_scope
+ON consolidation_ownership_interests(workspace_id, group_code, subsidiary_entity_code, effective_from, effective_to);
+CREATE TRIGGER IF NOT EXISTS consolidation_ownership_immutable_update
+BEFORE UPDATE ON consolidation_ownership_interests
+BEGIN
+    SELECT RAISE(ABORT, 'consolidation ownership interests are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS consolidation_ownership_immutable_delete
+BEFORE DELETE ON consolidation_ownership_interests
+BEGIN
+    SELECT RAISE(ABORT, 'consolidation ownership interests cannot be deleted');
+END;
 """

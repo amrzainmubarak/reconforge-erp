@@ -1935,6 +1935,21 @@ publication and remote GitHub verification before a release Go decision.
   retry/backoff coupling, soak, HA/DR, SLOs, and 100K/1M/10M tiers remain
   unverified.
 
+## E-278 — Persisted effective-dated consolidation ownership
+
+- Migration 26 (`consolidation_ownership_masters`) adds an immutable local
+  ownership master. `ConsolidationOwnershipApplicationService` and
+  `SQLiteConsolidationOwnershipRepository` validate approved domain interests,
+  exact Decimal percentages, preparer/approver separation, non-overlapping
+  subsidiary intervals, workspace isolation, and deterministic effective-date
+  resolution.
+- Backup/restore now includes the ownership table. Three focused ownership
+  tests plus the existing close/lifecycle contracts pass, including direct SQL
+  update/delete refusal and restored effective ownership replay.
+- Boundary: this is a local SQLite master-data slice. PostgreSQL parity,
+  acquisition/ownership-change accounting, statutory statements, and API/CLI/UI
+  exposure remain open.
+
 ## E-277 — Published 1M grouped-matching profile
 
 - `reconforge/benchmark/grouped_matching_scale.py` now declares a 1,000,000

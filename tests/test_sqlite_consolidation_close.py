@@ -218,8 +218,8 @@ def _reverse(repository: SQLiteConsolidationCloseRepository, run: dict[str, obje
 
 
 def test_migration_25_is_additive_and_adapter_rejects_a_pre_migration_database(tmp_path: Path) -> None:
-    assert MIGRATIONS[-1].version == 25
-    assert MIGRATIONS[-1].name == "consolidation_close_lifecycle"
+    assert next(migration for migration in MIGRATIONS if migration.version == 25).name == "consolidation_close_lifecycle"
+    assert MIGRATIONS[-1].version == 26
     old_path, old_connection = _database(tmp_path, version=24)
     try:
         with pytest.raises(PlatformError, match="schema is unavailable"):
@@ -228,7 +228,7 @@ def test_migration_25_is_additive_and_adapter_rejects_a_pre_migration_database(t
         old_connection.close()
 
     applied = run_migrations(old_path)
-    assert applied.applied_versions == [25]
+    assert applied.applied_versions == [25, 26]
     upgraded = connect(old_path, require_exists=True)
     try:
         SQLiteConsolidationCloseRepository(upgraded)

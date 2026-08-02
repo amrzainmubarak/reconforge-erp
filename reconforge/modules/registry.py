@@ -213,7 +213,7 @@ _MODULES = (
         default_enabled=True,
         dependencies=("platform.core", "platform.master-data"),
         permissions=("finance_core.manage", "finance_core.read", "finance_core.validate"),
-        migration_versions=(8, 25),
+        migration_versions=(8, 26),
         domain_events=(
             "accounting_dimension_upserted",
             "accounting_dimension_value_upserted",
@@ -247,7 +247,7 @@ _MODULES = (
         ),
         retention_note="Records remain in the operator-selected local SQLite database and controlled local exports.",
         activation_note=(
-            "Requires migrations 7-8 for the local ledger and 25 for the optional consolidation lifecycle. "
+            "Requires migrations 7-8 for the local ledger and 25-26 for the optional consolidation lifecycle. "
             "Translation and worksheet artifacts remain non-posting. Migration 25 persists only verified "
             "worksheets and exact balanced control-journal effects through maker-checker, posting, reversal, and "
             "period locks. It has a local SQLite/library boundary only and never mutates Finance Core entries, "

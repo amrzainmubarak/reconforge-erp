@@ -2,6 +2,15 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-293: Immutable local delegation administration
+
+- Added typed `DelegationGrant`, migration 27, and `DelegationRepository`.
+- `python -m pytest tests/test_delegation_repository.py tests/test_sqlite_consolidation_ownership.py tests/test_sqlite_consolidation_close.py -q`: passed (14 tests).
+- `python -m mypy reconforge/auth/delegations.py reconforge/auth/repositories.py reconforge/db/migrations.py`: passed.
+- Ruff passed for the changed implementation and tests.
+- Runtime evidence is limited to local SQLite synthetic data. No PostgreSQL,
+  federation, emergency workflow, or API/UI enforcement claim is made.
+
 ## E-292: Expiring delegation policy invariant
 
 - Added optional delegation fields to `PolicyEvaluationContext` and forwarded

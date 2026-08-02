@@ -5,6 +5,13 @@
 
 ## Decisions
 
+### D-293: Local Delegations Are Immutable and Tenant-Scoped
+- **Date**: 2026-08-02
+- **Context**: Expiring delegation evaluation needs durable administration evidence without hidden wall-clock or cross-tenant lookup behavior.
+- **Decision**: Store grants in migration 27 with immutable identity/scope/permission/approval fields. Permit only an independent active-to-revoked transition; effective reads require tenant, workspace, and explicit timezone-aware evaluation time.
+- **Rationale**: The record can be replayed and audited, and revocation cannot silently rewrite the approved authority.
+- **Reversibility**: Additive local migration with linear rollback through the existing database backup/restore process; no provider contract change.
+
 ### D-292: Delegated Authority Requires an Explicit Evaluation Instant
 - **Date**: 2026-08-02
 - **Context**: Enterprise policy needs expiring delegation without hidden wall-clock behavior that makes decisions non-replayable.

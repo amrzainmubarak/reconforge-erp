@@ -16,6 +16,13 @@ tasks:
     status: completed
     depends_on: []
     exit_evidence: CloseManagementApplicationService is recorded as live_verified_current in POSTGRES_PARITY_INVENTORY.yaml with CI runtime evidence E-289.
+  - id: E-293
+    priority: P0
+    area: enterprise-policy
+    title: Immutable local delegation administration
+    status: completed
+    depends_on: [E-292]
+    exit_evidence: Migration 27, typed grant validation, tenant/workspace-scoped effective lookup, independent revocation, immutable triggers, and focused migration/repository/domain tests are recorded in EVIDENCE.md and ADR 0244; federation, PostgreSQL/RLS, and surface coverage remain open.
   - id: E-290
     priority: P0
     area: postgres-parity
@@ -903,6 +910,7 @@ tasks:
     completed_slices:
       - E-285 extends `central-policy-v1` with exact finite Decimal amount floors/ceilings plus region and data-classification scopes. Missing scope grants deny by default; invalid numeric bounds fail before evaluation; existing callers remain compatible. Focused policy and Hypothesis suites pass under ADR 0238. Route/job/export/UI attribute coverage, policy administration/cache invalidation, OIDC/SAML/SCIM, and PostgreSQL RLS remain open.
       - E-292 adds explicit, timezone-aware expiring delegation to the central policy context. Evaluation time is supplied by the caller for deterministic replay; missing evaluation time and at/after-expiry requests deny by stable reason codes. The helper forwards the fields and focused/Hypothesis policy gates remain green. Delegation administration storage, provider federation, route/job/export/UI coverage, and PostgreSQL RLS remain open.
+      - E-293 adds migration 27 and a typed tenant/workspace-scoped SQLite delegation repository. Grant fields are immutable, only independent active-to-revoked transitions are allowed, and effective reads require an explicit timezone-aware instant. Local synthetic tests pass; federation, PostgreSQL/RLS, route/job/export/UI enforcement, cache invalidation, and emergency access remain open.
 
   - id: P4-PLAT-001
     priority: P4

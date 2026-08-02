@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from reconforge.auth.delegations import DelegationGrant, DelegationValidationError
 from reconforge.auth.federation import (
     FederatedPrincipal,
     FederationError,
@@ -33,6 +34,8 @@ __all__ = [
     "AuthRepositoryError",
     "AuthServiceError",
     "CentralPolicyEngine",
+    "DelegationGrant",
+    "DelegationValidationError",
     "FederatedPrincipal",
     "FederationError",
     "FederationProvider",

@@ -6,6 +6,15 @@ Updated: 2026-08-02
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-293 — Immutable local delegation administration
+
+- Migration 27 adds tenant/workspace-scoped `policy_delegations`; a typed
+  SQLite repository creates approved grants, resolves only effective grants at
+  an explicit instant, and allows independent-actor revocation only.
+- Focused migration/repository/domain tests, Ruff, and Mypy pass. This is a
+  Community SQLite slice only; federation, PostgreSQL/RLS parity, API/jobs/
+  exports/UI enforcement, cache invalidation, and emergency access remain open.
+
 ## E-292 — Explicit expiring delegation in central policy
 
 - The central policy engine now evaluates temporary delegated authority using a

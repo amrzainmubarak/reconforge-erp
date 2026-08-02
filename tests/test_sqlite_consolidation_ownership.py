@@ -43,9 +43,9 @@ def _database(tmp_path: Path) -> tuple[Path, sqlite3.Connection]:
     return path, connect(path, require_exists=True)
 
 
-def test_migration_26_persists_effective_dated_ownership_and_replays_by_date(tmp_path: Path) -> None:
-    assert MIGRATIONS[-1].version == 26
-    assert MIGRATIONS[-1].name == "consolidation_ownership_masters"
+def test_latest_migrations_persist_effective_dated_ownership_and_replay_by_date(tmp_path: Path) -> None:
+    assert MIGRATIONS[-1].version == 27
+    assert MIGRATIONS[-1].name == "policy_delegation_administration"
     path, connection = _database(tmp_path)
     try:
         repository = SQLiteConsolidationOwnershipRepository(connection)

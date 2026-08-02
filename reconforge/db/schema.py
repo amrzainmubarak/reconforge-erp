@@ -3970,3 +3970,47 @@ BEGIN
     SELECT RAISE(ABORT, 'consolidation ownership interests cannot be deleted');
 END;
 """
+
+POLICY_DELEGATIONS_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS policy_delegations (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    workspace_id TEXT NOT NULL,
+    delegator_id TEXT NOT NULL,
+    delegatee_id TEXT NOT NULL,
+    permissions_json TEXT NOT NULL,
+    starts_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    approved_by TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('active', 'revoked')),
+    revoked_at TEXT,
+    revoked_by TEXT,
+    CHECK (delegator_id <> delegatee_id),
+    CHECK (starts_at < expires_at),
+    CHECK (created_by <> '' AND approved_by <> ''),
+    CHECK (status='active' OR (revoked_at IS NOT NULL AND revoked_by IS NOT NULL)),
+    CHECK (status='revoked' OR (revoked_at IS NULL AND revoked_by IS NULL))
+);
+CREATE INDEX IF NOT EXISTS idx_policy_delegations_effective
+ON policy_delegations(tenant_id, workspace_id, delegatee_id, starts_at, expires_at, status);
+CREATE TRIGGER IF NOT EXISTS policy_delegations_guard_update
+BEFORE UPDATE ON policy_delegations
+BEGIN
+    SELECT CASE WHEN NEW.id<>OLD.id OR NEW.tenant_id<>OLD.tenant_id OR NEW.workspace_id<>OLD.workspace_id
+      OR NEW.delegator_id<>OLD.delegator_id OR NEW.delegatee_id<>OLD.delegatee_id
+      OR NEW.permissions_json<>OLD.permissions_json OR NEW.starts_at<>OLD.starts_at
+      OR NEW.expires_at<>OLD.expires_at OR NEW.created_by<>OLD.created_by
+      OR NEW.approved_by<>OLD.approved_by
+      THEN RAISE(ABORT, 'delegation grant is immutable') END;
+    SELECT CASE WHEN NOT (OLD.status='active' AND NEW.status='revoked'
+      AND NEW.revoked_at IS NOT NULL AND NEW.revoked_by IS NOT NULL
+      AND NEW.revoked_by<>OLD.delegator_id)
+      THEN RAISE(ABORT, 'delegation status transition is invalid') END;
+END;
+CREATE TRIGGER IF NOT EXISTS policy_delegations_immutable_delete
+BEFORE DELETE ON policy_delegations
+BEGIN
+    SELECT RAISE(ABORT, 'delegation grants cannot be deleted');
+END;
+"""

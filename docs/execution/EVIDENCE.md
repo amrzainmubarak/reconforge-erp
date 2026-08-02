@@ -40,6 +40,7 @@ This file records commands and observed results. It does not convert a dirty wor
 
 - ADR: `docs/adr/0223-reference-sftp-is-transport-injected-and-read-only.md`.
 - Boundary: this is not a live SFTP provider, host-key/SSH assurance, payment or ERP integration, write-back path, or production deployment claim. P4-CON-001 remains in progress.
+- Remote verification: Draft PR #71 head `05b64b18a083f290eb299835056cd3347d798af4` reported 15/15 required checks successful and merge state `CLEAN`. No merge, tag, release, deployment, or production mutation occurred.
 
 ## E-260: Bounded grouped and netting matching slice
 

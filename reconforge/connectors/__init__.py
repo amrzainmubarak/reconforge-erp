@@ -1,5 +1,15 @@
 """Safe, manifest-driven connector SDK contracts."""
 
+from reconforge.connectors.database_reference import (
+    DATABASE_REFERENCE_ENDPOINT,
+    DATABASE_REFERENCE_MANIFEST,
+    DatabaseConnectorRegistration,
+    DatabaseQueryProfile,
+    DatabaseRead,
+    DatabaseRecordRow,
+    ReferenceDatabaseConnector,
+    database_reference_registration,
+)
 from reconforge.connectors.manifest import (
     AuthenticationMethod,
     ConnectorCapability,
@@ -97,6 +107,14 @@ __all__ = [
     "ObjectStorageRead",
     "ReferenceObjectStorageConnector",
     "object_reference_registration",
+    "DATABASE_REFERENCE_ENDPOINT",
+    "DATABASE_REFERENCE_MANIFEST",
+    "DatabaseConnectorRegistration",
+    "DatabaseQueryProfile",
+    "DatabaseRead",
+    "DatabaseRecordRow",
+    "ReferenceDatabaseConnector",
+    "database_reference_registration",
     "DataClassification",
     "PublisherKeyStatus",
     "RetryPolicy",

@@ -59,6 +59,24 @@ This file records commands and observed results. It does not convert a dirty wor
 
 - ADR: `docs/adr/0224-reference-object-storage-is-tenant-scoped-and-read-only.md`.
 - Boundary: this is not a live S3/MinIO provider, IAM/encryption assurance, object-store HA/DR proof, write/delete/presign integration, or production deployment claim. P4-CON-001 remains in progress.
+
+## E-270: Synthetic reference database read-only connector
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Scope: transport-injected `reference-database-readonly` integration. Only `statement_lines_v1` and `trial_balance_v1` named profiles are accepted; SQL text and arbitrary identifiers cannot cross the SDK. Exact HTTPS egress, tenant scope, bounded rows/cells/cursor, finite Decimal text, stable ordering, duplicate rejection, and request/response digests are covered. No database connection, credential, customer data, write-back, or schema mutation is included.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_connector_database_reference.py -q` | 0 | 6/6 database connector tests passed. |
+| `python -m ruff check reconforge/connectors/database_reference.py reconforge/connectors/__init__.py tests/test_connector_database_reference.py` | 0 | Focused lint passed. |
+| `python -m mypy reconforge/connectors/database_reference.py` | 0 | No issues found. |
+| `python -m bandit -q -r reconforge/connectors/database_reference.py` | 0 | No findings. |
+| `python -m ruff check .` / `python -m mypy reconforge` / `python -m bandit -q -r reconforge` / `python -m pip_audit` / `uv lock --check` / `git diff --check` | 0 | Full static, type, security, dependency, lock, and whitespace gates passed; 391 typed source files; no known third-party vulnerabilities; existing narrowly-scoped Bandit nosec/parser warnings only. |
+| `python -m build --no-isolation` | 0 | sdist and wheel built successfully; database module, tests, docs, ADR, and manifest entries are present. |
+| `python -m pytest -q` | 0 | Full repository suite passed with zero failures/errors; existing environment-declared skips remain. |
+
+- ADR: `docs/adr/0225-reference-database-is-named-query-and-tenant-scoped.md`.
+- Boundary: this is not a live PostgreSQL/SQL Server/Oracle connector, prepared-statement runtime proof, least-privilege database role proof, migration parity, or production deployment claim. P4-CON-001 remains in progress.
 - Remote verification: Draft PR #71 head `b138fbe744b8008aeaae1972741f202d64c487ce` reported 15/15 required checks successful and merge state `CLEAN`. No merge, tag, release, deployment, or production mutation occurred.
 - Remote verification: Draft PR #71 head `b138fbe744b8008aeaae1972741f202d64c487ce` reported 15/15 required checks successful and merge state `CLEAN`. No merge, tag, release, deployment, or production mutation occurred.
 

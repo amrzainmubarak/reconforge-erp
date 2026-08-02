@@ -1959,3 +1959,12 @@
 - Consequence: Object-storage connector behavior is testable without cloud accounts; IAM, encryption, provider pagination/retry, and live evidence remain unclaimed. No write/delete/presign capability is added.
 - ADR: `docs/adr/0224-reference-object-storage-is-tenant-scoped-and-read-only.md`.
 - Rollback: Remove the object connector module, tests, docs, ADR, exports, and manifest entries. No database or external state is changed.
+
+## D252 - Reference database access is named-query and tenant-scoped
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Add a synthetic database reader with two closed named-query profiles, exact HTTPS egress, runtime credential reference, explicit tenant scope, bounded rows/cells, cursor pagination, stable ordering, duplicate rejection, and exact Decimal row validation. Never accept SQL or arbitrary identifiers; inject the transport.
+- Consequence: SQL injection is structurally absent from the connector SDK and tests run without a live database. Prepared statements, least privilege, timeouts, cancellation, consistency, migration compatibility, and live provider evidence remain adapter responsibilities.
+- ADR: `docs/adr/0225-reference-database-is-named-query-and-tenant-scoped.md`.
+- Rollback: Remove the database connector module, tests, docs, ADR, exports, and manifest entries. No database or external state is changed.

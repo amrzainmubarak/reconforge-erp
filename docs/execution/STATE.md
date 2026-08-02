@@ -14,6 +14,9 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Focused migration/repository/domain tests, Ruff, and Mypy pass. This is a
   Community SQLite slice only; federation, PostgreSQL/RLS parity, API/jobs/
   exports/UI enforcement, cache invalidation, and emergency access remain open.
+- Corrected commit `30dfd06` passed CI `30764141422` (Python 3.11/3.12,
+  parity, server-boundaries, docker-parity), CodeQL `30764141410`, Security
+  `30764141411`, and Docker `30764141415`.
 
 ## E-292 — Explicit expiring delegation in central policy
 

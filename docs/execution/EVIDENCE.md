@@ -15,6 +15,10 @@ This file records commands and observed results. It does not convert a dirty wor
   depended on a slice rather than a backlog task. Both inventory/task-ledger
   defects were corrected before the next run; the failed run is retained as
   evidence, not hidden.
+- CI run `30764141422` then passed both Python 3.11/3.12 suites, server
+  boundaries, all four engine-parity cells, and docker-parity for corrected
+  commit `30dfd06`; CodeQL `30764141410`, Security `30764141411`, and Docker
+  `30764141415` also passed.
 
 ## E-292: Expiring delegation policy invariant
 

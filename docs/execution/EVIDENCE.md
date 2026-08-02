@@ -22,8 +22,12 @@ This file records commands and observed results. It does not convert a dirty wor
 - Boundary: exact-USD synthetic, one Windows host/process, partitioned work;
   this does not establish distributed capacity, SLOs, PostgreSQL runtime parity,
   FX/fee/partial-settlement density, soak, or 1M performance.
-- Remote verification: pending after the implementation and documentation
-  commits; no merge, tag, release, deployment, or production mutation occurred.
+- Remote verification: implementation head `c22bd05dd8ebc9b70f0d7f878944fefddb7eec05`
+  passed all 15 reported PR #71 checks: Python analysis,
+  CodeQL, locked audits 3.11/3.12, secret/npm policy, Docker build/parity,
+  four engine-parity cells, Python security, server boundaries, and tests on
+  Python 3.11/3.12. GitHub reported `CLEAN`. No merge, tag, release,
+  deployment, or production mutation occurred.
 
 ## E-275: Grouped matching 10K-record tier
 

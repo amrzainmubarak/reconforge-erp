@@ -93,6 +93,13 @@ tasks:
     status: completed
     depends_on: [E-301, E-302]
     exit_evidence: API permission dependencies use the bounded allowed-only cache only when explicitly enabled, any-of contracts preserve deny semantics, and every non-safe request invalidates cached decisions; default deployments remain uncached under ADR 0254. CI run 30772431595 passed the full compatibility, server-boundaries, parity, Docker, Security, and CodeQL gates.
+  - id: E-304
+    priority: P4
+    area: financial-consolidation
+    title: Deterministic management trial-balance projection
+    status: completed
+    depends_on: [P4-FIN-002]
+    exit_evidence: A verified non-posting worksheet projects into exact reporting-currency lines with source lineage, balanced total, canonical digest, closed schema, focused tests, and explicit non-statutory boundaries under ADR 0255.
   - id: E-292
     priority: P0
     area: enterprise-policy
@@ -912,6 +919,7 @@ tasks:
       - E-283 records a current CI runtime pass of the existing PostgreSQL close-management contract. The server-boundaries matrix exercised tenant-scoped period/task/dependency persistence under the non-privileged role, cycle refusal, readiness, lock/reopen transitions, locked-period mutation refusal, audit/outbox evidence parity, and cross-tenant isolation. The inventory remains `live_test_available` until this contract is promoted through a dedicated current-live gate; consolidation journals, eliminations/NCI/statements, restore, HA/DR, RPO/RTO, and full consolidation posting remain open.
       - E-289 promotes `CloseManagementApplicationService` to `live_verified_current` through a dedicated current PostgreSQL gate. The inventory records the PostgreSQL 16 CI image, non-privileged role, focused runtime test, and single-node/synthetic/no-restore/no-HA limits. This does not promote the absent `ConsolidationCloseApplicationService` or close journal posting, eliminations/NCI, statements, restore, HA/DR, or RPO/RTO.
       - E-295 promotes the existing PostgreSQL intercompany control workflow through CI. Decimal import, tolerance matching, imbalance exception/evidence, settlement/outbox effects, tenant isolation, and SQLite semantic parity passed; statutory consolidation, elimination posting, ERP write-back, HA/DR, and RPO/RTO remain open.
+      - E-304 adds a deterministic management trial-balance projection over a verified non-posting worksheet. Exact reporting-currency lines retain source references and a canonical digest; the artifact is balanced and explicitly non-statutory. Acquisition accounting, statutory statements, PostgreSQL persistence, live rates, and write-back remain open.
 
   - id: P4-MAT-001
     priority: P4

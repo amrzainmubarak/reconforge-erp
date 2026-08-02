@@ -76,6 +76,13 @@
 - **Rationale**: This provides a reversible performance path without allowing stale authorization decisions to survive an API mutation or changing existing deployments silently.
 - **Reversibility**: Set `policy_cache_enabled=False`; no schema or client contract migration is required.
 
+### D-304: Keep the Consolidation Trial-Balance Projection Non-Statutory
+- **Date**: 2026-08-03
+- **Context**: Close review needs a deterministic, explainable projection without silently presenting the worksheet as regulated financial reporting.
+- **Decision**: Add a pure management trial-balance artifact over verified non-posting worksheets with exact amounts, source references, a zero balance, and a canonical digest; create no posting effect.
+- **Rationale**: This advances close explainability while preserving boundaries around statutory presentation, accounting judgments, persistence parity, and external write-back.
+- **Reversibility**: Additive domain module, schema, docs, and tests only; no database or source-system mutation.
+
 ### D-292: Delegated Authority Requires an Explicit Evaluation Instant
 - **Date**: 2026-08-02
 - **Context**: Enterprise policy needs expiring delegation without hidden wall-clock behavior that makes decisions non-replayable.

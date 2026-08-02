@@ -188,6 +188,19 @@ This file records commands and observed results. It does not convert a dirty wor
 - CI run `30772431595` passed both Python suites, server-boundaries,
   engine-parity, Docker, Security, and CodeQL for the adopted API path.
 
+## E-304: Deterministic management trial-balance projection
+
+- Code evidence: `reconforge/domain/consolidation_statement.py` projects only
+  a verified non-posting worksheet. Lines are sorted, retain source references,
+  use exact `Money`, and carry a canonical SHA-256 artifact digest.
+- Test evidence: `python -m pytest tests/test_consolidation_statement.py -q`
+  passed (2 tests); Ruff and Mypy passed for the new module and tests.
+- Contract evidence: the closed schema, ADR 0255, and Finance Core export
+  contract are included in the source distribution.
+- Boundary: local management-review artifact only; not statutory reporting,
+  legal-book posting, acquisition accounting, live-rate, PostgreSQL, write-back,
+  or production-readiness evidence.
+
 ## E-292: Expiring delegation policy invariant
 
 - Added optional delegation fields to `PolicyEvaluationContext` and forwarded

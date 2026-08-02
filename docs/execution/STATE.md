@@ -124,6 +124,18 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - CI run `30772431595` passed the full compatibility, server-boundaries,
   engine-parity, Docker, Security, and CodeQL gates.
 
+## E-304 — Deterministic management trial-balance projection
+
+- Added `consolidation-management-trial-balance-v1`, a pure projection from a
+  verified non-posting worksheet. Exact reporting-currency lines retain
+  worksheet source references; the artifact enforces a zero balance and a
+  canonical digest for replay/tamper detection.
+- Focused tests, Ruff, and Mypy pass. ADR 0255 and the closed schema define the
+  boundary: management review artifact only, not a statutory statement, legal
+  book, tax report, or assurance conclusion.
+- Acquisition/fair-value/goodwill/equity-method policy, PostgreSQL persistence,
+  API/CLI/UI exposure, live rates, and ERP/bank write-back remain open.
+
 ## E-292 — Explicit expiring delegation in central policy
 
 - The central policy engine now evaluates temporary delegated authority using a

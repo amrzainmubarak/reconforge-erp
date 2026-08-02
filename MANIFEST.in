@@ -193,6 +193,11 @@ include docs/adr/0234-postgres-consolidation-ownership-contract.md
 include docs/execution/benchmarks/postgres-consolidation-ownership-v1.md
 include reconforge/domain/consolidation_ownership_changes.py
 include tests/test_consolidation_ownership_changes.py
+include reconforge/domain/consolidation_statement.py
+include tests/test_consolidation_statement.py
+include docs/schemas/consolidation-management-trial-balance-v1.schema.json
+include docs/adr/0255-consolidation-management-trial-balance-is-non-statutory.md
+include docs/consolidation-management-trial-balance.md
 include docs/adr/0235-ownership-change-adjustments-are-non-posting-and-policy-bound.md
 include docs/execution/benchmarks/ownership-change-adjustment-v1.md
 include docs/schemas/ownership_change_adjustment_v1.schema.json

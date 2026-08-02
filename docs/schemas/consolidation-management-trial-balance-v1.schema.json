@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.dev/schemas/consolidation-management-trial-balance-v1.schema.json",
+  "title": "ReconForge consolidation management trial balance v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["algorithm_version", "artifact_digest", "group_code", "lines", "period_id", "reporting_currency", "schema_version", "total_balance", "worksheet_id", "worksheet_result_digest"],
+  "properties": {
+    "algorithm_version": {"const": "consolidation-management-trial-balance-v1"},
+    "artifact_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "group_code": {"type": "string", "minLength": 1},
+    "lines": {"type": "array", "items": {"$ref": "#/$defs/line"}},
+    "period_id": {"type": "string", "minLength": 1},
+    "reporting_currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+    "schema_version": {"const": 1},
+    "total_balance": {"$ref": "#/$defs/money"},
+    "worksheet_id": {"type": "string", "minLength": 1},
+    "worksheet_result_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  },
+  "$defs": {
+    "money": {"type": "object", "additionalProperties": false, "required": ["amount", "currency"], "properties": {"amount": {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"}, "currency": {"type": "string", "pattern": "^[A-Z]{3}$"}}},
+    "line": {"type": "object", "additionalProperties": false, "required": ["account_type", "amount", "group_account_code", "source_references"], "properties": {"account_type": {"enum": ["Asset", "Liability", "Equity", "Income", "Expense"]}, "amount": {"$ref": "#/$defs/money"}, "group_account_code": {"type": "string", "minLength": 1}, "source_references": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}}}
+  }
+}

@@ -111,6 +111,7 @@ This file records commands and observed results. It does not convert a dirty wor
 
 - ADR: `docs/adr/0220-portfolio-partial-settlement-requires-explicit-policy.md`.
 - Boundary: mutation/crash-resume, cross-engine parity, and 10K/100K/1M benchmarks remain open.
+- Remote verification: Draft PR #71 head `3a08bf930fdd02dec5cac8c0747e51719a79c2ff` reported 15/15 required checks successful and merge state `CLEAN`. No merge, tag, release, deployment, or production mutation occurred.
 
 ## E-259: Draft PR #71 remote verification
 

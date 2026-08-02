@@ -55,6 +55,13 @@
 - **Rationale**: Operators can reproduce and review the bounded drill without mistaking one-host evidence for independent-domain HA or production SLO evidence.
 - **Reversibility**: Additive schema, profile, and tests only; no database or deployment behavior changes.
 
+### D-301: Make Policy Caching Opt-In and Allowed-Only
+- **Date**: 2026-08-03
+- **Context**: Enterprise deployments need bounded decision caching, but stale grants or cross-tenant keys could weaken deny-by-default.
+- **Decision**: Add a bounded cache that includes the full policy context and policy version in its key, stores only allowed non-delegated decisions, and requires explicit tenant/workspace/global invalidation. Do not enable it implicitly in existing routes.
+- **Rationale**: Adoption can be wired beside each mutation authority and audited without making cache freshness an invisible security dependency.
+- **Reversibility**: Additive module and tests only; current callers remain uncached.
+
 ### D-292: Delegated Authority Requires an Explicit Evaluation Instant
 - **Date**: 2026-08-02
 - **Context**: Enterprise policy needs expiring delegation without hidden wall-clock behavior that makes decisions non-replayable.

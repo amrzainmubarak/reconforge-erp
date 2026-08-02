@@ -91,6 +91,15 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   controller is manual; quorum, automatic failover, site loss, and production
   SLO evidence remain open.
 
+## E-301 — Scope-aware allowed-only policy decision cache
+
+- The opt-in cache keys every policy context field and policy version, stores
+  only allowed non-delegated decisions, and supports explicit
+  tenant/workspace/global invalidation.
+- Focused tests prove denials and delegated authority bypass storage and that
+  invalidating one tenant does not evict a sibling tenant. Existing routes are
+  intentionally uncached until each mutation path owns invalidation.
+
 ## E-292 — Explicit expiring delegation in central policy
 
 - The central policy engine now evaluates temporary delegated authority using a

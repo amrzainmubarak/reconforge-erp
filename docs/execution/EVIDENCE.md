@@ -127,6 +127,18 @@ This file records commands and observed results. It does not convert a dirty wor
   engine-parity, and docker-parity for `a4b763b`; CodeQL `30769771590`,
   Security `30769771568`, and Docker `30769771622` also passed.
 
+## E-301: Scope-aware allowed-only policy decision cache
+
+- Added an opt-in bounded `PolicyDecisionCache` whose digest key includes all
+  policy context attributes, required permission, enforcement flags, and policy
+  version.
+- Denials and expiring delegated decisions are never cached. Explicit
+  tenant/workspace/global invalidation is scope-checked and tested against
+  sibling-tenant retention and stale-entry reuse.
+- Existing routes do not adopt the cache implicitly; mutation wiring and
+  distributed invalidation remain open. Focused policy-cache and policy-engine
+  tests, Ruff, and Mypy pass.
+
 ## E-292: Expiring delegation policy invariant
 
 - Added optional delegation fields to `PolicyEvaluationContext` and forwarded

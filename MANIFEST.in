@@ -230,6 +230,9 @@ include docs/schemas/ha_dr_operational_profile.schema.json
 include docs/operations/HA_DR_OPERATIONAL_PROFILE_2026-07-30.json
 include tests/test_ha_dr_operational_profile.py
 include docs/adr/0251-ha-dr-operational-profile-bounds.md
+include reconforge/auth/policy_cache.py
+include tests/test_policy_cache.py
+include docs/adr/0252-policy-decision-cache-is-explicit-and-scope-aware.md
 include docs/adr/0221-reference-rest-connector-is-read-only-and-schema-closed.md
 include reconforge/connectors/writeback.py
 include tests/test_connector_writeback.py

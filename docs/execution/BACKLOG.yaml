@@ -65,6 +65,13 @@ tasks:
     status: completed
     depends_on: [P3-ENT-010]
     exit_evidence: A schema-validated operational profile binds the repeated three-run PostgreSQL synchronous-standby report to explicit RPO/RTO targets, runbook steps, and residual limitations; it does not claim independent failure domains or production HA.
+  - id: E-301
+    priority: P4
+    area: enterprise-policy
+    title: Scope-aware allowed-only policy decision cache
+    status: completed
+    depends_on: [E-297, E-298]
+    exit_evidence: Opt-in bounded policy cache keys every policy context field, caches allowed non-delegated decisions only, and supports tenant/workspace/global invalidation with focused no-stale/no-cross-tenant tests under ADR 0252. No route adopts it implicitly.
   - id: E-292
     priority: P0
     area: enterprise-policy
@@ -968,6 +975,7 @@ tasks:
       - E-293 adds migration 27 and a typed tenant/workspace-scoped SQLite delegation repository. Grant fields are immutable, only independent active-to-revoked transitions are allowed, and effective reads require an explicit timezone-aware instant. Local synthetic tests pass; federation, PostgreSQL/RLS, route/job/export/UI enforcement, cache invalidation, and emergency access remain open.
       - E-297 adds an opt-in governed durable-job application boundary. Submit/cancel require a matching actor identity, central permission, tenant/workspace scope, and centralized SoD evaluation before the existing lifecycle repository is touched; denied requests are tested as no-effect. Route migration, federation, and cache invalidation remain open.
       - E-298 runs the governed wrapper against the PostgreSQL durable-job repository in the live server-boundaries job. A denied permission produces no row, an allowed scoped submit produces one tenant-bound row, and sibling-tenant lookup remains empty under the non-privileged role. The wrapper remains opt-in and is not a claim that every surface is migrated.
+      - E-301 adds an opt-in bounded `PolicyDecisionCache`. Cache keys include every policy context attribute and policy version; denials and delegated decisions bypass storage; explicit tenant/workspace/global invalidation is tested without sibling-tenant eviction. No API or mutation path adopts caching implicitly, so route migration and invalidation wiring remain open.
 
   - id: P4-PLAT-001
     priority: P4

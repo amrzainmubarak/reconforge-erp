@@ -12,13 +12,27 @@ import json
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
-from typing import Literal
+from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class WritebackError(ValueError):
     """Raised when a write-back lifecycle transition is unsafe or invalid."""
+
+
+class WritebackTransport(Protocol):
+    """Injected provider boundary; implementations own network and secrets."""
+
+    def send(
+        self,
+        *,
+        intent_id: str,
+        connector_id: str,
+        operation: str,
+        idempotency_key: str,
+        payload_digest: str,
+    ) -> WritebackAcknowledgement: ...
 
 
 class WritebackStatus(StrEnum):
@@ -183,6 +197,42 @@ def acknowledge_writeback(
         accepted=accepted,
     )
     return intent.model_copy(update={"status": WritebackStatus.ACKNOWLEDGED, "acknowledgement": acknowledgement})
+
+
+def dispatch_writeback_to_provider(
+    intent: WritebackIntent,
+    *,
+    policy: WritebackPolicy,
+    transport: WritebackTransport,
+) -> WritebackIntent:
+    """Send one already-dispatched intent through an injected provider boundary.
+
+    The default application has no transport and performs no network I/O. A
+    provider adapter must return an acknowledgement bound to the original
+    idempotency key; mismatches and transport failures fail closed.
+    """
+
+    policy.authorize(intent)
+    if intent.status is not WritebackStatus.DISPATCHED:
+        raise WritebackError("writeback_provider_dispatch_requires_dispatched")
+    try:
+        acknowledgement = transport.send(
+            intent_id=intent.intent_id,
+            connector_id=intent.connector_id,
+            operation=intent.operation,
+            idempotency_key=intent.idempotency_key,
+            payload_digest=intent.payload_digest,
+        )
+    except Exception as exc:
+        raise WritebackError("writeback_provider_dispatch_failed") from exc
+    if acknowledgement.idempotency_key != intent.idempotency_key:
+        raise WritebackError("writeback_provider_acknowledgement_mismatch")
+    return intent.model_copy(
+        update={
+            "status": WritebackStatus.ACKNOWLEDGED,
+            "acknowledgement": acknowledgement,
+        }
+    )
 
 
 def request_compensation(intent: WritebackIntent, *, reason: str) -> WritebackIntent:

@@ -50,6 +50,14 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Evidence is local SQLite only; distributed queue backpressure and SLOs
   remain open.
 
+## E-287 — Injected governed write-back transport
+
+- Write-back now has a transport-injected dispatch boundary that requires the
+  original idempotency key in the provider acknowledgement and fails closed on
+  provider errors or mismatches.
+- It remains synthetic and network-free; live providers and posting evidence
+  are not claimed.
+
 ## Snapshot boundary
 
 - Branch: `codex/consolidation-journal-lifecycle`, current ownership-adjustment code head `bfb29d44ae025b338a8a5d0f8311619a8292462e`; Draft PR #71 remains deliberately unmerged.

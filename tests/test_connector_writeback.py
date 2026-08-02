@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 import pytest
@@ -17,6 +18,7 @@ from reconforge.connectors.writeback import (
     approve_writeback,
     complete_compensation,
     dispatch_writeback,
+    dispatch_writeback_to_provider,
     request_compensation,
 )
 
@@ -148,6 +150,57 @@ def test_acknowledgement_requires_dispatched_state_and_exact_schema() -> None:
         _intent(payload_digest="not-a-digest")
     with pytest.raises(ValidationError):
         WritebackIntent.model_validate({**_intent().model_dump(mode="json"), "secret": "must-be-rejected"})
+
+
+@dataclass
+class _Transport:
+    acknowledgement: WritebackAcknowledgement | None = None
+    failure: bool = False
+
+    def send(self, **kwargs: object) -> WritebackAcknowledgement:
+        assert kwargs["idempotency_key"] == "writeback-001"
+        if self.failure:
+            raise RuntimeError("synthetic provider timeout")
+        assert self.acknowledgement is not None
+        return self.acknowledgement
+
+
+def test_injected_provider_dispatch_binds_ack_and_failure_is_fail_closed() -> None:
+    approved = approve_writeback(
+        _intent(), policy=POLICY, actor_id="checker-1", approved_at=NOW, assurance="mfa", reason="reviewed"
+    )
+    dispatched = dispatch_writeback(approved, policy=POLICY)
+    accepted = WritebackAcknowledgement(
+        provider_reference="provider-123",
+        acknowledged_at=NOW,
+        response_digest="b" * 64,
+        idempotency_key="writeback-001",
+        accepted=True,
+    )
+    acknowledged = dispatch_writeback_to_provider(
+        dispatched, policy=POLICY, transport=_Transport(acknowledgement=accepted)
+    )
+    assert acknowledged.status is WritebackStatus.ACKNOWLEDGED
+    with pytest.raises(WritebackError, match="dispatch_failed"):
+        dispatch_writeback_to_provider(dispatched, policy=POLICY, transport=_Transport(failure=True))
+
+
+def test_injected_provider_ack_mismatch_is_rejected() -> None:
+    approved = approve_writeback(
+        _intent(), policy=POLICY, actor_id="checker-1", approved_at=NOW, assurance="step_up", reason="reviewed"
+    )
+    dispatched = dispatch_writeback(approved, policy=POLICY)
+    mismatched = WritebackAcknowledgement(
+        provider_reference="provider-123",
+        acknowledged_at=NOW,
+        response_digest="b" * 64,
+        idempotency_key="other-key",
+        accepted=True,
+    )
+    with pytest.raises(WritebackError, match="acknowledgement_mismatch"):
+        dispatch_writeback_to_provider(
+            dispatched, policy=POLICY, transport=_Transport(acknowledgement=mismatched)
+        )
 
 
 def test_digest_is_deterministic_and_payload_is_not_part_of_contract() -> None:

@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-287: Governed write-back transport failure injection
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Implementation: `dispatch_writeback_to_provider` accepts an injected
+  transport only after policy-approved dispatch. It sends intent ID, connector,
+  operation, idempotency key, and payload digest; acknowledgement key mismatch
+  or provider exception raises a stable fail-closed error.
+- Evidence: write-back/package focused tests passed, including successful
+  acknowledgement binding, provider timeout injection, mismatch refusal,
+  replay refusal, compensation idempotency, and self-approval denial. Ruff and
+  mypy passed.
+- Boundary: no network I/O or live ERP/bank provider is used; credential,
+  settlement, posting, compensation execution, and provider conformance remain
+  deployment-owned follow-up work.
+
 ## E-286: Bounded durable-job producer backpressure
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

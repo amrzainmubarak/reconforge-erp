@@ -74,6 +74,7 @@ from reconforge.connectors.writeback import (
     approve_writeback,
     complete_compensation,
     dispatch_writeback,
+    dispatch_writeback_to_provider,
     request_compensation,
 )
 
@@ -99,6 +100,7 @@ __all__ = [
     "approve_writeback",
     "complete_compensation",
     "dispatch_writeback",
+    "dispatch_writeback_to_provider",
     "request_compensation",
     "SFTP_REFERENCE_ENDPOINT",
     "SFTP_REFERENCE_MANIFEST",

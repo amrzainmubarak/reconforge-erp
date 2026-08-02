@@ -250,6 +250,7 @@ include reconforge/benchmark/durable_job_backpressure.py
 include tests/test_durable_job_backpressure.py
 include docs/adr/0239-durable-job-backpressure-is-bounded-and-local.md
 include docs/execution/benchmarks/durable-job-backpressure-tier-v1.md
+include docs/adr/0240-writeback-injected-transport-fails-closed.md
 include tests/test_incident_response.py
 include tests/test_reliability_incident_drill.py
 include docs/security/deployment-boundaries.md

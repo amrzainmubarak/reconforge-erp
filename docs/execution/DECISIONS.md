@@ -2115,3 +2115,11 @@
   completed all 64 jobs and 256 effects without duplicates.
 - Boundary: this is local SQLite evidence, not distributed backpressure or an
   SLO/capacity claim.
+# E-287 — Provider write-back transport is injected and acknowledgement-bound
+
+- Date: 2026-08-02
+- Decision: add a transport protocol and fail-closed dispatch helper after
+  approval, without selecting or invoking a real provider.
+- Evidence: synthetic success, provider timeout, and idempotency mismatch
+  tests pass; only digest-bound intent metadata crosses the boundary.
+- Boundary: no live network, credential, settlement, or posting evidence.

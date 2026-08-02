@@ -24,6 +24,16 @@ from reconforge.connectors.rest_reference import (
     ReferenceRestRecord,
     reference_rest_registration,
 )
+from reconforge.connectors.sftp_reference import (
+    SFTP_REFERENCE_ENDPOINT,
+    SFTP_REFERENCE_MANIFEST,
+    ReferenceSftpConnector,
+    SftpConnectorRegistration,
+    SftpFileRead,
+    SftpRead,
+    SftpRemoteFile,
+    sftp_reference_registration,
+)
 from reconforge.connectors.writeback import (
     WritebackAcknowledgement,
     WritebackApproval,
@@ -61,6 +71,14 @@ __all__ = [
     "complete_compensation",
     "dispatch_writeback",
     "request_compensation",
+    "SFTP_REFERENCE_ENDPOINT",
+    "SFTP_REFERENCE_MANIFEST",
+    "ReferenceSftpConnector",
+    "SftpConnectorRegistration",
+    "SftpFileRead",
+    "SftpRead",
+    "SftpRemoteFile",
+    "sftp_reference_registration",
     "DataClassification",
     "PublisherKeyStatus",
     "RetryPolicy",

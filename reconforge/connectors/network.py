@@ -44,6 +44,8 @@ class NetworkConnectorRegistration(BaseModel):
             raise ValueError("network registration v1 supports secret-reference authentication only")
         if self.endpoint not in self.manifest.egress_destinations:
             raise ValueError("endpoint must exactly match one declared egress destination")
+        if (urlsplit(self.endpoint).scheme or "").lower() != "https":
+            raise ValueError("network registration v1 requires an HTTPS endpoint")
         return self
 
     @property

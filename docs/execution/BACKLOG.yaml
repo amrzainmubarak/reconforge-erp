@@ -828,6 +828,7 @@ tasks:
     completed_slices:
       - E-266 adds an executable provider-neutral `reference-rest-readonly` integration over the governed HTTPS runtime. It has a closed Decimal-text page schema, unique IDs, cursor/idempotency/retry/rate/egress enforcement through the existing executor, canonical response digest, synthetic transport tests, ADR 0221, and package membership. It is not a live ERP/bank provider and has no write-back; credentials and deployment contracts remain external.
       - E-267 adds a provider-neutral, fail-closed write-back intent lifecycle. Feature enablement, connector/operation allowlists, distinct human step-up/MFA approval, one-way dispatch, acknowledgement binding to the original idempotency key, and explicit compensation are covered by closed models and focused tests. It performs no network I/O and does not promote the read-only manifest to a live write capability; provider adapters, secret provisioning, signed admission, and failure-injection remain open.
+      - E-268 adds a synthetic `reference-sftp-readonly` integration with a transport-injected runtime. Exact SFTP egress, traversal-free root, bounded file count/size, extension allowlist, deterministic cursor ordering, credential isolation, and content digests are tested. It does not bundle SSH or make network calls; host-key, provider, and live operational evidence remain open.
 
   - id: P4-SCL-001
     priority: P4

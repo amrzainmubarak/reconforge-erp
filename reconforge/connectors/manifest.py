@@ -116,14 +116,14 @@ class ConnectorManifest(BaseModel):
         for destination in self.egress_destinations:
             parsed = urlsplit(destination)
             if (
-                parsed.scheme != "https"
+                parsed.scheme not in {"https", "sftp"}
                 or not parsed.hostname
                 or parsed.username is not None
                 or parsed.password is not None
                 or parsed.fragment
                 or parsed.query
             ):
-                raise ValueError("egress destinations must be exact HTTPS URLs without credentials, query, or fragment")
+                raise ValueError("egress destinations must be exact HTTPS URLs or exact SFTP URLs without credentials, query, or fragment")
             try:
                 port = parsed.port
             except ValueError as exc:

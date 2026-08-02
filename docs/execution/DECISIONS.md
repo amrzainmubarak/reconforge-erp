@@ -1941,3 +1941,12 @@
 - Consequence: Future adapters receive a stable governance/idempotency boundary without exposing payloads, secrets, destinations, or pretending that a live ERP/bank mutation exists. The connector manifest remains read-only until a provider-specific write capability is separately reviewed.
 - ADR: `docs/adr/0222-governed-writeback-is-approved-and-acknowledged.md`.
 - Rollback: Remove `reconforge/connectors/writeback.py`, exports, tests, docs, ADR, and package entries. No database or external state is changed.
+
+## D250 - Reference SFTP is transport-injected and read-only
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Add a synthetic `reference-sftp-readonly` connector with exact SFTP egress, runtime secret reference, traversal-free root, bounded file count/size, extension allowlist, deterministic cursor ordering, and content digests. Keep SFTP registration separate from the HTTPS executor and inject the transport protocol rather than bundling SSH or making network calls.
+- Consequence: SFTP security/replay behavior is testable without external accounts; host-key policy, SSH implementation, provider conformance, credential rotation, and live evidence remain unclaimed. The connector is read-only.
+- ADR: `docs/adr/0223-reference-sftp-is-transport-injected-and-read-only.md`.
+- Rollback: Remove the SFTP module, tests, docs, ADR, exports, and manifest changes. No database or external state is changed.

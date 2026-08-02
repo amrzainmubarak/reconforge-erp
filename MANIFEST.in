@@ -208,6 +208,10 @@ include reconforge/connectors/writeback.py
 include tests/test_connector_writeback.py
 include docs/connectors/governed-writeback.md
 include docs/adr/0222-governed-writeback-is-approved-and-acknowledged.md
+include reconforge/connectors/sftp_reference.py
+include tests/test_connector_sftp_reference.py
+include docs/connectors/reference-sftp-readonly.md
+include docs/adr/0223-reference-sftp-is-transport-injected-and-read-only.md
 include tests/test_incident_response.py
 include tests/test_reliability_incident_drill.py
 include docs/security/deployment-boundaries.md

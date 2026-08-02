@@ -134,7 +134,7 @@ This file records commands and observed results. It does not convert a dirty wor
 
 - ADR: `docs/adr/0221-reference-rest-connector-is-read-only-and-schema-closed.md`.
 - Boundary: no live ERP/bank provider, credential provisioning, write-back, acknowledgement/compensation, signed executable package, or production deployment claim.
-- Remote verification: Draft PR #71 head `9e9bd4400a509322267bd0e9fcaec8ffbdbb707e` reported 15/15 required checks successful and merge state `CLEAN`. No merge, tag, release, deployment, or production mutation occurred.
+- Remote verification: Draft PR #71 head `7d6e3000a0b29009da96199c9394ff2f24eeb290` reported 15/15 required checks successful and merge state `CLEAN`. No merge, tag, release, deployment, or production mutation occurred.
 
 ## E-259: Draft PR #71 remote verification
 

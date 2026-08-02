@@ -74,6 +74,7 @@ This file records commands and observed results. It does not convert a dirty wor
 
 - ADR: `docs/adr/0218-bounded-carry-forward-fifo-keeps-residuals-visible.md`.
 - Boundary: reversal-specific matching, partial groups inside portfolios, mutation/crash-resume, cross-engine parity, and 10K/100K/1M benchmarks remain open.
+- Remote verification: Draft PR #71 head `e7e5284ad35efca4164b934d9a314b49d7286ce8` reported 15/15 required checks successful and merge state `CLEAN`. No merge, tag, release, deployment, or production mutation occurred.
 
 ## E-259: Draft PR #71 remote verification
 

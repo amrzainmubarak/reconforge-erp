@@ -48,6 +48,12 @@ the new lifecycle tables. It adds no PostgreSQL parity, hosted API, CLI command,
 UI route, live ERP/bank connector, live rate provider, legal-book posting,
 statutory statement, tag, release, deployment, or write-back surface.
 
+E-258 adds one local cancellation-under-load benchmark harness, one focused
+profile test module, ADR 0214, and MANIFEST.in membership. It adds no new
+persistence primitive, migration, repository method, API, CLI, UI, PostgreSQL
+adapter, provider call, scale publication, tag, release, deployment, or
+production mutation.
+
 E-054 adds one test module with 13 collected contracts, two supply-chain
 schemas, ADR 0069, the universal `uv.lock`, closed policy/exception registries,
 one repository-only validator, Gitleaks configuration, Dependabot definitions,

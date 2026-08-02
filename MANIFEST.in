@@ -184,6 +184,9 @@ include tests/test_sqlite_consolidation_close.py
 include docs/adr/0213-durable-job-load-profile-is-structural-and-non-claim.md
 include reconforge/benchmark/durable_job_load.py
 include tests/test_durable_job_load_profile.py
+include reconforge/benchmark/durable_job_cancellation.py
+include tests/test_durable_job_cancellation_profile.py
+include docs/adr/0214-durable-job-cancellation-profile-is-structural-and-non-claim.md
 include tests/test_incident_response.py
 include tests/test_reliability_incident_drill.py
 include docs/security/deployment-boundaries.md

@@ -2,6 +2,27 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-258: Queued and running durable-job cancellation profiles
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Scope: local SQLite cancellation harness only; it reuses the existing durable-job application, worker, lease, and partition-effect contracts. No migration, API/CLI/UI, PostgreSQL, provider, tag, release, deployment, or production state was changed.
+- Boundary: the declared small profile cancels 16 queued jobs before claims and proves 48 completed jobs, 16 cancellations, 192 committed partition effects, zero duplicates, zero queue/running depth, and zero orphaned leases. A separate running-owner path commits one bounded prefix, cancels the running job, and verifies clean lease release. Runtime and peak-memory observations remain outside structural digests.
+
+| Command | Exit | Duration | Result |
+| --- | ---: | ---: | --- |
+| `python -m pytest tests/test_durable_job_cancellation_profile.py -q` | 0 | 5.1s | 7/7 passed: profile validation, declared small-tier shape, queued cancellation drain/no-duplicate effects, two-run structural digest reproducibility, running cancellation/lease release, closed manifest limitations, and distribution membership. |
+| `python -m ruff check reconforge/benchmark/durable_job_cancellation.py tests/test_durable_job_cancellation_profile.py` | 0 | 0.6s | All checks passed. |
+| `python -m mypy reconforge/benchmark/durable_job_cancellation.py` | 0 | 2.8s | No issues found in 1 source file. |
+| `python -m bandit -q -r reconforge/benchmark/durable_job_cancellation.py` | 0 | 0.8s | Passed with no findings. |
+| Direct queued/running profile smoke | 0 | 2.2s | Queued profile: 48 completed, 16 cancelled, 192 effects, peak memory 0.19 MB; running profile: `cancelled`, 2 committed prefix effects, lease released. Structural verifiers passed. |
+| `python -m pytest --no-header --tb=short -q` | 0 | 299.3s | 2,140 collected tests; zero failures/errors; 64 declared skips. The full run includes E-256/E-257/E-258 contracts and all existing Python regressions. |
+| `python -m ruff check .` / `python -m mypy reconforge` | 0 | 0.4s / 0.9s | Ruff passed; Mypy passed with no issues in 382 source files. |
+| `python -m bandit -q -r reconforge` | 0 | 14.5s | Passed; existing nosec/comment-parser warnings remained visible with no failed findings. |
+| `python -m build --no-isolation` plus archive membership | 0 | combined gate | Built `reconforge_erp-0.7.1`; sdist contains the three required E-258 files and the wheel contains the benchmark runtime module. |
+| `python -m pip_audit` / `uv lock --check` | 0 | combined gate | No known vulnerabilities found; locked 129-package resolution verified. |
+
+Residual boundary: this proves bounded local SQLite cancellation behavior only. It does not prove backpressure, soak, retry/backoff coupling, PostgreSQL parity, distributed capacity, SLOs, or 10K/100K/1M/10M tier publication. P4-SCL-001 remains in progress.
+
 ## E-257: Reproducible durable-job multi-worker load profile (first P4-SCL-001 slice)
 
 - Date/timezone: 2026-08-01, Africa/Cairo.

@@ -1,6 +1,6 @@
 # Execution State
 
-Updated: 2026-08-01
+Updated: 2026-08-02
 
 ## Current phase
 
@@ -49,7 +49,12 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Each worker is statically pinned to one tenant so per-tenant contention is fair (workers-per-tenant must be an exact multiple); a worker that has handled its fair share exits. The closed schema-v1 manifest carries only the structural outcome (declared shape, completed jobs, committed partition effects, duplicate count, final queue/running depth, per-tenant completions, deterministic effect-set digest, environment, explicit limitations) and excludes observed runtime/peak-memory/throughput from the manifest digest, so the digest is reproducible across runs and hardware while timing varies honestly.
 - `verify_load_manifest` asserts completed jobs equal the declared count, duplicate partition effects are zero, the queue drains to zero, committed effects equal completed * partitions_per_job, per-tenant completions sum to the declared count, and limitations retain honest non-claim wording. ADR 0213 documents scope, consequences, and rollback.
 - E-257 records 8/8 focused contracts and a 94-test integration matrix (durable-job domain/application/recovery, sqlite durable jobs, consolidation close, module registry, repository boundary, backup/restore, structured ingress, domain repository, generator benchmark) with zero failures. Ruff and Mypy across 381 source files, Bandit, and exact MANIFEST.in membership pass. An E-256 migration-25 regression in `test_sqlite_durable_jobs.py` (hardcoded `current_version == 24` and `applied_versions == [21,22,23,24]`) was discovered by the focused gate and corrected to the repo's `MIGRATIONS[-1].version` convention as part of the E-256 amend.
-- P4-SCL-001 remains open: backpressure, soak, retry/backoff coupling, cancellation-under-load, PostgreSQL load parity, and 10K/100K/1M/10M named-hardware tier publication are not implemented by this slice. SQLite serializes writes under `BEGIN IMMEDIATE`, so measured contention bounds multi-worker coordination, not database partition parallelism.
+- P4-SCL-001 remains open: backpressure, soak, retry/backoff coupling, PostgreSQL load parity, and 10K/100K/1M/10M named-hardware tier publication are not implemented by these slices. SQLite serializes writes under `BEGIN IMMEDIATE`, so measured contention bounds multi-worker coordination, not database partition parallelism.
+
+### E-258 complete: queued and running cancellation profiles
+
+- `reconforge/benchmark/durable_job_cancellation.py` reuses the existing application/worker/repository contracts. The small declared profile cancels a queued subset before claims, proves 48/64 completion with 16 cancellations and 192 exact partition effects, then separately proves running-owner cancellation after a committed prefix with clean lease release. Duplicate effects, queue/running depth, and orphaned leases are checked structurally; timing and peak memory are observations outside the manifest digest.
+- E-258 focused tests cover profile validation, queued-cancellation drain and no-duplicate effects, two-run structural digest reproducibility, running cancellation/lease release, closed manifest limitations, and distribution membership. P4-SCL-001 remains open for backpressure, soak, retry/backoff coupling, PostgreSQL load parity, distributed capacity, and named-hardware 10K/100K/1M/10M publication.
 
 ## P4-FIN-002 in progress: governed consolidation close lifecycle
 

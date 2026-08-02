@@ -1860,3 +1860,12 @@
 - Consequence: P4-SCL-001 gains the first reproducible multi-worker load profile with no-duplicate-effect proof under contention, but it does not claim a scale tier, SLO, backpressure behaviour, soak result, cancellation-under-load, distributed capacity, PostgreSQL load parity, or 10K/100K/1M/10M tier publication. SQLite serializes writes under `BEGIN IMMEDIATE`, so measured contention bounds multi-worker coordination, not database partition parallelism. No new persistence primitive, domain type, repository method, migration, API, CLI, UI, PostgreSQL, tag, release, or deployment is introduced.
 - ADR: `docs/adr/0213-durable-job-load-profile-is-structural-and-non-claim.md`.
 - Rollback: Remove `reconforge/benchmark/durable_job_load.py`, `tests/test_durable_job_load_profile.py`, ADR 0213, the execution-state entries, and the MANIFEST.in/test-membership lines. No database migration, domain change, repository change, API, CLI, UI, tag, release, or deployed service rollback is required.
+
+## D241 - Durable-job cancellation evidence is bounded and structural
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Add a local SQLite cancellation harness over the existing durable-job contracts. Cancel only a declared queued subset before claims, assert no effects for cancelled jobs and exactly-once completion for the remainder, and exercise a separate running-owner cancellation that releases its lease after a bounded committed prefix. Keep runtime/peak-memory observations outside the structural digest and retain explicit limitations.
+- Consequence: P4-SCL-001 gains reproducible queued and running cancellation evidence without a new migration, repository primitive, API, CLI, UI, provider, or scale claim. Backpressure, soak, retry/backoff coupling, PostgreSQL parity, distributed capacity, and 10K/100K/1M/10M tiers remain open.
+- ADR: `docs/adr/0214-durable-job-cancellation-profile-is-structural-and-non-claim.md`.
+- Rollback: Remove the cancellation harness, tests, ADR, manifest entry, and execution evidence. No database, source system, hosted service, release, or production state is mutated.

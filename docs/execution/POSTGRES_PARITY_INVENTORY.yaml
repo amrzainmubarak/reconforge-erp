@@ -1,5 +1,5 @@
 schema_version: 1
-updated_at: "2026-08-01"
+updated_at: "2026-08-02"
 claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
@@ -32,6 +32,7 @@ current_slice_gate:
   limitations: [single_node, synthetic_data, metadata_retention_only, no_administration_ui, no_external_assurance]
 allowed_statuses: [live_verified_current, live_test_available, contract_only, absent, not_applicable]
 boundaries:
+  - {file: consolidation_close.py, service: ConsolidationCloseApplicationService, status: absent, risk: local_sqlite_only_no_postgres_adapter_or_parity_evidence}
   - {file: consolidation.py, service: ConsolidationApplicationService, status: not_applicable, reason: immutable_scoped_object_store_artifact_repository}
   - {file: grouped_matching.py, service: GroupedMatchingApplicationService, status: not_applicable, reason: pure_strategy}
   - {file: backup_restore.py, service: BackupRestoreApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_backup.PostgresNativeBackupAdapter, test: tests/test_postgres_backup.py, risk: recovery_critical}
@@ -67,9 +68,9 @@ boundaries:
   - {file: inventory_valuation_reversal.py, service: InventoryValuationReversalApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_valuation_reversal.PostgresInventoryValuationReversalRepository, test: tests/test_postgres_inventory_valuation_reversal.py, risk: financial_critical}
   - {file: inventory_planning.py, service: InventoryPlanningApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_planning.PostgresInventoryPlanningRepository, test: tests/test_postgres_inventory_planning.py, risk: financial_high}
 summary:
-  total: 34
+  total: 35
   live_verified_current: 6
   live_test_available: 25
   contract_only: 1
-  absent: 0
+  absent: 1
   not_applicable: 2

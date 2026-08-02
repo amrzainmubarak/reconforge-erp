@@ -19,6 +19,13 @@
 - **Rationale**: This provides stronger evidence for the high-volume workstream without widening a single-node result into HA or scale claims.
 - **Reversibility**: Inventory status and documentation only; no schema or runtime behavior change.
 
+### D-295: Promote Intercompany Only as a Control Workflow
+- **Date**: 2026-08-02
+- **Context**: The PostgreSQL intercompany adapter had an unskipped server-boundary contract but was not counted as current parity.
+- **Decision**: Promote only the exact import/match/exception/settlement workflow with RLS and SQLite parity; retain explicit exclusions for statutory consolidation and posting.
+- **Rationale**: It strengthens the close foundation without conflating an operational control case with legal-accounting treatment.
+- **Reversibility**: Inventory and documentation status only.
+
 ### D-292: Delegated Authority Requires an Explicit Evaluation Instant
 - **Date**: 2026-08-02
 - **Context**: Enterprise policy needs expiring delegation without hidden wall-clock behavior that makes decisions non-replayable.

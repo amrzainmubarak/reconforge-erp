@@ -30,6 +30,13 @@ tasks:
     status: completed
     depends_on: []
     exit_evidence: CI server-boundaries run 30764427298 passed the unskipped PostgreSQL durable-job application/worker contract under the non-privileged role; inventory promotion, limits, and ADR 0245 are recorded. Queue HA, failover, soak, and RPO/RTO remain open.
+  - id: E-295
+    priority: P0
+    area: financial-consolidation
+    title: PostgreSQL intercompany runtime gate
+    status: completed
+    depends_on: []
+    exit_evidence: CI server-boundaries run 30765662833 passed the unskipped PostgreSQL intercompany contract with Decimal import, matching, imbalance exception, settlement/outbox, RLS isolation, and SQLite parity; inventory and ADR 0246 record the bounded claim.
   - id: E-292
     priority: P0
     area: enterprise-policy
@@ -848,6 +855,7 @@ tasks:
       - E-281 adds `ownership-change-adjustment-v1`, a pure Decimal non-posting proposal for prior/new group ownership, NCI delta, signed consideration, and a balancing parent-equity line. It preserves source/policy/approval lineage, visible rounding delta, exact three-line balance, deterministic digests, a closed JSON Schema, and tamper verification. It does not decide statutory treatment, goodwill, purchase-price allocation, or post journals.
       - E-283 records a current CI runtime pass of the existing PostgreSQL close-management contract. The server-boundaries matrix exercised tenant-scoped period/task/dependency persistence under the non-privileged role, cycle refusal, readiness, lock/reopen transitions, locked-period mutation refusal, audit/outbox evidence parity, and cross-tenant isolation. The inventory remains `live_test_available` until this contract is promoted through a dedicated current-live gate; consolidation journals, eliminations/NCI/statements, restore, HA/DR, RPO/RTO, and full consolidation posting remain open.
       - E-289 promotes `CloseManagementApplicationService` to `live_verified_current` through a dedicated current PostgreSQL gate. The inventory records the PostgreSQL 16 CI image, non-privileged role, focused runtime test, and single-node/synthetic/no-restore/no-HA limits. This does not promote the absent `ConsolidationCloseApplicationService` or close journal posting, eliminations/NCI, statements, restore, HA/DR, or RPO/RTO.
+      - E-295 promotes the existing PostgreSQL intercompany control workflow through CI. Decimal import, tolerance matching, imbalance exception/evidence, settlement/outbox effects, tenant isolation, and SQLite semantic parity passed; statutory consolidation, elimination posting, ERP write-back, HA/DR, and RPO/RTO remain open.
 
   - id: P4-MAT-001
     priority: P4

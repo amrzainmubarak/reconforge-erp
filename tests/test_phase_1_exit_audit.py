@@ -37,7 +37,7 @@ def test_phase_one_backend_and_recovery_evidence_is_current_and_bounded() -> Non
     assert boundaries["summary"]["backend_neutral_application"] == len(boundaries["application_services"])
     assert boundaries["summary"]["direct_sqlite"] == 0
     assert boundaries["summary"]["partial_repository"] == 0
-    assert postgres["current_live_gate"]["covered_live_boundaries"] == 23
+    assert postgres["current_live_gate"]["covered_live_boundaries"] == 22
     assert postgres["current_live_gate"]["skipped_live_boundaries"] == 0
     cells = {cell["id"]: cell for cell in recovery["cells"]}
     assert cells["community-sqlite-v6-to-v24"]["status"] == "verified"

@@ -29,6 +29,15 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Final CI run `30765377133` passed both Python versions, server-boundaries,
   parity, and Docker; CodeQL `30765377149` and Security `30765377138` passed.
 
+## E-295 — PostgreSQL intercompany runtime gate
+
+- The existing live intercompany test passed in CI `30765662833` under the
+  non-privileged PostgreSQL role: exact Decimal import, tolerance matching,
+  imbalance exception/evidence, settlement/outbox effects, tenant RLS, and
+  SQLite parity.
+- This is an operational control workflow only; statutory consolidation,
+  elimination posting, ERP write-back, HA/DR, and RPO/RTO remain open.
+
 ## E-292 — Explicit expiring delegation in central policy
 
 - The central policy engine now evaluates temporary delegated authority using a

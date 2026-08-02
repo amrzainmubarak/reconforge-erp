@@ -41,6 +41,19 @@ This file records commands and observed results. It does not convert a dirty wor
   engine-parity, and docker-parity for `773cb63`; CodeQL `30765377149`,
   Security `30765377138`, and Docker `30765377132` also passed.
 
+## E-295: PostgreSQL intercompany runtime gate
+
+- CI `30765662833` ran the unskipped `tests/test_postgres_intercompany.py`
+  contract against PostgreSQL 16 Alpine with the non-privileged application
+  role. It passed Decimal import, tolerance match, imbalance exception and
+  evidence, settlement/outbox effects, tenant isolation, and SQLite parity.
+- Inventory promotes `IntercompanyApplicationService` to
+  `live_verified_current`. This does not claim statutory consolidation,
+  elimination posting, ERP/bank write-back, HA/DR, or production scale.
+- The current-live inventory arithmetic was reduced from 23 to 22 after this
+  additional boundary promotion; compatibility assertions were updated with
+  the same evidence-bound count.
+
 ## E-292: Expiring delegation policy invariant
 
 - Added optional delegation fields to `PolicyEvaluationContext` and forwarded

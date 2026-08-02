@@ -15,7 +15,7 @@ current_live_gate:
   application_and_migration_result: passed
   native_encrypted_backup_restore_tests: 1
   native_encrypted_backup_restore_result: passed
-  covered_live_boundaries: 23
+  covered_live_boundaries: 22
   skipped_live_boundaries: 0
   limitations: [single_node, synthetic_data, no_ha, no_host_loss, no_rpo_rto_claim]
 current_slice_gate:
@@ -76,6 +76,18 @@ durable_job_runtime_gate:
   covered_live_boundaries: [DurableJobApplicationService, DurableJobWorkerService]
   ci_run: "30764427298"
   limitations: [single_node, synthetic_data, no_queue_ha, no_failover, no_soak, no_rpo_rto_claim]
+intercompany_runtime_gate:
+  id: E-295
+  executed_at: "2026-08-02"
+  database: "PostgreSQL 16 Alpine CI service"
+  database_image_digest: "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+  application_role: reconforge_app_non_superuser
+  focused_tests: 1
+  focused_result: passed
+  skipped_focused_tests: 0
+  covered_live_boundaries: [IntercompanyApplicationService]
+  ci_run: "30765662833"
+  limitations: [single_node, synthetic_transactions, no_statutory_consolidation, no_erp_writeback, no_ha, no_rpo_rto_claim]
 allowed_statuses: [live_verified_current, live_test_available, contract_only, absent, not_applicable]
 boundaries:
   - {file: consolidation_close.py, service: ConsolidationCloseApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_close.PostgresConsolidationCloseRepository, test: tests/test_postgres_consolidation_close.py, risk: single_node_control_journal_only_no_erp_writeback_or_restore_ha_evidence}
@@ -98,7 +110,7 @@ boundaries:
   - {file: security_governance.py, service: SecurityGovernanceApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_security_governance.PostgresSecurityGovernanceRepository, test: tests/test_postgres_security_governance.py, risk: governance_high}
   - {file: audit_browsing.py, service: AuditBrowsingApplicationService, status: contract_only, adapter: reconforge.infrastructure.postgres_audit_browsing.PostgresAuditBrowsingRepository, test: tests/test_audit_browsing.py, risk: disclosure_high}
   - {file: controls.py, service: ControlTestingApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_controls.PostgresControlTestingRepository, test: tests/test_postgres_controls.py}
-  - {file: intercompany.py, service: IntercompanyApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_intercompany.PostgresIntercompanyRepository, test: tests/test_postgres_intercompany.py}
+  - {file: intercompany.py, service: IntercompanyApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_intercompany.PostgresIntercompanyRepository, test: tests/test_postgres_intercompany.py, risk: control_workflow_only_no_statutory_posting}
   - {file: journals.py, service: JournalControlApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_journals.PostgresJournalControlRepository, test: tests/test_postgres_journals.py}
   - {file: accounts.py, service: AccountReconciliationApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_accounts.PostgresAccountReconciliationRepository, test: tests/test_postgres_accounts.py, risk: financial_high}
   - {file: approvals.py, service: ApprovalApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_approvals.PostgresApprovalRepository, test: tests/test_postgres_approvals.py, risk: governance_high}
@@ -116,8 +128,8 @@ boundaries:
   - {file: inventory_planning.py, service: InventoryPlanningApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_planning.PostgresInventoryPlanningRepository, test: tests/test_postgres_inventory_planning.py, risk: financial_high}
 summary:
   total: 36
-  live_verified_current: 11
-  live_test_available: 22
+  live_verified_current: 12
+  live_test_available: 21
   contract_only: 1
   absent: 0
   not_applicable: 2

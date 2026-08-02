@@ -21,7 +21,13 @@ This file records commands and observed results. It does not convert a dirty wor
 - Boundary: no live PostgreSQL DSN was used in this slice. Migration execution,
   RLS isolation, rollback, restore, and runtime overlap behavior remain pending;
   no PostgreSQL parity or enterprise deployment claim is made.
-- Remote verification: pending after implementation and documentation commits.
+- Remote verification: GitHub Actions run `30754824673` passed on implementation
+  head `c80fcbd4d51ca41c21bac459f9e67b93cd0e987f`: Python 3.11 and 3.12 full
+  suites, four engine-parity jobs, live `server-boundaries`, and `docker-parity`.
+  The live boundary migrated to `0054_pg_consol_ownership`, reported that head,
+  and completed the existing Alembic downgrade/upgrade checks. This does not
+  promote the adapter from `contract_only`: dedicated live ownership CRUD,
+  tenant isolation, restore, and overlap-runtime evidence are still pending.
 
 ## E-278: Persisted effective-dated consolidation ownership
 

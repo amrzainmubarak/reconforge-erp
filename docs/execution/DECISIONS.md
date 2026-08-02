@@ -2040,3 +2040,12 @@
 - Consequence: Consolidation close can now source its effective ownership inputs from a durable, tenant/workspace-isolated local master with deterministic replay and backup/restore coverage. This does not add acquisition accounting, ownership-change postings, statutory statements, PostgreSQL parity, or external write-back.
 - ADR: `docs/adr/0233-persist-effective-dated-consolidation-ownership.md`.
 - Rollback: Revert migration 26, adapter/application files, backup table wiring, tests, and documentation. Existing migration-25 databases remain readable before applying migration 26.
+
+## D261 - Add PostgreSQL ownership parity at contract-only maturity
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Add Alembic 0054 and a tenant-scoped PostgreSQL adapter for the same typed ownership contract. Use NUMERIC percentages, forced RLS keyed by `app.tenant_id`, immutable triggers, transaction-scoped overlap checks, and a reversible migration. Mark the parity inventory `contract_only` until a disposable non-superuser live run is executed.
+- Consequence: Enterprise deployments now have a reviewed PostgreSQL schema/adapter path without falsely counting static tests as runtime parity. SQLite remains the locally executed persistence mode; live migration, RLS, isolation, rollback, and restore evidence remain explicit next gates.
+- ADR: `docs/adr/0234-postgres-consolidation-ownership-contract.md`.
+- Rollback: Downgrade Alembic 0054 and remove the adapter/schema/tests/docs; no customer data or external service is touched by the contract-only slice.

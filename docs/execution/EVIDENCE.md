@@ -2,6 +2,27 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-279: PostgreSQL consolidation ownership contract
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Scope: Alembic 0054, tenant-scoped PostgreSQL ownership schema/adapter, and
+  parity inventory classification. The adapter reuses the typed ownership
+  domain, sets `app.tenant_id` transaction-locally, locks the overlap query,
+  emits audit evidence, and refuses immutable row mutation through triggers.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_postgres_consolidation_ownership.py -q` | 0 | 4/4 contract tests passed: exact NUMERIC/RLS/immutability schema, linear migration/downgrade, application-port signature, and actor fail-closed behavior. |
+| `python -m pytest tests/test_repository_boundary_inventory.py tests/test_postgres_parity_inventory.py -q` | 0 | 6/6 inventory tests passed; ownership is classified `contract_only`, not live parity. |
+| `python -m ruff check ...` and `python -m mypy reconforge/infrastructure/postgres_consolidation_ownership.py` | 0 | Focused static gates passed. |
+
+- Report: `docs/execution/benchmarks/postgres-consolidation-ownership-v1.md`.
+- ADR: `docs/adr/0234-postgres-consolidation-ownership-contract.md`.
+- Boundary: no live PostgreSQL DSN was used in this slice. Migration execution,
+  RLS isolation, rollback, restore, and runtime overlap behavior remain pending;
+  no PostgreSQL parity or enterprise deployment claim is made.
+- Remote verification: pending after implementation and documentation commits.
+
 ## E-278: Persisted effective-dated consolidation ownership
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

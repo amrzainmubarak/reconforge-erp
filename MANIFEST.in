@@ -186,6 +186,11 @@ include reconforge/infrastructure/sqlite_consolidation_ownership.py
 include tests/test_sqlite_consolidation_ownership.py
 include docs/adr/0233-persist-effective-dated-consolidation-ownership.md
 include docs/execution/benchmarks/consolidation-ownership-master-v1.md
+include reconforge/infrastructure/postgres_consolidation_ownership.py
+include tests/test_postgres_consolidation_ownership.py
+include alembic/versions/0054_postgres_consolidation_ownership.py
+include docs/adr/0234-postgres-consolidation-ownership-contract.md
+include docs/execution/benchmarks/postgres-consolidation-ownership-v1.md
 include docs/adr/0213-durable-job-load-profile-is-structural-and-non-claim.md
 include reconforge/benchmark/durable_job_load.py
 include tests/test_durable_job_load_profile.py

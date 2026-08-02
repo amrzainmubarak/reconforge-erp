@@ -1935,6 +1935,17 @@ publication and remote GitHub verification before a release Go decision.
   retry/backoff coupling, soak, HA/DR, SLOs, and 100K/1M/10M tiers remain
   unverified.
 
+## E-279 — PostgreSQL ownership contract added
+
+- Alembic 0054 and `PostgresConsolidationOwnershipRepository` now provide a
+  tenant-scoped contract for the typed ownership master. The schema uses exact
+  NUMERIC percentages, forced RLS, transaction-local `app.tenant_id`, and
+  immutable update/delete triggers; the adapter performs locked overlap checks
+  and emits audit evidence.
+- Four contract tests and six inventory tests pass. The parity inventory marks
+  this boundary `contract_only`; no live PostgreSQL DSN was used, so migration,
+  RLS isolation, rollback, restore, and runtime evidence remain open.
+
 ## E-278 — Persisted effective-dated consolidation ownership
 
 - Migration 26 (`consolidation_ownership_masters`) adds an immutable local

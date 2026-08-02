@@ -39,6 +39,7 @@ application_services:
     service: ConsolidationOwnershipApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.sqlite_consolidation_ownership.SQLiteConsolidationOwnershipRepository
+    postgres_adapter: reconforge.infrastructure.postgres_consolidation_ownership.PostgresConsolidationOwnershipRepository
   - file: grouped_matching.py
     service: GroupedMatchingApplicationService
     status: backend_neutral

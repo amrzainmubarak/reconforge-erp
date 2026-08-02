@@ -268,7 +268,7 @@ modules:
         status: bounded
         attack_surface: Money construction, currency precision, balanced-entry validation, trial-balance aggregation, explicit rate-bucket selection, translation/rounding, effective ownership graphs, exact NCI allocation, balanced elimination proposals, persisted minor-unit journals/effects, bounded worksheet replay, and JSON/CSV boundaries.
         controls: [SEC-C-002, SEC-C-005]
-        test_evidence: [tests/test_money_currency.py, tests/test_finance_core.py, tests/test_consolidation_translation.py, tests/test_consolidation_lifecycle.py, tests/test_sqlite_consolidation_close.py, tests/test_postgres_ledger.py, tests/test_business_record_ingress.py]
+        test_evidence: [tests/test_money_currency.py, tests/test_finance_core.py, tests/test_consolidation_translation.py, tests/test_consolidation_lifecycle.py, tests/test_consolidation_ownership_changes.py, tests/test_sqlite_consolidation_close.py, tests/test_postgres_ledger.py, tests/test_business_record_ingress.py]
         residual_risk_ids: [R-004]
         limitations:
           - Remaining explicit legacy financial readers outside this module retain a versioned compatibility boundary.
@@ -276,7 +276,7 @@ modules:
         status: partial
         attack_surface: Finance manage/read/validate permissions, worksheet and ownership actor separation, consolidation prepare/approve/post/reversal/lock/reopen separation, actor identity, and API routing.
         controls: [SEC-C-003, SEC-C-005]
-        test_evidence: [tests/test_finance_core.py, tests/test_consolidation_lifecycle.py, tests/test_sqlite_consolidation_close.py, tests/test_policy_engine.py]
+        test_evidence: [tests/test_finance_core.py, tests/test_consolidation_lifecycle.py, tests/test_consolidation_ownership_changes.py, tests/test_sqlite_consolidation_close.py, tests/test_policy_engine.py]
         residual_risk_ids: [R-011]
         limitations:
           - Trusted-local compatibility is not an enterprise identity or complete amount/period ABAC policy.
@@ -296,7 +296,7 @@ modules:
         residual_risk_ids: [R-014]
         limitations:
           - Artifact scope and checksum verification do not prove disclosure approval, WORM retention, production key custody, or recipient authorization.
-    module_test_evidence: [tests/test_consolidation_lifecycle.py, tests/test_consolidation_translation.py, tests/test_finance_core.py, tests/test_sqlite_consolidation_close.py]
+    module_test_evidence: [tests/test_consolidation_lifecycle.py, tests/test_consolidation_translation.py, tests/test_consolidation_ownership_changes.py, tests/test_finance_core.py, tests/test_sqlite_consolidation_close.py]
     assumptions:
       - Currency registry selection and source master data are reviewed before financial control use.
       - Operators approve source trial balances, group mappings, rate buckets, rate sources, and the CTA account before using a translation result.

@@ -1932,3 +1932,12 @@
 - Consequence: Connector SDK has one executable reference integration without claiming a live ERP/bank relationship. Provider credentials, acknowledgement reconciliation, compensation, and write-back remain separate gates.
 - ADR: `docs/adr/0221-reference-rest-connector-is-read-only-and-schema-closed.md`.
 - Rollback: Remove the connector, tests, docs, ADR, and manifest entries. No external or database state is changed.
+
+## D249 - Write-back is an approved, acknowledged, and compensatable intent
+
+- Date: 2026-08-02
+- Status: accepted
+- Decision: Add a closed provider-neutral write-back lifecycle. Keep the feature flag disabled by default; require an allowlisted connector/operation and a distinct human actor with step-up/MFA assurance; dispatch only from the approved state; bind acknowledgement to the original idempotency key and response digest; and require a separate explicit compensation transition.
+- Consequence: Future adapters receive a stable governance/idempotency boundary without exposing payloads, secrets, destinations, or pretending that a live ERP/bank mutation exists. The connector manifest remains read-only until a provider-specific write capability is separately reviewed.
+- ADR: `docs/adr/0222-governed-writeback-is-approved-and-acknowledged.md`.
+- Rollback: Remove `reconforge/connectors/writeback.py`, exports, tests, docs, ADR, and package entries. No database or external state is changed.

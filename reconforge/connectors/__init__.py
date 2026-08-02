@@ -24,6 +24,19 @@ from reconforge.connectors.rest_reference import (
     ReferenceRestRecord,
     reference_rest_registration,
 )
+from reconforge.connectors.writeback import (
+    WritebackAcknowledgement,
+    WritebackApproval,
+    WritebackError,
+    WritebackIntent,
+    WritebackPolicy,
+    WritebackStatus,
+    acknowledge_writeback,
+    approve_writeback,
+    complete_compensation,
+    dispatch_writeback,
+    request_compensation,
+)
 
 __all__ = [
     "AuthenticationMethod",
@@ -37,6 +50,17 @@ __all__ = [
     "ReferenceRestRead",
     "ReferenceRestRecord",
     "reference_rest_registration",
+    "WritebackAcknowledgement",
+    "WritebackApproval",
+    "WritebackError",
+    "WritebackIntent",
+    "WritebackPolicy",
+    "WritebackStatus",
+    "acknowledge_writeback",
+    "approve_writeback",
+    "complete_compensation",
+    "dispatch_writeback",
+    "request_compensation",
     "DataClassification",
     "PublisherKeyStatus",
     "RetryPolicy",

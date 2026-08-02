@@ -1,0 +1,157 @@
+"""Governed write-back lifecycle contracts; no provider or secret is used."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+
+import pytest
+from pydantic import ValidationError
+
+from reconforge.connectors.writeback import (
+    WritebackAcknowledgement,
+    WritebackError,
+    WritebackIntent,
+    WritebackPolicy,
+    WritebackStatus,
+    acknowledge_writeback,
+    approve_writeback,
+    complete_compensation,
+    dispatch_writeback,
+    request_compensation,
+)
+
+NOW = datetime(2026, 8, 2, 10, 0, tzinfo=UTC)
+POLICY = WritebackPolicy(
+    connector_id="reference-rest-readonly",
+    allowed_operations=frozenset({"payment.create"}),
+    feature_enabled=True,
+)
+
+
+def _intent(**updates: object) -> WritebackIntent:
+    values: dict[str, object] = {
+        "schema_version": "connector-writeback-intent-v1",
+        "intent_id": "intent-001",
+        "tenant_id": "tenant-a",
+        "workspace_id": "workspace-a",
+        "connector_id": "reference-rest-readonly",
+        "operation": "payment.create",
+        "payload_digest": "a" * 64,
+        "idempotency_key": "writeback-001",
+        "requested_by": "maker-1",
+        "requested_at": NOW,
+        "feature_enabled": True,
+    }
+    values.update(updates)
+    return WritebackIntent.model_validate(values)
+
+
+def test_writeback_is_disabled_by_default_and_policy_is_fail_closed() -> None:
+    intent = _intent(feature_enabled=False)
+    with pytest.raises(WritebackError, match="feature_disabled"):
+        POLICY.authorize(intent)
+    with pytest.raises(WritebackError, match="feature_disabled"):
+        dispatch_writeback(intent, policy=POLICY)
+
+
+def test_self_approval_and_unsupported_operation_are_denied() -> None:
+    with pytest.raises(WritebackError, match="self_approval"):
+        approve_writeback(
+            _intent(),
+            policy=POLICY,
+            actor_id="maker-1",
+            approved_at=NOW,
+            assurance="mfa",
+            reason="not allowed",
+        )
+    unsupported = _intent(operation="journal.post")
+    with pytest.raises(WritebackError, match="operation_not_allowed"):
+        approve_writeback(
+            unsupported,
+            policy=POLICY,
+            actor_id="checker-1",
+            approved_at=NOW,
+            assurance="step_up",
+            reason="reviewed",
+        )
+
+
+def test_approved_dispatch_acknowledgement_and_compensation_are_bound() -> None:
+    approved = approve_writeback(
+        _intent(),
+        policy=POLICY,
+        actor_id="checker-1",
+        approved_at=NOW,
+        assurance="mfa",
+        reason="two-person review",
+    )
+    assert approved.status is WritebackStatus.APPROVED
+    dispatched = dispatch_writeback(approved, policy=POLICY)
+    assert dispatched.status is WritebackStatus.DISPATCHED
+    acknowledged = acknowledge_writeback(
+        dispatched,
+        provider_reference="provider-123",
+        response_digest="b" * 64,
+        acknowledged_at=NOW,
+        accepted=True,
+    )
+    assert acknowledged.acknowledgement is not None
+    compensation = request_compensation(acknowledged, reason="provider reversal required")
+    completed = complete_compensation(
+        compensation,
+        acknowledgement=WritebackAcknowledgement(
+            provider_reference="provider-reversal-123",
+            acknowledged_at=NOW,
+            response_digest="c" * 64,
+            idempotency_key="writeback-001:compensation",
+            accepted=True,
+        ),
+    )
+    assert completed.status is WritebackStatus.COMPENSATED
+
+
+def test_dispatch_and_acknowledgement_cannot_be_replayed_or_misbound() -> None:
+    approved = approve_writeback(
+        _intent(),
+        policy=POLICY,
+        actor_id="checker-1",
+        approved_at=NOW,
+        assurance="step_up",
+        reason="reviewed",
+    )
+    dispatched = dispatch_writeback(approved, policy=POLICY)
+    with pytest.raises(WritebackError, match="dispatch_requires_approval"):
+        dispatch_writeback(dispatched, policy=POLICY)
+    with pytest.raises(WritebackError, match="idempotency"):
+        complete_compensation(
+            request_compensation(dispatched, reason="rollback"),
+            acknowledgement=WritebackAcknowledgement(
+                provider_reference="provider-reversal-123",
+                acknowledged_at=NOW,
+                response_digest="c" * 64,
+                idempotency_key="other-key",
+                accepted=True,
+            ),
+        )
+
+
+def test_acknowledgement_requires_dispatched_state_and_exact_schema() -> None:
+    with pytest.raises(WritebackError, match="acknowledgement_state"):
+        acknowledge_writeback(
+            _intent(),
+            provider_reference="provider-123",
+            response_digest="b" * 64,
+            acknowledged_at=NOW,
+            accepted=True,
+        )
+    with pytest.raises(ValidationError):
+        _intent(payload_digest="not-a-digest")
+    with pytest.raises(ValidationError):
+        WritebackIntent.model_validate({**_intent().model_dump(mode="json"), "secret": "must-be-rejected"})
+
+
+def test_digest_is_deterministic_and_payload_is_not_part_of_contract() -> None:
+    first = _intent()
+    second = _intent()
+    assert first.digest == second.digest
+    assert "payload" not in first.model_dump()

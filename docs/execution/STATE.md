@@ -73,6 +73,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 ## P4-CON-001 in progress: governed live connector foundation
 
 - E-266 adds the synthetic provider-neutral `reference-rest-readonly` connector. It validates a closed JSON record page with exact Decimal text, unique identities, bounded cursor, canonical response digest, and the existing SSRF/TLS/secret/rate/retry/idempotency boundary. No real provider, credential, customer data, or write-back is included.
+- E-267 adds the fail-closed provider-neutral write-back intent lifecycle. It requires an explicit feature flag, connector/operation allowlist, distinct human step-up/MFA approval, one-way dispatch, acknowledgement binding, and separate compensation idempotency. It performs no network I/O and does not claim a live provider or write capability.
 - P4-CON-001 remains open for named ERP/bank/SFTP/database/object-store providers, provider sandboxes, acknowledgement reconciliation, approval-gated write-back, compensation, signed executable packages, and production deployment evidence.
 
 ## P4-FIN-002 in progress: governed consolidation close lifecycle

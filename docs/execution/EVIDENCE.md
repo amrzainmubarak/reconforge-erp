@@ -2,6 +2,26 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-267: Governed write-back intent lifecycle
+
+- Date/timezone: 2026-08-02, Africa/Cairo.
+- Scope: provider-neutral write-back governance only. A closed intent model keeps raw payloads and credentials outside the contract; an explicit feature flag and operation allowlist are required; approval requires a distinct human actor with step-up/MFA assurance; dispatch is one-way; acknowledgement binds the original idempotency key and response digest; compensation uses a separate idempotency suffix. No network I/O, database migration, provider credential, customer data, or manifest write capability was introduced.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `python -m pytest tests/test_connector_writeback.py -q` | 0 | 6/6 passed: default-disabled policy, self-approval/operation denial, approved dispatch, acknowledgement, compensation, replay/misbinding rejection, closed schema, deterministic digest, and payload non-disclosure. |
+| `python -m ruff check reconforge/connectors/writeback.py reconforge/connectors/__init__.py tests/test_connector_writeback.py` | 0 | Focused lint passed. |
+| `python -m mypy reconforge/connectors/writeback.py` | 0 | No issues found in the new lifecycle module. |
+| `python -m bandit -q -r reconforge/connectors/writeback.py` | 0 | No findings. |
+| `python -m pytest tests/test_connector_writeback.py tests/test_connector_rest_reference.py tests/test_connector_network.py tests/test_connector_sdk.py tests/test_phase4_execution_contract.py -q` | 0 | 33 focused connector/phase-contract tests passed. |
+| `python -m ruff check .` / `python -m mypy reconforge` / `python -m bandit -q -r reconforge` / `python -m pip_audit` / `uv lock --check` / `git diff --check` | 0 | Full static, type, security, dependency, lock, and whitespace gates passed; 388 typed source files; no known third-party vulnerabilities; existing narrowly-scoped Bandit nosec/parser warnings only. |
+| `python -m build --no-isolation` | 0 | sdist and wheel built successfully; write-back module, tests, docs, and ADR are present in the distribution. |
+| `python -m pytest -q` | 0 | Full repository suite passed with zero failures/errors; existing environment-declared skips remain. |
+
+- ADR: `docs/adr/0222-governed-writeback-is-approved-and-acknowledged.md`.
+- Operator documentation: `docs/connectors/governed-writeback.md`.
+- Boundary: this is a governance contract, not a live ERP/bank integration, payment posting, provider acknowledgement, compensation execution, signed executable package, or production deployment claim. P4-CON-001 remains in progress.
+
 ## E-260: Bounded grouped and netting matching slice
 
 - Date/timezone: 2026-08-02, Africa/Cairo.

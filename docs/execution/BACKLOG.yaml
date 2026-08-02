@@ -897,7 +897,7 @@ tasks:
     area: enterprise_policy
     goal_workstream: enterprise_identity_and_policy
     title: Complex enterprise authorization and policy administration
-    status: in_progress
+    status: planned
     depends_on: [P1-PLAT-008, P3-ENT-001, P3-ENT-002, P3-ENT-003, P3-ENT-006]
     exit_evidence: Central versioned RBAC/ABAC covers entity, period, amount, region, data class, delegation, emergency authority, service identity, field restrictions, policy approval, cache invalidation, conflict analysis, tenant isolation, and no self-approval across API/jobs/exports/UI.
     completed_slices:

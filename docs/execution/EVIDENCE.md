@@ -12,6 +12,10 @@ This file records commands and observed results. It does not convert a dirty wor
   passed.
 - Boundary: pure evaluation only; no delegation registry, provider federation,
   emergency workflow replacement, or database/API/UI claim.
+- The first CI run after this slice correctly rejected an over-eager backlog
+  status change: the full P4-IAM workstream must remain `planned` until its
+  entire exit evidence exists. The status was restored and the E-292 slice
+  remains recorded as partial progress only.
 
 ## E-291: Current-live PostgreSQL consolidation-close gate
 

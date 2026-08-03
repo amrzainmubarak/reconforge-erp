@@ -188,6 +188,8 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   `network_dispatch: disabled` response. The underlying live PostgreSQL
   persistence gate remains the runtime evidence for RLS, replay, lifecycle, and
   append-only controls.
+- Hosted head `ea0e581` is green in CI `30839751728`, Security `30839744852`,
+  Docker `30839746700`, and CodeQL `30839744249`.
 - Boundary: this is API/backend selection and scope-binding evidence only. No
   provider I/O, secret-vault integration, compensation delivery, HA/DR, or
   production write-back is claimed.

@@ -176,7 +176,7 @@ tasks:
     title: PostgreSQL server-profile write-back intent API boundary
     status: completed
     depends_on: [E-343]
-    exit_evidence: "The proposal, maker-checker approval, and acknowledgement routes select the PostgreSQL intent repository in server mode, bind tenant/workspace headers to the persisted intent scope and authenticated actor, retain explicit network-dispatch disablement, and preserve SQLite local mode; route contract tests and the existing live PostgreSQL repository gate pass under ADR 0295. This is API/backend selection evidence, not live provider I/O, secret-vault interoperability, compensation delivery, HA/DR, or production write-back."
+    exit_evidence: "The proposal, maker-checker approval, and acknowledgement routes select the PostgreSQL intent repository in server mode, bind tenant/workspace headers to the persisted intent scope and authenticated actor, retain explicit network-dispatch disablement, and preserve SQLite local mode; route contract tests and the existing live PostgreSQL repository gate pass under ADR 0295. Hosted head ea0e581 is green in CI 30839751728, Security 30839744852, Docker 30839746700, and CodeQL 30839744249. This is API/backend selection evidence, not live provider I/O, secret-vault interoperability, compensation delivery, HA/DR, or production write-back."
   - id: E-292
     priority: P0
     area: enterprise-policy

@@ -12371,6 +12371,10 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   authenticated execution scope before repository access. The existing CI
   `30837085198` live PostgreSQL repository gate supplies the underlying RLS,
   replay, lifecycle, and append-only runtime evidence.
+- Hosted verification for commit `ea0e581` is green: CI `30839751728`
+  (server-boundaries, Python 3.11/3.12, four engine-parity cells, and
+  docker-parity), Security `30839744852`, Docker `30839746700`, and CodeQL
+  `30839744249` all completed successfully.
 - Boundary: this closes API/backend selection only. It does not prove a live
   ERP/bank provider, secret-vault interoperability, network dispatch,
   compensation delivery, HA/DR, throughput, or production write-back.

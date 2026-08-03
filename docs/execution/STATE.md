@@ -613,6 +613,10 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   PostgreSQL/object-storage/Redis and privilege-dependent cases remained
   skipped. Ruff, Mypy, Bandit, dependency audit, package build, and diff-check
   passed.
+- Remote evidence: commit `686880b6` passed CI run `30796453610` (Python 3.11
+  and 3.12, four engine-parity cells, server-boundaries, and Docker parity),
+  Security run `30796453664`, Docker run `30796453577`, and CodeQL run
+  `30796453692`. No release, tag, merge, or deployment occurred.
 - ADR: `docs/adr/0278-acquisition-purchase-price-allocation-boundary.md`.
 
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio

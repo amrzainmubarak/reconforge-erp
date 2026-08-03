@@ -11994,4 +11994,9 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   acquisition treatment, tax/deferred tax, impairment, equity method,
   PostgreSQL persistence/parity, source write-back, or independent valuation
   assurance.
+- Remote evidence: commit `686880b6` passed CI run `30796453610`, including
+  Python 3.11/3.12, all four engine-parity jobs, server-boundaries, and Docker
+  parity; Security `30796453664`, Docker `30796453577`, and CodeQL `30796453692`
+  also passed. The PR remains draft; no merge, tag, release, or deployment was
+  performed.
 - ADR: `docs/adr/0278-acquisition-purchase-price-allocation-boundary.md`.

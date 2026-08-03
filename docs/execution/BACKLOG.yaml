@@ -169,7 +169,7 @@ tasks:
     title: PostgreSQL governed write-back intent persistence
     status: completed
     depends_on: [E-309]
-    exit_evidence: "Add migration 0061 and a forced-RLS PostgreSQL append-only write-back intent repository with idempotent replay, optimistic lifecycle versions, workspace isolation, and tamper refusal; the live non-superuser server-boundary contract passes under ADR 0294. This proves durable intent evidence only, not a live ERP/bank provider, network dispatch, credentials, compensation execution, HA/DR, or production write-back."
+    exit_evidence: "Add migration 0061 and a forced-RLS PostgreSQL append-only write-back intent repository with idempotent replay, optimistic lifecycle versions, workspace isolation, advisory-lock serialization without UPDATE grants, and tamper refusal; CI server-boundaries run 30837085198 passes the live non-superuser contract under ADR 0294, alongside Python 3.11/3.12, four engine-parity cells, and docker-parity. This proves durable intent evidence only, not a live ERP/bank provider, network dispatch, credentials, compensation execution, HA/DR, or production write-back."
   - id: E-292
     priority: P0
     area: enterprise-policy

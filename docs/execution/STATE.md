@@ -171,10 +171,10 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   optimistic concurrency, same-intent writers use a PostgreSQL transaction
   advisory lock without UPDATE privilege, reads revalidate the persisted
   digest, and sibling tenants are excluded.
-- Local schema/contract checks pass; the live PostgreSQL test is wired into the
-  server-boundaries workflow and will be the authoritative runtime gate. This
-  remains intent persistence only: no provider payload, credential, network
-  dispatch, compensation execution, HA/DR, or production write-back claim.
+- Local schema/contract checks pass; CI run `30837085198` passed the live
+  PostgreSQL server-boundary test under a non-superuser role. This remains
+  intent persistence only: no provider payload, credential, network dispatch,
+  compensation execution, HA/DR, or production write-back claim.
 - ADR: `docs/adr/0294-postgres-writeback-intent-runtime-evidence.md`.
 
 ## E-293 — Immutable local delegation administration

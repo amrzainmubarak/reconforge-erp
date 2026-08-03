@@ -12347,8 +12347,10 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   Alembic head migration. Its live non-superuser contract proves proposed ->
   approved -> dispatched -> acknowledged persistence, idempotent replay,
   sibling-tenant exclusion, optimistic conflict refusal, and append-only
-  tamper refusal. The authoritative CI run will be recorded after the new head
-  completes.
+  tamper refusal. CI run `30837085198` passed server-boundaries, Python 3.11
+  and 3.12, all four engine-parity cells, and docker-parity. Security
+  `30837086059`, Docker `30837086296`, and CodeQL `30837085543` also passed on
+  the same head.
 - Boundary: this is durable intent evidence, not a live ERP/bank connector,
   provider credential integration, network write-back, compensation delivery,
   HA/DR, throughput, or production readiness claim.

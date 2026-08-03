@@ -72,6 +72,7 @@ def test_consolidation_close_api_is_scoped_replay_checked_and_read_only(tmp_path
     assert detail.json()["run"]["journal_lines"]
     assert detail.json()["run"]["translation_evidence"]["result_digest"] == run["translation_result_digest"]
     assert detail.json()["run"]["translation_evidence"]["line_count"] == 4
+    assert detail.json()["run"]["management_statement"]["total_balance"]["amount"] == "0.00"
     assert detail.json()["run"]["effects"] == []
     assert detail.json()["source"]["kind"] == "sqlite-consolidation-close"
 

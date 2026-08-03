@@ -16,6 +16,7 @@ from reconforge.domain.consolidation_lifecycle import (
     ConsolidationWorksheetResult,
     verify_consolidation_worksheet_payload,
 )
+from reconforge.domain.consolidation_statement import build_management_statement_package
 from reconforge.domain.models import utc_now_text
 from reconforge.infrastructure.sqlite_approvals import SQLiteApprovalRepository
 from reconforge.io.persisted import (
@@ -1041,6 +1042,7 @@ class SQLiteConsolidationCloseRepository:
                 raise PlatformError("Persisted consolidation effect attribution is inconsistent.")
         record["worksheet"] = worksheet.to_dict()
         record["translation_evidence"] = build_translation_evidence(worksheet.request.translation_result).to_dict()
+        record["management_statement"] = build_management_statement_package(worksheet).to_dict()
         record["journal_lines"] = [dict(item) for item in rows]
         record["effects"] = effects
         return record
@@ -1127,7 +1129,7 @@ class SQLiteConsolidationCloseRepository:
     def _public_run(row: Mapping[str, Any], *, include_details: bool) -> dict[str, Any]:
         hidden = {"worksheet_payload"}
         if not include_details:
-            hidden |= {"worksheet", "journal_lines", "effects"}
+            hidden |= {"worksheet", "journal_lines", "effects", "management_statement"}
         return {key: value for key, value in row.items() if key not in hidden}
 
 

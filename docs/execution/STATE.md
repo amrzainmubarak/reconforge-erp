@@ -515,6 +515,22 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   HA/DR, or production retry-tuning claim.
 - ADR: `docs/adr/0273-postgres-durable-job-retry-runtime-gate.md`.
 
+### E-323 complete: replayable management statement package
+
+- `ManagementStatementPackage` groups the verified worksheet's exact reporting
+  currency lines by account type, calculates section totals with Decimal/Money,
+  enforces a zero package balance, and binds the result to the worksheet digest
+  and canonical artifact digest. SQLite and PostgreSQL close reads expose the
+  same additive `management_statement` drill-down projection.
+- Local command: `python -m pytest tests/test_consolidation_statement.py
+  tests/test_sqlite_consolidation_close.py tests/test_api_consolidation_close.py
+  tests/test_postgres_consolidation_close.py -q -ra` -> 24 passed, 1 live
+  PostgreSQL skip. Full Ruff, Mypy, and diff-check pass.
+- Boundary: management statement evidence only; no statutory statements,
+  acquisition/goodwill/equity-method accounting, cash-flow semantics, live
+  rates, ERP/bank posting, or external assurance claim.
+- ADR: `docs/adr/0274-management-statement-package.md`.
+
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio
 
 ### E-260 complete: bounded grouped and netting matcher

@@ -2466,3 +2466,17 @@
 - **Boundary**: synthetic two-partition runtime only; capacity, soak,
   distributed supervision, HA/DR, and production retry policy remain open.
 - **ADR**: `docs/adr/0273-postgres-durable-job-retry-runtime-gate.md`.
+
+## D270 - Add a statement-shaped management evidence artifact
+
+- **Decision**: derive a sectioned `ManagementStatementPackage` from the
+  replay-verified worksheet, grouped by account type and bound to exact section
+  totals, zero balance, worksheet digest, and artifact digest. Expose it through
+  both close adapters without a schema migration.
+- **Rationale**: Reviewers need a stable statement-shaped drill-down while the
+  project does not yet have enough policy to claim statutory presentation. The
+  package reuses the verified trial-balance lines and cannot drift into a second
+  financial calculation path.
+- **Boundary**: management-only evidence; statutory classification, acquisition
+  accounting, cash-flow semantics, live rates, and source posting remain open.
+- **ADR**: `docs/adr/0274-management-statement-package.md`.

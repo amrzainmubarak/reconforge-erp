@@ -20,6 +20,7 @@ from reconforge.domain.consolidation_lifecycle import (
     ConsolidationWorksheetResult,
     verify_consolidation_worksheet_payload,
 )
+from reconforge.domain.consolidation_statement import build_management_statement_package
 from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
 from reconforge.infrastructure.postgres_approvals import PostgresApprovalRepository
 from reconforge.platform.common import PlatformError, normalize_text, platform_id
@@ -799,6 +800,7 @@ class PostgresConsolidationCloseRepository:
         record["worksheet"] = verified.to_dict()
         record["worksheet_object"] = verified
         record["translation_evidence"] = build_translation_evidence(verified.request.translation_result).to_dict()
+        record["management_statement"] = build_management_statement_package(verified).to_dict()
         record["journal_lines"] = actual_lines or expected_lines
         record["effects"] = effects
         return record

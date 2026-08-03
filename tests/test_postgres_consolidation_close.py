@@ -111,6 +111,20 @@ def test_translation_evidence_projection_is_backend_neutral() -> None:
     assert len(str(evidence["lineage_digest"])) == 64
 
 
+def test_management_statement_projection_is_backend_neutral() -> None:
+    from reconforge.domain.consolidation_statement import build_management_statement_package
+    from tests.test_sqlite_consolidation_close import _worksheet
+
+    worksheet = _worksheet()
+    statement = build_management_statement_package(worksheet).to_dict()
+
+    assert statement["worksheet_result_digest"] == worksheet.result_digest
+    assert statement["total_balance"]["amount"] == "0.00"
+    assert [section["account_type"] for section in statement["sections"]] == sorted(
+        section["account_type"] for section in statement["sections"]
+    )
+
+
 @pytest.mark.skipif(
     not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"),
     reason="requires a live PostgreSQL application role",

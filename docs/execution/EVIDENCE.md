@@ -11888,3 +11888,20 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   distributed queue supervision, automatic failover, HA/DR, and production
   retry tuning remain unverified.
 - ADR: `docs/adr/0273-postgres-durable-job-retry-runtime-gate.md`.
+
+## E-323: Replayable management statement package
+
+- `ManagementStatementPackage` groups verified worksheet lines by account type,
+  stores exact reporting-currency section totals, requires a zero package
+  balance, and binds the projection to `worksheet_result_digest` plus a
+  canonical artifact digest. SQLite and PostgreSQL replay-verified run reads
+  expose the same additive `management_statement` field; API and tamper tests
+  cover the drill-down.
+- Local command: `python -m pytest tests/test_consolidation_statement.py
+  tests/test_sqlite_consolidation_close.py tests/test_api_consolidation_close.py
+  tests/test_postgres_consolidation_close.py -q -ra` -> 24 passed, 1 live
+  PostgreSQL skip. Ruff, Mypy, and diff-check pass.
+- Boundary: management statement evidence only. No statutory presentation,
+  acquisition/goodwill/equity-method treatment, cash-flow semantics, live-rate
+  feed, ERP/bank posting, or external assurance claim is made.
+- ADR: `docs/adr/0274-management-statement-package.md`.

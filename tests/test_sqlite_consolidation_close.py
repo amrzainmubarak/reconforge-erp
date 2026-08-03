@@ -230,6 +230,10 @@ def test_replay_verified_run_exposes_explicit_translation_lineage_evidence(tmp_p
     assert evidence["rate_ids"] == ["IDENTITY-USD"]
     assert len(str(evidence["lineage_digest"])) == 64
     assert evidence["post_adjustment_balance"]["amount"] == "0.00"
+    statement = detail["management_statement"]
+    assert statement["total_balance"]["amount"] == "0.00"
+    assert statement["worksheet_result_digest"] == run["worksheet_result_digest"]
+    assert statement["sections"]
 
 
 def test_migration_25_is_additive_and_adapter_rejects_a_pre_migration_database(tmp_path: Path) -> None:

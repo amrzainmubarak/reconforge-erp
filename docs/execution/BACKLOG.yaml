@@ -156,6 +156,13 @@ tasks:
     status: completed
     depends_on: [E-294]
     exit_evidence: "Additive bounded submission enforces a queued/retrying cap atomically per tenant/workspace/entity lane, preserves idempotent replay at capacity, rejects new work without mutation, and passes SQLite plus live PostgreSQL server-boundary tests in CI run 30828746821 under ADR 0292; this does not prove throughput, distributed fairness, soak, HA/DR, or production capacity."
+  - id: E-342
+    priority: P4
+    area: scale
+    title: Deterministic fair durable-job lane scheduling
+    status: completed
+    depends_on: [E-341]
+    exit_evidence: "Add an exact-lane round-robin scheduler that scopes every claim to tenant/workspace/entity, alternates non-empty lanes deterministically, preserves lease fencing, and passes SQLite plus live PostgreSQL server-boundary tests under ADR 0293; this is process-scoped fairness evidence, not distributed fairness, throughput, soak, HA/DR, or production-capacity evidence."
   - id: E-292
     priority: P0
     area: enterprise-policy
@@ -1063,6 +1070,7 @@ tasks:
       - E-322 extends the live PostgreSQL durable-job contract with a transient-failure injection after one committed partition. The job enters `retrying`, releases its lease, a recovery worker resumes from the checkpoint, and the remaining partition completes exactly once with ordered transition evidence. This is a small synthetic retry proof, not PostgreSQL capacity, soak, distributed supervision, HA/DR, or production retry-tuning evidence under ADR 0273.
       - E-338 extends the same live contract with four one-tenant jobs, three partitions per job, and two independent worker connections contending on `FOR UPDATE SKIP LOCKED`. All jobs complete with exactly three unique partition effects and the worker completion total equals the declared workload. This is a bounded claim-contention proof, not PostgreSQL throughput, fairness SLO, soak, distributed supervision, queue HA, or production-readiness evidence.
       - E-341 adds an additive atomic bounded-submit contract. SQLite uses `BEGIN IMMEDIATE`; PostgreSQL uses a lane-derived transaction advisory lock under forced RLS. `queued` and `retrying` work count toward the `(tenant_id, workspace_id, entity_id)` cap, identical idempotent replay succeeds while full, and rejected new work leaves no row or transition. CI run `30828746821` passes the live PostgreSQL server-boundary assertions; Security `30828746100`, Docker `30828746066`, and CodeQL `30828746780` also pass. Throughput, global fairness, distributed quota, soak, HA/DR, and production capacity remain unverified.
+      - E-342 adds `DurableJobLane` and a process-scoped `RoundRobinDurableJobScheduler`. Worker claims accept optional exact workspace/entity filters; SQLite and PostgreSQL apply those filters under their existing transaction/RLS boundaries. A focused SQLite contract and the live PostgreSQL server-boundary contract alternate two non-empty lanes with no cross-lane claim. This proves deterministic scheduler fairness for one scheduler loop only; distributed fairness, throughput, soak, HA/DR, and capacity remain unverified.
 
   - id: P4-REL-001
     priority: P4

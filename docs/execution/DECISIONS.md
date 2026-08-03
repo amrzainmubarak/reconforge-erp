@@ -2721,3 +2721,21 @@
   impairment, provider integration, write-back, restore, HA/DR, or universal
   policy enforcement is introduced.
 - **ADR**: `docs/adr/0284-postgres-ppa-api-is-server-profile-and-non-posting.md`.
+-
+## D246 - Durable-job fairness is exact-lane and process-scoped
+
+- Date: 2026-08-03
+- Status: accepted
+- Decision: Add `DurableJobLane` and `RoundRobinDurableJobScheduler` as an
+  application-level primitive. Every claim may be filtered by the complete
+  tenant/workspace/entity lane, and the scheduler rotates a local cursor after
+  each selected lane. SQLite and PostgreSQL keep their existing transactional,
+  RLS, `SKIP LOCKED`, and lease-fencing boundaries.
+- Consequence: P4-SCL-001 gains deterministic no-cross-lane fairness evidence
+  for one scheduler loop. The cursor is not shared or durable; distributed
+  fairness, throughput, soak, HA/DR, SLO/RPO/RTO, and production capacity stay
+  unverified. No cross-tenant privileged query, migration, provider, or
+  write-back is introduced.
+- ADR: `docs/adr/0293-deterministic-fair-durable-job-lane-scheduling.md`.
+- Rollback: Remove the scheduler types, optional claim filters, tests, ADR, and
+  execution entries. No database or external system state is mutated.

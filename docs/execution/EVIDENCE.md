@@ -12293,3 +12293,29 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   `pip_audit` also passed; pip-audit reports no known vulnerabilities and
   skips only the non-PyPI local project package.
 - ADR: `docs/adr/0292-atomic-durable-job-backpressure.md`.
+
+## E-342: Deterministic fair durable-job lane scheduling
+
+- Local command: `python -m pytest -q tests/test_durable_job_application.py` ->
+  5 passed. `tests/test_postgres_durable_jobs.py` collects with 2 capability
+  skips because this workstation has no `RECONFORGE_TEST_POSTGRES_DSN`.
+  Targeted Ruff and Mypy checks pass for the changed application, SQLite, and
+  PostgreSQL paths.
+- `DurableJobWorkerService.claim` accepts optional workspace/entity filters.
+  SQLite applies them in the existing transactional claim query; PostgreSQL
+  applies them under the existing tenant scope, entity setting, `FOR UPDATE
+  SKIP LOCKED`, and lease-fencing transaction. `RoundRobinDurableJobScheduler`
+  rotates a process-local cursor and scans each exact lane once, so non-empty
+  lanes alternate deterministically without widening tenant/workspace scope.
+- The focused SQLite contract submits three synthetic jobs to each of two
+  lanes, claims and cancels six leases, and proves the sequence is
+  `lane-a, lane-b` repeated three times with no cross-lane job. The live
+  PostgreSQL contract is the same proof under the non-privileged server-boundary
+  role and cleans up its unique synthetic tenant.
+- Boundary: the cursor is process-scoped by design. This does not prove
+  distributed scheduler fairness, throughput, queue capacity, soak, HA/DR,
+  SLO/RPO/RTO, or production readiness. No migration, provider, write-back,
+  API, CLI, UI, or external system is changed.
+- Repository-wide `python -m pytest -q` then passed all 2,343 collected tests;
+  `git diff --check` also passed.
+- ADR: `docs/adr/0293-deterministic-fair-durable-job-lane-scheduling.md`.

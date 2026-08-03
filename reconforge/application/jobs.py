@@ -56,6 +56,8 @@ class DurableJobWorkerRepositoryProtocol(DurableJobRepositoryProtocol, Protocol)
         self,
         *,
         tenant_id: str,
+        workspace_id: str | None = None,
+        entity_id: str | None = None,
         worker_id: str,
         occurred_at: str,
         lease_expires_at: str,
@@ -134,6 +136,27 @@ class LeasedJob:
 
     job: DurableJob
     lease: JobLease
+
+
+@dataclass(frozen=True)
+class DurableJobLane:
+    """A fully-qualified execution lane used by deterministic schedulers."""
+
+    tenant_id: str
+    workspace_id: str
+    entity_id: str
+
+    def __post_init__(self) -> None:
+        if not all((self.tenant_id.strip(), self.workspace_id.strip(), self.entity_id.strip())):
+            raise ValueError("durable-job lane identifiers must be non-empty")
+
+
+@dataclass(frozen=True)
+class ScheduledDurableJob:
+    """A lease together with the lane selected by a fair scheduler."""
+
+    lane: DurableJobLane
+    leased_job: LeasedJob
 
 
 class DurableJobApplicationService:
@@ -376,6 +399,8 @@ class DurableJobWorkerService:
         self,
         *,
         tenant_id: str,
+        workspace_id: str | None = None,
+        entity_id: str | None = None,
         worker_id: str,
         occurred_at: str,
         lease_expires_at: str,
@@ -384,6 +409,8 @@ class DurableJobWorkerService:
         with self._observability.span("reconforge.job.claim", attributes) as span:
             claimed = self._repository.claim_next(
                 tenant_id=tenant_id,
+                workspace_id=workspace_id,
+                entity_id=entity_id,
                 worker_id=worker_id,
                 occurred_at=occurred_at,
                 lease_expires_at=lease_expires_at,
@@ -605,3 +632,52 @@ class DurableJobWorkerService:
             lease=leased_job.lease,
             release_lease=True,
         )
+
+
+class RoundRobinDurableJobScheduler:
+    """Select exact execution lanes in deterministic round-robin order.
+
+    The cursor is intentionally process-scoped. This provides a reproducible
+    fairness primitive for one scheduler/worker loop while preserving tenant
+    and workspace isolation; it is not a distributed fairness guarantee.
+    """
+
+    def __init__(self, worker: DurableJobWorkerService, lanes: tuple[DurableJobLane, ...]) -> None:
+        if not lanes:
+            raise ValueError("at least one durable-job lane is required")
+        if len(set(lanes)) != len(lanes):
+            raise ValueError("durable-job lanes must be unique")
+        self._worker = worker
+        self._lanes = lanes
+        self._cursor = 0
+
+    @property
+    def lanes(self) -> tuple[DurableJobLane, ...]:
+        return self._lanes
+
+    def claim(
+        self,
+        *,
+        worker_id: str,
+        occurred_at: str,
+        lease_expires_at: str,
+    ) -> ScheduledDurableJob | None:
+        """Scan each lane once, starting after the previously selected lane."""
+
+        start = self._cursor
+        for offset in range(len(self._lanes)):
+            index = (start + offset) % len(self._lanes)
+            lane = self._lanes[index]
+            leased = self._worker.claim(
+                tenant_id=lane.tenant_id,
+                workspace_id=lane.workspace_id,
+                entity_id=lane.entity_id,
+                worker_id=worker_id,
+                occurred_at=occurred_at,
+                lease_expires_at=lease_expires_at,
+            )
+            if leased is not None:
+                self._cursor = (index + 1) % len(self._lanes)
+                return ScheduledDurableJob(lane=lane, leased_job=leased)
+        self._cursor = (start + 1) % len(self._lanes)
+        return None

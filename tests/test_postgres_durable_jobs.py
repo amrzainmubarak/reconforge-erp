@@ -12,10 +12,12 @@ import pytest
 
 from reconforge.application.jobs import (
     DurableJobApplicationService,
+    DurableJobLane,
     DurableJobWorkerService,
     GovernedDurableJobApplicationService,
     JobAuthorizationError,
     JobSubmission,
+    RoundRobinDurableJobScheduler,
 )
 from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.db import connect, run_migrations
@@ -665,4 +667,85 @@ def test_live_postgres_job_application_contract_and_rls(tmp_path: Path) -> None:
         finally:
             connection.close()
     finally:
+        admin.close()
+
+
+@pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
+def test_live_postgres_round_robin_scheduler_is_lane_scoped_and_deterministic() -> None:
+    pytest.importorskip("psycopg")
+    dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
+    admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
+    app_user = os.environ.get("RECONFORGE_TEST_POSTGRES_APP_USER", "")
+    if not app_user:
+        pytest.skip("requires a non-privileged application role")
+    factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))
+    admin_factory = PostgresConnectionFactory(PostgresSettings(dsn=admin_dsn, require_tls=False))
+    tenant_id = "jobs_fair_" + uuid4().hex[:8]
+    admin = admin_factory.connect()
+    connection = None
+    try:
+        with admin.transaction():
+            install_postgres_rls_schema(admin)
+            install_postgres_durable_job_schema(admin)
+            admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            admin.execute(
+                f"GRANT SELECT, INSERT, UPDATE ON reconforge.durable_jobs, "
+                f"reconforge.durable_job_transitions, reconforge.durable_job_leases, "
+                f"reconforge.durable_job_lease_events, reconforge.durable_job_partition_effects TO {app_user}"
+            )
+            admin.execute(f"GRANT DELETE ON reconforge.durable_job_leases TO {app_user}")
+            admin.execute("INSERT INTO reconforge.tenants (id, name) VALUES (%s, %s)", (tenant_id, tenant_id))
+        connection = factory.connect()
+        repository = PostgresDurableJobRepository(connection)
+        service = DurableJobApplicationService(repository)
+        worker = DurableJobWorkerService(repository)
+        lanes = (
+            DurableJobLane(tenant_id, "workspace-fair-a", "entity-fair-a"),
+            DurableJobLane(tenant_id, "workspace-fair-b", "entity-fair-b"),
+        )
+        for lane_index, lane in enumerate(lanes):
+            for ordinal in range(3):
+                service.submit(
+                    replace(
+                        _submission(tenant_id),
+                        job_id=f"postgres-fair-{lane_index}-{ordinal}-{uuid4().hex[:6]}",
+                        idempotency_scope="postgres-fair",
+                        idempotency_key=f"fair-{lane_index}-{ordinal}-{uuid4().hex[:6]}",
+                        workspace_id=lane.workspace_id,
+                        entity_id=lane.entity_id,
+                    ),
+                    actor_id="fair-scheduler",
+                )
+        scheduler = RoundRobinDurableJobScheduler(worker, lanes)
+        selected_lanes: list[DurableJobLane] = []
+        for ordinal in range(6):
+            scheduled = scheduler.claim(
+                worker_id="fair-worker",
+                occurred_at=f"2026-07-27T11:01:{ordinal:02d}Z",
+                lease_expires_at=f"2026-07-27T11:02:{ordinal:02d}Z",
+            )
+            assert scheduled is not None
+            selected_lanes.append(scheduled.lane)
+            assert scheduled.leased_job.job.workspace_id == scheduled.lane.workspace_id
+            assert scheduled.leased_job.job.entity_id == scheduled.lane.entity_id
+            worker.cancel(scheduled.leased_job, occurred_at=f"2026-07-27T11:01:{30 + ordinal:02d}Z")
+        assert selected_lanes == list(lanes) * 3
+        assert scheduler.claim(
+            worker_id="fair-worker",
+            occurred_at="2026-07-27T11:04:00Z",
+            lease_expires_at="2026-07-27T11:05:00Z",
+        ) is None
+    finally:
+        if connection is not None:
+            connection.close()
+        with admin.transaction():
+            for table in (
+                "durable_job_partition_effects",
+                "durable_job_lease_events",
+                "durable_job_leases",
+                "durable_job_transitions",
+                "durable_jobs",
+            ):
+                admin.execute(f"DELETE FROM reconforge.{table} WHERE tenant_id=%s", (tenant_id,))
+            admin.execute("DELETE FROM reconforge.tenants WHERE id=%s", (tenant_id,))
         admin.close()

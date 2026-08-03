@@ -405,10 +405,21 @@ class PostgresDurableJobRepository:
         )
 
     def claim_next(
-        self, *, tenant_id: str, worker_id: str, occurred_at: str, lease_expires_at: str
+        self,
+        *,
+        tenant_id: str,
+        workspace_id: str | None = None,
+        entity_id: str | None = None,
+        worker_id: str,
+        occurred_at: str,
+        lease_expires_at: str,
     ) -> tuple[DurableJob, JobLease] | None:
         columns = ", ".join(f"jobs.{column}" for column in _JOB_COLUMNS)
-        with self._transaction(tenant_id):
+        with self._transaction(
+            tenant_id,
+            workspace_id=workspace_id or "",
+            entity_id=entity_id or "",
+        ):
             row = self.connection.execute(
                 f"""
                 SELECT {columns}, COALESCE((
@@ -418,7 +429,10 @@ class PostgresDurableJobRepository:
                 FROM reconforge.durable_jobs jobs
                 LEFT JOIN reconforge.durable_job_leases leases
                   ON leases.tenant_id = jobs.tenant_id AND leases.job_id = jobs.id
-                WHERE jobs.tenant_id = %s AND (
+                WHERE jobs.tenant_id = %s
+                  AND (%s IS NULL OR jobs.workspace_id = %s)
+                  AND (%s IS NULL OR jobs.entity_id = %s)
+                  AND (
                     jobs.status = 'queued'
                     OR (jobs.status = 'retrying' AND (leases.job_id IS NULL OR leases.expires_at <= %s))
                     OR (jobs.status = 'running' AND (leases.job_id IS NULL OR leases.expires_at <= %s))
@@ -427,7 +441,15 @@ class PostgresDurableJobRepository:
                          jobs.created_at, jobs.id
                 FOR UPDATE OF jobs SKIP LOCKED LIMIT 1
                 """,  # nosec B608
-                (tenant_id, occurred_at, occurred_at),
+                (
+                    tenant_id,
+                    workspace_id,
+                    workspace_id,
+                    entity_id,
+                    entity_id,
+                    occurred_at,
+                    occurred_at,
+                ),
             ).fetchone()
             if row is None:
                 return None

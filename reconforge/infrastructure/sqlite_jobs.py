@@ -433,6 +433,8 @@ class SQLiteDurableJobRepository:
         self,
         *,
         tenant_id: str,
+        workspace_id: str | None = None,
+        entity_id: str | None = None,
         worker_id: str,
         occurred_at: str,
         lease_expires_at: str,
@@ -453,6 +455,8 @@ class SQLiteDurableJobRepository:
                 FROM durable_jobs jobs
                 LEFT JOIN durable_job_leases leases ON leases.job_id = jobs.id
                 WHERE jobs.tenant_id = ?
+                  AND (? IS NULL OR jobs.workspace_id = ?)
+                  AND (? IS NULL OR jobs.entity_id = ?)
                   AND (
                     jobs.status = 'queued'
                     OR (jobs.status = 'retrying' AND (leases.job_id IS NULL OR leases.expires_at <= ?))
@@ -464,7 +468,15 @@ class SQLiteDurableJobRepository:
                     jobs.id
                 LIMIT 1
                 """,
-                (tenant_id, occurred_at, occurred_at),
+                (
+                    tenant_id,
+                    workspace_id,
+                    workspace_id,
+                    entity_id,
+                    entity_id,
+                    occurred_at,
+                    occurred_at,
+                ),
             ).fetchone()
             if row is None:
                 self.connection.commit()

@@ -7,9 +7,11 @@ import pytest
 
 from reconforge.application.jobs import (
     DurableJobApplicationService,
+    DurableJobLane,
     DurableJobNotFoundError,
     DurableJobWorkerService,
     JobSubmission,
+    RoundRobinDurableJobScheduler,
 )
 from reconforge.db import connect, run_migrations
 from reconforge.domain.jobs import DurableJobBackpressureError, JobOutputManifest, JobStatus
@@ -87,6 +89,58 @@ def test_worker_lease_lifecycle_fences_progress_and_releases_on_completion(tmp_p
         row["action"]
         for row in repository.list_lease_events(tenant_id="TENANT-1", job_id=queued.id)
     ] == ["claimed", "renewed", "released"]
+    connection.close()
+
+
+def test_round_robin_scheduler_alternates_exact_lanes_without_cross_lane_claims(tmp_path: Path) -> None:
+    database_path = tmp_path / "fair-lanes.db"
+    run_migrations(database_path)
+    connection = connect(database_path, require_exists=True)
+    repository = SQLiteDurableJobRepository(connection)
+    application = DurableJobApplicationService(repository)
+    worker = DurableJobWorkerService(repository)
+    lanes = (
+        DurableJobLane("TENANT-FAIR", "WORKSPACE-A", "ENTITY-A"),
+        DurableJobLane("TENANT-FAIR", "WORKSPACE-B", "ENTITY-B"),
+    )
+    for lane_index, lane in enumerate(lanes):
+        for ordinal in range(3):
+            submission = JobSubmission(
+                job_id=f"JOB-FAIR-{lane_index}-{ordinal}",
+                idempotency_scope="tenant/workspace/import",
+                idempotency_key=f"fair-{lane_index}-{ordinal}",
+                tenant_id=lane.tenant_id,
+                workspace_id=lane.workspace_id,
+                entity_id=lane.entity_id,
+                input_digest=(f"{lane_index}{ordinal}" * 32)[:64],
+                config_digest="b" * 64,
+                worker_version="worker/1.0.0",
+                total_units=1,
+                retry_ceiling=0,
+                created_at=f"2026-07-27T08:00:0{ordinal}Z",
+            )
+            application.submit(submission, actor_id="scheduler-fair")
+
+    scheduler = RoundRobinDurableJobScheduler(worker, lanes)
+    selected_lanes: list[DurableJobLane] = []
+    for ordinal in range(6):
+        scheduled = scheduler.claim(
+            worker_id="worker-fair",
+            occurred_at=f"2026-07-27T08:01:{ordinal:02d}Z",
+            lease_expires_at=f"2026-07-27T08:02:{ordinal:02d}Z",
+        )
+        assert scheduled is not None
+        selected_lanes.append(scheduled.lane)
+        assert scheduled.leased_job.job.workspace_id == scheduled.lane.workspace_id
+        assert scheduled.leased_job.job.entity_id == scheduled.lane.entity_id
+        worker.cancel(scheduled.leased_job, occurred_at=f"2026-07-27T08:01:{30 + ordinal:02d}Z")
+
+    assert selected_lanes == list(lanes) * 3
+    assert scheduler.claim(
+        worker_id="worker-fair",
+        occurred_at="2026-07-27T08:04:00Z",
+        lease_expires_at="2026-07-27T08:05:00Z",
+    ) is None
     connection.close()
 
 

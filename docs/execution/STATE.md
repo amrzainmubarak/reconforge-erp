@@ -218,7 +218,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   Docker `30842290618`, and CodeQL `30842290616`.
 - ADR: `docs/adr/0296-writeback-network-transport-is-explicit-and-digest-bound.md`.
 
-## E-346 — PostgreSQL bounded multi-worker scale profile (in progress)
+## E-346 — PostgreSQL bounded multi-worker scale profile (complete bounded slice)
 
 - Added `reconforge/benchmark/postgres_durable_job_scale.py` and a live
   server-boundary contract for eight independent worker connections, four
@@ -231,8 +231,12 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - The contention run exposed and then closed a stale-join takeover race:
   `claim_next` now rechecks an active lease after locking the job row, so only
   an explicitly expired lease can be reclaimed.
-- Local profile/contract tests pass; the live PostgreSQL result is pending the
-  next hosted server-boundaries run. ADR:
+- Local profile/contract tests pass. Hosted server-boundaries run
+  `30845549418` passed the live PostgreSQL 16 Alpine profile, both Python
+  versions, all four engine-parity cells, and Docker-parity. Security
+  `30845549419`, Docker `30845549425`, and CodeQL `30845549444` also passed.
+  No throughput, capacity, soak, distributed fairness, queue HA, HA/DR,
+  RPO/RTO, or production-sizing claim is made. ADR:
   `docs/adr/0297-postgres-durable-job-bounded-scale-profile.md`.
 
 ## E-293 — Immutable local delegation administration

@@ -12421,8 +12421,10 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   contention shape. `claim_next` now performs an in-transaction active-lease
   recheck after locking the job row; the repeated live run passed and the full
   existing PostgreSQL durable-job contract remained green.
-- Hosted runtime evidence is pending the next server-boundaries run. Until
-  that run passes, this remains a local profile plus an unexecuted live gate;
-  no PostgreSQL throughput, capacity, soak, distributed fairness, queue HA,
-  HA/DR, RPO/RTO, or production-sizing claim is made.
+- Hosted verification for commit `00f0836a` is green: server-boundaries run
+  `30845549418` passed the live PostgreSQL 16 service, both Python versions,
+  all four engine-parity cells, and Docker-parity. Security `30845549419`,
+  Docker `30845549425`, and CodeQL `30845549444` also passed. No PostgreSQL
+  throughput, capacity, soak, distributed fairness, queue HA, HA/DR, RPO/RTO,
+  or production-sizing claim is made.
 - ADR: `docs/adr/0297-postgres-durable-job-bounded-scale-profile.md`.

@@ -11814,14 +11814,15 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   skips; the broader SQLite/API/PostgreSQL close suite -> 24 passed, 2 live
   PostgreSQL skips. Ruff and Mypy for the changed adapter/operations/migration
   files pass. `RECONFORGE_TEST_POSTGRES_DSN` was not configured locally.
-- Remote live gate: CI run `30786172958` on exact commit
-  `9b9ff98d5892de518ae4c28665c7544bac8a73bb` passed
-  `server-boundaries` job `91600016470`. The PostgreSQL 16 service under the
-  non-privileged role completed the synthetic prepare/approve/post/reversal
-  lifecycle, line/effect cardinality and tenant isolation checks, and the
-  append-only update refusal. Both Python jobs, all four engine-parity jobs,
-  and Docker parity `91600778297` also passed; Security run `30786172957` and
-  CodeQL run `30786172968` passed.
+- Remote live gate: implementation commit `9b9ff98d` passed CI run
+  `30786172958`; the final documentation-bound head
+  `040196896dd708a4f3120b10e6758a851fafc920` passed CI run `30786555699`,
+  including `server-boundaries` job `91601074636`. The PostgreSQL 16 service
+  under the non-privileged role completed the synthetic
+  prepare/approve/post/reversal lifecycle, line/effect cardinality and tenant
+  isolation checks, and the append-only update refusal. Both Python jobs, all
+  four engine-parity jobs, and Docker parity `91601887798` also passed;
+  Security run `30786555690` and CodeQL run `30786555693` passed.
 - Boundary: this evidence is bounded control-journal parity. It does not prove
   statutory consolidation, acquisition/goodwill/equity-method treatment, live
   rates, ERP/bank interoperability or write-back, HA/DR, distributed scale,

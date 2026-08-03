@@ -451,11 +451,12 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Pre-0057 rows remain readable through a compatibility path; the first
   governed effect transition materializes the exact verified lines. Focused
   schema, migration, registry, SQLite compatibility, Ruff, Mypy, and adapter
-  tests pass locally. CI run `30786172958` on exact commit
-  `9b9ff98d5892de518ae4c28665c7544bac8a73bb` passed the live
-  `server-boundaries` job `91600016470`, both Python jobs, all four engine
-  parity jobs, and Docker parity `91600778297`. Security `30786172957` and
-  CodeQL `30786172968` also passed.
+  tests pass locally. Implementation commit `9b9ff98d` passed CI run
+  `30786172958`; the final documentation-bound head
+  `040196896dd708a4f3120b10e6758a851fafc920` passed CI run
+  `30786555699`, including live `server-boundaries` job `91601074636`, both
+  Python jobs, all four engine-parity jobs, and Docker parity
+  `91601887798`. Security `30786555690` and CodeQL `30786555693` also passed.
 - Boundary: this is synthetic PostgreSQL control-journal parity only. It does
   not prove statutory consolidation, acquisition/goodwill/equity-method
   accounting, live ERP/bank connectors or write-back, HA/DR, distributed

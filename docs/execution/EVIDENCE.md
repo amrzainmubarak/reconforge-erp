@@ -12401,4 +12401,8 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - Full `python -m pytest -q` passes after the transport slice. Ruff, Mypy,
   Bandit, `pip-audit` (no known vulnerabilities; the private project itself is
   not on PyPI), isolated package build, and `git diff --check` also pass.
+- Hosted verification for commit `bf4cc02` is green: CI `30842290819`
+  (server-boundaries, Python 3.11/3.12, four engine-parity cells, and
+  docker-parity), Security `30842291391`, Docker `30842290618`, and CodeQL
+  `30842290616` all completed successfully.
 - ADR: `docs/adr/0296-writeback-network-transport-is-explicit-and-digest-bound.md`.

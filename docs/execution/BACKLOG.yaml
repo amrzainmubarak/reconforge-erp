@@ -183,7 +183,7 @@ tasks:
     title: Digest-bound HTTPS write-back transport boundary
     status: completed
     depends_on: [E-344]
-    exit_evidence: "Add provider-neutral WritebackNetworkRegistration, PinnedHttpsPostTransport, and WritebackNetworkExecutor with exact HTTPS egress, short-lived payload digest verification, secret-reference isolation, explicit feature/approval gates, bounded idempotent retries, closed provider acknowledgement digest, response size/content-type guards, and failure-injection tests under ADR 0296. Existing v1 manifests remain read-only; no vendor, customer credential, compensation, or production write-back claim is made."
+    exit_evidence: "Add provider-neutral WritebackNetworkRegistration, PinnedHttpsPostTransport, and WritebackNetworkExecutor with exact HTTPS egress, short-lived payload digest verification, secret-reference isolation, explicit feature/approval gates, bounded idempotent retries, closed provider acknowledgement digest, response size/content-type guards, and failure-injection tests under ADR 0296. Hosted head bf4cc02 is green in CI 30842290819, Security 30842291391, Docker 30842290618, and CodeQL 30842290616. Existing v1 manifests remain read-only; no vendor, customer credential, compensation, or production write-back claim is made."
   - id: E-292
     priority: P0
     area: enterprise-policy

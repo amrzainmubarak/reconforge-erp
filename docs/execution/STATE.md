@@ -214,6 +214,8 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Boundary: synthetic injected transport only. No vendor endpoint, customer
   credential, hosted vault, compensation delivery, accounting posting, HA/DR,
   or production write-back is claimed.
+- Hosted head `bf4cc02` is green in CI `30842290819`, Security `30842291391`,
+  Docker `30842290618`, and CodeQL `30842290616`.
 - ADR: `docs/adr/0296-writeback-network-transport-is-explicit-and-digest-bound.md`.
 
 ## E-293 — Immutable local delegation administration

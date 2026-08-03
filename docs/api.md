@@ -159,6 +159,24 @@ status operations use the tenant-scoped PostgreSQL fiscal-period table and
 remain metadata-only: they do not lock source-ERP postings. They never fall
 back to tenant-local SQLite.
 
+The PostgreSQL server profile also exposes the bounded acquisition PPA evidence
+boundary:
+
+- `POST /api/v1/consolidation-ppa`
+- `GET /api/v1/consolidation-ppa/{artifact_id}`
+
+Both routes require `X-ReconForge-Tenant` and a server-authenticated bearer
+session. Preparation requires `finance_core.manage`; reads require either
+`finance_core.read` or `finance_core.manage`. The request uses strict canonical
+`Money` objects, binds `prepared_by` to the authenticated principal, and
+requires an independent approver. The PostgreSQL repository recomputes the
+artifact and digest, records audit evidence, and returns `posted: false`.
+There is no SQLite fallback, statutory journal posting, tax/deferred-tax or
+impairment treatment, live valuation provider, ERP/bank write-back, or approval
+of legal-book accounting in this API. The route contract is covered locally;
+the underlying PostgreSQL persistence boundary is the synthetic CI runtime
+gate described in the execution evidence.
+
 ## Endpoints
 
 Unauthenticated:

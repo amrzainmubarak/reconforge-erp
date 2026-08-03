@@ -2619,3 +2619,17 @@
   write-back, restore, HA/DR, or production-readiness claim. Downgrade refuses
   while PPA evidence exists.
 - **ADR**: `docs/adr/0283-postgres-consolidation-ppa-evidence-is-non-posting.md`.
+
+## D280 - Expose PPA evidence through an authenticated PostgreSQL API only
+
+- **Decision**: add additive `POST`/`GET` PPA routes to the explicit PostgreSQL
+  server profile, with strict canonical Money bodies, authenticated actor
+  binding, independent approval, central permission checks, and no SQLite
+  fallback.
+- **Rationale**: the durable E-332 artifact needs a controlled server consumer,
+  while keeping local Community behavior and the non-posting boundary intact.
+- **Boundary**: API contract tests and underlying repository runtime evidence
+  do not establish live hosted API operation. No statutory posting, tax,
+  impairment, provider integration, write-back, restore, HA/DR, or universal
+  policy enforcement is introduced.
+- **ADR**: `docs/adr/0284-postgres-ppa-api-is-server-profile-and-non-posting.md`.

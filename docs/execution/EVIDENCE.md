@@ -12119,3 +12119,23 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   rates, ERP/bank providers, source write-back, restore, HA/DR, or production
   readiness.
 - ADR: `docs/adr/0283-postgres-consolidation-ppa-evidence-is-non-posting.md`.
+
+## E-333: Authenticated PostgreSQL PPA evidence API
+
+- Focused local command: `uv run pytest -q
+  tests/test_api_consolidation_ppa.py
+  tests/test_api_authorization_inventory.py` -> 6 passed. The tests cover
+  unauthenticated denial, local-profile fail-closed behavior, strict body
+  rejection, authenticated preparer binding, permission-bearing route
+  inventory, and replay-shaped GET responses.
+- The API uses `PpaPrepareRequest` with `extra="forbid"`, reconstructs exact
+  canonical Money values, binds `prepared_by` to `/auth/me`, and delegates to
+  `AcquisitionPpaApplicationService` through the existing tenant PostgreSQL
+  boundary. Responses retain the durable artifact's `posted: false` marker.
+- Ruff, Mypy, and `git diff --check` pass for the slice. Full local gates and
+  CI are pending at this evidence checkpoint.
+- Runtime boundary: this is API contract evidence only. E-332's CI run
+  `30811914832` remains the live evidence for the underlying PostgreSQL
+  persistence adapter; no hosted API, statutory posting, provider, write-back,
+  restore, HA/DR, or production-readiness claim follows.
+- ADR: `docs/adr/0284-postgres-ppa-api-is-server-profile-and-non-posting.md`.

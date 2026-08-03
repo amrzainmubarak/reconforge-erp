@@ -6,6 +6,19 @@ Updated: 2026-08-03
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-333 — Authenticated PostgreSQL PPA evidence API (in progress)
+
+- Added strict, additive `POST /api/v1/consolidation-ppa` and
+  `GET /api/v1/consolidation-ppa/{artifact_id}` routes. Preparation requires
+  `finance_core.manage`; reads require `finance_core.read` or
+  `finance_core.manage`; the preparer is bound to the authenticated identity.
+- The routes execute only with the PostgreSQL server profile, use the existing
+  tenant transaction/RLS boundary and PPA repository, and preserve the
+  replay-verified `posted: false` evidence contract. Local mode fails closed
+  instead of falling back to SQLite.
+- Focused API/authorization tests pass locally. Full gates and CI confirmation
+  are pending; the route contract is not yet live-runtime evidence.
+
 ## E-293 — Immutable local delegation administration
 
 - Migration 27 adds tenant/workspace-scoped `policy_delegations`; a typed

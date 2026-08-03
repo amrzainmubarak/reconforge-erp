@@ -12230,4 +12230,7 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   bounded `SKIP LOCKED` claim ownership and no-duplicate effects under one
   tenant; capacity, fairness/SLO, soak, distributed supervision, queue HA,
   automatic failover, and production readiness remain open.
+- CI run `30822148482` passed Python 3.11/3.12, server-boundaries, all engine-
+  parity cells, and Docker-parity. Security `30822149026`, Docker `30822148703`,
+  and CodeQL `30822149876` also passed.
 - ADR: `docs/adr/0289-postgres-durable-job-claim-contention-runtime.md`.

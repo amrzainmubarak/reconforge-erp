@@ -19,7 +19,7 @@ from reconforge.application.jobs import (
 )
 from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.db import connect, run_migrations
-from reconforge.domain.jobs import JobOutputManifest, JobPartitionEffect
+from reconforge.domain.jobs import DurableJobBackpressureError, JobOutputManifest, JobPartitionEffect
 from reconforge.infrastructure.postgres import (
     PostgresConnectionFactory,
     PostgresSettings,
@@ -84,6 +84,95 @@ def test_live_postgres_job_application_contract_and_rls(tmp_path: Path) -> None:
             repository = PostgresDurableJobRepository(connection)
             service = DurableJobApplicationService(repository)
             governed = GovernedDurableJobApplicationService(service)
+
+            bounded_first_submission = replace(
+                _submission(tenant_b),
+                job_id="postgres-bounded-first-" + uuid4().hex[:8],
+                idempotency_scope="postgres-bounded",
+                idempotency_key="bounded-first-" + uuid4().hex[:8],
+            )
+            bounded_first, bounded_created = service.submit_bounded(
+                bounded_first_submission,
+                actor_id="bounded-submitter",
+                max_queued_jobs=1,
+            )
+            bounded_replay, bounded_replay_created = service.submit_bounded(
+                bounded_first_submission,
+                actor_id="bounded-replay",
+                max_queued_jobs=1,
+            )
+            assert bounded_created is True and bounded_replay_created is False
+            assert bounded_replay == bounded_first
+            bounded_second_submission = replace(
+                _submission(tenant_b),
+                job_id="postgres-bounded-second-" + uuid4().hex[:8],
+                idempotency_scope="postgres-bounded",
+                idempotency_key="bounded-second-" + uuid4().hex[:8],
+            )
+            with pytest.raises(DurableJobBackpressureError, match="queue capacity"):
+                service.submit_bounded(
+                    bounded_second_submission,
+                    actor_id="bounded-submitter",
+                    max_queued_jobs=1,
+                )
+            assert repository.get(tenant_id=tenant_b, job_id=bounded_second_submission.job_id) is None
+
+            bounded_sibling_submission = replace(
+                _submission(tenant_a),
+                job_id="postgres-bounded-sibling-" + uuid4().hex[:8],
+                idempotency_scope="postgres-bounded",
+                idempotency_key="bounded-sibling-" + uuid4().hex[:8],
+            )
+            bounded_sibling, bounded_sibling_created = service.submit_bounded(
+                bounded_sibling_submission,
+                actor_id="bounded-submitter",
+                max_queued_jobs=1,
+            )
+            assert bounded_sibling_created is True and bounded_sibling.tenant_id == tenant_a
+            bounded_worker = DurableJobWorkerService(repository)
+            bounded_lease = bounded_worker.claim(
+                tenant_id=tenant_b,
+                worker_id="bounded-worker",
+                occurred_at="2026-07-27T09:59:01Z",
+                lease_expires_at="2026-07-27T10:09:00Z",
+            )
+            assert bounded_lease is not None and bounded_lease.job.id == bounded_first.id
+            bounded_retrying = bounded_worker.schedule_retry(
+                bounded_lease,
+                occurred_at="2026-07-27T09:59:02Z",
+            )
+            with pytest.raises(DurableJobBackpressureError, match="queue capacity"):
+                service.submit_bounded(
+                    bounded_second_submission,
+                    actor_id="bounded-submitter",
+                    max_queued_jobs=1,
+                )
+            bounded_retry_lease = bounded_worker.claim(
+                tenant_id=tenant_b,
+                worker_id="bounded-worker-recovery",
+                occurred_at="2026-07-27T09:59:03Z",
+                lease_expires_at="2026-07-27T10:09:00Z",
+            )
+            assert bounded_retry_lease is not None and bounded_retry_lease.job.id == bounded_retrying.id
+            bounded_worker.cancel(bounded_retry_lease, occurred_at="2026-07-27T09:59:04Z")
+            bounded_second, bounded_second_created = service.submit_bounded(
+                bounded_second_submission,
+                actor_id="bounded-submitter",
+                max_queued_jobs=1,
+            )
+            assert bounded_second_created is True and bounded_second.status.value == "queued"
+            service.cancel(
+                tenant_id=tenant_a,
+                job_id=bounded_sibling.id,
+                actor_id="bounded-submitter",
+                occurred_at="2026-07-27T09:59:05Z",
+            )
+            service.cancel(
+                tenant_id=tenant_b,
+                job_id=bounded_second.id,
+                actor_id="bounded-submitter",
+                occurred_at="2026-07-27T09:59:06Z",
+            )
 
             # Bounded PostgreSQL parity/load slice: two tenant lanes contend
             # over real claims and generation-fenced partition effects. This

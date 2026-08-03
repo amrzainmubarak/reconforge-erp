@@ -9,6 +9,7 @@ from typing import Any
 
 from reconforge.domain.jobs import (
     DurableJob,
+    DurableJobBackpressureError,
     JobLease,
     JobOutputManifest,
     JobPartitionEffect,
@@ -167,6 +168,8 @@ class PostgresDurableJobRepository:
                 yield
         except PostgresJobRepositoryError:
             raise
+        except DurableJobBackpressureError:
+            raise
         except Exception as exc:
             raise PostgresJobRepositoryError("PostgreSQL durable-job operation failed.") from exc
 
@@ -207,6 +210,85 @@ class PostgresDurableJobRepository:
                     """,
                     (job.tenant_id, job.id, actor_id, job.created_at),
                 )
+            except Exception as exc:
+                raise PostgresJobConflictError("Durable job identity or idempotency scope conflicts.") from exc
+        return job, True
+
+    def create_or_get_bounded(
+        self,
+        job: DurableJob,
+        *,
+        actor_id: str,
+        max_queued_jobs: int,
+    ) -> tuple[DurableJob, bool]:
+        """Submit atomically while bounding queued work in one execution lane.
+
+        A transaction-scoped advisory lock serializes the count-and-insert
+        critical section even when the lane has no existing row to lock.
+        """
+
+        if isinstance(max_queued_jobs, bool) or not isinstance(max_queued_jobs, int) or max_queued_jobs < 1:
+            raise ValueError("max_queued_jobs must be a positive integer")
+        if job.status is not JobStatus.QUEUED or job.version != 1:
+            raise PostgresJobRepositoryError("Only a new queued job may be submitted.")
+        columns = ", ".join(_JOB_COLUMNS)
+        placeholders = ", ".join("%s" for _ in _JOB_COLUMNS)
+        lane_lock_key = f"reconforge:durable-job-lane:{job.tenant_id}:{job.workspace_id}:{job.entity_id}"
+        with self._transaction(job.tenant_id, workspace_id=job.workspace_id, entity_id=job.entity_id):
+            self.connection.execute(
+                "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                (lane_lock_key,),
+            )
+            try:
+                existing_row = self.connection.execute(  # nosec B608
+                    "SELECT " + columns + " FROM reconforge.durable_jobs "  # nosec B608
+                    "WHERE tenant_id=%s AND idempotency_scope=%s AND idempotency_key=%s",
+                    (job.tenant_id, job.idempotency_scope, job.idempotency_key),
+                ).fetchone()
+                if existing_row is not None:
+                    existing = _decode_job(existing_row)
+                    if not _same_submission(existing, job):
+                        raise PostgresJobConflictError(
+                            "Idempotency key is already bound to a different job submission."
+                        )
+                    return existing, False
+
+                queued = int(
+                    self.connection.execute(
+                        """
+                        SELECT COUNT(*) FROM reconforge.durable_jobs
+                        WHERE tenant_id=%s AND workspace_id=%s AND entity_id=%s
+                          AND status IN ('queued', 'retrying')
+                        """,
+                        (job.tenant_id, job.workspace_id, job.entity_id),
+                    ).fetchone()[0]
+                )
+                if queued >= max_queued_jobs:
+                    raise DurableJobBackpressureError(
+                        "Durable-job execution lane queue capacity has been reached."
+                    )
+
+                inserted = self.connection.execute(
+                    # SQL identifiers come only from the immutable module-level _JOB_COLUMNS tuple.
+                    f"INSERT INTO reconforge.durable_jobs ({columns}) VALUES ({placeholders}) "  # nosec B608
+                    "RETURNING id",
+                    _job_values(job),
+                ).fetchone()
+                if inserted is None:
+                    raise PostgresJobConflictError("Bounded durable-job insertion returned no identity.")
+                self.connection.execute(
+                    """
+                    INSERT INTO reconforge.durable_job_transitions
+                        (tenant_id, job_id, job_version, from_status, to_status,
+                         actor_id, occurred_at, reason_code)
+                    VALUES (%s, %s, 1, '', 'queued', %s, %s, 'CREATED')
+                    """,
+                    (job.tenant_id, job.id, actor_id, job.created_at),
+                )
+            except DurableJobBackpressureError:
+                raise
+            except PostgresJobConflictError:
+                raise
             except Exception as exc:
                 raise PostgresJobConflictError("Durable job identity or idempotency scope conflicts.") from exc
         return job, True

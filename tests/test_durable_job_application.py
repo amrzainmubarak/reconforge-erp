@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -11,7 +12,7 @@ from reconforge.application.jobs import (
     JobSubmission,
 )
 from reconforge.db import connect, run_migrations
-from reconforge.domain.jobs import JobOutputManifest, JobStatus
+from reconforge.domain.jobs import DurableJobBackpressureError, JobOutputManifest, JobStatus
 from reconforge.infrastructure.sqlite_jobs import SQLiteDurableJobRepository
 
 
@@ -86,6 +87,80 @@ def test_worker_lease_lifecycle_fences_progress_and_releases_on_completion(tmp_p
         row["action"]
         for row in repository.list_lease_events(tenant_id="TENANT-1", job_id=queued.id)
     ] == ["claimed", "renewed", "released"]
+    connection.close()
+
+
+def test_bounded_submission_is_atomic_idempotent_and_lane_scoped(tmp_path: Path) -> None:
+    database_path = tmp_path / "bounded-jobs.db"
+    run_migrations(database_path)
+    connection = connect(database_path, require_exists=True)
+    repository = SQLiteDurableJobRepository(connection)
+    application = DurableJobApplicationService(repository)
+
+    first_submission = _submission(job_id="JOB-BOUND-1", idempotency_key="bounded-1")
+    first, created = application.submit_bounded(
+        first_submission,
+        actor_id="scheduler-1",
+        max_queued_jobs=1,
+    )
+    replayed, replay_created = application.submit_bounded(
+        first_submission,
+        actor_id="scheduler-2",
+        max_queued_jobs=1,
+    )
+    assert created is True and replay_created is False and replayed == first
+
+    second_submission = _submission(job_id="JOB-BOUND-2", idempotency_key="bounded-2")
+    with pytest.raises(DurableJobBackpressureError, match="queue capacity"):
+        application.submit_bounded(second_submission, actor_id="scheduler-1", max_queued_jobs=1)
+    assert repository.get(tenant_id="TENANT-1", job_id=second_submission.job_id) is None
+
+    sibling_lane = _submission(job_id="JOB-BOUND-3", idempotency_key="bounded-3")
+    sibling_lane = replace(sibling_lane, workspace_id="WORKSPACE-2")
+    sibling, sibling_created = application.submit_bounded(
+        sibling_lane,
+        actor_id="scheduler-1",
+        max_queued_jobs=1,
+    )
+    assert sibling_created is True and sibling.workspace_id == "WORKSPACE-2"
+
+    worker = DurableJobWorkerService(repository)
+    leased = worker.claim(
+        tenant_id="TENANT-1",
+        worker_id="worker-1",
+        occurred_at="2026-07-27T08:00:01Z",
+        lease_expires_at="2026-07-27T08:00:04Z",
+    )
+    assert leased is not None and leased.job.id == first.id
+    retrying = worker.schedule_retry(leased, occurred_at="2026-07-27T08:00:02Z")
+    with pytest.raises(DurableJobBackpressureError, match="queue capacity"):
+        application.submit_bounded(second_submission, actor_id="scheduler-1", max_queued_jobs=1)
+    retry_lease = worker.claim(
+        tenant_id="TENANT-1",
+        worker_id="worker-2",
+        occurred_at="2026-07-27T08:00:03Z",
+        lease_expires_at="2026-07-27T08:00:05Z",
+    )
+    assert retry_lease is not None and retry_lease.job.id == retrying.id
+    worker.cancel(retry_lease, occurred_at="2026-07-27T08:00:04Z")
+    second, second_created = application.submit_bounded(
+        second_submission,
+        actor_id="scheduler-1",
+        max_queued_jobs=1,
+    )
+    assert second_created is True and second.status is JobStatus.QUEUED
+    application.cancel(
+        tenant_id="TENANT-1",
+        job_id=second.id,
+        actor_id="scheduler-1",
+        occurred_at="2026-07-27T08:00:03Z",
+    )
+    application.cancel(
+        tenant_id="TENANT-1",
+        job_id=sibling.id,
+        actor_id="scheduler-1",
+        occurred_at="2026-07-27T08:00:04Z",
+    )
     connection.close()
 
 

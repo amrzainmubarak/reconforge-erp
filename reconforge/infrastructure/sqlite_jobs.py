@@ -8,6 +8,7 @@ from typing import Any
 
 from reconforge.domain.jobs import (
     DurableJob,
+    DurableJobBackpressureError,
     JobLease,
     JobOutputManifest,
     JobPartitionEffect,
@@ -225,6 +226,90 @@ class SQLiteDurableJobRepository:
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise SQLiteJobRepositoryError("Unable to submit durable job.") from exc
+
+    def create_or_get_bounded(
+        self,
+        job: DurableJob,
+        *,
+        actor_id: str,
+        max_queued_jobs: int,
+    ) -> tuple[DurableJob, bool]:
+        """Submit atomically while bounding queued work in one execution lane.
+
+        The lane is `(tenant_id, workspace_id, entity_id)`. SQLite's
+        `BEGIN IMMEDIATE` serializes competing writers, so the count and
+        insert cannot pass the cap independently.
+        """
+
+        if isinstance(max_queued_jobs, bool) or not isinstance(max_queued_jobs, int) or max_queued_jobs < 1:
+            raise ValueError("max_queued_jobs must be a positive integer")
+        if job.status is not JobStatus.QUEUED or job.version != 1:
+            raise SQLiteJobRepositoryError("Only a new queued job may be submitted.")
+        creation_event = JobTransition(
+            job_id=job.id,
+            job_version=1,
+            from_status=JobStatus.QUEUED,
+            to_status=JobStatus.QUEUED,
+            actor_id=actor_id,
+            occurred_at=job.created_at,
+            reason_code="CREATED",
+        )
+        self._begin()
+        try:
+            existing_row = self.connection.execute(
+                "SELECT * FROM durable_jobs WHERE tenant_id = ? AND idempotency_scope = ? AND idempotency_key = ?",
+                (job.tenant_id, job.idempotency_scope, job.idempotency_key),
+            ).fetchone()
+            if existing_row is not None:
+                existing = _decode_job(existing_row)
+                if not _same_submission(existing, job):
+                    raise SQLiteJobConflictError("Idempotency key is already bound to a different job submission.")
+                self.connection.commit()
+                return existing, False
+
+            queued = int(
+                self.connection.execute(
+                    """
+                    SELECT COUNT(*) FROM durable_jobs
+                    WHERE tenant_id = ? AND workspace_id = ? AND entity_id = ?
+                      AND status IN ('queued', 'retrying')
+                    """,
+                    (job.tenant_id, job.workspace_id, job.entity_id),
+                ).fetchone()[0]
+            )
+            if queued >= max_queued_jobs:
+                raise DurableJobBackpressureError(
+                    "Durable-job execution lane queue capacity has been reached."
+                )
+
+            placeholders = ", ".join("?" for _ in _JOB_COLUMNS)
+            self.connection.execute(
+                # SQL identifiers come only from the immutable module-level _JOB_COLUMNS tuple.
+                f"INSERT INTO durable_jobs ({', '.join(_JOB_COLUMNS)}) VALUES ({placeholders})",  # nosec B608
+                _job_values(job),
+            )
+            self.connection.execute(
+                """
+                INSERT INTO durable_job_transitions
+                    (job_id, job_version, from_status, to_status, actor_id, occurred_at, reason_code)
+                VALUES (?, 1, '', 'queued', ?, ?, 'CREATED')
+                """,
+                (job.id, creation_event.actor_id, creation_event.occurred_at),
+            )
+            self.connection.commit()
+            return job, True
+        except DurableJobBackpressureError:
+            self.connection.rollback()
+            raise
+        except SQLiteJobConflictError:
+            self.connection.rollback()
+            raise
+        except sqlite3.IntegrityError as exc:
+            self.connection.rollback()
+            raise SQLiteJobConflictError("Durable job identity or idempotency scope conflicts.") from exc
+        except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
+            raise SQLiteJobRepositoryError("Unable to submit bounded durable job.") from exc
 
     def get(self, *, tenant_id: str, job_id: str) -> DurableJob | None:
         row = self.connection.execute(

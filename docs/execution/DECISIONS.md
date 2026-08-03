@@ -235,6 +235,25 @@
 - **Rationale**: Separation of proposal and approval prevents self-approval and makes the future provider mutation gate auditable.
 - **Reversibility**: Disable the approval route/permission; no external provider state is changed.
 
+### D-309: Enforce Durable-Job Backpressure Inside the Submission Transaction
+- **Date**: 2026-08-03
+- **Context**: The existing backpressure benchmark polled queue depth outside
+  the repository, so concurrent producers could overrun a declared cap and
+  idempotent retries had no explicit full-queue behavior.
+- **Decision**: Add an additive bounded submission contract. Count `queued` and
+  `retrying` work in the `(tenant_id, workspace_id, entity_id)` lane, resolve
+  identical idempotency before the cap, and reject only new work at capacity.
+  SQLite serializes with `BEGIN IMMEDIATE`; PostgreSQL serializes with a
+  transaction-scoped lane advisory lock under forced RLS.
+- **Rationale**: The invariant belongs at the persistence boundary, where the
+  count and insert can be atomic and backend parity can be tested without
+  adding a queue vendor or weakening existing submit compatibility.
+- **Boundary**: No global quota, distributed fairness SLO, throughput, soak,
+  HA/DR, or production-capacity claim follows from this bounded primitive.
+- **Reversibility**: Additive API/repository methods only; callers can stop
+  using `submit_bounded` without a migration or data rewrite.
+- **ADR**: `docs/adr/0292-atomic-durable-job-backpressure.md`.
+
 ### D-292: Delegated Authority Requires an Explicit Evaluation Instant
 - **Date**: 2026-08-02
 - **Context**: Enterprise policy needs expiring delegation without hidden wall-clock behavior that makes decisions non-replayable.

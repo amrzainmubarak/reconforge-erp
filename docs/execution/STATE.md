@@ -120,6 +120,24 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   single-node evidence, not posting, write-back, scale, HA/DR, or production
   readiness.
 
+## E-341 — Atomic durable-job queue backpressure (implementation complete; CI gate pending)
+
+- Added additive `submit_bounded` application and governed-service methods plus
+  SQLite/PostgreSQL repository implementations. The cap is enforced inside one
+  transaction for each `(tenant_id, workspace_id, entity_id)` lane and counts
+  `queued` and `retrying` work.
+- Identical idempotent replay is resolved before capacity rejection. New work
+  at the cap raises `DurableJobBackpressureError` with no row or transition;
+  PostgreSQL serializes the count/insert section with a transaction-scoped
+  advisory lock, while SQLite uses `BEGIN IMMEDIATE`.
+- Focused local application, durable-job, PostgreSQL contract, Ruff, and Mypy
+  checks pass; the full local suite then passed all 2,341 collected tests in
+  306.2 seconds, with Bandit and pip-audit also green. The live PostgreSQL
+  semantics are added to the server-boundary test and await the next CI run;
+  no throughput, fairness SLO, soak, distributed quota, HA/DR, or
+  production-capacity claim is made.
+- ADR: `docs/adr/0292-atomic-durable-job-backpressure.md`.
+
 ## E-293 — Immutable local delegation administration
 
 - Migration 27 adds tenant/workspace-scoped `policy_delegations`; a typed

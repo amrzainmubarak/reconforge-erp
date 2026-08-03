@@ -12267,3 +12267,28 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   does not prove posting, write-back, large-scale sequence performance, HA/DR,
   or production readiness.
 - ADR: `docs/adr/0291-postgres-sequential-matching-runtime-evidence.md`.
+
+## E-341: Atomic durable-job queue backpressure
+
+- Local command: `python -m pytest tests/test_durable_job_application.py
+  tests/test_postgres_durable_jobs.py tests/test_durable_job_backpressure.py
+  -q` -> 6 passed and 1 PostgreSQL capability skip. Ruff and Mypy pass for
+  the changed application/domain/repository paths.
+- `DurableJobApplicationService.submit_bounded` and its governed wrapper use an
+  additive repository contract. SQLite counts `queued`/`retrying` rows and
+  performs the count, idempotency replay, and insert under `BEGIN IMMEDIATE`.
+  PostgreSQL uses a lane-derived transaction advisory lock before the same
+  forced-RLS count and insert.
+- The focused SQLite contract proves a full-lane rejection has no persisted
+  row, identical replay succeeds while full, a sibling workspace lane is
+  independent, and capacity is released after claim/cancel. The live
+  PostgreSQL test adds the same assertions under the non-privileged role and
+  remains a capability skip on this workstation until CI executes it.
+- This is a bounded backpressure primitive, not global fairness, distributed
+  quota coordination, throughput, soak, HA/DR, SLO, or production-capacity
+  evidence.
+- Full local `python -m pytest -q` then passed all 2,341 collected tests in
+  306.2 seconds. Repository-wide Ruff, Mypy (424 source files), Bandit, and
+  `pip_audit` also passed; pip-audit reports no known vulnerabilities and
+  skips only the non-PyPI local project package.
+- ADR: `docs/adr/0292-atomic-durable-job-backpressure.md`.

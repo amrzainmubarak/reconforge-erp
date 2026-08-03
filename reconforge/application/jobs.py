@@ -8,6 +8,7 @@ from typing import Protocol
 from reconforge.auth.policy import CentralPolicyEngine, PolicyDecision, PolicyEvaluationContext
 from reconforge.domain.jobs import (
     DurableJob,
+    DurableJobBackpressureError,
     JobLease,
     JobOutputManifest,
     JobPartitionEffect,
@@ -34,6 +35,18 @@ class DurableJobRepositoryProtocol(Protocol):
         changed: DurableJob,
         event: JobTransition,
     ) -> DurableJob: ...
+
+
+class BoundedDurableJobRepositoryProtocol(DurableJobRepositoryProtocol, Protocol):
+    """Storage contract for an atomic execution-lane queue cap."""
+
+    def create_or_get_bounded(
+        self,
+        job: DurableJob,
+        *,
+        actor_id: str,
+        max_queued_jobs: int,
+    ) -> tuple[DurableJob, bool]: ...
 
 
 class DurableJobWorkerRepositoryProtocol(DurableJobRepositoryProtocol, Protocol):
@@ -98,6 +111,23 @@ class JobSubmission:
     created_at: str
 
 
+def _job_from_submission(submission: JobSubmission) -> DurableJob:
+    return DurableJob.queued(
+        job_id=submission.job_id,
+        idempotency_scope=submission.idempotency_scope,
+        idempotency_key=submission.idempotency_key,
+        tenant_id=submission.tenant_id,
+        workspace_id=submission.workspace_id,
+        entity_id=submission.entity_id,
+        input_digest=submission.input_digest,
+        config_digest=submission.config_digest,
+        worker_version=submission.worker_version,
+        total_units=submission.total_units,
+        retry_ceiling=submission.retry_ceiling,
+        created_at=submission.created_at,
+    )
+
+
 @dataclass(frozen=True)
 class LeasedJob:
     """A job paired with the exact fencing token required for worker writes."""
@@ -119,23 +149,46 @@ class DurableJobApplicationService:
         self._observability = observability or ObservabilityRuntime.disabled()
 
     def submit(self, submission: JobSubmission, *, actor_id: str) -> tuple[DurableJob, bool]:
-        job = DurableJob.queued(
-            job_id=submission.job_id,
-            idempotency_scope=submission.idempotency_scope,
-            idempotency_key=submission.idempotency_key,
-            tenant_id=submission.tenant_id,
-            workspace_id=submission.workspace_id,
-            entity_id=submission.entity_id,
-            input_digest=submission.input_digest,
-            config_digest=submission.config_digest,
-            worker_version=submission.worker_version,
-            total_units=submission.total_units,
-            retry_ceiling=submission.retry_ceiling,
-            created_at=submission.created_at,
-        )
+        job = _job_from_submission(submission)
         attributes: dict[str, object] = {"job.type": "durable", "reconforge.operation": "submit"}
         with self._observability.span("reconforge.job.submit", attributes) as span:
             persisted, created = self._repository.create_or_get(job, actor_id=actor_id)
+            result = "created" if created else "replayed"
+            if span is not None:
+                span.set_attribute("reconforge.result", result)
+            self._observability.record_job(
+                {**attributes, "job.status": persisted.status.value, "reconforge.result": result}
+            )
+            return persisted, created
+
+    def submit_bounded(
+        self,
+        submission: JobSubmission,
+        *,
+        actor_id: str,
+        max_queued_jobs: int,
+    ) -> tuple[DurableJob, bool]:
+        """Submit through a backend-atomic cap for one tenant/workspace/entity lane."""
+
+        if isinstance(max_queued_jobs, bool) or not isinstance(max_queued_jobs, int) or max_queued_jobs < 1:
+            raise ValueError("max_queued_jobs must be a positive integer")
+        create_or_get_bounded = getattr(self._repository, "create_or_get_bounded", None)
+        if create_or_get_bounded is None:
+            raise DurableJobBackpressureError(
+                "The configured durable-job backend does not support atomic queue bounds."
+            )
+        job = _job_from_submission(submission)
+        attributes: dict[str, object] = {
+            "job.type": "durable",
+            "reconforge.operation": "submit_bounded",
+            "job.queue_cap": max_queued_jobs,
+        }
+        with self._observability.span("reconforge.job.submit_bounded", attributes) as span:
+            persisted, created = create_or_get_bounded(
+                job,
+                actor_id=actor_id,
+                max_queued_jobs=max_queued_jobs,
+            )
             result = "created" if created else "replayed"
             if span is not None:
                 span.set_attribute("reconforge.result", result)
@@ -232,6 +285,30 @@ class GovernedDurableJobApplicationService:
             action="submit",
         )
         return self._service.submit(submission, actor_id=actor_id)
+
+    def submit_bounded(
+        self,
+        submission: JobSubmission,
+        *,
+        actor_id: str,
+        max_queued_jobs: int,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+    ) -> tuple[DurableJob, bool]:
+        self._authorize(
+            policy_context,
+            actor_id=actor_id,
+            required_permission=required_permission,
+            tenant_id=submission.tenant_id,
+            workspace_id=submission.workspace_id,
+            object_id=submission.job_id,
+            action="submit_bounded",
+        )
+        return self._service.submit_bounded(
+            submission,
+            actor_id=actor_id,
+            max_queued_jobs=max_queued_jobs,
+        )
 
     def cancel(
         self,

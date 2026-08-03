@@ -17,6 +17,10 @@ class JobInvariantError(ValueError):
     """Raised when a job would enter an invalid or unsafe state."""
 
 
+class DurableJobBackpressureError(RuntimeError):
+    """Raised when a new job would exceed its bounded execution-lane queue."""
+
+
 class JobStatus(StrEnum):
     QUEUED = "queued"
     RUNNING = "running"

@@ -51,6 +51,16 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - This is one small synthetic single-node worker cycle, not PostgreSQL scale,
   soak, distributed capacity, HA/DR, posting, or write-back evidence.
 
+## E-336 — Live PostgreSQL FX-aware grouped worker evidence (in progress)
+
+- Added a third grouped-worker run with explicit EUR→USD rate data,
+  `target_currency: USD`, and `many-to-one` mode. The test requires two USD
+  edges, USD lineage, and direct strategy digest parity alongside the existing
+  same-currency runs.
+- Local environments without PostgreSQL skip the live cases; CI
+  server-boundaries confirmation is pending. Fixed synthetic rates are not
+  live-market or accounting-rate evidence.
+
 ## E-293 — Immutable local delegation administration
 
 - Migration 27 adds tenant/workspace-scoped `policy_delegations`; a typed

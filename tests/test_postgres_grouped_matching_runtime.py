@@ -57,6 +57,7 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
     tenant_b = "grouped_live_b"
     run_id = "grouped-live-" + uuid4().hex[:16]
     many_run_id = "grouped-live-many-" + uuid4().hex[:16]
+    fx_run_id = "grouped-live-fx-" + uuid4().hex[:16]
     admin = admin_factory.connect()
     try:
         with admin.transaction():
@@ -166,6 +167,54 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
                         "entity_id": "entity-M",
                     },
                 )
+            fx_rule = {
+                "partition_fields": ["entity_id"],
+                "partition_max_records": 10,
+                "grouped_matching_mode": "many-to-one",
+                "amount_tolerance": "0",
+                "date_window_days": 0,
+                "target_currency": "USD",
+                "fx_rates": [
+                    {
+                        "base_currency": "EUR",
+                        "quote_currency": "USD",
+                        "rate": "0.5",
+                        "rate_type": "spot",
+                        "source": "synthetic-fx",
+                        "effective_at": "2026-08-01",
+                    }
+                ],
+            }
+            repository.create_run(
+                tenant_id=tenant_a,
+                run_id=fx_run_id,
+                name="Live FX-aware grouped reconciliation",
+                left_source="ledger-fx.csv",
+                right_source="bank-fx.csv",
+                algorithm_version="bounded-grouped-subset-sum@1.0.0",
+                rule=fx_rule,
+                input_hash="grouped-fx-live-input",
+                actor_id="grouped-live-user",
+            )
+            for side, source_id, amount, currency in (
+                ("Left", "FXL1", "60.00", "USD"),
+                ("Left", "FXL2", "40.00", "USD"),
+                ("Right", "FXR1", "200.00", "EUR"),
+            ):
+                repository.register_input(
+                    tenant_id=tenant_a,
+                    run_id=fx_run_id,
+                    side=side,
+                    source_id=source_id,
+                    record_hash=f"hash-{source_id}",
+                    amount=amount,
+                    currency_code=currency,
+                    attributes={
+                        "date": "2026-08-01",
+                        "currency": currency,
+                        "entity_id": "entity-FX",
+                    },
+                )
 
         worker = PostgresReconciliationWorker(
             factory,
@@ -178,7 +227,7 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
             ),
         )
         summary = worker.process_once()
-        assert summary.completed == 2
+        assert summary.completed == 3
         assert summary.failed == 0
 
         with PostgresTenantBoundary(factory).transaction(tenant_a) as connection:
@@ -208,6 +257,18 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
             }
             assert all(row["lineage_json"]["mode"] == "many-to-many" for row in many_rows)
             many_decision_digest = many_rows[0]["lineage_json"]["decision_digest"]
+            fx_metadata = repository.get_run_metadata(tenant_id=tenant_a, run_id=fx_run_id)
+            fx_rows = repository.list_results(tenant_id=tenant_a, run_id=fx_run_id)
+            assert fx_metadata["execution_status"] == "Complete"
+            assert fx_metadata["result_count"] == 2
+            assert fx_metadata["matched_count"] == 2
+            assert {(row["left_id"], row["right_id"]) for row in fx_rows} == {
+                ("FXL1", "FXR1"),
+                ("FXL2", "FXR1"),
+            }
+            assert all(row["lineage_json"]["mode"] == "many-to-one" for row in fx_rows)
+            assert all(row["lineage_json"]["currency"] == "USD" for row in fx_rows)
+            fx_decision_digest = fx_rows[0]["lineage_json"]["decision_digest"]
 
         expected = GroupedSubsetSumStrategy().execute(
         MatchingStrategyRequest(
@@ -238,6 +299,32 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
             )
         )
         assert many_decision_digest == many_expected.results[0]["decision_digest"]
+        fx_expected = GroupedSubsetSumStrategy().execute(
+            MatchingStrategyRequest(
+                left_records=(
+                    {"id": "FXL1", "amount": "60.00", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-FX",))},
+                    {"id": "FXL2", "amount": "40.00", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-FX",))},
+                ),
+                right_records=(
+                    {"id": "FXR1", "amount": "200.00", "date": "2026-08-01", "currency": "EUR", "partition": _stable_partition_key(("entity-FX",))},
+                ),
+                amount_tolerance="0",
+                date_window_days=0,
+                mode="many-to-one",
+                target_currency="USD",
+                fx_rates=(
+                    {
+                        "base_currency": "EUR",
+                        "quote_currency": "USD",
+                        "rate": "0.5",
+                        "rate_type": "spot",
+                        "source": "synthetic-fx",
+                        "effective_at": "2026-08-01",
+                    },
+                ),
+            )
+        )
+        assert fx_decision_digest == fx_expected.results[0]["decision_digest"]
 
         with PostgresTenantBoundary(factory).transaction(tenant_b) as connection, pytest.raises(
             PostgresReconciliationNotFoundError

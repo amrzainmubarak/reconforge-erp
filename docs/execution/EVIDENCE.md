@@ -12176,3 +12176,15 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   `30817197871` also passed. No PostgreSQL scale, soak, backpressure,
   distributed capacity, HA/DR, posting, or write-back claim is inferred.
 - ADR: `docs/adr/0286-postgres-grouped-many-to-many-runtime-evidence.md`.
+
+## E-336: Live PostgreSQL FX-aware grouped worker evidence
+
+- Local command: `uv run pytest -q tests/test_postgres_grouped_matching_runtime.py
+  tests/test_matching_strategy_contract.py` -> 21 passed with the two
+  PostgreSQL capability skips; Ruff and `git diff --check` pass.
+- The runtime test now adds a fixed synthetic EUR→USD rate (`0.5`) and
+  `target_currency: USD` to a `many-to-one` run. It requires two persisted
+  edges, USD lineage, and decision digest equality with the direct strategy.
+- CI server-boundaries evidence is pending. This does not prove live-market
+  rates, statutory FX accounting, scale, soak, HA/DR, posting, or write-back.
+- ADR: `docs/adr/0287-postgres-grouped-fx-runtime-evidence.md`.

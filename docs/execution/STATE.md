@@ -296,6 +296,10 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   statutory posting, cross-host scheduling, queue HA, automatic failover, or
   HA/DR evidence. ADR:
   `docs/adr/0300-postgres-grouped-matching-bounded-scale-profile.md`.
+- Hosted verification for code head `3ae39b68` passed CI `30854414579`,
+  including server-boundaries job `91821932337`, both Python test/build jobs,
+  all four engine-parity cells, and Docker-parity. Security `30854414587`,
+  Docker `30854414580`, and CodeQL `30854414574` also passed.
 
 ## E-293 — Immutable local delegation administration
 

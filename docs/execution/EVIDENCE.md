@@ -12496,3 +12496,7 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   statutory-posting, cross-host scheduling, queue-HA, automatic-failover, or
   HA/DR evidence. ADR:
   `docs/adr/0300-postgres-grouped-matching-bounded-scale-profile.md`.
+- Hosted verification for code head `3ae39b68` passed CI `30854414579`
+  (server-boundaries job `91821932337`, Python 3.11/3.12, four engine-parity
+  cells, and Docker-parity), Security `30854414587`, Docker `30854414580`, and
+  CodeQL `30854414574`.

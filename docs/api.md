@@ -559,6 +559,13 @@ The authoritative server routes are:
 - `PATCH /api/v1/admin/access/roles/{role_id}`
 - `PUT /api/v1/admin/access/roles/{role_id}/permissions`
 - `PUT /api/v1/admin/access/users/{user_id}/roles`
+- `POST /api/v1/admin/access/policy-analysis`
+
+The policy-analysis route is read-only. It requires the human-governed
+`security.policy.manage` permission and an independent `approved_by` plus
+prior `approved_at` timestamp. It analyzes the active PostgreSQL RBAC and
+enabled service-account snapshot under tenant RLS; it does not mutate policy,
+invalidate distributed caches, or call an external identity provider.
 
 Every route requires a human `roles.manage` principal and current privileged
 assurance. Role list cursors are signed and bound to the tenant, retirement

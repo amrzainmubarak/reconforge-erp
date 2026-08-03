@@ -20,6 +20,10 @@ from reconforge.application.operations import (
     OperationsApplicationService,
     OperationsRepositoryProtocol,
 )
+from reconforge.application.policy_analysis import (
+    PolicyAnalysisApplicationService,
+    PolicyAnalysisRepository,
+)
 from reconforge.application.workspace_periods import (
     WorkspacePeriodApplicationService,
     WorkspacePeriodSetup,
@@ -41,6 +45,8 @@ __all__ = [
     "MigrationStatus",
     "OperationsApplicationService",
     "OperationsRepositoryProtocol",
+    "PolicyAnalysisApplicationService",
+    "PolicyAnalysisRepository",
     "WorkspacePeriodApplicationService",
     "WorkspacePeriodSetup",
     "WorkspacePeriodValidationError",

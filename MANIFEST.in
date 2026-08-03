@@ -265,9 +265,14 @@ include docs/adr/0276-acquisition-fair-value-goodwill-bridge.md
 include docs/adr/0277-acquisition-bridge-cli-boundary.md
 include docs/adr/0278-acquisition-purchase-price-allocation-boundary.md
 include reconforge/auth/policy_analysis.py
+include reconforge/application/policy_analysis.py
+include reconforge/infrastructure/postgres_policy_analysis.py
 include tests/test_policy_analysis.py
+include tests/test_postgres_policy_analysis.py
+include tests/test_postgres_policy_analysis_runtime.py
 include docs/schemas/enterprise_policy_conflict_analysis_v1.schema.json
 include docs/adr/0279-enterprise-policy-conflict-analysis.md
+include docs/adr/0280-postgres-policy-snapshot-analysis.md
 include docs/adr/0251-ha-dr-operational-profile-bounds.md
 include reconforge/auth/policy_cache.py
 include tests/test_policy_cache.py

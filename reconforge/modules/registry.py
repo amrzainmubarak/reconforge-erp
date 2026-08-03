@@ -135,6 +135,8 @@ _MODULES = (
             "tests/test_db_export_import.py",
             "tests/test_db_import_structured_ingress.py",
             "tests/test_policy_analysis.py",
+            "tests/test_postgres_policy_analysis.py",
+            "tests/test_postgres_policy_analysis_runtime.py",
             "tests/test_studio_auth.py",
             "tests/test_upgrade_orchestrator.py",
         ),

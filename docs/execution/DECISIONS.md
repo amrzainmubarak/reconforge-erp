@@ -2550,3 +2550,20 @@
   federation, PostgreSQL/RLS storage, distributed cache invalidation, or
   universal route/job/export/UI coverage.
 - **ADR**: `docs/adr/0279-enterprise-policy-conflict-analysis.md`.
+
+## D276 - Add PostgreSQL policy snapshot analysis boundary
+
+- **Decision**: expose a read-only PostgreSQL policy snapshot loader and
+  application service behind `POST /api/v1/admin/access/policy-analysis`.
+  The route requires human-only `security.policy.manage`, an independent
+  approved actor and timestamp, and executes under the existing tenant RLS
+  transaction.
+- **Rationale**: the local analyzer becomes useful for governed operations only
+  when it can inspect the authoritative server RBAC/service-account snapshot.
+  Reusing the same typed deterministic analyzer avoids a second policy dialect
+  and keeps provider I/O and authorization mutation out of the path.
+- **Boundary**: existing PostgreSQL role/permission tables are read only;
+  tenant-wide grants are represented explicitly as unscoped analysis scopes.
+  No entity/period persistence, federation, distributed invalidation, role
+  mutation, session mutation, or write-back is introduced.
+- **ADR**: `docs/adr/0280-postgres-policy-snapshot-analysis.md`.

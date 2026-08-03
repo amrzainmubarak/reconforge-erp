@@ -46,7 +46,8 @@ def test_phase4_goal_covers_all_seven_workstreams_without_relabeling_old_closure
     assert phase4[3]["status"] == "in_progress"
     assert phase4[4]["status"] == "in_progress"
     assert phase4[5]["status"] == "in_progress"
-    assert all(task["status"] == "planned" for task in phase4[6:])
+    assert phase4[6]["status"] == "in_progress"
+    assert phase4[7]["status"] == "planned"
 
 
 def test_phase4_dependencies_exist_and_final_breadth_waits_for_every_workstream() -> None:

@@ -639,6 +639,22 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   release, or deployment occurred.
 - ADR: `docs/adr/0279-enterprise-policy-conflict-analysis.md`.
 
+### E-329 in progress: PostgreSQL policy snapshot analysis boundary
+
+- `reconforge/application/policy_analysis.py` now provides a backend-neutral
+  `PolicyAnalysisApplicationService`; `reconforge/infrastructure/postgres_policy_analysis.py`
+  loads active tenant-RLS user-role permissions and enabled service-account
+  permissions into the existing deterministic analyzer.
+- `POST /api/v1/admin/access/policy-analysis` is additive, read-only, and
+  requires human-only `security.policy.manage`, an independent approver, and
+  an explicit prior approval timestamp. It never mutates roles, sessions, or
+  policy state.
+- Local contract/API/parity tests pass, and the full local regression collected
+  2,326 tests with zero failures/errors. The dedicated live PostgreSQL test is
+  wired into CI server-boundaries; until that run is recorded, parity remains
+  `contract_only` and this slice is not a live-runtime claim.
+- ADR: `docs/adr/0280-postgres-policy-snapshot-analysis.md`.
+
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio
 
 ### E-260 complete: bounded grouped and netting matcher

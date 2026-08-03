@@ -18,11 +18,18 @@ lifecycle introduced by migration `0051_access_policy_lifecycle`.
 - `PATCH /api/v1/admin/access/roles/{role_id}`
 - `PUT /api/v1/admin/access/roles/{role_id}/permissions`
 - `PUT /api/v1/admin/access/users/{user_id}/roles`
+- `POST /api/v1/admin/access/policy-analysis`
 
 Permission and role sets are exact replacements, not incremental guesses. Read
 the current lifecycle version, submit the intended complete set, and handle a
 version conflict by rereading and reviewing the new state. Unknown permissions
 are rejected because permission registration is not an HTTP capability.
+
+Policy analysis is a read-only maker-checker operation. Callers must hold the
+human-only `security.policy.manage` permission and provide an independent
+approver and an approval timestamp earlier than the analysis time. The result
+is a digest-bound snapshot artifact; it does not change roles, assignments,
+sessions, or service-account permissions.
 
 ## Security behavior
 

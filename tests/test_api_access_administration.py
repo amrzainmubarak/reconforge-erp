@@ -39,6 +39,7 @@ def _role(*, name: str = "administrator", version: int = 1) -> AccessRoleSummary
 class _Repository:
     def __init__(self) -> None:
         self.calls: list[tuple[str, dict[str, object]]] = []
+        self.connection = _PolicyConnection()
 
     def list_permissions(self) -> tuple[AccessPermissionSummary, ...]:
         self.calls.append(("list_permissions", {}))
@@ -77,6 +78,31 @@ class _Repository:
         )
 
 
+class _PolicyCursor:
+    def __init__(self, rows: list[dict[str, object]]) -> None:
+        self.rows = rows
+
+    def fetchone(self) -> dict[str, object] | None:
+        return self.rows[0] if self.rows else None
+
+    def fetchall(self) -> list[dict[str, object]]:
+        return list(self.rows)
+
+
+class _PolicyConnection:
+    def execute(self, sql: str, _parameters: tuple[object, ...]) -> _PolicyCursor:
+        if "identity_user_roles" in sql:
+            return _PolicyCursor(
+                [
+                    {"principal_id": "user-1", "role_id": "role-prepare", "role_name": "preparer", "permission_name": "close.prepare"},
+                    {"principal_id": "user-1", "role_id": "role-approve", "role_name": "approver", "permission_name": "close.approve"},
+                ]
+            )
+        if "service_accounts" in sql:
+            return _PolicyCursor([{"principal_id": "svc-1", "permission_name": "close.manage"}])
+        return _PolicyCursor([{"active": True}])
+
+
 def test_access_admin_http_is_human_mfa_governed_paginated_and_closes_sqlite_roles(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
@@ -90,7 +116,7 @@ def test_access_admin_http_is_human_mfa_governed_paginated_and_closes_sqlite_rol
     def authenticate(request: Any, token: str) -> AuthenticatedServerRequest | None:
         assert request_tenant_id(request) == "tenant-a"
         profiles = {
-            "human-ok": ("user", frozenset({"roles.manage"}), True, "webauthn_user_verified"),
+            "human-ok": ("user", frozenset({"roles.manage", "security.policy.manage"}), True, "webauthn_user_verified"),
             "human-no-permission": ("user", frozenset(), True, "webauthn_user_verified"),
             "human-no-step-up": ("user", frozenset({"roles.manage"}), False, None),
             "human-password-only": ("user", frozenset({"roles.manage"}), True, "password_reauthentication"),
@@ -186,6 +212,14 @@ def test_access_admin_http_is_human_mfa_governed_paginated_and_closes_sqlite_rol
         json={"role_ids": ["role-reviewer"], "expected_user_lifecycle_version": 1},
     )
     assert assignment.status_code == 200 and assignment.json()["role_names"] == ["reviewer"]
+    analysis = client.post(
+        "/api/v1/admin/access/policy-analysis",
+        headers=headers("human-ok"),
+        json={"approved_by": "reviewer", "approved_at": "2026-08-03T08:00:00Z"},
+    )
+    assert analysis.status_code == 200, analysis.text
+    assert analysis.json()["status"] == "conflicts"
+    assert "sod_permission_overlap" in {finding["code"] for finding in analysis.json()["findings"]}
     hostile = client.post(
         "/api/v1/admin/access/roles",
         headers=headers("human-ok"),

@@ -12019,3 +12019,27 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   `30798744767`. The PR remains draft; no merge, tag, release, or deployment
   was performed.
 - ADR: `docs/adr/0279-enterprise-policy-conflict-analysis.md`.
+
+## E-329: PostgreSQL policy snapshot analysis boundary
+
+- Local command: `python -m pytest tests/test_postgres_policy_analysis.py
+  tests/test_repository_boundary_inventory.py tests/test_api_authorization_inventory.py
+  tests/test_api_access_administration.py -q -ra` -> 15 passed. The target
+  covers backend-neutral orchestration, tenant-bound parameterized snapshot
+  queries, active actor/maker-checker validation, API permission/response
+  behavior, route digest update, and repository/parity inventory binding.
+- Full local regression after the slice: `python -m pytest -q -ra` -> 2,326
+  collected, zero failures/errors; only repository-declared external-service
+  and host-capability skips remain. `ruff`, `mypy`, Bandit, `pip_audit`,
+  package build, and `git diff --check` also passed.
+- `POST /api/v1/admin/access/policy-analysis` is read-only and reuses
+  `enterprise-policy-conflict-analysis-v1`; no role, session, service-account,
+  cache, provider, or write-back mutation is possible.
+- CI server-boundaries is wired to run
+  `tests/test_postgres_policy_analysis_runtime.py` under the non-privileged
+  application role. Until that dedicated run succeeds, parity remains
+  `contract_only` and no live PostgreSQL claim is made.
+- Boundary: synthetic single-node PostgreSQL role/permission snapshot only;
+  entity/period-scoped persisted grants, federation, distributed invalidation,
+  and universal route/job/export/UI enforcement remain open.
+- ADR: `docs/adr/0280-postgres-policy-snapshot-analysis.md`.

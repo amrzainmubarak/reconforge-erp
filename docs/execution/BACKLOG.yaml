@@ -1065,7 +1065,7 @@ tasks:
     area: enterprise_policy
     goal_workstream: enterprise_identity_and_policy
     title: Complex enterprise authorization and policy administration
-    status: planned
+    status: in_progress
     depends_on: [P1-PLAT-008, P3-ENT-001, P3-ENT-002, P3-ENT-003, P3-ENT-006]
     exit_evidence: Central versioned RBAC/ABAC covers entity, period, amount, region, data class, delegation, emergency authority, service identity, field restrictions, policy approval, cache invalidation, conflict analysis, tenant isolation, and no self-approval across API/jobs/exports/UI.
     completed_slices:
@@ -1080,6 +1080,7 @@ tasks:
       - E-305 adds explicit field-level authorization inputs to the central policy helper and a deterministic `project_fields` primitive. Unauthorized fields deny; authorized masked fields become `[REDACTED]` with digest evidence. Complete route/action/UI migration remains open.
       - E-321 adds a startup fail-closed validator over the closed API route inventory. Every mutating route must be permission-bearing or dynamic unless it is in an explicit authentication/WebAuthn/step-up handshake allowlist; SCIM remains separately classified. Existing route count/digest stay unchanged. Federation, policy administration, distributed invalidation, and jobs/exports/UI coverage remain open under ADR 0272.
       - E-328 adds `enterprise-policy-conflict-analysis-v1`, a pure read-only analyzer over approved tenant-bound policy grants. It canonically detects overlapping prepare/review/submit/approve permissions, human-governed permissions held by service accounts, unscoped privileged grants when required by policy, and duplicate active grants. Findings are maker-checker attributed, severity/digest bound, replay-verifiable, and exposed through `reconforge policy analyze-conflicts` using bounded structured ingress; enforcement, provider-backed administration, distributed invalidation, and complete route/job/export/UI adoption remain open.
+      - E-329 adds `PolicyAnalysisApplicationService` and a tenant-RLS PostgreSQL snapshot adapter. `POST /api/v1/admin/access/policy-analysis` requires the human-only `security.policy.manage` permission, an independent approved actor/timestamp, and returns the same replay-verifiable analysis without mutating roles, sessions, or policy state. Active PostgreSQL user-role permissions and enabled service-account permissions are loaded with tenant predicates; live CI runtime, federation, scoped entity/period persistence, distributed invalidation, and complete route/job/export/UI adoption remain open until the dedicated server-boundary gate runs.
 
   - id: P4-PLAT-001
     priority: P4

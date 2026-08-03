@@ -100,6 +100,10 @@ application_services:
     service: AccessAdministrationApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.postgres_access_administration.PostgresAccessAdministrationRepository
+  - file: policy_analysis.py
+    service: PolicyAnalysisApplicationService
+    status: backend_neutral
+    adapter: reconforge.auth.policy_analysis.analyze_policy_conflicts
   - file: security_governance.py
     service: SecurityGovernanceApplicationService
     status: backend_neutral
@@ -181,4 +185,4 @@ summary:
   direct_sqlite: 0
   partial_repository: 0
   compatibility_adapter: 20
-  backend_neutral_application: 37
+  backend_neutral_application: 38

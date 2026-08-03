@@ -206,6 +206,18 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Local focused tests pass; live provider interoperability, credentials,
   settlement semantics, compensation, and production deployment remain open.
 
+## E-310 — Local consolidation-close drill-down API
+
+- Added permissioned read-only endpoints under `/api/v1/consolidation-close`
+  for workspace-scoped periods, runs, replay-verified run details, and summary.
+- The route passes the authenticated actor to the existing authorization
+  boundary and repository replay verifier. Unknown workspaces and tampered
+  persisted worksheets fail closed; no new posting or external write-back path
+  is exposed.
+- This improves local API/evidence drill-down only. PostgreSQL consolidation
+  parity, statutory statements, UI workflow, and production close claims remain
+  open.
+
 ## E-292 — Explicit expiring delegation in central policy
 
 - The central policy engine now evaluates temporary delegated authority using a

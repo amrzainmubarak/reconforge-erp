@@ -2270,3 +2270,16 @@
   pass. The response explicitly keeps network dispatch disabled.
 - Boundary: no live provider, credentials, settlement, compensation, or
   production write-back claim is made.
+
+# E-310 — Consolidation close API is read-only and replay-verified
+
+- Date: 2026-08-03
+- Decision: expose the existing local consolidation-close lifecycle through a
+  permissioned read-only API. Pass the authenticated actor into the repository,
+  scope list operations by workspace, and require replay verification before
+  run details are returned.
+- Evidence: 13 focused API/repository/authorization tests, Ruff, Mypy, and
+  diff-check pass. Tampered worksheet payloads and unknown workspaces fail
+  closed.
+- Boundary: this does not add statutory posting, PostgreSQL parity, UI
+  mutation, or source-system write-back.

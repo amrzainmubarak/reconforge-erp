@@ -39,6 +39,7 @@ from reconforge.api.routes import (
     auth,
     close,
     connectors,
+    consolidation_close,
     emergency_access,
     evidence,
     exceptions,
@@ -311,6 +312,7 @@ def create_api_app(
         app.mount("/", SPAStaticFiles(directory=resolved_web_root, html=True), name="studio-web")
     app.include_router(accounts.router, prefix="/api/v1")
     app.include_router(close.router, prefix="/api/v1")
+    app.include_router(consolidation_close.router, prefix="/api/v1")
     app.include_router(connectors.router, prefix="/api/v1")
     app.include_router(evidence.router, prefix="/api/v1")
     app.include_router(reconciliation.router, prefix="/api/v1")

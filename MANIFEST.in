@@ -354,3 +354,6 @@ include docs/adr/0249-governed-job-postgres-runtime-boundary.md
 include docs/adr/0253-postgres-delegation-repository-is-immutable-and-rls-scoped.md
 include docs/adr/0254-api-policy-cache-is-explicit-and-mutation-invalidated.md
 include docs/adr/0260-writeback-acknowledgement-reconciliation-api.md
+include docs/adr/0261-local-consolidation-close-drilldown-api.md
+include reconforge/api/routes/consolidation_close.py
+include tests/test_api_consolidation_close.py

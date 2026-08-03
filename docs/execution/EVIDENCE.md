@@ -284,6 +284,18 @@ This file records commands and observed results. It does not convert a dirty wor
   server-boundaries, four engine-parity matrices, Python 3.11/3.12 tests,
   package build, and Docker parity.
 
+## E-310: Local consolidation-close drill-down API
+
+- Code evidence: `reconforge/api/routes/consolidation_close.py` exposes
+  read-only periods, runs, run details, and summary endpoints. Each call uses
+  the authenticated actor and the existing SQLite repository, whose
+  `get_run` path verifies worksheet replay, journal balance, effect integrity,
+  and digests before returning details.
+- Test evidence: `python -m pytest tests/test_api_consolidation_close.py tests/test_sqlite_consolidation_close.py tests/test_api_authorization_inventory.py -q` passed (13 tests); Ruff, Mypy, and `git diff --check` passed for the changed files.
+- Boundary: local SQLite evidence only. No statutory close, PostgreSQL
+  consolidation parity, UI mutation workflow, source-system posting, or
+  external write-back claim is made.
+
 ## E-292: Expiring delegation policy invariant
 
 - Added optional delegation fields to `PolicyEvaluationContext` and forwarded

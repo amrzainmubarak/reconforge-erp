@@ -135,6 +135,13 @@ tasks:
     status: completed
     depends_on: [E-308]
     exit_evidence: Migration 30 adds a separate reconciliation permission; the scoped API accepts only an already-dispatched intent, binds the provider reference and response digest to the original idempotency key, appends an acknowledged or rejected version, and performs no network dispatch under ADR 0260.
+  - id: E-310
+    priority: P4
+    area: financial-consolidation
+    title: Local consolidation-close drill-down API
+    status: completed
+    depends_on: [P4-FIN-002, E-304]
+    exit_evidence: Permissioned local API endpoints expose workspace-scoped periods, runs, journal/effect details, and lifecycle summary; every run is replay- and digest-verified before response, unknown workspaces and tampered payloads fail closed, and no posting or external write-back is introduced under ADR 0261.
   - id: E-292
     priority: P0
     area: enterprise-policy
@@ -1000,6 +1007,7 @@ tasks:
       - E-307 adds `POST /api/v1/connectors/writeback/intents` as a proposal-only local API boundary. Dedicated permission and authenticated actor binding are enforced; identical requests return the same version/digest, while network dispatch is explicitly disabled.
       - E-308 adds `POST /api/v1/connectors/writeback/intents/{intent_id}/approve` with a separate approval permission and migration 29. Distinct maker/checker identity, tenant/workspace scope, lifecycle validation, and optimistic versioning are enforced; provider dispatch remains disabled.
       - E-309 adds `POST /api/v1/connectors/writeback/intents/{intent_id}/acknowledge` with migration 30 and a separate reconciliation permission. It reconciles only an already-dispatched local intent, binds provider reference/response digest to the original idempotency key, and keeps network dispatch disabled.
+      - E-310 adds permissioned local read-only drill-down endpoints under `/api/v1/consolidation-close`. Workspace-scoped periods, runs, journal/effect details, and summaries are replay-verified before response; tampered worksheets and unknown workspaces fail closed.
 
   - id: P4-SCL-001
     priority: P4

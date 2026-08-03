@@ -574,6 +574,20 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   posting, live rate, or source write-back claim.
 - ADR: `docs/adr/0276-acquisition-fair-value-goodwill-bridge.md`.
 
+### E-326 complete: acquisition bridge CLI boundary
+
+- Added `reconforge consolidation acquisition-bridge --input` with an optional
+  exact output path. The command accepts only the declared JSON request fields,
+  reconstructs canonical Money values, and invokes the pure bridge without a
+  second calculation or persistence path. Unknown fields and malformed input
+  fail closed.
+- Local command: `python -m pytest tests/test_consolidation_acquisition.py -q -ra`
+  -> 8 passed, including stdout/file replay and unknown-field rejection. Full
+  Ruff, Mypy, and diff-check pass.
+- Boundary: local read-only artifact preparation only. No approval, posting,
+  database mutation, network call, live provider, or source write-back claim.
+- ADR: `docs/adr/0277-acquisition-bridge-cli-boundary.md`.
+
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio
 
 ### E-260 complete: bounded grouped and netting matcher

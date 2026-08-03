@@ -2507,3 +2507,16 @@
 - **Boundary**: no purchase-price allocation, tax, impairment, step
   acquisition/disposal, legal opinion, source write-back, or posting claim.
 - **ADR**: `docs/adr/0276-acquisition-fair-value-goodwill-bridge.md`.
+
+## D273 - Expose the acquisition bridge through a strict local CLI
+
+- **Decision**: add `reconforge consolidation acquisition-bridge` as a
+  read-only JSON boundary. Require an exact top-level request field set,
+  reconstruct Money under the currency registry, and route all arithmetic to
+  `prepare_acquisition_fair_value_bridge`.
+- **Rationale**: operators need reproducible automation without a second
+  accounting implementation. Exact-field validation avoids silently ignoring
+  unreviewed policy or source inputs.
+- **Boundary**: no database/network side effect, approval, posting, statutory
+  workflow, provider integration, or source write-back.
+- **ADR**: `docs/adr/0277-acquisition-bridge-cli-boundary.md`.

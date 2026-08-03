@@ -11954,3 +11954,16 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   engine-parity jobs, and Docker parity `91619902895`; Security
   `30792497800` and CodeQL `30792497786` also passed.
 - ADR: `docs/adr/0276-acquisition-fair-value-goodwill-bridge.md`.
+
+## E-326: Acquisition bridge CLI boundary
+
+- `reconforge consolidation acquisition-bridge --input` accepts exactly the
+  declared acquisition request JSON, rebuilds canonical Money values, and
+  invokes the same pure-domain bridge. It can print the result or write one
+  exact JSON artifact; unknown fields and malformed input are rejected.
+- Local command: `python -m pytest tests/test_consolidation_acquisition.py
+  -q -ra` -> 8 passed, including stdout/file replay and unknown-field
+  rejection. Full Ruff, Mypy, and diff-check pass.
+- No database, network, approval, posting, provider, or source-system effect
+  is introduced. This remains local non-posting evidence preparation.
+- ADR: `docs/adr/0277-acquisition-bridge-cli-boundary.md`.

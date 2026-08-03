@@ -73,6 +73,11 @@ from reconforge.db.importers import (
     import_control_tests,
     import_review_state,
 )
+from reconforge.domain.consolidation import ConsolidationError
+from reconforge.domain.consolidation_acquisition import (
+    AcquisitionFairValueBridgeRequest,
+    prepare_acquisition_fair_value_bridge,
+)
 from reconforge.enterprise_demo import EnterpriseDemoError, generate_enterprise_demo
 from reconforge.evidence.binder import generate_evidence_binder
 from reconforge.generator.synthetic import generate_synthetic_dataset
@@ -161,7 +166,7 @@ from reconforge.rules.recon_as_code import ReconciliationAsCodeSpec
 from reconforge.schemas import DatasetName
 from reconforge.studio.app import create_studio_app
 from reconforge.studio.demo_bridge import StudioDemoBridgeError, build_studio_demo_bundle
-from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY
+from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY, Money
 from reconforge.validators import issues_to_frame, validate_input_directory
 from reconforge.variance import analyze_variance
 from reconforge.workflow import WorkflowRepositoryError, WorkflowService, WorkflowServiceError
@@ -3993,6 +3998,65 @@ def consolidation_summary_command(
     except (DatabaseError, PlatformError) as exc:
         _safe_cli_error(exc)
     _print_record_detail("Consolidation Close Summary", summary.to_dict())
+
+
+@consolidation_app.command("acquisition-bridge")
+def consolidation_acquisition_bridge_command(
+    input_path: Annotated[Path, typer.Option("--input", help="JSON acquisition bridge request.")],
+    output_path: Annotated[Path | None, typer.Option("--output", help="Optional exact JSON output path.")] = None,
+) -> None:
+    """Prepare a deterministic, non-posting acquisition fair-value bridge."""
+
+    try:
+        raw = json.loads(input_path.read_text(encoding="utf-8"))
+        if not isinstance(raw, dict):
+            raise PlatformError("Acquisition bridge input must be a JSON object.")
+        expected = {
+            "acquisition_id",
+            "subsidiary_entity_code",
+            "period_id",
+            "acquisition_date",
+            "reporting_currency",
+            "consideration",
+            "nci_fair_value",
+            "identifiable_net_assets_fair_value",
+            "allow_bargain_purchase",
+            "consideration_account_code",
+            "nci_account_code",
+            "identifiable_net_assets_account_code",
+            "goodwill_account_code",
+            "bargain_purchase_account_code",
+            "policy_id",
+            "policy_version",
+            "source_reference",
+            "source_digest",
+            "prepared_by",
+            "prepared_at",
+            "approved_by",
+            "approved_at",
+        }
+        if set(raw) != expected:
+            raise PlatformError("Acquisition bridge input fields are not exactly the declared contract.")
+
+        def parse_money(field: str) -> Money:
+            value = raw[field]
+            if not isinstance(value, dict) or not isinstance(value.get("amount"), str) or not isinstance(value.get("currency"), str):
+                raise PlatformError(f"Acquisition bridge {field} must be a canonical money object.")
+            return Money.from_exact(value["amount"], value["currency"], strict_precision=True)
+
+        values = dict(raw)
+        for field in ("consideration", "nci_fair_value", "identifiable_net_assets_fair_value"):
+            values[field] = parse_money(field)
+        result = prepare_acquisition_fair_value_bridge(AcquisitionFairValueBridgeRequest(**values))
+        rendered = json.dumps(result.to_dict(), sort_keys=True, indent=2)
+        if output_path is None:
+            console.print(rendered)
+        else:
+            target = ensure_output_dir(output_path.parent) / output_path.name
+            target.write_text(rendered + "\n", encoding="utf-8", newline="\n")
+            console.print(f"[green]Acquisition bridge written:[/green] {target}")
+    except (ConsolidationError, OSError, TypeError, ValueError) as exc:
+        _safe_cli_error(PlatformError(f"Acquisition bridge input is invalid: {exc}"))
 
 
 @approvals_app.command("submit")

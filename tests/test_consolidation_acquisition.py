@@ -8,7 +8,9 @@ from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator
+from typer.testing import CliRunner
 
+from reconforge.cli import app
 from reconforge.domain.consolidation import ConsolidationError
 from reconforge.domain.consolidation_acquisition import (
     ACQUISITION_BRIDGE_ALGORITHM_VERSION,
@@ -19,6 +21,7 @@ from reconforge.domain.consolidation_acquisition import (
 from reconforge.utils.money import Money
 
 ROOT = Path(__file__).resolve().parents[1]
+runner = CliRunner()
 
 
 def _request(**overrides: object) -> AcquisitionFairValueBridgeRequest:
@@ -143,3 +146,38 @@ def test_acquisition_bridge_schema_accepts_typed_result() -> None:
     Draft202012Validator.check_schema(schema)
     result = prepare_acquisition_fair_value_bridge(_request())
     Draft202012Validator(schema).validate(result.to_dict())
+
+
+def test_acquisition_bridge_cli_is_read_only_and_json_contract_bound(tmp_path: Path) -> None:
+    input_path = tmp_path / "acquisition-request.json"
+    input_path.write_text(json.dumps(_request().to_dict()), encoding="utf-8")
+
+    result = runner.invoke(app, ["consolidation", "acquisition-bridge", "--input", str(input_path)])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["algorithm_version"] == ACQUISITION_BRIDGE_ALGORITHM_VERSION
+    assert payload["posted"] is False
+    assert payload["goodwill"]["amount"] == "50.00"
+
+    output_path = tmp_path / "artifacts" / "bridge.json"
+    written = runner.invoke(
+        app,
+        [
+            "consolidation",
+            "acquisition-bridge",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+        ],
+    )
+    assert written.exit_code == 0
+    assert json.loads(output_path.read_text(encoding="utf-8"))["result_digest"] == payload["result_digest"]
+
+    invalid = json.loads(input_path.read_text(encoding="utf-8"))
+    invalid["unexpected"] = True
+    input_path.write_text(json.dumps(invalid), encoding="utf-8")
+    rejected = runner.invoke(app, ["consolidation", "acquisition-bridge", "--input", str(input_path)])
+    assert rejected.exit_code == 1
+    assert "exactly the declared contract" in rejected.output

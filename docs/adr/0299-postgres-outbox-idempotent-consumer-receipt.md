@@ -7,10 +7,13 @@
 
 Add `outbox_consumer_receipts` as an immutable, tenant-scoped PostgreSQL
 receipt table and expose `PostgresOutboxConsumer.apply`. The consumer takes an
-event digest and executes a database-local effect callback inside the same
-transaction that inserts the receipt. An advisory transaction lock serializes
-the same `(tenant, consumer, event)` key. A replay with the same digest returns
-`duplicate` without invoking the callback; a changed digest fails closed.
+event digest and verifies it against the canonical digest of the persisted
+outbox JSONB row. A database-local effect callback then executes inside the
+same transaction that inserts the receipt. An advisory transaction lock
+serializes the same `(tenant, consumer, event)` key, and a foreign key keeps a
+receipt bound to an existing outbox event. A replay with the same digest
+returns `duplicate` without invoking the callback; a changed or missing event
+fails closed.
 
 This is the concrete exactly-once business-effect boundary for effects that
 are committed in the same PostgreSQL transaction. The callback must not claim

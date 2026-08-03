@@ -259,8 +259,9 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Added migration `0062_pg_outbox_consumer` and
   `PostgresOutboxConsumer`. A database-local effect and its immutable
   `(tenant, consumer, event)` receipt commit in one transaction; advisory
-  locking serializes concurrent replays, same-digest replays return
-  `duplicate`, and changed digests fail closed.
+  locking serializes concurrent replays, the digest is recomputed from the
+  persisted outbox JSONB row, same-digest replays return `duplicate`, and
+  changed/missing events fail closed.
 - The live PostgreSQL contract simulates a crash after the consumer effect
   commits but before outbox acknowledgement. Lease reclaim and redelivery
   leave one effect row and one receipt, then acknowledge the outbox event.

@@ -12461,7 +12461,9 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   effect, simulates lost outbox acknowledgement, reclaims the expired lease,
   and redelivers. The second delivery returns `duplicate`; effect count and
   immutable receipt count remain one; the outbox is published; a changed event
-  digest is rejected.
+  digest is rejected. The consumer recomputes the supplied digest from the
+  persisted canonical outbox JSONB row and the receipt has a tenant/event
+  foreign key, so fabricated or missing source events fail closed.
 - Boundary: this is a single-node PostgreSQL database-local exactly-once
   business-effect primitive. The callback must use the supplied transaction;
   external broker/provider delivery, cross-host failover, queue HA,

@@ -22,6 +22,7 @@ from reconforge.infrastructure.postgres import (
     normalize_scope_id,
     validate_tenant_id,
 )
+from reconforge.io.persisted import PersistedJsonError, decode_postgres_outbox_payload
 
 _DIGEST_PATTERN = re.compile(r"^[a-f0-9]{64}$")
 _ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
@@ -49,7 +50,9 @@ CREATE TABLE IF NOT EXISTS reconforge.outbox_consumer_receipts (
     status TEXT NOT NULL DEFAULT 'applied' CHECK (status = 'applied'),
     applied_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (tenant_id, consumer_id, event_id),
-    FOREIGN KEY (tenant_id) REFERENCES reconforge.tenants(id) ON DELETE CASCADE
+    FOREIGN KEY (tenant_id) REFERENCES reconforge.tenants(id) ON DELETE CASCADE,
+    FOREIGN KEY (tenant_id, event_id)
+        REFERENCES reconforge.outbox_events(tenant_id, event_id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS outbox_consumer_receipts_event_idx
     ON reconforge.outbox_consumer_receipts(tenant_id, event_id, consumer_id);
@@ -162,6 +165,22 @@ class PostgresOutboxConsumer:
                 # Serialize the same event/consumer pair without requiring
                 # UPDATE privilege on the append-only receipt table.
                 connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (lock_key,))
+                source_event = connection.execute(
+                    """
+                    SELECT payload
+                    FROM reconforge.outbox_events
+                    WHERE tenant_id=%s AND event_id=%s
+                    """,
+                    (tenant, event),
+                ).fetchone()
+                if source_event is None:
+                    raise PostgresOutboxConsumerIntegrityError("outbox event is not available for consumption.")
+                try:
+                    source_digest = decode_postgres_outbox_payload(source_event[0]).checksum_sha256
+                except PersistedJsonError as exc:
+                    raise PostgresOutboxConsumerIntegrityError("outbox event payload failed integrity validation.") from exc
+                if source_digest != payload_digest:
+                    raise PostgresOutboxConsumerIntegrityError("event digest does not match the persisted outbox payload.")
                 existing = connection.execute(
                     """
                     SELECT event_digest, effect_digest

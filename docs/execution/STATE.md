@@ -38,6 +38,15 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   live-verified only within this synthetic single-node server boundary; it is
   not a hosted deployment or production-readiness claim.
 
+## E-335 — Live PostgreSQL true many-to-many worker evidence (in progress)
+
+- Extended the existing grouped-worker runtime contract with a second explicit
+  `many-to-many` run. It retains the prior one-to-many case, requires four
+  deterministic Cartesian edges, and compares the persisted decision digest to
+  the direct strategy output.
+- Local environments without PostgreSQL skip the two live grouped-worker
+  cases; CI server-boundaries confirmation is pending.
+
 ## E-293 — Immutable local delegation administration
 
 - Migration 27 adds tenant/workspace-scoped `policy_delegations`; a typed

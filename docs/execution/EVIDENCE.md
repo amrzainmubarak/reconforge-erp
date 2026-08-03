@@ -12161,3 +12161,17 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   Security/CodeQL runs `30815727156`, `30815726601`, and `30815726588` green.
   E-332 run `30811914832` remains the separate live adapter gate.
 - ADR: `docs/adr/0285-live-postgres-ppa-api-runtime-gate.md`.
+
+## E-335: Live PostgreSQL true many-to-many worker evidence
+
+- Local command: `uv run pytest -q tests/test_postgres_grouped_matching_runtime.py`
+  -> the two live PostgreSQL cases are declared capability skips without a
+  configured service; Ruff and `git diff --check` pass.
+- The runtime test now keeps the existing one-to-many run and creates a second
+  explicit `many-to-many` run. The worker must complete both, persist four
+  Cartesian edges (`ML1/ML2` x `MR1/MR2`), preserve `mode` and decision digest
+  lineage, and equal the direct `GroupedSubsetSumStrategy` digest.
+- CI server-boundaries evidence is pending. No PostgreSQL scale, soak,
+  backpressure, distributed capacity, HA/DR, posting, or write-back claim is
+  inferred.
+- ADR: `docs/adr/0286-postgres-grouped-many-to-many-runtime-evidence.md`.

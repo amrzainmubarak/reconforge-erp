@@ -56,6 +56,7 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
     tenant_a = "grouped_live_a"
     tenant_b = "grouped_live_b"
     run_id = "grouped-live-" + uuid4().hex[:16]
+    many_run_id = "grouped-live-many-" + uuid4().hex[:16]
     admin = admin_factory.connect()
     try:
         with admin.transaction():
@@ -127,6 +128,44 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
                         "entity_id": "entity-A",
                     },
                 )
+            many_rule = {
+                "partition_fields": ["entity_id"],
+                "partition_max_records": 10,
+                "grouped_matching_mode": "many-to-many",
+                "amount_tolerance": "0",
+                "date_window_days": 0,
+            }
+            repository.create_run(
+                tenant_id=tenant_a,
+                run_id=many_run_id,
+                name="Live true many-to-many reconciliation",
+                left_source="ledger-many.csv",
+                right_source="bank-many.csv",
+                algorithm_version="bounded-grouped-subset-sum@1.0.0",
+                rule=many_rule,
+                input_hash="grouped-many-live-input",
+                actor_id="grouped-live-user",
+            )
+            for side, source_id, amount in (
+                ("Left", "ML1", "30.00"),
+                ("Left", "ML2", "70.00"),
+                ("Right", "MR1", "25.00"),
+                ("Right", "MR2", "75.00"),
+            ):
+                repository.register_input(
+                    tenant_id=tenant_a,
+                    run_id=many_run_id,
+                    side=side,
+                    source_id=source_id,
+                    record_hash=f"hash-{source_id}",
+                    amount=amount,
+                    currency_code="USD",
+                    attributes={
+                        "date": "2026-08-01",
+                        "currency": "USD",
+                        "entity_id": "entity-M",
+                    },
+                )
 
         worker = PostgresReconciliationWorker(
             factory,
@@ -139,7 +178,7 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
             ),
         )
         summary = worker.process_once()
-        assert summary.completed == 1
+        assert summary.completed == 2
         assert summary.failed == 0
 
         with PostgresTenantBoundary(factory).transaction(tenant_a) as connection:
@@ -156,6 +195,19 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
             assert all(row["status"] == "Matched" for row in rows)
             assert all(row["lineage_json"]["strategy_id"] == "bounded-grouped-subset-sum" for row in rows)
             decision_digest = rows[0]["lineage_json"]["decision_digest"]
+            many_metadata = repository.get_run_metadata(tenant_id=tenant_a, run_id=many_run_id)
+            many_rows = repository.list_results(tenant_id=tenant_a, run_id=many_run_id)
+            assert many_metadata["execution_status"] == "Complete"
+            assert many_metadata["result_count"] == 4
+            assert many_metadata["matched_count"] == 4
+            assert {(row["left_id"], row["right_id"]) for row in many_rows} == {
+                ("ML1", "MR1"),
+                ("ML1", "MR2"),
+                ("ML2", "MR1"),
+                ("ML2", "MR2"),
+            }
+            assert all(row["lineage_json"]["mode"] == "many-to-many" for row in many_rows)
+            many_decision_digest = many_rows[0]["lineage_json"]["decision_digest"]
 
         expected = GroupedSubsetSumStrategy().execute(
         MatchingStrategyRequest(
@@ -170,6 +222,22 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
             )
         )
         assert decision_digest == expected.results[0]["decision_digest"]
+        many_expected = GroupedSubsetSumStrategy().execute(
+            MatchingStrategyRequest(
+                left_records=(
+                    {"id": "ML1", "amount": "30.00", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-M",))},
+                    {"id": "ML2", "amount": "70.00", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-M",))},
+                ),
+                right_records=(
+                    {"id": "MR1", "amount": "25.00", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-M",))},
+                    {"id": "MR2", "amount": "75.00", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-M",))},
+                ),
+                amount_tolerance="0",
+                date_window_days=0,
+                mode="many-to-many",
+            )
+        )
+        assert many_decision_digest == many_expected.results[0]["decision_digest"]
 
         with PostgresTenantBoundary(factory).transaction(tenant_b) as connection, pytest.raises(
             PostgresReconciliationNotFoundError

@@ -91,6 +91,19 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   controller is manual; quorum, automatic failover, site loss, and production
   SLO evidence remain open.
 
+## E-312 — HA/DR verification is fail-closed
+
+- The operational-profile schema now requires explicit verification booleans
+  for independent failure domains, quorum/witness fencing, automatic failover,
+  backup/restore integrity, repeated integrity, observed RPO/RTO, and
+  production SLO evidence.
+- JSON Schema conditional validation rejects `status: verified` unless every
+  gate is true. The retained Docker profile records the measured backup,
+  repeated-integrity, and RPO/RTO gates while keeping the missing independent
+  topology, quorum, automatic failover, and production-SLO gates false.
+- This closes documentation drift only; it does not claim independent-host HA,
+  site-loss recovery, automatic failover, or production readiness.
+
 ## E-301 — Scope-aware allowed-only policy decision cache
 
 - The opt-in cache keys every policy context field and policy version, stores

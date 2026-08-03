@@ -3,7 +3,7 @@
   "$id": "https://reconforge.local/schemas/ha_dr_operational_profile.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "profile_id", "status", "source_report", "targets", "observed", "runbook", "limitations"],
+  "required": ["schema_version", "profile_id", "status", "source_report", "targets", "observed", "verification", "runbook", "limitations"],
   "properties": {
     "schema_version": {"const": 1},
     "profile_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,79}$"},
@@ -31,7 +31,49 @@
         "failure_domains": {"type": "integer", "minimum": 1}
       }
     },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "independent_failure_domains",
+        "quorum_or_witness",
+        "automatic_failover",
+        "backup_restore_integrity",
+        "repeated_integrity",
+        "rpo_rto_observed",
+        "production_slo"
+      ],
+      "properties": {
+        "independent_failure_domains": {"type": "boolean"},
+        "quorum_or_witness": {"type": "boolean"},
+        "automatic_failover": {"type": "boolean"},
+        "backup_restore_integrity": {"type": "boolean"},
+        "repeated_integrity": {"type": "boolean"},
+        "rpo_rto_observed": {"type": "boolean"},
+        "production_slo": {"type": "boolean"}
+      }
+    },
     "runbook": {"type": "array", "minItems": 4, "items": {"type": "string", "minLength": 1, "maxLength": 300}},
     "limitations": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1, "maxLength": 300}}
-  }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "verified"}}},
+      "then": {
+        "properties": {
+          "verification": {
+            "properties": {
+              "independent_failure_domains": {"const": true},
+              "quorum_or_witness": {"const": true},
+              "automatic_failover": {"const": true},
+              "backup_restore_integrity": {"const": true},
+              "repeated_integrity": {"const": true},
+              "rpo_rto_observed": {"const": true},
+              "production_slo": {"const": true}
+            }
+          }
+        }
+      }
+    }
+  ]
 }

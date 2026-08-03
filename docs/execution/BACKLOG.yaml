@@ -1044,6 +1044,7 @@ tasks:
     exit_evidence: Independent-host quorum/fencing, automatic failover, split-brain refusal, backup/restore, regional or site-loss, repeated integrity, and declared RPO/RTO drills pass with every run retained and no single-host widening claim.
     completed_slices:
       - E-300 adds `HA_DR_OPERATIONAL_PROFILE_2026-07-30.json` and its closed schema. The profile binds the retained three-run single-host synchronous-standby report to zero-transaction-loss and 60-second failover/failback targets, a six-step operator runbook, and explicit single-host/manual-controller/quorum/production-SLO limitations. Independent hosts, witness quorum, automatic failover, and site-loss remain open.
+      - E-312 adds fail-closed verification gates to the HA/DR profile schema. `status: verified` now requires explicit evidence for independent failure domains, quorum/witness fencing, automatic failover, backup/restore integrity, repeated integrity, observed RPO/RTO, and production SLO; the retained single-host profile remains `partial`.
 
   - id: P4-IAM-001
     priority: P4

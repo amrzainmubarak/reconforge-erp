@@ -2296,3 +2296,14 @@
   non-privileged role.
 - Boundary: one-node synthetic control-journal evidence only; no statutory,
   HA/DR, restore, or source-system posting claim.
+## D263 - HA/DR verification status is conditional on explicit topology evidence
+
+- **Decision**: Require seven explicit HA/DR verification gates in the
+  operational profile and reject `status: verified` unless all are true.
+- **Rationale**: A measured single-host drill can prove useful bounded
+  behavior, but it cannot establish independent failure domains, quorum,
+  automatic failover, or production SLOs. Conditional schema validation keeps
+  future documentation fail-closed.
+- **Consequence**: The retained profile stays `partial`; no runtime or
+  deployment behavior changes, and independent-host/site-loss evidence remains
+  open under P4-REL-001.

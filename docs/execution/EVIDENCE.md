@@ -11655,3 +11655,19 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   inherited from `c5f23834a2546a29874164d7447f2b258bbe2350`.
 - No merge, tag, GitHub Release, package publication, deployment, production
   mutation, repository-setting change, or readiness/superiority claim occurred.
+## E-312: Fail-closed HA/DR verification profile
+
+- The HA/DR operational-profile schema now requires a `verification` object
+  with seven explicit gates: independent failure domains, quorum/witness,
+  automatic failover, backup/restore integrity, repeated integrity, observed
+  RPO/RTO, and production SLO evidence.
+- Conditional schema validation rejects a profile marked `verified` when any
+  gate is false. A regression test mutates the retained profile to `verified`
+  and confirms rejection at the independent-failure-domain gate.
+- The retained profile remains `partial`: backup/restore, repeated integrity,
+  and observed RPO/RTO are true; independent domains, quorum/witness,
+  automatic failover, and production SLO are false.
+- Focused command: `python -m pytest tests/test_ha_dr_operational_profile.py -q`
+  — 2 passed.
+- Boundary: this is a documentation/release-safety gate. It does not create
+  multi-host, site-loss, automatic-failover, or production-SLO evidence.

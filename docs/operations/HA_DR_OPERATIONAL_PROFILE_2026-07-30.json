@@ -15,6 +15,15 @@
     "failback_rto_max_seconds": 0.958,
     "failure_domains": 1
   },
+  "verification": {
+    "independent_failure_domains": false,
+    "quorum_or_witness": false,
+    "automatic_failover": false,
+    "backup_restore_integrity": true,
+    "repeated_integrity": true,
+    "rpo_rto_observed": true,
+    "production_slo": false
+  },
   "runbook": [
     "Start two labelled PostgreSQL nodes with synchronous remote_apply.",
     "Write and acknowledge the sentinel sequence before the controlled partition.",

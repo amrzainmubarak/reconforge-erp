@@ -11,6 +11,7 @@ import hashlib
 import hmac
 import json
 from collections.abc import Mapping, Sequence
+from decimal import Decimal, InvalidOperation
 from typing import Any, TypedDict
 
 from reconforge.domain.consolidation import ConsolidationError
@@ -205,6 +206,16 @@ class PostgresConsolidationCloseRepository:
             "source_reference": str(row["source_reference"]),
         }
 
+    @staticmethod
+    def _amount_matches_minor(amount_decimal: Any, amount_minor: int, currency_code: str) -> bool:
+        expected = Money.from_minor_units(amount_minor, currency_code).to_canonical_dict()["amount"]
+        try:
+            actual_decimal = Decimal(str(amount_decimal))
+            expected_decimal = Decimal(str(expected))
+        except (InvalidOperation, ValueError):
+            return False
+        return actual_decimal.is_finite() and actual_decimal == expected_decimal
+
     def _run_lines(
         self,
         run_id: str,
@@ -256,7 +267,14 @@ class PostgresConsolidationCloseRepository:
                 return [self._line_material(row) | {"id": str(row["id"]), "ordinal": int(row["ordinal"])} for row in rows], expected_digest
             return expected_lines, expected_digest
         actual_material: list[dict[str, Any]] = [dict(self._line_material(row)) for row in rows]
-        if actual_material != expected_lines or len(rows) != len(expected_lines):
+        if (
+            actual_material != expected_lines
+            or len(rows) != len(expected_lines)
+            or any(
+                not self._amount_matches_minor(row["amount_decimal"], int(row["amount_minor"]), str(row["currency_code"]))
+                for row in rows
+            )
+        ):
             raise PlatformError("Persisted consolidation journal lines do not reproduce the worksheet.")
         actual_lines = [
             material | {"id": str(row["id"]), "ordinal": int(row["ordinal"])}
@@ -757,6 +775,12 @@ class PostgresConsolidationCloseRepository:
                 actual_material != expected_lines
                 or len(persisted_lines) != int(record.get("journal_line_count", 0) or 0)
                 or not hmac.compare_digest(expected_journal_digest, str(record.get("journal_digest")))
+                or any(
+                    not self._amount_matches_minor(
+                        row["amount_decimal"], int(row["amount_minor"]), str(row["currency_code"])
+                    )
+                    for row in persisted_lines
+                )
             ):
                 raise PlatformError("Persisted consolidation journal failed balance or digest verification.")
         elif int(record.get("journal_line_count", 0) or 0) != 0:
@@ -812,15 +836,13 @@ class PostgresConsolidationCloseRepository:
             sign = 1 if effect_type == "Posting" else -1
             for line in lines:
                 source = run_by_id.get(str(line["run_line_id"]))
-                expected_amount = Money.from_minor_units(
-                    int(line["amount_minor"]),
-                    str(line["currency_code"]),
-                ).to_canonical_dict()["amount"]
                 if (
                     source is None
                     or int(line["amount_minor"]) != sign * int(source["amount_minor"])
                     or str(line["currency_code"]) != str(source["currency_code"])
-                    or str(line["amount_decimal"]) != str(expected_amount)
+                    or not self._amount_matches_minor(
+                        line["amount_decimal"], int(line["amount_minor"]), str(line["currency_code"])
+                    )
                     or int(line["ordinal"]) != int(source["ordinal"])
                 ):
                     raise PlatformError("Persisted consolidation effect does not reproduce its run lines.")

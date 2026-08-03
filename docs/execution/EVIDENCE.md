@@ -264,6 +264,9 @@ This file records commands and observed results. It does not convert a dirty wor
 - Boundary: this proves local approval evidence only. It does not prove MFA
   cryptographic assurance, external provider acknowledgement, compensation,
   or live ERP/bank mutation.
+- Remote evidence: CI `30776133163`, Docker `30776133152`, Security
+  `30776133138`, and CodeQL `30776133117` passed for migration 29, the API
+  maker-checker path, and the full compatibility matrix.
 
 ## E-292: Expiring delegation policy invariant
 

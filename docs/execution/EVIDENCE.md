@@ -310,6 +310,11 @@ This file records commands and observed results. It does not convert a dirty wor
 - Boundary: the existing CI PostgreSQL 16 single-node synthetic gate E-291
   remains the runtime evidence. No statutory consolidation, restore, HA/DR,
   ERP/bank write-back, or production SLO claim is made.
+- Diagnostic: initial CI `30778436155` correctly exposed two compatibility
+  defects: the new JSONB fallback parser was absent from the closed FI inventory,
+  and the test queried RLS-protected events outside the transaction-local tenant
+  scope. Both were corrected before the next gate; the initial run remains a
+  recorded diagnostic, not release evidence.
 
 ## E-292: Expiring delegation policy invariant
 

@@ -562,6 +562,23 @@ surfaces:
       - The JSON value is an internal digest-bound write-back intent contract, not provider payload or executable content.
       - Append-only SQLite and explicit tenant/workspace filtering are local evidence; live provider acknowledgement and external write-back remain open.
     next_action: Add provider-specific adapters only behind approved credentials, signed registration, and failure-injection evidence.
+  - id: FI-027
+    name: PostgreSQL consolidation-close worksheet records
+    module_ids: [finance.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/postgres_consolidation_close.py::PostgresConsolidationCloseRepository._verified_run
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_postgres_consolidation_close.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The JSONB value is an internal replay-verified worksheet, not an upload or executable document.
+      - The runtime gate is synthetic and single-node; statutory consolidation, restore, HA/DR, and source-system write-back remain open.
+    next_action: Preserve replay verification and add independent restore/HA evidence before widening the PostgreSQL claim.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader
@@ -619,6 +636,11 @@ direct_json_parser_allowlist:
     call_count: 1
     surface_id: FI-026
     rationale: Parses only the append-only canonical write-back intent contract after tenant/workspace selection; Pydantic validation and digest comparison fail closed before a persisted status can be returned.
+  - path: reconforge/infrastructure/postgres_consolidation_close.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-027
+    rationale: Parses only a bounded JSONB worksheet fallback before exact worksheet replay, canonical digest, and journal digest verification; malformed or conflicting persisted evidence fails closed.
   - path: reconforge/upgrade/application_adapter.py
     parser: json.loads
     call_count: 1

@@ -9,7 +9,7 @@ from uuid import uuid4
 import pytest
 
 from reconforge.application.consolidation_close import ConsolidationCloseRepositoryProtocol
-from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings
+from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings, set_local_tenant_scope
 from reconforge.infrastructure.postgres_consolidation_close import (
     POSTGRES_CONSOLIDATION_CLOSE_SCHEMA_SQL,
     PostgresConsolidationCloseRepository,
@@ -142,10 +142,12 @@ def test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable() -
         assert repository.summary(workspace="close").reversed_runs == 1
         detail = repository.get_run(first["id"])
         assert detail["worksheet"]["worksheet_id"] == worksheet.worksheet_id
-        events = connection.execute(
-            "SELECT action,actor FROM reconforge.consolidation_close_period_events WHERE tenant_id=%s AND period_id=%s ORDER BY created_at,id",
-            (tenant_a, period["id"]),
-        ).fetchall()
+        with connection.transaction():
+            set_local_tenant_scope(connection, tenant_a)
+            events = connection.execute(
+                "SELECT action,actor FROM reconforge.consolidation_close_period_events WHERE tenant_id=%s AND period_id=%s ORDER BY created_at,id",
+                (tenant_a, period["id"]),
+            ).fetchall()
         assert [(str(item["action"]), str(item["actor"])) for item in events] == [
             ("Locked", "period-reviewer"),
             ("Open", "period-reopener"),

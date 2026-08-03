@@ -12468,9 +12468,9 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   business-effect primitive. The callback must use the supplied transaction;
   external broker/provider delivery, cross-host failover, queue HA,
   throughput, soak, compensation, and production readiness remain open.
-- Hosted verification for commit `a1a8808b` is green: CI `30850066183`
+- Hosted verification for commit `c6a73dd9` is green: CI `30851329394`
   passed server-boundaries (including the live PostgreSQL failure-injection
   contract), Python 3.11/3.12, four engine-parity cells, and docker-parity.
-  Security `30850063383`, Docker `30850062971`, and CodeQL `30850062628` also
+  Security `30851329385`, Docker `30851329398`, and CodeQL `30851329332` also
   passed.
 - ADR: `docs/adr/0299-postgres-outbox-idempotent-consumer-receipt.md`.

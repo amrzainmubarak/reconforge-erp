@@ -272,9 +272,9 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   delivery, cross-host failover, queue HA, throughput, soak, compensation,
   or production readiness. ADR:
   `docs/adr/0299-postgres-outbox-idempotent-consumer-receipt.md`.
-- Hosted verification for code head `a1a8808b` passed CI `30850066183`
+- Hosted verification for code head `c6a73dd9` passed CI `30851329394`
   (server-boundaries, Python 3.11/3.12, engine-parity, docker-parity),
-  Security `30850063383`, Docker `30850062971`, and CodeQL `30850062628`.
+  Security `30851329385`, Docker `30851329398`, and CodeQL `30851329332`.
 
 ## E-293 — Immutable local delegation administration
 

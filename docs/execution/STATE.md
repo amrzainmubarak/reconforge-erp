@@ -342,7 +342,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 
 ## Snapshot boundary
 
-- Branch: `codex/consolidation-journal-lifecycle`, current E-331 code head `8b35da135d576600198b40a30692c27af5c9bce4`; Draft PR #71 remains deliberately unmerged.
+- Branch: `codex/consolidation-journal-lifecycle`, current E-332 code head `df5eb094df104483ac76f98222825a6677dc144a`; Draft PR #71 remains deliberately unmerged.
 - Phase 1 base: `1c633eea53a2f11c9a90af57edfc80a36faeef82` (merged atomic application-boundary PR #62)
 - Phase 0 signed-candidate source remains `d47edd845e6aef3bae16e05698e07878086d690b`; its evidence is immutable historical baseline, not evidence for Phase 1 changes.
 - Publication scope: PR #54 merged the evidence-bounded Phase 0 implementation. Signed Release Candidate run `30243819239` is non-publishing: it retained review artifact `8644255664` and pushed only the digest-addressed candidate image required for verification; no GitHub Release, PyPI publication, compliance claim, or production migration occurred.
@@ -694,7 +694,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   effectiveness remain open.
 - ADR: `docs/adr/0282-postgres-policy-scope-amount-bounds.md`.
 
-### E-332 in progress: PostgreSQL persisted non-posting acquisition PPA evidence
+### E-332 complete: PostgreSQL persisted non-posting acquisition PPA evidence
 
 - Added the backend-neutral `AcquisitionPpaApplicationService` and the
   tenant-scoped `PostgresConsolidationPpaRepository` behind Alembic
@@ -706,9 +706,11 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   emits an audit event, and replay-verifies reads. PostgreSQL forced RLS plus
   trigger-enforced append-only rows prevent sibling-tenant reads and direct
   update/delete tampering.
-- Local focused contracts, Ruff, Mypy, and diff-check pass. The live
-  PostgreSQL runtime gate is pending CI on this head; parity remains
-  `contract_only` until that gate passes.
+- Local focused/full contracts, Ruff, Mypy, Bandit, package build, and
+  diff-check pass. CI run `30811914832` passes Python 3.11/3.12, engine parity,
+  Docker parity, Security, CodeQL, migration `0060`, and the unskipped
+  PostgreSQL runtime gate; parity is now `live_verified_current` for this
+  bounded adapter.
 - Boundary: evidence storage only. No statutory acquisition accounting,
   tax/deferred-tax, impairment, journal posting, live rates, ERP/bank
   connector, source write-back, restore, HA/DR, or production-readiness claim.

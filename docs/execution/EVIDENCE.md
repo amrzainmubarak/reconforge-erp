@@ -12109,8 +12109,11 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   reads. A false `posted` marker is enforced by both application and database.
 - The dedicated runtime test is intentionally unskipped only when
   `RECONFORGE_TEST_POSTGRES_DSN` is supplied; on this local environment it is
-  a declared capability skip. CI server-boundaries evidence is pending for the
-  current head, so the parity inventory remains `contract_only`.
+  a declared capability skip. CI server-boundaries run `30811914832` executes
+  it against PostgreSQL 16 Alpine with the non-privileged role and passes
+  migration, idempotent replay, tenant isolation, audit evidence, and database
+  update/delete refusal. The parity inventory promotes this adapter to
+  `live_verified_current`.
 - Boundary: durable evidence storage only. This does not prove statutory
   acquisition accounting, tax/deferred-tax, impairment, journal posting, live
   rates, ERP/bank providers, source write-back, restore, HA/DR, or production

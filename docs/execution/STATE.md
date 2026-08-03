@@ -152,8 +152,11 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   role when CI provides the database.
 - Local focused tests and static checks pass. The local environment has no
   `RECONFORGE_TEST_POSTGRES_DSN`, so the PostgreSQL runtime is CI-only for this
-  slice. This is process-scoped fairness evidence, not distributed fairness,
-  throughput, soak, HA/DR, or production-capacity evidence.
+  slice. CI run `30831774662` passes server-boundaries, Python 3.11/3.12,
+  engine-parity, and Docker-parity; Security `30831776530`, Docker `30831774950`,
+  and CodeQL `30831774663` also pass. This is process-scoped fairness evidence,
+  not distributed fairness, throughput, soak, HA/DR, or production-capacity
+  evidence.
 - ADR: `docs/adr/0293-deterministic-fair-durable-job-lane-scheduling.md`.
 
 ## E-293 — Immutable local delegation administration

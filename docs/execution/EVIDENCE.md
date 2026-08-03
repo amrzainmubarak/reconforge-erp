@@ -12318,4 +12318,8 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   API, CLI, UI, or external system is changed.
 - Repository-wide `python -m pytest -q` then passed all 2,343 collected tests;
   `git diff --check` also passed.
+- CI run `30831774662` passed server-boundaries (including this live
+  PostgreSQL lane test), Python 3.11/3.12, all four engine-parity cells, and
+  Docker-parity. Security `30831776530`, Docker `30831774950`, and CodeQL
+  `30831774663` also passed on the repaired head.
 - ADR: `docs/adr/0293-deterministic-fair-durable-job-lane-scheduling.md`.

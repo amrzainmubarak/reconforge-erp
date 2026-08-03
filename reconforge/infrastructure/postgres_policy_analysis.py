@@ -81,7 +81,7 @@ class PostgresPolicyAnalysisRepository:
         approved = self._require_active_user(approved_by, "approved_by")
         user_rows = self.connection.execute(
             """SELECT ur.user_id AS principal_id, ur.role_id, r.name AS role_name,
-                      rp.permission_name, ps.scope_id, ps.workspace_id, ps.entity_id,
+                      rp.permission_name, ps.id AS scope_id, ps.workspace_id, ps.entity_id,
                       ps.period_id, ps.region_id, ps.data_classification
                  FROM reconforge.identity_user_roles ur
                  JOIN reconforge.identity_users u
@@ -94,7 +94,7 @@ class PostgresPolicyAnalysisRepository:
                    ON ps.tenant_id=rp.tenant_id AND ps.role_id=rp.role_id
                   AND ps.permission_name=rp.permission_name AND ps.active
                 WHERE ur.tenant_id=%s AND ur.active
-                ORDER BY ur.user_id, ur.role_id, rp.permission_name, ps.scope_id""",
+                ORDER BY ur.user_id, ur.role_id, rp.permission_name, ps.id""",
             (self.tenant_id,),
         ).fetchall()
         service_rows = self.connection.execute(

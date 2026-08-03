@@ -167,8 +167,14 @@ def test_live_postgres_policy_analysis_is_rls_isolated_and_maker_checker_bound()
     finally:
         with admin.transaction():
             admin.execute(
+                "ALTER TABLE reconforge.identity_role_permission_scopes DISABLE TRIGGER identity_role_permission_scope_guard"
+            )
+            admin.execute(
                 "DELETE FROM reconforge.identity_role_permission_scopes WHERE tenant_id IN (%s,%s)",
                 (tenant_a, tenant_b),
+            )
+            admin.execute(
+                "ALTER TABLE reconforge.identity_role_permission_scopes ENABLE TRIGGER identity_role_permission_scope_guard"
             )
             admin.execute(
                 "DELETE FROM reconforge.service_account_permissions WHERE tenant_id IN (%s,%s)",

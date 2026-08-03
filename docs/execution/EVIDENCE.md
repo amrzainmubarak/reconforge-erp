@@ -279,6 +279,10 @@ This file records commands and observed results. It does not convert a dirty wor
 - Boundary: this proves local acknowledgement reconciliation only. It does not
   prove a live ERP/bank provider, credential or settlement semantics,
   compensation, external retries, or production write-back.
+- Remote evidence: CI `30776952961`, Docker `30776952974`, Security
+  `30776952957`, and CodeQL `30776952954` passed. CI included PostgreSQL
+  server-boundaries, four engine-parity matrices, Python 3.11/3.12 tests,
+  package build, and Docker parity.
 
 ## E-292: Expiring delegation policy invariant
 

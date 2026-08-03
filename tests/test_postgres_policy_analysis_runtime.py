@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from uuid import uuid4
 
 import pytest
@@ -88,9 +89,20 @@ def test_live_postgres_policy_analysis_is_rls_isolated_and_maker_checker_bound()
             )
             admin.execute(
                 """INSERT INTO reconforge.identity_role_permission_scopes
-                   (tenant_id,id,role_id,permission_name,workspace_id,entity_id,period_id,created_by)
-                   VALUES (%s,%s,%s,'close.approve',%s,%s,%s,%s)""",
-                (tenant_a, scope_id, role_approve, workspace_id, entity_id, period_id, user_two),
+                   (tenant_id,id,role_id,permission_name,workspace_id,entity_id,period_id,
+                    minimum_amount,maximum_amount,created_by)
+                   VALUES (%s,%s,%s,'close.approve',%s,%s,%s,%s,%s,%s)""",
+                (
+                    tenant_a,
+                    scope_id,
+                    role_approve,
+                    workspace_id,
+                    entity_id,
+                    period_id,
+                    Decimal("100"),
+                    Decimal("2500"),
+                    user_two,
+                ),
             )
             admin.execute(
                 """INSERT INTO reconforge.service_accounts
@@ -109,6 +121,11 @@ def test_live_postgres_policy_analysis_is_rls_isolated_and_maker_checker_bound()
             admin.execute(
                 "UPDATE reconforge.identity_role_permission_scopes SET entity_id=%s WHERE tenant_id=%s AND id=%s",
                 (f"tampered_{suffix}", tenant_a, scope_id),
+            )
+        with pytest.raises(Exception, match="policy permission scope identity is immutable"), admin.transaction():
+            admin.execute(
+                "UPDATE reconforge.identity_role_permission_scopes SET maximum_amount=%s WHERE tenant_id=%s AND id=%s",
+                (Decimal("2501"), tenant_a, scope_id),
             )
         with pytest.raises(Exception, match="policy permission scopes are append-only"), admin.transaction():
             admin.execute(
@@ -136,6 +153,8 @@ def test_live_postgres_policy_analysis_is_rls_isolated_and_maker_checker_bound()
                 workspace_id=workspace_id,
                 entity_ids=frozenset({entity_id}),
                 period_ids=frozenset({period_id}),
+                minimum_amount=Decimal("100"),
+                maximum_amount=Decimal("2500"),
             ).digest
             assert any(
                 expected_scope_digest in finding.scope_digests for finding in result.findings

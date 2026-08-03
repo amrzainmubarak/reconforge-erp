@@ -12067,3 +12067,25 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   Amount-scope persistence, federation, distributed invalidation, and complete
   route/job/export/UI adoption remain open.
 - ADR: `docs/adr/0281-postgres-policy-permission-scopes.md`.
+
+## E-331: PostgreSQL persisted policy amount bounds
+
+- Local contract command: `uv run pytest -q tests/test_policy_analysis.py
+  tests/test_postgres_policy_analysis.py tests/test_postgres_policy_scopes.py
+  tests/test_postgres_operations.py tests/test_alembic_postgres.py` -> all
+  focused tests passed with only declared live-service skips. Ruff, Mypy, and
+  `git diff --check` pass.
+- Full local command: `uv run pytest -q` -> 2,330 tests collected, zero
+  failures/errors; declared external-service and host-capability skips remain.
+  Elapsed time: 326.4 seconds on the Windows local environment.
+- Migration `0059_pg_policy_amt_bounds` adds bounded exact `NUMERIC` minimum
+  and maximum amounts, extends the active uniqueness key, rejects invalid
+  order/non-finite values, and refuses downgrade while amount-bound evidence
+  exists. The trigger treats both bounds as immutable.
+- The pure analyzer and PostgreSQL adapter preserve old no-bound digests,
+  canonicalize Decimal bounds, and detect only intersecting inclusive ranges.
+  No route/job/export/UI enforcement or currency conversion is inferred.
+- PostgreSQL CI runtime evidence for this new migration is pending on the
+  pushed head; the prior E-330 runtime remains the bounded single-node scope
+  baseline.
+- ADR: `docs/adr/0282-postgres-policy-scope-amount-bounds.md`.

@@ -519,5 +519,5 @@ def test_alembic_upgrade_command_is_available_when_server_extra_is_installed(
         PostgresConnectionFactory(PostgresSettings(dsn=os.environ["RECONFORGE_POSTGRES_DSN"], require_tls=False))
     )
     assert provider("migration-test") == MigrationStatus(
-        "0058_pg_policy_permission_scopes", "0058_pg_policy_permission_scopes", ()
+        "0059_pg_policy_amt_bounds", "0059_pg_policy_amt_bounds", ()
     )

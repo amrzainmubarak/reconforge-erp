@@ -2586,3 +2586,19 @@
   or create a scope-administration API. Downgrade refuses while scope evidence
   exists.
 - **ADR**: `docs/adr/0281-postgres-policy-permission-scopes.md`.
+
+## D278 - Persist exact PostgreSQL policy amount bounds
+
+- **Decision**: add Alembic `0059_pg_policy_amt_bounds` with nullable exact
+  `NUMERIC` minimum/maximum amounts on the immutable role-permission scope
+  table. The typed analyzer canonicalizes finite Decimal text and uses
+  inclusive interval overlap while preserving old payloads when absent.
+- **Rationale**: central-policy amount floors/ceilings cannot be reviewed as
+  part of a server snapshot if they are discarded at persistence boundaries.
+  Keeping them in the same tenant-RLS append-only scope record preserves
+  replayable evidence without silently changing authorization consumers.
+- **Boundary**: amount bounds are currency-agnostic analysis evidence, not
+  universal enforcement or conversion. The migration rejects non-finite,
+  reversed, and evidence-losing downgrade paths; federation, distributed
+  invalidation, and complete route/job/export/UI adoption remain open.
+- **ADR**: `docs/adr/0282-postgres-policy-scope-amount-bounds.md`.

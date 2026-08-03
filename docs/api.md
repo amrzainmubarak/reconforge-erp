@@ -568,9 +568,11 @@ enabled service-account snapshot under tenant RLS; it does not mutate policy,
 invalidate distributed caches, or call an external identity provider.
 When migration `0058_pg_policy_permission_scopes` is present, the snapshot also
 projects active workspace/entity/period/region/data-classification bounds from
-immutable role-permission scope rows. The route remains analysis-only; those
-scopes are not claimed as universal enforcement for every API, job, export, or
-UI surface.
+immutable role-permission scope rows. With migration `0059_pg_policy_amt_bounds`,
+finite exact optional minimum/maximum amount bounds are projected and included
+in the replay digest. They have no implicit currency and remain analysis-only;
+the scopes are not claimed as universal enforcement for every API, job, export,
+or UI surface.
 
 Every route requires a human `roles.manage` principal and current privileged
 assurance. Role list cursors are signed and bound to the tenant, retirement

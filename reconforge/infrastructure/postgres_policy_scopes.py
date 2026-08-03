@@ -105,4 +105,73 @@ FOR EACH ROW EXECUTE FUNCTION reconforge.guard_identity_role_permission_scope();
 """
 
 
-__all__ = ["POSTGRES_POLICY_SCOPE_SCHEMA_SQL"]
+POSTGRES_POLICY_SCOPE_AMOUNT_BOUNDS_MIGRATION_SQL = r"""
+ALTER TABLE reconforge.identity_role_permission_scopes
+    ADD COLUMN IF NOT EXISTS minimum_amount NUMERIC,
+    ADD COLUMN IF NOT EXISTS maximum_amount NUMERIC;
+
+ALTER TABLE reconforge.identity_role_permission_scopes
+    DROP CONSTRAINT IF EXISTS identity_role_permission_scopes_dimension_required,
+    DROP CONSTRAINT IF EXISTS identity_role_permission_scopes_amount_finite,
+    DROP CONSTRAINT IF EXISTS identity_role_permission_scopes_amount_order;
+ALTER TABLE reconforge.identity_role_permission_scopes
+    ADD CONSTRAINT identity_role_permission_scopes_dimension_required CHECK (
+        workspace_id IS NOT NULL OR entity_id IS NOT NULL OR period_id IS NOT NULL
+        OR region_id IS NOT NULL OR data_classification IS NOT NULL
+        OR minimum_amount IS NOT NULL OR maximum_amount IS NOT NULL
+    ),
+    ADD CONSTRAINT identity_role_permission_scopes_amount_finite CHECK (
+        (minimum_amount IS NULL OR (
+            minimum_amount::text !~ '^(NaN|Infinity|-Infinity)$'
+            AND length(replace(replace(minimum_amount::text, '.', ''), '-', '')) BETWEEN 1 AND 128
+        ))
+        AND (maximum_amount IS NULL OR (
+            maximum_amount::text !~ '^(NaN|Infinity|-Infinity)$'
+            AND length(replace(replace(maximum_amount::text, '.', ''), '-', '')) BETWEEN 1 AND 128
+        ))
+    ),
+    ADD CONSTRAINT identity_role_permission_scopes_amount_order CHECK (
+        minimum_amount IS NULL OR maximum_amount IS NULL OR minimum_amount <= maximum_amount
+    );
+
+DROP INDEX IF EXISTS reconforge.identity_role_permission_scopes_active_unique;
+CREATE UNIQUE INDEX identity_role_permission_scopes_active_unique
+    ON reconforge.identity_role_permission_scopes (
+        tenant_id, role_id, permission_name,
+        COALESCE(workspace_id, ''), COALESCE(entity_id, ''),
+        COALESCE(period_id, ''), COALESCE(region_id, ''),
+        COALESCE(data_classification, ''),
+        COALESCE(minimum_amount::text, ''), COALESCE(maximum_amount::text, '')
+    ) WHERE active;
+
+CREATE OR REPLACE FUNCTION reconforge.guard_identity_role_permission_scope()
+RETURNS TRIGGER LANGUAGE plpgsql AS $reconforge$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'policy permission scopes are append-only' USING ERRCODE='check_violation';
+    END IF;
+    IF NEW.tenant_id <> OLD.tenant_id OR NEW.id <> OLD.id
+       OR NEW.role_id <> OLD.role_id OR NEW.permission_name <> OLD.permission_name
+       OR NEW.workspace_id IS DISTINCT FROM OLD.workspace_id
+       OR NEW.entity_id IS DISTINCT FROM OLD.entity_id
+       OR NEW.period_id IS DISTINCT FROM OLD.period_id
+       OR NEW.region_id IS DISTINCT FROM OLD.region_id
+       OR NEW.data_classification IS DISTINCT FROM OLD.data_classification
+       OR NEW.minimum_amount IS DISTINCT FROM OLD.minimum_amount
+       OR NEW.maximum_amount IS DISTINCT FROM OLD.maximum_amount
+       OR NEW.created_at <> OLD.created_at OR NEW.created_by <> OLD.created_by THEN
+        RAISE EXCEPTION 'policy permission scope identity is immutable' USING ERRCODE='check_violation';
+    END IF;
+    IF NOT OLD.active OR NEW.lifecycle_version <> OLD.lifecycle_version + 1
+       OR NEW.active OR NEW.revoked_at IS NULL OR NEW.revoked_by IS NULL
+       OR NEW.revocation_reason_code IS NULL THEN
+        RAISE EXCEPTION 'policy permission scope allows only one active-to-revoked transition'
+            USING ERRCODE='check_violation';
+    END IF;
+    RETURN NEW;
+END
+$reconforge$;
+"""
+
+
+__all__ = ["POSTGRES_POLICY_SCOPE_AMOUNT_BOUNDS_MIGRATION_SQL", "POSTGRES_POLICY_SCOPE_SCHEMA_SQL"]

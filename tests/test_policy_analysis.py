@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -146,6 +147,21 @@ def test_policy_analysis_tamper_and_schema_detection(tmp_path: Path) -> None:
     assert cli_result["algorithm_version"] == POLICY_ANALYSIS_ALGORITHM_VERSION
     assert cli_result["status"] == "clear"
 
+    amount_request = _request(
+        replace(
+            _grant("G-amount", "U-amount", {"close.prepare"}, workspace=None),
+            scope=PolicyScope(
+                tenant_id="TENANT-1",
+                minimum_amount=Decimal("10.00"),
+                maximum_amount=Decimal("20.00"),
+            ),
+        )
+    )
+    input_path.write_text(json.dumps(amount_request.to_dict()), encoding="utf-8")
+    amount_completed = runner.invoke(app, ["policy", "analyze-conflicts", "--input", str(input_path)])
+    assert amount_completed.exit_code == 0, amount_completed.output
+    assert json.loads(amount_completed.output)["status"] == "clear"
+
     invalid = json.loads(input_path.read_text(encoding="utf-8"))
     invalid["unexpected"] = True
     input_path.write_text(json.dumps(invalid), encoding="utf-8")
@@ -168,3 +184,37 @@ def test_policy_scope_requires_tenant_and_validates_timestamps() -> None:
             approved_by="reviewer",
             approved_at="2026-08-03T11:00:00Z",
         )
+
+
+def test_policy_scope_amount_bounds_are_exact_and_overlap_bounded() -> None:
+    amount_only = PolicyScope(
+        tenant_id="TENANT-1",
+        minimum_amount=Decimal("0.00"),
+        maximum_amount=Decimal("9.999"),
+    )
+    assert amount_only.is_unscoped_privileged is False
+    assert amount_only.to_dict()["minimum_amount"] == "0"
+    assert amount_only.to_dict()["maximum_amount"] == "9.999"
+
+    disjoint = _request(
+        replace(_grant("G-1", "U-1", {"close.prepare"}), scope=replace(amount_only, maximum_amount=Decimal("9.999"))),
+        replace(
+            _grant("G-2", "U-1", {"close.approve"}),
+            scope=replace(amount_only, minimum_amount=Decimal("10"), maximum_amount=Decimal("20")),
+        ),
+    )
+    assert analyze_policy_conflicts(disjoint).status == "clear"
+
+    overlapping = replace(
+        disjoint,
+        grants=(
+            disjoint.grants[0],
+            replace(disjoint.grants[1], scope=replace(disjoint.grants[1].scope, minimum_amount=Decimal("9.999"))),
+        ),
+    )
+    assert "sod_permission_overlap" in {finding.code for finding in analyze_policy_conflicts(overlapping).findings}
+
+    with pytest.raises(PolicyAnalysisError, match="finite Decimal"):
+        PolicyScope(tenant_id="TENANT-1", minimum_amount=Decimal("NaN"))
+    with pytest.raises(PolicyAnalysisError, match="cannot exceed"):
+        PolicyScope(tenant_id="TENANT-1", minimum_amount=Decimal("2"), maximum_amount=Decimal("1"))

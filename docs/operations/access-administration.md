@@ -32,8 +32,10 @@ is a digest-bound snapshot artifact; it does not change roles, assignments,
 sessions, or service-account permissions.
 With migration `0058_pg_policy_permission_scopes`, it also reports active
 immutable workspace/entity/period/region/data-classification bounds attached to
-role permissions. Missing scope rows remain explicit tenant-wide wildcards;
-this read projection does not itself migrate every authorization consumer.
+role permissions. With migration `0059_pg_policy_amt_bounds`, it also reports
+finite exact optional amount bounds; these values have no implicit currency.
+Missing scope rows remain explicit tenant-wide wildcards, and this read
+projection does not itself migrate every authorization consumer.
 
 ## Security behavior
 

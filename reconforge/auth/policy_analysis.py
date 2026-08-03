@@ -15,6 +15,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Literal
 
 from reconforge.auth.policy import (
@@ -29,6 +30,7 @@ _IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$")
 _PERMISSION = re.compile(r"^[a-z][a-z0-9_.-]{0,159}$")
 _SEMVER = re.compile(r"^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$")
 _SHA256 = re.compile(r"^[a-f0-9]{64}$")
+_MAX_SCOPE_AMOUNT_DIGITS = 128
 
 PrincipalType = Literal["user", "service_account"]
 GrantStatus = Literal["active", "revoked"]
@@ -75,6 +77,24 @@ def _digest(payload: object) -> str:
     return hashlib.sha256(encoded.encode("ascii")).hexdigest()
 
 
+def _canonical_scope_amount(value: object, field_name: str) -> str:
+    """Validate and serialize one bounded, exact policy amount."""
+
+    if not isinstance(value, Decimal) or not value.is_finite():
+        raise PolicyAnalysisError(f"Policy {field_name} must be a finite Decimal.")
+    digits = value.as_tuple().digits
+    if len(digits) > _MAX_SCOPE_AMOUNT_DIGITS or abs(value.adjusted()) > _MAX_SCOPE_AMOUNT_DIGITS:
+        raise PolicyAnalysisError(f"Policy {field_name} exceeds the bounded Decimal contract.")
+    rendered = format(value, "f")
+    if "." in rendered:
+        rendered = rendered.rstrip("0").rstrip(".")
+    if rendered in {"", "-0"}:
+        rendered = "0"
+    if len(rendered.lstrip("-")) > _MAX_SCOPE_AMOUNT_DIGITS + 1:
+        raise PolicyAnalysisError(f"Policy {field_name} exceeds the bounded Decimal contract.")
+    return rendered
+
+
 @dataclass(frozen=True)
 class PolicyScope:
     """Tenant-bound scope; empty dimensions mean wildcard within the tenant."""
@@ -85,6 +105,8 @@ class PolicyScope:
     period_ids: frozenset[str] = frozenset()
     region_ids: frozenset[str] = frozenset()
     data_classifications: frozenset[str] = frozenset()
+    minimum_amount: Decimal | None = None
+    maximum_amount: Decimal | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "tenant_id", _identifier(self.tenant_id, "Policy tenant"))
@@ -97,11 +119,28 @@ class PolicyScope:
             ):
                 raise PolicyAnalysisError(f"Policy {field_name} must contain bounded identifiers.")
             object.__setattr__(self, field_name, frozenset(value.strip() for value in values))
+        for field_name in ("minimum_amount", "maximum_amount"):
+            value = getattr(self, field_name)
+            if value is not None:
+                _canonical_scope_amount(value, field_name)
+        if (
+            self.minimum_amount is not None
+            and self.maximum_amount is not None
+            and self.minimum_amount > self.maximum_amount
+        ):
+            raise PolicyAnalysisError("Policy minimum_amount cannot exceed maximum_amount.")
 
     @property
     def is_unscoped_privileged(self) -> bool:
         return self.workspace_id is None and not any(
-            (self.entity_ids, self.period_ids, self.region_ids, self.data_classifications)
+            (
+                self.entity_ids,
+                self.period_ids,
+                self.region_ids,
+                self.data_classifications,
+                self.minimum_amount is not None,
+                self.maximum_amount is not None,
+            )
         )
 
     @property
@@ -109,7 +148,7 @@ class PolicyScope:
         return _digest(self.to_dict())
 
     def to_dict(self) -> dict[str, object]:
-        return {
+        payload: dict[str, object] = {
             "data_classifications": sorted(self.data_classifications),
             "entity_ids": sorted(self.entity_ids),
             "period_ids": sorted(self.period_ids),
@@ -117,6 +156,13 @@ class PolicyScope:
             "tenant_id": self.tenant_id,
             "workspace_id": self.workspace_id,
         }
+        # Omit new optional bounds when absent so legacy v1 request digests and
+        # CLI payloads remain byte-for-byte compatible.
+        if self.minimum_amount is not None:
+            payload["minimum_amount"] = _canonical_scope_amount(self.minimum_amount, "minimum_amount")
+        if self.maximum_amount is not None:
+            payload["maximum_amount"] = _canonical_scope_amount(self.maximum_amount, "maximum_amount")
+        return payload
 
 
 def _dimension_overlaps(left: frozenset[str], right: frozenset[str]) -> bool:
@@ -127,6 +173,18 @@ def _scopes_overlap(left: PolicyScope, right: PolicyScope) -> bool:
     if left.tenant_id != right.tenant_id:
         return False
     if left.workspace_id is not None and right.workspace_id is not None and left.workspace_id != right.workspace_id:
+        return False
+    if (
+        left.maximum_amount is not None
+        and right.minimum_amount is not None
+        and left.maximum_amount < right.minimum_amount
+    ):
+        return False
+    if (
+        right.maximum_amount is not None
+        and left.minimum_amount is not None
+        and right.maximum_amount < left.minimum_amount
+    ):
         return False
     return all(
         _dimension_overlaps(getattr(left, field_name), getattr(right, field_name))

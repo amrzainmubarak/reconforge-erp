@@ -8,6 +8,7 @@ import sqlite3
 import tempfile
 from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Annotated, cast
 
@@ -563,12 +564,13 @@ def policy_analyze_conflicts_command(
             raise PlatformError("Policy analysis grants must be a JSON array.")
         grant_fields = {"grant_id", "principal_id", "principal_type", "role_id", "scope", "permissions", "status"}
         scope_fields = {"tenant_id", "workspace_id", "entity_ids", "period_ids", "region_ids", "data_classifications"}
+        amount_scope_fields = {"minimum_amount", "maximum_amount"}
         grants: list[PolicyGrant] = []
         for index, raw_grant in enumerate(raw_grants):
             if not isinstance(raw_grant, dict) or set(raw_grant) != grant_fields:
                 raise PlatformError(f"Policy analysis grant {index} fields are not exactly declared.")
             raw_scope = raw_grant["scope"]
-            if not isinstance(raw_scope, dict) or set(raw_scope) != scope_fields:
+            if not isinstance(raw_scope, dict) or not set(raw_scope).issubset(scope_fields | amount_scope_fields) or not scope_fields.issubset(raw_scope):
                 raise PlatformError(f"Policy analysis grant {index} scope fields are not exactly declared.")
             permissions = raw_grant["permissions"]
             if not isinstance(permissions, list) or not all(isinstance(value, str) for value in permissions):
@@ -579,6 +581,19 @@ def policy_analyze_conflicts_command(
                 if not isinstance(values, list) or not all(isinstance(value, str) for value in values):
                     raise PlatformError(f"Policy analysis grant {index} {field} must be a string array.")
                 scope_values[field] = frozenset(values)
+            for field in amount_scope_fields:
+                raw_value = raw_scope.get(field)
+                if raw_value is None:
+                    scope_values[field] = None
+                elif not isinstance(raw_value, str):
+                    raise PlatformError(f"Policy analysis grant {index} {field} must be an exact Decimal string.")
+                else:
+                    try:
+                        scope_values[field] = Decimal(raw_value)
+                    except InvalidOperation as exc:
+                        raise PlatformError(
+                            f"Policy analysis grant {index} {field} must be an exact Decimal string."
+                        ) from exc
             grants.append(
                 PolicyGrant(
                     grant_id=raw_grant["grant_id"],

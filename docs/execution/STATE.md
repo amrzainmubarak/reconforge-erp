@@ -672,6 +672,27 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   failures/errors; external-service and host-capability skips remain explicit.
 - ADR: `docs/adr/0281-postgres-policy-permission-scopes.md`.
 
+### E-331 in progress: PostgreSQL persisted policy amount bounds
+
+- Alembic `0059_pg_policy_amt_bounds` extends the immutable scope table with
+  exact finite PostgreSQL `NUMERIC` minimum/maximum bounds. The migration
+  widens the active-scope uniqueness key, rejects reversed/non-finite or
+  unbounded-only rows, and restores the 0058 trigger/index on safe downgrade;
+  downgrade refuses while amount evidence exists.
+- `PolicyScope` serializes optional bounds canonically as exact Decimal text,
+  keeps old v1 payloads/digests unchanged when bounds are absent, and treats
+  inclusive bounded intervals as overlapping only when their ranges intersect.
+  The PostgreSQL snapshot adapter validates and projects the values without
+  mutating policy state.
+- Focused tests, Ruff, Mypy, diff-check, and the full local regression (2,330
+  collected, zero failures/errors; declared capability skips remain) pass.
+  PostgreSQL CI runtime verification for the new migration and amount tamper
+  gate is pending on the pushed head.
+- The bound has no implicit currency and is not universal route/job/export/UI
+  enforcement; provider federation, distributed invalidation, and production
+  effectiveness remain open.
+- ADR: `docs/adr/0282-postgres-policy-scope-amount-bounds.md`.
+
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio
 
 ### E-260 complete: bounded grouped and netting matcher

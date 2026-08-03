@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from decimal import Decimal
 
 import pytest
 
 from reconforge.application.policy_analysis import PolicyAnalysisApplicationService
+from reconforge.auth.policy_analysis import PolicyScope
 from reconforge.infrastructure.postgres_policy_analysis import (
     PostgresPolicyAnalysisError,
     PostgresPolicyAnalysisRepository,
@@ -42,6 +44,8 @@ class _Connection:
                         "period_id": "period-2026",
                         "region_id": None,
                         "data_classification": "financial",
+                        "minimum_amount": Decimal("100.00"),
+                        "maximum_amount": Decimal("2500"),
                     },
                     {"principal_id": "user-1", "role_id": "role-prepare", "role_name": "preparer", "permission_name": "close.prepare"},
                 ]
@@ -73,6 +77,16 @@ def test_postgres_snapshot_loader_is_tenant_bound_and_replayable() -> None:
     assert any("identity_user_roles" in sql for sql, _ in connection.calls)
     assert any("identity_role_permission_scopes" in sql for sql, _ in connection.calls)
     assert any("service_accounts" in sql for sql, _ in connection.calls)
+    expected_scope_digest = PolicyScope(
+        tenant_id="tenant-a",
+        workspace_id="workspace-a",
+        entity_ids=frozenset({"entity-a"}),
+        period_ids=frozenset({"period-2026"}),
+        data_classifications=frozenset({"financial"}),
+        minimum_amount=Decimal("100"),
+        maximum_amount=Decimal("2500"),
+    ).digest
+    assert any(expected_scope_digest in finding.scope_digests for finding in result.findings)
 
 
 def test_postgres_snapshot_loader_refuses_unknown_or_inactive_actors() -> None:

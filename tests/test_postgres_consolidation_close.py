@@ -8,7 +8,10 @@ from uuid import uuid4
 
 import pytest
 
-from reconforge.application.consolidation_close import ConsolidationCloseRepositoryProtocol
+from reconforge.application.consolidation_close import (
+    ConsolidationCloseRepositoryProtocol,
+    build_translation_evidence,
+)
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings, set_local_tenant_scope
 from reconforge.infrastructure.postgres_consolidation_close import (
     POSTGRES_CONSOLIDATION_CLOSE_SCHEMA_SQL,
@@ -94,6 +97,18 @@ def test_postgres_journal_material_is_canonical_and_balanced() -> None:
     assert restored["amount_decimal"] == "12.00"
     assert PostgresConsolidationCloseRepository._amount_matches_minor("12.000000000000000000", 1200, "USD")
     assert not PostgresConsolidationCloseRepository._amount_matches_minor("12.01", 1200, "USD")
+
+
+def test_translation_evidence_projection_is_backend_neutral() -> None:
+    from tests.test_sqlite_consolidation_close import _worksheet
+
+    worksheet = _worksheet()
+    evidence = build_translation_evidence(worksheet.request.translation_result).to_dict()
+
+    assert evidence["result_digest"] == worksheet.translation_result_digest
+    assert evidence["line_count"] == 4
+    assert evidence["source_currencies"] == ["USD"]
+    assert len(str(evidence["lineage_digest"])) == 64
 
 
 @pytest.mark.skipif(

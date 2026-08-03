@@ -217,6 +217,21 @@ def _reverse(repository: SQLiteConsolidationCloseRepository, run: dict[str, obje
     )
 
 
+def test_replay_verified_run_exposes_explicit_translation_lineage_evidence(tmp_path: Path) -> None:
+    connection = _database(tmp_path)[1]
+    repository, _, run = _prepare(connection)
+
+    detail = repository.get_run(str(run["id"]))
+    evidence = detail["translation_evidence"]
+
+    assert evidence["result_digest"] == str(run["translation_result_digest"])
+    assert evidence["line_count"] == len(detail["worksheet"]["request"]["translation_result"]["lines"])
+    assert evidence["source_currencies"] == ["USD"]
+    assert evidence["rate_ids"] == ["IDENTITY-USD"]
+    assert len(str(evidence["lineage_digest"])) == 64
+    assert evidence["post_adjustment_balance"]["amount"] == "0.00"
+
+
 def test_migration_25_is_additive_and_adapter_rejects_a_pre_migration_database(tmp_path: Path) -> None:
     assert next(migration for migration in MIGRATIONS if migration.version == 25).name == "consolidation_close_lifecycle"
     assert MIGRATIONS[-1].version == 30

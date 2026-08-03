@@ -9,7 +9,7 @@ import sqlite3
 from collections.abc import Mapping, Sequence
 from typing import Any, TypedDict
 
-from reconforge.application.consolidation_close import ConsolidationCloseSummary
+from reconforge.application.consolidation_close import ConsolidationCloseSummary, build_translation_evidence
 from reconforge.auth.rbac import same_actor
 from reconforge.domain.consolidation import ConsolidationError
 from reconforge.domain.consolidation_lifecycle import (
@@ -1040,6 +1040,7 @@ class SQLiteConsolidationCloseRepository:
             if not same_actor(str(effect["created_by"]), expected_actor) or str(effect["created_at"]) > expected_at:
                 raise PlatformError("Persisted consolidation effect attribution is inconsistent.")
         record["worksheet"] = worksheet.to_dict()
+        record["translation_evidence"] = build_translation_evidence(worksheet.request.translation_result).to_dict()
         record["journal_lines"] = [dict(item) for item in rows]
         record["effects"] = effects
         return record

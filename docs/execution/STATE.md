@@ -464,6 +464,23 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   accounting, live ERP/bank connectors or write-back, HA/DR, distributed
   capacity, or production readiness. ADR 0270 records the decision.
 
+### E-320 complete: explicit consolidation translation evidence projection
+
+- Both close adapters now expose a replay-verified `translation_evidence`
+  projection derived from the canonical translation result already embedded in
+  the worksheet. It binds `translation_result_digest` plus a line-level FX
+  lineage digest, source currencies, selected rate IDs/types, exact pre/post
+  balances, the explicit translation adjustment, and unrounded/rounded deltas.
+- Local command:
+  `python -m pytest tests/test_sqlite_consolidation_close.py
+  tests/test_api_consolidation_close.py tests/test_postgres_consolidation_close.py
+  -q -ra` -> 19 passed, 1 live PostgreSQL skip. Ruff and Mypy pass for the
+  changed application/adapters.
+- Boundary: additive read evidence only. No live-rate provider, statutory
+  accounting treatment, ERP/bank interoperability, source-system write-back,
+  HA/DR, scale, or production-readiness claim is made. ADR 0271 records the
+  decision.
+
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio
 
 ### E-260 complete: bounded grouped and netting matcher

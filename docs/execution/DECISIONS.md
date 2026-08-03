@@ -2423,3 +2423,18 @@
   equity-method accounting, live source-system posting/write-back, HA/DR,
   scale, or production readiness.
 - **ADR**: `docs/adr/0270-postgres-consolidation-journal-line-parity.md`.
+
+## D267 - Expose one backend-neutral FX evidence projection
+
+- **Decision**: derive `translation_evidence` from the replay-verified
+  `ConsolidationTranslationResult` at both SQLite and PostgreSQL read
+  boundaries. Bind the existing result digest and add a canonical line-level
+  lineage digest plus exact currency/rate/rounding summary fields.
+- **Rationale**: Reviewers need a stable currency-control projection without a
+  second FX calculation or backend-specific JSON interpretation. An additive
+  projection preserves existing schemas and keeps the full worksheet as the
+  source of truth.
+- **Boundary**: This improves explainability only; it does not establish live
+  rates, statutory treatment, ERP/bank write-back, HA/DR, scale, or production
+  readiness.
+- **ADR**: `docs/adr/0271-consolidation-translation-evidence-projection.md`.

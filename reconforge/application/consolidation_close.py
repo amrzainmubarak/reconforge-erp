@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import asdict, dataclass
 from typing import Any, Protocol
 
+from reconforge.domain.consolidation import ConsolidationTranslationResult
 from reconforge.domain.consolidation_lifecycle import ConsolidationWorksheetResult
 
 
@@ -23,6 +26,76 @@ class ConsolidationCloseSummary:
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
+
+
+@dataclass(frozen=True)
+class ConsolidationTranslationEvidence:
+    """Replay-bound FX lineage summary exposed with every close run.
+
+    The worksheet already stores the complete translation result.  This
+    projection makes the financial control evidence explicit for API/adapter
+    consumers without duplicating the calculation or introducing a second
+    source of truth.
+    """
+
+    schema_version: int
+    algorithm_version: str
+    result_digest: str
+    lineage_digest: str
+    line_count: int
+    source_currencies: tuple[str, ...]
+    rate_ids: tuple[str, ...]
+    rate_types: tuple[str, ...]
+    reporting_currency: str
+    pre_adjustment_balance: dict[str, object]
+    translation_adjustment: dict[str, object]
+    post_adjustment_balance: dict[str, object]
+    unrounded_translation_difference: str
+    rounding_delta: str
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "algorithm_version": self.algorithm_version,
+            "line_count": self.line_count,
+            "lineage_digest": self.lineage_digest,
+            "post_adjustment_balance": dict(self.post_adjustment_balance),
+            "pre_adjustment_balance": dict(self.pre_adjustment_balance),
+            "rate_ids": list(self.rate_ids),
+            "rate_types": list(self.rate_types),
+            "reporting_currency": self.reporting_currency,
+            "result_digest": self.result_digest,
+            "rounding_delta": self.rounding_delta,
+            "schema_version": self.schema_version,
+            "source_currencies": list(self.source_currencies),
+            "translation_adjustment": dict(self.translation_adjustment),
+            "unrounded_translation_difference": self.unrounded_translation_difference,
+        }
+
+
+def build_translation_evidence(result: ConsolidationTranslationResult) -> ConsolidationTranslationEvidence:
+    """Build a deterministic, read-only FX lineage projection from a verified result."""
+
+    if not isinstance(result, ConsolidationTranslationResult):
+        raise TypeError("A verified consolidation translation result is required.")
+    line_payload = [line.to_dict() for line in result.lines]
+    encoded = json.dumps(line_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    lineage_digest = hashlib.sha256(encoded.encode("ascii")).hexdigest()
+    return ConsolidationTranslationEvidence(
+        schema_version=result.schema_version,
+        algorithm_version=result.algorithm_version,
+        result_digest=result.result_digest,
+        lineage_digest=lineage_digest,
+        line_count=len(result.lines),
+        source_currencies=tuple(sorted({line.original_amount.currency for line in result.lines})),
+        rate_ids=tuple(sorted({line.rate_id for line in result.lines})),
+        rate_types=tuple(sorted({line.rate_type for line in result.lines})),
+        reporting_currency=result.reporting_currency,
+        pre_adjustment_balance=result.pre_adjustment_balance.to_canonical_dict(),
+        translation_adjustment=result.translation_adjustment.to_dict(),
+        post_adjustment_balance=result.post_adjustment_balance.to_canonical_dict(),
+        unrounded_translation_difference=str(result.unrounded_translation_difference),
+        rounding_delta=str(result.rounding_delta),
+    )
 
 
 class ConsolidationCloseRepositoryProtocol(Protocol):

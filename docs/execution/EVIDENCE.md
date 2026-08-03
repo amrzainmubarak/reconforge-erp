@@ -11830,3 +11830,22 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   rates, ERP/bank interoperability or write-back, HA/DR, distributed scale,
   RPO/RTO, independent assurance, compliance, or production readiness.
 - ADR: `docs/adr/0270-postgres-consolidation-journal-line-parity.md`.
+
+## E-320: Explicit consolidation translation evidence projection
+
+- The SQLite and PostgreSQL close adapters now attach a deterministic
+  `translation_evidence` object to every replay-verified run. It binds the
+  existing translation result digest and a SHA-256 digest over canonical
+  line-level FX lineage, and reports line count, source currencies, rate IDs,
+  rate types, reporting currency, exact pre/post balances, CTA proposal, and
+  unrounded/rounded translation deltas.
+- Local command:
+  `python -m pytest tests/test_sqlite_consolidation_close.py
+  tests/test_api_consolidation_close.py tests/test_postgres_consolidation_close.py
+  -q -ra` -> 19 passed, 1 live PostgreSQL skip. Ruff and Mypy pass for the
+  changed application/adapters.
+- This is additive read evidence derived from a verified worksheet, not a new
+  FX calculation or posting path. Live rates, statutory treatment, ERP/bank
+  interoperability, write-back, HA/DR, scale, and production readiness remain
+  unverified.
+- ADR: `docs/adr/0271-consolidation-translation-evidence-projection.md`.

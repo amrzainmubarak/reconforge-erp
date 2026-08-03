@@ -14,6 +14,7 @@ from collections.abc import Mapping, Sequence
 from decimal import Decimal, InvalidOperation
 from typing import Any, TypedDict
 
+from reconforge.application.consolidation_close import build_translation_evidence
 from reconforge.domain.consolidation import ConsolidationError
 from reconforge.domain.consolidation_lifecycle import (
     ConsolidationWorksheetResult,
@@ -797,6 +798,7 @@ class PostgresConsolidationCloseRepository:
             record["journal_line_count"] = len(expected_lines)
         record["worksheet"] = verified.to_dict()
         record["worksheet_object"] = verified
+        record["translation_evidence"] = build_translation_evidence(verified.request.translation_result).to_dict()
         record["journal_lines"] = actual_lines or expected_lines
         record["effects"] = effects
         return record

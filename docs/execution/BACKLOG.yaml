@@ -153,9 +153,9 @@ tasks:
     priority: P4
     area: scale
     title: Atomic durable-job queue backpressure
-    status: in_progress
+    status: completed
     depends_on: [E-294]
-    exit_evidence: "Additive bounded submission enforces a queued/retrying cap atomically per tenant/workspace/entity lane, preserves idempotent replay at capacity, rejects new work without mutation, and passes SQLite plus live PostgreSQL server-boundary tests under ADR 0292; this does not prove throughput, distributed fairness, soak, HA/DR, or production capacity."
+    exit_evidence: "Additive bounded submission enforces a queued/retrying cap atomically per tenant/workspace/entity lane, preserves idempotent replay at capacity, rejects new work without mutation, and passes SQLite plus live PostgreSQL server-boundary tests in CI run 30828746821 under ADR 0292; this does not prove throughput, distributed fairness, soak, HA/DR, or production capacity."
   - id: E-292
     priority: P0
     area: enterprise-policy
@@ -1062,7 +1062,7 @@ tasks:
       - E-313 adds a bounded PostgreSQL concurrent-load parity contract to the live server-boundaries test. Two tenant lanes submit six synthetic jobs and two partitions per job; real concurrent PostgreSQL workers claim and finish every job with exact effects, no duplicate partition keys, and completed terminal states. This is a small synthetic runtime gate, not a PostgreSQL capacity, soak, SLO, or distributed-scale claim.
       - E-322 extends the live PostgreSQL durable-job contract with a transient-failure injection after one committed partition. The job enters `retrying`, releases its lease, a recovery worker resumes from the checkpoint, and the remaining partition completes exactly once with ordered transition evidence. This is a small synthetic retry proof, not PostgreSQL capacity, soak, distributed supervision, HA/DR, or production retry-tuning evidence under ADR 0273.
       - E-338 extends the same live contract with four one-tenant jobs, three partitions per job, and two independent worker connections contending on `FOR UPDATE SKIP LOCKED`. All jobs complete with exactly three unique partition effects and the worker completion total equals the declared workload. This is a bounded claim-contention proof, not PostgreSQL throughput, fairness SLO, soak, distributed supervision, queue HA, or production-readiness evidence.
-      - E-341 adds an additive atomic bounded-submit contract. SQLite uses `BEGIN IMMEDIATE`; PostgreSQL uses a lane-derived transaction advisory lock under forced RLS. `queued` and `retrying` work count toward the `(tenant_id, workspace_id, entity_id)` cap, identical idempotent replay succeeds while full, and rejected new work leaves no row or transition. Focused SQLite semantics pass locally; the live PostgreSQL gate is pending CI. Throughput, global fairness, distributed quota, soak, HA/DR, and production capacity remain unverified.
+      - E-341 adds an additive atomic bounded-submit contract. SQLite uses `BEGIN IMMEDIATE`; PostgreSQL uses a lane-derived transaction advisory lock under forced RLS. `queued` and `retrying` work count toward the `(tenant_id, workspace_id, entity_id)` cap, identical idempotent replay succeeds while full, and rejected new work leaves no row or transition. CI run `30828746821` passes the live PostgreSQL server-boundary assertions; Security `30828746100`, Docker `30828746066`, and CodeQL `30828746780` also pass. Throughput, global fairness, distributed quota, soak, HA/DR, and production capacity remain unverified.
 
   - id: P4-REL-001
     priority: P4

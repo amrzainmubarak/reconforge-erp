@@ -12281,9 +12281,10 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   forced-RLS count and insert.
 - The focused SQLite contract proves a full-lane rejection has no persisted
   row, identical replay succeeds while full, a sibling workspace lane is
-  independent, and capacity is released after claim/cancel. The live
-  PostgreSQL test adds the same assertions under the non-privileged role and
-  remains a capability skip on this workstation until CI executes it.
+  independent, and capacity is released after claim/cancel. CI run
+  `30828746821` executes the same assertions under the non-privileged
+  PostgreSQL role in server-boundaries and passes. Security `30828746100`,
+  Docker `30828746066`, and CodeQL `30828746780` also pass on the same head.
 - This is a bounded backpressure primitive, not global fairness, distributed
   quota coordination, throughput, soak, HA/DR, SLO, or production-capacity
   evidence.

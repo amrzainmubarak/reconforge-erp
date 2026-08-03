@@ -430,8 +430,8 @@ class PostgresDurableJobRepository:
                 LEFT JOIN reconforge.durable_job_leases leases
                   ON leases.tenant_id = jobs.tenant_id AND leases.job_id = jobs.id
                 WHERE jobs.tenant_id = %s
-                  AND (%s IS NULL OR jobs.workspace_id = %s)
-                  AND (%s IS NULL OR jobs.entity_id = %s)
+                  AND (%s::text IS NULL OR jobs.workspace_id = %s::text)
+                  AND (%s::text IS NULL OR jobs.entity_id = %s::text)
                   AND (
                     jobs.status = 'queued'
                     OR (jobs.status = 'retrying' AND (leases.job_id IS NULL OR leases.expires_at <= %s))

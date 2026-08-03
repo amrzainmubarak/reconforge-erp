@@ -738,14 +738,4 @@ def test_live_postgres_round_robin_scheduler_is_lane_scoped_and_deterministic() 
     finally:
         if connection is not None:
             connection.close()
-        with admin.transaction():
-            for table in (
-                "durable_job_partition_effects",
-                "durable_job_lease_events",
-                "durable_job_leases",
-                "durable_job_transitions",
-                "durable_jobs",
-            ):
-                admin.execute(f"DELETE FROM reconforge.{table} WHERE tenant_id=%s", (tenant_id,))
-            admin.execute("DELETE FROM reconforge.tenants WHERE id=%s", (tenant_id,))
         admin.close()

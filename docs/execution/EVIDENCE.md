@@ -12311,7 +12311,7 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   lanes, claims and cancels six leases, and proves the sequence is
   `lane-a, lane-b` repeated three times with no cross-lane job. The live
   PostgreSQL contract is the same proof under the non-privileged server-boundary
-  role and cleans up its unique synthetic tenant.
+  role with a unique synthetic tenant in the ephemeral CI database.
 - Boundary: the cursor is process-scoped by design. This does not prove
   distributed scheduler fairness, throughput, queue capacity, soak, HA/DR,
   SLO/RPO/RTO, or production readiness. No migration, provider, write-back,

@@ -12185,6 +12185,8 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - The runtime test now adds a fixed synthetic EUR→USD rate (`0.5`) and
   `target_currency: USD` to a `many-to-one` run. It requires two persisted
   edges, USD lineage, and decision digest equality with the direct strategy.
-- CI server-boundaries evidence is pending. This does not prove live-market
-  rates, statutory FX accounting, scale, soak, HA/DR, posting, or write-back.
+- CI server-boundaries run `30818624136` passed the FX-aware worker run;
+  Python 3.11/3.12, parity, Docker, Security `30818623914`, and CodeQL
+  `30818624036` also passed. This does not prove live-market rates, statutory
+  FX accounting, scale, soak, HA/DR, posting, or write-back.
 - ADR: `docs/adr/0287-postgres-grouped-fx-runtime-evidence.md`.

@@ -166,6 +166,9 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Focused repository, connector lifecycle, migration, backup, Ruff, and Mypy
   tests pass. No provider network I/O is performed; live interoperability and
   external acknowledgement reconciliation remain open.
+- Corrected remote gates: CI `30774596822`, Docker `30774596807`, Security
+  `30774596805`, and CodeQL `30774596803` passed. The earlier CI `30774263443`
+  is retained as a diagnostic failure caused by stale compatibility evidence.
 
 ## E-292 — Explicit expiring delegation in central policy
 

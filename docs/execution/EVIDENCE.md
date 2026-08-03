@@ -233,6 +233,10 @@ This file records commands and observed results. It does not convert a dirty wor
   stores no payload or secret and performs no network I/O; live ERP/bank
   provider interoperability, external acknowledgement reconciliation, and
   production write-back remain unverified.
+- Remote evidence: initial CI `30774263443` failed with four compatibility
+  diagnostics (new parser allowlist, stale dependency/migration expectations);
+  corrected CI `30774596822`, Docker `30774596807`, Security `30774596805`, and
+  CodeQL `30774596803` passed.
 
 ## E-292: Expiring delegation policy invariant
 

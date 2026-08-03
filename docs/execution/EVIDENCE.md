@@ -12058,8 +12058,9 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   permissions by identical bounded scope, and retains tenant-wide wildcard
   behavior when no row exists. The route remains read-only and no universal
   authorization enforcement claim follows.
-- A dedicated CI server-boundary run is required before promoting the parity
-  status from `contract_only`; amount-scope persistence, federation,
-  distributed invalidation, and complete route/job/export/UI adoption remain
-  open.
+- Dedicated CI server-boundary run `30805942878` passed the migration, RLS,
+  bounded scope projection, tamper/delete refusal, and valid revocation gate;
+  the parity inventory records the adapter as `live_verified_current`.
+  Amount-scope persistence, federation, distributed invalidation, and complete
+  route/job/export/UI adoption remain open.
 - ADR: `docs/adr/0281-postgres-policy-permission-scopes.md`.

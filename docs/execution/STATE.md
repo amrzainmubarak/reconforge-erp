@@ -664,9 +664,10 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   persisted scope and preserves an explicit tenant-wide wildcard when no
   scope row exists. The analyzer remains read-only; universal route/job/export
   enforcement is not inferred.
-- Local contract tests pass. The live CI gate is wired but parity is
-  temporarily `contract_only` until migration, RLS, scope projection,
-  and immutability pass under the non-privileged PostgreSQL role.
+- Local contract tests pass. CI server-boundaries run `30805942878` passed
+  migration, RLS, bounded scope projection, tamper/delete refusal, and valid
+  revocation under the non-privileged role; parity is now
+  `live_verified_current` for this bounded adapter.
 - ADR: `docs/adr/0281-postgres-policy-permission-scopes.md`.
 
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio

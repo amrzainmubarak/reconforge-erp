@@ -168,8 +168,9 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   triggers reject updates and deletes.
 - The repository mirrors the existing governed lifecycle: identical replay is
   idempotent, maker/checker approval and dispatch/acknowledgement versions use
-  optimistic concurrency, reads revalidate the persisted digest, and sibling
-  tenants are excluded.
+  optimistic concurrency, same-intent writers use a PostgreSQL transaction
+  advisory lock without UPDATE privilege, reads revalidate the persisted
+  digest, and sibling tenants are excluded.
 - Local schema/contract checks pass; the live PostgreSQL test is wired into the
   server-boundaries workflow and will be the authoritative runtime gate. This
   remains intent persistence only: no provider payload, credential, network

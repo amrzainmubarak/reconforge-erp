@@ -12330,10 +12330,17 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   tests/test_postgres_operations.py tests/test_alembic_postgres.py` -> 6
   passed and 3 capability skips without a local PostgreSQL DSN. Ruff and Mypy
   pass for the new adapter and migration inventory.
+- A disposable local PostgreSQL 16 container on port 55433 with a
+  non-privileged role granted only schema USAGE plus table SELECT/INSERT ran
+  `tests/test_postgres_writeback.py` unskipped: 2 passed. This specifically
+  verifies the advisory-lock path does not require UPDATE privilege; the
+  authoritative hosted CI result remains pending.
 - Migration `0061_pg_writeback_intents` creates a JSONB, digest-bound,
   tenant/workspace-scoped table with forced RLS, a non-empty downgrade refusal,
   and immutable update/delete triggers. `PostgresWritebackIntentRepository`
-  performs all reads and versioned writes inside transactions, validates the
+  performs all reads and versioned writes inside transactions, serializes
+  same-intent writers with a transaction-scoped advisory lock without requiring
+  UPDATE privilege, validates the
   model/digest on reads, resolves identical replay before insert, and refuses
   stale or invalid lifecycle transitions.
 - CI server-boundaries now runs `tests/test_postgres_writeback.py` after a fresh

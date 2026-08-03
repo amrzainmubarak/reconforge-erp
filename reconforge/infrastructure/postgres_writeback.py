@@ -120,27 +120,25 @@ class PostgresWritebackIntentRepository:
     def _get_locked(self, *, tenant_id: str, workspace_id: str, intent_id: str, lock: bool) -> dict[str, Any] | None:
         parameters = (tenant_id, workspace_id, intent_id)
         if lock:
-            row = self.connection.execute(
-                """
-                SELECT version, status, intent_digest, intent_json
-                FROM reconforge.connector_writeback_intents
-                WHERE tenant_id=%s AND workspace_id=%s AND intent_id=%s
-                ORDER BY version DESC
-                LIMIT 1 FOR UPDATE
-                """,
-                parameters,
-            ).fetchone()
-        else:
-            row = self.connection.execute(
-                """
-                SELECT version, status, intent_digest, intent_json
-                FROM reconforge.connector_writeback_intents
-                WHERE tenant_id=%s AND workspace_id=%s AND intent_id=%s
-                ORDER BY version DESC
-                LIMIT 1
-                """,
-                parameters,
-            ).fetchone()
+            # SELECT ... FOR UPDATE would require UPDATE privilege even though
+            # this append-only role must never receive it. A transaction-scoped
+            # advisory lock serializes same-intent writers while preserving
+            # SELECT/INSERT-only table grants.
+            lock_key = json.dumps((tenant_id, workspace_id, intent_id), ensure_ascii=True, separators=(",", ":"))
+            self.connection.execute(
+                "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                (lock_key,),
+            )
+        row = self.connection.execute(
+            """
+            SELECT version, status, intent_digest, intent_json
+            FROM reconforge.connector_writeback_intents
+            WHERE tenant_id=%s AND workspace_id=%s AND intent_id=%s
+            ORDER BY version DESC
+            LIMIT 1
+            """,
+            parameters,
+        ).fetchone()
         if row is None:
             return None
         version, intent = _decode_intent(row)

@@ -10,7 +10,9 @@ write-back intent lifecycle. Migration `0061_pg_writeback_intents` stores only
 the canonical intent JSON, its digest, lifecycle version, tenant/workspace
 scope, and timestamp. Forced RLS, an append-only trigger, idempotent replay,
 optimistic version checks, and explicit status transitions apply inside the
-repository transaction.
+repository transaction. Same-intent writers use a transaction-scoped
+PostgreSQL advisory lock, so the application role needs only SELECT and INSERT
+on the append-only table.
 
 ## Rationale
 

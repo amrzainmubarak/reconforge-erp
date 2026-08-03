@@ -38,14 +38,18 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   live-verified only within this synthetic single-node server boundary; it is
   not a hosted deployment or production-readiness claim.
 
-## E-335 — Live PostgreSQL true many-to-many worker evidence (in progress)
+## E-335 — Live PostgreSQL true many-to-many worker evidence (complete bounded slice)
 
 - Extended the existing grouped-worker runtime contract with a second explicit
   `many-to-many` run. It retains the prior one-to-many case, requires four
   deterministic Cartesian edges, and compares the persisted decision digest to
   the direct strategy output.
 - Local environments without PostgreSQL skip the two live grouped-worker
-  cases; CI server-boundaries confirmation is pending.
+  cases. CI server-boundaries run `30817197467` passed both the retained
+  one-to-many and new true many-to-many assertions; the full Python,
+  parity/security, Docker, and CodeQL checks passed on the same head.
+- This is one small synthetic single-node worker cycle, not PostgreSQL scale,
+  soak, distributed capacity, HA/DR, posting, or write-back evidence.
 
 ## E-293 — Immutable local delegation administration
 

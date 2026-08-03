@@ -12171,7 +12171,8 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   explicit `many-to-many` run. The worker must complete both, persist four
   Cartesian edges (`ML1/ML2` x `MR1/MR2`), preserve `mode` and decision digest
   lineage, and equal the direct `GroupedSubsetSumStrategy` digest.
-- CI server-boundaries evidence is pending. No PostgreSQL scale, soak,
-  backpressure, distributed capacity, HA/DR, posting, or write-back claim is
-  inferred.
+- CI server-boundaries run `30817197467` passed both grouped-worker cases;
+  Python 3.11/3.12, parity, Docker, Security `30817197872`, and CodeQL
+  `30817197871` also passed. No PostgreSQL scale, soak, backpressure,
+  distributed capacity, HA/DR, posting, or write-back claim is inferred.
 - ADR: `docs/adr/0286-postgres-grouped-many-to-many-runtime-evidence.md`.

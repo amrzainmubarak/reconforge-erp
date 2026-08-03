@@ -128,6 +128,13 @@ tasks:
     status: completed
     depends_on: [E-307]
     exit_evidence: Migration 29 adds a separate approval permission; the scoped API loads the immutable proposal, enforces distinct authenticated approver and valid lifecycle/version, appends an approved version, and never dispatches a provider call under ADR 0259.
+  - id: E-309
+    priority: P4
+    area: connectors
+    title: Provider acknowledgement reconciliation API
+    status: completed
+    depends_on: [E-308]
+    exit_evidence: Migration 30 adds a separate reconciliation permission; the scoped API accepts only an already-dispatched intent, binds the provider reference and response digest to the original idempotency key, appends an acknowledged or rejected version, and performs no network dispatch under ADR 0260.
   - id: E-292
     priority: P0
     area: enterprise-policy
@@ -992,6 +999,7 @@ tasks:
       - E-306 adds migration 28 and `SQLiteWritebackIntentRepository`. Intent versions are append-only, scope-filtered, digest-bound, idempotent, optimistic-concurrency checked, and transition-limited; delete/update triggers fail closed. The repository stores no payload or secret and does not dispatch network calls. Live provider interoperability remains open.
       - E-307 adds `POST /api/v1/connectors/writeback/intents` as a proposal-only local API boundary. Dedicated permission and authenticated actor binding are enforced; identical requests return the same version/digest, while network dispatch is explicitly disabled.
       - E-308 adds `POST /api/v1/connectors/writeback/intents/{intent_id}/approve` with a separate approval permission and migration 29. Distinct maker/checker identity, tenant/workspace scope, lifecycle validation, and optimistic versioning are enforced; provider dispatch remains disabled.
+      - E-309 adds `POST /api/v1/connectors/writeback/intents/{intent_id}/acknowledge` with migration 30 and a separate reconciliation permission. It reconciles only an already-dispatched local intent, binds provider reference/response digest to the original idempotency key, and keeps network dispatch disabled.
 
   - id: P4-SCL-001
     priority: P4

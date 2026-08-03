@@ -2259,3 +2259,14 @@
 - Evidence: the gate records PostgreSQL 16 CI, non-privileged execution,
   lifecycle/tenant/audit-outbox checks, and explicit single-node limits.
 - Boundary: no claim for consolidation posting, restore, HA/DR, or RPO/RTO.
+
+# E-309 — Provider acknowledgement reconciliation remains local and digest-bound
+
+- Date: 2026-08-03
+- Decision: expose a separately authorized acknowledgement route only for an
+  already-dispatched immutable intent; require the original idempotency key and
+  persist provider reference/response digest as a new version.
+- Evidence: migration 30, scoped API tests, lifecycle tests, Ruff, and Mypy
+  pass. The response explicitly keeps network dispatch disabled.
+- Boundary: no live provider, credentials, settlement, compensation, or
+  production write-back claim is made.

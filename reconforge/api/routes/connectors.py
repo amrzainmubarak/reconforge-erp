@@ -12,12 +12,18 @@ from pydantic import BaseModel, ConfigDict, Field
 from reconforge.api.dependencies import get_local_db, require_permission
 from reconforge.api.errors import APIError
 from reconforge.auth.models import LocalUser
-from reconforge.connectors.writeback import WritebackIntent, WritebackPolicy, approve_writeback
+from reconforge.connectors.writeback import (
+    WritebackIntent,
+    WritebackPolicy,
+    acknowledge_writeback,
+    approve_writeback,
+)
 from reconforge.infrastructure.sqlite_writeback import SQLiteWritebackIntentRepository, WritebackPersistenceError
 
 router = APIRouter(prefix="/connectors", tags=["connectors"])
 WritebackProposer = Annotated[LocalUser, Depends(require_permission("connectors.writeback.propose"))]
 WritebackApprover = Annotated[LocalUser, Depends(require_permission("connectors.writeback.approve"))]
+WritebackReconciler = Annotated[LocalUser, Depends(require_permission("connectors.writeback.reconcile"))]
 
 
 class WritebackApprovalRequest(BaseModel):
@@ -27,6 +33,17 @@ class WritebackApprovalRequest(BaseModel):
     reason: str = Field(min_length=1, max_length=2_000)
     tenant_id: str = Field(min_length=1, max_length=256)
     workspace_id: str = Field(min_length=1, max_length=256)
+
+
+class WritebackAcknowledgementRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    tenant_id: str = Field(min_length=1, max_length=256)
+    workspace_id: str = Field(min_length=1, max_length=256)
+    provider_reference: str = Field(min_length=1, max_length=512)
+    response_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
+    idempotency_key: str = Field(min_length=1, max_length=200)
+    accepted: bool
 
 
 @router.post("/writeback/intents")
@@ -96,6 +113,47 @@ def approve_writeback_intent(
         stored = repository.put(approved, expected_version=int(current["version"]))
     except (ValueError, WritebackPersistenceError) as exc:
         raise APIError(status_code=409, code="writeback_approval_conflict", message=str(exc)) from exc
+    return {
+        "intent": stored.model_dump(mode="json"),
+        "version": int(current["version"]) + 1,
+        "digest": stored.digest,
+        "network_dispatch": "disabled",
+    }
+
+
+@router.post("/writeback/intents/{intent_id}/acknowledge")
+def acknowledge_writeback_intent(
+    intent_id: str,
+    payload: WritebackAcknowledgementRequest,
+    current_user: WritebackReconciler,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """Reconcile one provider acknowledgement to a dispatched intent."""
+    del current_user
+    if connection is None:
+        raise APIError(status_code=500, code="local_database_not_configured", message="Local database is not configured.")
+    repository = SQLiteWritebackIntentRepository(connection)
+    current = repository.get(
+        intent_id=intent_id,
+        tenant_id=payload.tenant_id,
+        workspace_id=payload.workspace_id,
+    )
+    if current is None:
+        raise APIError(status_code=404, code="writeback_intent_not_found", message="Write-back intent was not found.")
+    intent = current["intent"]
+    if payload.idempotency_key != intent.idempotency_key:
+        raise APIError(status_code=409, code="writeback_idempotency_mismatch", message="Acknowledgement key does not match the intent.")
+    try:
+        acknowledged = acknowledge_writeback(
+            intent,
+            provider_reference=payload.provider_reference,
+            response_digest=payload.response_digest,
+            acknowledged_at=datetime.now(UTC),
+            accepted=payload.accepted,
+        )
+        stored = repository.put(acknowledged, expected_version=int(current["version"]))
+    except (ValueError, WritebackPersistenceError) as exc:
+        raise APIError(status_code=409, code="writeback_acknowledgement_conflict", message=str(exc)) from exc
     return {
         "intent": stored.model_dump(mode="json"),
         "version": int(current["version"]) + 1,

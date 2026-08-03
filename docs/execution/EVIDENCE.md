@@ -268,6 +268,18 @@ This file records commands and observed results. It does not convert a dirty wor
   `30776133138`, and CodeQL `30776133117` passed for migration 29, the API
   maker-checker path, and the full compatibility matrix.
 
+## E-309: Provider acknowledgement reconciliation API
+
+- Code evidence: migration 30 seeds `connectors.writeback.reconcile`; the
+  route loads a tenant/workspace-scoped dispatched intent, validates the
+  original idempotency key, and appends the provider reference/response digest
+  through `acknowledge_writeback` and the immutable repository. No network
+  transport is reachable from the route.
+- Test evidence: `python -m pytest tests/test_api_connectors.py tests/test_sqlite_writeback.py tests/test_connector_writeback.py tests/test_api_authorization_inventory.py tests/test_phase4_execution_contract.py tests/test_file_ingestion_inventory.py tests/test_threat_model_index.py -q` passed (29 tests); Ruff, Mypy, and `git diff --check` passed for the changed files.
+- Boundary: this proves local acknowledgement reconciliation only. It does not
+  prove a live ERP/bank provider, credential or settlement semantics,
+  compensation, external retries, or production write-back.
+
 ## E-292: Expiring delegation policy invariant
 
 - Added optional delegation fields to `PolicyEvaluationContext` and forwarded

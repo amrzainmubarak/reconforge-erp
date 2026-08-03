@@ -4,7 +4,9 @@ from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
 from reconforge.auth.service import LocalAuthService
+from reconforge.connectors.writeback import WritebackPolicy, dispatch_writeback
 from reconforge.db import connect, run_migrations
+from reconforge.infrastructure.sqlite_writeback import SQLiteWritebackIntentRepository
 from tests.test_connector_writeback import _intent
 
 
@@ -49,6 +51,56 @@ def test_writeback_intent_api_is_authenticated_actor_bound_and_idempotent(tmp_pa
     )
     assert repeated.status_code == 409
 
+    # A provider adapter would persist the dispatched state after approved
+    # transport hand-off; the API only reconciles that already-persisted state.
+    dispatch_connection = connect(db_path)
+    try:
+        dispatch_repository = SQLiteWritebackIntentRepository(dispatch_connection)
+        approved = dispatch_repository.get(
+            intent_id=payload["intent_id"], tenant_id="tenant-a", workspace_id="workspace-a"
+        )
+        assert approved is not None
+        dispatched = dispatch_writeback(
+            approved["intent"],
+            policy=WritebackPolicy(
+                connector_id="reference-rest-readonly",
+                allowed_operations=frozenset({"payment.create"}),
+                feature_enabled=True,
+            ),
+        )
+        dispatch_repository.put(dispatched, expected_version=2)
+    finally:
+        dispatch_connection.close()
+    acknowledgement = client.post(
+        f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/acknowledge",
+        json={
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+            "provider_reference": "provider-ref-1",
+            "response_digest": "b" * 64,
+            "idempotency_key": payload["idempotency_key"],
+            "accepted": True,
+        },
+        headers=controller_headers,
+    )
+    assert acknowledgement.status_code == 200, acknowledgement.text
+    assert acknowledgement.json()["version"] == 4
+    assert acknowledgement.json()["intent"]["status"] == "acknowledged"
+    mismatch_ack = client.post(
+        f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/acknowledge",
+        json={
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+            "provider_reference": "provider-ref-2",
+            "response_digest": "c" * 64,
+            "idempotency_key": "wrong-key",
+            "accepted": True,
+        },
+        headers=controller_headers,
+    )
+    assert mismatch_ack.status_code == 409
+    assert mismatch_ack.json()["error"]["code"] == "writeback_idempotency_mismatch"
+
     mismatched = {**payload, "requested_by": "different-actor"}
     denied = client.post("/api/v1/connectors/writeback/intents", json=mismatched, headers=headers)
     assert denied.status_code == 403
@@ -56,6 +108,6 @@ def test_writeback_intent_api_is_authenticated_actor_bound_and_idempotent(tmp_pa
 
     check = connect(db_path)
     try:
-        assert check.execute("SELECT COUNT(*) FROM connector_writeback_intents").fetchone()[0] == 2
+        assert check.execute("SELECT COUNT(*) FROM connector_writeback_intents").fetchone()[0] == 4
     finally:
         check.close()

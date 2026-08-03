@@ -4056,3 +4056,12 @@ SELECT roles.id, permissions.name
 FROM roles CROSS JOIN permissions
 WHERE roles.name IN ('admin', 'controller') AND permissions.name='connectors.writeback.approve';
 """
+
+WRITEBACK_RECONCILIATION_PERMISSION_SQL = """
+INSERT OR IGNORE INTO permissions (name, description)
+VALUES ('connectors.writeback.reconcile', 'Reconcile a provider acknowledgement to a dispatched write-back intent.');
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles CROSS JOIN permissions
+WHERE roles.name IN ('admin', 'controller') AND permissions.name='connectors.writeback.reconcile';
+"""

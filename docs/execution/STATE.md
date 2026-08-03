@@ -195,6 +195,17 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   closed. The response explicitly keeps `network_dispatch=disabled`; provider
   acknowledgement and execution remain open.
 
+## E-309 — Provider acknowledgement reconciliation API
+
+- Migration 30 adds `connectors.writeback.reconcile`, separate from proposal
+  and approval permissions. The scoped route loads only the latest local intent
+  and requires its lifecycle to be dispatched before acknowledging it.
+- Provider reference and response digest are appended as a new immutable
+  acknowledged/rejected version and must carry the original idempotency key.
+  The route performs no provider call and reports `network_dispatch=disabled`.
+- Local focused tests pass; live provider interoperability, credentials,
+  settlement semantics, compensation, and production deployment remain open.
+
 ## E-292 — Explicit expiring delegation in central policy
 
 - The central policy engine now evaluates temporary delegated authority using a

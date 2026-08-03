@@ -62,6 +62,19 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   Python/parity/security/Docker/CodeQL matrix. The fixed synthetic rate is not
   live-market or accounting-rate evidence.
 
+## E-337 — Live PostgreSQL portfolio partial-settlement and fee lineage (complete bounded slice)
+
+- Extended the grouped-worker runtime contract with a fourth `portfolio` run
+  using explicit `netting_mode: net`, Decimal fee fields, and
+  `allow_partial_settlement: true`. The worker persists one partial proposal
+  (`120 - 20` net against `80`) with a visible `20` residual and one exact
+  `50`/`50` portfolio match.
+- The test compares the persisted portfolio result digest with the direct
+  strategy output and checks fee totals, net totals, settled amount, residuals,
+  reason code, and tenant-scoped result identity. This is synthetic fixed-date
+  data; it does not prove settlement posting, provider acknowledgement, scale,
+  soak/backpressure, HA/DR, or production accounting treatment.
+
 ## E-293 — Immutable local delegation administration
 
 - Migration 27 adds tenant/workspace-scoped `policy_delegations`; a typed

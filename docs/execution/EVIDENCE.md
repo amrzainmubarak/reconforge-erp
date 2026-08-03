@@ -12190,3 +12190,25 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   `30818624036` also passed. This does not prove live-market rates, statutory
   FX accounting, scale, soak, HA/DR, posting, or write-back.
 - ADR: `docs/adr/0287-postgres-grouped-fx-runtime-evidence.md`.
+
+## E-337: Live PostgreSQL portfolio partial-settlement and fee lineage
+
+- Local command: `uv run pytest -q
+  tests/test_postgres_grouped_matching_runtime.py
+  tests/test_matching_strategy_contract.py` -> 21 passed with the two
+  PostgreSQL capability skips; Ruff and `git diff --check` pass.
+- The live grouped-worker test now adds a fourth `portfolio` run with
+  `netting_mode: net`, explicit `fee` fields, and
+  `allow_partial_settlement: true`. It persists a partial `PL1`/`PR1`
+  proposal (`120 - 20` net against `80`, settled `80`, left residual `20`)
+  and an exact `PL2`/`PR2` match. The test checks the two result edges, fee/net
+  totals, residual lineage, portfolio reason code, and tenant-scoped metadata.
+- The persisted `strategy_result_digest` equals the direct
+  `GroupedSubsetSumStrategy` portfolio digest, preserving replay parity across
+  the worker boundary. The local environment has no PostgreSQL service, so the
+  live cases remain declared capability skips here; CI server-boundaries is the
+  required runtime evidence gate.
+- This does not prove settlement posting, provider acknowledgement, live fee
+  policy, statutory accounting, scale, soak/backpressure, distributed
+  capacity, HA/DR, or production readiness.
+- ADR: `docs/adr/0288-postgres-grouped-portfolio-partial-runtime-evidence.md`.

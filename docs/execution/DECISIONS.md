@@ -5,6 +5,26 @@
 
 ## Decisions
 
+### D-281: Promote PostgreSQL grouped portfolio fees and residuals only through a bounded runtime gate
+- **Date**: 2026-08-03
+- **Context**: The pure grouped strategy supported fee-aware netting and
+  explicitly enabled partial settlement inside a non-overlapping portfolio,
+  while the PostgreSQL worker had only live evidence for exact same-currency
+  and FX groups.
+- **Decision**: Add one synthetic portfolio run with exact Decimal fees,
+  `netting_mode: net`, and `allow_partial_settlement: true`; require persisted
+  residual/settled lineage and direct portfolio digest parity before counting
+  the worker boundary.
+- **Rationale**: This closes a concrete server-side replay gap for a common
+  statement/ledger settlement shape without conflating a proposal with an
+  external settlement or statutory posting.
+- **Boundary**: Single-node PostgreSQL CI evidence only. Live providers,
+  posting, external acknowledgement, scale/soak/backpressure, HA/DR, and
+  statutory accounting treatment remain open.
+- **Reversibility**: Test and documentation only; no schema or runtime
+  behavior change.
+- **ADR**: `docs/adr/0288-postgres-grouped-portfolio-partial-runtime-evidence.md`.
+
 ### D-264: Bounded PostgreSQL durable-job concurrency parity
 - **Date**: 2026-08-03
 - **Context**: Existing high-volume evidence is SQLite-only, while the

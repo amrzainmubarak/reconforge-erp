@@ -58,6 +58,7 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
     run_id = "grouped-live-" + uuid4().hex[:16]
     many_run_id = "grouped-live-many-" + uuid4().hex[:16]
     fx_run_id = "grouped-live-fx-" + uuid4().hex[:16]
+    portfolio_run_id = "grouped-live-portfolio-" + uuid4().hex[:16]
     admin = admin_factory.connect()
     try:
         with admin.transaction():
@@ -215,6 +216,49 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
                         "entity_id": "entity-FX",
                     },
                 )
+            portfolio_rule = {
+                "partition_fields": ["entity_id"],
+                "partition_max_records": 10,
+                "grouped_matching_mode": "portfolio",
+                "amount_tolerance": "0",
+                "date_window_days": 0,
+                "netting_mode": "net",
+                "left_fee_field": "fee",
+                "right_fee_field": "fee",
+                "allow_partial_settlement": True,
+            }
+            repository.create_run(
+                tenant_id=tenant_a,
+                run_id=portfolio_run_id,
+                name="Live portfolio partial settlement reconciliation",
+                left_source="ledger-portfolio.csv",
+                right_source="bank-portfolio.csv",
+                algorithm_version="bounded-grouped-subset-sum@1.0.0",
+                rule=portfolio_rule,
+                input_hash="grouped-portfolio-live-input",
+                actor_id="grouped-live-user",
+            )
+            for side, source_id, amount, fee in (
+                ("Left", "PL1", "120.00", "20.00"),
+                ("Left", "PL2", "50.00", "0.00"),
+                ("Right", "PR1", "80.00", "0.00"),
+                ("Right", "PR2", "50.00", "0.00"),
+            ):
+                repository.register_input(
+                    tenant_id=tenant_a,
+                    run_id=portfolio_run_id,
+                    side=side,
+                    source_id=source_id,
+                    record_hash=f"hash-{source_id}",
+                    amount=amount,
+                    currency_code="USD",
+                    attributes={
+                        "date": "2026-08-01",
+                        "currency": "USD",
+                        "entity_id": "entity-portfolio",
+                        "fee": fee,
+                    },
+                )
 
         worker = PostgresReconciliationWorker(
             factory,
@@ -227,7 +271,7 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
             ),
         )
         summary = worker.process_once()
-        assert summary.completed == 3
+        assert summary.completed == 4
         assert summary.failed == 0
 
         with PostgresTenantBoundary(factory).transaction(tenant_a) as connection:
@@ -269,6 +313,26 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
             assert all(row["lineage_json"]["mode"] == "many-to-one" for row in fx_rows)
             assert all(row["lineage_json"]["currency"] == "USD" for row in fx_rows)
             fx_decision_digest = fx_rows[0]["lineage_json"]["decision_digest"]
+            portfolio_metadata = repository.get_run_metadata(tenant_id=tenant_a, run_id=portfolio_run_id)
+            portfolio_rows = repository.list_results(tenant_id=tenant_a, run_id=portfolio_run_id)
+            assert portfolio_metadata["execution_status"] == "Complete"
+            assert portfolio_metadata["result_count"] == 2
+            assert portfolio_metadata["matched_count"] == 2
+            assert {(row["left_id"], row["right_id"]) for row in portfolio_rows} == {
+                ("PL1", "PR1"),
+                ("PL2", "PR2"),
+            }
+            partial_row = next(row for row in portfolio_rows if row["left_id"] == "PL1")
+            assert partial_row["lineage_json"]["mode"] == "portfolio"
+            assert partial_row["lineage_json"]["netting_mode"] == "net"
+            assert partial_row["lineage_json"]["left_fee_total"] == "20"
+            assert partial_row["lineage_json"]["left_net_total"] == "100"
+            assert partial_row["lineage_json"]["right_net_total"] == "80"
+            assert partial_row["lineage_json"]["settled_amount"] == "80"
+            assert partial_row["lineage_json"]["left_residual"] == "20"
+            assert partial_row["lineage_json"]["right_residual"] == "0"
+            assert partial_row["lineage_json"]["reason_code"] == "GROUP_PORTFOLIO_PARTIAL_SETTLEMENT"
+            portfolio_result_digest = partial_row["lineage_json"]["strategy_result_digest"]
 
         expected = GroupedSubsetSumStrategy().execute(
         MatchingStrategyRequest(
@@ -325,6 +389,52 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
             )
         )
         assert fx_decision_digest == fx_expected.results[0]["decision_digest"]
+        portfolio_expected = GroupedSubsetSumStrategy().execute(
+            MatchingStrategyRequest(
+                left_records=(
+                    {
+                        "id": "PL1",
+                        "amount": "120.00",
+                        "fee": "20.00",
+                        "date": "2026-08-01",
+                        "currency": "USD",
+                        "partition": _stable_partition_key(("entity-portfolio",)),
+                    },
+                    {
+                        "id": "PL2",
+                        "amount": "50.00",
+                        "fee": "0.00",
+                        "date": "2026-08-01",
+                        "currency": "USD",
+                        "partition": _stable_partition_key(("entity-portfolio",)),
+                    },
+                ),
+                right_records=(
+                    {
+                        "id": "PR1",
+                        "amount": "80.00",
+                        "fee": "0.00",
+                        "date": "2026-08-01",
+                        "currency": "USD",
+                        "partition": _stable_partition_key(("entity-portfolio",)),
+                    },
+                    {
+                        "id": "PR2",
+                        "amount": "50.00",
+                        "fee": "0.00",
+                        "date": "2026-08-01",
+                        "currency": "USD",
+                        "partition": _stable_partition_key(("entity-portfolio",)),
+                    },
+                ),
+                amount_tolerance="0",
+                date_window_days=0,
+                mode="portfolio",
+                netting_mode="net",
+                allow_partial_settlement=True,
+            )
+        )
+        assert portfolio_result_digest == portfolio_expected.decision_digest
 
         with PostgresTenantBoundary(factory).transaction(tenant_b) as connection, pytest.raises(
             PostgresReconciliationNotFoundError

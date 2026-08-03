@@ -696,6 +696,7 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
     from reconforge.api.routes.master_data import _server_id
     from reconforge.infrastructure.postgres import install_postgres_rls_schema
     from reconforge.infrastructure.postgres_close import POSTGRES_CLOSE_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_consolidation_ppa import POSTGRES_CONSOLIDATION_PPA_SCHEMA_SQL
     from reconforge.infrastructure.postgres_ledger import (
         POSTGRES_LEDGER_SCHEMA_SQL,
         PostgresLedgerRepository,
@@ -731,6 +732,7 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
             admin.execute(POSTGRES_CLOSE_SCHEMA_SQL)
             admin.execute(POSTGRES_IDENTITY_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_PPA_SCHEMA_SQL)
             admin.execute(POSTGRES_PRIVILEGED_SESSION_SCHEMA_SQL)
             admin.execute(
                 f"GRANT USAGE ON SCHEMA reconforge TO {app_user}" if app_user else "SELECT 1"
@@ -748,7 +750,7 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                     f"reconforge.ledger_accounts, "
                     f"reconforge.ledger_entries, reconforge.ledger_lines, reconforge.audit_events, "
                     f"reconforge.outbox_events, reconforge.close_periods, reconforge.close_tasks, "
-                    f"reconforge.close_task_dependencies TO {app_user}"
+                    f"reconforge.close_task_dependencies, reconforge.consolidation_ppa_artifacts TO {app_user}"
                 )
                 admin.execute(
                     f"GRANT SELECT, INSERT, UPDATE ON reconforge.principal_scope_grants TO {app_user}"
@@ -862,6 +864,13 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                 password="Strong-password-123",
                 role_name="admin",
             )
+            repository.create_user(
+                tenant_id=tenant_a,
+                user_id="api-user-reviewer",
+                username="Reviewer",
+                password="Strong-password-123",
+                role_name="admin",
+            )
             scope_authority = PostgresScopeAuthorityRepository(connection)
             scope_authority.grant(
                 tenant_id=tenant_a,
@@ -933,6 +942,25 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
         assert finance_before_step_up.json()["error"]["code"] == "step_up_required"
         assert step_up.status_code == 200
         assert step_up.json()["method"] == "password_reauthentication"
+        from tests.test_consolidation_ppa import _request as ppa_request
+
+        ppa_payload = ppa_request().to_dict()
+        ppa_payload.pop("prepared_by", None)
+        ppa_payload["approved_by"] = "api-user-reviewer"
+        ppa_created = client.post(
+            "/api/v1/consolidation-ppa",
+            headers=authenticated_headers,
+            json=ppa_payload,
+        )
+        assert ppa_created.status_code == 200, ppa_created.text
+        assert ppa_created.json()["artifact"]["posted"] is False
+        ppa_id = ppa_created.json()["artifact"]["id"]
+        ppa_loaded = client.get(
+            f"/api/v1/consolidation-ppa/{ppa_id}",
+            headers=authenticated_headers,
+        )
+        assert ppa_loaded.status_code == 200, ppa_loaded.text
+        assert ppa_loaded.json()["artifact"]["id"] == ppa_id
         missing_scope = client.get(
             "/api/v1/finance-core/summary",
             headers={"X-ReconForge-Tenant": tenant_a, "Authorization": f"Bearer {token}"},
@@ -1105,7 +1133,19 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                     "ALTER TABLE reconforge.principal_scope_grants "
                     "DISABLE TRIGGER principal_scope_grants_guard"
                 )
+                admin.execute(
+                    "ALTER TABLE reconforge.consolidation_ppa_artifacts "
+                    "DISABLE TRIGGER consolidation_ppa_artifact_guard"
+                )
+                admin.execute(
+                    "DELETE FROM reconforge.consolidation_ppa_artifacts WHERE tenant_id IN (%s, %s)",
+                    (tenant_a, tenant_b),
+                )
                 admin.execute("DELETE FROM reconforge.tenants WHERE id IN (%s, %s)", (tenant_a, tenant_b))
+                admin.execute(
+                    "ALTER TABLE reconforge.consolidation_ppa_artifacts "
+                    "ENABLE TRIGGER consolidation_ppa_artifact_guard"
+                )
                 admin.execute(
                     "ALTER TABLE reconforge.principal_scope_grants "
                     "ENABLE TRIGGER principal_scope_grants_guard"

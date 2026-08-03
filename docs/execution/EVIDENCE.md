@@ -12145,3 +12145,18 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   persistence adapter; no hosted API, statutory posting, provider, write-back,
   restore, HA/DR, or production-readiness claim follows.
 - ADR: `docs/adr/0284-postgres-ppa-api-is-server-profile-and-non-posting.md`.
+
+## E-334: Live PostgreSQL PPA API runtime gate
+
+- Local command: `uv run pytest -q tests/test_api_server_identity.py
+  tests/test_api_consolidation_ppa.py tests/test_api_authorization_inventory.py`
+  -> 8 passed, 1 declared live PostgreSQL capability skip. Ruff and
+  `git diff --check` pass.
+- The existing server-identity runtime test now creates the tenant-RLS PPA
+  table, grants the application role access, creates a distinct reviewer,
+  authenticates the preparer, performs password step-up, posts the strict PPA
+  request, reads it back, and asserts `posted: false` before guarded cleanup.
+- CI server-boundaries evidence is pending at this checkpoint. Until it passes,
+  the API remains local contract evidence; E-332 run `30811914832` remains the
+  separate live adapter gate.
+- ADR: `docs/adr/0285-live-postgres-ppa-api-runtime-gate.md`.

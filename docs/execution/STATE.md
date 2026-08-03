@@ -26,6 +26,15 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   `30811914832` is the live gate for the underlying PostgreSQL persistence
   adapter, not a hosted API deployment.
 
+## E-334 — Live PostgreSQL PPA API runtime gate (in progress)
+
+- Extended the existing server-identity runtime contract with the PPA schema,
+  a distinct reviewer identity, authenticated step-up, tenant-scoped POST/GET
+  calls, and append-only cleanup. Local environments without PostgreSQL skip
+  this capability test as declared.
+- Target CI evidence is the server-boundaries job. Until that job passes, the
+  API remains contract-tested only for current evidence purposes.
+
 ## E-293 — Immutable local delegation administration
 
 - Migration 27 adds tenant/workspace-scoped `policy_delegations`; a typed

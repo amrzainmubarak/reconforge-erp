@@ -192,6 +192,7 @@ include reconforge/api/server_consolidation_ppa.py
 include reconforge/api/routes/consolidation_ppa.py
 include tests/test_api_consolidation_ppa.py
 include docs/adr/0284-postgres-ppa-api-is-server-profile-and-non-posting.md
+include docs/adr/0285-live-postgres-ppa-api-runtime-gate.md
 include docs/adr/0233-persist-effective-dated-consolidation-ownership.md
 include docs/execution/benchmarks/consolidation-ownership-master-v1.md
 include reconforge/infrastructure/postgres_consolidation_ownership.py

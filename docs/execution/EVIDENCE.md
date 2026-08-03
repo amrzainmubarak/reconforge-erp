@@ -11924,3 +11924,20 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   operator evidence; lifecycle mutation, statutory statements, live rates,
   ERP/bank write-back, PostgreSQL CLI parity, and UI exposure remain open.
 - ADR: `docs/adr/0275-consolidation-close-cli-drilldown.md`.
+
+## E-325: Acquisition fair-value/goodwill bridge
+
+- `reconforge/domain/consolidation_acquisition.py` adds the closed
+  `acquisition-fair-value-goodwill-bridge-v1` contract. Exact Decimal/Money
+  inputs produce consideration, NCI, identifiable-net-assets, and either a
+  goodwill or an explicitly policy-allowed bargain-purchase line. The bridge
+  is balanced, maker-checker attributed, source/policy digest-bound, and
+  replay-verifiable with `posted: false`.
+- Local command: `python -m pytest tests/test_consolidation_acquisition.py
+  tests/test_module_registry.py -q -ra` -> 15 passed. Ruff and Mypy pass for
+  the changed domain and registry files; the JSON Schema validates the typed
+  result.
+- No migration, network call, journal mutation, or provider integration was
+  introduced. Purchase-price allocation detail, tax, impairment, step
+  acquisitions, statutory treatment, and source write-back remain unverified.
+- ADR: `docs/adr/0276-acquisition-fair-value-goodwill-bridge.md`.

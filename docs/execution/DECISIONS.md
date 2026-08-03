@@ -2493,3 +2493,17 @@
   lifecycle mutation, statutory statements, live rates, source write-back,
   PostgreSQL CLI parity, or UI exposure.
 - **ADR**: `docs/adr/0275-consolidation-close-cli-drilldown.md`.
+
+## D272 - Add a governed acquisition fair-value/goodwill bridge
+
+- **Decision**: add `acquisition-fair-value-goodwill-bridge-v1` as a pure
+  Decimal/Money proposal. Calculate consideration plus NCI fair value less
+  identifiable net assets as goodwill, or as an explicitly policy-allowed
+  bargain purchase, then emit a balanced, digest-bound non-posting bridge.
+- **Rationale**: acquisition depth needs a deterministic arithmetic boundary,
+  but statutory classification, tax, impairment, and journal posting require
+  separate policy and review. The fail-closed bargain rule prevents silently
+  converting a negative bridge into an accounting conclusion.
+- **Boundary**: no purchase-price allocation, tax, impairment, step
+  acquisition/disposal, legal opinion, source write-back, or posting claim.
+- **ADR**: `docs/adr/0276-acquisition-fair-value-goodwill-bridge.md`.

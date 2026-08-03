@@ -549,6 +549,23 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   parity, and UI exposure remain open.
 - ADR: `docs/adr/0275-consolidation-close-cli-drilldown.md`.
 
+### E-325 complete: acquisition fair-value/goodwill bridge
+
+- `acquisition-fair-value-goodwill-bridge-v1` is a pure-domain Decimal/Money
+  artifact for consideration, NCI fair value, identifiable net assets, and
+  goodwill. It preserves policy/source digests, maker-checker attribution,
+  exact balance, deterministic replay, and an explicit non-posting marker.
+- Bargain purchase is fail-closed unless `allow_bargain_purchase` is true;
+  goodwill and bargain purchase cannot coexist. The Finance Core registry and
+  closed JSON Schema declare the new export contract.
+- Local command: `python -m pytest tests/test_consolidation_acquisition.py
+  tests/test_module_registry.py -q -ra` -> 15 passed. Ruff and Mypy pass for
+  the changed domain/registry files.
+- Boundary: no purchase-price allocation engine, tax/deferred-tax treatment,
+  impairment, step acquisition/disposal, statutory classification, journal
+  posting, live rate, or source write-back claim.
+- ADR: `docs/adr/0276-acquisition-fair-value-goodwill-bridge.md`.
+
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio
 
 ### E-260 complete: bounded grouped and netting matcher

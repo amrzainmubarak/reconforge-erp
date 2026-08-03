@@ -337,9 +337,19 @@ def verify_acquisition_fair_value_bridge_payload(payload: object) -> dict[str, o
     if not isinstance(currency, str):
         raise ConsolidationError("Acquisition bridge reporting currency is missing.")
     lines = payload.get("lines")
-    if not isinstance(lines, list) or len(lines) not in {4, 5}:
-        raise ConsolidationError("Acquisition bridge requires four or five lines.")
+    if not isinstance(lines, list) or len(lines) not in {3, 4, 5}:
+        raise ConsolidationError("Acquisition bridge requires three to five lines.")
+    summary_values: dict[str, Decimal] = {}
+    for field in ("goodwill", "bargain_purchase"):
+        summary = payload.get(field)
+        if not isinstance(summary, dict) or summary.get("currency") != currency or not isinstance(summary.get("amount"), str):
+            raise ConsolidationError(f"Acquisition bridge {field} summary is invalid.")
+        summary_amount = Decimal(summary["amount"])
+        if summary_amount < 0:
+            raise ConsolidationError(f"Acquisition bridge {field} summary cannot be negative.")
+        summary_values[field] = summary_amount
     seen: set[str] = set()
+    line_values: dict[str, Decimal] = {}
     total = Decimal("0")
     for line in lines:
         if not isinstance(line, dict) or not isinstance(line.get("line_type"), str):
@@ -357,11 +367,25 @@ def verify_acquisition_fair_value_bridge_payload(payload: object) -> dict[str, o
         amount = line.get("amount")
         if not isinstance(amount, dict) or amount.get("currency") != currency or not isinstance(amount.get("amount"), str):
             raise ConsolidationError("Acquisition bridge line amount is invalid.")
-        total += Decimal(amount["amount"])
+        line_amount = Decimal(amount["amount"])
+        line_values[line_type] = line_amount
+        total += line_amount
     if {"consideration", "nci", "identifiable_net_assets"} - seen:
         raise ConsolidationError("Acquisition bridge core lines are missing.")
     if "goodwill" in seen and "bargain_purchase" in seen:
         raise ConsolidationError("Acquisition bridge cannot contain goodwill and bargain purchase together.")
+    if line_values.get("goodwill", Decimal("0")) != -summary_values["goodwill"]:
+        raise ConsolidationError("Acquisition bridge goodwill line does not match its summary.")
+    if line_values.get("bargain_purchase", Decimal("0")) != summary_values["bargain_purchase"]:
+        raise ConsolidationError("Acquisition bridge bargain-purchase line does not match its summary.")
+    if summary_values["goodwill"] > 0 and "goodwill" not in seen:
+        raise ConsolidationError("Acquisition bridge goodwill line is missing.")
+    if summary_values["bargain_purchase"] > 0 and "bargain_purchase" not in seen:
+        raise ConsolidationError("Acquisition bridge bargain-purchase line is missing.")
+    if summary_values["goodwill"] == 0 and "goodwill" in seen:
+        raise ConsolidationError("Acquisition bridge zero goodwill must not have a line.")
+    if summary_values["bargain_purchase"] == 0 and "bargain_purchase" in seen:
+        raise ConsolidationError("Acquisition bridge zero bargain purchase must not have a line.")
     if total != 0:
         raise ConsolidationError("Acquisition bridge lines must balance exactly.")
     return dict(payload)

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 from decimal import Decimal
+from hashlib import sha256
 from pathlib import Path
 
 import pytest
@@ -65,6 +66,20 @@ def test_acquisition_bridge_calculates_exact_goodwill_and_balances() -> None:
     assert result.posted is False
 
 
+def test_acquisition_bridge_exact_balance_has_no_zero_value_line() -> None:
+    request = replace(
+        _request(),
+        consideration=Money.from_exact(Decimal("70.00"), "USD", strict_precision=True),
+        nci_fair_value=Money.from_exact(Decimal("30.00"), "USD", strict_precision=True),
+    )
+    result = prepare_acquisition_fair_value_bridge(request)
+
+    assert len(result.lines) == 3
+    assert result.goodwill.amount == Decimal("0.00")
+    assert result.bargain_purchase.amount == Decimal("0.00")
+    assert verify_acquisition_fair_value_bridge_payload(result.to_dict())["result_digest"] == result.result_digest
+
+
 def test_acquisition_bridge_replay_is_digest_stable_for_equivalent_decimal_scale() -> None:
     first = prepare_acquisition_fair_value_bridge(_request())
     second = prepare_acquisition_fair_value_bridge(
@@ -110,6 +125,16 @@ def test_acquisition_bridge_payload_verification_detects_tampering() -> None:
     with pytest.raises(ConsolidationError, match="digest mismatch"):
         verify_acquisition_fair_value_bridge_payload(payload)
 
+    payload = result.to_dict()
+    payload["goodwill"]["amount"] = "49.00"  # type: ignore[index]
+    unsigned = dict(payload)
+    unsigned.pop("result_digest")
+    payload["result_digest"] = sha256(
+        json.dumps(unsigned, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    ).hexdigest()
+    with pytest.raises(ConsolidationError, match="goodwill line"):
+        verify_acquisition_fair_value_bridge_payload(payload)
+
 
 def test_acquisition_bridge_schema_accepts_typed_result() -> None:
     schema = json.loads(
@@ -118,4 +143,3 @@ def test_acquisition_bridge_schema_accepts_typed_result() -> None:
     Draft202012Validator.check_schema(schema)
     result = prepare_acquisition_fair_value_bridge(_request())
     Draft202012Validator(schema).validate(result.to_dict())
-

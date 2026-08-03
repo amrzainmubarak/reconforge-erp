@@ -559,7 +559,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   goodwill and bargain purchase cannot coexist. The Finance Core registry and
   closed JSON Schema declare the new export contract.
 - Local command: `python -m pytest tests/test_consolidation_acquisition.py
-  tests/test_module_registry.py -q -ra` -> 15 passed. Ruff and Mypy pass for
+  tests/test_module_registry.py -q -ra` -> 16 passed. Ruff and Mypy pass for
   the changed domain/registry files.
 - Boundary: no purchase-price allocation engine, tax/deferred-tax treatment,
   impairment, step acquisition/disposal, statutory classification, journal

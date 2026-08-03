@@ -11934,7 +11934,7 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   is balanced, maker-checker attributed, source/policy digest-bound, and
   replay-verifiable with `posted: false`.
 - Local command: `python -m pytest tests/test_consolidation_acquisition.py
-  tests/test_module_registry.py -q -ra` -> 15 passed. Ruff and Mypy pass for
+  tests/test_module_registry.py -q -ra` -> 16 passed. Ruff and Mypy pass for
   the changed domain and registry files; the JSON Schema validates the typed
   result.
 - No migration, network call, journal mutation, or provider integration was

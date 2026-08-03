@@ -16,7 +16,7 @@
     "goodwill": {"$ref": "#/$defs/money"},
     "lines": {
       "type": "array",
-      "minItems": 4,
+      "minItems": 3,
       "maxItems": 5,
       "items": {
         "type": "object",

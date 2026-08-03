@@ -78,6 +78,17 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   parity cells, and Docker-parity; Security `30820863921`, Docker
   `30820864225`, and CodeQL `30820865109` also passed.
 
+## E-338 — Live PostgreSQL durable-job same-tenant claim contention (complete bounded slice)
+
+- Extended the existing live durable-job contract with four synthetic jobs for
+  one tenant, three partitions per job, and two independent PostgreSQL worker
+  connections draining the same queue. `FOR UPDATE SKIP LOCKED` claim
+  ownership, checkpointed completion, and unique partition effects are
+  asserted for every job.
+- This is a small contention gate only; it does not establish PostgreSQL
+  throughput, fairness SLOs, soak, distributed supervision, queue HA,
+  automatic failover, or production readiness.
+
 ## E-293 — Immutable local delegation administration
 
 - Migration 27 adds tenant/workspace-scoped `policy_delegations`; a typed

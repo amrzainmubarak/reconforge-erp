@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
+from threading import Lock
 from uuid import uuid4
 
 import pytest
@@ -171,6 +173,105 @@ def test_live_postgres_job_application_contract_and_rls(tmp_path: Path) -> None:
                 assert len(effects) == load_partitions
                 assert len({effect.partition_key for effect in effects}) == load_partitions
                 loaded = repository.get(tenant_id=tenant_id, job_id=load_job_id)
+                assert loaded is not None and loaded.status.value == "completed"
+
+            # Bounded same-tenant claim contention: two real PostgreSQL
+            # workers drain one queue concurrently. This proves SKIP LOCKED
+            # claim ownership and no-duplicate effects without implying a
+            # capacity, soak, or production-SLO result.
+            contention_jobs_per_tenant = 4
+            contention_partitions = 3
+            contention_jobs: list[str] = []
+            for job_index in range(contention_jobs_per_tenant):
+                contention_job_id = f"postgres-contention-{job_index}-{uuid4().hex[:8]}"
+                contention_jobs.append(contention_job_id)
+                service.submit(
+                    JobSubmission(
+                        job_id=contention_job_id,
+                        idempotency_scope="postgres-contention",
+                        idempotency_key=contention_job_id,
+                        tenant_id=tenant_a,
+                        workspace_id="workspace-a",
+                        entity_id="entity-a",
+                        input_digest="f" * 64,
+                        config_digest="0" * 64,
+                        worker_version="postgres-contention-v1",
+                        total_units=contention_partitions,
+                        retry_ceiling=2,
+                        created_at="2026-07-27T10:05:00Z",
+                    ),
+                    actor_id="contention-submitter",
+                )
+            completed_contention = 0
+            contention_lock = Lock()
+
+            def drain_contended_worker(worker_id: str) -> int:
+                nonlocal completed_contention
+                worker_connection = factory.connect()
+                try:
+                    worker_repository = PostgresDurableJobRepository(worker_connection)
+                    worker = DurableJobWorkerService(worker_repository)
+                    completed = 0
+                    while True:
+                        with contention_lock:
+                            if completed_contention >= len(contention_jobs):
+                                return completed
+                        leased = worker.claim(
+                            tenant_id=tenant_a,
+                            worker_id=worker_id,
+                            occurred_at="2026-07-27T10:06:00Z",
+                            lease_expires_at="2026-07-27T10:16:00Z",
+                        )
+                        if leased is None:
+                            time.sleep(0.01)
+                            continue
+                        for ordinal in range(1, contention_partitions + 1):
+                            if ordinal == contention_partitions:
+                                worker.complete_partition(
+                                    leased,
+                                    partition_key=f"contention/{ordinal}",
+                                    ordinal=ordinal,
+                                    input_digest="1" * 64,
+                                    output_digest="2" * 64,
+                                    effect_reference=f"postgres-contention/{leased.job.id}/{ordinal}",
+                                    occurred_at=f"2026-07-27T10:06:0{ordinal}Z",
+                                    output_manifest=JobOutputManifest(
+                                        schema_version=1,
+                                        digest="3" * 64,
+                                        reference=f"manifest/contention/{leased.job.id}",
+                                    ),
+                                )
+                            else:
+                                leased = worker.commit_partition(
+                                    leased,
+                                    partition_key=f"contention/{ordinal}",
+                                    ordinal=ordinal,
+                                    completed_units=ordinal,
+                                    input_digest="1" * 64,
+                                    output_digest="2" * 64,
+                                    effect_reference=f"postgres-contention/{leased.job.id}/{ordinal}",
+                                    occurred_at=f"2026-07-27T10:06:0{ordinal}Z",
+                                )
+                        completed += 1
+                        with contention_lock:
+                            completed_contention += 1
+                finally:
+                    worker_connection.close()
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                worker_counts = list(
+                    executor.map(
+                        drain_contended_worker,
+                        ("postgres-contention-worker-a", "postgres-contention-worker-b"),
+                    )
+                )
+            assert sum(worker_counts) == contention_jobs_per_tenant
+            assert completed_contention == contention_jobs_per_tenant
+            for contention_job_id in contention_jobs:
+                effects = repository.list_partition_effects(tenant_id=tenant_a, job_id=contention_job_id)
+                assert len(effects) == contention_partitions
+                assert len({effect.partition_key for effect in effects}) == contention_partitions
+                loaded = repository.get(tenant_id=tenant_a, job_id=contention_job_id)
                 assert loaded is not None and loaded.status.value == "completed"
 
             retry_submission = JobSubmission(

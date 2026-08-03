@@ -12215,3 +12215,19 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   policy, statutory accounting, scale, soak/backpressure, distributed
   capacity, HA/DR, or production readiness.
 - ADR: `docs/adr/0288-postgres-grouped-portfolio-partial-runtime-evidence.md`.
+
+## E-338: Live PostgreSQL durable-job same-tenant claim contention
+
+- Local command: `uv run pytest -q tests/test_postgres_durable_jobs.py` -> one
+  schema/application test passed and the live PostgreSQL capability case was
+  skipped because this workstation has no configured service. Ruff and
+  `git diff --check` pass for the slice.
+- The live case now creates four tenant-scoped jobs with three partitions each
+  and drains the shared queue through two independent PostgreSQL connections.
+  It requires every job to be completed, exactly three unique partition keys
+  per job, and a completion count equal to the declared four-job workload.
+- CI server-boundaries is the required runtime evidence gate. This proves only
+  bounded `SKIP LOCKED` claim ownership and no-duplicate effects under one
+  tenant; capacity, fairness/SLO, soak, distributed supervision, queue HA,
+  automatic failover, and production readiness remain open.
+- ADR: `docs/adr/0289-postgres-durable-job-claim-contention-runtime.md`.

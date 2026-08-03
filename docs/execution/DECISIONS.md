@@ -25,6 +25,22 @@
   behavior change.
 - **ADR**: `docs/adr/0288-postgres-grouped-portfolio-partial-runtime-evidence.md`.
 
+### D-282: Exercise same-tenant PostgreSQL job claim contention without widening scale claims
+- **Date**: 2026-08-03
+- **Context**: The durable-job PostgreSQL gate covered two tenant lanes but used
+  one worker per tenant, leaving same-tenant claim ownership under contention
+  untested.
+- **Decision**: Add four synthetic jobs with three partitions each and drain
+  them with two independent worker connections. Require terminal completion and
+  exact per-job effect cardinality before counting the boundary.
+- **Rationale**: This directly tests the database lease/claim boundary and
+  duplicate-effect invariant while keeping the workload bounded and synthetic.
+- **Boundary**: No throughput, fairness SLO, soak, distributed supervision,
+  queue HA, automatic failover, or production-readiness claim follows.
+- **Reversibility**: Test and documentation only; no migration or public API
+  behavior changes.
+- **ADR**: `docs/adr/0289-postgres-durable-job-claim-contention-runtime.md`.
+
 ### D-264: Bounded PostgreSQL durable-job concurrency parity
 - **Date**: 2026-08-03
 - **Context**: Existing high-volume evidence is SQLite-only, while the

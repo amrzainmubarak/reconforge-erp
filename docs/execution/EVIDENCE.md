@@ -12428,3 +12428,19 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   throughput, capacity, soak, distributed fairness, queue HA, HA/DR, RPO/RTO,
   or production-sizing claim is made.
 - ADR: `docs/adr/0297-postgres-durable-job-bounded-scale-profile.md`.
+
+## E-347: PostgreSQL bounded outbox multi-worker delivery
+
+- Focused command: `python -m pytest -q tests/test_postgres_outbox_scale.py
+  tests/test_postgres_outbox.py` -> 15 passes and 2 live-service capability
+  skips locally when no PostgreSQL DSN is configured. Ruff and Mypy pass for
+  the profile and worker contracts.
+- The live profile inserts 64 synthetic events and runs four independent
+  PostgreSQL workers with batch size eight. The sink records event IDs; the
+  acceptance requires 64 published IDs, zero duplicate publish attempts, and
+  zero pending/claimed/dead rows.
+- The local PostgreSQL 16 run passes the live profile and the existing outbox
+  application contract. Hosted runtime verification is pending; no broker,
+  crash-after-publish, queue-HA, failover, throughput, soak, or production
+  delivery claim is made.
+- ADR: `docs/adr/0298-postgres-outbox-bounded-multi-worker-profile.md`.

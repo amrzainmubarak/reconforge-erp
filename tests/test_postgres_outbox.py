@@ -11,6 +11,13 @@ from uuid import uuid4
 import pytest
 
 from reconforge.application.outbox import OutboxApplicationService, OutboxError, OutboxRepositoryProtocol
+from reconforge.benchmark.postgres_outbox_scale import (
+    default_profile as postgres_outbox_scale_profile,
+)
+from reconforge.benchmark.postgres_outbox_scale import (
+    run_postgres_outbox_scale_profile,
+    verify_postgres_outbox_scale_result,
+)
 from reconforge.infrastructure.postgres import (
     PostgresConnectionFactory,
     PostgresSettings,
@@ -359,5 +366,48 @@ def test_live_postgres_outbox_application_claim_retry_dead_replay_publish_and_rl
             with admin.transaction():
                 admin.execute("DELETE FROM reconforge.tenants WHERE id IN (%s,%s)", (tenant_a, tenant_b))
         except psycopg.Error:
+            pass
+        admin.close()
+
+
+@pytest.mark.skipif(
+    not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires a live PostgreSQL service"
+)
+def test_live_postgres_outbox_bounded_multi_worker_delivery_profile() -> None:
+    """Drain one synthetic 64-event queue with independent PostgreSQL workers."""
+
+    pytest.importorskip("psycopg")
+    dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
+    admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
+    app_user = os.environ.get("RECONFORGE_TEST_POSTGRES_APP_USER", "")
+    if not app_user:
+        pytest.skip("requires a non-privileged application role")
+    factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))
+    admin_factory = PostgresConnectionFactory(PostgresSettings(dsn=admin_dsn, require_tls=False))
+    tenant_id = "outbox_scale_" + uuid4().hex[:8]
+    admin = admin_factory.connect()
+    try:
+        with admin.transaction():
+            install_postgres_rls_schema(admin)
+            admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
+            admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
+            admin.execute(POSTGRES_OUTBOX_APPLICATION_SCHEMA_SQL)
+            admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            admin.execute(f"GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO {app_user}")
+            admin.execute("INSERT INTO reconforge.tenants(id,name) VALUES(%s,%s)", (tenant_id, tenant_id))
+        result = run_postgres_outbox_scale_profile(
+            factory,
+            tenant_id,
+            id_prefix="PGOUTBOX-" + uuid4().hex[:8],
+        )
+        verify_postgres_outbox_scale_result(result)
+        assert result.published_events == postgres_outbox_scale_profile().events
+        assert result.duplicate_publish_attempts == 0
+        assert result.pending_events == result.claimed_events == result.dead_events == 0
+    finally:
+        try:
+            with admin.transaction():
+                admin.execute("DELETE FROM reconforge.tenants WHERE id=%s", (tenant_id,))
+        except Exception:
             pass
         admin.close()

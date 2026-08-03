@@ -239,6 +239,18 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   RPO/RTO, or production-sizing claim is made. ADR:
   `docs/adr/0297-postgres-durable-job-bounded-scale-profile.md`.
 
+## E-347 — PostgreSQL bounded outbox multi-worker delivery (in progress)
+
+- Added a four-worker, 64-event transactional-outbox profile using the
+  existing tenant-bound PostgreSQL worker and an injected idempotent sink.
+  The structural acceptance is one observation per event and zero pending,
+  claimed, or dead rows after acknowledgement.
+- Local live PostgreSQL test passes; hosted verification is pending. This is
+  one-node synthetic claim/publish/acknowledge evidence only, not broker,
+  crash-after-publish, queue-HA, failover, throughput, soak, or production
+  delivery evidence. ADR:
+  `docs/adr/0298-postgres-outbox-bounded-multi-worker-profile.md`.
+
 ## E-293 — Immutable local delegation administration
 
 - Migration 27 adds tenant/workspace-scoped `policy_delegations`; a typed

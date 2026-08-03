@@ -11814,11 +11814,14 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   skips; the broader SQLite/API/PostgreSQL close suite -> 24 passed, 2 live
   PostgreSQL skips. Ruff and Mypy for the changed adapter/operations/migration
   files pass. `RECONFORGE_TEST_POSTGRES_DSN` was not configured locally.
-- Required live gate: the server-boundaries PostgreSQL test must complete a
-  synthetic prepare/approve/post/reversal lifecycle under a non-privileged
-  role, verify line/effect cardinality and tenant isolation, and prove the
-  append-only update refusal. Until that run is green, this slice is not
-  `live_verified_current`.
+- Remote live gate: CI run `30786172958` on exact commit
+  `9b9ff98d5892de518ae4c28665c7544bac8a73bb` passed
+  `server-boundaries` job `91600016470`. The PostgreSQL 16 service under the
+  non-privileged role completed the synthetic prepare/approve/post/reversal
+  lifecycle, line/effect cardinality and tenant isolation checks, and the
+  append-only update refusal. Both Python jobs, all four engine-parity jobs,
+  and Docker parity `91600778297` also passed; Security run `30786172957` and
+  CodeQL run `30786172968` passed.
 - Boundary: this evidence is bounded control-journal parity. It does not prove
   statutory consolidation, acquisition/goodwill/equity-method treatment, live
   rates, ERP/bank interoperability or write-back, HA/DR, distributed scale,

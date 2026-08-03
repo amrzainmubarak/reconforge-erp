@@ -441,7 +441,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   engine parity, Docker parity, Security, and CodeQL. ADR 0269 records the
   boundary.
 
-### E-319 in progress: PostgreSQL consolidation journal-line parity
+### E-319 complete: PostgreSQL consolidation journal-line parity
 
 - Alembic 0057 and the PostgreSQL adapter now persist immutable,
   tenant-scoped run journal lines and posting/reversal effect lines. Each line
@@ -451,8 +451,11 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Pre-0057 rows remain readable through a compatibility path; the first
   governed effect transition materializes the exact verified lines. Focused
   schema, migration, registry, SQLite compatibility, Ruff, Mypy, and adapter
-  tests pass locally. The live PostgreSQL test is skipped without the CI DSN
-  and is the required promotion gate; no remote evidence is recorded yet.
+  tests pass locally. CI run `30786172958` on exact commit
+  `9b9ff98d5892de518ae4c28665c7544bac8a73bb` passed the live
+  `server-boundaries` job `91600016470`, both Python jobs, all four engine
+  parity jobs, and Docker parity `91600778297`. Security `30786172957` and
+  CodeQL `30786172968` also passed.
 - Boundary: this is synthetic PostgreSQL control-journal parity only. It does
   not prove statutory consolidation, acquisition/goodwill/equity-method
   accounting, live ERP/bank connectors or write-back, HA/DR, distributed

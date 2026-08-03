@@ -18,10 +18,10 @@
   model makes replay, tenant isolation, and append-only evidence explicit
   without pretending to be a statutory ledger.
 - **Verification**: Focused schema/migration/registry contracts and the
-  SQLite/PostgreSQL adapter suites pass locally. The live PostgreSQL contract
-  must prove lifecycle replay, effect-line cardinality, tenant isolation, and
-  an update refusal under the non-privileged role before this slice is promoted
-  to current-live parity.
+  SQLite/PostgreSQL adapter suites pass locally. CI run `30786172958` passed
+  the live PostgreSQL contract under the non-privileged role, proving lifecycle
+  replay, effect-line cardinality, tenant isolation, and update refusal at the
+  current commit.
 - **Boundary**: This is synthetic control-journal persistence parity only. It
   does not implement acquisition accounting, goodwill/equity method, statutory
   consolidation, live rates, ERP/bank write-back, HA/DR, distributed scale,

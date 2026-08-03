@@ -2414,9 +2414,9 @@
   materialize the exact compatibility lines; no silent rehash or mutation is
   accepted.
 - **Evidence**: Focused PostgreSQL schema/migration/registry and SQLite/API
-  compatibility suites pass locally. The live PostgreSQL server-boundaries
-  contract remains the promotion gate for runtime parity, tamper refusal, and
-  tenant isolation.
+  compatibility suites pass locally. CI run `30786172958` passed the live
+  PostgreSQL server-boundaries contract under the non-privileged role,
+  including runtime parity, tamper refusal, and tenant isolation.
 - **Boundary**: This does not claim statutory consolidation, acquisition or
   equity-method accounting, live source-system posting/write-back, HA/DR,
   scale, or production readiness.

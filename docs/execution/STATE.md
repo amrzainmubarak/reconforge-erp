@@ -342,7 +342,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 
 ## Snapshot boundary
 
-- Branch: `codex/consolidation-journal-lifecycle`, current ownership-adjustment code head `bfb29d44ae025b338a8a5d0f8311619a8292462e`; Draft PR #71 remains deliberately unmerged.
+- Branch: `codex/consolidation-journal-lifecycle`, current E-331 code head `8b35da135d576600198b40a30692c27af5c9bce4`; Draft PR #71 remains deliberately unmerged.
 - Phase 1 base: `1c633eea53a2f11c9a90af57edfc80a36faeef82` (merged atomic application-boundary PR #62)
 - Phase 0 signed-candidate source remains `d47edd845e6aef3bae16e05698e07878086d690b`; its evidence is immutable historical baseline, not evidence for Phase 1 changes.
 - Publication scope: PR #54 merged the evidence-bounded Phase 0 implementation. Signed Release Candidate run `30243819239` is non-publishing: it retained review artifact `8644255664` and pushed only the digest-addressed candidate image required for verification; no GitHub Release, PyPI publication, compliance claim, or production migration occurred.
@@ -686,8 +686,9 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   mutating policy state.
 - Focused tests, Ruff, Mypy, diff-check, and the full local regression (2,330
   collected, zero failures/errors; declared capability skips remain) pass.
-  PostgreSQL CI runtime verification for the new migration and amount tamper
-  gate is pending on the pushed head.
+  CI run `30808822315` also passes the migration, RLS, exact amount projection,
+  amount-tamper refusal, valid revocation, Python 3.11/3.12, engine parity,
+  Docker parity, Security, and CodeQL gates.
 - The bound has no implicit currency and is not universal route/job/export/UI
   enforcement; provider federation, distributed invalidation, and production
   effectiveness remain open.

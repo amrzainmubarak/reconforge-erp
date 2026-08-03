@@ -12085,7 +12085,10 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - The pure analyzer and PostgreSQL adapter preserve old no-bound digests,
   canonicalize Decimal bounds, and detect only intersecting inclusive ranges.
   No route/job/export/UI enforcement or currency conversion is inferred.
-- PostgreSQL CI runtime evidence for this new migration is pending on the
-  pushed head; the prior E-330 runtime remains the bounded single-node scope
-  baseline.
+- CI server-boundaries run `30808822315` passes the new migration, tenant-RLS
+  projection, exact amount-bound tamper refusal, valid revocation, and the
+  non-privileged application-role runtime gate. Docker, Security, CodeQL,
+  Python 3.11/3.12, and engine-parity jobs on the same head also pass.
+- The live claim remains synthetic single-node evidence; the prior E-330
+  runtime is retained as historical dimension-scope evidence.
 - ADR: `docs/adr/0282-postgres-policy-scope-amount-bounds.md`.

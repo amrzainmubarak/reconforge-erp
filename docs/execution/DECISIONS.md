@@ -2362,3 +2362,24 @@
 - **Consequence**: The retained profile stays `partial`; no runtime or
   deployment behavior changes, and independent-host/site-loss evidence remains
   open under P4-REL-001.
+
+## D264 - Project grouped decisions at the PostgreSQL worker boundary
+
+- **Decision**: Keep the grouped algorithm persistence-free, but project each
+  decision into the existing per-source PostgreSQL result/exception schema.
+  Matched groups emit deterministic Cartesian edges; unresolved groups emit
+  explicit single-sided outcomes and review exceptions. Preserve complete
+  group evidence and strategy digests in lineage, and let database-owned
+  canonical columns override shadowing JSON attributes.
+- **Rationale**: The worker's completion invariant requires every registered
+  source identity to be represented, while duplicating grouped logic in SQL
+  would create backend drift. A projection closes the runtime gap without a
+  second algorithm or a new schema.
+- **Evidence**: Focused adapter/reconciliation tests pass, and the new live
+  server-boundaries contract exercises a non-superuser PostgreSQL worker with
+  RLS, checkpointing, direct strategy digest parity, and sibling-tenant
+  isolation.
+- **Boundary**: This is one bounded synthetic runtime proof; PostgreSQL scale,
+  soak/backpressure, distributed capacity, HA/DR, live connectors, posting,
+  and write-back remain unclaimed.
+- **ADR**: `docs/adr/0268-postgres-grouped-matching-runtime-parity.md`.

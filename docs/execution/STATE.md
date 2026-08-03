@@ -401,6 +401,28 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   synthetic runtime gate only; PostgreSQL capacity, soak, backpressure, queue
   HA, distributed scale, and production SLOs remain open.
 
+### E-317 complete: PostgreSQL grouped-matching worker runtime parity
+
+- `PostgresGroupedMatchingAdapter` now maps the bounded grouped strategy's
+  multi-record decisions onto the existing PostgreSQL reconciliation result
+  contract. Matched groups emit deterministic Cartesian source edges so every
+  input is represented; unresolved groups emit explicit `Ambiguous`/`Unmatched`
+  rows and review exceptions. Group totals, identities, policy, and strategy
+  digests remain in replayable lineage JSON.
+- Database-owned identity, amount, date, currency, and partition columns
+  override any shadowing JSON attributes. Portfolio mode also materializes
+  unmatched source identities rather than letting completion fail with hidden
+  omissions.
+- The live server-boundaries test executes the real PostgreSQL worker under a
+  non-superuser RLS role and verifies one-to-many completion, two exact edges,
+  one checkpoint, lineage, direct strategy digest parity, and sibling-tenant
+  isolation. Local execution skips only the live section without a configured
+  `RECONFORGE_TEST_POSTGRES_DSN`.
+- This is one small synthetic runtime proof, not PostgreSQL 10K/100K/1M scale,
+  soak, backpressure, distributed capacity, HA/DR, source-system posting, or
+  live ERP/bank interoperability. The pure application service remains
+  `not_applicable` in `POSTGRES_PARITY_INVENTORY.yaml`.
+
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio
 
 ### E-260 complete: bounded grouped and netting matcher
@@ -414,6 +436,9 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - E-264 adds bounded reversal pairing. Opposite-sign records are paired within a currency/partition/date window, explicit `reversal_of` links outrank inferred candidates, one-to-one consumption is enforced, and ambiguity/unmatched outcomes remain visible. No journal mutation or posting occurs.
 - E-265 adds explicit partial groups inside portfolio selection. Existing exact-only portfolio behavior is unchanged unless `allow_partial_settlement` is true; selected partial decisions carry settled amount and residuals, and the policy flag is digest-bound. No posting or write-back occurs.
 - P4-MAT-001 remains open for mutation/crash-resume and cross-engine properties, and published 10K/100K/1M benchmarks.
+- E-317 closes only the worker-runtime portion of the PostgreSQL boundary; the
+  workstream remains open for broader cross-engine properties, PostgreSQL scale,
+  soak, and domain-diverse workloads.
 
 ## P4-CON-001 in progress: governed live connector foundation
 

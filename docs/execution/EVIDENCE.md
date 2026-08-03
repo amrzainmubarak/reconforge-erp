@@ -11737,3 +11737,33 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   `domain_audit_*` and `outbox_events` write boundary used by PostgreSQL
   approvals. The failure is retained; the fixture correction adds only those
   minimal grants before the next run.
+
+## E-317: PostgreSQL grouped-matching worker runtime parity
+
+- `PostgresGroupedMatchingAdapter` now projects grouped decisions into the
+  existing PostgreSQL per-source result/exception contract. Matched groups emit
+  deterministic Cartesian edges; unresolved groups emit explicit
+  `Ambiguous`/`Unmatched` rows and bounded review exceptions. Full group
+  identities, totals, explanation, and strategy digests remain in lineage.
+- Canonical PostgreSQL columns override shadowing JSON attributes for identity,
+  amount, date, currency, and partition. Portfolio mode materializes source
+  identities that the selected portfolio leaves unmatched.
+- Focused commands passed: `python -m pytest
+  tests/test_postgres_grouped_matching.py
+  tests/test_postgres_grouped_matching_runtime.py -q` -> 8 passed, 1 live
+  skip; Ruff and Mypy passed for the adapter/runtime contract; the broader
+  grouped strategy and PostgreSQL reconciliation suites also passed with one
+  expected live-service skip.
+- The new live server-boundaries contract uses the real PostgreSQL worker under
+  a non-superuser RLS role, verifies one-to-many completion with two exact
+  edges, one checkpoint, lineage and direct strategy digest parity, and sibling
+  tenant isolation. It is skipped locally when no PostgreSQL DSN is configured.
+- Boundary: this is one small synthetic PostgreSQL runtime proof. It does not
+  claim PostgreSQL 10K/100K/1M scale, soak, backpressure, distributed capacity,
+  HA/DR, live ERP/bank interoperability, source-system posting, or write-back.
+- Full local `python -m pytest -q` and a reduced suite both exceeded the
+  120-second local command budget without surfacing a test assertion; this is
+  recorded as an environment timeout, not a pass. Ruff, Mypy, Bandit, build,
+  and pip-audit completed locally; pip-audit excluded the unpublished local
+  package name because it is not on PyPI and reported no known vulnerabilities.
+- ADR: `docs/adr/0268-postgres-grouped-matching-runtime-parity.md`.

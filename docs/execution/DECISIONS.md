@@ -104,6 +104,13 @@
 - **Rationale**: Operators can create auditable proposals without silently turning the local deployment into an external mutation client.
 - **Reversibility**: Remove or disable the route and permission; no provider credentials, source-system state, or external network behavior is introduced.
 
+### D-308: Keep Write-Back Approval Separate from Proposal
+- **Date**: 2026-08-03
+- **Context**: Proposal persistence now had an authenticated API, but approval needed a distinct permission and maker-checker path.
+- **Decision**: Add migration 29 and a separate approval endpoint that loads the scoped immutable intent, requires a distinct actor, validates the lifecycle/version, and appends the approved version without dispatch.
+- **Rationale**: Separation of proposal and approval prevents self-approval and makes the future provider mutation gate auditable.
+- **Reversibility**: Disable the approval route/permission; no external provider state is changed.
+
 ### D-292: Delegated Authority Requires an Explicit Evaluation Instant
 - **Date**: 2026-08-02
 - **Context**: Enterprise policy needs expiring delegation without hidden wall-clock behavior that makes decisions non-replayable.

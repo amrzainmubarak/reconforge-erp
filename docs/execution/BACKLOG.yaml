@@ -121,6 +121,13 @@ tasks:
     status: completed
     depends_on: [P4-CON-001]
     exit_evidence: Local API POST proposal route requires connectors.writeback.propose, binds requested_by to the authenticated actor, persists through the append-only repository, replays idempotently, and explicitly disables network dispatch under ADR 0258; approval/provider execution remain separate.
+  - id: E-308
+    priority: P4
+    area: connectors
+    title: Maker-checker write-back approval API
+    status: completed
+    depends_on: [E-307]
+    exit_evidence: Migration 29 adds a separate approval permission; the scoped API loads the immutable proposal, enforces distinct authenticated approver and valid lifecycle/version, appends an approved version, and never dispatches a provider call under ADR 0259.
   - id: E-292
     priority: P0
     area: enterprise-policy
@@ -984,6 +991,7 @@ tasks:
       - E-299 adds `reference-erp-readonly`, an entity-scoped ERP ledger-line connector over the governed HTTPS runtime. Its exact Decimal page schema rejects non-finite amounts, duplicate IDs, and mixed-entity pages; cursor/idempotency, canonical response digests, secret-reference isolation, endpoint allowlisting, and failure schemas are covered by focused tests. It is a provider-neutral synthetic reference, not a live ERP integration or write-back capability.
       - E-306 adds migration 28 and `SQLiteWritebackIntentRepository`. Intent versions are append-only, scope-filtered, digest-bound, idempotent, optimistic-concurrency checked, and transition-limited; delete/update triggers fail closed. The repository stores no payload or secret and does not dispatch network calls. Live provider interoperability remains open.
       - E-307 adds `POST /api/v1/connectors/writeback/intents` as a proposal-only local API boundary. Dedicated permission and authenticated actor binding are enforced; identical requests return the same version/digest, while network dispatch is explicitly disabled.
+      - E-308 adds `POST /api/v1/connectors/writeback/intents/{intent_id}/approve` with a separate approval permission and migration 29. Distinct maker/checker identity, tenant/workspace scope, lifecycle validation, and optimistic versioning are enforced; provider dispatch remains disabled.
 
   - id: P4-SCL-001
     priority: P4

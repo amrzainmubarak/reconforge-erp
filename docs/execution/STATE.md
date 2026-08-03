@@ -183,6 +183,16 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Remote gates: CI `30775343346`, Docker `30775343347`, Security `30775343354`,
   and CodeQL `30775343353` passed.
 
+## E-308 — Maker-checker write-back approval API
+
+- Migration 29 adds `connectors.writeback.approve`, separate from proposal
+  permission. The approval route requires tenant/workspace scope, loads the
+  latest immutable intent, and appends an approved version only after the
+  authenticated checker is distinct from the requester.
+- Invalid state/version, self-approval, and missing feature enablement fail
+  closed. The response explicitly keeps `network_dispatch=disabled`; provider
+  acknowledgement and execution remain open.
+
 ## E-292 — Explicit expiring delegation in central policy
 
 - The central policy engine now evaluates temporary delegated authority using a

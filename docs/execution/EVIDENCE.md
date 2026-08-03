@@ -252,6 +252,19 @@ This file records commands and observed results. It does not convert a dirty wor
   `30775343354`, and CodeQL `30775343353` passed for the API route and full
   compatibility matrix.
 
+## E-308: Maker-checker write-back approval API
+
+- Code evidence: migration 29 seeds a separate approval permission. The
+  approval route loads a scope-bound latest intent, invokes the existing
+  `approve_writeback` invariant, and persists with the current version; it has
+  no provider transport dependency.
+- Test evidence: API, repository, lifecycle, migration, and authorization
+  focused tests pass; maker/checker approval reaches version 2, repeated
+  approval is rejected, and dispatch remains disabled.
+- Boundary: this proves local approval evidence only. It does not prove MFA
+  cryptographic assurance, external provider acknowledgement, compensation,
+  or live ERP/bank mutation.
+
 ## E-292: Expiring delegation policy invariant
 
 - Added optional delegation fields to `PolicyEvaluationContext` and forwarded

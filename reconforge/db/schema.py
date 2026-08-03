@@ -4047,3 +4047,12 @@ SELECT roles.id, permissions.name
 FROM roles CROSS JOIN permissions
 WHERE roles.name IN ('admin', 'controller') AND permissions.name='connectors.writeback.propose';
 """
+
+WRITEBACK_APPROVAL_PERMISSION_SQL = """
+INSERT OR IGNORE INTO permissions (name, description)
+VALUES ('connectors.writeback.approve', 'Approve a governed connector write-back intent as a distinct human checker.');
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles CROSS JOIN permissions
+WHERE roles.name IN ('admin', 'controller') AND permissions.name='connectors.writeback.approve';
+"""

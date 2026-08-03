@@ -36,6 +36,7 @@ HUMAN_ONLY_PERMISSIONS = frozenset(
         "security.center.read",
         "security.policy.manage",
         "connectors.writeback.propose",
+        "connectors.writeback.approve",
         "users.manage",
     }
 )

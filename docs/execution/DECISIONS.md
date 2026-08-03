@@ -90,6 +90,13 @@
 - **Rationale**: The separation prevents accidental disclosure and makes route-by-route migration auditable while preserving compatibility for callers that do not request field scoping.
 - **Reversibility**: Additive policy fields and pure helper; callers can omit field sets and no existing route behavior changes.
 
+### D-306: Persist Write-Back Intent History Append-Only
+- **Date**: 2026-08-03
+- **Context**: The provider-neutral write-back lifecycle had approval and acknowledgement contracts but no durable local history for retries, operator review, or replay.
+- **Decision**: Add migration 28 and an append-only SQLite repository keyed by intent/version and tenant/workspace. Store only canonical intent JSON and digest; require optimistic versions and an explicit allowed transition; keep payloads, credentials, and network dispatch outside the repository.
+- **Rationale**: Durable immutable history makes retries and compensation auditable without mutating a financial source or silently enabling external writes.
+- **Reversibility**: The migration is additive; disable the repository path and retain the backup before any future provider adapter is enabled.
+
 ### D-292: Delegated Authority Requires an Explicit Evaluation Instant
 - **Date**: 2026-08-02
 - **Context**: Enterprise policy needs expiring delegation without hidden wall-clock behavior that makes decisions non-replayable.

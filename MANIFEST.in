@@ -203,6 +203,9 @@ include reconforge/auth/field_access.py
 include tests/test_field_access.py
 include docs/adr/0256-field-level-policy-and-masking-are-explicit.md
 include docs/security/field-level-access.md
+include reconforge/infrastructure/sqlite_writeback.py
+include tests/test_sqlite_writeback.py
+include docs/adr/0257-writeback-intents-are-append-only-before-provider-I-O.md
 include docs/adr/0235-ownership-change-adjustments-are-non-posting-and-policy-bound.md
 include docs/execution/benchmarks/ownership-change-adjustment-v1.md
 include docs/schemas/ownership_change_adjustment_v1.schema.json

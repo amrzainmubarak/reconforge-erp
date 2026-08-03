@@ -154,6 +154,19 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Remote gates: CI `30773746150`, Docker `30773746185`, Security `30773746176`,
   and CodeQL `30773746148` passed for the field-policy slice.
 
+## E-306 — Immutable local write-back intent history
+
+- Migration 28 adds `connector_writeback_intents` with append-only update/delete
+  triggers and a tenant/workspace/versioned primary key. The new SQLite
+  repository persists only canonical intent contracts and digests; payloads and
+  credentials remain outside storage.
+- Identical intent digests replay idempotently. New versions require the current
+  version and an allowed lifecycle transition; cross-scope reads are empty and
+  tamper/delete attempts fail closed.
+- Focused repository, connector lifecycle, migration, backup, Ruff, and Mypy
+  tests pass. No provider network I/O is performed; live interoperability and
+  external acknowledgement reconciliation remain open.
+
 ## E-292 — Explicit expiring delegation in central policy
 
 - The central policy engine now evaluates temporary delegated authority using a

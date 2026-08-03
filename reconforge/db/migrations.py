@@ -36,6 +36,7 @@ from reconforge.db.schema import (
     POLICY_DELEGATIONS_SCHEMA_SQL,
     RECEIVABLES_SCHEMA_SQL,
     WORKFLOW_STATE_MACHINE_SCHEMA_SQL,
+    WRITEBACK_INTENTS_SCHEMA_SQL,
 )
 
 
@@ -105,6 +106,7 @@ MIGRATIONS = [
     Migration(version=25, name="consolidation_close_lifecycle", sql=CONSOLIDATION_CLOSE_SCHEMA_SQL),
     Migration(version=26, name="consolidation_ownership_masters", sql=CONSOLIDATION_OWNERSHIP_SCHEMA_SQL),
     Migration(version=27, name="policy_delegation_administration", sql=POLICY_DELEGATIONS_SCHEMA_SQL),
+    Migration(version=28, name="connector_writeback_intents", sql=WRITEBACK_INTENTS_SCHEMA_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """

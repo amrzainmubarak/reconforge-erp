@@ -4014,3 +4014,30 @@ BEGIN
     SELECT RAISE(ABORT, 'delegation grants cannot be deleted');
 END;
 """
+
+WRITEBACK_INTENTS_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS connector_writeback_intents (
+    intent_id TEXT NOT NULL,
+    tenant_id TEXT NOT NULL,
+    workspace_id TEXT NOT NULL,
+    version INTEGER NOT NULL CHECK (version > 0),
+    status TEXT NOT NULL,
+    intent_digest TEXT NOT NULL,
+    intent_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (intent_id, version),
+    UNIQUE (tenant_id, workspace_id, intent_id, intent_digest)
+);
+CREATE INDEX IF NOT EXISTS idx_connector_writeback_intents_scope
+    ON connector_writeback_intents(tenant_id, workspace_id, intent_id, version DESC);
+CREATE TRIGGER IF NOT EXISTS connector_writeback_intents_no_update
+BEFORE UPDATE ON connector_writeback_intents
+BEGIN
+    SELECT RAISE(ABORT, 'write-back intents are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS connector_writeback_intents_no_delete
+BEFORE DELETE ON connector_writeback_intents
+BEGIN
+    SELECT RAISE(ABORT, 'write-back intents cannot be deleted');
+END;
+"""

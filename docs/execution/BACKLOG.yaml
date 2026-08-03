@@ -107,6 +107,13 @@ tasks:
     status: completed
     depends_on: [E-303]
     exit_evidence: Central policy denies requested fields outside an authorized set, while a separate deterministic projection masks only authorized sensitive fields and records denied/masked evidence; focused tests and ADR 0256 pass without claiming complete route/UI migration.
+  - id: E-306
+    priority: P4
+    area: connectors
+    title: Immutable local write-back intent history
+    status: completed
+    depends_on: [E-267, E-287]
+    exit_evidence: SQLite migration 28 and a tenant/workspace-scoped append-only repository persist versioned write-back intent contracts, enforce lifecycle transitions and optimistic versions, return identical replays idempotently, reject deletes/tampering, and never store payloads or perform network I/O under ADR 0257.
   - id: E-292
     priority: P0
     area: enterprise-policy
@@ -968,6 +975,7 @@ tasks:
       - E-287 adds an injected provider transport boundary for governed write-back. Approved/dispatched intents pass only identity, operation, idempotency key, and payload digest; provider acknowledgements must bind the original key, while transport failures and mismatches fail closed. Synthetic success, replay/mismatch, self-approval, and failure-injection contracts pass under ADR 0240. No network I/O, live provider, credential provisioning, or posting claim is introduced.
       - E-296 adds `verify_manifest_portfolio`, a shared conformance gate over the five provider-neutral reference manifests. It rejects write capability, missing synthetic/idempotent guarantees, missing schema/threat declarations, and network manifests without secret-reference authentication or exact egress. Live vendors, write-back, and provider interoperability remain open.
       - E-299 adds `reference-erp-readonly`, an entity-scoped ERP ledger-line connector over the governed HTTPS runtime. Its exact Decimal page schema rejects non-finite amounts, duplicate IDs, and mixed-entity pages; cursor/idempotency, canonical response digests, secret-reference isolation, endpoint allowlisting, and failure schemas are covered by focused tests. It is a provider-neutral synthetic reference, not a live ERP integration or write-back capability.
+      - E-306 adds migration 28 and `SQLiteWritebackIntentRepository`. Intent versions are append-only, scope-filtered, digest-bound, idempotent, optimistic-concurrency checked, and transition-limited; delete/update triggers fail closed. The repository stores no payload or secret and does not dispatch network calls. Live provider interoperability remains open.
 
   - id: P4-SCL-001
     priority: P4

@@ -607,7 +607,7 @@ modules:
         status: bounded
         attack_surface: Adapter registry, future extension packaging, dependencies, network capability, credentials, and undeclared egress.
         controls: [SEC-C-008, SEC-C-010]
-        test_evidence: [tests/test_connector_sdk.py, tests/test_connector_package.py, tests/test_connector_network.py, tests/test_connector_durable_workload.py, tests/test_file_ingestion_inventory.py]
+        test_evidence: [tests/test_connector_sdk.py, tests/test_connector_package.py, tests/test_connector_network.py, tests/test_connector_durable_workload.py, tests/test_connector_writeback.py, tests/test_sqlite_writeback.py, tests/test_file_ingestion_inventory.py]
         residual_risk_ids: [R-009]
         limitations:
           - Signed packages authenticate bounded manifest data only and cannot install executable code; trusted-key administration and production provider composition remain deployment-owned.
@@ -620,7 +620,7 @@ modules:
         residual_risk_ids: [R-014, R-017]
         limitations:
           - Adapters do not own downstream disclosure approval, encryption, deletion, or recipient access.
-    module_test_evidence: [tests/test_file_ingestion_inventory.py, tests/test_file_ingress_security.py, tests/test_connector_sdk.py, tests/test_connector_package.py, tests/test_connector_network.py, tests/test_connector_durable_workload.py, tests/test_v03_platform.py]
+    module_test_evidence: [tests/test_file_ingestion_inventory.py, tests/test_file_ingress_security.py, tests/test_connector_sdk.py, tests/test_connector_package.py, tests/test_connector_network.py, tests/test_connector_durable_workload.py, tests/test_connector_writeback.py, tests/test_sqlite_writeback.py, tests/test_v03_platform.py]
     assumptions:
       - Adapter inputs are local exports selected by an authorized workspace operator.
       - Any provider registration is operator-approved and any credential resolver is tenant-scoped and non-disclosing.

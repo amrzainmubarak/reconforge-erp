@@ -221,6 +221,19 @@ This file records commands and observed results. It does not convert a dirty wor
   `30773746176`, and CodeQL `30773746148` passed, including both Python
   versions, server-boundaries, engine-parity, and Docker parity.
 
+## E-306: Immutable local write-back intent history
+
+- Code evidence: migration 28 creates an append-only, indexed intent history
+  with immutable triggers. `SQLiteWritebackIntentRepository` verifies the
+  tenant/workspace scope, canonical digest, expected version, and explicit
+  `WritebackStatus` transition before inserting a new version. Identical
+  digests return the existing record without a duplicate effect.
+- Test evidence: `python -m pytest tests/test_sqlite_writeback.py tests/test_connector_writeback.py tests/test_enterprise_db.py tests/test_db_backup_restore.py -q` passed (26 tests). Ruff and Mypy passed for the changed repository/migration files.
+- Boundary: only the local durable intent boundary is proven. The repository
+  stores no payload or secret and performs no network I/O; live ERP/bank
+  provider interoperability, external acknowledgement reconciliation, and
+  production write-back remain unverified.
+
 ## E-292: Expiring delegation policy invariant
 
 - Added optional delegation fields to `PolicyEvaluationContext` and forwarded

@@ -74,10 +74,10 @@ observability = [
     "opentelemetry-sdk==1.44.0",
 ]
 backup = [
-    "cryptography==49.0.0",
+    "cryptography==50.0.0",
 ]
 connectors = [
-    "cryptography==49.0.0",
+    "cryptography==50.0.0",
 ]
 federation = [
     "joserfc==1.7.4",
@@ -109,7 +109,7 @@ py-modules = ["reconforge_migration_sql"]
 # version attempts to rewrite the universal lock. Move the cutoff only in a
 # reviewed dependency-update change that regenerates and audits uv.lock.
 required-version = "==0.11.32"
-exclude-newer = "2026-07-26T00:00:00Z"
+exclude-newer = "2026-08-02T00:00:00Z"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

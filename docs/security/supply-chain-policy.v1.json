@@ -13,7 +13,7 @@
     "manager_commit": "3010295ae7ff572de459987ad70db315a62ecd61",
     "linux_x86_64_archive_sha256": "aab924fd522efd06f1c5f3b93a243864fc453132c94b2dc49f1371b528a4b967",
     "windows_x86_64_archive_sha256": "acfde570451cfdb8689fa159a138ee805ba4e241c466432750302c86254b0984",
-    "exclude_newer": "2026-07-26T00:00:00Z",
+    "exclude_newer": "2026-08-02T00:00:00Z",
     "supported_python": [
       "3.11",
       "3.12"

@@ -12500,3 +12500,25 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   (server-boundaries job `91821932337`, Python 3.11/3.12, four engine-parity
   cells, and Docker-parity), Security `30854414587`, Docker `30854414580`, and
   CodeQL `30854414574`.
+
+## E-350: Remediate hosted cryptography advisory in the locked supply chain
+
+- Hosted Security run `30854906809` rejected the prior locked resolution on
+  both Python 3.11 and 3.12 with `CVE-2026-69247` for `cryptography 49.0.0`.
+  The failure was treated as a real release blocker; no scanner exception or
+  suppression was introduced.
+- `pyproject.toml` now pins `cryptography==50.0.0` for the optional backup and
+  connectors profiles. The universal lock is regenerated under exact uv
+  `0.11.32` with `exclude-newer=2026-08-02T00:00:00Z`; the WebAuthn dependency
+  graph resolves `pyOpenSSL==26.4.0` and remains on `webauthn==3.0.0`.
+- `python .github/scripts/validate_supply_chain_policy.py --project-root .`
+  returns `status: valid`, `uv lock --check` passes, and locked all-extra
+  Python 3.14 synchronization installs `cryptography==50.0.0`. Focused
+  cryptographic, WebAuthn, backup, connector-signature, and upgrade tests pass
+  with only the declared capability skips. A local retry of hash-exported pip-audit
+  could not complete because the advisory request to PyPI timed out; hosted
+  execution of the remediation head remains the authoritative next gate.
+- No API, CLI, schema, migration, or financial arithmetic behavior changed;
+  this is a dependency-only security remediation. It does not establish
+  provenance, reachability, package safety, independent assessment, or
+  production readiness.

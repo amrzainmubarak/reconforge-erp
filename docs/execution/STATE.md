@@ -301,6 +301,23 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   all four engine-parity cells, and Docker-parity. Security `30854414587`,
   Docker `30854414580`, and CodeQL `30854414574` also passed.
 
+## E-350 — Remediate hosted cryptography advisory in the locked supply chain
+
+- Hosted Security reported `CVE-2026-69247` against the previous
+  `cryptography==49.0.0` lock on Python 3.11 and 3.12. No exception was added.
+- Reviewed remediation updates the optional backup/connectors pin to
+  `cryptography==50.0.0`, resolves compatible `pyOpenSSL==26.4.0` for the
+  pinned WebAuthn 3.0.0 stack, moves the absolute uv cutoff to
+  `2026-08-02T00:00:00Z`, and regenerates the hash-bearing `uv.lock`.
+- Local `uv lock --check`, closed supply-chain policy validation, locked
+  all-extra Python 3.14 sync, and cryptographic/WebAuthn/backup/signature
+  compatibility tests pass. The locked audit was retried but the local PyPI
+  advisory request timed out; hosted verification for the remediation head is
+  required before calling the security gate green.
+- Boundary: this is dependency remediation evidence only. It does not prove
+  package safety, reachability, provenance, independent review, or production
+  readiness.
+
 ## E-293 — Immutable local delegation administration
 
 - Migration 27 adds tenant/workspace-scoped `policy_delegations`; a typed
@@ -1593,8 +1610,9 @@ existing versioned Community SQLite backup. Operator keys enter only through a
 bounded local raw/hex key file; the envelope is authenticated before restore
 target mutation and is published as one exclusive staged file. Round-trip,
 dry-run, wrong-key, tamper, existing-target preservation, key contract, and CLI
-tests pass. The 113-package lock and supply-chain policy include cryptography
-49.0.0. Temporary plaintext protection, key rotation/KMS, PostgreSQL backup,
+tests pass. The then-current 113-package lock and supply-chain policy included
+cryptography 49.0.0; E-350 refreshes the active lock to 50.0.0 after the hosted
+advisory review. Temporary plaintext protection, key rotation/KMS, PostgreSQL backup,
 centralized restore authorization, and the full edition/version rollback
 matrix remain open; P1-PLAT-010 is in progress.
 

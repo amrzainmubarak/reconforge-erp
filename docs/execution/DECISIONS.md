@@ -2739,3 +2739,23 @@
 - ADR: `docs/adr/0293-deterministic-fair-durable-job-lane-scheduling.md`.
 - Rollback: Remove the scheduler types, optional claim filters, tests, ADR, and
   execution entries. No database or external system state is mutated.
+
+## D247 - Governed write-back intent persistence is evidence-only
+
+- Date: 2026-08-03
+- Status: accepted
+- Decision: add Alembic `0061_pg_writeback_intents` and a PostgreSQL
+  `PostgresWritebackIntentRepository` for the existing governed write-back
+  intent lifecycle. Persist only canonical intent JSON, digest, lifecycle
+  version, tenant/workspace scope, and timestamp. Enforce forced RLS,
+  idempotent replay, optimistic transitions, and append-only mutation refusal.
+- Rationale: the connector lifecycle needs durable, tenant-isolated evidence in
+  the server profile before any provider-specific dispatch is considered.
+- Boundary: this proves persistence and tamper/isolation behavior only. It does
+  not add provider payloads, credentials, network calls, ERP/bank
+  interoperability, compensation execution, throughput, HA/DR, or production
+  write-back.
+- ADR: `docs/adr/0294-postgres-writeback-intent-runtime-evidence.md`.
+- Rollback: downgrade refuses while intent evidence exists; after archival or
+  an empty disposable database, remove migration 0061, adapter, tests, and
+  execution entries without touching external systems.

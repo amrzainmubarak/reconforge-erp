@@ -647,6 +647,23 @@ surfaces:
       - The JSONB values are internal canonical request/result evidence, not uploads or executable content; replay verification rejects malformed or tampered rows.
       - The live runtime gate is synthetic and single-node; statutory acquisition accounting, restore, HA/DR, provider integration, and source write-back remain open.
     next_action: Preserve the append-only replay boundary and promote the parity inventory only after the unskipped CI runtime gate passes.
+  - id: FI-032
+    name: PostgreSQL write-back intent evidence records
+    module_ids: [platform.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/postgres_writeback.py::_decode_intent
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_postgres_writeback.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The JSONB value is an internal canonical digest-bound write-back intent, not provider payload, credentials, or executable content; typed validation and digest comparison fail closed before a lifecycle state is returned.
+      - The live runtime gate is synthetic and single-node; provider interoperability, network dispatch, compensation delivery, throughput, HA/DR, and production write-back remain open.
+    next_action: Keep provider-specific dispatch behind approved credentials, signed registration, idempotency, and failure-injection evidence; do not treat intent persistence as external write-back.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader
@@ -714,6 +731,11 @@ direct_json_parser_allowlist:
     call_count: 1
     surface_id: FI-031
     rationale: Parses only the canonical PostgreSQL JSONB PPA result before closed replay verification, immutable posted=false enforcement, and tenant-scoped evidence return; malformed or tampered persisted data fails closed.
+  - path: reconforge/infrastructure/postgres_writeback.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-032
+    rationale: Parses only the canonical PostgreSQL JSONB write-back intent after tenant/workspace selection; Pydantic validation and digest comparison fail closed before a persisted lifecycle state is returned.
   - path: reconforge/upgrade/application_adapter.py
     parser: json.loads
     call_count: 1

@@ -163,6 +163,13 @@ tasks:
     status: completed
     depends_on: [E-341]
     exit_evidence: "Add an exact-lane round-robin scheduler that scopes every claim to tenant/workspace/entity, alternates non-empty lanes deterministically, preserves lease fencing, and passes SQLite plus live PostgreSQL server-boundary tests in CI run 30831774662 under ADR 0293; Security 30831776530, Docker 30831774950, and CodeQL 30831774663 also pass. This is process-scoped fairness evidence, not distributed fairness, throughput, soak, HA/DR, or production-capacity evidence."
+  - id: E-343
+    priority: P4
+    area: connectors
+    title: PostgreSQL governed write-back intent persistence
+    status: completed
+    depends_on: [E-309]
+    exit_evidence: "Add migration 0061 and a forced-RLS PostgreSQL append-only write-back intent repository with idempotent replay, optimistic lifecycle versions, workspace isolation, and tamper refusal; the live non-superuser server-boundary contract passes under ADR 0294. This proves durable intent evidence only, not a live ERP/bank provider, network dispatch, credentials, compensation execution, HA/DR, or production write-back."
   - id: E-292
     priority: P0
     area: enterprise-policy
@@ -1049,6 +1056,7 @@ tasks:
       - E-315 adds posted-close certification to the local consolidation lifecycle. Certification is available only for `Posted`/`Reversed` runs, persists through the existing immutable certification record, requires distinct approval permissions and actors, and is exposed through authenticated prepare/review/read API routes with replay validation.
       - E-316 promotes posted-run certification to the PostgreSQL consolidation adapter. The tenant-scoped repository now replay-validates the JSONB worksheet, locks the run state, and delegates to the existing RLS certification record with independent review; the live contract grants only the required certification table access and exercises prepare/review/read.
       - E-314 adds `verify_network_retry_failure_injection`, a reusable synthetic transport gate for bounded transient retry, successful recovery, and response-body isolation. Focused connector tests cover retryable status validation and retry-ceiling refusal; no provider or network claim is introduced.
+      - E-343 adds Alembic `0061_pg_writeback_intents` and `PostgresWritebackIntentRepository`. Intent JSON/digests and lifecycle versions are immutable, forced-RLS tenant/workspace scoped, replay-idempotent, and optimistic-concurrency checked; the live CI test proves maker/checker approval, dispatch/acknowledgement persistence, sibling-tenant exclusion, version conflict refusal, and append-only mutation refusal. No provider payload, secret, network call, live ERP/bank integration, or write-back claim is introduced.
 
   - id: P4-SCL-001
     priority: P4

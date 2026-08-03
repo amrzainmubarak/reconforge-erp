@@ -44,6 +44,11 @@ application_services:
     service: AcquisitionPpaApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.postgres_consolidation_ppa.PostgresConsolidationPpaRepository
+  - file: writeback.py
+    service: WritebackIntentApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_writeback.SQLiteWritebackIntentRepository
+    postgres_adapter: reconforge.infrastructure.postgres_writeback.PostgresWritebackIntentRepository
   - file: grouped_matching.py
     service: GroupedMatchingApplicationService
     status: backend_neutral
@@ -189,4 +194,4 @@ summary:
   direct_sqlite: 0
   partial_repository: 0
   compatibility_adapter: 20
-  backend_neutral_application: 39
+  backend_neutral_application: 40

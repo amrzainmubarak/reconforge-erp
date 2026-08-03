@@ -159,6 +159,23 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   evidence.
 - ADR: `docs/adr/0293-deterministic-fair-durable-job-lane-scheduling.md`.
 
+## E-343 — PostgreSQL governed write-back intent persistence (complete bounded slice)
+
+- Added migration `0061_pg_writeback_intents` and
+  `PostgresWritebackIntentRepository`. It stores only canonical intent JSON,
+  digest, lifecycle version, scope, and timestamp; payloads and secrets are
+  excluded. Forced RLS requires the tenant/workspace scope, and append-only
+  triggers reject updates and deletes.
+- The repository mirrors the existing governed lifecycle: identical replay is
+  idempotent, maker/checker approval and dispatch/acknowledgement versions use
+  optimistic concurrency, reads revalidate the persisted digest, and sibling
+  tenants are excluded.
+- Local schema/contract checks pass; the live PostgreSQL test is wired into the
+  server-boundaries workflow and will be the authoritative runtime gate. This
+  remains intent persistence only: no provider payload, credential, network
+  dispatch, compensation execution, HA/DR, or production write-back claim.
+- ADR: `docs/adr/0294-postgres-writeback-intent-runtime-evidence.md`.
+
 ## E-293 — Immutable local delegation administration
 
 - Migration 27 adds tenant/workspace-scoped `policy_delegations`; a typed

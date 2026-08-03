@@ -12323,3 +12323,26 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   Docker-parity. Security `30831776530`, Docker `30831774950`, and CodeQL
   `30831774663` also passed on the repaired head.
 - ADR: `docs/adr/0293-deterministic-fair-durable-job-lane-scheduling.md`.
+
+## E-343: PostgreSQL governed write-back intent persistence
+
+- Local command: `python -m pytest -q tests/test_postgres_writeback.py
+  tests/test_postgres_operations.py tests/test_alembic_postgres.py` -> 6
+  passed and 3 capability skips without a local PostgreSQL DSN. Ruff and Mypy
+  pass for the new adapter and migration inventory.
+- Migration `0061_pg_writeback_intents` creates a JSONB, digest-bound,
+  tenant/workspace-scoped table with forced RLS, a non-empty downgrade refusal,
+  and immutable update/delete triggers. `PostgresWritebackIntentRepository`
+  performs all reads and versioned writes inside transactions, validates the
+  model/digest on reads, resolves identical replay before insert, and refuses
+  stale or invalid lifecycle transitions.
+- CI server-boundaries now runs `tests/test_postgres_writeback.py` after a fresh
+  Alembic head migration. Its live non-superuser contract proves proposed ->
+  approved -> dispatched -> acknowledged persistence, idempotent replay,
+  sibling-tenant exclusion, optimistic conflict refusal, and append-only
+  tamper refusal. The authoritative CI run will be recorded after the new head
+  completes.
+- Boundary: this is durable intent evidence, not a live ERP/bank connector,
+  provider credential integration, network write-back, compensation delivery,
+  HA/DR, throughput, or production readiness claim.
+- ADR: `docs/adr/0294-postgres-writeback-intent-runtime-evidence.md`.

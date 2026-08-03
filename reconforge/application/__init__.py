@@ -33,6 +33,10 @@ from reconforge.application.workspace_periods import (
     WorkspacePeriodSetup,
     WorkspacePeriodValidationError,
 )
+from reconforge.application.writeback import (
+    WritebackIntentApplicationService,
+    WritebackIntentRepositoryProtocol,
+)
 
 __all__ = [
     "DurableJobApplicationService",
@@ -56,4 +60,6 @@ __all__ = [
     "WorkspacePeriodApplicationService",
     "WorkspacePeriodSetup",
     "WorkspacePeriodValidationError",
+    "WritebackIntentApplicationService",
+    "WritebackIntentRepositoryProtocol",
 ]

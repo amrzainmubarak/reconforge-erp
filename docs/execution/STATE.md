@@ -446,6 +446,20 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   `/api/v1/consolidation-close/runs/{run_id}/certification`. This remains local
   workflow metadata, not a legal signature, audit opinion, or compliance claim.
 
+### E-316 complete: PostgreSQL consolidation certification parity
+
+- `PostgresConsolidationCloseRepository` now exposes the same certification
+  port as SQLite. Preparation and review lock and replay-verify the tenant
+  run, permit only `Posted`/`Reversed`, and use the existing RLS-scoped
+  `certification_records` repository for immutable maker-checker metadata.
+- The live PostgreSQL contract grants the application role only the required
+  certification table access and exercises prepare, self-review refusal,
+  independent review, and replay-validated read. Local execution skips the
+  live section when no PostgreSQL DSN is configured.
+- This closes backend parity for workflow metadata only; PostgreSQL API
+  exposure, statutory consolidation, legal signatures, and production claims
+  remain outside the slice.
+
 ## P4-FIN-002 in progress: governed consolidation close lifecycle
 
 ### E-256 complete: local SQLite consolidation close lifecycle (control-journal foundation)

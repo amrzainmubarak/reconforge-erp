@@ -17,6 +17,7 @@ from reconforge.domain.consolidation_lifecycle import (
     verify_consolidation_worksheet_payload,
 )
 from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
+from reconforge.infrastructure.postgres_approvals import PostgresApprovalRepository
 from reconforge.platform.common import PlatformError, normalize_text, platform_id
 
 POSTGRES_CONSOLIDATION_CLOSE_SCHEMA_SQL = r"""
@@ -268,6 +269,87 @@ class PostgresConsolidationCloseRepository:
             "reversed_by",
             effect_kind="Reversal",
         )
+
+    def prepare_certification(
+        self,
+        run_id: str,
+        *,
+        note: str = "",
+        actor_label: str = "local-cli",
+    ) -> dict[str, Any]:
+        """Prepare certification only for a replay-verified posted run."""
+
+        actor = self._actor(actor_label)
+        with self.connection.transaction():
+            self._scope()
+            run = self.connection.execute(
+                "SELECT * FROM reconforge.consolidation_close_runs WHERE tenant_id=%s AND id=%s FOR UPDATE",
+                (self.tenant_id, run_id),
+            ).fetchone()
+            if run is None:
+                raise PlatformError("Consolidation run not found.")
+            verified = self._verified_run(dict(run))
+            if str(verified["status"]) not in {"Posted", "Reversed"}:
+                raise PlatformError("Only a posted or reversed consolidation run can be certified.")
+            period = self.connection.execute(
+                "SELECT period_name,group_code FROM reconforge.consolidation_close_periods WHERE tenant_id=%s AND id=%s",
+                (self.tenant_id, str(verified["period_id"])),
+            ).fetchone()
+            if period is None:
+                raise PlatformError("Consolidation period not found.")
+            return PostgresApprovalRepository(self.connection, self.tenant_id).prepare_certification(
+                object_type="consolidation_close_run",
+                object_id=str(verified["id"]),
+                period_name=str(period["period_name"]),
+                entity_code=str(period["group_code"]),
+                note=note,
+                actor_label=actor,
+            )
+
+    def review_certification(
+        self,
+        run_id: str,
+        *,
+        note: str = "",
+        actor_label: str = "local-cli",
+    ) -> dict[str, Any]:
+        """Review posted-run certification with PostgreSQL maker-checker guard."""
+
+        actor = self._actor(actor_label)
+        with self.connection.transaction():
+            self._scope()
+            run = self.connection.execute(
+                "SELECT * FROM reconforge.consolidation_close_runs WHERE tenant_id=%s AND id=%s FOR UPDATE",
+                (self.tenant_id, run_id),
+            ).fetchone()
+            if run is None:
+                raise PlatformError("Consolidation run not found.")
+            verified = self._verified_run(dict(run))
+            if str(verified["status"]) not in {"Posted", "Reversed"}:
+                raise PlatformError("Only a posted or reversed consolidation run can be certified.")
+            return PostgresApprovalRepository(self.connection, self.tenant_id).review_certification(
+                object_type="consolidation_close_run",
+                object_id=str(verified["id"]),
+                note=note,
+                actor_label=actor,
+            )
+
+    def get_certification(self, run_id: str, *, actor_label: str = "local-cli") -> dict[str, Any]:
+        """Replay-verify the run before exposing its PostgreSQL certification."""
+
+        del actor_label
+        with self.connection.transaction():
+            self._scope()
+            row = self.connection.execute(
+                "SELECT * FROM reconforge.consolidation_close_runs WHERE tenant_id=%s AND id=%s",
+                (self.tenant_id, run_id),
+            ).fetchone()
+            if row is None:
+                raise PlatformError("Consolidation run not found.")
+            self._verified_run(dict(row))
+            return PostgresApprovalRepository(self.connection, self.tenant_id)._certification(
+                "consolidation_close_run", run_id
+            )
 
     def _effect(self, run_id: str, kind: str, actor_label: str) -> None:
         with self.connection.transaction():

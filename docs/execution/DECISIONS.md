@@ -46,6 +46,20 @@
 - **Reversibility**: Additive repository methods and API routes; existing run
   states and certification records remain backward compatible.
 
+### D-267: PostgreSQL certification reuses the tenant-scoped certification repository
+- **Date**: 2026-08-03
+- **Context**: Local posted-run certification existed, while PostgreSQL close
+  runs had no backend-neutral certification parity.
+- **Decision**: Add certification methods to the PostgreSQL close adapter. Lock
+  and replay-verify the run inside the tenant transaction, then use the
+  existing RLS `PostgresApprovalRepository` for certification persistence and
+  maker-checker review.
+- **Rationale**: Reusing the established certification triggers, RLS, audit,
+  and outbox boundary avoids a second certification schema and preserves exact
+  backend semantics.
+- **Reversibility**: Additive adapter methods and live tests; no migration or
+  existing run-state change.
+
 ### D-293: Local Delegations Are Immutable and Tenant-Scoped
 - **Date**: 2026-08-02
 - **Context**: Expiring delegation evaluation needs durable administration evidence without hidden wall-clock or cross-tenant lookup behavior.

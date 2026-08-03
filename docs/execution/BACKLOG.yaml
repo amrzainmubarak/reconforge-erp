@@ -1017,6 +1017,7 @@ tasks:
       - E-310 adds permissioned local read-only drill-down endpoints under `/api/v1/consolidation-close`. Workspace-scoped periods, runs, journal/effect details, and summaries are replay-verified before response; tampered worksheets and unknown workspaces fail closed.
       - E-311 hardens the live PostgreSQL consolidation-close adapter: conflicting replays fail closed, JSONB worksheets and journal digests are replay-verified on reads, and period lock/reopen events retain reasons and enforce independent actors.
       - E-315 adds posted-close certification to the local consolidation lifecycle. Certification is available only for `Posted`/`Reversed` runs, persists through the existing immutable certification record, requires distinct approval permissions and actors, and is exposed through authenticated prepare/review/read API routes with replay validation.
+      - E-316 promotes posted-run certification to the PostgreSQL consolidation adapter. The tenant-scoped repository now replay-validates the JSONB worksheet, locks the run state, and delegates to the existing RLS certification record with independent review; the live contract grants only the required certification table access and exercises prepare/review/read.
       - E-314 adds `verify_network_retry_failure_injection`, a reusable synthetic transport gate for bounded transient retry, successful recovery, and response-body isolation. Focused connector tests cover retryable status validation and retry-ceiling refusal; no provider or network claim is introduced.
 
   - id: P4-SCL-001

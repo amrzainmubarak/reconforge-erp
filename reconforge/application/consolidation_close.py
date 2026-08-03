@@ -86,6 +86,24 @@ class ConsolidationCloseRepositoryProtocol(Protocol):
         actor_label: str = "local-cli",
     ) -> dict[str, Any]: ...
 
+    def prepare_certification(
+        self,
+        run_id: str,
+        *,
+        note: str = "",
+        actor_label: str = "local-cli",
+    ) -> dict[str, Any]: ...
+
+    def review_certification(
+        self,
+        run_id: str,
+        *,
+        note: str = "",
+        actor_label: str = "local-cli",
+    ) -> dict[str, Any]: ...
+
+    def get_certification(self, run_id: str, *, actor_label: str = "local-cli") -> dict[str, Any]: ...
+
     def lock_period(
         self,
         period_id: str,
@@ -238,6 +256,27 @@ class ConsolidationCloseApplicationService:
             reason=reason,
             actor_label=actor_label,
         )
+
+    def prepare_certification(
+        self,
+        run_id: str,
+        *,
+        note: str = "",
+        actor_label: str = "local-cli",
+    ) -> dict[str, Any]:
+        return self.repository.prepare_certification(run_id, note=note, actor_label=actor_label)
+
+    def review_certification(
+        self,
+        run_id: str,
+        *,
+        note: str = "",
+        actor_label: str = "local-cli",
+    ) -> dict[str, Any]:
+        return self.repository.review_certification(run_id, note=note, actor_label=actor_label)
+
+    def get_certification(self, run_id: str, *, actor_label: str = "local-cli") -> dict[str, Any]:
+        return self.repository.get_certification(run_id, actor_label=actor_label)
 
     def lock_period(
         self,

@@ -79,7 +79,7 @@ def test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable() -
             admin.execute(
                 "GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.consolidation_close_periods,"
                 " reconforge.consolidation_close_runs,reconforge.consolidation_close_effects,"
-                " reconforge.consolidation_close_period_events TO " + app_user
+                " reconforge.consolidation_close_period_events,reconforge.certification_records TO " + app_user
             )
     finally:
         admin.close()
@@ -111,6 +111,17 @@ def test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable() -
         posted = repository.post_run(
             first["id"], expected_version=approved["row_version"], reason="posted", actor_label="close-poster"
         )
+        prepared_certification = repository.prepare_certification(
+            posted["id"], note="Posted control-journal evidence prepared.", actor_label="close-certifier"
+        )
+        assert prepared_certification["status"] == "Prepared"
+        with pytest.raises(PlatformError, match="different"):
+            repository.review_certification(posted["id"], note="Self review", actor_label="close-certifier")
+        reviewed_certification = repository.review_certification(
+            posted["id"], note="Independent certification review.", actor_label="close-cert-reviewer"
+        )
+        assert reviewed_certification["status"] == "Reviewed"
+        assert repository.get_certification(posted["id"])["reviewed_by"] == "close-cert-reviewer"
         reversal = repository.request_reversal(
             first["id"],
             expected_version=posted["row_version"],

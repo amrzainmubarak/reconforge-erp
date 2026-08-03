@@ -11715,3 +11715,20 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   self-review refusal and independent reviewer evidence.
 - Boundary: local workflow metadata only; no legal signature, statutory close,
   source-ERP posting, or compliance certification is claimed.
+
+## E-316: PostgreSQL consolidation certification parity
+
+- Added `prepare_certification`, `review_certification`, and
+  `get_certification` to the backend-neutral consolidation port and
+  PostgreSQL adapter. Each operation is tenant-scoped; prepare/review lock the
+  run and replay-verify its JSONB worksheet before using the existing immutable
+  certification repository.
+- Extended the live PostgreSQL consolidation contract with the required table
+  grant and assertions for posted-only certification, self-review refusal,
+  independent review, and replay-validated read.
+- Local command: `python -m pytest tests/test_postgres_consolidation_close.py
+  tests/test_sqlite_consolidation_close.py -q` — 12 passed, 1 live skip.
+  Ruff and Mypy pass. The live certification path requires the CI PostgreSQL
+  service and is not counted until server-boundaries is green.
+- Boundary: workflow metadata parity only; no legal signature, statutory
+  consolidation, or source-ERP posting claim.

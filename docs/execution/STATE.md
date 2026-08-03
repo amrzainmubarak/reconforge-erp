@@ -139,6 +139,19 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   `30773351818`, and CodeQL `30773351787` passed. The earlier CI `30773107270`
   is retained as a diagnostic failure caused by stale threat-model evidence.
 
+## E-305 — Explicit field-level authorization and masking
+
+- Central policy now accepts `requested_field_names` and
+  `authorized_field_names`; any requested field outside the authorized set is
+  denied with `field_scope_denied`. `evaluate_principal_access` forwards both
+  sets for callers that can supply a versioned field policy.
+- `reconforge.auth.field_access.project_fields` provides a separate deterministic
+  allowlisted projection: authorized masked fields become `[REDACTED]`, denied
+  fields are reported, and the result carries a stable digest.
+- Focused policy/field tests pass. This is a reusable primitive, not evidence
+  that every route, export, or UI field has migrated; federation, administration,
+  and PostgreSQL policy persistence remain open.
+
 ## E-292 — Explicit expiring delegation in central policy
 
 - The central policy engine now evaluates temporary delegated authority using a

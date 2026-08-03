@@ -83,6 +83,13 @@
 - **Rationale**: This advances close explainability while preserving boundaries around statutory presentation, accounting judgments, persistence parity, and external write-back.
 - **Reversibility**: Additive domain module, schema, docs, and tests only; no database or source-system mutation.
 
+### D-305: Separate Field Authorization from Field Masking
+- **Date**: 2026-08-03
+- **Context**: Enterprise policy needs field-level deny-by-default and safe redaction without treating a redacted value as permission.
+- **Decision**: Add explicit requested/authorized field sets to central evaluation and a separate allowlisted projection primitive that masks only authorized fields and records deterministic evidence.
+- **Rationale**: The separation prevents accidental disclosure and makes route-by-route migration auditable while preserving compatibility for callers that do not request field scoping.
+- **Reversibility**: Additive policy fields and pure helper; callers can omit field sets and no existing route behavior changes.
+
 ### D-292: Delegated Authority Requires an Explicit Evaluation Instant
 - **Date**: 2026-08-02
 - **Context**: Enterprise policy needs expiring delegation without hidden wall-clock behavior that makes decisions non-replayable.

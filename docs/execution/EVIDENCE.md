@@ -205,6 +205,19 @@ This file records commands and observed results. It does not convert a dirty wor
   CI `30773351786`, Docker `30773351797`, Security `30773351818`, and CodeQL
   `30773351787` all passed.
 
+## E-305: Explicit field-level authorization and masking
+
+- Code evidence: `PolicyEvaluationContext` and `evaluate_principal_access` now
+  support explicit requested/authorized field sets. `CentralPolicyEngine`
+  denies unauthorized requests before granting the named permission. The new
+  `project_fields` primitive masks only fields already in the allowlist and
+  emits sorted masked/denied evidence plus a canonical digest.
+- Test evidence: `python -m pytest tests/test_field_access.py tests/test_policy_engine.py -q`
+  passed; Ruff and Mypy passed for the changed modules.
+- Boundary: no implicit route/UI/export migration is claimed. Consumers must
+  provide field policies and classify sensitive values; this slice does not
+  prove enterprise-wide masking coverage or external IdP policy persistence.
+
 ## E-292: Expiring delegation policy invariant
 
 - Added optional delegation fields to `PolicyEvaluationContext` and forwarded

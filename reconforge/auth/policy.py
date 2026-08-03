@@ -91,6 +91,8 @@ class PolicyEvaluationContext:
     authorized_period_ids: frozenset[str] = field(default_factory=frozenset)
     authorized_region_ids: frozenset[str] = field(default_factory=frozenset)
     authorized_data_classifications: frozenset[str] = field(default_factory=frozenset)
+    requested_field_names: frozenset[str] = field(default_factory=frozenset)
+    authorized_field_names: frozenset[str] = field(default_factory=frozenset)
     delegation_id: str | None = None
     delegation_expires_at: datetime | None = None
     evaluation_time: datetime | None = None
@@ -117,6 +119,9 @@ class PolicyEvaluationContext:
                 raise ValueError(f"{field_name} must be timezone-aware when supplied.")
         if self.delegation_expires_at is not None and not self.delegation_id:
             raise ValueError("delegation_id is required when delegation_expires_at is supplied.")
+        for field_name, values in (("requested_field_names", self.requested_field_names), ("authorized_field_names", self.authorized_field_names)):
+            if any(not isinstance(value, str) or not value.strip() for value in values):
+                raise ValueError(f"{field_name} must contain non-empty field names.")
 
 
 @dataclass(frozen=True)
@@ -257,6 +262,13 @@ class CentralPolicyEngine:
                     False, "Deny: amount exceeds the authorized policy ceiling.", "amount_above_ceiling"
                 )
 
+        if ctx.requested_field_names and not ctx.requested_field_names.issubset(ctx.authorized_field_names):
+            return PolicyDecision(
+                False,
+                "Deny: one or more requested fields are not authorized.",
+                "field_scope_denied",
+            )
+
         # 4. Check Segregation of Duties (SoD) if object & action are specified
         if enforce_sod and ctx.object_type and ctx.object_id and ctx.action:
             sod_result = check_sod_conflict(
@@ -335,6 +347,8 @@ def evaluate_principal_access(
     authorized_period_ids: frozenset[str] = frozenset(),
     authorized_region_ids: frozenset[str] = frozenset(),
     authorized_data_classifications: frozenset[str] = frozenset(),
+    requested_field_names: frozenset[str] = frozenset(),
+    authorized_field_names: frozenset[str] = frozenset(),
     object_owner_id: str | None = None,
     delegation_id: str | None = None,
     delegation_expires_at: datetime | None = None,
@@ -364,6 +378,8 @@ def evaluate_principal_access(
         authorized_period_ids=authorized_period_ids,
         authorized_region_ids=authorized_region_ids,
         authorized_data_classifications=authorized_data_classifications,
+        requested_field_names=requested_field_names,
+        authorized_field_names=authorized_field_names,
         delegation_id=delegation_id,
         delegation_expires_at=delegation_expires_at,
         evaluation_time=evaluation_time,

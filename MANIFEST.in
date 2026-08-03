@@ -199,6 +199,10 @@ include docs/schemas/consolidation-management-trial-balance-v1.schema.json
 include docs/adr/0255-consolidation-management-trial-balance-is-non-statutory.md
 include docs/consolidation-management-trial-balance.md
 include docs/security/threat-model-index.v1.yaml
+include reconforge/auth/field_access.py
+include tests/test_field_access.py
+include docs/adr/0256-field-level-policy-and-masking-are-explicit.md
+include docs/security/field-level-access.md
 include docs/adr/0235-ownership-change-adjustments-are-non-posting-and-policy-bound.md
 include docs/execution/benchmarks/ownership-change-adjustment-v1.md
 include docs/schemas/ownership_change_adjustment_v1.schema.json

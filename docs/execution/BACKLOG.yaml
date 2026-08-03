@@ -100,6 +100,13 @@ tasks:
     status: completed
     depends_on: [P4-FIN-002]
     exit_evidence: A verified non-posting worksheet projects into exact reporting-currency lines with source lineage, balanced total, canonical digest, closed schema, focused tests, and explicit non-statutory boundaries under ADR 0255.
+  - id: E-305
+    priority: P4
+    area: enterprise-policy
+    title: Explicit field-level authorization and masking primitive
+    status: completed
+    depends_on: [E-303]
+    exit_evidence: Central policy denies requested fields outside an authorized set, while a separate deterministic projection masks only authorized sensitive fields and records denied/masked evidence; focused tests and ADR 0256 pass without claiming complete route/UI migration.
   - id: E-292
     priority: P0
     area: enterprise-policy
@@ -1007,6 +1014,7 @@ tasks:
       - E-301 adds an opt-in bounded `PolicyDecisionCache`. Cache keys include every policy context attribute and policy version; denials and delegated decisions bypass storage; explicit tenant/workspace/global invalidation is tested without sibling-tenant eviction. No API or mutation path adopts caching implicitly, so route migration and invalidation wiring remain open.
       - E-302 adds migration 0056 and `PostgresDelegationRepository` with exact typed grant conversion, tenant/workspace scope validation, explicit evaluation instants, forced RLS, and database-enforced append-only revocation. Focused schema/migration/repository contracts and CI server-boundaries run 30771736208 pass the live PostgreSQL create/effective-read/revoke/isolation gate under ADR 0253; federation, route coverage, and cache invalidation wiring remain open.
       - E-303 adds explicit `policy_cache_enabled` API configuration, cache-backed all/any permission dependencies, and global invalidation after every non-safe HTTP request. Focused cache/API compatibility tests pass under ADR 0254; distributed invalidation and route-specific scope optimization remain open.
+      - E-305 adds explicit field-level authorization inputs to the central policy helper and a deterministic `project_fields` primitive. Unauthorized fields deny; authorized masked fields become `[REDACTED]` with digest evidence. Complete route/action/UI migration remains open.
 
   - id: P4-PLAT-001
     priority: P4

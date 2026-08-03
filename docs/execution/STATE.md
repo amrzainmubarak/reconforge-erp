@@ -435,8 +435,11 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   non-superuser RLS role. This is the first live crash/resume proof for the
   grouped PostgreSQL worker; it does not create process supervision or HA/DR.
 - Local execution skips only the live section without a configured
-  `RECONFORGE_TEST_POSTGRES_DSN`; the required evidence is the exact remote
-  server-boundaries job for the pushed commit. ADR 0269 records the boundary.
+  `RECONFORGE_TEST_POSTGRES_DSN`. Remote CI on exact commit
+  `77d9e0c91e70ac4fa90ca6b8bd529fcd0ae98e5f` passed server-boundaries job
+  `91593993577` in run `30784006115`; the same run passed both Python jobs,
+  engine parity, Docker parity, Security, and CodeQL. ADR 0269 records the
+  boundary.
 
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio
 

@@ -11785,8 +11785,12 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - Local command:
   `python -m pytest tests/test_postgres_grouped_matching_runtime.py -q -ra`
   -> 2 live tests skipped because `RECONFORGE_TEST_POSTGRES_DSN` is not
-  configured. Ruff and Mypy for the changed runtime test pass. The live
-  server-boundaries job for the pushed commit is the required runtime evidence.
+  configured. Ruff and Mypy for the changed runtime test pass.
+- Remote CI on exact commit `77d9e0c91e70ac4fa90ca6b8bd529fcd0ae98e5f`
+  passed server-boundaries job `91593993577` in CI run `30784006115`, including
+  the crash/resume contract. The same run passed Python 3.11 job `91593993593`,
+  Python 3.12 job `91593993581`, all four engine-parity jobs, Docker parity
+  `91594793452`, Security run `30784006140`, and CodeQL run `30784006187`.
 - Boundary: this is one synthetic PostgreSQL crash/resume path. It does not
   prove process supervision, automatic failover, HA/DR, soak, capacity,
   production RPO/RTO, live ERP/bank interoperability, posting, or write-back.

@@ -239,14 +239,17 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   RPO/RTO, or production-sizing claim is made. ADR:
   `docs/adr/0297-postgres-durable-job-bounded-scale-profile.md`.
 
-## E-347 — PostgreSQL bounded outbox multi-worker delivery (in progress)
+## E-347 — PostgreSQL bounded outbox multi-worker delivery (complete bounded slice)
 
 - Added a four-worker, 64-event transactional-outbox profile using the
   existing tenant-bound PostgreSQL worker and an injected idempotent sink.
   The structural acceptance is one observation per event and zero pending,
   claimed, or dead rows after acknowledgement.
-- Local live PostgreSQL test passes; hosted verification is pending. This is
-  one-node synthetic claim/publish/acknowledge evidence only, not broker,
+- Local live PostgreSQL test passes. Hosted server-boundaries in CI
+  `30847668458` pass the 64-event profile; Python 3.11/3.12, all four
+  engine-parity cells, and Docker-parity also pass. Security `30847668487`,
+  Docker `30847668631`, and CodeQL `30847668940` pass. This is one-node
+  synthetic claim/publish/acknowledge evidence only, not broker,
   crash-after-publish, queue-HA, failover, throughput, soak, or production
   delivery evidence. ADR:
   `docs/adr/0298-postgres-outbox-bounded-multi-worker-profile.md`.

@@ -12440,7 +12440,9 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   acceptance requires 64 published IDs, zero duplicate publish attempts, and
   zero pending/claimed/dead rows.
 - The local PostgreSQL 16 run passes the live profile and the existing outbox
-  application contract. Hosted runtime verification is pending; no broker,
-  crash-after-publish, queue-HA, failover, throughput, soak, or production
-  delivery claim is made.
+  application contract. Hosted server-boundaries CI `30847668458` passes the
+  same profile; Python 3.11/3.12, four engine-parity cells, and Docker-parity
+  pass. Security `30847668487`, Docker `30847668631`, and CodeQL `30847668940`
+  also pass. No broker, crash-after-publish, queue-HA, failover, throughput,
+  soak, or production delivery claim is made.
 - ADR: `docs/adr/0298-postgres-outbox-bounded-multi-worker-profile.md`.

@@ -518,9 +518,12 @@ def test_alembic_upgrade_command_is_available_when_server_extra_is_installed(
         assert connection.execute("SELECT to_regclass('reconforge.connector_writeback_intents')").fetchone()[0] == (
             "reconforge.connector_writeback_intents"
         )
+        assert connection.execute("SELECT to_regclass('reconforge.outbox_consumer_receipts')").fetchone()[0] == (
+            "reconforge.outbox_consumer_receipts"
+        )
     provider = PostgresMigrationStatusProvider(
         PostgresConnectionFactory(PostgresSettings(dsn=os.environ["RECONFORGE_POSTGRES_DSN"], require_tls=False))
     )
     assert provider("migration-test") == MigrationStatus(
-        "0061_pg_writeback_intents", "0061_pg_writeback_intents", ()
+        "0062_pg_outbox_consumer", "0062_pg_outbox_consumer", ()
     )

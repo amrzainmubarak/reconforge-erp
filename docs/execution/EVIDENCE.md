@@ -12446,3 +12446,24 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   also pass. No broker, crash-after-publish, queue-HA, failover, throughput,
   soak, or production delivery claim is made.
 - ADR: `docs/adr/0298-postgres-outbox-bounded-multi-worker-profile.md`.
+
+## E-348: PostgreSQL idempotent outbox-consumer receipt
+
+- Focused command: `python -m pytest -q
+  tests/test_postgres_outbox_consumer.py tests/test_postgres_outbox.py
+  tests/test_postgres_operations.py` -> 17 passes on the local PostgreSQL 16
+  service. The structural-only run has two capability skips when no DSN is
+  configured. Ruff and Mypy pass for the new repository and contracts.
+- Migration command: `python -m alembic upgrade head` on a disposable local
+  PostgreSQL database -> all revisions through `0062_pg_outbox_consumer`
+  applied successfully, including forced-RLS receipt schema creation.
+- The live failure-injection contract applies one synthetic database-local
+  effect, simulates lost outbox acknowledgement, reclaims the expired lease,
+  and redelivers. The second delivery returns `duplicate`; effect count and
+  immutable receipt count remain one; the outbox is published; a changed event
+  digest is rejected.
+- Boundary: this is a single-node PostgreSQL database-local exactly-once
+  business-effect primitive. The callback must use the supplied transaction;
+  external broker/provider delivery, cross-host failover, queue HA,
+  throughput, soak, compensation, and production readiness remain open.
+- ADR: `docs/adr/0299-postgres-outbox-idempotent-consumer-receipt.md`.

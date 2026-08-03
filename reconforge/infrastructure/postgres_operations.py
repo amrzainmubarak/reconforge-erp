@@ -72,6 +72,7 @@ POSTGRES_MIGRATION_REVISIONS = (
     "0059_pg_policy_amt_bounds",
     "0060_pg_consolidation_ppa",
     "0061_pg_writeback_intents",
+    "0062_pg_outbox_consumer",
 )
 
 

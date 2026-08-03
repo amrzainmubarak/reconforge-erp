@@ -254,6 +254,24 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   delivery evidence. ADR:
   `docs/adr/0298-postgres-outbox-bounded-multi-worker-profile.md`.
 
+## E-348 — PostgreSQL idempotent outbox-consumer receipt (complete bounded slice)
+
+- Added migration `0062_pg_outbox_consumer` and
+  `PostgresOutboxConsumer`. A database-local effect and its immutable
+  `(tenant, consumer, event)` receipt commit in one transaction; advisory
+  locking serializes concurrent replays, same-digest replays return
+  `duplicate`, and changed digests fail closed.
+- The live PostgreSQL contract simulates a crash after the consumer effect
+  commits but before outbox acknowledgement. Lease reclaim and redelivery
+  leave one effect row and one receipt, then acknowledge the outbox event.
+  Local PostgreSQL 16 passed; structural tests, full outbox contracts,
+  migration head, Ruff, and Mypy passed.
+- This proves a bounded single-node database-local exactly-once business
+  effect boundary. It does not prove external broker/provider exactly-once
+  delivery, cross-host failover, queue HA, throughput, soak, compensation,
+  or production readiness. ADR:
+  `docs/adr/0299-postgres-outbox-idempotent-consumer-receipt.md`.
+
 ## E-293 — Immutable local delegation administration
 
 - Migration 27 adds tenant/workspace-scoped `policy_delegations`; a typed

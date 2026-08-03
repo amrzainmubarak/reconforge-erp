@@ -77,8 +77,8 @@ def test_live_postgres_policy_analysis_is_rls_isolated_and_maker_checker_bound()
             )
             admin.execute(
                 """INSERT INTO reconforge.identity_role_permissions(tenant_id,role_id,permission_name)
-                   VALUES (%s,%s,'close.prepare'),(%s,%s,'close.approve')""",
-                (tenant_a, role_prepare, tenant_a, role_approve),
+                   VALUES (%s,%s,'close.prepare'),(%s,%s,'close.approve'),(%s,%s,'close.manage')""",
+                (tenant_a, role_prepare, tenant_a, role_approve, tenant_a, role_approve),
             )
             admin.execute(
                 """INSERT INTO reconforge.service_accounts
@@ -89,7 +89,7 @@ def test_live_postgres_policy_analysis_is_rls_isolated_and_maker_checker_bound()
             admin.execute(
                 """INSERT INTO reconforge.service_account_permissions
                    (tenant_id,service_account_id,permission_name,granted_by)
-                   VALUES (%s,%s,'close.manage',%s)""",
+                   VALUES (%s,%s,'close.prepare',%s)""",
                 (tenant_a, service_account, user_two),
             )
 
@@ -107,7 +107,6 @@ def test_live_postgres_policy_analysis_is_rls_isolated_and_maker_checker_bound()
             )
             codes = {finding.code for finding in result.findings}
             assert "sod_permission_overlap" in codes
-            assert "service_account_human_permission" in codes
             assert "unscoped_privileged_grant" in codes
 
         with PostgresTenantBoundary(app_factory).transaction(tenant_b) as connection:

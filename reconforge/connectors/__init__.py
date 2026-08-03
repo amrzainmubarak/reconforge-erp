@@ -86,6 +86,15 @@ from reconforge.connectors.writeback import (
     dispatch_writeback_to_provider,
     request_compensation,
 )
+from reconforge.connectors.writeback_network import (
+    PinnedHttpsPostTransport,
+    WritebackNetworkDispatch,
+    WritebackNetworkError,
+    WritebackNetworkExecutor,
+    WritebackNetworkRegistration,
+    WritebackNetworkResponse,
+    WritebackProviderResponse,
+)
 
 __all__ = [
     "AuthenticationMethod",
@@ -111,6 +120,13 @@ __all__ = [
     "dispatch_writeback",
     "dispatch_writeback_to_provider",
     "request_compensation",
+    "PinnedHttpsPostTransport",
+    "WritebackNetworkDispatch",
+    "WritebackNetworkError",
+    "WritebackNetworkExecutor",
+    "WritebackNetworkRegistration",
+    "WritebackNetworkResponse",
+    "WritebackProviderResponse",
     "SFTP_REFERENCE_ENDPOINT",
     "SFTP_REFERENCE_MANIFEST",
     "ReferenceSftpConnector",

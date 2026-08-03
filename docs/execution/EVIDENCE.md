@@ -12379,3 +12379,26 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   ERP/bank provider, secret-vault interoperability, network dispatch,
   compensation delivery, HA/DR, throughput, or production write-back.
 - ADR: `docs/adr/0295-postgres-writeback-api-server-boundary.md`.
+
+## E-345: Digest-bound HTTPS write-back transport boundary
+
+- Focused command: `python -m pytest -q
+  tests/test_connector_writeback_network.py` -> 10 passed. Ruff and Mypy pass
+  for the new transport and package exports.
+- `WritebackNetworkRegistration` rejects non-HTTPS, credential-bearing,
+  query/fragment, undeclared, and non-canonical egress. The executor requires
+  an enabled, already-dispatched intent, an allowed connector/operation, a
+  short-lived payload whose SHA-256 equals `payload_digest`, and a secret
+  resolver that never returns credentials to the receipt.
+- Synthetic transport evidence covers successful acknowledgement, repeated
+  transient HTTP/transport failure with the same idempotency key and payload,
+  permanent/misbound/content-type/schema responses, secret/payload/response
+  bounds, response-digest tamper, and pinned HTTPS POST request shape.
+- Boundary: this is an opt-in provider-neutral transport contract with injected
+  synthetic I/O. Existing connector v1 manifests remain read-only; no vendor
+  endpoint, customer credential, hosted vault, compensation delivery,
+  accounting posting, HA/DR, or production write-back is evidenced.
+- Full `python -m pytest -q` passes after the transport slice. Ruff, Mypy,
+  Bandit, `pip-audit` (no known vulnerabilities; the private project itself is
+  not on PyPI), isolated package build, and `git diff --check` also pass.
+- ADR: `docs/adr/0296-writeback-network-transport-is-explicit-and-digest-bound.md`.

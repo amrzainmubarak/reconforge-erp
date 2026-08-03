@@ -195,6 +195,27 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   production write-back is claimed.
 - ADR: `docs/adr/0295-postgres-writeback-api-server-boundary.md`.
 
+## E-345 — Digest-bound HTTPS write-back transport boundary (complete bounded slice)
+
+- Added `WritebackNetworkRegistration`, `PinnedHttpsPostTransport`, and
+  `WritebackNetworkExecutor` as a separate opt-in provider boundary. Exact
+  HTTPS egress, credential-reference authentication, allowed operations,
+  feature enablement, request/response bounds, rate limiting, and finite
+  retries are closed and typed; the existing v1 connector manifests remain
+  read-only.
+- Dispatch accepts only an already dispatched intent, resolves a short-lived
+  payload, verifies its SHA-256 against `payload_digest`, reuses the original
+  idempotency key on each retry, and validates a canonical provider response
+  digest before returning an acknowledged intent and receipt. Secrets and
+  payloads are not persisted or returned.
+- Focused tests cover success, retry/failure injection, payload/response
+  tamper, secret isolation, egress/size/content-type guards, and pinned POST
+  request shape.
+- Boundary: synthetic injected transport only. No vendor endpoint, customer
+  credential, hosted vault, compensation delivery, accounting posting, HA/DR,
+  or production write-back is claimed.
+- ADR: `docs/adr/0296-writeback-network-transport-is-explicit-and-digest-bound.md`.
+
 ## E-293 — Immutable local delegation administration
 
 - Migration 27 adds tenant/workspace-scoped `policy_delegations`; a typed

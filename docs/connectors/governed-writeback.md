@@ -19,3 +19,11 @@ conformance and failure-injection evidence before it can be called live.
 
 This module performs no network I/O and does not constitute a live connector,
 payment integration, accounting posting, or production write-back guarantee.
+
+The opt-in `writeback_network` boundary adds a provider-neutral HTTPS POST
+adapter for a separately registered endpoint. It resolves a short-lived
+payload and credential only for the call, verifies the payload digest, reuses
+the same idempotency key on bounded retries, and validates a canonical provider
+acknowledgement digest. The built-in connector manifests remain read-only, and
+the adapter has only synthetic injected-transport evidence; it is not a live
+ERP or banking integration.

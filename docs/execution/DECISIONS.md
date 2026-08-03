@@ -2779,3 +2779,24 @@
 - ADR: `docs/adr/0295-postgres-writeback-api-server-boundary.md`.
 - Rollback: remove the factory alias and server route branch; no database or
   external provider state is mutated.
+
+## D249 - Write-back transport is explicit, payload-digest-bound, and provider-neutral
+
+- Date: 2026-08-03
+- Status: accepted
+- Decision: add a separate `WritebackNetworkRegistration` and injected/pinned
+  HTTPS POST transport. It requires an enabled feature, an already dispatched
+  approved intent, exact allowlisted HTTPS egress, a short-lived payload whose
+  digest equals the intent, secret-reference resolution at call time, and a
+  closed provider acknowledgement envelope. Retries reuse the same
+  idempotency key and are bounded by the registration policy.
+- Rationale: the existing write-back lifecycle had durable evidence and an
+  injected provider seam but no concrete transport contract. This closes the
+  safe adapter shape without weakening the default read-only manifest or
+  performing unapproved network I/O.
+- Boundary: synthetic transport and local pinned-request shape only; no vendor
+  interoperability, customer credentials, hosted secret vault, compensation,
+  posting, HA/DR, or production write-back claim.
+- ADR: `docs/adr/0296-writeback-network-transport-is-explicit-and-digest-bound.md`.
+- Rollback: remove the transport module and exports; intent repositories and
+  proposal-only APIs remain unchanged.

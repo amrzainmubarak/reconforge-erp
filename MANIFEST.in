@@ -296,7 +296,9 @@ include tests/test_policy_cache.py
 include docs/adr/0252-policy-decision-cache-is-explicit-and-scope-aware.md
 include docs/adr/0221-reference-rest-connector-is-read-only-and-schema-closed.md
 include reconforge/connectors/writeback.py
+include reconforge/connectors/writeback_network.py
 include tests/test_connector_writeback.py
+include tests/test_connector_writeback_network.py
 include tests/test_application_writeback.py
 include docs/connectors/governed-writeback.md
 include docs/adr/0222-governed-writeback-is-approved-and-acknowledged.md
@@ -398,6 +400,7 @@ include tests/test_postgres_writeback.py
 include alembic/versions/0061_postgres_writeback_intents.py
 include docs/adr/0294-postgres-writeback-intent-runtime-evidence.md
 include docs/adr/0295-postgres-writeback-api-server-boundary.md
+include docs/adr/0296-writeback-network-transport-is-explicit-and-digest-bound.md
 include docs/adr/0243-expiring-delegation-is-explicit-and-replayable.md
 include docs/adr/0244-local-delegation-administration-is-immutable-and-tenant-scoped.md
 include docs/adr/0245-postgres-durable-job-runtime-gate.md

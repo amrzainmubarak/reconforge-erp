@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,6 +18,13 @@ from reconforge.connectors.network import (
     NetworkConnectorRegistration,
     NetworkResponse,
     NetworkTransport,
+)
+from reconforge.connectors.writeback import WritebackIntent, WritebackPolicy
+from reconforge.connectors.writeback_network import (
+    WritebackNetworkExecutor,
+    WritebackNetworkRegistration,
+    WritebackNetworkResponse,
+    WritebackNetworkTransport,
 )
 
 
@@ -51,6 +60,25 @@ class _FailureInjectionTransport:
         self.calls += 1
         if not self.responses:
             raise ConnectorNetworkError("connector_transport_failed")
+        return self.responses.pop(0)
+
+
+@dataclass
+class _WritebackFailureInjectionTransport:
+    responses: list[WritebackNetworkResponse]
+    calls: int = 0
+
+    def post(
+        self,
+        endpoint: str,
+        *,
+        headers: dict[str, str],
+        body: bytes,
+        timeout_seconds: int,
+        maximum_response_bytes: int,
+    ) -> WritebackNetworkResponse:
+        del endpoint, headers, body, timeout_seconds, maximum_response_bytes
+        self.calls += 1
         return self.responses.pop(0)
 
 
@@ -192,5 +220,57 @@ def verify_network_retry_failure_injection(
             "bounded_transient_retry",
             "successful_recovery",
             "response_body_isolated",
+        ),
+    )
+
+
+def verify_writeback_retry_failure_injection(
+    registration: WritebackNetworkRegistration,
+    executor_factory: Callable[[WritebackNetworkTransport], WritebackNetworkExecutor],
+    intent: WritebackIntent,
+    policy: WritebackPolicy,
+    *,
+    transient_statuses: tuple[int, ...] = (503,),
+) -> ConformanceResult:
+    """Prove bounded idempotent write-back retry with synthetic responses."""
+
+    if not transient_statuses or any(
+        status not in {408, 425, 429} and not 500 <= status <= 599 for status in transient_statuses
+    ):
+        raise ValueError("transient_statuses must contain only retryable HTTP statuses")
+    if len(transient_statuses) >= registration.retry_policy.maximum_attempts:
+        raise ValueError("failure injection must leave one attempt for success")
+    response_fields = {
+        "accepted": True,
+        "idempotency_key": intent.idempotency_key,
+        "provider_reference": "synthetic-provider-reference",
+    }
+    response_digest = hashlib.sha256(
+        json.dumps(response_fields, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("ascii")
+    ).hexdigest()
+    response_body = json.dumps(
+        {**response_fields, "response_digest": response_digest},
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    transport = _WritebackFailureInjectionTransport(
+        [*(WritebackNetworkResponse(status, b"synthetic-transient") for status in transient_statuses), WritebackNetworkResponse(200, response_body)]
+    )
+    result = executor_factory(transport).dispatch(intent, registration=registration, policy=policy)
+    expected_attempts = len(transient_statuses) + 1
+    if result.attempts != expected_attempts or transport.calls != expected_attempts:
+        raise ValueError("write-back retry failure injection exceeded its declared bound")
+    if result.intent.acknowledgement is None or result.intent.acknowledgement.idempotency_key != intent.idempotency_key:
+        raise ValueError("write-back acknowledgement lost idempotency binding")
+    return ConformanceResult(
+        connector_id=registration.connector_id,
+        manifest_digest=registration.digest,
+        checks=(
+            "registration_valid",
+            "synthetic_failure_injection",
+            "bounded_idempotent_retry",
+            "successful_recovery",
+            "acknowledgement_bound",
         ),
     )

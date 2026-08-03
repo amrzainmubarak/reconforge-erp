@@ -56,6 +56,24 @@
   profile remains backward compatible.
 - **ADR**: `docs/adr/0290-ha-dr-verified-profile-requires-independent-domains.md`.
 
+### D-284: Keep sequential matching provider-neutral until the PostgreSQL gate passes
+- **Date**: 2026-08-03
+- **Context**: Carry-forward FIFO and reversal pairing had deterministic local
+  strategies but no hosted worker adapter or persisted lineage contract.
+- **Decision**: Add a persistence-free adapter with explicit modes and reuse the
+  existing PostgreSQL worker result/exception schema. Require a live synthetic
+  server-boundary run and direct strategy digest parity before promoting it in
+  the PostgreSQL parity inventory.
+- **Rationale**: This extends advanced matching without introducing a second
+  persistence protocol or silently turning experimental strategies into posting
+  or write-back behavior.
+- **Boundary**: Local evidence is complete for this slice; live PostgreSQL,
+  posting, write-back, scale, HA/DR, and production readiness remain open until
+  the runtime gate passes.
+- **Reversibility**: Additive adapter, test, and documentation; no migration or
+  existing mode behavior changes.
+- **ADR**: `docs/adr/0291-postgres-sequential-matching-runtime-evidence.md`.
+
 ### D-264: Bounded PostgreSQL durable-job concurrency parity
 - **Date**: 2026-08-03
 - **Context**: Existing high-volume evidence is SQLite-only, while the

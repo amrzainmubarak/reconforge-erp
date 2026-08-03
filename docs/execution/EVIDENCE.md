@@ -12248,3 +12248,18 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   parity cells, and Docker-parity. Security `30823574298`, Docker `30823572431`,
   and CodeQL `30823572439` also passed.
 - ADR: `docs/adr/0290-ha-dr-verified-profile-requires-independent-domains.md`.
+
+## E-340: PostgreSQL sequential matching adapter (runtime gate pending)
+
+- Local command: `uv run pytest -q tests/test_postgres_sequential_matching.py
+  tests/test_carry_forward.py tests/test_reversal_matching.py
+  tests/test_matching_strategy_contract.py` -> 33 passed. Ruff, Mypy for the
+  adapter, and `git diff --check` pass.
+- Added a persistence-free adapter for explicit `carry-forward`,
+  `sequence-window`, and `reversal-pairing` rules. Carry-forward rows retain
+  allocation and residual evidence; reversal rows retain explicit-link basis;
+  unmatched and ambiguous outcomes remain visible and fail closed.
+- The live PostgreSQL runtime test is added to the existing server-boundary
+  contract but has not yet passed on CI. No current PostgreSQL parity, posting,
+  write-back, scale, HA/DR, or production-readiness claim follows yet.
+- ADR: `docs/adr/0291-postgres-sequential-matching-runtime-evidence.md`.

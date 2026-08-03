@@ -8,6 +8,7 @@ from uuid import uuid4
 import pytest
 
 from reconforge.application.matching_strategies import MatchingStrategyRequest
+from reconforge.infrastructure.carry_forward_strategy import CarryForwardFifoStrategy
 from reconforge.infrastructure.grouped_matching_strategy import GroupedSubsetSumStrategy
 from reconforge.infrastructure.postgres import (
     PostgresConnectionFactory,
@@ -26,6 +27,7 @@ from reconforge.infrastructure.postgres_reconciliation import (
 from reconforge.infrastructure.postgres_reconciliation_checkpoints import (
     POSTGRES_RECONCILIATION_CHECKPOINT_SCHEMA_SQL,
 )
+from reconforge.infrastructure.reversal_matching_strategy import ReversalPairingStrategy
 from reconforge.workers.postgres_grouped_matching import PostgresGroupedMatchingAdapter
 from reconforge.workers.postgres_reconciliation import (
     PostgresReconciliationWorker,
@@ -35,6 +37,7 @@ from reconforge.workers.postgres_reconciliation import (
     ReconciliationPartitionResult,
     _stable_partition_key,
 )
+from reconforge.workers.postgres_sequential_matching import PostgresSequentialMatchingAdapter
 
 
 @pytest.mark.skipif(
@@ -59,6 +62,8 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
     many_run_id = "grouped-live-many-" + uuid4().hex[:16]
     fx_run_id = "grouped-live-fx-" + uuid4().hex[:16]
     portfolio_run_id = "grouped-live-portfolio-" + uuid4().hex[:16]
+    carry_run_id = "sequential-live-carry-" + uuid4().hex[:16]
+    reversal_run_id = "sequential-live-reversal-" + uuid4().hex[:16]
     admin = admin_factory.connect()
     try:
         with admin.transaction():
@@ -435,6 +440,129 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
             )
         )
         assert portfolio_result_digest == portfolio_expected.decision_digest
+
+        with PostgresTenantBoundary(factory).transaction(tenant_a) as connection:
+            repository = PostgresReconciliationRepository(connection)
+            repository.create_run(
+                tenant_id=tenant_a,
+                run_id=carry_run_id,
+                name="Live carry-forward reconciliation",
+                left_source="ledger-carry.csv",
+                right_source="bank-carry.csv",
+                algorithm_version="bounded-carry-forward-fifo@1.0.0",
+                rule={"matching_mode": "carry-forward", "date_window_days": 3, "amount_tolerance": "0"},
+                input_hash="sequential-carry-live-input",
+                actor_id="sequential-live-user",
+            )
+            repository.register_input(
+                tenant_id=tenant_a,
+                run_id=carry_run_id,
+                side="Left",
+                source_id="O1",
+                record_hash="hash-O1",
+                amount="100.00",
+                currency_code="USD",
+                attributes={"date": "2026-08-01", "currency": "USD"},
+            )
+            repository.register_input(
+                tenant_id=tenant_a,
+                run_id=carry_run_id,
+                side="Right",
+                source_id="S1",
+                record_hash="hash-S1",
+                amount="60.00",
+                currency_code="USD",
+                attributes={"date": "2026-08-02", "currency": "USD"},
+            )
+            repository.create_run(
+                tenant_id=tenant_a,
+                run_id=reversal_run_id,
+                name="Live reversal pairing reconciliation",
+                left_source="ledger-reversal.csv",
+                right_source="bank-reversal.csv",
+                algorithm_version="bounded-reversal-pairing@1.0.0",
+                rule={"matching_mode": "reversal-pairing", "date_window_days": 3, "amount_tolerance": "0"},
+                input_hash="sequential-reversal-live-input",
+                actor_id="sequential-live-user",
+            )
+            repository.register_input(
+                tenant_id=tenant_a,
+                run_id=reversal_run_id,
+                side="Left",
+                source_id="J1",
+                record_hash="hash-J1",
+                amount="100.00",
+                currency_code="USD",
+                attributes={"date": "2026-08-01", "currency": "USD"},
+            )
+            repository.register_input(
+                tenant_id=tenant_a,
+                run_id=reversal_run_id,
+                side="Right",
+                source_id="R1",
+                record_hash="hash-R1",
+                amount="-100.00",
+                currency_code="USD",
+                attributes={"date": "2026-08-02", "currency": "USD", "reversal_of": "J1"},
+            )
+
+        sequential_worker = PostgresReconciliationWorker(
+            factory,
+            tenant_supplier=lambda: [tenant_a],
+            matcher=PostgresSequentialMatchingAdapter(),
+            settings=PostgresReconciliationWorkerSettings(
+                worker_id="sequential-live-worker",
+                actor_id="sequential-live-worker",
+                poll_interval_seconds=0,
+            ),
+        )
+        sequential_summary = sequential_worker.process_once()
+        assert sequential_summary.completed == 2
+        assert sequential_summary.failed == 0
+        with PostgresTenantBoundary(factory).transaction(tenant_a) as connection:
+            repository = PostgresReconciliationRepository(connection)
+            carry_metadata = repository.get_run_metadata(tenant_id=tenant_a, run_id=carry_run_id)
+            carry_rows = repository.list_results(tenant_id=tenant_a, run_id=carry_run_id)
+            assert carry_metadata["execution_status"] == "Complete"
+            assert carry_metadata["matched_count"] == 1
+            assert {(row["left_id"], row["right_id"], row["status"]) for row in carry_rows} == {
+                ("O1", "S1", "Matched"),
+                ("O1", "", "Unmatched"),
+            }
+            carry_matched_row = next(row for row in carry_rows if row["status"] == "Matched")
+            assert carry_matched_row["lineage_json"]["strategy_id"] == "bounded-carry-forward-fifo"
+            assert carry_matched_row["lineage_json"]["allocation"]["obligation_residual"] == "40"
+            reversal_metadata = repository.get_run_metadata(tenant_id=tenant_a, run_id=reversal_run_id)
+            reversal_rows = repository.list_results(tenant_id=tenant_a, run_id=reversal_run_id)
+            assert reversal_metadata["execution_status"] == "Complete"
+            assert reversal_metadata["matched_count"] == 1
+            assert len(reversal_rows) == 1
+            assert (reversal_rows[0]["left_id"], reversal_rows[0]["right_id"]) == ("J1", "R1")
+            assert reversal_rows[0]["lineage_json"]["strategy_id"] == "bounded-reversal-pairing"
+            assert reversal_rows[0]["lineage_json"]["pair"]["match_basis"] == "explicit-reversal-link"
+            carry_result_digest = carry_matched_row["lineage_json"]["strategy_result_digest"]
+            reversal_result_digest = reversal_rows[0]["lineage_json"]["strategy_result_digest"]
+
+        carry_expected = CarryForwardFifoStrategy().execute(
+            MatchingStrategyRequest(
+                left_records=({"id": "O1", "amount": "100.00", "date": "2026-08-01", "currency": "USD", "partition": "default"},),
+                right_records=({"id": "S1", "amount": "60.00", "date": "2026-08-02", "currency": "USD", "partition": "default"},),
+                amount_tolerance="0",
+                date_window_days=3,
+                mode="carry-forward",
+            )
+        )
+        reversal_expected = ReversalPairingStrategy().execute(
+            MatchingStrategyRequest(
+                left_records=({"id": "J1", "amount": "100.00", "date": "2026-08-01", "currency": "USD", "partition": "default"},),
+                right_records=({"id": "R1", "amount": "-100.00", "date": "2026-08-02", "currency": "USD", "partition": "default", "reversal_of": "J1"},),
+                amount_tolerance="0",
+                date_window_days=3,
+                mode="reversal-pairing",
+            )
+        )
+        assert carry_result_digest == carry_expected.decision_digest
+        assert reversal_result_digest == reversal_expected.decision_digest
 
         with PostgresTenantBoundary(factory).transaction(tenant_b) as connection, pytest.raises(
             PostgresReconciliationNotFoundError

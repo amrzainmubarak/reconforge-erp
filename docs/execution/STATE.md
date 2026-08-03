@@ -105,6 +105,17 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   parity cells, and Docker-parity; Security `30823574298`, Docker
   `30823572431`, and CodeQL `30823572439` also passed.
 
+## E-340 — Live PostgreSQL carry-forward and reversal worker evidence (in progress)
+
+- Added `PostgresSequentialMatchingAdapter` for explicit `carry-forward`,
+  `sequence-window`, and `reversal-pairing` modes. It preserves strategy
+  manifests/digests, allocation residuals, explicit reversal-link basis,
+  unmatched records, and ambiguity exceptions through the existing worker
+  result contract.
+- Local adapter and domain contracts pass. The live server-boundary gate is
+  pending; until it passes this slice is not counted as current PostgreSQL
+  runtime parity.
+
 ## E-293 — Immutable local delegation administration
 
 - Migration 27 adds tenant/workspace-scoped `policy_delegations`; a typed

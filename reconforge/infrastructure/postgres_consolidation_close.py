@@ -230,7 +230,7 @@ class PostgresConsolidationCloseRepository:
                         "tenant_id,id,run_id,ordinal,elimination_id,source_line_id,entity_code,"
                         "group_account_code,account_type,amount_decimal,amount_minor,currency_code,"
                         "source_reference,source_digest"
-                        ") VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                        ") VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                         (
                             self.tenant_id,
                             platform_id("PGCCL", run_id, ordinal),
@@ -455,7 +455,7 @@ class PostgresConsolidationCloseRepository:
                     "tenant_id,id,run_id,ordinal,elimination_id,source_line_id,entity_code,"
                     "group_account_code,account_type,amount_decimal,amount_minor,currency_code,"
                     "source_reference,source_digest"
-                    ") VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                    ") VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                     (
                         self.tenant_id,
                         platform_id("PGCCL", run_id, ordinal),

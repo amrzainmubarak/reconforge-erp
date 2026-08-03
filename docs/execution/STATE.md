@@ -505,6 +505,11 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Local command: `python -m pytest tests/test_postgres_durable_jobs.py -q -ra`
   -> 1 schema pass, 1 live skip without a configured DSN. Ruff and Mypy pass.
   The unskipped runtime gate is executed in CI server-boundaries.
+- Implementation commit `60cda19e` passed CI run `30789429019`, including
+  server-boundaries job `91609680294`, both Python jobs, all four engine-parity
+  jobs, and Docker parity. Security `30789428995` and CodeQL `30789428992`
+  also passed. The preceding fixture-only failure in run `30789002840` used
+  non-hex digest literals and was corrected before this evidence.
 - Boundary: small synthetic two-partition retry/recovery proof only; no
   PostgreSQL capacity, soak/SLO, distributed queue, automatic supervision,
   HA/DR, or production retry-tuning claim.

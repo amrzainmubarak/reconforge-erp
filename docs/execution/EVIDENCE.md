@@ -11878,6 +11878,12 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   -> schema contract passed; the live test is skipped without a DSN. Ruff and
   Mypy pass. CI server-boundaries is the runtime source of truth for the
   unskipped path.
+- Implementation commit `60cda19e` passed CI run `30789429019`, with live
+  server-boundaries job `91609680294`, both Python versions, four engine-parity
+  cells, and Docker parity green; Security `30789428995` and CodeQL
+  `30789428992` also passed. An earlier run `30789002840` failed before the
+  retry assertions because the test fixture used invalid non-hex digest text;
+  `60cda19e` replaces those literals with valid SHA-256 hex fixtures.
 - Boundary: synthetic retry/recovery only. PostgreSQL capacity, soak/SLO,
   distributed queue supervision, automatic failover, HA/DR, and production
   retry tuning remain unverified.

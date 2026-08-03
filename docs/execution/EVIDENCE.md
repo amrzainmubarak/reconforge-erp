@@ -295,6 +295,10 @@ This file records commands and observed results. It does not convert a dirty wor
 - Boundary: local SQLite evidence only. No statutory close, PostgreSQL
   consolidation parity, UI mutation workflow, source-system posting, or
   external write-back claim is made.
+- Remote evidence: CI `30777713987`, Docker `30777714035`, Security
+  `30777714005`, and CodeQL `30777713991` passed. CI covered PostgreSQL
+  server-boundaries, four engine-parity matrices, Python 3.11/3.12 tests,
+  package build, and Docker parity.
 
 ## E-292: Expiring delegation policy invariant
 

@@ -8,8 +8,10 @@ statutory consolidation posting engine.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
-from typing import Any
+from collections.abc import Mapping, Sequence
+from typing import Any, TypedDict
 
 from reconforge.domain.consolidation import ConsolidationError
 from reconforge.domain.consolidation_lifecycle import (
@@ -19,6 +21,27 @@ from reconforge.domain.consolidation_lifecycle import (
 from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
 from reconforge.infrastructure.postgres_approvals import PostgresApprovalRepository
 from reconforge.platform.common import PlatformError, normalize_text, platform_id
+from reconforge.platform.inventory_values import MAX_AMOUNT_MINOR
+from reconforge.utils.money import Money
+
+
+class JournalLineMaterial(TypedDict):
+    account_type: str
+    amount_decimal: str
+    amount_minor: int
+    currency_code: str
+    elimination_id: str
+    entity_code: str
+    group_account_code: str
+    source_digest: str
+    source_line_id: str
+    source_reference: str
+
+
+class EffectLineMaterial(TypedDict):
+    amount_minor: int
+    currency_code: str
+    run_line_id: str
 
 POSTGRES_CONSOLIDATION_CLOSE_SCHEMA_SQL = r"""
 CREATE TABLE IF NOT EXISTS reconforge.consolidation_close_periods (
@@ -33,7 +56,8 @@ CREATE TABLE IF NOT EXISTS reconforge.consolidation_close_periods (
 CREATE TABLE IF NOT EXISTS reconforge.consolidation_close_runs (
  tenant_id TEXT NOT NULL, id TEXT NOT NULL, period_id TEXT NOT NULL, workspace_id TEXT NOT NULL,
  run_number TEXT NOT NULL, worksheet_payload JSONB NOT NULL, worksheet_digest TEXT NOT NULL,
- journal_digest TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'Prepared', row_version INTEGER NOT NULL DEFAULT 1,
+ journal_digest TEXT NOT NULL, journal_line_count INTEGER NOT NULL DEFAULT 0 CHECK (journal_line_count >= 0),
+ status TEXT NOT NULL DEFAULT 'Prepared', row_version INTEGER NOT NULL DEFAULT 1,
  prepared_by TEXT NOT NULL, approved_by TEXT, posted_by TEXT, reversal_requested_by TEXT, reversed_by TEXT,
  prepared_at TIMESTAMPTZ NOT NULL DEFAULT now(), approved_at TIMESTAMPTZ, posted_at TIMESTAMPTZ,
  reversal_requested_at TIMESTAMPTZ, reversed_at TIMESTAMPTZ, reasons JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -42,14 +66,36 @@ CREATE TABLE IF NOT EXISTS reconforge.consolidation_close_runs (
 );
 CREATE TABLE IF NOT EXISTS reconforge.consolidation_close_effects (
  tenant_id TEXT NOT NULL, id TEXT NOT NULL, run_id TEXT NOT NULL, effect_type TEXT NOT NULL,
- actor TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), effect_digest TEXT NOT NULL,
+ source_effect_id TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'Legacy',
+ line_count INTEGER NOT NULL DEFAULT 0 CHECK (line_count >= 0), actor TEXT NOT NULL,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT now(), effect_digest TEXT NOT NULL,
  PRIMARY KEY (tenant_id,id), UNIQUE (tenant_id,run_id,effect_type)
 );
 CREATE TABLE IF NOT EXISTS reconforge.consolidation_close_period_events (
  tenant_id TEXT NOT NULL, id TEXT NOT NULL, period_id TEXT NOT NULL, action TEXT NOT NULL,
  actor TEXT NOT NULL, reason TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (tenant_id,id)
 );
+CREATE TABLE IF NOT EXISTS reconforge.consolidation_close_run_lines (
+ tenant_id TEXT NOT NULL, id TEXT NOT NULL, run_id TEXT NOT NULL, ordinal INTEGER NOT NULL,
+ elimination_id TEXT NOT NULL, source_line_id TEXT NOT NULL, entity_code TEXT NOT NULL,
+ group_account_code TEXT NOT NULL, account_type TEXT NOT NULL, amount_decimal NUMERIC(38,18) NOT NULL,
+ amount_minor BIGINT NOT NULL, currency_code TEXT NOT NULL, source_reference TEXT NOT NULL,
+ source_digest TEXT NOT NULL, PRIMARY KEY (tenant_id,id),
+ UNIQUE (tenant_id,run_id,ordinal), FOREIGN KEY (tenant_id,run_id)
+  REFERENCES reconforge.consolidation_close_runs(tenant_id,id) ON DELETE CASCADE,
+ CHECK (ordinal >= 1), CHECK (amount_minor <> 0), CHECK (currency_code ~ '^[A-Z]{3}$')
+);
+CREATE TABLE IF NOT EXISTS reconforge.consolidation_close_effect_lines (
+ tenant_id TEXT NOT NULL, id TEXT NOT NULL, effect_id TEXT NOT NULL, run_line_id TEXT NOT NULL,
+ ordinal INTEGER NOT NULL, amount_decimal NUMERIC(38,18) NOT NULL, amount_minor BIGINT NOT NULL,
+ currency_code TEXT NOT NULL, PRIMARY KEY (tenant_id,id), UNIQUE (tenant_id,effect_id,ordinal),
+ FOREIGN KEY (tenant_id,effect_id) REFERENCES reconforge.consolidation_close_effects(tenant_id,id) ON DELETE CASCADE,
+ FOREIGN KEY (tenant_id,run_line_id) REFERENCES reconforge.consolidation_close_run_lines(tenant_id,id) ON DELETE RESTRICT,
+ CHECK (ordinal >= 1), CHECK (amount_minor <> 0), CHECK (currency_code ~ '^[A-Z]{3}$')
+);
 CREATE INDEX IF NOT EXISTS consolidation_close_runs_scope_idx ON reconforge.consolidation_close_runs(tenant_id,workspace_id,status);
+CREATE INDEX IF NOT EXISTS consolidation_close_run_lines_run_idx ON reconforge.consolidation_close_run_lines(tenant_id,run_id,ordinal);
+CREATE INDEX IF NOT EXISTS consolidation_close_effect_lines_effect_idx ON reconforge.consolidation_close_effect_lines(tenant_id,effect_id,ordinal);
 ALTER TABLE reconforge.consolidation_close_periods ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reconforge.consolidation_close_periods FORCE ROW LEVEL SECURITY;
 ALTER TABLE reconforge.consolidation_close_runs ENABLE ROW LEVEL SECURITY;
@@ -58,10 +104,24 @@ ALTER TABLE reconforge.consolidation_close_effects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reconforge.consolidation_close_effects FORCE ROW LEVEL SECURITY;
 ALTER TABLE reconforge.consolidation_close_period_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reconforge.consolidation_close_period_events FORCE ROW LEVEL SECURITY;
-DO $$ DECLARE t text; BEGIN FOREACH t IN ARRAY ARRAY['consolidation_close_periods','consolidation_close_runs','consolidation_close_effects','consolidation_close_period_events'] LOOP
+ALTER TABLE reconforge.consolidation_close_run_lines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reconforge.consolidation_close_run_lines FORCE ROW LEVEL SECURITY;
+ALTER TABLE reconforge.consolidation_close_effect_lines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reconforge.consolidation_close_effect_lines FORCE ROW LEVEL SECURITY;
+DO $$ DECLARE t text; BEGIN FOREACH t IN ARRAY ARRAY['consolidation_close_periods','consolidation_close_runs','consolidation_close_effects','consolidation_close_period_events','consolidation_close_run_lines','consolidation_close_effect_lines'] LOOP
  EXECUTE format('DROP POLICY IF EXISTS tenant_isolation ON reconforge.%I', t);
  EXECUTE format('CREATE POLICY tenant_isolation ON reconforge.%I USING (tenant_id=current_setting(''app.tenant_id'',true)) WITH CHECK (tenant_id=current_setting(''app.tenant_id'',true))', t);
- END LOOP; END $$;
+END LOOP; END $$;
+CREATE OR REPLACE FUNCTION reconforge.reject_consolidation_close_child_mutation()
+RETURNS trigger LANGUAGE plpgsql AS $fn$
+BEGIN
+ RAISE EXCEPTION 'consolidation close child rows are append-only';
+END;
+$fn$;
+DO $$ DECLARE t text; BEGIN FOREACH t IN ARRAY ARRAY['consolidation_close_effects','consolidation_close_run_lines','consolidation_close_effect_lines'] LOOP
+ EXECUTE format('DROP TRIGGER IF EXISTS %I_immutable ON reconforge.%I', t, t);
+ EXECUTE format('CREATE TRIGGER %I_immutable BEFORE UPDATE OR DELETE ON reconforge.%I FOR EACH ROW EXECUTE FUNCTION reconforge.reject_consolidation_close_child_mutation()', t, t);
+END LOOP; END $$;
 """
 
 
@@ -83,6 +143,204 @@ class PostgresConsolidationCloseRepository:
 
     def _scope(self) -> None:
         set_local_tenant_scope(self.connection, self.tenant_id)
+
+    @staticmethod
+    def _worksheet_lines(
+        worksheet: ConsolidationWorksheetResult,
+    ) -> tuple[list[JournalLineMaterial], str]:
+        """Materialize balanced control-journal lines from a verified worksheet."""
+
+        lines: list[JournalLineMaterial] = []
+        for elimination in worksheet.eliminations:
+            for line in elimination.lines:
+                if line.amount.currency != worksheet.reporting_currency:
+                    raise PlatformError("Consolidation journal lines must use the worksheet reporting currency.")
+                minor = line.amount.to_minor_units()
+                if minor == 0 or abs(minor) > MAX_AMOUNT_MINOR:
+                    raise PlatformError("Consolidation journal line exceeds the supported amount range.")
+                lines.append(
+                    {
+                        "account_type": line.account_type,
+                        "amount_decimal": str(line.amount.to_canonical_dict()["amount"]),
+                        "amount_minor": minor,
+                        "currency_code": line.amount.currency,
+                        "elimination_id": elimination.elimination_id,
+                        "entity_code": line.entity_code,
+                        "group_account_code": line.group_account_code,
+                        "source_digest": line.source_digest,
+                        "source_line_id": line.line_id,
+                        "source_reference": line.source_reference,
+                    }
+                )
+        lines.sort(key=lambda item: (str(item["elimination_id"]), str(item["source_line_id"])))
+        if not 2 <= len(lines) <= 10_000:
+            raise PlatformError("Persisted consolidation journals require between 2 and 10000 lines.")
+        if sum(line["amount_minor"] for line in lines) != 0:
+            raise PlatformError("Persisted consolidation journal lines must balance exactly in minor units.")
+        digest_material: dict[str, object] = {
+            "schema_version": 1,
+            "worksheet_result_digest": worksheet.result_digest,
+            "lines": lines,
+        }
+        digest = hashlib.sha256(
+            json.dumps(digest_material, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+        ).hexdigest()
+        return lines, digest
+
+    @staticmethod
+    def _line_material(row: Mapping[str, Any]) -> JournalLineMaterial:
+        currency_code = str(row["currency_code"])
+        amount_minor = int(row["amount_minor"])
+        canonical_amount = Money.from_minor_units(amount_minor, currency_code).to_canonical_dict()["amount"]
+        return {
+            "account_type": str(row["account_type"]),
+            "amount_decimal": str(canonical_amount),
+            "amount_minor": amount_minor,
+            "currency_code": currency_code,
+            "elimination_id": str(row["elimination_id"]),
+            "entity_code": str(row["entity_code"]),
+            "group_account_code": str(row["group_account_code"]),
+            "source_digest": str(row["source_digest"]),
+            "source_line_id": str(row["source_line_id"]),
+            "source_reference": str(row["source_reference"]),
+        }
+
+    def _run_lines(
+        self,
+        run_id: str,
+        worksheet: ConsolidationWorksheetResult,
+        *,
+        persist_legacy_fallback: bool = False,
+    ) -> tuple[list[dict[str, Any]], str]:
+        rows = self.connection.execute(
+            "SELECT * FROM reconforge.consolidation_close_run_lines "
+            "WHERE tenant_id=%s AND run_id=%s ORDER BY ordinal",
+            (self.tenant_id, run_id),
+        ).fetchall()
+        expected_material, expected_digest = self._worksheet_lines(worksheet)
+        expected_lines: list[dict[str, Any]] = [dict(line) for line in expected_material]
+        if not rows:
+            # Pre-0057 rows did not have a line table. Reads replay the
+            # verified worksheet; a later governed effect transition may
+            # materialize those exact lines inside the same transaction.
+            if persist_legacy_fallback:
+                for ordinal, line in enumerate(expected_lines, 1):
+                    self.connection.execute(
+                        "INSERT INTO reconforge.consolidation_close_run_lines("
+                        "tenant_id,id,run_id,ordinal,elimination_id,source_line_id,entity_code,"
+                        "group_account_code,account_type,amount_decimal,amount_minor,currency_code,"
+                        "source_reference,source_digest"
+                        ") VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                        (
+                            self.tenant_id,
+                            platform_id("PGCCL", run_id, ordinal),
+                            run_id,
+                            ordinal,
+                            line["elimination_id"],
+                            line["source_line_id"],
+                            line["entity_code"],
+                            line["group_account_code"],
+                            line["account_type"],
+                            line["amount_decimal"],
+                            line["amount_minor"],
+                            line["currency_code"],
+                            line["source_reference"],
+                            line["source_digest"],
+                        ),
+                    )
+                rows = self.connection.execute(
+                    "SELECT * FROM reconforge.consolidation_close_run_lines "
+                    "WHERE tenant_id=%s AND run_id=%s ORDER BY ordinal",
+                    (self.tenant_id, run_id),
+                ).fetchall()
+                return [self._line_material(row) | {"id": str(row["id"]), "ordinal": int(row["ordinal"])} for row in rows], expected_digest
+            return expected_lines, expected_digest
+        actual_material: list[dict[str, Any]] = [dict(self._line_material(row)) for row in rows]
+        if actual_material != expected_lines or len(rows) != len(expected_lines):
+            raise PlatformError("Persisted consolidation journal lines do not reproduce the worksheet.")
+        actual_lines = [
+            material | {"id": str(row["id"]), "ordinal": int(row["ordinal"])}
+            for material, row in zip(actual_material, rows, strict=True)
+        ]
+        return actual_lines, expected_digest
+
+    def _create_effect(
+        self,
+        run: Mapping[str, Any],
+        *,
+        effect_type: str,
+        actor: str,
+        run_lines: Sequence[Mapping[str, Any]],
+    ) -> None:
+        if effect_type not in {"Posting", "Reversal"}:
+            raise PlatformError("Unsupported consolidation effect type.")
+        run_id = str(run["id"])
+        if len(run_lines) != int(run.get("journal_line_count", len(run_lines))):
+            raise PlatformError("Consolidation run line count changed before effect creation.")
+        source_effect_id = ""
+        if effect_type == "Reversal":
+            source = self.connection.execute(
+                "SELECT id FROM reconforge.consolidation_close_effects "
+                "WHERE tenant_id=%s AND run_id=%s AND effect_type='Posting' "
+                "AND status IN ('Committed','Legacy')",
+                (self.tenant_id, run_id),
+            ).fetchone()
+            if source is None:
+                raise PlatformError("A committed posting effect is required before reversal.")
+            source_effect_id = str(source["id"])
+        sign = 1 if effect_type == "Posting" else -1
+        material_lines: list[EffectLineMaterial] = [
+            {
+                "amount_minor": sign * int(row["amount_minor"]),
+                "currency_code": str(row["currency_code"]),
+                "run_line_id": str(row["id"]),
+            }
+            for row in run_lines
+        ]
+        effect_id = platform_id("PGCCE", self.tenant_id, run_id, effect_type)
+        effect_digest = hashlib.sha256(
+            self._json(
+                {
+                    "effect_type": effect_type,
+                    "lines": material_lines,
+                    "run_id": run_id,
+                    "schema_version": 1,
+                    "source_effect_id": source_effect_id,
+                }
+            ).encode("ascii")
+        ).hexdigest()
+        self.connection.execute(
+            "INSERT INTO reconforge.consolidation_close_effects("
+            "tenant_id,id,run_id,effect_type,source_effect_id,status,line_count,actor,effect_digest"
+            ") VALUES(%s,%s,%s,%s,%s,'Committed',%s,%s,%s) ON CONFLICT DO NOTHING",
+            (
+                self.tenant_id,
+                effect_id,
+                run_id,
+                effect_type,
+                source_effect_id,
+                len(material_lines),
+                actor,
+                effect_digest,
+            ),
+        )
+        for ordinal, (row, material) in enumerate(zip(run_lines, material_lines, strict=True), 1):
+            amount = Money.from_minor_units(material["amount_minor"], material["currency_code"])
+            self.connection.execute(
+                "INSERT INTO reconforge.consolidation_close_effect_lines("
+                "tenant_id,id,effect_id,run_line_id,ordinal,amount_decimal,amount_minor,currency_code"
+                ") VALUES(%s,%s,%s,%s,%s,%s,%s,%s)",
+                (
+                    self.tenant_id,
+                    platform_id("PGCCEL", effect_id, ordinal),
+                    effect_id,
+                    str(row["id"]),
+                    ordinal,
+                    str(amount.to_canonical_dict()["amount"]),
+                    material["amount_minor"],
+                    material["currency_code"],
+                ),
+            )
 
     def create_period(
         self,
@@ -150,6 +408,7 @@ class PostgresConsolidationCloseRepository:
             raise PlatformError("Consolidation worksheet replay failed before persistence.") from exc
         if verified.prepared_by != actor or verified.posting_effect != "none":
             raise PlatformError("Worksheet preparation policy rejected the actor or posting effect.")
+        lines, journal_digest = self._worksheet_lines(verified)
         period_id = platform_id("PGCCP", self.tenant_id, workspace, verified.group_code, verified.period_id)
         run_id = platform_id("PGCGR", self.tenant_id, workspace, verified.group_code, verified.period_id, run_number)
         payload = verified.to_dict()
@@ -173,7 +432,10 @@ class PostgresConsolidationCloseRepository:
                     raise PlatformError("Consolidation run identifier conflicts with immutable worksheet evidence.")
                 return dict(existing)
             self.connection.execute(
-                "INSERT INTO reconforge.consolidation_close_runs(tenant_id,id,period_id,workspace_id,run_number,worksheet_payload,worksheet_digest,journal_digest,prepared_by) VALUES(%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s)",
+                "INSERT INTO reconforge.consolidation_close_runs("
+                "tenant_id,id,period_id,workspace_id,run_number,worksheet_payload,worksheet_digest,"
+                "journal_digest,journal_line_count,prepared_by"
+                ") VALUES(%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s,%s)",
                 (
                     self.tenant_id,
                     run_id,
@@ -182,10 +444,35 @@ class PostgresConsolidationCloseRepository:
                     run_number,
                     self._json(payload),
                     digest,
-                    verified.result_digest,
+                    journal_digest,
+                    len(lines),
                     actor,
                 ),
             )
+            for ordinal, line in enumerate(lines, 1):
+                self.connection.execute(
+                    "INSERT INTO reconforge.consolidation_close_run_lines("
+                    "tenant_id,id,run_id,ordinal,elimination_id,source_line_id,entity_code,"
+                    "group_account_code,account_type,amount_decimal,amount_minor,currency_code,"
+                    "source_reference,source_digest"
+                    ") VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                    (
+                        self.tenant_id,
+                        platform_id("PGCCL", run_id, ordinal),
+                        run_id,
+                        ordinal,
+                        line["elimination_id"],
+                        line["source_line_id"],
+                        line["entity_code"],
+                        line["group_account_code"],
+                        line["account_type"],
+                        line["amount_decimal"],
+                        line["amount_minor"],
+                        line["currency_code"],
+                        line["source_reference"],
+                        line["source_digest"],
+                    ),
+                )
             return dict(
                 self.connection.execute(
                     "SELECT * FROM reconforge.consolidation_close_runs WHERE tenant_id=%s AND id=%s",
@@ -220,11 +507,17 @@ class PostgresConsolidationCloseRepository:
             ):
                 raise PlatformError("Maker-checker actor separation rejected the transition.")
             if effect_kind:
-                effect_id = platform_id("PGCCE", self.tenant_id, run_id, effect_kind)
-                effect_digest = hashlib.sha256(f"{run_id}:{effect_kind}".encode()).hexdigest()
-                self.connection.execute(
-                    "INSERT INTO reconforge.consolidation_close_effects(tenant_id,id,run_id,effect_type,actor,effect_digest) VALUES(%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING",
-                    (self.tenant_id, effect_id, run_id, effect_kind, actor, effect_digest),
+                verified = self._verified_run(dict(row))
+                run_lines, _ = self._run_lines(
+                    run_id,
+                    verified["worksheet_object"],
+                    persist_legacy_fallback=True,
+                )
+                self._create_effect(
+                    verified,
+                    effect_type=effect_kind,
+                    actor=actor,
+                    run_lines=run_lines,
                 )
             self.connection.execute(
                 f"UPDATE reconforge.consolidation_close_runs SET status=%s,row_version=row_version+1,{actor_field}=%s,reasons=jsonb_set(reasons,ARRAY[%s]::text[],to_jsonb(%s::text),true) WHERE tenant_id=%s AND id=%s",  # nosec B608
@@ -351,16 +644,6 @@ class PostgresConsolidationCloseRepository:
                 "consolidation_close_run", run_id
             )
 
-    def _effect(self, run_id: str, kind: str, actor_label: str) -> None:
-        with self.connection.transaction():
-            self._scope()
-            effect_id = platform_id("PGCCE", self.tenant_id, run_id, kind)
-            digest = hashlib.sha256(f"{run_id}:{kind}".encode()).hexdigest()
-            self.connection.execute(
-                "INSERT INTO reconforge.consolidation_close_effects(tenant_id,id,run_id,effect_type,actor,effect_digest) VALUES(%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING",
-                (self.tenant_id, effect_id, run_id, kind, self._actor(actor_label), digest),
-            )
-
     def lock_period(
         self, period_id: str, *, expected_version: int, reason: str, actor_label: str = "local-cli"
     ) -> dict[str, Any]:
@@ -445,7 +728,7 @@ class PostgresConsolidationCloseRepository:
             return self._verified_run(dict(row))
 
     def _verified_run(self, record: dict[str, Any]) -> dict[str, Any]:
-        """Replay-check JSONB worksheet and effect metadata before exposure."""
+        """Replay-check worksheet, journal lines, and effect metadata before exposure."""
 
         payload = record.get("worksheet_payload")
         if isinstance(payload, str):
@@ -462,10 +745,128 @@ class PostgresConsolidationCloseRepository:
         expected_digest = hashlib.sha256(self._json(verified.to_dict()).encode()).hexdigest()
         if expected_digest != str(record.get("worksheet_digest")):
             raise PlatformError("Persisted consolidation worksheet digest mismatch.")
-        if verified.result_digest != str(record.get("journal_digest")):
-            raise PlatformError("Persisted consolidation journal digest mismatch.")
+        expected_lines, expected_journal_digest = self._worksheet_lines(verified)
+        persisted_lines = self.connection.execute(
+            "SELECT * FROM reconforge.consolidation_close_run_lines "
+            "WHERE tenant_id=%s AND run_id=%s ORDER BY ordinal",
+            (self.tenant_id, str(record["id"])),
+        ).fetchall()
+        actual_material = [self._line_material(row) for row in persisted_lines]
+        if persisted_lines:
+            if (
+                actual_material != expected_lines
+                or len(persisted_lines) != int(record.get("journal_line_count", 0) or 0)
+                or not hmac.compare_digest(expected_journal_digest, str(record.get("journal_digest")))
+            ):
+                raise PlatformError("Persisted consolidation journal failed balance or digest verification.")
+        elif int(record.get("journal_line_count", 0) or 0) != 0:
+            raise PlatformError("Persisted consolidation journal line count has no stored lines.")
+        elif str(record.get("journal_digest")) != verified.result_digest:
+            # Compatibility reader for rows created before migration 0057.
+            raise PlatformError("Persisted legacy consolidation journal digest mismatch.")
+        actual_lines = [
+            material | {"id": str(row["id"]), "ordinal": int(row["ordinal"])}
+            for material, row in zip(actual_material, persisted_lines, strict=True)
+        ]
+        effects = self._verified_effects(str(record["id"]), actual_lines or expected_lines)
+        if int(record.get("journal_line_count", 0) or 0) == 0:
+            record["journal_line_count"] = len(expected_lines)
         record["worksheet"] = verified.to_dict()
+        record["worksheet_object"] = verified
+        record["journal_lines"] = actual_lines or expected_lines
+        record["effects"] = effects
         return record
+
+    def _verified_effects(
+        self,
+        run_id: str,
+        run_lines: Sequence[Mapping[str, Any]],
+    ) -> list[dict[str, Any]]:
+        effects = self.connection.execute(
+            "SELECT * FROM reconforge.consolidation_close_effects "
+            "WHERE tenant_id=%s AND run_id=%s ORDER BY effect_type",
+            (self.tenant_id, run_id),
+        ).fetchall()
+        result: list[dict[str, Any]] = []
+        run_by_id = {str(row["id"]): row for row in run_lines}
+        for raw_effect in effects:
+            effect = dict(raw_effect)
+            status = str(effect.get("status", "Legacy"))
+            effect_type = str(effect["effect_type"])
+            if status == "Legacy":
+                expected_digest = hashlib.sha256(f"{run_id}:{effect_type}".encode()).hexdigest()
+                if str(effect.get("effect_digest")) != expected_digest:
+                    raise PlatformError("Persisted legacy consolidation effect digest mismatch.")
+                item = dict(effect)
+                item["lines"] = []
+                result.append(item)
+                continue
+            if status != "Committed":
+                raise PlatformError("Persisted consolidation effect is incomplete.")
+            lines = self.connection.execute(
+                "SELECT * FROM reconforge.consolidation_close_effect_lines "
+                "WHERE tenant_id=%s AND effect_id=%s ORDER BY ordinal",
+                (self.tenant_id, str(effect["id"])),
+            ).fetchall()
+            material: list[EffectLineMaterial] = []
+            sign = 1 if effect_type == "Posting" else -1
+            for line in lines:
+                source = run_by_id.get(str(line["run_line_id"]))
+                expected_amount = Money.from_minor_units(
+                    int(line["amount_minor"]),
+                    str(line["currency_code"]),
+                ).to_canonical_dict()["amount"]
+                if (
+                    source is None
+                    or int(line["amount_minor"]) != sign * int(source["amount_minor"])
+                    or str(line["currency_code"]) != str(source["currency_code"])
+                    or str(line["amount_decimal"]) != str(expected_amount)
+                    or int(line["ordinal"]) != int(source["ordinal"])
+                ):
+                    raise PlatformError("Persisted consolidation effect does not reproduce its run lines.")
+                material.append(
+                    {
+                        "amount_minor": int(line["amount_minor"]),
+                        "currency_code": str(line["currency_code"]),
+                        "run_line_id": str(line["run_line_id"]),
+                    }
+                )
+            expected_digest = hashlib.sha256(
+                self._json(
+                    {
+                        "effect_type": effect_type,
+                        "lines": material,
+                        "run_id": run_id,
+                        "schema_version": 1,
+                        "source_effect_id": str(effect.get("source_effect_id", "")),
+                    }
+                ).encode("ascii")
+            ).hexdigest()
+            if (
+                len(lines) != int(effect.get("line_count", 0) or 0)
+                or sum(int(line["amount_minor"]) for line in lines) != 0
+                or not hmac.compare_digest(expected_digest, str(effect["effect_digest"]))
+            ):
+                raise PlatformError("Persisted consolidation effect failed balance or digest verification.")
+            item = dict(effect)
+            item["lines"] = [dict(line) for line in lines]
+            result.append(item)
+        status_row = self.connection.execute(
+            "SELECT status FROM reconforge.consolidation_close_runs WHERE tenant_id=%s AND id=%s",
+            (self.tenant_id, run_id),
+        ).fetchone()
+        if status_row is None:
+            raise PlatformError("Consolidation run disappeared during effect verification.")
+        expected_effect_types = {
+            "Prepared": set(),
+            "Approved": set(),
+            "Posted": {"Posting"},
+            "ReversalPrepared": {"Posting"},
+            "Reversed": {"Posting", "Reversal"},
+        }.get(str(status_row["status"]))
+        if expected_effect_types is None or {str(item["effect_type"]) for item in effects} != expected_effect_types:
+            raise PlatformError("Persisted consolidation effects do not match the governed run state.")
+        return result
 
     def list_runs(
         self,

@@ -1,6 +1,6 @@
 # Execution State
 
-Updated: 2026-08-02
+Updated: 2026-08-03
 
 ## Current phase
 
@@ -440,6 +440,23 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   `91593993577` in run `30784006115`; the same run passed both Python jobs,
   engine parity, Docker parity, Security, and CodeQL. ADR 0269 records the
   boundary.
+
+### E-319 in progress: PostgreSQL consolidation journal-line parity
+
+- Alembic 0057 and the PostgreSQL adapter now persist immutable,
+  tenant-scoped run journal lines and posting/reversal effect lines. Each line
+  stores exact minor units plus canonical decimal text; forced RLS and
+  append-only database triggers protect the evidence, while reads replay the
+  worksheet and compare line/effect digests.
+- Pre-0057 rows remain readable through a compatibility path; the first
+  governed effect transition materializes the exact verified lines. Focused
+  schema, migration, registry, SQLite compatibility, Ruff, Mypy, and adapter
+  tests pass locally. The live PostgreSQL test is skipped without the CI DSN
+  and is the required promotion gate; no remote evidence is recorded yet.
+- Boundary: this is synthetic PostgreSQL control-journal parity only. It does
+  not prove statutory consolidation, acquisition/goodwill/equity-method
+  accounting, live ERP/bank connectors or write-back, HA/DR, distributed
+  capacity, or production readiness. ADR 0270 records the decision.
 
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio
 

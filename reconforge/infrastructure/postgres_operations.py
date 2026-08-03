@@ -67,6 +67,7 @@ POSTGRES_MIGRATION_REVISIONS = (
     "0054_pg_consol_ownership",
     "0055_pg_consol_close",
     "0056_pg_policy_delegations",
+    "0057_pg_consol_journal_lines",
 )
 
 

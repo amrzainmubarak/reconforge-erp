@@ -2401,3 +2401,23 @@
   automatic failover, HA/DR, capacity, live providers, posting, or write-back
   claim is made.
 - **ADR**: `docs/adr/0269-postgres-grouped-matching-crash-resume.md`.
+
+## D266 - Persist PostgreSQL consolidation journal and effect lines
+
+- **Decision**: Add migration `0057_pg_consol_journal_lines` with tenant-scoped
+  run-line and effect-line tables. Materialize only verified worksheet lines,
+  store exact minor units plus canonical decimal text, and protect child rows
+  and effects with forced RLS and append-only triggers. Replays compare the
+  canonical line/effect digests before a run is exposed.
+- **Compatibility**: Rows created before 0057 remain readable as legacy
+  worksheet/effect metadata. A subsequent governed effect transition may
+  materialize the exact compatibility lines; no silent rehash or mutation is
+  accepted.
+- **Evidence**: Focused PostgreSQL schema/migration/registry and SQLite/API
+  compatibility suites pass locally. The live PostgreSQL server-boundaries
+  contract remains the promotion gate for runtime parity, tamper refusal, and
+  tenant isolation.
+- **Boundary**: This does not claim statutory consolidation, acquisition or
+  equity-method accounting, live source-system posting/write-back, HA/DR,
+  scale, or production readiness.
+- **ADR**: `docs/adr/0270-postgres-consolidation-journal-line-parity.md`.

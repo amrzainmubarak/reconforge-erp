@@ -11795,3 +11795,32 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   prove process supervision, automatic failover, HA/DR, soak, capacity,
   production RPO/RTO, live ERP/bank interoperability, posting, or write-back.
 - ADR: `docs/adr/0269-postgres-grouped-matching-crash-resume.md`.
+
+## E-319: PostgreSQL consolidation journal-line parity
+
+- Alembic `0057_pg_consol_journal_lines` adds `consolidation_close_run_lines`
+  and `consolidation_close_effect_lines`, plus line counts and source/status
+  metadata on the existing run/effect rows. Both child tables are tenant-keyed,
+  forced-RLS protected, indexed by run/effect ordinal, and guarded by an
+  append-only trigger. The schema stores exact minor units and canonical
+  decimal text; no floating-point amount type is introduced.
+- The PostgreSQL adapter materializes only replay-verified worksheet lines,
+  creates digest-bound posting/reversal line sets, verifies persisted
+  line/effect cardinality, balance, currency, source identity, and digest on
+  every read, and provides a compatibility reader for pre-0057 rows.
+- Local commands passed:
+  `python -m pytest tests/test_postgres_consolidation_close.py
+  tests/test_postgres_operations.py -q -ra` -> 7 passed, 2 live PostgreSQL
+  skips; the broader SQLite/API/PostgreSQL close suite -> 24 passed, 2 live
+  PostgreSQL skips. Ruff and Mypy for the changed adapter/operations/migration
+  files pass. `RECONFORGE_TEST_POSTGRES_DSN` was not configured locally.
+- Required live gate: the server-boundaries PostgreSQL test must complete a
+  synthetic prepare/approve/post/reversal lifecycle under a non-privileged
+  role, verify line/effect cardinality and tenant isolation, and prove the
+  append-only update refusal. Until that run is green, this slice is not
+  `live_verified_current`.
+- Boundary: this evidence is bounded control-journal parity. It does not prove
+  statutory consolidation, acquisition/goodwill/equity-method treatment, live
+  rates, ERP/bank interoperability or write-back, HA/DR, distributed scale,
+  RPO/RTO, independent assurance, compliance, or production readiness.
+- ADR: `docs/adr/0270-postgres-consolidation-journal-line-parity.md`.

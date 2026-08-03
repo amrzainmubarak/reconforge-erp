@@ -11964,6 +11964,11 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - Local command: `python -m pytest tests/test_consolidation_acquisition.py
   -q -ra` -> 8 passed, including stdout/file replay and unknown-field
   rejection. Full Ruff, Mypy, and diff-check pass.
+- The first CLI head `36dce87` (CI run `30793593366`) failed at the exact
+  direct-JSON parser inventory because the command used an untracked
+  `json.loads` call. The implementation now uses the bounded business-record
+  reader and declares surface `FI-028`; the replacement CI run must prove both
+  the security inventory and the full suite.
 - No database, network, approval, posting, provider, or source-system effect
   is introduced. This remains local non-posting evidence preparation.
 - ADR: `docs/adr/0277-acquisition-bridge-cli-boundary.md`.

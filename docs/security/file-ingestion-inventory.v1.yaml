@@ -579,6 +579,23 @@ surfaces:
       - The JSONB value is an internal replay-verified worksheet, not an upload or executable document.
       - The runtime gate is synthetic and single-node; statutory consolidation, restore, HA/DR, and source-system write-back remain open.
     next_action: Preserve replay verification and add independent restore/HA evidence before widening the PostgreSQL claim.
+  - id: FI-028
+    name: Acquisition fair-value bridge CLI request
+    module_ids: [finance.core]
+    trust: untrusted-local
+    entrypoints:
+      - reconforge/cli.py::consolidation_acquisition_bridge_command
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002]
+    test_evidence: [tests/test_consolidation_acquisition.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - The command uses the bounded business-record JSON reader with strict UTF-8, a 64 MiB file ceiling, stable pre/post fingerprints, duplicate/non-finite rejection, and one-object/field-count limits before exact top-level contract validation.
+      - Canonical Money values are reconstructed under the local currency registry; the resulting bridge is non-posting and does not authenticate source origin, authorize an actor, or prove statutory acquisition accounting.
+    next_action: Add centralized source classification and operator authorization before accepting acquisition requests from hosted upload or external connector surfaces.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader

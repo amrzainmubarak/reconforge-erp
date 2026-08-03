@@ -4008,9 +4008,10 @@ def consolidation_acquisition_bridge_command(
     """Prepare a deterministic, non-posting acquisition fair-value bridge."""
 
     try:
-        raw = json.loads(input_path.read_text(encoding="utf-8"))
-        if not isinstance(raw, dict):
-            raise PlatformError("Acquisition bridge input must be a JSON object.")
+        document = read_json_record_document(input_path, envelope_keys=("request",), allow_single_object=True)
+        if len(document.records) != 1:
+            raise PlatformError("Acquisition bridge input must contain exactly one JSON request object.")
+        raw = document.records[0]
         expected = {
             "acquisition_id",
             "subsidiary_entity_code",

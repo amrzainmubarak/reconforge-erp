@@ -18,6 +18,20 @@
 - **Reversibility**: Test and documentation only; no migration or runtime
   behavior changes.
 
+### D-265: Connector retry failure injection is a reusable synthetic gate
+- **Date**: 2026-08-03
+- **Context**: Network connector retry behavior was covered by individual
+  tests but lacked one reusable conformance boundary for failure injection.
+- **Decision**: Add a provider-neutral helper that injects bounded retryable
+  statuses through a caller-owned executor, requires eventual success within
+  the declared ceiling, and verifies that transient response bodies cannot
+  leak into the successful result.
+- **Rationale**: Shared failure semantics reduce drift across REST, ERP, and
+  payment-statement references without pretending that synthetic transport is
+  a live provider sandbox.
+- **Reversibility**: Additive helper and tests only; no network, schema, or
+  credential behavior changes.
+
 ### D-293: Local Delegations Are Immutable and Tenant-Scoped
 - **Date**: 2026-08-02
 - **Context**: Expiring delegation evaluation needs durable administration evidence without hidden wall-clock or cross-tenant lookup behavior.

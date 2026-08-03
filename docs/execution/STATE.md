@@ -424,6 +424,16 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - E-270 adds the synthetic transport-injected `reference-database-readonly` connector. It exposes only two named query profiles, enforces tenant scope and exact Decimal rows, rejects arbitrary SQL by schema, and bounds rows/cells/cursors without opening a database connection.
 - P4-CON-001 remains open for named ERP/bank/SFTP/database/object-store providers, provider sandboxes, acknowledgement reconciliation, approval-gated write-back, compensation, signed executable packages, and production deployment evidence.
 
+### E-314 complete: reusable connector retry failure-injection gate
+
+- `verify_network_retry_failure_injection` now exercises a caller-supplied
+  network executor against a synthetic response sequence. It validates only
+  retryable HTTP statuses, requires one bounded success attempt, checks the
+  executor attempt count, and rejects transient-body leakage.
+- Focused connector tests pass for successful recovery, invalid statuses, and
+  retry-ceiling refusal. The helper is provider-neutral and performs no network
+  I/O; live vendor interoperability and deployment evidence remain open.
+
 ## P4-FIN-002 in progress: governed consolidation close lifecycle
 
 ### E-256 complete: local SQLite consolidation close lifecycle (control-journal foundation)

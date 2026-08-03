@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 import pytest
 from pydantic import ValidationError
 
-from reconforge.connectors.conformance import verify_network_connector
+from reconforge.connectors.conformance import verify_network_connector, verify_network_retry_failure_injection
 from reconforge.connectors.manifest import (
     AuthenticationMethod,
     ConnectorCapability,
@@ -128,6 +128,38 @@ def test_transient_retry_is_bounded_and_permanent_failure_is_not_retried() -> No
             _registration(), idempotency_key="permanent-1"
         )
     assert len(permanent.calls) == 1
+
+
+def test_formal_failure_injection_conformance_is_bounded_and_provider_neutral() -> None:
+    waits: list[float] = []
+    result = verify_network_retry_failure_injection(
+        _registration(),
+        lambda transport: NetworkConnectorExecutor(
+            transport,
+            secret_resolver=_Secrets(),
+            sleeper=waits.append,
+            clock=lambda: 0.0,
+        ),
+        transient_statuses=(503, 429),
+    )
+    assert result.checks == (
+        "manifest_valid",
+        "synthetic_failure_injection",
+        "bounded_transient_retry",
+        "successful_recovery",
+        "response_body_isolated",
+    )
+    assert waits.count(1.0) >= 2 and waits.count(2.0) >= 2
+
+
+@pytest.mark.parametrize("statuses", [(403,), (503, 503, 503)])
+def test_formal_failure_injection_rejects_invalid_or_exhausting_profiles(statuses: tuple[int, ...]) -> None:
+    with pytest.raises(ValueError, match="(retryable HTTP statuses|leave one attempt)"):
+        verify_network_retry_failure_injection(
+            _registration(),
+            lambda transport: NetworkConnectorExecutor(transport, secret_resolver=_Secrets()),
+            transient_statuses=statuses,
+        )
 
 
 def test_runtime_fails_closed_for_secret_cursor_size_and_response_bounds() -> None:

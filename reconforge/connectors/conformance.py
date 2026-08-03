@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -10,7 +10,13 @@ from typing import Protocol
 import pandas as pd
 
 from reconforge.connectors.manifest import ConnectorCapability, ConnectorKind, ConnectorManifest
-from reconforge.connectors.network import NetworkConnectorExecutor, NetworkConnectorRegistration
+from reconforge.connectors.network import (
+    ConnectorNetworkError,
+    NetworkConnectorExecutor,
+    NetworkConnectorRegistration,
+    NetworkResponse,
+    NetworkTransport,
+)
 
 
 class ReadOnlyConnector(Protocol):
@@ -26,6 +32,26 @@ class ConformanceResult:
     connector_id: str
     manifest_digest: str
     checks: tuple[str, ...]
+
+
+@dataclass
+class _FailureInjectionTransport:
+    responses: list[NetworkResponse]
+    calls: int = 0
+
+    def get(
+        self,
+        endpoint: str,
+        *,
+        headers: dict[str, str],
+        timeout_seconds: int,
+        maximum_response_bytes: int,
+    ) -> NetworkResponse:
+        del endpoint, headers, timeout_seconds, maximum_response_bytes
+        self.calls += 1
+        if not self.responses:
+            raise ConnectorNetworkError("connector_transport_failed")
+        return self.responses.pop(0)
 
 
 def verify_manifest_portfolio(manifests: Iterable[ConnectorManifest]) -> tuple[str, ...]:
@@ -118,5 +144,53 @@ def verify_network_connector(
             "cursor_contract",
             "idempotent_replay",
             "synthetic_sandbox",
+        ),
+    )
+
+
+def verify_network_retry_failure_injection(
+    registration: NetworkConnectorRegistration,
+    executor_factory: Callable[[NetworkTransport], NetworkConnectorExecutor],
+    *,
+    transient_statuses: tuple[int, ...] = (503,),
+    idempotency_key: str = "failure-injection-1",
+    cursor: str | None = None,
+) -> ConformanceResult:
+    """Prove bounded transient retry behavior with a synthetic transport.
+
+    The caller supplies the executor factory so credential resolution and
+    timing remain explicit. No network is contacted and the synthetic
+    response body is never interpreted as provider data. This is a runtime
+    failure contract, not provider interoperability evidence.
+    """
+
+    if not transient_statuses or any(
+        status not in {408, 425, 429} and not 500 <= status <= 599 for status in transient_statuses
+    ):
+        raise ValueError("transient_statuses must contain only retryable HTTP statuses")
+    if len(transient_statuses) >= registration.manifest.retry_policy.maximum_attempts:
+        raise ValueError("failure injection must leave one attempt for success")
+    transport = _FailureInjectionTransport(
+        [*(NetworkResponse(status, b"synthetic-transient") for status in transient_statuses), NetworkResponse(200, b"{}")]
+    )
+    result = executor_factory(transport).read(
+        registration,
+        idempotency_key=idempotency_key,
+        cursor=cursor,
+    )
+    expected_attempts = len(transient_statuses) + 1
+    if result.attempts != expected_attempts or transport.calls != expected_attempts:
+        raise ValueError("network retry failure injection exceeded its declared bound")
+    if b"synthetic-transient" in result.response_body:
+        raise ValueError("transient failure body leaked into the successful response")
+    return ConformanceResult(
+        connector_id=registration.manifest.connector_id,
+        manifest_digest=registration.manifest.digest,
+        checks=(
+            "manifest_valid",
+            "synthetic_failure_injection",
+            "bounded_transient_retry",
+            "successful_recovery",
+            "response_body_isolated",
         ),
     )

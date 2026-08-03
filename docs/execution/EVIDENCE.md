@@ -11688,3 +11688,16 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - Boundary: synthetic small workload only. It does not prove PostgreSQL
   capacity, soak, backpressure, queue HA, distributed scale, or production
   SLOs.
+
+## E-314: Connector retry failure-injection conformance
+
+- Added `verify_network_retry_failure_injection` to the shared connector
+  conformance module. A synthetic transport injects retryable HTTP statuses,
+  then a successful response; the helper requires a bounded attempt count and
+  verifies the transient response body is not returned as success data.
+- Focused command: `python -m pytest tests/test_connector_network.py -q` —
+  14 passed. Ruff and mypy on the changed connector module pass.
+- Negative contracts reject non-retryable statuses and sequences that consume
+  the entire retry ceiling, preserving fail-closed behavior.
+- Boundary: no network I/O, provider sandbox, credentials, customer data, or
+  live ERP/bank interoperability is claimed.

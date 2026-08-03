@@ -262,13 +262,17 @@ modules:
         description: Verified worksheet snapshots, exact balanced journal/effect lines, maker-checker attribution, optimistic lifecycle versions, and immutable period-transition history in local SQLite.
         data_class: DC-003
         objectives: [confidentiality, integrity, availability, auditability]
+      - id: acquisition-goodwill-bridge
+        description: Source-bound consideration, NCI fair value, identifiable net assets, goodwill or policy-allowed bargain-purchase bridge with replay digest and non-posting marker.
+        data_class: DC-003
+        objectives: [confidentiality, integrity, auditability]
     actors: [ACT-001, ACT-002, ACT-004, ACT-006, ACT-007]
     threat_cases:
       - threat_id: TM-T-002
         status: bounded
         attack_surface: Money construction, currency precision, balanced-entry validation, trial-balance aggregation, explicit rate-bucket selection, translation/rounding, effective ownership graphs, exact NCI allocation, balanced elimination proposals, persisted minor-unit journals/effects, bounded worksheet replay, and JSON/CSV boundaries.
         controls: [SEC-C-002, SEC-C-005]
-        test_evidence: [tests/test_money_currency.py, tests/test_finance_core.py, tests/test_consolidation_translation.py, tests/test_consolidation_lifecycle.py, tests/test_consolidation_ownership_changes.py, tests/test_sqlite_consolidation_close.py, tests/test_postgres_ledger.py, tests/test_business_record_ingress.py]
+        test_evidence: [tests/test_money_currency.py, tests/test_finance_core.py, tests/test_consolidation_translation.py, tests/test_consolidation_lifecycle.py, tests/test_consolidation_ownership_changes.py, tests/test_consolidation_acquisition.py, tests/test_sqlite_consolidation_close.py, tests/test_postgres_ledger.py, tests/test_business_record_ingress.py]
         residual_risk_ids: [R-004]
         limitations:
           - Remaining explicit legacy financial readers outside this module retain a versioned compatibility boundary.
@@ -296,7 +300,7 @@ modules:
         residual_risk_ids: [R-014]
         limitations:
           - Artifact scope and checksum verification do not prove disclosure approval, WORM retention, production key custody, or recipient authorization.
-    module_test_evidence: [tests/test_consolidation_lifecycle.py, tests/test_consolidation_translation.py, tests/test_consolidation_ownership_changes.py, tests/test_consolidation_statement.py, tests/test_finance_core.py, tests/test_sqlite_consolidation_close.py]
+    module_test_evidence: [tests/test_consolidation_lifecycle.py, tests/test_consolidation_translation.py, tests/test_consolidation_ownership_changes.py, tests/test_consolidation_acquisition.py, tests/test_consolidation_statement.py, tests/test_finance_core.py, tests/test_sqlite_consolidation_close.py]
     assumptions:
       - Currency registry selection and source master data are reviewed before financial control use.
       - Operators approve source trial balances, group mappings, rate buckets, rate sources, and the CTA account before using a translation result.
@@ -304,7 +308,7 @@ modules:
       - Local consolidation lifecycle actors are attributable operator-controlled identities; trusted labels are not federated identity assurance.
       - Validated entries mean validated inside the local control ledger only.
     out_of_scope:
-      - Acquisition accounting, goodwill or bargain purchase, equity-method or joint-arrangement accounting, historical FX recycling, NCI ownership changes, statutory accounting/statements, tax, payment execution, source-ERP posting, legal books, PostgreSQL consolidation-lifecycle parity, hosted APIs/UI, and independent financial assurance.
+      - Full acquisition accounting, purchase-price allocation, goodwill impairment, bargain-purchase statutory treatment, equity-method or joint-arrangement accounting, historical FX recycling, NCI ownership changes, statutory accounting/statements, tax, payment execution, source-ERP posting, legal books, PostgreSQL consolidation-lifecycle parity, hosted APIs/UI, and independent financial assurance.
 
   - module_id: inventory.core
     registry_maturity: experimental

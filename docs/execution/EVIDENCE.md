@@ -11940,4 +11940,9 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - No migration, network call, journal mutation, or provider integration was
   introduced. Purchase-price allocation detail, tax, impairment, step
   acquisitions, statutory treatment, and source write-back remain unverified.
+- The first remote head `5b4f729` (CI run `30792021202`) failed only at the
+  threat-model index after `2243 passed, 67 skipped`; the new acquisition test
+  was missing from the Finance Core evidence list. The index now declares the
+  acquisition bridge asset, test evidence, and full-acquisition out-of-scope
+  boundary before the replacement CI run.
 - ADR: `docs/adr/0276-acquisition-fair-value-goodwill-bridge.md`.

@@ -255,6 +255,15 @@ include tests/test_postgres_grouped_matching_runtime.py
 include docs/adr/0268-postgres-grouped-matching-runtime-parity.md
 include docs/adr/0269-postgres-grouped-matching-crash-resume.md
 include docs/adr/0270-postgres-consolidation-journal-line-parity.md
+include reconforge/domain/consolidation_acquisition.py
+include reconforge/domain/consolidation_ppa.py
+include tests/test_consolidation_acquisition.py
+include tests/test_consolidation_ppa.py
+include docs/schemas/acquisition_fair_value_goodwill_bridge_v1.schema.json
+include docs/schemas/acquisition_purchase_price_allocation_v1.schema.json
+include docs/adr/0276-acquisition-fair-value-goodwill-bridge.md
+include docs/adr/0277-acquisition-bridge-cli-boundary.md
+include docs/adr/0278-acquisition-purchase-price-allocation-boundary.md
 include docs/adr/0251-ha-dr-operational-profile-bounds.md
 include reconforge/auth/policy_cache.py
 include tests/test_policy_cache.py

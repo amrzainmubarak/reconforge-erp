@@ -596,6 +596,23 @@ surfaces:
       - The command uses the bounded business-record JSON reader with strict UTF-8, a 64 MiB file ceiling, stable pre/post fingerprints, duplicate/non-finite rejection, and one-object/field-count limits before exact top-level contract validation.
       - Canonical Money values are reconstructed under the local currency registry; the resulting bridge is non-posting and does not authenticate source origin, authorize an actor, or prove statutory acquisition accounting.
     next_action: Add centralized source classification and operator authorization before accepting acquisition requests from hosted upload or external connector surfaces.
+  - id: FI-029
+    name: Acquisition purchase-price allocation CLI request
+    module_ids: [finance.core]
+    trust: untrusted-local
+    entrypoints:
+      - reconforge/cli.py::consolidation_acquisition_ppa_command
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002]
+    test_evidence: [tests/test_consolidation_ppa.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - The command uses the bounded business-record JSON reader with strict UTF-8, a 64 MiB file ceiling, stable pre/post fingerprints, duplicate/non-finite rejection, and one-object/field-count limits before exact item contract validation.
+      - Canonical Money values and valuation items are reconstructed under the local currency registry; the result is non-posting and does not authenticate valuation source, authorize an actor, or prove statutory treatment.
+    next_action: Add centralized source classification and operator authorization before accepting PPA requests from hosted upload or external connector surfaces.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader

@@ -78,6 +78,11 @@ from reconforge.domain.consolidation_acquisition import (
     AcquisitionFairValueBridgeRequest,
     prepare_acquisition_fair_value_bridge,
 )
+from reconforge.domain.consolidation_ppa import (
+    AcquisitionPpaItem,
+    AcquisitionPurchasePriceAllocationRequest,
+    prepare_acquisition_purchase_price_allocation,
+)
 from reconforge.enterprise_demo import EnterpriseDemoError, generate_enterprise_demo
 from reconforge.evidence.binder import generate_evidence_binder
 from reconforge.generator.synthetic import generate_synthetic_dataset
@@ -4058,6 +4063,88 @@ def consolidation_acquisition_bridge_command(
             console.print(f"[green]Acquisition bridge written:[/green] {target}")
     except (ConsolidationError, OSError, TypeError, ValueError) as exc:
         _safe_cli_error(PlatformError(f"Acquisition bridge input is invalid: {exc}"))
+
+
+@consolidation_app.command("acquisition-ppa")
+def consolidation_acquisition_ppa_command(
+    input_path: Annotated[Path, typer.Option("--input", help="JSON acquisition PPA request.")],
+    output_path: Annotated[Path | None, typer.Option("--output", help="Optional exact JSON output path.")] = None,
+) -> None:
+    """Prepare a deterministic, non-posting acquisition purchase-price allocation."""
+
+    try:
+        document = read_json_record_document(input_path, envelope_keys=("request",), allow_single_object=True)
+        if len(document.records) != 1:
+            raise PlatformError("Acquisition PPA input must contain exactly one JSON request object.")
+        raw = document.records[0]
+        expected = {
+            "acquisition_id",
+            "subsidiary_entity_code",
+            "period_id",
+            "acquisition_date",
+            "reporting_currency",
+            "consideration",
+            "nci_fair_value",
+            "items",
+            "allow_bargain_purchase",
+            "consideration_account_code",
+            "nci_account_code",
+            "identifiable_net_assets_account_code",
+            "goodwill_account_code",
+            "bargain_purchase_account_code",
+            "policy_id",
+            "policy_version",
+            "source_reference",
+            "source_digest",
+            "prepared_by",
+            "prepared_at",
+            "approved_by",
+            "approved_at",
+        }
+        if set(raw) != expected:
+            raise PlatformError("Acquisition PPA input fields are not exactly the declared contract.")
+
+        def parse_money(value: object, field: str) -> Money:
+            if not isinstance(value, dict) or not isinstance(value.get("amount"), str) or not isinstance(value.get("currency"), str):
+                raise PlatformError(f"Acquisition PPA {field} must be a canonical money object.")
+            return Money.from_exact(value["amount"], value["currency"], strict_precision=True)
+
+        raw_items = raw["items"]
+        if not isinstance(raw_items, list):
+            raise PlatformError("Acquisition PPA items must be a JSON array.")
+        item_fields = {
+            "item_id",
+            "item_kind",
+            "class_code",
+            "account_code",
+            "book_value",
+            "fair_value",
+            "valuation_reference",
+            "source_reference",
+        }
+        items: list[AcquisitionPpaItem] = []
+        for index, raw_item in enumerate(raw_items):
+            if not isinstance(raw_item, dict) or set(raw_item) != item_fields:
+                raise PlatformError(f"Acquisition PPA item {index} fields are not exactly the declared contract.")
+            item_values = dict(raw_item)
+            item_values["book_value"] = parse_money(raw_item["book_value"], f"item {index} book_value")
+            item_values["fair_value"] = parse_money(raw_item["fair_value"], f"item {index} fair_value")
+            items.append(AcquisitionPpaItem(**item_values))
+
+        values = dict(raw)
+        values["consideration"] = parse_money(raw["consideration"], "consideration")
+        values["nci_fair_value"] = parse_money(raw["nci_fair_value"], "nci_fair_value")
+        values["items"] = tuple(items)
+        result = prepare_acquisition_purchase_price_allocation(AcquisitionPurchasePriceAllocationRequest(**values))
+        rendered = json.dumps(result.to_dict(), sort_keys=True, indent=2)
+        if output_path is None:
+            console.print(rendered)
+        else:
+            target = ensure_output_dir(output_path.parent) / output_path.name
+            target.write_text(rendered + "\n", encoding="utf-8", newline="\n")
+            console.print(f"[green]Acquisition PPA written:[/green] {target}")
+    except (ConsolidationError, OSError, TypeError, ValueError) as exc:
+        _safe_cli_error(PlatformError(f"Acquisition PPA input is invalid: {exc}"))
 
 
 @approvals_app.command("submit")

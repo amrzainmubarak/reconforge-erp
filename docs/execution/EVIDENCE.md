@@ -11976,3 +11976,22 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - No database, network, approval, posting, provider, or source-system effect
   is introduced. This remains local non-posting evidence preparation.
 - ADR: `docs/adr/0277-acquisition-bridge-cli-boundary.md`.
+
+## E-327: Acquisition purchase-price allocation detail
+
+- Local command: `python -m pytest tests/test_consolidation_ppa.py -q -ra`
+  -> 5 passed. The target covers exact asset/liability reconciliation,
+  permutation-stable request/result digests, negative-net-assets refusal,
+  tamper detection, schema validation, and the read-only CLI contract.
+- `acquisition_purchase_price_allocation_v1.schema.json`, Finance Core module
+  export metadata, threat-model asset/test evidence, and file-ingestion
+  surface `FI-029` are bound to the implementation. The combined
+  consolidation/ingress/module/threat target passed 34/34; the full current
+  collection passed with 2,317 tests collected and no failures, with only
+  environment-declared PostgreSQL/object-storage/Redis/privilege skips.
+  Ruff, Mypy, Bandit, pip-audit, package build, and diff-check also passed.
+- Boundary: non-posting local evidence only. It does not decide statutory
+  acquisition treatment, tax/deferred tax, impairment, equity method,
+  PostgreSQL persistence/parity, source write-back, or independent valuation
+  assurance.
+- ADR: `docs/adr/0278-acquisition-purchase-price-allocation-boundary.md`.

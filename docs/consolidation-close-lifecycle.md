@@ -59,11 +59,16 @@ database.
 
 ## Current Limits
 
-- No PostgreSQL consolidation lifecycle parity yet.
-- No hosted API, CLI, or Studio workflow yet.
-- No acquisition accounting, goodwill/bargain purchase, ownership-change model,
+- PostgreSQL control-journal/run-line replay and certification parity exists for
+  the bounded server contract; complete close mutation and statutory lifecycle
+  parity remain out of scope.
+- Read-only hosted API and local CLI drill-downs exist; no Studio workflow for
+  this lifecycle is claimed.
+- Non-posting acquisition fair-value/goodwill and item-level PPA artifacts plus
+  effective-dated ownership evidence exist. Statutory acquisition accounting,
   equity-method/joint-arrangement accounting, remeasurement, statement
-  presentation, tax, certification, payment execution, or ERP/bank write-back.
+  presentation, tax, impairment, payment execution, or ERP/bank write-back do
+  not.
 - `Posted` is local control-journal evidence only. It is not a statutory posting
   and does not validate or mutate Finance Core entries.
 - Local actor labels are not SSO/MFA assurance.

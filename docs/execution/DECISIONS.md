@@ -2520,3 +2520,19 @@
 - **Boundary**: no database/network side effect, approval, posting, statutory
   workflow, provider integration, or source write-back.
 - **ADR**: `docs/adr/0277-acquisition-bridge-cli-boundary.md`.
+
+## D274 - Add non-posting acquisition purchase-price allocation detail
+
+- **Decision**: add `acquisition-purchase-price-allocation-v1` as a pure
+  Decimal/Money artifact over an explicitly supplied, bounded list of
+  identifiable assets and liabilities. Canonically order items by stable ID,
+  reconcile book and fair-value net assets, and embed the existing verified
+  goodwill/bargain bridge.
+- **Rationale**: deep-close review needs traceable valuation detail without
+  inventing tax, impairment, or statutory judgments. A distinct artifact
+  prevents the existing goodwill bridge from silently becoming a full PPA or
+  posting engine.
+- **Boundary**: no tax/deferred-tax effects, impairment, statutory treatment,
+  equity method, ledger posting, PostgreSQL persistence/parity, source
+  write-back, or independent valuation assurance.
+- **ADR**: `docs/adr/0278-acquisition-purchase-price-allocation-boundary.md`.

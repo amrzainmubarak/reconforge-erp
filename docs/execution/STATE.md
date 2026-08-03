@@ -592,6 +592,29 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   database mutation, network call, live provider, or source write-back claim.
 - ADR: `docs/adr/0277-acquisition-bridge-cli-boundary.md`.
 
+### E-327 complete: acquisition purchase-price allocation detail
+
+- `reconforge/domain/consolidation_ppa.py` adds the closed
+  `acquisition-purchase-price-allocation-v1` contract. Source-bound asset and
+  liability items carry exact book/fair values, valuation references, and
+  signed fair-value adjustments. Stable item IDs canonicalize equivalent input
+  permutations; the artifact reconciles book net assets to fair-value net
+  assets and embeds the verified goodwill/bargain bridge.
+- The result is maker-checker attributed through the request digest,
+  replay/tamper-verifiable, balanced, and permanently `posted: false`. The
+  read-only `reconforge consolidation acquisition-ppa` CLI uses bounded
+  structured ingress and rejects unknown request or item fields.
+- Boundary: no tax/deferred-tax effects, impairment, statutory accounting
+  judgment, ledger posting, PostgreSQL persistence/parity, provider
+  interoperability, or source-system write-back.
+- Local evidence: the focused PPA target passed 5/5; the combined
+  consolidation/ingress/module/threat target passed 34/34; the full current
+  suite collected 2,317 tests with no failures, while environment-declared
+  PostgreSQL/object-storage/Redis and privilege-dependent cases remained
+  skipped. Ruff, Mypy, Bandit, dependency audit, package build, and diff-check
+  passed.
+- ADR: `docs/adr/0278-acquisition-purchase-price-allocation-boundary.md`.
+
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio
 
 ### E-260 complete: bounded grouped and netting matcher

@@ -15,7 +15,7 @@ This backlog is a planning contract, not a capability list. Status labels preven
 | Capability | Status | Delivery note |
 | --- | --- | --- |
 | Organizations, companies, branches, departments | Foundation | Governed organization/entity/branch services, RBAC, audit events, API/CLI, and snapshot now exist; departments remain planned. |
-| Multi-company | Foundation | Governed organizations/entities, deterministic translation, a non-posting effective-ownership/NCI/balanced-elimination worksheet, and a local SQLite verified-worksheet close lifecycle with maker-checker approval, exact control-journal effects, and lock/reopen evidence exist; persisted ownership masters, acquisition policy, PostgreSQL/API/UI parity, live providers, write-back, and statutory statements remain planned. |
+| Multi-company | Foundation | Governed organizations/entities, deterministic translation, effective ownership/NCI/elimination evidence, non-posting acquisition fair-value/goodwill and item-level PPA artifacts, and a local SQLite verified-worksheet close lifecycle with maker-checker approval, exact control-journal effects, and lock/reopen evidence exist; statutory policy, PostgreSQL/API/UI parity, live providers, write-back, and statutory statements remain planned. |
 | Multi-currency | Foundation | Versioned currency precision and an operator-supplied, source-bound period-rate translation artifact exist; live rates, functional-currency remeasurement, posting, and statutory policy assurance remain planned. |
 | Multi-language | This slice | English/Arabic client dictionary foundation only. |
 | Arabic + English support | This slice | UI shell translation foundation; no claim of complete accounting localization. |

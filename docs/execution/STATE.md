@@ -6,7 +6,7 @@ Updated: 2026-08-03
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
-## E-333 — Authenticated PostgreSQL PPA evidence API (in progress)
+## E-333 — Authenticated PostgreSQL PPA evidence API (complete bounded slice)
 
 - Added strict, additive `POST /api/v1/consolidation-ppa` and
   `GET /api/v1/consolidation-ppa/{artifact_id}` routes. Preparation requires
@@ -16,8 +16,15 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   tenant transaction/RLS boundary and PPA repository, and preserve the
   replay-verified `posted: false` evidence contract. Local mode fails closed
   instead of falling back to SQLite.
-- Focused API/authorization tests pass locally. Full gates and CI confirmation
-  are pending; the route contract is not yet live-runtime evidence.
+- Focused API/authorization tests pass locally. The full local suite collected
+  2,336 tests and passed with zero failures/errors; Ruff, Mypy, Bandit, package
+  build, pip-audit, and diff checks also pass. CI run `30814401814` passed the
+  Python 3.11/3.12, server-boundaries, engine-parity, and Docker-parity jobs;
+  Security `30814401794`, Docker `30814404291`, and CodeQL `30814402171` also
+  passed.
+- The route contract is still not live-runtime evidence: E-332's
+  `30811914832` is the live gate for the underlying PostgreSQL persistence
+  adapter, not a hosted API deployment.
 
 ## E-293 — Immutable local delegation administration
 

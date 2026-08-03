@@ -12132,8 +12132,14 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   canonical Money values, binds `prepared_by` to `/auth/me`, and delegates to
   `AcquisitionPpaApplicationService` through the existing tenant PostgreSQL
   boundary. Responses retain the durable artifact's `posted: false` marker.
-- Ruff, Mypy, and `git diff --check` pass for the slice. Full local gates and
-  CI are pending at this evidence checkpoint.
+- Full local command: `uv run pytest -q -ra` -> 2,336 tests collected,
+  zero failures/errors in 338.4 seconds on Windows; only declared external
+  PostgreSQL/S3/Redis/host-capability skips remain. Ruff, Mypy, Bandit,
+  package build, pip-audit, and `git diff --check` also pass. The package
+  archive contains the new route, test, and ADR.
+- CI run `30814401814` passed Python 3.11/3.12, server-boundaries,
+  engine-parity, and Docker-parity; Security `30814401794`, Docker
+  `30814404291`, and CodeQL `30814402171` passed on the same commit.
 - Runtime boundary: this is API contract evidence only. E-332's CI run
   `30811914832` remains the live evidence for the underlying PostgreSQL
   persistence adapter; no hosted API, statutory posting, provider, write-back,

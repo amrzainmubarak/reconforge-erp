@@ -544,6 +544,10 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   `translation_evidence` in run detail.
 - Local command: `python -m pytest tests/test_consolidation_cli.py -q -ra`
   -> 2 passed. The unknown-run case exits through the bounded CLI error path.
+- Implementation commit `81bcaa2` passed CI run `30791340686`, including
+  server-boundaries job `91615324419`, both Python jobs, all four
+  engine-parity jobs, and Docker parity `91616203160`; Security
+  `30791340616` and CodeQL `30791340591` also passed.
 - Boundary: read-only local operator evidence only. Full lifecycle mutation,
   statutory statements, live rates, source-system write-back, PostgreSQL CLI
   parity, and UI exposure remain open.
@@ -561,6 +565,10 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Local command: `python -m pytest tests/test_consolidation_acquisition.py
   tests/test_module_registry.py -q -ra` -> 16 passed. Ruff and Mypy pass for
   the changed domain/registry files.
+- Corrected implementation head `408fa84` passed CI run `30792498056`,
+  including server-boundaries job `91618814357`, both Python jobs, all four
+  engine-parity jobs, and Docker parity `91619902895`; Security
+  `30792497800` and CodeQL `30792497786` also passed.
 - Boundary: no purchase-price allocation engine, tax/deferred-tax treatment,
   impairment, step acquisition/disposal, statutory classification, journal
   posting, live rate, or source write-back claim.

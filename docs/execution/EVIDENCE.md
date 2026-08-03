@@ -12208,6 +12208,9 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   the worker boundary. The local environment has no PostgreSQL service, so the
   live cases remain declared capability skips here; CI server-boundaries is the
   required runtime evidence gate.
+- CI run `30820862956` passed Python 3.11/3.12, server-boundaries, all engine-
+  parity cells, and Docker-parity. Security `30820863921`, Docker `30820864225`,
+  and CodeQL `30820865109` also passed on the corrected YAML head.
 - This does not prove settlement posting, provider acknowledgement, live fee
   policy, statutory accounting, scale, soak/backpressure, distributed
   capacity, HA/DR, or production readiness.

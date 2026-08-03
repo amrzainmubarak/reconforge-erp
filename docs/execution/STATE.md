@@ -584,6 +584,10 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Local command: `python -m pytest tests/test_consolidation_acquisition.py -q -ra`
   -> 8 passed, including stdout/file replay and unknown-field rejection. Full
   Ruff, Mypy, and diff-check pass.
+- Corrected head `0dcadf2` passed CI run `30794127503`, including
+  server-boundaries job `91623768262`, both Python jobs, all four
+  engine-parity jobs, and Docker parity `91624882551`; Security
+  `30794127496` and CodeQL `30794127540` also passed.
 - Boundary: local read-only artifact preparation only. No approval, posting,
   database mutation, network call, live provider, or source write-back claim.
 - ADR: `docs/adr/0277-acquisition-bridge-cli-boundary.md`.

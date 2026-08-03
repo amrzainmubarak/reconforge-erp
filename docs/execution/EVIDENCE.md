@@ -11969,6 +11969,10 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   `json.loads` call. The implementation now uses the bounded business-record
   reader and declares surface `FI-028`; the replacement CI run must prove both
   the security inventory and the full suite.
+- Corrected head `0dcadf2` passed CI run `30794127503`, including
+  server-boundaries job `91623768262`, both Python jobs, all four
+  engine-parity jobs, and Docker parity `91624882551`; Security
+  `30794127496` and CodeQL `30794127540` also passed.
 - No database, network, approval, posting, provider, or source-system effect
   is introduced. This remains local non-posting evidence preparation.
 - ADR: `docs/adr/0277-acquisition-bridge-cli-boundary.md`.

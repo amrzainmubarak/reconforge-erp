@@ -22,7 +22,11 @@ from starlette.staticfiles import StaticFiles
 from starlette.types import Scope
 
 from reconforge import __version__
-from reconforge.api.authorization import authorization_inventory_digest, build_route_authorization_inventory
+from reconforge.api.authorization import (
+    authorization_inventory_digest,
+    build_route_authorization_inventory,
+    validate_authorization_surface,
+)
 from reconforge.api.browser_session import BROWSER_SESSION_COOKIE
 from reconforge.api.errors import (
     APIError,
@@ -389,5 +393,6 @@ def create_api_app(
         (scim.router,), prefix="", public_routes=frozenset(), identity_routes=frozenset()
     )
     app.state.authorization_contracts = tuple(sorted((*core_contracts, *scim_contracts)))
+    validate_authorization_surface(app.state.authorization_contracts)
     app.state.authorization_contract_digest = authorization_inventory_digest(app.state.authorization_contracts)
     return app

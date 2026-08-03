@@ -1072,6 +1072,7 @@ tasks:
       - E-302 adds migration 0056 and `PostgresDelegationRepository` with exact typed grant conversion, tenant/workspace scope validation, explicit evaluation instants, forced RLS, and database-enforced append-only revocation. Focused schema/migration/repository contracts and CI server-boundaries run 30771736208 pass the live PostgreSQL create/effective-read/revoke/isolation gate under ADR 0253; federation, route coverage, and cache invalidation wiring remain open.
       - E-303 adds explicit `policy_cache_enabled` API configuration, cache-backed all/any permission dependencies, and global invalidation after every non-safe HTTP request. Focused cache/API compatibility tests pass under ADR 0254; distributed invalidation and route-specific scope optimization remain open.
       - E-305 adds explicit field-level authorization inputs to the central policy helper and a deterministic `project_fields` primitive. Unauthorized fields deny; authorized masked fields become `[REDACTED]` with digest evidence. Complete route/action/UI migration remains open.
+      - E-321 adds a startup fail-closed validator over the closed API route inventory. Every mutating route must be permission-bearing or dynamic unless it is in an explicit authentication/WebAuthn/step-up handshake allowlist; SCIM remains separately classified. Existing route count/digest stay unchanged. Federation, policy administration, distributed invalidation, and jobs/exports/UI coverage remain open under ADR 0272.
 
   - id: P4-PLAT-001
     priority: P4

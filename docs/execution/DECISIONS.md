@@ -2438,3 +2438,18 @@
   rates, statutory treatment, ERP/bank write-back, HA/DR, scale, or production
   readiness.
 - **ADR**: `docs/adr/0271-consolidation-translation-evidence-projection.md`.
+
+## D268 - Make mutating API route policy fail closed at startup
+
+- **Decision**: validate the route authorization inventory during app
+  construction. Public/identity mutation routes must be in explicit handshake
+  allowlists; other mutations require permission-bearing or dynamic policy
+  contracts, while SCIM is explicitly classified as its own protocol boundary.
+- **Rationale**: A new mutation with a missing or overly broad dependency must
+  fail deterministically before serving requests. The existing inventory digest
+  remains stable; this adds a validation gate rather than silently changing
+  route contracts.
+- **Boundary**: API route/action classification only; federation, policy
+  administration, distributed invalidation, and jobs/exports/UI coverage stay
+  open.
+- **ADR**: `docs/adr/0272-api-mutating-authorization-surface-gate.md`.

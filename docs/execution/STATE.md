@@ -481,6 +481,21 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   HA/DR, scale, or production-readiness claim is made. ADR 0271 records the
   decision.
 
+### E-321 complete: fail-closed mutating API authorization surface
+
+- Application construction now validates the closed route inventory for every
+  `POST`/`PUT`/`PATCH`/`DELETE` operation. Non-handshake mutations must carry an
+  explicit permission-bearing (`all`/`any`) or governed `dynamic` contract;
+  SCIM remains explicitly classified. Public and identity-only mutations are
+  restricted to deliberate auth/WebAuthn/step-up allowlists.
+- Local command: `python -m pytest tests/test_api_authorization_inventory.py
+  -q -ra` -> 4 passed; Ruff and Mypy pass for the changed API files. Existing
+  route inventory count/digest remains unchanged.
+- Boundary: route/action coverage only. OIDC/SAML/SCIM provisioning,
+  distributed cache invalidation, complete ABAC administration, and jobs/
+  exports/UI enforcement remain open.
+- ADR: `docs/adr/0272-api-mutating-authorization-surface-gate.md`.
+
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio
 
 ### E-260 complete: bounded grouped and netting matcher

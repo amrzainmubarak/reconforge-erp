@@ -11849,3 +11849,19 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   interoperability, write-back, HA/DR, scale, and production readiness remain
   unverified.
 - ADR: `docs/adr/0271-consolidation-translation-evidence-projection.md`.
+
+## E-321: Fail-closed mutating API authorization surface
+
+- `validate_authorization_surface` runs during FastAPI app construction over
+  the existing 206-operation inventory. Public and identity-only mutations are
+  restricted to explicit auth/WebAuthn/step-up allowlists; all other mutation
+  routes require `all`/`any` permissions or `dynamic` policy, with SCIM
+  explicitly classified as a separate protocol.
+- Local command: `python -m pytest tests/test_api_authorization_inventory.py
+  -q -ra` -> 4 passed. Ruff and Mypy pass; the existing inventory count and
+  digest remain `206` and
+  `fc4fe5e4a9ba708ef921e268a68850e8e68adc57d49283d8356b14790b9dd43c`.
+- Negative tests prove public, identity-only, and permissionless mutation
+  contracts fail closed. This does not claim complete federation, ABAC
+  administration, distributed cache invalidation, or jobs/exports/UI coverage.
+- ADR: `docs/adr/0272-api-mutating-authorization-surface-gate.md`.

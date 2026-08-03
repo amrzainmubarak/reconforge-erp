@@ -21,6 +21,30 @@ class RouteAuthorizationContract:
     permissions: tuple[str, ...] = ()
 
 
+_MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+_PUBLIC_MUTATION_ALLOWLIST = frozenset(
+    {
+        ("POST", "/api/v1/auth/login"),
+        ("POST", "/api/v1/auth/browser/login"),
+        ("POST", "/api/v1/auth/federation/challenge"),
+        ("POST", "/api/v1/auth/federated-login"),
+    }
+)
+_IDENTITY_MUTATION_ALLOWLIST = frozenset(
+    {
+        ("POST", "/api/v1/auth/logout"),
+        ("POST", "/api/v1/auth/step-up"),
+        ("POST", "/api/v1/auth/emergency-access/requests"),
+        ("POST", "/api/v1/auth/emergency-access/requests/{access_id}/activate"),
+        ("POST", "/api/v1/auth/emergency-access/requests/{access_id}/end"),
+        ("POST", "/api/v1/auth/webauthn/registration/options"),
+        ("POST", "/api/v1/auth/webauthn/registration/verify"),
+        ("POST", "/api/v1/auth/webauthn/authentication/options"),
+        ("POST", "/api/v1/auth/webauthn/authentication/verify"),
+    }
+)
+
+
 def _dependency_contract(route: APIRoute) -> tuple[str, tuple[str, ...]] | None:
     found: set[tuple[str, tuple[str, ...]]] = set()
     pending = list(route.dependant.dependencies)
@@ -84,3 +108,26 @@ def authorization_inventory_digest(contracts: Iterable[RouteAuthorizationContrac
         ensure_ascii=True,
     ).encode("ascii")
     return hashlib.sha256(payload).hexdigest()
+
+
+def validate_authorization_surface(contracts: Iterable[RouteAuthorizationContract]) -> None:
+    """Fail closed when a mutating route escapes its declared policy boundary.
+
+    Public and identity-only mutations are deliberately limited to the small
+    authentication handshake allowlists. SCIM is a separate protocol boundary
+    and is classified explicitly by its `scim` mode. Every other mutation must
+    carry a permission-bearing or dynamic policy contract.
+    """
+
+    for contract in contracts:
+        key = (contract.method, contract.path)
+        if contract.method not in _MUTATING_METHODS:
+            continue
+        if contract.mode == "public" and key not in _PUBLIC_MUTATION_ALLOWLIST:
+            raise ValueError(f"Mutating API route is publicly authorized: {contract.method} {contract.path}.")
+        if contract.mode == "identity" and key not in _IDENTITY_MUTATION_ALLOWLIST:
+            raise ValueError(f"Mutating API route has identity-only authorization: {contract.method} {contract.path}.")
+        if contract.mode in {"all", "any"} and not contract.permissions:
+            raise ValueError(f"Mutating API route lacks a permission contract: {contract.method} {contract.path}.")
+        if contract.mode not in {"all", "any", "dynamic", "identity", "public", "scim"}:
+            raise ValueError(f"Mutating API route has unsupported authorization mode: {contract.method} {contract.path}.")

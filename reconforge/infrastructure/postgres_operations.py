@@ -70,6 +70,7 @@ POSTGRES_MIGRATION_REVISIONS = (
     "0057_pg_consol_journal_lines",
     "0058_pg_policy_permission_scopes",
     "0059_pg_policy_amt_bounds",
+    "0060_pg_consolidation_ppa",
 )
 
 

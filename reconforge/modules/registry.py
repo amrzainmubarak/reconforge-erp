@@ -270,6 +270,8 @@ _MODULES = (
             "tests/test_consolidation_statement.py",
             "tests/test_finance_core.py",
             "tests/test_sqlite_consolidation_close.py",
+            "tests/test_postgres_consolidation_ppa.py",
+            "tests/test_postgres_consolidation_ppa_runtime.py",
         ),
     ),
     ModuleDescriptor(

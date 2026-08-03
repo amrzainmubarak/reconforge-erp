@@ -1,5 +1,9 @@
 """Backend-neutral ReconForge application use cases."""
 
+from reconforge.application.consolidation_ppa import (
+    AcquisitionPpaApplicationService,
+    AcquisitionPpaRepositoryProtocol,
+)
 from reconforge.application.grouped_matching import (
     GroupedMatchingApplicationService,
     GroupedMatchRequest,
@@ -32,6 +36,8 @@ from reconforge.application.workspace_periods import (
 
 __all__ = [
     "DurableJobApplicationService",
+    "AcquisitionPpaApplicationService",
+    "AcquisitionPpaRepositoryProtocol",
     "GovernedDurableJobApplicationService",
     "JobAuthorizationError",
     "DurableJobNotFoundError",

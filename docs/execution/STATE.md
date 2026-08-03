@@ -694,6 +694,26 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   effectiveness remain open.
 - ADR: `docs/adr/0282-postgres-policy-scope-amount-bounds.md`.
 
+### E-332 in progress: PostgreSQL persisted non-posting acquisition PPA evidence
+
+- Added the backend-neutral `AcquisitionPpaApplicationService` and the
+  tenant-scoped `PostgresConsolidationPpaRepository` behind Alembic
+  `0060_pg_consolidation_ppa`. The adapter stores canonical request/result
+  JSONB, exact request/result digests, maker-checker attribution, and a
+  permanently `posted: false` marker.
+- Persistence recomputes and verifies the PPA result before insert, derives a
+  deterministic tenant-bound artifact ID, makes identical retries idempotent,
+  emits an audit event, and replay-verifies reads. PostgreSQL forced RLS plus
+  trigger-enforced append-only rows prevent sibling-tenant reads and direct
+  update/delete tampering.
+- Local focused contracts, Ruff, Mypy, and diff-check pass. The live
+  PostgreSQL runtime gate is pending CI on this head; parity remains
+  `contract_only` until that gate passes.
+- Boundary: evidence storage only. No statutory acquisition accounting,
+  tax/deferred-tax, impairment, journal posting, live rates, ERP/bank
+  connector, source write-back, restore, HA/DR, or production-readiness claim.
+- ADR: `docs/adr/0283-postgres-consolidation-ppa-evidence-is-non-posting.md`.
+
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio
 
 ### E-260 complete: bounded grouped and netting matcher

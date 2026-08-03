@@ -630,6 +630,23 @@ surfaces:
       - The command uses the bounded business-record JSON reader with strict UTF-8, a 64 MiB file ceiling, stable pre/post fingerprints, duplicate/non-finite rejection, and exact nested grant/scope field validation.
       - Analysis is read-only and does not mutate roles, permissions, sessions, policies, or routes; it does not prove provider federation, PostgreSQL RLS, or complete surface adoption.
     next_action: Bind policy-analysis requests to centralized operator authorization and provider-backed policy administration only after route/job/export/UI coverage is complete.
+  - id: FI-031
+    name: PostgreSQL acquisition PPA evidence records
+    module_ids: [finance.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/postgres_consolidation_ppa.py::PostgresConsolidationPpaRepository._decode_row
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_postgres_consolidation_ppa.py, tests/test_postgres_consolidation_ppa_runtime.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The JSONB values are internal canonical request/result evidence, not uploads or executable content; replay verification rejects malformed or tampered rows.
+      - The live runtime gate is synthetic and single-node; statutory acquisition accounting, restore, HA/DR, provider integration, and source write-back remain open.
+    next_action: Preserve the append-only replay boundary and promote the parity inventory only after the unskipped CI runtime gate passes.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader
@@ -692,6 +709,11 @@ direct_json_parser_allowlist:
     call_count: 1
     surface_id: FI-027
     rationale: Parses only a bounded JSONB worksheet fallback before exact worksheet replay, canonical digest, and journal digest verification; malformed or conflicting persisted evidence fails closed.
+  - path: reconforge/infrastructure/postgres_consolidation_ppa.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-031
+    rationale: Parses only the canonical PostgreSQL JSONB PPA result before closed replay verification, immutable posted=false enforcement, and tenant-scoped evidence return; malformed or tampered persisted data fails closed.
   - path: reconforge/upgrade/application_adapter.py
     parser: json.loads
     call_count: 1

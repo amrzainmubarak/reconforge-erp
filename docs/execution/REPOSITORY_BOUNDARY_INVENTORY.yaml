@@ -40,6 +40,10 @@ application_services:
     status: backend_neutral
     adapter: reconforge.infrastructure.sqlite_consolidation_ownership.SQLiteConsolidationOwnershipRepository
     postgres_adapter: reconforge.infrastructure.postgres_consolidation_ownership.PostgresConsolidationOwnershipRepository
+  - file: consolidation_ppa.py
+    service: AcquisitionPpaApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_consolidation_ppa.PostgresConsolidationPpaRepository
   - file: grouped_matching.py
     service: GroupedMatchingApplicationService
     status: backend_neutral
@@ -185,4 +189,4 @@ summary:
   direct_sqlite: 0
   partial_repository: 0
   compatibility_adapter: 20
-  backend_neutral_application: 38
+  backend_neutral_application: 39

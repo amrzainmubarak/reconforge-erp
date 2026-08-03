@@ -2602,3 +2602,20 @@
   reversed, and evidence-losing downgrade paths; federation, distributed
   invalidation, and complete route/job/export/UI adoption remain open.
 - **ADR**: `docs/adr/0282-postgres-policy-scope-amount-bounds.md`.
+
+## D279 - Persist non-posting PostgreSQL acquisition PPA evidence
+
+- **Decision**: add Alembic `0060_pg_consolidation_ppa`, a backend-neutral
+  `AcquisitionPpaApplicationService`, and a tenant-RLS PostgreSQL adapter for
+  the existing deterministic PPA artifact. Store canonical request/result
+  JSONB, digests, maker-checker identity, audit evidence, and an immutable
+  `posted: false` marker; verify by recomputation on writes and reads.
+- **Rationale**: deep-close evidence needs durable, tenant-isolated replay
+  without silently creating a statutory posting path. Idempotent artifact
+  identity and append-only database guards make retries and tamper attempts
+  reviewable.
+- **Boundary**: no statutory acquisition accounting, tax/deferred tax,
+  impairment, journal posting, live rates, provider connector, source
+  write-back, restore, HA/DR, or production-readiness claim. Downgrade refuses
+  while PPA evidence exists.
+- **ADR**: `docs/adr/0283-postgres-consolidation-ppa-evidence-is-non-posting.md`.

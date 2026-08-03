@@ -12092,3 +12092,27 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - The live claim remains synthetic single-node evidence; the prior E-330
   runtime is retained as historical dimension-scope evidence.
 - ADR: `docs/adr/0282-postgres-policy-scope-amount-bounds.md`.
+
+## E-332: PostgreSQL persisted non-posting acquisition PPA evidence
+
+- Local contract command: `uv run pytest -q tests/test_consolidation_ppa.py
+  tests/test_postgres_consolidation_ppa.py
+  tests/test_postgres_consolidation_ppa_runtime.py
+  tests/test_postgres_operations.py tests/test_alembic_postgres.py
+  tests/test_postgres_parity_inventory.py tests/test_repository_boundary_inventory.py`
+  -> focused tests pass with only declared PostgreSQL capability skips. Ruff,
+  Mypy, and `git diff --check` pass for the slice.
+- Alembic `0060_pg_consolidation_ppa` creates a tenant-forced-RLS,
+  append-only `consolidation_ppa_artifacts` table. The adapter stores canonical
+  request/result JSONB and exact digests, recomputes the PPA before insert,
+  makes identical retries idempotent, emits an audit event, and replay-verifies
+  reads. A false `posted` marker is enforced by both application and database.
+- The dedicated runtime test is intentionally unskipped only when
+  `RECONFORGE_TEST_POSTGRES_DSN` is supplied; on this local environment it is
+  a declared capability skip. CI server-boundaries evidence is pending for the
+  current head, so the parity inventory remains `contract_only`.
+- Boundary: durable evidence storage only. This does not prove statutory
+  acquisition accounting, tax/deferred-tax, impairment, journal posting, live
+  rates, ERP/bank providers, source write-back, restore, HA/DR, or production
+  readiness.
+- ADR: `docs/adr/0283-postgres-consolidation-ppa-evidence-is-non-posting.md`.

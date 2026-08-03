@@ -114,6 +114,7 @@ allowed_statuses: [live_verified_current, live_test_available, contract_only, ab
 boundaries:
   - {file: consolidation_close.py, service: ConsolidationCloseApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_close.PostgresConsolidationCloseRepository, test: tests/test_postgres_consolidation_close.py, risk: single_node_control_journal_only_no_erp_writeback_or_restore_ha_evidence}
   - {file: consolidation_ownership.py, service: ConsolidationOwnershipApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_ownership.PostgresConsolidationOwnershipRepository, test: tests/test_postgres_consolidation_ownership.py, risk: single_node_runtime_only_no_restore_or_ha_evidence}
+  - {file: consolidation_ppa.py, service: AcquisitionPpaApplicationService, status: contract_only, adapter: reconforge.infrastructure.postgres_consolidation_ppa.PostgresConsolidationPpaRepository, test: tests/test_postgres_consolidation_ppa_runtime.py, risk: pending_live_gate_non_posting_only_no_statutory_or_writeback}
   - {file: consolidation.py, service: ConsolidationApplicationService, status: not_applicable, reason: immutable_scoped_object_store_artifact_repository}
   - {file: grouped_matching.py, service: GroupedMatchingApplicationService, status: not_applicable, reason: pure_strategy}
   - {file: backup_restore.py, service: BackupRestoreApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_backup.PostgresNativeBackupAdapter, test: tests/test_postgres_backup.py, risk: recovery_critical}
@@ -151,9 +152,9 @@ boundaries:
   - {file: inventory_valuation_reversal.py, service: InventoryValuationReversalApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_valuation_reversal.PostgresInventoryValuationReversalRepository, test: tests/test_postgres_inventory_valuation_reversal.py, risk: financial_critical}
   - {file: inventory_planning.py, service: InventoryPlanningApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_planning.PostgresInventoryPlanningRepository, test: tests/test_postgres_inventory_planning.py, risk: financial_high}
 summary:
-  total: 38
+  total: 39
   live_verified_current: 14
   live_test_available: 21
   absent: 0
-  contract_only: 1
+  contract_only: 2
   not_applicable: 2

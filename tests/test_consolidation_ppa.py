@@ -9,6 +9,7 @@ import pytest
 from jsonschema import Draft202012Validator
 from typer.testing import CliRunner
 
+from reconforge.application.consolidation_ppa import AcquisitionPpaApplicationService
 from reconforge.cli import app
 from reconforge.domain.consolidation import ConsolidationError
 from reconforge.domain.consolidation_ppa import (
@@ -149,3 +150,23 @@ def test_ppa_schema_and_read_only_cli_contract(tmp_path: Path) -> None:
     rejected = runner.invoke(app, ["consolidation", "acquisition-ppa", "--input", str(input_path)])
     assert rejected.exit_code != 0
     assert "declared contract" in rejected.stdout
+
+
+def test_ppa_application_service_prepares_once_at_the_repository_boundary() -> None:
+    class Repository:
+        def __init__(self) -> None:
+            self.calls: list[tuple[object, object]] = []
+
+        def persist(self, request: object, result: object, **_kwargs: object) -> dict[str, object]:
+            self.calls.append((request, result))
+            return {"result_digest": result.result_digest}  # type: ignore[union-attr]
+
+        def get(self, _artifact_id: str, **_kwargs: object) -> dict[str, object]:
+            return {}
+
+    repository = Repository()
+    response = AcquisitionPpaApplicationService(repository).prepare_and_persist(
+        _request(), actor_label="preparer"
+    )
+    assert response["result_digest"]
+    assert len(repository.calls) == 1

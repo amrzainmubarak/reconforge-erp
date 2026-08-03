@@ -184,6 +184,10 @@ include tests/test_sqlite_consolidation_close.py
 include reconforge/application/consolidation_ownership.py
 include reconforge/infrastructure/sqlite_consolidation_ownership.py
 include tests/test_sqlite_consolidation_ownership.py
+include reconforge/application/consolidation_ppa.py
+include reconforge/infrastructure/postgres_consolidation_ppa.py
+include tests/test_postgres_consolidation_ppa.py
+include tests/test_postgres_consolidation_ppa_runtime.py
 include docs/adr/0233-persist-effective-dated-consolidation-ownership.md
 include docs/execution/benchmarks/consolidation-ownership-master-v1.md
 include reconforge/infrastructure/postgres_consolidation_ownership.py
@@ -277,6 +281,7 @@ include docs/adr/0279-enterprise-policy-conflict-analysis.md
 include docs/adr/0280-postgres-policy-snapshot-analysis.md
 include docs/adr/0281-postgres-policy-permission-scopes.md
 include docs/adr/0282-postgres-policy-scope-amount-bounds.md
+include docs/adr/0283-postgres-consolidation-ppa-evidence-is-non-posting.md
 include docs/adr/0251-ha-dr-operational-profile-bounds.md
 include reconforge/auth/policy_cache.py
 include tests/test_policy_cache.py
@@ -378,6 +383,7 @@ include alembic/versions/0056_postgres_policy_delegations.py
 include alembic/versions/0057_postgres_consolidation_journal_lines.py
 include alembic/versions/0058_postgres_policy_permission_scopes.py
 include alembic/versions/0059_postgres_policy_scope_amount_bounds.py
+include alembic/versions/0060_postgres_consolidation_ppa.py
 include docs/adr/0243-expiring-delegation-is-explicit-and-replayable.md
 include docs/adr/0244-local-delegation-administration-is-immutable-and-tenant-scoped.md
 include docs/adr/0245-postgres-durable-job-runtime-gate.md

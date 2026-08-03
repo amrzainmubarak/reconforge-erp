@@ -206,6 +206,9 @@ include docs/security/field-level-access.md
 include reconforge/infrastructure/sqlite_writeback.py
 include tests/test_sqlite_writeback.py
 include docs/adr/0257-writeback-intents-are-append-only-before-provider-I-O.md
+include reconforge/api/routes/connectors.py
+include tests/test_api_connectors.py
+include docs/adr/0258-writeback-intent-api-is-proposal-only.md
 include docs/adr/0235-ownership-change-adjustments-are-non-posting-and-policy-bound.md
 include docs/execution/benchmarks/ownership-change-adjustment-v1.md
 include docs/schemas/ownership_change_adjustment_v1.schema.json

@@ -170,6 +170,17 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   `30774596805`, and CodeQL `30774596803` passed. The earlier CI `30774263443`
   is retained as a diagnostic failure caused by stale compatibility evidence.
 
+## E-307 — Authenticated write-back proposal API boundary
+
+- Added `POST /api/v1/connectors/writeback/intents` with the dedicated
+  `connectors.writeback.propose` permission. The route binds `requested_by` to
+  the authenticated local user and persists through the append-only repository.
+- Repeated identical proposals return the same version/digest; actor mismatch
+  is denied. The response explicitly reports `network_dispatch=disabled` and
+  no provider call is possible through this route.
+- Approval, provider acknowledgement, compensation, and live ERP/bank
+  execution remain separate evidence gates.
+
 ## E-292 — Explicit expiring delegation in central policy
 
 - The central policy engine now evaluates temporary delegated authority using a

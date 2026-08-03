@@ -114,6 +114,13 @@ tasks:
     status: completed
     depends_on: [P4-CON-001]
     exit_evidence: SQLite migration 28 and a tenant/workspace-scoped append-only repository persist versioned write-back intent contracts, enforce lifecycle transitions and optimistic versions, return identical replays idempotently, reject deletes/tampering, and never store payloads or perform network I/O under ADR 0257.
+  - id: E-307
+    priority: P4
+    area: connectors
+    title: Authenticated write-back proposal API boundary
+    status: completed
+    depends_on: [P4-CON-001]
+    exit_evidence: Local API POST proposal route requires connectors.writeback.propose, binds requested_by to the authenticated actor, persists through the append-only repository, replays idempotently, and explicitly disables network dispatch under ADR 0258; approval/provider execution remain separate.
   - id: E-292
     priority: P0
     area: enterprise-policy
@@ -976,6 +983,7 @@ tasks:
       - E-296 adds `verify_manifest_portfolio`, a shared conformance gate over the five provider-neutral reference manifests. It rejects write capability, missing synthetic/idempotent guarantees, missing schema/threat declarations, and network manifests without secret-reference authentication or exact egress. Live vendors, write-back, and provider interoperability remain open.
       - E-299 adds `reference-erp-readonly`, an entity-scoped ERP ledger-line connector over the governed HTTPS runtime. Its exact Decimal page schema rejects non-finite amounts, duplicate IDs, and mixed-entity pages; cursor/idempotency, canonical response digests, secret-reference isolation, endpoint allowlisting, and failure schemas are covered by focused tests. It is a provider-neutral synthetic reference, not a live ERP integration or write-back capability.
       - E-306 adds migration 28 and `SQLiteWritebackIntentRepository`. Intent versions are append-only, scope-filtered, digest-bound, idempotent, optimistic-concurrency checked, and transition-limited; delete/update triggers fail closed. The repository stores no payload or secret and does not dispatch network calls. Live provider interoperability remains open.
+      - E-307 adds `POST /api/v1/connectors/writeback/intents` as a proposal-only local API boundary. Dedicated permission and authenticated actor binding are enforced; identical requests return the same version/digest, while network dispatch is explicitly disabled.
 
   - id: P4-SCL-001
     priority: P4

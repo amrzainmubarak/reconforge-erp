@@ -4040,4 +4040,10 @@ BEFORE DELETE ON connector_writeback_intents
 BEGIN
     SELECT RAISE(ABORT, 'write-back intents cannot be deleted');
 END;
+INSERT OR IGNORE INTO permissions (name, description)
+VALUES ('connectors.writeback.propose', 'Propose a digest-bound governed connector write-back intent.');
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles CROSS JOIN permissions
+WHERE roles.name IN ('admin', 'controller') AND permissions.name='connectors.writeback.propose';
 """

@@ -97,6 +97,13 @@
 - **Rationale**: Durable immutable history makes retries and compensation auditable without mutating a financial source or silently enabling external writes.
 - **Reversibility**: The migration is additive; disable the repository path and retain the backup before any future provider adapter is enabled.
 
+### D-307: Expose Write-Back Proposals Without Dispatch
+- **Date**: 2026-08-03
+- **Context**: Durable intents existed as a library boundary but had no authenticated operator surface.
+- **Decision**: Add a permissioned local POST route that persists only a closed proposal, binds the actor, supports idempotent replay, and explicitly disables network dispatch.
+- **Rationale**: Operators can create auditable proposals without silently turning the local deployment into an external mutation client.
+- **Reversibility**: Remove or disable the route and permission; no provider credentials, source-system state, or external network behavior is introduced.
+
 ### D-292: Delegated Authority Requires an Explicit Evaluation Instant
 - **Date**: 2026-08-02
 - **Context**: Enterprise policy needs expiring delegation without hidden wall-clock behavior that makes decisions non-replayable.

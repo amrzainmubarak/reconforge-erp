@@ -238,6 +238,17 @@ This file records commands and observed results. It does not convert a dirty wor
   corrected CI `30774596822`, Docker `30774596807`, Security `30774596805`, and
   CodeQL `30774596803` passed.
 
+## E-307: Authenticated write-back proposal API boundary
+
+- Code evidence: `reconforge/api/routes/connectors.py` registers a local POST
+  proposal route requiring `connectors.writeback.propose`, checking the
+  authenticated actor, and calling only `SQLiteWritebackIntentRepository.put`.
+  The response marks network dispatch disabled.
+- Test evidence: `python -m pytest tests/test_api_connectors.py tests/test_api_authorization_inventory.py tests/test_phase4_execution_contract.py -q` passed (7 tests); Ruff and Mypy passed for the route/policy changes.
+- Boundary: this proves proposal persistence and replay only. It does not
+  approve, dispatch, acknowledge, compensate, or establish live ERP/bank
+  interoperability, credentials, or provider write-back.
+
 ## E-292: Expiring delegation policy invariant
 
 - Added optional delegation fields to `PolicyEvaluationContext` and forwarded

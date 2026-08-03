@@ -668,6 +668,8 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   migration, RLS, bounded scope projection, tamper/delete refusal, and valid
   revocation under the non-privileged role; parity is now
   `live_verified_current` for this bounded adapter.
+- The full local regression at the slice head collected 2,328 tests with zero
+  failures/errors; external-service and host-capability skips remain explicit.
 - ADR: `docs/adr/0281-postgres-policy-permission-scopes.md`.
 
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio

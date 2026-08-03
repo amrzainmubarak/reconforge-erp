@@ -12050,6 +12050,9 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   tests/test_postgres_policy_analysis.py tests/test_postgres_policy_analysis_runtime.py
   tests/test_alembic_postgres.py tests/test_postgres_operations.py -q -ra` ->
   10 passed with only the declared live-service skips. Ruff and Mypy also pass.
+- The full local regression at the E-330 implementation head collected 2,328
+  tests and completed with zero failures/errors; external-service and host
+  capability cases remain declared skips.
 - Alembic `0058_pg_policy_permission_scopes` adds a forced-RLS,
   append-only scope table. Identity and dimension fields are immutable; only a
   single independent active-to-revoked transition is accepted, and downgrade

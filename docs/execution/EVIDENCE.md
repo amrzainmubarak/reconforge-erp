@@ -12234,3 +12234,14 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   parity cells, and Docker-parity. Security `30822149026`, Docker `30822148703`,
   and CodeQL `30822149876` also passed.
 - ADR: `docs/adr/0289-postgres-durable-job-claim-contention-runtime.md`.
+
+## E-339: HA/DR verified profile requires multiple observed domains
+
+- Local command: `uv run pytest -q tests/test_ha_dr_operational_profile.py`
+  -> three tests passed. The schema now rejects `status=verified` when
+  `observed.failure_domains` is one, even if every verification boolean is
+  forced to true; the existing single-host profile remains `partial`.
+- Ruff and `git diff --check` pass. This is a fail-closed documentation/schema
+  guard only. It does not provide independent hosts, quorum/witness fencing,
+  automatic failover, site-loss recovery, or production SLO evidence.
+- ADR: `docs/adr/0290-ha-dr-verified-profile-requires-independent-domains.md`.

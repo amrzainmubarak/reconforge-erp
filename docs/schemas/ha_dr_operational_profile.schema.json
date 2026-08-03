@@ -61,6 +61,11 @@
       "if": {"properties": {"status": {"const": "verified"}}},
       "then": {
         "properties": {
+          "observed": {
+            "properties": {
+              "failure_domains": {"minimum": 2}
+            }
+          },
           "verification": {
             "properties": {
               "independent_failure_domains": {"const": true},

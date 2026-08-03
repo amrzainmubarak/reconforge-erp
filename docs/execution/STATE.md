@@ -92,6 +92,16 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   parity cells, and Docker-parity; Security `30822149026`, Docker
   `30822148703`, and CodeQL `30822149876` also passed.
 
+## E-339 — HA/DR verified profiles require independent failure domains (complete bounded slice)
+
+- Tightened `ha_dr_operational_profile.schema.json` so a profile marked
+  `verified` must report at least two observed failure domains in addition to
+  all existing verification booleans.
+- Added a regression that sets every boolean true while retaining one domain
+  and requires schema rejection. The retained single-host profile remains
+  `partial`; no independent-host, quorum, automatic-failover, site-loss, or
+  production-SLO evidence is introduced.
+
 ## E-293 — Immutable local delegation administration
 
 - Migration 27 adds tenant/workspace-scoped `policy_delegations`; a typed

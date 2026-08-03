@@ -50,3 +50,18 @@ def test_verified_profile_cannot_bypass_independent_ha_dr_gates() -> None:
     errors = list(jsonschema.Draft202012Validator(schema).iter_errors(profile))
     assert errors
     assert any(error.json_path.endswith("verification.independent_failure_domains") for error in errors)
+
+
+def test_verified_profile_requires_multiple_observed_failure_domains() -> None:
+    profile = json.loads(
+        (ROOT / "docs/operations/HA_DR_OPERATIONAL_PROFILE_2026-07-30.json").read_text(encoding="utf-8")
+    )
+    schema = json.loads(
+        (ROOT / "docs/schemas/ha_dr_operational_profile.schema.json").read_text(encoding="utf-8")
+    )
+    profile["status"] = "verified"
+    profile["observed"]["failure_domains"] = 1
+    profile["verification"] = {key: True for key in profile["verification"]}
+    errors = list(jsonschema.Draft202012Validator(schema).iter_errors(profile))
+    assert errors
+    assert any(error.json_path.endswith("observed.failure_domains") for error in errors)

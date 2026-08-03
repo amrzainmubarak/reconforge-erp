@@ -41,6 +41,21 @@
   behavior changes.
 - **ADR**: `docs/adr/0289-postgres-durable-job-claim-contention-runtime.md`.
 
+### D-283: Bind verified HA/DR status to multiple observed failure domains
+- **Date**: 2026-08-03
+- **Context**: The HA/DR profile already required all verification booleans for
+  `verified`, but did not require the observed topology to contain more than
+  one failure domain.
+- **Decision**: Require `observed.failure_domains >= 2` whenever status is
+  `verified`, with a regression test for the all-true/one-domain case.
+- **Rationale**: A verified HA claim must be structurally incapable of using a
+  single-host measurement as independent-domain evidence.
+- **Boundary**: Schema guard only; no host, quorum, failover, site-loss, or
+  production-SLO execution is added.
+- **Reversibility**: Additive schema constraint and test; the current partial
+  profile remains backward compatible.
+- **ADR**: `docs/adr/0290-ha-dr-verified-profile-requires-independent-domains.md`.
+
 ### D-264: Bounded PostgreSQL durable-job concurrency parity
 - **Date**: 2026-08-03
 - **Context**: Existing high-volume evidence is SQLite-only, while the

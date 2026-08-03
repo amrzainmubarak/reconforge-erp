@@ -135,6 +135,9 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   book, tax report, or assurance conclusion.
 - Acquisition/fair-value/goodwill/equity-method policy, PostgreSQL persistence,
   API/CLI/UI exposure, live rates, and ERP/bank write-back remain open.
+- Corrected remote gates: CI `30773351786`, Docker `30773351797`, Security
+  `30773351818`, and CodeQL `30773351787` passed. The earlier CI `30773107270`
+  is retained as a diagnostic failure caused by stale threat-model evidence.
 
 ## E-292 — Explicit expiring delegation in central policy
 

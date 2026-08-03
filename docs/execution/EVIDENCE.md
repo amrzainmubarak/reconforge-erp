@@ -200,6 +200,10 @@ This file records commands and observed results. It does not convert a dirty wor
 - Boundary: local management-review artifact only; not statutory reporting,
   legal-book posting, acquisition accounting, live-rate, PostgreSQL, write-back,
   or production-readiness evidence.
+- Remote evidence: initial CI `30773107270` failed only because the new test
+  was missing from the threat-model index (2,207 passed, 1 failed); corrected
+  CI `30773351786`, Docker `30773351797`, Security `30773351818`, and CodeQL
+  `30773351787` all passed.
 
 ## E-292: Expiring delegation policy invariant
 

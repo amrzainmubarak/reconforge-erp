@@ -253,7 +253,7 @@ class PostgresConsolidationPpaRepository:
                     (self.tenant_id, artifact_id),
                 ).fetchone()
                 if row is None:
-                    raise PlatformError("PPA artifact was not found.")
+                    raise PostgresConsolidationPpaError("PPA artifact was not found.")
                 return self._decode_row(row)
         except (PlatformError, PostgresConsolidationPpaError):
             raise

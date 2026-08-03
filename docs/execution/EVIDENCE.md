@@ -12013,4 +12013,9 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - Boundary: local approved-snapshot analysis only. OIDC/SAML/SCIM provider
   administration, PostgreSQL/RLS persistence, distributed invalidation, and
   universal route/job/export/UI policy adoption remain unverified.
+- Remote evidence: commit `734f4b04` passed CI run `30798744771` (Python
+  3.11/3.12, four engine-parity cells, PostgreSQL server-boundaries, and
+  Docker parity), Security `30798744778`, Docker `30798744776`, and CodeQL
+  `30798744767`. The PR remains draft; no merge, tag, release, or deployment
+  was performed.
 - ADR: `docs/adr/0279-enterprise-policy-conflict-analysis.md`.

@@ -134,6 +134,7 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
                         "currency": "USD",
                         "entity_id": "entity-A",
                     },
+                    allowed_uses=2,
                 )
             many_rule = {
                 "partition_fields": ["entity_id"],
@@ -172,6 +173,7 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
                         "currency": "USD",
                         "entity_id": "entity-M",
                     },
+                    allowed_uses=2,
                 )
             fx_rule = {
                 "partition_fields": ["entity_id"],
@@ -220,6 +222,7 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
                         "currency": currency,
                         "entity_id": "entity-FX",
                     },
+                    allowed_uses=2,
                 )
             portfolio_rule = {
                 "partition_fields": ["entity_id"],
@@ -256,13 +259,14 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
                     source_id=source_id,
                     record_hash=f"hash-{source_id}",
                     amount=amount,
-                    currency_code="USD",
+                    currency_code="EUR" if source_id in {"PL2", "PR2"} else "USD",
                     attributes={
                         "date": "2026-08-01",
-                        "currency": "USD",
+                        "currency": "EUR" if source_id in {"PL2", "PR2"} else "USD",
                         "entity_id": "entity-portfolio",
                         "fee": fee,
                     },
+                    allowed_uses=2,
                 )
 
         worker = PostgresReconciliationWorker(
@@ -341,10 +345,10 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
 
         expected = GroupedSubsetSumStrategy().execute(
         MatchingStrategyRequest(
-                left_records=({"id": "L1", "amount": "100.00", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-A",))},),
+                left_records=({"id": "L1", "amount": "100", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-A",))},),
                 right_records=(
-                    {"id": "R1", "amount": "40.00", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-A",))},
-                    {"id": "R2", "amount": "60.00", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-A",))},
+                    {"id": "R1", "amount": "40", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-A",))},
+                    {"id": "R2", "amount": "60", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-A",))},
                 ),
                 amount_tolerance="0",
                 date_window_days=0,
@@ -355,12 +359,12 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
         many_expected = GroupedSubsetSumStrategy().execute(
             MatchingStrategyRequest(
                 left_records=(
-                    {"id": "ML1", "amount": "30.00", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-M",))},
-                    {"id": "ML2", "amount": "70.00", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-M",))},
+                    {"id": "ML1", "amount": "30", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-M",))},
+                    {"id": "ML2", "amount": "70", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-M",))},
                 ),
                 right_records=(
-                    {"id": "MR1", "amount": "25.00", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-M",))},
-                    {"id": "MR2", "amount": "75.00", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-M",))},
+                    {"id": "MR1", "amount": "25", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-M",))},
+                    {"id": "MR2", "amount": "75", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-M",))},
                 ),
                 amount_tolerance="0",
                 date_window_days=0,
@@ -371,11 +375,11 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
         fx_expected = GroupedSubsetSumStrategy().execute(
             MatchingStrategyRequest(
                 left_records=(
-                    {"id": "FXL1", "amount": "60.00", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-FX",))},
-                    {"id": "FXL2", "amount": "40.00", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-FX",))},
+                    {"id": "FXL1", "amount": "60", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-FX",))},
+                    {"id": "FXL2", "amount": "40", "date": "2026-08-01", "currency": "USD", "partition": _stable_partition_key(("entity-FX",))},
                 ),
                 right_records=(
-                    {"id": "FXR1", "amount": "200.00", "date": "2026-08-01", "currency": "EUR", "partition": _stable_partition_key(("entity-FX",))},
+                    {"id": "FXR1", "amount": "200", "date": "2026-08-01", "currency": "EUR", "partition": _stable_partition_key(("entity-FX",))},
                 ),
                 amount_tolerance="0",
                 date_window_days=0,
@@ -399,36 +403,40 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
                 left_records=(
                     {
                         "id": "PL1",
-                        "amount": "120.00",
+                        "amount": "120",
                         "fee": "20.00",
                         "date": "2026-08-01",
                         "currency": "USD",
+                        "entity_id": "entity-portfolio",
                         "partition": _stable_partition_key(("entity-portfolio",)),
                     },
                     {
                         "id": "PL2",
-                        "amount": "50.00",
+                        "amount": "50",
                         "fee": "0.00",
                         "date": "2026-08-01",
-                        "currency": "USD",
+                        "currency": "EUR",
+                        "entity_id": "entity-portfolio",
                         "partition": _stable_partition_key(("entity-portfolio",)),
                     },
                 ),
                 right_records=(
                     {
                         "id": "PR1",
-                        "amount": "80.00",
+                        "amount": "80",
                         "fee": "0.00",
                         "date": "2026-08-01",
                         "currency": "USD",
+                        "entity_id": "entity-portfolio",
                         "partition": _stable_partition_key(("entity-portfolio",)),
                     },
                     {
                         "id": "PR2",
-                        "amount": "50.00",
+                        "amount": "50",
                         "fee": "0.00",
                         "date": "2026-08-01",
-                        "currency": "USD",
+                        "currency": "EUR",
+                        "entity_id": "entity-portfolio",
                         "partition": _stable_partition_key(("entity-portfolio",)),
                     },
                 ),
@@ -463,6 +471,7 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
                 amount="100.00",
                 currency_code="USD",
                 attributes={"date": "2026-08-01", "currency": "USD"},
+                allowed_uses=2,
             )
             repository.register_input(
                 tenant_id=tenant_a,
@@ -545,8 +554,8 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
 
         carry_expected = CarryForwardFifoStrategy().execute(
             MatchingStrategyRequest(
-                left_records=({"id": "O1", "amount": "100.00", "date": "2026-08-01", "currency": "USD", "partition": "default"},),
-                right_records=({"id": "S1", "amount": "60.00", "date": "2026-08-02", "currency": "USD", "partition": "default"},),
+                    left_records=({"id": "O1", "amount": "100", "date": "2026-08-01", "currency": "USD", "partition": "default"},),
+                    right_records=({"id": "S1", "amount": "60", "date": "2026-08-02", "currency": "USD", "partition": "default"},),
                 amount_tolerance="0",
                 date_window_days=3,
                 mode="carry-forward",
@@ -554,8 +563,8 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
         )
         reversal_expected = ReversalPairingStrategy().execute(
             MatchingStrategyRequest(
-                left_records=({"id": "J1", "amount": "100.00", "date": "2026-08-01", "currency": "USD", "partition": "default"},),
-                right_records=({"id": "R1", "amount": "-100.00", "date": "2026-08-02", "currency": "USD", "partition": "default", "reversal_of": "J1"},),
+                    left_records=({"id": "J1", "amount": "100", "date": "2026-08-01", "currency": "USD", "partition": "default"},),
+                    right_records=({"id": "R1", "amount": "-100", "date": "2026-08-02", "currency": "USD", "partition": "default", "reversal_of": "J1"},),
                 amount_tolerance="0",
                 date_window_days=3,
                 mode="reversal-pairing",
@@ -663,6 +672,7 @@ def test_live_postgres_grouped_matching_resumes_after_process_crash_without_dupl
                         "currency": "USD",
                         "entity_id": entity,
                     },
+                    allowed_uses=2,
                 )
 
         class _SyntheticProcessCrash(BaseException):
@@ -745,7 +755,7 @@ def test_live_postgres_grouped_matching_resumes_after_process_crash_without_dupl
 
         resumed = replacement_worker.process_run(tenant_id=tenant_id, run_id=run_id)
         assert resumed.status == "Complete"
-        assert resumed.result_count == 3
+        assert resumed.result_count == 4
         assert resumed.exception_count == 0
         assert len(matcher.seen_by_attempt) == 2
         assert all(len(attempt) == 1 for attempt in matcher.seen_by_attempt)
@@ -760,12 +770,13 @@ def test_live_postgres_grouped_matching_resumes_after_process_crash_without_dupl
             assert metadata["execution_attempt"] == 2
             assert metadata["execution_worker_id"] is None
             assert len(checkpoints) == 2
-            assert len(rows) == 3
-            assert len({str(row["id"]) for row in rows}) == 3
+            assert len(rows) == 4
+            assert len({str(row["id"]) for row in rows}) == 4
             assert {(row["left_id"], row["right_id"]) for row in rows} == {
                 ("L-A", "R-A1"),
                 ("L-A", "R-A2"),
-                ("L-B", "R-B"),
+                ("L-B", ""),
+                ("", "R-B"),
             }
             assert {str(item["worker_id"]) for item in checkpoints} == {
                 "grouped-crash-worker-a",

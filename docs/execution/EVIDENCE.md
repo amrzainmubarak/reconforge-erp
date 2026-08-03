@@ -12474,3 +12474,25 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   Security `30851329385`, Docker `30851329398`, and CodeQL `30851329332` also
   passed.
 - ADR: `docs/adr/0299-postgres-outbox-idempotent-consumer-receipt.md`.
+
+## E-349: PostgreSQL grouped matching bounded multi-worker scale
+
+- Focused command with a local PostgreSQL 16 service and non-superuser RLS
+  role: `python -m pytest -q tests/test_postgres_grouped_matching_scale.py`
+  -> `3 passed`. Ruff passes for the new profile, adapter normalization, and
+  tests.
+- `postgres-grouped-matching/64-partitions-v1` declares four workers, 32 runs,
+  two hard-key partitions per run, and 152 expected result rows across five
+  grouped modes. The live test runs a bounded five-run/ten-partition variant
+  with the same mode sequence and worker contract. It proves complete runs and
+  checkpoints, mode counts, no duplicate result identities, no failed or
+  active runs, and non-empty effect/manifest digests.
+- The test found that PostgreSQL canonical Decimal values can arrive as
+  `0E-18`, which the strict persistence lexeme validator correctly rejects.
+  The grouped adapter now serializes Decimal values canonically before result
+  and lineage persistence; existing grouped adapter contracts remain green.
+- Boundary: synthetic one-tenant single-node PostgreSQL runtime only. This is
+  not throughput, capacity, soak, SLO, production-sizing, provider,
+  statutory-posting, cross-host scheduling, queue-HA, automatic-failover, or
+  HA/DR evidence. ADR:
+  `docs/adr/0300-postgres-grouped-matching-bounded-scale-profile.md`.

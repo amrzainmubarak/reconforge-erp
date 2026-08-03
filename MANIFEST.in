@@ -376,6 +376,8 @@ include reconforge/benchmark/postgres_durable_job_scale.py
 include tests/test_postgres_durable_job_scale.py
 include reconforge/benchmark/postgres_outbox_scale.py
 include tests/test_postgres_outbox_scale.py
+include reconforge/benchmark/postgres_grouped_matching_scale.py
+include tests/test_postgres_grouped_matching_scale.py
 include docs/adr/0229-durable-job-10k-tier-is-hardware-scoped.md
 include docs/execution/benchmarks/durable-job-10k-tier-v1.md
 include docs/adr/0236-durable-job-100k-tier-is-hardware-scoped.md
@@ -410,6 +412,8 @@ include docs/adr/0295-postgres-writeback-api-server-boundary.md
 include docs/adr/0296-writeback-network-transport-is-explicit-and-digest-bound.md
 include docs/adr/0299-postgres-outbox-idempotent-consumer-receipt.md
 include docs/execution/benchmarks/postgres-outbox-consumer-crash-v1.md
+include docs/adr/0300-postgres-grouped-matching-bounded-scale-profile.md
+include docs/execution/benchmarks/postgres-grouped-matching-64-partitions-v1.md
 include docs/adr/0243-expiring-delegation-is-explicit-and-replayable.md
 include docs/adr/0244-local-delegation-administration-is-immutable-and-tenant-scoped.md
 include docs/adr/0245-postgres-durable-job-runtime-gate.md

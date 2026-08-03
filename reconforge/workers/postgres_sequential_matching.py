@@ -21,6 +21,13 @@ class PostgresSequentialMatchingAdapterError(ValueError):
     """Raised when a sequential PostgreSQL matching partition is invalid."""
 
 
+def _decimal_text(value: object) -> object:
+    if not isinstance(value, Decimal):
+        return value
+    normalized = Decimal("0") if value == 0 else value.normalize()
+    return format(normalized, "f")
+
+
 def _record(value: Mapping[str, Any], *, partition_key: str) -> dict[str, object]:
     source_id = str(value.get("source_id") or value.get("id") or "").strip()
     attributes = value.get("attributes_json", value)
@@ -28,7 +35,7 @@ def _record(value: Mapping[str, Any], *, partition_key: str) -> dict[str, object
         raise PostgresSequentialMatchingAdapterError("Sequential PostgreSQL attributes must be an object.")
     item = {str(key): item_value for key, item_value in attributes.items()}
     item["id"] = source_id
-    item["amount"] = value.get("amount_decimal") or value.get("amount") or item.get("amount", "")
+    item["amount"] = _decimal_text(value.get("amount_decimal") or value.get("amount") or item.get("amount", ""))
     date_value = value.get("date_value") or value.get("date") or item.get("date", "")
     item["date"] = date_value.isoformat() if hasattr(date_value, "isoformat") else date_value
     item["currency"] = value.get("currency_code") or value.get("currency") or item.get("currency", "USD")
@@ -88,7 +95,7 @@ def _ids(value: object) -> tuple[str, ...]:
 
 def _json_safe(value: object) -> object:
     if isinstance(value, Decimal):
-        return str(value)
+        return _decimal_text(value)
     if isinstance(value, Mapping):
         return {str(key): _json_safe(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
@@ -189,7 +196,7 @@ class PostgresSequentialMatchingAdapter:
                         "match_type": "sequential:reversal-pairing",
                         "confidence": "1" if status == "Matched" else "0",
                         "explanation": "Bounded reversal pairing preserves explicit links and candidate evidence.",
-                        "amount_difference": str(pair.get("absolute_difference", "0")),
+                        "amount_difference": str(_decimal_text(pair.get("absolute_difference", "0"))),
                         "date_difference_days": pair.get("date_delta_days"),
                         "status": status,
                         "reason_code": str(decision.get("reason_code", "")),

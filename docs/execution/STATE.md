@@ -276,6 +276,27 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   (server-boundaries, Python 3.11/3.12, engine-parity, docker-parity),
   Security `30851329385`, Docker `30851329398`, and CodeQL `30851329332`.
 
+## E-349 — PostgreSQL grouped matching bounded multi-worker scale
+
+- Added `reconforge/benchmark/postgres_grouped_matching_scale.py` and a live
+  contract over four independent worker connections, five grouped modes, and
+  a declared 32-run/64-partition profile. The bounded local test uses a
+  five-run/ten-partition variant and retains every mode.
+- The worker contract asserts complete runs and checkpoints, mode-derived
+  result cardinality, unique `(run, partition, left_id, right_id, status)`
+  identities, zero failed/active runs, and non-empty effect/manifest digests.
+  It also exposed PostgreSQL `Decimal` scale (`0E-18`) as an invalid persisted
+  lexeme; the grouped adapter now canonicalizes Decimal JSON/result values
+  before repository validation.
+- Focused command with PostgreSQL 16 and a non-superuser RLS role:
+  `python -m pytest -q tests/test_postgres_grouped_matching_scale.py` ->
+  `3 passed`. Ruff passes for the adapter, profile, and tests.
+- Boundary: synthetic one-tenant single-node evidence only. The observed
+  runtime is not throughput, capacity, soak, SLO, production sizing, provider,
+  statutory posting, cross-host scheduling, queue HA, automatic failover, or
+  HA/DR evidence. ADR:
+  `docs/adr/0300-postgres-grouped-matching-bounded-scale-profile.md`.
+
 ## E-293 — Immutable local delegation administration
 
 - Migration 27 adds tenant/workspace-scoped `policy_delegations`; a typed

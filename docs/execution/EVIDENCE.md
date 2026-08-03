@@ -12035,10 +12035,10 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - `POST /api/v1/admin/access/policy-analysis` is read-only and reuses
   `enterprise-policy-conflict-analysis-v1`; no role, session, service-account,
   cache, provider, or write-back mutation is possible.
-- CI server-boundaries is wired to run
+- CI server-boundaries run `30803066835` passed
   `tests/test_postgres_policy_analysis_runtime.py` under the non-privileged
-  application role. Until that dedicated run succeeds, parity remains
-  `contract_only` and no live PostgreSQL claim is made.
+  application role. The PostgreSQL parity inventory now records this adapter
+  as `live_verified_current` for the bounded single-node synthetic snapshot.
 - Boundary: synthetic single-node PostgreSQL role/permission snapshot only;
   entity/period-scoped persisted grants, federation, distributed invalidation,
   and universal route/job/export/UI enforcement remain open.

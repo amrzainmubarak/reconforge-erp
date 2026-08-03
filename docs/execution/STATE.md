@@ -650,9 +650,9 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   an explicit prior approval timestamp. It never mutates roles, sessions, or
   policy state.
 - Local contract/API/parity tests pass, and the full local regression collected
-  2,326 tests with zero failures/errors. The dedicated live PostgreSQL test is
-  wired into CI server-boundaries; until that run is recorded, parity remains
-  `contract_only` and this slice is not a live-runtime claim.
+  2,326 tests with zero failures/errors. CI server-boundaries run `30803066835`
+  passed the live PostgreSQL test under the non-privileged role; the parity
+  inventory now records this bounded adapter as `live_verified_current`.
 - ADR: `docs/adr/0280-postgres-policy-snapshot-analysis.md`.
 
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio

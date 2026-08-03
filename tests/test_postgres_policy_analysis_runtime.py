@@ -125,5 +125,9 @@ def test_live_postgres_policy_analysis_is_rls_isolated_and_maker_checker_bound()
             assert sibling.active_grant_count == 0
     finally:
         with admin.transaction():
+            admin.execute(
+                "DELETE FROM reconforge.service_account_permissions WHERE tenant_id IN (%s,%s)",
+                (tenant_a, tenant_b),
+            )
             admin.execute("DELETE FROM reconforge.tenants WHERE id IN (%s,%s)", (tenant_a, tenant_b))
         admin.close()

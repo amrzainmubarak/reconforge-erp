@@ -112,7 +112,7 @@ tasks:
     area: connectors
     title: Immutable local write-back intent history
     status: completed
-    depends_on: [E-267, E-287]
+    depends_on: [P4-CON-001]
     exit_evidence: SQLite migration 28 and a tenant/workspace-scoped append-only repository persist versioned write-back intent contracts, enforce lifecycle transitions and optimistic versions, return identical replays idempotently, reject deletes/tampering, and never store payloads or perform network I/O under ADR 0257.
   - id: E-292
     priority: P0

@@ -545,6 +545,23 @@ surfaces:
       - The JSON value is an internal canonical permission array returned by PostgreSQL JSONB, not an upload or executable document.
       - The live runtime gate is synthetic and single-node; federation, route coverage, and cache invalidation remain open.
     next_action: Promote the PostgreSQL delegation boundary only after the unskipped CI runtime test passes and record the migration evidence.
+  - id: FI-026
+    name: SQLite write-back intent contracts
+    module_ids: [platform.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/sqlite_writeback.py::SQLiteWritebackIntentRepository.get
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_sqlite_writeback.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The JSON value is an internal digest-bound write-back intent contract, not provider payload or executable content.
+      - Append-only SQLite and explicit tenant/workspace filtering are local evidence; live provider acknowledgement and external write-back remain open.
+    next_action: Add provider-specific adapters only behind approved credentials, signed registration, and failure-injection evidence.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader
@@ -597,6 +614,11 @@ direct_json_parser_allowlist:
     call_count: 1
     surface_id: FI-025
     rationale: Parses only the canonical permission array returned by PostgreSQL JSONB; the typed grant validator rejects malformed or unsafe stored authority before it can influence policy evaluation.
+  - path: reconforge/infrastructure/sqlite_writeback.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-026
+    rationale: Parses only the append-only canonical write-back intent contract after tenant/workspace selection; Pydantic validation and digest comparison fail closed before a persisted status can be returned.
   - path: reconforge/upgrade/application_adapter.py
     parser: json.loads
     call_count: 1

@@ -11758,6 +11758,10 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   a non-superuser RLS role, verifies one-to-many completion with two exact
   edges, one checkpoint, lineage and direct strategy digest parity, and sibling
   tenant isolation. It is skipped locally when no PostgreSQL DSN is configured.
+- Remote CI on exact commit `09459a98bb83b37ed014da10e5d396daddc3371d` passed
+  server-boundaries job `91591263215` (CI run `30783033246`), both Python test
+  jobs, all four engine-parity cells, and Docker parity. Security run
+  `30783033220` and CodeQL run `30783033261` also passed.
 - Boundary: this is one small synthetic PostgreSQL runtime proof. It does not
   claim PostgreSQL 10K/100K/1M scale, soak, backpressure, distributed capacity,
   HA/DR, live ERP/bank interoperability, source-system posting, or write-back.

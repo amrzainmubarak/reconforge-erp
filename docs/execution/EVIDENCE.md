@@ -315,6 +315,10 @@ This file records commands and observed results. It does not convert a dirty wor
   and the test queried RLS-protected events outside the transaction-local tenant
   scope. Both were corrected before the next gate; the initial run remains a
   recorded diagnostic, not release evidence.
+- Remote evidence: corrected CI `30778736948`, Docker `30778736958`, Security
+  `30778736947`, and CodeQL `30778736962` passed. The CI server-boundaries job
+  executed the unskipped PostgreSQL 16 lifecycle under the non-privileged role,
+  including independent period reopen and attributed event checks.
 
 ## E-292: Expiring delegation policy invariant
 

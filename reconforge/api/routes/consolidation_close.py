@@ -6,8 +6,9 @@ import sqlite3
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import get_local_db, require_any_permission
+from reconforge.api.dependencies import get_local_db, require_any_permission, require_permission
 from reconforge.api.errors import APIError
 from reconforge.auth.models import LocalUser
 from reconforge.infrastructure.sqlite_consolidation_close import SQLiteConsolidationCloseRepository
@@ -15,6 +16,13 @@ from reconforge.platform.common import PlatformError
 
 router = APIRouter(prefix="/consolidation-close", tags=["consolidation-close"])
 ConsolidationRead = Annotated[LocalUser, Depends(require_any_permission({"finance_core.read", "finance_core.manage"}))]
+ConsolidationCertify = Annotated[LocalUser, Depends(require_permission("finance_core.manage"))]
+ConsolidationReview = Annotated[LocalUser, Depends(require_permission("finance_core.validate"))]
+
+
+class CertificationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    note: str = Field(default="", max_length=1000)
 
 
 def _repository(connection: sqlite3.Connection | None) -> SQLiteConsolidationCloseRepository:
@@ -94,6 +102,61 @@ def get_run(
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_run_failed", exc) from exc
     return {"run": run, "source": {"kind": "sqlite-consolidation-close"}}
+
+
+@router.post("/runs/{run_id}/certification")
+def prepare_certification(
+    run_id: str,
+    payload: CertificationRequest,
+    current_user: ConsolidationCertify,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """Prepare maker-checker certification metadata for a posted close run."""
+
+    try:
+        certification = _repository(connection).prepare_certification(
+            run_id,
+            note=payload.note,
+            actor_label=current_user.username,
+        )
+    except (PlatformError, sqlite3.DatabaseError) as exc:
+        raise _error("consolidation_certification_prepare_failed", exc) from exc
+    return {"certification": certification, "source": {"kind": "sqlite-consolidation-close"}}
+
+
+@router.post("/runs/{run_id}/certification/review")
+def review_certification(
+    run_id: str,
+    payload: CertificationRequest,
+    current_user: ConsolidationReview,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """Review certification metadata with an actor independent of preparation."""
+
+    try:
+        certification = _repository(connection).review_certification(
+            run_id,
+            note=payload.note,
+            actor_label=current_user.username,
+        )
+    except (PlatformError, sqlite3.DatabaseError) as exc:
+        raise _error("consolidation_certification_review_failed", exc) from exc
+    return {"certification": certification, "source": {"kind": "sqlite-consolidation-close"}}
+
+
+@router.get("/runs/{run_id}/certification")
+def get_certification(
+    run_id: str,
+    current_user: ConsolidationRead,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """Return replay-scoped certification metadata for one close run."""
+
+    try:
+        certification = _repository(connection).get_certification(run_id, actor_label=current_user.username)
+    except (PlatformError, sqlite3.DatabaseError) as exc:
+        raise _error("consolidation_certification_failed", exc) from exc
+    return {"certification": certification, "source": {"kind": "sqlite-consolidation-close"}}
 
 
 @router.get("/summary")

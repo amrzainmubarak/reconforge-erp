@@ -434,6 +434,18 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   retry-ceiling refusal. The helper is provider-neutral and performs no network
   I/O; live vendor interoperability and deployment evidence remain open.
 
+### E-315 complete: posted consolidation-run certification
+
+- The SQLite consolidation repository now binds certification metadata to a
+  replay-verified run and rejects certification before `Posted` or `Reversed`.
+  Preparation requires consolidation-management and approval-submit
+  permissions; review requires consolidation-validation and approval-approve.
+- Maker-checker separation is enforced by the existing certification guard, and
+  read access replay-validates the underlying run before returning metadata.
+- Authenticated API routes expose prepare, review, and read operations under
+  `/api/v1/consolidation-close/runs/{run_id}/certification`. This remains local
+  workflow metadata, not a legal signature, audit opinion, or compliance claim.
+
 ## P4-FIN-002 in progress: governed consolidation close lifecycle
 
 ### E-256 complete: local SQLite consolidation close lifecycle (control-journal foundation)

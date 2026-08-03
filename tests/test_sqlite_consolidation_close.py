@@ -391,6 +391,36 @@ def test_full_lifecycle_is_exact_attributable_immutable_and_replay_verified(tmp_
         connection.close()
 
 
+def test_posted_run_certification_is_replayable_and_maker_checker_bound(tmp_path: Path) -> None:
+    _path, connection = _database(tmp_path)
+    try:
+        repository, _period, run = _prepare(connection)
+        posted = _post(repository, run)
+        prepared = repository.prepare_certification(
+            str(posted["id"]),
+            note="Synthetic close evidence is ready for independent review.",
+            actor_label="certification-preparer",
+        )
+        assert prepared["status"] == "Prepared"
+        assert prepared["prepared_by"] == "certification-preparer"
+        with pytest.raises(PlatformError, match="preparer and reviewer"):
+            repository.review_certification(
+                str(posted["id"]),
+                note="Self-review must fail closed.",
+                actor_label="certification-preparer",
+            )
+        reviewed = repository.review_certification(
+            str(posted["id"]),
+            note="Independent review completed against the posted control journal.",
+            actor_label="certification-reviewer",
+        )
+        assert reviewed["status"] == "Reviewed"
+        assert reviewed["reviewed_by"] == "certification-reviewer"
+        assert repository.get_certification(str(posted["id"])) == reviewed
+    finally:
+        connection.close()
+
+
 def test_locked_period_blocks_new_or_changed_runs_until_independent_reopen(tmp_path: Path) -> None:
     _path, connection = _database(tmp_path)
     try:

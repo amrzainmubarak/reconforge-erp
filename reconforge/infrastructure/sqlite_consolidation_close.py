@@ -17,6 +17,7 @@ from reconforge.domain.consolidation_lifecycle import (
     verify_consolidation_worksheet_payload,
 )
 from reconforge.domain.models import utc_now_text
+from reconforge.infrastructure.sqlite_approvals import SQLiteApprovalRepository
 from reconforge.io.persisted import (
     PersistedJsonError,
     decode_consolidation_worksheet,
@@ -449,6 +450,65 @@ class SQLiteConsolidationCloseRepository:
             self.connection.rollback()
             raise PlatformError("Unable to post the consolidation run atomically.") from exc
         return self._public_run(self._verified_run(identifier), include_details=True)
+
+    def prepare_certification(
+        self,
+        run_id: str,
+        *,
+        note: str = "",
+        actor_label: str = "local-cli",
+    ) -> dict[str, Any]:
+        """Prepare workflow certification metadata for a posted close run."""
+
+        actor = self._actor(actor_label, CONSOLIDATION_PREPARE_PERMISSION)
+        run = self._verified_run(clean_text(run_id, "Consolidation run ID"))
+        if str(run["status"]) not in {"Posted", "Reversed"}:
+            raise PlatformError("Only a posted or reversed consolidation run can be certified.")
+        require_permission(self.connection, actor_label=actor, permission="approval.submit")
+        period = self._period(str(run["period_id"]))
+        return SQLiteApprovalRepository(self.connection).prepare_certification(
+            object_type="consolidation_close_run",
+            object_id=str(run["id"]),
+            period_name=str(period["period_name"]),
+            entity_code=str(period["group_code"]),
+            note=note,
+            actor_label=actor,
+        )
+
+    def review_certification(
+        self,
+        run_id: str,
+        *,
+        note: str = "",
+        actor_label: str = "local-cli",
+    ) -> dict[str, Any]:
+        """Review posted-close certification metadata with maker-checker SoD."""
+
+        actor = self._actor(actor_label, CONSOLIDATION_APPROVE_PERMISSION)
+        run = self._verified_run(clean_text(run_id, "Consolidation run ID"))
+        if str(run["status"]) not in {"Posted", "Reversed"}:
+            raise PlatformError("Only a posted or reversed consolidation run can be certified.")
+        require_permission(self.connection, actor_label=actor, permission="approval.approve")
+        return SQLiteApprovalRepository(self.connection).review_certification(
+            object_type="consolidation_close_run",
+            object_id=str(run["id"]),
+            note=note,
+            actor_label=actor,
+        )
+
+    def get_certification(self, run_id: str, *, actor_label: str = "local-cli") -> dict[str, Any]:
+        """Read certification metadata only after replay-validating its run."""
+
+        self._actor(actor_label, CONSOLIDATION_READ_PERMISSION)
+        identifier = clean_text(run_id, "Consolidation run ID")
+        self._verified_run(identifier)
+        row = self.connection.execute(
+            "SELECT * FROM certification_records WHERE object_type=? AND object_id=?",
+            ("consolidation_close_run", identifier),
+        ).fetchone()
+        if row is None:
+            raise PlatformError("Consolidation certification metadata not found.")
+        return dict(row)
 
     def request_reversal(
         self,

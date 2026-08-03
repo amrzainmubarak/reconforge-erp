@@ -249,6 +249,7 @@ include tests/test_ha_dr_operational_profile.py
 include docs/adr/0263-ha-dr-profile-verification-gates.md
 include docs/adr/0264-postgres-durable-job-concurrency-parity.md
 include docs/adr/0265-connector-retry-failure-injection-conformance.md
+include docs/adr/0266-consolidation-run-certification-api.md
 include docs/adr/0251-ha-dr-operational-profile-bounds.md
 include reconforge/auth/policy_cache.py
 include tests/test_policy_cache.py

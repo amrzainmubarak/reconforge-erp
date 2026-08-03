@@ -32,6 +32,20 @@
 - **Reversibility**: Additive helper and tests only; no network, schema, or
   credential behavior changes.
 
+### D-266: Consolidation certification attaches only to replay-verified posted runs
+- **Date**: 2026-08-03
+- **Context**: The close lifecycle had immutable posting/reversal effects but
+  no API-visible certification step bound to their final state.
+- **Decision**: Reuse the existing local certification record for
+  `consolidation_close_run`, permit preparation only for `Posted`/`Reversed`
+  runs, require separate management/validation plus approval permissions, and
+  replay-verify the run on reads.
+- **Rationale**: Certification must describe an immutable financial-control
+  result without becoming a source-ERP journal, legal signature, or silently
+  certifying an unposted worksheet.
+- **Reversibility**: Additive repository methods and API routes; existing run
+  states and certification records remain backward compatible.
+
 ### D-293: Local Delegations Are Immutable and Tenant-Scoped
 - **Date**: 2026-08-02
 - **Context**: Expiring delegation evaluation needs durable administration evidence without hidden wall-clock or cross-tenant lookup behavior.

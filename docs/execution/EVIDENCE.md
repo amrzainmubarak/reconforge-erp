@@ -11701,3 +11701,17 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   the entire retry ceiling, preserving fail-closed behavior.
 - Boundary: no network I/O, provider sandbox, credentials, customer data, or
   live ERP/bank interoperability is claimed.
+
+## E-315: Posted consolidation-run certification API
+
+- Added repository methods that bind certification to a replay-verified
+  consolidation run and reject `Prepared`/`Approved` states. `Posted` and
+  `Reversed` runs can be prepared and independently reviewed through the
+  existing immutable certification-record workflow.
+- Added authenticated routes for prepare, review, and read under
+  `/api/v1/consolidation-close/runs/{run_id}/certification`.
+- Focused commands: `python -m pytest tests/test_sqlite_consolidation_close.py
+  tests/test_api_consolidation_close.py -q` and Ruff — passed, including
+  self-review refusal and independent reviewer evidence.
+- Boundary: local workflow metadata only; no legal signature, statutory close,
+  source-ERP posting, or compliance certification is claimed.

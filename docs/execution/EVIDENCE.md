@@ -12140,10 +12140,10 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - CI run `30814401814` passed Python 3.11/3.12, server-boundaries,
   engine-parity, and Docker-parity; Security `30814401794`, Docker
   `30814404291`, and CodeQL `30814402171` passed on the same commit.
-- Runtime boundary: this is API contract evidence only. E-332's CI run
-  `30811914832` remains the live evidence for the underlying PostgreSQL
-  persistence adapter; no hosted API, statutory posting, provider, write-back,
-  restore, HA/DR, or production-readiness claim follows.
+- E-334 server-boundaries run `30815726556` now passes the authenticated API
+  path. E-332 run `30811914832` remains the separate live adapter gate; no
+  hosted API, statutory posting, provider, write-back, restore, HA/DR, or
+  production-readiness claim follows.
 - ADR: `docs/adr/0284-postgres-ppa-api-is-server-profile-and-non-posting.md`.
 
 ## E-334: Live PostgreSQL PPA API runtime gate
@@ -12156,7 +12156,8 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   table, grants the application role access, creates a distinct reviewer,
   authenticates the preparer, performs password step-up, posts the strict PPA
   request, reads it back, and asserts `posted: false` before guarded cleanup.
-- CI server-boundaries evidence is pending at this checkpoint. Until it passes,
-  the API remains local contract evidence; E-332 run `30811914832` remains the
-  separate live adapter gate.
+- CI server-boundaries run `30815726556` passed the extended server API test;
+  the same run passed Python 3.11/3.12, engine-parity, and Docker-parity, with
+  Security/CodeQL runs `30815727156`, `30815726601`, and `30815726588` green.
+  E-332 run `30811914832` remains the separate live adapter gate.
 - ADR: `docs/adr/0285-live-postgres-ppa-api-runtime-gate.md`.

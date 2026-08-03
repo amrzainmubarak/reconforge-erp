@@ -98,6 +98,9 @@ ppa_runtime_gate:
   skipped_focused_tests: 0
   covered_live_boundaries: [AcquisitionPpaApplicationService]
   ci_run: "30811914832"
+  api_runtime_test: tests/test_api_server_identity.py
+  api_runtime_result: passed
+  api_ci_run: "30815726556"
   limitations: [single_node, synthetic_data, non_posting_evidence_only, no_statutory_accounting, no_restore_drill, no_ha, no_rpo_rto_claim, no_erp_writeback]
 delegation_runtime_gate:
   id: E-302

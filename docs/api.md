@@ -173,9 +173,11 @@ requires an independent approver. The PostgreSQL repository recomputes the
 artifact and digest, records audit evidence, and returns `posted: false`.
 There is no SQLite fallback, statutory journal posting, tax/deferred-tax or
 impairment treatment, live valuation provider, ERP/bank write-back, or approval
-of legal-book accounting in this API. The route contract is covered locally;
-the underlying PostgreSQL persistence boundary is the synthetic CI runtime
-gate described in the execution evidence.
+of legal-book accounting in this API. The POST/GET path is exercised by the
+authenticated PostgreSQL server-identity runtime test in CI; this is a
+synthetic single-node, one-process boundary, not hosted availability,
+statutory accounting, production readiness, or a provider/write-back
+guarantee.
 
 ## Endpoints
 

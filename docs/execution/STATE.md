@@ -22,18 +22,21 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   Python 3.11/3.12, server-boundaries, engine-parity, and Docker-parity jobs;
   Security `30814401794`, Docker `30814404291`, and CodeQL `30814402171` also
   passed.
-- The route contract is still not live-runtime evidence: E-332's
-  `30811914832` is the live gate for the underlying PostgreSQL persistence
-  adapter, not a hosted API deployment.
+- The route contract is live-verified only inside the synthetic server
+  boundary described by E-334; E-332's `30811914832` remains the separate
+  persistence-adapter gate. This is not a hosted API deployment.
 
-## E-334 — Live PostgreSQL PPA API runtime gate (in progress)
+## E-334 — Live PostgreSQL PPA API runtime gate (complete bounded slice)
 
 - Extended the existing server-identity runtime contract with the PPA schema,
   a distinct reviewer identity, authenticated step-up, tenant-scoped POST/GET
   calls, and append-only cleanup. Local environments without PostgreSQL skip
   this capability test as declared.
-- Target CI evidence is the server-boundaries job. Until that job passes, the
-  API remains contract-tested only for current evidence purposes.
+- CI server-boundaries run `30815726556` passed the extended
+  `test_live_server_api_uses_postgres_identity_and_tenant_scope` path, along
+  with the full Python/parity/security/Docker/CodeQL checks. The PPA API is
+  live-verified only within this synthetic single-node server boundary; it is
+  not a hosted deployment or production-readiness claim.
 
 ## E-293 — Immutable local delegation administration
 

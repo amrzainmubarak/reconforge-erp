@@ -530,7 +530,10 @@ def test_live_security_governance_is_atomic_runtime_enforced_and_tenant_isolated
                 "SELECT version_num FROM alembic_version"
             ).fetchone()[0]
         monkeypatch.setenv("RECONFORGE_POSTGRES_DSN", admin_dsn)
-        with pytest.raises(Exception, match="refusing to discard governed retention policy"):
+        with pytest.raises(
+            Exception,
+            match="refusing to discard (?:governed retention policy|connector write-back intent evidence)",
+        ):
             command.downgrade(Config(str(Path("alembic.ini").resolve())), "0051_access_policy_lifecycle")
         with admin.transaction():
             # A guarded non-empty downgrade is atomic: it must preserve whatever

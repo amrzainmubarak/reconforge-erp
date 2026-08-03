@@ -456,6 +456,24 @@ class PostgresDurableJobRepository:
             previous = _decode_job(row)
             set_local_tenant_scope(self.connection, previous.tenant_id, workspace_id=previous.workspace_id)
             self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (previous.entity_id,))
+            # Re-read the lease after locking the job row.  Under concurrent
+            # PostgreSQL plans a LEFT JOIN can expose a stale/missing lease
+            # snapshot; never turn that into a takeover while an active lease
+            # is still present.  The worker will retry the claim and only a
+            # genuinely expired lease can be reclaimed.
+            active_lease = self.connection.execute(
+                """
+                SELECT owner_id, generation, expires_at
+                FROM reconforge.durable_job_leases
+                WHERE tenant_id=%s AND job_id=%s
+                FOR UPDATE
+                """,
+                (previous.tenant_id, previous.id),
+            ).fetchone()
+            if previous.status in {JobStatus.RUNNING, JobStatus.RETRYING} and active_lease is not None:
+                active_expires_at = str(_value(active_lease, "expires_at", 2))
+                if active_expires_at > occurred_at:
+                    return None
             if previous.status in {JobStatus.QUEUED, JobStatus.RETRYING}:
                 changed, event = previous.transition(
                     JobStatus.RUNNING, actor_id=worker_id, occurred_at=occurred_at, reason_code="CLAIMED"

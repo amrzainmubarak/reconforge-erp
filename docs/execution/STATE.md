@@ -218,6 +218,23 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   Docker `30842290618`, and CodeQL `30842290616`.
 - ADR: `docs/adr/0296-writeback-network-transport-is-explicit-and-digest-bound.md`.
 
+## E-346 — PostgreSQL bounded multi-worker scale profile (in progress)
+
+- Added `reconforge/benchmark/postgres_durable_job_scale.py` and a live
+  server-boundary contract for eight independent worker connections, four
+  tenant lanes, 64 synthetic jobs, four partitions per job, and 256 declared
+  partition effects.
+- The acceptance result requires completed terminal jobs, exact partition
+  cardinality, zero duplicate effects, forced-RLS lane scope, and zero queued
+  or running rows after the drain. Runtime and throughput are observations,
+  not capacity claims.
+- The contention run exposed and then closed a stale-join takeover race:
+  `claim_next` now rechecks an active lease after locking the job row, so only
+  an explicitly expired lease can be reclaimed.
+- Local profile/contract tests pass; the live PostgreSQL result is pending the
+  next hosted server-boundaries run. ADR:
+  `docs/adr/0297-postgres-durable-job-bounded-scale-profile.md`.
+
 ## E-293 — Immutable local delegation administration
 
 - Migration 27 adds tenant/workspace-scoped `policy_delegations`; a typed

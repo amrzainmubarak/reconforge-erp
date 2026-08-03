@@ -20,6 +20,13 @@ from reconforge.application.jobs import (
     RoundRobinDurableJobScheduler,
 )
 from reconforge.auth.policy import PolicyEvaluationContext
+from reconforge.benchmark.postgres_durable_job_scale import (
+    default_profile as postgres_scale_profile,
+)
+from reconforge.benchmark.postgres_durable_job_scale import (
+    run_postgres_durable_job_scale_profile,
+    verify_postgres_durable_job_scale_result,
+)
 from reconforge.db import connect, run_migrations
 from reconforge.domain.jobs import DurableJobBackpressureError, JobOutputManifest, JobPartitionEffect
 from reconforge.infrastructure.postgres import (
@@ -667,6 +674,58 @@ def test_live_postgres_job_application_contract_and_rls(tmp_path: Path) -> None:
         finally:
             connection.close()
     finally:
+        admin.close()
+
+
+@pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
+def test_live_postgres_durable_job_bounded_multi_worker_scale_profile() -> None:
+    """Exercise a repeatable 8-worker/256-effect profile on real PostgreSQL.
+
+    This is a structural concurrency gate, not a throughput or capacity
+    assertion.  The profile uses independent connections and the same
+    non-privileged RLS role as the other live durable-job contracts.
+    """
+
+    pytest.importorskip("psycopg")
+    dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
+    admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
+    app_user = os.environ.get("RECONFORGE_TEST_POSTGRES_APP_USER", "")
+    if not app_user:
+        pytest.skip("requires a non-privileged application role")
+    factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))
+    admin_factory = PostgresConnectionFactory(PostgresSettings(dsn=admin_dsn, require_tls=False))
+    tenants = tuple(f"jobs_scale_{uuid4().hex[:8]}_{index}" for index in range(postgres_scale_profile().tenants))
+    admin = admin_factory.connect()
+    connection = None
+    try:
+        with admin.transaction():
+            install_postgres_rls_schema(admin)
+            install_postgres_durable_job_schema(admin)
+            admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            admin.execute(
+                f"GRANT SELECT, INSERT, UPDATE ON reconforge.durable_jobs, "
+                f"reconforge.durable_job_transitions, reconforge.durable_job_leases, "
+                f"reconforge.durable_job_lease_events, reconforge.durable_job_partition_effects TO {app_user}"
+            )
+            admin.execute(f"GRANT DELETE ON reconforge.durable_job_leases TO {app_user}")
+            for tenant in tenants:
+                admin.execute("INSERT INTO reconforge.tenants (id, name) VALUES (%s, %s)", (tenant, tenant))
+        connection = factory.connect()
+        repository = PostgresDurableJobRepository(connection)
+        result = run_postgres_durable_job_scale_profile(
+            factory.connect,
+            DurableJobApplicationService(repository),
+            tenants,
+            id_prefix="PGSCALE-" + uuid4().hex[:8],
+        )
+        verify_postgres_durable_job_scale_result(result)
+        assert result.completed_jobs == 64
+        assert result.committed_partition_effects == 256
+        assert result.duplicate_partition_effects == 0
+        assert result.final_queue_depth == result.final_running_depth == 0
+    finally:
+        if connection is not None:
+            connection.close()
         admin.close()
 
 

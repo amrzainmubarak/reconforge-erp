@@ -12406,3 +12406,23 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   docker-parity), Security `30842291391`, Docker `30842290618`, and CodeQL
   `30842290616` all completed successfully.
 - ADR: `docs/adr/0296-writeback-network-transport-is-explicit-and-digest-bound.md`.
+
+## E-346: PostgreSQL bounded multi-worker scale profile
+
+- Focused command: `python -m pytest -q
+  tests/test_postgres_durable_job_scale.py tests/test_postgres_durable_jobs.py`
+  -> 9 passed and 3 live-service capability skips locally; Ruff and Mypy pass
+  for the profile and its contracts.
+- The new live contract submits 64 synthetic jobs across four tenant lanes and
+  drains four partition effects per job with eight independent PostgreSQL
+  connections. It asserts completed terminal states, 256 committed effects,
+  zero duplicate effects, forced-RLS lane scope, and zero queued/running rows.
+- The first local live run exposed a stale-join lease takeover under this
+  contention shape. `claim_next` now performs an in-transaction active-lease
+  recheck after locking the job row; the repeated live run passed and the full
+  existing PostgreSQL durable-job contract remained green.
+- Hosted runtime evidence is pending the next server-boundaries run. Until
+  that run passes, this remains a local profile plus an unexecuted live gate;
+  no PostgreSQL throughput, capacity, soak, distributed fairness, queue HA,
+  HA/DR, RPO/RTO, or production-sizing claim is made.
+- ADR: `docs/adr/0297-postgres-durable-job-bounded-scale-profile.md`.

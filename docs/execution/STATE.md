@@ -151,6 +151,8 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Focused policy/field tests pass. This is a reusable primitive, not evidence
   that every route, export, or UI field has migrated; federation, administration,
   and PostgreSQL policy persistence remain open.
+- Remote gates: CI `30773746150`, Docker `30773746185`, Security `30773746176`,
+  and CodeQL `30773746148` passed for the field-policy slice.
 
 ## E-292 — Explicit expiring delegation in central policy
 

@@ -217,6 +217,9 @@ This file records commands and observed results. It does not convert a dirty wor
 - Boundary: no implicit route/UI/export migration is claimed. Consumers must
   provide field policies and classify sensitive values; this slice does not
   prove enterprise-wide masking coverage or external IdP policy persistence.
+- Remote evidence: CI `30773746150`, Docker `30773746185`, Security
+  `30773746176`, and CodeQL `30773746148` passed, including both Python
+  versions, server-boundaries, engine-parity, and Docker parity.
 
 ## E-292: Expiring delegation policy invariant
 

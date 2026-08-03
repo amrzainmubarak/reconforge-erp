@@ -25,6 +25,7 @@ from reconforge.application.consolidation_close import ConsolidationCloseApplica
 from reconforge.audit import AuditLedgerError, list_audit_events, verify_audit_events
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService, RoleRepository
 from reconforge.auth.federation_config import FederationConfigurationError, load_federation_runtime
+from reconforge.auth.policy_analysis import PolicyAnalysisRequest, PolicyGrant, PolicyScope, analyze_policy_conflicts
 from reconforge.auth.scim import SCIMError
 from reconforge.auth.webauthn_config import WebAuthnConfigurationError, load_webauthn_runtime
 from reconforge.benchmark.reconciliation_execution import (
@@ -208,6 +209,7 @@ db_app = typer.Typer(help="Manage the local SQLite database foundation.")
 audit_app = typer.Typer(help="Inspect local append-only audit events.")
 users_app = typer.Typer(help="Manage local users for DB-backed workflows.")
 roles_app = typer.Typer(help="Inspect local RBAC roles and permissions.")
+policy_app = typer.Typer(help="Analyze versioned enterprise policy snapshots without mutating access.")
 workflow_app = typer.Typer(help="Manage local workflow state machine foundations.")
 api_app = typer.Typer(help="Serve the local REST API foundation.")
 scim_app = typer.Typer(help="Manage PostgreSQL-backed SCIM client credentials.")
@@ -247,6 +249,7 @@ app.add_typer(db_app, name="db")
 app.add_typer(audit_app, name="audit")
 app.add_typer(users_app, name="users")
 app.add_typer(roles_app, name="roles")
+app.add_typer(policy_app, name="policy")
 app.add_typer(workflow_app, name="workflow")
 app.add_typer(api_app, name="api")
 app.add_typer(scim_app, name="scim")
@@ -529,6 +532,76 @@ def modules_validate() -> None:
             console.print(f"[red]{issue.code}[/red] {issue.module_id}: {issue.message}")
         raise typer.Exit(code=1)
     console.print(f"[green]Module registry is valid.[/green] {len(list_modules())} runtime modules, schema v1.")
+
+
+@policy_app.command("analyze-conflicts")
+def policy_analyze_conflicts_command(
+    input_path: Annotated[Path, typer.Option("--input", help="JSON policy analysis request.")],
+    output_path: Annotated[Path | None, typer.Option("--output", help="Optional exact JSON output path.")] = None,
+) -> None:
+    """Analyze a policy snapshot for deterministic SoD and scope conflicts."""
+
+    try:
+        document = read_json_record_document(input_path, envelope_keys=("request",), allow_single_object=True)
+        if len(document.records) != 1:
+            raise PlatformError("Policy analysis input must contain exactly one JSON request object.")
+        raw = document.records[0]
+        expected = {
+            "policy_id",
+            "policy_version",
+            "grants",
+            "require_scoped_privileged",
+            "prepared_by",
+            "prepared_at",
+            "approved_by",
+            "approved_at",
+        }
+        if set(raw) != expected:
+            raise PlatformError("Policy analysis input fields are not exactly the declared contract.")
+        raw_grants = raw["grants"]
+        if not isinstance(raw_grants, list):
+            raise PlatformError("Policy analysis grants must be a JSON array.")
+        grant_fields = {"grant_id", "principal_id", "principal_type", "role_id", "scope", "permissions", "status"}
+        scope_fields = {"tenant_id", "workspace_id", "entity_ids", "period_ids", "region_ids", "data_classifications"}
+        grants: list[PolicyGrant] = []
+        for index, raw_grant in enumerate(raw_grants):
+            if not isinstance(raw_grant, dict) or set(raw_grant) != grant_fields:
+                raise PlatformError(f"Policy analysis grant {index} fields are not exactly declared.")
+            raw_scope = raw_grant["scope"]
+            if not isinstance(raw_scope, dict) or set(raw_scope) != scope_fields:
+                raise PlatformError(f"Policy analysis grant {index} scope fields are not exactly declared.")
+            permissions = raw_grant["permissions"]
+            if not isinstance(permissions, list) or not all(isinstance(value, str) for value in permissions):
+                raise PlatformError(f"Policy analysis grant {index} permissions must be string values.")
+            scope_values = dict(raw_scope)
+            for field in ("entity_ids", "period_ids", "region_ids", "data_classifications"):
+                values = raw_scope[field]
+                if not isinstance(values, list) or not all(isinstance(value, str) for value in values):
+                    raise PlatformError(f"Policy analysis grant {index} {field} must be a string array.")
+                scope_values[field] = frozenset(values)
+            grants.append(
+                PolicyGrant(
+                    grant_id=raw_grant["grant_id"],
+                    principal_id=raw_grant["principal_id"],
+                    principal_type=raw_grant["principal_type"],
+                    role_id=raw_grant["role_id"],
+                    scope=PolicyScope(**scope_values),
+                    permissions=frozenset(permissions),
+                    status=raw_grant["status"],
+                )
+            )
+        values = dict(raw)
+        values["grants"] = tuple(grants)
+        result = analyze_policy_conflicts(PolicyAnalysisRequest(**values))
+        rendered = json.dumps(result.to_dict(), sort_keys=True, indent=2)
+        if output_path is None:
+            console.print(rendered)
+        else:
+            target = ensure_output_dir(output_path.parent) / output_path.name
+            target.write_text(rendered + "\n", encoding="utf-8", newline="\n")
+            console.print(f"[green]Policy analysis written:[/green] {target}")
+    except (OSError, PlatformError, TypeError, ValueError) as exc:
+        _safe_cli_error(PlatformError(f"Policy analysis input is invalid: {exc}"))
 
 
 @master_data_app.command("summary")

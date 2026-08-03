@@ -619,6 +619,23 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   `30796453692`. No release, tag, merge, or deployment occurred.
 - ADR: `docs/adr/0278-acquisition-purchase-price-allocation-boundary.md`.
 
+### E-328 complete: enterprise policy conflict analysis
+
+- `reconforge/auth/policy_analysis.py` adds the closed
+  `enterprise-policy-conflict-analysis-v1` artifact. It analyzes an approved,
+  tenant-bound grant snapshot for overlapping SoD permission pairs,
+  human-governed permissions on service accounts, unscoped privileged grants,
+  and duplicate active grants over overlapping scopes.
+- Findings are sorted deterministically, carry severity, grant/permission
+  references, scope digests, bounded reasons, and stable conflict IDs. The
+  request and result are maker-checker attributed and replay/tamper-verifiable;
+  no policy or authorization state is mutated.
+- `reconforge policy analyze-conflicts` accepts the exact JSON contract through
+  bounded structured ingress. Provider federation, PostgreSQL/RLS policy
+  storage, enforcement adoption, distributed cache invalidation, and complete
+  route/job/export/UI coverage remain open.
+- ADR: `docs/adr/0279-enterprise-policy-conflict-analysis.md`.
+
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio
 
 ### E-260 complete: bounded grouped and netting matcher

@@ -12000,3 +12000,17 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   also passed. The PR remains draft; no merge, tag, release, or deployment was
   performed.
 - ADR: `docs/adr/0278-acquisition-purchase-price-allocation-boundary.md`.
+
+## E-328: Enterprise policy conflict analysis
+
+- Local command: `python -m pytest tests/test_policy_analysis.py -q -ra`
+  -> 5 passed. Tests cover SoD overlap, service-account human permissions,
+  unscoped privileged grants, revoked/disjoint scope handling, permutation
+  stability, maker-checker validation, tamper/schema checks, and the CLI.
+- The module registry export, platform-core threat asset/test evidence, and
+  file-ingestion surface `FI-030` bind the implementation. The artifact is
+  explicitly read-only and is not an enforcement substitute.
+- Boundary: local approved-snapshot analysis only. OIDC/SAML/SCIM provider
+  administration, PostgreSQL/RLS persistence, distributed invalidation, and
+  universal route/job/export/UI policy adoption remain unverified.
+- ADR: `docs/adr/0279-enterprise-policy-conflict-analysis.md`.

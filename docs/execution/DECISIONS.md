@@ -2536,3 +2536,17 @@
   equity method, ledger posting, PostgreSQL persistence/parity, source
   write-back, or independent valuation assurance.
 - **ADR**: `docs/adr/0278-acquisition-purchase-price-allocation-boundary.md`.
+
+## D275 - Add read-only enterprise policy conflict analysis
+
+- **Decision**: add `enterprise-policy-conflict-analysis-v1` as a deterministic
+  artifact over an approved tenant-bound policy snapshot. Detect overlapping
+  prepare/review/submit/approve permissions, service-account human permissions,
+  unscoped privileged grants when required, and duplicate active grants.
+- **Rationale**: policy administration needs explainable conflict detection
+  before a provider-backed mutation surface is widened. Keeping the analyzer
+  read-only prevents it from becoming an unreviewed authorization bypass.
+- **Boundary**: no enforcement mutation, CentralPolicyEngine replacement,
+  federation, PostgreSQL/RLS storage, distributed cache invalidation, or
+  universal route/job/export/UI coverage.
+- **ADR**: `docs/adr/0279-enterprise-policy-conflict-analysis.md`.

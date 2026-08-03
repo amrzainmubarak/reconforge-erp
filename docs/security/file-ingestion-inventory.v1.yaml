@@ -613,6 +613,23 @@ surfaces:
       - The command uses the bounded business-record JSON reader with strict UTF-8, a 64 MiB file ceiling, stable pre/post fingerprints, duplicate/non-finite rejection, and one-object/field-count limits before exact item contract validation.
       - Canonical Money values and valuation items are reconstructed under the local currency registry; the result is non-posting and does not authenticate valuation source, authorize an actor, or prove statutory treatment.
     next_action: Add centralized source classification and operator authorization before accepting PPA requests from hosted upload or external connector surfaces.
+  - id: FI-030
+    name: Enterprise policy conflict analysis CLI request
+    module_ids: [platform.core]
+    trust: untrusted-local
+    entrypoints:
+      - reconforge/cli.py::policy_analyze_conflicts_command
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002]
+    test_evidence: [tests/test_policy_analysis.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - The command uses the bounded business-record JSON reader with strict UTF-8, a 64 MiB file ceiling, stable pre/post fingerprints, duplicate/non-finite rejection, and exact nested grant/scope field validation.
+      - Analysis is read-only and does not mutate roles, permissions, sessions, policies, or routes; it does not prove provider federation, PostgreSQL RLS, or complete surface adoption.
+    next_action: Bind policy-analysis requests to centralized operator authorization and provider-backed policy administration only after route/job/export/UI coverage is complete.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader

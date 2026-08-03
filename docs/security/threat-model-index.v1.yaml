@@ -134,13 +134,17 @@ modules:
         description: Operator-selected SQLite databases, exports, imports, and backup/restore artifacts.
         data_class: DC-003
         objectives: [confidentiality, integrity, availability]
+      - id: enterprise-policy-analysis-artifact
+        description: Versioned tenant-bound policy grants, deterministic SoD/scope conflict findings, and replay/result digests produced without mutating access state.
+        data_class: DC-004
+        objectives: [confidentiality, integrity, auditability]
     actors: [ACT-001, ACT-002, ACT-004, ACT-005, ACT-007]
     threat_cases:
       - threat_id: TM-T-003
         status: partial
         attack_surface: Local/API login, bearer sessions, actor propagation, role assignment, and privileged platform routes.
         controls: [SEC-C-003, SEC-C-004]
-        test_evidence: [tests/test_api_auth.py, tests/test_api_dependencies.py, tests/test_policy_engine.py, tests/test_approval_sod.py, tests/test_approval_surface_inventory.py, tests/test_workflow_state_machine.py]
+        test_evidence: [tests/test_api_auth.py, tests/test_api_dependencies.py, tests/test_policy_analysis.py, tests/test_policy_engine.py, tests/test_approval_sod.py, tests/test_approval_surface_inventory.py, tests/test_workflow_state_machine.py]
         residual_risk_ids: [R-007, R-011]
         limitations:
           - Trusted-local labels cannot bypass the bounded inventoried no-self-approval property, but they are not enterprise principals; bounded federation, emergency review, and WebAuthn MFA now exist, while universal route/repository ABAC, recovery/attestation governance, hosted interoperability, and deployed effectiveness remain absent.
@@ -168,7 +172,7 @@ modules:
         residual_risk_ids: [R-019]
         limitations:
           - Dependencies are not locked with hashes and no current clean-tree signed provenance is available.
-    module_test_evidence: [tests/test_api_foundation.py, tests/test_db_backup_structured_ingress.py, tests/test_db_export_import.py, tests/test_db_import_structured_ingress.py, tests/test_studio_auth.py, tests/test_upgrade_orchestrator.py]
+    module_test_evidence: [tests/test_api_foundation.py, tests/test_db_backup_structured_ingress.py, tests/test_db_export_import.py, tests/test_db_import_structured_ingress.py, tests/test_policy_analysis.py, tests/test_studio_auth.py, tests/test_upgrade_orchestrator.py]
     assumptions:
       - The operator protects the local operating-system account, database paths, backups, and process environment.
       - Enabled HTTP services are restricted to reviewed local or self-hosted network boundaries.

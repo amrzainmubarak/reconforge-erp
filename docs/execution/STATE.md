@@ -310,10 +310,12 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   pinned WebAuthn 3.0.0 stack, moves the absolute uv cutoff to
   `2026-08-02T00:00:00Z`, and regenerates the hash-bearing `uv.lock`.
 - Local `uv lock --check`, closed supply-chain policy validation, locked
-  all-extra Python 3.14 sync, and cryptographic/WebAuthn/backup/signature
-  compatibility tests pass. The locked audit was retried but the local PyPI
-  advisory request timed out; hosted verification for the remediation head is
-  required before calling the security gate green.
+  all-extra Python 3.14 sync, hash-exported `pip-audit` (`pip_findings=0`),
+  and cryptographic/WebAuthn/backup/signature compatibility tests pass.
+- Hosted verification for head `a4a35f8` is green: CI `30856023045` passed
+  Python 3.11/3.12, server-boundaries, four engine-parity cells, and
+  Docker-parity; Security `30856022993`, Docker `30856022975`, and CodeQL
+  `30856022972` also passed.
 - Boundary: this is dependency remediation evidence only. It does not prove
   package safety, reachability, provenance, independent review, or production
   readiness.

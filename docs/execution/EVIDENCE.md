@@ -12515,9 +12515,11 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   returns `status: valid`, `uv lock --check` passes, and locked all-extra
   Python 3.14 synchronization installs `cryptography==50.0.0`. Focused
   cryptographic, WebAuthn, backup, connector-signature, and upgrade tests pass
-  with only the declared capability skips. A local retry of hash-exported pip-audit
-  could not complete because the advisory request to PyPI timed out; hosted
-  execution of the remediation head remains the authoritative next gate.
+  with only the declared capability skips. Hash-exported `pip-audit` returns
+  `pip_findings=0` and the closed policy validator remains valid. Hosted head
+  `a4a35f8` is green: CI `30856023045` passed Python 3.11/3.12,
+  server-boundaries, four engine-parity cells, and Docker-parity; Security
+  `30856022993`, Docker `30856022975`, and CodeQL `30856022972` also passed.
 - No API, CLI, schema, migration, or financial arithmetic behavior changed;
   this is a dependency-only security remediation. It does not establish
   provenance, reachability, package safety, independent assessment, or

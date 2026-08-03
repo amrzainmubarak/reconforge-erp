@@ -11865,3 +11865,20 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   contracts fail closed. This does not claim complete federation, ABAC
   administration, distributed cache invalidation, or jobs/exports/UI coverage.
 - ADR: `docs/adr/0272-api-mutating-authorization-surface-gate.md`.
+
+## E-322: PostgreSQL durable-job transient retry recovery
+
+- The live server-boundaries contract now creates a two-partition synthetic
+  job, commits partition one, schedules a transient retry, and verifies that a
+  new worker lease resumes from the committed checkpoint and completes
+  partition two exactly once. The final job retains `retry_count == 1` and the
+  ordered `CREATED`, `CLAIMED`, `CHECKPOINTED`, `TRANSIENT_FAILURE`, `CLAIMED`,
+  `FINISHED` transition evidence.
+- Local command: `python -m pytest tests/test_postgres_durable_jobs.py -q -ra`
+  -> schema contract passed; the live test is skipped without a DSN. Ruff and
+  Mypy pass. CI server-boundaries is the runtime source of truth for the
+  unskipped path.
+- Boundary: synthetic retry/recovery only. PostgreSQL capacity, soak/SLO,
+  distributed queue supervision, automatic failover, HA/DR, and production
+  retry tuning remain unverified.
+- ADR: `docs/adr/0273-postgres-durable-job-retry-runtime-gate.md`.

@@ -172,6 +172,70 @@ def test_live_postgres_job_application_contract_and_rls(tmp_path: Path) -> None:
                 assert len({effect.partition_key for effect in effects}) == load_partitions
                 loaded = repository.get(tenant_id=tenant_id, job_id=load_job_id)
                 assert loaded is not None and loaded.status.value == "completed"
+
+            retry_submission = JobSubmission(
+                job_id="postgres-retry-" + uuid4().hex[:8],
+                idempotency_scope="postgres-retry",
+                idempotency_key="postgres-retry-key",
+                tenant_id=tenant_a,
+                workspace_id="workspace-a",
+                entity_id="entity-a",
+                input_digest="f" * 64,
+                config_digest="g" * 64,
+                worker_version="postgres-retry-v1",
+                total_units=2,
+                retry_ceiling=2,
+                created_at="2026-07-27T10:20:00Z",
+            )
+            retry_job, retry_created = service.submit(retry_submission, actor_id="retry-submitter")
+            assert retry_created is True
+            retry_worker = DurableJobWorkerService(repository)
+            retry_leased = retry_worker.claim(
+                tenant_id=tenant_a,
+                worker_id="retry-worker-fault",
+                occurred_at="2026-07-27T10:20:01Z",
+                lease_expires_at="2026-07-27T10:30:00Z",
+            )
+            assert retry_leased is not None and retry_leased.job.id == retry_job.id
+            retry_leased = retry_worker.commit_partition(
+                retry_leased,
+                partition_key="retry/p1",
+                ordinal=1,
+                completed_units=1,
+                input_digest="h" * 64,
+                output_digest="i" * 64,
+                effect_reference="retry/p1",
+                occurred_at="2026-07-27T10:20:02Z",
+            )
+            retrying = retry_worker.schedule_retry(retry_leased, occurred_at="2026-07-27T10:20:03Z")
+            assert retrying.status.value == "retrying" and retrying.retry_count == 1
+            recovered = retry_worker.claim(
+                tenant_id=tenant_a,
+                worker_id="retry-worker-recovery",
+                occurred_at="2026-07-27T10:20:04Z",
+                lease_expires_at="2026-07-27T10:30:00Z",
+            )
+            assert recovered is not None and recovered.job.id == retry_job.id
+            assert [effect.partition_key for effect in retry_worker.completed_effects(recovered)] == ["retry/p1"]
+            retried_completed = retry_worker.complete_partition(
+                recovered,
+                partition_key="retry/p2",
+                ordinal=2,
+                input_digest="j" * 64,
+                output_digest="k" * 64,
+                effect_reference="retry/p2",
+                occurred_at="2026-07-27T10:20:05Z",
+                output_manifest=JobOutputManifest(
+                    schema_version=1,
+                    digest="l" * 64,
+                    reference="manifest/retry",
+                ),
+            )
+            assert retried_completed.status.value == "completed"
+            assert retried_completed.retry_count == 1
+            assert [row["reason_code"] for row in repository.list_transitions(
+                tenant_id=tenant_a, job_id=retry_job.id
+            )] == ["CREATED", "CLAIMED", "CHECKPOINTED", "TRANSIENT_FAILURE", "CLAIMED", "FINISHED"]
             governed_submission = replace(
                 _submission(tenant_a), job_id="governed-postgres-job", idempotency_key="governed-postgres-key"
             )

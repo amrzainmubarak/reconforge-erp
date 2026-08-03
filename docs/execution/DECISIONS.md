@@ -2453,3 +2453,16 @@
   administration, distributed invalidation, and jobs/exports/UI coverage stay
   open.
 - **ADR**: `docs/adr/0272-api-mutating-authorization-surface-gate.md`.
+
+## D269 - Prove the PostgreSQL transient retry path with real leases
+
+- **Decision**: add a live server-boundaries scenario that commits one
+  partition, schedules a transient retry, and recovers from a new worker lease.
+  The recovery must preserve the committed checkpoint and complete the
+  remaining partition once.
+- **Rationale**: Lease takeover/crash evidence is not the same as a normal
+  retryable fault. Exercising the repository transition and checkpoint tables
+  closes that distinct runtime branch without inventing a queue or provider.
+- **Boundary**: synthetic two-partition runtime only; capacity, soak,
+  distributed supervision, HA/DR, and production retry policy remain open.
+- **ADR**: `docs/adr/0273-postgres-durable-job-retry-runtime-gate.md`.

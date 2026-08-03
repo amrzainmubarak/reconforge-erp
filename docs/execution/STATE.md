@@ -496,6 +496,20 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   exports/UI enforcement remain open.
 - ADR: `docs/adr/0272-api-mutating-authorization-surface-gate.md`.
 
+### E-322 complete: PostgreSQL durable-job transient retry recovery
+
+- The live PostgreSQL durable-job contract now injects a transient failure
+  after one committed partition, asserts `retrying` with retry count one and
+  lease release, then lets a recovery worker claim the job, skip the committed
+  partition, finish exactly once, and retain the ordered transition reasons.
+- Local command: `python -m pytest tests/test_postgres_durable_jobs.py -q -ra`
+  -> 1 schema pass, 1 live skip without a configured DSN. Ruff and Mypy pass.
+  The unskipped runtime gate is executed in CI server-boundaries.
+- Boundary: small synthetic two-partition retry/recovery proof only; no
+  PostgreSQL capacity, soak/SLO, distributed queue, automatic supervision,
+  HA/DR, or production retry-tuning claim.
+- ADR: `docs/adr/0273-postgres-durable-job-retry-runtime-gate.md`.
+
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio
 
 ### E-260 complete: bounded grouped and netting matcher

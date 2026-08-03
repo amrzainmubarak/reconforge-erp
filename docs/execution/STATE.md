@@ -177,6 +177,22 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   compensation execution, HA/DR, or production write-back claim.
 - ADR: `docs/adr/0294-postgres-writeback-intent-runtime-evidence.md`.
 
+## E-344 — PostgreSQL server-profile write-back intent API boundary (complete bounded slice)
+
+- The proposal, maker-checker approval, and acknowledgement routes now select
+  the PostgreSQL intent repository when the explicit server profile is enabled;
+  local mode keeps its SQLite adapter. Request tenant/workspace headers must
+  match the authenticated execution scope, and proposals must name the
+  authenticated actor.
+- The route contract proves the PostgreSQL operation seam and an explicit
+  `network_dispatch: disabled` response. The underlying live PostgreSQL
+  persistence gate remains the runtime evidence for RLS, replay, lifecycle, and
+  append-only controls.
+- Boundary: this is API/backend selection and scope-binding evidence only. No
+  provider I/O, secret-vault integration, compensation delivery, HA/DR, or
+  production write-back is claimed.
+- ADR: `docs/adr/0295-postgres-writeback-api-server-boundary.md`.
+
 ## E-293 — Immutable local delegation administration
 
 - Migration 27 adds tenant/workspace-scoped `policy_delegations`; a typed

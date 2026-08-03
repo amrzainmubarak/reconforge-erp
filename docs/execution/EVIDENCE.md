@@ -12355,3 +12355,23 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   provider credential integration, network write-back, compensation delivery,
   HA/DR, throughput, or production readiness claim.
 - ADR: `docs/adr/0294-postgres-writeback-intent-runtime-evidence.md`.
+
+## E-344: PostgreSQL server-profile write-back intent API boundary
+
+- Local contract command: `python -m pytest -q
+  tests/test_api_connectors.py tests/test_api_authorization_inventory.py
+  tests/test_application_writeback.py tests/test_postgres_writeback.py` -> 15
+  passed and 1 capability skip without a PostgreSQL DSN. Ruff passes for the
+  route, server boundary, application factory, and manifest changes.
+- `test_writeback_api_uses_postgres_server_boundary_when_enabled` proves the
+  authenticated proposal route selects the PostgreSQL operation seam, binds
+  the maker actor, returns the explicit `network_dispatch: disabled` marker,
+  and leaves local SQLite behavior covered by the existing lifecycle test.
+- The route boundary requires tenant/workspace headers to match the
+  authenticated execution scope before repository access. The existing CI
+  `30837085198` live PostgreSQL repository gate supplies the underlying RLS,
+  replay, lifecycle, and append-only runtime evidence.
+- Boundary: this closes API/backend selection only. It does not prove a live
+  ERP/bank provider, secret-vault interoperability, network dispatch,
+  compensation delivery, HA/DR, throughput, or production write-back.
+- ADR: `docs/adr/0295-postgres-writeback-api-server-boundary.md`.

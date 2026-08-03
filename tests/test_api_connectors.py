@@ -1,8 +1,10 @@
 from pathlib import Path
+from typing import Any
 
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
+from reconforge.api.routes import connectors as routes
 from reconforge.auth.service import LocalAuthService
 from reconforge.connectors.writeback import WritebackPolicy, dispatch_writeback
 from reconforge.db import connect, run_migrations
@@ -111,3 +113,49 @@ def test_writeback_intent_api_is_authenticated_actor_bound_and_idempotent(tmp_pa
         assert check.execute("SELECT COUNT(*) FROM connector_writeback_intents").fetchone()[0] == 4
     finally:
         check.close()
+
+
+def test_writeback_api_uses_postgres_server_boundary_when_enabled(tmp_path: Path, monkeypatch: Any) -> None:
+    db_path = tmp_path / "writeback-server-boundary.db"
+    run_migrations(db_path)
+    connection = connect(db_path)
+    LocalAuthService(connection).init_admin(username="admin", password="Secret-123")
+    connection.close()
+    client = TestClient(create_api_app(db_path))
+    login = client.post("/api/v1/auth/login", json={"username": "admin", "password": "Secret-123"})
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    actor_id = client.get("/api/v1/auth/me", headers=headers).json()["id"]
+
+    calls: list[str] = []
+
+    class Repository:
+        def __init__(self) -> None:
+            self.current = None
+            self.version = 0
+
+        def put(self, intent: object, *, expected_version: int | None = None) -> object:
+            del expected_version
+            self.current = intent
+            self.version += 1
+            return intent
+
+        def get(self, **_: object) -> dict[str, object] | None:
+            if self.current is None:
+                return None
+            return {"intent": self.current, "version": self.version}
+
+    repository = Repository()
+
+    def execute(_request: object, operation: object) -> object:
+        calls.append("postgres")
+        return operation(repository, "tenant-a", "workspace-a")  # type: ignore[operator]
+
+    monkeypatch.setattr(routes, "server_writeback_enabled", lambda _request: True)
+    monkeypatch.setattr(routes, "_require_server_scope", lambda _request, _tenant, _workspace: ("tenant-a", "workspace-a"))
+    monkeypatch.setattr(routes, "execute_postgres_writeback", execute)
+
+    payload = _intent(requested_by=actor_id).model_dump(mode="json")
+    proposed = client.post("/api/v1/connectors/writeback/intents", headers=headers, json=payload)
+    assert proposed.status_code == 200, proposed.text
+    assert proposed.json()["source"]["server_mode"] is True
+    assert calls == ["postgres"]

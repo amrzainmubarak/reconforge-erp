@@ -2759,3 +2759,23 @@
 - Rollback: downgrade refuses while intent evidence exists; after archival or
   an empty disposable database, remove migration 0061, adapter, tests, and
   execution entries without touching external systems.
+
+## D248 - PostgreSQL server-profile write-back API is a scoped evidence boundary
+
+- Date: 2026-08-03
+- Status: accepted
+- Decision: when the explicit PostgreSQL server profile is enabled, proposal,
+  maker-checker approval, and acknowledgement routes use the tenant/workspace
+  scoped PostgreSQL intent repository. The authenticated actor and request
+  scope must match the intent; local mode remains SQLite; network dispatch stays
+  disabled.
+- Rationale: server deployments must not silently fall back to a local shared
+  database for governed intent evidence, while Community mode must retain its
+  existing behavior.
+- Boundary: route contract plus the existing live repository gate prove only
+  backend selection, actor/scope binding, and durable intent evidence. They do
+  not prove provider I/O, secret-vault interoperability, compensation,
+  throughput, HA/DR, or production write-back.
+- ADR: `docs/adr/0295-postgres-writeback-api-server-boundary.md`.
+- Rollback: remove the factory alias and server route branch; no database or
+  external provider state is mutated.

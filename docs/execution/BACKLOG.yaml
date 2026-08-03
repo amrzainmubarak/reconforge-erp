@@ -170,6 +170,13 @@ tasks:
     status: completed
     depends_on: [E-309]
     exit_evidence: "Add migration 0061 and a forced-RLS PostgreSQL append-only write-back intent repository with idempotent replay, optimistic lifecycle versions, workspace isolation, advisory-lock serialization without UPDATE grants, and tamper refusal; CI server-boundaries run 30837085198 passes the live non-superuser contract under ADR 0294, alongside Python 3.11/3.12, four engine-parity cells, and docker-parity. This proves durable intent evidence only, not a live ERP/bank provider, network dispatch, credentials, compensation execution, HA/DR, or production write-back."
+  - id: E-344
+    priority: P4
+    area: connectors
+    title: PostgreSQL server-profile write-back intent API boundary
+    status: completed
+    depends_on: [E-343]
+    exit_evidence: "The proposal, maker-checker approval, and acknowledgement routes select the PostgreSQL intent repository in server mode, bind tenant/workspace headers to the persisted intent scope and authenticated actor, retain explicit network-dispatch disablement, and preserve SQLite local mode; route contract tests and the existing live PostgreSQL repository gate pass under ADR 0295. This is API/backend selection evidence, not live provider I/O, secret-vault interoperability, compensation delivery, HA/DR, or production write-back."
   - id: E-292
     priority: P0
     area: enterprise-policy
@@ -1057,6 +1064,7 @@ tasks:
       - E-316 promotes posted-run certification to the PostgreSQL consolidation adapter. The tenant-scoped repository now replay-validates the JSONB worksheet, locks the run state, and delegates to the existing RLS certification record with independent review; the live contract grants only the required certification table access and exercises prepare/review/read.
       - E-314 adds `verify_network_retry_failure_injection`, a reusable synthetic transport gate for bounded transient retry, successful recovery, and response-body isolation. Focused connector tests cover retryable status validation and retry-ceiling refusal; no provider or network claim is introduced.
       - E-343 adds Alembic `0061_pg_writeback_intents` and `PostgresWritebackIntentRepository`. Intent JSON/digests and lifecycle versions are immutable, forced-RLS tenant/workspace scoped, replay-idempotent, and optimistic-concurrency checked; the live CI test proves maker/checker approval, dispatch/acknowledgement persistence, sibling-tenant exclusion, version conflict refusal, and append-only mutation refusal. No provider payload, secret, network call, live ERP/bank integration, or write-back claim is introduced.
+      - E-344 routes the existing proposal, maker-checker approval, and acknowledgement endpoints through a request-scoped PostgreSQL write-back repository when the server profile is enabled. Tenant/workspace headers must match the authenticated execution scope, the proposal actor is bound to the authenticated user, and the response retains `network_dispatch: disabled`; local SQLite mode remains unchanged. Contract coverage passes under ADR 0295. Live provider I/O, secret-vault interoperability, compensation delivery, HA/DR, and production write-back remain open.
 
   - id: P4-SCL-001
     priority: P4

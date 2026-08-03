@@ -174,6 +174,7 @@ def create_api_app(
     app.state.postgres_ppa_factory = app.state.postgres_identity_factory
     app.state.postgres_evidence_factory = app.state.postgres_identity_factory
     app.state.postgres_reconciliation_factory = app.state.postgres_identity_factory
+    app.state.postgres_writeback_factory = app.state.postgres_identity_factory
     app.state.federation_providers = dict(federation_providers or {})
     app.state.federation_verifiers = dict(federation_verifiers or {})
     app.state.federation_air_gap_mode = federation_air_gap_mode

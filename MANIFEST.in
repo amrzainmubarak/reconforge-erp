@@ -218,6 +218,7 @@ include reconforge/infrastructure/sqlite_writeback.py
 include tests/test_sqlite_writeback.py
 include docs/adr/0257-writeback-intents-are-append-only-before-provider-I-O.md
 include reconforge/api/routes/connectors.py
+include reconforge/api/server_writeback.py
 include tests/test_api_connectors.py
 include docs/adr/0258-writeback-intent-api-is-proposal-only.md
 include docs/adr/0259-writeback-approval-api-is-maker-checker.md
@@ -396,6 +397,7 @@ include reconforge/infrastructure/postgres_writeback.py
 include tests/test_postgres_writeback.py
 include alembic/versions/0061_postgres_writeback_intents.py
 include docs/adr/0294-postgres-writeback-intent-runtime-evidence.md
+include docs/adr/0295-postgres-writeback-api-server-boundary.md
 include docs/adr/0243-expiring-delegation-is-explicit-and-replayable.md
 include docs/adr/0244-local-delegation-administration-is-immutable-and-tenant-scoped.md
 include docs/adr/0245-postgres-durable-job-runtime-gate.md

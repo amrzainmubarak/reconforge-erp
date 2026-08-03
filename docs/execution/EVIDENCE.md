@@ -11816,13 +11816,15 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   files pass. `RECONFORGE_TEST_POSTGRES_DSN` was not configured locally.
 - Remote live gate: implementation commit `9b9ff98d` passed CI run
   `30786172958`; the final documentation-bound head
-  `040196896dd708a4f3120b10e6758a851fafc920` passed CI run `30786555699`,
-  including `server-boundaries` job `91601074636`. The PostgreSQL 16 service
-  under the non-privileged role completed the synthetic
+  `040196896dd708a4f3120b10e6758a851fafc920` passed CI run `30786555699`;
+  the final evidence-bound head `17170ce1bf59abbe9daf1fabafb7f5925f6573cf`
+  passed CI run `30786961571`, including `server-boundaries` job
+  `91602257271`. The PostgreSQL 16 service under the non-privileged role
+  completed the synthetic
   prepare/approve/post/reversal lifecycle, line/effect cardinality and tenant
   isolation checks, and the append-only update refusal. Both Python jobs, all
-  four engine-parity jobs, and Docker parity `91601887798` also passed;
-  Security run `30786555690` and CodeQL run `30786555693` passed.
+  four engine-parity jobs, and Docker parity `91603048107` also passed;
+  Security run `30786961543` and CodeQL run `30786961541` passed.
 - Boundary: this evidence is bounded control-journal parity. It does not prove
   statutory consolidation, acquisition/goodwill/equity-method treatment, live
   rates, ERP/bank interoperability or write-back, HA/DR, distributed scale,

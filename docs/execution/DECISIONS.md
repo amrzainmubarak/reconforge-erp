@@ -2415,9 +2415,10 @@
   accepted.
 - **Evidence**: Focused PostgreSQL schema/migration/registry and SQLite/API
   compatibility suites pass locally. Implementation commit `9b9ff98d` and
-  final documentation-bound head `04019689` both passed the live PostgreSQL
-  server-boundaries contract under the non-privileged role, including runtime
-  parity, tamper refusal, and tenant isolation.
+  final documentation-bound head `04019689` and final evidence-bound head
+  `17170ce1` both passed the live PostgreSQL server-boundaries contract under
+  the non-privileged role, including runtime parity, tamper refusal, and tenant
+  isolation.
 - **Boundary**: This does not claim statutory consolidation, acquisition or
   equity-method accounting, live source-system posting/write-back, HA/DR,
   scale, or production readiness.

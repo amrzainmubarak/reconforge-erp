@@ -453,10 +453,12 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   schema, migration, registry, SQLite compatibility, Ruff, Mypy, and adapter
   tests pass locally. Implementation commit `9b9ff98d` passed CI run
   `30786172958`; the final documentation-bound head
-  `040196896dd708a4f3120b10e6758a851fafc920` passed CI run
-  `30786555699`, including live `server-boundaries` job `91601074636`, both
-  Python jobs, all four engine-parity jobs, and Docker parity
-  `91601887798`. Security `30786555690` and CodeQL `30786555693` also passed.
+  `040196896dd708a4f3120b10e6758a851fafc920` passed CI run `30786555699`;
+  the final evidence-bound head `17170ce1bf59abbe9daf1fabafb7f5925f6573cf`
+  passed CI run `30786961571`, including live `server-boundaries` job
+  `91602257271`, both Python jobs, all four engine-parity jobs, and Docker
+  parity `91603048107`. Security `30786961543` and CodeQL `30786961541` also
+  passed.
 - Boundary: this is synthetic PostgreSQL control-journal parity only. It does
   not prove statutory consolidation, acquisition/goodwill/equity-method
   accounting, live ERP/bank connectors or write-back, HA/DR, distributed

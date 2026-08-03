@@ -22,7 +22,7 @@
   the implementation, and final documentation-bound CI run `30786555699`
   passed the live PostgreSQL contract under the non-privileged role, proving
   lifecycle replay, effect-line cardinality, tenant isolation, and update
-  refusal at the final head.
+  refusal. The final evidence-bound head is `17170ce1`.
 - **Boundary**: This is synthetic control-journal persistence parity only. It
   does not implement acquisition accounting, goodwill/equity method, statutory
   consolidation, live rates, ERP/bank write-back, HA/DR, distributed scale,

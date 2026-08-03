@@ -2283,3 +2283,16 @@
   closed.
 - Boundary: this does not add statutory posting, PostgreSQL parity, UI
   mutation, or source-system write-back.
+
+# E-311 — PostgreSQL close reads must replay and reopening must be independent
+
+- Date: 2026-08-03
+- Decision: treat PostgreSQL JSONB as untrusted persisted evidence at every read
+  boundary; reproduce the worksheet and compare canonical/journal digests.
+  Persist lock/reopen events with supplied reasons and require a different actor
+  for reopening a period.
+- Evidence: adapter contract tests pass locally; the existing CI server-boundary
+  test executes the strengthened lifecycle against PostgreSQL 16 under the
+  non-privileged role.
+- Boundary: one-node synthetic control-journal evidence only; no statutory,
+  HA/DR, restore, or source-system posting claim.

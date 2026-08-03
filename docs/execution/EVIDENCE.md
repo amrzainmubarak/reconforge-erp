@@ -300,6 +300,17 @@ This file records commands and observed results. It does not convert a dirty wor
   server-boundaries, four engine-parity matrices, Python 3.11/3.12 tests,
   package build, and Docker parity.
 
+## E-311: PostgreSQL consolidation-close replay and period SoD hardening
+
+- Code evidence: `PostgresConsolidationCloseRepository` binds idempotent replay
+  to worksheet digest and preparer, verifies JSONB worksheet replay and journal
+  digest on run reads, and records lock/reopen events with actor/reason
+  attribution. Reopen by the locking actor fails closed.
+- Test evidence: `python -m pytest tests/test_postgres_consolidation_close.py tests/test_postgres_parity_inventory.py -q` passed locally (6 passed, 1 live test skipped without DSN); Ruff, Mypy, and diff-check passed.
+- Boundary: the existing CI PostgreSQL 16 single-node synthetic gate E-291
+  remains the runtime evidence. No statutory consolidation, restore, HA/DR,
+  ERP/bank write-back, or production SLO claim is made.
+
 ## E-292: Expiring delegation policy invariant
 
 - Added optional delegation fields to `PolicyEvaluationContext` and forwarded

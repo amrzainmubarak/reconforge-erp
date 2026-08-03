@@ -168,6 +168,8 @@ class PostgresConsolidationCloseRepository:
                 (self.tenant_id, run_id),
             ).fetchone()
             if existing:
+                if str(existing["worksheet_digest"]) != digest or str(existing["prepared_by"]) != actor:
+                    raise PlatformError("Consolidation run identifier conflicts with immutable worksheet evidence.")
                 return dict(existing)
             self.connection.execute(
                 "INSERT INTO reconforge.consolidation_close_runs(tenant_id,id,period_id,workspace_id,run_number,worksheet_payload,worksheet_digest,journal_digest,prepared_by) VALUES(%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s)",
@@ -280,24 +282,46 @@ class PostgresConsolidationCloseRepository:
     def lock_period(
         self, period_id: str, *, expected_version: int, reason: str, actor_label: str = "local-cli"
     ) -> dict[str, Any]:
-        return self._period_transition(period_id, expected_version, "Open", "Locked", actor_label)
+        return self._period_transition(period_id, expected_version, "Open", "Locked", reason, actor_label)
 
     def reopen_period(
         self, period_id: str, *, expected_version: int, reason: str, actor_label: str = "local-cli"
     ) -> dict[str, Any]:
-        return self._period_transition(period_id, expected_version, "Locked", "Open", actor_label)
+        return self._period_transition(period_id, expected_version, "Locked", "Open", reason, actor_label)
 
     def _period_transition(
-        self, period_id: str, expected_version: int, old: str, new: str, actor_label: str
+        self, period_id: str, expected_version: int, old: str, new: str, reason: str, actor_label: str
     ) -> dict[str, Any]:
+        actor = self._actor(actor_label)
+        reason_text = self._actor(reason)
         with self.connection.transaction():
             self._scope()
+            current = self.connection.execute(
+                "SELECT status,row_version FROM reconforge.consolidation_close_periods WHERE tenant_id=%s AND id=%s FOR UPDATE",
+                (self.tenant_id, period_id),
+            ).fetchone()
+            if current is None:
+                raise PlatformError("Consolidation period not found.")
+            if str(current["status"]) != old or int(current["row_version"]) != expected_version:
+                raise PlatformError("Consolidation period changed concurrently or has an invalid state.")
+            if new == "Open":
+                locker = self.connection.execute(
+                    "SELECT actor FROM reconforge.consolidation_close_period_events WHERE tenant_id=%s AND period_id=%s AND action='Locked' ORDER BY created_at DESC,id DESC LIMIT 1",
+                    (self.tenant_id, period_id),
+                ).fetchone()
+                if locker is not None and str(locker["actor"]) == actor:
+                    raise PlatformError("Period reopen requires an actor independent of the period locker.")
             updated = self.connection.execute(
                 "UPDATE reconforge.consolidation_close_periods SET status=%s,row_version=row_version+1,updated_at=now() WHERE tenant_id=%s AND id=%s AND status=%s AND row_version=%s",
                 (new, self.tenant_id, period_id, old, expected_version),
             )
             if updated.rowcount != 1:
                 raise PlatformError("Consolidation period changed concurrently or has an invalid state.")
+            event_id = platform_id("PGCCPE", self.tenant_id, period_id, new, expected_version + 1)
+            self.connection.execute(
+                "INSERT INTO reconforge.consolidation_close_period_events(tenant_id,id,period_id,action,actor,reason) VALUES(%s,%s,%s,%s,%s,%s)",
+                (self.tenant_id, event_id, period_id, new, actor, reason_text),
+            )
             return dict(
                 self.connection.execute(
                     "SELECT * FROM reconforge.consolidation_close_periods WHERE tenant_id=%s AND id=%s",
@@ -334,7 +358,32 @@ class PostgresConsolidationCloseRepository:
                 "SELECT * FROM reconforge.consolidation_close_runs WHERE tenant_id=%s AND id=%s",
                 (self.tenant_id, run_id),
             ).fetchone()
-            return dict(row) if row else (_ for _ in ()).throw(PlatformError("Consolidation run not found."))
+            if row is None:
+                raise PlatformError("Consolidation run not found.")
+            return self._verified_run(dict(row))
+
+    def _verified_run(self, record: dict[str, Any]) -> dict[str, Any]:
+        """Replay-check JSONB worksheet and effect metadata before exposure."""
+
+        payload = record.get("worksheet_payload")
+        if isinstance(payload, str):
+            try:
+                payload = json.loads(payload)
+            except json.JSONDecodeError as exc:
+                raise PlatformError("Persisted consolidation worksheet is not valid JSON.") from exc
+        if not isinstance(payload, dict):
+            raise PlatformError("Persisted consolidation worksheet is not an object.")
+        try:
+            verified = verify_consolidation_worksheet_payload(payload)
+        except (ConsolidationError, TypeError, ValueError) as exc:
+            raise PlatformError("Persisted consolidation worksheet failed replay verification.") from exc
+        expected_digest = hashlib.sha256(self._json(verified.to_dict()).encode()).hexdigest()
+        if expected_digest != str(record.get("worksheet_digest")):
+            raise PlatformError("Persisted consolidation worksheet digest mismatch.")
+        if verified.result_digest != str(record.get("journal_digest")):
+            raise PlatformError("Persisted consolidation journal digest mismatch.")
+        record["worksheet"] = verified.to_dict()
+        return record
 
     def list_runs(
         self,
@@ -351,7 +400,7 @@ class PostgresConsolidationCloseRepository:
                 "SELECT * FROM reconforge.consolidation_close_runs WHERE tenant_id=%s AND workspace_id=%s AND (%s='' OR status=%s) ORDER BY run_number LIMIT %s OFFSET %s",
                 (self.tenant_id, workspace, status, status, limit, offset),
             ).fetchall()
-            return [dict(r) for r in rows]
+            return [self._verified_run(dict(r)) for r in rows]
 
     def summary(self, *, workspace: str = "default", actor_label: str = "local-cli") -> Any:
         from reconforge.application.consolidation_close import ConsolidationCloseSummary

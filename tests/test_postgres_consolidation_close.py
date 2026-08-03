@@ -125,14 +125,31 @@ def test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable() -
         )
         locked = repository.lock_period(period["id"], expected_version=1, reason="close", actor_label="period-reviewer")
         assert locked["status"] == "Locked"
+        with pytest.raises(PlatformError, match="independent"):
+            repository.reopen_period(
+                period["id"],
+                expected_version=locked["row_version"],
+                reason="same actor",
+                actor_label="period-reviewer",
+            )
         reopened = repository.reopen_period(
             period["id"],
             expected_version=locked["row_version"],
             reason="controlled reopen",
-            actor_label="period-reviewer",
+            actor_label="period-reopener",
         )
         assert reopened["status"] == "Open"
         assert repository.summary(workspace="close").reversed_runs == 1
+        detail = repository.get_run(first["id"])
+        assert detail["worksheet"]["worksheet_id"] == worksheet.worksheet_id
+        events = connection.execute(
+            "SELECT action,actor FROM reconforge.consolidation_close_period_events WHERE tenant_id=%s AND period_id=%s ORDER BY created_at,id",
+            (tenant_a, period["id"]),
+        ).fetchall()
+        assert [(str(item["action"]), str(item["actor"])) for item in events] == [
+            ("Locked", "period-reviewer"),
+            ("Open", "period-reopener"),
+        ]
         with pytest.raises(PlatformError, match="not found"):
             PostgresConsolidationCloseRepository(connection, tenant_b).get_period(period["id"])
     finally:

@@ -218,6 +218,16 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   parity, statutory statements, UI workflow, and production close claims remain
   open.
 
+## E-311 — PostgreSQL consolidation-close replay and period SoD hardening
+
+- Conflicting idempotent run identifiers now fail closed when worksheet digest
+  or preparer differs. JSONB worksheets and journal digests are replay-verified
+  before run reads, lists, or summaries expose them.
+- Period lock/reopen transitions persist attributed events with the supplied
+  reason and reject reopening by the actor who locked the period.
+- The runtime claim remains bounded to one synthetic PostgreSQL CI node;
+  restore, HA/DR, ERP write-back, and external assurance remain open.
+
 ## E-292 — Explicit expiring delegation in central policy
 
 - The central policy engine now evaluates temporary delegated authority using a

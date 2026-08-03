@@ -81,6 +81,10 @@ def test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable() -
                 " reconforge.consolidation_close_runs,reconforge.consolidation_close_effects,"
                 " reconforge.consolidation_close_period_events,reconforge.certification_records TO " + app_user
             )
+            admin.execute(
+                "GRANT SELECT,INSERT,UPDATE ON reconforge.domain_audit_ledger_state,"
+                " reconforge.domain_audit_events,reconforge.outbox_events TO " + app_user
+            )
     finally:
         admin.close()
 

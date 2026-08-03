@@ -11732,3 +11732,8 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   service and is not counted until server-boundaries is green.
 - Boundary: workflow metadata parity only; no legal signature, statutory
   consolidation, or source-ERP posting claim.
+- Diagnostic CI run `30781459988` failed in the new live path because the
+  fixture granted certification/close tables but omitted the existing
+  `domain_audit_*` and `outbox_events` write boundary used by PostgreSQL
+  approvals. The failure is retained; the fixture correction adds only those
+  minimal grants before the next run.

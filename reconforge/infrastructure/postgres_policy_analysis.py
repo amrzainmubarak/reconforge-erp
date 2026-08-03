@@ -38,6 +38,13 @@ def _timestamp(value: datetime, field_name: str) -> str:
     return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
+def _optional_scope_value(row: Any, key: str, index: int, field_name: str) -> str | None:
+    value = _value(row, key, index)
+    if value is None:
+        return None
+    return _scope(str(value), field_name)
+
+
 @dataclass(frozen=True)
 class PostgresPolicyAnalysisRepository:
     """Read active effective grants under the caller's transaction-local tenant RLS."""
@@ -74,7 +81,8 @@ class PostgresPolicyAnalysisRepository:
         approved = self._require_active_user(approved_by, "approved_by")
         user_rows = self.connection.execute(
             """SELECT ur.user_id AS principal_id, ur.role_id, r.name AS role_name,
-                      rp.permission_name
+                      rp.permission_name, ps.scope_id, ps.workspace_id, ps.entity_id,
+                      ps.period_id, ps.region_id, ps.data_classification
                  FROM reconforge.identity_user_roles ur
                  JOIN reconforge.identity_users u
                    ON u.tenant_id=ur.tenant_id AND u.id=ur.user_id AND NOT u.disabled
@@ -82,8 +90,11 @@ class PostgresPolicyAnalysisRepository:
                    ON r.tenant_id=ur.tenant_id AND r.id=ur.role_id AND r.active
                  JOIN reconforge.identity_role_permissions rp
                    ON rp.tenant_id=r.tenant_id AND rp.role_id=r.id AND rp.active
+                 LEFT JOIN reconforge.identity_role_permission_scopes ps
+                   ON ps.tenant_id=rp.tenant_id AND ps.role_id=rp.role_id
+                  AND ps.permission_name=rp.permission_name AND ps.active
                 WHERE ur.tenant_id=%s AND ur.active
-                ORDER BY ur.user_id, ur.role_id, rp.permission_name""",
+                ORDER BY ur.user_id, ur.role_id, rp.permission_name, ps.scope_id""",
             (self.tenant_id,),
         ).fetchall()
         service_rows = self.connection.execute(
@@ -96,23 +107,50 @@ class PostgresPolicyAnalysisRepository:
             (self.tenant_id,),
         ).fetchall()
 
-        user_permissions: dict[tuple[str, str, str], set[str]] = defaultdict(set)
+        user_permissions: dict[tuple[str, str, str, str], set[str]] = defaultdict(set)
+        user_scopes: dict[tuple[str, str, str, str], PolicyScope] = {}
         for row in user_rows:
             principal = _scope(str(_value(row, "principal_id", 0)), "principal_id")
             role_id = _scope(str(_value(row, "role_id", 1)), "role_id")
             role_name = _scope(str(_value(row, "role_name", 2)), "role_name")
             permission = str(_value(row, "permission_name", 3)).strip()
-            user_permissions[(principal, role_id, role_name)].add(permission)
+            scope = PolicyScope(
+                tenant_id=self.tenant_id,
+                workspace_id=_optional_scope_value(row, "workspace_id", 5, "workspace_id"),
+                entity_ids=frozenset(
+                    value
+                    for value in [_optional_scope_value(row, "entity_id", 6, "entity_id")]
+                    if value is not None
+                ),
+                period_ids=frozenset(
+                    value
+                    for value in [_optional_scope_value(row, "period_id", 7, "period_id")]
+                    if value is not None
+                ),
+                region_ids=frozenset(
+                    value
+                    for value in [_optional_scope_value(row, "region_id", 8, "region_id")]
+                    if value is not None
+                ),
+                data_classifications=frozenset(
+                    value
+                    for value in [_optional_scope_value(row, "data_classification", 9, "data_classification")]
+                    if value is not None
+                ),
+            )
+            key = (principal, role_id, role_name, scope.digest)
+            user_permissions[key].add(permission)
+            user_scopes[key] = scope
 
         grants: list[PolicyGrant] = []
-        for (principal, role_id, _role_name), permissions in sorted(user_permissions.items()):
+        for (principal, role_id, _role_name, scope_digest), permissions in sorted(user_permissions.items()):
             grants.append(
                 PolicyGrant(
-                    grant_id=f"role-grant:{principal}:{role_id}",
+                    grant_id=f"role-grant:{principal}:{role_id}:{scope_digest}",
                     principal_id=principal,
                     principal_type="user",
                     role_id=role_id,
-                    scope=PolicyScope(tenant_id=self.tenant_id),
+                    scope=user_scopes[(principal, role_id, _role_name, scope_digest)],
                     permissions=frozenset(permissions),
                 )
             )

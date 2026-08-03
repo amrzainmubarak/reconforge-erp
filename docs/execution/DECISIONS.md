@@ -2567,3 +2567,22 @@
   No entity/period persistence, federation, distributed invalidation, role
   mutation, session mutation, or write-back is introduced.
 - **ADR**: `docs/adr/0280-postgres-policy-snapshot-analysis.md`.
+
+## D277 - Persist bounded PostgreSQL role-permission scopes
+
+- **Decision**: add `identity_role_permission_scopes` through Alembic
+  `0058_pg_policy_permission_scopes`. Scope rows are tenant-bound, forced-RLS,
+  append-only records that bind one role permission to workspace/entity/period,
+  region, or data-classification dimensions. The policy snapshot loader
+  groups permissions by identical active scope and retains an explicit
+  tenant-wide wildcard when no row exists.
+- **Rationale**: the analyzer can already reason about scope overlap, but a
+  tenant-only persisted model cannot prove whether a privileged grant is
+  bounded. A separate immutable table preserves compatibility with existing
+  role-permission rows and makes scope evidence reviewable without silently
+  widening every authorization route.
+- **Boundary**: this slice does not persist amount floors/ceilings, perform
+  universal policy enforcement, add federation, invalidate distributed caches,
+  or create a scope-administration API. Downgrade refuses while scope evidence
+  exists.
+- **ADR**: `docs/adr/0281-postgres-policy-permission-scopes.md`.

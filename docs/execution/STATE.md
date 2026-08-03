@@ -655,6 +655,20 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   inventory now records this bounded adapter as `live_verified_current`.
 - ADR: `docs/adr/0280-postgres-policy-snapshot-analysis.md`.
 
+### E-330 in progress: PostgreSQL persisted policy permission scopes
+
+- Alembic `0058_pg_policy_permission_scopes` adds a forced-RLS,
+  append-only scope table binding role permissions to bounded workspace,
+  entity, period, region, or data-classification dimensions.
+- The policy snapshot adapter now groups active permissions by identical
+  persisted scope and preserves an explicit tenant-wide wildcard when no
+  scope row exists. The analyzer remains read-only; universal route/job/export
+  enforcement is not inferred.
+- Local contract tests pass. The live CI gate is wired but parity is
+  temporarily `contract_only` until migration, RLS, scope projection,
+  and immutability pass under the non-privileged PostgreSQL role.
+- ADR: `docs/adr/0281-postgres-policy-permission-scopes.md`.
+
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio
 
 ### E-260 complete: bounded grouped and netting matcher

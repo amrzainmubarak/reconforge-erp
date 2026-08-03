@@ -12043,3 +12043,23 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   entity/period-scoped persisted grants, federation, distributed invalidation,
   and universal route/job/export/UI enforcement remain open.
 - ADR: `docs/adr/0280-postgres-policy-snapshot-analysis.md`.
+
+## E-330: PostgreSQL persisted policy permission scopes
+
+- Local contract command: `python -m pytest tests/test_postgres_policy_scopes.py
+  tests/test_postgres_policy_analysis.py tests/test_postgres_policy_analysis_runtime.py
+  tests/test_alembic_postgres.py tests/test_postgres_operations.py -q -ra` ->
+  10 passed with only the declared live-service skips. Ruff and Mypy also pass.
+- Alembic `0058_pg_policy_permission_scopes` adds a forced-RLS,
+  append-only scope table. Identity and dimension fields are immutable; only a
+  single independent active-to-revoked transition is accepted, and downgrade
+  refuses while evidence remains.
+- `PostgresPolicyAnalysisRepository` left-joins active scope rows, groups
+  permissions by identical bounded scope, and retains tenant-wide wildcard
+  behavior when no row exists. The route remains read-only and no universal
+  authorization enforcement claim follows.
+- A dedicated CI server-boundary run is required before promoting the parity
+  status from `contract_only`; amount-scope persistence, federation,
+  distributed invalidation, and complete route/job/export/UI adoption remain
+  open.
+- ADR: `docs/adr/0281-postgres-policy-permission-scopes.md`.

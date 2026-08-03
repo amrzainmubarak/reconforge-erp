@@ -30,6 +30,10 @@ human-only `security.policy.manage` permission and provide an independent
 approver and an approval timestamp earlier than the analysis time. The result
 is a digest-bound snapshot artifact; it does not change roles, assignments,
 sessions, or service-account permissions.
+With migration `0058_pg_policy_permission_scopes`, it also reports active
+immutable workspace/entity/period/region/data-classification bounds attached to
+role permissions. Missing scope rows remain explicit tenant-wide wildcards;
+this read projection does not itself migrate every authorization consumer.
 
 ## Security behavior
 

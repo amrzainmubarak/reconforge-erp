@@ -267,12 +267,15 @@ include docs/adr/0278-acquisition-purchase-price-allocation-boundary.md
 include reconforge/auth/policy_analysis.py
 include reconforge/application/policy_analysis.py
 include reconforge/infrastructure/postgres_policy_analysis.py
+include reconforge/infrastructure/postgres_policy_scopes.py
 include tests/test_policy_analysis.py
 include tests/test_postgres_policy_analysis.py
 include tests/test_postgres_policy_analysis_runtime.py
+include tests/test_postgres_policy_scopes.py
 include docs/schemas/enterprise_policy_conflict_analysis_v1.schema.json
 include docs/adr/0279-enterprise-policy-conflict-analysis.md
 include docs/adr/0280-postgres-policy-snapshot-analysis.md
+include docs/adr/0281-postgres-policy-permission-scopes.md
 include docs/adr/0251-ha-dr-operational-profile-bounds.md
 include reconforge/auth/policy_cache.py
 include tests/test_policy_cache.py
@@ -372,6 +375,7 @@ include tests/test_postgres_delegations.py
 include tests/test_postgres_delegations_runtime.py
 include alembic/versions/0056_postgres_policy_delegations.py
 include alembic/versions/0057_postgres_consolidation_journal_lines.py
+include alembic/versions/0058_postgres_policy_permission_scopes.py
 include docs/adr/0243-expiring-delegation-is-explicit-and-replayable.md
 include docs/adr/0244-local-delegation-administration-is-immutable-and-tenant-scoped.md
 include docs/adr/0245-postgres-durable-job-runtime-gate.md

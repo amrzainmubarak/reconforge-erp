@@ -31,7 +31,18 @@ class _Connection:
         if "identity_user_roles" in sql:
             return _Cursor(
                 [
-                    {"principal_id": "user-1", "role_id": "role-approve", "role_name": "approver", "permission_name": "close.approve"},
+                    {
+                        "principal_id": "user-1",
+                        "role_id": "role-approve",
+                        "role_name": "approver",
+                        "permission_name": "close.approve",
+                        "scope_id": "rps-1",
+                        "workspace_id": "workspace-a",
+                        "entity_id": "entity-a",
+                        "period_id": "period-2026",
+                        "region_id": None,
+                        "data_classification": "financial",
+                    },
                     {"principal_id": "user-1", "role_id": "role-prepare", "role_name": "preparer", "permission_name": "close.prepare"},
                 ]
             )
@@ -57,8 +68,10 @@ def test_postgres_snapshot_loader_is_tenant_bound_and_replayable() -> None:
     assert {"sod_permission_overlap", "service_account_human_permission", "unscoped_privileged_grant"} <= codes
     assert result.request_digest
     assert result.result_digest
+    assert any(finding.scope_digests for finding in result.findings)
     assert all(parameters == ("tenant-a", "user-1") or parameters == ("tenant-a", "user-2") or parameters == ("tenant-a",) for _, parameters in connection.calls)
     assert any("identity_user_roles" in sql for sql, _ in connection.calls)
+    assert any("identity_role_permission_scopes" in sql for sql, _ in connection.calls)
     assert any("service_accounts" in sql for sql, _ in connection.calls)
 
 

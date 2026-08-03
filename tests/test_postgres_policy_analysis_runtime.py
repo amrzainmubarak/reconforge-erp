@@ -7,6 +7,7 @@ from uuid import uuid4
 import pytest
 
 from reconforge.application.policy_analysis import PolicyAnalysisApplicationService
+from reconforge.auth.policy_analysis import PolicyScope
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings, PostgresTenantBoundary
 from reconforge.infrastructure.postgres_policy_analysis import PostgresPolicyAnalysisRepository
 
@@ -29,6 +30,10 @@ def test_live_postgres_policy_analysis_is_rls_isolated_and_maker_checker_bound()
     role_prepare = f"role_prepare_{suffix}"
     role_approve = f"role_approve_{suffix}"
     service_account = f"svc-{suffix}"
+    scope_id = f"rps-{uuid4().hex}"
+    workspace_id = f"workspace_{suffix}"
+    entity_id = f"entity_{suffix}"
+    period_id = f"period_{suffix}"
     now = datetime.now(UTC).replace(microsecond=0)
 
     admin = admin_factory.connect()
@@ -41,8 +46,9 @@ def test_live_postgres_policy_analysis_is_rls_isolated_and_maker_checker_bound()
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
             admin.execute(
                 f"GRANT SELECT ON TABLE reconforge.identity_users, reconforge.identity_roles, "
-                f"reconforge.identity_user_roles, reconforge.identity_role_permissions, "
-                f"reconforge.identity_permissions, reconforge.service_accounts, "
+                        f"reconforge.identity_user_roles, reconforge.identity_role_permissions, "
+                        f"reconforge.identity_role_permission_scopes, "
+                        f"reconforge.identity_permissions, reconforge.service_accounts, "
                 f"reconforge.service_account_permissions TO {app_user}"
             )
             admin.execute(
@@ -81,6 +87,12 @@ def test_live_postgres_policy_analysis_is_rls_isolated_and_maker_checker_bound()
                 (tenant_a, role_prepare, tenant_a, role_approve, tenant_a, role_approve),
             )
             admin.execute(
+                """INSERT INTO reconforge.identity_role_permission_scopes
+                   (tenant_id,id,role_id,permission_name,workspace_id,entity_id,period_id,created_by)
+                   VALUES (%s,%s,%s,'close.approve',%s,%s,%s,%s)""",
+                (tenant_a, scope_id, role_approve, workspace_id, entity_id, period_id, user_two),
+            )
+            admin.execute(
                 """INSERT INTO reconforge.service_accounts
                    (tenant_id,id,name,display_name,max_credential_ttl_seconds,created_by)
                    VALUES (%s,%s,%s,%s,3600,%s)""",
@@ -91,6 +103,17 @@ def test_live_postgres_policy_analysis_is_rls_isolated_and_maker_checker_bound()
                    (tenant_id,service_account_id,permission_name,granted_by)
                    VALUES (%s,%s,'close.prepare',%s)""",
                 (tenant_a, service_account, user_two),
+            )
+
+        with pytest.raises(Exception, match="policy permission scope identity is immutable"), admin.transaction():
+            admin.execute(
+                "UPDATE reconforge.identity_role_permission_scopes SET entity_id=%s WHERE tenant_id=%s AND id=%s",
+                (f"tampered_{suffix}", tenant_a, scope_id),
+            )
+        with pytest.raises(Exception, match="policy permission scopes are append-only"), admin.transaction():
+            admin.execute(
+                "DELETE FROM reconforge.identity_role_permission_scopes WHERE tenant_id=%s AND id=%s",
+                (tenant_a, scope_id),
             )
 
         with PostgresTenantBoundary(app_factory).transaction(tenant_a) as connection:
@@ -108,6 +131,24 @@ def test_live_postgres_policy_analysis_is_rls_isolated_and_maker_checker_bound()
             codes = {finding.code for finding in result.findings}
             assert "sod_permission_overlap" in codes
             assert "unscoped_privileged_grant" in codes
+            expected_scope_digest = PolicyScope(
+                tenant_id=tenant_a,
+                workspace_id=workspace_id,
+                entity_ids=frozenset({entity_id}),
+                period_ids=frozenset({period_id}),
+            ).digest
+            assert any(
+                expected_scope_digest in finding.scope_digests for finding in result.findings
+            )
+
+        with admin.transaction():
+            admin.execute(
+                """UPDATE reconforge.identity_role_permission_scopes
+                   SET active=FALSE, lifecycle_version=2, revoked_at=now(), revoked_by=%s,
+                       revocation_reason_code='administrative_cleanup'
+                   WHERE tenant_id=%s AND id=%s""",
+                (user_two, tenant_a, scope_id),
+            )
 
         with PostgresTenantBoundary(app_factory).transaction(tenant_b) as connection:
             sibling = PolicyAnalysisApplicationService(
@@ -125,6 +166,10 @@ def test_live_postgres_policy_analysis_is_rls_isolated_and_maker_checker_bound()
             assert sibling.active_grant_count == 0
     finally:
         with admin.transaction():
+            admin.execute(
+                "DELETE FROM reconforge.identity_role_permission_scopes WHERE tenant_id IN (%s,%s)",
+                (tenant_a, tenant_b),
+            )
             admin.execute(
                 "DELETE FROM reconforge.service_account_permissions WHERE tenant_id IN (%s,%s)",
                 (tenant_a, tenant_b),

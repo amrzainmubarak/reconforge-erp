@@ -100,16 +100,15 @@ delegation_runtime_gate:
   ci_run: "30771736208"
   limitations: [single_node, synthetic_data, no_federation, no_route_coverage, no_cache_invalidation_claim]
 policy_analysis_runtime_gate:
-  id: E-329
+  id: E-330
   executed_at: "2026-08-03"
   database: "PostgreSQL 16 Alpine CI service"
   database_image_digest: "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
   application_role: reconforge_app_non_superuser
   focused_tests: 1
-  focused_result: passed
+  focused_result: pending
   covered_live_boundaries: [PolicyAnalysisApplicationService]
-  ci_run: "30803066835"
-  limitations: [single_node, synthetic_data, no_provider_federation, no_distributed_cache_invalidation, no_route_coverage]
+  limitations: [single_node, synthetic_data, no_provider_federation, no_distributed_cache_invalidation, no_route_coverage, no_amount_scope_persistence]
 allowed_statuses: [live_verified_current, live_test_available, contract_only, absent, not_applicable]
 boundaries:
   - {file: consolidation_close.py, service: ConsolidationCloseApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_close.PostgresConsolidationCloseRepository, test: tests/test_postgres_consolidation_close.py, risk: single_node_control_journal_only_no_erp_writeback_or_restore_ha_evidence}
@@ -130,7 +129,7 @@ boundaries:
   - {file: security_center.py, service: SecurityCenterApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_security_center.PostgresSecurityCenterRepository, test: tests/test_postgres_security_center.py, risk: disclosure_high}
   - {file: identity_administration.py, service: IdentityAdministrationApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_identity_administration.PostgresIdentityAdministrationRepository, test: tests/test_postgres_identity_administration.py, risk: identity_critical}
   - {file: access_administration.py, service: AccessAdministrationApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_access_administration.PostgresAccessAdministrationRepository, test: tests/test_postgres_access_administration.py, risk: identity_critical}
-  - {file: policy_analysis.py, service: PolicyAnalysisApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_policy_analysis.PostgresPolicyAnalysisRepository, test: tests/test_postgres_policy_analysis_runtime.py, risk: single_node_synthetic_no_provider_federation_or_route_coverage}
+  - {file: policy_analysis.py, service: PolicyAnalysisApplicationService, status: contract_only, adapter: reconforge.infrastructure.postgres_policy_analysis.PostgresPolicyAnalysisRepository, test: tests/test_postgres_policy_analysis_runtime.py, risk: pending_e330_scope_runtime_gate}
   - {file: security_governance.py, service: SecurityGovernanceApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_security_governance.PostgresSecurityGovernanceRepository, test: tests/test_postgres_security_governance.py, risk: governance_high}
   - {file: audit_browsing.py, service: AuditBrowsingApplicationService, status: contract_only, adapter: reconforge.infrastructure.postgres_audit_browsing.PostgresAuditBrowsingRepository, test: tests/test_audit_browsing.py, risk: disclosure_high}
   - {file: controls.py, service: ControlTestingApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_controls.PostgresControlTestingRepository, test: tests/test_postgres_controls.py}
@@ -152,8 +151,8 @@ boundaries:
   - {file: inventory_planning.py, service: InventoryPlanningApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_planning.PostgresInventoryPlanningRepository, test: tests/test_postgres_inventory_planning.py, risk: financial_high}
 summary:
   total: 38
-  live_verified_current: 14
+  live_verified_current: 13
   live_test_available: 21
   absent: 0
-  contract_only: 1
+  contract_only: 2
   not_applicable: 2

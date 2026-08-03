@@ -566,6 +566,11 @@ The policy-analysis route is read-only. It requires the human-governed
 prior `approved_at` timestamp. It analyzes the active PostgreSQL RBAC and
 enabled service-account snapshot under tenant RLS; it does not mutate policy,
 invalidate distributed caches, or call an external identity provider.
+When migration `0058_pg_policy_permission_scopes` is present, the snapshot also
+projects active workspace/entity/period/region/data-classification bounds from
+immutable role-permission scope rows. The route remains analysis-only; those
+scopes are not claimed as universal enforcement for every API, job, export, or
+UI surface.
 
 Every route requires a human `roles.manage` principal and current privileged
 assurance. Role list cursors are signed and bound to the tenant, retirement

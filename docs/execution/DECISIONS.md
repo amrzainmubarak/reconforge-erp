@@ -2383,3 +2383,21 @@
   soak/backpressure, distributed capacity, HA/DR, live connectors, posting,
   and write-back remain unclaimed.
 - **ADR**: `docs/adr/0268-postgres-grouped-matching-runtime-parity.md`.
+
+## D265 - Preserve checkpointed grouped output across PostgreSQL worker loss
+
+- **Decision**: Treat an unhandled worker loss as a lease-expiry recovery, not
+  a normal matcher failure. Keep already committed partitions immutable, fence
+  replacements until the lease expires, and resume only keys returned by the
+  checkpoint table.
+- **Rationale**: Catching process-termination signals as ordinary failures could
+  hide partial execution. The existing atomic checkpoint/result transaction and
+  generation-bound lease provide a safer recovery boundary without a second
+  matching implementation.
+- **Evidence**: E-318 adds a live non-superuser PostgreSQL contract with two
+  partitions, deliberate process-crash injection, lease fencing, takeover, and
+  exact no-duplicate result assertions.
+- **Boundary**: One synthetic recovery path only; no process supervisor,
+  automatic failover, HA/DR, capacity, live providers, posting, or write-back
+  claim is made.
+- **ADR**: `docs/adr/0269-postgres-grouped-matching-crash-resume.md`.

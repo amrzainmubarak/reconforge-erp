@@ -11771,3 +11771,23 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   and pip-audit completed locally; pip-audit excluded the unpublished local
   package name because it is not on PyPI and reported no known vulnerabilities.
 - ADR: `docs/adr/0268-postgres-grouped-matching-runtime-parity.md`.
+
+## E-318: PostgreSQL grouped-matching crash resume
+
+- Added a live server-boundaries contract with two synthetic entity partitions
+  and the real `PostgresReconciliationWorker` plus
+  `PostgresGroupedMatchingAdapter`. The matcher deliberately raises an
+  unhandled `BaseException` after the first partition has committed.
+- The contract asserts that the original lease fences a replacement worker,
+  explicit database lease expiry permits takeover, completed checkpoint keys
+  are skipped, and the recovered run finishes with two checkpoints, three
+  unique result identities, execution attempt two, and no duplicate edges.
+- Local command:
+  `python -m pytest tests/test_postgres_grouped_matching_runtime.py -q -ra`
+  -> 2 live tests skipped because `RECONFORGE_TEST_POSTGRES_DSN` is not
+  configured. Ruff and Mypy for the changed runtime test pass. The live
+  server-boundaries job for the pushed commit is the required runtime evidence.
+- Boundary: this is one synthetic PostgreSQL crash/resume path. It does not
+  prove process supervision, automatic failover, HA/DR, soak, capacity,
+  production RPO/RTO, live ERP/bank interoperability, posting, or write-back.
+- ADR: `docs/adr/0269-postgres-grouped-matching-crash-resume.md`.

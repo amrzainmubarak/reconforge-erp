@@ -253,6 +253,7 @@ include docs/adr/0266-consolidation-run-certification-api.md
 include docs/adr/0267-postgres-consolidation-certification-parity.md
 include tests/test_postgres_grouped_matching_runtime.py
 include docs/adr/0268-postgres-grouped-matching-runtime-parity.md
+include docs/adr/0269-postgres-grouped-matching-crash-resume.md
 include docs/adr/0251-ha-dr-operational-profile-bounds.md
 include reconforge/auth/policy_cache.py
 include tests/test_policy_cache.py

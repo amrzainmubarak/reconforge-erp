@@ -423,6 +423,21 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   live ERP/bank interoperability. The pure application service remains
   `not_applicable` in `POSTGRES_PARITY_INVENTORY.yaml`.
 
+### E-318 complete: PostgreSQL grouped-matching crash resume
+
+- A live server-boundaries contract now uses two synthetic entity partitions,
+  injects an unhandled process-crash exception after the first committed
+  checkpoint, rejects a replacement worker while the original lease is valid,
+  and resumes only the remaining partition after explicit database lease
+  expiry.
+- The recovered run completes with two checkpoints, three unique result
+  identities, execution attempt two, and no duplicate grouped edges under the
+  non-superuser RLS role. This is the first live crash/resume proof for the
+  grouped PostgreSQL worker; it does not create process supervision or HA/DR.
+- Local execution skips only the live section without a configured
+  `RECONFORGE_TEST_POSTGRES_DSN`; the required evidence is the exact remote
+  server-boundaries job for the pushed commit. ADR 0269 records the boundary.
+
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio
 
 ### E-260 complete: bounded grouped and netting matcher
@@ -435,7 +450,10 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - E-263 adds the bounded FIFO carry-forward/sequence-window strategy. It allocates oldest eligible obligations within one currency/partition and date window, preserves Decimal residuals, is permutation-stable, and returns explicit ambiguity when ceilings are exhausted. No posting or write-back occurs.
 - E-264 adds bounded reversal pairing. Opposite-sign records are paired within a currency/partition/date window, explicit `reversal_of` links outrank inferred candidates, one-to-one consumption is enforced, and ambiguity/unmatched outcomes remain visible. No journal mutation or posting occurs.
 - E-265 adds explicit partial groups inside portfolio selection. Existing exact-only portfolio behavior is unchanged unless `allow_partial_settlement` is true; selected partial decisions carry settled amount and residuals, and the policy flag is digest-bound. No posting or write-back occurs.
-- P4-MAT-001 remains open for mutation/crash-resume and cross-engine properties, and published 10K/100K/1M benchmarks.
+- P4-MAT-001 remains open for broader crash-resume/failure injection,
+  cross-engine properties, PostgreSQL scale, soak, and domain-diverse
+  workloads. E-318 is one bounded live recovery path, not a general reliability
+  or capacity claim.
 - E-317 closes only the worker-runtime portion of the PostgreSQL boundary; the
   workstream remains open for broader cross-engine properties, PostgreSQL scale,
   soak, and domain-diverse workloads.

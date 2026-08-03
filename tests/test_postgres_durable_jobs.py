@@ -82,6 +82,96 @@ def test_live_postgres_job_application_contract_and_rls(tmp_path: Path) -> None:
             repository = PostgresDurableJobRepository(connection)
             service = DurableJobApplicationService(repository)
             governed = GovernedDurableJobApplicationService(service)
+
+            # Bounded PostgreSQL parity/load slice: two tenant lanes contend
+            # over real claims and generation-fenced partition effects. This
+            # intentionally stays small and synthetic; it is not a capacity
+            # or production-SLO claim.
+            load_tenants = [tenant_a, tenant_b]
+            load_jobs_per_tenant = 3
+            load_partitions = 2
+            load_jobs: list[tuple[str, str]] = []
+            for tenant_index, tenant_id in enumerate(load_tenants):
+                for job_index in range(load_jobs_per_tenant):
+                    load_job_id = f"postgres-load-{tenant_index}-{job_index}-{uuid4().hex[:8]}"
+                    load_jobs.append((tenant_id, load_job_id))
+                    service.submit(
+                        JobSubmission(
+                            job_id=load_job_id,
+                            idempotency_scope="postgres-load",
+                            idempotency_key=load_job_id,
+                            tenant_id=tenant_id,
+                            workspace_id="workspace-a",
+                            entity_id="entity-a",
+                            input_digest="a" * 64,
+                            config_digest="b" * 64,
+                            worker_version="postgres-load-v1",
+                            total_units=load_partitions,
+                            retry_ceiling=2,
+                            created_at="2026-07-27T10:00:00Z",
+                        ),
+                        actor_id="load-submitter",
+                    )
+
+            def drain_postgres_load(tenant_id: str, worker_id: str) -> int:
+                worker_connection = factory.connect()
+                try:
+                    worker_repository = PostgresDurableJobRepository(worker_connection)
+                    worker = DurableJobWorkerService(worker_repository)
+                    completed = 0
+                    while completed < load_jobs_per_tenant:
+                        leased = worker.claim(
+                            tenant_id=tenant_id,
+                            worker_id=worker_id,
+                            occurred_at="2026-07-27T10:01:00Z",
+                            lease_expires_at="2026-07-27T10:11:00Z",
+                        )
+                        assert leased is not None
+                        for ordinal in range(1, load_partitions + 1):
+                            if ordinal == load_partitions:
+                                worker.complete_partition(
+                                    leased,
+                                    partition_key=f"partition/{ordinal}",
+                                    ordinal=ordinal,
+                                    input_digest="c" * 64,
+                                    output_digest="d" * 64,
+                                    effect_reference=f"postgres-load/{leased.job.id}/{ordinal}",
+                                    occurred_at=f"2026-07-27T10:01:0{ordinal}Z",
+                                    output_manifest=JobOutputManifest(
+                                        schema_version=1,
+                                        digest="e" * 64,
+                                        reference=f"manifest/{leased.job.id}",
+                                    ),
+                                )
+                            else:
+                                leased = worker.commit_partition(
+                                    leased,
+                                    partition_key=f"partition/{ordinal}",
+                                    ordinal=ordinal,
+                                    completed_units=ordinal,
+                                    input_digest="c" * 64,
+                                    output_digest="d" * 64,
+                                    effect_reference=f"postgres-load/{leased.job.id}/{ordinal}",
+                                    occurred_at=f"2026-07-27T10:01:0{ordinal}Z",
+                                )
+                        completed += 1
+                    return completed
+                finally:
+                    worker_connection.close()
+
+            with ThreadPoolExecutor(max_workers=len(load_tenants)) as executor:
+                assert list(
+                    executor.map(
+                        lambda item: drain_postgres_load(*item),
+                        [(tenant_id, f"postgres-load-worker-{index}") for index, tenant_id in enumerate(load_tenants)],
+                    )
+                ) == [load_jobs_per_tenant] * len(load_tenants)
+            for tenant_id, load_job_id in load_jobs:
+                effects = repository.list_partition_effects(tenant_id=tenant_id, job_id=load_job_id)
+                assert len(effects) == load_partitions
+                assert len({effect.partition_key for effect in effects}) == load_partitions
+                loaded = repository.get(tenant_id=tenant_id, job_id=load_job_id)
+                assert loaded is not None and loaded.status.value == "completed"
             governed_submission = replace(
                 _submission(tenant_a), job_id="governed-postgres-job", idempotency_key="governed-postgres-key"
             )

@@ -390,6 +390,17 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - `reconforge/benchmark/durable_job_cancellation.py` reuses the existing application/worker/repository contracts. The small declared profile cancels a queued subset before claims, proves 48/64 completion with 16 cancellations and 192 exact partition effects, then separately proves running-owner cancellation after a committed prefix with clean lease release. Duplicate effects, queue/running depth, and orphaned leases are checked structurally; timing and peak memory are observations outside the manifest digest.
 - E-258 focused tests cover profile validation, queued-cancellation drain and no-duplicate effects, two-run structural digest reproducibility, running cancellation/lease release, closed manifest limitations, and distribution membership. P4-SCL-001 remains open for backpressure, soak, retry/backoff coupling, PostgreSQL load parity, distributed capacity, and named-hardware 10K/100K/1M/10M publication.
 
+### E-313 complete: bounded PostgreSQL concurrent-load parity
+
+- The live PostgreSQL durable-job contract now exercises two tenant lanes,
+  three synthetic jobs per lane, and two partitions per job through separate
+  worker connections. Every job is claimed, checkpointed, and completed via
+  the existing PostgreSQL application/repository/worker boundaries.
+- The gate requires six completed jobs, twelve exact partition effects, unique
+  partition keys per job, and no duplicate business effect. It is a small
+  synthetic runtime gate only; PostgreSQL capacity, soak, backpressure, queue
+  HA, distributed scale, and production SLOs remain open.
+
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio
 
 ### E-260 complete: bounded grouped and netting matcher

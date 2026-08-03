@@ -11671,3 +11671,20 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   — 2 passed.
 - Boundary: this is a documentation/release-safety gate. It does not create
   multi-host, site-loss, automatic-failover, or production-SLO evidence.
+
+## E-313: PostgreSQL concurrent durable-job parity gate
+
+- Extended `tests/test_postgres_durable_jobs.py` with a bounded live workload:
+  two tenant lanes, three synthetic jobs per tenant, two partitions per job,
+  and one PostgreSQL worker connection per lane. Jobs use the normal
+  application service and real claim/checkpoint/complete repository calls.
+- The contract asserts all six jobs reach `completed`, every job has exactly
+  two partition effects, partition keys are unique per job, and no duplicate
+  business effect exists.
+- Local checks: Ruff, mypy on the changed test, and `git diff --check` pass.
+  The live test is skipped locally because
+  `RECONFORGE_TEST_POSTGRES_DSN` is not configured; CI server-boundaries is the
+  required runtime evidence.
+- Boundary: synthetic small workload only. It does not prove PostgreSQL
+  capacity, soak, backpressure, queue HA, distributed scale, or production
+  SLOs.

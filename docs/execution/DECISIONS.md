@@ -5,6 +5,19 @@
 
 ## Decisions
 
+### D-264: Bounded PostgreSQL durable-job concurrency parity
+- **Date**: 2026-08-03
+- **Context**: Existing high-volume evidence is SQLite-only, while the
+  PostgreSQL worker contract had no concurrent multi-tenant load assertion.
+- **Decision**: Add a small live server-boundaries workload with two tenant
+  lanes, three jobs per lane, and two partitions per job, each lane using a
+  separate PostgreSQL connection.
+- **Rationale**: This directly exercises PostgreSQL claim/checkpoint/effect
+  behavior without converting a small synthetic run into a capacity or SLO
+  claim.
+- **Reversibility**: Test and documentation only; no migration or runtime
+  behavior changes.
+
 ### D-293: Local Delegations Are Immutable and Tenant-Scoped
 - **Date**: 2026-08-02
 - **Context**: Expiring delegation evaluation needs durable administration evidence without hidden wall-clock or cross-tenant lookup behavior.

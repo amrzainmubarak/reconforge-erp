@@ -11909,3 +11909,18 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   acquisition/goodwill/equity-method treatment, cash-flow semantics, live-rate
   feed, ERP/bank posting, or external assurance claim is made.
 - ADR: `docs/adr/0274-management-statement-package.md`.
+
+## E-324: Consolidation close CLI drill-down
+
+- The additive `reconforge consolidation` namespace exposes replay-verified
+  run listing, one-run detail, and workspace summary through the existing
+  `ConsolidationCloseApplicationService` and SQLite repository. Detail output
+  includes the existing `management_statement` and `translation_evidence`
+  projections.
+- Local command: `python -m pytest tests/test_consolidation_cli.py -q -ra`
+  -> 2 passed. The unknown-run case confirms bounded failure instead of an
+  unverifiable success response.
+- No migration or network call was introduced. This is read-only local
+  operator evidence; lifecycle mutation, statutory statements, live rates,
+  ERP/bank write-back, PostgreSQL CLI parity, and UI exposure remain open.
+- ADR: `docs/adr/0275-consolidation-close-cli-drilldown.md`.

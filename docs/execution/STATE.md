@@ -535,6 +535,20 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   rates, ERP/bank posting, or external assurance claim.
 - ADR: `docs/adr/0274-management-statement-package.md`.
 
+### E-324 complete: consolidation close CLI drill-down
+
+- Added `reconforge consolidation runs`, `reconforge consolidation run`, and
+  `reconforge consolidation summary`. These commands reuse the existing
+  backend-neutral close service and SQLite repository, preserve workspace and
+  actor scope, and expose replay-verified `management_statement` and
+  `translation_evidence` in run detail.
+- Local command: `python -m pytest tests/test_consolidation_cli.py -q -ra`
+  -> 2 passed. The unknown-run case exits through the bounded CLI error path.
+- Boundary: read-only local operator evidence only. Full lifecycle mutation,
+  statutory statements, live rates, source-system write-back, PostgreSQL CLI
+  parity, and UI exposure remain open.
+- ADR: `docs/adr/0275-consolidation-close-cli-drilldown.md`.
+
 ## P4-MAT-001 in progress: optimization-grade advanced matching portfolio
 
 ### E-260 complete: bounded grouped and netting matcher

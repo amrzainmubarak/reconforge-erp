@@ -21,6 +21,7 @@ from reconforge import __version__
 from reconforge.ai.summaries import explain_exception_file
 from reconforge.anonymizer.engine import anonymize_directory
 from reconforge.api import create_api_app
+from reconforge.application.consolidation_close import ConsolidationCloseApplicationService
 from reconforge.audit import AuditLedgerError, list_audit_events, verify_audit_events
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService, RoleRepository
 from reconforge.auth.federation_config import FederationConfigurationError, load_federation_runtime
@@ -93,6 +94,7 @@ from reconforge.infrastructure.postgres_service_accounts import (
     PostgresServiceAccountRepository,
     ServiceAccountError,
 )
+from reconforge.infrastructure.sqlite_consolidation_close import SQLiteConsolidationCloseRepository
 from reconforge.io.excel import audit_metadata, write_excel_workbook
 from reconforge.io.generated import GeneratedArtifactError
 from reconforge.io.readers import read_required_datasets
@@ -178,6 +180,7 @@ review_app = typer.Typer(help="Review exceptions with local JSON state.")
 demo_app = typer.Typer(help="Run first-time-user demo workflows.")
 compare_app = typer.Typer(help="Compare generated exception outputs across periods.")
 close_app = typer.Typer(help="Manage local close checklist workflow state.")
+consolidation_app = typer.Typer(help="Inspect replay-verified consolidation close runs.")
 accounts_app = typer.Typer(help="Manage DB-backed account reconciliations.")
 approvals_app = typer.Typer(help="Manage local approval and certification metadata.")
 certifications_app = typer.Typer(help="Manage local certification workflow metadata.")
@@ -216,6 +219,7 @@ app.add_typer(review_app, name="review")
 app.add_typer(demo_app, name="demo")
 app.add_typer(compare_app, name="compare")
 app.add_typer(close_app, name="close")
+app.add_typer(consolidation_app, name="consolidation")
 app.add_typer(accounts_app, name="accounts")
 app.add_typer(approvals_app, name="approvals")
 app.add_typer(certifications_app, name="certifications")
@@ -3916,6 +3920,79 @@ def close_db_report_command(
         _safe_cli_error(exc)
     _print_records("Close Periods", periods, max_rows=50)
     _print_records("Close Tasks", tasks, max_rows=100)
+
+
+@consolidation_app.command("runs")
+def consolidation_runs_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    workspace: Annotated[str, typer.Option("--workspace", help="Workspace scope.")] = "default",
+    status: Annotated[str, typer.Option("--status", help="Optional lifecycle status filter.")] = "",
+    limit: Annotated[int, typer.Option("--limit", min=1, max=500, help="Maximum rows to return.")] = 100,
+    offset: Annotated[int, typer.Option("--offset", min=0, help="Rows to skip.")] = 0,
+    actor: Annotated[str, typer.Option("--actor", help="Actor label for audit attribution.")] = "local-cli",
+) -> None:
+    """List replay-verified consolidation close runs in one workspace."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            service = ConsolidationCloseApplicationService(SQLiteConsolidationCloseRepository(connection))
+            runs = service.list_runs(
+                workspace=workspace,
+                status=status,
+                limit=limit,
+                offset=offset,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    if not runs:
+        console.print("[yellow]No consolidation close runs found.[/yellow]")
+    else:
+        for run in runs:
+            _print_record_detail("Consolidation Close Run", run)
+
+
+@consolidation_app.command("run")
+def consolidation_run_command(
+    run_id: Annotated[str, typer.Option("--run-id", help="Consolidation close run id.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    actor: Annotated[str, typer.Option("--actor", help="Actor label for audit attribution.")] = "local-cli",
+) -> None:
+    """Show one run with replay-verified evidence and management statement sections."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            service = ConsolidationCloseApplicationService(SQLiteConsolidationCloseRepository(connection))
+            run = service.get_run(run_id, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Consolidation Close Run", run)
+
+
+@consolidation_app.command("summary")
+def consolidation_summary_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    workspace: Annotated[str, typer.Option("--workspace", help="Workspace scope.")] = "default",
+    actor: Annotated[str, typer.Option("--actor", help="Actor label for audit attribution.")] = "local-cli",
+) -> None:
+    """Show bounded close lifecycle counts for one workspace."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            service = ConsolidationCloseApplicationService(SQLiteConsolidationCloseRepository(connection))
+            summary = service.summary(workspace=workspace, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Consolidation Close Summary", summary.to_dict())
 
 
 @approvals_app.command("submit")

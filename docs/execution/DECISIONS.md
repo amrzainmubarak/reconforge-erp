@@ -2480,3 +2480,16 @@
 - **Boundary**: management-only evidence; statutory classification, acquisition
   accounting, cash-flow semantics, live rates, and source posting remain open.
 - **ADR**: `docs/adr/0274-management-statement-package.md`.
+
+## D271 - Expose consolidation evidence through a read-only CLI
+
+- **Decision**: add `consolidation runs`, `consolidation run`, and
+  `consolidation summary` commands that call the existing replay-verified
+  close application service and SQLite adapter.
+- **Rationale**: local operators need a CLI evidence path that shows the
+  existing management statement and translation evidence without duplicating
+  accounting calculations or adding an unreviewed mutation surface.
+- **Boundary**: additive read-only local inspection. It does not implement
+  lifecycle mutation, statutory statements, live rates, source write-back,
+  PostgreSQL CLI parity, or UI exposure.
+- **ADR**: `docs/adr/0275-consolidation-close-cli-drilldown.md`.

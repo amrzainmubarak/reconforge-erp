@@ -180,6 +180,8 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   no provider call is possible through this route.
 - Approval, provider acknowledgement, compensation, and live ERP/bank
   execution remain separate evidence gates.
+- Remote gates: CI `30775343346`, Docker `30775343347`, Security `30775343354`,
+  and CodeQL `30775343353` passed.
 
 ## E-292 — Explicit expiring delegation in central policy
 

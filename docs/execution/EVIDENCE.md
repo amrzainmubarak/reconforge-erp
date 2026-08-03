@@ -248,6 +248,9 @@ This file records commands and observed results. It does not convert a dirty wor
 - Boundary: this proves proposal persistence and replay only. It does not
   approve, dispatch, acknowledge, compensate, or establish live ERP/bank
   interoperability, credentials, or provider write-back.
+- Remote evidence: CI `30775343346`, Docker `30775343347`, Security
+  `30775343354`, and CodeQL `30775343353` passed for the API route and full
+  compatibility matrix.
 
 ## E-292: Expiring delegation policy invariant
 

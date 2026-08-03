@@ -12244,4 +12244,7 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - Ruff and `git diff --check` pass. This is a fail-closed documentation/schema
   guard only. It does not provide independent hosts, quorum/witness fencing,
   automatic failover, site-loss recovery, or production SLO evidence.
+- CI run `30823572161` passed Python 3.11/3.12, server-boundaries, all engine-
+  parity cells, and Docker-parity. Security `30823574298`, Docker `30823572431`,
+  and CodeQL `30823572439` also passed.
 - ADR: `docs/adr/0290-ha-dr-verified-profile-requires-independent-domains.md`.

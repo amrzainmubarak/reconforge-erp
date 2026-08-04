@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
-from reconforge.api.server_identity import AuthenticatedServerRequest, request_tenant_id
+from reconforge.api.server_identity import AuthenticatedServerRequest, RequestExecutionScope, request_tenant_id
 from reconforge.auth.models import LocalUser
 from reconforge.db import connect, run_migrations
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings, PostgresTenantBoundary
@@ -430,6 +430,7 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
     import reconforge.api.routes.master_data as master_data_routes
 
     fake = _FakeServerIdentity()
+    scoped_permissions: list[dict[str, object]] = []
 
     def execute(_request: Any, operation: Any) -> Any:
         return operation(fake, request_tenant_id(_request))
@@ -455,6 +456,12 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
     monkeypatch.setattr(auth_routes, "execute_postgres_identity", execute)
     monkeypatch.setattr(audit_routes, "execute_postgres_ledger", execute)
     monkeypatch.setattr(close_routes, "execute_postgres_close", execute)
+    monkeypatch.setattr(close_routes, "request_execution_scope", lambda _request: RequestExecutionScope("tenant-a", "workspace-a"))
+    monkeypatch.setattr(
+        close_routes,
+        "enforce_server_scoped_permission",
+        lambda _request, **kwargs: scoped_permissions.append(kwargs),
+    )
     monkeypatch.setattr(finance_core_routes, "execute_postgres_ledger", execute)
     monkeypatch.setattr(master_data_routes, "execute_postgres_master_data", execute)
 
@@ -654,6 +661,10 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
     assert len(close_tasks.json()["tasks"]) == 5
     assert close_readiness.status_code == 200
     assert close_task_status.status_code == 200
+    assert scoped_permissions == [
+        {"permission": "close.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        {"permission": "close.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+    ]
     assert cash.status_code == 200
     assert revenue.status_code == 200
     assert accounts.status_code == 200

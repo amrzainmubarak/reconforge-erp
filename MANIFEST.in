@@ -461,3 +461,4 @@ include docs/adr/0319-consolidation-close-period-api-write-boundary.md
 include docs/adr/0320-consolidation-close-api-full-lifecycle-boundary.md
 include docs/adr/0321-governed-server-writeback-dispatch-boundary.md
 include docs/adr/0322-server-scoped-close-and-ownership-mutations.md
+include docs/adr/0323-server-scoped-close-management-mutations.md

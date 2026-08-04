@@ -74,10 +74,10 @@ observability = [
     "opentelemetry-sdk==1.44.0",
 ]
 backup = [
-    "cryptography==49.0.0",
+    "cryptography==50.0.0",
 ]
 connectors = [
-    "cryptography==49.0.0",
+    "cryptography==50.0.0",
 ]
 federation = [
     "joserfc==1.7.4",

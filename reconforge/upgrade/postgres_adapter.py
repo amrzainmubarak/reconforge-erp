@@ -69,6 +69,7 @@ class PsycopgAlembicMigrationRunner:
             raise UpgradeError("postgres_upgrade_command_invalid")
         environment = os.environ.copy()
         environment["RECONFORGE_POSTGRES_DSN"] = self._dsns[database]
+        migration_diagnostic = ""
         try:
             with tempfile.TemporaryFile() as output:
                 completed = subprocess.run(  # nosec B603
@@ -81,12 +82,18 @@ class PsycopgAlembicMigrationRunner:
                     check=False,
                     timeout=self._timeout,
                 )
+                if completed.returncode != 0:
+                    output.seek(0)
+                    raw_diagnostic = output.read()
+                    migration_diagnostic = (
+                        raw_diagnostic.decode("utf-8", errors="replace")
+                        if isinstance(raw_diagnostic, bytes)
+                        else str(raw_diagnostic)
+                    )
         except (OSError, subprocess.SubprocessError) as exc:
             raise UpgradeError("postgres_upgrade_migration_process_failed") from exc
         if completed.returncode != 0:
-            output.seek(0)
-            raw_diagnostic = output.read()
-            diagnostic = raw_diagnostic.decode("utf-8", errors="replace") if isinstance(raw_diagnostic, bytes) else str(raw_diagnostic)
+            diagnostic = migration_diagnostic
             for dsn in self._dsns.values():
                 diagnostic = diagnostic.replace(dsn, "[redacted-dsn]")
             diagnostic = diagnostic.strip()

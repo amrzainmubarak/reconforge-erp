@@ -109,6 +109,18 @@ def default_profile() -> PostgresDurableJobScaleProfile:
     )
 
 
+def ten_k_profile() -> PostgresDurableJobScaleProfile:
+    """Return the larger hosted PostgreSQL correctness tier (10K effects)."""
+
+    return PostgresDurableJobScaleProfile(
+        profile_id="postgres-durable-job-load/10k-effects-v1",
+        workers=16,
+        jobs_per_tenant=625,
+        partitions_per_job=4,
+        tenants=4,
+    )
+
+
 def _utc_text() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
@@ -196,9 +208,24 @@ def _manifest_digest(document: dict[str, object]) -> str:
 LIMITATIONS = (
     "This is a bounded synthetic PostgreSQL 16 CI service run with one database host and independent worker connections.",
     "Observed runtime and throughput are hardware/load observations, not an SLO, capacity, or sizing claim.",
-    "The declared profile is 8 workers, 64 jobs, 4 partitions per job, 4 tenant lanes, and 256 committed effects; larger tiers, soak, and backpressure coupling remain unverified here.",
+    "The declared profile shape is recorded in the result; larger tiers, soak, and backpressure coupling remain unverified here.",
     "Queue HA, automatic failover, host loss, cross-host fairness, RPO/RTO, and production deployment remain unverified.",
 )
+
+
+def _limitations(profile: PostgresDurableJobScaleProfile) -> tuple[str, ...]:
+    return (
+        LIMITATIONS[0],
+        LIMITATIONS[1],
+        (
+            "The declared profile is "
+            f"{profile.workers} workers, {profile.jobs} jobs, "
+            f"{profile.partitions_per_job} partitions per job, {profile.tenants} tenant lanes, "
+            f"and {profile.declared_partition_effects} committed effects; larger tiers, soak, "
+            "and backpressure coupling remain unverified here."
+        ),
+        LIMITATIONS[3],
+    )
 
 
 def run_postgres_durable_job_scale_profile(
@@ -217,6 +244,7 @@ def run_postgres_durable_job_scale_profile(
     """
 
     declared = profile or default_profile()
+    limitations = _limitations(declared)
     tenants = tuple(str(value) for value in tenant_ids)
     if len(tenants) != declared.tenants or len(set(tenants)) != len(tenants):
         raise ValueError("tenant_ids must contain exactly the unique declared tenant lanes")
@@ -330,7 +358,7 @@ def run_postgres_durable_job_scale_profile(
         "final_running_depth": final_running_depth,
         "per_tenant_completions": dict(sorted(counts.items())),
         "effect_set_digest": effect_digest,
-        "limitations": list(LIMITATIONS),
+        "limitations": list(limitations),
     }
     manifest_digest = _manifest_digest(document)
     return PostgresDurableJobScaleResult(
@@ -353,7 +381,7 @@ def run_postgres_durable_job_scale_profile(
         observed_throughput_jobs_per_second=round(completed_jobs / runtime, 4) if runtime else 0.0,
         environment=_environment(),
         manifest_digest=manifest_digest,
-        limitations=LIMITATIONS,
+        limitations=limitations,
     )
 
 
@@ -385,6 +413,7 @@ __all__ = [
     "PostgresDurableJobScaleProfile",
     "PostgresDurableJobScaleResult",
     "default_profile",
+    "ten_k_profile",
     "run_postgres_durable_job_scale_profile",
     "verify_postgres_durable_job_scale_result",
 ]

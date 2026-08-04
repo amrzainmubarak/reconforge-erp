@@ -2904,3 +2904,24 @@
 - **ADR**: `docs/adr/0305-grouped-matching-domain-diverse-scale.md`.
 - **Rollback**: remove the benchmark module, artifact/schema, tests, package
   entries, and execution records; existing grouped strategies are unchanged.
+
+## D282 - Publish a PostgreSQL durable-job 10K-effect tier
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Add `postgres-durable-job-load/10k-effects-v1` with 16
+  independent worker connections, 2,500 synthetic jobs, four partitions per
+  job, and four forced-RLS tenant lanes. Keep the 256-effect profile as the
+  compatibility baseline and reuse the existing lease, checkpoint,
+  idempotency, and partition-effect uniqueness contracts.
+- **Reason**: SQLite already has published 10K/100K tiers, while PostgreSQL
+  concurrency evidence stopped at 256 effects. A real 10K PostgreSQL service
+  run closes a material backend-parity gap without turning one host into a
+  capacity or SLO claim.
+- **Boundary**: One PostgreSQL host and synthetic data only. Soak,
+  backpressure coupling, queue HA, automatic failover, host loss, cross-host
+  fairness, RPO/RTO, and production sizing remain unverified.
+- **ADR**: `docs/adr/0306-postgres-durable-job-10k-scale.md`.
+- **Rollback**: remove the tier factory, test, artifact/schema, benchmark
+  note, manifest entries, and execution records; the 256-effect baseline and
+  durable-job runtime remain unchanged.

@@ -1157,6 +1157,24 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   `30876285712`, Security `30876285779`, and CodeQL `30876285690`. The
   engine-parity mirror's 403 fallback was an annotation only; its jobs passed.
 
+### E-356 complete: PostgreSQL durable-job 10K-effect tier
+
+- Added `postgres-durable-job-load/10k-effects-v1`: 16 worker connections,
+  2,500 jobs, four partitions per job, four tenant lanes, and 10,000 declared
+  effects. The local PostgreSQL 16 run completed 2,500/2,500 jobs and
+  10,000/10,000 effects with zero duplicates, zero queue/running residue, and
+  625 completions per lane.
+- Observed Windows 11/Python 3.14.6 runtime was 30.4805s at 82.0197 jobs/s.
+  Effect digest: `62b8f8ea4b19b9644b4fd356db3fc6d96d5922ebfcfe1a4a5aa4aba035e83c2f`;
+  manifest digest: `995184fd3d9bbbb1a8d8f54f619af700673a71e031a35b9c0f609a5cc741b512`.
+- Boundary: one-host synthetic PostgreSQL correctness/concurrency evidence;
+  soak, backpressure coupling, queue HA, automatic failover, host loss,
+  cross-host fairness, RPO/RTO, and production sizing remain open.
+- ADR: `docs/adr/0306-postgres-durable-job-10k-scale.md`.
+- Repository gates after the slice: 2,404 tests collected and the suite exited
+  0 (repository-declared skips); Ruff, Mypy, Bandit, package build, lock
+  consistency, and diff checks passed.
+
 ## P4-CON-001 in progress: governed live connector foundation
 
 - E-266 adds the synthetic provider-neutral `reference-rest-readonly` connector. It validates a closed JSON record page with exact Decimal text, unique identities, bounded cursor, canonical response digest, and the existing SSRF/TLS/secret/rate/retry/idempotency boundary. No real provider, credential, customer data, or write-back is included.

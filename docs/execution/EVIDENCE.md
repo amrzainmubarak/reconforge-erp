@@ -12675,3 +12675,24 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   `30876285712`, Security run `30876285779`, and CodeQL run `30876285690`
   also passed. The engine-parity mirror emitted a 403 fallback annotation but
   the job completed successfully.
+
+## E-356: PostgreSQL durable-job 10K-effect tier
+
+- Added `ten_k_profile()` to `reconforge/benchmark/postgres_durable_job_scale.py`
+  and a live server-boundary test covering 16 independent worker connections,
+  2,500 jobs, four partitions per job, and four forced-RLS tenant lanes.
+- Focused structural tests pass 10/10. A real local PostgreSQL 16 run on
+  Windows 11/Python 3.14.6 completed 2,500 jobs and 10,000 partition effects,
+  with zero duplicate effects, zero queued/running residue, and 625 jobs per
+  lane. Runtime was 30.4805s and observed throughput 82.0197 jobs/s.
+- Artifact `docs/execution/benchmarks/postgres-durable-job-10k-effects-v1.json`
+  is schema-valid. Effect digest is
+  `62b8f8ea4b19b9644b4fd356db3fc6d96d5922ebfcfe1a4a5aa4aba035e83c2f`; manifest
+  digest is `995184fd3d9bbbb1a8d8f54f619af700673a71e031a35b9c0f609a5cc741b512`.
+- Boundary: one-host synthetic PostgreSQL correctness/concurrency evidence;
+  soak, backpressure coupling, queue HA, automatic failover, host loss,
+  cross-host fairness, RPO/RTO, and production sizing remain unverified.
+- Repository gates after the slice: `uv run --no-sync pytest -q` exited 0 with
+  2,404 tests collected (repository-declared skips); Ruff, Mypy, Bandit,
+  package build, `uv lock --check`, and `git diff --check` all passed.
+- ADR: `docs/adr/0306-postgres-durable-job-10k-scale.md`.

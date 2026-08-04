@@ -12668,3 +12668,10 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   2,401 tests collected (repository-declared skips); `python -m ruff check .`, `python -m mypy reconforge`,
   `python -m bandit -q -r reconforge`, `python -m build --no-isolation`,
   `uv lock --check`, and `git diff --check` all passed.
+- Hosted evidence for commit `04a6c3164709278104275fa221d6aedcb18187ee`:
+  CI run `30876285705` passed, including server-boundaries job
+  `91888301725`, object-storage job `91888301790`, Python 3.11/3.12 test jobs
+  `91888301752`/`91888301759`, and all four engine-parity jobs. Docker run
+  `30876285712`, Security run `30876285779`, and CodeQL run `30876285690`
+  also passed. The engine-parity mirror emitted a 403 fallback annotation but
+  the job completed successfully.

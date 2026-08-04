@@ -14,7 +14,9 @@ from reconforge.connectors.package import (
     SignedConnectorEnvelope,
     TrustedPublisherKey,
     TrustedPublisherRegistry,
+    admit_verified_package,
     load_verified_package,
+    load_verified_package_for_admission,
     signature_payload,
 )
 from reconforge.plugins.registry import get_connector
@@ -46,6 +48,41 @@ def test_data_only_package_verifies_against_exact_publisher_key(tmp_path: Path) 
     envelope = load_verified_package(path, trusted_keys=(trust,))
     assert envelope.manifest.connector_id == "generic_csv"
     assert envelope.algorithm == "Ed25519"
+
+
+def test_signed_package_admission_binds_trust_snapshot_and_conformance(tmp_path: Path) -> None:
+    path = tmp_path / "connector.json"
+    trust, _ = _write_signed_package(path)
+    admitted = load_verified_package_for_admission(path, trusted_keys=(trust,))
+    assert admitted.envelope.manifest.connector_id == "generic_csv"
+    assert admitted.checks == ("signature_verified", "publisher_trusted", "manifest_conformant", "data_only")
+    assert admitted.manifest_digest == admitted.envelope.manifest.digest
+    assert len(admitted.admission_digest) == 64
+    assert admitted.to_dict()["trust_registry_digest"] == TrustedPublisherRegistry(version=1, keys=(trust,)).digest
+
+
+def test_signed_package_admission_rejects_manifest_without_synthetic_conformance(tmp_path: Path) -> None:
+    del tmp_path
+    private_key = Ed25519PrivateKey.generate()
+    public_key = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    manifest = get_connector("generic_csv").manifest.model_copy(update={"synthetic_sandbox": False})
+    unsigned = {
+        "package_schema": "signed-connector-package-v1",
+        "publisher_id": "example.publisher",
+        "key_id": "test-key-1",
+        "algorithm": "Ed25519",
+        "manifest": manifest.model_dump(mode="json"),
+        "signature": base64.b64encode(bytes(64)).decode("ascii"),
+    }
+    envelope = SignedConnectorEnvelope.model_validate(unsigned)
+    unsigned["signature"] = base64.b64encode(private_key.sign(signature_payload(envelope))).decode("ascii")
+    envelope = SignedConnectorEnvelope.model_validate(unsigned)
+    trust = TrustedPublisherKey("example.publisher", "test-key-1", public_key)
+    with pytest.raises(ConnectorPackageError, match="conformance_failed"):
+        admit_verified_package(envelope, trust_registry=TrustedPublisherRegistry(version=1, keys=(trust,)))
 
 
 @pytest.mark.parametrize("mutation", ["manifest", "publisher", "signature", "unknown_field"])

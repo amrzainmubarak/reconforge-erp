@@ -6,7 +6,20 @@ Updated: 2026-08-04
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
-## E-380 — Governed write-back compensation dispatch API (in progress locally)
+## E-381 — Signed connector package trust-plus-conformance admission (complete bounded slice)
+
+- Added `load_verified_package_for_admission` and `admit_verified_package`.
+  A signed envelope must pass the operator-owned Ed25519 trust registry and the
+  existing read-only connector conformance portfolio before admission.
+- `VerifiedConnectorPackage` binds the manifest digest, trust-registry
+  version/digest, signature digest, and canonical admission digest. The
+  boundary remains data-only and never imports or executes package code.
+- Focused package/SDK tests, Ruff, and Mypy pass. Live provider interoperability,
+  executable package loading, write-back, and production marketplace evidence
+  remain open.
+- ADR: `docs/adr/0331-signed-connector-package-admission.md`.
+
+## E-380 — Governed write-back compensation dispatch API (complete bounded slice)
 
 - Added the server-profile-only
   `POST /api/v1/connectors/writeback/intents/{intent_id}/compensate/dispatch`
@@ -20,7 +33,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   digest mismatch, and provider failure leave the intent retryable.
 - Local SQLite network I/O remains disabled. Focused local API, route-inventory,
   Ruff, and Mypy checks pass; hosted PostgreSQL server-identity evidence is
-  pending for this new route.
+  recorded below.
 - ADR: `docs/adr/0330-governed-writeback-compensation-dispatch-api.md`.
 - Hosted CI for commit `1f9f222d` is green: CI `30951488861` including
   server-boundaries `92134375855`, PostgreSQL/HA-DR `92134375833`, Python

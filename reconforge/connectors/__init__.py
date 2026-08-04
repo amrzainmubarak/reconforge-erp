@@ -44,7 +44,10 @@ from reconforge.connectors.package import (
     PublisherKeyStatus,
     TrustedPublisherKey,
     TrustedPublisherRegistry,
+    VerifiedConnectorPackage,
+    admit_verified_package,
     load_verified_package,
+    load_verified_package_for_admission,
 )
 from reconforge.connectors.payment_statement_reference import (
     PAYMENT_STATEMENT_ENDPOINT,
@@ -111,6 +114,8 @@ __all__ = [
     "ConnectorKind",
     "ConnectorManifest",
     "ConnectorPackageError",
+    "VerifiedConnectorPackage",
+    "admit_verified_package",
     "REFERENCE_REST_MANIFEST",
     "ReferenceRestConnector",
     "ReferenceRestPage",
@@ -188,4 +193,5 @@ __all__ = [
     "TrustedPublisherKey",
     "TrustedPublisherRegistry",
     "load_verified_package",
+    "load_verified_package_for_admission",
 ]

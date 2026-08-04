@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-286: Require connector package conformance after signature verification
+- **Date**: 2026-08-04
+- **Context**: Ed25519 envelope verification authenticated publishers, but did
+  not itself prove the signed manifest satisfied the connector safety contract.
+- **Decision**: Add a data-only admission helper that verifies one trust source,
+  runs the existing read-only manifest conformance gate, and binds trust,
+  manifest, signature, and admission digests. No executable package loading is
+  permitted.
+- **Rationale**: Trust and capability conformance are independent controls;
+  combining them at an explicit boundary prevents signature-only promotion.
+- **Boundary**: Synthetic manifest/package evidence only; no live provider,
+  write-back, or marketplace claim.
+- **Reversibility**: Additive helper; disable package admission without
+  deleting envelope evidence.
+- **ADR**: `docs/adr/0331-signed-connector-package-admission.md`.
+
 ### D-285: Keep compensation dispatch server-only and payload-resolver bound
 - **Date**: 2026-08-04
 - **Context**: Compensation request and provider-neutral transport existed,

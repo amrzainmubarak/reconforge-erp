@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-381: Signed connector package trust-plus-conformance admission
+
+- Added `load_verified_package_for_admission` and `admit_verified_package`.
+  The signed envelope must pass the exact publisher trust registry and the
+  existing read-only/synthetic/egress conformance gate before admission.
+- `VerifiedConnectorPackage` records canonical checks plus manifest and trust
+  registry digests; no package code is loaded or executed.
+- `uv run python -m pytest -q tests/test_connector_package.py
+  tests/test_connector_sdk.py` -> 20 passed; Ruff and Mypy on the changed
+  package/tests -> passed.
+- Boundary: signed data-only package admission evidence. It is not a live
+  ERP/bank connector, executable plugin loader, write-back authorization,
+  provider compatibility, or production marketplace claim.
+- ADR: `docs/adr/0331-signed-connector-package-admission.md`.
+
 ## E-380: Governed write-back compensation dispatch API
 
 - Added server-only `POST

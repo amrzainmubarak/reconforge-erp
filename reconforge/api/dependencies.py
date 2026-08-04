@@ -272,22 +272,26 @@ def _evaluate_any_policy(
     return CentralPolicyEngine().evaluate_any(context, required_permissions=required_permissions)
 
 
-def enforce_server_scoped_permission(
+def enforce_server_scoped_permissions(
     request: Request,
     *,
-    permission: str,
+    permissions: frozenset[str],
     tenant_id: str,
     workspace_id: str,
     entity_id: str | None = None,
 ) -> None:
-    """Re-evaluate a permission against the selected server hierarchy.
+    """Re-evaluate one of several permissions against the server hierarchy.
 
-    The regular permission dependency proves that the principal has the named
-    capability.  Server business routes must additionally bind that capability
-    to the caller-selected tenant/workspace/entity before touching a repository.
+    The regular permission dependency proves that the principal has one of the
+    named capabilities. Server business routes must additionally bind that
+    capability to the caller-selected tenant/workspace/entity before touching a
+    repository. An explicit set preserves routes whose compatibility contract
+    intentionally accepts more than one permission.
     Local SQLite routes intentionally keep their existing compatibility path.
     """
 
+    if not permissions:
+        raise ValueError("At least one server-scoped permission is required.")
     if not server_identity_enabled(request):
         return
     principal = getattr(request.state, "server_principal", None)
@@ -311,12 +315,12 @@ def enforce_server_scoped_permission(
         authorized_workspace_ids=principal.authorized_workspace_ids,
         authorized_entity_ids=principal.authorized_legal_entity_ids,
     )
-    decision = _evaluate_policy(request, context, required_permission=permission)
+    decision = _evaluate_any_policy(request, context, required_permissions=permissions)
     audit_policy_decision(
         decision,
         actor_id=principal.user.id,
-        required_permissions=frozenset({permission}),
-        surface=f"server.scoped:{permission}",
+        required_permissions=permissions,
+        surface=f"server.scoped:{','.join(sorted(permissions))}",
         request_id=str(getattr(request.state, "request_id", "")),
         principal_type=principal.principal_type,
     )
@@ -337,6 +341,25 @@ def enforce_server_scoped_permission(
         "entity_scope_denied": "Legal-entity scope is not authorized.",
     }.get(code, "Permission denied.")
     raise APIError(status_code=403, code=code, message=message)
+
+
+def enforce_server_scoped_permission(
+    request: Request,
+    *,
+    permission: str,
+    tenant_id: str,
+    workspace_id: str,
+    entity_id: str | None = None,
+) -> None:
+    """Re-evaluate one permission against the selected server hierarchy."""
+
+    enforce_server_scoped_permissions(
+        request,
+        permissions=frozenset({permission}),
+        tenant_id=tenant_id,
+        workspace_id=workspace_id,
+        entity_id=entity_id,
+    )
 
 
 def require_permission(permission: str) -> Callable[..., LocalUser]:

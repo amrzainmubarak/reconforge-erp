@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from fastapi import Request
 
-from reconforge.api.dependencies import enforce_server_scoped_permission
+from reconforge.api.dependencies import enforce_server_scoped_permission, enforce_server_scoped_permissions
 from reconforge.api.errors import APIError
 from reconforge.api.server_identity import (
     AuthenticatedServerRequest,
@@ -168,6 +168,34 @@ def test_server_scoped_permission_allows_granted_workspace_and_audits_without_ra
     enforce_server_scoped_permission(
         request,
         permission="connectors.writeback.approve",
+        tenant_id="tenant-a",
+        workspace_id="workspace-a",
+    )
+
+
+def test_server_scoped_any_permission_preserves_reconciliation_run_alternatives(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from fastapi import FastAPI
+
+    app = FastAPI()
+    app.state.policy_decision_cache = None
+    import reconforge.api.dependencies as dependencies
+
+    monkeypatch.setattr(dependencies, "server_identity_enabled", lambda _request: True)
+    request = _request(
+        {"X-ReconForge-Tenant": "tenant-a", "X-ReconForge-Workspace": "workspace-a"},
+        ServerPrincipal(
+            user=LocalUser(id="user-a", username="alice", display_name="Alice"),
+            permissions=frozenset({"match.run"}),
+            step_up_active=True,
+            authorized_workspace_ids=frozenset({"workspace-a"}),
+        ),
+    )
+    request.scope["app"] = app
+    enforce_server_scoped_permissions(
+        request,
+        permissions=frozenset({"reconciliation.manage", "match.run"}),
         tenant_id="tenant-a",
         workspace_id="workspace-a",
     )

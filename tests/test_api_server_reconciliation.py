@@ -8,7 +8,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
-from reconforge.api.server_identity import request_tenant_id
+from reconforge.api.server_identity import RequestExecutionScope, request_tenant_id
 from reconforge.auth.models import LocalUser
 
 
@@ -86,6 +86,7 @@ def test_server_reconciliation_routes_are_tenant_scoped_and_read_only(tmp_path: 
     user = LocalUser(id="user-a", username="alice", display_name="Alice")
     permissions = frozenset({"reconciliation.read", "reconciliation.manage"})
     repository = _FakeReconciliationRepository()
+    scoped_permissions: list[dict[str, object]] = []
 
     def authenticate(request: Any, token: str) -> tuple[LocalUser, frozenset[str]] | None:
         assert request_tenant_id(request) == "tenant-a"
@@ -97,6 +98,16 @@ def test_server_reconciliation_routes_are_tenant_scoped_and_read_only(tmp_path: 
 
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
+    monkeypatch.setattr(
+        reconciliation_routes,
+        "request_execution_scope",
+        lambda _request: RequestExecutionScope("tenant-a", "workspace-a"),
+    )
+    monkeypatch.setattr(
+        reconciliation_routes,
+        "enforce_server_scoped_permissions",
+        lambda _request, **kwargs: scoped_permissions.append(kwargs),
+    )
     monkeypatch.setattr(reconciliation_routes, "execute_postgres_reconciliation", execute)
 
     tenant_root = tmp_path / "tenants"
@@ -232,6 +243,38 @@ def test_server_reconciliation_routes_are_tenant_scoped_and_read_only(tmp_path: 
     assert cancelled.json()["run"]["cancel_requested"] is True
     assert requeued.status_code == 200
     assert requeued.json()["run"]["execution_status"] == "Queued"
+    assert scoped_permissions == [
+        {
+            "permissions": frozenset({"reconciliation.manage", "match.run"}),
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+        },
+        {
+            "permissions": frozenset({"reconciliation.manage", "match.run"}),
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+        },
+        {
+            "permissions": frozenset({"reconciliation.manage", "match.run"}),
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+        },
+        {
+            "permissions": frozenset({"reconciliation.manage", "match.run"}),
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+        },
+        {
+            "permissions": frozenset({"reconciliation.manage", "match.run"}),
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+        },
+        {
+            "permissions": frozenset({"reconciliation.manage", "match.run"}),
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+        },
+    ]
 
 
 def test_server_reconciliation_routes_require_read_permission(tmp_path: Path, monkeypatch: Any) -> None:

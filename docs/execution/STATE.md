@@ -403,6 +403,23 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   assurance remain open.
 - ADR: `docs/adr/0325-server-scoped-master-data-mutations.md`.
 
+## E-376 — Server-scoped reconciliation run mutations (complete bounded slice)
+
+- PostgreSQL server-profile reconciliation submit, cooperative cancel, and
+  requeue now re-evaluate the existing compatible permission set
+  (`reconciliation.manage` OR `match.run`) against the authenticated
+  tenant/workspace before repository access. The reusable central helper keeps
+  OR semantics explicit; it does not narrow existing callers to one role.
+- Focused reconciliation route and execution-scope tests pass 9/9, including
+  six route invocations and a direct `match.run` any-permission proof. The
+  full pytest suite passes with declared skips only; Ruff, Mypy, build, and
+  diff-check are green locally. Hosted CI is the remaining promotion gate.
+- Boundary: reconciliation route-family policy binding only. Distributed
+  worker authorization, universal route/job/export/UI adoption, federation,
+  live providers, independent HA/DR, and production IAM assurance remain
+  open.
+- ADR: `docs/adr/0326-server-scoped-reconciliation-run-mutations.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

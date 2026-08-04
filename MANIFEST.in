@@ -464,3 +464,4 @@ include docs/adr/0322-server-scoped-close-and-ownership-mutations.md
 include docs/adr/0323-server-scoped-close-management-mutations.md
 include docs/adr/0324-server-scoped-finance-ledger-mutations.md
 include docs/adr/0325-server-scoped-master-data-mutations.md
+include docs/adr/0326-server-scoped-reconciliation-run-mutations.md

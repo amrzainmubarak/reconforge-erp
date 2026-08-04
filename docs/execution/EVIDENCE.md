@@ -282,6 +282,24 @@ This file records commands and observed results. It does not convert a dirty wor
   policy coverage, distributed invalidation, live provider operation,
   independent HA/DR, or production IAM assurance.
 - ADR: `docs/adr/0325-server-scoped-master-data-mutations.md`.
+
+## E-376: Server-scoped reconciliation run mutations
+
+- `reconciliation.py` now binds submit, cooperative cancel, and requeue to a
+  reusable central any-permission scope check for
+  `reconciliation.manage` OR `match.run` before PostgreSQL repository access.
+  The local compatibility path and read routes are unchanged.
+- Focused command:
+  `pytest -q tests/test_api_server_reconciliation.py tests/test_api_execution_scope.py`
+  -> 9 passed. This includes six route invocations (four submissions,
+  cancellation, and requeue) plus a direct `match.run` alternative proof.
+  The final full pytest suite passes with declared skips only; Ruff, Mypy,
+  `python -m build --no-isolation`, and diff-check pass.
+- Boundary: synthetic server-profile reconciliation scope binding only; no
+  claim of distributed worker authorization, universal route/job/export/UI
+  adoption, federation, live providers, independent HA/DR, or production IAM
+  assurance.
+- ADR: `docs/adr/0326-server-scoped-reconciliation-run-mutations.md`.
 - ADR: `docs/adr/0321-governed-server-writeback-dispatch-boundary.md`.
 
 ## E-293: Immutable local delegation administration

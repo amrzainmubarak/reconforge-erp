@@ -18,6 +18,13 @@ This file records commands and observed results. It does not convert a dirty wor
   passed.
 - `python -m mypy reconforge/api/dependencies.py reconforge/api/routes/connectors.py`:
   passed.
+- Hosted GitHub run `30901818289` passed the complete CI matrix for commit
+  `20912d2e`, including `server-boundaries` job `91967637839` and
+  `postgres-ha-dr` job `91967637874`; the companion Security run
+  `30901818328`, Docker run `30901818290`, and CodeQL run `30901818344` also
+  passed. This is a no-regression signal for the repository and hosted
+  boundaries; the new helper itself still has only the focused local policy
+  contract above, not a live route exercise with a real identity fixture.
 - This is a focused local contract. Hosted PostgreSQL server-profile
   execution, complete surface migration, federation, live provider I/O, and
   production IAM assurance remain unverified.

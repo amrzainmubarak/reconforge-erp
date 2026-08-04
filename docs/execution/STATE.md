@@ -129,11 +129,11 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   for atomic queue-cap rejection/idempotent replay/retry cleanup and the
   process-scoped round-robin scheduler's tenant/workspace/entity lane
   isolation.
-- Hosted verification is retained in CI run `30897423047` /
-  `server-boundaries` job `91953554332` for the preceding code head; the new
-  workflow command is part of the next head and must pass its own exact run
-  before promotion. This slice does not claim throughput, global fairness,
-  soak, queue HA, failover, capacity, or production SLOs.
+- Hosted CI run `30898382499` / `server-boundaries` job `91956632669` passed
+  the explicit queue-policy and lane-fairness invocation; Python 3.11/3.12,
+  engine-parity, Docker-parity, object-storage, and `postgres-ha-dr` also
+  passed in the same workflow. This slice does not claim throughput, global
+  fairness, soak, queue HA, failover, capacity, or production SLOs.
 - ADR: `docs/adr/0312-hosted-postgres-queue-policy-and-fairness-gate.md`.
 
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)

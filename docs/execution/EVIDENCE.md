@@ -12820,9 +12820,9 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   with the non-privileged PostgreSQL role. The tests cover atomic queue caps,
   idempotent replay at capacity, retry/cancellation lease cleanup, tenant
   isolation, exact lane filters, and deterministic round-robin selection.
-- The command was added after the green predecessor CI run
-  `30897423047` / `server-boundaries` job `91953554332`; promotion requires a
-  green run on the new workflow head. This is a bounded synthetic runtime
-  gate, not throughput, distributed fairness, soak, queue HA, failover,
-  capacity, or production-SLO evidence.
+- Hosted CI run `30898382499` / `server-boundaries` job `91956632669` passed
+  the explicit invocation; the Python 3.11/3.12, engine-parity, Docker-
+  parity, object-storage, and `postgres-ha-dr` jobs also passed. This is a
+  bounded synthetic runtime gate, not throughput, distributed fairness, soak,
+  queue HA, failover, capacity, or production-SLO evidence.
 - ADR: `docs/adr/0312-hosted-postgres-queue-policy-and-fairness-gate.md`.

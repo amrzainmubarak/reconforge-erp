@@ -3068,9 +3068,9 @@
 - **Boundary**: One synthetic PostgreSQL service and one scheduler loop.
   Throughput, distributed fairness, soak, queue HA, failover, capacity, and
   production SLOs remain open.
-- **Result**: Pending a green CI run on the new workflow head; predecessor
-  `30897423047` / `server-boundaries` job `91953554332` was green before the
-  command addition.
+- **Result**: Hosted CI run `30898382499` / `server-boundaries` job
+  `91956632669` passed the explicit queue-policy and lane-fairness tests, with
+  the remaining required matrix jobs also green.
 - **ADR**: `docs/adr/0312-hosted-postgres-queue-policy-and-fairness-gate.md`.
 - **Rollback**: remove the extra workflow command, ADR, manifest entry, and
   execution evidence; retain the existing 10K hosted gate.

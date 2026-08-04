@@ -102,6 +102,10 @@ This file records commands and observed results. It does not convert a dirty wor
 - Boundary: synthetic single-node route/adapter integration with an empty
   period set. No statutory/posting assurance, independent HA/DR, live
   ERP/bank provider, write-back, or production claim is promoted.
+- Hosted CI `30910990925` passed the live server-boundaries invocation,
+  Python 3.11/3.12 suites, parity, PostgreSQL HA/DR, Docker parity, and
+  object-storage; Security `30910991025`, Docker `30910990850`, and CodeQL
+  `30910990719` also passed for commit `b9fd51d`.
 - ADR: `docs/adr/0317-live-consolidation-close-api-gate.md`.
 
 ## E-293: Immutable local delegation administration

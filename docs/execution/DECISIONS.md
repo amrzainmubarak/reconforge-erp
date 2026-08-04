@@ -3180,7 +3180,8 @@
   statutory or posted close correctness, HA/DR, providers, write-back, or
   production readiness.
 - **Result**: The combined local API/identity/ownership/close gate passes 29/29;
-  Ruff and Mypy pass.
+  Ruff and Mypy pass. Hosted CI `30910990925`, Security `30910991025`, Docker
+  `30910990850`, and CodeQL `30910990719` are green for commit `b9fd51d`.
 - **ADR**: `docs/adr/0317-live-consolidation-close-api-gate.md`.
 - **Rollback**: remove the fixture schema/grants/assertions and ADR; no
   application migration rollback is required.

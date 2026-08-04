@@ -231,6 +231,9 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Boundary: route selection and hierarchy isolation on one synthetic
   PostgreSQL node. This does not prove posted/statutory close behavior,
   independent HA/DR, ERP/bank providers, write-back, or production readiness.
+- Hosted verification for commit `b9fd51d` is green: CI `30910990925`
+  (including `server-boundaries` and `postgres-ha-dr`), Security `30910991025`,
+  Docker `30910990850`, and CodeQL `30910990719`.
 - ADR: `docs/adr/0317-live-consolidation-close-api-gate.md`.
 
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)

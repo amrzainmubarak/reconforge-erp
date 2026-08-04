@@ -696,6 +696,9 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
     from reconforge.api.routes.master_data import _server_id
     from reconforge.infrastructure.postgres import install_postgres_rls_schema
     from reconforge.infrastructure.postgres_close import POSTGRES_CLOSE_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_consolidation_ownership import (
+        POSTGRES_CONSOLIDATION_OWNERSHIP_SCHEMA_SQL,
+    )
     from reconforge.infrastructure.postgres_consolidation_ppa import POSTGRES_CONSOLIDATION_PPA_SCHEMA_SQL
     from reconforge.infrastructure.postgres_ledger import (
         POSTGRES_LEDGER_SCHEMA_SQL,
@@ -732,6 +735,7 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
             admin.execute(POSTGRES_CLOSE_SCHEMA_SQL)
             admin.execute(POSTGRES_IDENTITY_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_OWNERSHIP_SCHEMA_SQL)
             admin.execute(POSTGRES_CONSOLIDATION_PPA_SCHEMA_SQL)
             admin.execute(POSTGRES_PRIVILEGED_SESSION_SCHEMA_SQL)
             admin.execute(
@@ -750,7 +754,8 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                     f"reconforge.ledger_accounts, "
                     f"reconforge.ledger_entries, reconforge.ledger_lines, reconforge.audit_events, "
                     f"reconforge.outbox_events, reconforge.close_periods, reconforge.close_tasks, "
-                    f"reconforge.close_task_dependencies, reconforge.consolidation_ppa_artifacts TO {app_user}"
+                    f"reconforge.close_task_dependencies, reconforge.consolidation_ppa_artifacts, "
+                    f"reconforge.consolidation_ownership_interests TO {app_user}"
                 )
                 admin.execute(
                     f"GRANT SELECT, INSERT, UPDATE ON reconforge.principal_scope_grants TO {app_user}"
@@ -961,6 +966,41 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
         )
         assert ppa_loaded.status_code == 200, ppa_loaded.text
         assert ppa_loaded.json()["artifact"]["id"] == ppa_id
+        ownership_payload = {
+            "group_code": "GLOBAL-GROUP",
+            "workspace": "default",
+            "interest_id": "OWN-API-2026",
+            "parent_entity_code": "PARENT",
+            "subsidiary_entity_code": "SUB",
+            "direct_ownership_percentage": "0.80",
+            "effective_from": "2026-01-01",
+            "effective_to": "",
+            "version": "1.0.0",
+            "source_digest": "b" * 64,
+            "approved_by": "api-user-reviewer",
+            "approved_at": "2026-01-01T00:00:00Z",
+        }
+        ownership_created = client.post(
+            "/api/v1/consolidation-ownership/interests",
+            headers=authenticated_headers,
+            json=ownership_payload,
+        )
+        assert ownership_created.status_code == 200, ownership_created.text
+        assert ownership_created.json()["source"]["kind"] == "postgresql-consolidation-ownership"
+        ownership_resolved = client.get(
+            "/api/v1/consolidation-ownership/effective",
+            headers=authenticated_headers,
+            params={"group_code": "GLOBAL-GROUP", "reporting_date": "2026-08-01"},
+        )
+        assert ownership_resolved.status_code == 200, ownership_resolved.text
+        assert ownership_resolved.json()["interests"][0]["interest_id"] == "OWN-API-2026"
+        sibling_ownership = client.get(
+            "/api/v1/consolidation-ownership/effective",
+            headers={**authenticated_headers, "X-ReconForge-Workspace": "workspace-b"},
+            params={"group_code": "GLOBAL-GROUP", "reporting_date": "2026-08-01"},
+        )
+        assert sibling_ownership.status_code == 403
+        assert sibling_ownership.json()["error"]["code"] == "workspace_scope_denied"
         missing_scope = client.get(
             "/api/v1/finance-core/summary",
             headers={"X-ReconForge-Tenant": tenant_a, "Authorization": f"Bearer {token}"},

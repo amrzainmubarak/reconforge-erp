@@ -71,6 +71,21 @@ This file records commands and observed results. It does not convert a dirty wor
   HA/DR, or production assurance claim.
 - ADR: `docs/adr/0315-consolidation-ownership-api-is-scope-bound.md`.
 
+## E-366: Live authenticated consolidation ownership API gate
+
+- `tests/test_api_server_identity.py::test_live_server_api_uses_postgres_identity_and_tenant_scope`
+  now installs `POSTGRES_CONSOLIDATION_OWNERSHIP_SCHEMA_SQL`, grants the
+  non-privileged app role access to the ownership table, and exercises the
+  real authenticated ownership POST/GET path plus sibling-workspace refusal.
+- With the configured local PostgreSQL 16 service, the combined command
+  `pytest -q tests/test_api_server_identity.py tests/test_api_consolidation_ownership.py tests/test_api_server_scope_boundary.py tests/test_api_authorization_inventory.py tests/test_postgres_consolidation_ownership.py`
+  passes 25 tests. Ruff and Mypy pass for the changed surface.
+- Boundary: synthetic single-node PostgreSQL and one API process. The test
+  proves server identity/request scope/RLS/adapter integration, not production
+  HA/DR, independent approver authentication, statutory consolidation, live
+  providers, write-back, or production readiness.
+- ADR: `docs/adr/0316-live-consolidation-ownership-api-gate.md`.
+
 ## E-293: Immutable local delegation administration
 
 - Added typed `DelegationGrant`, migration 27, and `DelegationRepository`.

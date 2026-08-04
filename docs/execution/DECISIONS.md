@@ -3144,3 +3144,23 @@
 - **ADR**: `docs/adr/0315-consolidation-ownership-api-is-scope-bound.md`.
 - **Rollback**: remove the route/server adapter, inventory entry, tests,
   manifest entry, and ADR; persisted ownership rows and migrations remain.
+
+## D293 - Promote consolidation ownership API to a live server-identity gate
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Extend the existing live PostgreSQL server-identity fixture to
+  install the ownership schema, grant the non-privileged role only the needed
+  table access, and exercise authenticated ownership create/resolve plus
+  sibling-workspace denial through the real FastAPI stack.
+- **Reason**: Mocked scope tests proved route control flow, but did not prove
+  middleware identity, request hierarchy, RLS, and ownership persistence as one
+  runtime path.
+- **Boundary**: Synthetic single-node PostgreSQL and one API process; no claim
+  of independent approver authentication, statutory consolidation, providers,
+  write-back, HA/DR, or production readiness.
+- **Result**: The combined local API/identity/ownership gate passes 25/25;
+  Ruff and Mypy pass.
+- **ADR**: `docs/adr/0316-live-consolidation-ownership-api-gate.md`.
+- **Rollback**: remove the fixture schema/grant/assertions and this ADR; no
+  production schema or migration rollback is required.

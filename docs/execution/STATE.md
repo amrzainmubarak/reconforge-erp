@@ -200,6 +200,22 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   and production assurance remain open.
 - ADR: `docs/adr/0315-consolidation-ownership-api-is-scope-bound.md`.
 
+## E-366 — Live authenticated consolidation ownership API gate (complete bounded slice)
+
+- The existing PostgreSQL server-identity fixture now installs the ownership
+  schema, grants the non-privileged application role the ownership table, and
+  exercises the real FastAPI POST/GET ownership API path.
+- The live test proves authenticated preparer binding, exact decimal input,
+  PostgreSQL persistence/replay, authorized `workspace-a` resolution, and
+  sibling-workspace refusal (`403 workspace_scope_denied`). With the local
+  PostgreSQL 16 service, the combined API/identity/ownership gate passes 25/25;
+  Ruff and Mypy pass.
+- Boundary: synthetic single-node PostgreSQL runtime and one API process. The
+  fixture does not prove independent approver authentication, statutory
+  consolidation, live ERP/bank providers, write-back, HA/DR, or production
+  readiness.
+- ADR: `docs/adr/0316-live-consolidation-ownership-api-gate.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

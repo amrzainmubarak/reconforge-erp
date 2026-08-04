@@ -3029,3 +3029,26 @@
 - **Rollback**: remove the explicit test invocation, contract assertion, ADR,
   and manifest entry; retain the existing 64-partition and local domain-
   diverse profiles.
+
+## D288 - Bind replay-verified close artifacts into one evidence bundle
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Add `consolidation-close-bundle-v1` as a pure, additive
+  read-time manifest over the artifacts already replay-verified by the SQLite
+  and PostgreSQL close adapters. Expose it from detailed run reads without a
+  migration or new mutation path.
+- **Reason**: Separate worksheet, translation, statement, journal, and effect
+  responses were individually integrity-checked but not bound to one consumer-
+  visible identity. A canonical bundle prevents accidental cross-run evidence
+  composition while retaining existing lifecycle compatibility.
+- **Boundary**: Local control-journal and management-only evidence. Statutory
+  reporting, external posting, provider acknowledgement, write-back, HA/DR,
+  and production assurance remain open.
+- **Result**: Focused SQLite bundle/lifecycle tests pass 14/14; PostgreSQL
+  close/bundle tests pass 7/7 with one no-DSN skip; Ruff and Mypy pass for the
+  changed modules.
+- **ADR**: `docs/adr/0311-consolidation-close-evidence-bundle.md`.
+- **Rollback**: remove the bundle module, adapter projection, focused tests,
+  manifest entry, and ADR; persisted rows remain readable because the bundle
+  is derived at read time.

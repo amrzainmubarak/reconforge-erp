@@ -16,6 +16,7 @@ from typing import Any, TypedDict
 
 from reconforge.application.consolidation_close import build_translation_evidence
 from reconforge.domain.consolidation import ConsolidationError
+from reconforge.domain.consolidation_close_bundle import build_consolidation_close_bundle
 from reconforge.domain.consolidation_lifecycle import (
     ConsolidationWorksheetResult,
     verify_consolidation_worksheet_payload,
@@ -803,6 +804,7 @@ class PostgresConsolidationCloseRepository:
         record["management_statement"] = build_management_statement_package(verified).to_dict()
         record["journal_lines"] = actual_lines or expected_lines
         record["effects"] = effects
+        record["close_bundle"] = build_consolidation_close_bundle(record).to_dict()
         return record
 
     def _verified_effects(

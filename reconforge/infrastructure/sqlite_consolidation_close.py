@@ -12,6 +12,7 @@ from typing import Any, TypedDict
 from reconforge.application.consolidation_close import ConsolidationCloseSummary, build_translation_evidence
 from reconforge.auth.rbac import same_actor
 from reconforge.domain.consolidation import ConsolidationError
+from reconforge.domain.consolidation_close_bundle import build_consolidation_close_bundle
 from reconforge.domain.consolidation_lifecycle import (
     ConsolidationWorksheetResult,
     verify_consolidation_worksheet_payload,
@@ -1045,6 +1046,7 @@ class SQLiteConsolidationCloseRepository:
         record["management_statement"] = build_management_statement_package(worksheet).to_dict()
         record["journal_lines"] = [dict(item) for item in rows]
         record["effects"] = effects
+        record["close_bundle"] = build_consolidation_close_bundle(record).to_dict()
         return record
 
     def _verified_effects(self, run_id: str, run_lines: Sequence[sqlite3.Row]) -> list[dict[str, Any]]:

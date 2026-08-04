@@ -234,6 +234,10 @@ def test_replay_verified_run_exposes_explicit_translation_lineage_evidence(tmp_p
     assert statement["total_balance"]["amount"] == "0.00"
     assert statement["worksheet_result_digest"] == run["worksheet_result_digest"]
     assert statement["sections"]
+    bundle = detail["close_bundle"]
+    assert bundle["worksheet_result_digest"] == run["worksheet_result_digest"]
+    assert bundle["translation_result_digest"] == run["translation_result_digest"]
+    assert bundle["management_statement_digest"] == statement["artifact_digest"]
 
 
 def test_migration_25_is_additive_and_adapter_rejects_a_pre_migration_database(tmp_path: Path) -> None:

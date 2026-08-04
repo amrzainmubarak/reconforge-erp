@@ -427,6 +427,9 @@ include docs/adr/0307-postgres-durable-job-lock-order.md
 include docs/adr/0308-postgres-ha-dr-runtime-gate.md
 include docs/adr/0309-postgres-durable-job-10k-hosted-gate.md
 include docs/adr/0310-postgres-grouped-matching-2000-partition-hosted-gate.md
+include reconforge/domain/consolidation_close_bundle.py
+include tests/test_consolidation_close_bundle.py
+include docs/adr/0311-consolidation-close-evidence-bundle.md
 include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-04.json
 include docs/execution/benchmarks/postgres-grouped-matching-64-partitions-v1.md
 include docs/adr/0243-expiring-delegation-is-explicit-and-replayable.md

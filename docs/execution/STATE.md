@@ -106,6 +106,21 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   write-back, HA/DR, or production sizing.
 - ADR: `docs/adr/0310-postgres-grouped-matching-2000-partition-hosted-gate.md`.
 
+## E-361 — Replay-verifiable consolidation close evidence bundle (complete bounded slice)
+
+- Added `consolidation-close-bundle-v1`, a pure digest-bound index over the
+  replay-verified worksheet, translation evidence, management statement,
+  journal, and committed effects for one close run. SQLite and PostgreSQL
+  `get_run` details now expose the same additive bundle after their existing
+  integrity checks.
+- Focused SQLite and PostgreSQL contract tests pass, including cross-run
+  worksheet binding, effect ordering, and tamper refusal. No migration or
+  posting path changed.
+- Boundary: local control-journal and management-only evidence. This is not a
+  statutory statement, external ledger posting, provider acknowledgement,
+  write-back, HA/DR, or production-assurance claim.
+- ADR: `docs/adr/0311-consolidation-close-evidence-bundle.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

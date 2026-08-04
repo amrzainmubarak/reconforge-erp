@@ -12794,3 +12794,20 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   interoperability, posting, write-back, HA/DR, and production sizing remain
   unverified.
 - ADR: `docs/adr/0310-postgres-grouped-matching-2000-partition-hosted-gate.md`.
+
+## E-361: Replay-verifiable consolidation close evidence bundle
+
+- `consolidation-close-bundle-v1` is built only after the SQLite or PostgreSQL
+  repository has replay-verified the worksheet, translation evidence,
+  management statement, journal lines, and committed effects. The bundle
+  binds their digests plus workspace, period, run status, and sorted effect
+  digests into one canonical digest.
+- Focused command: `pytest -q tests/test_consolidation_close_bundle.py
+  tests/test_sqlite_consolidation_close.py` -> `14 passed`; PostgreSQL
+  contract command `pytest -q tests/test_postgres_consolidation_close.py
+  tests/test_consolidation_close_bundle.py` -> `7 passed, 1 skipped` without
+  a configured live DSN. Ruff and Mypy pass for the changed modules.
+- Boundary: additive read-time evidence only. No migration, new posting path,
+  statutory statement, external ledger/provider, write-back, HA/DR, or
+  production-assurance claim is introduced.
+- ADR: `docs/adr/0311-consolidation-close-evidence-bundle.md`.

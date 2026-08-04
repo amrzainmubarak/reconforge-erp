@@ -214,6 +214,9 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   fixture does not prove independent approver authentication, statutory
   consolidation, live ERP/bank providers, write-back, HA/DR, or production
   readiness.
+- Hosted verification for commit `0f9a7eb` is green: CI `30909580514`
+  (including `server-boundaries` and `postgres-ha-dr`), Security `30909580496`,
+  Docker `30909580586`, and CodeQL `30909580604`.
 - ADR: `docs/adr/0316-live-consolidation-ownership-api-gate.md`.
 
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)

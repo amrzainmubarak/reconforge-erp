@@ -3160,7 +3160,8 @@
   of independent approver authentication, statutory consolidation, providers,
   write-back, HA/DR, or production readiness.
 - **Result**: The combined local API/identity/ownership gate passes 25/25;
-  Ruff and Mypy pass.
+  Ruff and Mypy pass. Hosted CI `30909580514`, Security `30909580496`, Docker
+  `30909580586`, and CodeQL `30909580604` are green for commit `0f9a7eb`.
 - **ADR**: `docs/adr/0316-live-consolidation-ownership-api-gate.md`.
 - **Rollback**: remove the fixture schema/grant/assertions and this ADR; no
   production schema or migration rollback is required.

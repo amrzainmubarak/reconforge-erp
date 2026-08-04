@@ -246,8 +246,11 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   `consolidation_ownership_approver_unauthorized`. The check runs inside the
   same PostgreSQL request/transaction boundary and preserves SQLite behavior.
 - The combined local API/identity/ownership/close gate passes 29/29 after the
-  change; focused SQLite ownership tests pass 3/3; Ruff, Mypy, and diff-check
-  pass. Hosted CI verification is pending for the new code head.
+  change; focused SQLite ownership tests pass 3/3; Ruff, Mypy, diff-check, and
+  package build pass. Hosted head `6eb71f2a` is green: CI `30913043618`
+  (`server-boundaries` `92004218583`, `postgres-ha-dr` `92004218707`, and
+  `docker-parity` `92005941216`), Security `30913043237`, Docker `30913043606`,
+  and CodeQL `30913043202`.
 - Boundary: verified identity and permission lookup is not proof of a separate
   approver session, MFA ceremony, statutory consolidation, provider/write-back,
   HA/DR, or production IAM assurance.

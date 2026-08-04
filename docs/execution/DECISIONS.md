@@ -3202,8 +3202,10 @@
   does not prove a separate approver session, MFA ceremony, statutory
   consolidation, live providers, write-back, HA/DR, or production IAM.
 - **Result**: Local ownership API tests pass 3/3 and the combined live
-  API/identity/ownership/close gate passes 29/29; Ruff, Mypy, and diff-check
-  pass. Hosted verification for the new code head is pending.
+  API/identity/ownership/close gate passes 29/29; Ruff, Mypy, diff-check, and
+  package build pass. Hosted head `6eb71f2a` is green in CI `30913043618`
+  (including `server-boundaries`, `postgres-ha-dr`, and `docker-parity`),
+  Security `30913043237`, Docker `30913043606`, and CodeQL `30913043202`.
 - **ADR**: `docs/adr/0318-consolidation-ownership-approver-identity.md`.
 - **Rollback**: remove the identity lookup methods, route checks, tests, ADR,
   and manifest entry; no schema rollback is required.

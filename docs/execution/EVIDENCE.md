@@ -121,7 +121,10 @@ This file records commands and observed results. It does not convert a dirty wor
   single-node evidence and does not prove a separate approver session/MFA,
   statutory consolidation, live providers, write-back, HA/DR, or production
   IAM.
-- Hosted verification for the new code head is pending.
+- Hosted head `6eb71f2a` passes CI `30913043618`, including
+  `server-boundaries` job `92004218583`, `postgres-ha-dr` job `92004218707`,
+  and `docker-parity` job `92005941216`; Security `30913043237`, Docker
+  `30913043606`, and CodeQL `30913043202` also pass.
 - ADR: `docs/adr/0318-consolidation-ownership-approver-identity.md`.
 
 ## E-293: Immutable local delegation administration

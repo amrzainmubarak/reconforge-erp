@@ -385,6 +385,24 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   live providers, independent HA/DR, or production IAM assurance.
 - ADR: `docs/adr/0324-server-scoped-finance-ledger-mutations.md`.
 
+## E-375 — Server-scoped master-data mutations (complete bounded slice)
+
+- PostgreSQL server-profile currency, organization, legal-entity, branch,
+  fiscal-period, and period-status mutations now re-evaluate
+  `master_data.manage` against the authenticated tenant/workspace before
+  repository access. Read routes, the explicit server workspace boundary, and
+  local SQLite compatibility remain unchanged.
+- The focused server identity/scope contract passes 7/7, including six
+  master-data mutation assertions; the broader master-data/server-scope
+  selection passes 16/16. The final full suite passes with 100% local test
+  completion (declared skips only), Ruff, Mypy, build, and diff-check all
+  green. Hosted CI is the remaining promotion gate.
+- Boundary: route-family policy binding only. Full master-data/Finance Core
+  parity, federation, complete route/job/export/UI adoption, distributed
+  invalidation, live providers, independent HA/DR, and production IAM
+  assurance remain open.
+- ADR: `docs/adr/0325-server-scoped-master-data-mutations.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

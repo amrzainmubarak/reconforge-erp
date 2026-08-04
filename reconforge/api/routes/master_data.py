@@ -9,8 +9,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import get_local_db, require_any_permission, require_permission
+from reconforge.api.dependencies import (
+    enforce_server_scoped_permission,
+    get_local_db,
+    require_any_permission,
+    require_permission,
+)
 from reconforge.api.errors import APIError
+from reconforge.api.server_identity import request_execution_scope
 from reconforge.api.server_master_data import execute_postgres_master_data, server_master_data_enabled
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
@@ -131,6 +137,19 @@ def _server_workspace(workspace: str) -> None:
             code="server_workspace_unsupported",
             message="The PostgreSQL server master-data boundary is tenant-scoped and does not support workspaces yet.",
         )
+
+
+def _enforce_server_manage(request: Request, *, workspace: str = "default") -> None:
+    """Re-evaluate master-data mutation authority against the live request scope."""
+
+    _server_workspace(workspace)
+    scope = request_execution_scope(request)
+    enforce_server_scoped_permission(
+        request,
+        permission="master_data.manage",
+        tenant_id=scope.tenant_id,
+        workspace_id=scope.workspace_id,
+    )
 
 
 def _server_id(prefix: str, *parts: object) -> str:
@@ -302,6 +321,7 @@ def upsert_currency(
     """Create or update one local currency reference."""
 
     if server_master_data_enabled(request):
+        _enforce_server_manage(request)
         record = execute_postgres_master_data(
             request,
             lambda repository, tenant: repository.upsert_currency(
@@ -372,7 +392,7 @@ def upsert_organization(
     """Create or update one local organization reference."""
 
     if server_master_data_enabled(request):
-        _server_workspace(payload.workspace)
+        _enforce_server_manage(request, workspace=payload.workspace)
 
         def operation(repository: PostgresMasterDataRepository, tenant: str) -> dict[str, object]:
             base_currency = payload.base_currency.strip().upper() or None
@@ -466,7 +486,7 @@ def upsert_legal_entity(
     """Create or update one local legal-entity reference."""
 
     if server_master_data_enabled(request):
-        _server_workspace(payload.workspace)
+        _enforce_server_manage(request, workspace=payload.workspace)
 
         def operation(repository: PostgresMasterDataRepository, tenant: str) -> dict[str, object]:
             organization = repository.organization_by_code(
@@ -566,7 +586,7 @@ def upsert_branch(
     """Create or update one local branch reference."""
 
     if server_master_data_enabled(request):
-        _server_workspace(payload.workspace)
+        _enforce_server_manage(request, workspace=payload.workspace)
 
         def operation(repository: PostgresMasterDataRepository, tenant: str) -> dict[str, object]:
             organization = repository.organization_by_code(
@@ -654,7 +674,7 @@ def upsert_period(
     """Create or update one non-overlapping local fiscal period."""
 
     if server_master_data_enabled(request):
-        _server_workspace(payload.workspace)
+        _enforce_server_manage(request, workspace=payload.workspace)
         record = execute_postgres_master_data(
             request,
             lambda repository, tenant: repository.upsert_period(
@@ -697,6 +717,7 @@ def set_period_status(
     """Transition fiscal-period metadata; this does not post or lock ERP transactions."""
 
     if server_master_data_enabled(request):
+        _enforce_server_manage(request)
         record = execute_postgres_master_data(
             request,
             lambda repository, tenant: repository.set_period_status(

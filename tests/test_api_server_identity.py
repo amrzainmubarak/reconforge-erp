@@ -432,6 +432,7 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
     fake = _FakeServerIdentity()
     scoped_permissions: list[dict[str, object]] = []
     ledger_scoped_permissions: list[dict[str, object]] = []
+    master_scoped_permissions: list[dict[str, object]] = []
 
     def execute(_request: Any, operation: Any) -> Any:
         return operation(fake, request_tenant_id(_request))
@@ -474,6 +475,16 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
         lambda _request, **kwargs: ledger_scoped_permissions.append(kwargs),
     )
     monkeypatch.setattr(finance_core_routes, "execute_postgres_ledger", execute)
+    monkeypatch.setattr(
+        master_data_routes,
+        "request_execution_scope",
+        lambda _request: RequestExecutionScope("tenant-a", "workspace-a"),
+    )
+    monkeypatch.setattr(
+        master_data_routes,
+        "enforce_server_scoped_permission",
+        lambda _request, **kwargs: master_scoped_permissions.append(kwargs),
+    )
     monkeypatch.setattr(master_data_routes, "execute_postgres_master_data", execute)
 
     tenant_root = tmp_path / "tenants"
@@ -680,6 +691,14 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
         {"permission": "finance_core.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
         {"permission": "finance_core.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
         {"permission": "finance_core.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+    ]
+    assert master_scoped_permissions == [
+        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
     ]
     assert cash.status_code == 200
     assert revenue.status_code == 200

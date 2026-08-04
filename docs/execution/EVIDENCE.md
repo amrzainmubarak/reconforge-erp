@@ -264,6 +264,24 @@ This file records commands and observed results. It does not convert a dirty wor
   posting, complete enterprise IAM, federation, universal route/job/export/UI
   policy coverage, live providers, independent HA/DR, or production assurance.
 - ADR: `docs/adr/0324-server-scoped-finance-ledger-mutations.md`.
+
+## E-375: Server-scoped master-data mutations
+
+- `master_data.py` now calls `enforce_server_scoped_permission` for
+  `master_data.manage` before PostgreSQL server-profile currency,
+  organization, legal-entity, branch, fiscal-period, and period-status
+  mutations. Read routes and the local SQLite path are unchanged.
+- Focused command:
+  `pytest -q tests/test_api_server_identity.py::test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permissions tests/test_api_execution_scope.py`
+  -> 7 passed. The master-data/server-scope selection command passes 16/16.
+  The final `python -m pytest -q --durations=10` passes with declared skips
+  only; Ruff, Mypy, `python -m build --no-isolation`, and diff-check pass.
+  Hosted CI is the remaining promotion gate.
+- Boundary: synthetic server-profile scope binding only; no claim of full
+  master-data/Finance Core parity, federation, universal route/job/export/UI
+  policy coverage, distributed invalidation, live provider operation,
+  independent HA/DR, or production IAM assurance.
+- ADR: `docs/adr/0325-server-scoped-master-data-mutations.md`.
 - ADR: `docs/adr/0321-governed-server-writeback-dispatch-boundary.md`.
 
 ## E-293: Immutable local delegation administration

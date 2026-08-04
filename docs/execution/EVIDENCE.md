@@ -12629,6 +12629,13 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   0 over 2,396 collected tests in 307.2s (declared capability skips and
   warnings only). Ruff, Mypy, Bandit, package build, supply-chain policy,
   `uv lock --check`, and `git diff --check` also passed.
+- Hosted head `01ee957b934d93c0c9c248f2a44a6acc093f2f5c` passed CI
+  `30873354330`, including server-boundaries job `91879657202`, where the
+  live Redis 7 generation contract ran alongside PostgreSQL boundaries.
+  Object-storage `91879657199`, Security `30873354355`, Docker
+  `30873354315`, and CodeQL `30873354319` also passed. The engine-parity
+  annotation was a mirror-download fallback warning only; all selected jobs
+  completed successfully.
 - Boundary: coarse global invalidation only. Redis HA/failover, outage
   recovery, complete route/job/export/UI migration, federation, and production
   IAM assurance remain open. ADR:

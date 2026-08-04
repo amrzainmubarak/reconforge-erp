@@ -32,6 +32,10 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   allowed decision after a bump and do not cache during a synthetic outage.
   Live Redis tests prove two clients observe atomic generation changes and
   remove their synthetic key.
+- Hosted head `01ee957b` passed CI `30873354330` (server-boundaries
+  `91879657202`), where the Redis 7 live contract ran with PostgreSQL; Security,
+  Docker, CodeQL, object-storage, both Python suites, and all engine-parity
+  cells also passed.
 - Boundary: coarse global invalidation only. Redis HA/failover, outage
   recovery, complete route/job/export/UI migration, federation, and production
   IAM assurance remain open. The feature is opt-in and local-first defaults are

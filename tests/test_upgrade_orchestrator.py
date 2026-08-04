@@ -546,6 +546,7 @@ def test_postgres_receipt_detects_backup_tamper_and_native_runner_keeps_dsn_out_
     runner.upgrade("source", "0053_audit_administration_acl")
     argv, kwargs = calls[0]
     assert all("secret" not in item for item in argv)
+    assert argv[1:3] == ("-c", "from alembic.config import main; main()")
     assert argv[-2:] == ("upgrade", "0053_audit_administration_acl")
     assert kwargs["shell"] is False
     assert cast(dict[str, str], kwargs["env"])["RECONFORGE_POSTGRES_DSN"].endswith("/source")

@@ -73,7 +73,15 @@ class PsycopgAlembicMigrationRunner:
         try:
             with tempfile.TemporaryFile() as output:
                 completed = subprocess.run(  # nosec B603
-                    (self._python, "-m", "alembic", "-c", self._alembic_ini, operation, revision),
+                    (
+                        self._python,
+                        "-c",
+                        "from alembic.config import main; main()",
+                        "-c",
+                        self._alembic_ini,
+                        operation,
+                        revision,
+                    ),
                     stdin=subprocess.DEVNULL,
                     stdout=output,
                     stderr=output,

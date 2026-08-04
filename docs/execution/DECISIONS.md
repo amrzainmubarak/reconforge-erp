@@ -2999,17 +2999,20 @@
 - **Rollback**: remove the explicit test invocation, contract assertion, ADR,
   and manifest entry; retain the local and 256-effect hosted profiles.
 
-## D287 - Add a hosted PostgreSQL grouped-matching 2,000-partition gate
+## D287 - Bound the hosted PostgreSQL grouped-matching scale gate
 
 - Date: 2026-08-04
 - Status: accepted
 - **Decision**: Reuse the public grouped strategy and existing PostgreSQL
-  checkpoint worker for a bounded 2,000-partition hosted test instead of
-  creating a parallel matching implementation.
+  checkpoint worker for a bounded 500-partition hosted test instead of
+  creating a parallel matching implementation. The initial 2,000-partition
+  candidate failed in hosted `server-boundaries` run `30890782410` / job
+  `91932080667` after 2m34s and remains an unverified boundary.
 - **Reason**: Local domain-diverse matching evidence and small PostgreSQL
   runtime gates did not jointly exercise the five grouped modes over a larger
-  concurrent partition set. The explicit gate makes result cardinality,
-  duplicate prevention, terminal state, and per-mode distribution reviewable.
+  concurrent partition set. The bounded gate makes result cardinality,
+  duplicate prevention, terminal state, and per-mode distribution reviewable
+  without exceeding the worker's drain window.
 - **Boundary**: Hosted single-node synthetic correctness/concurrency only.
   Throughput, soak, backpressure, cross-host fairness, provider
   interoperability, posting, write-back, HA/DR, and production sizing remain

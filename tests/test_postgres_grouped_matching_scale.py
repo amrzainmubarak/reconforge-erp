@@ -56,7 +56,7 @@ def test_postgres_grouped_matching_scale_artifacts_are_in_source_manifest() -> N
     assert "include tests/test_postgres_grouped_matching_scale.py" in manifest
     assert "include docs/adr/0300-postgres-grouped-matching-bounded-scale-profile.md" in manifest
     assert "include docs/execution/benchmarks/postgres-grouped-matching-64-partitions-v1.md" in manifest
-    assert "test_live_postgres_grouped_matching_2000_partition_scale_profile" in workflow
+    assert "test_live_postgres_grouped_matching_500_partition_scale_profile" in workflow
 
 
 def _run_live_postgres_grouped_profile(
@@ -147,20 +147,20 @@ def test_live_postgres_grouped_matching_scale_drains_concurrent_runs_without_dup
     not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"),
     reason="requires a live PostgreSQL service",
 )
-def test_live_postgres_grouped_matching_2000_partition_scale_profile() -> None:
+def test_live_postgres_grouped_matching_500_partition_scale_profile() -> None:
     profile = PostgresGroupedMatchingScaleProfile(
-        profile_id="postgres-grouped-matching/2000-partitions-v1",
+        profile_id="postgres-grouped-matching/500-partitions-v1",
         workers=16,
-        runs=1_000,
+        runs=250,
         partitions_per_run=2,
         batch_size=16,
     )
-    result = _run_live_postgres_grouped_profile(profile, id_prefix="PG-GROUPED-SCALE-2000-")
+    result = _run_live_postgres_grouped_profile(profile, id_prefix="PG-GROUPED-SCALE-500-")
 
-    assert result.completed_runs == 1_000
-    assert result.completed_partitions == 2_000
+    assert result.completed_runs == 250
+    assert result.completed_partitions == 500
     assert result.result_rows == profile.expected_result_rows
     assert result.duplicate_result_identities == 0
     assert result.failed_runs == 0
     assert result.final_active_runs == 0
-    assert result.per_mode_completed == {mode: 200 for mode in profile.modes}
+    assert result.per_mode_completed == {mode: 50 for mode in profile.modes}

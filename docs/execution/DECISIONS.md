@@ -3389,6 +3389,29 @@
 - **Rollback**: remove helper calls, focused assertions, ADR, and manifest
   entry. No data or schema rollback is required.
 
+## D305 - Separate governed write-back compensation transport
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Add an explicit opt-in compensation operation to the HTTPS
+  write-back executor. A connector registration must allow the original
+  operation for compensation; the executor derives a separate operation
+  marker and `:compensation` idempotency key, validates a caller-supplied
+  payload digest, and requires a matching acknowledgement before the intent
+  becomes `compensated`.
+- **Reason**: Replaying the original write-back payload is not a safe
+  compensation strategy. A separate allowlist, payload, operation, and
+  idempotency domain makes reversal intent visible and fail closed.
+- **Result**: Focused connector tests pass 22/22, including missing allowlist,
+  tampering, retry/failure injection, separate headers, and acknowledgement
+  binding. Ruff and Mypy pass for the changed connector surfaces.
+- **Boundary**: Provider-neutral transport contract only; live ERP/bank
+  compensation semantics, provider sandbox, vault, signed package, production
+  egress, and HA/DR remain unverified.
+- **ADR**: `docs/adr/0328-governed-writeback-compensation-transport.md`.
+- **Rollback**: remove the allowlist field, executor/conformance method,
+  tests, ADR, and manifest entry. No migration is required.
+
 ## D303 - Preserve OR permission compatibility for reconciliation scope
 
 - Date: 2026-08-04

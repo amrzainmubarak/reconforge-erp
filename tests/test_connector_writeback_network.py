@@ -9,8 +9,17 @@ from dataclasses import dataclass, field
 import pytest
 from pydantic import ValidationError
 
-from reconforge.connectors.conformance import verify_writeback_retry_failure_injection
-from reconforge.connectors.writeback import WritebackPolicy, WritebackStatus, approve_writeback, dispatch_writeback
+from reconforge.connectors.conformance import (
+    verify_writeback_compensation_retry_failure_injection,
+    verify_writeback_retry_failure_injection,
+)
+from reconforge.connectors.writeback import (
+    WritebackPolicy,
+    WritebackStatus,
+    approve_writeback,
+    dispatch_writeback,
+    request_compensation,
+)
 from reconforge.connectors.writeback_network import (
     PinnedHttpsPostTransport,
     WritebackNetworkError,
@@ -22,6 +31,7 @@ from reconforge.connectors.writeback_network import (
 from tests.test_connector_writeback import NOW, _intent
 
 PAYLOAD = b'{"amount":"10.00","currency":"USD","reference":"payment-1"}'
+COMPENSATION_PAYLOAD = b'{"amount":"10.00","currency":"USD","reference":"payment-1","action":"reverse"}'
 CONNECTOR_ID = "reference-rest-writeback"
 POLICY = WritebackPolicy(
     connector_id=CONNECTOR_ID,
@@ -39,6 +49,7 @@ def _registration(**updates: object) -> WritebackNetworkRegistration:
         "egress_destinations": ("https://api.example.test/v1/writeback",),
         "credential_reference": "vault://tenant-a/writeback-token",
         "allowed_operations": frozenset({"payment.create"}),
+        "allowed_compensation_operations": frozenset(),
         "feature_enabled": True,
         "synthetic_sandbox": True,
         "rate_limit_per_minute": 60,
@@ -63,6 +74,10 @@ def _dispatched_intent(payload: bytes = PAYLOAD):
         reason="independent provider review",
     )
     return dispatch_writeback(approved, policy=POLICY)
+
+
+def _compensation_requested_intent():
+    return request_compensation(_dispatched_intent(), reason="provider accepted the original mutation but downstream state diverged")
 
 
 def _provider_body(intent_idempotency_key: str, *, reference: str = "provider-1", accepted: bool = True) -> bytes:
@@ -145,6 +160,115 @@ def test_network_dispatch_verifies_payload_sends_secret_only_to_transport_and_bi
     assert headers["Authorization"].startswith("Bearer ")
     assert b"synthetic-writeback-token" not in receipt.intent.model_dump_json().encode()
     assert (timeout, maximum) == (7, 1_048_576)
+
+
+def test_network_compensation_uses_separate_allowlist_key_and_payload_digest() -> None:
+    intent = _compensation_requested_intent()
+    compensation_digest = hashlib.sha256(COMPENSATION_PAYLOAD).hexdigest()
+    compensation_key = intent.idempotency_key + ":compensation"
+    transport = _Transport([WritebackNetworkResponse(200, _provider_body(compensation_key, reference="compensation-1"))])
+    receipt = WritebackNetworkExecutor(
+        transport,
+        payload_resolver=_Payloads(),
+        secret_resolver=_Secrets(),
+        clock=lambda: 0.0,
+    ).dispatch_compensation(
+        intent,
+        registration=_registration(allowed_compensation_operations=frozenset({"payment.create"})),
+        policy=POLICY,
+        payload=COMPENSATION_PAYLOAD,
+        payload_digest=compensation_digest,
+    )
+    assert receipt.intent.status is WritebackStatus.COMPENSATED
+    assert receipt.intent.acknowledgement is not None
+    assert receipt.intent.acknowledgement.idempotency_key == compensation_key
+    assert receipt.intent.acknowledgement.provider_reference == "compensation-1"
+    endpoint, headers, body, _timeout, _maximum = transport.calls[0]
+    assert endpoint == "https://api.example.test/v1/writeback"
+    assert headers["Idempotency-Key"] == compensation_key
+    assert headers["X-ReconForge-Operation"] == "compensate.payment.create"
+    assert body == COMPENSATION_PAYLOAD
+
+
+def test_network_compensation_fails_closed_without_allowlist_or_with_tampered_payload() -> None:
+    intent = _compensation_requested_intent()
+    digest = hashlib.sha256(COMPENSATION_PAYLOAD).hexdigest()
+    executor = WritebackNetworkExecutor(_Transport([]), payload_resolver=_Payloads(), secret_resolver=_Secrets())
+    with pytest.raises(WritebackNetworkError, match="compensation_operation_not_allowed"):
+        executor.dispatch_compensation(
+            intent,
+            registration=_registration(),
+            policy=POLICY,
+            payload=COMPENSATION_PAYLOAD,
+            payload_digest=digest,
+        )
+    with pytest.raises(WritebackNetworkError, match="compensation_payload_digest_mismatch"):
+        executor.dispatch_compensation(
+            intent,
+            registration=_registration(allowed_compensation_operations=frozenset({"payment.create"})),
+            policy=POLICY,
+            payload=b"tampered",
+            payload_digest=digest,
+        )
+
+
+def test_network_compensation_retries_with_the_same_compensation_key() -> None:
+    intent = _compensation_requested_intent()
+    compensation_key = intent.idempotency_key + ":compensation"
+    transport = _Transport(
+        [
+            WritebackNetworkResponse(503, b"retry"),
+            WritebackNetworkError("writeback_transport_failed"),
+            WritebackNetworkResponse(200, _provider_body(compensation_key)),
+        ]
+    )
+    waits: list[float] = []
+    receipt = WritebackNetworkExecutor(
+        transport,
+        payload_resolver=_Payloads(),
+        secret_resolver=_Secrets(),
+        sleeper=waits.append,
+        clock=lambda: 0.0,
+    ).dispatch_compensation(
+        intent,
+        registration=_registration(allowed_compensation_operations=frozenset({"payment.create"})),
+        policy=POLICY,
+        payload=COMPENSATION_PAYLOAD,
+        payload_digest=hashlib.sha256(COMPENSATION_PAYLOAD).hexdigest(),
+    )
+    assert receipt.attempts == 3
+    assert all(call[1]["Idempotency-Key"] == compensation_key for call in transport.calls)
+    assert all(call[1]["X-ReconForge-Operation"] == "compensate.payment.create" for call in transport.calls)
+    assert 1.0 in waits and 2.0 in waits
+
+
+def test_formal_compensation_failure_injection_conformance_is_bounded() -> None:
+    intent = _compensation_requested_intent()
+    digest = hashlib.sha256(COMPENSATION_PAYLOAD).hexdigest()
+    waits: list[float] = []
+    result = verify_writeback_compensation_retry_failure_injection(
+        _registration(allowed_compensation_operations=frozenset({"payment.create"})),
+        lambda transport: WritebackNetworkExecutor(
+            transport,
+            payload_resolver=_Payloads(),
+            secret_resolver=_Secrets(),
+            sleeper=waits.append,
+            clock=lambda: 0.0,
+        ),
+        intent,
+        POLICY,
+        payload=COMPENSATION_PAYLOAD,
+        payload_digest=digest,
+        transient_statuses=(503, 429),
+    )
+    assert result.checks == (
+        "registration_valid",
+        "synthetic_failure_injection",
+        "bounded_compensation_retry",
+        "successful_compensation",
+        "compensation_acknowledgement_bound",
+    )
+    assert 1.0 in waits and 2.0 in waits
 
 
 def test_network_dispatch_rejects_disabled_state_wrong_scope_and_payload_digest() -> None:

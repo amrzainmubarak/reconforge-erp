@@ -2,6 +2,25 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-378: Governed write-back compensation transport
+
+- `WritebackNetworkRegistration` now has an explicit, empty-by-default
+  `allowed_compensation_operations` allowlist. `WritebackNetworkExecutor.dispatch_compensation`
+  requires `compensation_requested`, validates a caller-supplied bounded
+  payload digest, sends `X-ReconForge-Operation: compensate.<operation>` with
+  `<idempotency-key>:compensation`, and requires a matching provider
+  acknowledgement before persisting the `compensated` intent state.
+- `python -m pytest -q tests/test_connector_writeback_network.py tests/test_connector_writeback.py`
+  -> 22 passed.
+- `python -m ruff check reconforge/connectors/writeback_network.py reconforge/connectors/conformance.py tests/test_connector_writeback_network.py`
+  -> passed.
+- `python -m mypy reconforge/connectors/writeback_network.py reconforge/connectors/conformance.py`
+  -> success with no issues.
+- Boundary: synthetic transport and in-memory payload only; no live provider,
+  provider-specific reversal semantics, vault, signed executable package,
+  production egress, or HA/DR claim.
+- ADR: `docs/adr/0328-governed-writeback-compensation-transport.md`.
+
 ## E-363: Scope-bound server write-back authorization
 
 - `reconforge/api/dependencies.py` now exposes an explicit

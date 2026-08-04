@@ -274,3 +274,74 @@ def verify_writeback_retry_failure_injection(
             "acknowledgement_bound",
         ),
     )
+
+
+def verify_writeback_compensation_retry_failure_injection(
+    registration: WritebackNetworkRegistration,
+    executor_factory: Callable[[WritebackNetworkTransport], WritebackNetworkExecutor],
+    intent: WritebackIntent,
+    policy: WritebackPolicy,
+    *,
+    payload: bytes,
+    payload_digest: str,
+    transient_statuses: tuple[int, ...] = (503,),
+) -> ConformanceResult:
+    """Prove bounded retry and acknowledgement binding for compensation.
+
+    The transport is entirely synthetic. The compensation payload and digest
+    are supplied by the caller so this check cannot silently reuse the original
+    write-back payload or introduce provider-specific semantics.
+    """
+
+    if not transient_statuses or any(
+        status not in {408, 425, 429} and not 500 <= status <= 599 for status in transient_statuses
+    ):
+        raise ValueError("transient_statuses must contain only retryable HTTP statuses")
+    if len(transient_statuses) >= registration.retry_policy.maximum_attempts:
+        raise ValueError("failure injection must leave one attempt for success")
+    compensation_key = intent.idempotency_key + ":compensation"
+    response_fields = {
+        "accepted": True,
+        "idempotency_key": compensation_key,
+        "provider_reference": "synthetic-compensation-reference",
+    }
+    response_digest = hashlib.sha256(
+        json.dumps(response_fields, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("ascii")
+    ).hexdigest()
+    response_body = json.dumps(
+        {**response_fields, "response_digest": response_digest},
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    transport = _WritebackFailureInjectionTransport(
+        [
+            *(WritebackNetworkResponse(status, b"synthetic-transient") for status in transient_statuses),
+            WritebackNetworkResponse(200, response_body),
+        ]
+    )
+    result = executor_factory(transport).dispatch_compensation(
+        intent,
+        registration=registration,
+        policy=policy,
+        payload=payload,
+        payload_digest=payload_digest,
+    )
+    expected_attempts = len(transient_statuses) + 1
+    if result.attempts != expected_attempts or transport.calls != expected_attempts:
+        raise ValueError("write-back compensation retry failure injection exceeded its declared bound")
+    if result.intent.status.value != "compensated":
+        raise ValueError("write-back compensation did not reach the compensated state")
+    if result.intent.acknowledgement is None or result.intent.acknowledgement.idempotency_key != compensation_key:
+        raise ValueError("write-back compensation acknowledgement lost idempotency binding")
+    return ConformanceResult(
+        connector_id=registration.connector_id,
+        manifest_digest=registration.digest,
+        checks=(
+            "registration_valid",
+            "synthetic_failure_injection",
+            "bounded_compensation_retry",
+            "successful_compensation",
+            "compensation_acknowledgement_bound",
+        ),
+    )

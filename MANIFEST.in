@@ -466,3 +466,4 @@ include docs/adr/0324-server-scoped-finance-ledger-mutations.md
 include docs/adr/0325-server-scoped-master-data-mutations.md
 include docs/adr/0326-server-scoped-reconciliation-run-mutations.md
 include docs/adr/0327-server-scoped-evidence-mutations.md
+include docs/adr/0328-governed-writeback-compensation-transport.md

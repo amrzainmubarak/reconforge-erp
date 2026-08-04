@@ -40,6 +40,7 @@ from reconforge.connectors.writeback import (
     WritebackIntent,
     WritebackPolicy,
     WritebackStatus,
+    complete_compensation,
 )
 
 _ID_PATTERN = r"^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
@@ -64,6 +65,7 @@ class WritebackNetworkRegistration(BaseModel):
     egress_destinations: tuple[str, ...] = Field(min_length=1, max_length=8)
     credential_reference: str = Field(pattern=_SECRET_REFERENCE_PATTERN)
     allowed_operations: frozenset[str] = Field(min_length=1, max_length=64)
+    allowed_compensation_operations: frozenset[str] = Field(default_factory=frozenset, max_length=64)
     feature_enabled: bool = False
     synthetic_sandbox: bool = True
     rate_limit_per_minute: int = Field(default=60, ge=1, le=1_000_000)
@@ -76,6 +78,8 @@ class WritebackNetworkRegistration(BaseModel):
     def validate_boundary(self) -> WritebackNetworkRegistration:
         if any(_OPERATION_RE.fullmatch(operation) is None for operation in self.allowed_operations):
             raise ValueError("allowed_operations contains invalid operation")
+        if any(_OPERATION_RE.fullmatch(operation) is None for operation in self.allowed_compensation_operations):
+            raise ValueError("allowed_compensation_operations contains invalid operation")
         if tuple(sorted(set(self.egress_destinations))) != self.egress_destinations:
             raise ValueError("egress destinations must be unique and canonically sorted")
         if self.endpoint not in self.egress_destinations:
@@ -228,13 +232,20 @@ Sleeper = Callable[[float], None]
 Clock = Callable[[], float]
 
 
-def _canonical_request_digest(intent: WritebackIntent, registration: WritebackNetworkRegistration) -> str:
+def _canonical_request_digest(
+    intent: WritebackIntent,
+    registration: WritebackNetworkRegistration,
+    *,
+    operation: str | None = None,
+    idempotency_key: str | None = None,
+    payload_digest: str | None = None,
+) -> str:
     payload = {
         "connector_id": intent.connector_id,
         "connector_version": registration.version,
-        "operation": intent.operation,
-        "idempotency_key": intent.idempotency_key,
-        "payload_digest": intent.payload_digest,
+        "operation": operation or intent.operation,
+        "idempotency_key": idempotency_key or intent.idempotency_key,
+        "payload_digest": payload_digest or intent.payload_digest,
         "registration_digest": registration.digest,
     }
     encoded = json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("ascii")
@@ -298,13 +309,114 @@ class WritebackNetworkExecutor:
             raise WritebackNetworkError("writeback_payload_size_invalid")
         if hashlib.sha256(payload).hexdigest() != intent.payload_digest:
             raise WritebackNetworkError("writeback_payload_digest_mismatch")
+        provider, attempts = self._post_and_validate(
+            registration=registration,
+            payload=payload,
+            idempotency_key=intent.idempotency_key,
+            operation=intent.operation,
+            error_prefix="writeback",
+        )
+        acknowledged = intent.model_copy(
+            update={
+                "status": WritebackStatus.ACKNOWLEDGED,
+                "acknowledgement": WritebackAcknowledgement(
+                    provider_reference=provider.provider_reference,
+                    acknowledged_at=datetime.now(UTC),
+                    response_digest=provider.response_digest,
+                    idempotency_key=provider.idempotency_key,
+                    accepted=provider.accepted,
+                ),
+            }
+        )
+        return WritebackNetworkDispatch(
+            intent=acknowledged,
+            request_digest=_canonical_request_digest(intent, registration),
+            response_digest=provider.response_digest,
+            attempts=attempts,
+        )
+
+    def dispatch_compensation(
+        self,
+        intent: WritebackIntent,
+        *,
+        registration: WritebackNetworkRegistration,
+        policy: WritebackPolicy,
+        payload: bytes,
+        payload_digest: str,
+    ) -> WritebackNetworkDispatch:
+        """Dispatch an explicitly allowlisted compensation mutation.
+
+        Compensation is a separate provider operation and idempotency domain.
+        The caller supplies a short-lived, already-authorized payload in
+        memory; this executor never persists it or reuses the original payload
+        implicitly. Provider acknowledgement must carry the ``:compensation``
+        key before the intent can become ``compensated``.
+        """
+
+        policy.authorize(intent)
+        if not registration.feature_enabled or not intent.feature_enabled:
+            raise WritebackNetworkError("writeback_network_feature_disabled")
+        if intent.status is not WritebackStatus.COMPENSATION_REQUESTED:
+            raise WritebackNetworkError("writeback_compensation_requires_requested")
+        if intent.connector_id != registration.connector_id:
+            raise WritebackNetworkError("writeback_connector_not_allowed")
+        if intent.operation not in registration.allowed_compensation_operations:
+            raise WritebackNetworkError("writeback_compensation_operation_not_allowed")
+        if not isinstance(payload, bytes):
+            raise WritebackNetworkError("writeback_compensation_payload_invalid")
+        if not payload or len(payload) > registration.maximum_request_bytes:
+            raise WritebackNetworkError("writeback_compensation_payload_size_invalid")
+        if hashlib.sha256(payload).hexdigest() != payload_digest:
+            raise WritebackNetworkError("writeback_compensation_payload_digest_mismatch")
+        compensation_key = intent.idempotency_key + ":compensation"
+        if len(compensation_key) > 200:
+            raise WritebackNetworkError("writeback_compensation_idempotency_key_invalid")
+        compensation_operation = "compensate." + intent.operation
+        provider, attempts = self._post_and_validate(
+            registration=registration,
+            payload=payload,
+            idempotency_key=compensation_key,
+            operation=compensation_operation,
+            error_prefix="writeback_compensation",
+        )
+        acknowledgement = WritebackAcknowledgement(
+            provider_reference=provider.provider_reference,
+            acknowledged_at=datetime.now(UTC),
+            response_digest=provider.response_digest,
+            idempotency_key=provider.idempotency_key,
+            accepted=provider.accepted,
+        )
+        compensated = complete_compensation(intent, acknowledgement=acknowledgement)
+        return WritebackNetworkDispatch(
+            intent=compensated,
+            request_digest=_canonical_request_digest(
+                intent,
+                registration,
+                operation=compensation_operation,
+                idempotency_key=compensation_key,
+                payload_digest=payload_digest,
+            ),
+            response_digest=provider.response_digest,
+            attempts=attempts,
+        )
+
+    def _post_and_validate(
+        self,
+        *,
+        registration: WritebackNetworkRegistration,
+        payload: bytes,
+        idempotency_key: str,
+        operation: str,
+        error_prefix: str,
+    ) -> tuple[WritebackProviderResponse, int]:
         credential = _resolve_credential(self.secret_resolver, registration.credential_reference)
         headers = {
             "Accept": "application/json",
             "Authorization": "Bearer " + credential,
             "Content-Type": "application/json",
-            "Idempotency-Key": intent.idempotency_key,
+            "Idempotency-Key": idempotency_key,
             "User-Agent": "ReconForge-Writeback/1",
+            "X-ReconForge-Operation": operation,
         }
         attempts = 0
         while attempts < registration.retry_policy.maximum_attempts:
@@ -324,41 +436,24 @@ class WritebackNetworkExecutor:
                 self._retry_wait(registration, attempts)
                 continue
             if len(response.body) > registration.maximum_response_bytes:
-                raise WritebackNetworkError("writeback_response_too_large")
+                raise WritebackNetworkError(f"{error_prefix}_response_too_large")
             if response.status < 200 or response.status >= 300:
                 if response.status not in {408, 425, 429} and not 500 <= response.status < 600:
-                    raise WritebackNetworkError("writeback_permanent_http_failure")
+                    raise WritebackNetworkError(f"{error_prefix}_permanent_http_failure")
                 if attempts >= registration.retry_policy.maximum_attempts:
-                    raise WritebackNetworkError("writeback_retry_exhausted")
+                    raise WritebackNetworkError(f"{error_prefix}_retry_exhausted")
                 self._retry_wait(registration, attempts)
                 continue
             if response.content_type.split(";", 1)[0].strip().lower() != "application/json":
-                raise WritebackNetworkError("writeback_response_content_type_invalid")
+                raise WritebackNetworkError(f"{error_prefix}_response_content_type_invalid")
             try:
                 provider = WritebackProviderResponse.model_validate_json(response.body)
             except (TypeError, ValueError) as exc:
-                raise WritebackNetworkError("writeback_response_schema_invalid") from exc
-            if provider.idempotency_key != intent.idempotency_key:
-                raise WritebackNetworkError("writeback_acknowledgement_mismatch")
-            acknowledged = intent.model_copy(
-                update={
-                    "status": WritebackStatus.ACKNOWLEDGED,
-                    "acknowledgement": WritebackAcknowledgement(
-                        provider_reference=provider.provider_reference,
-                        acknowledged_at=datetime.now(UTC),
-                        response_digest=provider.response_digest,
-                        idempotency_key=provider.idempotency_key,
-                        accepted=provider.accepted,
-                    ),
-                }
-            )
-            return WritebackNetworkDispatch(
-                intent=acknowledged,
-                request_digest=_canonical_request_digest(intent, registration),
-                response_digest=provider.response_digest,
-                attempts=attempts,
-            )
-        raise WritebackNetworkError("writeback_retry_exhausted")
+                raise WritebackNetworkError(f"{error_prefix}_response_schema_invalid") from exc
+            if provider.idempotency_key != idempotency_key:
+                raise WritebackNetworkError(f"{error_prefix}_acknowledgement_mismatch")
+            return provider, attempts
+        raise WritebackNetworkError(f"{error_prefix}_retry_exhausted")
 
     def _apply_rate_limit(self, registration: WritebackNetworkRegistration) -> None:
         now = self.clock()

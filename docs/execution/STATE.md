@@ -1132,6 +1132,28 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   workstream remains open for broader cross-engine properties, PostgreSQL scale,
   soak, and domain-diverse workloads.
 
+### E-355 complete: domain-diverse grouped-matching 10K profile
+
+- Added `grouped-matching/10k-domain-diverse-v1` with 2,500 partitions and
+  exactly 10,000 synthetic records cycling one-to-many, many-to-one, true
+  many-to-many, fee-aware portfolio netting, FX-aware many-to-many, and
+  partial-settlement portfolio cases. Every partition runs through the public
+  strategy adapter and the application service.
+- The published artifact records 2,084 matched partitions, 416 deliberate
+  ambiguity outcomes for equal partial portfolios, zero unmatched partitions,
+  zero adapter mismatches, zero permutation mismatches, decision digest
+  `89e6a9f354f2501cf7fe1f2b5b804ddb7666e0dffdbd55671acd2e1c4ca00d86`, and
+  manifest digest `9f4ab153c9733dc54bf2183fa92654a56fa8ce1a831547952d261ad4ab10d77d`.
+  The observed Windows 11/Python 3.14.6 run was 6.8093s and 1.5709 MiB peak
+  traced memory; timing is observational.
+- Boundary: one host/process synthetic algorithm evidence. Carry-forward,
+  sequence/window, reversal, PostgreSQL runtime parity, soak, distributed
+  capacity, provider I/O, posting, and production sizing remain open.
+- ADR: `docs/adr/0305-grouped-matching-domain-diverse-scale.md`.
+- Repository gates after the slice: 2,401 tests collected and the suite exited
+  0 (repository-declared skips); Ruff, Mypy, Bandit, package build, lock
+  consistency, and diff checks passed.
+
 ## P4-CON-001 in progress: governed live connector foundation
 
 - E-266 adds the synthetic provider-neutral `reference-rest-readonly` connector. It validates a closed JSON record page with exact Decimal text, unique identities, bounded cursor, canonical response digest, and the existing SSRF/TLS/secret/rate/retry/idempotency boundary. No real provider, credential, customer data, or write-back is included.

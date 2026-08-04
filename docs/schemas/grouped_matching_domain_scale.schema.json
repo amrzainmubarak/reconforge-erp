@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schema/grouped-matching-domain-scale-v1.json",
+  "title": "ReconForge grouped matching domain-diverse scale result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "profile_id",
+    "partitions",
+    "records",
+    "mode_counts",
+    "matched_partitions",
+    "ambiguous_partitions",
+    "unmatched_partitions",
+    "adapter_mismatches",
+    "permutation_mismatches",
+    "strategy_evaluations",
+    "decision_digest",
+    "observed_runtime_seconds",
+    "observed_peak_memory_mb",
+    "environment",
+    "limitations",
+    "manifest_digest"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "profile_id": {"const": "grouped-matching/10k-domain-diverse-v1"},
+    "partitions": {"const": 2500},
+    "records": {"const": 10000},
+    "mode_counts": {
+      "type": "object",
+      "additionalProperties": {"type": "integer", "minimum": 0},
+      "minProperties": 6
+    },
+    "matched_partitions": {"type": "integer", "minimum": 0},
+    "ambiguous_partitions": {"type": "integer", "minimum": 0},
+    "unmatched_partitions": {"const": 0},
+    "adapter_mismatches": {"const": 0},
+    "permutation_mismatches": {"const": 0},
+    "strategy_evaluations": {"type": "integer", "minimum": 1},
+    "decision_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "observed_runtime_seconds": {"type": "number", "minimum": 0},
+    "observed_peak_memory_mb": {"type": "number", "minimum": 0},
+    "environment": {"type": "object"},
+    "limitations": {"type": "array", "minItems": 3, "items": {"type": "string"}},
+    "manifest_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

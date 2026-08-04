@@ -1,0 +1,36 @@
+{
+  "adapter_mismatches": 0,
+  "ambiguous_partitions": 416,
+  "decision_digest": "89e6a9f354f2501cf7fe1f2b5b804ddb7666e0dffdbd55671acd2e1c4ca00d86",
+  "environment": {
+    "cpu_count": 16,
+    "machine": "AMD64",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+    "python": "3.14.6"
+  },
+  "limitations": [
+    "One host and one Python process; this is a partitioned algorithm correctness observation, not distributed capacity or an SLO.",
+    "The declared 10K records cycle six synthetic grouped modes; carry-forward, sequence/window, reversal, PostgreSQL runtime, soak, and provider I/O are separate boundaries.",
+    "Each partition stays inside the published grouped strategy cardinality and search-evaluation ceilings; this profile does not widen those limits or claim production sizing."
+  ],
+  "manifest_digest": "9f4ab153c9733dc54bf2183fa92654a56fa8ce1a831547952d261ad4ab10d77d",
+  "matched_partitions": 2084,
+  "mode_counts": {
+    "fx-many-to-many": 416,
+    "many-to-many": 417,
+    "many-to-one": 417,
+    "one-to-many": 417,
+    "portfolio-net": 417,
+    "portfolio-partial": 416
+  },
+  "observed_peak_memory_mb": 1.5709,
+  "observed_runtime_seconds": 6.8093,
+  "partitions": 2500,
+  "permutation_mismatches": 0,
+  "profile_id": "grouped-matching/10k-domain-diverse-v1",
+  "records": 10000,
+  "schema_version": 1,
+  "strategy_evaluations": 17492,
+  "unmatched_partitions": 0
+}

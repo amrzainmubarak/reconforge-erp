@@ -2883,3 +2883,24 @@
 - **ADR**: `docs/adr/0304-redis-shared-policy-cache-generation.md`.
 - **Rollback**: remove the version-store class, cache hook, tests, and
   execution records; process-local opt-in caching remains available.
+
+## D281 - Publish a domain-diverse grouped-matching 10K profile
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Add `grouped-matching/10k-domain-diverse-v1` with 2,500 bounded
+  partitions and 10,000 synthetic records cycling one-to-many, many-to-one,
+  true many-to-many, fee-aware portfolio netting, FX-aware many-to-many, and
+  partial-settlement portfolio cases. Require adapter/application digest
+  equality, reversed-input permutation equality, exact mode counts, and
+  explicit expected ambiguity for equal partial candidates.
+- **Reason**: Existing 10K/100K/1M profiles are deliberately homogeneous
+  exact USD many-to-many workloads. The new profile adds domain diversity
+  without widening algorithm ceilings or converting a workstation observation
+  into a capacity claim.
+- **Boundary**: One host/process synthetic algorithm evidence only. Sequence,
+  carry-forward, reversal, PostgreSQL parity, soak, distributed capacity,
+  provider I/O, posting, and production sizing remain separate gates.
+- **ADR**: `docs/adr/0305-grouped-matching-domain-diverse-scale.md`.
+- **Rollback**: remove the benchmark module, artifact/schema, tests, package
+  entries, and execution records; existing grouped strategies are unchanged.

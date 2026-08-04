@@ -12640,3 +12640,31 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   recovery, complete route/job/export/UI migration, federation, and production
   IAM assurance remain open. ADR:
   `docs/adr/0304-redis-shared-policy-cache-generation.md`.
+
+## E-355: Domain-diverse grouped-matching 10K profile
+
+- Added `reconforge/benchmark/grouped_matching_domain_scale.py`, a closed
+  schema, ADR, operator benchmark note, and published JSON artifact. The
+  profile declares 2,500 independent partitions and exactly 10,000 synthetic
+  records across six modes: one-to-many, many-to-one, true many-to-many,
+  fee-aware portfolio netting, FX-aware many-to-many, and portfolio partial
+  settlement.
+- Focused command: `uv run --no-sync pytest -q
+  tests/test_grouped_matching_domain_scale.py` -> 5 passed. Ruff and Mypy pass
+  for the benchmark and contracts. The full profile run on Windows 11,
+  Python 3.14.6 completed in 6.8093s with 1.5709 MiB peak traced memory.
+- Artifact `docs/execution/benchmarks/grouped-matching-10k-domain-diverse-v1.json`
+  is schema-valid and digest-verified. It records mode counts of 417/417/417/
+  417/416/416, 2,084 matched partitions, 416 deliberate ambiguous partial
+  portfolios, zero unmatched partitions, zero adapter mismatches, zero
+  permutation mismatches, decision digest
+  `89e6a9f354f2501cf7fe1f2b5b804ddb7666e0dffdbd55671acd2e1c4ca00d86`, and
+  manifest digest `9f4ab153c9733dc54bf2183fa92654a56fa8ce1a831547952d261ad4ab10d77d`.
+- Boundary: one host/process synthetic algorithm evidence. Carry-forward,
+  sequence/window, reversal, PostgreSQL runtime parity, soak, distributed
+  capacity, provider I/O, posting, and production sizing remain open. ADR:
+  `docs/adr/0305-grouped-matching-domain-diverse-scale.md`.
+- Repository gates after the slice: `uv run --no-sync pytest -q` exited 0 with
+  2,401 tests collected (repository-declared skips); `python -m ruff check .`, `python -m mypy reconforge`,
+  `python -m bandit -q -r reconforge`, `python -m build --no-isolation`,
+  `uv lock --check`, and `git diff --check` all passed.

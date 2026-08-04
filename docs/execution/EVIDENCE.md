@@ -12782,7 +12782,9 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   2m34s; no result is promoted from that attempt.
 - The revised gate requires 500 completed partitions, exact result-row
   cardinality, zero duplicate result identities, zero failed/active runs, and
-  50 completed runs per mode. Hosted verification is pending.
+  50 completed runs per mode. Hosted CI run `30894602923` passed with
+  `server-boundaries` job `91944412213`; the Python 3.11/3.12, engine-parity,
+  Docker-parity, object-storage, and `postgres-ha-dr` jobs also passed.
 - Boundary: synthetic single-node PostgreSQL matching correctness/concurrency
   only; throughput, soak, backpressure, cross-host fairness, provider
   interoperability, posting, write-back, HA/DR, and production sizing remain

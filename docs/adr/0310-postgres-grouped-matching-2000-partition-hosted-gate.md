@@ -28,6 +28,14 @@ correctness/concurrency evidence. It does not establish throughput capacity,
 soak behavior, queue backpressure, cross-host scheduling, provider
 interoperability, statutory posting, write-back, HA/DR, or production sizing.
 
+## Verification
+
+Hosted CI run `30894602923` passed. The `server-boundaries` job
+`91944412213` verified the 500-partition profile; the Python 3.11/3.12,
+engine-parity, Docker-parity, object-storage, and `postgres-ha-dr` jobs in the
+same workflow also passed. The earlier 2,000-partition failure remains
+unpromoted evidence.
+
 ## Rollback
 
 Remove the explicit test invocation, this ADR, its manifest entry, and the

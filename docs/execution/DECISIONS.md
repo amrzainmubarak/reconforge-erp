@@ -3017,6 +3017,10 @@
   Throughput, soak, backpressure, cross-host fairness, provider
   interoperability, posting, write-back, HA/DR, and production sizing remain
   open.
+- **Result**: Hosted CI run `30894602923` passed; `server-boundaries` job
+  `91944412213` verified 500 completed partitions, exact result-row
+  cardinality, zero duplicate result identities, zero failed/active runs, and
+  50 completed runs per grouped mode.
 - **ADR**: `docs/adr/0310-postgres-grouped-matching-2000-partition-hosted-gate.md`.
 - **Rollback**: remove the explicit test invocation, contract assertion, ADR,
   and manifest entry; retain the existing 64-partition and local domain-

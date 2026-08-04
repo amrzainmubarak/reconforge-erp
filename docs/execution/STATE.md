@@ -81,7 +81,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   queue-HA, or production-sizing claim is made.
 - ADR: `docs/adr/0309-postgres-durable-job-10k-hosted-gate.md`.
 
-## E-360 — Hosted PostgreSQL grouped-matching 500-partition gate (in progress)
+## E-360 — Hosted PostgreSQL grouped-matching 500-partition gate (complete bounded slice)
 
 - The next hosted advanced-matching gate adds
   `test_live_postgres_grouped_matching_500_partition_scale_profile` to
@@ -91,9 +91,14 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   retained as an unverified scale boundary, not a success.
 - The verifier requires 500 completed partitions, exact result-row
   cardinality, zero duplicate result identities, zero failed/active runs, and
-  50 completed runs per mode. Hosted verification is pending; this does not
-  claim throughput, soak, queue backpressure, cross-host scheduling, provider
-  interoperability, posting, write-back, HA/DR, or production sizing.
+  50 completed runs per mode. Hosted CI run `30894602923` passed with
+  `server-boundaries` job `91944412213`; Python 3.11/3.12, engine-parity,
+  Docker-parity, object-storage, and `postgres-ha-dr` also passed in the same
+  workflow.
+- Boundary: hosted single-node synthetic PostgreSQL matching
+  correctness/concurrency only. This does not claim throughput, soak, queue
+  backpressure, cross-host scheduling, provider interoperability, posting,
+  write-back, HA/DR, or production sizing.
 - ADR: `docs/adr/0310-postgres-grouped-matching-2000-partition-hosted-gate.md`.
 
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)

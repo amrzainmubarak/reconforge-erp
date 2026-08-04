@@ -15,6 +15,7 @@ from reconforge.infrastructure.redis import (
     RedisConfigurationError,
     RedisConnectionFactory,
     RedisDataError,
+    RedisPolicyCacheVersionStore,
     RedisSessionRecord,
     RedisSettings,
     RedisUnavailableError,
@@ -38,6 +39,12 @@ class _FakeRedis:
     def get(self, key: str) -> str | None:
         self.calls.append(("get", key))
         return self.values.get(key)
+
+    def incr(self, key: str) -> int:
+        self.calls.append(("incr", key))
+        value = int(self.values.get(key, "0")) + 1
+        self.values[key] = str(value)
+        return value
 
     def eval(self, script: str, key_count: int, key: str, argument: object) -> int:
         self.calls.append(("eval", script, key_count, key, argument))
@@ -183,6 +190,17 @@ def test_malformed_session_and_invalid_token_hash_fail_closed() -> None:
         store.get_session("tenant-a", "SES-1")
 
 
+def test_policy_cache_generation_is_atomic_and_shared_between_instances() -> None:
+    client = _FakeRedis()
+    first = RedisPolicyCacheVersionStore(_Factory(client))
+    second = RedisPolicyCacheVersionStore(_Factory(client))
+    assert first.current_version() == "0"
+    assert first.bump_version() == "1"
+    assert second.current_version() == "1"
+    assert second.bump_version() == "2"
+    assert first.current_version() == "2"
+
+
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_REDIS_URL"), reason="requires a live Redis service")
 def test_live_redis_tenant_key_isolation() -> None:
     pytest.importorskip("redis")
@@ -204,3 +222,26 @@ def test_live_redis_tenant_key_isolation() -> None:
         factory.client().delete(store._key("test_redis_a", "revoked-token", token_hash))
         factory.client().delete(session_key)
         factory.close()
+
+
+@pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_REDIS_URL"), reason="requires a live Redis service")
+def test_live_redis_policy_cache_generation_invalidates_other_process_cache() -> None:
+    pytest.importorskip("redis")
+    settings = RedisSettings(url=os.environ["RECONFORGE_TEST_REDIS_URL"], require_tls=False)
+    first_factory = RedisConnectionFactory(settings)
+    second_factory = RedisConnectionFactory(settings)
+    first = RedisPolicyCacheVersionStore(first_factory)
+    second = RedisPolicyCacheVersionStore(second_factory)
+    key = first._key
+    client = first_factory.client()
+    try:
+        client.delete(key)
+        assert first.current_version() == "0"
+        assert first.bump_version() == "1"
+        assert second.current_version() == "1"
+        assert second.bump_version() == "2"
+        assert first.current_version() == "2"
+    finally:
+        client.delete(key)
+        first_factory.close()
+        second_factory.close()

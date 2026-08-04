@@ -12604,3 +12604,32 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   replication, KMS, cross-site durability, provider interoperability,
   object-store HA/DR, malware scanning, authorized download, or production
   SLO is proven. ADR: `docs/adr/0303-live-s3-compatible-object-storage-gate.md`.
+
+## E-354: Redis-shared policy-cache generation
+
+- Added `RedisPolicyCacheVersionStore` and wired it only when both the API
+  policy cache and the optional Redis server profile are explicitly enabled.
+  Local allowed decisions include the shared monotonic generation; non-safe
+  request invalidation increments that generation and clears the local cache.
+  Redis stores only an integer generation and no policy decision, identity, or
+  financial data.
+- Focused command: `python -m pytest -q tests/test_policy_cache.py
+  tests/test_redis_foundation.py tests/test_api_foundation.py` -> 26 passed and
+  2 declared live-service capability skips on the ambient interpreter.
+  `python -m ruff check` for the touched modules and `python -m mypy reconforge`
+  pass. With the local Redis 7 service and the locked environment, `uv run
+  --no-sync pytest -q tests/test_redis_foundation.py -k 'live_redis'` -> 2
+  passed.
+- The live contract uses two independent Redis clients, observes atomic
+  generation changes in both directions, and deletes its synthetic key during
+  cleanup. Unit tests prove independent cache instances stop reusing an
+  allowed decision after a bump and bypass caching during a generation-store
+  outage.
+- After the API wiring regression was added, the full locked local suite exited
+  0 over 2,396 collected tests in 307.2s (declared capability skips and
+  warnings only). Ruff, Mypy, Bandit, package build, supply-chain policy,
+  `uv lock --check`, and `git diff --check` also passed.
+- Boundary: coarse global invalidation only. Redis HA/failover, outage
+  recovery, complete route/job/export/UI migration, federation, and production
+  IAM assurance remain open. ADR:
+  `docs/adr/0304-redis-shared-policy-cache-generation.md`.

@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections import OrderedDict
+from contextlib import suppress
 from dataclasses import fields
 from datetime import datetime
 from decimal import Decimal
@@ -41,6 +42,14 @@ class PolicyEvaluator(Protocol):
         *,
         required_permissions: frozenset[str],
     ) -> PolicyDecision: ...
+
+
+class PolicyCacheVersionStore(Protocol):
+    """Optional shared version boundary used to invalidate other processes."""
+
+    def current_version(self) -> str: ...
+
+    def bump_version(self) -> str: ...
 
 
 class PolicyCacheError(ValueError):
@@ -85,13 +94,20 @@ def policy_cache_key(
 class PolicyDecisionCache:
     """Bounded cache that requires explicit scope invalidation by adopters."""
 
-    def __init__(self, *, max_entries: int = 1024, policy_version: str = POLICY_VERSION) -> None:
+    def __init__(
+        self,
+        *,
+        max_entries: int = 1024,
+        policy_version: str = POLICY_VERSION,
+        version_store: PolicyCacheVersionStore | None = None,
+    ) -> None:
         if not isinstance(max_entries, int) or isinstance(max_entries, bool) or not 1 <= max_entries <= 100_000:
             raise PolicyCacheError("max_entries must be between 1 and 100000")
         if not policy_version.strip():
             raise PolicyCacheError("policy_version must be non-empty")
         self._max_entries = max_entries
         self._policy_version = policy_version
+        self._version_store = version_store
         self._entries: OrderedDict[str, tuple[PolicyDecision, str | None, str | None]] = OrderedDict()
         self._lock = RLock()
 
@@ -116,12 +132,25 @@ class PolicyDecisionCache:
                 enforce_sod=enforce_sod,
                 enforce_ownership=enforce_ownership,
             )
+        version = self._policy_version
+        if self._version_store is not None:
+            try:
+                version = f"{version}:{self._version_store.current_version()}"
+            except Exception:
+                # A shared cache outage must remove a performance optimization,
+                # never remove authorization. Evaluate without caching.
+                return engine.evaluate(
+                    context,
+                    required_permission=required_permission,
+                    enforce_sod=enforce_sod,
+                    enforce_ownership=enforce_ownership,
+                )
         key = policy_cache_key(
             context,
             required_permission=required_permission,
             enforce_sod=enforce_sod,
             enforce_ownership=enforce_ownership,
-            policy_version=self._policy_version,
+            policy_version=version,
         )
         with self._lock:
             cached = self._entries.pop(key, None)
@@ -178,6 +207,9 @@ class PolicyDecisionCache:
 
         if workspace_id is not None and tenant_id is None:
             raise PolicyCacheError("workspace invalidation requires tenant_id")
+        if self._version_store is not None and tenant_id is None and workspace_id is None:
+            with suppress(Exception):
+                self._version_store.bump_version()
         with self._lock:
             if tenant_id is None:
                 removed = len(self._entries)

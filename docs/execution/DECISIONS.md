@@ -2863,3 +2863,23 @@
 - **ADR**: `docs/adr/0303-live-s3-compatible-object-storage-gate.md`.
 - **Rollback**: remove the CI job, verifier, schema, tests, report upload, and
   execution records; the local filesystem default and S3 adapter remain.
+
+## D253 - Share explicit policy-cache invalidation through a Redis generation
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: When both the API policy cache and Redis server profile are
+  explicitly enabled, include a Redis-backed monotonic generation in local
+  allowed-decision cache keys and increment it on non-safe request
+  invalidation. Redis stores only the generation; it never stores policy
+  decisions or credentials.
+- **Reason**: A process-local cache cannot invalidate sibling API workers. A
+  generation is deterministic, inspectable, and avoids pub/sub subscriber
+  state while preserving the local-first default.
+- **Boundary**: Redis generation reads that fail bypass local caching. The
+  contract is coarse global invalidation; Redis HA/failover, outage recovery,
+  complete route/job/export/UI adoption, federation, and production IAM
+  assurance remain unverified.
+- **ADR**: `docs/adr/0304-redis-shared-policy-cache-generation.md`.
+- **Rollback**: remove the version-store class, cache hook, tests, and
+  execution records; process-local opt-in caching remains available.

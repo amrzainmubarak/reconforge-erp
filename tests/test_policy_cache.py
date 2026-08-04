@@ -23,6 +23,22 @@ class _CountingEvaluator:
         return self.decision
 
 
+class _VersionStore:
+    def __init__(self) -> None:
+        self.version = 0
+        self.fail = False
+
+    def current_version(self) -> str:
+        if self.fail:
+            raise RuntimeError("synthetic redis outage")
+        return str(self.version)
+
+    def bump_version(self) -> str:
+        if self.fail:
+            raise RuntimeError("synthetic redis outage")
+        self.version += 1
+        return str(self.version)
+
 def _context(tenant: str, workspace: str = "workspace-a") -> PolicyEvaluationContext:
     return PolicyEvaluationContext(
         user_id="operator", username="operator", user_permissions={"close.manage"},
@@ -95,3 +111,30 @@ def test_any_permission_uses_same_allowed_only_cache_and_preserves_denial() -> N
     cache.evaluate_any(missing, required_permissions=frozenset({"reports.read"}), evaluator=denied)
     cache.evaluate_any(missing, required_permissions=frozenset({"reports.read"}), evaluator=denied)
     assert denied.calls == 2
+
+
+def test_shared_generation_invalidates_independent_cache_instances() -> None:
+    versions = _VersionStore()
+    first = PolicyDecisionCache(version_store=versions)
+    second = PolicyDecisionCache(version_store=versions)
+    evaluator = _CountingEvaluator(PolicyDecision(True, "allowed", granted_permission="close.manage"))
+    context = _context("tenant-a")
+
+    first.evaluate(context, required_permission="close.manage", evaluator=evaluator)
+    second.evaluate(context, required_permission="close.manage", evaluator=evaluator)
+    assert evaluator.calls == 2
+    assert first.invalidate() == 1
+    second.evaluate(context, required_permission="close.manage", evaluator=evaluator)
+    assert evaluator.calls == 3
+
+
+def test_shared_generation_outage_falls_back_to_uncached_evaluation() -> None:
+    versions = _VersionStore()
+    versions.fail = True
+    cache = PolicyDecisionCache(version_store=versions)
+    evaluator = _CountingEvaluator(PolicyDecision(True, "allowed", granted_permission="close.manage"))
+    context = _context("tenant-a")
+    cache.evaluate(context, required_permission="close.manage", evaluator=evaluator)
+    cache.evaluate(context, required_permission="close.manage", evaluator=evaluator)
+    assert evaluator.calls == 2
+    assert len(cache) == 0

@@ -82,7 +82,12 @@ from reconforge.auth.webauthn_config import WebAuthnRuntime
 from reconforge.db import resolve_db_path
 from reconforge.db.tenancy import TenantDatabaseRouter
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings
-from reconforge.infrastructure.redis import RedisConnectionFactory, RedisSettings, TenantRedisStore
+from reconforge.infrastructure.redis import (
+    RedisConnectionFactory,
+    RedisPolicyCacheVersionStore,
+    RedisSettings,
+    TenantRedisStore,
+)
 from reconforge.observability import ObservabilityRuntime, safe_attributes, telemetry_request_context
 from reconforge.platform.common import ServerPrincipal, server_principal_context, trusted_local_mode
 from reconforge.reliability_sources import HttpReliabilityWindow
@@ -182,6 +187,7 @@ def create_api_app(
     app.state.cursor_codec = CursorCodec(cursor_signing_key) if cursor_signing_key is not None else None
     app.state.observability = observability or ObservabilityRuntime.disabled()
     app.state.reliability_window = reliability_window
+    redis_factory: RedisConnectionFactory | None = None
     if redis_url is not None:
         redis_factory = RedisConnectionFactory(RedisSettings(url=redis_url, require_tls=redis_require_tls))
         app.state.redis_store = TenantRedisStore(redis_factory)
@@ -194,7 +200,17 @@ def create_api_app(
     app.state.allowed_hosts = normalized_hosts
     # Explicit opt-in only: the middleware below invalidates after every
     # mutation, so callers do not inherit an invisible freshness dependency.
-    app.state.policy_decision_cache = PolicyDecisionCache() if policy_cache_enabled else None
+    # When Redis is configured, a shared generation makes that invalidation
+    # visible to other API processes without storing policy decisions there.
+    policy_version_store = (
+        RedisPolicyCacheVersionStore(redis_factory)
+        if policy_cache_enabled and redis_factory is not None
+        else None
+    )
+    app.state.policy_cache_version_store = policy_version_store
+    app.state.policy_decision_cache = (
+        PolicyDecisionCache(version_store=policy_version_store) if policy_cache_enabled else None
+    )
     if normalized_hosts:
         # Register before decorator middleware so request IDs and the response
         # policy still wrap a Host rejection.

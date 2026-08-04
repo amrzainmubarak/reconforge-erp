@@ -21,6 +21,23 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   malware scanning, authorized download, and production SLOs remain open.
 - ADR: `docs/adr/0303-live-s3-compatible-object-storage-gate.md`.
 
+## E-354 — Redis-shared policy-cache generation (complete bounded slice)
+
+- Added `RedisPolicyCacheVersionStore` as an explicit optional server-profile
+  boundary. API processes include its monotonic generation in local allowed
+  decision-cache keys; non-safe requests bump the generation and clear local
+  entries. Redis is never used to store policy decisions or credentials.
+- If the generation read fails, the cache bypasses itself and evaluates policy
+  directly. Unit tests prove independent cache instances stop reusing an
+  allowed decision after a bump and do not cache during a synthetic outage.
+  Live Redis tests prove two clients observe atomic generation changes and
+  remove their synthetic key.
+- Boundary: coarse global invalidation only. Redis HA/failover, outage
+  recovery, complete route/job/export/UI migration, federation, and production
+  IAM assurance remain open. The feature is opt-in and local-first defaults are
+  unchanged.
+- ADR: `docs/adr/0304-redis-shared-policy-cache-generation.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

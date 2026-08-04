@@ -303,3 +303,48 @@ class TenantRedisStore:
         """Return the dependency health without exposing connection details."""
 
         return bool(self._call(lambda client: client.ping()))
+
+
+class RedisPolicyCacheVersionStore:
+    """Process-shared policy-cache generation backed by one Redis key.
+
+    The generation contains no authorization data.  A mutation increments it;
+    every cache process includes the current generation in its key, so stale
+    entries become unreachable without requiring pub/sub subscribers.  Redis
+    is an optional optimization boundary: callers must fall back to uncached
+    policy evaluation when it is unavailable.
+    """
+
+    def __init__(self, connection_factory: RedisConnectionFactory) -> None:
+        self.connection_factory = connection_factory
+        self._key = f"{connection_factory.settings.key_prefix}:policy-cache:generation"
+
+    def _call(self, operation: Callable[[Any], _RedisResult]) -> _RedisResult:
+        try:
+            return operation(self.connection_factory.client())
+        except (RedisConfigurationError, RedisDataError, RedisUnavailableError, RedisOperationError):
+            raise
+        except Exception as exc:
+            raise RedisOperationError("Redis policy-cache generation operation failed.") from exc
+
+    def current_version(self) -> str:
+        value = self._call(lambda client: client.get(self._key))
+        if value is None:
+            return "0"
+        try:
+            version = int(value)
+        except (TypeError, ValueError) as exc:
+            raise RedisDataError("Redis policy-cache generation is malformed.") from exc
+        if version < 0:
+            raise RedisDataError("Redis policy-cache generation is negative.")
+        return str(version)
+
+    def bump_version(self) -> str:
+        value = self._call(lambda client: client.incr(self._key))
+        try:
+            version = int(value)
+        except (TypeError, ValueError) as exc:
+            raise RedisDataError("Redis policy-cache generation result is malformed.") from exc
+        if version < 1:
+            raise RedisDataError("Redis policy-cache generation did not advance.")
+        return str(version)

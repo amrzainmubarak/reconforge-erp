@@ -13,6 +13,7 @@ from reconforge.auth.policy_cache import PolicyDecisionCache
 from reconforge.cli import app
 from reconforge.db import run_migrations
 from reconforge.db.migrations import MIGRATIONS
+from reconforge.infrastructure.redis import RedisPolicyCacheVersionStore
 from reconforge.platform.common import is_trusted_local_mode
 
 runner = CliRunner()
@@ -95,6 +96,21 @@ def test_policy_cache_is_explicit_and_mutations_invalidate_it(tmp_path: Path) ->
     response = TestClient(api).post("/api/v1/auth/login", json={})
     assert response.status_code in {400, 401, 422}
     assert len(cache) == 0
+
+
+def test_policy_cache_uses_shared_redis_generation_only_when_explicitly_configured(tmp_path: Path) -> None:
+    db_path = tmp_path / "policy-cache-redis.db"
+    run_migrations(db_path)
+    local_api = create_api_app(db_path, policy_cache_enabled=True)
+    assert local_api.state.policy_cache_version_store is None
+    server_api = create_api_app(
+        db_path,
+        policy_cache_enabled=True,
+        redis_url="redis://localhost:6379/0",
+        redis_require_tls=False,
+    )
+    assert isinstance(server_api.state.policy_cache_version_store, RedisPolicyCacheVersionStore)
+    assert isinstance(server_api.state.policy_decision_cache, PolicyDecisionCache)
 
 
 class _AllowedEvaluator:

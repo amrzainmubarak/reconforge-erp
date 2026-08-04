@@ -90,6 +90,20 @@ This file records commands and observed results. It does not convert a dirty wor
   `30909580604` also passed for commit `0f9a7eb`.
 - ADR: `docs/adr/0316-live-consolidation-ownership-api-gate.md`.
 
+## E-367: Live authenticated consolidation-close API gate
+
+- The live server-identity fixture installs
+  `POSTGRES_CONSOLIDATION_CLOSE_SCHEMA_SQL`, grants the six consolidation-close
+  RLS tables plus certification storage to the non-privileged role, and calls
+  the real `GET /api/v1/consolidation-close/periods` route.
+- Authorized `workspace-a` returns the PostgreSQL source marker; a sibling
+  workspace is refused with `403 workspace_scope_denied`. The combined local
+  API/identity/ownership/close command passes 29 tests; Ruff and Mypy pass.
+- Boundary: synthetic single-node route/adapter integration with an empty
+  period set. No statutory/posting assurance, independent HA/DR, live
+  ERP/bank provider, write-back, or production claim is promoted.
+- ADR: `docs/adr/0317-live-consolidation-close-api-gate.md`.
+
 ## E-293: Immutable local delegation administration
 
 - Added typed `DelegationGrant`, migration 27, and `DelegationRepository`.

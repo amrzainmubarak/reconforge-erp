@@ -3165,3 +3165,22 @@
 - **ADR**: `docs/adr/0316-live-consolidation-ownership-api-gate.md`.
 - **Rollback**: remove the fixture schema/grant/assertions and this ADR; no
   production schema or migration rollback is required.
+
+## D294 - Promote consolidation-close API to a live server gate
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Install the existing PostgreSQL consolidation-close schema in
+  the live server-identity fixture, grant only its RLS tables/certification
+  storage, and exercise authorized period listing plus sibling-workspace
+  refusal through the real API.
+- **Reason**: Mocked route scope tests did not prove middleware identity,
+  PostgreSQL RLS, and the consolidation-close adapter together.
+- **Boundary**: Empty synthetic period set on one PostgreSQL node; no claim of
+  statutory or posted close correctness, HA/DR, providers, write-back, or
+  production readiness.
+- **Result**: The combined local API/identity/ownership/close gate passes 29/29;
+  Ruff and Mypy pass.
+- **ADR**: `docs/adr/0317-live-consolidation-close-api-gate.md`.
+- **Rollback**: remove the fixture schema/grants/assertions and ADR; no
+  application migration rollback is required.

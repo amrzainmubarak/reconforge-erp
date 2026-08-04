@@ -696,6 +696,9 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
     from reconforge.api.routes.master_data import _server_id
     from reconforge.infrastructure.postgres import install_postgres_rls_schema
     from reconforge.infrastructure.postgres_close import POSTGRES_CLOSE_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_consolidation_close import (
+        POSTGRES_CONSOLIDATION_CLOSE_SCHEMA_SQL,
+    )
     from reconforge.infrastructure.postgres_consolidation_ownership import (
         POSTGRES_CONSOLIDATION_OWNERSHIP_SCHEMA_SQL,
     )
@@ -734,6 +737,7 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             admin.execute(POSTGRES_FISCAL_PERIOD_SCHEMA_SQL)
             admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
             admin.execute(POSTGRES_CLOSE_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_CLOSE_SCHEMA_SQL)
             admin.execute(POSTGRES_IDENTITY_SCHEMA_SQL)
             admin.execute(POSTGRES_CONSOLIDATION_OWNERSHIP_SCHEMA_SQL)
             admin.execute(POSTGRES_CONSOLIDATION_PPA_SCHEMA_SQL)
@@ -754,8 +758,11 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                     f"reconforge.ledger_accounts, "
                     f"reconforge.ledger_entries, reconforge.ledger_lines, reconforge.audit_events, "
                     f"reconforge.outbox_events, reconforge.close_periods, reconforge.close_tasks, "
-                    f"reconforge.close_task_dependencies, reconforge.consolidation_ppa_artifacts, "
-                    f"reconforge.consolidation_ownership_interests TO {app_user}"
+                    f"reconforge.close_task_dependencies, reconforge.certification_records, "
+                    f"reconforge.consolidation_close_periods, reconforge.consolidation_close_runs, "
+                    f"reconforge.consolidation_close_effects, reconforge.consolidation_close_period_events, "
+                    f"reconforge.consolidation_close_run_lines, reconforge.consolidation_close_effect_lines, "
+                    f"reconforge.consolidation_ppa_artifacts, reconforge.consolidation_ownership_interests TO {app_user}"
                 )
                 admin.execute(
                     f"GRANT SELECT, INSERT, UPDATE ON reconforge.principal_scope_grants TO {app_user}"
@@ -1001,6 +1008,18 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
         )
         assert sibling_ownership.status_code == 403
         assert sibling_ownership.json()["error"]["code"] == "workspace_scope_denied"
+        close_periods = client.get(
+            "/api/v1/consolidation-close/periods",
+            headers=authenticated_headers,
+        )
+        assert close_periods.status_code == 200, close_periods.text
+        assert close_periods.json()["source"]["kind"] == "postgresql-consolidation-close"
+        close_sibling = client.get(
+            "/api/v1/consolidation-close/periods",
+            headers={**authenticated_headers, "X-ReconForge-Workspace": "workspace-b"},
+        )
+        assert close_sibling.status_code == 403
+        assert close_sibling.json()["error"]["code"] == "workspace_scope_denied"
         missing_scope = client.get(
             "/api/v1/finance-core/summary",
             headers={"X-ReconForge-Tenant": tenant_a, "Authorization": f"Bearer {token}"},

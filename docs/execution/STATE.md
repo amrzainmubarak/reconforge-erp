@@ -219,6 +219,20 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   Docker `30909580586`, and CodeQL `30909580604`.
 - ADR: `docs/adr/0316-live-consolidation-ownership-api-gate.md`.
 
+## E-367 — Live authenticated consolidation-close API gate (complete bounded slice)
+
+- The live PostgreSQL server-identity fixture now installs the existing
+  consolidation-close schema and grants its six RLS tables plus certification
+  storage to the non-privileged app role.
+- The real authenticated API path returns PostgreSQL-backed empty periods for
+  the authorized workspace and rejects the sibling workspace with
+  `403 workspace_scope_denied`. The local combined API/identity/ownership/close
+  gate passes 29/29; Ruff and Mypy pass.
+- Boundary: route selection and hierarchy isolation on one synthetic
+  PostgreSQL node. This does not prove posted/statutory close behavior,
+  independent HA/DR, ERP/bank providers, write-back, or production readiness.
+- ADR: `docs/adr/0317-live-consolidation-close-api-gate.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

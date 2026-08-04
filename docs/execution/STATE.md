@@ -367,6 +367,24 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   remain open.
 - ADR: `docs/adr/0323-server-scoped-close-management-mutations.md`.
 
+## E-374 — Server-scoped finance-ledger mutations (complete bounded slice)
+
+- PostgreSQL server-profile account upsert and atomic ledger-entry creation now
+  re-evaluate `finance_core.manage` against the authenticated tenant/workspace
+  before repository access. Read routes, unsupported feature boundaries, and
+  local SQLite compatibility remain unchanged.
+- The focused server identity/scope contract passes 7/7 and the final full
+  pytest suite exits 0. Ruff, Mypy, and diff-check pass. Exact code head
+  `35c09f63` is green on CI `30932859161` (server-boundaries `92071583948`,
+  postgres-ha-dr `92071583884`, Docker parity `92073207856`, both Python test
+  jobs and four engine-parity jobs), Security `30932857268`, Docker
+  `30932856740`, and CodeQL `30932859207`.
+- Boundary: this covers two server finance-ledger mutation endpoints only. It
+  is not statutory/legal-book posting, full Finance Core parity, complete
+  route/job/export/UI policy coverage, federation, distributed invalidation,
+  live providers, independent HA/DR, or production IAM assurance.
+- ADR: `docs/adr/0324-server-scoped-finance-ledger-mutations.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

@@ -3340,3 +3340,27 @@
 - **ADR**: `docs/adr/0323-server-scoped-close-management-mutations.md`.
 - **Rollback**: remove the four helper calls, focused assertions, ADR, and
   manifest entry. No data or schema rollback is required.
+
+## D301 - Bind finance-ledger mutations to server execution scope
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Before PostgreSQL server-profile account upsert or atomic
+  ledger-entry creation reaches the ledger repository, re-evaluate
+  `finance_core.manage` with the authenticated tenant/workspace. Keep reads,
+  unsupported capability boundaries, and SQLite unchanged.
+- **Reason**: These operations mutate financial control data; role membership
+  and RLS alone do not provide a route-level proof of the selected hierarchy.
+  Reusing the central policy helper adds that proof without changing the
+  ledger schema or inventing statutory posting semantics.
+- **Result**: Focused identity/scope tests pass 7/7; the final full pytest,
+  Ruff, Mypy, and diff-check pass. Exact code head `35c09f63` is green on CI
+  `30932859161`, Security `30932857268`, Docker `30932856740`, and CodeQL
+  `30932859207`.
+- **Boundary**: Two server finance-ledger mutation endpoints only; full
+  Finance Core parity, statutory posting, federation, complete route/job/
+  export/UI adoption, live providers, independent HA/DR, and production IAM
+  assurance remain open.
+- **ADR**: `docs/adr/0324-server-scoped-finance-ledger-mutations.md`.
+- **Rollback**: remove the two helper calls, focused assertions, ADR, and
+  manifest entry. No data or schema rollback is required.

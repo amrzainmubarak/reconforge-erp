@@ -242,6 +242,28 @@ This file records commands and observed results. It does not convert a dirty wor
   distributed invalidation, live provider operation, independent HA/DR, or
   production IAM assurance.
 - ADR: `docs/adr/0323-server-scoped-close-management-mutations.md`.
+
+## E-374: Server-scoped finance-ledger mutations
+
+- PostgreSQL server-profile account upsert and atomic ledger-entry creation
+  now call `enforce_server_scoped_permission` for `finance_core.manage` before
+  repository access. Read-only routes, unsupported capability responses, and
+  SQLite are unchanged.
+- `pytest -q tests/test_api_server_identity.py::test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permissions tests/test_api_execution_scope.py`
+  -> 7 passed. The final `python -m pytest -q --durations=10` exits 0;
+  Ruff, Mypy, and `git diff --check` pass.
+- Exact code head `35c09f63` is green on CI `30932859161`
+  ([server-boundaries](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30932859161/job/92071583948),
+  [postgres-ha-dr](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30932859161/job/92071583884),
+  [Docker parity](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30932859161/job/92073207856),
+  Python 3.11/3.12 and four engine-parity jobs),
+  [Security](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30932857268),
+  [Docker](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30932856740),
+  and [CodeQL](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30932859207).
+- Boundary: account/ledger mutation binding only. This is not statutory
+  posting, complete enterprise IAM, federation, universal route/job/export/UI
+  policy coverage, live providers, independent HA/DR, or production assurance.
+- ADR: `docs/adr/0324-server-scoped-finance-ledger-mutations.md`.
 - ADR: `docs/adr/0321-governed-server-writeback-dispatch-boundary.md`.
 
 ## E-293: Immutable local delegation administration

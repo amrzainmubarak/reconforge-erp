@@ -24,6 +24,10 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   semantics, automatic compensation, signed connector packages, HA/DR, and
   production deployment evidence remain open.
 - ADR: `docs/adr/0329-governed-writeback-compensation-request-api.md`.
+- Hosted CI for commit `4932442f` is green: CI `30948449550` (server-boundaries
+  `92124197210`, PostgreSQL/HA-DR `92124197189`, Python 3.11/3.12,
+  object-storage, parity, and Docker parity `92125667608`), Security
+  `30948449806`, Docker `30948449939`, and CodeQL `30948449932`.
 
 ## E-378 — Governed write-back compensation transport (complete bounded slice)
 

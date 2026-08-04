@@ -24,6 +24,14 @@ This file records commands and observed results. It does not convert a dirty wor
   environment is not the locked `.venv` evidence).
 - `python -m build --no-isolation` -> built sdist and wheel successfully; the
   new ADR is present in the source distribution manifest.
+- Hosted GitHub evidence for commit `4932442f214393f7d08ecdbf3001b22a06acbf`:
+  CI `30948449550` passed, including server-boundaries `92124197210`,
+  PostgreSQL/HA-DR `92124197189`, Python 3.11 `92124197170`, Python 3.12
+  `92124197179`, object-storage `92124197262`, engine-parity cells, and Docker
+  parity `92125667608`; Security `30948449806`, Docker `30948449939`, and
+  CodeQL `30948449932` also passed. The server-boundaries job includes the
+  live PostgreSQL server-identity write-back fixture with compensation
+  permission provisioning and the new request transition.
 - Boundary: synthetic local/API/repository evidence only. Provider-specific
   reversal, live ERP/bank semantics, automatic compensation execution,
   signed packages, HA/DR, and production deployment remain unverified.

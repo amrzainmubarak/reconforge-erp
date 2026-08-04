@@ -6,6 +6,24 @@ Updated: 2026-08-04
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
+
+- Added `reconforge.reliability.ha_dr` with a closed topology requiring three
+  voter failure domains plus a witness, a two-vote quorum, monotonic terms,
+  fence-before-elect failover, stable election tie-breaks, exact standby
+  catch-up, and independent repromotion authorization. Stale leaders cannot
+  commit after fencing.
+- The generated `HA_DR_QUORUM_SIMULATION_2026-08-04.json` is digest-bound and
+  schema-valid. It records two logical failovers, four ordered commits, zero
+  acknowledged transaction loss, stale-commit refusal, and no split-brain in
+  the model. Five focused tests pass, including input-order stability and
+  tamper rejection; CI now runs the same verifier.
+- Boundary: `simulation_only`. No PostgreSQL/Docker/network execution,
+  external fencing device, wall-clock RPO/RTO, host-loss independence, or
+  production SLO is claimed. The existing one-host PostgreSQL drill remains
+  `partial`.
+- ADR: `docs/adr/0302-ha-dr-quorum-fencing-safety-state-machine.md`.
+
 ## E-351 — Concrete PostgreSQL named-query read-only connector (complete bounded slice)
 
 - Added `reference-postgres-readonly` with a dedicated `database_source`

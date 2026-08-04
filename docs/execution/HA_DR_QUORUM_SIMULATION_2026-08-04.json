@@ -1,0 +1,143 @@
+{
+  "limitations": [
+    "orchestration_neutral_simulation",
+    "no_network_or_postgres_execution",
+    "container_domains_are_not_host_failure_domains",
+    "no_production_slo",
+    "no_automatic_external_fencing_device"
+  ],
+  "observed": {
+    "committed_sequences": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "failover_count": 2,
+    "final_leader": "node-a",
+    "final_term": 3,
+    "initial_leader": "node-a",
+    "initial_term": 1,
+    "logical_failover_ticks": [
+      10,
+      30
+    ],
+    "no_split_brain": true,
+    "rpo_transactions": 0,
+    "stale_commit_rejection": "stale_leader_fenced"
+  },
+  "profile_id": "postgres-multi-domain-quorum-simulation-v1",
+  "report_digest": "e7eff0ba7a4e6cf2b914797699518f43db99ef7af048e447f3673a38a0345c37",
+  "schema_version": 1,
+  "state": {
+    "cluster_id": "reconforge-ha-sim",
+    "commits": [
+      {
+        "leader_id": "node-a",
+        "payload": "tx-1",
+        "sequence": 1,
+        "term": 1
+      },
+      {
+        "leader_id": "node-a",
+        "payload": "tx-2",
+        "sequence": 2,
+        "term": 1
+      },
+      {
+        "leader_id": "node-b",
+        "payload": "tx-3",
+        "sequence": 3,
+        "term": 2
+      },
+      {
+        "leader_id": "node-a",
+        "payload": "tx-4",
+        "sequence": 4,
+        "term": 3
+      }
+    ],
+    "events": [
+      {
+        "event": "cluster_started",
+        "leader_id": "node-a",
+        "term": 1,
+        "tick": 0
+      },
+      {
+        "actor_id": "node-a",
+        "event": "commit",
+        "sequence": 1,
+        "term": 1,
+        "tick": 0
+      },
+      {
+        "actor_id": "node-a",
+        "event": "commit",
+        "sequence": 2,
+        "term": 1,
+        "tick": 0
+      },
+      {
+        "candidate_id": "node-b",
+        "event": "fence_and_elect",
+        "fenced_node_id": "node-a",
+        "quorum_size": 2,
+        "term": 2,
+        "tick": 10,
+        "witness_ack": true
+      },
+      {
+        "actor_id": "node-b",
+        "event": "commit",
+        "sequence": 3,
+        "term": 2,
+        "tick": 10
+      },
+      {
+        "event": "standby_rejoined",
+        "node_id": "node-a",
+        "sequence": 3,
+        "term": 2,
+        "tick": 20
+      },
+      {
+        "approver_id": "node-b",
+        "event": "standby_unfenced_for_repromotion",
+        "node_id": "node-a",
+        "term": 2,
+        "tick": 21
+      },
+      {
+        "candidate_id": "node-a",
+        "event": "fence_and_elect",
+        "fenced_node_id": "node-b",
+        "quorum_size": 2,
+        "term": 3,
+        "tick": 30,
+        "witness_ack": true
+      },
+      {
+        "actor_id": "node-a",
+        "event": "commit",
+        "sequence": 4,
+        "term": 3,
+        "tick": 30
+      }
+    ],
+    "fenced_nodes": [
+      "node-b"
+    ],
+    "leader_id": "node-a",
+    "sequence": 4,
+    "term": 3
+  },
+  "status": "simulation_only",
+  "topology": {
+    "failure_domain_count": 3,
+    "independent_failure_domains": true,
+    "quorum_size": 2,
+    "voter_count": 3,
+    "witness_count": 1
+  }
+}

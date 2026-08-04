@@ -2823,3 +2823,24 @@
 - ADR: `docs/adr/0301-postgres-named-query-readonly-connector.md`.
 - Rollback: remove the adapter, registration, tests, CI entry, and docs; the
   existing synthetic database connector remains unchanged.
+
+## D251 - Quorum and fencing safety is a separate deterministic state machine
+
+- Date: 2026-08-04
+- Status: accepted
+- Decision: add an orchestration-neutral HA/DR state machine requiring three
+  voter failure domains plus a witness. Failover requires a monotonic detection
+  tick, witness acknowledgement, and quorum; fencing is recorded before
+  election; stale leaders cannot commit; rejoining nodes must catch up exactly
+  and receive independent repromotion authorization.
+- Rationale: the existing Docker drill is deliberately single-host and manual.
+  Modeling the safety decisions separately advances split-brain and replay
+  correctness without falsely converting container namespaces into host-level
+  failure domains.
+- Consequence: PostgreSQL, queue, object-store, and external fencing adapters
+  can target a stable contract. The generated report is `simulation_only`; it
+  does not establish network failover, wall-clock RPO/RTO, host loss, or a
+  production SLO.
+- ADR: `docs/adr/0302-ha-dr-quorum-fencing-safety-state-machine.md`.
+- Rollback: remove the reliability module, verifier, schema, report, tests,
+  CI invocation, and execution entries without changing the existing drill.

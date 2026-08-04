@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/ha_dr_quorum_simulation.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile_id", "status", "topology", "observed", "state", "limitations", "report_digest"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "profile_id": {"const": "postgres-multi-domain-quorum-simulation-v1"},
+    "status": {"const": "simulation_only"},
+    "topology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["voter_count", "witness_count", "failure_domain_count", "quorum_size", "independent_failure_domains"],
+      "properties": {
+        "voter_count": {"const": 3},
+        "witness_count": {"minimum": 1, "type": "integer"},
+        "failure_domain_count": {"minimum": 3, "type": "integer"},
+        "quorum_size": {"const": 2},
+        "independent_failure_domains": {"const": true}
+      }
+    },
+    "observed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["initial_leader", "initial_term", "failover_count", "final_leader", "final_term", "committed_sequences", "stale_commit_rejection", "rpo_transactions", "logical_failover_ticks", "no_split_brain"],
+      "properties": {
+        "initial_leader": {"const": "node-a"},
+        "initial_term": {"const": 1},
+        "failover_count": {"const": 2},
+        "final_leader": {"const": "node-a"},
+        "final_term": {"const": 3},
+        "committed_sequences": {"const": [1, 2, 3, 4]},
+        "stale_commit_rejection": {"const": "stale_leader_fenced"},
+        "rpo_transactions": {"const": 0},
+        "logical_failover_ticks": {"const": [10, 30]},
+        "no_split_brain": {"const": true}
+      }
+    },
+    "state": {"type": "object"},
+    "limitations": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1, "maxLength": 200}},
+    "report_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  }
+}

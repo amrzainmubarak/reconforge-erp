@@ -50,6 +50,9 @@ jobs:
           uv run --no-sync reconforge validate examples/sample_data
           uv run --no-sync reconforge rules validate --pack control-packs/audit-basic
 
+      - name: HA/DR quorum and fencing safety simulation
+        run: uv run --no-sync python .github/scripts/verify_ha_dr_quorum_simulation.py --output "${{ runner.temp }}/ha-dr-quorum-simulation.json"
+
       - name: Build package
         run: uv run --no-sync python -m build --no-isolation
 

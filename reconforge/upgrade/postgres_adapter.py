@@ -77,7 +77,9 @@ class PsycopgAlembicMigrationRunner:
                         self._python,
                         "-c",
                         (
-                            "from alembic.config import main; import sys; "
+                            "from importlib.metadata import distribution; import sys; "
+                            "sys.path.insert(0, str(distribution('alembic').locate_file(''))); "
+                            "from alembic.config import main; "
                             f"sys.path.insert(0, {str(Path(self._alembic_ini).parent)!r}); main()"
                         ),
                         "-c",
@@ -92,7 +94,7 @@ class PsycopgAlembicMigrationRunner:
                     shell=False,
                     check=False,
                     timeout=self._timeout,
-                    cwd=Path(tempfile.gettempdir()),
+                    cwd=Path(self._alembic_ini).parent,
                 )
                 if completed.returncode != 0:
                     output.seek(0)

@@ -18,14 +18,18 @@ from reconforge.api.server_consolidation_ownership import (
 from reconforge.api.server_identity import RequestExecutionScope, request_execution_scope
 from reconforge.application.consolidation_ownership import ConsolidationOwnershipApplicationService
 from reconforge.auth.models import LocalUser
+from reconforge.auth.service import AuthServiceError, LocalAuthService
 from reconforge.domain.consolidation import ConsolidationError
 from reconforge.domain.consolidation_lifecycle import ConsolidationOwnershipInterest
+from reconforge.infrastructure.postgres_consolidation_ownership import PostgresConsolidationOwnershipRepository
+from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
 from reconforge.infrastructure.sqlite_consolidation_ownership import SQLiteConsolidationOwnershipRepository
 from reconforge.platform.common import PlatformError
 
 router = APIRouter(prefix="/consolidation-ownership", tags=["consolidation-ownership"])
 OwnershipRead = Annotated[LocalUser, Depends(require_any_permission({"finance_core.read", "finance_core.manage"}))]
 OwnershipManage = Annotated[LocalUser, Depends(require_permission("finance_core.manage"))]
+_APPROVER_PERMISSIONS = frozenset({"finance_core.manage", "finance_core.validate"})
 
 
 class OwnershipInterestRequest(BaseModel):
@@ -88,6 +92,59 @@ def _server_source() -> dict[str, object]:
     return {"kind": "postgresql-consolidation-ownership", "server_mode": True}
 
 
+def _verify_local_approver(connection: sqlite3.Connection, *, approver_id: str, preparer_id: str) -> None:
+    """Require a real, enabled local reviewer with a governed finance permission."""
+
+    try:
+        service = LocalAuthService(connection)
+        approver = service.users.get_by_id(approver_id)
+        if approver is None or approver.disabled or approver.id == preparer_id:
+            raise APIError(
+                status_code=400,
+                code="consolidation_ownership_approver_invalid",
+                message="Ownership approver must be a distinct enabled finance user.",
+            )
+        if not any(service.user_has_permission(username=approver.username, permission=permission) for permission in _APPROVER_PERMISSIONS):
+            raise APIError(
+                status_code=403,
+                code="consolidation_ownership_approver_unauthorized",
+                message="Ownership approver lacks a governed finance permission.",
+            )
+    except APIError:
+        raise
+    except (AuthServiceError, ValueError) as exc:
+        raise APIError(
+            status_code=400,
+            code="consolidation_ownership_approver_invalid",
+            message="Ownership approver identity could not be verified.",
+        ) from exc
+
+
+def _verify_postgres_approver(
+    repository: PostgresConsolidationOwnershipRepository,
+    *,
+    tenant_id: str,
+    approver_id: str,
+    preparer_id: str,
+) -> None:
+    """Require a tenant-local enabled PostgreSQL reviewer in the same transaction."""
+
+    identity = PostgresIdentityRepository(repository.connection)
+    approver = identity.get_user_by_id(tenant_id=tenant_id, user_id=approver_id)
+    if approver is None or approver.disabled or approver.id == preparer_id:
+        raise APIError(
+            status_code=400,
+            code="consolidation_ownership_approver_invalid",
+            message="Ownership approver must be a distinct enabled finance user.",
+        )
+    if not identity.user_permissions(tenant_id=tenant_id, user_id=approver.id).intersection(_APPROVER_PERMISSIONS):
+        raise APIError(
+            status_code=403,
+            code="consolidation_ownership_approver_unauthorized",
+            message="Ownership approver lacks a governed finance permission.",
+        )
+
+
 @router.post("/interests")
 def save_interest(
     request: Request,
@@ -100,20 +157,32 @@ def save_interest(
     if server_consolidation_ownership_enabled(request):
         scope = _server_scope(request, payload.workspace)
         interest = payload.to_domain(prepared_by=current_user.id)
-        saved = execute_postgres_consolidation_ownership(
-            request,
-            lambda repository, _tenant: ConsolidationOwnershipApplicationService(repository).save(
+
+        def save(repository: PostgresConsolidationOwnershipRepository, tenant_id: str) -> dict[str, object]:
+            _verify_postgres_approver(
+                repository,
+                tenant_id=tenant_id,
+                approver_id=payload.approved_by,
+                preparer_id=current_user.id,
+            )
+            return ConsolidationOwnershipApplicationService(repository).save(
                 interest,
                 group_code=payload.group_code,
                 workspace=scope.workspace_id,
                 actor_label=current_user.id,
-            ),
+            )
+
+        saved = execute_postgres_consolidation_ownership(
+            request,
+            save,
         )
         return {"interest": saved, "source": _server_source()}
 
     interest = payload.to_domain(prepared_by=current_user.username)
     try:
-        saved = ConsolidationOwnershipApplicationService(_repository(connection)).save(
+        repository = _repository(connection)
+        _verify_local_approver(repository.connection, approver_id=payload.approved_by, preparer_id=current_user.id)
+        saved = ConsolidationOwnershipApplicationService(repository).save(
             interest,
             group_code=payload.group_code,
             workspace=payload.workspace,

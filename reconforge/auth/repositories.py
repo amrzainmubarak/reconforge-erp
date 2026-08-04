@@ -179,6 +179,15 @@ class UserRepository:
             raise AuthRepositoryError("Unable to read local user.") from exc
         return self._row_to_user(row) if row is not None else None
 
+    def get_by_id(self, user_id: str) -> LocalUser | None:
+        """Return one local user by immutable identity id."""
+
+        try:
+            row = self.connection.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        except sqlite3.DatabaseError as exc:
+            raise AuthRepositoryError("Unable to read local user.") from exc
+        return self._row_to_user(row) if row is not None else None
+
     def get_password_hash(self, username: str) -> PasswordHash | None:
         try:
             row = self.connection.execute(

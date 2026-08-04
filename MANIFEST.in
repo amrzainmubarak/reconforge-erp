@@ -456,3 +456,4 @@ include tests/test_api_consolidation_ownership.py
 include docs/adr/0315-consolidation-ownership-api-is-scope-bound.md
 include docs/adr/0316-live-consolidation-ownership-api-gate.md
 include docs/adr/0317-live-consolidation-close-api-gate.md
+include docs/adr/0318-consolidation-ownership-approver-identity.md

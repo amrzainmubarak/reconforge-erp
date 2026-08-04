@@ -108,6 +108,22 @@ This file records commands and observed results. It does not convert a dirty wor
   `30910990719` also passed for commit `b9fd51d`.
 - ADR: `docs/adr/0317-live-consolidation-close-api-gate.md`.
 
+## E-368: Consolidation ownership approver identity gate
+
+- The SQLite and PostgreSQL ownership save paths now resolve `approved_by` to
+  a real enabled identity, require `finance_core.manage` or
+  `finance_core.validate`, and reject self-approval before persistence.
+- `pytest -q tests/test_api_consolidation_ownership.py` -> `3 passed`; the
+  configured local PostgreSQL combined API/identity/ownership/close command
+  -> `29 passed`. Ruff, Mypy, and `git diff --check` pass.
+- The live fixture uses the actual tenant-scoped PostgreSQL identity lookup;
+  the local API contract rejects an unknown approver. This is synthetic
+  single-node evidence and does not prove a separate approver session/MFA,
+  statutory consolidation, live providers, write-back, HA/DR, or production
+  IAM.
+- Hosted verification for the new code head is pending.
+- ADR: `docs/adr/0318-consolidation-ownership-approver-identity.md`.
+
 ## E-293: Immutable local delegation administration
 
 - Added typed `DelegationGrant`, migration 27, and `DelegationRepository`.

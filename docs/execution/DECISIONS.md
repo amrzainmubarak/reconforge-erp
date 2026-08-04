@@ -3185,3 +3185,25 @@
 - **ADR**: `docs/adr/0317-live-consolidation-close-api-gate.md`.
 - **Rollback**: remove the fixture schema/grants/assertions and ADR; no
   application migration rollback is required.
+
+## D295 - Verify consolidation ownership approver identity at save time
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Resolve `approved_by` through the local user repository or the
+  tenant-scoped PostgreSQL identity repository during the ownership save
+  operation. Require an enabled, distinct identity with
+  `finance_core.manage` or `finance_core.validate`; reject unknown, disabled,
+  self, or unauthorized identities before persistence.
+- **Reason**: A declared approver string is not maker-checker evidence. The
+  check belongs inside the same backend transaction and authenticated scope as
+  the ownership write, while keeping SQLite/local-first compatibility.
+- **Boundary**: This proves identity existence and permission lookup only. It
+  does not prove a separate approver session, MFA ceremony, statutory
+  consolidation, live providers, write-back, HA/DR, or production IAM.
+- **Result**: Local ownership API tests pass 3/3 and the combined live
+  API/identity/ownership/close gate passes 29/29; Ruff, Mypy, and diff-check
+  pass. Hosted verification for the new code head is pending.
+- **ADR**: `docs/adr/0318-consolidation-ownership-approver-identity.md`.
+- **Rollback**: remove the identity lookup methods, route checks, tests, ADR,
+  and manifest entry; no schema rollback is required.

@@ -3402,9 +3402,10 @@
 - **Reason**: Replaying the original write-back payload is not a safe
   compensation strategy. A separate allowlist, payload, operation, and
   idempotency domain makes reversal intent visible and fail closed.
-- **Result**: Focused connector tests pass 22/22, including missing allowlist,
-  tampering, retry/failure injection, separate headers, and acknowledgement
-  binding. Ruff and Mypy pass for the changed connector surfaces.
+- **Result**: Focused connector tests pass 24/24, including missing allowlist,
+  tampering, retry/failure injection, separate headers, rejected-provider
+  acknowledgement refusal, and acknowledgement binding. Ruff and Mypy pass
+  for the changed connector surfaces.
 - **Boundary**: Provider-neutral transport contract only; live ERP/bank
   compensation semantics, provider sandbox, vault, signed package, production
   egress, and HA/DR remain unverified.

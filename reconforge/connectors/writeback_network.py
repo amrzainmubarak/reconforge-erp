@@ -386,7 +386,10 @@ class WritebackNetworkExecutor:
             idempotency_key=provider.idempotency_key,
             accepted=provider.accepted,
         )
-        compensated = complete_compensation(intent, acknowledgement=acknowledgement)
+        try:
+            compensated = complete_compensation(intent, acknowledgement=acknowledgement)
+        except WritebackError as exc:
+            raise WritebackNetworkError(str(exc)) from exc
         return WritebackNetworkDispatch(
             intent=compensated,
             request_digest=_canonical_request_digest(

@@ -16,7 +16,7 @@ original payload implicitly, persists the compensation payload, or accepts a
 provider acknowledgement whose idempotency key does not match the separate
 compensation key. Only an intent already in
 `compensation_requested` can cross this boundary, and a valid acknowledgement
-is required before the intent becomes `compensated`.
+with `accepted=true` is required before the intent becomes `compensated`.
 
 ## Rationale
 
@@ -29,10 +29,11 @@ idempotency domain make the provider boundary explicit and fail closed.
 ## Evidence and boundary
 
 Focused tests cover successful compensation, missing allowlist, payload
-tampering, separate operation/key headers, transient HTTP/transport retry, and
-the reusable synthetic conformance check. This is a provider-neutral transport
-contract only: no live ERP/bank provider, compensation business semantics,
-provider sandbox, secret vault, or production egress is claimed.
+tampering, separate operation/key headers, transient HTTP/transport retry,
+negative provider acknowledgement refusal, and the reusable synthetic
+conformance check. This is a provider-neutral transport contract only: no live
+ERP/bank provider, compensation business semantics, provider sandbox, secret
+vault, or production egress is claimed.
 
 ## Rollback
 

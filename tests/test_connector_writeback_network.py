@@ -212,6 +212,24 @@ def test_network_compensation_fails_closed_without_allowlist_or_with_tampered_pa
         )
 
 
+def test_network_compensation_rejects_negative_provider_acknowledgement() -> None:
+    intent = _compensation_requested_intent()
+    compensation_key = intent.idempotency_key + ":compensation"
+    transport = _Transport([WritebackNetworkResponse(200, _provider_body(compensation_key, accepted=False))])
+    with pytest.raises(WritebackNetworkError, match="compensation_not_accepted"):
+        WritebackNetworkExecutor(
+            transport,
+            payload_resolver=_Payloads(),
+            secret_resolver=_Secrets(),
+        ).dispatch_compensation(
+            intent,
+            registration=_registration(allowed_compensation_operations=frozenset({"payment.create"})),
+            policy=POLICY,
+            payload=COMPENSATION_PAYLOAD,
+            payload_digest=hashlib.sha256(COMPENSATION_PAYLOAD).hexdigest(),
+        )
+
+
 def test_network_compensation_retries_with_the_same_compensation_key() -> None:
     intent = _compensation_requested_intent()
     compensation_key = intent.idempotency_key + ":compensation"

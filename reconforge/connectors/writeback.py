@@ -252,4 +252,6 @@ def complete_compensation(intent: WritebackIntent, *, acknowledgement: Writeback
         raise WritebackError("writeback_compensation_not_requested")
     if acknowledgement.idempotency_key != intent.idempotency_key + ":compensation":
         raise WritebackError("writeback_compensation_idempotency_mismatch")
+    if not acknowledgement.accepted:
+        raise WritebackError("writeback_compensation_not_accepted")
     return intent.model_copy(update={"status": WritebackStatus.COMPENSATED, "acknowledgement": acknowledgement})

@@ -137,6 +137,31 @@ def test_dispatch_and_acknowledgement_cannot_be_replayed_or_misbound() -> None:
         )
 
 
+def test_compensation_rejected_acknowledgement_does_not_claim_compensated() -> None:
+    approved = approve_writeback(
+        _intent(),
+        policy=POLICY,
+        actor_id="checker-1",
+        approved_at=NOW,
+        assurance="mfa",
+        reason="two-person review",
+    )
+    compensation = request_compensation(
+        dispatch_writeback(approved, policy=POLICY), reason="rollback required"
+    )
+    with pytest.raises(WritebackError, match="compensation_not_accepted"):
+        complete_compensation(
+            compensation,
+            acknowledgement=WritebackAcknowledgement(
+                provider_reference="provider-reversal-rejected",
+                acknowledged_at=NOW,
+                response_digest="d" * 64,
+                idempotency_key="writeback-001:compensation",
+                accepted=False,
+            ),
+        )
+
+
 def test_acknowledgement_requires_dispatched_state_and_exact_schema() -> None:
     with pytest.raises(WritebackError, match="acknowledgement_state"):
         acknowledge_writeback(

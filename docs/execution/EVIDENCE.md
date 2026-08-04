@@ -11,7 +11,7 @@ This file records commands and observed results. It does not convert a dirty wor
   `<idempotency-key>:compensation`, and requires a matching provider
   acknowledgement before persisting the `compensated` intent state.
 - `python -m pytest -q tests/test_connector_writeback_network.py tests/test_connector_writeback.py`
-  -> 22 passed.
+  -> 24 passed, including the negative provider acknowledgement regression.
 - `python -m ruff check reconforge/connectors/writeback_network.py reconforge/connectors/conformance.py tests/test_connector_writeback_network.py`
   -> passed.
 - `python -m mypy reconforge/connectors/writeback_network.py reconforge/connectors/conformance.py`

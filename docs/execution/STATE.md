@@ -16,10 +16,10 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   memory. The executor refuses a missing allowlist, wrong lifecycle state,
   oversized/tampered payload, or misbound provider acknowledgement, and only a
   valid acknowledgement transitions the intent to `compensated`.
-- Focused write-back/network tests pass 22/22, including transient
-  HTTP/transport failure injection and the reusable synthetic conformance
-  check. Existing write-back dispatch tests remain green; Ruff and Mypy pass
-  for the changed connector surfaces.
+- Focused write-back/network tests pass 24/24, including rejected-provider
+  acknowledgement refusal, transient HTTP/transport failure injection, and
+  the reusable synthetic conformance check. Existing write-back dispatch tests
+  remain green; Ruff and Mypy pass for the changed connector surfaces.
 - Boundary: provider-neutral transport contract only. No live ERP/bank
   compensation semantics, provider sandbox, vault, signed executable
   connector, production egress, or deployment assurance is claimed.

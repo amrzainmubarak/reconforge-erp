@@ -41,7 +41,7 @@ class PsycopgAlembicMigrationRunner:
         self._dsns = {"source": source_dsn.strip(), "compatibility": compatibility_dsn.strip()}
         if any(not value.startswith(("postgres://", "postgresql://", "postgresql+")) for value in self._dsns.values()):
             raise UpgradeError("postgres_upgrade_dsn_invalid")
-        self._python = self._ordinary_file(python_executable, "python")
+        self._python = self._python_file(python_executable)
         self._alembic_ini = self._ordinary_file(alembic_ini, "alembic configuration")
         if timeout_seconds < 1 or timeout_seconds > 86_400:
             raise UpgradeError("postgres_upgrade_timeout_invalid")
@@ -127,6 +127,20 @@ class PsycopgAlembicMigrationRunner:
         if not stat.S_ISREG(metadata.st_mode) or path.is_symlink():
             raise UpgradeError(f"postgres_upgrade_{label.replace(' ', '_')}_path_invalid")
         return str(path.resolve(strict=True))
+
+    @staticmethod
+    def _python_file(path: Path) -> str:
+        """Validate an interpreter while preserving a venv symlink's prefix semantics."""
+        if not path.is_absolute():
+            raise UpgradeError("postgres_upgrade_python_path_invalid")
+        try:
+            resolved = path.resolve(strict=True)
+            metadata = resolved.stat()
+        except OSError as exc:
+            raise UpgradeError("postgres_upgrade_python_path_invalid") from exc
+        if not stat.S_ISREG(metadata.st_mode):
+            raise UpgradeError("postgres_upgrade_python_path_invalid")
+        return str(path)
 
 
 def _revision_digest(revision: str) -> str:

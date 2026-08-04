@@ -12811,3 +12811,18 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   statutory statement, external ledger/provider, write-back, HA/DR, or
   production-assurance claim is introduced.
 - ADR: `docs/adr/0311-consolidation-close-evidence-bundle.md`.
+
+## E-362: Hosted PostgreSQL queue-policy and lane-fairness gate
+
+- The `server-boundaries` workflow now explicitly invokes
+  `test_live_postgres_job_application_contract_and_rls` and
+  `test_live_postgres_round_robin_scheduler_is_lane_scoped_and_deterministic`
+  with the non-privileged PostgreSQL role. The tests cover atomic queue caps,
+  idempotent replay at capacity, retry/cancellation lease cleanup, tenant
+  isolation, exact lane filters, and deterministic round-robin selection.
+- The command was added after the green predecessor CI run
+  `30897423047` / `server-boundaries` job `91953554332`; promotion requires a
+  green run on the new workflow head. This is a bounded synthetic runtime
+  gate, not throughput, distributed fairness, soak, queue HA, failover,
+  capacity, or production-SLO evidence.
+- ADR: `docs/adr/0312-hosted-postgres-queue-policy-and-fairness-gate.md`.

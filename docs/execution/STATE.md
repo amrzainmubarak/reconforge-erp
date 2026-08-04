@@ -123,6 +123,19 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   write-back, HA/DR, or production-assurance claim.
 - ADR: `docs/adr/0311-consolidation-close-evidence-bundle.md`.
 
+## E-362 — Hosted PostgreSQL queue-policy and lane-fairness gate (complete bounded slice)
+
+- `server-boundaries` now explicitly runs the existing live PostgreSQL tests
+  for atomic queue-cap rejection/idempotent replay/retry cleanup and the
+  process-scoped round-robin scheduler's tenant/workspace/entity lane
+  isolation.
+- Hosted verification is retained in CI run `30897423047` /
+  `server-boundaries` job `91953554332` for the preceding code head; the new
+  workflow command is part of the next head and must pass its own exact run
+  before promotion. This slice does not claim throughput, global fairness,
+  soak, queue HA, failover, capacity, or production SLOs.
+- ADR: `docs/adr/0312-hosted-postgres-queue-policy-and-fairness-gate.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

@@ -3053,3 +3053,24 @@
 - **Rollback**: remove the bundle module, adapter projection, focused tests,
   manifest entry, and ADR; persisted rows remain readable because the bundle
   is derived at read time.
+
+## D289 - Make hosted queue-policy and lane-fairness tests explicit
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Add a separate `server-boundaries` invocation for the existing
+  PostgreSQL durable-job queue-cap/retry/isolation contract and process-scoped
+  round-robin lane-fairness contract. Keep the 10K load command separate.
+- **Reason**: The implementation already had these protections, but the
+  current hosted command selected only the 10K scale test. Explicit selection
+  prevents future workflow drift from silently dropping queue and fairness
+  evidence.
+- **Boundary**: One synthetic PostgreSQL service and one scheduler loop.
+  Throughput, distributed fairness, soak, queue HA, failover, capacity, and
+  production SLOs remain open.
+- **Result**: Pending a green CI run on the new workflow head; predecessor
+  `30897423047` / `server-boundaries` job `91953554332` was green before the
+  command addition.
+- **ADR**: `docs/adr/0312-hosted-postgres-queue-policy-and-fairness-gate.md`.
+- **Rollback**: remove the extra workflow command, ADR, manifest entry, and
+  execution evidence; retain the existing 10K hosted gate.

@@ -428,6 +428,22 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   open.
 - ADR: `docs/adr/0326-server-scoped-reconciliation-run-mutations.md`.
 
+## E-377 — Server-scoped evidence mutations (complete bounded slice)
+
+- PostgreSQL server-profile evidence registration, linking, requirement
+  creation, sensitive drill-down authorization, and checksum verification now
+  re-evaluate `evidence.manage` or `evidence.verify` against the authenticated
+  tenant/workspace before repository access. The former raw permission-set
+  check for sensitive drill-down is replaced by the central scope helper.
+- Focused evidence, execution-scope, and authorization-inventory tests pass
+  12/12; Ruff and Mypy pass for the changed surfaces. Full pytest, build,
+  diff-check, and hosted CI are required before promotion.
+- Boundary: evidence route-family policy binding only. Workspace-level
+  evidence persistence, universal route/job/export/UI adoption, federation,
+  live providers, independent HA/DR, and production IAM assurance remain
+  open.
+- ADR: `docs/adr/0327-server-scoped-evidence-mutations.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

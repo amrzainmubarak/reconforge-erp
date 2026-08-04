@@ -8,9 +8,15 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import get_local_db, require_any_permission, require_permission
+from reconforge.api.dependencies import (
+    enforce_server_scoped_permission,
+    get_local_db,
+    require_any_permission,
+    require_permission,
+)
 from reconforge.api.errors import APIError
 from reconforge.api.server_evidence import execute_postgres_evidence, server_evidence_enabled
+from reconforge.api.server_identity import request_execution_scope
 from reconforge.application.pagination import (
     CursorCodec,
     CursorError,
@@ -126,18 +132,21 @@ def _server_record(record: dict[str, object]) -> dict[str, object]:
     return {**record, "source_backend": "postgresql-evidence-registry"}
 
 
-def _is_server_manage_authorized(request: Request) -> bool:
-    principal = getattr(request.state, "server_principal", None)
-    permissions: frozenset[str] = getattr(principal, "permissions", frozenset())
-    return "evidence.manage" in permissions
+def _enforce_server_evidence_permission(request: Request, *, permission: str) -> None:
+    scope = request_execution_scope(request)
+    enforce_server_scoped_permission(
+        request,
+        permission=permission,
+        tenant_id=scope.tenant_id,
+        workspace_id=scope.workspace_id,
+    )
 
 
 def _require_evidence_manage_access(
     request: Request, current_user: EvidenceRead, connection: sqlite3.Connection | None
 ) -> None:
     if server_evidence_enabled(request):
-        if not _is_server_manage_authorized(request):
-            raise APIError(status_code=403, code="permission_denied", message="Permission denied.")
+        _enforce_server_evidence_permission(request, permission="evidence.manage")
         return
     if connection is None:
         raise APIError(status_code=500, code="db_not_configured", message="Local auth database is not configured.")
@@ -314,6 +323,7 @@ def register_evidence(
             code="evidence_registration_server_only",
             message="Evidence metadata registration is server-only; use the local CLI for local files.",
         )
+    _enforce_server_evidence_permission(request, permission="evidence.manage")
     record = execute_postgres_evidence(
         request,
         lambda repository, tenant: repository.register(
@@ -354,6 +364,7 @@ def link_evidence(
         raise APIError(
             status_code=501, code="evidence_link_server_only", message="Server evidence linking is not enabled."
         )
+    _enforce_server_evidence_permission(request, permission="evidence.manage")
     link = execute_postgres_evidence(
         request,
         lambda repository, tenant: repository.link(
@@ -384,6 +395,7 @@ def save_evidence_requirement(
             code="evidence_requirement_server_only",
             message="Server evidence requirements are not enabled.",
         )
+    _enforce_server_evidence_permission(request, permission="evidence.manage")
     requirement = execute_postgres_evidence(
         request,
         lambda repository, tenant: repository.requirement(
@@ -414,6 +426,7 @@ def verify_evidence(
         raise APIError(
             status_code=501, code="evidence_verify_server_only", message="Server evidence verification is not enabled."
         )
+    _enforce_server_evidence_permission(request, permission="evidence.verify")
     result = execute_postgres_evidence(
         request,
         lambda repository, tenant: repository.verify_checksum(

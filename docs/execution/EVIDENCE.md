@@ -316,6 +316,24 @@ This file records commands and observed results. It does not convert a dirty wor
   and [CodeQL](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30937323585)
   also pass.
 - ADR: `docs/adr/0326-server-scoped-reconciliation-run-mutations.md`.
+
+## E-377: Server-scoped evidence mutations
+
+- `evidence.py` now re-evaluates the central scope policy before PostgreSQL
+  server-profile evidence registration, linking, requirement creation,
+  sensitive drill-down, and checksum verification. `evidence.manage` and
+  `evidence.verify` remain distinct; local SQLite and ordinary reads are
+  unchanged.
+- Focused command:
+  `pytest -q tests/test_api_server_evidence.py tests/test_api_execution_scope.py tests/test_api_authorization_inventory.py`
+  -> 12 passed. Ruff and Mypy pass for the changed route; full pytest,
+  `python -m build --no-isolation`, diff-check, and hosted CI remain required
+  before promotion.
+- Boundary: synthetic server-profile evidence scope binding only; no claim of
+  workspace-level evidence persistence, universal route/job/export/UI policy
+  adoption, federation, live providers, independent HA/DR, or production IAM
+  assurance.
+- ADR: `docs/adr/0327-server-scoped-evidence-mutations.md`.
 - ADR: `docs/adr/0321-governed-server-writeback-dispatch-boundary.md`.
 
 ## E-293: Immutable local delegation administration

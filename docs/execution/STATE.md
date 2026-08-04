@@ -165,6 +165,12 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - The eight routes are now included in the startup authorization inventory.
   Focused API, server-scope, and inventory tests pass 16/16; Ruff and Mypy
   pass, and local SQLite consolidation-close behavior remains green.
+- Hosted no-regression verification for commit `21978ccb` is green: CI run
+  `30904707354` (including `server-boundaries` and `postgres-ha-dr`), Security
+  `30904707336`, Docker `30904707413`, and CodeQL `30904707431`. The hosted
+  matrix did not add a live authenticated consolidation-close API fixture, so
+  this remains repository/CI compatibility evidence rather than a live API
+  route claim.
 - Boundary: synthetic/local API policy and repository wiring only. The close
   adapter remains control-journal evidence, not statutory consolidation,
   external posting, live ERP/bank integration, write-back, HA/DR, or complete

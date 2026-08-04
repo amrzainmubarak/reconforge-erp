@@ -3111,7 +3111,10 @@
   does not implement statutory consolidation, external posting, live provider
   integration, write-back, HA/DR, or universal enterprise IAM.
 - **Result**: Focused API/server-scope/inventory tests pass 16/16; Ruff and
-  Mypy pass. Local SQLite compatibility remains unchanged.
+  Mypy pass. Local SQLite compatibility remains unchanged. Hosted
+  no-regression verification is green in CI `30904707354`, Security
+  `30904707336`, Docker `30904707413`, and CodeQL `30904707431`; no live
+  authenticated route fixture was added.
 - **ADR**: `docs/adr/0314-postgres-consolidation-close-api-is-scope-bound.md`.
 - **Rollback**: remove the adapter, route branches, inventory inclusion, tests,
   ADR, manifest entry, and ledger additions; no schema rollback is required.

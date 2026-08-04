@@ -38,6 +38,11 @@ This file records commands and observed results. It does not convert a dirty wor
   workspace and verify every detail/list/certification row before exposure;
   the router is included in the startup authorization inventory.
 - `pytest -q tests/test_api_consolidation_close.py tests/test_api_server_scope_boundary.py tests/test_api_authorization_inventory.py` -> `16 passed`; Ruff and Mypy pass for the changed modules.
+- Hosted no-regression verification for commit `21978ccb` is green: CI
+  `30904707354` (server-boundaries and postgres-ha-dr included), Security
+  `30904707336`, Docker `30904707413`, and CodeQL `30904707431`. The hosted
+  matrix did not exercise this route family with a live authenticated API
+  fixture.
 - Boundary: local route/adapter contract and synthetic sibling-workspace
   refusal. No live authenticated PostgreSQL API fixture, statutory
   consolidation, external posting, ERP/bank provider, write-back, HA/DR, or

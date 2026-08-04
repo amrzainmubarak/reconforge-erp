@@ -29,6 +29,9 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   ambient pip-audit call timed out at PyPI and is recorded as operationally
   blocked rather than green; the hash-locked CI-equivalent audit is the valid
   dependency result.
+- Hosted commit `f8e6996b` is green: CI `30865985067` (including
+  server-boundaries job `91857821428`), Security `30865984998`, Docker
+  `30865985056`, and CodeQL `30865985004` all passed.
 - ADR: `docs/adr/0301-postgres-named-query-readonly-connector.md`.
 
 ## E-333 — Authenticated PostgreSQL PPA evidence API (complete bounded slice)

@@ -1179,7 +1179,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   `30878667888`, and CodeQL `30878667878`; Python 3.11/3.12 and engine parity
   jobs also passed. The uv mirror 403 was an annotation-only fallback.
 
-### E-357 in progress: PostgreSQL durable-job lock-order remediation
+### E-357 complete: PostgreSQL durable-job lock-order remediation
 
 - The hosted documentation rerun exposed an intermittent deadlock in the
   existing two-worker PostgreSQL contention contract. The cycle was caused by
@@ -1190,8 +1190,10 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   local 10K profile pass with 2,500 jobs and 10,000 effects and no duplicate or
   residual work.
 - ADR: `docs/adr/0307-postgres-durable-job-lock-order.md`.
-- Remote verification remains pending the CI run for the remediation commit;
-  the phase is not marked closed until server-boundaries is green.
+- Hosted CI for commit `a131fe32` is green: CI `30880528118`,
+  server-boundaries `91900726859`, Docker `30880528103`, Security
+  `30880528153`, and CodeQL `30880528101`; Python 3.11/3.12, object-storage,
+  docker-parity, and all engine-parity cells also passed.
 
 ## P4-CON-001 in progress: governed live connector foundation
 

@@ -12721,5 +12721,8 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   2,500/2,500 jobs, 10,000/10,000 effects, no duplicates, and no queue/running
   residue.
 - ADR: `docs/adr/0307-postgres-durable-job-lock-order.md`.
-- Hosted verification is intentionally pending the CI run for the remediation
-  commit; no remote-green claim is made here until that run completes.
+- Hosted verification for commit `a131fe32c2afbdad9970d0f19bd111e09fbd24c7`
+  is green: CI run `30880528118` passed server-boundaries job
+  `91900726859`, both Python versions, all four engine-parity cells,
+  object-storage, and docker-parity. Docker run `30880528103`, Security
+  `30880528153`, and CodeQL `30880528101` also passed.

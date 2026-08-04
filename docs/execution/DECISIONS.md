@@ -3229,8 +3229,10 @@
   PostgreSQL API/identity/ownership/close gate passes 30/30; authorization
   inventory is 220 routes with digest
   `3adace1833893004e67851b0be16791f8cff078bb0a55babe49a7a5c216f05c0`; Ruff,
-  Mypy, and diff-check pass. Hosted verification for the new code head is
-  pending.
+  Mypy, and diff-check pass. Hosted head `8c2589ef` is green in CI
+  `30915384871` (including `server-boundaries`, `postgres-ha-dr`, and
+  `docker-parity`), Security `30915375062`, Docker `30915374854`, and CodeQL
+  `30915379664`.
 - **ADR**: `docs/adr/0319-consolidation-close-period-api-write-boundary.md`.
 - **Rollback**: remove the route, request model, tests, inventory update, ADR,
   and manifest entry; no database migration rollback is required.

@@ -267,8 +267,10 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   before repository use. The live API/identity/ownership/close gate passes
   30/30; authorization inventory is now 220 routes with digest
   `3adace1833893004e67851b0be16791f8cff078bb0a55babe49a7a5c216f05c0`.
-- Ruff, Mypy, and diff-check pass. Hosted verification for the new code head
-  is pending.
+- Ruff, Mypy, and diff-check pass. Hosted head `8c2589ef` is green: CI
+  `30915384871` (`server-boundaries` `92012074573`, `postgres-ha-dr`
+  `92012074773`, and `docker-parity` `92013746295`), Security `30915375062`,
+  Docker `30915374854`, and CodeQL `30915379664`.
 - Boundary: period creation only. Run preparation, approval/posting, reversal,
   locks/reopens, statutory statements, provider/write-back, independent HA/DR,
   and production assurance remain open.

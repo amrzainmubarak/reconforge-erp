@@ -142,7 +142,10 @@ This file records commands and observed results. It does not convert a dirty wor
   `3adace1833893004e67851b0be16791f8cff078bb0a55babe49a7a5c216f05c0`.
 - Boundary: period creation only; no statutory close, run posting/approval,
   external provider/write-back, independent HA/DR, or production claim.
-- Hosted verification for the new code head is pending.
+- Hosted head `8c2589ef` passes CI `30915384871`, including
+  `server-boundaries` job `92012074573`, `postgres-ha-dr` job `92012074773`,
+  and `docker-parity` job `92013746295`; Security `30915375062`, Docker
+  `30915374854`, and CodeQL `30915379664` also pass.
 - ADR: `docs/adr/0319-consolidation-close-period-api-write-boundary.md`.
 
 ## E-293: Immutable local delegation administration

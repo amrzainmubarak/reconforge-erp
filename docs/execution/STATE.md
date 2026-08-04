@@ -6,6 +6,21 @@ Updated: 2026-08-04
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-353 — Live S3-compatible object-storage provider gate (complete bounded slice)
+
+- Added an independent CI `object-storage` job that starts a digest-pinned
+  MinIO process with synthetic credentials, creates normal and object-lock
+  buckets, runs the real boto3-backed `S3ObjectStore`, and uploads a
+  digest-bound report.
+- The contract verifies hierarchical tenant/workspace/entity isolation,
+  immutable conditional creation, checksum tamper refusal, object-lock delete
+  refusal, and cleanup. The report verifier rejects credentials and requires
+  all observed invariants.
+- Boundary: one disposable MinIO process on one CI host. Replication, KMS,
+  cross-site durability, provider interoperability, object-store HA/DR,
+  malware scanning, authorized download, and production SLOs remain open.
+- ADR: `docs/adr/0303-live-s3-compatible-object-storage-gate.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

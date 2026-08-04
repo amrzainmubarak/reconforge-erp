@@ -12575,3 +12575,24 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   exited 0. A direct ambient `python -m pip_audit` attempt timed out against
   PyPI; it was not used as a green result, and the required hash-locked audit
   completed separately.
+
+## E-353: Live S3-compatible object-storage provider gate
+
+- Added `.github/scripts/verify_s3_object_storage_live.py`, a closed report
+  schema, an ADR, an operator note, and a separate CI `object-storage` job.
+  The job runs MinIO image
+  `minio/minio@sha256:13582eff79c6605a2d315bdd0e70164142ea7e98fc8411e9e10d089502a6d883`
+  with synthetic credentials, creates a normal bucket and an object-lock
+  bucket, runs the real boto3-backed adapter, uploads the report, and removes
+  the container with `always()` cleanup.
+- Local runtime command (disposable MinIO, Windows 11/Python 3.14.6) passed the
+  two live object-storage tests and the report verifier. The report observed
+  hierarchical scope isolation, immutable conflict refusal, checksum-tamper
+  refusal, object-lock delete refusal, and cleanup; no credential or object
+  bytes were recorded. A sample local run measured 315.638 ms; timing is
+  observational and not a performance claim.
+- Hosted runtime evidence is intentionally pending until the new CI head runs.
+  The boundary remains one MinIO process on one CI host: no replication, KMS,
+  cross-site durability, provider interoperability, object-store HA/DR,
+  malware scanning, authorized download, or production SLO is proven. ADR:
+  `docs/adr/0303-live-s3-compatible-object-storage-gate.md`.

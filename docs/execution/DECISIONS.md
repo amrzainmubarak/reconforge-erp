@@ -2844,3 +2844,22 @@
 - ADR: `docs/adr/0302-ha-dr-quorum-fencing-safety-state-machine.md`.
 - Rollback: remove the reliability module, verifier, schema, report, tests,
   CI invocation, and execution entries without changing the existing drill.
+## D252 - Exercise the optional S3 boundary against digest-pinned MinIO
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Add a separate CI job for a real boto3-backed S3-compatible
+  object-store run. Start a digest-pinned MinIO process, create normal and
+  object-lock buckets with synthetic credentials, run hierarchical isolation,
+  immutable-create, checksum-tamper, retention-delete, and cleanup checks, and
+  retain a digest-bound report as a CI artifact.
+- **Reason**: Transport-injected tests cannot expose conditional-create,
+  object-lock, or provider metadata behavior. A disposable open-source process
+  supplies stronger provider evidence without changing the local-first default
+  or using customer data.
+- **Boundary**: One process on one CI host only. No replication, KMS,
+  cross-site durability, provider interoperability, object-store HA/DR,
+  malware scanning, authorized download, or production SLO claim follows.
+- **ADR**: `docs/adr/0303-live-s3-compatible-object-storage-gate.md`.
+- **Rollback**: remove the CI job, verifier, schema, tests, report upload, and
+  execution records; the local filesystem default and S3 adapter remain.

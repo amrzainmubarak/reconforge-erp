@@ -245,3 +245,77 @@ jobs:
           chmod 600 "$PGSERVICEFILE"
           mapfile -t parity_tests < <(uv run --no-sync python -c "import yaml; document = yaml.safe_load(open('docs/execution/POSTGRES_PARITY_INVENTORY.yaml', encoding='utf-8')); print(*dict.fromkeys(item['test'] for item in document['boundaries'] if item.get('test')), sep='\\n')")
             uv run --no-sync pytest "${parity_tests[@]}" tests/test_postgres_delegations_runtime.py tests/test_postgres_policy_analysis_runtime.py tests/test_alembic_postgres.py tests/test_postgres_foundation.py tests/test_postgres_master_data.py tests/test_postgres_ledger.py tests/test_postgres_identity.py tests/test_postgres_evidence.py tests/test_postgres_reconciliation.py tests/test_postgres_writeback.py tests/test_postgres_database_reference.py tests/test_api_server_identity.py tests/test_redis_foundation.py -q
+
+  object-storage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install locked server dependencies
+        run: uv sync --locked --extra dev --extra server --no-editable --python 3.12
+
+      - name: Start digest-pinned MinIO
+        env:
+          MINIO_IMAGE: minio/minio@sha256:13582eff79c6605a2d315bdd0e70164142ea7e98fc8411e9e10d089502a6d883
+          MINIO_ROOT_USER: reconforge_ci_access
+          MINIO_ROOT_PASSWORD: reconforge_ci_secret_2026
+        run: |
+          set -euo pipefail
+          docker run --detach --name reconforge-ci-minio \
+            --publish 19000:9000 \
+            --publish 19001:9001 \
+            --env "MINIO_ROOT_USER=${MINIO_ROOT_USER}" \
+            --env "MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}" \
+            "${MINIO_IMAGE}" server /data --console-address ':9001'
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:19000/minio/health/ready >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo 'MinIO readiness timeout' >&2
+          docker logs reconforge-ci-minio >&2 || true
+          exit 1
+
+      - name: Run live object-storage contract and emit report
+        env:
+          AWS_ACCESS_KEY_ID: reconforge_ci_access
+          AWS_SECRET_ACCESS_KEY: reconforge_ci_secret_2026
+          AWS_DEFAULT_REGION: us-east-1
+          RECONFORGE_TEST_S3_ENDPOINT: http://127.0.0.1:19000
+          RECONFORGE_TEST_S3_BUCKET: reconforge-ci-live
+          RECONFORGE_TEST_S3_LOCK_BUCKET: reconforge-ci-lock
+          RECONFORGE_S3_IMAGE_DIGEST: sha256:13582eff79c6605a2d315bdd0e70164142ea7e98fc8411e9e10d089502a6d883
+          RECONFORGE_S3_LIVE_REPORT: ${{ runner.temp }}/reconforge-s3-live-report.json
+        run: |
+          set -euo pipefail
+          uv run --no-sync python -c "import boto3, os; client=boto3.client('s3', endpoint_url=os.environ['RECONFORGE_TEST_S3_ENDPOINT'], region_name='us-east-1'); client.create_bucket(Bucket=os.environ['RECONFORGE_TEST_S3_BUCKET']); client.create_bucket(Bucket=os.environ['RECONFORGE_TEST_S3_LOCK_BUCKET'], ObjectLockEnabledForBucket=True)"
+          uv run --no-sync python .github/scripts/verify_s3_object_storage_live.py --output "${RECONFORGE_S3_LIVE_REPORT}"
+          uv run --no-sync pytest -q tests/test_object_storage_foundation.py -k 'live_s3_'
+
+      - name: Upload live object-storage report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: reconforge-s3-live-report
+          path: ${{ runner.temp }}/reconforge-s3-live-report.json
+          if-no-files-found: ignore
+
+      - name: Stop MinIO
+        if: always()
+        run: docker rm --force reconforge-ci-minio || true

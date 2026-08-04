@@ -546,8 +546,11 @@ def test_postgres_receipt_detects_backup_tamper_and_native_runner_keeps_dsn_out_
     runner.upgrade("source", "0053_audit_administration_acl")
     argv, kwargs = calls[0]
     assert all("secret" not in item for item in argv)
-    assert argv[0].lower().endswith(("/alembic", "\\alembic", "/alembic.exe", "\\alembic.exe"))
-    assert argv[1:] == ("-c", str(Path("alembic.ini").resolve()), "upgrade", "0053_audit_administration_acl")
+    assert argv[0] == str(Path(sys.executable).resolve())
+    assert argv[1] == "-c"
+    assert "from alembic.config import main" in argv[2]
+    assert str(Path("alembic.ini").resolve().parent).replace("\\", "\\\\") in argv[2]
+    assert argv[3:] == ("-c", str(Path("alembic.ini").resolve()), "upgrade", "0053_audit_administration_acl")
     assert kwargs["shell"] is False
     assert cast(dict[str, str], kwargs["env"])["RECONFORGE_POSTGRES_DSN"].endswith("/source")
 

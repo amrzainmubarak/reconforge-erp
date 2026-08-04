@@ -21,10 +21,12 @@ the declared synthetic tenant lanes and effect checks.
 
 ## Evidence boundary
 
-This proves a repeatable hosted single-node PostgreSQL correctness/concurrency
-tier: 2,500 completed jobs and 10,000 unique committed effects with no queue
-residue. It does not prove throughput capacity, soak, backpressure coupling,
-distributed fairness, queue HA, host loss, RPO/RTO, or production sizing.
+Hosted CI run `30887647946` / `server-boundaries` job `91922298719` passed the
+test. This proves a repeatable hosted single-node PostgreSQL
+correctness/concurrency tier: 2,500 completed jobs and 10,000 unique committed
+effects with no queue residue. It does not prove throughput capacity, soak,
+backpressure coupling, distributed fairness, queue HA, host loss, RPO/RTO, or
+production sizing.
 
 ## Rollback
 

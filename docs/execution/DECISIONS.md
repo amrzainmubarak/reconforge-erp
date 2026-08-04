@@ -2992,6 +2992,9 @@
 - **Boundary**: Single-node synthetic correctness/concurrency only. Soak,
   backpressure coupling, queue HA, host loss, cross-host fairness, RPO/RTO,
   and production sizing remain open.
+- **Result**: Hosted CI run `30887647946` passed; `server-boundaries` job
+  `91922298719` executed the explicit 10K test successfully, and the full
+  workflow remained green.
 - **ADR**: `docs/adr/0309-postgres-durable-job-10k-hosted-gate.md`.
 - **Rollback**: remove the explicit test invocation, contract assertion, ADR,
   and manifest entry; retain the local and 256-effect hosted profiles.

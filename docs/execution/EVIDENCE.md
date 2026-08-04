@@ -12763,8 +12763,10 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   partitions per job, four tenant lanes, and 10,000 committed effects. The
   verifier requires zero duplicate effects, zero queued/running residue, and
   exactly 625 completed jobs per lane.
-- Hosted verification is pending this change. Boundary: synthetic single-node
-  correctness/concurrency only; soak, throughput capacity, backpressure,
-  queue HA, host loss, cross-host fairness, RPO/RTO, and production sizing are
-  unverified.
+- Hosted CI run `30887647946` passed the full workflow; the
+  `server-boundaries` job `91922298719` executed the explicit test against the
+  digest-pinned PostgreSQL 16 service and non-privileged role. Boundary:
+  synthetic single-node correctness/concurrency only; soak, throughput
+  capacity, backpressure, queue HA, host loss, cross-host fairness, RPO/RTO,
+  and production sizing remain unverified.
 - ADR: `docs/adr/0309-postgres-durable-job-10k-hosted-gate.md`.

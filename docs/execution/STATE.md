@@ -65,7 +65,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   jobs also passed.
 - ADR: `docs/adr/0308-postgres-ha-dr-runtime-gate.md`.
 
-## E-359 — Hosted PostgreSQL durable-job 10K-effect gate (in progress)
+## E-359 — Hosted PostgreSQL durable-job 10K-effect gate (complete bounded slice)
 
 - The `server-boundaries` CI command now explicitly runs the existing live
   `postgres-durable-job-load/10k-effects-v1` profile with 16 independent
@@ -73,7 +73,11 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   tenant lanes, and 10,000 declared effects.
 - The gate requires every job/effect to complete exactly once, zero duplicate
   effects, zero queued/running residue, and equal per-lane completion counts.
-  Hosted verification is pending this change; no capacity, soak, backpressure,
+  Hosted CI run `30887647946` passed the full workflow; the
+  `server-boundaries` job `91922298719` ran the explicit test successfully
+  against the digest-pinned PostgreSQL 16 service. The same run's Python
+  3.11/3.12, engine-parity, object-storage, Docker, Security, CodeQL, and
+  `postgres-ha-dr` jobs also passed. No capacity, soak, backpressure,
   queue-HA, or production-sizing claim is made.
 - ADR: `docs/adr/0309-postgres-durable-job-10k-hosted-gate.md`.
 

@@ -15,6 +15,7 @@ from reconforge.api.server_consolidation_close import (
     server_consolidation_close_enabled,
 )
 from reconforge.api.server_identity import RequestExecutionScope, request_execution_scope
+from reconforge.application.consolidation_close import ConsolidationCloseApplicationService
 from reconforge.auth.models import LocalUser
 from reconforge.infrastructure.postgres_consolidation_close import PostgresConsolidationCloseRepository
 from reconforge.infrastructure.sqlite_consolidation_close import SQLiteConsolidationCloseRepository
@@ -29,6 +30,20 @@ ConsolidationReview = Annotated[LocalUser, Depends(require_permission("finance_c
 class CertificationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     note: str = Field(default="", max_length=1000)
+
+
+class ConsolidationPeriodRequest(BaseModel):
+    """Strict request for one effective consolidation-close period."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    group_code: str = Field(min_length=1, max_length=160)
+    period_id: str = Field(min_length=1, max_length=160)
+    reporting_currency: str = Field(pattern=r"^[A-Z]{3}$", min_length=3, max_length=3)
+    period_start_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$", min_length=10, max_length=10)
+    period_end_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$", min_length=10, max_length=10)
+    reporting_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$", min_length=10, max_length=10)
+    workspace: str = Field(default="default", min_length=1, max_length=120)
 
 
 def _repository(connection: sqlite3.Connection | None) -> SQLiteConsolidationCloseRepository:
@@ -109,6 +124,51 @@ def list_periods(
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_periods_failed", exc) from exc
     return {"periods": records, "source": {"kind": "sqlite-consolidation-close", "workspace": workspace}}
+
+
+@router.post("/periods")
+def create_period(
+    request: Request,
+    payload: ConsolidationPeriodRequest,
+    current_user: ConsolidationCertify,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """Create or replay one workspace-scoped close period."""
+
+    if server_consolidation_close_enabled(request):
+        scope = _server_scope(request, payload.workspace)
+
+        def create(repository: PostgresConsolidationCloseRepository, _tenant: str) -> dict[str, object]:
+            period = ConsolidationCloseApplicationService(repository).create_period(
+                group_code=payload.group_code,
+                period_id=payload.period_id,
+                reporting_currency=payload.reporting_currency,
+                period_start_date=payload.period_start_date,
+                period_end_date=payload.period_end_date,
+                reporting_date=payload.reporting_date,
+                workspace=scope.workspace_id,
+                actor_label=current_user.id,
+            )
+            _assert_workspace(period, scope.workspace_id)
+            return period
+
+        period = execute_postgres_consolidation_close(request, create)
+        return {"period": period, "source": _server_source()}
+
+    try:
+        period = ConsolidationCloseApplicationService(_repository(connection)).create_period(
+            group_code=payload.group_code,
+            period_id=payload.period_id,
+            reporting_currency=payload.reporting_currency,
+            period_start_date=payload.period_start_date,
+            period_end_date=payload.period_end_date,
+            reporting_date=payload.reporting_date,
+            workspace=payload.workspace,
+            actor_label=current_user.username,
+        )
+    except (PlatformError, sqlite3.DatabaseError) as exc:
+        raise _error("consolidation_period_create_failed", exc) from exc
+    return {"period": period, "source": {"kind": "sqlite-consolidation-close", "workspace": payload.workspace}}
 
 
 @router.get("/periods/{period_id}")

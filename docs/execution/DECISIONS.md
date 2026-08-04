@@ -3209,3 +3209,28 @@
 - **ADR**: `docs/adr/0318-consolidation-ownership-approver-identity.md`.
 - **Rollback**: remove the identity lookup methods, route checks, tests, ADR,
   and manifest entry; no schema rollback is required.
+
+## D296 - Expose a scoped consolidation-close period write boundary
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Add strict authenticated `POST /api/v1/consolidation-close/periods`
+  over the existing application/repository port. Local mode uses SQLite;
+  server mode uses the authenticated PostgreSQL tenant/workspace hierarchy and
+  binds the actor to the bearer identity. Identical period identities replay;
+  sibling workspaces fail before repository access.
+- **Reason**: The close API exposed evidence and certification but had no
+  authenticated period-entry boundary. A period-only write slice advances the
+  lifecycle without inventing a second calculation or posting path.
+- **Boundary**: Period creation only. Run preparation, approval/posting,
+  reversal, locks/reopens, statutory statements, provider/write-back, HA/DR,
+  and production assurance remain unverified.
+- **Result**: The local close API/inventory tests pass 9/9; the configured live
+  PostgreSQL API/identity/ownership/close gate passes 30/30; authorization
+  inventory is 220 routes with digest
+  `3adace1833893004e67851b0be16791f8cff078bb0a55babe49a7a5c216f05c0`; Ruff,
+  Mypy, and diff-check pass. Hosted verification for the new code head is
+  pending.
+- **ADR**: `docs/adr/0319-consolidation-close-period-api-write-boundary.md`.
+- **Rollback**: remove the route, request model, tests, inventory update, ADR,
+  and manifest entry; no database migration rollback is required.

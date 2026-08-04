@@ -256,6 +256,24 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   HA/DR, or production IAM assurance.
 - ADR: `docs/adr/0318-consolidation-ownership-approver-identity.md`.
 
+## E-369 — Scoped consolidation-close period write API (complete bounded slice)
+
+- Added strict authenticated `POST /api/v1/consolidation-close/periods` over
+  the existing backend-neutral close application service. Local mode persists
+  through SQLite; server mode persists through the authenticated PostgreSQL
+  hierarchy/RLS boundary and binds the actor to the bearer identity.
+- The request rejects unknown fields and malformed currency/date values,
+  replays an identical period identity, and rejects sibling workspace input
+  before repository use. The live API/identity/ownership/close gate passes
+  30/30; authorization inventory is now 220 routes with digest
+  `3adace1833893004e67851b0be16791f8cff078bb0a55babe49a7a5c216f05c0`.
+- Ruff, Mypy, and diff-check pass. Hosted verification for the new code head
+  is pending.
+- Boundary: period creation only. Run preparation, approval/posting, reversal,
+  locks/reopens, statutory statements, provider/write-back, independent HA/DR,
+  and production assurance remain open.
+- ADR: `docs/adr/0319-consolidation-close-period-api-write-boundary.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

@@ -127,6 +127,24 @@ This file records commands and observed results. It does not convert a dirty wor
   `30913043606`, and CodeQL `30913043202` also pass.
 - ADR: `docs/adr/0318-consolidation-ownership-approver-identity.md`.
 
+## E-369: Scoped consolidation-close period write API
+
+- Added strict `POST /api/v1/consolidation-close/periods` using the existing
+  `ConsolidationCloseApplicationService`. Local SQLite and server PostgreSQL
+  paths share the repository port; server requests use authenticated hierarchy,
+  RLS, and actor binding.
+- `pytest -q tests/test_api_consolidation_close.py tests/test_api_authorization_inventory.py`
+  -> `9 passed`; the configured local PostgreSQL API/identity/ownership/close
+  command -> `30 passed`. Unknown fields/currency/date shapes, same-period
+  replay, and sibling-workspace refusal are covered. Ruff, Mypy, and
+  `git diff --check` pass.
+- Authorization inventory is 220 routes with digest
+  `3adace1833893004e67851b0be16791f8cff078bb0a55babe49a7a5c216f05c0`.
+- Boundary: period creation only; no statutory close, run posting/approval,
+  external provider/write-back, independent HA/DR, or production claim.
+- Hosted verification for the new code head is pending.
+- ADR: `docs/adr/0319-consolidation-close-period-api-write-boundary.md`.
+
 ## E-293: Immutable local delegation administration
 
 - Added typed `DelegationGrant`, migration 27, and `DelegationRepository`.

@@ -109,6 +109,36 @@ def test_consolidation_close_api_rejects_unknown_workspace(tmp_path: Path) -> No
     assert response.json()["error"]["code"] == "consolidation_periods_failed"
 
 
+def test_consolidation_close_api_creates_strict_period_and_replays(tmp_path: Path) -> None:
+    db_path = tmp_path / "consolidation-api-create.db"
+    run_migrations(db_path)
+    connection = connect(db_path)
+    LocalAuthService(connection).init_admin(username="admin", password="Secret-123")
+    connection.close()
+    client = TestClient(create_api_app(db_path))
+    login = client.post("/api/v1/auth/login", json={"username": "admin", "password": "Secret-123"})
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    payload = {
+        "group_code": "GLOBAL-GROUP",
+        "period_id": "2026-09",
+        "reporting_currency": "USD",
+        "period_start_date": "2026-09-01",
+        "period_end_date": "2026-09-30",
+        "reporting_date": "2026-09-30",
+        "workspace": "default",
+    }
+    created = client.post("/api/v1/consolidation-close/periods", headers=headers, json=payload)
+    assert created.status_code == 200, created.text
+    assert created.json()["period"]["period_name"] == "2026-09"
+    assert created.json()["source"]["kind"] == "sqlite-consolidation-close"
+    replay = client.post("/api/v1/consolidation-close/periods", headers=headers, json=payload)
+    assert replay.status_code == 200, replay.text
+    assert replay.json()["period"]["id"] == created.json()["period"]["id"]
+    invalid = {**payload, "unexpected": True}
+    rejected = client.post("/api/v1/consolidation-close/periods", headers=headers, json=invalid)
+    assert rejected.status_code == 422
+
+
 def test_consolidation_close_certification_api_is_posted_only_and_maker_checker_bound(tmp_path: Path) -> None:
     db_path = tmp_path / "consolidation-certification-api.db"
     run_migrations(db_path)
@@ -178,6 +208,9 @@ def test_consolidation_close_server_boundary_binds_workspace_before_exposure(
     headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
 
     class Repository:
+        def create_period(self, **kwargs: object) -> dict[str, object]:
+            return {"id": "period-a", "workspace_id": str(kwargs["workspace"]), "period_name": "2026-09"}
+
         def list_periods(self, **_: object) -> list[dict[str, object]]:
             return [{"id": "period-b", "workspace_id": "workspace-b"}]
 
@@ -202,6 +235,37 @@ def test_consolidation_close_server_boundary_binds_workspace_before_exposure(
     listed = client.get("/api/v1/consolidation-close/periods", headers=headers)
     assert listed.status_code == 403
     assert listed.json()["error"]["code"] == "workspace_scope_denied"
+
+    created = client.post(
+        "/api/v1/consolidation-close/periods",
+        headers=headers,
+        json={
+            "group_code": "GLOBAL-GROUP",
+            "period_id": "2026-09",
+            "reporting_currency": "USD",
+            "period_start_date": "2026-09-01",
+            "period_end_date": "2026-09-30",
+            "reporting_date": "2026-09-30",
+        },
+    )
+    assert created.status_code == 200
+    assert created.json()["period"]["workspace_id"] == "workspace-a"
+
+    sibling_create = client.post(
+        "/api/v1/consolidation-close/periods",
+        headers=headers,
+        json={
+            "group_code": "GLOBAL-GROUP",
+            "period_id": "2026-10",
+            "reporting_currency": "USD",
+            "period_start_date": "2026-10-01",
+            "period_end_date": "2026-10-31",
+            "reporting_date": "2026-10-31",
+            "workspace": "workspace-b",
+        },
+    )
+    assert sibling_create.status_code == 403
+    assert sibling_create.json()["error"]["code"] == "workspace_scope_denied"
 
     detail = client.get("/api/v1/consolidation-close/runs/run-b", headers=headers)
     assert detail.status_code == 403

@@ -1008,12 +1008,29 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
         )
         assert sibling_ownership.status_code == 403
         assert sibling_ownership.json()["error"]["code"] == "workspace_scope_denied"
+        close_period_payload = {
+            "group_code": "GLOBAL-GROUP",
+            "period_id": "2026-08",
+            "reporting_currency": "USD",
+            "period_start_date": "2026-08-01",
+            "period_end_date": "2026-08-31",
+            "reporting_date": "2026-08-31",
+        }
+        close_period_created = client.post(
+            "/api/v1/consolidation-close/periods",
+            headers=authenticated_headers,
+            json=close_period_payload,
+        )
+        assert close_period_created.status_code == 200, close_period_created.text
+        assert close_period_created.json()["source"]["kind"] == "postgresql-consolidation-close"
+        assert close_period_created.json()["period"]["workspace_id"] == "workspace-a"
         close_periods = client.get(
             "/api/v1/consolidation-close/periods",
             headers=authenticated_headers,
         )
         assert close_periods.status_code == 200, close_periods.text
         assert close_periods.json()["source"]["kind"] == "postgresql-consolidation-close"
+        assert [item["period_name"] for item in close_periods.json()["periods"]] == ["2026-08"]
         close_sibling = client.get(
             "/api/v1/consolidation-close/periods",
             headers={**authenticated_headers, "X-ReconForge-Workspace": "workspace-b"},

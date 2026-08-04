@@ -12785,6 +12785,10 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   50 completed runs per mode. Hosted CI run `30894602923` passed with
   `server-boundaries` job `91944412213`; the Python 3.11/3.12, engine-parity,
   Docker-parity, object-storage, and `postgres-ha-dr` jobs also passed.
+- The production-like contention path found and closed a stale active-page
+  race: terminal `Complete`/`Failed`/`Cancelled` claims now use the existing
+  busy/skip contract rather than surfacing a worker failure. The regression is
+  in `tests/test_postgres_reconciliation.py`.
 - Boundary: synthetic single-node PostgreSQL matching correctness/concurrency
   only; throughput, soak, backpressure, cross-host fairness, provider
   interoperability, posting, write-back, HA/DR, and production sizing remain

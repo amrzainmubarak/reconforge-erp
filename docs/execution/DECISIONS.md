@@ -3021,6 +3021,10 @@
   `91944412213` verified 500 completed partitions, exact result-row
   cardinality, zero duplicate result identities, zero failed/active runs, and
   50 completed runs per grouped mode.
+- The run also drove a stale active-page race to a concrete fix: terminal
+  reconciliation observations now raise the existing busy signal so a
+  competing worker skips them instead of converting a completed run into a
+  worker failure; a focused regression preserves this behavior.
 - **ADR**: `docs/adr/0310-postgres-grouped-matching-2000-partition-hosted-gate.md`.
 - **Rollback**: remove the explicit test invocation, contract assertion, ADR,
   and manifest entry; retain the existing 64-partition and local domain-

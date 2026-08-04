@@ -95,6 +95,11 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   `server-boundaries` job `91944412213`; Python 3.11/3.12, engine-parity,
   Docker-parity, object-storage, and `postgres-ha-dr` also passed in the same
   workflow.
+- The hosted run exposed a real active-page race: a second worker could see a
+  run already completed by another worker and treat that terminal state as an
+  integrity failure. `PostgresReconciliationRepository.claim_run` now maps
+  terminal `Complete`/`Failed`/`Cancelled` observations to the existing busy
+  skip path; a focused regression covers the contract.
 - Boundary: hosted single-node synthetic PostgreSQL matching
   correctness/concurrency only. This does not claim throughput, soak, queue
   backpressure, cross-host scheduling, provider interoperability, posting,

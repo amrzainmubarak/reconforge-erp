@@ -113,9 +113,11 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   journal, and committed effects for one close run. SQLite and PostgreSQL
   `get_run` details now expose the same additive bundle after their existing
   integrity checks.
-- Focused SQLite and PostgreSQL contract tests pass, including cross-run
-  worksheet binding, effect ordering, and tamper refusal. No migration or
-  posting path changed.
+- Focused SQLite bundle/lifecycle tests pass 15/15; the PostgreSQL close
+  contract passes 7/7 with one no-DSN skip, and the live local PostgreSQL close
+  contract passes 8/8. Cross-run worksheet binding, effect ordering, header
+  compatibility, and tamper refusal are covered. No migration or posting path
+  changed.
 - Boundary: local control-journal and management-only evidence. This is not a
   statutory statement, external ledger posting, provider acknowledgement,
   write-back, HA/DR, or production-assurance claim.

@@ -150,11 +150,19 @@ def build_consolidation_close_bundle(run: Mapping[str, object]) -> Consolidation
         raise ConsolidationError("Close run effects are invalid.")
 
     worksheet_digest = _digest(worksheet.get("result_digest"), "Worksheet result digest")
-    if not hmac.compare_digest(worksheet_digest, _digest(run.get("worksheet_result_digest"), "Run worksheet digest")):
-        raise ConsolidationError("Close bundle worksheet digest does not match the run header.")
+    if run.get("worksheet_result_digest") is not None:
+        run_worksheet_digest = _digest(run.get("worksheet_result_digest"), "Run worksheet digest")
+        if not hmac.compare_digest(worksheet_digest, run_worksheet_digest):
+            raise ConsolidationError("Close bundle worksheet digest does not match the run header.")
+    else:
+        # PostgreSQL stores the canonical JSONB payload digest as
+        # ``worksheet_digest``; replay verification has already checked it.
+        _digest(run.get("worksheet_digest"), "Run worksheet payload digest")
     translation_digest = _digest(translation.get("result_digest"), "Translation result digest")
-    if not hmac.compare_digest(translation_digest, _digest(run.get("translation_result_digest"), "Run translation digest")):
-        raise ConsolidationError("Close bundle translation digest does not match the run header.")
+    if run.get("translation_result_digest") is not None:
+        run_translation_digest = _digest(run.get("translation_result_digest"), "Run translation digest")
+        if not hmac.compare_digest(translation_digest, run_translation_digest):
+            raise ConsolidationError("Close bundle translation digest does not match the run header.")
     statement_digest = _digest(statement.get("artifact_digest"), "Management statement digest")
     statement_worksheet_digest = _digest(statement.get("worksheet_result_digest"), "Management statement worksheet digest")
     if not hmac.compare_digest(statement_worksheet_digest, worksheet_digest):

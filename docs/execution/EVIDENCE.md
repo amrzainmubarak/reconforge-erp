@@ -12803,7 +12803,7 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   binds their digests plus workspace, period, run status, and sorted effect
   digests into one canonical digest.
 - Focused command: `pytest -q tests/test_consolidation_close_bundle.py
-  tests/test_sqlite_consolidation_close.py` -> `14 passed`; PostgreSQL
+  tests/test_sqlite_consolidation_close.py` -> `15 passed`; PostgreSQL
   contract command `pytest -q tests/test_postgres_consolidation_close.py
   tests/test_consolidation_close_bundle.py` -> `7 passed, 1 skipped` without
   a configured live DSN. Ruff and Mypy pass for the changed modules.

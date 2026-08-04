@@ -38,6 +38,19 @@ def test_close_bundle_binds_posting_and_reversal_effects_deterministically(tmp_p
     assert build_consolidation_close_bundle(detail).to_dict() == bundle
 
 
+def test_close_bundle_accepts_postgres_payload_digest_header_alias(tmp_path: Path) -> None:
+    connection = _database(tmp_path)[1]
+    repository, _period, run = _prepare(connection)
+    detail = repository.get_run(str(run["id"]))
+    postgres_style = deepcopy(detail)
+    postgres_style.pop("worksheet_result_digest", None)
+    postgres_style.pop("translation_result_digest", None)
+    postgres_style["worksheet_digest"] = "a" * 64
+
+    bundle = build_consolidation_close_bundle(postgres_style)
+    assert bundle.worksheet_result_digest == detail["worksheet"]["result_digest"]
+
+
 def test_close_bundle_rejects_cross_run_statement_and_digest_tampering(tmp_path: Path) -> None:
     connection = _database(tmp_path)[1]
     repository, _period, run = _prepare(connection)

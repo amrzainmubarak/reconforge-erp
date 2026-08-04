@@ -3045,9 +3045,10 @@
 - **Boundary**: Local control-journal and management-only evidence. Statutory
   reporting, external posting, provider acknowledgement, write-back, HA/DR,
   and production assurance remain open.
-- **Result**: Focused SQLite bundle/lifecycle tests pass 14/14; PostgreSQL
-  close/bundle tests pass 7/7 with one no-DSN skip; Ruff and Mypy pass for the
-  changed modules.
+- **Result**: Focused SQLite bundle/lifecycle tests pass 15/15; PostgreSQL
+  close/bundle tests pass 7/7 with one no-DSN skip, and the live local
+  PostgreSQL close contract passes 8/8; Ruff and Mypy pass for the changed
+  modules.
 - **ADR**: `docs/adr/0311-consolidation-close-evidence-bundle.md`.
 - **Rollback**: remove the bundle module, adapter projection, focused tests,
   manifest entry, and ADR; persisted rows remain readable because the bundle

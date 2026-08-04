@@ -713,6 +713,7 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
         PostgresMasterDataRepository,
     )
     from reconforge.infrastructure.postgres_privileged_sessions import POSTGRES_PRIVILEGED_SESSION_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_writeback import POSTGRES_WRITEBACK_SCHEMA_SQL
 
     dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
     admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
@@ -741,6 +742,7 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             admin.execute(POSTGRES_IDENTITY_SCHEMA_SQL)
             admin.execute(POSTGRES_CONSOLIDATION_OWNERSHIP_SCHEMA_SQL)
             admin.execute(POSTGRES_CONSOLIDATION_PPA_SCHEMA_SQL)
+            admin.execute(POSTGRES_WRITEBACK_SCHEMA_SQL)
             admin.execute(POSTGRES_PRIVILEGED_SESSION_SCHEMA_SQL)
             admin.execute(
                 f"GRANT USAGE ON SCHEMA reconforge TO {app_user}" if app_user else "SELECT 1"
@@ -762,7 +764,8 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                     f"reconforge.consolidation_close_periods, reconforge.consolidation_close_runs, "
                     f"reconforge.consolidation_close_effects, reconforge.consolidation_close_period_events, "
                     f"reconforge.consolidation_close_run_lines, reconforge.consolidation_close_effect_lines, "
-                    f"reconforge.consolidation_ppa_artifacts, reconforge.consolidation_ownership_interests TO {app_user}"
+                    f"reconforge.consolidation_ppa_artifacts, reconforge.consolidation_ownership_interests, "
+                    f"reconforge.connector_writeback_intents TO {app_user}"
                 )
                 admin.execute(
                     f"GRANT SELECT, INSERT, UPDATE ON reconforge.principal_scope_grants TO {app_user}"
@@ -823,6 +826,10 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             repository.create_permission(tenant_id=tenant_a, permission_name="audit.verify")
             repository.create_permission(tenant_id=tenant_a, permission_name="close.read")
             repository.create_permission(tenant_id=tenant_a, permission_name="close.manage")
+            repository.create_permission(tenant_id=tenant_a, permission_name="connectors.writeback.propose")
+            repository.create_permission(tenant_id=tenant_a, permission_name="connectors.writeback.approve")
+            repository.create_permission(tenant_id=tenant_a, permission_name="connectors.writeback.dispatch")
+            repository.create_permission(tenant_id=tenant_a, permission_name="connectors.writeback.reconcile")
             repository.create_permission(tenant_id=tenant_a, permission_name="roles.manage")
             repository.grant_permission(tenant_id=tenant_a, role_name="admin", permission_name="db.read")
             repository.grant_permission(
@@ -870,6 +877,17 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                 role_name="admin",
                 permission_name="close.manage",
             )
+            for permission_name in (
+                "connectors.writeback.propose",
+                "connectors.writeback.approve",
+                "connectors.writeback.dispatch",
+                "connectors.writeback.reconcile",
+            ):
+                repository.grant_permission(
+                    tenant_id=tenant_a,
+                    role_name="admin",
+                    permission_name=permission_name,
+                )
             repository.grant_permission(
                 tenant_id=tenant_a,
                 role_name="admin",
@@ -934,14 +952,22 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                     scope_id=organization_id,
                     actor_id="api-user-a",
                 )
-        client = TestClient(
-            create_api_app(
-                tmp_path / "unused.db",
-                tenant_db_root=root,
-                postgres_dsn=dsn,
-                postgres_require_tls=False,
-            )
+        from dataclasses import dataclass
+
+        from reconforge.connectors.writeback_network import (
+            WritebackNetworkExecutor,
+            WritebackNetworkRegistration,
+            WritebackNetworkResponse,
         )
+        from tests.test_connector_writeback import _intent as writeback_intent
+
+        app = create_api_app(
+            tmp_path / "unused.db",
+            tenant_db_root=root,
+            postgres_dsn=dsn,
+            postgres_require_tls=False,
+        )
+        client = TestClient(app)
         headers = {"X-ReconForge-Tenant": tenant_a}
         login = client.post(
             "/api/v1/auth/login",
@@ -1103,6 +1129,107 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             json={"password": "Strong-password-123"},
         )
         assert poster_step_up.status_code == 200, poster_step_up.text
+
+        connector_id = "reference-rest-writeback"
+        payload_bytes = b'{"amount":"10.00","currency":"USD","reference":"live-payment-1"}'
+        import hashlib
+        import json
+
+        writeback_payload = writeback_intent(
+            intent_id=f"intent-live-{token}",
+            tenant_id=tenant_a,
+            workspace_id="workspace-a",
+            connector_id=connector_id,
+            operation="payment.create",
+            payload_digest=hashlib.sha256(payload_bytes).hexdigest(),
+            requested_by="api-user-a",
+        ).model_dump(mode="json")
+
+        @dataclass
+        class Transport:
+            calls: int = 0
+
+            def post(
+                self,
+                endpoint: str,
+                *,
+                headers: dict[str, str],
+                body: bytes,
+                timeout_seconds: int,
+                maximum_response_bytes: int,
+            ) -> WritebackNetworkResponse:
+                del endpoint, headers, body, timeout_seconds, maximum_response_bytes
+                self.calls += 1
+                provider = {
+                    "accepted": True,
+                    "idempotency_key": writeback_payload["idempotency_key"],
+                    "provider_reference": "live-provider-1",
+                }
+                response_digest = hashlib.sha256(
+                    json.dumps(provider, sort_keys=True, separators=(",", ":")).encode("ascii")
+                ).hexdigest()
+                return WritebackNetworkResponse(
+                    status=200,
+                    body=json.dumps({**provider, "response_digest": response_digest}).encode("ascii"),
+                )
+
+        class Payloads:
+            def resolve(self, intent: object) -> bytes:
+                del intent
+                return payload_bytes
+
+        class Secrets:
+            def resolve(self, reference: str) -> bytes:
+                assert reference == f"vault://{tenant_a}/writeback-token"
+                return b"synthetic-live-writeback-token"
+
+        transport = Transport()
+        app.state.writeback_network_executor = WritebackNetworkExecutor(
+            transport,
+            payload_resolver=Payloads(),
+            secret_resolver=Secrets(),
+        )
+        app.state.writeback_network_registrations = {
+            connector_id: WritebackNetworkRegistration.model_validate(
+                {
+                    "registration_schema": "writeback-network-registration-v1",
+                    "connector_id": connector_id,
+                    "version": "1.0.0",
+                    "endpoint": "https://api.example.test/v1/writeback",
+                    "egress_destinations": ("https://api.example.test/v1/writeback",),
+                        "credential_reference": f"vault://{tenant_a}/writeback-token",
+                    "allowed_operations": frozenset({"payment.create"}),
+                    "feature_enabled": True,
+                    "synthetic_sandbox": True,
+                }
+            )
+        }
+        proposed_writeback = client.post(
+            "/api/v1/connectors/writeback/intents",
+            headers=authenticated_headers,
+            json=writeback_payload,
+        )
+        assert proposed_writeback.status_code == 200, proposed_writeback.text
+        approved_writeback = client.post(
+            f"/api/v1/connectors/writeback/intents/{writeback_payload['intent_id']}/approve",
+            headers=reviewer_headers,
+            json={
+                "assurance": "mfa",
+                "reason": "Live synthetic provider review.",
+                "tenant_id": tenant_a,
+                "workspace_id": "workspace-a",
+            },
+        )
+        assert approved_writeback.status_code == 200, approved_writeback.text
+        dispatched_writeback = client.post(
+            f"/api/v1/connectors/writeback/intents/{writeback_payload['intent_id']}/dispatch",
+            headers=reviewer_headers,
+            json={"tenant_id": tenant_a, "workspace_id": "workspace-a", "expected_version": 2},
+        )
+        assert dispatched_writeback.status_code == 200, dispatched_writeback.text
+        assert dispatched_writeback.json()["intent"]["status"] == "acknowledged"
+        assert dispatched_writeback.json()["network_dispatch"] == "acknowledged"
+        assert transport.calls == 1
         approved_run = client.post(
             f"/api/v1/consolidation-close/runs/{run_id}/approve",
             headers=reviewer_headers,

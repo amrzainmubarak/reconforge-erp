@@ -184,9 +184,10 @@ This file records commands and observed results. It does not convert a dirty wor
   idempotency binding, bounded retries, and append-only acknowledgement
   persistence are retained.
 - `pytest -q tests/test_api_connectors.py tests/test_api_authorization_inventory.py`
-  -> `7 passed`; Ruff and Mypy pass for the changed route/policy/migration
-  surfaces. The test proves local default disablement and synthetic provider
-  acknowledgement/replay with one transport call.
+  -> `7 passed`; the live PostgreSQL server-identity/API fixture passes `4`
+  tests and now exercises real RLS write-back proposal, approval, and
+  synthetic executor acknowledgement with one transport call. Ruff and Mypy
+  pass for the changed route/policy/migration surfaces.
 - Boundary: injected synthetic transport only. No live ERP/bank vendor,
   customer secret/vault, accounting posting, compensation delivery, distributed
   quota, HA/DR, or production write-back claim is promoted.

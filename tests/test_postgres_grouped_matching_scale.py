@@ -10,6 +10,7 @@ import pytest
 from reconforge.benchmark.postgres_grouped_matching_scale import (
     LIMITATIONS,
     PostgresGroupedMatchingScaleProfile,
+    PostgresGroupedMatchingScaleResult,
     default_profile,
     run_postgres_grouped_matching_scale_profile,
     verify_postgres_grouped_matching_scale_result,
@@ -50,17 +51,19 @@ def test_postgres_grouped_matching_scale_profile_rejects_unbounded_mode_changes(
 
 def test_postgres_grouped_matching_scale_artifacts_are_in_source_manifest() -> None:
     manifest = Path("MANIFEST.in").read_text(encoding="utf-8")
+    workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
     assert "include reconforge/benchmark/postgres_grouped_matching_scale.py" in manifest
     assert "include tests/test_postgres_grouped_matching_scale.py" in manifest
     assert "include docs/adr/0300-postgres-grouped-matching-bounded-scale-profile.md" in manifest
     assert "include docs/execution/benchmarks/postgres-grouped-matching-64-partitions-v1.md" in manifest
+    assert "test_live_postgres_grouped_matching_2000_partition_scale_profile" in workflow
 
 
-@pytest.mark.skipif(
-    not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"),
-    reason="requires a live PostgreSQL service",
-)
-def test_live_postgres_grouped_matching_scale_drains_concurrent_runs_without_duplicate_effects() -> None:
+def _run_live_postgres_grouped_profile(
+    profile: PostgresGroupedMatchingScaleProfile,
+    *,
+    id_prefix: str,
+) -> PostgresGroupedMatchingScaleResult:
     pytest.importorskip("psycopg")
     dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
     admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
@@ -104,27 +107,60 @@ def test_live_postgres_grouped_matching_scale_drains_concurrent_runs_without_dup
         if role is None or bool(role[0]) or bool(role[1]):
             pytest.skip("live grouped matching scale test requires a non-superuser, non-BYPASSRLS role")
 
-        profile = PostgresGroupedMatchingScaleProfile(
-            profile_id="postgres-grouped-matching/10-partitions-test-v1",
-            workers=2,
-            runs=5,
-            partitions_per_run=2,
-        )
         result = run_postgres_grouped_matching_scale_profile(
             factory,
             tenant_id,
             profile=profile,
-            id_prefix="PG-GROUPED-SCALE-TEST-" + uuid4().hex[:8],
+            id_prefix=id_prefix + uuid4().hex[:8],
         )
 
         verify_postgres_grouped_matching_scale_result(result, profile=profile)
-        assert result.completed_runs == 5
-        assert result.completed_partitions == 10
-        assert result.result_rows == 24
-        assert result.duplicate_result_identities == 0
-        assert result.failed_runs == 0
-        assert result.final_active_runs == 0
+        return result
     finally:
         # The PostgreSQL financial tables are append-only by policy; the
         # unique synthetic tenant is intentionally retained for auditability.
         admin.close()
+
+
+@pytest.mark.skipif(
+    not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"),
+    reason="requires a live PostgreSQL service",
+)
+def test_live_postgres_grouped_matching_scale_drains_concurrent_runs_without_duplicate_effects() -> None:
+    profile = PostgresGroupedMatchingScaleProfile(
+        profile_id="postgres-grouped-matching/10-partitions-test-v1",
+        workers=2,
+        runs=5,
+        partitions_per_run=2,
+    )
+    result = _run_live_postgres_grouped_profile(profile, id_prefix="PG-GROUPED-SCALE-TEST-")
+
+    assert result.completed_runs == 5
+    assert result.completed_partitions == 10
+    assert result.result_rows == 24
+    assert result.duplicate_result_identities == 0
+    assert result.failed_runs == 0
+    assert result.final_active_runs == 0
+
+
+@pytest.mark.skipif(
+    not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"),
+    reason="requires a live PostgreSQL service",
+)
+def test_live_postgres_grouped_matching_2000_partition_scale_profile() -> None:
+    profile = PostgresGroupedMatchingScaleProfile(
+        profile_id="postgres-grouped-matching/2000-partitions-v1",
+        workers=16,
+        runs=1_000,
+        partitions_per_run=2,
+        batch_size=16,
+    )
+    result = _run_live_postgres_grouped_profile(profile, id_prefix="PG-GROUPED-SCALE-2000-")
+
+    assert result.completed_runs == 1_000
+    assert result.completed_partitions == 2_000
+    assert result.result_rows == profile.expected_result_rows
+    assert result.duplicate_result_identities == 0
+    assert result.failed_runs == 0
+    assert result.final_active_runs == 0
+    assert result.per_mode_completed == {mode: 200 for mode in profile.modes}

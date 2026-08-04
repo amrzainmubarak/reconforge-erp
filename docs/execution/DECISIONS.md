@@ -2998,3 +2998,23 @@
 - **ADR**: `docs/adr/0309-postgres-durable-job-10k-hosted-gate.md`.
 - **Rollback**: remove the explicit test invocation, contract assertion, ADR,
   and manifest entry; retain the local and 256-effect hosted profiles.
+
+## D287 - Add a hosted PostgreSQL grouped-matching 2,000-partition gate
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Reuse the public grouped strategy and existing PostgreSQL
+  checkpoint worker for a bounded 2,000-partition hosted test instead of
+  creating a parallel matching implementation.
+- **Reason**: Local domain-diverse matching evidence and small PostgreSQL
+  runtime gates did not jointly exercise the five grouped modes over a larger
+  concurrent partition set. The explicit gate makes result cardinality,
+  duplicate prevention, terminal state, and per-mode distribution reviewable.
+- **Boundary**: Hosted single-node synthetic correctness/concurrency only.
+  Throughput, soak, backpressure, cross-host fairness, provider
+  interoperability, posting, write-back, HA/DR, and production sizing remain
+  open.
+- **ADR**: `docs/adr/0310-postgres-grouped-matching-2000-partition-hosted-gate.md`.
+- **Rollback**: remove the explicit test invocation, contract assertion, ADR,
+  and manifest entry; retain the existing 64-partition and local domain-
+  diverse profiles.

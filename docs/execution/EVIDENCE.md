@@ -12770,3 +12770,19 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   capacity, backpressure, queue HA, host loss, cross-host fairness, RPO/RTO,
   and production sizing remain unverified.
 - ADR: `docs/adr/0309-postgres-durable-job-10k-hosted-gate.md`.
+
+## E-360: Hosted PostgreSQL grouped-matching 2,000-partition gate
+
+- The `server-boundaries` workflow now explicitly invokes
+  `test_live_postgres_grouped_matching_2000_partition_scale_profile` against
+  the digest-pinned PostgreSQL 16 service and non-privileged role. The profile
+  uses 16 worker connections, 1,000 runs, two partitions per run, five grouped
+  modes, and batch size 16.
+- The gate requires 2,000 completed partitions, exact result-row cardinality,
+  zero duplicate result identities, zero failed/active runs, and 200 completed
+  runs per mode. Hosted verification is pending.
+- Boundary: synthetic single-node PostgreSQL matching correctness/concurrency
+  only; throughput, soak, backpressure, cross-host fairness, provider
+  interoperability, posting, write-back, HA/DR, and production sizing remain
+  unverified.
+- ADR: `docs/adr/0310-postgres-grouped-matching-2000-partition-hosted-gate.md`.

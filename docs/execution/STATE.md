@@ -81,6 +81,19 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   queue-HA, or production-sizing claim is made.
 - ADR: `docs/adr/0309-postgres-durable-job-10k-hosted-gate.md`.
 
+## E-360 — Hosted PostgreSQL grouped-matching 2,000-partition gate (in progress)
+
+- The next hosted advanced-matching gate adds
+  `test_live_postgres_grouped_matching_2000_partition_scale_profile` to
+  `server-boundaries`: 16 worker connections, 1,000 runs, two partitions per
+  run, five grouped modes, and a bounded batch size of 16.
+- The verifier requires 2,000 completed partitions, exact result-row
+  cardinality, zero duplicate result identities, zero failed/active runs, and
+  200 completed runs per mode. Hosted verification is pending; this does not
+  claim throughput, soak, queue backpressure, cross-host scheduling, provider
+  interoperability, posting, write-back, HA/DR, or production sizing.
+- ADR: `docs/adr/0310-postgres-grouped-matching-2000-partition-hosted-gate.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

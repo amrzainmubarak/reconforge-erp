@@ -3118,3 +3118,27 @@
 - **ADR**: `docs/adr/0314-postgres-consolidation-close-api-is-scope-bound.md`.
 - **Rollback**: remove the adapter, route branches, inventory inclusion, tests,
   ADR, manifest entry, and ledger additions; no schema rollback is required.
+
+## D292 - Expose effective-dated consolidation ownership through a scoped API
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Add strict authenticated save/effective-resolution routes over
+  the existing backend-neutral ownership service. Bind the preparer to the
+  authenticated actor, preserve the declared independent approver, and use
+  SQLite locally or PostgreSQL under the authenticated hierarchy/RLS boundary
+  in server mode.
+- **Reason**: Ownership persistence and deterministic effective-date replay
+  existed in both backends but were not consumable through the API. A route
+  contract closes that exposure gap without duplicating financial logic.
+- **Boundary**: The API does not prove a separate approver session, statutory
+  consolidation treatment, live ERP/bank integration, write-back, HA/DR, or
+  production readiness.
+- **Result**: Focused API and server-scope tests pass 12/12; authorization
+  inventory is 219 routes with digest
+  `46a0eac80865dbf7219a2b8230c8dc576d41cd503bdae224c9e01e442828e8f8`; Ruff
+  and Mypy pass. The configured local PostgreSQL 16 ownership repository gate
+  passes 5/5.
+- **ADR**: `docs/adr/0315-consolidation-ownership-api-is-scope-bound.md`.
+- **Rollback**: remove the route/server adapter, inventory entry, tests,
+  manifest entry, and ADR; persisted ownership rows and migrations remain.

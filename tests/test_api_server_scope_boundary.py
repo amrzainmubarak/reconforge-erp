@@ -52,6 +52,11 @@ def _request(factory_state_name: str, *, workspace_id: str | None = "workspace-a
             "postgres_consolidation_close_factory",
             "execute_postgres_consolidation_close",
         ),
+        (
+            "reconforge.api.server_consolidation_ownership",
+            "postgres_consolidation_ownership_factory",
+            "execute_postgres_consolidation_ownership",
+        ),
     ),
 )
 def test_server_business_boundary_passes_only_authorized_scope_to_rls(

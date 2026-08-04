@@ -177,6 +177,25 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   enterprise IAM.
 - ADR: `docs/adr/0314-postgres-consolidation-close-api-is-scope-bound.md`.
 
+## E-365 — Scope-bound consolidation ownership API (complete bounded slice)
+
+- Added strict authenticated `/api/v1/consolidation-ownership/interests` and
+  `/effective` routes over the existing immutable effective-dated ownership
+  service. Local mode uses SQLite; server mode binds the authenticated
+  tenant/workspace/organization/entity hierarchy through PostgreSQL RLS.
+- Percentages are exact decimal text, the authenticated principal is bound as
+  `prepared_by`, and sibling workspace requests fail before repository use.
+  Focused API and server-scope tests pass 12/12; authorization inventory is
+  219 routes with digest
+  `46a0eac80865dbf7219a2b8230c8dc576d41cd503bdae224c9e01e442828e8f8`.
+  Ruff and Mypy pass for the changed modules. With the configured local
+  PostgreSQL 16 service, `pytest -q tests/test_postgres_consolidation_ownership.py`
+  passes 5/5.
+- Boundary: API exposure and hierarchy isolation only. Full approver identity
+  proof, statutory statements, live ERP/bank integration, write-back, HA/DR,
+  and production assurance remain open.
+- ADR: `docs/adr/0315-consolidation-ownership-api-is-scope-bound.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

@@ -450,3 +450,7 @@ include reconforge/api/routes/consolidation_close.py
 include reconforge/api/server_consolidation_close.py
 include tests/test_api_consolidation_close.py
 include docs/adr/0314-postgres-consolidation-close-api-is-scope-bound.md
+include reconforge/api/routes/consolidation_ownership.py
+include reconforge/api/server_consolidation_ownership.py
+include tests/test_api_consolidation_ownership.py
+include docs/adr/0315-consolidation-ownership-api-is-scope-bound.md

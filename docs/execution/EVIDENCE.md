@@ -49,6 +49,25 @@ This file records commands and observed results. It does not convert a dirty wor
   production IAM claim is promoted by this slice.
 - ADR: `docs/adr/0314-postgres-consolidation-close-api-is-scope-bound.md`.
 
+## E-365: Scope-bound consolidation ownership API
+
+- The ownership API exposes strict save/effective-resolution operations over
+  the existing SQLite/PostgreSQL adapters. Server mode binds the authenticated
+  hierarchy to PostgreSQL RLS and rejects sibling workspace input; local mode
+  remains backward-compatible.
+- `pytest -q tests/test_api_consolidation_ownership.py tests/test_api_server_scope_boundary.py`
+  -> `12 passed`; `tests/test_api_authorization_inventory.py` passes with 219
+  contracts and digest `46a0eac80865dbf7219a2b8230c8dc576d41cd503bdae224c9e01e442828e8f8`.
+  Ruff and Mypy pass for the changed modules.
+- Existing PostgreSQL ownership repository tests remain the runtime evidence;
+  the configured local PostgreSQL 16 service passes
+  `pytest -q tests/test_postgres_consolidation_ownership.py` (5 passed). No
+  live authenticated ownership API fixture is promoted by this slice.
+- Boundary: strict API and hierarchy isolation only; no statutory
+  consolidation, full approver identity federation, live provider/write-back,
+  HA/DR, or production assurance claim.
+- ADR: `docs/adr/0315-consolidation-ownership-api-is-scope-bound.md`.
+
 ## E-293: Immutable local delegation administration
 
 - Added typed `DelegationGrant`, migration 27, and `DelegationRepository`.

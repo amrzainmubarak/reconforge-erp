@@ -246,6 +246,42 @@ jobs:
           mapfile -t parity_tests < <(uv run --no-sync python -c "import yaml; document = yaml.safe_load(open('docs/execution/POSTGRES_PARITY_INVENTORY.yaml', encoding='utf-8')); print(*dict.fromkeys(item['test'] for item in document['boundaries'] if item.get('test')), sep='\\n')")
             uv run --no-sync pytest "${parity_tests[@]}" tests/test_postgres_delegations_runtime.py tests/test_postgres_policy_analysis_runtime.py tests/test_alembic_postgres.py tests/test_postgres_foundation.py tests/test_postgres_master_data.py tests/test_postgres_ledger.py tests/test_postgres_identity.py tests/test_postgres_evidence.py tests/test_postgres_reconciliation.py tests/test_postgres_writeback.py tests/test_postgres_database_reference.py tests/test_api_server_identity.py tests/test_redis_foundation.py -q
 
+  postgres-ha-dr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install locked HA/DR dependencies
+        run: uv sync --locked --extra dev --extra server --extra backup --no-editable --python 3.12
+
+      - name: Run repeated PostgreSQL HA/DR drill
+        env:
+          RECONFORGE_HA_DR_REPORT: ${{ runner.temp }}/reconforge-postgres-ha-dr.json
+        run: uv run --no-sync python .github/scripts/verify_postgres_ha_dr_repeated.py --executed-at "$(date -u +%F)" --output "${RECONFORGE_HA_DR_REPORT}"
+
+      - name: Upload PostgreSQL HA/DR report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: reconforge-postgres-ha-dr-report
+          path: ${{ runner.temp }}/reconforge-postgres-ha-dr.json
+          if-no-files-found: ignore
+
   object-storage:
     runs-on: ubuntu-latest
     steps:

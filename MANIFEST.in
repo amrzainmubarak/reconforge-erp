@@ -424,6 +424,8 @@ include docs/adr/0299-postgres-outbox-idempotent-consumer-receipt.md
 include docs/execution/benchmarks/postgres-outbox-consumer-crash-v1.md
 include docs/adr/0300-postgres-grouped-matching-bounded-scale-profile.md
 include docs/adr/0307-postgres-durable-job-lock-order.md
+include docs/adr/0308-postgres-ha-dr-runtime-gate.md
+include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-04.json
 include docs/execution/benchmarks/postgres-grouped-matching-64-partitions-v1.md
 include docs/adr/0243-expiring-delegation-is-explicit-and-replayable.md
 include docs/adr/0244-local-delegation-administration-is-immutable-and-tenant-scoped.md

@@ -6,6 +6,7 @@ import argparse
 import json
 import subprocess  # nosec B404
 import sys
+from datetime import UTC, date, datetime
 from pathlib import Path
 from statistics import median
 from typing import Any
@@ -48,9 +49,13 @@ def _run_once() -> dict[str, Any]:
     return value
 
 
-def build_report(results: list[dict[str, Any]]) -> dict[str, Any]:
+def build_report(results: list[dict[str, Any]], *, executed_at: str = "2026-07-30") -> dict[str, Any]:
     if len(results) != RUNS:
         raise ValueError("exactly three complete runs are required")
+    try:
+        date.fromisoformat(executed_at)
+    except ValueError as exc:
+        raise ValueError("executed_at must be an ISO date") from exc
     runs = [
         {
             "run": index,
@@ -67,7 +72,7 @@ def build_report(results: list[dict[str, Any]]) -> dict[str, Any]:
     failback = [run["failback_rto_seconds"] for run in runs]
     return {
         "schema_version": 1,
-        "executed_at": "2026-07-30",
+        "executed_at": executed_at,
         "profile": "docker-single-host-primary-synchronous-standby-v1",
         "infrastructure": {
             "docker_server": "Docker Engine 29.6.2",
@@ -112,8 +117,13 @@ def build_report(results: list[dict[str, Any]]) -> dict[str, Any]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--executed-at",
+        default=datetime.now(UTC).date().isoformat(),
+        help="ISO execution date recorded in the report (defaults to current UTC date)",
+    )
     args = parser.parse_args()
-    report = build_report([_run_once() for _ in range(RUNS)])
+    report = build_report([_run_once() for _ in range(RUNS)], executed_at=args.executed_at)
     if not report["summary"]["all_runs_passed"]:
         raise SystemExit("Repeated HA/DR gate failed")
     args.output.parent.mkdir(parents=True, exist_ok=True)

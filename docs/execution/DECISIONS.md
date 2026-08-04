@@ -2946,3 +2946,22 @@
 - **ADR**: `docs/adr/0307-postgres-durable-job-lock-order.md`.
 - **Rollback**: revert the `_lock_job` helper and its two call sites; no schema
   or public API migration is required.
+
+## D284 - Promote the PostgreSQL HA/DR drill to a hosted runtime gate
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Add a separate `postgres-ha-dr` CI job that runs the existing
+  Docker synchronous-standby drill three times with locked dependencies,
+  execution-date metadata, labelled-resource cleanup checks, and an uploaded
+  schema-validated report.
+- **Reason**: The repository had real local backup/failover/failback behavior
+  but the default CI only ran the orchestration-neutral quorum simulation. A
+  dedicated hosted job makes the runtime evidence repeatable and reviewable
+  without converting one host into an independent-HA claim.
+- **Boundary**: The gate remains single-host, manual-controller, synthetic
+  evidence. Independent failure domains, quorum/witness, automatic promotion,
+  site-loss recovery, managed keys, and production SLOs remain unverified.
+- **ADR**: `docs/adr/0308-postgres-ha-dr-runtime-gate.md`.
+- **Rollback**: remove the job, report artifact, contract test, ADR, and
+  manifest entry; the existing drill scripts remain available locally.

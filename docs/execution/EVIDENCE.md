@@ -12726,3 +12726,23 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   `91900726859`, both Python versions, all four engine-parity cells,
   object-storage, and docker-parity. Docker run `30880528103`, Security
   `30880528153`, and CodeQL `30880528101` also passed.
+
+## E-358: Hosted repeated PostgreSQL HA/DR runtime gate
+
+- Added a dedicated `postgres-ha-dr` CI job. It installs the locked server and
+  backup extras, runs `verify_postgres_ha_dr_repeated.py` three times, records
+  the UTC execution date, rejects leaked labelled Docker resources, and uploads
+  the report artifact.
+- Local execution of the same repeated gate on Windows 11 / Docker Engine
+  29.6.2 passed 3/3 runs. Each run performed encrypted native backup and
+  isolated restore, synchronous replication, partition write refusal, primary
+  fencing, standby promotion, former-primary read-only rejoin, and failback.
+  Failover RTO was 11.098–11.138s; failback RTO was 0.980–1.025s; all runs had
+  zero acknowledged transaction loss, final sequence 4, and complete cleanup.
+- The schema-valid local artifact is
+  `docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-04.json`.
+- Boundary: one Docker host and a manual controller with synthetic data/key;
+  independent domains, quorum/witness, automatic promotion, site loss,
+  managed-key custody, and production SLO remain unverified. Hosted CI is the
+  next gate for this slice.
+- ADR: `docs/adr/0308-postgres-ha-dr-runtime-gate.md`.

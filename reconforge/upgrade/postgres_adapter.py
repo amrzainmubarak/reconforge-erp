@@ -42,6 +42,7 @@ class PsycopgAlembicMigrationRunner:
         if any(not value.startswith(("postgres://", "postgresql://", "postgresql+")) for value in self._dsns.values()):
             raise UpgradeError("postgres_upgrade_dsn_invalid")
         self._python = self._ordinary_file(python_executable, "python")
+        self._alembic = self._alembic_file(Path(self._python))
         self._alembic_ini = self._ordinary_file(alembic_ini, "alembic configuration")
         if timeout_seconds < 1 or timeout_seconds > 86_400:
             raise UpgradeError("postgres_upgrade_timeout_invalid")
@@ -74,9 +75,7 @@ class PsycopgAlembicMigrationRunner:
             with tempfile.TemporaryFile() as output:
                 completed = subprocess.run(  # nosec B603
                     (
-                        self._python,
-                        "-c",
-                        "from alembic.config import main; main()",
+                        self._alembic,
                         "-c",
                         self._alembic_ini,
                         operation,
@@ -121,6 +120,15 @@ class PsycopgAlembicMigrationRunner:
         if not stat.S_ISREG(metadata.st_mode) or path.is_symlink():
             raise UpgradeError(f"postgres_upgrade_{label.replace(' ', '_')}_path_invalid")
         return str(path.resolve(strict=True))
+
+    @classmethod
+    def _alembic_file(cls, python: Path) -> str:
+        names = ("alembic.exe", "alembic") if os.name == "nt" else ("alembic", "alembic.exe")
+        for name in names:
+            candidate = python.with_name(name)
+            if candidate.exists():
+                return cls._ordinary_file(candidate, "alembic executable")
+        raise UpgradeError("postgres_upgrade_alembic_executable_path_invalid")
 
 
 def _revision_digest(revision: str) -> str:

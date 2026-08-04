@@ -895,6 +895,13 @@ def test_postgres_reconciliation_execution_failure_is_retryable_and_busy_runs_ar
     with pytest.raises(PostgresReconciliationBusyError):
         repository.claim_run(tenant_id="tenant_a", run_id="run-a", worker_id="recon-worker-b")
 
+    # A stale active-page result can race with a completion.  The terminal
+    # status is contention, not a scheduler-fatal integrity violation.
+    assert connection.run is not None
+    connection.run.update({"status": "Complete", "execution_status": "Complete"})
+    with pytest.raises(PostgresReconciliationBusyError):
+        repository.claim_run(tenant_id="tenant_a", run_id="run-a", worker_id="recon-worker-c")
+
 
 def test_postgres_reconciliation_requires_complete_left_and_right_coverage() -> None:
     connection = _ReconciliationConnection()

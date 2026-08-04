@@ -754,6 +754,14 @@ class PostgresReconciliationRepository:
         lease = self._lease_seconds(lease_seconds)
         before = self._run_row(tenant, run, lock=True)
         if str(before["status"]) != "Running":
+            # A concurrent worker may have completed (or failed/cancelled) a
+            # run after it was discovered by this worker's active-page query.
+            # Treat that stale discovery as contention so the worker skips it;
+            # surfacing it as an integrity error would incorrectly fail the
+            # whole scheduler cycle and could poison a healthy high-volume
+            # drain.
+            if str(before.get("execution_status") or "") in {"Complete", "Failed", "Cancelled"}:
+                raise PostgresReconciliationBusyError("Reconciliation run is no longer active.")
             raise PostgresReconciliationIntegrityError("Only a Running reconciliation can be claimed.")
         if str(before.get("execution_status") or "Queued") in {"Complete", "Failed", "Cancelled"}:
             raise PostgresReconciliationIntegrityError("Reconciliation execution must be requeued before it can run.")

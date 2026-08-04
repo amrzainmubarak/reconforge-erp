@@ -13,18 +13,35 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 RUNS = 3
+DIAGNOSTIC_LIMIT = 6000
+
+
+def _diagnostic(stdout: str | None, stderr: str | None) -> str:
+    """Return bounded child output without exposing the disposable password."""
+    detail = "\n".join(part for part in (stdout or "", stderr or "") if part).replace(
+        "reconforge-synthetic-upgrade-only", "[redacted]"
+    ).strip()
+    if len(detail) > DIAGNOSTIC_LIMIT:
+        detail = detail[-DIAGNOSTIC_LIMIT:]
+    return detail
 
 
 def _run_once() -> dict[str, Any]:
-    completed = subprocess.run(  # nosec B603
-        (sys.executable, str(ROOT / ".github/scripts/verify_postgres_ha_dr.py")),
-        cwd=ROOT,
-        check=True,
-        shell=False,
-        text=True,
-        capture_output=True,
-        timeout=900,
-    )
+    command = (sys.executable, str(ROOT / ".github/scripts/verify_postgres_ha_dr.py"))
+    try:
+        completed = subprocess.run(  # nosec B603
+            command,
+            cwd=ROOT,
+            check=True,
+            shell=False,
+            text=True,
+            capture_output=True,
+            timeout=900,
+        )
+    except subprocess.CalledProcessError as exc:
+        detail = _diagnostic(exc.stdout, exc.stderr)
+        suffix = f": {detail}" if detail else ""
+        raise RuntimeError(f"HA/DR child drill failed{suffix}") from exc
     lines = [line for line in completed.stdout.splitlines() if line.strip()]
     if len(lines) != 1:
         raise RuntimeError("HA/DR child emitted an unexpected output shape")

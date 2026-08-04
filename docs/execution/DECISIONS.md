@@ -2925,3 +2925,24 @@
 - **Rollback**: remove the tier factory, test, artifact/schema, benchmark
   note, manifest entries, and execution records; the 256-effect baseline and
   durable-job runtime remain unchanged.
+
+## D283 - Order PostgreSQL durable-job aggregate and lease locks consistently
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Owned durable-job transition transactions must lock the
+  `durable_jobs` row with `FOR UPDATE` before checking and locking the matching
+  `durable_job_leases` row. This matches the existing `claim_next` order.
+- **Reason**: Hosted server-boundary rerun evidence showed an intermittent
+  deadlock cycle between the aggregate and lease rows during two-worker
+  contention. A single lock order removes the cycle without weakening the
+  optimistic version fence, lease ownership check, RLS, or append-only effect
+  evidence.
+- **Boundary**: This is a transaction-order availability fix only. It does not
+  establish PostgreSQL soak, queue HA, automatic failover, distributed
+  fairness, or production SLOs. Local evidence is 10/10 repeated contention
+  passes plus a successful 10K-effect profile; hosted verification remains a
+  required gate for closure.
+- **ADR**: `docs/adr/0307-postgres-durable-job-lock-order.md`.
+- **Rollback**: revert the `_lock_job` helper and its two call sites; no schema
+  or public API migration is required.

@@ -48,7 +48,9 @@ def test_postgres_scale_profile_is_packaged_and_documented() -> None:
     assert "include docs/execution/benchmarks/postgres-durable-job-10k-effects-v1.json" in manifest
     assert "include docs/schemas/postgres_durable_job_scale.schema.json" in manifest
     assert "include docs/adr/0306-postgres-durable-job-10k-scale.md" in manifest
+    assert "include docs/adr/0307-postgres-durable-job-lock-order.md" in manifest
     assert (root / "docs/adr/0306-postgres-durable-job-10k-scale.md").is_file()
+    assert (root / "docs/adr/0307-postgres-durable-job-lock-order.md").is_file()
     assert (root / "docs/execution/benchmarks/postgres-durable-job-10k-effects-v1.json").is_file()
 
 

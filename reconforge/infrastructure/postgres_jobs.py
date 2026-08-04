@@ -569,6 +569,22 @@ class PostgresDurableJobRepository:
         if owned is None or previous.id != lease.job_id or previous.tenant_id != lease.tenant_id:
             raise PostgresJobConflictError("Durable-job lease ownership changed or expired.")
 
+    def _lock_job(self, job: DurableJob) -> None:
+        """Acquire the aggregate row before its lease row.
+
+        Claiming already follows the job-then-lease order.  Completion used to
+        take the inverse lease-then-job order, which allowed PostgreSQL to
+        deadlock a worker reclaiming an expired job with its current owner
+        finishing a partition.  Every transition now follows one lock order.
+        """
+
+        row = self.connection.execute(
+            "SELECT 1 FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s FOR UPDATE",
+            (job.tenant_id, job.id),
+        ).fetchone()
+        if row is None:
+            raise PostgresJobConflictError("Durable-job target no longer exists.")
+
     def _release(self, lease: JobLease, *, occurred_at: str) -> None:
         cursor = self.connection.execute(
             "DELETE FROM reconforge.durable_job_leases "
@@ -594,6 +610,7 @@ class PostgresDurableJobRepository:
             workspace_id=previous.workspace_id,
             entity_id=previous.entity_id,
         ):
+            self._lock_job(previous)
             self._require_owned(previous, lease, event.occurred_at)
             self._persist_transition_rows(previous, changed, event)
             if release_lease:
@@ -620,6 +637,7 @@ class PostgresDurableJobRepository:
             workspace_id=previous.workspace_id,
             entity_id=previous.entity_id,
         ):
+            self._lock_job(previous)
             self._require_owned(previous, lease, event.occurred_at)
             row = self.connection.execute(
                 "SELECT COALESCE(MAX(ordinal), 0) + 1 FROM reconforge.durable_job_partition_effects "

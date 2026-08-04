@@ -12704,3 +12704,22 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   engine-parity jobs also passed. Docker run `30878667913` (job
   `91895963333`), Security `30878667888`, and CodeQL `30878667878` passed.
   The uv mirror emitted only its known 403 fallback annotation.
+
+## E-357: PostgreSQL durable-job lock-order remediation
+
+- The hosted rerun of the documentation-only head exposed an intermittent
+  `psycopg.errors.DeadlockDetected` in the pre-existing two-worker contention
+  contract. The cycle was between `durable_jobs` and `durable_job_leases`:
+  `claim_next` acquired the aggregate row first, while owned transitions
+  acquired the lease row first.
+- `PostgresDurableJobRepository` now locks the durable-job row with `FOR
+  UPDATE` before checking/locking its lease in both owned-transition paths.
+  This keeps the lock order `durable_jobs -> durable_job_leases` and leaves the
+  versioned update as the stale-worker fence. No schema or public API changed.
+- Local evidence after the change: the live PostgreSQL same-tenant contention
+  contract passed 10/10 repeated runs; the live 10K profile passed with
+  2,500/2,500 jobs, 10,000/10,000 effects, no duplicates, and no queue/running
+  residue.
+- ADR: `docs/adr/0307-postgres-durable-job-lock-order.md`.
+- Hosted verification is intentionally pending the CI run for the remediation
+  commit; no remote-green claim is made here until that run completes.

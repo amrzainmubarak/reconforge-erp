@@ -288,6 +288,7 @@ def test_consolidation_close_server_boundary_binds_workspace_before_exposure(
     """The server adapter must reject a tenant row from a sibling workspace."""
 
     db_path = tmp_path / "consolidation-server-boundary.db"
+    scoped_permissions: list[dict[str, object]] = []
     run_migrations(db_path)
     connection = connect(db_path)
     LocalAuthService(connection).init_admin(username="admin", password="Secret-123")
@@ -312,6 +313,11 @@ def test_consolidation_close_server_boundary_binds_workspace_before_exposure(
         return operation(repository, "tenant-a")  # type: ignore[operator]
 
     monkeypatch.setattr(consolidation_routes, "server_consolidation_close_enabled", lambda _request: True)
+    monkeypatch.setattr(
+        consolidation_routes,
+        "enforce_server_scoped_permission",
+        lambda _request, **kwargs: scoped_permissions.append(kwargs),
+    )
     monkeypatch.setattr(
         consolidation_routes,
         "request_execution_scope",
@@ -339,6 +345,9 @@ def test_consolidation_close_server_boundary_binds_workspace_before_exposure(
     )
     assert created.status_code == 200
     assert created.json()["period"]["workspace_id"] == "workspace-a"
+    assert scoped_permissions == [
+        {"permission": "finance_core.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"}
+    ]
 
     sibling_create = client.post(
         "/api/v1/consolidation-close/periods",

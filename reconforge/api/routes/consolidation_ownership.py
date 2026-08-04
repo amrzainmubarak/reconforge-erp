@@ -9,7 +9,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import get_local_db, require_any_permission, require_permission
+from reconforge.api.dependencies import (
+    enforce_server_scoped_permission,
+    get_local_db,
+    require_any_permission,
+    require_permission,
+)
 from reconforge.api.errors import APIError
 from reconforge.api.server_consolidation_ownership import (
     execute_postgres_consolidation_ownership,
@@ -156,6 +161,12 @@ def save_interest(
 
     if server_consolidation_ownership_enabled(request):
         scope = _server_scope(request, payload.workspace)
+        enforce_server_scoped_permission(
+            request,
+            permission="finance_core.manage",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
         interest = payload.to_domain(prepared_by=current_user.id)
 
         def save(repository: PostgresConsolidationOwnershipRepository, tenant_id: str) -> dict[str, object]:

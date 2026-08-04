@@ -8,7 +8,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import get_local_db, require_any_permission, require_permission
+from reconforge.api.dependencies import (
+    enforce_server_scoped_permission,
+    get_local_db,
+    require_any_permission,
+    require_permission,
+)
 from reconforge.api.errors import APIError
 from reconforge.api.server_consolidation_close import (
     execute_postgres_consolidation_close,
@@ -180,6 +185,12 @@ def create_period(
 
     if server_consolidation_close_enabled(request):
         scope = _server_scope(request, payload.workspace)
+        enforce_server_scoped_permission(
+            request,
+            permission="finance_core.manage",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
 
         def create(repository: PostgresConsolidationCloseRepository, _tenant: str) -> dict[str, object]:
             period = ConsolidationCloseApplicationService(repository).create_period(
@@ -226,6 +237,12 @@ def prepare_run(
     worksheet = payload.to_worksheet()
     if server_consolidation_close_enabled(request):
         scope = _server_scope(request, payload.workspace)
+        enforce_server_scoped_permission(
+            request,
+            permission="finance_core.manage",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
         _assert_prepared_actor(worksheet, current_user.id)
         run = execute_postgres_consolidation_close(
             request,
@@ -264,6 +281,12 @@ def approve_run(
 
     if server_consolidation_close_enabled(request):
         scope = _server_scope(request, "")
+        enforce_server_scoped_permission(
+            request,
+            permission="finance_core.validate",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
         run = execute_postgres_consolidation_close(
             request,
             lambda repository, _tenant: ConsolidationCloseApplicationService(repository).approve_run(
@@ -299,6 +322,12 @@ def post_run(
 
     if server_consolidation_close_enabled(request):
         scope = _server_scope(request, "")
+        enforce_server_scoped_permission(
+            request,
+            permission="finance_core.validate",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
         run = execute_postgres_consolidation_close(
             request,
             lambda repository, _tenant: ConsolidationCloseApplicationService(repository).post_run(
@@ -334,6 +363,12 @@ def request_reversal(
 
     if server_consolidation_close_enabled(request):
         scope = _server_scope(request, "")
+        enforce_server_scoped_permission(
+            request,
+            permission="finance_core.manage",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
         run = execute_postgres_consolidation_close(
             request,
             lambda repository, _tenant: ConsolidationCloseApplicationService(repository).request_reversal(
@@ -369,6 +404,12 @@ def approve_reversal(
 
     if server_consolidation_close_enabled(request):
         scope = _server_scope(request, "")
+        enforce_server_scoped_permission(
+            request,
+            permission="finance_core.validate",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
         run = execute_postgres_consolidation_close(
             request,
             lambda repository, _tenant: ConsolidationCloseApplicationService(repository).approve_reversal(
@@ -404,6 +445,12 @@ def lock_period(
 
     if server_consolidation_close_enabled(request):
         scope = _server_scope(request, "")
+        enforce_server_scoped_permission(
+            request,
+            permission="finance_core.validate",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
         period = execute_postgres_consolidation_close(
             request,
             lambda repository, _tenant: ConsolidationCloseApplicationService(repository).lock_period(
@@ -439,6 +486,12 @@ def reopen_period(
 
     if server_consolidation_close_enabled(request):
         scope = _server_scope(request, "")
+        enforce_server_scoped_permission(
+            request,
+            permission="finance_core.validate",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
         period = execute_postgres_consolidation_close(
             request,
             lambda repository, _tenant: ConsolidationCloseApplicationService(repository).reopen_period(
@@ -560,6 +613,12 @@ def prepare_certification(
 
     if server_consolidation_close_enabled(request):
         scope = _server_scope(request, "")
+        enforce_server_scoped_permission(
+            request,
+            permission="finance_core.manage",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
 
         def prepare(repository: PostgresConsolidationCloseRepository, _tenant: str) -> dict[str, object]:
             run = repository.get_run(run_id, actor_label=current_user.id)
@@ -596,6 +655,12 @@ def review_certification(
 
     if server_consolidation_close_enabled(request):
         scope = _server_scope(request, "")
+        enforce_server_scoped_permission(
+            request,
+            permission="finance_core.validate",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
 
         def review(repository: PostgresConsolidationCloseRepository, _tenant: str) -> dict[str, object]:
             run = repository.get_run(run_id, actor_label=current_user.id)

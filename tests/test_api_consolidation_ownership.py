@@ -103,6 +103,7 @@ def test_ownership_api_rejects_float_and_unknown_fields(tmp_path: Path) -> None:
 def test_ownership_api_server_branch_binds_authenticated_workspace(tmp_path: Path, monkeypatch: Any) -> None:
     client, headers, reviewer_id = _client(tmp_path)
     captured: dict[str, object] = {}
+    scoped_permissions: list[dict[str, object]] = []
 
     class Repository:
         connection = object()
@@ -122,6 +123,11 @@ def test_ownership_api_server_branch_binds_authenticated_workspace(tmp_path: Pat
         return operation(repository, "tenant-a")  # type: ignore[operator]
 
     monkeypatch.setattr(routes, "server_consolidation_ownership_enabled", lambda _request: True)
+    monkeypatch.setattr(
+        routes,
+        "enforce_server_scoped_permission",
+        lambda _request, **kwargs: scoped_permissions.append(kwargs),
+    )
     monkeypatch.setattr(routes, "_verify_postgres_approver", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(routes, "request_execution_scope", lambda _request: RequestExecutionScope("tenant-a", "workspace-a"))
     monkeypatch.setattr(routes, "execute_postgres_consolidation_ownership", execute)
@@ -133,6 +139,9 @@ def test_ownership_api_server_branch_binds_authenticated_workspace(tmp_path: Pat
     )
     assert created.status_code == 200, created.text
     assert created.json()["source"]["kind"] == "postgresql-consolidation-ownership"
+    assert scoped_permissions == [
+        {"permission": "finance_core.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"}
+    ]
     assert captured["workspace"] == "workspace-a"
     assert captured["actor_label"] == captured["interest"].prepared_by  # type: ignore[union-attr]
 

@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-284: Expose compensation requests as a separately permissioned, scoped API transition
+- **Date**: 2026-08-04
+- **Context**: Provider-neutral compensation transport existed, but no API
+  boundary recorded the authenticated requester or guarded stale lifecycle
+  transitions.
+- **Decision**: Add a dedicated human permission and actor-bound,
+  tenant/workspace-scoped, optimistic-versioned compensation-request endpoint.
+  Persist reason, actor, and UTC time; allow only exact immediate replay; keep
+  provider execution separate.
+- **Rationale**: A reversal trail must be attributable and race-safe without
+  granting the API implicit network or accounting authority.
+- **Boundary**: Local SQLite migration and synthetic API/repository contracts;
+  PostgreSQL permission provisioning remains tenant-administered under RLS;
+  live provider semantics and production assurance are not inferred.
+- **Reversibility**: Additive route, permission, and JSON metadata; retain
+  append-only evidence and migrate forward rather than deleting history.
+- **ADR**: `docs/adr/0329-governed-writeback-compensation-request-api.md`.
+
 ### D-281: Promote PostgreSQL grouped portfolio fees and residuals only through a bounded runtime gate
 - **Date**: 2026-08-03
 - **Context**: The pure grouped strategy supported fee-aware netting and

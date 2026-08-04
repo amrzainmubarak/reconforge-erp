@@ -876,6 +876,7 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             repository.create_permission(tenant_id=tenant_a, permission_name="connectors.writeback.approve")
             repository.create_permission(tenant_id=tenant_a, permission_name="connectors.writeback.dispatch")
             repository.create_permission(tenant_id=tenant_a, permission_name="connectors.writeback.reconcile")
+            repository.create_permission(tenant_id=tenant_a, permission_name="connectors.writeback.compensate")
             repository.create_permission(tenant_id=tenant_a, permission_name="roles.manage")
             repository.grant_permission(tenant_id=tenant_a, role_name="admin", permission_name="db.read")
             repository.grant_permission(
@@ -928,6 +929,7 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                 "connectors.writeback.approve",
                 "connectors.writeback.dispatch",
                 "connectors.writeback.reconcile",
+                "connectors.writeback.compensate",
             ):
                 repository.grant_permission(
                     tenant_id=tenant_a,
@@ -1276,6 +1278,19 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
         assert dispatched_writeback.json()["intent"]["status"] == "acknowledged"
         assert dispatched_writeback.json()["network_dispatch"] == "acknowledged"
         assert transport.calls == 1
+        compensation_writeback = client.post(
+            f"/api/v1/connectors/writeback/intents/{writeback_payload['intent_id']}/compensate",
+            headers=reviewer_headers,
+            json={
+                "tenant_id": tenant_a,
+                "workspace_id": "workspace-a",
+                "reason": "Live synthetic provider reversal request.",
+                "expected_version": 4,
+            },
+        )
+        assert compensation_writeback.status_code == 200, compensation_writeback.text
+        assert compensation_writeback.json()["intent"]["status"] == "compensation_requested"
+        assert compensation_writeback.json()["version"] == 5
         approved_run = client.post(
             f"/api/v1/consolidation-close/runs/{run_id}/approve",
             headers=reviewer_headers,

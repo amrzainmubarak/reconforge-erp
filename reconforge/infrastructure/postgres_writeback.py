@@ -96,7 +96,9 @@ def _decode_intent(row: Any) -> tuple[int, WritebackIntent]:
         raw = _row_value(row, "intent_json", 3)
         document = json.loads(raw) if isinstance(raw, str) else raw
         intent = WritebackIntent.model_validate(document)
-        if intent.digest != str(_row_value(row, "intent_digest", 2)):
+        if intent.digest != str(_row_value(row, "intent_digest", 2)) and intent.legacy_digest != str(
+            _row_value(row, "intent_digest", 2)
+        ):
             raise ValueError("digest mismatch")
         return int(_row_value(row, "version", 0)), intent
     except Exception as exc:

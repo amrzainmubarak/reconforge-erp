@@ -6,6 +6,25 @@ Updated: 2026-08-04
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-379 — Governed write-back compensation request API (complete bounded slice)
+
+- Added the independent `connectors.writeback.compensate` human permission and
+  local SQLite migration 32, seeded for the default `admin` and `controller`
+  roles. The PostgreSQL identity boundary remains explicit: tenants provision
+  this permission through identity administration under their RLS context.
+- Added `POST /api/v1/connectors/writeback/intents/{intent_id}/compensate`.
+  It binds the authenticated actor, rejects the original maker, checks the
+  tenant/workspace scope in server mode, enforces optimistic versions, records
+  bounded reason/actor/UTC time, and never performs provider I/O.
+- Same-input retries against the immediately prior version replay the existing
+  compensation request without appending a duplicate. Changed reason/actor,
+  stale versions, wrong scope, and invalid lifecycle states fail closed.
+- Focused API/domain/repository/inventory gates pass locally. This remains a
+  bounded synthetic/provider-neutral request boundary; live ERP/bank reversal
+  semantics, automatic compensation, signed connector packages, HA/DR, and
+  production deployment evidence remain open.
+- ADR: `docs/adr/0329-governed-writeback-compensation-request-api.md`.
+
 ## E-378 — Governed write-back compensation transport (complete bounded slice)
 
 - The provider-neutral HTTPS write-back executor now exposes an explicit
@@ -1626,7 +1645,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - E-268 adds the synthetic transport-injected `reference-sftp-readonly` connector. It enforces exact SFTP egress, traversal-free roots, bounded files, extension allowlists, deterministic cursor ordering, credential isolation, and content digests without bundling SSH or making network calls.
 - E-269 adds the synthetic transport-injected `reference-object-storage-readonly` connector. It enforces exact HTTPS egress, tenant scope, traversal-free prefixes, bounded objects, deterministic cursors, SHA-256 verification, and metadata scope without changing the existing object-store protocol or calling a cloud provider.
 - E-270 adds the synthetic transport-injected `reference-database-readonly` connector. It exposes only two named query profiles, enforces tenant scope and exact Decimal rows, rejects arbitrary SQL by schema, and bounds rows/cells/cursors without opening a database connection.
-- P4-CON-001 remains open for named ERP/bank/SFTP/database/object-store providers, provider sandboxes, acknowledgement reconciliation, approval-gated write-back, compensation, signed executable packages, and production deployment evidence.
+- P4-CON-001 remains open for named ERP/bank/SFTP/database/object-store providers, provider sandboxes, provider-specific compensation semantics, signed executable packages, and production deployment evidence. The local/server request and provider-neutral transport boundaries are now separately evidenced.
 
 ### E-314 complete: reusable connector retry failure-injection gate
 

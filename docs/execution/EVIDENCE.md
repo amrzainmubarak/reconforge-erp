@@ -2,6 +2,33 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-379: Governed write-back compensation request API
+
+- Added local migration 32 for `connectors.writeback.compensate`, seeded for
+  local `admin` and `controller` roles. PostgreSQL permission provisioning is
+  intentionally left to the tenant-scoped identity administration boundary.
+- Added the actor-bound, scope-bound,
+  `POST /api/v1/connectors/writeback/intents/{intent_id}/compensate` route.
+  It appends a digest-bound `compensation_requested` version with bounded
+  reason, requester, UTC timestamp, and optimistic version checks. It performs
+  no provider I/O.
+- `python -m pytest -q tests/test_connector_writeback.py tests/test_api_connectors.py tests/test_sqlite_consolidation_close.py tests/test_sqlite_consolidation_ownership.py tests/test_api_authorization_inventory.py`
+  -> 29 passed.
+- Authorization inventory is now 232 routes with digest
+  `d703c87206397de65a3dc4006e12c41f3818dfab518195c0670c1c3a3a5dc30e`.
+- `uv run python -m pytest -q` -> complete repository suite passed with only
+  the repository's declared capability skips and deprecation warnings.
+- `uv run python -m ruff check .` and `uv run python -m mypy reconforge` ->
+  passed (439 source files); `uv run python -m pip_audit` -> no known
+  vulnerabilities (the local system interpreter's stale cryptography 49
+  environment is not the locked `.venv` evidence).
+- `python -m build --no-isolation` -> built sdist and wheel successfully; the
+  new ADR is present in the source distribution manifest.
+- Boundary: synthetic local/API/repository evidence only. Provider-specific
+  reversal, live ERP/bank semantics, automatic compensation execution,
+  signed packages, HA/DR, and production deployment remain unverified.
+- ADR: `docs/adr/0329-governed-writeback-compensation-request-api.md`.
+
 ## E-378: Governed write-back compensation transport
 
 - `WritebackNetworkRegistration` now has an explicit, empty-by-default

@@ -109,7 +109,7 @@ class SQLiteWritebackIntentRepository:
             intent = WritebackIntent.model_validate(json.loads(str(row["intent_json"])))
         except Exception as exc:
             raise WritebackPersistenceError("persisted write-back intent is invalid") from exc
-        if intent.digest != str(row["intent_digest"]):
+        if intent.digest != str(row["intent_digest"]) and intent.legacy_digest != str(row["intent_digest"]):
             raise WritebackPersistenceError("persisted write-back intent digest mismatch")
         return {"version": int(row["version"]), "status": str(row["status"]), "intent": intent}
 

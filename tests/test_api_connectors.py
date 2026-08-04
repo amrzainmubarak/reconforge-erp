@@ -45,6 +45,7 @@ def test_writeback_intent_api_is_authenticated_actor_bound_and_idempotent(tmp_pa
         "/api/v1/auth/login", json={"username": "controller", "password": "Secret-123"}
     )
     controller_headers = {"Authorization": f"Bearer {controller_login.json()['access_token']}"}
+    controller_id = client.get("/api/v1/auth/me", headers=controller_headers).json()["id"]
     approval = client.post(
         f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/approve",
         json={"assurance": "mfa", "reason": "independent review", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
@@ -111,6 +112,46 @@ def test_writeback_intent_api_is_authenticated_actor_bound_and_idempotent(tmp_pa
     assert mismatch_ack.status_code == 409
     assert mismatch_ack.json()["error"]["code"] == "writeback_idempotency_mismatch"
 
+    compensation = client.post(
+        f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/compensate",
+        json={
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+            "reason": "provider reversal required",
+            "expected_version": 4,
+        },
+        headers=controller_headers,
+    )
+    assert compensation.status_code == 200, compensation.text
+    assert compensation.json()["version"] == 5
+    assert compensation.json()["intent"]["status"] == "compensation_requested"
+    assert compensation.json()["intent"]["compensation_requested_by"] == controller_id
+    replay_compensation = client.post(
+        f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/compensate",
+        json={
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+            "reason": "provider reversal required",
+            "expected_version": 4,
+        },
+        headers=controller_headers,
+    )
+    assert replay_compensation.status_code == 200, replay_compensation.text
+    assert replay_compensation.json()["version"] == 5
+    assert replay_compensation.json()["digest"] == compensation.json()["digest"]
+    denied_compensation = client.post(
+        f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/compensate",
+        json={
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+            "reason": "different actor attempt",
+            "expected_version": 5,
+        },
+        headers=headers,
+    )
+    assert denied_compensation.status_code == 409
+    assert denied_compensation.json()["error"]["code"] == "writeback_compensation_conflict"
+
     mismatched = {**payload, "requested_by": "different-actor"}
     denied = client.post("/api/v1/connectors/writeback/intents", json=mismatched, headers=headers)
     assert denied.status_code == 403
@@ -118,7 +159,7 @@ def test_writeback_intent_api_is_authenticated_actor_bound_and_idempotent(tmp_pa
 
     check = connect(db_path)
     try:
-        assert check.execute("SELECT COUNT(*) FROM connector_writeback_intents").fetchone()[0] == 4
+        assert check.execute("SELECT COUNT(*) FROM connector_writeback_intents").fetchone()[0] == 5
     finally:
         check.close()
 

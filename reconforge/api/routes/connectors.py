@@ -21,6 +21,7 @@ from reconforge.connectors.writeback import (
     acknowledge_writeback,
     approve_writeback,
     dispatch_writeback,
+    request_compensation,
 )
 from reconforge.connectors.writeback_network import (
     WritebackNetworkError,
@@ -34,6 +35,7 @@ WritebackProposer = Annotated[LocalUser, Depends(require_permission("connectors.
 WritebackApprover = Annotated[LocalUser, Depends(require_permission("connectors.writeback.approve"))]
 WritebackDispatcher = Annotated[LocalUser, Depends(require_permission("connectors.writeback.dispatch"))]
 WritebackReconciler = Annotated[LocalUser, Depends(require_permission("connectors.writeback.reconcile"))]
+WritebackCompensator = Annotated[LocalUser, Depends(require_permission("connectors.writeback.compensate"))]
 
 
 class WritebackApprovalRequest(BaseModel):
@@ -61,6 +63,15 @@ class WritebackDispatchRequest(BaseModel):
 
     tenant_id: str = Field(min_length=1, max_length=256)
     workspace_id: str = Field(min_length=1, max_length=256)
+    expected_version: int = Field(ge=1)
+
+
+class WritebackCompensationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    tenant_id: str = Field(min_length=1, max_length=256)
+    workspace_id: str = Field(min_length=1, max_length=256)
+    reason: str = Field(min_length=1, max_length=2_000)
     expected_version: int = Field(ge=1)
 
 
@@ -390,6 +401,87 @@ def acknowledge_writeback_intent(
         "digest": stored.digest,
         "network_dispatch": "disabled",
     }
+
+
+@router.post("/writeback/intents/{intent_id}/compensate")
+def request_writeback_compensation(
+    intent_id: str,
+    request: Request,
+    payload: WritebackCompensationRequest,
+    current_user: WritebackCompensator,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """Record a human-governed compensation request without provider I/O.
+
+    The request is actor-bound, optimistic-versioned, and scoped before the
+    repository is touched. A replay with the same version, actor, and reason
+    is idempotent; changing any of those inputs fails closed.
+    """
+
+    if server_writeback_enabled(request):
+        tenant_id, workspace_id = _require_server_scope(request, payload.tenant_id, payload.workspace_id)
+        enforce_server_scoped_permission(
+            request,
+            permission="connectors.writeback.compensate",
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+        )
+
+        def compensate(repository: object, tenant_id: str, workspace_id: str) -> dict[str, object]:
+            current = repository.get(intent_id=intent_id, tenant_id=tenant_id, workspace_id=workspace_id)  # type: ignore[attr-defined]
+            if current is None:
+                raise APIError(status_code=404, code="writeback_intent_not_found", message="Write-back intent was not found.")
+            intent = cast(WritebackIntent, current["intent"])
+            version = int(cast(int, current["version"]))
+            if intent.status in {WritebackStatus.COMPENSATION_REQUESTED, WritebackStatus.COMPENSATED}:
+                if payload.expected_version not in {version, version - 1}:
+                    raise APIError(status_code=409, code="writeback_intent_version_conflict", message="Write-back intent version is stale.")
+                if intent.compensation_reason != payload.reason or intent.compensation_requested_by not in {None, current_user.id}:
+                    raise APIError(status_code=409, code="writeback_compensation_conflict", message="Compensation request is already bound to another actor or reason.")
+                return _writeback_response(intent, version, server_mode=True)
+            if version != payload.expected_version:
+                raise APIError(status_code=409, code="writeback_intent_version_conflict", message="Write-back intent version is stale.")
+            try:
+                requested = request_compensation(
+                    intent,
+                    reason=payload.reason,
+                    actor_id=current_user.id,
+                    requested_at=datetime.now(UTC),
+                )
+                stored = repository.put(requested, expected_version=version)  # type: ignore[attr-defined]
+            except (ValueError, WritebackPersistenceError) as exc:
+                raise APIError(status_code=409, code="writeback_compensation_conflict", message=str(exc)) from exc
+            return _writeback_response(stored, version + 1, server_mode=True)
+
+        return execute_postgres_writeback(request, compensate)
+
+    if connection is None:
+        raise APIError(status_code=500, code="local_database_not_configured", message="Local database is not configured.")
+    repository = SQLiteWritebackIntentRepository(connection)
+    current = repository.get(intent_id=intent_id, tenant_id=payload.tenant_id, workspace_id=payload.workspace_id)
+    if current is None:
+        raise APIError(status_code=404, code="writeback_intent_not_found", message="Write-back intent was not found.")
+    intent = cast(WritebackIntent, current["intent"])
+    version = int(cast(int, current["version"]))
+    if intent.status in {WritebackStatus.COMPENSATION_REQUESTED, WritebackStatus.COMPENSATED}:
+        if payload.expected_version not in {version, version - 1}:
+            raise APIError(status_code=409, code="writeback_intent_version_conflict", message="Write-back intent version is stale.")
+        if intent.compensation_reason != payload.reason or intent.compensation_requested_by not in {None, current_user.id}:
+            raise APIError(status_code=409, code="writeback_compensation_conflict", message="Compensation request is already bound to another actor or reason.")
+        return _writeback_response(intent, version, server_mode=False)
+    if version != payload.expected_version:
+        raise APIError(status_code=409, code="writeback_intent_version_conflict", message="Write-back intent version is stale.")
+    try:
+        requested = request_compensation(
+            intent,
+            reason=payload.reason,
+            actor_id=current_user.id,
+            requested_at=datetime.now(UTC),
+        )
+        stored = repository.put(requested, expected_version=version)
+    except (ValueError, WritebackPersistenceError) as exc:
+        raise APIError(status_code=409, code="writeback_compensation_conflict", message=str(exc)) from exc
+    return _writeback_response(stored, version + 1, server_mode=False)
 
 
 def _require_server_scope(request: Request, tenant_id: str, workspace_id: str) -> tuple[str, str]:

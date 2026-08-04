@@ -4074,3 +4074,12 @@ SELECT roles.id, permissions.name
 FROM roles CROSS JOIN permissions
 WHERE roles.name IN ('admin', 'controller') AND permissions.name='connectors.writeback.dispatch';
 """
+
+WRITEBACK_COMPENSATION_PERMISSION_SQL = """
+INSERT OR IGNORE INTO permissions (name, description)
+VALUES ('connectors.writeback.compensate', 'Request a separately governed compensation for a dispatched write-back intent.');
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles CROSS JOIN permissions
+WHERE roles.name IN ('admin', 'controller') AND permissions.name='connectors.writeback.compensate';
+"""

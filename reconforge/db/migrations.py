@@ -37,6 +37,7 @@ from reconforge.db.schema import (
     RECEIVABLES_SCHEMA_SQL,
     WORKFLOW_STATE_MACHINE_SCHEMA_SQL,
     WRITEBACK_APPROVAL_PERMISSION_SQL,
+    WRITEBACK_COMPENSATION_PERMISSION_SQL,
     WRITEBACK_DISPATCH_PERMISSION_SQL,
     WRITEBACK_INTENTS_SCHEMA_SQL,
     WRITEBACK_RECONCILIATION_PERMISSION_SQL,
@@ -113,6 +114,7 @@ MIGRATIONS = [
     Migration(version=29, name="connector_writeback_approval_permission", sql=WRITEBACK_APPROVAL_PERMISSION_SQL),
     Migration(version=30, name="connector_writeback_reconciliation_permission", sql=WRITEBACK_RECONCILIATION_PERMISSION_SQL),
     Migration(version=31, name="connector_writeback_dispatch_permission", sql=WRITEBACK_DISPATCH_PERMISSION_SQL),
+    Migration(version=32, name="connector_writeback_compensation_permission", sql=WRITEBACK_COMPENSATION_PERMISSION_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """

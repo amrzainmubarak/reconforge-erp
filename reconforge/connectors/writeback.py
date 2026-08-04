@@ -90,6 +90,8 @@ class WritebackIntent(BaseModel):
     approval: WritebackApproval | None = None
     acknowledgement: WritebackAcknowledgement | None = None
     compensation_reason: str | None = Field(default=None, max_length=2_000)
+    compensation_requested_by: str | None = Field(default=None, min_length=1, max_length=256)
+    compensation_requested_at: datetime | None = None
 
     @model_validator(mode="after")
     def validate_state(self) -> WritebackIntent:
@@ -109,17 +111,30 @@ class WritebackIntent(BaseModel):
             raise ValueError("acknowledgement is required for this write-back state")
         if self.status is WritebackStatus.COMPENSATED and not self.compensation_reason:
             raise ValueError("compensation reason is required")
+        if self.compensation_requested_at is not None and self.compensation_requested_by is None:
+            raise ValueError("compensation requester is required when compensation time is recorded")
         return self
 
     @property
     def digest(self) -> str:
-        encoded = json.dumps(
-            self.model_dump(mode="json", exclude_none=False),
-            ensure_ascii=True,
-            sort_keys=True,
-            separators=(",", ":"),
-        ).encode("ascii")
-        return hashlib.sha256(encoded).hexdigest()
+        return _digest_document(self.model_dump(mode="json", exclude_none=False))
+
+    @property
+    def legacy_digest(self) -> str:
+        """Digest used before compensation actor metadata was additive."""
+
+        return _digest_document(
+            self.model_dump(
+                mode="json",
+                exclude_none=False,
+                exclude={"compensation_requested_by", "compensation_requested_at"},
+            )
+        )
+
+
+def _digest_document(document: object) -> str:
+    encoded = json.dumps(document, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("ascii")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -235,15 +250,33 @@ def dispatch_writeback_to_provider(
     )
 
 
-def request_compensation(intent: WritebackIntent, *, reason: str) -> WritebackIntent:
+def request_compensation(
+    intent: WritebackIntent,
+    *,
+    reason: str,
+    actor_id: str | None = None,
+    requested_at: datetime | None = None,
+) -> WritebackIntent:
     """Request a separately auditable compensation after dispatch/ack."""
 
     if intent.status not in {WritebackStatus.DISPATCHED, WritebackStatus.ACKNOWLEDGED}:
         raise WritebackError("writeback_compensation_state_invalid")
     if not reason.strip():
         raise WritebackError("writeback_compensation_reason_required")
+    if actor_id is not None:
+        if not actor_id.strip():
+            raise WritebackError("writeback_compensation_actor_required")
+        if actor_id == intent.requested_by:
+            raise WritebackError("writeback_compensation_self_request_denied")
+    if requested_at is not None and actor_id is None:
+        raise WritebackError("writeback_compensation_actor_required")
     return intent.model_copy(
-        update={"status": WritebackStatus.COMPENSATION_REQUESTED, "compensation_reason": reason}
+        update={
+            "status": WritebackStatus.COMPENSATION_REQUESTED,
+            "compensation_reason": reason,
+            "compensation_requested_by": actor_id,
+            "compensation_requested_at": requested_at,
+        }
     )
 
 

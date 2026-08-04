@@ -3364,3 +3364,69 @@
 - **ADR**: `docs/adr/0324-server-scoped-finance-ledger-mutations.md`.
 - **Rollback**: remove the two helper calls, focused assertions, ADR, and
   manifest entry. No data or schema rollback is required.
+
+## D302 - Bind master-data mutations to server execution scope
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Before PostgreSQL server-profile currency, organization,
+  legal-entity, branch, fiscal-period, or period-status mutation reaches the
+  repository, re-evaluate `master_data.manage` with the authenticated
+  tenant/workspace. Keep explicit server workspace limits and local SQLite
+  compatibility unchanged.
+- **Reason**: Master data controls the hierarchy used by posting and close;
+  tenant RLS and role membership alone do not prove selected-scope authority.
+  The central policy helper closes that route-level gap without schema change.
+- **Result**: Focused identity/scope and master-data route tests pass; full
+  pytest, Ruff, Mypy, build, and diff-check pass. Exact head `d8bc4dd8` is
+  green on hosted CI `30937323538` (server-boundaries `92086636635`,
+  postgres-ha-dr `92086636683`, Docker parity `92088189807`), Security
+  `30937323640`, Docker `30937323622`, and CodeQL `30937323585`.
+- **Boundary**: Master-data mutation family only; full parity, federation,
+  complete route/job/export/UI adoption, distributed invalidation, live
+  providers, independent HA/DR, and production IAM assurance remain open.
+- **ADR**: `docs/adr/0325-server-scoped-master-data-mutations.md`.
+- **Rollback**: remove helper calls, focused assertions, ADR, and manifest
+  entry. No data or schema rollback is required.
+
+## D303 - Preserve OR permission compatibility for reconciliation scope
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Reconciliation submit, cancel, and requeue keep their existing
+  `reconciliation.manage` OR `match.run` contract while using a reusable
+  server-scoped any-permission evaluator before PostgreSQL repository access.
+- **Reason**: Requiring only one alternative would silently narrow existing
+  roles; duplicating policy logic would create authorization drift.
+- **Result**: Focused reconciliation/scope tests pass 9/9; full local gates
+  pass. Exact head `d8bc4dd8` is green on hosted CI `30937323538`, Security
+  `30937323640`, Docker `30937323622`, and CodeQL `30937323585`.
+- **Boundary**: Reconciliation route family only; distributed worker
+  authorization, federation, universal route/job/export/UI coverage, live
+  providers, independent HA/DR, and production IAM assurance remain open.
+- **ADR**: `docs/adr/0326-server-scoped-reconciliation-run-mutations.md`.
+- **Rollback**: remove the helper, route calls, tests, ADR, and manifest entry.
+
+## D304 - Bind evidence mutations to server execution scope
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Evidence registration, linking, requirements, sensitive
+  drill-down, and checksum verification re-evaluate `evidence.manage` or
+  `evidence.verify` against authenticated tenant/workspace before the
+  PostgreSQL evidence repository. Local SQLite and ordinary reads remain
+  unchanged.
+- **Reason**: Evidence underpins close and reconciliation claims; raw role
+  membership is not proof of selected hierarchy authority. Central scope
+  policy also removes the former raw permission-set special case.
+- **Result**: Focused evidence/scope/inventory tests pass 12/12; full pytest,
+  Ruff, Mypy, build, and diff-check pass. Exact head `3778811` is green on
+  hosted CI `30940202330` (server-boundaries `92096349955`, postgres-ha-dr
+  `92096349776`, Docker parity `92097921442`), Security `30940202609`, Docker
+  `30940202853`, and CodeQL `30940202230`.
+- **Boundary**: Evidence mutation routes only; workspace-level persistence,
+  universal route/job/export/UI adoption, federation, live providers,
+  independent HA/DR, and production IAM assurance remain open.
+- **ADR**: `docs/adr/0327-server-scoped-evidence-mutations.md`.
+- **Rollback**: remove helper calls, focused assertions, ADR, and manifest
+  entry. No data or schema rollback is required.

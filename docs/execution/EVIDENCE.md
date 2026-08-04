@@ -326,9 +326,15 @@ This file records commands and observed results. It does not convert a dirty wor
   unchanged.
 - Focused command:
   `pytest -q tests/test_api_server_evidence.py tests/test_api_execution_scope.py tests/test_api_authorization_inventory.py`
-  -> 12 passed. Ruff and Mypy pass for the changed route; full pytest,
-  `python -m build --no-isolation`, diff-check, and hosted CI remain required
-  before promotion.
+  -> 12 passed. Ruff, Mypy, full pytest, `python -m build --no-isolation`,
+  and diff-check pass. Exact head `3778811` passes hosted CI `30940202330`
+  with [server-boundaries](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30940202330/job/92096349955),
+  [postgres-ha-dr](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30940202330/job/92096349776),
+  [Docker parity](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30940202330/job/92097921442),
+  both Python suites, engine-parity, and object-storage; [Security](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30940202609),
+  [Docker](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30940202853),
+  and [CodeQL](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30940202230)
+  also pass.
 - Boundary: synthetic server-profile evidence scope binding only; no claim of
   workspace-level evidence persistence, universal route/job/export/UI policy
   adoption, federation, live providers, independent HA/DR, or production IAM

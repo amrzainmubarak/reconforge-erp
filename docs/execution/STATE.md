@@ -437,7 +437,10 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   check for sensitive drill-down is replaced by the central scope helper.
 - Focused evidence, execution-scope, and authorization-inventory tests pass
   12/12; Ruff and Mypy pass for the changed surfaces. Full pytest, build,
-  diff-check, and hosted CI are required before promotion.
+  and diff-check pass. Exact head `3778811` passes hosted CI `30940202330`
+  (server-boundaries `92096349955`, postgres-ha-dr `92096349776`, Docker
+  parity `92097921442`, both Python suites, engine-parity, and object-storage),
+  Security `30940202609`, Docker `30940202853`, and CodeQL `30940202230`.
 - Boundary: evidence route-family policy binding only. Workspace-level
   evidence persistence, universal route/job/export/UI adoption, federation,
   live providers, independent HA/DR, and production IAM assurance remain

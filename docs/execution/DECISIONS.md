@@ -3283,7 +3283,10 @@
 - **Result**: Connector/API and authorization-inventory tests pass 7/7; the
   inventory is 231 routes with digest
   `5ab85f381b3ef49f060b27f539b342af01a91d739788da5601db383a5b15ebdd`; Ruff
-  and Mypy pass.
+  and Mypy pass. Exact code head `e963de17` is green on CI `30924311132`
+  (server-boundaries `92042596978`, PostgreSQL/HA-DR `92042596980`, Docker
+  parity `92044277714`), Security `30924311089`, Docker `30924311183`, and
+  CodeQL `30924311129`.
 - **ADR**: `docs/adr/0321-governed-server-writeback-dispatch-boundary.md`.
 - **Rollback**: remove the route, permission migration, tests, inventory
   inclusion, ADR, and manifest entry.

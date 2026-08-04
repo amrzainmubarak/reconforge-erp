@@ -176,6 +176,7 @@ def create_api_app(
     app.state.postgres_ledger_factory = app.state.postgres_identity_factory
     app.state.postgres_master_data_factory = app.state.postgres_identity_factory
     app.state.postgres_close_factory = app.state.postgres_identity_factory
+    app.state.postgres_consolidation_close_factory = app.state.postgres_identity_factory
     app.state.postgres_ppa_factory = app.state.postgres_identity_factory
     app.state.postgres_evidence_factory = app.state.postgres_identity_factory
     app.state.postgres_reconciliation_factory = app.state.postgres_identity_factory
@@ -367,6 +368,7 @@ def create_api_app(
         workflow.router,
         accounts.router,
         close.router,
+        consolidation_close.router,
         evidence.router,
         consolidation_ppa.router,
         reconciliation.router,

@@ -30,6 +30,20 @@ This file records commands and observed results. It does not convert a dirty wor
   production IAM assurance remain unverified.
 - ADR: `docs/adr/0313-server-writeback-policy-is-scope-bound.md`.
 
+## E-364: Scope-bound PostgreSQL consolidation-close API
+
+- `reconforge/api/server_consolidation_close.py` opens the existing
+  `PostgresConsolidationCloseRepository` only through the authenticated
+  execution scope. `consolidation_close` server branches query the selected
+  workspace and verify every detail/list/certification row before exposure;
+  the router is included in the startup authorization inventory.
+- `pytest -q tests/test_api_consolidation_close.py tests/test_api_server_scope_boundary.py tests/test_api_authorization_inventory.py` -> `16 passed`; Ruff and Mypy pass for the changed modules.
+- Boundary: local route/adapter contract and synthetic sibling-workspace
+  refusal. No live authenticated PostgreSQL API fixture, statutory
+  consolidation, external posting, ERP/bank provider, write-back, HA/DR, or
+  production IAM claim is promoted by this slice.
+- ADR: `docs/adr/0314-postgres-consolidation-close-api-is-scope-bound.md`.
+
 ## E-293: Immutable local delegation administration
 
 - Added typed `DelegationGrant`, migration 27, and `DelegationRepository`.

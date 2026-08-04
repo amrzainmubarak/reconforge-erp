@@ -6,6 +6,8 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
+from reconforge.api.routes import consolidation_close as consolidation_routes
+from reconforge.api.server_identity import RequestExecutionScope
 from reconforge.auth.service import LocalAuthService
 from reconforge.db import connect, run_migrations
 from reconforge.domain.consolidation_lifecycle import prepare_consolidation_worksheet
@@ -159,3 +161,48 @@ def test_consolidation_close_certification_api_is_posted_only_and_maker_checker_
     assert fetched.status_code == 200
     assert fetched.json()["certification"]["reviewed_by"] == "reviewer"
     assert fetched.json()["certification"]["object_type"] == "consolidation_close_run"
+
+
+def test_consolidation_close_server_boundary_binds_workspace_before_exposure(
+    tmp_path: Path, monkeypatch: object
+) -> None:
+    """The server adapter must reject a tenant row from a sibling workspace."""
+
+    db_path = tmp_path / "consolidation-server-boundary.db"
+    run_migrations(db_path)
+    connection = connect(db_path)
+    LocalAuthService(connection).init_admin(username="admin", password="Secret-123")
+    connection.close()
+    client = TestClient(create_api_app(db_path))
+    login = client.post("/api/v1/auth/login", json={"username": "admin", "password": "Secret-123"})
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    class Repository:
+        def list_periods(self, **_: object) -> list[dict[str, object]]:
+            return [{"id": "period-b", "workspace_id": "workspace-b"}]
+
+        def get_run(self, *_: object, **__: object) -> dict[str, object]:
+            return {"id": "run-b", "workspace_id": "workspace-b"}
+
+    repository = Repository()
+
+    def execute(_request: object, operation: object) -> object:
+        return operation(repository, "tenant-a")  # type: ignore[operator]
+
+    monkeypatch.setattr(consolidation_routes, "server_consolidation_close_enabled", lambda _request: True)
+    monkeypatch.setattr(
+        consolidation_routes,
+        "request_execution_scope",
+        lambda _request: RequestExecutionScope(
+            tenant_id="tenant-a", workspace_id="workspace-a", organization_id="org-a", legal_entity_id="entity-a"
+        ),
+    )
+    monkeypatch.setattr(consolidation_routes, "execute_postgres_consolidation_close", execute)
+
+    listed = client.get("/api/v1/consolidation-close/periods", headers=headers)
+    assert listed.status_code == 403
+    assert listed.json()["error"]["code"] == "workspace_scope_denied"
+
+    detail = client.get("/api/v1/consolidation-close/runs/run-b", headers=headers)
+    assert detail.status_code == 403
+    assert detail.json()["error"]["code"] == "workspace_scope_denied"

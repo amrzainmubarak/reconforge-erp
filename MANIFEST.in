@@ -447,4 +447,6 @@ include docs/adr/0260-writeback-acknowledgement-reconciliation-api.md
 include docs/adr/0261-local-consolidation-close-drilldown-api.md
 include docs/adr/0262-postgres-consolidation-close-replay-and-period-sod.md
 include reconforge/api/routes/consolidation_close.py
+include reconforge/api/server_consolidation_close.py
 include tests/test_api_consolidation_close.py
+include docs/adr/0314-postgres-consolidation-close-api-is-scope-bound.md

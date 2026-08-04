@@ -154,6 +154,23 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   write-back remain open.
 - ADR: `docs/adr/0313-server-writeback-policy-is-scope-bound.md`.
 
+## E-364 — Scope-bound PostgreSQL consolidation-close API (complete bounded slice)
+
+- Added a request-scoped PostgreSQL adapter for the existing
+  consolidation-close periods, runs, replay-verified detail, certification,
+  and summary routes. Server requests now pass the authenticated
+  tenant/workspace/organization/entity hierarchy through `PostgresTenantBoundary`
+  and query the authorized workspace; detail, certification, and every list
+  record fail closed on a returned sibling-workspace row.
+- The eight routes are now included in the startup authorization inventory.
+  Focused API, server-scope, and inventory tests pass 16/16; Ruff and Mypy
+  pass, and local SQLite consolidation-close behavior remains green.
+- Boundary: synthetic/local API policy and repository wiring only. The close
+  adapter remains control-journal evidence, not statutory consolidation,
+  external posting, live ERP/bank integration, write-back, HA/DR, or complete
+  enterprise IAM.
+- ADR: `docs/adr/0314-postgres-consolidation-close-api-is-scope-bound.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

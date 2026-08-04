@@ -3093,3 +3093,25 @@
 - **ADR**: `docs/adr/0313-server-writeback-policy-is-scope-bound.md`.
 - **Rollback**: remove the helper and the three route calls, tests, ADR, and
   ledger entries; retain the prior coarse permission/header checks.
+
+## D291 - Bind the PostgreSQL consolidation-close API to execution scope
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Add a dedicated server adapter and route branch for the
+  consolidation-close API. Resolve tenant/workspace/organization/entity from
+  the authenticated grant snapshot, pass it through the PostgreSQL RLS
+  boundary, query by workspace, and reject any returned row outside that
+  workspace. Include all eight routes in the authorization inventory.
+- **Reason**: The PostgreSQL repository already provided replay-verified close
+  evidence, but the API remained SQLite-only and its routes were invisible to
+  the authorization drift gate. Tenant-only RLS does not replace explicit
+  hierarchy checks.
+- **Boundary**: This is control-journal API parity and isolation evidence. It
+  does not implement statutory consolidation, external posting, live provider
+  integration, write-back, HA/DR, or universal enterprise IAM.
+- **Result**: Focused API/server-scope/inventory tests pass 16/16; Ruff and
+  Mypy pass. Local SQLite compatibility remains unchanged.
+- **ADR**: `docs/adr/0314-postgres-consolidation-close-api-is-scope-bound.md`.
+- **Rollback**: remove the adapter, route branches, inventory inclusion, tests,
+  ADR, manifest entry, and ledger additions; no schema rollback is required.

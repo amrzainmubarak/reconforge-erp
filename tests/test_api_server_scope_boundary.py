@@ -47,6 +47,11 @@ def _request(factory_state_name: str, *, workspace_id: str | None = "workspace-a
         ("reconforge.api.server_master_data", "postgres_master_data_factory", "execute_postgres_master_data"),
         ("reconforge.api.server_ledger", "postgres_ledger_factory", "execute_postgres_ledger"),
         ("reconforge.api.server_close", "postgres_close_factory", "execute_postgres_close"),
+        (
+            "reconforge.api.server_consolidation_close",
+            "postgres_consolidation_close_factory",
+            "execute_postgres_consolidation_close",
+        ),
     ),
 )
 def test_server_business_boundary_passes_only_authorized_scope_to_rls(

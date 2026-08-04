@@ -292,7 +292,10 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - The focused live API/identity/close/inventory gate passes 14/14 in the current
   environment; authorization inventory is now 227 routes with digest
   `9e4e4f568df98a482a0eaf34d9c9c359330caf22df43b89e2cb14f771b183fc5`.
-  Hosted verification for the new code head is pending.
+- Hosted verification for exact code head `672b2282` is green: CI run
+  `30919182900` (Python 3.11/3.12, server-boundaries job `92025004869`,
+  PostgreSQL/HA-DR job `92025004440`, and Docker parity job `92026761956`),
+  Security `30919182689`, Docker `30919183050`, and CodeQL `30919183059`.
 - Boundary: PostgreSQL reopened periods currently serialize as `Open` while
   SQLite returns `Reopened`; this compatibility difference is recorded rather
   than hidden. The slice remains a control-journal API, not statutory close,

@@ -166,7 +166,10 @@ This file records commands and observed results. It does not convert a dirty wor
 - PostgreSQL reopens to status `Open` while SQLite returns `Reopened`; this
   existing compatibility difference is explicit. No statutory, external
   provider, independent HA/DR, or production claim is promoted.
-- Hosted verification for the new code head is pending.
+- Hosted verification for exact code head `672b2282` is green: CI
+  `30919182900` (Python 3.11/3.12, server-boundaries `92025004869`,
+  PostgreSQL/HA-DR `92025004440`, Docker parity `92026761956`), Security
+  `30919182689`, Docker `30919183050`, and CodeQL `30919183059`.
 - ADR: `docs/adr/0320-consolidation-close-api-full-lifecycle-boundary.md`.
 
 ## E-293: Immutable local delegation administration

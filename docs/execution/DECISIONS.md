@@ -3255,7 +3255,10 @@
 - **Result**: Local full lifecycle API tests pass 6/6; the live
   API/identity/close/inventory gate passes 14/14; inventory is 227 routes with
   digest `9e4e4f568df98a482a0eaf34d9c9c359330caf22df43b89e2cb14f771b183fc5`;
-  Ruff, Mypy, and diff-check pass. Hosted verification is pending.
+  Ruff, Mypy, and diff-check pass. Exact code head `672b2282` is green on CI
+  `30919182900` (server-boundaries `92025004869`, PostgreSQL/HA-DR
+  `92025004440`, Docker parity `92026761956`), Security `30919182689`, Docker
+  `30919183050`, and CodeQL `30919183059`.
 - **ADR**: `docs/adr/0320-consolidation-close-api-full-lifecycle-boundary.md`.
 - **Rollback**: remove the routes, request models, tests, inventory update,
   ADR, and manifest entry; no schema rollback is required.

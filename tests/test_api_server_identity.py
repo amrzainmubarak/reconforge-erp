@@ -431,6 +431,7 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
 
     fake = _FakeServerIdentity()
     scoped_permissions: list[dict[str, object]] = []
+    ledger_scoped_permissions: list[dict[str, object]] = []
 
     def execute(_request: Any, operation: Any) -> Any:
         return operation(fake, request_tenant_id(_request))
@@ -461,6 +462,16 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
         close_routes,
         "enforce_server_scoped_permission",
         lambda _request, **kwargs: scoped_permissions.append(kwargs),
+    )
+    monkeypatch.setattr(
+        finance_core_routes,
+        "request_execution_scope",
+        lambda _request: RequestExecutionScope("tenant-a", "workspace-a"),
+    )
+    monkeypatch.setattr(
+        finance_core_routes,
+        "enforce_server_scoped_permission",
+        lambda _request, **kwargs: ledger_scoped_permissions.append(kwargs),
     )
     monkeypatch.setattr(finance_core_routes, "execute_postgres_ledger", execute)
     monkeypatch.setattr(master_data_routes, "execute_postgres_master_data", execute)
@@ -664,6 +675,11 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
     assert scoped_permissions == [
         {"permission": "close.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
         {"permission": "close.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+    ]
+    assert ledger_scoped_permissions == [
+        {"permission": "finance_core.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        {"permission": "finance_core.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        {"permission": "finance_core.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
     ]
     assert cash.status_code == 200
     assert revenue.status_code == 200

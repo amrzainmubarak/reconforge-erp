@@ -9,8 +9,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import get_local_db, require_any_permission, require_permission
+from reconforge.api.dependencies import (
+    enforce_server_scoped_permission,
+    get_local_db,
+    require_any_permission,
+    require_permission,
+)
 from reconforge.api.errors import APIError
+from reconforge.api.server_identity import request_execution_scope
 from reconforge.api.server_ledger import execute_postgres_ledger, server_ledger_enabled
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
@@ -388,6 +394,13 @@ def upsert_account(
 ) -> dict[str, object]:
     if server_ledger_enabled(request):
         _server_workspace(payload.workspace)
+        scope = request_execution_scope(request)
+        enforce_server_scoped_permission(
+            request,
+            permission="finance_core.manage",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
         if not payload.organization_code.strip():
             raise APIError(
                 status_code=400,
@@ -655,6 +668,13 @@ def create_entry(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_ledger_enabled(request):
+        scope = request_execution_scope(request)
+        enforce_server_scoped_permission(
+            request,
+            permission="finance_core.manage",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
         record = execute_postgres_ledger(
             request,
             lambda repository, tenant: _server_entry(

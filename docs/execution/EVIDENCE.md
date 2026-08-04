@@ -12524,3 +12524,33 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   this is a dependency-only security remediation. It does not establish
   provenance, reachability, package safety, independent assessment, or
   production readiness.
+
+## E-351: Concrete PostgreSQL named-query read-only connector
+
+- Focused structural command: `python -m pytest -q
+  tests/test_postgres_database_reference.py tests/test_connector_database_reference.py
+  tests/test_connector_sdk.py` -> 20 passed and 1 declared live-service skip
+  without a PostgreSQL DSN. Ruff and Mypy pass for the connector, conformance
+  boundary, exports, and tests.
+- Live command with PostgreSQL 16, `reconforge_app` (`rolsuper=false`,
+  `rolbypassrls=false`), and synthetic RLS-protected views: `RECONFORGE_TEST_POSTGRES_DSN=...`
+  `python -m pytest -q tests/test_postgres_database_reference.py` -> 3 passed.
+  The run proves fixed named queries, `SET TRANSACTION READ ONLY`, parameter
+  binding, endpoint/DSN host-port-database matching, cursor replay, canonical
+  Decimal normalization (`0E-18` -> `0`), and tenant isolation.
+- The adapter is `reference-postgres-readonly` with `database_source` kind and
+  `synthetic_sandbox=false`; the older `reference-database-readonly` HTTPS
+  transport remains synthetic and is not relabeled. No arbitrary SQL, provider
+  payload, write-back, secret, or customer data is stored or returned.
+- Boundary: deployment-provided views and a local single-node PostgreSQL
+  service only. ERP/bank vendor interoperability, provider schema migration,
+  TLS/vault operations, throughput/soak, HA/DR, and production readiness are
+  not proven. ADR: `docs/adr/0301-postgres-named-query-readonly-connector.md`.
+- Repository gates after the slice: `python -m pytest -q` exited 0 after
+  316.3s over 2,383 collected tests (declared capability skips and warnings
+  only); Ruff, Mypy, full Bandit, `python -m build --no-isolation`,
+  `uv lock --check`, supply-chain policy validation, hash-locked all-extra
+  `pip-audit` (128 packages, zero findings), and `git diff --check` also
+  exited 0. A direct ambient `python -m pip_audit` attempt timed out against
+  PyPI; it was not used as a green result, and the required hash-locked audit
+  completed separately.

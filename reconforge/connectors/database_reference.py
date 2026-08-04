@@ -134,6 +134,21 @@ class DatabaseTransport(Protocol):
     ) -> tuple[DatabaseRecordRow, ...]: ...
 
 
+class DatabaseRegistration(Protocol):
+    """Minimal immutable registration surface shared by database adapters."""
+
+    manifest: ConnectorManifest
+    endpoint: str
+    credential_reference: str
+    tenant_id: str
+    query_profile: DatabaseQueryProfile
+    maximum_rows: int
+    maximum_cell_characters: int
+
+    @property
+    def digest(self) -> str: ...
+
+
 @dataclass(frozen=True)
 class DatabaseRead:
     rows: tuple[DatabaseRecordRow, ...]
@@ -160,7 +175,7 @@ def database_reference_registration(
 class ReferenceDatabaseConnector:
     transport: DatabaseTransport
     secret_resolver: ConnectorSecretResolver
-    registration: DatabaseConnectorRegistration
+    registration: DatabaseRegistration
 
     def read_rows(self, *, idempotency_key: str, cursor: str | None = None) -> DatabaseRead:
         key_bytes = idempotency_key.encode("utf-8")

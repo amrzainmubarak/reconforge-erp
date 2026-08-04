@@ -11,6 +11,11 @@ reference, and tenant identity. Results are sorted by stable record ID, cursor
 paginated, duplicate-checked, tenant-verified, and hashed. The transport is
 injected; the repository makes no database connection and stores no secret.
 
-A live adapter must separately prove parameter binding, database role least
-privilege, statement timeout, cancellation, replica/read consistency, retry
-semantics, schema migration compatibility, and provider failure injection.
+A concrete PostgreSQL adapter now lives in
+`docs/connectors/postgres-named-query-readonly.md`. It is a separate
+`database_source` manifest and does not change this synthetic HTTPS contract.
+The adapter proves parameter binding, a non-privileged PostgreSQL role,
+statement timeout/read-only setup, cursor replay, and tenant isolation against
+synthetic views. TLS/vault operations, cancellation and replica consistency,
+provider failure injection, schema migration compatibility, and ERP/bank
+interoperability still require separate runtime evidence.

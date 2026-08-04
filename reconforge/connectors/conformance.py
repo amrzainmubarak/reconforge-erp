@@ -100,7 +100,7 @@ def verify_manifest_portfolio(manifests: Iterable[ConnectorManifest]) -> tuple[s
             raise ValueError(f"{manifest.connector_id} lacks synthetic/idempotent read guarantees")
         if not manifest.schema_versions or not manifest.threat_model:
             raise ValueError(f"{manifest.connector_id} lacks schema/threat declarations")
-        if manifest.kind is ConnectorKind.NETWORK_SOURCE:
+        if manifest.kind in {ConnectorKind.NETWORK_SOURCE, ConnectorKind.DATABASE_SOURCE}:
             if not manifest.network_required or not manifest.egress_destinations:
                 raise ValueError(f"{manifest.connector_id} lacks exact network egress")
             if manifest.authentication.value != "secret_reference":

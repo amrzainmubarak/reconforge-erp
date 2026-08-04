@@ -7,6 +7,7 @@ from reconforge.connectors.database_reference import (
     DatabaseQueryProfile,
     DatabaseRead,
     DatabaseRecordRow,
+    DatabaseRegistration,
     ReferenceDatabaseConnector,
     database_reference_registration,
 )
@@ -53,6 +54,14 @@ from reconforge.connectors.payment_statement_reference import (
     PaymentStatementRead,
     ReferencePaymentStatementConnector,
     payment_statement_registration,
+)
+from reconforge.connectors.postgres_database_reference import (
+    POSTGRES_DATABASE_ENDPOINT,
+    POSTGRES_DATABASE_MANIFEST,
+    PostgresDatabaseConnector,
+    PostgresDatabaseConnectorRegistration,
+    PostgresNamedQueryTransport,
+    postgres_database_registration,
 )
 from reconforge.connectors.rest_reference import (
     REFERENCE_REST_MANIFEST,
@@ -152,12 +161,19 @@ __all__ = [
     "payment_statement_registration",
     "DATABASE_REFERENCE_ENDPOINT",
     "DATABASE_REFERENCE_MANIFEST",
+    "DatabaseRegistration",
     "DatabaseConnectorRegistration",
     "DatabaseQueryProfile",
     "DatabaseRead",
     "DatabaseRecordRow",
     "ReferenceDatabaseConnector",
     "database_reference_registration",
+    "POSTGRES_DATABASE_ENDPOINT",
+    "POSTGRES_DATABASE_MANIFEST",
+    "PostgresDatabaseConnector",
+    "PostgresDatabaseConnectorRegistration",
+    "PostgresNamedQueryTransport",
+    "postgres_database_registration",
     "ERP_REFERENCE_ENDPOINT",
     "ERP_REFERENCE_MANIFEST",
     "ReferenceErpConnector",

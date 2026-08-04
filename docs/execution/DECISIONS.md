@@ -2800,3 +2800,26 @@
 - ADR: `docs/adr/0296-writeback-network-transport-is-explicit-and-digest-bound.md`.
 - Rollback: remove the transport module and exports; intent repositories and
   proposal-only APIs remain unchanged.
+
+## D250 - PostgreSQL source access is fixed named-query and read-only
+
+- Date: 2026-08-04
+- Status: accepted
+- Decision: add a separate `database_source` manifest and
+  `PostgresNamedQueryTransport` for the two versioned database profiles. The
+  registration pins an exact credential-free PostgreSQL endpoint; the runtime
+  DSN must match its host, port, and database path. Queries are fixed,
+  parameterized, bounded by a statement timeout, and executed in an explicit
+  `READ ONLY` transaction with transaction-local tenant context.
+- Rationale: the prior database connector intentionally stopped at a
+  transport-injected synthetic boundary. A concrete local PostgreSQL adapter
+  gives the connector workstream an executable, least-privilege read gate
+  without inventing ERP/bank provider interoperability or opening arbitrary
+  SQL.
+- Consequence: deployments must expose the two documented views and grant
+  `SELECT` to the application role. Canonical Decimal output and cursor/replay
+  evidence are available; provider schema compatibility, vault/TLS operations,
+  write-back, throughput, HA/DR, and production readiness remain open.
+- ADR: `docs/adr/0301-postgres-named-query-readonly-connector.md`.
+- Rollback: remove the adapter, registration, tests, CI entry, and docs; the
+  existing synthetic database connector remains unchanged.

@@ -23,6 +23,7 @@ class ConnectorKind(StrEnum):
     LOCAL_FILE = "local_file"
     EXPORT_PROFILE = "export_profile"
     NETWORK_SOURCE = "network_source"
+    DATABASE_SOURCE = "database_source"
 
 
 class ConnectorCapability(StrEnum):
@@ -115,8 +116,11 @@ class ConnectorManifest(BaseModel):
             raise ValueError("egress destinations must be unique and canonically sorted")
         for destination in self.egress_destinations:
             parsed = urlsplit(destination)
+            allowed_schemes = {"https", "sftp"}
+            if self.kind is ConnectorKind.DATABASE_SOURCE:
+                allowed_schemes = {"postgresql", "postgres"}
             if (
-                parsed.scheme not in {"https", "sftp"}
+                parsed.scheme not in allowed_schemes
                 or not parsed.hostname
                 or parsed.username is not None
                 or parsed.password is not None

@@ -1,10 +1,35 @@
 # Execution State
 
-Updated: 2026-08-03
+Updated: 2026-08-04
 
 ## Current phase
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
+
+## E-351 — Concrete PostgreSQL named-query read-only connector (complete bounded slice)
+
+- Added `reference-postgres-readonly` with a dedicated `database_source`
+  manifest, exact credential-free endpoint pinning, runtime DSN host/port/path
+  matching, fixed `statement_lines_v1` and `trial_balance_v1` queries, bounded
+  `READ ONLY` transactions, statement timeout, tenant-local context,
+  parameterized cursor/limit values, canonical Decimal output, and safe error
+  boundaries. The existing synthetic HTTPS database connector remains
+  unchanged and distinct.
+- `tests/test_postgres_database_reference.py` passes its structural/failure
+  contracts and a live PostgreSQL 16 run with a non-superuser,
+  non-`BYPASSRLS` role. The live path proves cursor replay, canonical
+  `0E-18` normalization, read-only setup, endpoint/DSN binding, and RLS tenant
+  isolation over synthetic rows.
+- Boundary: two fixed deployment-provided views only. This is not ERP/bank
+  vendor interoperability, provider schema compatibility, secret-vault/TLS
+  operations, write-back, throughput/soak, HA/DR, or production readiness.
+- Full repository gates then passed: 2,383 collected tests in 316.3s, Ruff,
+  Mypy, Bandit, package build, `uv lock --check`, policy validation,
+  hash-locked all-extra audit with zero findings, and diff check. A separate
+  ambient pip-audit call timed out at PyPI and is recorded as operationally
+  blocked rather than green; the hash-locked CI-equivalent audit is the valid
+  dependency result.
+- ADR: `docs/adr/0301-postgres-named-query-readonly-connector.md`.
 
 ## E-333 — Authenticated PostgreSQL PPA evidence API (complete bounded slice)
 

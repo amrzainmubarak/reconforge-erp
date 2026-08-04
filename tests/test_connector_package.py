@@ -7,7 +7,9 @@ from pathlib import Path
 import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from typer.testing import CliRunner
 
+from reconforge.cli import app
 from reconforge.connectors.package import (
     ConnectorPackageError,
     PublisherKeyStatus,
@@ -20,6 +22,8 @@ from reconforge.connectors.package import (
     signature_payload,
 )
 from reconforge.plugins.registry import get_connector
+
+runner = CliRunner()
 
 
 def _write_signed_package(path: Path) -> tuple[TrustedPublisherKey, dict[str, object]]:
@@ -83,6 +87,29 @@ def test_signed_package_admission_rejects_manifest_without_synthetic_conformance
     trust = TrustedPublisherKey("example.publisher", "test-key-1", public_key)
     with pytest.raises(ConnectorPackageError, match="conformance_failed"):
         admit_verified_package(envelope, trust_registry=TrustedPublisherRegistry(version=1, keys=(trust,)))
+
+
+def test_connector_cli_verifies_package_without_loading_code(tmp_path: Path) -> None:
+    path = tmp_path / "connector.json"
+    trust, _ = _write_signed_package(path)
+    result = runner.invoke(
+        app,
+        [
+            "connectors",
+            "verify-package",
+            str(path),
+            "--publisher-id",
+            trust.publisher_id,
+            "--key-id",
+            trust.key_id,
+            "--public-key",
+            base64.b64encode(trust.public_key).decode("ascii"),
+        ],
+    )
+    assert result.exit_code == 0
+    assert '"connector_id"' not in result.output
+    assert '"admission_digest"' in result.output
+    assert '"manifest_digest"' in result.output
 
 
 @pytest.mark.parametrize("mutation", ["manifest", "publisher", "signature", "unknown_field"])

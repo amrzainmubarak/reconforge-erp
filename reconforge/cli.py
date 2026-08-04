@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import shutil
 import sqlite3
@@ -47,6 +49,12 @@ from reconforge.close import (
     write_close_checklist,
 )
 from reconforge.config import load_config, write_default_config
+from reconforge.connectors.package import (
+    ConnectorPackageError,
+    TrustedPublisherKey,
+    TrustedPublisherRegistry,
+    load_verified_package_for_admission,
+)
 from reconforge.control_matrix import export_control_matrix
 from reconforge.dashboard.app import create_app
 from reconforge.db import (
@@ -216,6 +224,7 @@ api_app = typer.Typer(help="Serve the local REST API foundation.")
 scim_app = typer.Typer(help="Manage PostgreSQL-backed SCIM client credentials.")
 service_accounts_app = typer.Typer(help="Manage least-privilege PostgreSQL service accounts.")
 modules_app = typer.Typer(help="Inspect deterministic local module capability metadata.")
+connectors_app = typer.Typer(help="Verify data-only signed connector packages.")
 master_data_app = typer.Typer(help="Manage governed local organization and fiscal master data.")
 finance_core_app = typer.Typer(help="Manage local chart-of-accounts and balanced ledger-control foundations.")
 inventory_app = typer.Typer(help="Manage local inventory masters, movements, balances, and controls.")
@@ -256,6 +265,7 @@ app.add_typer(api_app, name="api")
 app.add_typer(scim_app, name="scim")
 app.add_typer(service_accounts_app, name="service-accounts")
 app.add_typer(modules_app, name="modules")
+app.add_typer(connectors_app, name="connectors")
 app.add_typer(master_data_app, name="master-data")
 app.add_typer(finance_core_app, name="finance-core")
 app.add_typer(inventory_app, name="inventory")
@@ -533,6 +543,29 @@ def modules_validate() -> None:
             console.print(f"[red]{issue.code}[/red] {issue.module_id}: {issue.message}")
         raise typer.Exit(code=1)
     console.print(f"[green]Module registry is valid.[/green] {len(list_modules())} runtime modules, schema v1.")
+
+
+@connectors_app.command("verify-package")
+def connectors_verify_package_command(
+    package_path: Annotated[Path, typer.Argument(help="Signed connector package JSON path.")],
+    publisher_id: Annotated[str, typer.Option("--publisher-id", help="Trusted publisher identifier.")],
+    key_id: Annotated[str, typer.Option("--key-id", help="Trusted Ed25519 key identifier.")],
+    public_key: Annotated[str, typer.Option("--public-key", help="Base64-encoded raw Ed25519 public key.")],
+) -> None:
+    """Authenticate and admit one data-only signed read-only package."""
+
+    try:
+        decoded_key = base64.b64decode(public_key, validate=True)
+        if len(decoded_key) != 32:
+            raise ValueError("Ed25519 public keys must contain exactly 32 bytes")
+        registry = TrustedPublisherRegistry(
+            version=1,
+            keys=(TrustedPublisherKey(publisher_id, key_id, decoded_key),),
+        )
+        admitted = load_verified_package_for_admission(package_path, trusted_registry=registry)
+    except (binascii.Error, ConnectorPackageError, OSError, ValueError) as exc:
+        _safe_cli_error(exc)
+    typer.echo(json.dumps(admitted.to_dict(), ensure_ascii=True, indent=2, sort_keys=True))
 
 
 @policy_app.command("analyze-conflicts")

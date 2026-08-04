@@ -5,6 +5,20 @@
 
 ## Decisions
 
+### D-287: Keep signed-package admission CLI read-only and digest-only
+- **Date**: 2026-08-04
+- **Context**: Operators need a reproducible local check without turning a
+  signed manifest envelope into an installer or executable plugin loader.
+- **Decision**: Add `reconforge connectors verify-package` with explicit public
+  key inputs; invoke trust-plus-conformance admission and emit only the
+  digest-bound result. Invalid trust/signature/conformance exits non-zero.
+- **Rationale**: A narrow CLI makes owner/team testing repeatable while
+  preserving the no-network, no-code-loading boundary.
+- **Boundary**: Local data-only package evidence; no provider or marketplace
+  claim.
+- **Reversibility**: Disable the command without deleting package evidence.
+- **ADR**: `docs/adr/0332-signed-package-admission-cli.md`.
+
 ### D-286: Require connector package conformance after signature verification
 - **Date**: 2026-08-04
 - **Context**: Ed25519 envelope verification authenticated publishers, but did

@@ -6,6 +6,17 @@ Updated: 2026-08-04
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-382 — Signed package admission CLI (complete bounded slice)
+
+- Added `reconforge connectors verify-package`, a read-only operator command
+  that accepts an explicit package path and public trust key, invokes the
+  signed trust-plus-conformance gate, and emits only the digest-bound admission
+  record. Invalid input exits non-zero; no package code is loaded or executed.
+- CLI regression, package/SDK tests, Ruff, and Mypy pass. This is local
+  operator evidence only; marketplace installation, live ERP/bank providers,
+  write-back, and production deployment remain open.
+- ADR: `docs/adr/0332-signed-package-admission-cli.md`.
+
 ## E-381 — Signed connector package trust-plus-conformance admission (complete bounded slice)
 
 - Added `load_verified_package_for_admission` and `admit_verified_package`.
@@ -14,7 +25,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - `VerifiedConnectorPackage` binds the manifest digest, trust-registry
   version/digest, signature digest, and canonical admission digest. The
   boundary remains data-only and never imports or executes package code.
-- Focused package/SDK tests, Ruff, and Mypy pass. Live provider interoperability,
+- Focused package/SDK tests, CLI regression, Ruff, and Mypy pass. Live provider interoperability,
   executable package loading, write-back, and production marketplace evidence
   remain open.
 - ADR: `docs/adr/0331-signed-connector-package-admission.md`.

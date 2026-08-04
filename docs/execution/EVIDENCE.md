@@ -2,9 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-382: Signed package admission CLI
+
+- Added `reconforge connectors verify-package`; it accepts an explicit package
+  path and base64 raw public key, then prints only the canonical admission
+  record. It has no network, import, install, or mutation path.
+- `uv run python -m pytest -q tests/test_connector_package.py` -> 10 passed;
+  Ruff and Mypy on the CLI/package boundary -> passed.
+- Boundary: local owner/team verification of a signed data-only package. This
+  is not executable package installation, live ERP/bank interoperability,
+  write-back authorization, or production marketplace evidence.
+- ADR: `docs/adr/0332-signed-package-admission-cli.md`.
+
 ## E-381: Signed connector package trust-plus-conformance admission
 
-- Added `load_verified_package_for_admission` and `admit_verified_package`.
+- Added `load_verified_package_for_admission`, `admit_verified_package`, and
+  the operator CLI boundary.
   The signed envelope must pass the exact publisher trust registry and the
   existing read-only/synthetic/egress conformance gate before admission.
 - `VerifiedConnectorPackage` records canonical checks plus manifest and trust

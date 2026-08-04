@@ -323,9 +323,9 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   neutral synthetic transport evidence: no live ERP/bank vendor, customer
   vault, accounting posting, compensation delivery, distributed quota, HA/DR,
   or production write-back claim.
-- Exact code head `e963de17` is green on CI `30924311132` (server-boundaries
-  `92042596978`, PostgreSQL/HA-DR `92042596980`, Docker parity `92044277714`),
-  Security `30924311089`, Docker `30924311183`, and CodeQL `30924311129`.
+- Exact code head `392b7907` is green on CI `30926588702` (server-boundaries
+  `92050378455`, PostgreSQL/HA-DR `92050378311`, Docker parity `92052163349`),
+  Security `30926583902`, Docker `30926589234`, and CodeQL `30926584585`.
 - ADR: `docs/adr/0321-governed-server-writeback-dispatch-boundary.md`.
 
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)

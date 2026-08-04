@@ -12591,8 +12591,16 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   refusal, object-lock delete refusal, and cleanup; no credential or object
   bytes were recorded. A sample local run measured 315.638 ms; timing is
   observational and not a performance claim.
-- Hosted runtime evidence is intentionally pending until the new CI head runs.
-  The boundary remains one MinIO process on one CI host: no replication, KMS,
-  cross-site durability, provider interoperability, object-store HA/DR,
-  malware scanning, authorized download, or production SLO is proven. ADR:
-  `docs/adr/0303-live-s3-compatible-object-storage-gate.md`.
+- The post-slice local full suite exited 0 over 2,391 collected tests in
+  329.7s. Ruff, Mypy, Bandit, package build, supply-chain policy, `uv
+  lock --check`, and `git diff --check` also passed; actionlint is not
+  installed locally and is therefore not counted as a local pass.
+- Hosted head `6f821f02` passed CI `30870515701`, including the dedicated
+  `object-storage` job `91871388678`; its uploaded report is
+  `s3-compatible-object-store-live-v1` with digest
+  `57abe6a81342f0b7368314be99fd1410e29d0ce98a0c706e93548fe47941d8d6`.
+  Security `30870515709`, Docker `30870515692`, and CodeQL `30870515706` also
+  passed. The boundary remains one MinIO process on one CI host: no
+  replication, KMS, cross-site durability, provider interoperability,
+  object-store HA/DR, malware scanning, authorized download, or production
+  SLO is proven. ADR: `docs/adr/0303-live-s3-compatible-object-storage-gate.md`.

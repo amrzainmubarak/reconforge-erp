@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/intercompany-elimination-v1.schema.json",
+  "title": "ReconForge Intercompany Elimination Result v1",
+  "description": "Replayable exact reciprocal intercompany elimination proposals and explicit unresolved groups.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "algorithm_version",
+    "request_digest",
+    "result_digest",
+    "reporting_currency",
+    "version",
+    "prepared_by",
+    "prepared_at",
+    "resolutions"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "algorithm_version": {"const": "intercompany-elimination-v1"},
+    "request_digest": {"$ref": "#/$defs/sha256"},
+    "result_digest": {"$ref": "#/$defs/sha256"},
+    "reporting_currency": {"$ref": "#/$defs/currency"},
+    "version": {"$ref": "#/$defs/semver"},
+    "prepared_by": {"$ref": "#/$defs/identifier"},
+    "prepared_at": {"$ref": "#/$defs/timestamp"},
+    "resolutions": {
+      "type": "array",
+      "maxItems": 100000,
+      "items": {"$ref": "#/$defs/resolution"}
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+    },
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "currency": {"type": "string", "pattern": "^(?:[A-Z]{3}|[0-9]{3})$"},
+    "semver": {"type": "string", "pattern": "^(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)$"},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "amount",
+        "currency",
+        "currency_policy_digest",
+        "currency_registry_digest",
+        "currency_registry_version",
+        "minor_units",
+        "rounding_policy",
+        "schema_version"
+      ],
+      "properties": {
+        "amount": {"type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"},
+        "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+        "currency_policy_digest": {"$ref": "#/$defs/sha256"},
+        "currency_registry_digest": {"$ref": "#/$defs/sha256"},
+        "currency_registry_version": {"type": "string", "minLength": 1, "maxLength": 128},
+        "minor_units": {"type": "integer", "minimum": 0, "maximum": 8},
+        "rounding_policy": {"const": "ROUND_HALF_UP"},
+        "schema_version": {"const": 1}
+      }
+    },
+    "proposal_line": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "line_id",
+        "entity_code",
+        "group_account_code",
+        "account_type",
+        "amount",
+        "source_reference",
+        "source_digest"
+      ],
+      "properties": {
+        "line_id": {"type": "string", "pattern": "^IC-ELIM-[a-f0-9]{20}:line:[0-9]{6}$"},
+        "entity_code": {"$ref": "#/$defs/identifier"},
+        "group_account_code": {"$ref": "#/$defs/identifier"},
+        "account_type": {"enum": ["Asset", "Liability", "Equity", "Income", "Expense"]},
+        "amount": {"$ref": "#/$defs/money"},
+        "source_reference": {"type": "string", "minLength": 1, "maxLength": 500},
+        "source_digest": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "proposal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "elimination_id",
+        "elimination_type",
+        "lines",
+        "prepared_at",
+        "prepared_by",
+        "rationale",
+        "version"
+      ],
+      "properties": {
+        "elimination_id": {"type": "string", "pattern": "^IC-ELIM-[a-f0-9]{20}$"},
+        "elimination_type": {"const": "intercompany_transaction"},
+        "lines": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 100000,
+          "items": {"$ref": "#/$defs/proposal_line"}
+        },
+        "prepared_at": {"$ref": "#/$defs/timestamp"},
+        "prepared_by": {"$ref": "#/$defs/identifier"},
+        "rationale": {"type": "string", "minLength": 1, "maxLength": 500},
+        "version": {"$ref": "#/$defs/semver"}
+      }
+    },
+    "resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["group_key", "status", "source_transaction_ids", "source_group_digest", "proposal", "reason"],
+      "properties": {
+        "group_key": {"type": "string", "pattern": "^IC-GROUP-[a-f0-9]{24}$"},
+        "status": {"enum": ["proposed", "unresolved"]},
+        "source_transaction_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100000,
+          "items": {"$ref": "#/$defs/identifier"}
+        },
+        "source_group_digest": {"$ref": "#/$defs/sha256"},
+        "proposal": {"anyOf": [{"$ref": "#/$defs/proposal"}, {"type": "null"}]},
+        "reason": {
+          "enum": [
+            "exact_reciprocal_zero_sum_group",
+            "insufficient_reciprocal_lines",
+            "non_reciprocal_entity_coverage",
+            "source_group_is_not_zero_sum"
+          ]
+        }
+      }
+    }
+  }
+}

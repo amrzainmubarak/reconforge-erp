@@ -1,5 +1,5 @@
 schema_version: 1
-updated_at: "2026-08-03"
+updated_at: "2026-08-05"
 claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
@@ -130,6 +130,7 @@ boundaries:
   - {file: consolidation_ownership.py, service: ConsolidationOwnershipApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_ownership.PostgresConsolidationOwnershipRepository, test: tests/test_postgres_consolidation_ownership.py, risk: single_node_runtime_only_no_restore_or_ha_evidence}
   - {file: consolidation_ppa.py, service: AcquisitionPpaApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_ppa.PostgresConsolidationPpaRepository, test: tests/test_postgres_consolidation_ppa_runtime.py, risk: single_node_synthetic_non_posting_only_no_statutory_or_writeback}
   - {file: consolidation.py, service: ConsolidationApplicationService, status: not_applicable, reason: immutable_scoped_object_store_artifact_repository}
+  - {file: intercompany_elimination.py, service: IntercompanyEliminationApplicationService, status: not_applicable, reason: pure_nonposting_artifact_without_persistence_adapter}
   - {file: grouped_matching.py, service: GroupedMatchingApplicationService, status: not_applicable, reason: pure_strategy}
   - {file: backup_restore.py, service: BackupRestoreApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_backup.PostgresNativeBackupAdapter, test: tests/test_postgres_backup.py, risk: recovery_critical}
   - {file: idempotency.py, service: IdempotencyApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_idempotency.PostgresIdempotencyRepository, test: tests/test_postgres_idempotency.py}
@@ -167,9 +168,9 @@ boundaries:
   - {file: inventory_valuation_reversal.py, service: InventoryValuationReversalApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_valuation_reversal.PostgresInventoryValuationReversalRepository, test: tests/test_postgres_inventory_valuation_reversal.py, risk: financial_critical}
   - {file: inventory_planning.py, service: InventoryPlanningApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_planning.PostgresInventoryPlanningRepository, test: tests/test_postgres_inventory_planning.py, risk: financial_high}
 summary:
-  total: 40
+  total: 41
   live_verified_current: 16
   live_test_available: 21
   absent: 0
   contract_only: 1
-  not_applicable: 2
+  not_applicable: 3

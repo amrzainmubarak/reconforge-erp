@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-288: Require exact reciprocal evidence before intercompany elimination
+- **Date**: 2026-08-05
+- **Context**: Intercompany matching and consolidation worksheets were separate
+  boundaries. Automatically inferring accounts, FX, or statutory treatment
+  would turn incomplete source data into an unsafe financial effect.
+- **Decision**: Add `intercompany-elimination-v1` as a pure, non-posting bridge.
+  Require explicit reporting-currency signed Money, account mapping/type,
+  reciprocal entity/counterparty coverage, and exact zero-sum Decimal balance.
+  Emit a digest-bound negating `ConsolidationElimination` only for proven
+  groups; retain all other groups as unresolved with a reason. Expose a
+  read-only CLI and replay verifier over original typed lines.
+- **Rationale**: The bridge improves close depth while preserving fail-closed
+  financial correctness and the existing worksheet's explicit approval/posting
+  boundary.
+- **Boundary**: Local synthetic evidence only; no statutory/legal-book posting,
+  live FX/provider semantics, persistence parity, write-back, HA/DR, or
+  production readiness.
+- **Reversibility**: Remove the additive domain/application/CLI surfaces and
+  retain existing intercompany matching and worksheet contracts.
+- **ADR**: `docs/adr/0333-intercompany-elimination-proposals-are-exact-and-nonposting.md`.
+
 ### D-287: Keep signed-package admission CLI read-only and digest-only
 - **Date**: 2026-08-04
 - **Context**: Operators need a reproducible local check without turning a

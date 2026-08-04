@@ -2,6 +2,28 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-383: Exact intercompany elimination proposal bridge
+
+- Added `intercompany-elimination-v1` and the read-only
+  `reconforge consolidation intercompany-eliminations` command. Inputs require
+  explicit signed reporting-currency Money, account mapping/type, reciprocal
+  entity/counterparty, period/reference, and source digest.
+- Exact zero-sum reciprocal groups produce digest-bound non-posting
+  `ConsolidationElimination` proposals that negate each source line. One-way,
+  incomplete, or imbalanced groups are retained as unresolved with a reason;
+  implicit FX, account inference, tolerance rounding, and posting are absent.
+- `uv run pytest tests/test_intercompany_elimination.py
+  tests/test_consolidation_cli.py -q` -> 8 passed. The result JSON validates
+  against `docs/schemas/intercompany-elimination-v1.schema.json`; permutation,
+  replay, tamper, currency, and CLI contracts are covered.
+- Ruff on the changed domain/application/CLI/test surfaces and Mypy on the
+  changed source surfaces -> passed.
+- Boundary: local pure artifact and owner/team CLI evidence only. This is not
+  statutory/legal-book posting, tax/deferred tax/impairment, live FX, provider
+  interoperability, persistence parity, write-back, HA/DR, or production
+  readiness.
+- ADR: `docs/adr/0333-intercompany-elimination-proposals-are-exact-and-nonposting.md`.
+
 ## E-382: Signed package admission CLI
 
 - Added `reconforge connectors verify-package`; it accepts an explicit package

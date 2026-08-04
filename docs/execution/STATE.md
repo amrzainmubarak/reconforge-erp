@@ -1,10 +1,32 @@
 # Execution State
 
-Updated: 2026-08-04
+Updated: 2026-08-05
 
 ## Current phase
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
+
+## E-383 — Exact intercompany elimination proposal bridge (complete bounded slice)
+
+- Added the pure `intercompany-elimination-v1` domain/application boundary and
+  the read-only `reconforge consolidation intercompany-eliminations` command.
+  The caller must supply signed reporting-currency `Money`, explicit group
+  account and account type, reciprocal entity/counterparty, period/reference,
+  source reference, and source digest for every line.
+- A partition is proposed only when entity/counterparty coverage is reciprocal
+  and the signed Decimal total is exactly zero. The generated elimination
+  negates each source line while preserving source digest/entity/account
+  lineage. One-way, incomplete, and imbalanced partitions remain explicit
+  `unresolved` records; no tolerance, implicit FX, account inference, or
+  posting is performed.
+- Request, source-group, and result digests, replay against the original typed
+  lines, a closed JSON Schema, permutation stability, tamper refusal, and CLI
+  regressions are covered by `tests/test_intercompany_elimination.py`.
+- This closes only the deterministic intercompany-to-worksheet proposal bridge.
+  Approval, accounting-standard interpretation, tax/FX/impairment, statutory
+  or legal-book posting, live provider semantics, persistence parity, HA/DR,
+  and production readiness remain open under P4-FIN-002/P4-CON-001/P4-REL-001.
+- ADR: `docs/adr/0333-intercompany-elimination-proposals-are-exact-and-nonposting.md`.
 
 ## E-382 — Signed package admission CLI (complete bounded slice)
 

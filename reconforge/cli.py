@@ -25,6 +25,7 @@ from reconforge.ai.summaries import explain_exception_file
 from reconforge.anonymizer.engine import anonymize_directory
 from reconforge.api import create_api_app
 from reconforge.application.consolidation_close import ConsolidationCloseApplicationService
+from reconforge.application.intercompany_elimination import IntercompanyEliminationApplicationService
 from reconforge.audit import AuditLedgerError, list_audit_events, verify_audit_events
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService, RoleRepository
 from reconforge.auth.federation_config import FederationConfigurationError, load_federation_runtime
@@ -93,6 +94,7 @@ from reconforge.domain.consolidation_ppa import (
     AcquisitionPurchasePriceAllocationRequest,
     prepare_acquisition_purchase_price_allocation,
 )
+from reconforge.domain.intercompany_elimination import IntercompanyEliminationInputLine
 from reconforge.enterprise_demo import EnterpriseDemoError, generate_enterprise_demo
 from reconforge.evidence.binder import generate_evidence_binder
 from reconforge.generator.synthetic import generate_synthetic_dataset
@@ -4266,6 +4268,64 @@ def consolidation_acquisition_ppa_command(
             console.print(f"[green]Acquisition PPA written:[/green] {target}")
     except (ConsolidationError, OSError, TypeError, ValueError) as exc:
         _safe_cli_error(PlatformError(f"Acquisition PPA input is invalid: {exc}"))
+
+
+@consolidation_app.command("intercompany-eliminations")
+def consolidation_intercompany_eliminations_command(
+    input_path: Annotated[Path, typer.Option("--input", help="JSON intercompany elimination request.")],
+    output_path: Annotated[Path | None, typer.Option("--output", help="Optional exact JSON output path.")] = None,
+) -> None:
+    """Prepare exact, non-posting intercompany elimination proposals."""
+
+    try:
+        document = read_json_record_document(input_path, envelope_keys=("request",), allow_single_object=True)
+        if len(document.records) != 1:
+            raise PlatformError("Intercompany elimination input must contain exactly one JSON request object.")
+        raw = document.records[0]
+        expected = {"schema_version", "reporting_currency", "version", "prepared_by", "prepared_at", "lines"}
+        if set(raw) != expected or raw["schema_version"] != 1:
+            raise PlatformError("Intercompany elimination input fields are not exactly the declared contract.")
+        raw_lines = raw["lines"]
+        if not isinstance(raw_lines, list):
+            raise PlatformError("Intercompany elimination lines must be a JSON array.")
+        line_fields = {
+            "transaction_id",
+            "period_name",
+            "entity_code",
+            "counterparty_code",
+            "reference",
+            "group_account_code",
+            "account_type",
+            "amount",
+            "source_reference",
+            "source_digest",
+        }
+        lines: list[IntercompanyEliminationInputLine] = []
+        for index, raw_line in enumerate(raw_lines):
+            if not isinstance(raw_line, dict) or set(raw_line) != line_fields:
+                raise PlatformError(f"Intercompany elimination line {index} fields are not exact.")
+            amount = raw_line["amount"]
+            if not isinstance(amount, dict):
+                raise PlatformError(f"Intercompany elimination line {index} amount must be canonical Money.")
+            values = dict(raw_line)
+            values["amount"] = Money.from_canonical_dict(cast(dict[str, object], amount))
+            lines.append(IntercompanyEliminationInputLine(**values))
+        result = IntercompanyEliminationApplicationService.prepare(
+            tuple(lines),
+            reporting_currency=cast(str, raw["reporting_currency"]),
+            prepared_by=cast(str, raw["prepared_by"]),
+            prepared_at=cast(str, raw["prepared_at"]),
+            version=cast(str, raw["version"]),
+        )
+        rendered = json.dumps(result.to_dict(), sort_keys=True, indent=2)
+        if output_path is None:
+            console.print(rendered)
+        else:
+            target = ensure_output_dir(output_path.parent) / output_path.name
+            target.write_text(rendered + "\n", encoding="utf-8", newline="\n")
+            console.print(f"[green]Intercompany eliminations written:[/green] {target}")
+    except (ConsolidationError, OSError, TypeError, ValueError) as exc:
+        _safe_cli_error(PlatformError(f"Intercompany elimination input is invalid: {exc}"))
 
 
 @approvals_app.command("submit")

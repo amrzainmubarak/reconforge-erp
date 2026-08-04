@@ -35,6 +35,10 @@ application_services:
     service: ConsolidationCloseApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.sqlite_consolidation_close.SQLiteConsolidationCloseRepository
+  - file: intercompany_elimination.py
+    service: IntercompanyEliminationApplicationService
+    status: backend_neutral
+    adapter: pure domain artifact; no persistence or posting adapter
   - file: consolidation_ownership.py
     service: ConsolidationOwnershipApplicationService
     status: backend_neutral
@@ -194,4 +198,4 @@ summary:
   direct_sqlite: 0
   partial_repository: 0
   compatibility_adapter: 20
-  backend_neutral_application: 40
+  backend_neutral_application: 41

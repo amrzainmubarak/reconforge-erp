@@ -349,6 +349,24 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   independent HA/DR, and production IAM assurance remain open.
 - ADR: `docs/adr/0322-server-scoped-close-and-ownership-mutations.md`.
 
+## E-373 — Server-scoped close-management mutations (complete bounded slice)
+
+- PostgreSQL server-profile close-management period initialization, task status
+  changes, period lock, and period reopen now re-evaluate `close.manage`
+  against the authenticated tenant/workspace before repository access. Read
+  routes and local SQLite compatibility remain unchanged.
+- The focused server-profile identity/scope contract passes 7/7 and the final
+  full pytest suite exits 0. Ruff, Mypy, and diff-check pass. Exact code head
+  `6d2a926a` is green on CI `30931676837` (server-boundaries `92067646971`,
+  postgres-ha-dr `92067646818`, Docker parity `92069231895`, both Python test
+  jobs and four engine-parity jobs), Security `30931676624`, Docker
+  `30931675916`, and CodeQL `30931676434`.
+- Boundary: this closes only the close-management mutation family. Complete
+  route/job/export/UI policy coverage, federation, distributed invalidation,
+  live provider operation, independent HA/DR, and production IAM assurance
+  remain open.
+- ADR: `docs/adr/0323-server-scoped-close-management-mutations.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

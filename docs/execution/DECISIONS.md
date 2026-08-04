@@ -3317,3 +3317,26 @@
 - **ADR**: `docs/adr/0322-server-scoped-close-and-ownership-mutations.md`.
 - **Rollback**: remove the helper calls, focused assertions, ADR, and
   manifest entry. No data or schema rollback is required.
+
+## D300 - Bind close-management mutations to server execution scope
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Before PostgreSQL server-profile close-management period
+  initialization, task status, lock, or reopen reaches the repository,
+  re-evaluate `close.manage` with the authenticated tenant/workspace. Keep
+  read routes and local SQLite behavior unchanged.
+- **Reason**: Close-control RLS and a role-level permission are necessary but
+  not sufficient proof of mutation authority for the selected hierarchy. The
+  central policy helper supplies the missing route-level binding without a
+  new schema or policy engine.
+- **Result**: Focused identity/scope tests pass 7/7; the final full pytest,
+  Ruff, Mypy, and diff-check pass. Exact code head `6d2a926a` is green on CI
+  `30931676837`, Security `30931676624`, Docker `30931675916`, and CodeQL
+  `30931676434`.
+- **Boundary**: Close-management routes only; federation, complete
+  route/job/export/UI adoption, distributed invalidation, live provider
+  operation, independent HA/DR, and production IAM assurance remain open.
+- **ADR**: `docs/adr/0323-server-scoped-close-management-mutations.md`.
+- **Rollback**: remove the four helper calls, focused assertions, ADR, and
+  manifest entry. No data or schema rollback is required.

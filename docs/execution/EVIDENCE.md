@@ -220,6 +220,28 @@ This file records commands and observed results. It does not convert a dirty wor
   distributed invalidation, live provider operation, independent HA/DR, or
   production IAM assurance.
 - ADR: `docs/adr/0322-server-scoped-close-and-ownership-mutations.md`.
+
+## E-373: Server-scoped close-management mutations
+
+- The PostgreSQL close-management route now re-evaluates `close.manage` before
+  period initialization, task status mutation, lock, and reopen. The existing
+  read routes and local SQLite path are unchanged.
+- `pytest -q tests/test_api_server_identity.py::test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permissions tests/test_api_execution_scope.py`
+  -> 7 passed. The final `python -m pytest -q --durations=10` exits 0;
+  Ruff, Mypy, and `git diff --check` pass.
+- Exact code head `6d2a926a` is green on CI `30931676837`
+  ([server-boundaries](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30931676837/job/92067646971),
+  [postgres-ha-dr](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30931676837/job/92067646818),
+  [Docker parity](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30931676837/job/92069231895),
+  Python 3.11/3.12 and four engine-parity jobs),
+  [Security](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30931676624),
+  [Docker](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30931675916),
+  and [CodeQL](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30931676434).
+- Boundary: close-management mutation adoption only. This is not complete
+  enterprise federation, universal route/job/export/UI policy coverage,
+  distributed invalidation, live provider operation, independent HA/DR, or
+  production IAM assurance.
+- ADR: `docs/adr/0323-server-scoped-close-management-mutations.md`.
 - ADR: `docs/adr/0321-governed-server-writeback-dispatch-boundary.md`.
 
 ## E-293: Immutable local delegation administration

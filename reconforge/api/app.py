@@ -375,6 +375,7 @@ def create_api_app(
         consolidation_ownership.router,
         evidence.router,
         consolidation_ppa.router,
+        connectors.router,
         reconciliation.router,
         exceptions.router,
         metrics.router,

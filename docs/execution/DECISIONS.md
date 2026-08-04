@@ -3262,3 +3262,28 @@
 - **ADR**: `docs/adr/0320-consolidation-close-api-full-lifecycle-boundary.md`.
 - **Rollback**: remove the routes, request models, tests, inventory update,
   ADR, and manifest entry; no schema rollback is required.
+
+## D298 - Add an opt-in governed server write-back hand-off
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Add a dedicated dispatch permission/migration and a
+  server-profile-only route that persists `approved -> dispatched` before an
+  explicitly registered provider-neutral network executor. Persist the
+  verified acknowledgement only after response-digest and idempotency-key
+  validation; local mode remains network-disabled.
+- **Reason**: The existing transport was safely implemented but unreachable
+  from the API, while the connector router was outside the startup
+  authorization inventory. The hand-off closes both gaps without claiming a
+  live vendor or enabling default egress.
+- **Boundary**: Synthetic injected transport and one API process only. Live
+  ERP/bank interoperability, customer vault, accounting posting,
+  compensation delivery, distributed quotas, HA/DR, and production write-back
+  remain open.
+- **Result**: Connector/API and authorization-inventory tests pass 7/7; the
+  inventory is 231 routes with digest
+  `5ab85f381b3ef49f060b27f539b342af01a91d739788da5601db383a5b15ebdd`; Ruff
+  and Mypy pass.
+- **ADR**: `docs/adr/0321-governed-server-writeback-dispatch-boundary.md`.
+- **Rollback**: remove the route, permission migration, tests, inventory
+  inclusion, ADR, and manifest entry.

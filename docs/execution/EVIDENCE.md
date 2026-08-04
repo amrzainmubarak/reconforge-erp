@@ -172,6 +172,26 @@ This file records commands and observed results. It does not convert a dirty wor
   `30919182689`, Docker `30919183050`, and CodeQL `30919183059`.
 - ADR: `docs/adr/0320-consolidation-close-api-full-lifecycle-boundary.md`.
 
+## E-371: Opt-in governed server write-back dispatch
+
+- Added migration 31 for the human-governed `connectors.writeback.dispatch`
+  permission and included the connector router in the startup authorization
+  inventory. The inventory is now 231 routes with digest
+  `5ab85f381b3ef49f060b27f539b342af01a91d739788da5601db383a5b15ebdd`.
+- The new server-profile-only dispatch route persists `approved -> dispatched`
+  before an explicitly registered `WritebackNetworkExecutor` call. Registration
+  feature/operation gates, payload SHA-256, canonical response digest,
+  idempotency binding, bounded retries, and append-only acknowledgement
+  persistence are retained.
+- `pytest -q tests/test_api_connectors.py tests/test_api_authorization_inventory.py`
+  -> `7 passed`; Ruff and Mypy pass for the changed route/policy/migration
+  surfaces. The test proves local default disablement and synthetic provider
+  acknowledgement/replay with one transport call.
+- Boundary: injected synthetic transport only. No live ERP/bank vendor,
+  customer secret/vault, accounting posting, compensation delivery, distributed
+  quota, HA/DR, or production write-back claim is promoted.
+- ADR: `docs/adr/0321-governed-server-writeback-dispatch-boundary.md`.
+
 ## E-293: Immutable local delegation administration
 
 - Added typed `DelegationGrant`, migration 27, and `DelegationRepository`.

@@ -303,6 +303,25 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   assurance.
 - ADR: `docs/adr/0320-consolidation-close-api-full-lifecycle-boundary.md`.
 
+## E-371 — Opt-in governed server write-back dispatch (complete bounded slice)
+
+- Added migration 31 and the human-governed
+  `connectors.writeback.dispatch` permission. The dispatch route is now part
+  of the startup authorization inventory, which is 231 routes with digest
+  `5ab85f381b3ef49f060b27f539b342af01a91d739788da5601db383a5b15ebdd`.
+- `POST /api/v1/connectors/writeback/intents/{intent_id}/dispatch` is
+  server-profile-only. It persists `approved -> dispatched` before invoking an
+  explicitly registered `WritebackNetworkExecutor`, verifies the registration,
+  payload digest, canonical provider response, and original idempotency key,
+  then persists the acknowledgement. Missing registration or transport errors
+  fail closed; a transport failure leaves the intent retryable as dispatched.
+- Local API tests prove default network disablement, synthetic provider
+  acknowledgement, replay without a duplicate provider call, and route-scope
+  authorization. This remains provider-neutral synthetic transport evidence:
+  no live ERP/bank vendor, customer vault, accounting posting, compensation
+  delivery, distributed quota, HA/DR, or production write-back claim.
+- ADR: `docs/adr/0321-governed-server-writeback-dispatch-boundary.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

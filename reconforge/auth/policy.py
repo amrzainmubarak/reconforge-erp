@@ -38,6 +38,7 @@ HUMAN_ONLY_PERMISSIONS = frozenset(
         "connectors.writeback.propose",
         "connectors.writeback.approve",
         "connectors.writeback.reconcile",
+        "connectors.writeback.dispatch",
         "users.manage",
     }
 )
@@ -56,6 +57,7 @@ PRIVILEGED_STEP_UP_PERMISSIONS = frozenset(
         "security.emergency.review",
         "security.center.read",
         "security.policy.manage",
+        "connectors.writeback.dispatch",
         "users.manage",
     }
 )

@@ -32,11 +32,15 @@ def _run(argv: Sequence[str], *, capture: bool = False, allow_failure: bool = Fa
     completed = subprocess.run(  # nosec B603
         tuple(argv), cwd=ROOT, shell=False, check=False, text=True,
         stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
-        stderr=subprocess.PIPE if capture else subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
         timeout=300,
     )
     if completed.returncode != 0 and not allow_failure:
-        raise RuntimeError("HA/DR drill command failed")
+        diagnostic = (completed.stderr or "").replace(PASSWORD, "[redacted]").strip()
+        if len(diagnostic) > 4000:
+            diagnostic = diagnostic[-4000:]
+        suffix = f": {diagnostic}" if diagnostic else ""
+        raise RuntimeError(f"HA/DR drill command failed{suffix}")
     return completed.stdout.strip() if capture else ""
 
 

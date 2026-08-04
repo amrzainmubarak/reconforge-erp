@@ -22,6 +22,12 @@ This file records commands and observed results. It does not convert a dirty wor
   statutory/legal-book posting, tax/deferred tax/impairment, live FX, provider
   interoperability, persistence parity, write-back, HA/DR, or production
   readiness.
+- Hosted GitHub evidence for commit `39ee3560425eb84d0391cc8b16e77abaf2af4ac5`:
+  CI `30957905278` passed with Python 3.11/3.12, server-boundaries
+  `92155112535`, PostgreSQL/HA-DR `92155112665`, object-storage
+  `92155112581`, engine-parity cells, and Docker parity `92156185805`;
+  Security `30957904702`, Docker `30957904676`, and CodeQL `30957905390`
+  also passed. This is hosted synthetic CI evidence, not production assurance.
 - ADR: `docs/adr/0333-intercompany-elimination-proposals-are-exact-and-nonposting.md`.
 
 ## E-382: Signed package admission CLI

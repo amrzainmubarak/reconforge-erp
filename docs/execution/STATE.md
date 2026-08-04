@@ -26,6 +26,9 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   Approval, accounting-standard interpretation, tax/FX/impairment, statutory
   or legal-book posting, live provider semantics, persistence parity, HA/DR,
   and production readiness remain open under P4-FIN-002/P4-CON-001/P4-REL-001.
+- Hosted CI for commit `39ee3560` is green: CI `30957905278` (server-boundaries
+  `92155112535`, PostgreSQL/HA-DR `92155112665`, Docker parity `92156185805`),
+  Security `30957904702`, Docker `30957904676`, and CodeQL `30957905390`.
 - ADR: `docs/adr/0333-intercompany-elimination-proposals-are-exact-and-nonposting.md`.
 
 ## E-382 — Signed package admission CLI (complete bounded slice)

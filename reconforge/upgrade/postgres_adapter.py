@@ -17,6 +17,7 @@ from reconforge.infrastructure.postgres_backup import PostgresBackupError, Postg
 from reconforge.upgrade.orchestrator import ApplyReceipt, PreflightEvidence, StepKind, UpgradeError, UpgradeStep
 
 _REVISION_RE = re.compile(r"^[0-9]{4}_[a-z0-9_]{1,100}$")
+_DIAGNOSTIC_LIMIT = 4000
 
 
 class PostgresMigrationRunner(Protocol):
@@ -83,7 +84,16 @@ class PsycopgAlembicMigrationRunner:
         except (OSError, subprocess.SubprocessError) as exc:
             raise UpgradeError("postgres_upgrade_migration_process_failed") from exc
         if completed.returncode != 0:
-            raise UpgradeError("postgres_upgrade_migration_failed")
+            output.seek(0)
+            raw_diagnostic = output.read()
+            diagnostic = raw_diagnostic.decode("utf-8", errors="replace") if isinstance(raw_diagnostic, bytes) else str(raw_diagnostic)
+            for dsn in self._dsns.values():
+                diagnostic = diagnostic.replace(dsn, "[redacted-dsn]")
+            diagnostic = diagnostic.strip()
+            if len(diagnostic) > _DIAGNOSTIC_LIMIT:
+                diagnostic = diagnostic[-_DIAGNOSTIC_LIMIT:]
+            suffix = f": {diagnostic}" if diagnostic else ""
+            raise UpgradeError(f"postgres_upgrade_migration_failed{suffix}")
 
     @staticmethod
     def _ordinary_file(path: Path, label: str) -> str:

@@ -12753,3 +12753,18 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   managed-key custody, and production SLO remain unverified. This is repeated
   hosted single-host runtime evidence, not independent HA/DR deployment proof.
 - ADR: `docs/adr/0308-postgres-ha-dr-runtime-gate.md`.
+
+## E-359: Hosted PostgreSQL durable-job 10K-effect gate
+
+- The `server-boundaries` workflow now explicitly invokes
+  `test_live_postgres_durable_job_10k_multi_worker_scale_profile` against the
+  digest-pinned PostgreSQL 16 service and non-privileged role.
+- The declared profile is 16 independent connections, 2,500 jobs, four
+  partitions per job, four tenant lanes, and 10,000 committed effects. The
+  verifier requires zero duplicate effects, zero queued/running residue, and
+  exactly 625 completed jobs per lane.
+- Hosted verification is pending this change. Boundary: synthetic single-node
+  correctness/concurrency only; soak, throughput capacity, backpressure,
+  queue HA, host loss, cross-host fairness, RPO/RTO, and production sizing are
+  unverified.
+- ADR: `docs/adr/0309-postgres-durable-job-10k-hosted-gate.md`.

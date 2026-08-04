@@ -2979,3 +2979,19 @@
 - **ADR**: `docs/adr/0308-postgres-ha-dr-runtime-gate.md`.
 - **Rollback**: revert the hosted job and documentation evidence; retain the
   local drill only if the runtime gate is intentionally withdrawn.
+
+## D286 - Promote the PostgreSQL durable-job 10K tier to a hosted gate
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Add the existing 10K-effect PostgreSQL profile to the hosted
+  `server-boundaries` command rather than creating a parallel worker path.
+- **Reason**: Local 10K evidence covered the real repository but did not run on
+  the hosted PostgreSQL service. The explicit test invocation makes the
+  declared concurrency/effect invariants reviewable without claiming capacity.
+- **Boundary**: Single-node synthetic correctness/concurrency only. Soak,
+  backpressure coupling, queue HA, host loss, cross-host fairness, RPO/RTO,
+  and production sizing remain open.
+- **ADR**: `docs/adr/0309-postgres-durable-job-10k-hosted-gate.md`.
+- **Rollback**: remove the explicit test invocation, contract assertion, ADR,
+  and manifest entry; retain the local and 256-effect hosted profiles.

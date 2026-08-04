@@ -65,6 +65,18 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   jobs also passed.
 - ADR: `docs/adr/0308-postgres-ha-dr-runtime-gate.md`.
 
+## E-359 — Hosted PostgreSQL durable-job 10K-effect gate (in progress)
+
+- The `server-boundaries` CI command now explicitly runs the existing live
+  `postgres-durable-job-load/10k-effects-v1` profile with 16 independent
+  worker connections, 2,500 jobs, four partitions per job, four forced-RLS
+  tenant lanes, and 10,000 declared effects.
+- The gate requires every job/effect to complete exactly once, zero duplicate
+  effects, zero queued/running residue, and equal per-lane completion counts.
+  Hosted verification is pending this change; no capacity, soak, backpressure,
+  queue-HA, or production-sizing claim is made.
+- ADR: `docs/adr/0309-postgres-durable-job-10k-hosted-gate.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import jsonschema
 import pytest
+import yaml
 
 from reconforge.benchmark.postgres_durable_job_scale import (
     PostgresDurableJobScaleProfile,
@@ -61,6 +62,17 @@ def test_published_10k_artifact_is_schema_valid() -> None:
         (root / "docs/execution/benchmarks/postgres-durable-job-10k-effects-v1.json").read_text(encoding="utf-8")
     )
     jsonschema.Draft202012Validator(schema).validate(artifact)
+
+
+def test_server_boundaries_runs_the_live_10k_postgres_scale_gate() -> None:
+    root = Path(__file__).resolve().parents[1]
+    workflow = yaml.safe_load((root / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+    runs = [step.get("run", "") for step in workflow["jobs"]["server-boundaries"]["steps"]]
+    assert any(
+        "test_live_postgres_durable_job_10k_multi_worker_scale_profile" in run
+        and "tests/test_postgres_durable_jobs.py" in run
+        for run in runs
+    )
 
 
 @pytest.mark.parametrize(

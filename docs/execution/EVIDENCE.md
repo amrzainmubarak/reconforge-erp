@@ -281,6 +281,14 @@ This file records commands and observed results. It does not convert a dirty wor
   master-data/Finance Core parity, federation, universal route/job/export/UI
   policy coverage, distributed invalidation, live provider operation,
   independent HA/DR, or production IAM assurance.
+- Exact head `d8bc4dd8` passes hosted CI `30937323538` with
+  [server-boundaries](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30937323538/job/92086636635),
+  [postgres-ha-dr](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30937323538/job/92086636683),
+  [Docker parity](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30937323538/job/92088189807),
+  both Python suites, four engine-parity jobs, and object-storage; [Security](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30937323640),
+  [Docker](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30937323622),
+  and [CodeQL](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30937323585)
+  also pass.
 - ADR: `docs/adr/0325-server-scoped-master-data-mutations.md`.
 
 ## E-376: Server-scoped reconciliation run mutations
@@ -299,6 +307,14 @@ This file records commands and observed results. It does not convert a dirty wor
   claim of distributed worker authorization, universal route/job/export/UI
   adoption, federation, live providers, independent HA/DR, or production IAM
   assurance.
+- Exact head `d8bc4dd8` passes hosted CI `30937323538` with
+  [server-boundaries](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30937323538/job/92086636635),
+  [postgres-ha-dr](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30937323538/job/92086636683),
+  [Docker parity](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30937323538/job/92088189807),
+  both Python suites, four engine-parity jobs, and object-storage; [Security](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30937323640),
+  [Docker](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30937323622),
+  and [CodeQL](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30937323585)
+  also pass.
 - ADR: `docs/adr/0326-server-scoped-reconciliation-run-mutations.md`.
 - ADR: `docs/adr/0321-governed-server-writeback-dispatch-boundary.md`.
 

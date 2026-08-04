@@ -401,6 +401,10 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   parity, federation, complete route/job/export/UI adoption, distributed
   invalidation, live providers, independent HA/DR, and production IAM
   assurance remain open.
+- Exact head `d8bc4dd8` passes hosted CI `30937323538` (server-boundaries
+  `92086636635`, postgres-ha-dr `92086636683`, Docker parity `92088189807`,
+  both Python suites, four engine-parity jobs, and object-storage), Security
+  `30937323640`, Docker `30937323622`, and CodeQL `30937323585`.
 - ADR: `docs/adr/0325-server-scoped-master-data-mutations.md`.
 
 ## E-376 — Server-scoped reconciliation run mutations (complete bounded slice)
@@ -413,7 +417,11 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Focused reconciliation route and execution-scope tests pass 9/9, including
   six route invocations and a direct `match.run` any-permission proof. The
   full pytest suite passes with declared skips only; Ruff, Mypy, build, and
-  diff-check are green locally. Hosted CI is the remaining promotion gate.
+  diff-check are green locally. Exact head `d8bc4dd8` passes hosted CI
+  `30937323538` (server-boundaries `92086636635`, postgres-ha-dr `92086636683`,
+  Docker parity `92088189807`, both Python suites, four engine-parity jobs,
+  and object-storage), Security `30937323640`, Docker `30937323622`, and
+  CodeQL `30937323585`.
 - Boundary: reconciliation route-family policy binding only. Distributed
   worker authorization, universal route/job/export/UI adoption, federation,
   live providers, independent HA/DR, and production IAM assurance remain

@@ -3138,7 +3138,9 @@
   inventory is 219 routes with digest
   `46a0eac80865dbf7219a2b8230c8dc576d41cd503bdae224c9e01e442828e8f8`; Ruff
   and Mypy pass. The configured local PostgreSQL 16 ownership repository gate
-  passes 5/5.
+  passes 5/5. Hosted no-regression CI `30907636302`, Security `30907636780`,
+  Docker `30907634915`, and CodeQL `30907635562` are green for commit
+  `b8e30bab`.
 - **ADR**: `docs/adr/0315-consolidation-ownership-api-is-scope-bound.md`.
 - **Rollback**: remove the route/server adapter, inventory entry, tests,
   manifest entry, and ADR; persisted ownership rows and migrations remain.

@@ -194,6 +194,32 @@ This file records commands and observed results. It does not convert a dirty wor
 - Exact code head `392b7907` is green on CI `30926588702` (server-boundaries
   `92050378455`, PostgreSQL/HA-DR `92050378311`, Docker parity `92052163349`),
   Security `30926583902`, Docker `30926589234`, and CodeQL `30926584585`.
+
+## E-372: Server-scoped close and ownership mutations
+
+- `consolidation_close.py` now calls `enforce_server_scoped_permission` before
+  period creation, run preparation/approval/posting, reversal transitions,
+  period lock/reopen, and certification preparation/review. The ownership save
+  route applies the same check before PostgreSQL persistence. GET routes and the
+  local SQLite path are unchanged.
+- `pytest -q tests/test_api_consolidation_close.py
+  tests/test_api_consolidation_ownership.py tests/test_api_execution_scope.py`
+  -> 15 passed. The final `python -m pytest -q --durations=10` exits 0;
+  `python -m ruff check .`, `python -m mypy reconforge`,
+  `python -m build --no-isolation`, and `git diff --check` pass.
+- Exact code head `8521b15d` is green on CI `30929398907`
+  ([server-boundaries](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30929398907/job/92059947838),
+  [postgres-ha-dr](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30929398907/job/92059947810),
+  [Docker parity](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30929398907/job/92061607466),
+  Python 3.11/3.12 and four engine-parity jobs),
+  [Security](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30929399364),
+  [Docker](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30929398698),
+  and [CodeQL](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/30929399241).
+- Boundary: close/ownership mutation adoption only. This is not complete
+  enterprise federation, universal route/job/export/UI policy coverage,
+  distributed invalidation, live provider operation, independent HA/DR, or
+  production IAM assurance.
+- ADR: `docs/adr/0322-server-scoped-close-and-ownership-mutations.md`.
 - ADR: `docs/adr/0321-governed-server-writeback-dispatch-boundary.md`.
 
 ## E-293: Immutable local delegation administration

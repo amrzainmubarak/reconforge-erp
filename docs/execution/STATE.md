@@ -328,6 +328,27 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   Security `30926583902`, Docker `30926589234`, and CodeQL `30926584585`.
 - ADR: `docs/adr/0321-governed-server-writeback-dispatch-boundary.md`.
 
+## E-372 — Server-scoped close and ownership mutations (complete bounded slice)
+
+- Every PostgreSQL server-profile mutation in the consolidation-close lifecycle
+  now re-evaluates its required `finance_core.manage` or
+  `finance_core.validate` permission against the authenticated tenant and
+  workspace immediately before repository access. The immutable ownership save
+  route uses the same central hierarchy check; local SQLite compatibility is
+  unchanged and read routes remain available through their existing read
+  permission.
+- Focused close/ownership/execution-scope tests pass 15/15, the final full
+  pytest suite exits 0, Ruff, Mypy, build, and diff-check pass. Exact code head
+  `8521b15d` is green on CI `30929398907` (server-boundaries `92059947838`,
+  postgres-ha-dr `92059947810`, Docker parity `92061607466`, both Python test
+  jobs and four engine-parity jobs), Security `30929399364`, Docker
+  `30929398698`, and CodeQL `30929399241`.
+- Boundary: this closes the server-scoped mutation adoption for the close and
+  ownership route families only. Federation, complete route/job/export/UI
+  adoption, distributed policy invalidation, live provider operation,
+  independent HA/DR, and production IAM assurance remain open.
+- ADR: `docs/adr/0322-server-scoped-close-and-ownership-mutations.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

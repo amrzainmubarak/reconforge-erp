@@ -3291,3 +3291,29 @@
 - **ADR**: `docs/adr/0321-governed-server-writeback-dispatch-boundary.md`.
 - **Rollback**: remove the route, permission migration, tests, inventory
   inclusion, ADR, and manifest entry.
+
+## D299 - Re-evaluate central hierarchy policy before close mutations
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Before a PostgreSQL server-profile consolidation-close or
+  consolidation-ownership mutation reaches its repository, re-evaluate the
+  required `finance_core.manage` or `finance_core.validate` permission with
+  the authenticated tenant and workspace. Keep the local SQLite compatibility
+  path and read permission contracts unchanged.
+- **Reason**: A role-level permission and a matching workspace header are not
+  sufficient evidence that the selected business mutation is authorized. The
+  central policy engine already evaluates hierarchy grants and step-up state;
+  binding it immediately before persistence closes this route-level widening
+  gap without changing schemas or introducing a second policy engine.
+- **Result**: Focused close/ownership/execution-scope tests pass 15/15, the
+  final full pytest suite, Ruff, Mypy, build, and diff-check pass. Exact code
+  head `8521b15d` is green on CI `30929398907`, Security `30929399364`, Docker
+  `30929398698`, and CodeQL `30929399241`.
+- **Boundary**: Close and ownership mutation families only; federation,
+  complete route/job/export/UI adoption, distributed invalidation, live
+  provider operation, independent HA/DR, and production IAM assurance remain
+  open.
+- **ADR**: `docs/adr/0322-server-scoped-close-and-ownership-mutations.md`.
+- **Rollback**: remove the helper calls, focused assertions, ADR, and
+  manifest entry. No data or schema rollback is required.

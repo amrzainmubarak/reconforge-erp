@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-384: PostgreSQL intercompany elimination evidence
+
+- Added migration `0063_pg_ic_elimination`, a forced-RLS immutable table, a
+  replay-verifying PostgreSQL repository, and authenticated server endpoints
+  for computing and reading non-posting intercompany artifacts.
+- Focused command: `uv run pytest -q
+  tests/test_postgres_intercompany_elimination.py
+  tests/test_api_consolidation_intercompany.py` -> 4 passed.
+- `uv run python -m ruff check` and targeted `mypy` pass for the changed
+  modules. The live PostgreSQL adapter gate is intentionally pending hosted CI.
+- Boundary: exact synthetic source evidence only; no statutory consolidation,
+  journal posting, ERP/bank provider, write-back, throughput, HA/DR, or
+  production-readiness claim.
+
 ## E-383: Exact intercompany elimination proposal bridge
 
 - Added `intercompany-elimination-v1` and the read-only

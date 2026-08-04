@@ -5,6 +5,20 @@
 
 ## Decisions
 
+### D-289: Persist intercompany elimination proposals as replay-verified evidence
+- **Date**: 2026-08-05
+- **Context**: The pure exact intercompany bridge had no server persistence, so
+  a close operator could not retain a tenant/workspace-scoped replay artifact.
+- **Decision**: Add migration `0063_pg_ic_elimination` and a PostgreSQL
+  server-profile API that computes the proposal from typed source lines, stores
+  immutable request/result JSONB and digests under forced RLS, and binds the
+  authenticated preparer/workspace. Reads must replay before returning data.
+  Keep the artifact explicitly non-posting.
+- **Rationale**: This deepens close evidence without inventing statutory posting,
+  FX, tolerances, provider semantics, or autonomous financial authority.
+- **Reversibility**: Revert the API/adapter and use the data-loss-refusing
+  migration downgrade only after an explicit retention decision.
+
 ### D-288: Require exact reciprocal evidence before intercompany elimination
 - **Date**: 2026-08-05
 - **Context**: Intercompany matching and consolidation worksheets were separate

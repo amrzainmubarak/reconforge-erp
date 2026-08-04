@@ -129,6 +129,48 @@ class IntercompanyEliminationInputLine:
         }
 
 
+def intercompany_elimination_input_line_from_dict(
+    payload: Mapping[str, object],
+) -> IntercompanyEliminationInputLine:
+    """Decode one exact persisted source line without weakening domain checks."""
+
+    if not isinstance(payload, Mapping):
+        raise ConsolidationError("Intercompany source line must be an object.")
+    expected_keys = {
+        "account_type",
+        "amount",
+        "counterparty_code",
+        "entity_code",
+        "group_account_code",
+        "period_name",
+        "reference",
+        "source_digest",
+        "source_reference",
+        "transaction_id",
+    }
+    if set(payload) != expected_keys:
+        raise ConsolidationError("Intercompany source line fields are not exact.")
+    amount = payload["amount"]
+    if not isinstance(amount, Mapping):
+        raise ConsolidationError("Intercompany source amount is invalid.")
+    try:
+        money = Money.from_canonical_dict(dict(amount))
+        return IntercompanyEliminationInputLine(
+            transaction_id=payload["transaction_id"],  # type: ignore[arg-type]
+            period_name=payload["period_name"],  # type: ignore[arg-type]
+            entity_code=payload["entity_code"],  # type: ignore[arg-type]
+            counterparty_code=payload["counterparty_code"],  # type: ignore[arg-type]
+            reference=payload["reference"],  # type: ignore[arg-type]
+            group_account_code=payload["group_account_code"],  # type: ignore[arg-type]
+            account_type=payload["account_type"],  # type: ignore[arg-type]
+            amount=money,
+            source_reference=payload["source_reference"],  # type: ignore[arg-type]
+            source_digest=payload["source_digest"],  # type: ignore[arg-type]
+        )
+    except (ConsolidationError, InvalidAmountError, TypeError, ValueError, KeyError) as exc:
+        raise ConsolidationError("Intercompany source line failed deterministic decoding.") from exc
+
+
 @dataclass(frozen=True)
 class IntercompanyEliminationResolution:
     """One deterministic source group, proposed or explicitly unresolved."""

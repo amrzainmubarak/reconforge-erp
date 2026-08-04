@@ -16,6 +16,13 @@ tasks:
     status: completed
     depends_on: []
     exit_evidence: CloseManagementApplicationService is recorded as live_verified_current in POSTGRES_PARITY_INVENTORY.yaml with CI runtime evidence E-289.
+  - id: E-384
+    priority: P1
+    area: postgres-parity
+    title: PostgreSQL intercompany elimination evidence adapter and API
+    status: in_progress
+    depends_on: [P4-FIN-002]
+    exit_evidence: Hosted non-superuser PostgreSQL test proves migration 0063, forced-RLS tenant/workspace isolation, immutable replay-verified artifact persistence, idempotent replay, and authenticated API scope; no posting/provider/HA/DR claim.
   - id: E-293
     priority: P0
     area: enterprise-policy

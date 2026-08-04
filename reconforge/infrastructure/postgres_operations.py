@@ -73,6 +73,7 @@ POSTGRES_MIGRATION_REVISIONS = (
     "0060_pg_consolidation_ppa",
     "0061_pg_writeback_intents",
     "0062_pg_outbox_consumer",
+    "0063_pg_ic_elimination",
 )
 
 

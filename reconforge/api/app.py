@@ -44,6 +44,7 @@ from reconforge.api.routes import (
     close,
     connectors,
     consolidation_close,
+    consolidation_intercompany,
     consolidation_ownership,
     consolidation_ppa,
     emergency_access,
@@ -180,6 +181,7 @@ def create_api_app(
     app.state.postgres_consolidation_close_factory = app.state.postgres_identity_factory
     app.state.postgres_consolidation_ownership_factory = app.state.postgres_identity_factory
     app.state.postgres_ppa_factory = app.state.postgres_identity_factory
+    app.state.postgres_consolidation_intercompany_factory = app.state.postgres_identity_factory
     app.state.postgres_evidence_factory = app.state.postgres_identity_factory
     app.state.postgres_reconciliation_factory = app.state.postgres_identity_factory
     app.state.postgres_writeback_factory = app.state.postgres_identity_factory
@@ -341,6 +343,7 @@ def create_api_app(
     app.include_router(consolidation_close.router, prefix="/api/v1")
     app.include_router(consolidation_ownership.router, prefix="/api/v1")
     app.include_router(consolidation_ppa.router, prefix="/api/v1")
+    app.include_router(consolidation_intercompany.router, prefix="/api/v1")
     app.include_router(connectors.router, prefix="/api/v1")
     app.include_router(evidence.router, prefix="/api/v1")
     app.include_router(reconciliation.router, prefix="/api/v1")
@@ -375,6 +378,7 @@ def create_api_app(
         consolidation_ownership.router,
         evidence.router,
         consolidation_ppa.router,
+        consolidation_intercompany.router,
         connectors.router,
         reconciliation.router,
         exceptions.router,

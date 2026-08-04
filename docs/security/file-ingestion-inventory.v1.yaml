@@ -664,6 +664,23 @@ surfaces:
       - The JSONB value is an internal canonical digest-bound write-back intent, not provider payload, credentials, or executable content; typed validation and digest comparison fail closed before a lifecycle state is returned.
       - The live runtime gate is synthetic and single-node; provider interoperability, network dispatch, compensation delivery, throughput, HA/DR, and production write-back remain open.
     next_action: Keep provider-specific dispatch behind approved credentials, signed registration, idempotency, and failure-injection evidence; do not treat intent persistence as external write-back.
+  - id: FI-033
+    name: PostgreSQL intercompany elimination evidence records
+    module_ids: [finance.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/postgres_intercompany_elimination.py::PostgresIntercompanyEliminationRepository._decode_row
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_postgres_intercompany_elimination.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The JSONB values are internal canonical source/result evidence, not uploads or executable content; strict source decoding and result replay reject malformed or tampered rows.
+      - The hosted PostgreSQL runtime gate is pending; statutory consolidation, posting, provider integration, write-back, HA/DR, and production evidence remain open.
+    next_action: Add the unskipped PostgreSQL migration/RLS/replay runtime gate before promoting the parity inventory beyond contract_only.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader
@@ -736,6 +753,11 @@ direct_json_parser_allowlist:
     call_count: 1
     surface_id: FI-032
     rationale: Parses only the canonical PostgreSQL JSONB write-back intent after tenant/workspace selection; Pydantic validation and digest comparison fail closed before a persisted lifecycle state is returned.
+  - path: reconforge/infrastructure/postgres_intercompany_elimination.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-033
+    rationale: Parses only canonical PostgreSQL JSONB intercompany source/result evidence before strict typed line decoding, replay verification, digest matching, and tenant/workspace-scoped return.
   - path: reconforge/upgrade/application_adapter.py
     parser: json.loads
     call_count: 1

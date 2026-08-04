@@ -47,5 +47,21 @@ reconforge consolidation intercompany-eliminations --input request.json
 ```
 
 The command performs no database write, provider call, network egress, ledger
-posting, or write-back. Approval, statutory/legal-book treatment, live ERP/bank
-semantics, and PostgreSQL persistence remain later bounded work.
+posting, or write-back.
+
+## PostgreSQL server profile
+
+The authenticated server API computes the same result and persists it as an
+immutable, tenant/workspace-scoped evidence artifact:
+
+```text
+POST /api/v1/consolidation-intercompany-eliminations
+GET  /api/v1/consolidation-intercompany-eliminations/{artifact_id}
+```
+
+The request contains source lines, reporting currency, version, preparation
+timestamp, and an explicit workspace. The authenticated user is the preparer;
+the server never trusts a client-supplied result. Reads replay the stored result
+against the stored source lines and reject tampering. The artifact advertises
+`posting: not_available`: it is a proposal/evidence boundary, not a statutory
+consolidation or journal-posting workflow.

@@ -19,10 +19,17 @@ This file records commands and observed results. It does not convert a dirty wor
   on the changed route/tests -> passed; Mypy on the changed route -> passed.
 - Authorization inventory is now 233 routes with digest
   `5b59764852e9aee179afe726beb2f911489c22fd6fbbcf55180e479f85be3666`.
-- Boundary: local synthetic API and injected provider only; hosted
-  PostgreSQL/server-identity verification for this new route is pending.
-  Live ERP/bank reversal semantics, accounting posting, signed packages,
-  HA/DR, and production deployment remain unverified.
+- Boundary: local synthetic API, injected provider, and one disposable hosted
+  PostgreSQL/server-identity run only. Live ERP/bank reversal semantics,
+  accounting posting, signed packages, HA/DR, and production deployment
+  remain unverified.
+- Hosted GitHub evidence for commit `1f9f222dc573f099ede66b9fe66f044f27fdca12`:
+  CI `30951488861` passed, including server-boundaries `92134375855`,
+  PostgreSQL/HA-DR `92134375833`, Python 3.11 `92134375776`, Python 3.12
+  `92134375772`, object-storage `92134375803`, and Docker parity
+  `92135966028`; Security `30951488894`, Docker `30951488919`, and CodeQL
+  `30951488904` also passed. The server-boundaries job exercised the live
+  synthetic PostgreSQL identity/API compensation dispatch route.
 - ADR: `docs/adr/0330-governed-writeback-compensation-dispatch-api.md`.
 
 ## E-379: Governed write-back compensation request API

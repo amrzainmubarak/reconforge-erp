@@ -58,16 +58,24 @@ def _run_code(argv: Sequence[str], *, timeout_seconds: int) -> int:
 
 def _wait_ready(container: str) -> None:
     for _ in range(120):
-        result = _run(
+        check = subprocess.run(  # nosec B603
             ("docker", "exec", container, "pg_isready", "-U", "postgres", "-d", "postgres"),
-            allow_failure=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=False, check=False,
         )
-        if result == "":
-            check = subprocess.run(  # nosec B603
-                ("docker", "exec", container, "pg_isready", "-U", "postgres", "-d", "postgres"),
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=False, check=False,
+        if check.returncode == 0:
+            # pg_isready can report accepting connections while PostgreSQL is
+            # still completing crash recovery and rejects SQL with
+            # ``database system is starting up``.  Require a real query before
+            # allowing migrations or replication setup to proceed.
+            probe = _run(
+                (
+                    "docker", "exec", "-e", f"PGPASSWORD={PASSWORD}", container,
+                    "psql", "-U", "postgres", "-d", "postgres", "-tAc", "SELECT 1",
+                ),
+                capture=True,
+                allow_failure=True,
             )
-            if check.returncode == 0:
+            if probe.strip() == "1":
                 return
         time.sleep(0.5)
     raise RuntimeError("PostgreSQL container did not become ready")

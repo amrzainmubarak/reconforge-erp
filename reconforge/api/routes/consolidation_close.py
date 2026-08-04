@@ -17,6 +17,11 @@ from reconforge.api.server_consolidation_close import (
 from reconforge.api.server_identity import RequestExecutionScope, request_execution_scope
 from reconforge.application.consolidation_close import ConsolidationCloseApplicationService
 from reconforge.auth.models import LocalUser
+from reconforge.domain.consolidation import ConsolidationError
+from reconforge.domain.consolidation_lifecycle import (
+    ConsolidationWorksheetResult,
+    verify_consolidation_worksheet_payload,
+)
 from reconforge.infrastructure.postgres_consolidation_close import PostgresConsolidationCloseRepository
 from reconforge.infrastructure.sqlite_consolidation_close import SQLiteConsolidationCloseRepository
 from reconforge.platform.common import PlatformError
@@ -44,6 +49,44 @@ class ConsolidationPeriodRequest(BaseModel):
     period_end_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$", min_length=10, max_length=10)
     reporting_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$", min_length=10, max_length=10)
     workspace: str = Field(default="default", min_length=1, max_length=120)
+
+
+class ConsolidationRunRequest(BaseModel):
+    """Strict request for one replay-verified, non-posting close worksheet run."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    run_number: str = Field(min_length=1, max_length=160)
+    workspace: str = Field(default="default", min_length=1, max_length=120)
+    worksheet: dict[str, object]
+
+    def to_worksheet(self) -> ConsolidationWorksheetResult:
+        try:
+            return verify_consolidation_worksheet_payload(self.worksheet)
+        except ConsolidationError as exc:
+            raise APIError(
+                status_code=400,
+                code="consolidation_worksheet_invalid",
+                message="Consolidation worksheet failed deterministic replay validation.",
+            ) from exc
+
+
+class ConsolidationTransitionRequest(BaseModel):
+    """Optimistic-concurrency request for one governed close transition."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    expected_version: int = Field(ge=1)
+    reason: str = Field(min_length=1, max_length=500)
+
+
+def _assert_prepared_actor(worksheet: ConsolidationWorksheetResult, actor: str) -> None:
+    if worksheet.prepared_by != actor:
+        raise APIError(
+            status_code=403,
+            code="consolidation_worksheet_actor_mismatch",
+            message="Worksheet preparation actor must be the authenticated principal.",
+        )
 
 
 def _repository(connection: sqlite3.Connection | None) -> SQLiteConsolidationCloseRepository:
@@ -169,6 +212,254 @@ def create_period(
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_period_create_failed", exc) from exc
     return {"period": period, "source": {"kind": "sqlite-consolidation-close", "workspace": payload.workspace}}
+
+
+@router.post("/runs")
+def prepare_run(
+    request: Request,
+    payload: ConsolidationRunRequest,
+    current_user: ConsolidationCertify,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """Persist one replay-verified non-posting worksheet as a Prepared run."""
+
+    worksheet = payload.to_worksheet()
+    if server_consolidation_close_enabled(request):
+        scope = _server_scope(request, payload.workspace)
+        _assert_prepared_actor(worksheet, current_user.id)
+        run = execute_postgres_consolidation_close(
+            request,
+            lambda repository, _tenant: ConsolidationCloseApplicationService(repository).prepare_run(
+                run_number=payload.run_number,
+                worksheet=worksheet,
+                workspace=scope.workspace_id,
+                actor_label=current_user.id,
+            ),
+        )
+        _assert_workspace(run, scope.workspace_id)
+        return {"run": run, "source": _server_source()}
+
+    _assert_prepared_actor(worksheet, current_user.username)
+    try:
+        run = ConsolidationCloseApplicationService(_repository(connection)).prepare_run(
+            run_number=payload.run_number,
+            worksheet=worksheet,
+            workspace=payload.workspace,
+            actor_label=current_user.username,
+        )
+    except (PlatformError, sqlite3.DatabaseError) as exc:
+        raise _error("consolidation_run_prepare_failed", exc) from exc
+    return {"run": run, "source": {"kind": "sqlite-consolidation-close", "workspace": payload.workspace}}
+
+
+@router.post("/runs/{run_id}/approve")
+def approve_run(
+    run_id: str,
+    request: Request,
+    payload: ConsolidationTransitionRequest,
+    current_user: ConsolidationReview,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """Approve one prepared run with an independent validation actor."""
+
+    if server_consolidation_close_enabled(request):
+        scope = _server_scope(request, "")
+        run = execute_postgres_consolidation_close(
+            request,
+            lambda repository, _tenant: ConsolidationCloseApplicationService(repository).approve_run(
+                run_id,
+                expected_version=payload.expected_version,
+                reason=payload.reason,
+                actor_label=current_user.id,
+            ),
+        )
+        _assert_workspace(run, scope.workspace_id)
+        return {"run": run, "source": _server_source()}
+    try:
+        run = ConsolidationCloseApplicationService(_repository(connection)).approve_run(
+            run_id,
+            expected_version=payload.expected_version,
+            reason=payload.reason,
+            actor_label=current_user.username,
+        )
+    except (PlatformError, sqlite3.DatabaseError) as exc:
+        raise _error("consolidation_run_approve_failed", exc) from exc
+    return {"run": run, "source": {"kind": "sqlite-consolidation-close"}}
+
+
+@router.post("/runs/{run_id}/post")
+def post_run(
+    run_id: str,
+    request: Request,
+    payload: ConsolidationTransitionRequest,
+    current_user: ConsolidationReview,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """Post one approved run into the immutable control-journal boundary."""
+
+    if server_consolidation_close_enabled(request):
+        scope = _server_scope(request, "")
+        run = execute_postgres_consolidation_close(
+            request,
+            lambda repository, _tenant: ConsolidationCloseApplicationService(repository).post_run(
+                run_id,
+                expected_version=payload.expected_version,
+                reason=payload.reason,
+                actor_label=current_user.id,
+            ),
+        )
+        _assert_workspace(run, scope.workspace_id)
+        return {"run": run, "source": _server_source()}
+    try:
+        run = ConsolidationCloseApplicationService(_repository(connection)).post_run(
+            run_id,
+            expected_version=payload.expected_version,
+            reason=payload.reason,
+            actor_label=current_user.username,
+        )
+    except (PlatformError, sqlite3.DatabaseError) as exc:
+        raise _error("consolidation_run_post_failed", exc) from exc
+    return {"run": run, "source": {"kind": "sqlite-consolidation-close"}}
+
+
+@router.post("/runs/{run_id}/reversal/request")
+def request_reversal(
+    run_id: str,
+    request: Request,
+    payload: ConsolidationTransitionRequest,
+    current_user: ConsolidationCertify,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """Request a governed reversal for one posted run."""
+
+    if server_consolidation_close_enabled(request):
+        scope = _server_scope(request, "")
+        run = execute_postgres_consolidation_close(
+            request,
+            lambda repository, _tenant: ConsolidationCloseApplicationService(repository).request_reversal(
+                run_id,
+                expected_version=payload.expected_version,
+                reason=payload.reason,
+                actor_label=current_user.id,
+            ),
+        )
+        _assert_workspace(run, scope.workspace_id)
+        return {"run": run, "source": _server_source()}
+    try:
+        run = ConsolidationCloseApplicationService(_repository(connection)).request_reversal(
+            run_id,
+            expected_version=payload.expected_version,
+            reason=payload.reason,
+            actor_label=current_user.username,
+        )
+    except (PlatformError, sqlite3.DatabaseError) as exc:
+        raise _error("consolidation_reversal_request_failed", exc) from exc
+    return {"run": run, "source": {"kind": "sqlite-consolidation-close"}}
+
+
+@router.post("/runs/{run_id}/reversal/approve")
+def approve_reversal(
+    run_id: str,
+    request: Request,
+    payload: ConsolidationTransitionRequest,
+    current_user: ConsolidationReview,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """Approve and commit one governed reversal with an independent actor."""
+
+    if server_consolidation_close_enabled(request):
+        scope = _server_scope(request, "")
+        run = execute_postgres_consolidation_close(
+            request,
+            lambda repository, _tenant: ConsolidationCloseApplicationService(repository).approve_reversal(
+                run_id,
+                expected_version=payload.expected_version,
+                reason=payload.reason,
+                actor_label=current_user.id,
+            ),
+        )
+        _assert_workspace(run, scope.workspace_id)
+        return {"run": run, "source": _server_source()}
+    try:
+        run = ConsolidationCloseApplicationService(_repository(connection)).approve_reversal(
+            run_id,
+            expected_version=payload.expected_version,
+            reason=payload.reason,
+            actor_label=current_user.username,
+        )
+    except (PlatformError, sqlite3.DatabaseError) as exc:
+        raise _error("consolidation_reversal_approve_failed", exc) from exc
+    return {"run": run, "source": {"kind": "sqlite-consolidation-close"}}
+
+
+@router.post("/periods/{period_id}/lock")
+def lock_period(
+    period_id: str,
+    request: Request,
+    payload: ConsolidationTransitionRequest,
+    current_user: ConsolidationReview,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """Lock one open close period with an optimistic version."""
+
+    if server_consolidation_close_enabled(request):
+        scope = _server_scope(request, "")
+        period = execute_postgres_consolidation_close(
+            request,
+            lambda repository, _tenant: ConsolidationCloseApplicationService(repository).lock_period(
+                period_id,
+                expected_version=payload.expected_version,
+                reason=payload.reason,
+                actor_label=current_user.id,
+            ),
+        )
+        _assert_workspace(period, scope.workspace_id)
+        return {"period": period, "source": _server_source()}
+    try:
+        period = ConsolidationCloseApplicationService(_repository(connection)).lock_period(
+            period_id,
+            expected_version=payload.expected_version,
+            reason=payload.reason,
+            actor_label=current_user.username,
+        )
+    except (PlatformError, sqlite3.DatabaseError) as exc:
+        raise _error("consolidation_period_lock_failed", exc) from exc
+    return {"period": period, "source": {"kind": "sqlite-consolidation-close"}}
+
+
+@router.post("/periods/{period_id}/reopen")
+def reopen_period(
+    period_id: str,
+    request: Request,
+    payload: ConsolidationTransitionRequest,
+    current_user: ConsolidationReview,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """Reopen one locked close period with an independent actor."""
+
+    if server_consolidation_close_enabled(request):
+        scope = _server_scope(request, "")
+        period = execute_postgres_consolidation_close(
+            request,
+            lambda repository, _tenant: ConsolidationCloseApplicationService(repository).reopen_period(
+                period_id,
+                expected_version=payload.expected_version,
+                reason=payload.reason,
+                actor_label=current_user.id,
+            ),
+        )
+        _assert_workspace(period, scope.workspace_id)
+        return {"period": period, "source": _server_source()}
+    try:
+        period = ConsolidationCloseApplicationService(_repository(connection)).reopen_period(
+            period_id,
+            expected_version=payload.expected_version,
+            reason=payload.reason,
+            actor_label=current_user.username,
+        )
+    except (PlatformError, sqlite3.DatabaseError) as exc:
+        raise _error("consolidation_period_reopen_failed", exc) from exc
+    return {"period": period, "source": {"kind": "sqlite-consolidation-close"}}
 
 
 @router.get("/periods/{period_id}")

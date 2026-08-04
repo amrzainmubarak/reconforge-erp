@@ -276,6 +276,30 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   and production assurance remain open.
 - ADR: `docs/adr/0319-consolidation-close-period-api-write-boundary.md`.
 
+## E-370 — Full governed consolidation-close API lifecycle (complete bounded slice)
+
+- Added strict authenticated routes for replay-verified run preparation,
+  independent approval, control-journal posting, reversal request/approval, and
+  period lock/reopen. All transitions use optimistic versions, bounded reasons,
+  authenticated actor binding, and the existing SQLite/PostgreSQL application
+  ports.
+- Worksheet ingress is reconstructed through the closed deterministic verifier;
+  unknown fields, float/tampered worksheet payloads, wrong actors, invalid
+  states, and stale versions fail closed. The local API lifecycle test executes
+  prepare → approve → post → reverse and lock → reopen; the live PostgreSQL
+  server-identity fixture executes prepare/approve/post/lock/reopen with scoped
+  users and step-up.
+- The focused live API/identity/close/inventory gate passes 14/14 in the current
+  environment; authorization inventory is now 227 routes with digest
+  `9e4e4f568df98a482a0eaf34d9c9c359330caf22df43b89e2cb14f771b183fc5`.
+  Hosted verification for the new code head is pending.
+- Boundary: PostgreSQL reopened periods currently serialize as `Open` while
+  SQLite returns `Reopened`; this compatibility difference is recorded rather
+  than hidden. The slice remains a control-journal API, not statutory close,
+  external posting, live provider write-back, independent HA/DR, or production
+  assurance.
+- ADR: `docs/adr/0320-consolidation-close-api-full-lifecycle-boundary.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

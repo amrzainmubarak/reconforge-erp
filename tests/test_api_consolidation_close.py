@@ -139,6 +139,95 @@ def test_consolidation_close_api_creates_strict_period_and_replays(tmp_path: Pat
     assert rejected.status_code == 422
 
 
+def test_consolidation_close_api_runs_full_governed_lifecycle(tmp_path: Path) -> None:
+    db_path = tmp_path / "consolidation-api-lifecycle.db"
+    run_migrations(db_path)
+    connection = connect(db_path)
+    auth = LocalAuthService(connection)
+    auth.init_admin(username="admin", password="Secret-123")
+    auth.create_user(username="reviewer", password="Secret-123", role="reviewer")
+    auth.create_user(username="poster", password="Secret-123", role="reviewer")
+    connection.close()
+    client = TestClient(create_api_app(db_path))
+
+    def headers(username: str) -> dict[str, str]:
+        login = client.post("/api/v1/auth/login", json={"username": username, "password": "Secret-123"})
+        assert login.status_code == 200, login.text
+        return {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    admin_headers = headers("admin")
+    reviewer_headers = headers("reviewer")
+    poster_headers = headers("poster")
+    period = client.post(
+        "/api/v1/consolidation-close/periods",
+        headers=admin_headers,
+        json={
+            "group_code": "GLOBAL-GROUP",
+            "period_id": "2026-08",
+            "reporting_currency": "USD",
+            "period_start_date": "2026-08-01",
+            "period_end_date": "2026-08-31",
+            "reporting_date": "2026-08-01",
+        },
+    )
+    assert period.status_code == 200, period.text
+    worksheet = prepare_consolidation_worksheet(replace(_worksheet().request, prepared_by="admin"))
+    prepared = client.post(
+        "/api/v1/consolidation-close/runs",
+        headers=admin_headers,
+        json={"run_number": "RUN-API-001", "worksheet": worksheet.to_dict()},
+    )
+    assert prepared.status_code == 200, prepared.text
+    run = prepared.json()["run"]
+    assert run["status"] == "Prepared"
+    run_id = run["id"]
+
+    approved = client.post(
+        f"/api/v1/consolidation-close/runs/{run_id}/approve",
+        headers=reviewer_headers,
+        json={"expected_version": 1, "reason": "Independent worksheet review."},
+    )
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["run"]["status"] == "Approved"
+    posted = client.post(
+        f"/api/v1/consolidation-close/runs/{run_id}/post",
+        headers=poster_headers,
+        json={"expected_version": 2, "reason": "Control journal posting approved."},
+    )
+    assert posted.status_code == 200, posted.text
+    assert posted.json()["run"]["status"] == "Posted"
+    reversal = client.post(
+        f"/api/v1/consolidation-close/runs/{run_id}/reversal/request",
+        headers=admin_headers,
+        json={"expected_version": 3, "reason": "Synthetic reversal request."},
+    )
+    assert reversal.status_code == 200, reversal.text
+    assert reversal.json()["run"]["status"] == "ReversalPrepared"
+    reversed_run = client.post(
+        f"/api/v1/consolidation-close/runs/{run_id}/reversal/approve",
+        headers=reviewer_headers,
+        json={"expected_version": 4, "reason": "Independent reversal approval."},
+    )
+    assert reversed_run.status_code == 200, reversed_run.text
+    assert reversed_run.json()["run"]["status"] == "Reversed"
+
+    period_id = period.json()["period"]["id"]
+    locked = client.post(
+        f"/api/v1/consolidation-close/periods/{period_id}/lock",
+        headers=reviewer_headers,
+        json={"expected_version": 1, "reason": "Close period locked."},
+    )
+    assert locked.status_code == 200, locked.text
+    assert locked.json()["period"]["status"] == "Locked"
+    reopened = client.post(
+        f"/api/v1/consolidation-close/periods/{period_id}/reopen",
+        headers=admin_headers,
+        json={"expected_version": 2, "reason": "Independent reopen review."},
+    )
+    assert reopened.status_code == 200, reopened.text
+    assert reopened.json()["period"]["status"] == "Reopened"
+
+
 def test_consolidation_close_certification_api_is_posted_only_and_maker_checker_bound(tmp_path: Path) -> None:
     db_path = tmp_path / "consolidation-certification-api.db"
     run_migrations(db_path)

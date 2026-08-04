@@ -816,6 +816,7 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             repository.create_permission(tenant_id=tenant_a, permission_name="db.read")
             repository.create_permission(tenant_id=tenant_a, permission_name="finance_core.read")
             repository.create_permission(tenant_id=tenant_a, permission_name="finance_core.manage")
+            repository.create_permission(tenant_id=tenant_a, permission_name="finance_core.validate")
             repository.create_permission(tenant_id=tenant_a, permission_name="master_data.read")
             repository.create_permission(tenant_id=tenant_a, permission_name="master_data.manage")
             repository.create_permission(tenant_id=tenant_a, permission_name="audit.read")
@@ -833,6 +834,11 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                 tenant_id=tenant_a,
                 role_name="admin",
                 permission_name="finance_core.manage",
+            )
+            repository.grant_permission(
+                tenant_id=tenant_a,
+                role_name="admin",
+                permission_name="finance_core.validate",
             )
             repository.grant_permission(
                 tenant_id=tenant_a,
@@ -883,6 +889,13 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                 password="Strong-password-123",
                 role_name="admin",
             )
+            repository.create_user(
+                tenant_id=tenant_a,
+                user_id="api-user-poster",
+                username="Poster",
+                password="Strong-password-123",
+                role_name="admin",
+            )
             scope_authority = PostgresScopeAuthorityRepository(connection)
             scope_authority.grant(
                 tenant_id=tenant_a,
@@ -902,6 +915,25 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                 scope_id=organization_id,
                 actor_id="api-user-a",
             )
+            for user_id, suffix in (("api-user-reviewer", "reviewer"), ("api-user-poster", "poster")):
+                scope_authority.grant(
+                    tenant_id=tenant_a,
+                    grant_id=f"scope-user-workspace-a-{suffix}",
+                    principal_type="user",
+                    principal_id=user_id,
+                    scope_type="workspace",
+                    scope_id="workspace-a",
+                    actor_id="api-user-a",
+                )
+                scope_authority.grant(
+                    tenant_id=tenant_a,
+                    grant_id=f"scope-user-org-a-{suffix}",
+                    principal_type="user",
+                    principal_id=user_id,
+                    scope_type="organization",
+                    scope_id=organization_id,
+                    actor_id="api-user-a",
+                )
         client = TestClient(
             create_api_app(
                 tmp_path / "unused.db",
@@ -1031,6 +1063,74 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
         assert close_periods.status_code == 200, close_periods.text
         assert close_periods.json()["source"]["kind"] == "postgresql-consolidation-close"
         assert [item["period_name"] for item in close_periods.json()["periods"]] == ["2026-08"]
+        from dataclasses import replace
+
+        from reconforge.domain.consolidation_lifecycle import prepare_consolidation_worksheet
+        from tests.test_sqlite_consolidation_close import _worksheet
+
+        worksheet = prepare_consolidation_worksheet(replace(_worksheet().request, prepared_by="api-user-a"))
+        prepared_run = client.post(
+            "/api/v1/consolidation-close/runs",
+            headers=authenticated_headers,
+            json={"run_number": "RUN-API-001", "worksheet": worksheet.to_dict()},
+        )
+        assert prepared_run.status_code == 200, prepared_run.text
+        assert prepared_run.json()["run"]["status"] == "Prepared"
+        run_id = prepared_run.json()["run"]["id"]
+        reviewer_login = client.post(
+            "/api/v1/auth/login",
+            headers={"X-ReconForge-Tenant": tenant_a},
+            json={"username": "reviewer", "password": "Strong-password-123"},
+        )
+        assert reviewer_login.status_code == 200, reviewer_login.text
+        reviewer_headers = {**headers, "Authorization": f"Bearer {reviewer_login.json()['access_token']}"}
+        reviewer_step_up = client.post(
+            "/api/v1/auth/step-up",
+            headers=reviewer_headers,
+            json={"password": "Strong-password-123"},
+        )
+        assert reviewer_step_up.status_code == 200, reviewer_step_up.text
+        poster_login = client.post(
+            "/api/v1/auth/login",
+            headers={"X-ReconForge-Tenant": tenant_a},
+            json={"username": "poster", "password": "Strong-password-123"},
+        )
+        assert poster_login.status_code == 200, poster_login.text
+        poster_headers = {**headers, "Authorization": f"Bearer {poster_login.json()['access_token']}"}
+        poster_step_up = client.post(
+            "/api/v1/auth/step-up",
+            headers=poster_headers,
+            json={"password": "Strong-password-123"},
+        )
+        assert poster_step_up.status_code == 200, poster_step_up.text
+        approved_run = client.post(
+            f"/api/v1/consolidation-close/runs/{run_id}/approve",
+            headers=reviewer_headers,
+            json={"expected_version": 1, "reason": "Independent live worksheet review."},
+        )
+        assert approved_run.status_code == 200, approved_run.text
+        assert approved_run.json()["run"]["status"] == "Approved"
+        posted_run = client.post(
+            f"/api/v1/consolidation-close/runs/{run_id}/post",
+            headers=poster_headers,
+            json={"expected_version": 2, "reason": "Live synthetic control journal posting."},
+        )
+        assert posted_run.status_code == 200, posted_run.text
+        assert posted_run.json()["run"]["status"] == "Posted"
+        locked_period = client.post(
+            f"/api/v1/consolidation-close/periods/{close_period_created.json()['period']['id']}/lock",
+            headers=reviewer_headers,
+            json={"expected_version": 1, "reason": "Live synthetic period lock."},
+        )
+        assert locked_period.status_code == 200, locked_period.text
+        assert locked_period.json()["period"]["status"] == "Locked"
+        reopened_period = client.post(
+            f"/api/v1/consolidation-close/periods/{close_period_created.json()['period']['id']}/reopen",
+            headers=authenticated_headers,
+            json={"expected_version": 2, "reason": "Live synthetic independent reopen."},
+        )
+        assert reopened_period.status_code == 200, reopened_period.text
+        assert reopened_period.json()["period"]["status"] == "Open"
         close_sibling = client.get(
             "/api/v1/consolidation-close/periods",
             headers={**authenticated_headers, "X-ReconForge-Workspace": "workspace-b"},

@@ -148,6 +148,27 @@ This file records commands and observed results. It does not convert a dirty wor
   `30915374854`, and CodeQL `30915379664` also pass.
 - ADR: `docs/adr/0319-consolidation-close-period-api-write-boundary.md`.
 
+## E-370: Full governed consolidation-close API lifecycle
+
+- Added strict API contracts for replay-verified run preparation, approval,
+  posting, reversal request/approval, period lock, and period reopen. Worksheet
+  payloads are reconstructed by the closed deterministic verifier; transitions
+  require positive optimistic versions and bounded reasons.
+- `pytest -q tests/test_api_consolidation_close.py` -> `6 passed`; the live
+  PostgreSQL command over server identity, close API, and inventory -> `14
+  passed`. Ruff, Mypy, and `git diff --check` pass.
+- The local API test proves prepare → approve → post → reversal request →
+  reversal approve and lock → reopen with distinct identities. The live fixture
+  proves authenticated PostgreSQL prepare/approve/post/lock/reopen, scope
+  grants, step-up, and journal-effect creation.
+- Authorization inventory is 227 routes with digest
+  `9e4e4f568df98a482a0eaf34d9c9c359330caf22df43b89e2cb14f771b183fc5`.
+- PostgreSQL reopens to status `Open` while SQLite returns `Reopened`; this
+  existing compatibility difference is explicit. No statutory, external
+  provider, independent HA/DR, or production claim is promoted.
+- Hosted verification for the new code head is pending.
+- ADR: `docs/adr/0320-consolidation-close-api-full-lifecycle-boundary.md`.
+
 ## E-293: Immutable local delegation administration
 
 - Added typed `DelegationGrant`, migration 27, and `DelegationRepository`.

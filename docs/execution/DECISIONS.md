@@ -3236,3 +3236,26 @@
 - **ADR**: `docs/adr/0319-consolidation-close-period-api-write-boundary.md`.
 - **Rollback**: remove the route, request model, tests, inventory update, ADR,
   and manifest entry; no database migration rollback is required.
+
+## D297 - Expose the governed consolidation-close lifecycle through one API boundary
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Add strict authenticated routes for replay-verified run
+  preparation, independent approval, control-journal posting, reversal
+  request/approval, and optimistic period lock/reopen. Route operations reuse
+  the backend-neutral SQLite/PostgreSQL application ports and verify returned
+  workspace scope in server mode.
+- **Reason**: Period creation alone left the existing tested close lifecycle
+  unreachable through the API. Reusing the port closes the gap without a new
+  posting engine or raw journal ingress.
+- **Boundary**: Synthetic control-journal evidence only. PostgreSQL currently
+  represents reopen as `Open` while SQLite returns `Reopened`; statutory close,
+  legal books, live providers, HA/DR, and production assurance remain open.
+- **Result**: Local full lifecycle API tests pass 6/6; the live
+  API/identity/close/inventory gate passes 14/14; inventory is 227 routes with
+  digest `9e4e4f568df98a482a0eaf34d9c9c359330caf22df43b89e2cb14f771b183fc5`;
+  Ruff, Mypy, and diff-check pass. Hosted verification is pending.
+- **ADR**: `docs/adr/0320-consolidation-close-api-full-lifecycle-boundary.md`.
+- **Rollback**: remove the routes, request models, tests, inventory update,
+  ADR, and manifest entry; no schema rollback is required.

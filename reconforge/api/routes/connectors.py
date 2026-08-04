@@ -9,7 +9,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import get_local_db, require_permission
+from reconforge.api.dependencies import enforce_server_scoped_permission, get_local_db, require_permission
 from reconforge.api.errors import APIError
 from reconforge.api.server_writeback import execute_postgres_writeback, server_writeback_enabled
 from reconforge.auth.models import LocalUser
@@ -56,7 +56,13 @@ def propose_writeback_intent(
 ) -> dict[str, object]:
     """Persist one approved-scope proposal; this endpoint never dispatches network I/O."""
     if server_writeback_enabled(request):
-        _require_server_scope(request, payload.tenant_id, payload.workspace_id)
+        tenant_id, workspace_id = _require_server_scope(request, payload.tenant_id, payload.workspace_id)
+        enforce_server_scoped_permission(
+            request,
+            permission="connectors.writeback.propose",
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+        )
         if payload.requested_by != current_user.id:
             raise APIError(status_code=403, code="writeback_actor_mismatch", message="Intent actor does not match the authenticated user.")
 
@@ -106,7 +112,13 @@ def approve_writeback_intent(
 ) -> dict[str, object]:
     """Approve one persisted proposal as a distinct human checker; never dispatch."""
     if server_writeback_enabled(request):
-        _require_server_scope(request, payload.tenant_id, payload.workspace_id)
+        tenant_id, workspace_id = _require_server_scope(request, payload.tenant_id, payload.workspace_id)
+        enforce_server_scoped_permission(
+            request,
+            permission="connectors.writeback.approve",
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+        )
 
         def approve(repository: object, tenant_id: str, workspace_id: str) -> dict[str, object]:
             current = repository.get(intent_id=intent_id, tenant_id=tenant_id, workspace_id=workspace_id)  # type: ignore[attr-defined]
@@ -179,7 +191,13 @@ def acknowledge_writeback_intent(
 ) -> dict[str, object]:
     """Reconcile one provider acknowledgement to a dispatched intent."""
     if server_writeback_enabled(request):
-        _require_server_scope(request, payload.tenant_id, payload.workspace_id)
+        tenant_id, workspace_id = _require_server_scope(request, payload.tenant_id, payload.workspace_id)
+        enforce_server_scoped_permission(
+            request,
+            permission="connectors.writeback.reconcile",
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+        )
 
         def acknowledge(repository: object, tenant_id: str, workspace_id: str) -> dict[str, object]:
             current = repository.get(intent_id=intent_id, tenant_id=tenant_id, workspace_id=workspace_id)  # type: ignore[attr-defined]

@@ -2,6 +2,27 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-363: Scope-bound server write-back authorization
+
+- `reconforge/api/dependencies.py` now exposes an explicit
+  `enforce_server_scoped_permission` boundary. In server mode it binds the
+  central policy context to the authenticated tenant/workspace/entity grant
+  snapshot and step-up state, audits a sanitized decision, and fails closed
+  before repository use. Local SQLite mode remains compatible.
+- The three PostgreSQL write-back routes invoke the boundary after their
+  existing request-scope equality checks and before proposal, approval, or
+  acknowledgement persistence.
+- `python -m pytest -q tests/test_api_execution_scope.py tests/test_api_connectors.py`:
+  passed (8 tests).
+- `python -m ruff check reconforge/api/dependencies.py reconforge/api/routes/connectors.py tests/test_api_execution_scope.py`:
+  passed.
+- `python -m mypy reconforge/api/dependencies.py reconforge/api/routes/connectors.py`:
+  passed.
+- This is a focused local contract. Hosted PostgreSQL server-profile
+  execution, complete surface migration, federation, live provider I/O, and
+  production IAM assurance remain unverified.
+- ADR: `docs/adr/0313-server-writeback-policy-is-scope-bound.md`.
+
 ## E-293: Immutable local delegation administration
 
 - Added typed `DelegationGrant`, migration 27, and `DelegationRepository`.

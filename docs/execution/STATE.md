@@ -136,6 +136,24 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   fairness, soak, queue HA, failover, capacity, or production SLOs.
 - ADR: `docs/adr/0312-hosted-postgres-queue-policy-and-fairness-gate.md`.
 
+## E-363 — Scope-bound server write-back authorization (complete bounded slice)
+
+- Added `enforce_server_scoped_permission` to the API policy dependencies. In
+  the PostgreSQL server profile it re-evaluates a permission against the
+  authenticated tenant/workspace/entity grant snapshot, step-up state, and
+  central policy engine before a repository operation; authorization evidence
+  remains sanitized and local SQLite compatibility is unchanged.
+- The proposal, maker-checker approval, and provider-acknowledgement routes
+  now invoke that gate after request-scope equality and before touching the
+  PostgreSQL write-back repository. Focused API tests pass 8/8, including
+  sibling-workspace refusal and granted-workspace approval with step-up;
+  Ruff and Mypy pass for the changed surface.
+- Boundary: one server write-back surface is now centrally scope-bound. Full
+  route/job/export/UI adoption, federation, distributed IAM assurance, live
+  ERP/bank providers, network dispatch, compensation, HA/DR, and production
+  write-back remain open.
+- ADR: `docs/adr/0313-server-writeback-policy-is-scope-bound.md`.
+
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)
 
 - Added `reconforge.reliability.ha_dr` with a closed topology requiring three

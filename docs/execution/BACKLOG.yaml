@@ -1150,6 +1150,8 @@ tasks:
       - E-331 adds Alembic `0059_pg_policy_amt_bounds` with finite exact Decimal minimum/maximum bounds, inclusive interval overlap, append-only immutability, widened uniqueness, and data-loss-refusing downgrade. Local focused/full tests and CI server-boundaries run `30808822315` pass the migration, RLS, projection, tamper, revocation, parity, security, and packaging gates. Currency conversion, federation, distributed invalidation, and complete route/job/export/UI enforcement remain open.
       - E-354 adds an explicit Redis-backed policy-cache generation for server-profile multi-process invalidation. Each local allowed-decision cache includes the monotonic generation; non-safe requests bump it and clear local entries, while Redis stores no policy decisions or credentials. Independent-cache unit tests and the live Redis server-boundary test pass. A generation-read outage bypasses caching; coarse global invalidation, Redis HA/failover, complete route/job/export/UI adoption, federation, and production IAM assurance remain open under ADR 0304.
 
+      - E-363 adds `enforce_server_scoped_permission` and adopts it on the PostgreSQL proposal, maker-checker approval, and acknowledgement write-back routes. The central policy engine now receives the authenticated tenant/workspace/entity grant snapshot and step-up state before repository access; sibling-workspace denial and granted-workspace approval are covered by 8/8 focused tests. Full route/job/export/UI adoption, federation, distributed IAM, live providers, network dispatch, compensation, HA/DR, and production write-back remain open under ADR 0313.
+
   - id: P4-PLAT-001
     priority: P4
     area: platform_breadth

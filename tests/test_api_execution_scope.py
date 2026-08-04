@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from fastapi import Request
 
+from reconforge.api.dependencies import enforce_server_scoped_permission
 from reconforge.api.errors import APIError
 from reconforge.api.server_identity import (
     AuthenticatedServerRequest,
@@ -112,3 +113,61 @@ def test_authenticated_scope_snapshot_is_bound_to_server_principal() -> None:
     assert principal.authorized_workspace_ids == frozenset({"workspace-a"})
     assert principal.authorized_organization_ids == frozenset({"organization-a"})
     assert principal.authorized_legal_entity_ids == frozenset({"entity-a"})
+
+
+def test_server_scoped_permission_denies_sibling_workspace_before_repository_use(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from fastapi import FastAPI
+
+    app = FastAPI()
+    app.state.policy_decision_cache = None
+    import reconforge.api.dependencies as dependencies
+
+    monkeypatch.setattr(dependencies, "server_identity_enabled", lambda _request: True)
+    request = _request(
+        {"X-ReconForge-Tenant": "tenant-a", "X-ReconForge-Workspace": "workspace-b"},
+        ServerPrincipal(
+            user=LocalUser(id="user-a", username="alice", display_name="Alice"),
+            permissions=frozenset({"connectors.writeback.approve"}),
+            step_up_active=True,
+            authorized_workspace_ids=frozenset({"workspace-a"}),
+        ),
+    )
+    request.scope["app"] = app
+    with pytest.raises(APIError) as denied:
+        enforce_server_scoped_permission(
+            request,
+            permission="connectors.writeback.approve",
+            tenant_id="tenant-a",
+            workspace_id="workspace-b",
+        )
+    assert denied.value.code == "workspace_scope_denied"
+
+
+def test_server_scoped_permission_allows_granted_workspace_and_audits_without_raw_scope(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from fastapi import FastAPI
+
+    app = FastAPI()
+    app.state.policy_decision_cache = None
+    import reconforge.api.dependencies as dependencies
+
+    monkeypatch.setattr(dependencies, "server_identity_enabled", lambda _request: True)
+    request = _request(
+        {"X-ReconForge-Tenant": "tenant-a", "X-ReconForge-Workspace": "workspace-a"},
+        ServerPrincipal(
+            user=LocalUser(id="user-a", username="alice", display_name="Alice"),
+            permissions=frozenset({"connectors.writeback.approve"}),
+            step_up_active=True,
+            authorized_workspace_ids=frozenset({"workspace-a"}),
+        ),
+    )
+    request.scope["app"] = app
+    enforce_server_scoped_permission(
+        request,
+        permission="connectors.writeback.approve",
+        tenant_id="tenant-a",
+        workspace_id="workspace-a",
+    )

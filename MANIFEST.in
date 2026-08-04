@@ -431,6 +431,7 @@ include reconforge/domain/consolidation_close_bundle.py
 include tests/test_consolidation_close_bundle.py
 include docs/adr/0311-consolidation-close-evidence-bundle.md
 include docs/adr/0312-hosted-postgres-queue-policy-and-fairness-gate.md
+include docs/adr/0313-server-writeback-policy-is-scope-bound.md
 include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-04.json
 include docs/execution/benchmarks/postgres-grouped-matching-64-partitions-v1.md
 include docs/adr/0243-expiring-delegation-is-explicit-and-replayable.md

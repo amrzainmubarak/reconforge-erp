@@ -3074,3 +3074,22 @@
 - **ADR**: `docs/adr/0312-hosted-postgres-queue-policy-and-fairness-gate.md`.
 - **Rollback**: remove the extra workflow command, ADR, manifest entry, and
   execution evidence; retain the existing 10K hosted gate.
+
+## D290 - Bind server write-back routes to central hierarchy policy
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Keep the existing named-permission and header-equality checks,
+  then re-evaluate proposal, approval, and acknowledgement permissions against
+  the authenticated PostgreSQL tenant/workspace/entity grant snapshot before
+  repository access. Local SQLite routes remain unchanged.
+- **Reason**: A coarse permission dependency proves capability but not the
+  selected resource hierarchy. The write-back surface is a sensitive,
+  human-governed boundary and must fail closed if the workspace grant is
+  missing or the required assurance is stale.
+- **Result**: Focused API execution-scope and write-back tests pass 8/8;
+  Ruff and Mypy pass. This is one centrally scope-bound route family, not
+  universal route/job/export/UI migration or live provider evidence.
+- **ADR**: `docs/adr/0313-server-writeback-policy-is-scope-bound.md`.
+- **Rollback**: remove the helper and the three route calls, tests, ADR, and
+  ledger entries; retain the prior coarse permission/header checks.

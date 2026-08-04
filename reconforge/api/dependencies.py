@@ -272,6 +272,73 @@ def _evaluate_any_policy(
     return CentralPolicyEngine().evaluate_any(context, required_permissions=required_permissions)
 
 
+def enforce_server_scoped_permission(
+    request: Request,
+    *,
+    permission: str,
+    tenant_id: str,
+    workspace_id: str,
+    entity_id: str | None = None,
+) -> None:
+    """Re-evaluate a permission against the selected server hierarchy.
+
+    The regular permission dependency proves that the principal has the named
+    capability.  Server business routes must additionally bind that capability
+    to the caller-selected tenant/workspace/entity before touching a repository.
+    Local SQLite routes intentionally keep their existing compatibility path.
+    """
+
+    if not server_identity_enabled(request):
+        return
+    principal = getattr(request.state, "server_principal", None)
+    if not isinstance(principal, ServerPrincipal):
+        principal = current_server_principal()
+    if principal is None:
+        raise APIError(status_code=401, code="auth_required", message="Authentication required.")
+    context = PolicyEvaluationContext(
+        user_id=principal.user.id,
+        username=principal.user.username,
+        user_permissions=principal.permissions,
+        principal_type=principal.principal_type,
+        step_up_active=principal.step_up_active,
+        step_up_enforced=True,
+        required_step_up_method=_required_step_up_method(request),
+        step_up_method=principal.step_up_method,
+        tenant_id=tenant_id,
+        workspace_id=workspace_id,
+        entity_id=entity_id,
+        authorized_tenant_ids=frozenset({tenant_id}),
+        authorized_workspace_ids=principal.authorized_workspace_ids,
+        authorized_entity_ids=principal.authorized_legal_entity_ids,
+    )
+    decision = _evaluate_policy(request, context, required_permission=permission)
+    audit_policy_decision(
+        decision,
+        actor_id=principal.user.id,
+        required_permissions=frozenset({permission}),
+        surface=f"server.scoped:{permission}",
+        request_id=str(getattr(request.state, "request_id", "")),
+        principal_type=principal.principal_type,
+    )
+    if decision.allowed:
+        return
+    code = decision.reason_code if decision.reason_code in {
+        "tenant_scope_denied",
+        "workspace_scope_denied",
+        "entity_scope_denied",
+        "step_up_required",
+        "mfa_required",
+    } else "permission_denied"
+    message = {
+        "step_up_required": "Recent human reauthentication is required.",
+        "mfa_required": "User-verified WebAuthn MFA is required.",
+        "tenant_scope_denied": "Tenant scope is not authorized.",
+        "workspace_scope_denied": "Workspace scope is not authorized.",
+        "entity_scope_denied": "Legal-entity scope is not authorized.",
+    }.get(code, "Permission denied.")
+    raise APIError(status_code=403, code=code, message=message)
+
+
 def require_permission(permission: str) -> Callable[..., LocalUser]:
     """Build a dependency requiring one local RBAC permission."""
 

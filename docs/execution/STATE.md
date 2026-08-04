@@ -1174,6 +1174,10 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Repository gates after the slice: 2,404 tests collected and the suite exited
   0 (repository-declared skips); Ruff, Mypy, Bandit, package build, lock
   consistency, and diff checks passed.
+- Hosted CI for commit `8fee1bb9` is green: CI `30878667892` with
+  server-boundaries job `91895157424`, Docker `30878667913`, Security
+  `30878667888`, and CodeQL `30878667878`; Python 3.11/3.12 and engine parity
+  jobs also passed. The uv mirror 403 was an annotation-only fallback.
 
 ## P4-CON-001 in progress: governed live connector foundation
 

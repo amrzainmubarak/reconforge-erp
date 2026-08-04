@@ -12696,3 +12696,11 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   2,404 tests collected (repository-declared skips); Ruff, Mypy, Bandit,
   package build, `uv lock --check`, and `git diff --check` all passed.
 - ADR: `docs/adr/0306-postgres-durable-job-10k-scale.md`.
+- Hosted evidence for commit `8fee1bb9672b23ae3e6afe6c27071e0e8bda3730`:
+  CI run `30878667892` passed, including server-boundaries job
+  `91895157424`, where `tests/test_postgres_durable_jobs.py` ran with the
+  PostgreSQL service and non-privileged role. Python 3.11/3.12 jobs
+  `91895157399`/`91895157437`, object-storage `91895157415`, and all four
+  engine-parity jobs also passed. Docker run `30878667913` (job
+  `91895963333`), Security `30878667888`, and CodeQL `30878667878` passed.
+  The uv mirror emitted only its known 403 fallback annotation.

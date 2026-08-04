@@ -6,6 +6,23 @@ Updated: 2026-08-04
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-380 — Governed write-back compensation dispatch API (in progress locally)
+
+- Added the server-profile-only
+  `POST /api/v1/connectors/writeback/intents/{intent_id}/compensate/dispatch`
+  route behind the privileged `connectors.writeback.dispatch` permission and
+  central server scope re-evaluation.
+- The route resolves a short-lived compensation payload only from an explicit
+  in-memory application resolver, checks the caller-provided SHA-256 digest,
+  delegates bounded retries/egress/secret/acknowledgement checks to the
+  provider-neutral executor, and appends `compensated` only after an accepted
+  provider acknowledgement. Missing resolver, stale version, wrong state,
+  digest mismatch, and provider failure leave the intent retryable.
+- Local SQLite network I/O remains disabled. Focused local API, route-inventory,
+  Ruff, and Mypy checks pass; hosted PostgreSQL server-identity evidence is
+  pending for this new route.
+- ADR: `docs/adr/0330-governed-writeback-compensation-dispatch-api.md`.
+
 ## E-379 — Governed write-back compensation request API (complete bounded slice)
 
 - Added the independent `connectors.writeback.compensate` human permission and

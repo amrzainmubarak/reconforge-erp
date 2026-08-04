@@ -2,6 +2,29 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-380: Governed write-back compensation dispatch API
+
+- Added server-only `POST
+  /api/v1/connectors/writeback/intents/{intent_id}/compensate/dispatch`.
+  It requires `compensation_requested`, a current optimistic version, the
+  privileged dispatch permission, and a matching payload digest. The payload
+  comes from an explicit short-lived in-memory resolver and is never accepted
+  from or echoed to the API caller.
+- The route persists `compensated` only after the executor receives an accepted
+  provider acknowledgement. A missing resolver fails with no provider call;
+  an already-compensated intent replays without a second call.
+- `uv run python -m pytest -q tests/test_api_connectors.py
+  tests/test_api_server_identity.py tests/test_api_authorization_inventory.py`
+  -> 11 passed, 1 declared live-service skip; `uv run python -m ruff check`
+  on the changed route/tests -> passed; Mypy on the changed route -> passed.
+- Authorization inventory is now 233 routes with digest
+  `5b59764852e9aee179afe726beb2f911489c22fd6fbbcf55180e479f85be3666`.
+- Boundary: local synthetic API and injected provider only; hosted
+  PostgreSQL/server-identity verification for this new route is pending.
+  Live ERP/bank reversal semantics, accounting posting, signed packages,
+  HA/DR, and production deployment remain unverified.
+- ADR: `docs/adr/0330-governed-writeback-compensation-dispatch-api.md`.
+
 ## E-379: Governed write-back compensation request API
 
 - Added local migration 32 for `connectors.writeback.compensate`, seeded for

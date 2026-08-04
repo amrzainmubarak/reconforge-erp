@@ -1180,6 +1180,7 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
 
         connector_id = "reference-rest-writeback"
         payload_bytes = b'{"amount":"10.00","currency":"USD","reference":"live-payment-1"}'
+        compensation_payload_bytes = b'{"amount":"-10.00","currency":"USD","reference":"live-payment-1-reversal"}'
         import hashlib
         import json
 
@@ -1206,12 +1207,15 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                 timeout_seconds: int,
                 maximum_response_bytes: int,
             ) -> WritebackNetworkResponse:
-                del endpoint, headers, body, timeout_seconds, maximum_response_bytes
+                del endpoint, body, timeout_seconds, maximum_response_bytes
                 self.calls += 1
+                idempotency_key = headers["Idempotency-Key"]
                 provider = {
                     "accepted": True,
-                    "idempotency_key": writeback_payload["idempotency_key"],
-                    "provider_reference": "live-provider-1",
+                    "idempotency_key": idempotency_key,
+                    "provider_reference": "live-provider-compensation-1"
+                    if idempotency_key.endswith(":compensation")
+                    else "live-provider-1",
                 }
                 response_digest = hashlib.sha256(
                     json.dumps(provider, sort_keys=True, separators=(",", ":")).encode("ascii")
@@ -1225,6 +1229,11 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             def resolve(self, intent: object) -> bytes:
                 del intent
                 return payload_bytes
+
+        class CompensationPayloads:
+            def resolve(self, intent: object) -> bytes:
+                del intent
+                return compensation_payload_bytes
 
         class Secrets:
             def resolve(self, reference: str) -> bytes:
@@ -1247,6 +1256,7 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                     "egress_destinations": ("https://api.example.test/v1/writeback",),
                         "credential_reference": f"vault://{tenant_a}/writeback-token",
                     "allowed_operations": frozenset({"payment.create"}),
+                    "allowed_compensation_operations": frozenset({"payment.create"}),
                     "feature_enabled": True,
                     "synthetic_sandbox": True,
                 }
@@ -1291,6 +1301,22 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
         assert compensation_writeback.status_code == 200, compensation_writeback.text
         assert compensation_writeback.json()["intent"]["status"] == "compensation_requested"
         assert compensation_writeback.json()["version"] == 5
+        app.state.writeback_compensation_payload_resolver = CompensationPayloads()
+        compensated_writeback = client.post(
+            f"/api/v1/connectors/writeback/intents/{writeback_payload['intent_id']}/compensate/dispatch",
+            headers=reviewer_headers,
+            json={
+                "tenant_id": tenant_a,
+                "workspace_id": "workspace-a",
+                "expected_version": 5,
+                "payload_digest": hashlib.sha256(compensation_payload_bytes).hexdigest(),
+            },
+        )
+        assert compensated_writeback.status_code == 200, compensated_writeback.text
+        assert compensated_writeback.json()["intent"]["status"] == "compensated"
+        assert compensated_writeback.json()["version"] == 6
+        assert compensated_writeback.json()["network_dispatch"] == "compensated"
+        assert transport.calls == 2
         approved_run = client.post(
             f"/api/v1/consolidation-close/runs/{run_id}/approve",
             headers=reviewer_headers,

@@ -227,6 +227,7 @@ def test_writeback_dispatch_is_opt_in_server_scoped_and_idempotent(tmp_path: Pat
     controller_headers = {"Authorization": f"Bearer {controller_login.json()['access_token']}"}
 
     payload_bytes = b'{"amount":"10.00","currency":"USD","reference":"payment-1"}'
+    compensation_payload_bytes = b'{"amount":"-10.00","currency":"USD","reference":"payment-1-reversal"}'
     connector_id = "reference-rest-writeback"
     payload = _intent(
         connector_id=connector_id,
@@ -269,12 +270,15 @@ def test_writeback_dispatch_is_opt_in_server_scoped_and_idempotent(tmp_path: Pat
             timeout_seconds: int,
             maximum_response_bytes: int,
         ) -> WritebackNetworkResponse:
-            del endpoint, headers, body, timeout_seconds, maximum_response_bytes
+            del endpoint, body, timeout_seconds, maximum_response_bytes
             self.calls += 1
+            idempotency_key = headers["Idempotency-Key"]
             response = {
                 "accepted": True,
-                "idempotency_key": payload["idempotency_key"],
-                "provider_reference": "provider-1",
+                "idempotency_key": idempotency_key,
+                "provider_reference": "provider-compensation-1"
+                if idempotency_key.endswith(":compensation")
+                else "provider-1",
             }
             response_digest = hashlib.sha256(
                 json.dumps(response, sort_keys=True, separators=(",", ":")).encode("ascii")
@@ -309,6 +313,7 @@ def test_writeback_dispatch_is_opt_in_server_scoped_and_idempotent(tmp_path: Pat
             "egress_destinations": ("https://api.example.test/v1/writeback",),
             "credential_reference": "vault://tenant-a/writeback-token",
             "allowed_operations": frozenset({"payment.create"}),
+            "allowed_compensation_operations": frozenset({"payment.create"}),
             "feature_enabled": True,
             "synthetic_sandbox": True,
         }
@@ -345,3 +350,66 @@ def test_writeback_dispatch_is_opt_in_server_scoped_and_idempotent(tmp_path: Pat
     assert replay.status_code == 200, replay.text
     assert replay.json()["network_dispatch"] == "already_acknowledged"
     assert transport.calls == 1
+
+    requested_compensation = client.post(
+        f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/compensate",
+        json={
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+            "reason": "provider reversal required",
+            "expected_version": 4,
+        },
+        headers=controller_headers,
+    )
+    assert requested_compensation.status_code == 200, requested_compensation.text
+    assert requested_compensation.json()["intent"]["status"] == "compensation_requested"
+    assert requested_compensation.json()["version"] == 5
+
+    class CompensationPayloads:
+        def resolve(self, intent: object) -> bytes:
+            del intent
+            return compensation_payload_bytes
+
+    missing_resolver = client.post(
+        f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/compensate/dispatch",
+        json={
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+            "expected_version": 5,
+            "payload_digest": hashlib.sha256(compensation_payload_bytes).hexdigest(),
+        },
+        headers=controller_headers,
+    )
+    assert missing_resolver.status_code == 503
+    assert missing_resolver.json()["error"]["code"] == "writeback_compensation_payload_not_configured"
+    assert transport.calls == 1
+    app.state.writeback_compensation_payload_resolver = CompensationPayloads()
+    compensated = client.post(
+        f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/compensate/dispatch",
+        json={
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+            "expected_version": 5,
+            "payload_digest": hashlib.sha256(compensation_payload_bytes).hexdigest(),
+        },
+        headers=controller_headers,
+    )
+    assert compensated.status_code == 200, compensated.text
+    assert compensated.json()["intent"]["status"] == "compensated"
+    assert compensated.json()["version"] == 6
+    assert compensated.json()["network_dispatch"] == "compensated"
+    assert compensated.json()["attempts"] == 1
+    assert transport.calls == 2
+    compensated_replay = client.post(
+        f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/compensate/dispatch",
+        json={
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+            "expected_version": 6,
+            "payload_digest": hashlib.sha256(compensation_payload_bytes).hexdigest(),
+        },
+        headers=controller_headers,
+    )
+    assert compensated_replay.status_code == 200, compensated_replay.text
+    assert compensated_replay.json()["network_dispatch"] == "already_compensated"
+    assert transport.calls == 2

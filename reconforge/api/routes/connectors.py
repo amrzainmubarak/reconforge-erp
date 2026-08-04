@@ -75,6 +75,15 @@ class WritebackCompensationRequest(BaseModel):
     expected_version: int = Field(ge=1)
 
 
+class WritebackCompensationDispatchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    tenant_id: str = Field(min_length=1, max_length=256)
+    workspace_id: str = Field(min_length=1, max_length=256)
+    expected_version: int = Field(ge=1)
+    payload_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
 class _MarkedDispatch(TypedDict):
     already_acknowledged: bool
     intent: WritebackIntent
@@ -482,6 +491,128 @@ def request_writeback_compensation(
     except (ValueError, WritebackPersistenceError) as exc:
         raise APIError(status_code=409, code="writeback_compensation_conflict", message=str(exc)) from exc
     return _writeback_response(stored, version + 1, server_mode=False)
+
+
+@router.post("/writeback/intents/{intent_id}/compensate/dispatch")
+def dispatch_writeback_compensation(
+    intent_id: str,
+    request: Request,
+    payload: WritebackCompensationDispatchRequest,
+    current_user: WritebackDispatcher,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """Execute an admitted compensation and persist it only after acknowledgement.
+
+    Compensation payloads are resolved by an explicitly configured, short-lived
+    in-memory resolver. They are never accepted from, persisted by, or echoed
+    to the API caller. The provider transport owns bounded retries and uses the
+    compensation idempotency key, so a lost persistence response remains
+    safely replayable.
+    """
+
+    del connection, current_user
+    if not server_writeback_enabled(request):
+        raise APIError(
+            status_code=503,
+            code="writeback_network_requires_server_profile",
+            message="Network write-back requires an explicitly configured server profile.",
+        )
+    tenant_id, workspace_id = _require_server_scope(request, payload.tenant_id, payload.workspace_id)
+    enforce_server_scoped_permission(
+        request,
+        permission="connectors.writeback.dispatch",
+        tenant_id=tenant_id,
+        workspace_id=workspace_id,
+    )
+    executor = cast(WritebackNetworkExecutor, getattr(request.app.state, "writeback_network_executor", None))
+    registration: WritebackNetworkRegistration | None = None
+
+    def load(repository: object, tenant_id: str, workspace_id: str) -> dict[str, object]:
+        nonlocal registration
+        current = repository.get(intent_id=intent_id, tenant_id=tenant_id, workspace_id=workspace_id)  # type: ignore[attr-defined]
+        if current is None:
+            raise APIError(status_code=404, code="writeback_intent_not_found", message="Write-back intent was not found.")
+        intent = cast(WritebackIntent, current["intent"])
+        version = int(cast(int, current["version"]))
+        if intent.status is WritebackStatus.COMPENSATED:
+            if payload.expected_version not in {version, version - 1}:
+                raise APIError(status_code=409, code="writeback_intent_version_conflict", message="Write-back intent version is stale.")
+            return {"already_compensated": True, "intent": intent, "version": version}
+        if version != payload.expected_version:
+            raise APIError(status_code=409, code="writeback_intent_version_conflict", message="Write-back intent version is stale.")
+        if intent.status is not WritebackStatus.COMPENSATION_REQUESTED:
+            raise APIError(status_code=409, code="writeback_compensation_state_invalid", message="Write-back compensation has not been requested.")
+        registration = _network_registration(request, intent.connector_id)
+        return {"already_compensated": False, "intent": intent, "version": version}
+
+    marked = execute_postgres_writeback(request, load)
+    if bool(marked["already_compensated"]):
+        intent = cast(WritebackIntent, marked["intent"])
+        return {
+            "intent": intent.model_dump(mode="json"),
+            "version": int(cast(int, marked["version"])),
+            "digest": intent.digest,
+            "network_dispatch": "already_compensated",
+        }
+    if not isinstance(registration, WritebackNetworkRegistration) or not isinstance(executor, WritebackNetworkExecutor):
+        raise APIError(status_code=503, code="writeback_network_not_configured", message="No governed network write-back registration is configured.")
+    intent = cast(WritebackIntent, marked["intent"])
+    resolver = getattr(request.app.state, "writeback_compensation_payload_resolver", None)
+    if resolver is None or not callable(getattr(resolver, "resolve", None)):
+        raise APIError(
+            status_code=503,
+            code="writeback_compensation_payload_not_configured",
+            message="No short-lived compensation payload resolver is configured.",
+        )
+    try:
+        compensation_payload = resolver.resolve(intent)
+    except Exception as exc:
+        raise APIError(status_code=503, code="writeback_compensation_payload_unavailable", message="Compensation payload could not be resolved safely.") from exc
+    policy = WritebackPolicy(
+        connector_id=registration.connector_id,
+        allowed_operations=registration.allowed_operations,
+        feature_enabled=registration.feature_enabled,
+    )
+    try:
+        dispatch = executor.dispatch_compensation(
+            intent,
+            registration=registration,
+            policy=policy,
+            payload=compensation_payload,
+            payload_digest=payload.payload_digest,
+        )
+    except WritebackNetworkError as exc:
+        raise APIError(status_code=502, code=str(exc), message="Provider compensation failed safely; the intent remains retryable.") from exc
+    except Exception as exc:
+        raise APIError(status_code=502, code="writeback_compensation_dispatch_failed", message="Provider compensation failed safely; the intent remains retryable.") from exc
+
+    def persist(repository: object, tenant_id: str, workspace_id: str) -> dict[str, object]:
+        current = repository.get(intent_id=intent_id, tenant_id=tenant_id, workspace_id=workspace_id)  # type: ignore[attr-defined]
+        if current is None:
+            raise APIError(status_code=404, code="writeback_intent_not_found", message="Write-back intent was not found.")
+        current_intent = cast(WritebackIntent, current["intent"])
+        current_version = int(cast(int, current["version"]))
+        if current_intent.status is WritebackStatus.COMPENSATED:
+            return {"intent": current_intent, "version": current_version, "already_compensated": True}
+        if current_version != int(cast(int, marked["version"])):
+            raise APIError(status_code=409, code="writeback_compensation_version_conflict", message="Write-back intent changed during provider compensation; retry with the same idempotency key.")
+        try:
+            stored = repository.put(dispatch.intent, expected_version=current_version)  # type: ignore[attr-defined]
+        except (ValueError, WritebackPersistenceError) as exc:
+            raise APIError(status_code=409, code="writeback_compensation_persistence_conflict", message=str(exc)) from exc
+        return {"intent": stored, "version": current_version + 1, "already_compensated": False}
+
+    persisted = execute_postgres_writeback(request, persist)
+    persisted_intent = cast(WritebackIntent, persisted["intent"])
+    return {
+        "intent": persisted_intent.model_dump(mode="json"),
+        "version": int(cast(int, persisted["version"])),
+        "digest": persisted_intent.digest,
+        "network_dispatch": "already_compensated" if bool(persisted["already_compensated"]) else "compensated",
+        "request_digest": dispatch.request_digest,
+        "response_digest": dispatch.response_digest,
+        "attempts": dispatch.attempts,
+    }
 
 
 def _require_server_scope(request: Request, tenant_id: str, workspace_id: str) -> tuple[str, str]:

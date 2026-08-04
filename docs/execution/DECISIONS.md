@@ -5,6 +5,25 @@
 
 ## Decisions
 
+### D-285: Keep compensation dispatch server-only and payload-resolver bound
+- **Date**: 2026-08-04
+- **Context**: Compensation request and provider-neutral transport existed,
+  but exposing a browser-supplied reversal payload would violate the secret and
+  financial-data boundary, while persisting before acknowledgement could claim
+  a reversal that never occurred.
+- **Decision**: Add a privileged server-profile dispatch route that obtains
+  bytes from an explicit short-lived in-memory resolver, verifies a caller-bound
+  SHA-256 digest, delegates transport safeguards, and appends `compensated` only
+  after accepted acknowledgement. Local mode remains network-disabled.
+- **Rationale**: Provider side effects need an operator-configured payload
+  boundary and an append-only acknowledgement gate; the API must not become a
+  generic financial-payload upload surface.
+- **Boundary**: Synthetic/injected provider and hosted server-identity gate;
+  no live vendor, accounting posting, or production claim.
+- **Reversibility**: Disable the server profile or connector registration;
+  retain intent evidence and migrate forward.
+- **ADR**: `docs/adr/0330-governed-writeback-compensation-dispatch-api.md`.
+
 ### D-284: Expose compensation requests as a separately permissioned, scoped API transition
 - **Date**: 2026-08-04
 - **Context**: Provider-neutral compensation transport existed, but no API

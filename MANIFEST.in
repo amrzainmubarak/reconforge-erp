@@ -468,3 +468,4 @@ include docs/adr/0326-server-scoped-reconciliation-run-mutations.md
 include docs/adr/0327-server-scoped-evidence-mutations.md
 include docs/adr/0328-governed-writeback-compensation-transport.md
 include docs/adr/0329-governed-writeback-compensation-request-api.md
+include docs/adr/0330-governed-writeback-compensation-dispatch-api.md

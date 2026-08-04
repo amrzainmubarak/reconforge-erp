@@ -2965,3 +2965,17 @@
 - **ADR**: `docs/adr/0308-postgres-ha-dr-runtime-gate.md`.
 - **Rollback**: remove the job, report artifact, contract test, ADR, and
   manifest entry; the existing drill scripts remain available locally.
+
+## D285 - Record hosted PostgreSQL HA/DR gate evidence
+
+- Date: 2026-08-04
+- Status: accepted
+- **Decision**: Mark E-358 as a complete bounded slice after hosted CI run
+  `30884962171` and `postgres-ha-dr` job `91914021265` passed all three
+  repeated Docker drills and uploaded the report artifact.
+- **Boundary**: The evidence is still two containers on one host with a
+  manual controller and synthetic data/key. It does not satisfy the
+  independent-failure-domain exit criteria in P4-REL-001.
+- **ADR**: `docs/adr/0308-postgres-ha-dr-runtime-gate.md`.
+- **Rollback**: revert the hosted job and documentation evidence; retain the
+  local drill only if the runtime gate is intentionally withdrawn.

@@ -42,7 +42,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   unchanged.
 - ADR: `docs/adr/0304-redis-shared-policy-cache-generation.md`.
 
-## E-358 — Hosted repeated PostgreSQL HA/DR runtime gate (in progress)
+## E-358 — Hosted repeated PostgreSQL HA/DR runtime gate (complete bounded slice)
 
 - The existing Docker drill now runs as a dedicated `postgres-ha-dr` CI job
   using locked server/backup dependencies. Three repetitions execute encrypted
@@ -56,7 +56,13 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   Artifact: `docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-04.json`.
 - Boundary remains one host and manual controller: no independent failure
   domains, quorum/witness, automatic promotion, site loss, or production SLO
-  is claimed. Hosted CI verification is pending this change.
+  is claimed. Hosted CI run `30884962171` passed the full workflow; the
+  `postgres-ha-dr` job `91914021265` ran the three repeated Docker drills and
+  uploaded the report artifact. The hosted artifact reports 3/3 passes,
+  zero acknowledged loss, failover RTO 10.468–11.301s, and failback RTO
+  0.424–0.668s. The same run's Python 3.11/3.12, server-
+  boundaries, engine-parity, object-storage, Docker, Security, and CodeQL
+  jobs also passed.
 - ADR: `docs/adr/0308-postgres-ha-dr-runtime-gate.md`.
 
 ## E-352 — Deterministic quorum/fencing safety state machine (complete bounded slice)

@@ -12741,8 +12741,15 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   zero acknowledged transaction loss, final sequence 4, and complete cleanup.
 - The schema-valid local artifact is
   `docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-04.json`.
+- Hosted CI run `30884962171` passed with `postgres-ha-dr` job
+  `91914021265`; the job ran all three repetitions on the GitHub-hosted Docker
+  runtime and uploaded the report artifact. The hosted report records 3/3
+  passes, zero acknowledged transaction loss, failover RTO 10.468–11.301s,
+  and failback RTO 0.424–0.668s. The same workflow passed its
+  Python 3.11/3.12, server-boundaries, engine-parity, object-storage, Docker,
+  Security, and CodeQL jobs.
 - Boundary: one Docker host and a manual controller with synthetic data/key;
   independent domains, quorum/witness, automatic promotion, site loss,
-  managed-key custody, and production SLO remain unverified. Hosted CI is the
-  next gate for this slice.
+  managed-key custody, and production SLO remain unverified. This is repeated
+  hosted single-host runtime evidence, not independent HA/DR deployment proof.
 - ADR: `docs/adr/0308-postgres-ha-dr-runtime-gate.md`.

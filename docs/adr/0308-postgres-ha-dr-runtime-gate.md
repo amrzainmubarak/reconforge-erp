@@ -34,3 +34,10 @@ custody, or production SLOs/RPO/RTO.
 Remove the `postgres-ha-dr` workflow job, its contract test, this ADR, and the
 manifest entry. The existing application backup adapter and local/previous
 profile artifacts remain unchanged.
+
+## Verification
+
+Hosted CI run `30884962171` passed. Job `91914021265` executed all three
+repetitions and uploaded the report; the workflow's remaining Python,
+server-boundary, parity, object-storage, Docker, Security, and CodeQL jobs also
+passed. The result remains bounded to one Docker host and a manual controller.

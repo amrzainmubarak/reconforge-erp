@@ -31,6 +31,7 @@ def _client(tmp_path: Path) -> tuple[TestClient, dict[str, str]]:
 
 def test_ppa_api_is_server_profile_only_and_authenticated(tmp_path: Path) -> None:
     client, headers = _client(tmp_path)
+    headers = {**headers, "X-ReconForge-Tenant": "tenant-a"}
 
     unauthenticated = client.post("/api/v1/consolidation-ppa", json=_body())
     assert unauthenticated.status_code == 401
@@ -43,6 +44,7 @@ def test_ppa_api_rebuilds_typed_request_and_uses_authenticated_actor(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
     client, headers = _client(tmp_path)
+    headers = {**headers, "X-ReconForge-Tenant": "tenant-a"}
     captured: dict[str, object] = {}
 
     class Repository:
@@ -80,3 +82,30 @@ def test_ppa_api_rebuilds_typed_request_and_uses_authenticated_actor(
     invalid["unexpected"] = True
     rejected = client.post("/api/v1/consolidation-ppa", headers=headers, json=invalid)
     assert rejected.status_code == 422
+
+
+def test_ppa_server_routes_re_evaluate_tenant_policy_without_workspace(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    client, headers = _client(tmp_path)
+    captured: list[tuple[frozenset[str], str, None]] = []
+
+    def enforce(_request: object, *, permissions: frozenset[str], tenant_id: str, workspace_id: None) -> None:
+        captured.append((permissions, tenant_id, workspace_id))
+
+    monkeypatch.setattr(routes, "server_ppa_enabled", lambda _request: True)
+    monkeypatch.setattr(
+        routes,
+        "execute_postgres_ppa",
+        lambda _request, _operation: {"id": "ppa-" + "a" * 32, "posted": False},
+    )
+    monkeypatch.setattr(routes, "enforce_server_scoped_permissions", enforce)
+    headers = {**headers, "X-ReconForge-Tenant": "tenant-a"}
+
+    created = client.post("/api/v1/consolidation-ppa", headers=headers, json=_body())
+    assert created.status_code == 200
+    assert captured == [(frozenset({"finance_core.manage"}), "tenant-a", None)]
+
+    loaded = client.get("/api/v1/consolidation-ppa/ppa-" + "a" * 32, headers=headers)
+    assert loaded.status_code == 200
+    assert captured[-1] == (frozenset({"finance_core.read", "finance_core.manage"}), "tenant-a", None)

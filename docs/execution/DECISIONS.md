@@ -3818,3 +3818,19 @@
 - **Boundary**: bounded evidence/control-journal integration only; no
   statutory/legal-book posting, live ERP/bank connector, write-back,
   throughput, HA/DR, compliance, certification, or production-readiness claim.
+### D-310: Bind consolidation PPA routes to tenant policy
+
+- **Date**: 2026-08-05
+- **Decision**: Re-evaluate `finance_core.manage` before PPA preparation and
+  `finance_core.read` OR `finance_core.manage` before PPA reads, using the
+  validated request tenant and no workspace scope.
+- **Rationale**: The current PostgreSQL PPA artifact is tenant-scoped. Central
+  policy must be bound to the request tenant without inventing a workspace that
+  would distort authorization semantics.
+- **Verification**: ADR 0347, focused PPA API tests (3 passed), and the full
+  server-identity API file (3 passed, 1 declared skip).
+- **Boundary**: This is route-family IAM evidence only; statutory acquisition
+  accounting, providers, write-back, independent HA/DR, distributed IAM and
+  complete worker/export/UI adoption remain open.
+- **Rollback**: Remove the helper calls, focused test, ADR and manifest entry;
+  no schema or data rollback is required.

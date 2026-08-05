@@ -7,7 +7,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import require_any_permission, require_permission
+from reconforge.api.dependencies import enforce_server_scoped_permissions, require_any_permission, require_permission
 from reconforge.api.errors import APIError
 from reconforge.api.server_consolidation_ppa import execute_postgres_ppa, server_ppa_enabled
 from reconforge.application.consolidation_ppa import AcquisitionPpaApplicationService
@@ -143,6 +143,24 @@ def _server_only(request: Request) -> None:
         )
 
 
+def _enforce_server_policy(request: Request, *, permissions: frozenset[str]) -> None:
+    """Re-evaluate PPA access against the authenticated tenant in server mode.
+
+    PPA evidence is currently tenant-scoped (the persisted contract has no
+    workspace key), so the central policy must be evaluated with an explicit
+    ``None`` workspace rather than inventing a synthetic workspace scope.
+    """
+
+    from reconforge.api.server_identity import request_tenant_id
+
+    enforce_server_scoped_permissions(
+        request,
+        permissions=permissions,
+        tenant_id=request_tenant_id(request),
+        workspace_id=None,
+    )
+
+
 @router.post("")
 def prepare_ppa(
     request: Request,
@@ -152,6 +170,7 @@ def prepare_ppa(
     """Persist one authenticated, maker-checker, non-posting PPA artifact."""
 
     _server_only(request)
+    _enforce_server_policy(request, permissions=frozenset({"finance_core.manage"}))
     domain_request = payload.to_domain(prepared_by=current_user.id)
     artifact = execute_postgres_ppa(
         request,
@@ -172,6 +191,7 @@ def get_ppa(
     """Return one tenant-scoped, replay-verified PPA artifact."""
 
     _server_only(request)
+    _enforce_server_policy(request, permissions=frozenset({"finance_core.read", "finance_core.manage"}))
     artifact = execute_postgres_ppa(
         request,
         lambda repository, _tenant: repository.get(artifact_id, actor_label=current_user.id),

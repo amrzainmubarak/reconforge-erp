@@ -13614,3 +13614,20 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   write-back, throughput, HA/DR, compliance, certification, or production
   readiness.
 - ADR: `docs/adr/0336-postgres-close-intercompany-evidence-binding.md`.
+## E-401 — Server-scoped consolidation PPA policy
+
+- `reconforge/api/routes/consolidation_ppa.py` now invokes the central server
+  policy evaluator immediately after server-profile availability is confirmed
+  and before PPA request conversion or repository access. Preparation requires
+  `finance_core.manage`; reads preserve `finance_core.read` OR
+  `finance_core.manage`.
+- Because the persisted PPA artifact is tenant-scoped, the evaluator receives
+  the validated request tenant with an explicit `None` workspace. No synthetic
+  workspace is introduced.
+- `uv run pytest -q tests/test_api_consolidation_ppa.py --tb=short` -> 3 passed;
+  `uv run pytest -q tests/test_api_server_identity.py --tb=short` -> 3 passed,
+  1 declared skip.
+- Boundary: route-family central-policy evidence only. It does not prove
+  statutory/legal-book acquisition accounting, tax/impairment, live providers,
+  write-back, independent HA/DR, distributed IAM, or production readiness.
+- ADR: `docs/adr/0347-server-scoped-consolidation-ppa-policy.md`.

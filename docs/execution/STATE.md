@@ -6,6 +6,20 @@ Updated: 2026-08-05
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-401 — Server-scoped consolidation PPA policy (passed locally)
+
+- PostgreSQL consolidation PPA preparation now re-evaluates
+  `finance_core.manage` against the validated request tenant before the
+  non-posting evidence adapter; reads re-evaluate the existing
+  `finance_core.read` OR `finance_core.manage` contract.
+- The policy call deliberately passes `workspace_id=None` because the current
+  PPA persistence contract is tenant-scoped and has no workspace key. A
+  focused API regression proves the call shape and the existing server-identity
+  lifecycle remains green.
+- This is route-family IAM evidence only. Statutory acquisition accounting,
+  provider interoperability, write-back, independent HA/DR, and complete
+  worker/export/UI policy adoption remain open.
+
 ## E-400 — Full local post-IAM quality gates (passed)
 
 - `uv run pytest -q --tb=short` -> exit 0 in 318.9 seconds; declared skips and

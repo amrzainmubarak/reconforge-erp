@@ -4555,3 +4555,8 @@ After the namespace repair and YAML evidence correction, the complete local
 pytest/static/security/package gate is green again: pytest 0 in 353.3s, Mypy
 465 files, Ruff, Bandit, OSV audit, supply-chain policy, build, and diff-check
 all pass. Declared capability skips and existing warnings remain visible.
+The native PostgreSQL backup contract also passes locally at the unit/security
+boundary (11 passed); its one live test remains explicitly skipped because the
+Windows host has no native `pg_dump`/`pg_restore`/`createdb`/`dropdb`/`psql` set.
+The retry and fail-closed no-dump paths are therefore verified, while hosted
+native-tool execution remains open.

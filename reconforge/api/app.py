@@ -176,6 +176,7 @@ def create_api_app(
     # The bounded PostgreSQL ledger uses the same secured connection factory
     # as server identity, but remains an explicit API capability boundary.
     app.state.postgres_ledger_factory = app.state.postgres_identity_factory
+    app.state.postgres_finance_core_factory = app.state.postgres_identity_factory
     app.state.postgres_master_data_factory = app.state.postgres_identity_factory
     app.state.postgres_close_factory = app.state.postgres_identity_factory
     app.state.postgres_consolidation_close_factory = app.state.postgres_identity_factory

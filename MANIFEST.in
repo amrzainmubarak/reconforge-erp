@@ -478,10 +478,14 @@ include docs/adr/0331-signed-connector-package-admission.md
 include docs/adr/0332-signed-package-admission-cli.md
 include docs/adr/0333-intercompany-elimination-proposals-are-exact-and-nonposting.md
 include docs/adr/0334-postgres-intercompany-elimination-evidence.md
+include docs/adr/0335-server-finance-core-api-adapter.md
 include reconforge/infrastructure/postgres_intercompany_elimination.py
+include reconforge/api/server_finance_core.py
 include reconforge/api/server_consolidation_intercompany.py
 include reconforge/api/routes/consolidation_intercompany.py
 include tests/test_postgres_intercompany_elimination.py
 include tests/test_postgres_intercompany_elimination_runtime.py
 include tests/test_api_consolidation_intercompany.py
+include tests/test_api_server_finance_core.py
+include tests/test_api_server_finance_core_live.py
 include alembic/versions/0063_postgres_intercompany_eliminations.py

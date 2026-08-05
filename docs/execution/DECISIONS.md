@@ -3560,3 +3560,16 @@
 - **ADR**: `docs/adr/0327-server-scoped-evidence-mutations.md`.
 - **Rollback**: remove helper calls, focused assertions, ADR, and manifest
   entry. No data or schema rollback is required.
+### D-291: Activate the PostgreSQL Finance Core API adapter
+
+- **Date**: 2026-08-05
+
+- **Decision**: use a dedicated request-scoped `server_finance_core` executor and
+  the existing forced-RLS Finance Core repository for rich server operations;
+  retain the old posted-ledger adapter for minimal legacy payloads.
+- **Rationale**: this adds real chart/account/dimension/journal and draft lifecycle
+  semantics without silently changing or downgrading existing clients.
+- **Verification**: ADR 0335, `tests/test_api_server_finance_core.py`, and the optional
+  live-DSN route lifecycle gate.
+- **Boundary**: no statutory posting, live vendor connector, write-back, scale,
+  HA/DR, or production-readiness claim.

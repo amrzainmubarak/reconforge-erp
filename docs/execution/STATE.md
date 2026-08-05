@@ -3729,3 +3729,18 @@ publication and remote GitHub verification before a release Go decision.
 - Boundary: exact USD synthetic single-process evidence only. FX/fees/partial
   density, PostgreSQL runtime parity, distributed load, soak, and 100K/1M
   records remain unverified.
+
+## E-385 — Server Finance Core adapter routes
+
+- The server API now activates the forced-RLS `PostgresFinanceCoreRepository`
+  for charts, account hierarchy, dimensions, journals, snapshot, and explicit
+  entity/period/journal entry lifecycle operations. Every adapter call carries
+  the authenticated tenant/workspace scope and re-checks the matching central
+  Finance Core permission immediately before access.
+- Focused route/scope tests pass, including sibling-workspace rejection and
+  no-local-fallback behavior. A live-DSN route lifecycle test covers the same
+  path when the configured non-privileged PostgreSQL role is available.
+- Boundary: legacy minimal posted-ledger requests remain on their compatibility
+  adapter; this slice does not prove statutory consolidation, legal-book
+  posting, live ERP/bank interoperability, write-back, throughput, HA/DR, or
+  production readiness.

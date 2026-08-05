@@ -491,14 +491,16 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
     tenant_root.mkdir()
     tenant_db = tenant_root / "tenant-a.db"
     run_migrations(tenant_db)
-    client = TestClient(
-        create_api_app(
-            tmp_path / "unused.db",
-            tenant_db_root=tenant_root,
-            postgres_dsn="postgresql://identity.test/postgres",
-            postgres_require_tls=False,
-        )
+    legacy_app = create_api_app(
+        tmp_path / "unused.db",
+        tenant_db_root=tenant_root,
+        postgres_dsn="postgresql://identity.test/postgres",
+        postgres_require_tls=False,
     )
+    # This fixture intentionally covers the pre-Finance-Core server ledger
+    # compatibility contract.  Dedicated tests exercise the new adapter.
+    legacy_app.state.postgres_finance_core_factory = None
+    client = TestClient(legacy_app)
     tenant_headers = {"X-ReconForge-Tenant": "tenant-a"}
 
     missing_tenant = client.post("/api/v1/auth/login", json={"username": "alice", "password": "Strong-password-123"})

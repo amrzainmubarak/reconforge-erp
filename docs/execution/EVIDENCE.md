@@ -13325,3 +13325,20 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   bounded synthetic runtime gate, not throughput, distributed fairness, soak,
   queue HA, failover, capacity, or production-SLO evidence.
 - ADR: `docs/adr/0312-hosted-postgres-queue-policy-and-fairness-gate.md`.
+
+## E-385 — Server Finance Core adapter routes
+
+- `reconforge/api/server_finance_core.py` opens a `PostgresTenantBoundary` for
+  each request and constructs `PostgresFinanceCoreRepository` with the
+  authenticated tenant. Finance Core routes re-evaluate read/manage/validate
+  permissions and reject a payload naming a sibling workspace.
+- `tests/test_api_server_finance_core.py` passes the focused adapter/scope
+  contract (including no-local-fallback and workspace denial). The optional
+  `tests/test_api_server_finance_core_live.py` runs the same chart/account/
+  journal/draft-validation/isolation path against a non-privileged PostgreSQL
+  role when `RECONFORGE_TEST_POSTGRES_DSN` is configured.
+- Boundary: route and workspace-control evidence only. Legacy minimal ledger
+  requests retain their compatibility adapter; no statutory posting, live
+  ERP/bank provider, write-back, throughput, HA/DR, or production-readiness
+  claim is made.
+- ADR: `docs/adr/0335-server-finance-core-api-adapter.md`.

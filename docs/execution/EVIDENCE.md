@@ -14029,3 +14029,20 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   physical-airgap custody, OCI offline subject verification, hardware-backed
   key custody, or production-readiness claim.
 - ADR: `docs/adr/0360-current-airgap-install-recovery-upgrade-drill.md`.
+
+## E-431 — Current live S3-compatible object-storage contract drill
+
+- The real boto3-backed adapter completed against a disposable MinIO
+  container pinned to image digest
+  `sha256:13582eff79c6605a2d315bdd0e70164142ea7e98fc8411e9e10d089502a6d883`.
+  Normal and Object Lock buckets proved hierarchical scope isolation,
+  immutable conflict refusal, checksum tamper refusal, object-lock delete
+  refusal, and cleanup. The schema-validated report is
+  `docs/execution/S3_OBJECT_STORAGE_LIVE_DOCKER_DRILL_2026-08-05.json` and
+  carries digest
+  `5f4ef103abfe4b198bc64e348f554dc52e56d3ebb5d7f425faf1761ce6225c6a`.
+- Boundary: one disposable single-node MinIO process with synthetic
+  credentials/bytes; no replication, KMS, cross-site durability, provider
+  interoperability, object-store HA/DR, malware scanning, authorized
+  downloads, or production SLO claim follows.
+- ADR: `docs/adr/0361-live-s3-object-storage-contract-drill.md`.

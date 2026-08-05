@@ -4300,3 +4300,18 @@
   multi-platform repetition, HA/DR, or production readiness follows.
 - **Rollback**: Remove the dated report/schema/test pointer and retain the
   historical 2026-07-30 drill artifacts.
+
+### D-342: Retain the current live S3-compatible object-storage drill
+
+- **Date**: 2026-08-05
+- **Decision**: Keep the disposable MinIO execution as fresh runtime evidence
+  for the real boto3-backed object-store adapter, while keeping the provider
+  and availability claim bounded.
+- **Verification**: Digest-pinned MinIO, normal and Object Lock buckets, five
+  true invariants, cleanup, and report digest
+  `5f4ef103abfe4b198bc64e348f554dc52e56d3ebb5d7f425faf1761ce6225c6a`.
+- **Boundary**: Single-node synthetic runtime only; no replication, KMS,
+  cross-site durability, provider interoperability, object-store HA/DR,
+  malware scanning, authorized downloads, or production SLO.
+- **Rollback**: Remove the dated report and focused test while retaining the
+  provider-neutral contract and prior hosted evidence.

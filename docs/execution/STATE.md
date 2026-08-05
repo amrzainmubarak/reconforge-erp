@@ -4577,3 +4577,8 @@ duplicate identities, no failed runs, and no active runs. Both databases were
 dropped after verification. This is bounded single-host synthetic evidence and
 does not establish production throughput, soak, queue HA, host-loss,
 cross-host fairness, RPO/RTO, or capacity sizing.
+The current-revision public-financial verifier was also retried from a clean
+tree. Treasury and World Bank isolated fetches were reachable, but the pinned
+OpenDataNI March 2026 artifact returned HTTP 403, so the complete experiment was
+not counted as passed. E-444 remains the last complete public-data run; this is
+external source-availability drift, not evidence of a code regression.

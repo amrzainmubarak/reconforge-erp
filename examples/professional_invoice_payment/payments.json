@@ -1,0 +1,58 @@
+{
+  "records": [
+    {
+      "payment_id": "PAY-001",
+      "client_id": "ACME",
+      "payment_date": "2026-07-30",
+      "amount": "1000.00",
+      "currency": "USD",
+      "reference": "INV-001",
+      "source_reference": "payment-export-2026-07"
+    },
+    {
+      "payment_id": "PAY-002",
+      "client_id": "ACME",
+      "payment_date": "2026-08-01",
+      "amount": "260.00",
+      "currency": "USD",
+      "reference": "INV-002",
+      "source_reference": "payment-export-2026-07"
+    },
+    {
+      "payment_id": "PAY-003",
+      "client_id": "BETA",
+      "payment_date": "2026-08-02",
+      "amount": "500.00",
+      "currency": "USD",
+      "reference": "INV-003",
+      "source_reference": "payment-export-2026-07"
+    },
+    {
+      "payment_id": "PAY-004",
+      "client_id": "BETA",
+      "payment_date": "2026-08-03",
+      "amount": "75.00",
+      "currency": "USD",
+      "reference": "INV-004",
+      "source_reference": "payment-export-2026-07"
+    },
+    {
+      "payment_id": "PAY-005",
+      "client_id": "BETA",
+      "payment_date": "2026-08-03",
+      "amount": "75.00",
+      "currency": "USD",
+      "reference": "INV-004",
+      "source_reference": "payment-export-2026-07"
+    },
+    {
+      "payment_id": "PAY-006",
+      "client_id": "ACME",
+      "payment_date": "2026-08-04",
+      "amount": "50.00",
+      "currency": "USD",
+      "reference": "UNAPPLIED",
+      "source_reference": "payment-export-2026-07"
+    }
+  ]
+}

@@ -42,6 +42,7 @@ from reconforge.cli_inventory_planning import inventory_planning_app
 from reconforge.cli_inventory_valuation import inventory_valuation_app
 from reconforge.cli_inventory_valuation_reversal import inventory_valuation_reversal_app
 from reconforge.cli_manufacturing_cost_control import manufacturing_cost_control_app
+from reconforge.cli_professional_invoice_payment_control import professional_invoice_payment_app
 from reconforge.cli_retail_settlement import retail_settlement_app
 from reconforge.close import (
     ALLOWED_CLOSE_STATUSES,
@@ -244,6 +245,7 @@ outbox_app = typer.Typer(help="Inspect and replay local transactional outbox eve
 retail_app = typer.Typer(help="Run bounded retail operations controls.")
 bank_app = typer.Typer(help="Run bounded banking and professional cash controls.")
 manufacturing_app = typer.Typer(help="Run bounded manufacturing production controls.")
+professional_app = typer.Typer(help="Run bounded professional services controls.")
 app.add_typer(reconcile_app, name="reconcile")
 app.add_typer(report_app, name="report")
 app.add_typer(rules_app, name="rules")
@@ -288,12 +290,14 @@ app.add_typer(outbox_app, name="outbox")
 app.add_typer(retail_app, name="retail")
 app.add_typer(bank_app, name="bank")
 app.add_typer(manufacturing_app, name="manufacturing")
+app.add_typer(professional_app, name="professional")
 inventory_app.add_typer(inventory_planning_app, name="planning")
 inventory_app.add_typer(inventory_valuation_app, name="valuation")
 inventory_valuation_app.add_typer(inventory_valuation_reversal_app, name="reversal")
 retail_app.add_typer(retail_settlement_app, name="settlement")
 bank_app.add_typer(bank_statement_app, name="statement")
 manufacturing_app.add_typer(manufacturing_cost_control_app, name="cost-control")
+professional_app.add_typer(professional_invoice_payment_app, name="invoice-payment")
 
 
 def _version_callback(value: bool) -> None:

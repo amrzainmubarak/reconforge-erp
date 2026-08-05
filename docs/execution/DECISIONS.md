@@ -4455,3 +4455,26 @@
   approval; no GitHub publication occurs here.
 - **Rollback**: Supersede E-440 with the next exact-environment audit if the
   locked dependency graph changes; no runtime/data rollback is needed.
+# ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
+
+Implemented and bounded the `professional.invoice-payment` module. It is local,
+non-posting, and provider-neutral. Exact `Money`, normalized references, client
+identity, due-date window, duplicate/ambiguity, unmatched-invoice, and
+unapplied-payment behavior are explicit and digest-bound. The slice does not
+claim revenue recognition, receivables allocation, live billing/payment
+connectivity, ERP posting/write-back, HA/DR, or production readiness.
+### D-306: Treat professional invoice/payment evidence as local bounded breadth
+- **Date**: 2026-08-05
+- **Context**: The professional-services vertical needed a real, testable control
+  without pretending that exported files are a live billing or receivables
+  system.
+- **Decision**: Ship the `professional.invoice-payment` module as experimental,
+  local-first, non-posting, provider-neutral code with exact Money arithmetic,
+  explicit ambiguity/unapplied outcomes, and digest-bound reports.
+- **Rationale**: This adds useful individual/professional breadth while keeping
+  revenue recognition, allocation, posting, provider authentication, and ERP
+  write-back behind separate evidence gates.
+- **Reversibility**: Remove the module/pack/CLI and registry metadata; no
+  migration or persistent data rollback is required.
+- **Verification**: Focused tests, pack validation, full pytest, Ruff, Mypy,
+  Bandit, OSV, supply-chain policy, build, and diff-check all pass locally.

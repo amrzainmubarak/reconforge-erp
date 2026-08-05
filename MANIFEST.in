@@ -472,6 +472,14 @@ include docs/schemas/manufacturing_cost_control_report.schema.json
 recursive-include control-packs/manufacturing-production-cost *
 recursive-include examples/manufacturing_cost_control *
 include docs/adr/0366-manufacturing-production-cost-control-slice.md
+include reconforge/domain/professional_invoice_payment_control.py
+include reconforge/application/professional_invoice_payment_control.py
+include reconforge/cli_professional_invoice_payment_control.py
+include tests/test_professional_invoice_payment_control.py
+include docs/schemas/professional_invoice_payment_report.schema.json
+recursive-include control-packs/professional-invoice-payment *
+recursive-include examples/professional_invoice_payment *
+include docs/adr/0367-professional-invoice-payment-control-slice.md
 include docs/execution/S3_OBJECT_STORAGE_LIVE_DOCKER_DRILL_2026-08-05.json
 include tests/test_current_s3_object_storage_live_report.py
 include docs/adr/0229-durable-job-10k-tier-is-hardware-scoped.md

@@ -41,6 +41,9 @@ module_ceilings:
   - module_id: plugins.export
     maximum_maturity: experimental
     evidence_claim: Live ERP connectors
+  - module_id: professional.invoice-payment
+    maximum_maturity: experimental
+    evidence_claim: Experimental professional invoice and payment control
   - module_id: reconciliation.core
     maximum_maturity: experimental
     evidence_claim: Deterministic reconciliation

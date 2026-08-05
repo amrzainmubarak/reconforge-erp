@@ -4490,3 +4490,18 @@ publication and remote GitHub verification before a release Go decision.
   local dependency evidence only; hosted matrices, live ERP/MRP
   providers/write-back, statutory valuation/posting, independent HA/DR,
   distributed IAM, scale/soak, and GitHub publication remain open.
+## Current slice — professional invoice-to-payment control (2026-08-05)
+
+`professional.invoice-payment` is implemented as an experimental local,
+non-posting module. The typed control compares exported invoices and client
+payments using exact Money, normalized references, client identity, and a
+bounded due-date window. It emits explicit matched, exception, ambiguous,
+unmatched-invoice, and unapplied-payment decisions with a replay-verifiable
+digest. Focused tests and the control-pack validation pass. E-442 is in progress
+for the full local regression/static/security/package gate; no GitHub publication
+has occurred.
+The professional invoice/payment slice has now passed E-442: full local
+pytest/static/security/package gates are green. This closes only the local
+compatibility gate for the slice; the coherent-breadth workstream and all live
+provider, posting, write-back, external-operator, hosted, and production gates
+remain open. No GitHub publication occurred.

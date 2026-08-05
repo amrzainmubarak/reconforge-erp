@@ -1,0 +1,44 @@
+rules:
+  - rule_id: PRO-001
+    rule_name: Invoice has a payment candidate
+    severity: high
+    entity_type: invoice
+    source_file: invoices.csv
+    condition:
+      operator: cross_file_missing
+      source_key: reference
+      target_file: payments.csv
+      target_key: reference
+    message: An invoice reference has no payment candidate in the payment export.
+    business_impact: Professional-service revenue may remain outstanding or be misapplied.
+    recommended_action: Review the client remittance, unapplied cash, and invoice reference lineage.
+    risk_impact: 78
+    evidence_fields: [invoice_id, client_id, amount, due_date, reference]
+  - rule_id: PRO-002
+    rule_name: Duplicate payment reference
+    severity: critical
+    entity_type: payment
+    source_file: payments.csv
+    condition:
+      operator: duplicate
+      field: reference
+    message: More than one payment uses the same normalized invoice reference.
+    business_impact: Cash may be double-applied or require an explicit allocation review.
+    recommended_action: Confirm the payment identifiers and allocate only after independent review.
+    risk_impact: 92
+    evidence_fields: [payment_id, client_id, amount, reference]
+  - rule_id: PRO-003
+    rule_name: Unapplied payment
+    severity: medium
+    entity_type: payment
+    source_file: payments.csv
+    condition:
+      operator: cross_file_missing
+      source_key: reference
+      target_file: invoices.csv
+      target_key: reference
+    message: A payment reference has no invoice candidate.
+    business_impact: Unapplied client cash can distort receivables and cash forecasting.
+    recommended_action: Obtain remittance detail and keep the cash item visibly unapplied until reviewed.
+    risk_impact: 64
+    evidence_fields: [payment_id, client_id, amount, reference]

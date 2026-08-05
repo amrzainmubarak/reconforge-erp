@@ -569,6 +569,32 @@ _MODULES = (
         test_evidence=("tests/test_manufacturing_cost_control.py",),
     ),
     ModuleDescriptor(
+        module_id="professional.invoice-payment",
+        name="Professional invoice and payment control",
+        version="1.0.0",
+        maturity="experimental",
+        capability_status="implemented",
+        summary=(
+            "Deterministic local invoice-to-payment control with exact amount, client, reference, due-date, "
+            "duplicate, ambiguous, and unapplied-cash evidence."
+        ),
+        default_enabled=False,
+        dependencies=("platform.core",),
+        interfaces=("artifacts", "cli", "library"),
+        import_contracts=("professional-invoice-export.v1", "professional-payment-export.v1"),
+        export_contracts=("professional-invoice-payment-report.v1",),
+        data_classification=("financial-sensitive", "receivables-control-data", "source-export-metadata"),
+        retention_note=(
+            "Invoice exports, payment exports, and reports remain in operator-selected local paths; the module "
+            "does not retain client credentials or contact a billing provider."
+        ),
+        activation_note=(
+            "Run explicitly with bounded local JSON exports. The slice is non-posting and provider-neutral; "
+            "receivables allocation, billing connectivity, and ERP write-back remain separate gates."
+        ),
+        test_evidence=("tests/test_professional_invoice_payment_control.py",),
+    ),
+    ModuleDescriptor(
         module_id="studio.modern",
         name="Modern Studio synthetic preview",
         version=__version__,

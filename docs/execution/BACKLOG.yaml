@@ -1280,6 +1280,22 @@ tasks:
     depends_on: [E-439]
     exit_evidence: Full pytest exits 0 in 353.3s; Ruff, Mypy across 462 source files, Bandit, pip-audit via OSV with no known vulnerabilities, supply-chain policy validation, package build, and diff-check pass; optional service skips and existing warnings remain visible.
 
+  - id: E-441
+    priority: P4
+    area: platform_breadth
+    title: Experimental professional invoice-to-payment control slice
+    status: completed
+    depends_on: [E-439]
+    exit_evidence: Typed professional.invoice-payment domain/application boundary over local invoice and client-payment exports, exact Money/reference/client/date-window decisions, explicit ambiguity/exception/unmatched/unapplied outcomes, local CLI, digest-bound schema/report, synthetic JSON/CSV fixtures, declarative control pack, module/threat registry entries, focused replay/tamper tests, ADR 0367, and explicit non-posting/live-provider limits.
+
+  - id: E-442
+    priority: P0
+    area: quality
+    title: Full local regression and release-tool gates after professional invoice-payment slice
+    status: completed
+    depends_on: [E-441]
+    exit_evidence: Full pytest exits 0 in 351.8s; Ruff, Mypy across 465 source files, Bandit, OSV dependency audit with no known vulnerabilities, supply-chain policy validation, package build, and diff-check pass after the professional module; optional service skips and existing warnings remain visible, and hosted/public release gates remain external evidence.
+
   - id: P4-PLAT-001
     priority: P4
     area: platform_breadth
@@ -1292,3 +1308,4 @@ tasks:
       - E-435 adds the experimental `retail.settlement` runtime module and `retail-pos-settlement-v1` export-based control. It includes exact Money arithmetic, fees/refunds/chargebacks, unmatched and ambiguous outcomes, deterministic replay, a digest-bound report, local CLI, synthetic fixtures, a declarative pack, and focused security/tamper tests. It is a bounded non-posting slice; complete retail persistence/API/Studio, live provider conformance, operational evidence, and the full breadth exit gate remain open.
       - E-437 adds the experimental `bank.cash-reconciliation` runtime module and a `bank-statement-control-v1` export-based control over local CAMT.053 and ledger files. It includes exact Money/reference/date-window decisions, ambiguity/exception/unmatched outcomes, deterministic replay, a digest-bound report, local CLI, synthetic fixtures, a declarative pack, and focused security/tamper tests. It is a bounded non-posting slice; live bank/ERP connectivity, payment initiation, statutory posting, write-back, operational evidence, and the full breadth exit gate remain open.
       - E-439 adds the experimental `manufacturing.cost-control` runtime module and a `manufacturing-cost-control-v1` export-based control over local production orders, material issues, completions, and scrap. It includes exact Money/Quantity arithmetic, standard/material/completion cost variance, planned-versus-completed quantity, scrap limits, unknown-order lineage, deterministic replay, a digest-bound report, local CLI, synthetic fixtures, a declarative pack, and focused security/tamper tests. It is a bounded non-posting slice; statutory valuation, live ERP/MRP connectivity, inventory/WIP/GL posting, write-back, operational evidence, and the full breadth exit gate remain open.
+      - E-441 adds the experimental `professional.invoice-payment` runtime module and a `professional-invoice-payment-v1` export-based control over local professional-service invoices and client payments. It includes exact Money/reference/client/date-window decisions, duplicate/ambiguous/unmatched/unapplied outcomes, deterministic replay, a digest-bound report, local CLI, synthetic fixtures, a declarative control pack, and focused security/tamper tests. It is a bounded non-posting slice; revenue recognition, live billing/payment connectivity, receivables allocation, ERP posting/write-back, operational evidence, and the full breadth exit gate remain open under ADR 0367.

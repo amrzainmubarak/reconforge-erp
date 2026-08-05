@@ -817,6 +817,64 @@ modules:
     out_of_scope:
       - Live bank/ERP connectivity, payment initiation, fraud controls, statutory posting, write-back, persistence/API/Studio, HA/DR, and production availability.
 
+  - module_id: professional.invoice-payment
+    registry_maturity: experimental
+    capability_status: implemented
+    threat_model_status: evidence-bounded
+    owner: platform-security
+    interfaces: [artifacts, cli, library]
+    module_data_classifications: [financial-sensitive, receivables-control-data, source-export-metadata]
+    architecture_boundaries: [TB-001, TB-003, TB-007]
+    assets:
+      - id: professional-invoice-payment-exports
+        description: Operator-selected professional-service invoice and client-payment exports used by the non-posting control.
+        data_class: DC-003
+        objectives: [confidentiality, integrity, availability]
+      - id: professional-invoice-payment-report-and-digests
+        description: Exact client, amount, due-date, ambiguity, unmatched, and unapplied-cash decisions with input fingerprints.
+        data_class: DC-005
+        objectives: [integrity, auditability]
+    actors: [ACT-001, ACT-002, ACT-003, ACT-006, ACT-007]
+    threat_cases:
+      - threat_id: TM-T-001
+        status: partial
+        attack_surface: JSON/CSV invoice and payment exports, client identifiers, exact amounts, dates, paths, and report verification.
+        controls: [SEC-C-001, SEC-C-002]
+        test_evidence: [tests/test_professional_invoice_payment_control.py, tests/test_file_ingestion_inventory.py]
+        residual_risk_ids: [R-018]
+        limitations:
+          - Bounded local ingress rejects malformed structures and resource abuse, but it does not authenticate billing origin or scan for malware.
+      - threat_id: TM-T-002
+        status: bounded
+        attack_surface: Reference normalization, exact currency/tolerance, client binding, due-date window, duplicate IDs, candidate ambiguity, and unapplied cash.
+        controls: [SEC-C-005, SEC-C-006]
+        test_evidence: [tests/test_professional_invoice_payment_control.py, tests/test_v03_platform.py]
+        residual_risk_ids: [R-003]
+        limitations:
+          - Exact arithmetic and replay digests do not establish revenue recognition, receivables allocation, source completeness, or client remittance truth.
+      - threat_id: TM-T-006
+        status: deployment-dependent
+        attack_surface: Digest-bound reports, source fingerprints, output paths, and external recipients.
+        controls: [SEC-C-006, SEC-C-007]
+        test_evidence: [tests/test_professional_invoice_payment_control.py]
+        residual_risk_ids: [R-014, R-017]
+        limitations:
+          - Hashes are not signatures and the module does not authorize disclosure, retention, allocation, or downstream posting.
+      - threat_id: TM-T-007
+        status: deployment-dependent
+        attack_surface: Future billing/payment connectors, credentials, network egress, and attempted receivables or ERP write-back.
+        controls: [SEC-C-008, SEC-C-010]
+        test_evidence: [tests/test_professional_invoice_payment_control.py]
+        residual_risk_ids: [R-009]
+        limitations:
+          - This slice performs no network calls, receivables allocation, journal posting, billing authentication, or distributed quota enforcement.
+    module_test_evidence: [tests/test_professional_invoice_payment_control.py, tests/test_file_ingestion_inventory.py, tests/test_v03_platform.py]
+    assumptions:
+      - Operators provide authorized invoice/payment exports and independently review all exceptions before allocation or posting.
+      - The control remains non-posting and no billing credential or endpoint is configured through this module.
+    out_of_scope:
+      - Live billing/payment connectivity, revenue recognition, receivables allocation, statutory posting, ERP write-back, persistence/API/Studio, HA/DR, and production availability.
+
   - module_id: retail.settlement
     registry_maturity: experimental
     capability_status: implemented

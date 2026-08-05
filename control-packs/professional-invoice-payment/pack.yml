@@ -1,0 +1,6 @@
+pack_id: professional-invoice-payment
+name: Professional Invoice and Payment Controls
+version: 1.0.0
+description: Bounded controls for exported professional-service invoices and client payments.
+owner: ReconForge ERP Maintainers
+tags: [professional-services, invoices, receipts, cash, controls]

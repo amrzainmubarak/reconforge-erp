@@ -18,7 +18,7 @@ runner = CliRunner()
 def test_registry_is_deterministic_complete_and_valid() -> None:
     descriptors = list_modules()
 
-    assert len(descriptors) == 14
+    assert len(descriptors) == 15
     assert [record.module_id for record in descriptors] == sorted(record.module_id for record in descriptors)
     assert validate_registry() == ()
     assert all(record.local_first is True for record in descriptors)
@@ -105,7 +105,7 @@ def test_modules_cli_lists_filters_and_shows_json() -> None:
     assert shown.exit_code == 0
     assert json.loads(shown.output)["module_id"] == "studio.modern"
     assert validated.exit_code == 0
-    assert "14 runtime modules" in validated.output
+    assert "15 runtime modules" in validated.output
 
 
 def test_modules_cli_rejects_unknown_values_without_traceback() -> None:

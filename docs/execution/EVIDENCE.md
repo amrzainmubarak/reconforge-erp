@@ -14199,3 +14199,18 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   local dependency evidence only; hosted matrices, live ERP/MRP
   providers/write-back, statutory valuation/posting, independent HA/DR,
   distributed IAM, scale/soak, and GitHub publication remain open.
+## E-441 — professional invoice-to-payment control (2026-08-05)
+
+- Code: `reconforge/domain/professional_invoice_payment_control.py`, typed
+  application boundary, `reconforge professional invoice-payment run`, module
+  registry, control pack, schema, fixtures, and ADR 0367.
+- Focused tests: `uv run pytest -q tests/test_professional_invoice_payment_control.py --tb=short` — 6 passed.
+- Pack: `uv run reconforge rules validate --pack control-packs/professional-invoice-payment` — valid; local CSV run triggered 13 bounded controls.
+- Fixture runtime: matched 2, exception 1, ambiguous 1, unmatched invoice 1,
+  unmatched payment 1; decision digest
+  `06a65e9f3caf29c53929905b9fc20f14b89ee6aae2491e98c04356df12442717`.
+- Report: JSON Schema validation and artifact-digest verification pass.
+- Boundary: synthetic local exports only; no billing/payment provider,
+  revenue recognition, receivables allocation, posting, write-back, HA/DR, or
+  production claim.
+- E-442 full local regression/package gate (2026-08-05): `uv run pytest -q --tb=short -ra` exits 0 in 351.8s with declared PostgreSQL/Redis/S3/Windows skips and existing warnings; `uv run ruff check .`, `uv run mypy reconforge` (465 files), `uv run bandit -q -r reconforge`, `uv run pip-audit -s osv --progress-spinner off --timeout 30` (no known vulnerabilities), supply-chain policy validation, `uv run python -m build --no-isolation`, and `git diff --check` pass. This is local evidence only; hosted matrices, live providers/write-back, independent HA/DR, and release approval remain external.

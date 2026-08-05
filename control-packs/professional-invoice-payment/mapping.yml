@@ -1,0 +1,10 @@
+mapping_id: professional-invoice-payment-v1
+sources:
+  invoices: invoices.csv
+  payments: payments.csv
+canonical_fields:
+  invoice_id: [invoice_id, document_id, bill_id]
+  client_id: [client_id, customer_id, counterparty_id]
+  amount: [amount, gross_amount, total]
+  due_date: [due_date, payment_due]
+  reference: [reference, invoice_reference, document_number]

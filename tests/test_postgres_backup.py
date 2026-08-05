@@ -35,11 +35,13 @@ class _Runner:
         fail_restore: bool = False,
         fail_verification: bool = False,
         fail_rollback: bool = False,
+        omit_dump_attempts: int = 0,
     ) -> None:
         self.calls: list[tuple[str, ...]] = []
         self.fail_restore = fail_restore
         self.fail_verification = fail_verification
         self.fail_rollback = fail_rollback
+        self.omit_dump_attempts = omit_dump_attempts
 
     def run(self, argv: Sequence[str], *, timeout_seconds: int) -> int:
         assert timeout_seconds == 30
@@ -47,8 +49,11 @@ class _Runner:
         self.calls.append(call)
         executable = Path(call[0]).stem
         if executable == "pg_dump":
-            output = Path(call[call.index("--file") + 1])
-            output.write_bytes(b"PGDMP\x01\x0f confidential-database-content")
+            if self.omit_dump_attempts:
+                self.omit_dump_attempts -= 1
+            else:
+                output = Path(call[call.index("--file") + 1]) if "--file" in call else Path(call[4].split("=", 1)[1])
+                output.write_bytes(b"PGDMP\x01\x0f confidential-database-content")
         if executable == "pg_restore" and "--list" not in call and self.fail_restore:
             return 1
         if executable == "psql" and self.fail_verification:
@@ -109,6 +114,26 @@ def test_postgres_native_backup_is_encrypted_and_uses_service_not_secret(tmp_pat
         "service=reconforge_source",
     )
     assert all("password" not in value.casefold() for value in runner.calls[0])
+
+
+def test_backup_retries_portable_file_argument_when_success_has_no_dump(tmp_path: Path) -> None:
+    runner = _Runner(omit_dump_attempts=1)
+    adapter = _adapter(tmp_path, runner)
+
+    result = adapter.create_backup(tmp_path / "portable-retry.rfpgbackup", key=KEY)
+
+    dump_calls = [call for call in runner.calls if Path(call[0]).stem == "pg_dump"]
+    assert len(dump_calls) == 2
+    assert "--file" in dump_calls[0]
+    assert any(argument.startswith("--file=") for argument in dump_calls[1])
+    assert result.bytes_written > 0
+
+
+def test_backup_fails_closed_when_portable_retry_still_has_no_dump(tmp_path: Path) -> None:
+    runner = _Runner(omit_dump_attempts=2)
+
+    with pytest.raises(PostgresBackupError, match="no usable dump after retry"):
+        _adapter(tmp_path, runner).create_backup(tmp_path / "missing.rfpgbackup", key=KEY)
 
 
 def test_restore_creates_new_database_and_rollback_removes_partial_target(tmp_path: Path) -> None:

@@ -357,8 +357,26 @@ class PostgresNativeBackupAdapter:
                 ),
                 action="backup",
             )
-            if not dump_path.is_file():
-                raise PostgresBackupError("PostgreSQL backup tool produced no dump.")
+            if not dump_path.is_file() or dump_path.stat().st_size == 0:
+                # A few client wrappers accept the equals form more reliably
+                # than the POSIX-style two-argument form.  Retry once only
+                # after a successful command produced no usable artifact;
+                # pg_dump is read-only, and the retry remains inside the
+                # disposable temporary directory.
+                dump_path.unlink(missing_ok=True)
+                self._run(
+                    (
+                        self._pg_dump,
+                        "--format=custom",
+                        "--no-owner",
+                        "--no-privileges",
+                        f"--file={dump_path}",
+                        f"service={source_service}",
+                    ),
+                    action="backup retry",
+                )
+            if not dump_path.is_file() or dump_path.stat().st_size == 0:
+                raise PostgresBackupError("PostgreSQL backup tool produced no usable dump after retry.")
             return _encrypt_dump(dump_path, target, key)
 
     def restore_backup(self, input_path: Path, *, key: bytes) -> RestoreOutcome:

@@ -27,6 +27,18 @@ This file records commands and observed results. It does not convert a dirty wor
   independent HA/DR, or production readiness is established.
 - ADR: `docs/adr/0349-server-scoped-metrics-policy.md`.
 
+## E-405 — PostgreSQL native backup portable dump retry
+
+- `PostgresNativeBackupAdapter.create_backup` now rejects missing/empty dump
+  files after a successful `pg_dump`, retries once with `--file=<path>`, and
+  fails closed if the retry also produces no usable artifact.
+- `uv run pytest -q tests/test_postgres_backup.py --tb=short` -> 11 passed,
+  1 declared skip; Ruff and Mypy pass for the changed implementation/test.
+- Boundary: this only hardens a client-wrapper argument boundary. It does not
+  prove hosted CI repair, native-tool availability, independent HA/DR,
+  restore RPO/RTO, or production backup readiness.
+- ADR: `docs/adr/0350-postgres-backup-portable-dump-retry.md`.
+
 ## E-400: Full local post-IAM quality gates
 
 - `uv run pytest -q --tb=short` -> exit 0 for the full repository suite; the

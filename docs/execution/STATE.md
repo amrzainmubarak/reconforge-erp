@@ -28,6 +28,16 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   compliance, or production-readiness claim; broader distributed IAM and
   worker/export/UI adoption remain open.
 
+## E-405 — PostgreSQL native backup portable dump retry (passed locally)
+
+- The native backup adapter now requires a non-empty dump and retries once with
+  the equivalent `--file=<path>` spelling when a successful `pg_dump` command
+  produces no usable file. A second absence fails closed; non-zero tool exits
+  are not retried.
+- Focused backup tests pass normal encryption, one portable retry, and
+  fail-closed double absence. This is a bounded client-wrapper resilience fix,
+  not independent HA/DR or production backup evidence.
+
 ## E-401 — Server-scoped consolidation PPA policy (passed locally)
 
 - PostgreSQL consolidation PPA preparation now re-evaluates

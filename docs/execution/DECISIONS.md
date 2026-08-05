@@ -3880,3 +3880,18 @@
   distributed invalidation, independent HA/DR or production claim.
 - **Rollback**: Remove the helper, test, ADR and manifest entry; no schema
   rollback is required.
+
+### D-314: Retry a missing native PostgreSQL dump once
+
+- **Date**: 2026-08-05
+- **Decision**: Require a non-empty dump after a successful `pg_dump`; retry
+  once with the equivalent equals-form file argument and fail closed after a
+  second absence.
+- **Rationale**: This addresses wrapper argument parsing without hiding a
+  non-zero tool failure or introducing unbounded retries or external I/O.
+- **Verification**: ADR 0350 and the focused backup suite pass 11/11 with one
+  declared native-tool skip.
+- **Boundary**: Wrapper resilience only; no hosted CI, HA/DR, restore RPO/RTO,
+  or production backup claim.
+- **Rollback**: Remove retry code, tests, ADR, manifest and execution records;
+  no schema/data rollback is needed.

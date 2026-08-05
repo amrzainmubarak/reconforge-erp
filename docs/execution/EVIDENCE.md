@@ -13914,3 +13914,17 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   statutory close, live ERP/bank providers and write-back, independent
   restore/HA/DR, distributed IAM, scale/soak, coherent breadth, and production
   approval remain open.
+
+## E-423 — PostgreSQL migration-head compatibility repair
+
+- `tests/test_alembic_postgres.py` now tracks the actual current migration head
+  `0065_pg_deferred_tax` instead of the superseded `0064_pg_close_ic_links`.
+- With a disposable PostgreSQL 16 service and an isolated migration database,
+  `uv run pytest -q
+  tests/test_alembic_postgres.py::test_alembic_upgrade_command_is_available_when_server_extra_is_installed
+  --tb=short -ra` passes 1/1. The same focused run also retained the expected
+  downgrade/re-upgrade schema assertions and cleans up its database.
+- This is a test-compatibility correction for the server boundary; native
+  PostgreSQL client availability, statutory close, live provider/write-back,
+  independent HA/DR, distributed IAM, scale, and production claims remain
+  outside the evidence.

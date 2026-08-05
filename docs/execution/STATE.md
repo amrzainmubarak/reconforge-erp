@@ -6,6 +6,19 @@ Updated: 2026-08-05
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-423 — PostgreSQL migration-head compatibility repair (passed locally)
+
+- Updated `tests/test_alembic_postgres.py` to expect the current Alembic head
+  `0065_pg_deferred_tax` after the deferred-tax persistence migration.
+- The isolated PostgreSQL 16 migration contract passes through upgrade to head,
+  downgrade to `0051_access_policy_lifecycle`, re-upgrade, downgrade to
+  `0011_postgres_recon_ckpts`, and final re-upgrade; expected schema presence
+  and absence checks remain green.
+- This closes a stale test assertion exposed by the server-boundaries log. It
+  does not prove native backup tools on every runner, statutory/legal-book
+  posting, live providers/write-back, independent HA/DR, distributed IAM,
+  scale/soak, or production readiness.
+
 ## E-407 — Acquisition deferred-tax bridge (passed locally)
 
 - Added `acquisition-deferred-tax-bridge-v1`, a deterministic non-posting

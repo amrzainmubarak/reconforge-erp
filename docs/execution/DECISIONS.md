@@ -4182,3 +4182,19 @@
   distributed IAM, or production readiness.
 - **Rollback**: Supersede E-422 with a later complete gate; no runtime/data
   rollback is required.
+
+### D-334: Keep the Alembic compatibility contract on the current head
+
+- **Date**: 2026-08-05
+- **Decision**: Update the isolated PostgreSQL migration test expectation from
+  the superseded `0064_pg_close_ic_links` head to `0065_pg_deferred_tax`.
+- **Rationale**: A migration addition must advance both the registry and every
+  version-pinned runtime assertion. Leaving the old expectation caused a real
+  server-boundaries failure even though the migration chain itself was valid.
+- **Verification**: The disposable PostgreSQL 16 isolated upgrade/downgrade/
+  re-upgrade contract passes 1/1 locally; focused static and compatibility
+  tests remain green.
+- **Boundary**: This repairs test compatibility only; it is not evidence for
+  statutory accounting, provider write-back, HA/DR, scale, or production.
+- **Rollback**: Revert the single expectation change if the migration head is
+  intentionally rolled back together with migration `0065`.

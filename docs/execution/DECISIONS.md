@@ -3866,3 +3866,17 @@
   `git diff --check` all exit successfully; Mypy reports no issues in 447 files.
 - **Rollback**: Replace E-403 with a later superseding run; no runtime or
   migration rollback is required.
+
+### D-313: Bind server metrics reads to tenant policy
+
+- **Date**: 2026-08-05
+- **Decision**: Re-evaluate `metrics.read` against the validated request tenant
+  before PostgreSQL dashboard and lineage reads, with `workspace_id=None`.
+- **Rationale**: Metrics are tenant-wide projections; central policy must bind
+  the selected tenant without fabricating a business workspace.
+- **Verification**: ADR 0349 and `tests/test_api_metrics.py` pass 1/1 with
+  both route calls captured.
+- **Boundary**: Route IAM control only; no SLO, compliance, federation,
+  distributed invalidation, independent HA/DR or production claim.
+- **Rollback**: Remove the helper, test, ADR and manifest entry; no schema
+  rollback is required.

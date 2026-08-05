@@ -7,7 +7,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 
-from reconforge.api.dependencies import get_local_db, require_permission
+from reconforge.api.dependencies import enforce_server_scoped_permissions, get_local_db, require_permission
 from reconforge.api.errors import APIError
 from reconforge.api.server_metrics import execute_postgres_metrics, server_metrics_enabled
 from reconforge.application.metrics import MetricsApplicationService
@@ -21,6 +21,19 @@ router = APIRouter(prefix="/metrics", tags=["metrics"])
 MetricsRead = Annotated[LocalUser, Depends(require_permission("metrics.read"))]
 
 
+def _enforce_server_policy(request: Request) -> None:
+    """Bind tenant-wide metrics reads to the authenticated request tenant."""
+
+    from reconforge.api.server_identity import request_tenant_id
+
+    enforce_server_scoped_permissions(
+        request,
+        permissions=frozenset({"metrics.read"}),
+        tenant_id=request_tenant_id(request),
+        workspace_id=None,
+    )
+
+
 @router.get("/dashboard")
 def dashboard(
     request: Request,
@@ -32,6 +45,7 @@ def dashboard(
 
     try:
         if server_metrics_enabled(request):
+            _enforce_server_policy(request)
             metrics = execute_postgres_metrics(
                 request,
                 lambda repository, _: MetricsApplicationService(repository).dashboard(period_name=period),
@@ -55,6 +69,7 @@ def lineage(
 
     try:
         if server_metrics_enabled(request):
+            _enforce_server_policy(request)
             definitions = execute_postgres_metrics(
                 request,
                 lambda repository, _: MetricsApplicationService(repository).lineage(),

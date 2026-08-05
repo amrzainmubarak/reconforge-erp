@@ -17,6 +17,17 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   vendor providers, independent failure domains, and production release
   approval remain separate and unverified.
 
+## E-404 — Server-scoped metrics policy (passed locally)
+
+- PostgreSQL metrics dashboard and lineage reads now re-evaluate
+  `metrics.read` against the validated request tenant before the metrics
+  adapter, using `workspace_id=None` for these tenant-wide projections.
+- The focused API contract passes both routes with explicit tenant/null-
+  workspace assertions. Local SQLite compatibility is unchanged.
+- This is a bounded route IAM control, not a security assurance, SLO,
+  compliance, or production-readiness claim; broader distributed IAM and
+  worker/export/UI adoption remain open.
+
 ## E-401 — Server-scoped consolidation PPA policy (passed locally)
 
 - PostgreSQL consolidation PPA preparation now re-evaluates

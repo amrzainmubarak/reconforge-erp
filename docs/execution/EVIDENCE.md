@@ -15,6 +15,18 @@ This file records commands and observed results. It does not convert a dirty wor
   external providers, independent HA/DR, distributed IAM and production
   release evidence remain separate.
 
+## E-404 — Server-scoped metrics policy
+
+- `reconforge/api/routes/metrics.py` re-evaluates `metrics.read` against the
+  validated request tenant before both PostgreSQL dashboard and lineage reads,
+  with an explicit null workspace because the projections are tenant-wide.
+- `uv run pytest -q tests/test_api_metrics.py --tb=short` -> 1 passed; Ruff
+  and Mypy pass for the changed route and test.
+- Boundary: bounded route IAM evidence only; no security assurance, SLO,
+  compliance, federation, distributed invalidation, worker/export/UI coverage,
+  independent HA/DR, or production readiness is established.
+- ADR: `docs/adr/0349-server-scoped-metrics-policy.md`.
+
 ## E-400: Full local post-IAM quality gates
 
 - `uv run pytest -q --tb=short` -> exit 0 for the full repository suite; the

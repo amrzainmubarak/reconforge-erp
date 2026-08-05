@@ -3909,3 +3909,36 @@
   build and diff-check all exit successfully.
 - **Rollback**: Supersede E-406 with a later gate record; no runtime or
   migration rollback is required.
+
+### D-316: Add a deterministic non-posting acquisition deferred-tax bridge
+
+- **Date**: 2026-08-05
+- **Decision**: Add `acquisition-deferred-tax-bridge-v1` for exact temporary
+  differences, signed by asset/liability kind and rounded through the installed
+  currency policy. Require source/policy lineage and independent maker-checker
+  actors; expose a closed CLI/JSON Schema contract and always return
+  `posted: false`.
+- **Rationale**: This advances the acquisition close workstream with a real
+  reviewable calculation while avoiding an unverified claim of statutory tax
+  accounting, tax-law recognition, valuation allowances, or journal posting.
+- **Verification**: Five focused tests pass, including schema/CLI,
+  permutation-stable digest, arithmetic/totals, maker-checker/rate rejection,
+  and tamper detection. Ruff, Mypy, and diff-check pass for changed files.
+- **Boundary**: Live tax rates, tax filing, statutory/legal-book treatment,
+  posting, independent HA/DR, and production close assurance remain open.
+- **Rollback**: Remove the module, CLI, schema, tests, ADR, manifest and
+  execution records; no migration or data rollback is required.
+
+### D-317: Record the full local gate after the deferred-tax slice
+
+- **Date**: 2026-08-05
+- **Decision**: Record E-408 as local compatibility evidence and keep all
+  hosted, external-provider, statutory, independent-HA/DR, distributed-IAM,
+  scale, and production-release claims separate.
+- **Verification**: Full pytest exits 0 in 325.9s; Ruff, Mypy (448 files),
+  package build, and diff-check pass. Only declared skips and existing
+  deprecation/legacy-input warnings remain.
+- **Boundary**: A green local suite does not close the global objective or
+  authorize GitHub publication.
+- **Rollback**: Supersede E-408 with a later gate record; no runtime or
+  migration rollback is required.

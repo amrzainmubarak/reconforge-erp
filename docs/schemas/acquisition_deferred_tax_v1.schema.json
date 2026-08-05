@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/acquisition-deferred-tax-v1.schema.json",
+  "title": "ReconForge acquisition deferred-tax bridge v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "acquisition_id", "algorithm_version", "deferred_tax_asset", "deferred_tax_liability",
+    "items", "net_deferred_tax", "posted", "reporting_currency", "request_digest",
+    "result_digest", "schema_version"
+  ],
+  "properties": {
+    "acquisition_id": {"type": "string", "minLength": 1},
+    "algorithm_version": {"const": "acquisition-deferred-tax-bridge-v1"},
+    "deferred_tax_asset": {"$ref": "#/$defs/money"},
+    "deferred_tax_liability": {"$ref": "#/$defs/money"},
+    "items": {"type": "array", "minItems": 1, "maxItems": 4096, "items": {"$ref": "#/$defs/item"}},
+    "net_deferred_tax": {"$ref": "#/$defs/money"},
+    "posted": {"const": false},
+    "reporting_currency": {"type": "string", "pattern": "^[A-Z][A-Z0-9]{2,5}$"},
+    "request_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "result_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "schema_version": {"const": 1}
+  },
+  "$defs": {
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "amount", "currency", "minor_units", "rounding_policy",
+        "currency_policy_digest", "currency_registry_version", "currency_registry_digest"
+      ],
+      "properties": {
+        "schema_version": {"const": 1},
+        "amount": {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"},
+        "currency": {"type": "string", "pattern": "^[A-Z][A-Z0-9]{2,5}$"},
+        "minor_units": {"type": "integer", "minimum": 0, "maximum": 8},
+        "rounding_policy": {"const": "ROUND_HALF_UP"},
+        "currency_policy_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "currency_registry_version": {"type": "string", "minLength": 1, "maxLength": 128},
+        "currency_registry_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "account_code", "classification", "fair_value", "item_id", "item_kind",
+        "source_reference", "tax_amount", "tax_basis", "tax_basis_reference", "tax_rate",
+        "temporary_difference"
+      ],
+      "properties": {
+        "account_code": {"type": "string", "minLength": 1},
+        "classification": {"enum": ["deferred_tax_asset", "deferred_tax_liability", "none"]},
+        "fair_value": {"$ref": "#/$defs/money"},
+        "item_id": {"type": "string", "minLength": 1},
+        "item_kind": {"enum": ["asset", "liability"]},
+        "source_reference": {"type": "string", "minLength": 1},
+        "tax_amount": {"$ref": "#/$defs/money"},
+        "tax_basis": {"$ref": "#/$defs/money"},
+        "tax_basis_reference": {"type": "string", "minLength": 1},
+        "tax_rate": {"type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"},
+        "temporary_difference": {"$ref": "#/$defs/money"}
+      }
+    }
+  }
+}

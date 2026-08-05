@@ -6,6 +6,32 @@ Updated: 2026-08-05
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-407 — Acquisition deferred-tax bridge (passed locally)
+
+- Added `acquisition-deferred-tax-bridge-v1`, a deterministic non-posting
+  artifact for source-bound temporary differences. It uses exact `Money` and
+  Decimal tax rates, explicit asset/liability signing, the installed currency
+  registry rounding policy, canonical item ordering, source/policy lineage,
+  independent maker-checker actors, and replay/tamper verification.
+- Added the closed JSON Schema, CLI command
+  `reconforge consolidation acquisition-deferred-tax`, and five focused tests
+  covering arithmetic, permutation determinism, maker-checker/rate rejection,
+  tamper detection, schema validation, and the read-only CLI contract.
+- This is a calculation bridge only. It does not decide tax-law recognition,
+  valuation allowances, statutory/legal-book treatment, tax filing, journal
+  posting, live rates, or production close readiness.
+
+## E-408 — Full local suite after deferred-tax bridge (passed)
+
+- `uv run pytest -q --tb=short` -> exit 0 in 325.9 seconds; only declared
+  skips and existing deprecation/legacy-input warnings remain.
+- The package build already succeeded and the changed-file Ruff, Mypy, and
+  diff-check gates pass. Mypy reports no issues in 448 source files after the
+  new domain and CLI contract.
+- This is local compatibility evidence only. The global objective remains open
+  for statutory close semantics, live providers/write-back, independent HA/DR,
+  distributed IAM adoption, scale/soak, and coherent industry breadth.
+
 ## E-403 — Full local post-E-402 quality gates (passed)
 
 - `uv run pytest -q --tb=short` -> exit 0 in 330.3 seconds; only declared

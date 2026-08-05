@@ -285,6 +285,9 @@ include tests/test_consolidation_acquisition.py
 include tests/test_consolidation_ppa.py
 include docs/schemas/acquisition_fair_value_goodwill_bridge_v1.schema.json
 include docs/schemas/acquisition_purchase_price_allocation_v1.schema.json
+include reconforge/domain/consolidation_deferred_tax.py
+include tests/test_consolidation_deferred_tax.py
+include docs/schemas/acquisition_deferred_tax_v1.schema.json
 include docs/adr/0276-acquisition-fair-value-goodwill-bridge.md
 include docs/adr/0277-acquisition-bridge-cli-boundary.md
 include docs/adr/0278-acquisition-purchase-price-allocation-boundary.md
@@ -417,6 +420,7 @@ include docs/adr/0347-server-scoped-consolidation-ppa-policy.md
 include docs/adr/0348-server-scoped-audit-and-security-overview-policy.md
 include docs/adr/0349-server-scoped-metrics-policy.md
 include docs/adr/0350-postgres-backup-portable-dump-retry.md
+include docs/adr/0351-acquisition-deferred-tax-bridge.md
 include docs/adr/0229-durable-job-10k-tier-is-hardware-scoped.md
 include docs/execution/benchmarks/durable-job-10k-tier-v1.md
 include docs/adr/0236-durable-job-100k-tier-is-hardware-scoped.md

@@ -90,6 +90,11 @@ from reconforge.domain.consolidation_acquisition import (
     AcquisitionFairValueBridgeRequest,
     prepare_acquisition_fair_value_bridge,
 )
+from reconforge.domain.consolidation_deferred_tax import (
+    AcquisitionDeferredTaxBridgeRequest,
+    AcquisitionDeferredTaxItem,
+    prepare_acquisition_deferred_tax_bridge,
+)
 from reconforge.domain.consolidation_ppa import (
     AcquisitionPpaItem,
     AcquisitionPurchasePriceAllocationRequest,
@@ -184,7 +189,7 @@ from reconforge.rules.recon_as_code import ReconciliationAsCodeSpec
 from reconforge.schemas import DatasetName
 from reconforge.studio.app import create_studio_app
 from reconforge.studio.demo_bridge import StudioDemoBridgeError, build_studio_demo_bundle
-from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY, Money
+from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY, Money, parse_exact_amount
 from reconforge.validators import issues_to_frame, validate_input_directory
 from reconforge.variance import analyze_variance
 from reconforge.workflow import WorkflowRepositoryError, WorkflowService, WorkflowServiceError
@@ -4289,6 +4294,84 @@ def consolidation_acquisition_ppa_command(
             console.print(f"[green]Acquisition PPA written:[/green] {target}")
     except (ConsolidationError, OSError, TypeError, ValueError) as exc:
         _safe_cli_error(PlatformError(f"Acquisition PPA input is invalid: {exc}"))
+
+
+@consolidation_app.command("acquisition-deferred-tax")
+def consolidation_acquisition_deferred_tax_command(
+    input_path: Annotated[Path, typer.Option("--input", help="JSON acquisition deferred-tax request.")],
+    output_path: Annotated[Path | None, typer.Option("--output", help="Optional exact JSON output path.")] = None,
+) -> None:
+    """Prepare a deterministic, non-posting acquisition deferred-tax bridge."""
+
+    try:
+        document = read_json_record_document(input_path, envelope_keys=("request",), allow_single_object=True)
+        if len(document.records) != 1:
+            raise PlatformError("Acquisition deferred-tax input must contain exactly one JSON request object.")
+        raw = document.records[0]
+        expected = {
+            "acquisition_id",
+            "subsidiary_entity_code",
+            "period_id",
+            "acquisition_date",
+            "reporting_currency",
+            "items",
+            "deferred_tax_asset_account_code",
+            "deferred_tax_liability_account_code",
+            "policy_id",
+            "policy_version",
+            "source_reference",
+            "source_digest",
+            "prepared_by",
+            "prepared_at",
+            "approved_by",
+            "approved_at",
+        }
+        if set(raw) != expected:
+            raise PlatformError("Acquisition deferred-tax input fields are not exactly the declared contract.")
+
+        def parse_money(value: object, field: str) -> Money:
+            if not isinstance(value, dict) or not isinstance(value.get("amount"), str) or not isinstance(value.get("currency"), str):
+                raise PlatformError(f"Acquisition deferred-tax {field} must be a canonical money object.")
+            return Money.from_exact(value["amount"], value["currency"], strict_precision=True)
+
+        raw_items = raw["items"]
+        if not isinstance(raw_items, list):
+            raise PlatformError("Acquisition deferred-tax items must be a JSON array.")
+        item_fields = {
+            "item_id",
+            "item_kind",
+            "account_code",
+            "fair_value",
+            "tax_basis",
+            "tax_rate",
+            "source_reference",
+            "tax_basis_reference",
+        }
+        items: list[AcquisitionDeferredTaxItem] = []
+        for index, raw_item in enumerate(raw_items):
+            if not isinstance(raw_item, dict) or set(raw_item) != item_fields:
+                raise PlatformError(f"Acquisition deferred-tax item {index} fields are not exactly the declared contract.")
+            item_values = dict(raw_item)
+            item_values["fair_value"] = parse_money(raw_item["fair_value"], f"item {index} fair_value")
+            item_values["tax_basis"] = parse_money(raw_item["tax_basis"], f"item {index} tax_basis")
+            try:
+                item_values["tax_rate"] = parse_exact_amount(raw_item["tax_rate"])
+            except (TypeError, ValueError) as exc:
+                raise PlatformError(f"Acquisition deferred-tax item {index} tax_rate must be exact decimal text.") from exc
+            items.append(AcquisitionDeferredTaxItem(**item_values))
+
+        values = dict(raw)
+        values["items"] = tuple(items)
+        result = prepare_acquisition_deferred_tax_bridge(AcquisitionDeferredTaxBridgeRequest(**values))
+        rendered = json.dumps(result.to_dict(), sort_keys=True, indent=2)
+        if output_path is None:
+            console.print(rendered)
+        else:
+            target = ensure_output_dir(output_path.parent) / output_path.name
+            target.write_text(rendered + "\n", encoding="utf-8", newline="\n")
+            console.print(f"[green]Acquisition deferred-tax bridge written:[/green] {target}")
+    except (ConsolidationError, OSError, TypeError, ValueError) as exc:
+        _safe_cli_error(PlatformError(f"Acquisition deferred-tax input is invalid: {exc}"))
 
 
 @consolidation_app.command("intercompany-eliminations")

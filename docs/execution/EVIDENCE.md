@@ -13696,3 +13696,33 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   worker/export/UI adoption, independent HA/DR, compliance, and production IAM
   assurance remain open.
 - ADR: `docs/adr/0348-server-scoped-audit-and-security-overview-policy.md`.
+
+## E-407 — Acquisition deferred-tax bridge
+
+- Added `reconforge/domain/consolidation_deferred_tax.py` with the closed
+  `acquisition-deferred-tax-bridge-v1` contract. Each asset/liability item
+  carries fair value, tax basis, exact tax rate, account/source references,
+  signed temporary difference, rounded tax effect, and an explicit DTA/DTL/
+  none classification. Totals are independently reconciled and the result is
+  permanently marked `posted: false`.
+- The request digest includes acquisition, period, policy, source, exact item
+  inputs, and independent preparer/approver timestamps. The result verifier
+  recomputes every item and total after digest validation; item order is
+  canonical and permutation-stable.
+- `uv run pytest -q tests/test_consolidation_deferred_tax.py --tb=short` ->
+  5 passed. Ruff, Mypy, and `git diff --check` pass for the changed files.
+- Boundary: this is a non-posting deterministic calculation bridge, not
+  statutory or legal-book tax accounting, tax-law advice, recognition or
+  valuation-allowance policy, live tax-rate integration, journal posting,
+  independent HA/DR, or production close assurance.
+- ADR: `docs/adr/0351-acquisition-deferred-tax-bridge.md`.
+
+## E-408 — Full local suite after deferred-tax bridge
+
+- `uv run pytest -q --tb=short` exits 0 in 325.9 seconds after the deferred-tax
+  domain and CLI additions. The run contains only declared skips and existing
+  deprecation/legacy-input warnings.
+- Ruff, Mypy (448 source files), package build, and `git diff --check` pass for
+  the current tree. This is local compatibility/package evidence; it does not
+  promote hosted matrices or external provider, statutory, HA/DR, scale,
+  distributed-IAM, or production claims.

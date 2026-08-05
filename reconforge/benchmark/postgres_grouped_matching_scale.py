@@ -115,9 +115,21 @@ def default_profile() -> PostgresGroupedMatchingScaleProfile:
     )
 
 
+def ten_k_profile() -> PostgresGroupedMatchingScaleProfile:
+    """Return the bounded 10,000-partition, five-mode profile."""
+
+    return PostgresGroupedMatchingScaleProfile(
+        profile_id="postgres-grouped-matching/10k-partitions-v1",
+        workers=16,
+        runs=1_000,
+        partitions_per_run=10,
+        batch_size=32,
+    )
+
+
 LIMITATIONS = (
-    "Synthetic one-tenant PostgreSQL 16 service with four independent worker connections.",
-    "The workload uses bounded two-partition runs and synthetic USD/FX/fee inputs; no provider or statutory posting is exercised.",
+    "Synthetic one-tenant PostgreSQL 16 service with bounded independent worker connections.",
+    "The workload uses bounded partitioned runs and synthetic USD/FX/fee inputs; no provider or statutory posting is exercised.",
     "Observed runtime is an environment observation, not a throughput, capacity, SLO, soak, or production-sizing claim.",
     "Cross-host scheduling, queue HA, automatic failover, large-domain diversity, and HA/DR remain unverified.",
 )
@@ -423,6 +435,7 @@ __all__ = [
     "PostgresGroupedMatchingScaleProfile",
     "PostgresGroupedMatchingScaleResult",
     "default_profile",
+    "ten_k_profile",
     "run_postgres_grouped_matching_scale_profile",
     "verify_postgres_grouped_matching_scale_result",
 ]

@@ -6,6 +6,27 @@ Updated: 2026-08-05
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-392 — PostgreSQL grouped-matching 10K tier with bounded connection reuse (complete bounded slice)
+
+- Added `PostgresConnectionPool`, a small dependency-free pool with explicit
+  max size/acquisition timeout, rollback-on-release, idempotent proxy close,
+  and deterministic idle/active cleanup. Foundation tests prove one bounded
+  connection is reused and then closed; existing tenant-local transaction
+  scope remains in force.
+- The grouped-matching harness now uses the pool and publishes
+  `postgres-grouped-matching/10k-partitions-v1`: 16 worker tasks, 1,000 runs,
+  ten partitions per run, five synthetic modes, and 24,000 expected result
+  rows. A local PostgreSQL 16 run completed 10,000/10,000 partitions and
+  24,000/24,000 result rows with zero duplicate identities, zero failed/active
+  runs, and 200 completed runs per mode.
+- Observed wall time was approximately 303.5 seconds on Windows 11/Python
+  3.14.6 with one host. The artifact records effect digest
+  `14e33ba117d7be05da5290346736ea6a594c1a0a52689b4939b665c0c674c88b` and
+  manifest digest `da43b12e3a034bcb7e6f3dc8492a7a45fdfb9e87f2591718d49e8049c0f00305`.
+- Boundary: bounded synthetic correctness/concurrency only. The result is not
+  throughput, capacity, soak, SLO, HA/DR, provider, statutory-posting,
+  write-back, or production-sizing evidence.
+
 ## E-391 — PostgreSQL grouped-matching 10K probe (blocked, not promoted)
 
 - A disposable PostgreSQL 16 probe for 10,000 grouped-matching partitions

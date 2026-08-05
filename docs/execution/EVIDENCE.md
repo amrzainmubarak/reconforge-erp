@@ -2,6 +2,31 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-392: PostgreSQL grouped-matching 10K tier with bounded connection reuse
+
+- Added `PostgresConnectionPool` to the PostgreSQL infrastructure boundary.
+  The pool uses an explicit maximum size and acquire timeout, returns a
+  connection when the tenant boundary calls `close`, rolls back defensively
+  before reuse, and closes idle/active resources deterministically. Foundation
+  tests cover reuse, release, and pool close.
+- The grouped-matching scale harness now uses a bounded pool and includes the
+  `postgres-grouped-matching/10k-partitions-v1` gate: 16 workers, 1,000 runs,
+  ten partitions per run, five modes, and 10,000 total partitions.
+- Local live command:
+  `RECONFORGE_TEST_POSTGRES_DSN=... uv run pytest -q tests/test_postgres_grouped_matching_scale.py -k test_live_postgres_grouped_matching_10k_partition_scale_profile -s`
+  -> 1 passed. It completed 1,000/1,000 runs, 10,000/10,000 checkpoints,
+  24,000/24,000 result rows, zero duplicate identities, zero failed/active
+  runs, and 200 completions per mode. Approximate wall time was 303.5s on
+  Windows 11/Python 3.14.6/PostgreSQL 16.
+- Artifact digests: effect set
+  `14e33ba117d7be05da5290346736ea6a594c1a0a52689b4939b665c0c674c88b`,
+  manifest
+  `da43b12e3a034bcb7e6f3dc8492a7a45fdfb9e87f2591718d49e8049c0f00305`.
+- Boundary: this is a bounded synthetic single-host correctness/concurrency
+  gate. It does not establish throughput, capacity, soak, cross-host
+  scheduling, queue HA/failover, host-loss recovery, provider I/O, statutory
+  posting, write-back, HA/DR, or production sizing.
+
 ## E-391: PostgreSQL grouped-matching 10K probe blocked by connection churn
 
 - Attempted a disposable PostgreSQL 16 run of 1,000 grouped-matching runs,

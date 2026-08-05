@@ -13,10 +13,12 @@ from reconforge.benchmark.postgres_grouped_matching_scale import (
     PostgresGroupedMatchingScaleResult,
     default_profile,
     run_postgres_grouped_matching_scale_profile,
+    ten_k_profile,
     verify_postgres_grouped_matching_scale_result,
 )
 from reconforge.infrastructure.postgres import (
     PostgresConnectionFactory,
+    PostgresConnectionPool,
     PostgresSettings,
     install_postgres_rls_schema,
 )
@@ -49,6 +51,20 @@ def test_postgres_grouped_matching_scale_profile_rejects_unbounded_mode_changes(
         )
 
 
+def test_postgres_grouped_matching_scale_profile_declares_10k_partition_tier() -> None:
+    profile = ten_k_profile()
+
+    assert profile.profile_id == "postgres-grouped-matching/10k-partitions-v1"
+    assert (profile.workers, profile.runs, profile.partitions_per_run, profile.batch_size) == (
+        16,
+        1_000,
+        10,
+        32,
+    )
+    assert profile.declared_partitions == 10_000
+    assert profile.expected_result_rows == 24_000
+
+
 def test_postgres_grouped_matching_scale_artifacts_are_in_source_manifest() -> None:
     manifest = Path("MANIFEST.in").read_text(encoding="utf-8")
     workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
@@ -56,7 +72,11 @@ def test_postgres_grouped_matching_scale_artifacts_are_in_source_manifest() -> N
     assert "include tests/test_postgres_grouped_matching_scale.py" in manifest
     assert "include docs/adr/0300-postgres-grouped-matching-bounded-scale-profile.md" in manifest
     assert "include docs/execution/benchmarks/postgres-grouped-matching-64-partitions-v1.md" in manifest
+    assert "include docs/execution/benchmarks/postgres-grouped-matching-10k-partitions-v1.md" in manifest
+    assert "include docs/execution/benchmarks/postgres-grouped-matching-10k-partitions-v1.json" in manifest
+    assert "include docs/adr/0341-postgres-grouped-matching-10k-connection-pool.md" in manifest
     assert "test_live_postgres_grouped_matching_500_partition_scale_profile" in workflow
+    assert "test_live_postgres_grouped_matching_10k_partition_scale_profile" in workflow
 
 
 def _run_live_postgres_grouped_profile(
@@ -107,12 +127,16 @@ def _run_live_postgres_grouped_profile(
         if role is None or bool(role[0]) or bool(role[1]):
             pytest.skip("live grouped matching scale test requires a non-superuser, non-BYPASSRLS role")
 
-        result = run_postgres_grouped_matching_scale_profile(
-            factory,
-            tenant_id,
-            profile=profile,
-            id_prefix=id_prefix + uuid4().hex[:8],
-        )
+        pool = PostgresConnectionPool(factory, max_size=max(2, min(profile.workers, 16)))
+        try:
+            result = run_postgres_grouped_matching_scale_profile(
+                pool,
+                tenant_id,
+                profile=profile,
+                id_prefix=id_prefix + uuid4().hex[:8],
+            )
+        finally:
+            pool.close()
 
         verify_postgres_grouped_matching_scale_result(result, profile=profile)
         return result
@@ -164,3 +188,20 @@ def test_live_postgres_grouped_matching_500_partition_scale_profile() -> None:
     assert result.failed_runs == 0
     assert result.final_active_runs == 0
     assert result.per_mode_completed == {mode: 50 for mode in profile.modes}
+
+
+@pytest.mark.skipif(
+    not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"),
+    reason="requires a live PostgreSQL service",
+)
+def test_live_postgres_grouped_matching_10k_partition_scale_profile() -> None:
+    profile = ten_k_profile()
+    result = _run_live_postgres_grouped_profile(profile, id_prefix="PG-GROUPED-SCALE-10K-")
+
+    assert result.completed_runs == 1_000
+    assert result.completed_partitions == 10_000
+    assert result.result_rows == profile.expected_result_rows
+    assert result.duplicate_result_identities == 0
+    assert result.failed_runs == 0
+    assert result.final_active_runs == 0
+    assert result.per_mode_completed == {mode: 200 for mode in profile.modes}

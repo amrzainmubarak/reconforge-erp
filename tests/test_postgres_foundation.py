@@ -10,6 +10,7 @@ from reconforge.infrastructure.postgres import (
     POSTGRES_RLS_SCHEMA_SQL,
     PostgresConfigurationError,
     PostgresConnectionFactory,
+    PostgresConnectionPool,
     PostgresExecutionScope,
     PostgresSettings,
     PostgresTenantBoundary,
@@ -48,6 +49,9 @@ class _FakeConnection:
 
     def close(self) -> None:
         self.closed = True
+
+    def rollback(self) -> None:
+        self.events.append("rollback-release")
 
 
 def test_postgres_settings_reject_unsafe_configuration() -> None:
@@ -133,6 +137,27 @@ def test_tenant_boundary_rolls_back_and_closes_on_failure() -> None:
 
     assert connection.events == ["begin", "rollback"]
     assert connection.closed is True
+
+
+def test_postgres_connection_pool_reuses_and_closes_bounded_connections() -> None:
+    connections: list[_FakeConnection] = []
+
+    class _Factory:
+        def connect(self) -> _FakeConnection:
+            connection = _FakeConnection()
+            connections.append(connection)
+            return connection
+
+    pool = PostgresConnectionPool(_Factory(), max_size=1, acquire_timeout_seconds=0.1)
+    first = pool.connect()
+    first.close()
+    second = pool.connect()
+    second.close()
+
+    assert len(connections) == 1
+    assert connections[0].events == ["rollback-release", "rollback-release"]
+    pool.close()
+    assert connections[0].closed is True
 
 
 def test_connection_factory_configures_tls_and_timeout(monkeypatch: pytest.MonkeyPatch) -> None:

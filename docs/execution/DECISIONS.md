@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-298: Bound PostgreSQL grouped-matching scale with explicit connection reuse
+- **Date**: 2026-08-05
+- **Context**: The first 10K grouped-matching probe failed closed from Windows
+  ephemeral-port exhaustion because worker phases opened fresh connections.
+- **Decision**: Add a dependency-free `PostgresConnectionPool` with explicit
+  size/timeout limits, rollback-on-release, idempotent proxy close, and clear
+  idle/active shutdown. Use it in the bounded 10K grouped-matching harness;
+  do not change the default unpooled application boundary implicitly.
+- **Rationale**: Connection reuse removes avoidable TCP churn while preserving
+  tenant-local transaction scopes and an observable resource ceiling. The
+  pool's lifecycle is directly tested before the larger profile is promoted.
+- **Reversibility**: Remove the pool, foundation tests, 10K profile/test,
+  artifact, benchmark note, workflow selector, ADR, manifest entries, and
+  execution records; lower grouped-matching tiers remain unchanged.
+- **Verification**: Local PostgreSQL 16 run passes 10,000/10,000 partitions,
+  24,000/24,000 rows, zero duplicate identities, zero failed/active runs, and
+  200 completed runs per mode.
+
 ### D-297: Do not promote a PostgreSQL grouped-matching 10K tier after connection exhaustion
 - **Date**: 2026-08-05
 - **Context**: A disposable 10,000-partition grouped-matching probe failed

@@ -1202,6 +1202,7 @@ tasks:
       - E-403 reruns the complete local gate after E-402: pytest exits 0 in 330.3s, Ruff/Mypy/Bandit/pip-audit/build/diff-check pass, and Mypy reports no issues in 447 source files. This is local correctness/package evidence only; hosted matrices, external providers, independent HA/DR, distributed IAM, and production release approval remain open.
       - E-404 binds PostgreSQL metrics dashboard and lineage reads to central tenant policy with explicit null workspace semantics. The focused API route contract passes under ADR 0349. This is bounded route IAM evidence only; distributed IAM, worker/export/UI adoption, independent HA/DR, and production readiness remain open.
       - E-405 hardens native PostgreSQL backup creation with one bounded `--file=<path>` retry when a successful tool invocation produces no usable dump, plus fail-closed tests under ADR 0350. This is wrapper-resilience evidence only; hosted tool availability, independent HA/DR, restore RPO/RTO, and production backup readiness remain open.
+      - E-406 reruns the complete local pytest/static/security/package gate after E-405: pytest exits 0 in 356.6s, Ruff/Mypy/Bandit/pip-audit/build/diff-check pass, and Mypy reports no issues in 447 source files. This is clean local correctness evidence only; external providers, statutory close, independent HA/DR, distributed IAM, scale, breadth, and production release approval remain open.
 
   - id: P4-PLAT-001
     priority: P4

@@ -39,6 +39,17 @@ This file records commands and observed results. It does not convert a dirty wor
   restore RPO/RTO, or production backup readiness.
 - ADR: `docs/adr/0350-postgres-backup-portable-dump-retry.md`.
 
+## E-406 — Final full local gate after backup hardening
+
+- `uv run pytest -q --tb=short` -> exit 0 in 356.6 seconds; declared skips and
+  existing warnings remain visible.
+- Ruff, Mypy (447 source files), Bandit, pip-audit, package build and
+  `git diff --check` all pass. `pip-audit` reports no known vulnerabilities
+  and skips the unpublished local distribution because it is not on PyPI.
+- Boundary: this is local correctness/package evidence for the current clean
+  branch. It is not hosted CI, live vendor/provider, independent HA/DR,
+  distributed IAM, statutory-close or production-release evidence.
+
 ## E-400: Full local post-IAM quality gates
 
 - `uv run pytest -q --tb=short` -> exit 0 for the full repository suite; the

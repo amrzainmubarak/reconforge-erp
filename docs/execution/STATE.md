@@ -38,6 +38,17 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   fail-closed double absence. This is a bounded client-wrapper resilience fix,
   not independent HA/DR or production backup evidence.
 
+## E-406 — Final full local gate after backup hardening (passed)
+
+- `uv run pytest -q --tb=short` -> exit 0 in 356.6 seconds with only declared
+  skips and existing deprecation/legacy-input warnings.
+- Ruff, Mypy (447 source files), Bandit, pip-audit, package build and
+  `git diff --check` all pass after the metrics/IAM and backup changes.
+- This closes the local correctness gate for the current branch only. The
+  global objective remains open for external provider contracts, statutory
+  close semantics, independent HA/DR, distributed IAM, production scale and
+  coherent industry breadth.
+
 ## E-401 — Server-scoped consolidation PPA policy (passed locally)
 
 - PostgreSQL consolidation PPA preparation now re-evaluates

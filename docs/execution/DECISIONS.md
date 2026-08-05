@@ -3895,3 +3895,17 @@
   or production backup claim.
 - **Rollback**: Remove retry code, tests, ADR, manifest and execution records;
   no schema/data rollback is needed.
+
+### D-315: Record the final post-backup local gate as bounded evidence
+
+- **Date**: 2026-08-05
+- **Decision**: Record the complete local suite and static/security/package
+  gates as E-406 while withholding any hosted, external-provider, statutory,
+  independent-HA/DR, distributed-IAM or production-release claim.
+- **Rationale**: The current branch is clean and compatible locally, but the
+  remaining workstreams require evidence that cannot be produced by one local
+  workstation and synthetic services.
+- **Verification**: Pytest exits 0 in 356.6s; Ruff, Mypy, Bandit, pip-audit,
+  build and diff-check all exit successfully.
+- **Rollback**: Supersede E-406 with a later gate record; no runtime or
+  migration rollback is required.

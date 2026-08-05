@@ -1,0 +1,39 @@
+{
+  "committed_partition_effects": 100000,
+  "completed_jobs": 2500,
+  "declared_partition_effects": 100000,
+  "duplicate_partition_effects": 0,
+  "effect_set_digest": "e79d9c21a6243a9d4c9bdd3c09471551fcb7ae9aaf6f26241ef94d9319529252",
+  "environment": {
+    "cpu_count": 16,
+    "database": "PostgreSQL",
+    "machine": "AMD64",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+    "python": "3.14.6"
+  },
+  "final_queue_depth": 0,
+  "final_running_depth": 0,
+  "jobs": 2500,
+  "jobs_per_tenant": 625,
+  "limitations": [
+    "This is a bounded synthetic PostgreSQL 16 CI service run with one database host and independent worker connections.",
+    "Observed runtime and throughput are hardware/load observations, not an SLO, capacity, or sizing claim.",
+    "The declared profile is 16 workers, 2500 jobs, 40 partitions per job, 4 tenant lanes, and 100000 committed effects; larger tiers, soak, and backpressure coupling remain unverified here.",
+    "Queue HA, automatic failover, host loss, cross-host fairness, RPO/RTO, and production deployment remain unverified."
+  ],
+  "manifest_digest": "d56fd2fe2bdcda9161c9545e456347c136adf15e15b74c543904147c3d06f890",
+  "observed_runtime_seconds": 202.1521,
+  "observed_throughput_jobs_per_second": 12.3669,
+  "partitions_per_job": 40,
+  "per_tenant_completions": {
+    "lane-00": 625,
+    "lane-01": 625,
+    "lane-02": 625,
+    "lane-03": 625
+  },
+  "profile_id": "postgres-durable-job-load/100k-effects-v1",
+  "schema_version": 1,
+  "tenants": 4,
+  "workers": 16
+}

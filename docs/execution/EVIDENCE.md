@@ -2,6 +2,26 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-387: PostgreSQL durable-job 100K-effect tier
+
+- Added `hundred_k_profile()` with 16 workers, 2,500 jobs, forty partitions per
+  job, four tenant lanes, and 100,000 declared effects. The packaged artifact
+  is `docs/execution/benchmarks/postgres-durable-job-100k-effects-v1.json` and
+  validates against the shared 10K/100K schema.
+- Live local command:
+  `RECONFORGE_TEST_POSTGRES_DSN=... uv run pytest -q tests/test_postgres_durable_jobs.py -k test_live_postgres_durable_job_100k_multi_worker_scale_profile -s`
+  -> 1 passed. It observed 2,500/2,500 completed jobs, 100,000/100,000
+  committed effects, zero duplicates/residue, and 625 completions per lane.
+- Local artifact digests: effect set
+  `e79d9c21a6243a9d4c9bdd3c09471551fcb7ae9aaf6f26241ef94d9319529252`,
+  manifest `d56fd2fe2bdcda9161c9545e456347c136adf15e15b74c543904147c3d06f890`;
+  observed runtime 202.1521s / 12.3669 jobs per second on Windows 11,
+  PostgreSQL 16, Python 3.14.6.
+- Boundary: bounded synthetic one-host correctness/concurrency only. Hosted
+  verification is pending; no capacity, SLO, soak, backpressure, queue HA,
+  failover, host-loss, cross-host fairness, RPO/RTO, or production-sizing
+  claim.
+
 ## E-384: PostgreSQL intercompany elimination evidence
 
 - Added migration `0063_pg_ic_elimination`, a forced-RLS immutable table, a

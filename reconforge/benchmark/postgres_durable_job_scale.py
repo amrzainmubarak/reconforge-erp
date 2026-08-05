@@ -121,6 +121,18 @@ def ten_k_profile() -> PostgresDurableJobScaleProfile:
     )
 
 
+def hundred_k_profile() -> PostgresDurableJobScaleProfile:
+    """Return the larger PostgreSQL correctness tier (100K effects)."""
+
+    return PostgresDurableJobScaleProfile(
+        profile_id="postgres-durable-job-load/100k-effects-v1",
+        workers=16,
+        jobs_per_tenant=625,
+        partitions_per_job=40,
+        tenants=4,
+    )
+
+
 def _utc_text() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
@@ -414,6 +426,7 @@ __all__ = [
     "PostgresDurableJobScaleResult",
     "default_profile",
     "ten_k_profile",
+    "hundred_k_profile",
     "run_postgres_durable_job_scale_profile",
     "verify_postgres_durable_job_scale_result",
 ]

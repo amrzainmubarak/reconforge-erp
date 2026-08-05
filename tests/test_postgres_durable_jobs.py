@@ -30,6 +30,9 @@ from reconforge.benchmark.postgres_durable_job_scale import (
     default_profile as postgres_scale_profile,
 )
 from reconforge.benchmark.postgres_durable_job_scale import (
+    hundred_k_profile as postgres_scale_100k_profile,
+)
+from reconforge.benchmark.postgres_durable_job_scale import (
     ten_k_profile as postgres_scale_10k_profile,
 )
 from reconforge.db import connect, run_migrations
@@ -745,6 +748,13 @@ def test_live_postgres_durable_job_10k_multi_worker_scale_profile() -> None:
     """Exercise the declared 16-worker/10K-effect PostgreSQL tier."""
 
     _run_live_postgres_durable_job_scale_profile(postgres_scale_10k_profile, id_prefix="PGSCALE10K-")
+
+
+@pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
+def test_live_postgres_durable_job_100k_multi_worker_scale_profile() -> None:
+    """Exercise the declared 16-worker/100K-effect PostgreSQL tier."""
+
+    _run_live_postgres_durable_job_scale_profile(postgres_scale_100k_profile, id_prefix="PGSCALE100K-")
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")

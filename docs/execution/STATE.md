@@ -6,6 +6,22 @@ Updated: 2026-08-05
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-387 — PostgreSQL durable-job 100K-effect tier (complete bounded slice)
+
+- Added `postgres-durable-job-load/100k-effects-v1`: 16 independent worker
+  connections, 2,500 jobs, forty partitions per job, and four forced-RLS tenant
+  lanes (100,000 declared effects). The shared schema now validates both the
+  published 10K and 100K profiles.
+- A local PostgreSQL 16 container run completed 2,500/2,500 jobs and
+  100,000/100,000 unique effects with zero duplicate effects, zero queued or
+  running residue, and exactly 625 completions per lane. Observed runtime was
+  202.1521 seconds / 12.3669 jobs per second on Windows 11/Python 3.14.6.
+- Focused profile/schema/package tests pass. The hosted `server-boundaries`
+  invocation is required before promotion to hosted runtime evidence.
+- Boundary: synthetic one-host correctness/concurrency only; no throughput,
+  soak, backpressure, queue HA, automatic failover, host-loss, cross-host
+  fairness, RPO/RTO, or production-sizing claim.
+
 ## E-384 — PostgreSQL intercompany elimination evidence (complete bounded slice)
 
 - Added a server-profile API and forced-RLS PostgreSQL adapter for the exact

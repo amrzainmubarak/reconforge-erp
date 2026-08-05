@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-293: Publish a PostgreSQL durable-job 100K-effect tier
+- **Date**: 2026-08-05
+- **Context**: The live PostgreSQL durable-job gate previously stopped at 10,000
+  effects, while SQLite already had a bounded 100K tier.
+- **Decision**: Publish `postgres-durable-job-load/100k-effects-v1` with 16
+  independent workers, 2,500 jobs, forty partitions per job, and four
+  forced-RLS tenant lanes. Keep the 10K and 256-effect profiles as compatibility
+  tiers and require the same profile in hosted `server-boundaries`.
+- **Rationale**: This increases PostgreSQL workload evidence while preserving
+  deterministic job/effect/tenant invariants and the explicit rule that
+  one-host timings are not capacity, SLO, HA/DR, or production-sizing claims.
+- **Reversibility**: Remove the tier factory, live test, artifact/schema,
+  benchmark note, manifest/workflow entries, and execution records; existing
+  durable-job runtime and lower tiers remain unchanged.
+
 ### D-289: Persist intercompany elimination proposals as replay-verified evidence
 - **Date**: 2026-08-05
 - **Context**: The pure exact intercompany bridge had no server persistence, so

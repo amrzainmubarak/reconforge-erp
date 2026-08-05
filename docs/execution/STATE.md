@@ -75,6 +75,26 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - This is local regression/package evidence only; the global objective and
   GitHub publication remain open pending external/runtime workstreams.
 
+## E-413 — Server-scoped legacy audit policy (passed locally)
+
+- Legacy PostgreSQL ledger audit events and chain verification now re-evaluate
+  tenant-wide `audit.read` and `audit.verify` before the tenant-scoped adapter;
+  no synthetic workspace is introduced.
+- A focused fake-adapter test captures both calls, and server-identity plus
+  audit-administration regressions remain green. This is route IAM evidence
+  only; complete worker/export/UI adoption, federation, distributed
+  invalidation, providers, independent HA/DR, and production IAM remain open.
+
+## E-414 — Final local gates after legacy-audit IAM adoption (passed)
+
+- `uv run pytest -q --tb=short` -> exit 0 in 325.3 seconds; only declared
+  skips and existing deprecation/legacy-input warnings remain.
+- Ruff, Mypy (448 source files), Bandit, pip-audit, package build, and
+  `git diff --check` all pass after the legacy audit route change.
+- This is local regression/package evidence only. External providers,
+  statutory close, independent HA/DR, distributed IAM, scale/soak, coherent
+  breadth, hosted matrices, and production approval remain open.
+
 ## E-403 — Full local post-E-402 quality gates (passed)
 
 - `uv run pytest -q --tb=short` -> exit 0 in 330.3 seconds; only declared

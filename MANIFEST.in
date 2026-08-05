@@ -423,6 +423,7 @@ include docs/adr/0350-postgres-backup-portable-dump-retry.md
 include docs/adr/0351-acquisition-deferred-tax-bridge.md
 include docs/adr/0352-ha-dr-witness-is-not-a-voter.md
 include docs/adr/0353-server-scoped-evidence-read-policy.md
+include docs/adr/0354-server-scoped-legacy-audit-policy.md
 include docs/adr/0229-durable-job-10k-tier-is-hardware-scoped.md
 include docs/execution/benchmarks/durable-job-10k-tier-v1.md
 include docs/adr/0236-durable-job-100k-tier-is-hardware-scoped.md

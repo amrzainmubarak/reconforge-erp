@@ -13770,3 +13770,27 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - This remains one-workstation local evidence. Hosted matrices, live
   providers/write-back, statutory close, independent HA/DR, distributed IAM,
   scale/soak, coherent breadth, and production approval remain unverified.
+
+## E-413 — Server-scoped legacy audit policy
+
+- `/audit/events` and `/audit/verify` now call central tenant-wide policy
+  enforcement for `audit.read` and `audit.verify` before the PostgreSQL ledger
+  adapter. The validated request tenant is used without fabricating a
+  workspace; SQLite compatibility is unchanged.
+- `uv run pytest -q tests/test_api_server_audit_policy.py
+  tests/test_api_server_identity.py tests/test_api_audit_administration.py
+  --tb=short` -> 4 passed, 1 declared skip. Ruff, Mypy, and diff-check pass
+  for the changed route/test.
+- Boundary: tenant-wide route IAM only; complete worker/export/UI adoption,
+  federation, distributed invalidation, live providers, independent HA/DR,
+  compliance, and production IAM assurance remain open.
+- ADR: `docs/adr/0354-server-scoped-legacy-audit-policy.md`.
+
+## E-414 — Final local gates after legacy-audit IAM adoption
+
+- `uv run pytest -q --tb=short` exits 0 in 325.3 seconds after the legacy
+  audit policy change. Ruff, Mypy (448 source files), Bandit, pip-audit,
+  package build, and `git diff --check` also pass.
+- The gate remains one-workstation local evidence and does not promote hosted,
+  provider/write-back, statutory, independent-HA/DR, distributed-IAM,
+  scale, breadth, or production claims.

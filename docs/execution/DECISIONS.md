@@ -4001,3 +4001,32 @@
   authorize GitHub publication.
 - **Rollback**: Supersede E-412 with a later gate record; no runtime or
   migration rollback is required.
+
+### D-322: Bind legacy PostgreSQL audit views to tenant policy
+
+- **Date**: 2026-08-05
+- **Decision**: Re-evaluate `audit.read` and `audit.verify` with the validated
+  tenant before legacy ledger audit adapter access, using tenant-wide policy
+  semantics without a synthetic workspace.
+- **Rationale**: The dependency-level permission did not bind the selected
+  tenant; newer audit-administration routes already required this boundary.
+- **Verification**: ADR 0354 and the focused server-audit/server-identity/
+  audit-administration gate pass 4/4 with one declared skip; Ruff, Mypy, and
+  diff-check pass.
+- **Boundary**: Route IAM only; worker/export/UI adoption, federation,
+  distributed invalidation, providers, HA/DR, and production IAM remain open.
+- **Rollback**: Remove helper calls, test, ADR, manifest and execution records;
+  no schema or data rollback is required.
+
+### D-323: Record the final local gate after legacy-audit IAM adoption
+
+- **Date**: 2026-08-05
+- **Decision**: Record E-414 as local regression/package evidence while keeping
+  hosted, external-provider, statutory, independent-HA/DR, distributed-IAM,
+  scale, breadth, and production-release claims separate.
+- **Verification**: Pytest exits 0 in 325.3s; Ruff, Mypy (448 files), Bandit,
+  pip-audit, build, and diff-check pass.
+- **Boundary**: The green local gate does not complete the global objective or
+  authorize GitHub publication.
+- **Rollback**: Supersede E-414 with a later gate record; no runtime or
+  migration rollback is required.

@@ -4532,3 +4532,8 @@ The digest-pinned production image also builds locally on Docker Engine 29.6.2;
 its doctor, sample validation, audit-basic pack, and professional fixture CLI all
 pass. The doctor still reports the sample's ten intentional warnings, so this is
 container parity evidence rather than a claim of warning-free production data.
+The Studio frontend also passes its local release gates: locked npm install,
+zero high-or-worse audit findings, typecheck, 55 unit/component tests, production
+build, and 11 Playwright paths. Five Playwright paths remain explicit skips for
+live hosting/session configuration, so deployed HTTPS and hosted browser evidence
+are still open.

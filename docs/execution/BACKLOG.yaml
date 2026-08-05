@@ -1344,6 +1344,14 @@ tasks:
     depends_on: [E-447]
     exit_evidence: `docker build -t reconforge:local-e447 .` passes on Docker Engine 29.6.2 in 94.1s with the digest-pinned Python/uv base. The image's `reconforge doctor`, sample validation, audit-basic pack validation, and professional invoice-payment fixture run pass; the doctor reports zero errors with ten intentional sample warnings, and the professional decision digest is `06a65e9f3caf29c53929905b9fc20f14b89ee6aae2491e98c04356df12442717`. This is local container evidence, not hosted Docker parity or production deployment evidence.
 
+  - id: E-449
+    priority: P0
+    area: quality
+    title: Studio frontend local release gate
+    status: completed
+    depends_on: [E-448]
+    exit_evidence: With Node 26.3.0/npm 11.16.0, `npm --prefix apps/web ci`, `npm audit --package-lock-only --audit-level=high`, typecheck, 55 Vitest tests, and production build all pass with zero reported vulnerabilities. Playwright runs 11 tests passed and 5 declared live-hosting/session tests skipped because their external service is not configured. This is local frontend evidence, not hosted browser attestation or deployed HTTPS evidence.
+
   - id: P4-PLAT-001
     priority: P4
     area: platform_breadth

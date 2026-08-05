@@ -1390,7 +1390,7 @@ tasks:
     title: PostgreSQL native-backup retry contract verification
     status: completed
     depends_on: [E-453]
-    exit_evidence: `tests/test_postgres_backup.py` passes 11 unit/security contracts with one explicit live-service skip because this Windows host has no PostgreSQL native client-tool set. The retry test covers a successful portable `--file=...` fallback and the fail-closed no-dump path; encrypted backup, tamper, restore rollback, authorization, and command-safety contracts pass. Hosted native-tool execution remains external.
+    exit_evidence: PostgreSQL backup unit/security tests pass 11 contracts with one explicit live-service skip because this Windows host has no PostgreSQL native client-tool set. The retry test covers a successful portable `--file=...` fallback and the fail-closed no-dump path; encrypted backup, tamper, restore rollback, authorization, and command-safety contracts pass. Hosted native-tool execution remains external.
 
   - id: P4-PLAT-001
     priority: P4

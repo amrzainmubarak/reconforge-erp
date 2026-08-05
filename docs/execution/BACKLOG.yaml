@@ -1336,6 +1336,14 @@ tasks:
     depends_on: [E-446]
     exit_evidence: The exact seven test files named in the historical hosted ImportError run pass under `uv run --locked --all-extras --no-editable --python 3.12`: 48 passed, one declared live-PostgreSQL skip, zero collection errors, in 68.2s. This verifies the current locked all-extras profile locally; hosted matrix status remains external.
 
+  - id: E-448
+    priority: P0
+    area: quality
+    title: Container packaging and CLI parity regression closure
+    status: completed
+    depends_on: [E-447]
+    exit_evidence: `docker build -t reconforge:local-e447 .` passes on Docker Engine 29.6.2 in 94.1s with the digest-pinned Python/uv base. The image's `reconforge doctor`, sample validation, audit-basic pack validation, and professional invoice-payment fixture run pass; the doctor reports zero errors with ten intentional sample warnings, and the professional decision digest is `06a65e9f3caf29c53929905b9fc20f14b89ee6aae2491e98c04356df12442717`. This is local container evidence, not hosted Docker parity or production deployment evidence.
+
   - id: P4-PLAT-001
     priority: P4
     area: platform_breadth

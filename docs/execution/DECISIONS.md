@@ -3852,3 +3852,17 @@
   production IAM assurance remain open.
 - **Rollback**: Remove the helper calls, focused assertions, ADR and manifest
   entry; no migration or data rollback is required.
+
+### D-312: Record the post-E-402 local gate as non-release evidence
+
+- **Date**: 2026-08-05
+- **Decision**: Record the complete local pytest/static/security/package gate as
+  E-403 while keeping hosted matrices, external providers, independent HA/DR,
+  distributed IAM and production approval separate.
+- **Rationale**: The gate proves repository compatibility after the IAM route
+  additions, but the remaining objective requires evidence outside one local
+  workstation and one PostgreSQL profile.
+- **Verification**: Pytest, Ruff, Mypy, Bandit, pip-audit, build and
+  `git diff --check` all exit successfully; Mypy reports no issues in 447 files.
+- **Rollback**: Replace E-403 with a later superseding run; no runtime or
+  migration rollback is required.

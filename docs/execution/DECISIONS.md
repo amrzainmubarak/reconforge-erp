@@ -4422,3 +4422,37 @@
   distributed IAM, scale/soak, or release approval.
 - **Rollback**: Supersede E-438 with the next exact-environment run; no runtime
   or data rollback is required.
+
+### D-350: Add an export-based manufacturing production-cost control slice
+
+- **Date**: 2026-08-05
+- **Decision**: Deliver the first manufacturing breadth use case as an
+  experimental, non-posting local production-order control. Keep statutory or
+  standard-cost valuation, ERP/MRP connectivity, inventory/WIP/GL posting, and
+  write-back out of the slice until separately evidenced.
+- **Verification**: Exact Money/Quantity arithmetic, normalized record
+  contracts, material and completion cost variance, planned/completed quantity,
+  scrap limit, unknown-order visibility, permutation-stable digest,
+  digest-bound report/tamper refusal, local CLI, synthetic fixtures, module and
+  threat-model parity, and declarative pack tests are required.
+- **Boundary**: No statutory valuation, live provider/ERP interoperability,
+  inventory/WIP/GL posting, write-back, persistence/API/Studio, HA/DR, or
+  complete manufacturing breadth claim follows.
+- **Rollback**: Remove the E-439 slice files, CLI wiring, pack, fixtures, schema,
+  docs, registry entry, and tests in one reviewed commit.
+
+### D-351: Keep the post-manufacturing gate open for a fresh dependency audit
+
+- **Date**: 2026-08-05
+- **Decision**: Retain E-439 as complete after focused/full correctness and
+  package checks, but keep E-440 `in_progress` until the current pip-audit
+  invocation completes successfully.
+- **Verification**: Full pytest, Ruff, Mypy (462 files), Bandit, supply-chain
+  policy, package build, and diff-check pass. Two current pip-audit attempts
+  reached PyPI and failed with timeout/connection errors; the prior locked
+  environment audit reported no known vulnerabilities while excluding the local
+  unpublished distribution.
+- **Boundary**: This is a transient external-service gate, not a code failure;
+  no release or GitHub publication occurs while the fresh audit is unresolved.
+- **Rollback**: Supersede E-440 with a successful exact-environment audit or a
+  documented tool-version/network diagnosis; no runtime/data rollback is needed.

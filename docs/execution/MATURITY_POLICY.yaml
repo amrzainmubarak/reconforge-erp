@@ -23,6 +23,9 @@ module_ceilings:
   - module_id: inventory.core
     maximum_maturity: experimental
     evidence_claim: Open-source financial reconciliation and controls toolkit
+  - module_id: manufacturing.cost-control
+    maximum_maturity: experimental
+    evidence_claim: Experimental manufacturing production-cost control
   - module_id: mapping.profiles
     maximum_maturity: experimental
     evidence_claim: Works beside source systems; not a complete ERP

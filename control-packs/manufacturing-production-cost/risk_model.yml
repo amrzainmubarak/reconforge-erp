@@ -1,0 +1,7 @@
+risk_model_id: manufacturing-production-cost-risk-v1
+weights:
+  material_issue_without_order: 84
+  duplicate_completion: 94
+  material_cost_variance: 86
+  completion_quantity_exceeds_plan: 90
+  scrap_exceeds_limit: 82

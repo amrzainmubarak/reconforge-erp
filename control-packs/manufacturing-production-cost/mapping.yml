@@ -1,0 +1,11 @@
+mapping_id: manufacturing-production-cost-v1
+sources:
+  orders: orders.csv
+  material_issues: material_issues.csv
+  completions: completions.csv
+  scrap: scrap.csv
+canonical_fields:
+  order_id: [order_id, production_order, work_order]
+  planned_quantity: [planned_quantity, planned_qty]
+  actual_cost: [actual_cost, completion_cost, finished_cost]
+  unit_cost: [unit_cost, material_unit_cost, actual_unit_cost]

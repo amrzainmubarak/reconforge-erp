@@ -1,0 +1,6 @@
+{
+  "records": [
+    {"order_id": "MFG-001", "product_id": "PRODUCT-A", "planned_quantity": "100", "unit": "PCS", "standard_unit_cost": "2.00", "currency": "EUR", "source_reference": "production-export-2026-08-05"},
+    {"order_id": "MFG-002", "product_id": "PRODUCT-B", "planned_quantity": "50", "unit": "PCS", "standard_unit_cost": "3.00", "currency": "EUR", "source_reference": "production-export-2026-08-05"}
+  ]
+}

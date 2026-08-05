@@ -1,0 +1,7 @@
+{
+  "records": [
+    {"issue_id": "ISSUE-001", "order_id": "MFG-001", "item_id": "RAW-A", "quantity": "100", "unit": "PCS", "unit_cost": "2.00", "currency": "EUR", "source_reference": "material-issue-export-2026-08-05"},
+    {"issue_id": "ISSUE-002", "order_id": "MFG-002", "item_id": "RAW-B", "quantity": "55", "unit": "PCS", "unit_cost": "3.20", "currency": "EUR", "source_reference": "material-issue-export-2026-08-05"},
+    {"issue_id": "ISSUE-UNKNOWN-001", "order_id": "MFG-UNKNOWN", "item_id": "RAW-X", "quantity": "1", "unit": "PCS", "unit_cost": "1.00", "currency": "EUR", "source_reference": "material-issue-export-2026-08-05"}
+  ]
+}

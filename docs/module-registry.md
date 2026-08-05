@@ -33,6 +33,13 @@ reference, exact amount, booking-date window, ambiguity, duplicate, unmatched,
 and digest verification outcomes. It is not a live bank connector, payment
 initiation path, ERP write-back path, or statutory posting engine.
 
+The experimental `manufacturing.cost-control` entry is an implemented,
+non-posting artifact slice for local production-order, material-issue,
+completion, and scrap exports. It exposes exact material/completion cost
+variances, planned-versus-completed quantities, scrap limits, unknown-order
+lineage, and digest-bound reports. It is not a statutory valuation engine, ERP
+connector, inventory/WIP/GL posting path, or complete manufacturing module.
+
 ## Maturity and capability are separate
 
 | Field | Allowed values | Meaning |

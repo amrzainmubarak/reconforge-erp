@@ -1,0 +1,6 @@
+pack_id: manufacturing-production-cost
+name: Manufacturing Production Cost Controls
+version: 1.0.0
+description: Bounded controls for local production-order, material-issue, completion, and scrap exports.
+owner: ReconForge ERP Maintainers
+tags: [manufacturing, production, inventory, wip, cost]

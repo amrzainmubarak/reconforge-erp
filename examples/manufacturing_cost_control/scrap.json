@@ -1,0 +1,5 @@
+{
+  "records": [
+    {"scrap_id": "SCRAP-001", "order_id": "MFG-002", "scrap_date": "2026-08-05", "quantity": "7", "unit": "PCS", "reason": "setup loss", "source_reference": "scrap-export-2026-08-05"}
+  ]
+}

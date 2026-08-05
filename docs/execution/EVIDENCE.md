@@ -14162,3 +14162,42 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - Boundary: exact local Windows evidence only. Hosted matrices, live
   bank/ERP providers and write-back, statutory close, independent HA/DR,
   distributed IAM, scale/soak, and GitHub publication remain open.
+
+## E-439 — Experimental manufacturing production-cost control vertical slice
+
+- Added the typed `manufacturing-cost-control-v1` domain/application boundary
+  for local production orders, material issues, completions, and scrap events.
+  Exact Money/Quantity, one-currency/unit policy, standard/material and
+  completion cost variance, planned-versus-completed quantity, scrap limits,
+  unknown-order lineage, deterministic ordering, source fingerprints, and
+  decision digests are tested.
+- Added the local `reconforge manufacturing cost-control run` command, closed
+  `reconforge-manufacturing-cost-control` report schema, synthetic JSON/CSV
+  fixtures, and `manufacturing-production-cost` control pack. The runtime
+  module is `manufacturing.cost-control` with experimental/implemented maturity.
+- Focused command: `uv run pytest -q tests/test_manufacturing_cost_control.py
+  tests/test_module_registry.py tests/test_v03_platform.py
+  tests/test_rules_engine.py tests/test_file_ingestion_inventory.py::test_direct_json_parser_inventory_is_an_exact_ast_allowlist
+  tests/test_threat_model_index.py --tb=short` (record the observed result after
+  the current-tree run).
+- Boundary: local export-only and non-posting. No statutory valuation, live
+  ERP/MRP provider, inventory/WIP/GL posting, write-back, persistence/API/Studio,
+  HA/DR, or production claim follows.
+- ADR: `docs/adr/0366-manufacturing-production-cost-control-slice.md`.
+
+## E-440 — Full local regression and release-tool gates after manufacturing slice
+
+- `uv run pytest -q --tb=short -ra` exits 0 in 353.3 seconds with no collection
+  or executed failure. Optional PostgreSQL/Redis/S3 and Windows capability skips
+  remain explicit, and existing Starlette/legacy financial-input warnings remain
+  visible.
+- `uv run ruff check .`, `uv run mypy reconforge` (462 source files),
+  `uv run bandit -q -r reconforge`, the closed supply-chain policy validator,
+  `uv run python -m build --no-isolation`, and `git diff --check` pass. The
+  current `pip-audit --timeout 60` retry is blocked by intermittent PyPI
+  connection failure; the prior locked-environment audit reported no known
+  vulnerabilities with the unpublished local distribution excluded. A fresh
+  successful pip-audit run remains required before E-440 is complete.
+- Boundary: hosted matrices, live ERP/MRP providers/write-back, statutory
+  valuation/posting, independent HA/DR, distributed IAM, scale/soak, and GitHub
+  publication remain open.

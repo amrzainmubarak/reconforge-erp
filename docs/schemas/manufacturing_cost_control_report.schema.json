@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/manufacturing_cost_control_report.schema.json",
+  "title": "ReconForge Manufacturing Cost Control Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["algorithm_version", "artifact_digest", "artifact_type", "amount_tolerance", "decision_digest", "decisions", "input_digests", "max_scrap_quantity", "schema_version", "status_counts"],
+  "properties": {
+    "algorithm_version": {"const": "manufacturing-cost-control-v1"},
+    "artifact_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "artifact_type": {"const": "reconforge-manufacturing-cost-control"},
+    "amount_tolerance": {"$ref": "#/$defs/money"},
+    "decision_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "decisions": {"type": "array", "items": {"$ref": "#/$defs/decision"}},
+    "input_digests": {"type": "array", "items": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "uniqueItems": true},
+    "max_scrap_quantity": {"$ref": "#/$defs/quantity"},
+    "schema_version": {"const": 1},
+    "status_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}}
+  },
+  "$defs": {
+    "money": {
+      "type": "object", "additionalProperties": false,
+      "required": ["amount", "currency", "currency_policy_digest", "currency_registry_digest", "currency_registry_version", "minor_units", "rounding_policy", "schema_version"],
+      "properties": {
+        "amount": {"type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"},
+        "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+        "currency_policy_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "currency_registry_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "currency_registry_version": {"type": "string", "minLength": 1},
+        "minor_units": {"type": "integer", "minimum": 0},
+        "rounding_policy": {"type": "string", "minLength": 1},
+        "schema_version": {"const": 1}
+      }
+    },
+    "quantity": {
+      "type": "object", "additionalProperties": false, "required": ["scale", "unit", "value"],
+      "properties": {
+        "scale": {"type": "integer", "minimum": 0, "maximum": 8},
+        "unit": {"type": "string", "minLength": 1},
+        "value": {"type": "string", "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"}
+      }
+    },
+    "decision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["actual_material_cost", "completed_quantity", "completion_cost", "completion_cost_variance", "expected_material_cost", "issued_quantity", "material_cost_variance", "order_id", "planned_quantity", "product_id", "reason_codes", "scrap_quantity", "status"],
+      "properties": {
+        "actual_material_cost": {"$ref": "#/$defs/money"},
+        "completed_quantity": {"$ref": "#/$defs/quantity"},
+        "completion_cost": {"$ref": "#/$defs/money"},
+        "completion_cost_variance": {"$ref": "#/$defs/money"},
+        "expected_material_cost": {"$ref": "#/$defs/money"},
+        "issued_quantity": {"$ref": "#/$defs/quantity"},
+        "material_cost_variance": {"$ref": "#/$defs/money"},
+        "order_id": {"type": "string", "minLength": 1},
+        "planned_quantity": {"$ref": "#/$defs/quantity"},
+        "product_id": {"type": "string", "minLength": 1},
+        "reason_codes": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "scrap_quantity": {"$ref": "#/$defs/quantity"},
+        "status": {"enum": ["reconciled", "exception", "unmatched"]}
+      }
+    }
+  }
+}

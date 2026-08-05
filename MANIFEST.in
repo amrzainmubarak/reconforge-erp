@@ -464,6 +464,14 @@ include docs/schemas/bank_statement_control_report.schema.json
 include docs/adr/0365-bank-statement-control-slice.md
 recursive-include control-packs/bank-statement-reconciliation *
 recursive-include examples/bank_statement_control *
+include reconforge/domain/manufacturing_cost_control.py
+include reconforge/application/manufacturing_cost_control.py
+include reconforge/cli_manufacturing_cost_control.py
+include tests/test_manufacturing_cost_control.py
+include docs/schemas/manufacturing_cost_control_report.schema.json
+recursive-include control-packs/manufacturing-production-cost *
+recursive-include examples/manufacturing_cost_control *
+include docs/adr/0366-manufacturing-production-cost-control-slice.md
 include docs/execution/S3_OBJECT_STORAGE_LIVE_DOCKER_DRILL_2026-08-05.json
 include tests/test_current_s3_object_storage_live_report.py
 include docs/adr/0229-durable-job-10k-tier-is-hardware-scoped.md

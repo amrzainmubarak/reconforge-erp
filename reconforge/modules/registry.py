@@ -543,6 +543,32 @@ _MODULES = (
         test_evidence=("tests/test_bank_statement_control.py",),
     ),
     ModuleDescriptor(
+        module_id="manufacturing.cost-control",
+        name="Manufacturing production cost control",
+        version="1.0.0",
+        maturity="experimental",
+        capability_status="implemented",
+        summary=(
+            "Deterministic local production-order control over material cost, completion cost, planned/completed "
+            "quantity, scrap, and source-order lineage."
+        ),
+        default_enabled=False,
+        dependencies=("inventory.core", "platform.core"),
+        interfaces=("artifacts", "cli", "library"),
+        import_contracts=("production-order-export.v1", "material-issue-export.v1", "completion-export.v1", "scrap-export.v1"),
+        export_contracts=("manufacturing-cost-control-report.v1",),
+        data_classification=("financial-sensitive", "inventory-control-data", "source-export-metadata"),
+        retention_note=(
+            "Production exports and reports remain in operator-selected local paths; this module does not retain "
+            "ERP credentials or post inventory, WIP, or ledger entries."
+        ),
+        activation_note=(
+            "Run explicitly with bounded local JSON exports. The slice is non-posting and provider-neutral; standard "
+            "cost policy, statutory valuation, ERP connectivity, and write-back remain separate gates."
+        ),
+        test_evidence=("tests/test_manufacturing_cost_control.py",),
+    ),
+    ModuleDescriptor(
         module_id="studio.modern",
         name="Modern Studio synthetic preview",
         version=__version__,

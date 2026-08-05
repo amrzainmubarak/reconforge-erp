@@ -4378,3 +4378,13 @@ publication and remote GitHub verification before a release Go decision.
   metadata. Replication, Sentinel/Cluster failover, cross-site durability,
   Redis HA, and production SLOs remain unverified.
 - ADR: `docs/adr/0363-live-redis-session-policy-contract-drill.md`.
+
+## E-434 — Full local regression after current runtime slices
+
+- `uv run pytest -q --tb=short -ra` exits 0 in 356.1 seconds on the current
+  Windows environment. No collection or executed test failure occurred.
+- Declared PostgreSQL/Redis/S3 and Windows capability skips remain explicit;
+  existing Starlette and legacy binary-financial-input warnings remain visible.
+- Boundary: local compatibility only. Hosted Python/security/Docker matrices,
+  statutory close, live vendors/write-back, independent HA/DR, distributed
+  IAM, scale/soak, and release approval remain unverified.

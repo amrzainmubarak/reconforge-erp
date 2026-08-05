@@ -4344,3 +4344,16 @@
   Sentinel/Cluster failover, cross-site durability, Redis HA, or SLO evidence.
 - **Rollback**: Remove the dated verifier/report/test and retain existing
   provider-neutral Redis contracts and the CI server-boundary tests.
+
+### D-345: Record the current full local regression
+
+- **Date**: 2026-08-05
+- **Decision**: Retain the complete local suite as compatibility evidence after
+  the live Redis/object-storage slices.
+- **Verification**: Pytest exits 0 in 356.1s with no collection or executed
+  failure; external-service and capability skips plus existing warnings remain
+  visible.
+- **Boundary**: No hosted matrix, live vendor/write-back, statutory close,
+  independent HA/DR, distributed IAM, scale/soak, or release approval follows.
+- **Rollback**: Supersede E-434 with the next exact-environment regression; no
+  runtime/data rollback is required.

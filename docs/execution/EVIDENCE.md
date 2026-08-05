@@ -13928,3 +13928,16 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   PostgreSQL client availability, statutory close, live provider/write-back,
   independent HA/DR, distributed IAM, scale, and production claims remain
   outside the evidence.
+
+## E-424 — Python 3.11 all-extras collection boundary
+
+- `uv sync --locked --all-extras --no-editable --python 3.11` installs the
+  optional packages required by observability, signed-pack, upgrade, and
+  WebAuthn tests, including OpenTelemetry, cryptography, cbor2, and WebAuthn.
+- The affected seven-module target collects 49 tests and executes 48 passes
+  with one declared live-PostgreSQL skip. This directly addresses the earlier
+  `ModuleNotFoundError` collection evidence while preserving the current CI
+  `all-extras` installation contract.
+- Boundary: local dependency/collection evidence only; no hosted rerun, secret
+  scan approval, live provider, write-back, statutory, HA/DR, scale, or release
+  claim follows.

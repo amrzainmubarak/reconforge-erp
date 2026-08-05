@@ -19,6 +19,19 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   posting, live providers/write-back, independent HA/DR, distributed IAM,
   scale/soak, or production readiness.
 
+## E-424 — Python 3.11 all-extras collection boundary (passed locally)
+
+- Recreated the dependency profile used by the current CI test matrix with
+  `uv sync --locked --all-extras --no-editable --python 3.11`. The lock installs
+  the optional observability, backup/connector cryptography, CBOR, and WebAuthn
+  packages that were missing in the historical collection log.
+- The seven affected modules collect 49 tests and execute 48 passes with one
+  declared live-PostgreSQL skip under the refreshed Python 3.11 environment.
+- The current `.github/workflows/ci.yml` already uses `--all-extras`; this local
+  result confirms the import boundary is covered by that profile. It does not
+  establish a hosted rerun, Gitleaks approval, live provider/write-back,
+  statutory close, independent HA/DR, scale, or production readiness.
+
 ## E-407 — Acquisition deferred-tax bridge (passed locally)
 
 - Added `acquisition-deferred-tax-bridge-v1`, a deterministic non-posting

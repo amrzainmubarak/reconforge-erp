@@ -4198,3 +4198,21 @@
   statutory accounting, provider write-back, HA/DR, scale, or production.
 - **Rollback**: Revert the single expectation change if the migration head is
   intentionally rolled back together with migration `0065`.
+
+### D-335: Keep CI test dependencies in the all-extras profile
+
+- **Date**: 2026-08-05
+- **Decision**: Retain the existing CI test installation command
+  `uv sync --locked --all-extras --no-editable` and verify it locally on Python
+  3.11 rather than weakening tests or adding ad-hoc imports to runtime code.
+- **Rationale**: The historical collection failures were missing optional test
+  packages (`opentelemetry`, `cryptography`, `cbor2`), not application import
+  behavior. The repository already declares those capabilities in optional
+  extras, so the safe fix is to keep the matrix on the complete locked profile.
+- **Verification**: The refreshed Python 3.11 environment collects 49 affected
+  tests and passes 48 with one explicit live-service skip; the current CI YAML
+  uses `--all-extras` for the test job.
+- **Boundary**: Local environment evidence only; it does not replace hosted
+  reruns or establish production readiness.
+- **Rollback**: If the CI profile is intentionally narrowed, add an explicit
+  reviewed test-dependency profile and update the lock/evidence together.

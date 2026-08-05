@@ -6,6 +6,16 @@ Updated: 2026-08-05
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-400 — Full local post-IAM quality gates (passed)
+
+- `uv run pytest -q --tb=short` -> exit 0 in 318.9 seconds; declared skips and
+  existing deprecation/legacy-input warnings remain visible.
+- Ruff, Mypy (447 source files), Bandit, pip-audit, package build and
+  `git diff --check` all pass. `pip-audit` reports no known vulnerabilities and
+  skips the unpublished local distribution because it is not on PyPI.
+- This is a clean local quality gate after E-399, not hosted CI, image,
+  external-provider, HA/DR or production-release evidence.
+
 ## E-399 — Central server-policy tenant binding (passed)
 
 - `enforce_server_scoped_permissions` now compares every adapter-supplied

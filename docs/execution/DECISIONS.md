@@ -5,6 +5,20 @@
 
 ## Decisions
 
+### D-305: Treat the post-IAM local gate as correctness evidence, not release approval
+- **Date**: 2026-08-05
+- **Context**: The tenant-policy hardening changed central request authorization
+  and required a full regression after the live PostgreSQL checks.
+- **Decision**: Record the full local pytest/static/security/package gate as
+  E-400 while keeping hosted, provider, independent-HA/DR and production
+  release claims separate.
+- **Rationale**: A green local suite proves current repository compatibility;
+  it cannot prove external services or independent failure domains.
+- **Reversibility**: Replace the E-400 evidence entry if a later run supersedes
+  it; no runtime or migration rollback is required.
+- **Verification**: Pytest, Ruff, Mypy, Bandit, pip-audit, build and diff-check
+  all exit successfully.
+
 ### D-304: Require request-tenant equality for every server-scoped policy check
 - **Date**: 2026-08-05
 - **Context**: Server route adapters pass tenant/workspace values into the

@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-400: Full local post-IAM quality gates
+
+- `uv run pytest -q --tb=short` -> exit 0 for the full repository suite; the
+  run completed in 318.9 seconds with only declared skips and existing
+  warnings. The exact collection count is intentionally not promoted here
+  because the console summary is line-wrapped; the process exit is the gate.
+- `uv run ruff check .` -> pass; `uv run mypy reconforge` -> no issues in 447
+  source files; `uv run bandit -q -r reconforge` -> pass with existing nosec
+  warning noise; `uv run pip-audit` -> no known vulnerabilities and local
+  distribution skipped because it is not on PyPI; `uv run python -m build
+  --no-isolation` -> sdist and wheel built; `git diff --check` -> pass.
+- Boundary: local Windows/Python environment only. Hosted Python matrix,
+  browser/image gates, external providers, independent HA/DR and production
+  release evidence remain separate.
+
 ## E-399: Central server-policy tenant binding
 
 - `enforce_server_scoped_permissions` now validates that the tenant supplied by

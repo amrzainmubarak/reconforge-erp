@@ -1,5 +1,14 @@
 # Quality Baseline
 
+## Current post-E-400 verification (2026-08-05)
+
+The current head has a full local post-IAM gate: `uv run pytest -q --tb=short`
+exits 0 in 318.9 seconds; Ruff, Mypy (447 source files), Bandit, pip-audit,
+`python -m build --no-isolation`, and `git diff --check` also pass. Existing
+warnings and declared optional-service skips remain visible. This current local
+gate does not replace hosted Python/web/container execution, external-provider
+contracts, independent HA/DR, or production-release evidence.
+
 Measured through 2026-07-27 on the dirty snapshot in `BASELINE.md` and `STATE.md`.
 
 | Gate | Initial baseline | Post-remediation result |

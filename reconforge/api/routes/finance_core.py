@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from reconforge.api.dependencies import (
     enforce_server_scoped_permission,
+    enforce_server_tenant_permission,
     get_local_db,
     require_any_permission,
     require_permission,
@@ -184,6 +185,13 @@ def _server_workspace(workspace: str) -> None:
         )
 
 
+def _enforce_server_legacy_finance_permission(request: Request, *, permission: str) -> None:
+    """Bind the tenant-scoped legacy ledger boundary to central policy."""
+
+    scope = request_execution_scope(request)
+    enforce_server_tenant_permission(request, permission=permission, tenant_id=scope.tenant_id)
+
+
 def _server_finance_workspace(request: Request, workspace: str, *, permission: str) -> str:
     """Validate the requested workspace against the authenticated hierarchy."""
 
@@ -297,6 +305,7 @@ def summary(
         return {"summary": result.to_dict()}
     if server_ledger_enabled(request):
         _server_workspace(workspace)
+        _enforce_server_legacy_finance_permission(request, permission="finance_core.read")
         server_result = execute_postgres_ledger(
             request, lambda repository, tenant: repository.summary(tenant_id=tenant)
         )
@@ -447,6 +456,7 @@ def list_accounts(
         return _list_response("accounts", page, limit=limit, offset=offset)
     if server_ledger_enabled(request):
         _server_workspace(workspace)
+        _enforce_server_legacy_finance_permission(request, permission="finance_core.read")
         if chart:
             raise _server_unsupported("chart filtering")
 
@@ -776,6 +786,7 @@ def trial_balance(
         )
     if server_ledger_enabled(request):
         _server_workspace(workspace)
+        _enforce_server_legacy_finance_permission(request, permission="finance_core.read")
         if entity.strip():
             raise _server_unsupported("legal-entity-scoped trial balance")
 
@@ -837,6 +848,7 @@ def list_entries(
         return _list_response("entries", records, limit=limit, offset=offset)
     if server_ledger_enabled(request):
         _server_workspace(workspace)
+        _enforce_server_legacy_finance_permission(request, permission="finance_core.read")
         if entity or period_id:
             raise _server_unsupported("entity- and fiscal-period-scoped entry filtering")
 
@@ -936,6 +948,7 @@ def get_entry(
             )
         }
     if server_ledger_enabled(request):
+        _enforce_server_legacy_finance_permission(request, permission="finance_core.read")
         record = execute_postgres_ledger(
             request, lambda repository, tenant: repository.get_entry(tenant_id=tenant, entry_id=entry_id)
         )

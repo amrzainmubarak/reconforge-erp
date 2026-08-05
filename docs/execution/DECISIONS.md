@@ -4030,3 +4030,33 @@
   authorize GitHub publication.
 - **Rollback**: Supersede E-414 with a later gate record; no runtime or
   migration rollback is required.
+
+### D-324: Bind legacy PostgreSQL Finance reads to tenant policy
+
+- **Date**: 2026-08-05
+- **Decision**: Re-evaluate `finance_core.read` tenant-wide before legacy
+  PostgreSQL ledger summary/account/trial-balance/entry reads; retain the
+  existing workspace-bound `finance_core.manage` checks for mutations.
+- **Rationale**: The compatibility ledger schema rejects workspaces, but its
+  dependency-level read permission still needed request-tenant binding.
+- **Verification**: ADR 0355 and the focused legacy-finance/server-identity/
+  Finance Core gate pass 6/6 with one declared skip; Ruff, Mypy, and diff-check
+  pass.
+- **Boundary**: Route IAM only; statutory posting, worker/export/UI adoption,
+  federation, distributed invalidation, providers, HA/DR, and production IAM
+  remain open.
+- **Rollback**: Remove helper calls, assertions, ADR, manifest and execution
+  records; no schema or data rollback is required.
+
+### D-325: Record the final local gate after legacy Finance-read IAM adoption
+
+- **Date**: 2026-08-05
+- **Decision**: Record E-416 as local regression/package evidence while
+  withholding hosted, external-provider, statutory, independent-HA/DR,
+  distributed-IAM, scale, breadth, and production-release claims.
+- **Verification**: Pytest exits 0 in 322.7s; Ruff, Mypy (448 files), Bandit,
+  pip-audit, build, and diff-check pass.
+- **Boundary**: The green local gate does not complete the global objective or
+  authorize GitHub publication.
+- **Rollback**: Supersede E-416 with a later gate record; no runtime or
+  migration rollback is required.

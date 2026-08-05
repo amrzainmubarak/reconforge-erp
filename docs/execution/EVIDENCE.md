@@ -13794,3 +13794,27 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - The gate remains one-workstation local evidence and does not promote hosted,
   provider/write-back, statutory, independent-HA/DR, distributed-IAM,
   scale, breadth, or production claims.
+
+## E-415 — Server-scoped legacy Finance reads
+
+- Tenant-scoped legacy PostgreSQL ledger summary, account list, trial balance,
+  entry list, and entry lookup now re-evaluate `finance_core.read` with the
+  validated tenant before adapter access; no synthetic workspace is passed.
+  Existing account/entry writes keep their `finance_core.manage` scope checks.
+- `uv run pytest -q tests/test_api_server_legacy_finance_policy.py
+  tests/test_api_server_finance_core.py tests/test_api_server_identity.py
+  --tb=short` -> 6 passed, 1 declared skip. Ruff, Mypy, and diff-check pass
+  for the changed route/tests.
+- Boundary: bounded route IAM evidence only; statutory posting, complete
+  worker/export/UI adoption, federation, distributed invalidation, providers,
+  HA/DR, compliance, and production IAM assurance remain open.
+- ADR: `docs/adr/0355-server-scoped-legacy-finance-read-policy.md`.
+
+## E-416 — Final local gates after legacy Finance-read IAM adoption
+
+- `uv run pytest -q --tb=short` exits 0 in 322.7 seconds after the legacy
+  Finance read policy change. Ruff, Mypy (448 source files), Bandit,
+  pip-audit, package build, and `git diff --check` also pass.
+- This remains one-workstation local evidence and does not promote hosted,
+  provider/write-back, statutory, independent-HA/DR, distributed-IAM, scale,
+  breadth, or production claims.

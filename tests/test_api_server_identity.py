@@ -474,6 +474,13 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
         "enforce_server_scoped_permission",
         lambda _request, **kwargs: ledger_scoped_permissions.append(kwargs),
     )
+    monkeypatch.setattr(
+        finance_core_routes,
+        "enforce_server_tenant_permission",
+        lambda _request, **kwargs: ledger_scoped_permissions.append(
+            {**kwargs, "workspace_id": None}
+        ),
+    )
     monkeypatch.setattr(finance_core_routes, "execute_postgres_ledger", execute)
     monkeypatch.setattr(
         master_data_routes,
@@ -689,11 +696,12 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
         {"permission": "close.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
         {"permission": "close.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
     ]
-    assert ledger_scoped_permissions == [
-        {"permission": "finance_core.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
-        {"permission": "finance_core.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
-        {"permission": "finance_core.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
-    ]
+    assert ledger_scoped_permissions.count(
+        {"permission": "finance_core.read", "tenant_id": "tenant-a", "workspace_id": None}
+    ) == 6
+    assert ledger_scoped_permissions.count(
+        {"permission": "finance_core.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"}
+    ) == 3
     assert master_scoped_permissions == [
         {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
         {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},

@@ -95,6 +95,29 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   statutory close, independent HA/DR, distributed IAM, scale/soak, coherent
   breadth, hosted matrices, and production approval remain open.
 
+## E-415 — Server-scoped legacy Finance reads (passed locally)
+
+- Legacy PostgreSQL ledger branches for summary, accounts, trial balance,
+  entries, and entry lookup now re-evaluate `finance_core.read` against the
+  authenticated tenant before adapter access. Tenant-wide semantics are used
+  because this compatibility ledger boundary rejects workspaces.
+- Existing account/entry mutations retain their workspace-bound
+  `finance_core.manage` checks. A focused test captures five read gates, and
+  server identity/Finance Core regressions pass.
+- Boundary: route IAM only; statutory posting, worker/export/UI adoption,
+  federation, distributed invalidation, live providers, independent HA/DR,
+  and production IAM remain open.
+
+## E-416 — Final local gates after legacy Finance-read IAM adoption (passed)
+
+- `uv run pytest -q --tb=short` -> exit 0 in 322.7 seconds with only declared
+  skips and existing deprecation/legacy-input warnings.
+- Ruff, Mypy (448 source files), Bandit, pip-audit, package build, and
+  `git diff --check` all pass after the legacy Finance route changes.
+- This is local regression/package evidence only. Hosted matrices, external
+  providers/write-back, statutory close, independent HA/DR, distributed IAM,
+  scale/soak, coherent breadth, and production approval remain open.
+
 ## E-403 — Full local post-E-402 quality gates (passed)
 
 - `uv run pytest -q --tb=short` -> exit 0 in 330.3 seconds; only declared

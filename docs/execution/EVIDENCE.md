@@ -2,6 +2,23 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-391: PostgreSQL grouped-matching 10K probe blocked by connection churn
+
+- Attempted a disposable PostgreSQL 16 run of 1,000 grouped-matching runs,
+  ten partitions per run (10,000 partitions), with the existing 16-worker,
+  batch-32 worker configuration. The run reached 304 complete runs, 3,108
+  checkpoints, and 7,458 result rows before a worker failed with
+  `psycopg.OperationalError: ... Address already in use` while opening a new
+  transaction connection.
+- The failure is attributable to the current fresh-connection-per-phase
+  worker lifecycle under this larger partition count on Windows. It is not a
+  successful scale result; no artifact, profile factory, workflow selector,
+  or claim was retained. The disposable PostgreSQL container was removed.
+- Follow-up remains open under P4-MAT-001: introduce bounded connection reuse
+  or a pool with tenant-scope reset, then repeat the test with leak, timeout,
+  cleanup, and deterministic-result assertions before publishing a larger
+  PostgreSQL matching tier. The existing 500-partition gate is unaffected.
+
 ## E-390: PostgreSQL durable-job backpressure runtime gate
 
 - Added `reconforge/benchmark/postgres_durable_job_backpressure.py`, its

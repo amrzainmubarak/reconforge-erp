@@ -6,6 +6,20 @@ Updated: 2026-08-05
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-391 — PostgreSQL grouped-matching 10K probe (blocked, not promoted)
+
+- A disposable PostgreSQL 16 probe for 10,000 grouped-matching partitions
+  reached 304 completed runs, 3,108 checkpoints, and 7,458 result rows before
+  the existing worker's fresh-connection-per-phase behavior exhausted local
+  Windows ephemeral ports (`Address already in use`). The test failed closed
+  rather than publishing a partial tier; the disposable container was removed.
+- No 10K profile, workflow gate, artifact, or public capability claim was
+  retained. The existing 500-partition gate remains unchanged and green.
+- Required follow-up: connection lifecycle/pooling or bounded connection reuse
+  must be designed, tested, and benchmarked before any larger PostgreSQL
+  grouped-matching tier can be promoted. This is an engineering blocker, not
+  evidence of production capacity.
+
 ## E-390 — PostgreSQL durable-job backpressure runtime gate (complete bounded slice)
 
 - Added `postgres-durable-job-load/backpressure-tier-v1`: eight independent

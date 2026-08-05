@@ -5,6 +5,23 @@
 
 ## Decisions
 
+### D-297: Do not promote a PostgreSQL grouped-matching 10K tier after connection exhaustion
+- **Date**: 2026-08-05
+- **Context**: A disposable 10,000-partition grouped-matching probe failed
+  after partial progress because the worker opens fresh PostgreSQL connections
+  for each transaction phase and Windows reported `Address already in use`.
+- **Decision**: Retain no 10K profile or workflow gate. Record the probe as a
+  blocked engineering finding and require a separately reviewed connection
+  lifecycle/pooling design before retrying a larger tier.
+- **Rationale**: Publishing partial results would hide a reproducible resource
+  exhaustion boundary and would misrepresent the current worker as scalable at
+  that tier. The existing 500-partition correctness gate remains the allowed
+  bounded wording.
+- **Reversibility**: This is a documentation decision; a future pooling or
+  bounded-reuse slice may supersede it with new tests and evidence.
+- **Verification**: Probe failed closed at 304 runs/3,108 checkpoints/7,458
+  result rows; no artifact or runtime claim was promoted.
+
 ### D-296: Add a PostgreSQL durable-job backpressure runtime gate
 - **Date**: 2026-08-05
 - **Context**: SQLite had a producer-cap profile, while PostgreSQL had load,

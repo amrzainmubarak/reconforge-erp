@@ -24,6 +24,7 @@ CAMT053_SCHEMA_VERSION = "camt.053.001-bounded-v1"
 MAX_CAMT053_BYTES = 8 * 1024 * 1024
 MAX_CAMT053_LINES = 100_000
 MAX_TEXT_BYTES = 8_192
+MAX_PAYMENT_STATEMENT_PAGE_LINES = 10_000
 
 
 class Camt053Error(ValueError):
@@ -243,7 +244,7 @@ def _line(entry: Any, account_id: str, seen_ids: set[str]) -> Camt053Line:
         signed_amount=_signed_amount(amount, direction, "entry_amount"),
         booking_date=booking_date,
         value_date=value_date,
-        bank_reference=line_id,
+        bank_reference=service_reference if service_reference is not None else line_id,
         end_to_end_id=end_to_end_id,
         transaction_id=transaction_id,
         remittance_information=remittance_information,
@@ -305,13 +306,75 @@ def parse_camt053_file(path: str) -> Camt053Statement:
     return parse_camt053_bytes(payload)
 
 
+def project_camt053_to_payment_statement_pages(
+    statement: Camt053Statement, *, page_size: int = MAX_PAYMENT_STATEMENT_PAGE_LINES
+) -> tuple[Any, ...]:
+    """Project a parsed statement into bounded internal payment-statement pages.
+
+    The projection is local and deterministic. It keeps the signed amount and
+    source line identity and uses a numeric offset cursor only to paginate the
+    existing read-only payment-statement contract. It does not perform provider
+    I/O, settlement, posting, or write-back.
+    """
+
+    if (
+        not isinstance(page_size, int)
+        or isinstance(page_size, bool)
+        or not 1 <= page_size <= MAX_PAYMENT_STATEMENT_PAGE_LINES
+    ):
+        raise Camt053Error("camt053_payment_statement_page_size_invalid")
+    from reconforge.connectors.payment_statement_reference import PaymentStatementLine, PaymentStatementPage
+
+    projected: list[Any] = []
+    for line in statement.lines:
+        reference_parts = [line.line_id]
+        if line.bank_reference != line.line_id:
+            reference_parts.append(line.bank_reference)
+        if line.end_to_end_id:
+            reference_parts.append(line.end_to_end_id)
+        if line.transaction_id:
+            reference_parts.append(line.transaction_id)
+        if line.remittance_information:
+            reference_parts.append(line.remittance_information)
+        reference = " | ".join(reference_parts)
+        if len(reference.encode("utf-8")) > 512:
+            raise Camt053Error("camt053_payment_statement_reference_too_large")
+        try:
+            projected.append(
+                PaymentStatementLine(
+                    id=line.line_id,
+                    account_id=line.account_id,
+                    bookingDate=date.fromisoformat(line.booking_date),
+                    valueDate=date.fromisoformat(line.value_date),
+                    amount=line.signed_amount,
+                    currency=line.currency,
+                    reference=reference,
+                )
+            )
+        except (TypeError, ValueError) as exc:
+            raise Camt053Error("camt053_payment_statement_projection_invalid") from exc
+
+    pages: list[Any] = []
+    for start in range(0, len(projected), page_size):
+        end = min(start + page_size, len(projected))
+        pages.append(
+            PaymentStatementPage(
+                records=tuple(projected[start:end]),
+                next_cursor=str(end) if end < len(projected) else None,
+            )
+        )
+    return tuple(pages)
+
+
 __all__ = [
     "CAMT053_SCHEMA_VERSION",
     "MAX_CAMT053_BYTES",
+    "MAX_PAYMENT_STATEMENT_PAGE_LINES",
     "Camt053Balance",
     "Camt053Error",
     "Camt053Line",
     "Camt053Statement",
     "parse_camt053_bytes",
     "parse_camt053_file",
+    "project_camt053_to_payment_statement_pages",
 ]

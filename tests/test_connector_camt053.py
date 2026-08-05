@@ -8,7 +8,12 @@ import pytest
 from typer.testing import CliRunner
 
 from reconforge.cli import app
-from reconforge.connectors.camt053 import Camt053Error, parse_camt053_bytes, parse_camt053_file
+from reconforge.connectors.camt053 import (
+    Camt053Error,
+    parse_camt053_bytes,
+    parse_camt053_file,
+    project_camt053_to_payment_statement_pages,
+)
 
 runner = CliRunner()
 
@@ -51,6 +56,27 @@ def test_camt053_file_parser_and_cli_emit_replayable_json(tmp_path: Path) -> Non
     assert rendered["lines"][1]["signed_amount"] == "-20"
     schema = json.loads(Path("docs/schemas/camt053_statement.schema.json").read_text(encoding="utf-8"))
     jsonschema.Draft202012Validator(schema).validate(rendered)
+
+
+def test_camt053_projection_preserves_signed_payment_statement_lineage_and_pages() -> None:
+    statement = parse_camt053_bytes(_fixture())
+    pages = project_camt053_to_payment_statement_pages(statement, page_size=1)
+
+    assert len(pages) == 2
+    assert pages[0].next_cursor == "1"
+    assert pages[1].next_cursor is None
+    assert [record.line_id for page in pages for record in page.records] == [
+        "ENTRY-CREDIT-001",
+        "ENTRY-DEBIT-001",
+    ]
+    assert [record.amount for page in pages for record in page.records] == ["100", "-20"]
+    assert pages[1].records[0].reference.startswith("ENTRY-DEBIT-001 | BANK-REF-002")
+
+
+def test_camt053_projection_rejects_unbounded_page_size() -> None:
+    statement = parse_camt053_bytes(_fixture())
+    with pytest.raises(Camt053Error, match="page_size_invalid"):
+        project_camt053_to_payment_statement_pages(statement, page_size=0)
 
 
 def test_camt053_is_packaged_as_a_closed_connector_boundary() -> None:

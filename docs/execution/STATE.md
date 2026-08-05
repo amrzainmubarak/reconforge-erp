@@ -14,6 +14,10 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   entry/service reference, validates booking/value-date ordering, and emits
   opening/closing balances, references, remittance text, and a deterministic
   source digest.
+- Added a deterministic projection into bounded internal payment-statement
+  pages. It preserves signed amounts, stable line IDs, account/currency,
+  booking/value dates, and source references while using only a local offset
+  cursor for pagination.
 - XML parsing uses `defusedxml`; payloads are capped at 8 MiB, entries at
   100,000, and bounded text fields at 8 KiB. The closed JSON Schema, synthetic
   golden fixture, packaging assertions, malformed-input tests, XXE rejection,

@@ -15,6 +15,8 @@
   exact finite Decimal strings, stable entry/service references, explicit
   booking/value dates, opening/closing balances, and a deterministic digest.
   Expose it only through the local `parse-camt053` CLI and a closed JSON Schema.
+  Add a local projection into the existing bounded payment-statement page model,
+  preserving signed line identity and source references with an offset cursor.
 - **Rationale**: This creates a useful banking vertical input contract and
   replayable evidence while preserving fail-closed XML, identity, date, and
   amount semantics. It does not invent provider credentials, transport,

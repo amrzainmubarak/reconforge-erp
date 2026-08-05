@@ -21,3 +21,11 @@ The parser is deliberately bounded:
 This is a local file boundary, not a live bank connector. Bank-specific dialects,
 network credentials, certificates, payment initiation, settlement, posting, and
 write-back require separately approved conformance profiles and runtime evidence.
+
+Parsed statements can be projected into the existing bounded internal
+payment-statement pages with
+`project_camt053_to_payment_statement_pages(statement, page_size=...)`. The
+projection preserves line IDs, account, currency, signed amount, booking/value
+dates, and source references, and uses only a local numeric page-offset cursor.
+It is not a settlement, posting, payment initiation, or provider write-back
+operation.

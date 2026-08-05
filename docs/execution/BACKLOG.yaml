@@ -1312,6 +1312,22 @@ tasks:
     depends_on: [E-443]
     exit_evidence: On a clean commit `cd10968b1b4943726cbde0d6d8c2567509af68b8`, `verify_public_financial_evidence.py --allow-network --execution-scope maintainer-local` fetched 11 pinned official public-data responses and passed 3 experiments with 967 matched, zero unmatched, zero exceptions, reproducibility SHA-256 `890a4aa8f7b362981bfdd1f0f333d3bad55a886d842c0ff0a82ff165c48e26c5`, report bytes SHA-256 `25052c709ccd9400065cee6d39092d2d0bd77c6e7bb2ede69f9cbcb48fd4477d`, in 47.8s. This remains maintainer-run technical evidence, not a customer pilot, independent review, production validation, or release approval.
 
+  - id: E-445
+    priority: P0
+    area: quality
+    title: PostgreSQL migration and metrics parity regression closure
+    status: completed
+    depends_on: [E-444]
+    exit_evidence: Against the local PostgreSQL 17.10 service, an isolated `reconforge_e445` database was created and removed after verification. Alembic reached head `0065_pg_deferred_tax` in 3.9s; `test_live_postgres_metrics_and_sqlite_parity` passed in 2.8s using the non-privileged `reconforge_app` role; and the exact `test_alembic_upgrade_command_is_available_when_server_extra_is_installed` passed in 10.2s with all downgrade/re-upgrade assertions. This directly reproduces the two historical CI failure surfaces locally; the hosted runner result and native `pg_dump` capability remain external.
+
+  - id: E-446
+    priority: P0
+    area: security
+    title: Local history and tree secret-scan regression closure
+    status: completed
+    depends_on: [E-445]
+    exit_evidence: Checksum-verified Gitleaks 8.30.1 scans of all 490 local commits and the current tree both exit 0 with no leaks under `.gitleaks.toml`. This is current local evidence only; hosted security job attestation remains external.
+
   - id: P4-PLAT-001
     priority: P4
     area: platform_breadth

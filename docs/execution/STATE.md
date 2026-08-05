@@ -4515,3 +4515,12 @@ revision: 11 official responses, 967 matched, zero unmatched/exceptions, and
 replay/permutation checks. It is useful open-data evidence for the deterministic
 engine, but remains a maintainer run and does not satisfy the external-operator,
 customer, independent-review, hosted-attestation, or production gates.
+The PostgreSQL failure surfaces from the supplied CI log were then exercised on
+the local PostgreSQL 17.10 service with an isolated database. Alembic reached
+`0065_pg_deferred_tax`; the live PostgreSQL/SQLite metrics parity test and the
+Alembic downgrade/re-upgrade command test both passed with the non-privileged
+application role. This closes only the local reproduction of those two failures;
+the hosted runner and native `pg_dump` backup capability remain unverified.
+Checksum-verified Gitleaks 8.30.1 also scanned all 490 local commits and the
+current tree with zero leaks. The earlier hosted one-leak result is therefore
+not reproduced locally, but hosted security attestation remains open.

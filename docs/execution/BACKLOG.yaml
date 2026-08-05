@@ -20,9 +20,9 @@ tasks:
     priority: P1
     area: postgres-parity
     title: PostgreSQL intercompany elimination evidence adapter and API
-    status: in_progress
+    status: completed
     depends_on: [P4-FIN-002]
-    exit_evidence: Hosted non-superuser PostgreSQL test proves migration 0063, forced-RLS tenant/workspace isolation, immutable replay-verified artifact persistence, idempotent replay, and authenticated API scope; no posting/provider/HA/DR claim.
+    exit_evidence: Hosted CI 30961377710 / server-boundaries 92165832615 proves migration 0063, forced-RLS tenant/workspace isolation, immutable replay-verified artifact persistence, idempotent replay, and non-superuser runtime; no posting/provider/HA/DR claim.
   - id: E-293
     priority: P0
     area: enterprise-policy

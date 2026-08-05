@@ -18,6 +18,10 @@
   FX, tolerances, provider semantics, or autonomous financial authority.
 - **Reversibility**: Revert the API/adapter and use the data-loss-refusing
   migration downgrade only after an explicit retention decision.
+- **Verification**: Hosted CI `30961377710` / `server-boundaries` job
+  `92165832615` passed migration, forced-RLS scope, idempotent replay,
+  sibling-tenant exclusion, and database immutability. The bounded parity
+  inventory is promoted to `live_verified_current`.
 
 ### D-288: Require exact reciprocal evidence before intercompany elimination
 - **Date**: 2026-08-05

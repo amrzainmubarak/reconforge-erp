@@ -9,9 +9,14 @@ This file records commands and observed results. It does not convert a dirty wor
   for computing and reading non-posting intercompany artifacts.
 - Focused command: `uv run pytest -q
   tests/test_postgres_intercompany_elimination.py
-  tests/test_api_consolidation_intercompany.py` -> 4 passed.
-- `uv run python -m ruff check` and targeted `mypy` pass for the changed
-  modules. The live PostgreSQL adapter gate is intentionally pending hosted CI.
+  tests/test_api_consolidation_intercompany.py` -> 4 passed; the live test is
+  skipped locally because no DSN is configured.
+- Full local pytest passes with declared skips; Ruff, Mypy, build,
+  pip-audit, and diff-check pass.
+- Hosted CI `30961377710` / `server-boundaries` `92165832615` passes the live
+  non-superuser PostgreSQL migration, RLS, idempotent replay, sibling-tenant
+  isolation, and database immutability test. Python 3.11/3.12, Docker,
+  Security, CodeQL, engine parity, and HA/DR jobs are green in the same run.
 - Boundary: exact synthetic source evidence only; no statutory consolidation,
   journal posting, ERP/bank provider, write-back, throughput, HA/DR, or
   production-readiness claim.

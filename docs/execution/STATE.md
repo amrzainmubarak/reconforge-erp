@@ -6,7 +6,7 @@ Updated: 2026-08-05
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
-## E-384 — PostgreSQL intercompany elimination evidence (active bounded slice)
+## E-384 — PostgreSQL intercompany elimination evidence (complete bounded slice)
 
 - Added a server-profile API and forced-RLS PostgreSQL adapter for the exact
   intercompany proposal bridge. The server computes the result from typed source
@@ -16,8 +16,14 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   payload/digest tampering. The artifact explicitly reports
   `posting: not_available`; no statutory journal or provider write-back path was
   added.
-- Local schema/API contracts pass. Hosted PostgreSQL runtime evidence is still
-  required before promoting the parity row beyond `live_test_available`.
+- Local schema/API contracts pass. Hosted CI run `30961377710`, including
+  `server-boundaries` job `92165832615`, passed the live non-superuser
+  PostgreSQL migration/RLS/replay/immutability/workspace-isolation test. The
+  parity row is now `live_verified_current`.
+- Boundary: one digest-pinned PostgreSQL CI service with synthetic data. This
+  proves a non-posting evidence artifact only; statutory posting, ERP/bank
+  providers, write-back, throughput, HA/DR, and production readiness remain
+  unverified.
 
 ## E-383 — Exact intercompany elimination proposal bridge (complete bounded slice)
 

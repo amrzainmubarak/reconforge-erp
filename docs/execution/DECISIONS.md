@@ -19,6 +19,9 @@
 - **Reversibility**: Remove the tier factory, live test, artifact/schema,
   benchmark note, manifest/workflow entries, and execution records; existing
   durable-job runtime and lower tiers remain unchanged.
+- **Verification update**: Hosted CI `30970795278` / `server-boundaries`
+  `92194440053` passed both the 10K and 100K live profile gates; the associated
+  Security, Docker, CodeQL, HA/DR, and Docker-parity jobs are green.
 
 ### D-289: Persist intercompany elimination proposals as replay-verified evidence
 - **Date**: 2026-08-05

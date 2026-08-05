@@ -17,10 +17,13 @@ This file records commands and observed results. It does not convert a dirty wor
   manifest `d56fd2fe2bdcda9161c9545e456347c136adf15e15b74c543904147c3d06f890`;
   observed runtime 202.1521s / 12.3669 jobs per second on Windows 11,
   PostgreSQL 16, Python 3.14.6.
-- Boundary: bounded synthetic one-host correctness/concurrency only. Hosted
-  verification is pending; no capacity, SLO, soak, backpressure, queue HA,
-  failover, host-loss, cross-host fairness, RPO/RTO, or production-sizing
-  claim.
+- Hosted CI run `30970795278` / `server-boundaries` job `92194440053` passed
+  both the 10K and 100K live PostgreSQL durable-job profile gates. The same run
+  passed `postgres-ha-dr` `92194440057`, Docker parity `92195270355`, Security
+  `30970795282`, Docker `30970795277`, and CodeQL `30970795309`.
+- Boundary: bounded synthetic one-host correctness/concurrency only. No
+  capacity, SLO, soak, backpressure, queue HA, failover, host-loss, cross-host
+  fairness, RPO/RTO, or production-sizing claim.
 
 ## E-384: PostgreSQL intercompany elimination evidence
 

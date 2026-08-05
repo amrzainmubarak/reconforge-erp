@@ -16,8 +16,11 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   100,000/100,000 unique effects with zero duplicate effects, zero queued or
   running residue, and exactly 625 completions per lane. Observed runtime was
   202.1521 seconds / 12.3669 jobs per second on Windows 11/Python 3.14.6.
-- Focused profile/schema/package tests pass. The hosted `server-boundaries`
-  invocation is required before promotion to hosted runtime evidence.
+- Focused profile/schema/package tests pass. Hosted CI run `30970795278` passed
+  the `server-boundaries` job `92194440053`, including both the 10K and 100K
+  live PostgreSQL profile gates. Security `30970795282`, Docker `30970795277`,
+  CodeQL `30970795309`, `postgres-ha-dr` `92194440057`, and Docker parity
+  `92195270355` are green.
 - Boundary: synthetic one-host correctness/concurrency only; no throughput,
   soak, backpressure, queue HA, automatic failover, host-loss, cross-host
   fairness, RPO/RTO, or production-sizing claim.

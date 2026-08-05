@@ -3740,6 +3740,11 @@ publication and remote GitHub verification before a release Go decision.
 - Focused route/scope tests pass, including sibling-workspace rejection and
   no-local-fallback behavior. A live-DSN route lifecycle test covers the same
   path when the configured non-privileged PostgreSQL role is available.
+- Commit `d6c4b303` passed the local full suite/static/package gates and hosted
+  CI `30965184880` (Python 3.11/3.12, server-boundaries, postgres-ha-dr,
+  engine-parity, Docker-parity, object-storage), with Security `30965184879`,
+  Docker `30965184887`, and CodeQL `30965184884` green. The optional live-DSN
+  route test was not promoted as a separately executed hosted API claim.
 - Boundary: legacy minimal posted-ledger requests remain on their compatibility
   adapter; this slice does not prove statutory consolidation, legal-book
   posting, live ERP/bank interoperability, write-back, throughput, HA/DR, or

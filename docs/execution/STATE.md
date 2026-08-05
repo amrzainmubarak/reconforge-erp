@@ -4540,3 +4540,8 @@ are still open.
 The current locked Python 3.12 engine/golden selection also passes 55/55 tests
 without skips. This is a single current-compatible environment and does not
 replace the four lower-bound/current hosted matrix cells.
+The live PostgreSQL 10K and 100K durable-job scale tests also pass together on
+an isolated PostgreSQL 17.10 database with the non-privileged role; cleanup
+removed the database. This strengthens the bounded single-host concurrency
+evidence only and leaves soak, HA, host-loss, RPO/RTO, and production capacity
+unverified.

@@ -1360,6 +1360,14 @@ tasks:
     depends_on: [E-449]
     exit_evidence: On the current locked Python 3.12 environment, the no-skip engine/golden selection (`test_engine_signature.py`, `test_generator_benchmark_engines.py`, `test_matching_properties.py`, `test_matching_ambiguity.py`, `test_golden_finance_datasets.py`) passes all 55 collected tests with no skipped result. This is one current-compatible environment; the four hosted lower-bound/current Python matrix cells remain external evidence.
 
+  - id: E-451
+    priority: P0
+    area: scale
+    title: Local PostgreSQL 10K/100K durable-job correctness gate
+    status: completed
+    depends_on: [E-450]
+    exit_evidence: On PostgreSQL 17.10, an isolated database and non-privileged application role ran the exact live 10K-effects and 100K-effects durable-job tests. Both passed with exit 0 in 423.6s combined and the database was removed in cleanup. This proves bounded single-host PostgreSQL correctness/concurrency for the declared synthetic tiers only; throughput sizing, soak, queue HA, host loss, cross-host fairness, RPO/RTO, and production capacity remain open.
+
   - id: P4-PLAT-001
     priority: P4
     area: platform_breadth

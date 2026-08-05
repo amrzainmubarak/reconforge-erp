@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-394: Disposable local HTTPS write-back sandbox
+
+- `tests/test_connector_writeback_network.py` now starts a disposable TLS
+  server with a short-lived synthetic localhost certificate and drives the
+  normal `PinnedHttpsPostTransport`/`WritebackNetworkExecutor` path.
+- `uv run pytest -q tests/test_connector_writeback_network.py -k local_https_writeback_sandbox --tb=short`
+  -> 1 passed. Two transient `503` responses were retried; the third response
+  acknowledged the same idempotency key. Every request carried the exact
+  payload, and the returned intent did not contain the synthetic bearer token.
+- Connector/write-back regression command:
+  `uv run pytest -q tests/test_connector_writeback_network.py tests/test_connector_network.py tests/test_connector_writeback.py tests/test_api_connectors.py --tb=short`
+  -> 42 passed. Ruff and `git diff --check` pass.
+- Boundary: loopback-only synthetic HTTPS. No internet, vendor API, vault,
+  accounting posting, compensation semantics, or production write-back claim.
+
 ## E-393: Official-source competitive matrix supplement
 
 - Added `docs/strategy/official-source-competitive-matrix-2026-08-05.md` and

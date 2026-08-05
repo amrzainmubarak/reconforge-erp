@@ -6,6 +6,18 @@ Updated: 2026-08-05
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-394 — Disposable local HTTPS write-back sandbox (complete bounded slice)
+
+- The provider-neutral write-back test now runs the real TLS/HTTP transport
+  against a short-lived local HTTPS server. The sandbox returns two transient
+  `503` responses and then a digest-valid acknowledgement.
+- The gate proves three attempts carry the same idempotency key and exact
+  payload, the public-address resolver guard is exercised, the synthetic
+  bearer secret is only sent in the request, and the receipt is secret-free.
+- Boundary: no internet, vendor API, vault, accounting posting, provider
+  version contract or production write-back is evidenced. The provider and
+  compensation gaps remain open; GitHub publication remains deferred.
+
 ## E-393 — Official-source competitive matrix supplement (complete bounded slice)
 
 - Added a dated ethical comparison using only first-party Odoo, ERPNext and

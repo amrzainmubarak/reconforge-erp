@@ -3,8 +3,14 @@
 from __future__ import annotations
 
 import hashlib
+import http.client
 import json
+import socket
+import ssl
+import threading
 from dataclasses import dataclass, field
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -28,6 +34,7 @@ from reconforge.connectors.writeback_network import (
     WritebackNetworkResponse,
     WritebackProviderResponse,
 )
+from tests.https_runtime import create_localhost_certificate
 from tests.test_connector_writeback import NOW, _intent
 
 PAYLOAD = b'{"amount":"10.00","currency":"USD","reference":"payment-1"}'
@@ -444,3 +451,102 @@ def test_pinned_https_post_transport_preserves_hostname_and_never_follows_redire
     assert response.status == 302
     assert captured[0][0:4] == ("api.example.test", 443, "93.184.216.34", 7)
     assert ("POST", "/v1/writeback", PAYLOAD, {"Idempotency-Key": "key-1"}) in captured
+
+
+def test_local_https_writeback_sandbox_exercises_real_tls_retry_and_idempotency(tmp_path: Path) -> None:
+    """Exercise the real HTTPS transport against a disposable local provider sandbox.
+
+    The resolver is intentionally given a public test address while the injected
+    connection factory pins the socket to the disposable loopback listener. This
+    keeps the production SSRF/public-address gate active without contacting an
+    external service or using a real credential.
+    """
+
+    certificate, key = create_localhost_certificate(tmp_path)
+    requests: list[tuple[dict[str, str], bytes]] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
+        def do_POST(self) -> None:  # noqa: N802 - stdlib handler contract
+            length = int(self.headers.get("Content-Length", "0"))
+            body = self.rfile.read(length)
+            requests.append((dict(self.headers), body))
+            if len(requests) < 3:
+                status = 503
+                response_body = b'{"retry":true}'
+            else:
+                status = 200
+                response_body = _provider_body(self.headers.get("Idempotency-Key", ""))
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(response_body)))
+            self.send_header("Connection", "close")
+            self.end_headers()
+            self.wfile.write(response_body)
+
+        def log_message(self, _format: str, *_args: object) -> None:
+            return
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    server_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    server_context.load_cert_chain(certificate, key)
+    server.socket = server_context.wrap_socket(server.socket, server_side=True)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    waits: list[float] = []
+    pinned_addresses: list[str] = []
+
+    class _LocalPinnedConnection(http.client.HTTPSConnection):
+        def __init__(self, host: str, port: int, timeout: int, context: ssl.SSLContext) -> None:
+            super().__init__(host=host, port=port, timeout=timeout, context=context)
+            self._create_connection = self._connect_local
+
+        def _connect_local(
+            self,
+            _address: tuple[str, int],
+            timeout: float | None = None,
+            source_address: tuple[str, int] | None = None,
+        ) -> socket.socket:
+            return socket.create_connection(("127.0.0.1", self.port), timeout, source_address)
+
+    def factory(host: str, port: int, address: str, timeout: int, context: ssl.SSLContext) -> http.client.HTTPSConnection:
+        pinned_addresses.append(address)
+        return _LocalPinnedConnection(host, port, timeout, context)
+
+    try:
+        endpoint = f"https://localhost:{server.server_port}/v1/writeback"
+        client_context = ssl.create_default_context(cafile=str(certificate))
+        transport = PinnedHttpsPostTransport(
+            resolver=lambda _host, _port: ("93.184.216.34",),
+            connection_factory=factory,
+            tls_context=client_context,
+        )
+        intent = _dispatched_intent()
+        receipt = WritebackNetworkExecutor(
+            transport,
+            payload_resolver=_Payloads(),
+            secret_resolver=_Secrets(),
+            sleeper=waits.append,
+            clock=lambda: 0.0,
+        ).dispatch(
+            intent,
+            registration=_registration(endpoint=endpoint, egress_destinations=(endpoint,)),
+            policy=POLICY,
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+    assert receipt.attempts == 3
+    assert len(requests) == 3
+    assert pinned_addresses == ["93.184.216.34"] * 3
+    assert {headers["Idempotency-Key"] for headers, _body in requests} == {intent.idempotency_key}
+    assert all(headers["Authorization"] == "Bearer synthetic-writeback-token-123" for headers, _body in requests)
+    assert all(body == PAYLOAD for _headers, body in requests)
+    assert receipt.intent.status is WritebackStatus.ACKNOWLEDGED
+    assert receipt.intent.acknowledgement is not None
+    assert receipt.intent.acknowledgement.provider_reference == "provider-1"
+    assert b"synthetic-writeback-token-123" not in receipt.intent.model_dump_json().encode()
+    assert waits

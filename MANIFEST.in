@@ -409,6 +409,7 @@ include docs/adr/0341-postgres-grouped-matching-10k-connection-pool.md
 include docs/strategy/official-source-competitive-matrix-2026-08-05.md
 include docs/adr/0342-official-source-competitive-matrix.md
 include tests/test_official_competitive_matrix.py
+include docs/adr/0343-local-https-writeback-sandbox.md
 include docs/adr/0229-durable-job-10k-tier-is-hardware-scoped.md
 include docs/execution/benchmarks/durable-job-10k-tier-v1.md
 include docs/adr/0236-durable-job-100k-tier-is-hardware-scoped.md

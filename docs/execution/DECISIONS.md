@@ -5,6 +5,23 @@
 
 ## Decisions
 
+### D-300: Exercise write-back transport through a disposable local HTTPS server
+- **Date**: 2026-08-05
+- **Context**: Injected write-back transports proved retry and acknowledgement
+  rules, but did not exercise the actual TLS/HTTP stack.
+- **Decision**: Add a local-only HTTPS sandbox using a short-lived synthetic
+  certificate, two transient `503` responses, and one digest-valid provider
+  acknowledgement. Keep the resolver/public-address guard active while the
+  test connection factory pins the socket to loopback. Require stable payload
+  and idempotency values and secret-free receipts.
+- **Rationale**: This closes a meaningful transport integration gap without
+  introducing internet calls, provider credentials, or a false live-provider
+  claim.
+- **Reversibility**: Remove the focused test, ADR 0343, package entry and
+  E-394 records; application defaults and migrations are unchanged.
+- **Verification**: The focused sandbox passes 1/1 and the connector/write-back
+  regression set passes 42/42.
+
 ### D-299: Keep the current competitive matrix official-source and bounded
 - **Date**: 2026-08-05
 - **Context**: The execution goal requires ethical comparison with open-source

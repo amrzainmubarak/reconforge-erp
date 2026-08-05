@@ -441,6 +441,7 @@ include docs/adr/0358-postgres-deferred-tax-evidence-boundary.md
 include docs/adr/0359-hosted-worker-policy-boundary.md
 include docs/adr/0360-current-airgap-install-recovery-upgrade-drill.md
 include docs/adr/0361-live-s3-object-storage-contract-drill.md
+include docs/adr/0362-ci-synthetic-credential-hygiene.md
 include docs/execution/S3_OBJECT_STORAGE_LIVE_DOCKER_DRILL_2026-08-05.json
 include tests/test_current_s3_object_storage_live_report.py
 include docs/adr/0229-durable-job-10k-tier-is-hardware-scoped.md

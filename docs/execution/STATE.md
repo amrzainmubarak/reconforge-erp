@@ -4351,3 +4351,17 @@ publication and remote GitHub verification before a release Go decision.
   interoperability, object-store HA/DR, malware scanning, authorized
   downloads, and production SLOs remain unverified.
 - ADR: `docs/adr/0361-live-s3-object-storage-contract-drill.md`.
+
+## E-432 — Remove hard-coded synthetic object-storage credentials from CI
+
+- The digest-pinned CI MinIO job no longer stores a password literal in
+  workflow `env` blocks. The startup and contract steps independently derive
+  the same disposable credential from a non-secret seed at runtime, so the
+  live boto3 contract remains authenticated without recording a reusable
+  credential in repository text.
+- `tests/test_s3_object_storage_live.py`, the closed supply-chain policy
+  validator, Ruff, and `git diff --check` pass. No Gitleaks allowlist or rule
+  weakening was added.
+- Boundary: hosted Gitleaks history/tree execution remains required; this is
+  CI secret-hygiene evidence, not a release approval or production claim.
+- ADR: `docs/adr/0362-ci-synthetic-credential-hygiene.md`.

@@ -14046,3 +14046,17 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   interoperability, object-store HA/DR, malware scanning, authorized
   downloads, or production SLO claim follows.
 - ADR: `docs/adr/0361-live-s3-object-storage-contract-drill.md`.
+
+## E-432 — Remove hard-coded synthetic object-storage credentials from CI
+
+- The digest-pinned CI MinIO job derives its disposable password at runtime
+  from the non-secret seed `reconforge-ci-object-store` in both the container
+  startup and boto3 contract steps. The repository no longer contains the
+  previous literal password in workflow environment mappings.
+- Focused workflow/schema/digest tests pass 4/4; the closed supply-chain
+  policy validator reports `status: valid` with zero active exceptions and
+  zero npm integrity-gap entries; Ruff and `git diff --check` pass.
+- Boundary: hosted Gitleaks history/tree execution is still needed to confirm
+  the remote gate; no scanner allowlist, generated-path exemption, or release
+  approval follows.
+- ADR: `docs/adr/0362-ci-synthetic-credential-hygiene.md`.

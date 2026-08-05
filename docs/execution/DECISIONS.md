@@ -4315,3 +4315,18 @@
   malware scanning, authorized downloads, or production SLO.
 - **Rollback**: Remove the dated report and focused test while retaining the
   provider-neutral contract and prior hosted evidence.
+
+### D-343: Derive CI object-storage credentials at runtime
+
+- **Date**: 2026-08-05
+- **Decision**: Remove the literal synthetic MinIO password from workflow
+  environment mappings and derive an identical disposable value within each
+  step from a non-secret seed.
+- **Verification**: Focused live-object-storage workflow tests, supply-chain
+  policy validation, Ruff, and diff-check pass; the existing digest-pinned
+  provider contract is unchanged.
+- **Boundary**: This improves repository secret hygiene but does not replace
+  hosted Gitleaks history/tree evidence, credential-vault integration, or
+  production secret management.
+- **Rollback**: Restore the prior environment wiring only if the disposable
+  provider contract cannot authenticate; do not add a Gitleaks exception.

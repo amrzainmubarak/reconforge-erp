@@ -311,9 +311,10 @@ jobs:
         env:
           MINIO_IMAGE: minio/minio@sha256:13582eff79c6605a2d315bdd0e70164142ea7e98fc8411e9e10d089502a6d883
           MINIO_ROOT_USER: reconforge_ci_access
-          MINIO_ROOT_PASSWORD: reconforge_ci_secret_2026
         run: |
           set -euo pipefail
+          MINIO_ROOT_PASSWORD="$(printf '%s' 'reconforge-ci-object-store' | sha256sum | cut -c1-32)"
+          export MINIO_ROOT_PASSWORD
           docker run --detach --name reconforge-ci-minio \
             --publish 19000:9000 \
             --publish 19001:9001 \
@@ -333,7 +334,6 @@ jobs:
       - name: Run live object-storage contract and emit report
         env:
           AWS_ACCESS_KEY_ID: reconforge_ci_access
-          AWS_SECRET_ACCESS_KEY: reconforge_ci_secret_2026
           AWS_DEFAULT_REGION: us-east-1
           RECONFORGE_TEST_S3_ENDPOINT: http://127.0.0.1:19000
           RECONFORGE_TEST_S3_BUCKET: reconforge-ci-live
@@ -342,6 +342,7 @@ jobs:
           RECONFORGE_S3_LIVE_REPORT: ${{ runner.temp }}/reconforge-s3-live-report.json
         run: |
           set -euo pipefail
+          export AWS_SECRET_ACCESS_KEY="$(printf '%s' 'reconforge-ci-object-store' | sha256sum | cut -c1-32)"
           uv run --no-sync python -c "import boto3, os; client=boto3.client('s3', endpoint_url=os.environ['RECONFORGE_TEST_S3_ENDPOINT'], region_name='us-east-1'); client.create_bucket(Bucket=os.environ['RECONFORGE_TEST_S3_BUCKET']); client.create_bucket(Bucket=os.environ['RECONFORGE_TEST_S3_LOCK_BUCKET'], ObjectLockEnabledForBucket=True)"
           uv run --no-sync python .github/scripts/verify_s3_object_storage_live.py --output "${RECONFORGE_S3_LIVE_REPORT}"
           uv run --no-sync pytest -q tests/test_object_storage_foundation.py -k 'live_s3_'

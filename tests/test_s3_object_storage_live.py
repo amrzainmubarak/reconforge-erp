@@ -78,5 +78,8 @@ def test_ci_has_digest_pinned_live_object_storage_job() -> None:
     assert "minio/minio@sha256:13582eff79c6605a2d315bdd0e70164142ea7e98fc8411e9e10d089502a6d883" in environments
     assert "verify_s3_object_storage_live.py" in runs
     assert "tests/test_object_storage_foundation.py -k 'live_s3_'" in runs
+    assert "MINIO_ROOT_PASSWORD: reconforge_ci_secret_2026" not in environments
+    assert "AWS_SECRET_ACCESS_KEY: reconforge_ci_secret_2026" not in environments
+    assert "sha256sum | cut -c1-32" in runs
     assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in uses
     assert any(step.get("name") == "Stop MinIO" and step.get("if") == "always()" for step in job["steps"])

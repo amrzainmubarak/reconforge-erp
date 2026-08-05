@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-393: Official-source competitive matrix supplement
+
+- Added `docs/strategy/official-source-competitive-matrix-2026-08-05.md` and
+  ADR 0342. The supplement cites first-party Odoo, ERPNext and Apache Fineract
+  documentation and records only narrow, source-supported observations.
+- It maps each comparison row to existing ReconForge code/evidence or an
+  explicit unresolved gap. It deliberately avoids performance, security,
+  pricing, regulatory, customer-outcome and superiority inferences.
+- `uv run pytest -q tests/test_official_competitive_matrix.py --tb=short`
+  -> 1 passed. No runtime, database, provider or external-network state was
+  changed. GitHub publication is intentionally deferred by the owner.
+
 ## E-392: PostgreSQL grouped-matching 10K tier with bounded connection reuse
 
 - Added `PostgresConnectionPool` to the PostgreSQL infrastructure boundary.

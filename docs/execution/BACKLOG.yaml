@@ -958,6 +958,7 @@ tasks:
     completed_slices:
       - E-229 publishes a date-stamped, primary-source competitor map with explicit limitations for 13 dimensions, maps each row to bounded ReconForge evidence IDs, leaves unsupported cost assumptions explicit, and adds no superiority claims. It adds `docs/strategy/competitive-capability-matrix.md` for Phase 3 external-facing evidence discipline, while all compliance/commercial/pilot claims remain pending through `P3-EXT-001` and `P3-EXT-002`.
       - E-251 closes the owner/team release requirement from the dated primary-source matrix and retained technical evidence. Optional external pilots or an independent review may strengthen later assurance wording but do not block team-controlled publication; unsupported independent, compliance, certification, universal-superiority, and Enterprise-ready claims remain prohibited.
+      - E-393 adds a dated official-source supplement covering Odoo reconciliation/synchronization, ERPNext accounting/bank reconciliation, and Apache Fineract maker-checker documentation. Each row separates first-party observations from ReconForge code/evidence and names unresolved live-provider, statutory, IAM, HA/DR, and breadth gaps. The focused matrix regression passes; no runtime, provider, or external-network capability is claimed.
   - id: P3-EXT-001
     priority: P3
     area: external_validation

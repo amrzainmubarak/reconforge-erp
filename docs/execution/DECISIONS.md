@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-299: Keep the current competitive matrix official-source and bounded
+- **Date**: 2026-08-05
+- **Context**: The execution goal requires ethical comparison with open-source
+  and commercial financial/ERP platforms without copying proprietary claims or
+  treating a marketing page as independent assurance.
+- **Decision**: Add a dated official-source supplement citing first-party Odoo,
+  ERPNext and Apache Fineract documentation. Separate source observations from
+  ReconForge code/evidence and record every missing comparison as an open gap.
+  Do not infer performance, compliance, customer outcomes, security assurance,
+  pricing or superiority.
+- **Rationale**: This preserves useful market context while keeping the claim
+  boundary auditable and aligned with the repository's evidence policy.
+- **Reversibility**: Remove the supplement, ADR 0342, regression test, package
+  entries and E-393 records; no runtime or migration state changes.
+- **Verification**: `tests/test_official_competitive_matrix.py` passes with the
+  five required official links, local evidence references and bounded-language
+  guardrails.
+
 ### D-298: Bound PostgreSQL grouped-matching scale with explicit connection reuse
 - **Date**: 2026-08-05
 - **Context**: The first 10K grouped-matching probe failed closed from Windows

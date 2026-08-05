@@ -6,6 +6,20 @@ Updated: 2026-08-05
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-393 — Official-source competitive matrix supplement (complete bounded slice)
+
+- Added a dated ethical comparison using only first-party Odoo, ERPNext and
+  Apache Fineract documentation. The matrix separates documented competitor
+  workflows from ReconForge code/evidence and records unresolved live-provider,
+  statutory, IAM, HA/DR and breadth gaps.
+- Added a regression test for the required official links, local evidence IDs
+  and prohibited unqualified wording. The supplement is documentation and
+  evidence governance only; it does not change runtime behavior, migrations or
+  connector activation.
+- Boundary: a source page is not a performance, security-assurance, customer-
+  outcome or production-readiness proof. GitHub publication remains deferred
+  by the owner, so no hosted evidence exists for this slice.
+
 ## E-392 — PostgreSQL grouped-matching 10K tier with bounded connection reuse (complete bounded slice)
 
 - Added `PostgresConnectionPool`, a small dependency-free pool with explicit

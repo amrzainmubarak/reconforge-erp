@@ -1276,9 +1276,9 @@ tasks:
     priority: P0
     area: quality
     title: Full local regression and release-tool gates after manufacturing control slice
-    status: in_progress
+    status: completed
     depends_on: [E-439]
-    exit_evidence: Full pytest exits 0 in 353.3s; Ruff, Mypy across 462 source files, Bandit, supply-chain policy validation, package build, and diff-check pass. The current pip-audit retry is blocked by intermittent PyPI connection failure; the prior locked environment audit reported no known vulnerabilities with the unpublished local distribution excluded, so a fresh successful audit remains required before this gate is completed.
+    exit_evidence: Full pytest exits 0 in 353.3s; Ruff, Mypy across 462 source files, Bandit, pip-audit via OSV with no known vulnerabilities, supply-chain policy validation, package build, and diff-check pass; optional service skips and existing warnings remain visible.
 
   - id: P4-PLAT-001
     priority: P4

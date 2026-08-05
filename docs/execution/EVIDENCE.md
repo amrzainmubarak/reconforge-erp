@@ -14192,12 +14192,10 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   remain explicit, and existing Starlette/legacy financial-input warnings remain
   visible.
 - `uv run ruff check .`, `uv run mypy reconforge` (462 source files),
-  `uv run bandit -q -r reconforge`, the closed supply-chain policy validator,
-  `uv run python -m build --no-isolation`, and `git diff --check` pass. The
-  current `pip-audit --timeout 60` retry is blocked by intermittent PyPI
-  connection failure; the prior locked-environment audit reported no known
-  vulnerabilities with the unpublished local distribution excluded. A fresh
-  successful pip-audit run remains required before E-440 is complete.
-- Boundary: hosted matrices, live ERP/MRP providers/write-back, statutory
-  valuation/posting, independent HA/DR, distributed IAM, scale/soak, and GitHub
-  publication remain open.
+  `uv run bandit -q -r reconforge`, `uv run pip-audit -s osv --progress-spinner
+  off --timeout 30` (no known vulnerabilities), the closed supply-chain policy
+  validator, `uv run python -m build --no-isolation`, and `git diff --check` pass.
+- Boundary: the OSV audit excludes the unpublished local distribution and is
+  local dependency evidence only; hosted matrices, live ERP/MRP
+  providers/write-back, statutory valuation/posting, independent HA/DR,
+  distributed IAM, scale/soak, and GitHub publication remain open.

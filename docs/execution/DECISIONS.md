@@ -4441,18 +4441,17 @@
 - **Rollback**: Remove the E-439 slice files, CLI wiring, pack, fixtures, schema,
   docs, registry entry, and tests in one reviewed commit.
 
-### D-351: Keep the post-manufacturing gate open for a fresh dependency audit
+### D-351: Close the post-manufacturing dependency audit with OSV
 
 - **Date**: 2026-08-05
-- **Decision**: Retain E-439 as complete after focused/full correctness and
-  package checks, but keep E-440 `in_progress` until the current pip-audit
-  invocation completes successfully.
+- **Decision**: Close E-440 after the current dependency audit completed through
+  the OSV service, while retaining the explicit local/hosted boundary.
 - **Verification**: Full pytest, Ruff, Mypy (462 files), Bandit, supply-chain
-  policy, package build, and diff-check pass. Two current pip-audit attempts
-  reached PyPI and failed with timeout/connection errors; the prior locked
-  environment audit reported no known vulnerabilities while excluding the local
-  unpublished distribution.
-- **Boundary**: This is a transient external-service gate, not a code failure;
-  no release or GitHub publication occurs while the fresh audit is unresolved.
-- **Rollback**: Supersede E-440 with a successful exact-environment audit or a
-  documented tool-version/network diagnosis; no runtime/data rollback is needed.
+  policy, package build, diff-check, and
+  `uv run pip-audit -s osv --progress-spinner off --timeout 30` pass; OSV
+  reports no known vulnerabilities.
+- **Boundary**: OSV dependency evidence excludes the unpublished local
+  distribution and does not replace hosted security/provenance or release
+  approval; no GitHub publication occurs here.
+- **Rollback**: Supersede E-440 with the next exact-environment audit if the
+  locked dependency graph changes; no runtime/data rollback is needed.

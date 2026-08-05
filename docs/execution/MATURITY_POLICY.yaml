@@ -8,6 +8,9 @@ module_maturity_order:
   beta: 2
   stable: 3
 module_ceilings:
+  - module_id: bank.cash-reconciliation
+    maximum_maturity: experimental
+    evidence_claim: Experimental bank statement to ledger control
   - module_id: connectors.boundary
     maximum_maturity: experimental
     evidence_claim: Bounded CAMT.053 offline statement ingestion

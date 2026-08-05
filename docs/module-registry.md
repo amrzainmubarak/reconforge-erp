@@ -27,6 +27,12 @@ digest-bound report through the local CLI/library. It is not a live processor
 connector, a payment/fraud product, an ERP write-back path, or a complete
 retail module.
 
+The experimental `bank.cash-reconciliation` entry is an implemented, non-posting
+artifact slice for a local CAMT.053 statement and ledger export. It exposes
+reference, exact amount, booking-date window, ambiguity, duplicate, unmatched,
+and digest verification outcomes. It is not a live bank connector, payment
+initiation path, ERP write-back path, or statutory posting engine.
+
 ## Maturity and capability are separate
 
 | Field | Allowed values | Meaning |

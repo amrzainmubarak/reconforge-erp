@@ -37,6 +37,7 @@ from reconforge.benchmark.reconciliation_execution import (
     run_reconciliation_execution_streaming_benchmark,
 )
 from reconforge.benchmark.runner import run_benchmark
+from reconforge.cli_bank_statement_control import bank_statement_app
 from reconforge.cli_inventory_planning import inventory_planning_app
 from reconforge.cli_inventory_valuation import inventory_valuation_app
 from reconforge.cli_inventory_valuation_reversal import inventory_valuation_reversal_app
@@ -240,6 +241,7 @@ inventory_app = typer.Typer(help="Manage local inventory masters, movements, bal
 receivables_app = typer.Typer(help="Manage bounded local Accounts Receivable, credit controls, receipts, and aging.")
 outbox_app = typer.Typer(help="Inspect and replay local transactional outbox events.")
 retail_app = typer.Typer(help="Run bounded retail operations controls.")
+bank_app = typer.Typer(help="Run bounded banking and professional cash controls.")
 app.add_typer(reconcile_app, name="reconcile")
 app.add_typer(report_app, name="report")
 app.add_typer(rules_app, name="rules")
@@ -282,10 +284,12 @@ app.add_typer(inventory_app, name="inventory")
 app.add_typer(receivables_app, name="receivables")
 app.add_typer(outbox_app, name="outbox")
 app.add_typer(retail_app, name="retail")
+app.add_typer(bank_app, name="bank")
 inventory_app.add_typer(inventory_planning_app, name="planning")
 inventory_app.add_typer(inventory_valuation_app, name="valuation")
 inventory_valuation_app.add_typer(inventory_valuation_reversal_app, name="reversal")
 retail_app.add_typer(retail_settlement_app, name="settlement")
+bank_app.add_typer(bank_statement_app, name="statement")
 
 
 def _version_callback(value: bool) -> None:

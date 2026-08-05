@@ -4387,3 +4387,38 @@
   distributed IAM, scale/soak, and publication remain unresolved.
 - **Rollback**: Supersede E-436 with the next exact-environment run; no runtime
   or data rollback is required.
+
+### D-348: Add an export-based bank statement control slice
+
+- **Date**: 2026-08-05
+- **Decision**: Deliver the first banking/professional breadth use case as an
+  experimental, non-posting local CAMT.053-to-ledger control. Keep bank/provider
+  connectivity, payment initiation, accounting posting, and ERP write-back out
+  of the slice until separately evidenced.
+- **Verification**: Exact Money/tolerance arithmetic, normalized-reference
+  matching, booking-date window, account/amount exceptions, duplicate and
+  unmatched visibility, ambiguity refusal, permutation-stable digest,
+  digest-bound report/tamper refusal, local CLI, synthetic fixtures, module and
+  threat-model parity, and declarative pack tests are required.
+- **Boundary**: No bank authenticity, live provider/ERP interoperability,
+  payment initiation, statutory posting, write-back, persistence/API/Studio,
+  HA/DR, or complete banking breadth claim follows.
+- **Rollback**: Remove the E-437 slice files, CLI wiring, pack, fixtures, schema,
+  docs, registry entry, and tests in one reviewed commit; existing CAMT.053
+  ingestion remains independent.
+
+### D-349: Retain the post-bank local gate as bounded evidence
+
+- **Date**: 2026-08-05
+- **Decision**: Record the complete local regression and static/security/package
+  gates after E-437, while keeping hosted matrices and external banking/ERP
+  evidence separate.
+- **Verification**: Pytest exits 0 in 344.6s; Ruff, Mypy (459 files), Bandit,
+  pip-audit with the unpublished-project exclusion, supply-chain validation,
+  package build, and diff-check pass. Declared service skips and warnings remain
+  visible.
+- **Boundary**: This is local compatibility/package evidence only; it does not
+  prove live providers/write-back, statutory close, independent HA/DR,
+  distributed IAM, scale/soak, or release approval.
+- **Rollback**: Supersede E-438 with the next exact-environment run; no runtime
+  or data rollback is required.

@@ -4423,3 +4423,36 @@ publication and remote GitHub verification before a release Go decision.
 - Boundary: local evidence only. Hosted Python/security/Docker/browser gates,
   live processor/ERP write-back, statutory close, independent HA/DR,
   distributed IAM, scale/soak, and GitHub publication remain open.
+
+## E-437 — Experimental bank statement to ledger control vertical slice
+
+- Added the typed `bank-statement-control-v1` domain/application boundary for a
+  local CAMT.053 statement and JSON ledger export. Exact Money values, one
+  currency/tolerance policy, normalized references, booking-date windows,
+  account/amount exceptions, duplicate IDs, ambiguity, unmatched records,
+  deterministic ordering, input fingerprints, and decision digests are explicit.
+- Added `reconforge bank statement control-run`, the closed digest-bound report
+  schema, synthetic XML/JSON/CSV fixtures, and the
+  `bank-statement-reconciliation` declarative control pack. Runtime registry
+  entry `bank.cash-reconciliation` is experimental/implemented and has no
+  database, provider, network, posting, or write-back dependency.
+- Boundary: this does not prove bank authenticity, live bank/ERP interoperability,
+  payment initiation, statutory posting, write-back, persistence/API/Studio,
+  HA/DR, production availability, or complete banking breadth.
+- ADR: `docs/adr/0365-bank-statement-control-slice.md`.
+
+## E-438 — Full local regression and release-tool gates after bank control slice
+
+- `uv run pytest -q --tb=short -ra` exits 0 in 344.6 seconds with no collection
+  or executed failure. Optional PostgreSQL/Redis/S3 and Windows capability skips
+  remain explicit, and existing Starlette/legacy financial-input warnings remain
+  visible.
+- `uv run ruff check .`, `uv run mypy reconforge` (459 source files),
+  `uv run bandit -q -r reconforge`, `uv run pip-audit --progress-spinner off
+  --timeout 60`, the closed supply-chain policy validator, `uv run python -m
+  build --no-isolation`, and `git diff --check` pass. Pip-audit explicitly
+  excludes the unpublished local distribution and reports no known
+  vulnerabilities for auditable packages.
+- Boundary: exact local Windows evidence only. Hosted matrices, live
+  bank/ERP providers and write-back, statutory close, independent HA/DR,
+  distributed IAM, scale/soak, and GitHub publication remain open.

@@ -456,6 +456,14 @@ include docs/retail-pos-settlement.md
 include docs/adr/0364-retail-pos-settlement-control-slice.md
 recursive-include control-packs/retail-pos-settlement *
 recursive-include examples/retail_settlement *
+include reconforge/domain/bank_statement_control.py
+include reconforge/application/bank_statement_control.py
+include reconforge/cli_bank_statement_control.py
+include tests/test_bank_statement_control.py
+include docs/schemas/bank_statement_control_report.schema.json
+include docs/adr/0365-bank-statement-control-slice.md
+recursive-include control-packs/bank-statement-reconciliation *
+recursive-include examples/bank_statement_control *
 include docs/execution/S3_OBJECT_STORAGE_LIVE_DOCKER_DRILL_2026-08-05.json
 include tests/test_current_s3_object_storage_live_report.py
 include docs/adr/0229-durable-job-10k-tier-is-hardware-scoped.md

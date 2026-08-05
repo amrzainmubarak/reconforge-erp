@@ -1,0 +1,31 @@
+{
+  "records": [
+    {
+      "record_id": "LEDGER-CREDIT-001",
+      "account_id": "DE89370400440532013000",
+      "booking_date": "2026-08-04",
+      "amount": "100.00",
+      "currency": "EUR",
+      "reference": "BANK-CREDIT-001 | REF-CREDIT-001 | E2E-CREDIT-001 | TX-CREDIT-001 | Invoice 100",
+      "source_reference": "ledger-export-2026-08-04"
+    },
+    {
+      "record_id": "LEDGER-DEBIT-001",
+      "account_id": "DE89370400440532013000",
+      "booking_date": "2026-08-05",
+      "amount": "-20.00",
+      "currency": "EUR",
+      "reference": "BANK-DEBIT-001 | REF-DEBIT-001 | E2E-DEBIT-001 | TX-DEBIT-001 | Service fee",
+      "source_reference": "ledger-export-2026-08-04"
+    },
+    {
+      "record_id": "LEDGER-UNMATCHED-001",
+      "account_id": "DE89370400440532013000",
+      "booking_date": "2026-08-05",
+      "amount": "5.00",
+      "currency": "EUR",
+      "reference": "UNMATCHED-REFERENCE-001",
+      "source_reference": "ledger-export-2026-08-04"
+    }
+  ]
+}

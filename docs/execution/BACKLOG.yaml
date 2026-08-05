@@ -1248,6 +1248,22 @@ tasks:
     depends_on: [E-435]
     exit_evidence: Full pytest exits 0 in 343.2s; Ruff, Mypy across 456 source files, Bandit, pip-audit with explicit unpublished-project exclusion, supply-chain policy validation, package build, and diff-check pass; optional service skips and existing warnings remain visible.
 
+  - id: E-437
+    priority: P4
+    area: platform_breadth
+    title: Experimental bank statement to ledger control slice
+    status: completed
+    depends_on: [E-435]
+    exit_evidence: Typed bank.cash-reconciliation domain/application boundary over CAMT.053 and local ledger exports, exact Money/tolerance/reference/date-window decisions, explicit ambiguity/exception/unmatched outcomes, local CLI, digest-bound schema/report, synthetic XML/JSON/CSV fixtures, declarative control pack, module/threat registry entries, focused replay/tamper tests, ADR 0365, and explicit non-posting/live-provider limits.
+
+  - id: E-438
+    priority: P0
+    area: quality
+    title: Full local regression and release-tool gates after bank control slice
+    status: completed
+    depends_on: [E-437]
+    exit_evidence: Full pytest exits 0 in 344.6s; Ruff, Mypy across 459 source files, Bandit, pip-audit with explicit unpublished-project exclusion, supply-chain policy validation, package build, and diff-check pass; optional service skips and existing warnings remain visible.
+
   - id: P4-PLAT-001
     priority: P4
     area: platform_breadth
@@ -1258,3 +1274,4 @@ tasks:
     exit_evidence: Every delivered bounded context has a versioned runtime manifest, invariants, ports/adapters, migrations where stateful, permissions, audit/evidence, synthetic fixtures, UI/API/CLI where needed, rollback, performance/security tests, and evidence-bounded claims without weakening Community local-first operation.
     completed_slices:
       - E-435 adds the experimental `retail.settlement` runtime module and `retail-pos-settlement-v1` export-based control. It includes exact Money arithmetic, fees/refunds/chargebacks, unmatched and ambiguous outcomes, deterministic replay, a digest-bound report, local CLI, synthetic fixtures, a declarative pack, and focused security/tamper tests. It is a bounded non-posting slice; complete retail persistence/API/Studio, live provider conformance, operational evidence, and the full breadth exit gate remain open.
+      - E-437 adds the experimental `bank.cash-reconciliation` runtime module and a `bank-statement-control-v1` export-based control over local CAMT.053 and ledger files. It includes exact Money/reference/date-window decisions, ambiguity/exception/unmatched outcomes, deterministic replay, a digest-bound report, local CLI, synthetic fixtures, a declarative pack, and focused security/tamper tests. It is a bounded non-posting slice; live bank/ERP connectivity, payment initiation, statutory posting, write-back, operational evidence, and the full breadth exit gate remain open.

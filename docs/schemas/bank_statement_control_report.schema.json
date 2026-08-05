@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/bank_statement_control_report.schema.json",
+  "title": "ReconForge Bank Statement Control Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["algorithm_version", "artifact_digest", "artifact_type", "amount_tolerance", "date_window_days", "decision_digest", "decisions", "input_digests", "schema_version", "status_counts"],
+  "properties": {
+    "algorithm_version": {"const": "bank-statement-control-v1"},
+    "artifact_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "artifact_type": {"const": "reconforge-bank-statement-control"},
+    "amount_tolerance": {"$ref": "#/$defs/money"},
+    "date_window_days": {"type": "integer", "minimum": 0, "maximum": 366},
+    "decision_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "input_digests": {"type": "array", "items": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "uniqueItems": true},
+    "schema_version": {"const": 1},
+    "status_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "decisions": {"type": "array", "items": {"$ref": "#/$defs/decision"}}
+  },
+  "$defs": {
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount", "currency", "currency_policy_digest", "currency_registry_digest", "currency_registry_version", "minor_units", "rounding_policy", "schema_version"],
+      "properties": {
+        "amount": {"type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"},
+        "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+        "currency_policy_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "currency_registry_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "currency_registry_version": {"type": "string", "minLength": 1},
+        "minor_units": {"type": "integer", "minimum": 0},
+        "rounding_policy": {"type": "string", "minLength": 1},
+        "schema_version": {"const": 1}
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["account_id", "amount_variance", "bank_line_id", "days_variance", "ledger_record_ids", "reason_code", "status"],
+      "properties": {
+        "account_id": {"type": "string", "minLength": 1},
+        "amount_variance": {"anyOf": [{"$ref": "#/$defs/money"}, {"type": "null"}]},
+        "bank_line_id": {"type": "string", "minLength": 1},
+        "days_variance": {"anyOf": [{"type": "integer", "minimum": 0}, {"type": "null"}]},
+        "ledger_record_ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "reason_code": {"type": "string", "minLength": 1},
+        "status": {"enum": ["matched", "exception", "unmatched_bank", "unmatched_ledger", "ambiguous"]}
+      }
+    }
+  }
+}

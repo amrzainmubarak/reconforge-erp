@@ -1,0 +1,9 @@
+profile_id: bank-statement-reconciliation-v1
+name: Bank statement and ledger export mapping
+source_system: local-bank-or-ledger-export
+mode: local-read-only
+files:
+  - file: bank_lines.csv
+    required_headers: [line_id, booking_date, amount, normalized_reference]
+  - file: ledger.csv
+    required_headers: [record_id, booking_date, bank_amount, ledger_amount, normalized_reference]

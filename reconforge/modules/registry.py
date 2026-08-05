@@ -517,6 +517,32 @@ _MODULES = (
         test_evidence=("tests/test_retail_settlement.py",),
     ),
     ModuleDescriptor(
+        module_id="bank.cash-reconciliation",
+        name="Bank statement to ledger control",
+        version="1.0.0",
+        maturity="experimental",
+        capability_status="implemented",
+        summary=(
+            "Deterministic local CAMT.053 and ledger-export control with reference, amount, date-window, "
+            "duplicate, unmatched, and ambiguity evidence."
+        ),
+        default_enabled=False,
+        dependencies=("connectors.boundary", "platform.core"),
+        interfaces=("artifacts", "cli", "library"),
+        import_contracts=("camt053-statement.v1", "bank-ledger-export.v1"),
+        export_contracts=("bank-statement-control-report.v1",),
+        data_classification=("financial-sensitive", "payment-control-data", "source-export-metadata"),
+        retention_note=(
+            "Statement exports, ledger exports, and reports remain in operator-selected local paths; the module "
+            "does not retain credentials or contact a bank."
+        ),
+        activation_note=(
+            "Run explicitly with a bounded local CAMT.053 file and JSON ledger export. The control is non-posting "
+            "and provider-neutral; live bank connectivity, payment initiation, and ERP write-back are separate gates."
+        ),
+        test_evidence=("tests/test_bank_statement_control.py",),
+    ),
+    ModuleDescriptor(
         module_id="studio.modern",
         name="Modern Studio synthetic preview",
         version=__version__,

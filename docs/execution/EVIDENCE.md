@@ -14124,3 +14124,41 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - Boundary: exact local Windows evidence only. It does not replace hosted
   matrices, live providers/write-back, statutory close, independent HA/DR,
   distributed IAM, scale/soak, or release approval.
+
+## E-437 — Experimental bank statement to ledger control vertical slice
+
+- Added the typed `bank-statement-control-v1` domain/application boundary for
+  local CAMT.053 statement lines and a JSON ledger export. Exact Money,
+  normalized references, one-currency/tolerance policy, booking-date windows,
+  account/amount exceptions, ambiguity, duplicate IDs, unmatched records,
+  deterministic ordering, source fingerprints, and decision digests are tested.
+- Added the local `reconforge bank statement control-run` command, closed
+  `reconforge-bank-statement-control` report schema, synthetic XML/JSON/CSV
+  fixtures, and `bank-statement-reconciliation` control pack. The runtime module
+  is `bank.cash-reconciliation` with experimental/implemented maturity.
+- Focused command: `uv run pytest -q tests/test_bank_statement_control.py
+  tests/test_module_registry.py tests/test_v03_platform.py
+  tests/test_rules_engine.py tests/test_connector_camt053.py
+  tests/test_file_ingestion_inventory.py::test_direct_json_parser_inventory_is_an_exact_ast_allowlist
+  tests/test_threat_model_index.py --tb=short` (record the observed result after
+  the current-tree run).
+- Boundary: local export-only and non-posting. No bank authenticity, live
+  provider/ERP connectivity, payment initiation, statutory posting, write-back,
+  persistence/API/Studio, HA/DR, or production claim follows.
+- ADR: `docs/adr/0365-bank-statement-control-slice.md`.
+
+## E-438 — Full local regression and release-tool gates after bank control slice
+
+- `uv run pytest -q --tb=short -ra` exits 0 in 344.6 seconds with no collection
+  or executed failure. Optional PostgreSQL/Redis/S3 and Windows capability skips
+  remain explicit, and existing Starlette/legacy financial-input warnings remain
+  visible.
+- `uv run ruff check .`, `uv run mypy reconforge` (459 source files),
+  `uv run bandit -q -r reconforge`, `uv run pip-audit --progress-spinner off
+  --timeout 60`, the closed supply-chain policy validator, `uv run python -m
+  build --no-isolation`, and `git diff --check` pass. Pip-audit explicitly
+  excludes the unpublished local distribution and reports no known
+  vulnerabilities for auditable packages.
+- Boundary: exact local Windows evidence only. Hosted matrices, live
+  bank/ERP providers and write-back, statutory close, independent HA/DR,
+  distributed IAM, scale/soak, and GitHub publication remain open.

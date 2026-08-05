@@ -6,6 +6,26 @@ Updated: 2026-08-05
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-390 — PostgreSQL durable-job backpressure runtime gate (complete bounded slice)
+
+- Added `postgres-durable-job-load/backpressure-tier-v1`: eight independent
+  worker connections, four producer lanes, 64 jobs, four partitions per job,
+  and a four-job queued/retrying cap per tenant/workspace/entity lane. The
+  profile uses the existing atomic bounded-submit, lease, checkpoint, and
+  partition-effect contracts; no new migration or provider activation is
+  introduced.
+- A local PostgreSQL 16 disposable-service run completed 64/64 jobs and
+  256/256 effects, observed maximum queue depth four and 12 rejected retries,
+  and ended with zero duplicate effects and zero queued/running residue. Each
+  lane completed exactly 16 jobs. Artifact digests are recorded in the
+  benchmark JSON and the E-390 evidence entry.
+- Focused shape/live tests, Ruff, and Mypy pass. The workflow server-boundaries
+  selector now includes the gate, but hosted evidence remains pending because
+  GitHub publication is intentionally deferred by the owner.
+- Boundary: this is bounded single-host synthetic queue-cap correctness only;
+  throughput, capacity, global fairness, soak, queue HA, automatic failover,
+  host loss, cross-host fairness, RPO/RTO, and production sizing remain open.
+
 ## E-388 — Bounded CAMT.053 offline statement ingestion (complete bounded slice)
 
 - Added a strict local ISO 20022 CAMT.053 parser and `reconforge connectors

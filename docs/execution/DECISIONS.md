@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-296: Add a PostgreSQL durable-job backpressure runtime gate
+- **Date**: 2026-08-05
+- **Context**: SQLite had a producer-cap profile, while PostgreSQL had load,
+  retry, and contention gates but no runtime proof that the bounded-submit cap
+  holds while independent PostgreSQL workers drain each lane.
+- **Decision**: Add `postgres-durable-job-load/backpressure-tier-v1` with eight
+  workers, four producer lanes, 64 jobs, four partitions per job, and a
+  four-job queued/retrying cap per tenant/workspace/entity lane. Keep it
+  synthetic, non-provider, and skipped without a configured live DSN.
+- **Rationale**: This exercises atomic cap enforcement, retry-without-mutation,
+  forced-RLS isolation, lease fencing, checkpoint/effect commits, and queue
+  drain on the real PostgreSQL adapter without turning one-host timing into a
+  capacity claim.
+- **Reversibility**: Remove the profile, tests, workflow selector, benchmark
+  note/artifact, ADR, manifest entries, and execution records. Existing
+  durable-job runtime and lower profiles remain unchanged.
+- **Verification**: Local disposable PostgreSQL run passes 64 jobs/256 effects
+  with maximum queue depth four, 12 rejected attempts, zero duplicates/residue,
+  and 16 completions per lane. Hosted evidence is intentionally pending until
+  the owner authorizes the deferred GitHub publication.
+
 ### D-295: Register connector boundaries as an evidence-bounded module
 - **Date**: 2026-08-05
 - **Context**: Connector implementations had individual contracts but no

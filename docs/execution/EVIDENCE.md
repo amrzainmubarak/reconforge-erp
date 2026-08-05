@@ -2,6 +2,32 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-390: PostgreSQL durable-job backpressure runtime gate
+
+- Added `reconforge/benchmark/postgres_durable_job_backpressure.py`, its
+  focused structural tests, a benchmark note/artifact, ADR 0340, and the
+  `server-boundaries` selector. The profile uses eight independent workers,
+  four producer lanes, 64 jobs, four partitions per job, and an atomic
+  four-job queued/retrying cap per tenant/workspace/entity lane.
+- Local live command:
+  `RECONFORGE_TEST_POSTGRES_DSN=... uv run pytest -q tests/test_postgres_durable_jobs.py -k test_live_postgres_durable_job_backpressure_profile -s`
+  -> 1 passed. It observed 64/64 completed jobs, 256/256 committed effects,
+  maximum queue depth four, 12 rejected bounded-submit attempts, zero duplicate
+  effects, zero final queued/running residue, and 16 completions per lane.
+- Structural/shape command:
+  `uv run pytest -q tests/test_postgres_durable_job_backpressure.py tests/test_postgres_durable_jobs.py -k 'not live_postgres'`
+  -> 7 passed. Focused Ruff and Mypy pass for the changed benchmark/test
+  surfaces.
+- Local artifact digests: effect set
+  `b86c16598f6acdf95dd23a00826bf8be373d1608de2cbaafc08ff19cb4ba19d5`,
+  manifest
+  `ab6bebb3bb1f2ffad458865487acaef32f1a67da78da0bc7b53292b57caea001`;
+  observed runtime 1.3913s on Windows 11/Python 3.14.6 with one PostgreSQL
+  16 host.
+- Boundary: synthetic single-host queue-cap correctness only. Hosted CI,
+  throughput/capacity, global fairness, soak, queue HA/failover, host loss,
+  cross-host fairness, RPO/RTO, and production sizing remain unverified.
+
 ## E-388: Bounded CAMT.053 offline statement ingestion
 
 - Added `reconforge/connectors/camt053.py`, the closed schema

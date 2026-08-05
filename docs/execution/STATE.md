@@ -32,6 +32,17 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   establish a hosted rerun, Gitleaks approval, live provider/write-back,
   statutory close, independent HA/DR, scale, or production readiness.
 
+## E-425 — Full Python 3.11 regression after CI dependency verification (passed)
+
+- `uv run pytest -q --tb=short -ra` exits 0 in 366.7 seconds on the refreshed
+  locked Python 3.11 all-extras environment.
+- Only declared optional-service/platform skips and existing legacy financial
+  input/framework warnings remain visible. No collection or test failure
+  remains in this local run.
+- This confirms local compatibility for the current test profile; hosted
+  matrices, statutory close, live provider/write-back, independent HA/DR,
+  distributed IAM, scale/soak, and release approval remain open.
+
 ## E-407 — Acquisition deferred-tax bridge (passed locally)
 
 - Added `acquisition-deferred-tax-bridge-v1`, a deterministic non-posting

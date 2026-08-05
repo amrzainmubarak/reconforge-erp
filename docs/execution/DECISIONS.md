@@ -4216,3 +4216,17 @@
   reruns or establish production readiness.
 - **Rollback**: If the CI profile is intentionally narrowed, add an explicit
   reviewed test-dependency profile and update the lock/evidence together.
+
+### D-336: Record the Python 3.11 full regression boundary
+
+- **Date**: 2026-08-05
+- **Decision**: Treat the Python 3.11 all-extras full-suite result as local
+  compatibility evidence while keeping external-service and production gates
+  explicit and unclaimed.
+- **Verification**: The full suite exits 0 in 366.7s after the complete locked
+  all-extras sync; optional live-service/platform skips and known warnings are
+  retained rather than converted into passes.
+- **Boundary**: No hosted matrix, live provider/write-back, statutory close,
+  independent HA/DR, distributed IAM, scale, or release approval follows.
+- **Rollback**: Supersede E-425 with the next exact-environment regression;
+  no runtime/data rollback is required.

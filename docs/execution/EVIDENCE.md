@@ -13941,3 +13941,15 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - Boundary: local dependency/collection evidence only; no hosted rerun, secret
   scan approval, live provider, write-back, statutory, HA/DR, scale, or release
   claim follows.
+
+## E-425 — Full Python 3.11 regression after CI dependency verification
+
+- `uv run pytest -q --tb=short -ra` exits 0 in 366.7 seconds after installing
+  the locked all-extras profile on Python 3.11.
+- The run retains only declared external-service/platform skips and existing
+  legacy-financial-input/framework warnings. Collection and executed tests
+  have no failures.
+- Boundary: this is one local Windows environment and does not substitute for
+  hosted Python matrices, live PostgreSQL/Redis/object-storage cells, statutory
+  close, providers/write-back, independent HA/DR, scale/soak, or release
+  approval.

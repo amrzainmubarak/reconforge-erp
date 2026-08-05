@@ -6,6 +6,17 @@ Updated: 2026-08-05
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-399 — Central server-policy tenant binding (passed)
+
+- `enforce_server_scoped_permissions` now compares every adapter-supplied
+  tenant with the validated request tenant before evaluating policy; a
+  mismatch returns `tenant_scope_denied` before repository access.
+- A focused regression covers both valid workspace scope and a caller-supplied
+  sibling tenant. This is additive to E-397/E-398 and leaves local SQLite
+  behavior unchanged.
+- Worker/export/UI adoption, federation, distributed invalidation, live
+  providers, independent HA/DR and production IAM assurance remain open.
+
 ## E-398 — Live PostgreSQL tenant-administration policy gate (passed locally)
 
 - A fresh PostgreSQL 16 database with the non-superuser `reconforge_app`

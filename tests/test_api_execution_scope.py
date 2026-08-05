@@ -177,6 +177,36 @@ def test_server_scoped_permission_allows_granted_workspace_and_audits_without_ra
     )
 
 
+def test_server_scoped_permission_rejects_caller_supplied_sibling_tenant(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from fastapi import FastAPI
+
+    app = FastAPI()
+    app.state.policy_decision_cache = None
+    import reconforge.api.dependencies as dependencies
+
+    monkeypatch.setattr(dependencies, "server_identity_enabled", lambda _request: True)
+    request = _request(
+        {"X-ReconForge-Tenant": "tenant-a", "X-ReconForge-Workspace": "workspace-a"},
+        ServerPrincipal(
+            user=LocalUser(id="user-a", username="alice", display_name="Alice"),
+            permissions=frozenset({"connectors.writeback.approve"}),
+            step_up_active=True,
+            authorized_workspace_ids=frozenset({"workspace-a"}),
+        ),
+    )
+    request.scope["app"] = app
+    with pytest.raises(APIError) as denied:
+        enforce_server_scoped_permission(
+            request,
+            permission="connectors.writeback.approve",
+            tenant_id="tenant-b",
+            workspace_id="workspace-a",
+        )
+    assert denied.value.code == "tenant_scope_denied"
+
+
 def test_server_scoped_any_permission_preserves_reconciliation_run_alternatives(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

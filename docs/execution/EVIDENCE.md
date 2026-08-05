@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-399: Central server-policy tenant binding
+
+- `enforce_server_scoped_permissions` now validates that the tenant supplied by
+  every server adapter equals the validated `X-ReconForge-Tenant` request
+  header before central policy evaluation; mismatches fail with
+  `tenant_scope_denied`.
+- `uv run pytest -q tests/test_api_execution_scope.py --tb=short` -> 10
+  passed, including matching workspace scope and sibling-tenant refusal.
+- Boundary: central request invariant only. Local SQLite behavior is unchanged;
+  worker/export/UI adoption, federation, distributed invalidation, live
+  providers, independent HA/DR and production IAM assurance remain open.
+
 ## E-398: Live PostgreSQL tenant-administration policy gate
 
 - On a fresh disposable PostgreSQL 16 database upgraded through Alembic

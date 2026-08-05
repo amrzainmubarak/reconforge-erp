@@ -294,6 +294,10 @@ def enforce_server_scoped_permissions(
         raise ValueError("At least one server-scoped permission is required.")
     if not server_identity_enabled(request):
         return
+    from reconforge.api.server_identity import request_tenant_id
+
+    if request_tenant_id(request) != tenant_id:
+        raise APIError(status_code=403, code="tenant_scope_denied", message="Tenant scope is not authorized.")
     principal = getattr(request.state, "server_principal", None)
     if not isinstance(principal, ServerPrincipal):
         principal = current_server_principal()
@@ -375,14 +379,6 @@ def enforce_server_tenant_permission(
     request-time central-policy re-evaluation as business routes, but forcing a
     synthetic workspace would incorrectly deny valid tenant administrators.
     """
-
-    # The tenant is a request-bound security boundary, not a caller-controlled
-    # argument.  Keep this check local to the tenant-wide helper so an
-    # administrative adapter cannot accidentally authorize a sibling tenant.
-    from reconforge.api.server_identity import request_tenant_id
-
-    if request_tenant_id(request) != tenant_id:
-        raise APIError(status_code=403, code="tenant_scope_denied", message="Tenant scope is not authorized.")
 
     enforce_server_scoped_permissions(
         request,

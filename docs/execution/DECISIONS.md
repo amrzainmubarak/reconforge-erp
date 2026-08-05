@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-304: Require request-tenant equality for every server-scoped policy check
+- **Date**: 2026-08-05
+- **Context**: Server route adapters pass tenant/workspace values into the
+  central policy helper. Tenant-wide administration now has an equality guard,
+  but workspace-scoped routes also need protection from a future adapter bug
+  that supplies a sibling tenant.
+- **Decision**: Make `enforce_server_scoped_permissions` compare the adapter
+  tenant with the validated `X-ReconForge-Tenant` header and fail closed before
+  policy evaluation on mismatch.
+- **Rationale**: The request tenant is the authoritative security boundary;
+  adapter arguments must not be able to widen it.
+- **Reversibility**: Remove the equality check, ADR 0346, package entry and
+  E-399 record; no migration or persisted-data change is required.
+- **Verification**: Focused execution-scope tests pass with sibling-tenant
+  refusal.
+
 ### D-303: Promote tenant-wide policy enforcement only on a non-superuser fresh database
 - **Date**: 2026-08-05
 - **Context**: The new tenant-wide central-policy route boundary needed live

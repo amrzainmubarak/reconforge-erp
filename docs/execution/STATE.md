@@ -20,6 +20,18 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   provider interoperability, write-back, independent HA/DR, and complete
   worker/export/UI policy adoption remain open.
 
+## E-402 — Server-scoped audit and security views (passed locally)
+
+- PostgreSQL audit browsing, audit-chain verification, and the security-center
+  overview now re-evaluate their exact central permissions against the
+  validated tenant before opening the tenant-wide repository boundary.
+- These projections intentionally pass `workspace_id=None`; they are
+  tenant-wide operational views, not workspace business actions.
+- Focused audit/security-center/PostgreSQL security-center tests pass. This
+  extends route-family IAM coverage only; federation, distributed invalidation,
+  worker/export/UI adoption, independent HA/DR, and production IAM assurance
+  remain open.
+
 ## E-400 — Full local post-IAM quality gates (passed)
 
 - `uv run pytest -q --tb=short` -> exit 0 in 318.9 seconds; declared skips and

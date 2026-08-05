@@ -414,6 +414,7 @@ include docs/adr/0344-local-https-rest-sandbox.md
 include docs/adr/0345-tenant-wide-policy-re-evaluation.md
 include docs/adr/0346-server-policy-tenant-binding.md
 include docs/adr/0347-server-scoped-consolidation-ppa-policy.md
+include docs/adr/0348-server-scoped-audit-and-security-overview-policy.md
 include docs/adr/0229-durable-job-10k-tier-is-hardware-scoped.md
 include docs/execution/benchmarks/durable-job-10k-tier-v1.md
 include docs/adr/0236-durable-job-100k-tier-is-hardware-scoped.md

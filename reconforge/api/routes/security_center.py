@@ -8,7 +8,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict
 
-from reconforge.api.dependencies import require_permission
+from reconforge.api.dependencies import enforce_server_scoped_permissions, require_permission
 from reconforge.api.errors import APIError
 from reconforge.api.server_identity import execute_postgres_security_center, server_identity_enabled
 from reconforge.application.security_center import SecurityCenterApplicationService, SecurityCenterRuntime
@@ -111,6 +111,14 @@ def security_overview(request: Request, current_user: SecurityCenterRead) -> Sec
     del current_user
     if not server_identity_enabled(request):
         raise APIError(status_code=404, code="security_center_unavailable", message="Security center is unavailable.")
+    from reconforge.api.server_identity import request_tenant_id
+
+    enforce_server_scoped_permissions(
+        request,
+        permissions=frozenset({"security.center.read"}),
+        tenant_id=request_tenant_id(request),
+        workspace_id=None,
+    )
     runtime = SecurityCenterRuntime(
         configured_federation_providers=len(getattr(request.app.state, "federation_providers", {})),
         federation_air_gap_mode=bool(getattr(request.app.state, "federation_air_gap_mode", False)),

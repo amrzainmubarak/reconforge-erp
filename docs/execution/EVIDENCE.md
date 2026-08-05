@@ -13631,3 +13631,20 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   statutory/legal-book acquisition accounting, tax/impairment, live providers,
   write-back, independent HA/DR, distributed IAM, or production readiness.
 - ADR: `docs/adr/0347-server-scoped-consolidation-ppa-policy.md`.
+
+## E-402 — Server-scoped audit and security views
+
+- PostgreSQL audit browsing and chain verification now re-evaluate
+  `audit.read` or `audit.verify`; the security-center overview re-evaluates
+  `security.center.read` before opening its tenant-wide repository boundary.
+  Each call binds to the validated request tenant and explicitly passes a null
+  workspace because these views are not workspace-scoped.
+- `uv run pytest -q tests/test_api_audit_administration.py
+  tests/test_api_security_center.py tests/test_postgres_security_center.py
+  --tb=short` -> 4 passed, 1 declared skip; Ruff and Mypy pass for the changed
+  routes.
+- Boundary: tenant-wide route IAM evidence only. Redaction and operational
+  snapshot claims remain bounded; federation, distributed invalidation,
+  worker/export/UI adoption, independent HA/DR, compliance, and production IAM
+  assurance remain open.
+- ADR: `docs/adr/0348-server-scoped-audit-and-security-overview-policy.md`.

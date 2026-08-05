@@ -7,7 +7,7 @@ from typing import Annotated, Literal, cast
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict
 
-from reconforge.api.dependencies import require_permission
+from reconforge.api.dependencies import enforce_server_scoped_permissions, require_permission
 from reconforge.api.errors import APIError
 from reconforge.api.server_audit import (
     execute_postgres_audit_administration,
@@ -92,6 +92,17 @@ def _scope(request: Request) -> str:
     return cursor_scope_digest({"resource": "audit_events", "tenant": request_tenant_id(request)})
 
 
+def _enforce_server_policy(request: Request, *, permission: str) -> None:
+    """Bind tenant-wide audit access to the authenticated request tenant."""
+
+    enforce_server_scoped_permissions(
+        request,
+        permissions=frozenset({permission}),
+        tenant_id=request_tenant_id(request),
+        workspace_id=None,
+    )
+
+
 def _decode_cursor(request: Request, cursor: str | None) -> tuple[str, Literal["domain", "ledger_control"], str] | None:
     if cursor is None:
         return None
@@ -144,6 +155,7 @@ def list_audit_events(
             code="audit_administration_unavailable",
             message="Audit administration requires the PostgreSQL server profile.",
         )
+    _enforce_server_policy(request, permission="audit.read")
     position = _decode_cursor(request, cursor)
 
     def operation(repository: AuditBrowsingRepositoryProtocol, _tenant: str) -> dict[str, object]:
@@ -186,6 +198,7 @@ def verify_audit_events(request: Request, current_user: AuditVerify) -> dict[str
             code="audit_administration_unavailable",
             message="Audit administration requires the PostgreSQL server profile.",
         )
+    _enforce_server_policy(request, permission="audit.verify")
 
     def operation(repository: AuditBrowsingRepositoryProtocol, _tenant: str) -> dict[str, object]:
         service = AuditBrowsingApplicationService(repository)

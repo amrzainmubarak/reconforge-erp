@@ -59,6 +59,12 @@ def test_audit_administration_http_requires_human_assurance_and_redacts(tmp_path
     import reconforge.api.routes.audit_administration as routes
 
     user = LocalUser(id="user-admin", username="admin", display_name="Admin")
+    policy_calls: list[tuple[str, str, None]] = []
+
+    def enforce_policy(
+        _request: Any, *, permissions: frozenset[str], tenant_id: str, workspace_id: None
+    ) -> None:
+        policy_calls.append((next(iter(permissions)), tenant_id, workspace_id))
 
     def authenticate(request: Any, token: str) -> AuthenticatedServerRequest | None:
         assert request_tenant_id(request) == "tenant-a"
@@ -88,6 +94,7 @@ def test_audit_administration_http_requires_human_assurance_and_redacts(tmp_path
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
     monkeypatch.setattr(routes, "execute_postgres_audit_administration", execute)
+    monkeypatch.setattr(routes, "enforce_server_scoped_permissions", enforce_policy)
     root = tmp_path / "tenants"
     root.mkdir()
     client = TestClient(
@@ -122,6 +129,8 @@ def test_audit_administration_http_requires_human_assurance_and_redacts(tmp_path
 
     verification = client.get("/api/v1/admin/audit/verify", headers=headers("human-ok"))
     assert verification.status_code == 200 and verification.json()["ok"] is True
+    assert policy_calls[0] == ("audit.read", "tenant-a", None)
+    assert ("audit.verify", "tenant-a", None) in policy_calls
     client.cookies.set(BROWSER_SESSION_COOKIE, "human-ok")
     browser_cookie_read = client.get(path, headers={"X-ReconForge-Tenant": "tenant-a"})
     assert browser_cookie_read.status_code == 200

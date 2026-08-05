@@ -3834,3 +3834,21 @@
   complete worker/export/UI adoption remain open.
 - **Rollback**: Remove the helper calls, focused test, ADR and manifest entry;
   no schema or data rollback is required.
+
+### D-311: Bind tenant-wide audit and security views to central policy
+
+- **Date**: 2026-08-05
+- **Decision**: Re-evaluate `audit.read`, `audit.verify`, and
+  `security.center.read` against the validated request tenant before their
+  PostgreSQL repositories; use `workspace_id=None` for these tenant-wide
+  projections.
+- **Rationale**: A raw permission snapshot is not sufficient authority for a
+  selected tenant. The views do not carry a workspace key, so a synthetic one
+  would be misleading and could deny valid tenant operators.
+- **Verification**: ADR 0348; audit/security-center focused tests pass 4/4,
+  with one declared PostgreSQL skip; Ruff and Mypy pass.
+- **Boundary**: This is route IAM coverage only; complete worker/export/UI
+  adoption, federation, distributed invalidation, independent HA/DR, and
+  production IAM assurance remain open.
+- **Rollback**: Remove the helper calls, focused assertions, ADR and manifest
+  entry; no migration or data rollback is required.

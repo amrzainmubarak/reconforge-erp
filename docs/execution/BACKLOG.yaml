@@ -1296,6 +1296,14 @@ tasks:
     depends_on: [E-441]
     exit_evidence: Full pytest exits 0 in 351.8s; Ruff, Mypy across 465 source files, Bandit, OSV dependency audit with no known vulnerabilities, supply-chain policy validation, package build, and diff-check pass after the professional module; optional service skips and existing warnings remain visible, and hosted/public release gates remain external evidence.
 
+  - id: E-443
+    priority: P0
+    area: quality
+    title: Python 3.11 all-extras collection regression closure
+    status: completed
+    depends_on: [E-442]
+    exit_evidence: The exact previously failing Python 3.11 test files run under `uv run --locked --all-extras --no-editable --python 3.11` — 47 passed, one declared live-PostgreSQL skip, zero collection ImportErrors, in 18.8s. This verifies the current all-extras workflow dependency profile only; hosted matrix status remains external.
+
   - id: P4-PLAT-001
     priority: P4
     area: platform_breadth

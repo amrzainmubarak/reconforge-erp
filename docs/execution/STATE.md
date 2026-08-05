@@ -4505,3 +4505,8 @@ pytest/static/security/package gates are green. This closes only the local
 compatibility gate for the slice; the coherent-breadth workstream and all live
 provider, posting, write-back, external-operator, hosted, and production gates
 remain open. No GitHub publication occurred.
+The historical Python 3.11 dependency-collection failure is not reproduced
+with the current workflow profile: all named optional modules import and the
+seven previously failing test files pass under locked `--all-extras`, with one
+declared live-PostgreSQL skip. This is local compatibility evidence, not a
+hosted CI result.

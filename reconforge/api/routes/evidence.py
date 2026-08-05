@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from reconforge.api.dependencies import (
     enforce_server_scoped_permission,
+    enforce_server_scoped_permissions,
     get_local_db,
     require_any_permission,
     require_permission,
@@ -142,6 +143,18 @@ def _enforce_server_evidence_permission(request: Request, *, permission: str) ->
     )
 
 
+def _enforce_server_evidence_read_access(request: Request) -> None:
+    """Bind tenant/workspace evidence reads to the same central policy gate."""
+
+    scope = request_execution_scope(request)
+    enforce_server_scoped_permissions(
+        request,
+        permissions=frozenset({"evidence.read", "evidence.manage"}),
+        tenant_id=scope.tenant_id,
+        workspace_id=scope.workspace_id,
+    )
+
+
 def _require_evidence_manage_access(
     request: Request, current_user: EvidenceRead, connection: sqlite3.Connection | None
 ) -> None:
@@ -179,6 +192,7 @@ def list_evidence(
     if pagination == "cursor" and offset != 0:
         raise APIError(status_code=400, code="pagination_mode_conflict", message="Offset is not valid in cursor mode.")
     if server_evidence_enabled(request):
+        _enforce_server_evidence_read_access(request)
         if pagination == "cursor":
             raise APIError(
                 status_code=501,
@@ -224,6 +238,7 @@ def evidence_coverage(
     """Report linked evidence coverage by governed object."""
 
     if server_evidence_enabled(request):
+        _enforce_server_evidence_read_access(request)
         result = execute_postgres_evidence(request, lambda repository, tenant: repository.coverage(tenant_id=tenant))
         return {"coverage": result, "source": {"kind": "postgresql-evidence-registry", "server_mode": True}}
     try:
@@ -243,6 +258,7 @@ def get_evidence(
     """Return evidence provenance and links; artifact bytes remain out of band."""
 
     if server_evidence_enabled(request):
+        _enforce_server_evidence_read_access(request)
         record = execute_postgres_evidence(
             request, lambda repository, tenant: repository.get(tenant_id=tenant, evidence_id=evidence_id)
         )
@@ -274,6 +290,8 @@ def get_evidence_drill_down(
     if include_sensitive:
         _require_evidence_manage_access(request, current_user, connection)
     if server_evidence_enabled(request):
+        if not include_sensitive:
+            _enforce_server_evidence_read_access(request)
         result = execute_postgres_evidence(
             request,
             lambda repository, tenant: repository.drill_down(

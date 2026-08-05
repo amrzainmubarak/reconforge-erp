@@ -121,6 +121,11 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
         "enforce_server_scoped_permission",
         lambda _request, **kwargs: scoped_permissions.append(kwargs),
     )
+    monkeypatch.setattr(
+        evidence_routes,
+        "enforce_server_scoped_permissions",
+        lambda _request, **kwargs: scoped_permissions.append(kwargs),
+    )
     monkeypatch.setattr(evidence_routes, "execute_postgres_evidence", execute)
 
     tenant_root = tmp_path / "tenants"
@@ -183,7 +188,10 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
     assert coverage.status_code == 200
     assert scoped_permissions == [
         {"permission": "evidence.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        {"permissions": frozenset({"evidence.read", "evidence.manage"}), "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        {"permissions": frozenset({"evidence.read", "evidence.manage"}), "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
         {"permission": "evidence.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
         {"permission": "evidence.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
         {"permission": "evidence.verify", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        {"permissions": frozenset({"evidence.read", "evidence.manage"}), "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
     ]

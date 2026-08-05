@@ -3972,3 +3972,32 @@
   open.
 - **Rollback**: Supersede E-410 with a later gate record; no runtime or
   migration rollback is required.
+
+### D-320: Bind PostgreSQL evidence reads to central scope policy
+
+- **Date**: 2026-08-05
+- **Decision**: Re-evaluate `evidence.read` OR `evidence.manage` for ordinary
+  evidence reads against the authenticated tenant/workspace before PostgreSQL
+  access; keep sensitive drill-down on `evidence.manage`.
+- **Rationale**: A dependency-level permission check does not bind a selected
+  server tenant/workspace. Read projections need the same request-time central
+  policy boundary as evidence mutations.
+- **Verification**: ADR 0353 and `tests/test_api_server_evidence.py` pass 1/1,
+  capturing all read/manage/verify calls; Ruff, Mypy, and diff-check pass.
+- **Boundary**: Route IAM only; worker/export/UI adoption, federation,
+  distributed invalidation, providers, HA/DR, and production IAM remain open.
+- **Rollback**: Remove the helper calls, test, ADR, manifest and execution
+  records; no schema or data rollback is required.
+
+### D-321: Record the final local gate after evidence-read IAM adoption
+
+- **Date**: 2026-08-05
+- **Decision**: Record E-412 as local regression/package evidence while
+  withholding hosted, external-provider, statutory, independent-HA/DR,
+  distributed-IAM, scale, breadth, and production-release claims.
+- **Verification**: Pytest exits 0 in 322.8s; Ruff, Mypy (448 files), Bandit,
+  pip-audit, build, and diff-check pass.
+- **Boundary**: The green local gate does not complete the global objective or
+  authorize GitHub publication.
+- **Rollback**: Supersede E-412 with a later gate record; no runtime or
+  migration rollback is required.

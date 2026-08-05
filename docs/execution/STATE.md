@@ -54,6 +54,27 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   contracts/write-back, statutory close, independent HA/DR, distributed IAM,
   scale/soak, and coherent breadth are not complete.
 
+## E-411 — Server-scoped evidence read policy (passed locally)
+
+- PostgreSQL evidence list, coverage, record, and non-sensitive drill-down
+  reads now re-evaluate `evidence.read` OR `evidence.manage` against the
+  authenticated tenant/workspace before the repository adapter.
+- Sensitive drill-down retains the separate `evidence.manage` gate. Local
+  SQLite behavior is unchanged; the focused server contract captures every
+  read/manage/verify policy call.
+- This closes a route-family IAM gap only. Worker/export/UI adoption,
+  federation, distributed invalidation, live providers, independent HA/DR,
+  and production IAM assurance remain open.
+
+## E-412 — Final local gates after evidence-read IAM adoption (passed)
+
+- `uv run pytest -q --tb=short` -> exit 0 in 322.8 seconds with only declared
+  skips and existing deprecation/legacy-input warnings.
+- Ruff, Mypy (448 source files), Bandit, pip-audit, package build, and
+  `git diff --check` all pass after the evidence route changes.
+- This is local regression/package evidence only; the global objective and
+  GitHub publication remain open pending external/runtime workstreams.
+
 ## E-403 — Full local post-E-402 quality gates (passed)
 
 - `uv run pytest -q --tb=short` -> exit 0 in 330.3 seconds; only declared

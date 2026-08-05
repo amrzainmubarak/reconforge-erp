@@ -13748,3 +13748,25 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - This closes the local regression/package gate for the current tree only. It
   does not promote hosted matrices, provider/write-back, statutory, live
   independent-HA/DR, distributed-IAM, scale, or production evidence.
+
+## E-411 — Server-scoped evidence read policy
+
+- PostgreSQL evidence list, coverage, record, and non-sensitive drill-down
+  routes invoke central `evidence.read` OR `evidence.manage` scope enforcement
+  with the request tenant/workspace before adapter access. Sensitive drill-down
+  still requires `evidence.manage` through the existing path.
+- `uv run pytest -q tests/test_api_server_evidence.py --tb=short` -> 1 passed;
+  Ruff, Mypy, and `git diff --check` pass for the changed route/test.
+- Boundary: route-family IAM evidence only. Complete worker/export/UI adoption,
+  federation, distributed invalidation, live providers, independent HA/DR,
+  compliance, and production IAM assurance remain open.
+- ADR: `docs/adr/0353-server-scoped-evidence-read-policy.md`.
+
+## E-412 — Final local gates after evidence-read IAM adoption
+
+- `uv run pytest -q --tb=short` exits 0 in 322.8 seconds after the evidence
+  read-policy adoption. Ruff, Mypy (448 source files), Bandit, pip-audit,
+  package build, and `git diff --check` also pass.
+- This remains one-workstation local evidence. Hosted matrices, live
+  providers/write-back, statutory close, independent HA/DR, distributed IAM,
+  scale/soak, coherent breadth, and production approval remain unverified.

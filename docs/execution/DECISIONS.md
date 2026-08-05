@@ -3942,3 +3942,20 @@
   authorize GitHub publication.
 - **Rollback**: Supersede E-408 with a later gate record; no runtime or
   migration rollback is required.
+
+### D-318: Keep witness acknowledgement separate from voter quorum
+
+- **Date**: 2026-08-05
+- **Decision**: Require a healthy-voter count at least equal to configured
+  quorum for failover and repromotion, while requiring witness acknowledgement
+  independently. Reject topologies whose witnesses all share voter failure
+  domains.
+- **Rationale**: A witness is a fencing/election observer, not a voting
+  replica. Counting it as a voter could permit one healthy voter to elect in a
+  three-voter topology; co-location would also undermine domain independence.
+- **Verification**: HA/DR simulation tests pass 5/5, including co-located
+  witness and one-voter-plus-witness rejection; Ruff, Mypy, and diff-check pass.
+- **Boundary**: Model safety only; no live PostgreSQL/network, automatic
+  failover, external fencing, wall-clock RPO/RTO, or production HA claim.
+- **Rollback**: Remove the checks, tests, ADR, manifest and execution records;
+  no schema or data rollback is needed.

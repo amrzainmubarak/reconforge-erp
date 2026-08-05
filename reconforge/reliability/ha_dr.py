@@ -67,6 +67,9 @@ class HaDrTopology:
             raise ValueError("HA/DR topology requires three independent voter failure domains")
         if not witnesses:
             raise ValueError("HA/DR topology requires a witness")
+        voter_domains = {node.failure_domain for node in voters}
+        if not any(node.failure_domain not in voter_domains for node in witnesses):
+            raise ValueError("HA/DR witness must use a failure domain independent from voters")
         if self.quorum_size is not None and not 2 <= self.quorum_size <= len(voters):
             raise ValueError("HA/DR quorum_size must be between two and voter count")
         object.__setattr__(self, "nodes", ordered)
@@ -165,7 +168,9 @@ class HaDrCluster:
             raise HaDrError("health_observation_invalid")
         if not witness_ack:
             raise HaDrError("witness_ack_required")
-        if len(healthy) + 1 < int(self.topology.quorum_size or 0):
+        # A witness acknowledges the election but is not a voter.  It must
+        # never be counted as a substitute for a healthy voting member.
+        if len(healthy) < int(self.topology.quorum_size or 0):
             raise HaDrError("quorum_not_reached")
         candidates = tuple(
             sorted(
@@ -205,7 +210,7 @@ class HaDrCluster:
         if approver_id != self.leader_id or not witness_ack:
             raise HaDrError("repromotion_approval_invalid")
         self.tick(approval_tick)
-        if len(self._healthy) + 1 < int(self.topology.quorum_size or 0):
+        if len(self._healthy) < int(self.topology.quorum_size or 0):
             raise HaDrError("quorum_not_reached")
         self._fenced.remove(node_id)
         self._event("standby_unfenced_for_repromotion", node_id=node_id, approver_id=approver_id)

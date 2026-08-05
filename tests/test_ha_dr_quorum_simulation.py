@@ -51,6 +51,16 @@ def test_topology_requires_independent_voters_and_witness() -> None:
                 HaDrNode("node-c", "zone-c", 10),
             ),
         )
+    with pytest.raises(ValueError, match="failure domain independent"):
+        HaDrTopology(
+            cluster_id="cluster-test",
+            nodes=(
+                HaDrNode("node-a", "zone-a", 30),
+                HaDrNode("node-b", "zone-b", 20),
+                HaDrNode("node-c", "zone-c", 10),
+                HaDrNode("witness-a", "zone-a", 0, "witness"),
+            ),
+        )
 
 
 def test_failover_requires_witness_quorum_and_fences_old_leader() -> None:
@@ -60,9 +70,13 @@ def test_failover_requires_witness_quorum_and_fences_old_leader() -> None:
         cluster.failover(
             failed_leader_id="node-a", healthy_voter_ids=("node-b", "node-c"), witness_ack=False, detection_tick=1
         )
+    with pytest.raises(HaDrError, match="quorum_not_reached"):
+        cluster.failover(
+            failed_leader_id="node-a", healthy_voter_ids=("node-b",), witness_ack=True, detection_tick=2
+        )
     assert cluster.leader_id == "node-a"
     assert cluster.failover(
-        failed_leader_id="node-a", healthy_voter_ids=("node-b", "node-c"), witness_ack=True, detection_tick=2
+        failed_leader_id="node-a", healthy_voter_ids=("node-b", "node-c"), witness_ack=True, detection_tick=3
     ) == "node-b"
     assert cluster.fenced_nodes == {"node-a"}
     with pytest.raises(HaDrError, match="stale_leader_fenced"):

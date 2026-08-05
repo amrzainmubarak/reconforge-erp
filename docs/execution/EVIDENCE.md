@@ -13726,3 +13726,16 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   the current tree. This is local compatibility/package evidence; it does not
   promote hosted matrices or external provider, statutory, HA/DR, scale,
   distributed-IAM, or production claims.
+
+## E-409 — HA/DR quorum safety hardening
+
+- `HaDrTopology` now rejects a topology whose witnesses all share voter
+  failure domains. `HaDrCluster` requires the configured number of healthy
+  voters for failover and repromotion; witness acknowledgement is tracked as
+  fencing evidence, not as a voting seat.
+- `uv run pytest -q tests/test_ha_dr_quorum_simulation.py --tb=short` -> 5
+  passed. Ruff, Mypy, and `git diff --check` pass for the changed files.
+- Boundary: this is orchestration-neutral simulation safety evidence only.
+  Docker containers are not independent hosts and no live automatic failover,
+  external fencing, wall-clock RPO/RTO, or production HA claim is made.
+- ADR: `docs/adr/0352-ha-dr-witness-is-not-a-voter.md`.

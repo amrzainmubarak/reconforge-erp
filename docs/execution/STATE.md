@@ -32,6 +32,18 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   for statutory close semantics, live providers/write-back, independent HA/DR,
   distributed IAM adoption, scale/soak, and coherent industry breadth.
 
+## E-409 — HA/DR quorum safety hardening (passed locally)
+
+- The orchestration-neutral HA/DR state machine now requires at least one
+  witness failure domain independent from all voter domains.
+- Witness acknowledgement remains mandatory but is no longer counted as a
+  voter when checking quorum during failover or repromotion; a three-voter
+  topology therefore cannot elect with only one healthy voter plus a witness.
+- Focused HA/DR simulation tests pass 5/5 with Ruff, Mypy, and diff-check.
+  This improves model safety only; it does not provide independent-host,
+  network, external-fencing, automatic-failover, wall-clock RPO/RTO, or
+  production-SLO evidence.
+
 ## E-403 — Full local post-E-402 quality gates (passed)
 
 - `uv run pytest -q --tb=short` -> exit 0 in 330.3 seconds; only declared

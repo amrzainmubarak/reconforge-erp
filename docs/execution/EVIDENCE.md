@@ -13867,3 +13867,50 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - This is local regression evidence only; hosted matrices, external
   providers/write-back, statutory close, independent HA/DR, distributed IAM,
   scale, breadth, and production approval remain open.
+
+## E-421 — PostgreSQL acquisition deferred-tax evidence boundary
+
+- Added Alembic `0065_pg_deferred_tax`, the backend-neutral
+  `AcquisitionDeferredTaxApplicationService`, and the forced-RLS append-only
+  `PostgresConsolidationDeferredTaxRepository`. The adapter stores canonical
+  request/result JSONB, recomputes the deterministic bridge before insert,
+  verifies both digests on read, rejects posted results, enforces independent
+  maker/checker actors, makes identical retries idempotent, and emits a
+  sanitized audit event.
+- Added server-profile-only authenticated POST/GET routes. POST requires
+  `finance_core.manage`; GET accepts `finance_core.read` or
+  `finance_core.manage`; both re-evaluate central tenant policy with an
+  explicit null workspace and never fall back to SQLite.
+- `uv run pytest -q tests/test_postgres_consolidation_deferred_tax.py
+  tests/test_api_consolidation_deferred_tax.py --tb=short` -> 5 passed.
+  With a disposable PostgreSQL 16 container at `127.0.0.1:55433`, Alembic
+  `0065_pg_deferred_tax` was applied and
+  `uv run pytest -q tests/test_postgres_consolidation_deferred_tax_runtime.py
+  --tb=short -ra` -> 1 passed. The live gate proves non-superuser RLS,
+  idempotent replay, sibling-tenant exclusion, replay verification, and
+  append-only trigger refusal; it is synthetic single-node evidence.
+- `uv run pytest -q tests/test_repository_boundary_inventory.py
+  tests/test_postgres_parity_inventory.py --tb=short` -> 6 passed after the
+  inventories were updated to 43 application services and 2 contract-only
+  PostgreSQL boundaries.
+- The authorization inventory is 238 routes with digest
+  `2fd93f143e0b3294bbc7159bc6a0f7e3e52b6e9351c6a285a2490e3cabe43086`.
+- Boundary: non-posting evidence persistence only. This does not prove
+  statutory tax accounting, tax-law recognition, valuation allowances, legal-
+  book posting, live rates, ERP/bank integration, write-back, restore, HA/DR,
+  scale, or production readiness.
+- ADR: `docs/adr/0358-postgres-deferred-tax-evidence-boundary.md`.
+
+## E-422 — Full local regression after deferred-tax persistence/API
+
+- `uv run pytest -q --tb=short -ra` exits 0 in 351.9 seconds. The complete
+  local suite retains only declared capability skips and existing framework,
+  SAML, and legacy-float warnings; no test failure remains.
+- Ruff, Mypy (452 source files), Bandit, pip-audit, package build, and
+  `git diff --check` pass for the current tree. The separate disposable
+  PostgreSQL 16 deferred-tax runtime gate is recorded under E-421 because the
+  full suite intentionally runs without live-service environment variables.
+- This is local regression/package evidence only. Hosted Python matrices,
+  statutory close, live ERP/bank providers and write-back, independent
+  restore/HA/DR, distributed IAM, scale/soak, coherent breadth, and production
+  approval remain open.

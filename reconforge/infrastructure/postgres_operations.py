@@ -75,6 +75,7 @@ POSTGRES_MIGRATION_REVISIONS = (
     "0062_pg_outbox_consumer",
     "0063_pg_ic_elimination",
     "0064_pg_close_ic_links",
+    "0065_pg_deferred_tax",
 )
 
 

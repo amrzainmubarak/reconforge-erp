@@ -681,6 +681,23 @@ surfaces:
       - The JSONB values are internal canonical source/result evidence, not uploads or executable content; strict source decoding and result replay reject malformed or tampered rows.
       - The hosted PostgreSQL runtime gate is pending; statutory consolidation, posting, provider integration, write-back, HA/DR, and production evidence remain open.
     next_action: Add the unskipped PostgreSQL migration/RLS/replay runtime gate before promoting the parity inventory beyond contract_only.
+  - id: FI-034
+    name: PostgreSQL acquisition deferred-tax evidence records
+    module_ids: [finance.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/postgres_consolidation_deferred_tax.py::PostgresConsolidationDeferredTaxRepository._decode_row
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_postgres_consolidation_deferred_tax.py, tests/test_postgres_consolidation_deferred_tax_runtime.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The JSONB values are internal canonical request/result evidence, not uploads or executable content; request/result digest checks, deterministic replay, and posted=false enforcement fail closed before a row is returned.
+      - The runtime gate is synthetic and single-node; tax-law recognition, statutory posting, live rates, provider integration, write-back, restore, HA/DR, and production evidence remain open.
+    next_action: Keep deferred-tax persistence as non-posting evidence until a separately reviewed statutory close policy and independent assurance exist.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader
@@ -758,6 +775,11 @@ direct_json_parser_allowlist:
     call_count: 1
     surface_id: FI-033
     rationale: Parses only canonical PostgreSQL JSONB intercompany source/result evidence before strict typed line decoding, replay verification, digest matching, and tenant/workspace-scoped return.
+  - path: reconforge/infrastructure/postgres_consolidation_deferred_tax.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-034
+    rationale: Parses only canonical PostgreSQL JSONB deferred-tax request/result evidence before request/result digest verification, deterministic arithmetic replay, posted=false enforcement, and tenant-scoped return.
   - path: reconforge/upgrade/application_adapter.py
     parser: json.loads
     call_count: 1

@@ -4119,3 +4119,66 @@
   independent-HA/DR, distributed-IAM, scale, breadth, or production claims.
 - **Rollback**: Supersede E-420 with a later gate record; no runtime/schema
   rollback is required.
+
+### D-330: Persist the acquisition deferred-tax bridge as non-posting evidence
+
+- **Date**: 2026-08-05
+- **Decision**: Add migration `0065_pg_deferred_tax`, a
+  backend-neutral application service, and a forced-RLS append-only adapter
+  for the deterministic acquisition deferred-tax artifact. Recompute before
+  insert, replay-verify request/result payloads, make retries idempotent, and
+  emit an audit event; reject any posted result.
+- **Rationale**: Team deployments need durable, tenant-isolated evidence while
+  the project has not established tax-law recognition, statutory/legal-book
+  posting, or source-system write-back. Keeping this boundary non-posting
+  prevents a calculation bridge from silently becoming a ledger authority.
+- **Verification**: ADR 0358; focused PostgreSQL schema and authenticated API
+  contracts pass, and the disposable PostgreSQL 16 non-superuser runtime gate
+  passes 1/1 for RLS, idempotent replay, tenant isolation, replay verification,
+  and trigger immutability.
+- **Boundary**: No tax advice, statutory accounting, legal-book posting, live
+  rates, ERP/bank provider, write-back, restore, HA/DR, or production claim.
+- **Rollback**: Remove the application/adapter/API and migration in a code
+  rollback; migration downgrade refuses to discard non-empty evidence.
+
+### D-331: Record the deferred-tax evidence/API gate
+
+- **Date**: 2026-08-05
+- **Decision**: Record E-421 as local schema/API and inventory evidence while
+  withholding live PostgreSQL, statutory, provider, HA/DR, scale, breadth, and
+  GitHub publication claims.
+- **Verification**: Focused schema/API contracts and the disposable PostgreSQL
+  runtime gate pass; inventories report 43 backend-neutral services, 43 parity
+  rows, and 238 authorization contracts.
+- **Boundary**: The green local slice does not complete the global objective or
+  authorize GitHub publication.
+- **Rollback**: Supersede E-421 with a later gate record; migration downgrade
+  refuses to remove non-empty evidence.
+
+### D-332: Record the deferred-tax runtime and ingestion-control evidence
+
+- **Date**: 2026-08-05
+- **Decision**: Promote the local disposable PostgreSQL 16 runtime result to
+  E-421 evidence while keeping the parity inventory status `contract_only`
+  until a repeatable hosted/current gate exists.
+- **Verification**: Alembic `0065_pg_deferred_tax` applies cleanly; the
+  non-superuser runtime test passes 1/1 for forced RLS, idempotent replay,
+  sibling-tenant exclusion, replay verification, and append-only triggers;
+  FI-034 closes the direct-JSON parser allowlist.
+- **Boundary**: Single-node synthetic runtime only; no statutory tax, live
+  provider, write-back, restore, HA/DR, or production claim.
+- **Rollback**: Remove the runtime evidence entry and keep the migration/API
+  implementation behind the existing bounded claim boundary.
+
+### D-333: Record the final local regression after deferred-tax persistence
+
+- **Date**: 2026-08-05
+- **Decision**: Record E-422 as a passing local regression/package gate and
+  continue withholding GitHub publication until the full objective exits.
+- **Verification**: Pytest exits 0 in 351.9s; Ruff, Mypy (452 files), Bandit,
+  pip-audit, build, and diff-check pass with declared skips/warnings only.
+- **Boundary**: This does not establish hosted release approval, statutory
+  close, live providers/write-back, independent HA/DR, scale, breadth,
+  distributed IAM, or production readiness.
+- **Rollback**: Supersede E-422 with a later complete gate; no runtime/data
+  rollback is required.

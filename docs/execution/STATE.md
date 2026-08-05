@@ -168,6 +168,41 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   independent HA/DR, distributed IAM, scale, breadth, and production approval
   remain unverified.
 
+## E-421 — PostgreSQL acquisition deferred-tax evidence boundary (passed locally)
+
+- Added migration `0065_pg_deferred_tax`, a backend-neutral
+  `AcquisitionDeferredTaxApplicationService`, and a tenant-forced-RLS,
+  append-only `PostgresConsolidationDeferredTaxRepository`. Request/result JSON
+  is canonical and digest-bound; deterministic recalculation occurs before
+  insert; reads verify both request and result lineage; retries are idempotent;
+  and creation emits a sanitized audit event. The database contract and API
+  are explicitly non-posting.
+- Added authenticated server-profile POST/GET routes with strict canonical
+  Money, actor binding, maker-checker separation, tenant policy re-evaluation,
+  and no SQLite fallback. The authorization inventory now has 238 routes with
+  digest `2fd93f143e0b3294bbc7159bc6a0f7e3e52b6e9351c6a285a2490e3cabe43086`.
+- Focused schema/API tests pass. With the disposable local PostgreSQL 16
+  service at `127.0.0.1:55433`, Alembic `0065_pg_deferred_tax` was applied and
+  the live runtime contract passed 1/1 under the non-superuser role, proving
+  RLS, idempotent replay, sibling-tenant exclusion, replay verification, and
+  trigger-enforced immutability. The global objective remains open for
+  statutory tax recognition/posting, live rates and providers, independent
+  restore/HA/DR, scale, distributed IAM, coherent breadth, and production
+  assurance.
+- ADR: `docs/adr/0358-postgres-deferred-tax-evidence-boundary.md`.
+
+## E-422 — Full local regression after deferred-tax persistence/API (passed)
+
+- `uv run pytest -q --tb=short -ra` exits 0 in 351.9 seconds with only
+  declared capability skips and existing framework/SAML/legacy-input warnings.
+- Ruff, Mypy (452 source files), Bandit, pip-audit, package build, and
+  `git diff --check` pass. The separate live PostgreSQL 16 runtime proof is
+  recorded under E-421 because the full suite intentionally runs without live
+  service environment variables.
+- This remains local regression/package evidence. Hosted matrices, statutory
+  close, live providers/write-back, independent restore/HA/DR, distributed
+  IAM, scale/soak, coherent breadth, and production approval remain open.
+
 ## E-403 — Full local post-E-402 quality gates (passed)
 
 - `uv run pytest -q --tb=short` -> exit 0 in 330.3 seconds; only declared

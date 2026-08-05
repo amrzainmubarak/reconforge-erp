@@ -102,6 +102,16 @@ ppa_runtime_gate:
   api_runtime_result: passed
   api_ci_run: "30815726556"
   limitations: [single_node, synthetic_data, non_posting_evidence_only, no_statutory_accounting, no_restore_drill, no_ha, no_rpo_rto_claim, no_erp_writeback]
+deferred_tax_runtime_gate:
+  id: E-421
+  executed_at: "2026-08-05"
+  database: "PostgreSQL 16 Alpine local container"
+  application_role: reconforge_app
+  focused_tests: 1
+  focused_result: passed
+  covered_live_boundaries: [AcquisitionDeferredTaxApplicationService]
+  migration_head: "0065_pg_deferred_tax"
+  limitations: [single_node, synthetic_data, non_posting_evidence_only, no_statutory_tax_accounting, no_restore_drill, no_ha, no_rpo_rto_claim, no_erp_writeback]
 delegation_runtime_gate:
   id: E-302
   executed_at: "2026-08-03"
@@ -129,6 +139,7 @@ boundaries:
   - {file: consolidation_close.py, service: ConsolidationCloseApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_close.PostgresConsolidationCloseRepository, test: tests/test_postgres_consolidation_close.py, risk: single_node_control_journal_only_no_erp_writeback_or_restore_ha_evidence}
   - {file: consolidation_ownership.py, service: ConsolidationOwnershipApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_ownership.PostgresConsolidationOwnershipRepository, test: tests/test_postgres_consolidation_ownership.py, risk: single_node_runtime_only_no_restore_or_ha_evidence}
   - {file: consolidation_ppa.py, service: AcquisitionPpaApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_ppa.PostgresConsolidationPpaRepository, test: tests/test_postgres_consolidation_ppa_runtime.py, risk: single_node_synthetic_non_posting_only_no_statutory_or_writeback}
+  - {file: consolidation_deferred_tax.py, service: AcquisitionDeferredTaxApplicationService, status: contract_only, adapter: reconforge.infrastructure.postgres_consolidation_deferred_tax.PostgresConsolidationDeferredTaxRepository, test: tests/test_postgres_consolidation_deferred_tax_runtime.py, risk: local_runtime_only_not_promoted_to_current_ci_gate_non_posting_only_no_statutory_or_writeback}
   - {file: consolidation.py, service: ConsolidationApplicationService, status: not_applicable, reason: immutable_scoped_object_store_artifact_repository}
   - {file: intercompany_elimination.py, service: IntercompanyEliminationApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_intercompany_elimination.PostgresIntercompanyEliminationRepository, test: tests/test_postgres_intercompany_elimination_runtime.py, risk: single_node_nonposting_proposal_only_no_statutory_posting_or_writeback}
   - {file: grouped_matching.py, service: GroupedMatchingApplicationService, status: not_applicable, reason: pure_strategy}
@@ -169,9 +180,9 @@ boundaries:
   - {file: inventory_valuation_reversal.py, service: InventoryValuationReversalApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_valuation_reversal.PostgresInventoryValuationReversalRepository, test: tests/test_postgres_inventory_valuation_reversal.py, risk: financial_critical}
   - {file: inventory_planning.py, service: InventoryPlanningApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_planning.PostgresInventoryPlanningRepository, test: tests/test_postgres_inventory_planning.py, risk: financial_high}
 summary:
-  total: 42
+  total: 43
   live_verified_current: 17
   live_test_available: 21
   absent: 0
-  contract_only: 1
+  contract_only: 2
   not_applicable: 3

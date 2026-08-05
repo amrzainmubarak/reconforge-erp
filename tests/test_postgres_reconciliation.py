@@ -11,6 +11,7 @@ from uuid import uuid4
 
 import pytest
 
+from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.infrastructure.postgres import (
     PostgresConnectionFactory,
     PostgresSettings,
@@ -467,6 +468,57 @@ def test_postgres_reconciliation_execution_worker_claims_persists_and_completes(
     assert connection.run["execution_attempt"] == 1
     assert len(connection.results) == 1
     adapter.close()
+
+
+def test_postgres_reconciliation_worker_policy_denies_before_connection_access() -> None:
+    class _NeverConnect:
+        def connect(self) -> Any:
+            raise AssertionError("policy denial must precede connection access")
+
+    worker = PostgresReconciliationWorker(
+        _NeverConnect(),
+        tenant_supplier=lambda: ["tenant_a"],
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="policy-worker",
+            policy_context_supplier=lambda tenant: PolicyEvaluationContext(
+                user_id="policy-worker",
+                username="policy-worker",
+                user_permissions=set(),
+                principal_type="service_account",
+                tenant_id=tenant,
+                authorized_tenant_ids=frozenset({tenant}),
+            ),
+        ),
+    )
+    with pytest.raises(PostgresReconciliationWorkerError, match="permission_missing"):
+        worker.process_once()
+
+
+def test_postgres_reconciliation_worker_policy_allows_scoped_service_identity() -> None:
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+    _create_run(repository)
+
+    worker = PostgresReconciliationWorker(
+        _ConnectionFactory(connection),
+        tenant_supplier=lambda: ["tenant_a"],
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="policy-worker",
+            policy_context_supplier=lambda tenant: PolicyEvaluationContext(
+                user_id="policy-worker",
+                username="policy-worker",
+                user_permissions={"match.run"},
+                principal_type="service_account",
+                tenant_id=tenant,
+                authorized_tenant_ids=frozenset({tenant}),
+            ),
+        ),
+    )
+    summary = worker.process_once()
+    assert summary.completed == 1
+    assert connection.run is not None and connection.run["execution_status"] == "Complete"
 
 
 def test_local_matcher_partitioning_is_deterministic_and_reports_progress() -> None:

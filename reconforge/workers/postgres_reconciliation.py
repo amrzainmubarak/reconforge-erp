@@ -11,6 +11,7 @@ from threading import Event
 from typing import Any, Protocol, cast
 
 from reconforge.application.matching import LEGACY_RECORD_IDENTITY_POLICY
+from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext, audit_policy_decision
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_reconciliation import (
     PostgresReconciliationBusyError,
@@ -475,6 +476,8 @@ class PostgresReconciliationWorkerSettings:
     batch_size: int = 10
     lease_seconds: int = 300
     actor_id: str = ""
+    policy_context_supplier: Callable[[str], PolicyEvaluationContext] | None = None
+    policy_permission: str = "match.run"
 
     def __post_init__(self) -> None:
         if not self.worker_id.strip() or len(self.worker_id.strip()) > 160:
@@ -485,6 +488,8 @@ class PostgresReconciliationWorkerSettings:
             raise PostgresReconciliationWorkerError("batch_size must be between 1 and 1000.")
         if not 1 <= self.lease_seconds <= 86_400:
             raise PostgresReconciliationWorkerError("lease_seconds is outside its supported range.")
+        if not self.policy_permission.strip():
+            raise PostgresReconciliationWorkerError("policy_permission must be non-empty when configured.")
 
     @property
     def audit_actor_id(self) -> str:
@@ -659,6 +664,40 @@ class PostgresReconciliationWorker:
         self.tenant_supplier = tenant_supplier
         self.matcher = matcher
         self.settings = settings
+        self.policy = CentralPolicyEngine()
+
+    def _authorize_tenant(self, tenant_id: str, *, request_id: str = "") -> None:
+        """Optionally require a central service-account decision before reads/claims."""
+
+        supplier = self.settings.policy_context_supplier
+        if supplier is None:
+            return
+        try:
+            context = supplier(tenant_id)
+        except Exception as exc:  # noqa: BLE001 - worker boundary adds safe context.
+            raise PostgresReconciliationWorkerError("Unable to resolve worker policy context safely.") from exc
+        if context.principal_type != "service_account":
+            raise PostgresReconciliationWorkerError("Reconciliation workers require a service-account principal.")
+        if context.user_id != self.settings.audit_actor_id:
+            raise PostgresReconciliationWorkerError("Worker actor does not match policy identity.")
+        if context.tenant_id != tenant_id or context.workspace_id is not None or context.entity_id is not None:
+            raise PostgresReconciliationWorkerError("Worker policy scope does not match tenant claim scope.")
+        decision = self.policy.evaluate(
+            context,
+            required_permission=self.settings.policy_permission.strip(),
+            enforce_sod=False,
+            enforce_ownership=False,
+        )
+        audit_policy_decision(
+            decision,
+            actor_id=context.user_id,
+            required_permissions=frozenset({self.settings.policy_permission.strip()}),
+            surface="postgres-reconciliation.worker.claim",
+            request_id=request_id,
+            principal_type=context.principal_type,
+        )
+        if not decision.allowed:
+            raise PostgresReconciliationWorkerError(f"Reconciliation worker policy denied: {decision.reason_code}")
 
     def _transaction(self) -> PostgresTenantBoundary:
         return PostgresTenantBoundary(self.connection_factory)
@@ -820,6 +859,7 @@ class PostgresReconciliationWorker:
     def process_run(self, *, tenant_id: str, run_id: str, request_id: str = "") -> ReconciliationProcessResult:
         """Claim and execute one run using fresh connections for each phase."""
 
+        self._authorize_tenant(tenant_id, request_id=request_id)
         try:
             with self._transaction().transaction(tenant_id) as connection:
                 repository = PostgresReconciliationRepository(connection)
@@ -919,6 +959,7 @@ class PostgresReconciliationWorker:
         skipped = 0
         discovered = 0
         for tenant_id in tenants:
+            self._authorize_tenant(tenant_id, request_id=request_id)
             with self._transaction().transaction(tenant_id) as connection:
                 runs = PostgresReconciliationRepository(connection).list_runs(
                     tenant_id=tenant_id,

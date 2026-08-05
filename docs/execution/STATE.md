@@ -142,6 +142,22 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   evidence and does not promote hosted, provider, statutory, independent
   HA/DR, distributed-IAM, scale, breadth, or production claims.
 
+## E-419 — PostgreSQL reconciliation worker policy boundary (passed locally)
+
+- `PostgresReconciliationWorkerSettings` now accepts an optional central policy
+  context supplier and permission contract. When configured, the worker
+  re-evaluates each tenant before run discovery and before claim, requiring a
+  service-account identity equal to the audit actor and exact tenant-only
+  scope. Policy denial happens before connection access.
+- `uv run pytest -q tests/test_postgres_reconciliation.py -k worker_policy
+  --tb=short` -> 2 passed; the full reconciliation contract file passes
+  15 tests with one declared skip; Ruff and Mypy pass.
+- Boundary: the current reconciliation schema has no workspace/entity scope,
+  so this is tenant-only and opt-in. Universal worker/export/UI adoption,
+  dynamic revocation, federation, distributed invalidation, providers,
+  independent HA/DR, and production IAM assurance remain open.
+- ADR: `docs/adr/0357-postgres-reconciliation-worker-policy-boundary.md`.
+
 ## E-403 — Full local post-E-402 quality gates (passed)
 
 - `uv run pytest -q --tb=short` -> exit 0 in 330.3 seconds; only declared

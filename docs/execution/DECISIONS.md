@@ -4090,3 +4090,20 @@
   authorize GitHub publication.
 - **Rollback**: Supersede E-418 with a later gate record; no runtime or schema
   rollback is required.
+
+### D-328: Gate the PostgreSQL reconciliation worker by central policy
+
+- **Date**: 2026-08-05
+- **Decision**: Add an optional tenant policy supplier to the PostgreSQL
+  reconciliation worker and evaluate it before discovery and claim. Require a
+  service-account actor match and exact tenant-only scope.
+- **Rationale**: The worker is a separate execution surface and must not gain
+  tenant work solely from database connectivity; the current schema cannot
+  honestly claim workspace/entity scope.
+- **Verification**: ADR 0357 and the focused worker-policy tests pass 2/2;
+  the existing worker contract file passes 15 tests with one declared skip.
+- **Boundary**: Opt-in tenant-only worker control; universal worker/export/UI
+  adoption, revocation, federation, distributed invalidation, providers,
+  independent HA/DR, and production IAM remain open.
+- **Rollback**: Do not configure the optional supplier; no schema or data
+  rollback is required.

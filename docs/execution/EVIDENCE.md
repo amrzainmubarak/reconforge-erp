@@ -13842,3 +13842,19 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   pass. This is local regression evidence only; hosted matrices, external
   providers/write-back, statutory close, independent HA/DR, distributed IAM,
   scale, breadth, and production approval remain open.
+
+## E-419 — PostgreSQL reconciliation worker policy boundary
+
+- `PostgresReconciliationWorkerSettings` supports an explicit policy context
+  supplier and permission contract. Configured workers evaluate central policy
+  before tenant discovery and before a run claim, requiring a service-account
+  actor match and exact tenant-only scope; denied contexts reach no database
+  connection.
+- `uv run pytest -q tests/test_postgres_reconciliation.py -k worker_policy
+  --tb=short` -> 2 passed; the complete reconciliation contract file passes
+  15 tests with one declared skip; Ruff and Mypy pass.
+- Boundary: tenant-only, opt-in worker evidence. The schema has no
+  workspace/entity scope, and universal worker/export/UI adoption, revocation,
+  federation, distributed invalidation, providers, independent HA/DR, and
+  production IAM assurance remain open.
+- ADR: `docs/adr/0357-postgres-reconciliation-worker-policy-boundary.md`.

@@ -13365,9 +13365,12 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - Local focused commands passed: schema/migration/exact replay/tamper tests,
   API scope test, authorization inventory, close-bundle tests, Ruff, and Mypy.
 - The complete local `uv run pytest -q` suite passed 100%, together with full
-  Ruff, Mypy, Bandit, pip-audit, package build, and diff-check gates. Hosted
-  verification is pending for the resulting commit; no hosted claim is
-  promoted here yet.
+  Ruff, Mypy, Bandit, pip-audit, package build, and diff-check gates. Hosted CI
+  `30968619652` passed Python 3.11/3.12, server-boundaries `92187914873`
+  (including the live PostgreSQL close/intercompany-link path), engine parity,
+  object storage, postgres-ha-dr `92187914777`, and Docker parity
+  `92188812253`; Security `30968619726`, Docker `30968619657`, and CodeQL
+  `30968619666` also passed.
 - Boundary: this is bounded control-journal/evidence provenance. It does not
   prove statutory/legal-book posting, live ERP/bank interoperability,
   write-back, throughput, HA/DR, compliance, certification, or production

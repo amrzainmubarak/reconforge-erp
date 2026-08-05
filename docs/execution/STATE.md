@@ -3752,7 +3752,7 @@ publication and remote GitHub verification before a release Go decision.
 
 ## E-386 — Bind intercompany evidence to PostgreSQL close runs
 
-- **Status:** implemented locally; hosted verification pending for this head.
+- **Status:** hosted-verified on commit `01f4de85`.
 - Added `0064_pg_close_ic_links` and the forced-RLS immutable
   `consolidation_close_intercompany_links` table. A prepared close run can bind
   an existing `ice-*` artifact only through the server profile and
@@ -3763,7 +3763,12 @@ publication and remote GitHub verification before a release Go decision.
   `intercompany_transaction` elimination without exactly one matching linked
   artifact. Run detail and the additive close bundle expose the artifact
   result digests and matched elimination IDs.
-- Focused schema/migration, exact replay/tamper, API-scope, and bundle tests
-  pass locally. This remains bounded control-journal/evidence provenance, not
+- Complete local `uv run pytest -q`, Ruff, Mypy, Bandit, pip-audit, package
+  build, and diff-check pass. Hosted CI `30968619652` passes Python 3.11/3.12,
+  server-boundaries `92187914873` (including the live PostgreSQL close and
+  intercompany-link path), engine parity, object storage, postgres-ha-dr
+  `92187914777`, and Docker parity `92188812253`; Security `30968619726`,
+  Docker `30968619657`, and CodeQL `30968619666` also pass.
+- This remains bounded control-journal/evidence provenance, not
   statutory/legal-book posting, live ERP/bank write-back, throughput, HA/DR,
   compliance, certification, or production readiness.

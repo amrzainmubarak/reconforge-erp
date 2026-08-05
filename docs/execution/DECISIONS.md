@@ -3588,8 +3588,10 @@
   explicit provenance edge before maker-checker approval; matching by ID alone
   would allow tampered or cross-period evidence.
 - **Verification**: ADR 0336, migration/schema contracts, exact proposal
-  replay tests, API scope test, close-bundle round-trip tests, and the full
-  local/hosted gates for the resulting head.
+  replay tests, API scope test, close-bundle round-trip tests, complete local
+  gates, and hosted head `01f4de85` under CI `30968619652` (server-boundaries
+  `92187914873`, postgres-ha-dr `92187914777`, Docker parity `92188812253`),
+  Security `30968619726`, Docker `30968619657`, and CodeQL `30968619666`.
 - **Boundary**: bounded evidence/control-journal integration only; no
   statutory/legal-book posting, live ERP/bank connector, write-back,
   throughput, HA/DR, compliance, certification, or production-readiness claim.

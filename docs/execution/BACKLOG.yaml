@@ -1304,6 +1304,14 @@ tasks:
     depends_on: [E-442]
     exit_evidence: The exact previously failing Python 3.11 test files run under `uv run --locked --all-extras --no-editable --python 3.11` — 47 passed, one declared live-PostgreSQL skip, zero collection ImportErrors, in 18.8s. This verifies the current all-extras workflow dependency profile only; hosted matrix status remains external.
 
+  - id: E-444
+    priority: P4
+    area: public_data_validation
+    title: Fresh maintainer-run public financial data verification
+    status: completed
+    depends_on: [E-443]
+    exit_evidence: On a clean commit `cd10968b1b4943726cbde0d6d8c2567509af68b8`, `verify_public_financial_evidence.py --allow-network --execution-scope maintainer-local` fetched 11 pinned official public-data responses and passed 3 experiments with 967 matched, zero unmatched, zero exceptions, reproducibility SHA-256 `890a4aa8f7b362981bfdd1f0f333d3bad55a886d842c0ff0a82ff165c48e26c5`, report bytes SHA-256 `25052c709ccd9400065cee6d39092d2d0bd77c6e7bb2ede69f9cbcb48fd4477d`, in 47.8s. This remains maintainer-run technical evidence, not a customer pilot, independent review, production validation, or release approval.
+
   - id: P4-PLAT-001
     priority: P4
     area: platform_breadth

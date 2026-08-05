@@ -4510,3 +4510,8 @@ with the current workflow profile: all named optional modules import and the
 seven previously failing test files pass under locked `--all-extras`, with one
 declared live-PostgreSQL skip. This is local compatibility evidence, not a
 hosted CI result.
+A fresh network-enabled public-data run also passed on the clean current
+revision: 11 official responses, 967 matched, zero unmatched/exceptions, and
+replay/permutation checks. It is useful open-data evidence for the deterministic
+engine, but remains a maintainer run and does not satisfy the external-operator,
+customer, independent-review, hosted-attestation, or production gates.

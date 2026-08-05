@@ -4365,3 +4365,16 @@ publication and remote GitHub verification before a release Go decision.
 - Boundary: hosted Gitleaks history/tree execution remains required; this is
   CI secret-hygiene evidence, not a release approval or production claim.
 - ADR: `docs/adr/0362-ci-synthetic-credential-hygiene.md`.
+
+## E-433 — Current live Redis session and policy contract drill
+
+- The real tenant-scoped Redis stores completed against Redis 7.4 Alpine
+  digest `sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2`.
+  The runtime proved tenant-key isolation, digest-only session persistence,
+  shared policy-generation visibility across two clients, and cleanup; the
+  report digest is
+  `99fbd6b7aba969e0a41f4faa9e26d034e5e0f3b5a36e0e4e22bb2928ed9b44ca`.
+- Boundary: one disposable single-node Redis process with synthetic keys and
+  metadata. Replication, Sentinel/Cluster failover, cross-site durability,
+  Redis HA, and production SLOs remain unverified.
+- ADR: `docs/adr/0363-live-redis-session-policy-contract-drill.md`.

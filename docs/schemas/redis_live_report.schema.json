@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/redis-live-report-v1.json",
+  "title": "ReconForge live Redis report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "report_id", "status", "provider", "image_digest", "endpoint", "observed", "elapsed_ms", "limitations", "report_digest"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "report_id": {"const": "redis-live-session-policy-v1"},
+    "status": {"const": "verified"},
+    "provider": {"const": "redis"},
+    "image_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "endpoint": {"type": "string", "pattern": "^redis(s)?://[^/:]+:[0-9]{1,5}$"},
+    "observed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tenant_key_isolation", "session_raw_token_absent", "policy_generation_shared", "cleanup"],
+      "properties": {
+        "tenant_key_isolation": {"const": true},
+        "session_raw_token_absent": {"const": true},
+        "policy_generation_shared": {"const": true},
+        "cleanup": {"const": true}
+      }
+    },
+    "elapsed_ms": {"type": "number", "minimum": 0},
+    "limitations": {"type": "array", "minItems": 3, "items": {"type": "string", "minLength": 1}},
+    "report_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

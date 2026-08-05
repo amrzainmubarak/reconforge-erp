@@ -14060,3 +14060,16 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   the remote gate; no scanner allowlist, generated-path exemption, or release
   approval follows.
 - ADR: `docs/adr/0362-ci-synthetic-credential-hygiene.md`.
+
+## E-433 — Current live Redis session and policy contract drill
+
+- The real tenant-scoped Redis stores completed against Redis 7.4 Alpine
+  digest `sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2`.
+  Tenant-key isolation, digest-only session persistence, cross-client policy
+  generation visibility, and cleanup are all true. The schema-validated report
+  is `docs/execution/REDIS_LIVE_DOCKER_DRILL_2026-08-05.json` with digest
+  `99fbd6b7aba969e0a41f4faa9e26d034e5e0f3b5a36e0e4e22bb2928ed9b44ca`.
+- Boundary: one disposable single-node Redis process with synthetic keys,
+  token digests, and metadata; no replication, Sentinel/Cluster failover,
+  cross-site durability, Redis HA, or production SLO claim follows.
+- ADR: `docs/adr/0363-live-redis-session-policy-contract-drill.md`.

@@ -4330,3 +4330,17 @@
   production secret management.
 - **Rollback**: Restore the prior environment wiring only if the disposable
   provider contract cannot authenticate; do not add a Gitleaks exception.
+
+### D-344: Retain the current live Redis session/policy drill
+
+- **Date**: 2026-08-05
+- **Decision**: Keep the fresh digest-pinned Redis runtime report as bounded
+  evidence for tenant-scoped sessions, revocation keys, and shared policy
+  generation.
+- **Verification**: Four invariants and cleanup pass; the report is
+  schema-closed and digest-bound to
+  `99fbd6b7aba969e0a41f4faa9e26d034e5e0f3b5a36e0e4e22bb2928ed9b44ca`.
+- **Boundary**: Single-node synthetic runtime only; no replication,
+  Sentinel/Cluster failover, cross-site durability, Redis HA, or SLO evidence.
+- **Rollback**: Remove the dated verifier/report/test and retain existing
+  provider-neutral Redis contracts and the CI server-boundary tests.

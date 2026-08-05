@@ -175,7 +175,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       redis:
-        image: redis:7
+        image: redis:7.4-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2
         ports:
           - 6379:6379
         options: >-
@@ -227,6 +227,8 @@ jobs:
           RECONFORGE_TEST_POSTGRES_SOURCE_SERVICE: reconforge_ci_source
           RECONFORGE_TEST_POSTGRES_MAINTENANCE_SERVICE: reconforge_ci_admin
           RECONFORGE_TEST_REDIS_URL: redis://localhost:6379/0
+          RECONFORGE_REDIS_IMAGE_DIGEST: sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2
+          RECONFORGE_REDIS_LIVE_REPORT: ${{ runner.temp }}/reconforge-redis-live-report.json
           PGSERVICEFILE: ${{ runner.temp }}/reconforge-pgservice.conf
         run: |
           printf '%s\n' \
@@ -247,6 +249,15 @@ jobs:
              uv run --no-sync pytest "${parity_tests[@]}" tests/test_postgres_delegations_runtime.py tests/test_postgres_policy_analysis_runtime.py tests/test_alembic_postgres.py tests/test_postgres_foundation.py tests/test_postgres_master_data.py tests/test_postgres_ledger.py tests/test_postgres_identity.py tests/test_postgres_evidence.py tests/test_postgres_reconciliation.py tests/test_postgres_writeback.py tests/test_postgres_database_reference.py tests/test_api_server_identity.py tests/test_redis_foundation.py tests/test_postgres_durable_jobs.py -k 'test_live_postgres_durable_job_10k_multi_worker_scale_profile or test_live_postgres_durable_job_100k_multi_worker_scale_profile or test_live_postgres_durable_job_backpressure_profile' -q
              uv run --no-sync pytest tests/test_postgres_grouped_matching_scale.py -k 'test_live_postgres_grouped_matching_500_partition_scale_profile or test_live_postgres_grouped_matching_10k_partition_scale_profile' -q
              uv run --no-sync pytest tests/test_postgres_durable_jobs.py -k 'test_live_postgres_job_application_contract_and_rls or test_live_postgres_round_robin_scheduler_is_lane_scoped_and_deterministic' -q
+          uv run --no-sync python .github/scripts/verify_redis_live.py --output "${RECONFORGE_REDIS_LIVE_REPORT}"
+
+      - name: Upload live Redis report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: reconforge-redis-live-report
+          path: ${{ runner.temp }}/reconforge-redis-live-report.json
+          if-no-files-found: ignore
 
   postgres-ha-dr:
     runs-on: ubuntu-latest

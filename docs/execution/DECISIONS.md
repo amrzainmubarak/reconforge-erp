@@ -4498,6 +4498,24 @@
   claim. ADR: `0369-allowlisted-query-urls-in-readonly-network-connectors.md`.
 - **Rollback**: Remove the no-auth branch and restore mandatory credential
   references; no migration or data rollback is needed.
+
+### D-354: Record PostgreSQL grouped-matching scale without widening the claim
+
+- **Date**: 2026-08-06
+- **Decision**: Retain the local 500-partition and 10K-partition grouped-
+  matching runs as bounded PostgreSQL correctness/concurrency evidence. Do not
+  convert their wall time or single-host execution into production throughput,
+  soak, HA, host-loss, cross-host fairness, RPO/RTO, or capacity claims.
+- **Verification**: PostgreSQL 17.10 isolated databases under the
+  non-privileged `reconforge_app` role passed the exact 500-partition profile in
+  67.9s and 10K profile in 336.2s. The 10K run completed 1,000 runs and 10,000
+  partitions across all five declared modes with 24,000 result rows, zero
+  duplicate identities, zero failed runs, and zero active runs. Cleanup dropped
+  both databases.
+- **Boundary**: Synthetic single-host evidence only; production hardware,
+  multi-host fairness, soak, queue HA, host-loss, and RPO/RTO remain open.
+- **Rollback**: Supersede this evidence with a later exact-profile run; no
+  runtime or data rollback is required.
 # ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
 
 Implemented and bounded the `professional.invoice-payment` module. It is local,

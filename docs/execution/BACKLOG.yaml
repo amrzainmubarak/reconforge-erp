@@ -1400,6 +1400,14 @@ tasks:
     depends_on: [E-454]
     exit_evidence: ADR 0369 and focused network/SDK tests pass. Operator-declared HTTPS egress destinations may include fixed query strings; public no-auth registrations emit no credential header, while credentialed registrations require secret references. Credentials in authority, fragments, non-visible ASCII, and undeclared endpoints remain rejected; the pinned transport preserves the exact path/query without runtime URL merging or redirect following. This enables fixed-parameter public REST endpoints but does not prove live provider availability, authentication interoperability, write-back, or production operations.
 
+  - id: E-456
+    priority: P4
+    area: scale
+    title: PostgreSQL grouped-matching 500 and 10K partition tiers
+    status: completed
+    depends_on: [E-455]
+    exit_evidence: On PostgreSQL 17.10, isolated disposable databases with the non-privileged `reconforge_app` role passed the exact grouped-matching 500-partition profile in 67.9s and the 10K-partition profile in 336.2s. The 10K run completed 1,000 runs and 10,000 partitions across all five declared modes with 24,000 expected result rows, zero duplicate identities, zero failed runs, and zero active runs; both databases were removed after verification. This is bounded single-host synthetic correctness/concurrency evidence, not production throughput, soak, queue HA, host-loss, cross-host fairness, RPO/RTO, or capacity sizing.
+
   - id: P4-PLAT-001
     priority: P4
     area: platform_breadth

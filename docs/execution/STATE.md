@@ -4569,3 +4569,11 @@ Public no-auth registrations emit no authorization header, while credentialed
 registrations require a secret reference. This enables fixed-parameter public
 REST endpoints but does not establish live provider availability,
 authentication interoperability, write-back, or production operations.
+The exact PostgreSQL grouped-matching 500-partition and 10K-partition profiles
+also pass on isolated PostgreSQL 17.10 databases with the non-privileged role:
+67.9s and 336.2s respectively. The 10K profile completes 1,000 runs and 10,000
+partitions over all five declared grouped modes with 24,000 result rows, no
+duplicate identities, no failed runs, and no active runs. Both databases were
+dropped after verification. This is bounded single-host synthetic evidence and
+does not establish production throughput, soak, queue HA, host-loss,
+cross-host fairness, RPO/RTO, or capacity sizing.

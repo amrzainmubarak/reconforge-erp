@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-301: Exercise the reference REST reader through disposable HTTPS
+- **Date**: 2026-08-05
+- **Context**: The reference REST connector's schema, cursor and retry rules
+  were covered by injected transports but not by the actual TLS/HTTP GET path.
+- **Decision**: Add a loopback-only HTTPS sandbox that returns one transient
+  `429` and then a valid page. Drive the standard pinned transport and require
+  stable idempotency/cursor headers, secret-reference handling, digest parity
+  and deterministic cleanup. Clone the manifest only inside the test to bind
+  the ephemeral endpoint; keep the packaged reference manifest unchanged.
+- **Rationale**: This adds meaningful transport integration evidence while
+  preserving the no-vendor/no-internet boundary and the existing allowlist.
+- **Reversibility**: Remove the test, ADR 0344, package entry and E-395
+  records; runtime code and migrations are unchanged.
+- **Verification**: The focused sandbox passes 1/1.
+
 ### D-300: Exercise write-back transport through a disposable local HTTPS server
 - **Date**: 2026-08-05
 - **Context**: Injected write-back transports proved retry and acknowledgement

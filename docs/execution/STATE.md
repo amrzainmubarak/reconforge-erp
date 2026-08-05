@@ -6,6 +6,17 @@ Updated: 2026-08-05
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-395 — Disposable local HTTPS REST reader sandbox (complete bounded slice)
+
+- The reference REST reader now runs through a disposable local TLS server and
+  the real `PinnedHttpsGetTransport`/`NetworkConnectorExecutor` path. The
+  sandbox returns one transient `429` and then a valid bounded JSON page.
+- The gate proves stable idempotency key/cursor propagation, public-address
+  resolution guard execution, secret-reference header handling, cursor output,
+  canonical response digest and deterministic server cleanup.
+- Boundary: provider-neutral loopback transport only. No live ERP/bank schema,
+  vendor authentication, external network or production capacity is evidenced.
+
 ## E-394 — Disposable local HTTPS write-back sandbox (complete bounded slice)
 
 - The provider-neutral write-back test now runs the real TLS/HTTP transport

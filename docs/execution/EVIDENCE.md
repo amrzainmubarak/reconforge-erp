@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-395: Disposable local HTTPS REST reader sandbox
+
+- `tests/test_connector_rest_reference.py` starts a short-lived TLS server and
+  drives the real `PinnedHttpsGetTransport`, `NetworkConnectorExecutor` and
+  `ReferenceRestConnector` path. The first request receives `429`; the second
+  returns a valid bounded page and next cursor.
+- `uv run pytest -q tests/test_connector_rest_reference.py -k local_https_rest_sandbox --tb=short`
+  -> 1 passed. Both requests preserve the same idempotency key and cursor;
+  public-address resolution is exercised and the canonical response digest
+  matches the transport-injected reference result.
+- Boundary: loopback-only synthetic HTTPS. This is not vendor API, bank
+  authentication, ERP semantics, external network or production evidence.
+
 ## E-394: Disposable local HTTPS write-back sandbox
 
 - `tests/test_connector_writeback_network.py` now starts a disposable TLS

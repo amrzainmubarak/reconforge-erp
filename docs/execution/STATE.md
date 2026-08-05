@@ -43,6 +43,20 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   matrices, statutory close, live provider/write-back, independent HA/DR,
   distributed IAM, scale/soak, and release approval remain open.
 
+## E-426 — Fresh repeated PostgreSQL HA/DR drill (passed locally)
+
+- The repeated Docker drill ran three complete cycles on Docker Engine 29.6.2
+  with PostgreSQL 17.10 Alpine, synchronous standby fencing, encrypted native
+  backup/isolated restore, promotion, rejoin, failback, and labelled-resource
+  cleanup.
+- All three runs passed with zero acknowledged transaction loss and cleanup;
+  failover RTO ranged from 11.084s to 11.175s and failback RTO from 0.981s to
+  1.023s. The schema-valid report is retained at
+  `docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-05.json`.
+- Boundary: two containers on one host with a manual controller and synthetic
+  data/key. Independent failure domains, quorum/witness, automatic failover,
+  site-loss recovery, and production SLO remain unverified.
+
 ## E-407 — Acquisition deferred-tax bridge (passed locally)
 
 - Added `acquisition-deferred-tax-bridge-v1`, a deterministic non-posting

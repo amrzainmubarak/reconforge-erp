@@ -13953,3 +13953,17 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   hosted Python matrices, live PostgreSQL/Redis/object-storage cells, statutory
   close, providers/write-back, independent HA/DR, scale/soak, or release
   approval.
+
+## E-426 — Fresh repeated PostgreSQL HA/DR drill
+
+- `.github/scripts/verify_postgres_ha_dr_repeated.py` completed three Docker
+  cycles on Engine 29.6.2 / PostgreSQL 17.10 Alpine. Each cycle exercised
+  encrypted native backup and isolated restore, synchronous partition fencing,
+  primary fencing, promotion, read-only rejoin, failback, and resource cleanup.
+- Report `docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-05.json`
+  validates against the repeated-drill schema: 3/3 runs passed, zero
+  acknowledged transaction loss, zero cleanup residue, failover RTO
+  11.084–11.175s, and failback RTO 0.981–1.023s.
+- Boundary: this is one-host/manual-controller synthetic runtime evidence. It
+  does not prove independent failure domains, quorum/witness fencing,
+  automatic failover, site-loss DR, managed-key custody, or production SLO.

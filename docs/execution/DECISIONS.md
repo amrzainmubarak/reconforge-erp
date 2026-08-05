@@ -4230,3 +4230,18 @@
   independent HA/DR, distributed IAM, scale, or release approval follows.
 - **Rollback**: Supersede E-425 with the next exact-environment regression;
   no runtime/data rollback is required.
+
+### D-337: Retain a fresh repeated single-host HA/DR report
+
+- **Date**: 2026-08-05
+- **Decision**: Keep the new three-run Docker PostgreSQL synchronous-standby
+  report as dated runtime evidence while preserving the partial single-host
+  boundary.
+- **Verification**: All runs pass with zero acknowledged transaction loss and
+  cleanup; failover RTO is 11.084–11.175s and failback RTO is 0.981–1.023s.
+  The report is schema-validated and packaged.
+- **Boundary**: Two containers share one host and a manual controller. No
+  independent failure domains, quorum/witness, automatic failover, site-loss,
+  managed-key, or production-SLO claim is authorized.
+- **Rollback**: Remove the dated report and its manifest/test pointer if the
+  drill is invalidated; retain the prior report as historical evidence.

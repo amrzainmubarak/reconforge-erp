@@ -72,13 +72,13 @@ def test_repeated_ha_dr_report_preserves_every_run_and_single_host_boundary() ->
 
 def test_current_postgres_ha_dr_artifact_is_schema_valid_and_packaged() -> None:
     artifact = json.loads(
-        (ROOT / "docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-04.json").read_text(encoding="utf-8")
+        (ROOT / "docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-05.json").read_text(encoding="utf-8")
     )
     schema = json.loads(
         (ROOT / "docs/schemas/ha_dr_repeated_drill_report.schema.json").read_text(encoding="utf-8")
     )
     jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker()).validate(artifact)
-    assert "include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-04.json" in (
+    assert "include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-05.json" in (
         ROOT / "MANIFEST.in"
     ).read_text(encoding="utf-8")
 

@@ -1,4 +1,4 @@
-"""Fresh-connection worker for tenant-scoped PostgreSQL reconciliation runs."""
+"""Tenant-scoped PostgreSQL worker for reconciliation runs."""
 
 from __future__ import annotations
 
@@ -614,7 +614,7 @@ class PostgresReconciliationWorker:
     """Claim, execute, and persist PostgreSQL reconciliation runs safely.
 
     The matcher is deliberately injected.  This worker owns leases, fresh
-    connections, cancellation, retries, and atomic persistence; it does not
+    connection boundaries, cancellation, retries, and atomic persistence; it does not
     pretend that a local SQLite matcher is a PostgreSQL execution engine.
     """
 

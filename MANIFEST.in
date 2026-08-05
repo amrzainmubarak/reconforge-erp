@@ -136,6 +136,9 @@ include tests/test_airgap_upgrade_rollback.py
 include tests/test_airgap_upgrade_rollback_drill.py
 include docs/schemas/signed_airgap_install_drill_report.schema.json
 include docs/execution/SIGNED_AIRGAP_INSTALL_DOCKER_DRILL_2026-07-30.json
+include docs/schemas/airgap_install_recovery_upgrade_drill_report.schema.json
+include docs/execution/AIRGAP_INSTALL_RECOVERY_UPGRADE_DOCKER_DRILL_2026-08-05.json
+include tests/test_airgap_current_drill.py
 include docs/execution/P3_ENT_011_EXIT_AUDIT.yaml
 include tests/test_signed_airgap_install_drill.py
 include tests/test_p3_ent_011_exit_audit.py
@@ -436,6 +439,7 @@ include docs/adr/0356-governed-durable-worker-claim-boundary.md
 include docs/adr/0357-postgres-reconciliation-worker-policy-boundary.md
 include docs/adr/0358-postgres-deferred-tax-evidence-boundary.md
 include docs/adr/0359-hosted-worker-policy-boundary.md
+include docs/adr/0360-current-airgap-install-recovery-upgrade-drill.md
 include docs/adr/0229-durable-job-10k-tier-is-hardware-scoped.md
 include docs/execution/benchmarks/durable-job-10k-tier-v1.md
 include docs/adr/0236-durable-job-100k-tier-is-hardware-scoped.md

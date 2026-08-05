@@ -86,6 +86,21 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   project exclusion, hosted supply-chain/provenance gates, signed artifacts,
   and release approval remain explicit.
 
+## E-430 — Current no-network install, identity recovery, and rollback drill
+
+- Docker Engine 29.6.2 executed the current 0.7.1 bundle on
+  `python:3.14.1-slim` (digest-pinned), with 68 entries and 100,386,256 bytes.
+  The container used network mode `none`, read-only root/bundle mounts, bounded
+  tmpfs, hash-locked no-index installation, and doctor success.
+- Identity recovery restored two local users, preserved admin permission and
+  the audit chain, rejected a wrong AES-256-GCM key atomically, and restored no
+  old sessions. The tagged 0.7.0 to 0.7.1 cutover used zero network inputs and
+  rolled back to the exact prior content digest.
+- Boundary: connected bundle assembly, one Linux/Python runtime and one run;
+  signature trust, physical transfer custody, OCI offline verification,
+  hardware-backed keys, cross-platform repetition, HA/DR, and production
+  readiness remain unverified.
+
 ## E-407 — Acquisition deferred-tax bridge (passed locally)
 
 - Added `acquisition-deferred-tax-bridge-v1`, a deterministic non-posting

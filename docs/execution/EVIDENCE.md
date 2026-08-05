@@ -14009,3 +14009,23 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - Boundary: local dependency/security evidence only. The local-project audit
   exclusion, hosted secret/dependency scans, signed SBOM/provenance, trusted
   builder, and release approval remain unverified.
+
+## E-430 — Current no-network install, identity recovery, and rollback drill
+
+- `.github/scripts/verify_airgap_install.py` completed against Docker Engine
+  29.6.2 and `python:3.14.1-slim` digest
+  `sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e`.
+  The locked bundle contained 68 entries and 100,386,256 bytes with manifest
+  digest `4be42566f0caba894140275186e9c679c6fbcc7c589c6c71cc8e33cafae94e99`;
+  network mode was `none`, mounts/root were read-only, installation used
+  no-index/no-deps/require-hashes, doctor exited zero, and cleanup completed.
+- The same no-network runtime restored two local users from AES-256-GCM state,
+  retained admin permission and a valid audit chain, rejected the wrong key
+  atomically, and restored zero old sessions. The tagged application probe
+  cut over 0.7.0 to 0.7.1 with zero network inputs and restored the exact
+  previous content digest. The current report is schema-validated at
+  `docs/execution/AIRGAP_INSTALL_RECOVERY_UPGRADE_DOCKER_DRILL_2026-08-05.json`.
+- Boundary: connected assembly, one Linux/Python run, no signature trust,
+  physical-airgap custody, OCI offline subject verification, hardware-backed
+  key custody, or production-readiness claim.
+- ADR: `docs/adr/0360-current-airgap-install-recovery-upgrade-drill.md`.

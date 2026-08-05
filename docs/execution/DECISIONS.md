@@ -4285,3 +4285,18 @@
   trusted-builder assessment, or release approval follows.
 - **Rollback**: Supersede E-429 with the next exact-environment gate; no
   runtime/data rollback is required.
+
+### D-341: Retain the current no-network sovereign deployment drill
+
+- **Date**: 2026-08-05
+- **Decision**: Keep the fresh Docker install, local-identity recovery, and
+  exact tagged application rollback as current dated evidence.
+- **Verification**: 68 hash-locked bundle entries, 100,386,256 bytes, network
+  mode none, read-only mounts, doctor success, two-user recovery, wrong-key
+  atomic refusal, zero old-session restoration, zero network upgrade inputs,
+  and exact rollback all pass.
+- **Boundary**: Connected assembly and one Linux/Python runtime only; no
+  signature trust, physical custody, OCI verification, hardware-backed keys,
+  multi-platform repetition, HA/DR, or production readiness follows.
+- **Rollback**: Remove the dated report/schema/test pointer and retain the
+  historical 2026-07-30 drill artifacts.

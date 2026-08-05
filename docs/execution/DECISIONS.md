@@ -5,6 +5,23 @@
 
 ## Decisions
 
+### D-295: Register connector boundaries as an evidence-bounded module
+- **Date**: 2026-08-05
+- **Context**: Connector implementations had individual contracts but no
+  first-class runtime module, maturity ceiling, or threat-model parity.
+- **Decision**: Add `connectors.boundary` with explicit interfaces,
+  import/export contracts, data classifications, test evidence, activation and
+  retention boundaries, and a matching threat-model entry. Keep it experimental
+  and foundation-stage with no migration or default network activation.
+- **Rationale**: Registry parity prevents connector claims from escaping the
+  same governance controls used by finance, inventory, and workflow modules.
+  It improves discoverability without mislabeling provider-neutral code as a
+  live ERP/bank integration.
+- **Reversibility**: Remove the descriptor, threat entry, maturity ceiling,
+  ADR, manifest entry, tests, and execution records; connector code remains.
+- **Verification**: Registry, threat-model schema/parity, and maturity tests
+  pass with eleven active modules.
+
 ### D-294: Add a bounded offline CAMT.053 statement boundary
 - **Date**: 2026-08-05
 - **Context**: Banking statement formats are required for the connector

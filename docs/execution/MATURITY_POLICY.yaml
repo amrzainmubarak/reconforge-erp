@@ -8,6 +8,9 @@ module_maturity_order:
   beta: 2
   stable: 3
 module_ceilings:
+  - module_id: connectors.boundary
+    maximum_maturity: experimental
+    evidence_claim: Bounded CAMT.053 offline statement ingestion
   - module_id: finance.controls
     maximum_maturity: experimental
     evidence_claim: Exact control-decision scores

@@ -27,6 +27,19 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   or write-back. Named live bank/ERP providers and production deployment remain
   open under P4-CON-001.
 
+## E-389 — Connector boundary module and threat-model parity (complete bounded slice)
+
+- Registered `connectors.boundary` as an evidence-bounded runtime module with
+  explicit interfaces, connector import/export contracts, data classifications,
+  retention/activation notes, and the existing connector test portfolio.
+- Added exact threat-model index coverage, readable threat-model coverage, and
+  maturity-policy ceiling. Registry, threat-index schema/parity, and maturity
+  tests pass with eleven active modules.
+- Boundary: module discoverability and governance metadata only; it does not
+  promote provider-neutral adapters to live ERP/bank integrations or establish
+  vendor credentials, source authenticity, write-back, HA/DR, or production
+  readiness.
+
 ## E-387 — PostgreSQL durable-job 100K-effect tier (complete bounded slice)
 
 - Added `postgres-durable-job-load/100k-effects-v1`: 16 independent worker

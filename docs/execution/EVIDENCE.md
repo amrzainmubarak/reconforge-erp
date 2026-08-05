@@ -21,6 +21,22 @@ This file records commands and observed results. It does not convert a dirty wor
   provider, credentials, network transport, payment/write-back, provider
   acknowledgement, or production readiness claim is made.
 
+## E-389: Connector boundary module and threat-model parity
+
+- Added `connectors.boundary` to `reconforge/modules/registry.py` with closed
+  interfaces, connector contracts, data classifications, retention, activation,
+  and four existing connector test paths. No migration or default network
+  activation is introduced.
+- Added ADR `docs/adr/0339-connectors-boundary-is-an-evidence-bounded-module.md`,
+  a matching module entry in `docs/security/threat-model-index.v1.yaml`, a
+  readable coverage row, and an experimental maturity ceiling.
+- `uv run pytest -q tests/test_module_registry.py tests/test_threat_model_index.py
+  tests/test_maturity_policy.py --tb=short` -> 18 passed. The registry now
+  validates eleven active modules with exact threat and evidence parity.
+- Boundary: governance/discoverability evidence only. Live vendor conformance,
+  source authenticity, credentials, payments, write-back, HA/DR, and production
+  deployment remain unverified.
+
 ## E-387: PostgreSQL durable-job 100K-effect tier
 
 - Added `hundred_k_profile()` with 16 workers, 2,500 jobs, forty partitions per

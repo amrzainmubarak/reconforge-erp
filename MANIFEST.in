@@ -90,6 +90,7 @@ include tests/test_connector_camt053.py
 include tests/golden/camt053/statement.xml
 include docs/schemas/camt053_statement.schema.json
 include docs/adr/0338-bounded-camt053-statement-ingestion.md
+include docs/adr/0339-connectors-boundary-is-an-evidence-bounded-module.md
 include docs/connectors/camt053-bounded-readonly.md
 include docs/execution/P3_ENT_007_EXIT_AUDIT.yaml
 include tests/test_p3_ent_007_exit_audit.py

@@ -445,6 +445,31 @@ _MODULES = (
         test_evidence=("tests/test_p3_ent_008_exit_audit.py", "tests/test_signed_pack_lifecycle.py"),
     ),
     ModuleDescriptor(
+        module_id="connectors.boundary",
+        name="Governed connector boundaries",
+        version=__version__,
+        maturity="experimental",
+        capability_status="foundation",
+        summary=(
+            "Closed read-only connector manifests, bounded network contracts, signed package admission, "
+            "and offline CAMT.053 statement projection without provider-specific write-back."
+        ),
+        default_enabled=False,
+        dependencies=("platform.core",),
+        interfaces=("artifacts", "cli", "library"),
+        import_contracts=("iso20022-camt053-v1", "network-connector-registration-v1"),
+        export_contracts=("connector-manifest.v1", "payment-statement-pages.v1"),
+        data_classification=("financial-sensitive", "internal-configuration", "security-audit-sensitive", "secret"),
+        retention_note="Connector inputs and generated evidence remain in operator-selected local paths; credentials are deployment-owned and never persisted by the boundary.",
+        activation_note="Read-only provider-neutral and offline CAMT.053 paths require explicit operator activation; live vendor credentials, provider conformance, and write-back remain separately gated.",
+        test_evidence=(
+            "tests/test_connector_camt053.py",
+            "tests/test_connector_network.py",
+            "tests/test_connector_package.py",
+            "tests/test_connector_sdk.py",
+        ),
+    ),
+    ModuleDescriptor(
         module_id="plugins.export",
         name="Local export-adapter plugins",
         version=__version__,

@@ -68,6 +68,15 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   compatible. Universal worker/export/UI adoption, workspace/entity worker
   scope, federation, distributed invalidation, and production IAM remain open.
 
+## E-428 — Full local regression after hosted worker IAM (passed)
+
+- `uv run pytest -q --tb=short -ra` exits 0 in 345.7 seconds after E-427.
+- Only declared external-service/platform skips and existing financial/framework
+  warnings remain; no collection or executed test failure is present.
+- Boundary: local Windows regression only. Hosted matrices, live providers,
+  statutory/legal-book close, independent HA/DR, distributed IAM, scale/soak,
+  coherent breadth, and release approval remain open.
+
 ## E-407 — Acquisition deferred-tax bridge (passed locally)
 
 - Added `acquisition-deferred-tax-bridge-v1`, a deterministic non-posting

@@ -13985,3 +13985,15 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   adoption, revocation re-evaluation, federation, distributed invalidation,
   provider delivery, HA/DR, and production IAM effectiveness remain open.
 - ADR: `docs/adr/0359-hosted-worker-policy-boundary.md`.
+
+## E-428 — Full local regression after hosted worker IAM
+
+- `uv run pytest -q --tb=short -ra` exits 0 in 345.7 seconds on the current
+  Windows environment after E-427. The run contains no collection or executed
+  test failure.
+- Declared PostgreSQL/Redis/S3 and Windows capability skips remain explicit;
+  existing Starlette and legacy binary-financial-input warnings remain visible.
+- Boundary: this is local compatibility evidence only. It does not replace
+  hosted Python/security/Docker matrices or prove statutory close, live
+  providers/write-back, independent HA/DR, distributed IAM, scale/soak,
+  coherent breadth, or release approval.

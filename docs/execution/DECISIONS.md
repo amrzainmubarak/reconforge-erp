@@ -4260,3 +4260,16 @@
   invalidation, providers, HA/DR, and production IAM assurance remain open.
 - **Rollback**: Remove the additive guard/settings and retain the prior
   unconfigured worker contract.
+
+### D-339: Record the post-IAM full local regression
+
+- **Date**: 2026-08-05
+- **Decision**: Keep the complete local regression as compatibility evidence
+  after adding the hosted scheduler/outbox policy guard.
+- **Verification**: Pytest exits 0 in 345.7s; declared external-service and
+  platform skips plus existing warnings remain visible.
+- **Boundary**: No hosted matrix, live provider/write-back, statutory close,
+  independent HA/DR, distributed IAM, scale/soak, breadth, or release
+  approval follows.
+- **Rollback**: Supersede E-428 with the next exact-environment regression;
+  no runtime/data rollback is required.

@@ -1328,6 +1328,14 @@ tasks:
     depends_on: [E-445]
     exit_evidence: Checksum-verified Gitleaks 8.30.1 scans of all 490 local commits and the current tree both exit 0 with no leaks under `.gitleaks.toml`. This is current local evidence only; hosted security job attestation remains external.
 
+  - id: E-447
+    priority: P0
+    area: quality
+    title: Python 3.12 all-extras collection regression closure
+    status: completed
+    depends_on: [E-446]
+    exit_evidence: The exact seven test files named in the historical hosted ImportError run pass under `uv run --locked --all-extras --no-editable --python 3.12`: 48 passed, one declared live-PostgreSQL skip, zero collection errors, in 68.2s. This verifies the current locked all-extras profile locally; hosted matrix status remains external.
+
   - id: P4-PLAT-001
     priority: P4
     area: platform_breadth

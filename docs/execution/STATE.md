@@ -4524,3 +4524,7 @@ the hosted runner and native `pg_dump` backup capability remain unverified.
 Checksum-verified Gitleaks 8.30.1 also scanned all 490 local commits and the
 current tree with zero leaks. The earlier hosted one-leak result is therefore
 not reproduced locally, but hosted security attestation remains open.
+The same seven historical dependency-collection test files also pass under the
+locked Python 3.12 all-extras profile: 48 passed, one declared live-PostgreSQL
+skip, zero collection errors. Together with E-443, this closes local reproduction
+on both supported CI Python versions without asserting hosted matrix success.

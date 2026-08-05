@@ -1,0 +1,46 @@
+{
+  "records": [
+    {
+      "batch_id": "POS-100",
+      "store_id": "STORE-01",
+      "business_date": "2026-08-04",
+      "currency": "USD",
+      "card_sales": "100.00",
+      "card_refunds": "5.00",
+      "cash_sales": "20.00",
+      "cash_refunds": "0.00",
+      "gift_sales": "0.00",
+      "gift_refunds": "0.00",
+      "transaction_count": 12,
+      "source_reference": "pos-export-2026-08-04-01"
+    },
+    {
+      "batch_id": "POS-101",
+      "store_id": "STORE-01",
+      "business_date": "2026-08-04",
+      "currency": "USD",
+      "card_sales": "50.00",
+      "card_refunds": "0.00",
+      "cash_sales": "10.00",
+      "cash_refunds": "0.00",
+      "gift_sales": "0.00",
+      "gift_refunds": "0.00",
+      "transaction_count": 6,
+      "source_reference": "pos-export-2026-08-04-02"
+    },
+    {
+      "batch_id": "POS-102",
+      "store_id": "STORE-02",
+      "business_date": "2026-08-04",
+      "currency": "USD",
+      "card_sales": "30.00",
+      "card_refunds": "0.00",
+      "cash_sales": "0.00",
+      "cash_refunds": "0.00",
+      "gift_sales": "0.00",
+      "gift_refunds": "0.00",
+      "transaction_count": 3,
+      "source_reference": "pos-export-2026-08-04-03"
+    }
+  ]
+}

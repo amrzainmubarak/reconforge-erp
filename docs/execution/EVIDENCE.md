@@ -14083,3 +14083,44 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - Boundary: local compatibility only; it does not replace hosted Python,
   security, Docker, or browser matrices, statutory close, live vendors/write-
   back, independent HA/DR, distributed IAM, scale/soak, or release approval.
+
+## E-435 — Experimental retail POS settlement vertical slice
+
+- `reconforge/domain/retail_settlement.py` and
+  `reconforge/application/retail_settlement.py` implement
+  `retail-pos-settlement-v1` over exported POS and processor records. The
+  boundary uses exact `Money`, one currency/tolerance policy, explicit
+  refunds/fees/chargebacks, scope checks, duplicate identity refusal,
+  unmatched/ambiguous statuses, deterministic ordering, source fingerprints,
+  and replayable decision digests.
+- `reconforge retail settlement settlement-run` writes the closed
+  `reconforge-retail-settlement` artifact. `tests/test_retail_settlement.py`
+  covers matched, variance, unmatched, ambiguity, permutation replay,
+  duplicate rejection, report tamper refusal, CLI execution, and the
+  declarative pack. The pack finds the expected missing-batch and net-variance
+  exceptions on `examples/retail_settlement/csv`.
+- Focused command: `uv run pytest -q tests/test_retail_settlement.py
+  tests/test_module_registry.py tests/test_v03_platform.py --tb=short` -> exit
+  0 (38 tests collected in the current checkout). `uv run ruff check` and
+  `uv run mypy` are required in the final local gate below.
+- Boundary: synthetic/local exports only. No live processor or ERP connector,
+  provider acknowledgement, fraud or settlement-finality decision, statutory
+  posting, write-back, persistence/API/Studio, HA/DR, or production claim is
+  implied.
+- ADR: `docs/adr/0364-retail-pos-settlement-control-slice.md`.
+
+## E-436 — Full local regression and release-tool gates after retail slice
+
+- `uv run pytest -q --tb=short -ra` exits 0 in 343.2 seconds with no
+  collection or executed failure. Declared optional-service/platform skips and
+  existing framework/legacy-input warnings remain visible.
+- `uv run ruff check .` passes; `uv run mypy reconforge` reports no issues in
+  456 source files; `uv run bandit -q -r reconforge` exits cleanly with the
+  repository's existing nosec/comment warnings; `uv run pip-audit
+  --progress-spinner off` reports no known vulnerabilities while excluding the
+  unpublished local distribution; the closed supply-chain policy validator is
+  `status: valid` with zero active exceptions and zero npm integrity-gap
+  entries; and `git diff --check` passes.
+- Boundary: exact local Windows evidence only. It does not replace hosted
+  matrices, live providers/write-back, statutory close, independent HA/DR,
+  distributed IAM, scale/soak, or release approval.

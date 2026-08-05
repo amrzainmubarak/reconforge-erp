@@ -1,0 +1,9 @@
+profile_id: retail-pos-settlement-v1
+name: Retail POS settlement export mapping
+source_system: generic-retail-or-processor-export
+mode: local-read-only
+files:
+  - file: pos_batches.csv
+    required_headers: [batch_id, store_id, business_date, card_sales, card_refunds, cash_sales, cash_refunds, gift_sales, gift_refunds, transaction_count, source_reference]
+  - file: settlements.csv
+    required_headers: [settlement_id, batch_id, store_id, settlement_date, card_gross, refunds, fees, chargebacks, net_settlement, expected_net, provider_reference]

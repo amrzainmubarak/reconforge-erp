@@ -38,6 +38,9 @@ module_ceilings:
   - module_id: reconciliation.core
     maximum_maturity: experimental
     evidence_claim: Deterministic reconciliation
+  - module_id: retail.settlement
+    maximum_maturity: experimental
+    evidence_claim: Experimental retail POS settlement control
   - module_id: studio.modern
     maximum_maturity: experimental
     evidence_claim: React Studio

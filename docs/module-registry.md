@@ -20,6 +20,13 @@ reconforge modules validate
 
 The experimental `inventory.core` entry currently declares migrations 9 through 12: the exact movement ledger, governed count/reorder controls, a bounded FIFO valuation/Finance Core Draft bridge, and exact whole-valuation correction through a separately Posted compensating movement. Reorder remains advisory; valuation and reversal approval never validate Finance Core entries; the registry does not advertise Purchasing, partial/chained reversal, AVCO, landed cost, or ERP writeback as implemented.
 
+The experimental `retail.settlement` entry is an implemented, non-posting
+artifact slice for exported POS batches and processor settlements. It exposes
+exact refunds/fees/chargebacks, unmatched and ambiguous outcomes, and a
+digest-bound report through the local CLI/library. It is not a live processor
+connector, a payment/fraud product, an ERP write-back path, or a complete
+retail module.
+
 ## Maturity and capability are separate
 
 | Field | Allowed values | Meaning |

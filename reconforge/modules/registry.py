@@ -491,6 +491,32 @@ _MODULES = (
         ),
     ),
     ModuleDescriptor(
+        module_id="retail.settlement",
+        name="Retail POS settlement control",
+        version="1.0.0",
+        maturity="experimental",
+        capability_status="implemented",
+        summary=(
+            "Deterministic local reconciliation of exported POS batches and processor settlements with visible "
+            "fees, refunds, chargebacks, unmatched records, and ambiguity."
+        ),
+        default_enabled=False,
+        dependencies=("platform.core",),
+        interfaces=("artifacts", "cli", "library"),
+        import_contracts=("retail-pos-batch-export.v1", "retail-processor-settlement-export.v1"),
+        export_contracts=("retail-settlement-report.v1",),
+        data_classification=("financial-sensitive", "payment-control-data", "source-export-metadata"),
+        retention_note=(
+            "Source exports and reports remain in operator-selected local paths; no processor credentials or "
+            "payment data are transmitted by this module."
+        ),
+        activation_note=(
+            "Run explicitly with two local JSON exports. The slice is non-posting and provider-neutral; it does "
+            "not imply a live card processor, ERP connector, write-back, or settlement finality."
+        ),
+        test_evidence=("tests/test_retail_settlement.py",),
+    ),
+    ModuleDescriptor(
         module_id="studio.modern",
         name="Modern Studio synthetic preview",
         version=__version__,

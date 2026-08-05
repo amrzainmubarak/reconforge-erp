@@ -447,6 +447,15 @@ include docs/schemas/redis_live_report.schema.json
 include docs/execution/REDIS_LIVE_DOCKER_DRILL_2026-08-05.json
 include tests/test_redis_live_report.py
 include docs/adr/0363-live-redis-session-policy-contract-drill.md
+include reconforge/domain/retail_settlement.py
+include reconforge/application/retail_settlement.py
+include reconforge/cli_retail_settlement.py
+include tests/test_retail_settlement.py
+include docs/schemas/retail_settlement_report.schema.json
+include docs/retail-pos-settlement.md
+include docs/adr/0364-retail-pos-settlement-control-slice.md
+recursive-include control-packs/retail-pos-settlement *
+recursive-include examples/retail_settlement *
 include docs/execution/S3_OBJECT_STORAGE_LIVE_DOCKER_DRILL_2026-08-05.json
 include tests/test_current_s3_object_storage_live_report.py
 include docs/adr/0229-durable-job-10k-tier-is-hardware-scoped.md

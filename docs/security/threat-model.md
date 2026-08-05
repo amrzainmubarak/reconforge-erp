@@ -25,9 +25,10 @@ deployed control operates continuously.
 | `connectors.boundary` | Platform Security | CAMT.053 statements, normalized payment pages, connector manifests, endpoint policy, credential references; file ingress, optional network, build | Offline XML and provider-neutral connector bounds are tested; source authenticity, provider identity, live vendor conformance, payment/write-back, and deployment isolation remain partial or deployment-dependent |
 | `packs.lifecycle` | Platform Security | signed declarative packs, publisher keys, approvals, immutable versions, lifecycle events; file ingress, local storage, build | Closed data-only signatures, maker-checker, compatibility, disable, and rollback are synthetic/local; legal publisher identity, production trust administration, distributed activation, and business-effectiveness assurance remain absent |
 | `plugins.export` | Platform Security | built-in adapter registry, local exports, canonical projections; file ingress, local storage, build | Allowlisted built-in CSV reads share bounded preflight and signed manifest-only network foundations are synthetic; malware assurance, production credentials, vendor interoperability, distributed quotas, and writeback are absent |
+| `retail.settlement` | Platform Security | exported POS/processor records, exact settlement decisions, input fingerprints, digest-bound reports; file ingress, local storage, disclosure | Exact non-posting arithmetic, ambiguity, duplicate, unmatched, and tamper controls are bounded locally; provider authenticity, settlement finality, fraud, posting, write-back, persistence/API/Studio, and production operation remain outside the slice |
 | `studio.modern` | Evidence Security | marked synthetic contracts, frontend build, rendering, screenshots; disclosure and build | Synthetic/read-only guards are bounded; edited artifacts, browser storage, recipients, provenance, and public hosting remain outside assurance |
 
-All eleven modules are `experimental` in the runtime registry. The index cannot
+All twelve modules are `experimental` in the runtime registry. The index cannot
 promote that maturity: every entry is `evidence-bounded`, and every module has
 at least one `partial`, `deployment-dependent`, or `planned` threat case.
 

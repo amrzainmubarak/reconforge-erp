@@ -4357,3 +4357,33 @@
   independent HA/DR, distributed IAM, scale/soak, or release approval follows.
 - **Rollback**: Supersede E-434 with the next exact-environment regression; no
   runtime/data rollback is required.
+
+### D-346: Add an export-based retail POS settlement slice
+
+- **Date**: 2026-08-05
+- **Decision**: Deliver the first retail breadth use case as an experimental,
+  non-posting, local export control. Keep provider connectivity and accounting
+  effects outside the slice until separately evidenced.
+- **Verification**: Exact Money/tolerance arithmetic, refunds/fees/chargebacks,
+  missing/duplicate/ambiguous records, permutation-stable decision digest,
+  digest-bound report/tamper refusal, local CLI, synthetic JSON/CSV fixtures,
+  module registry, and declarative pack tests pass.
+- **Boundary**: No live processor/ERP interoperability, settlement finality,
+  fraud assessment, journal posting, write-back, persistence/API/Studio,
+  HA/DR, or complete retail breadth claim follows.
+- **Rollback**: Remove the E-435 slice files and registry entry in one reviewed
+  commit; existing reconciliation, connector, and inventory modules remain
+  independent.
+
+### D-347: Retain the post-retail local gate as bounded evidence
+
+- **Date**: 2026-08-05
+- **Decision**: Record the full local regression and static/package/security
+  tools after E-435, while keeping hosted and external-service gates separate.
+- **Verification**: Pytest exits 0 in 343.2s; Ruff, Mypy (456 files), Bandit,
+  pip-audit, supply-chain validation, package build, and diff-check pass.
+- **Boundary**: The local pip-audit project exclusion, declared service skips,
+  existing warnings, hosted matrices, live providers, independent recovery,
+  distributed IAM, scale/soak, and publication remain unresolved.
+- **Rollback**: Supersede E-436 with the next exact-environment run; no runtime
+  or data rollback is required.

@@ -1850,7 +1850,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - **Phase 1 (Foundation)**: `docs/execution/PHASE_1_EXIT_AUDIT.yaml` remains `verified`. All required gates and backend-neutrality/operational evidence are closed within the declared scope.
 - **Phase 2 (Matching & Evidence 2.0)**: `docs/execution/PHASE_2_EXIT_AUDIT.yaml` remains `verified`. Deterministic matching, evidence graph, reconciliation-as-code, and benchmark evidence are closed within the declared single-process/declared benchmark limits.
 - **Phase 3 (Enterprise Product)**: required owner/team scope is `13/13` completed at its documented bounded maturity. `P3-ENT-013` is closed by E-251. `P3-EXT-001` and `P3-EXT-002` are deferred optional assurance items and are not release blockers.
-- **Phase 4 (Global Capability Expansion)**: eight tracked tasks cover the seven owner-requested workstreams. `P4-FIN-001` is complete at its bounded translation-artifact scope and remotely green on Draft PR #67. `P4-FIN-002`, `P4-MAT-001`, and `P4-SCL-001` are active; live connectors/write-back, independent-domain HA/DR, complex enterprise policy, and coherent platform breadth remain planned, not complete.
+- **Phase 4 (Global Capability Expansion)**: the seven owner-requested workstreams remain active. `P4-FIN-001` is complete at its bounded translation-artifact scope; `P4-FIN-002`, `P4-MAT-001`, and `P4-SCL-001` remain active; live connectors/write-back, independent-domain HA/DR, complex enterprise policy, and complete coherent breadth remain open. E-435 delivers the first experimental retail POS settlement slice, not the breadth exit gate.
 - The complete required Phase 1–3 scope is `41/41`; external evidence remains unverified and must not be claimed.
 - PR #66's earlier optional-dependency, PostgreSQL harness/registry, and Gitleaks failures were repaired and remotely verified on the Phase 1–3 head. P4-FIN-001 is remotely green on Draft PR #67. The initial P4-FIN-002 worksheet candidate is remotely green on stacked Draft PR #68; every later head still requires its own exact remote verification before merge consideration.
 - A historical Docker-API connectivity block was recorded on 2026-07-31 for one run of `verify_postgres_reliability.py`, `verify_postgres_ha_dr.py`, and `verify_otel_collector_distribution.py`; later reruns in the same session completed successfully (`E-227` to `E-228`, `E-224` to `E-226`). Explicit production-readiness and claim limits remain, but optional external assurance does not block the owner/team release path.
@@ -4388,3 +4388,38 @@ publication and remote GitHub verification before a release Go decision.
 - Boundary: local compatibility only. Hosted Python/security/Docker matrices,
   statutory close, live vendors/write-back, independent HA/DR, distributed
   IAM, scale/soak, and release approval remain unverified.
+
+## E-435 — Experimental retail POS settlement vertical slice
+
+- Added the typed `retail-pos-settlement-v1` domain/application boundary for
+  exported POS batches and processor settlements. Exact Money values, one
+  currency per run, fees, refunds, chargebacks, scope mismatch, duplicate and
+  unmatched detection, ambiguity refusal, tolerance decisions, deterministic
+  ordering, input fingerprints, and decision digests are explicit.
+- Added the local `reconforge retail settlement settlement-run` CLI, a closed
+  digest-bound report schema, synthetic JSON/CSV fixtures, and the
+  `retail-pos-settlement` declarative control pack. Runtime registry entry
+  `retail.settlement` is experimental/implemented and has no database or
+  network dependency because this first slice is export-based and non-posting.
+- Focused retail/module/rules tests pass. The pack finds the expected
+  missing-batch and net-variance exceptions; permutation replay produces the
+  same decision digest; report tampering is rejected.
+- Boundary: this does not prove live processor or ERP interoperability,
+  settlement finality, fraud controls, statutory posting, write-back, API/UI
+  persistence, HA/DR, production availability, or complete retail breadth.
+- ADR: `docs/adr/0364-retail-pos-settlement-control-slice.md`.
+
+## E-436 — Full local regression and release-tool gates after retail slice
+
+- `uv run pytest -q --tb=short -ra` exits 0 in 343.2 seconds. No collection
+  or executed test failure occurred; optional PostgreSQL/Redis/S3 and Windows
+  capability skips remain declared, and existing Starlette/legacy financial
+  input warnings remain visible.
+- `uv run ruff check .`, `uv run mypy reconforge` (456 source files),
+  `uv run bandit -q -r reconforge`, `uv run pip-audit --progress-spinner off`,
+  the closed supply-chain policy validator, and `git diff --check` pass. The
+  pip audit excludes the unpublished local distribution and reports no known
+  vulnerabilities for auditable packages.
+- Boundary: local evidence only. Hosted Python/security/Docker/browser gates,
+  live processor/ERP write-back, statutory close, independent HA/DR,
+  distributed IAM, scale/soak, and GitHub publication remain open.

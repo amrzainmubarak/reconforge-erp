@@ -1,0 +1,4 @@
+batch_id,store_id,business_date,card_sales,card_refunds,cash_sales,cash_refunds,gift_sales,gift_refunds,transaction_count,source_reference
+POS-100,STORE-01,2026-08-04,100.00,5.00,20.00,0.00,0.00,0.00,12,pos-export-2026-08-04-01
+POS-101,STORE-01,2026-08-04,50.00,0.00,10.00,0.00,0.00,0.00,6,pos-export-2026-08-04-02
+POS-102,STORE-02,2026-08-04,30.00,0.00,0.00,0.00,0.00,0.00,3,pos-export-2026-08-04-03

@@ -1232,11 +1232,29 @@ tasks:
       - E-419 adds an optional central-policy supplier to the PostgreSQL reconciliation worker. Configured workers require a service-account actor match and exact tenant-only scope before discovery and claim, with denial before connection access. Focused worker-policy tests pass 2/2 and the complete worker contract file passes 15 tests with one declared skip under ADR 0357. The current schema has no workspace/entity scope; universal worker/export/UI adoption, revocation, federation, distributed invalidation, providers, independent HA/DR, and production IAM remain open.
       - E-420 reruns the complete local pytest suite after E-419: exit 0 in 324.6s with declared skips and existing warnings only. This is local regression evidence for the optional PostgreSQL worker policy boundary; hosted matrices, external providers/write-back, statutory close, independent HA/DR, distributed IAM, scale, breadth, and production approval remain open.
 
+  - id: E-435
+    priority: P4
+    area: platform_breadth
+    title: Experimental retail POS settlement vertical slice
+    status: completed
+    depends_on: [P4-PLAT-001]
+    exit_evidence: Typed retail-pos-settlement-v1 domain/application boundary, deterministic Money/tolerance/variance decisions, local CLI, digest-bound schema/report, synthetic JSON/CSV fixtures, declarative control pack, module registry entry, focused replay/tamper/ambiguity tests, ADR 0364, and explicit non-posting/live-provider limits.
+
+  - id: E-436
+    priority: P0
+    area: quality
+    title: Full local regression and release-tool gates after retail slice
+    status: completed
+    depends_on: [E-435]
+    exit_evidence: Full pytest exits 0 in 343.2s; Ruff, Mypy across 456 source files, Bandit, pip-audit with explicit unpublished-project exclusion, supply-chain policy validation, package build, and diff-check pass; optional service skips and existing warnings remain visible.
+
   - id: P4-PLAT-001
     priority: P4
     area: platform_breadth
     goal_workstream: coherent_platform_breadth
     title: Coherent modular platform breadth
-    status: planned
+    status: in_progress
     depends_on: [P4-FIN-002, P4-MAT-001, P4-CON-001, P4-SCL-001, P4-REL-001, P4-IAM-001]
     exit_evidence: Every delivered bounded context has a versioned runtime manifest, invariants, ports/adapters, migrations where stateful, permissions, audit/evidence, synthetic fixtures, UI/API/CLI where needed, rollback, performance/security tests, and evidence-bounded claims without weakening Community local-first operation.
+    completed_slices:
+      - E-435 adds the experimental `retail.settlement` runtime module and `retail-pos-settlement-v1` export-based control. It includes exact Money arithmetic, fees/refunds/chargebacks, unmatched and ambiguous outcomes, deterministic replay, a digest-bound report, local CLI, synthetic fixtures, a declarative pack, and focused security/tamper tests. It is a bounded non-posting slice; complete retail persistence/API/Studio, live provider conformance, operational evidence, and the full breadth exit gate remain open.

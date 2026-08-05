@@ -701,6 +701,56 @@ modules:
     out_of_scope:
       - Live vendor interoperability, production credential-vault integration, arbitrary plugin loading, writeback, distributed quotas, and external executable connector installation.
 
+  - module_id: retail.settlement
+    registry_maturity: experimental
+    capability_status: implemented
+    threat_model_status: evidence-bounded
+    owner: platform-security
+    interfaces: [artifacts, cli, library]
+    module_data_classifications: [financial-sensitive, payment-control-data, source-export-metadata]
+    architecture_boundaries: [TB-001, TB-003, TB-007]
+    assets:
+      - id: retail-pos-and-settlement-exports
+        description: Operator-selected POS batches and processor settlement exports used by the local control.
+        data_class: DC-003
+        objectives: [confidentiality, integrity, availability]
+      - id: retail-settlement-report-and-digests
+        description: Non-posting settlement decisions, input fingerprints, tolerance policy, and replay digests.
+        data_class: DC-005
+        objectives: [integrity, auditability]
+    actors: [ACT-001, ACT-002, ACT-003, ACT-006]
+    threat_cases:
+      - threat_id: TM-T-001
+        status: partial
+        attack_surface: JSON/CSV exports, identifiers, exact amounts, dates, paths, and report verification.
+        controls: [SEC-C-001, SEC-C-002]
+        test_evidence: [tests/test_retail_settlement.py, tests/test_file_ingestion_inventory.py]
+        residual_risk_ids: [R-018]
+        limitations:
+          - Bounded local ingress rejects malformed structures and resource abuse, but it does not authenticate provider origin or scan for malware.
+      - threat_id: TM-T-002
+        status: bounded
+        attack_surface: Currency policy, fees, refunds, chargebacks, tolerance, duplicate identities, and decision ordering.
+        controls: [SEC-C-005, SEC-C-006]
+        test_evidence: [tests/test_retail_settlement.py, tests/test_v03_platform.py]
+        residual_risk_ids: [R-003]
+        limitations:
+          - Exact arithmetic and replay digests do not establish the business correctness or completeness of a processor export.
+      - threat_id: TM-T-006
+        status: deployment-dependent
+        attack_surface: Digest-bound JSON reports, source fingerprints, output paths, and external recipients.
+        controls: [SEC-C-006, SEC-C-007]
+        test_evidence: [tests/test_retail_settlement.py]
+        residual_risk_ids: [R-014, R-017]
+        limitations:
+          - Hashes are not signatures and the module does not authorize disclosure, retention, or downstream posting.
+    module_test_evidence: [tests/test_retail_settlement.py, tests/test_file_ingestion_inventory.py, tests/test_v03_platform.py]
+    assumptions:
+      - Operators provide authorized exports and independently review provider references, fees, refunds, and chargebacks.
+      - The control remains non-posting and no processor credential or network endpoint is configured through this module.
+    out_of_scope:
+      - Live processor/ERP connectors, settlement finality, fraud controls, statutory posting, write-back, persistence/API/Studio, HA/DR, and production availability.
+
   - module_id: studio.modern
     registry_maturity: experimental
     capability_status: foundation

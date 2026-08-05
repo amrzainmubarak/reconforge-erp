@@ -1,0 +1,9 @@
+model_id: retail-pos-settlement-risk-v1
+classification:
+  critical: 90
+  high: 75
+  medium: 45
+  low: 0
+notes:
+  - Scores are triage metadata, not a fraud decision or provider settlement approval.
+  - A human reviewer must resolve every critical or high exception.

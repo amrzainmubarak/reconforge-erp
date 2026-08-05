@@ -4537,3 +4537,6 @@ zero high-or-worse audit findings, typecheck, 55 unit/component tests, productio
 build, and 11 Playwright paths. Five Playwright paths remain explicit skips for
 live hosting/session configuration, so deployed HTTPS and hosted browser evidence
 are still open.
+The current locked Python 3.12 engine/golden selection also passes 55/55 tests
+without skips. This is a single current-compatible environment and does not
+replace the four lower-bound/current hosted matrix cells.

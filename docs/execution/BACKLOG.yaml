@@ -1352,6 +1352,14 @@ tasks:
     depends_on: [E-448]
     exit_evidence: With Node 26.3.0/npm 11.16.0, `npm --prefix apps/web ci`, `npm audit --package-lock-only --audit-level=high`, typecheck, 55 Vitest tests, and production build all pass with zero reported vulnerabilities. Playwright runs 11 tests passed and 5 declared live-hosting/session tests skipped because their external service is not configured. This is local frontend evidence, not hosted browser attestation or deployed HTTPS evidence.
 
+  - id: E-450
+    priority: P0
+    area: quality
+    title: Current engine and golden-dataset parity gate
+    status: completed
+    depends_on: [E-449]
+    exit_evidence: On the current locked Python 3.12 environment, the no-skip engine/golden selection (`test_engine_signature.py`, `test_generator_benchmark_engines.py`, `test_matching_properties.py`, `test_matching_ambiguity.py`, `test_golden_finance_datasets.py`) passes all 55 collected tests with no skipped result. This is one current-compatible environment; the four hosted lower-bound/current Python matrix cells remain external evidence.
+
   - id: P4-PLAT-001
     priority: P4
     area: platform_breadth

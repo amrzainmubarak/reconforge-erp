@@ -13858,3 +13858,12 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   federation, distributed invalidation, providers, independent HA/DR, and
   production IAM assurance remain open.
 - ADR: `docs/adr/0357-postgres-reconciliation-worker-policy-boundary.md`.
+
+## E-420 — Final local gates after PostgreSQL worker policy boundary
+
+- `uv run pytest -q --tb=short` exits 0 in 324.6 seconds with declared skips
+  and existing deprecation/legacy-input warnings only. The complete suite
+  covers the changed worker and all repository compatibility contracts.
+- This is local regression evidence only; hosted matrices, external
+  providers/write-back, statutory close, independent HA/DR, distributed IAM,
+  scale, breadth, and production approval remain open.

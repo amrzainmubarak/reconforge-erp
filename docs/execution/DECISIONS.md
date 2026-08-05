@@ -4107,3 +4107,15 @@
   independent HA/DR, and production IAM remain open.
 - **Rollback**: Do not configure the optional supplier; no schema or data
   rollback is required.
+
+### D-329: Record the final local gate after PostgreSQL worker policy adoption
+
+- **Date**: 2026-08-05
+- **Decision**: Record E-420 as the complete local regression result for the
+  optional PostgreSQL reconciliation worker policy boundary.
+- **Verification**: Pytest exits 0 in 324.6s with declared skips; the changed
+  worker and existing repository compatibility contracts all pass.
+- **Boundary**: This does not promote hosted, provider/write-back, statutory,
+  independent-HA/DR, distributed-IAM, scale, breadth, or production claims.
+- **Rollback**: Supersede E-420 with a later gate record; no runtime/schema
+  rollback is required.

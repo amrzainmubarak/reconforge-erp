@@ -158,6 +158,16 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   independent HA/DR, and production IAM assurance remain open.
 - ADR: `docs/adr/0357-postgres-reconciliation-worker-policy-boundary.md`.
 
+## E-420 — Final local gates after PostgreSQL worker policy boundary (passed)
+
+- `uv run pytest -q --tb=short` -> exit 0 in 324.6 seconds with declared
+  skips and existing deprecation/legacy-input warnings only.
+- This full local regression confirms the optional worker policy path does not
+  break existing reconciliation, PostgreSQL contracts, or compatibility
+  surfaces. Hosted matrices, external providers/write-back, statutory close,
+  independent HA/DR, distributed IAM, scale, breadth, and production approval
+  remain unverified.
+
 ## E-403 — Full local post-E-402 quality gates (passed)
 
 - `uv run pytest -q --tb=short` -> exit 0 in 330.3 seconds; only declared

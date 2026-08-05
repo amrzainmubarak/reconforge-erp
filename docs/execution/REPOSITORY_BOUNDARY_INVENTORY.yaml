@@ -85,6 +85,10 @@ application_services:
     service: DurableJobWorkerService
     status: backend_neutral
     adapter: reconforge.infrastructure.sqlite_jobs.SQLiteDurableJobRepository
+  - file: jobs.py
+    service: GovernedDurableJobWorkerService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_jobs.SQLiteDurableJobRepository
   - file: metrics.py
     service: MetricsApplicationService
     status: backend_neutral
@@ -198,4 +202,4 @@ summary:
   direct_sqlite: 0
   partial_repository: 0
   compatibility_adapter: 20
-  backend_neutral_application: 41
+  backend_neutral_application: 42

@@ -4060,3 +4060,33 @@
   authorize GitHub publication.
 - **Rollback**: Supersede E-416 with a later gate record; no runtime or
   migration rollback is required.
+
+### D-326: Govern durable-worker claim authorization
+
+- **Date**: 2026-08-05
+- **Decision**: Add an opt-in worker facade that evaluates central policy before
+  a durable-job claim and requires a service-account identity matching the
+  worker id plus exact tenant/workspace/entity scope.
+- **Rationale**: Route-level authorization does not protect a worker process
+  that calls the lease primitive directly; the claim boundary is the smallest
+  reversible adoption point that preserves Community compatibility.
+- **Verification**: ADR 0356 and `tests/test_governed_worker_policy.py` pass
+  3/3; denied claims leave the queued job and lease-event history unchanged,
+  while a scoped `match.run` service identity claims exactly one job.
+- **Boundary**: This is not universal worker/export/UI adoption, distributed
+  invalidation, federation, live provider, HA/DR, or production IAM evidence.
+- **Rollback**: Stop wrapping workers with the facade; no schema or data
+  rollback is required.
+
+### D-327: Record the final local gate after governed worker adoption
+
+- **Date**: 2026-08-05
+- **Decision**: Record E-418 as local full-suite/package evidence while keeping
+  hosted, external-provider, statutory, independent-HA/DR, distributed-IAM,
+  scale, breadth, and production-release claims separate.
+- **Verification**: Pytest exits 0 in 323.9s; repository inventories, Ruff,
+  and Mypy pass. Existing declared skips and warnings remain visible.
+- **Boundary**: The green local gate does not complete the global objective or
+  authorize GitHub publication.
+- **Rollback**: Supersede E-418 with a later gate record; no runtime or schema
+  rollback is required.

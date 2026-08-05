@@ -139,6 +139,7 @@ boundaries:
   - {file: jobs.py, service: DurableJobApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_jobs.PostgresDurableJobRepository, test: tests/test_postgres_durable_jobs.py, risk: single_node_no_queue_ha_or_soak}
   - {file: jobs.py, service: GovernedDurableJobApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_jobs.PostgresDurableJobRepository, test: tests/test_postgres_durable_jobs.py, risk: policy_wrapper_is_opt_in_and_route_federation_cache_coverage_remains_open}
   - {file: jobs.py, service: DurableJobWorkerService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_jobs.PostgresDurableJobRepository, test: tests/test_postgres_durable_jobs.py, risk: single_node_no_queue_ha_or_soak}
+  - {file: jobs.py, service: GovernedDurableJobWorkerService, status: not_applicable, reason: policy_facade_reuses_the_underlying_worker_adapter_and_has_no_backend_specific_persistence}
   - {file: writeback.py, service: WritebackIntentApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_writeback.PostgresWritebackIntentRepository, test: tests/test_postgres_writeback.py, api_test: tests/test_api_connectors.py, api_result: contract_only, risk: intent_persistence_and_server_route_contract_only_no_live_provider_or_network_writeback}
   - {file: metrics.py, service: MetricsApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_metrics.PostgresMetricsRepository, test: tests/test_application_metrics.py}
   - {file: outbox.py, service: OutboxApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_outbox.TenantBoundPostgresOutboxRepository, test: tests/test_postgres_outbox.py, risk: delivery_critical}
@@ -168,9 +169,9 @@ boundaries:
   - {file: inventory_valuation_reversal.py, service: InventoryValuationReversalApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_valuation_reversal.PostgresInventoryValuationReversalRepository, test: tests/test_postgres_inventory_valuation_reversal.py, risk: financial_critical}
   - {file: inventory_planning.py, service: InventoryPlanningApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_planning.PostgresInventoryPlanningRepository, test: tests/test_postgres_inventory_planning.py, risk: financial_high}
 summary:
-  total: 41
+  total: 42
   live_verified_current: 17
   live_test_available: 21
   absent: 0
   contract_only: 1
-  not_applicable: 2
+  not_applicable: 3

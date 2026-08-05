@@ -118,6 +118,30 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   providers/write-back, statutory close, independent HA/DR, distributed IAM,
   scale/soak, coherent breadth, and production approval remain open.
 
+## E-417 — Governed durable-worker claim boundary (passed locally)
+
+- Added the opt-in `GovernedDurableJobWorkerService` facade. Before a durable
+  worker claims a lane, it requires a central permission decision, a
+  `service_account` principal, worker-id identity equality, and exact
+  tenant/workspace/entity agreement. Denials occur before the repository claim;
+  allowed decisions emit sanitized policy-audit metadata.
+- `uv run pytest -q tests/test_governed_worker_policy.py --tb=short` -> 3
+  passed. Ruff and Mypy pass for the changed worker/application test surface.
+- Boundary: this is an explicit worker claim boundary, not universal worker,
+  export, or UI adoption. Re-evaluation after revocation, distributed cache
+  invalidation, federation, provider integration, independent HA/DR, and
+  production IAM assurance remain open.
+- ADR: `docs/adr/0356-governed-durable-worker-claim-boundary.md`.
+
+## E-418 — Final local gates after governed worker boundary (passed)
+
+- `uv run pytest -q --tb=short` -> exit 0 in 323.9 seconds with declared
+  skips and existing deprecation/legacy-input warnings only.
+- Ruff, Mypy (448 source files), and the repository boundary/parity inventories
+  pass after registering the new policy facade. The full gate remains local
+  evidence and does not promote hosted, provider, statutory, independent
+  HA/DR, distributed-IAM, scale, breadth, or production claims.
+
 ## E-403 — Full local post-E-402 quality gates (passed)
 
 - `uv run pytest -q --tb=short` -> exit 0 in 330.3 seconds; only declared

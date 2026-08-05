@@ -5,7 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from reconforge.auth.policy import CentralPolicyEngine, PolicyDecision, PolicyEvaluationContext
+from reconforge.auth.policy import (
+    CentralPolicyEngine,
+    PolicyDecision,
+    PolicyEvaluationContext,
+    audit_policy_decision,
+)
 from reconforge.domain.jobs import (
     DurableJob,
     DurableJobBackpressureError,
@@ -570,6 +575,7 @@ class DurableJobWorkerService:
             release_lease=True,
         )
 
+
     def schedule_retry(self, leased_job: LeasedJob, *, occurred_at: str) -> DurableJob:
         return self._finish_with_status(
             leased_job,
@@ -632,6 +638,100 @@ class DurableJobWorkerService:
             lease=leased_job.lease,
             release_lease=True,
         )
+
+
+class GovernedDurableJobWorkerService:
+    """Policy-gated facade for server-profile durable-job workers.
+
+    The existing worker service remains a backend-neutral lease primitive.  This
+    facade is an explicit adoption boundary for deployments that run workers as
+    service identities: a claim is denied before the repository is touched when
+    the principal is not a service account, the requested scope does not match
+    the policy context, or the central permission is absent. Lease fencing still
+    protects subsequent writes; callers should re-evaluate policy at their
+    deployment's claim boundary when permissions are changed.
+    """
+
+    def __init__(
+        self,
+        worker: DurableJobWorkerService,
+        *,
+        policy_engine: CentralPolicyEngine | None = None,
+    ) -> None:
+        self._worker = worker
+        self._policy = policy_engine or CentralPolicyEngine()
+
+    def claim(
+        self,
+        *,
+        tenant_id: str,
+        workspace_id: str | None = None,
+        entity_id: str | None = None,
+        worker_id: str,
+        occurred_at: str,
+        lease_expires_at: str,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+        request_id: str = "",
+    ) -> LeasedJob | None:
+        """Authorize one scoped claim, then delegate to the lease primitive."""
+
+        self._authorize(
+            policy_context,
+            worker_id=worker_id,
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+            entity_id=entity_id,
+            required_permission=required_permission,
+            request_id=request_id,
+        )
+        return self._worker.claim(
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+            entity_id=entity_id,
+            worker_id=worker_id,
+            occurred_at=occurred_at,
+            lease_expires_at=lease_expires_at,
+        )
+
+    def _authorize(
+        self,
+        context: PolicyEvaluationContext,
+        *,
+        worker_id: str,
+        tenant_id: str,
+        workspace_id: str | None,
+        entity_id: str | None,
+        required_permission: str,
+        request_id: str,
+    ) -> PolicyDecision:
+        if not required_permission.strip():
+            raise JobAuthorizationError("worker permission contract is missing")
+        if context.principal_type != "service_account":
+            raise JobAuthorizationError("durable workers require a service-account principal")
+        if context.user_id != worker_id:
+            raise JobAuthorizationError("worker actor does not match policy identity")
+        if context.tenant_id != tenant_id or context.workspace_id != workspace_id:
+            raise JobAuthorizationError("worker policy scope does not match claim scope")
+        if context.entity_id is not None and context.entity_id != entity_id:
+            raise JobAuthorizationError("worker policy entity does not match claim scope")
+        decision = self._policy.evaluate(
+            context,
+            required_permission=required_permission.strip(),
+            enforce_sod=False,
+            enforce_ownership=False,
+        )
+        audit_policy_decision(
+            decision,
+            actor_id=context.user_id,
+            required_permissions=frozenset({required_permission.strip()}),
+            surface="durable-job.worker.claim",
+            request_id=request_id,
+            principal_type=context.principal_type,
+        )
+        if not decision.allowed:
+            raise JobAuthorizationError(f"worker policy denied: {decision.reason_code}")
+        return decision
 
 
 class RoundRobinDurableJobScheduler:

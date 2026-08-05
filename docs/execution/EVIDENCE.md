@@ -13818,3 +13818,27 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - This remains one-workstation local evidence and does not promote hosted,
   provider/write-back, statutory, independent-HA/DR, distributed-IAM, scale,
   breadth, or production claims.
+
+## E-417 — Governed durable-worker claim boundary
+
+- `GovernedDurableJobWorkerService` is an opt-in facade around the durable-job
+  lease primitive. It requires a central permission decision, a
+  `service_account` principal whose identity matches `worker_id`, and exact
+  tenant/workspace/entity agreement before calling the repository. Denied
+  claims emit no lease and only sanitized policy-audit metadata is recorded.
+- `uv run pytest -q tests/test_governed_worker_policy.py --tb=short` -> 3
+  passed; Ruff and Mypy pass for the changed worker/application surface.
+- Boundary: this is a bounded worker claim control, not universal worker,
+  export, or UI adoption; distributed invalidation, federation, live providers,
+  independent HA/DR, and production IAM assurance remain open.
+- ADR: `docs/adr/0356-governed-durable-worker-claim-boundary.md`.
+
+## E-418 — Final local gates after governed worker boundary
+
+- `uv run pytest -q --tb=short` exits 0 in 323.9 seconds with declared skips
+  and existing deprecation/legacy-input warnings only. The repository-boundary
+  and PostgreSQL parity inventories include the new facade and remain exact.
+- Ruff, Mypy (448 source files), and the focused worker/inventory contracts
+  pass. This is local regression evidence only; hosted matrices, external
+  providers/write-back, statutory close, independent HA/DR, distributed IAM,
+  scale, breadth, and production approval remain open.

@@ -4516,6 +4516,35 @@
   multi-host fairness, soak, queue HA, host-loss, and RPO/RTO remain open.
 - **Rollback**: Supersede this evidence with a later exact-profile run; no
   runtime or data rollback is required.
+
+### D-355: Re-run the complete local suite after connector and scale changes
+
+- **Date**: 2026-08-06
+- **Decision**: Require and record a complete local pytest run after the
+  public no-auth/query-preserving connector and PostgreSQL grouped-matching
+  evidence changes before any release-candidate discussion.
+- **Verification**: `uv run --no-sync pytest -q --tb=short -ra` exits 0 in
+  379.8s. No executed test failed; PostgreSQL/Redis capability skips and
+  existing framework/legacy-input warnings remain explicit.
+- **Boundary**: Local compatibility only; hosted Python/security/Docker/
+  browser matrices, live provider availability, independent HA/DR, and
+  publication approval remain external.
+- **Rollback**: Supersede E-458 with the next exact-environment full run; no
+  runtime or data rollback is required.
+
+### D-356: Require the final local static and package gate
+
+- **Date**: 2026-08-06
+- **Decision**: Treat the current revision as locally regression-clean only
+  after static analysis, dependency audit, supply-chain policy, package build,
+  and diff checks pass after E-458.
+- **Verification**: Ruff, Mypy over 465 source files, Bandit, OSV pip-audit
+  after one retried TLS transport failure, supply-chain policy validation,
+  package build, and `git diff --check` all pass.
+- **Boundary**: This does not attest hosted CI/security/provenance, external
+  providers, independent HA/DR, production operations, or publication approval.
+- **Rollback**: Supersede E-459 with the next exact lock/source gate; no
+  runtime or data rollback is required.
 # ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
 
 Implemented and bounded the `professional.invoice-payment` module. It is local,

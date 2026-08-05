@@ -4582,3 +4582,12 @@ tree. Treasury and World Bank isolated fetches were reachable, but the pinned
 OpenDataNI March 2026 artifact returned HTTP 403, so the complete experiment was
 not counted as passed. E-444 remains the last complete public-data run; this is
 external source-availability drift, not evidence of a code regression.
+The subsequent full local regression after these changes exits 0 in 379.8s.
+No executed test failed; declared PostgreSQL/Redis capability skips and existing
+framework/legacy-input warnings remain visible. This is current local
+compatibility evidence only, not hosted matrix or release approval.
+The final local static/security/package gate is also green: Ruff, Mypy over
+465 source files, Bandit, OSV pip-audit after a successful retry, the closed
+supply-chain validator, package build, and diff-check all pass. Existing
+Bandit suppression warnings remain visible; hosted security/provenance and
+release approval remain external.

@@ -1408,6 +1408,22 @@ tasks:
     depends_on: [E-455]
     exit_evidence: On PostgreSQL 17.10, isolated disposable databases with the non-privileged `reconforge_app` role passed the exact grouped-matching 500-partition profile in 67.9s and the 10K-partition profile in 336.2s. The 10K run completed 1,000 runs and 10,000 partitions across all five declared modes with 24,000 expected result rows, zero duplicate identities, zero failed runs, and zero active runs; both databases were removed after verification. This is bounded single-host synthetic correctness/concurrency evidence, not production throughput, soak, queue HA, host-loss, cross-host fairness, RPO/RTO, or capacity sizing.
 
+  - id: E-458
+    priority: P0
+    area: quality
+    title: Current full local regression after connector and scale evidence
+    status: completed
+    depends_on: [E-456]
+    exit_evidence: Full `uv run --no-sync pytest -q --tb=short -ra` exits 0 in 379.8s after the governed public-network connector and PostgreSQL grouped-matching evidence changes. Declared PostgreSQL/Redis capability skips and existing framework/legacy-input warnings remain visible; this is local regression evidence and does not replace hosted matrices or external release approval.
+
+  - id: E-459
+    priority: P0
+    area: quality
+    title: Final local static security dependency and package gate
+    status: completed
+    depends_on: [E-458]
+    exit_evidence: Ruff passes; Mypy reports no issues in 465 source files; Bandit exits 0 with existing reviewed nosec/comment warnings; pip-audit OSV retry reports no known vulnerabilities; the closed supply-chain validator reports status valid with zero active exceptions and zero npm integrity gaps; package build and git diff check pass. Initial OSV TLS EOF was retried successfully and is recorded as transport noise, not as a vulnerability result. Hosted security/provenance/release approval remain external.
+
   - id: P4-PLAT-001
     priority: P4
     area: platform_breadth

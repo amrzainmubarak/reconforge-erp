@@ -13739,3 +13739,12 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   Docker containers are not independent hosts and no live automatic failover,
   external fencing, wall-clock RPO/RTO, or production HA claim is made.
 - ADR: `docs/adr/0352-ha-dr-witness-is-not-a-voter.md`.
+
+## E-410 — Final local gates after HA/DR safety hardening
+
+- `uv run pytest -q --tb=short` exits 0 in 326.3 seconds after the quorum
+  invariant change. Ruff, Mypy (448 source files), Bandit, pip-audit, package
+  build, and `git diff --check` also pass.
+- This closes the local regression/package gate for the current tree only. It
+  does not promote hosted matrices, provider/write-back, statutory, live
+  independent-HA/DR, distributed-IAM, scale, or production evidence.

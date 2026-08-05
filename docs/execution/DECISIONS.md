@@ -3959,3 +3959,16 @@
   failover, external fencing, wall-clock RPO/RTO, or production HA claim.
 - **Rollback**: Remove the checks, tests, ADR, manifest and execution records;
   no schema or data rollback is needed.
+
+### D-319: Record the final local gate after HA/DR hardening
+
+- **Date**: 2026-08-05
+- **Decision**: Record E-410 as local regression/package evidence without
+  treating it as hosted release approval or completion of the global objective.
+- **Verification**: Pytest exits 0 in 326.3s; Ruff, Mypy (448 files), Bandit,
+  pip-audit, build, and diff-check pass.
+- **Boundary**: External providers/write-back, statutory close, independent
+  HA/DR, distributed IAM, scale/soak, breadth, and production approval remain
+  open.
+- **Rollback**: Supersede E-410 with a later gate record; no runtime or
+  migration rollback is required.

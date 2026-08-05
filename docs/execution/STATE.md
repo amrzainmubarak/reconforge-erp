@@ -57,6 +57,17 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   data/key. Independent failure domains, quorum/witness, automatic failover,
   site-loss recovery, and production SLO remain unverified.
 
+## E-427 — Hosted scheduler/outbox central-policy boundary (passed locally)
+
+- Added the shared `require_service_worker_policy` guard and opt-in settings
+  fields to the PostgreSQL scheduler and transactional-outbox workers.
+- Configured workers now require a matching service-account actor, exact
+  tenant-only scope, and `schedule.run`/`outbox.publish` before opening a
+  repository connection. Focused allow/deny contracts pass 4/4.
+- Existing unconfigured worker and Community/SQLite behavior remains
+  compatible. Universal worker/export/UI adoption, workspace/entity worker
+  scope, federation, distributed invalidation, and production IAM remain open.
+
 ## E-407 — Acquisition deferred-tax bridge (passed locally)
 
 - Added `acquisition-deferred-tax-bridge-v1`, a deterministic non-posting

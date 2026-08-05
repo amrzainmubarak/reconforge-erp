@@ -13967,3 +13967,21 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - Boundary: this is one-host/manual-controller synthetic runtime evidence. It
   does not prove independent failure domains, quorum/witness fencing,
   automatic failover, site-loss DR, managed-key custody, or production SLO.
+
+## E-427 — Hosted scheduler/outbox central-policy boundary
+
+- Added `reconforge.workers.policy.require_service_worker_policy` and wired it
+  into `PostgresSchedulerWorker` and `PostgresOutboxWorker`. The guard is
+  opt-in, requires a service-account principal whose actor matches the worker,
+  checks exact tenant-only scope, evaluates the configured non-human
+  permission, and audits the sanitized decision before repository I/O.
+- `uv run pytest -q tests/test_postgres_outbox.py
+  tests/test_postgres_scheduler_worker.py --tb=short -ra` passes 16 tests with
+  two declared live-PostgreSQL skips. The new contracts cover denial before
+  connection access and allowed scoped service identities for both workers;
+  Ruff passes on all changed modules/tests.
+- Boundary: scheduler/outbox rows are currently tenant-scoped, so this does
+  not provide workspace/entity worker scope. Universal route/export/UI
+  adoption, revocation re-evaluation, federation, distributed invalidation,
+  provider delivery, HA/DR, and production IAM effectiveness remain open.
+- ADR: `docs/adr/0359-hosted-worker-policy-boundary.md`.

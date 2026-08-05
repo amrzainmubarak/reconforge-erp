@@ -10,6 +10,7 @@ from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_outbox import PostgresOutboxEvent, PostgresOutboxRepository
 from reconforge.platform.outbox import OutboxProcessResult
 from reconforge.workers.outbox import OutboxWorkerSettings, WorkerRunSummary
+from reconforge.workers.policy import require_service_worker_policy
 
 
 class PostgresOutboxWorkerError(RuntimeError):
@@ -32,6 +33,17 @@ class PostgresOutboxWorker:
         self.publisher = publisher
         self.settings = settings
 
+    def _authorize_tenant(self, tenant_id: str) -> None:
+        require_service_worker_policy(
+            tenant_id=tenant_id,
+            worker_id=self.settings.worker_id,
+            actor_id=self.settings.audit_actor_id,
+            policy_context_supplier=self.settings.policy_context_supplier,
+            policy_permission=self.settings.policy_permission,
+            surface="postgres-outbox.worker.claim",
+            error_factory=PostgresOutboxWorkerError,
+        )
+
     def _publish(self, event: PostgresOutboxEvent) -> None:
         if callable(self.publisher):
             self.publisher(event)
@@ -53,6 +65,7 @@ class PostgresOutboxWorker:
         dead_lettered_count = 0
         for tenant_id in self._tenant_ids():
             try:
+                self._authorize_tenant(tenant_id)
                 with PostgresTenantBoundary(self.connection_factory).transaction(tenant_id) as connection:
                     events = PostgresOutboxRepository(connection).claim_pending(
                         tenant_id=tenant_id,

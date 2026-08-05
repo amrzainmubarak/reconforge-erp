@@ -4245,3 +4245,18 @@
   managed-key, or production-SLO claim is authorized.
 - **Rollback**: Remove the dated report and its manifest/test pointer if the
   drill is invalidated; retain the prior report as historical evidence.
+
+### D-338: Gate hosted scheduler and outbox workers with central policy
+
+- **Date**: 2026-08-05
+- **Decision**: Add an opt-in shared service-worker authorization guard to the
+  PostgreSQL scheduler and transactional-outbox workers before connection
+  access.
+- **Verification**: Four focused contracts pass: denial-before-I/O and
+  allowed service identity for each worker. Existing unconfigured and local
+  worker behavior remains unchanged.
+- **Boundary**: Tenant-only worker rows do not support workspace/entity scope;
+  universal worker/export/UI adoption, revocation, federation, distributed
+  invalidation, providers, HA/DR, and production IAM assurance remain open.
+- **Rollback**: Remove the additive guard/settings and retain the prior
+  unconfigured worker contract.

@@ -9,8 +9,10 @@ from threading import Event
 from typing import Any
 
 from reconforge.application.scheduler import ScheduleProcessResult, SchedulerApplicationService
+from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_scheduler import PostgresScheduleRepository
+from reconforge.workers.policy import require_service_worker_policy
 
 
 class PostgresSchedulerWorkerError(RuntimeError):
@@ -27,6 +29,9 @@ class PostgresSchedulerWorkerSettings:
     poll_interval_seconds: float = 5.0
     batch_size: int = 50
     max_tenants: int = 10_000
+    actor_id: str = ""
+    policy_context_supplier: Callable[[str], PolicyEvaluationContext] | None = None
+    policy_permission: str = "schedule.run"
 
     def __post_init__(self) -> None:
         normalized = str(self.worker_id or "").strip()
@@ -39,6 +44,14 @@ class PostgresSchedulerWorkerSettings:
             raise PostgresSchedulerWorkerError("batch_size must be between 1 and 1000.")
         if not 1 <= int(self.max_tenants) <= 100_000:
             raise PostgresSchedulerWorkerError("max_tenants must be between 1 and 100000.")
+        if not self.policy_permission.strip():
+            raise PostgresSchedulerWorkerError("policy_permission must be non-empty when configured.")
+
+    @property
+    def audit_actor_id(self) -> str:
+        """Return the configured service actor, falling back to worker identity."""
+
+        return self.actor_id.strip() or self.worker_id.strip()
 
 
 @dataclass(frozen=True)
@@ -104,6 +117,15 @@ class PostgresSchedulerWorker:
             current = now.astimezone(UTC).replace(microsecond=0)
             results: list[ScheduleProcessResult] = []
             for tenant_id in self._tenant_ids():
+                require_service_worker_policy(
+                    tenant_id=tenant_id,
+                    worker_id=self.settings.worker_id,
+                    actor_id=self.settings.audit_actor_id,
+                    policy_context_supplier=self.settings.policy_context_supplier,
+                    policy_permission=self.settings.policy_permission,
+                    surface="postgres-scheduler.worker.claim",
+                    error_factory=PostgresSchedulerWorkerError,
+                )
                 connection = self.connection_factory.connect()
                 try:
                     result = SchedulerApplicationService(PostgresScheduleRepository(connection)).process_due(

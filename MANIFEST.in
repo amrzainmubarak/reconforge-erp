@@ -435,6 +435,7 @@ include docs/adr/0355-server-scoped-legacy-finance-read-policy.md
 include docs/adr/0356-governed-durable-worker-claim-boundary.md
 include docs/adr/0357-postgres-reconciliation-worker-policy-boundary.md
 include docs/adr/0358-postgres-deferred-tax-evidence-boundary.md
+include docs/adr/0359-hosted-worker-policy-boundary.md
 include docs/adr/0229-durable-job-10k-tier-is-hardware-scoped.md
 include docs/execution/benchmarks/durable-job-10k-tier-v1.md
 include docs/adr/0236-durable-job-100k-tier-is-hardware-scoped.md

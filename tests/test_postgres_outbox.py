@@ -11,6 +11,7 @@ from uuid import uuid4
 import pytest
 
 from reconforge.application.outbox import OutboxApplicationService, OutboxError, OutboxRepositoryProtocol
+from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.benchmark.postgres_outbox_scale import (
     default_profile as postgres_outbox_scale_profile,
 )
@@ -36,7 +37,7 @@ from reconforge.infrastructure.postgres_outbox import (
     tenant_bound_postgres_outbox_repository,
 )
 from reconforge.workers.outbox import OutboxWorkerSettings
-from reconforge.workers.postgres_outbox import PostgresOutboxWorker
+from reconforge.workers.postgres_outbox import PostgresOutboxWorker, PostgresOutboxWorkerError
 
 
 class _Cursor:
@@ -233,6 +234,53 @@ def test_postgres_outbox_worker_records_publisher_failure() -> None:
     assert result.published == 0
     assert result.failed == 1
     assert result.dead_lettered == 1
+
+
+def test_postgres_outbox_worker_policy_denies_before_connection_access() -> None:
+    class _NeverConnect:
+        def connect(self) -> Any:
+            raise AssertionError("policy denial must precede connection access")
+
+    worker = PostgresOutboxWorker(
+        _NeverConnect(),
+        tenant_supplier=lambda: ["tenant_a"],
+        publisher=lambda _event: None,
+        settings=OutboxWorkerSettings(
+            worker_id="outbox-policy-worker",
+            policy_context_supplier=lambda tenant: PolicyEvaluationContext(
+                user_id="outbox-policy-worker",
+                username="outbox-policy-worker",
+                user_permissions=set(),
+                principal_type="service_account",
+                tenant_id=tenant,
+                authorized_tenant_ids=frozenset({tenant}),
+            ),
+        ),
+    )
+    with pytest.raises(PostgresOutboxWorkerError, match="permission_missing"):
+        worker.process_once()
+
+
+def test_postgres_outbox_worker_policy_allows_scoped_service_identity() -> None:
+    connection = _FakeConnection()
+    worker = PostgresOutboxWorker(
+        _FakeFactory(connection),
+        tenant_supplier=lambda: ["tenant_a"],
+        publisher=lambda _event: None,
+        settings=OutboxWorkerSettings(
+            worker_id="outbox-policy-worker",
+            policy_context_supplier=lambda tenant: PolicyEvaluationContext(
+                user_id="outbox-policy-worker",
+                username="outbox-policy-worker",
+                user_permissions={"outbox.publish"},
+                principal_type="service_account",
+                tenant_id=tenant,
+                authorized_tenant_ids=frozenset({tenant}),
+            ),
+        ),
+    )
+    result = worker.process_once()
+    assert result.published == 1
 
 
 def test_tenant_bound_postgres_adapter_satisfies_application_contract() -> None:

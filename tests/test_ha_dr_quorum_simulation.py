@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
@@ -121,3 +124,26 @@ def test_quorum_report_script_writes_verifiable_artifact(tmp_path: Path) -> None
     module.verify_quorum_simulation_report(report)
     output.write_text(json.dumps(report, sort_keys=True), encoding="utf-8")
     assert json.loads(output.read_text(encoding="utf-8"))["report_digest"] == report["report_digest"]
+
+
+def test_quorum_report_script_runs_from_installed_distribution_without_module_collision(tmp_path: Path) -> None:
+    """The packaged reliability namespace must expose the HA/DR submodule."""
+
+    path = ROOT / ".github/scripts/verify_ha_dr_quorum_simulation.py"
+    output = tmp_path / "installed-ha-dr.json"
+    assert not (ROOT / "reconforge/reliability.py").exists()
+    assert (ROOT / "reconforge/reliability/ha_dr.py").is_file()
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = str(ROOT)
+    completed = subprocess.run(  # nosec B603 - fixed repository script and interpreter
+        (sys.executable, str(path), "--output", str(output)),
+        cwd=ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["status"] == "simulation_only"

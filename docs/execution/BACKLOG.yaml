@@ -1334,7 +1334,7 @@ tasks:
     title: Python 3.12 all-extras collection regression closure
     status: completed
     depends_on: [E-446]
-    exit_evidence: The exact seven test files named in the historical hosted ImportError run pass under `uv run --locked --all-extras --no-editable --python 3.12`: 48 passed, one declared live-PostgreSQL skip, zero collection errors, in 68.2s. This verifies the current locked all-extras profile locally; hosted matrix status remains external.
+    exit_evidence: The exact seven test files named in the historical hosted ImportError run pass under `uv run --locked --all-extras --no-editable --python 3.12`; 48 passed, one declared live-PostgreSQL skip, zero collection errors, in 68.2s. This verifies the current locked all-extras profile locally; hosted matrix status remains external.
 
   - id: E-448
     priority: P0
@@ -1342,7 +1342,7 @@ tasks:
     title: Container packaging and CLI parity regression closure
     status: completed
     depends_on: [E-447]
-    exit_evidence: `docker build -t reconforge:local-e447 .` passes on Docker Engine 29.6.2 in 94.1s with the digest-pinned Python/uv base. The image's `reconforge doctor`, sample validation, audit-basic pack validation, and professional invoice-payment fixture run pass; the doctor reports zero errors with ten intentional sample warnings, and the professional decision digest is `06a65e9f3caf29c53929905b9fc20f14b89ee6aae2491e98c04356df12442717`. This is local container evidence, not hosted Docker parity or production deployment evidence.
+    exit_evidence: Docker build `reconforge:local-e447` passes on Docker Engine 29.6.2 in 94.1s with the digest-pinned Python/uv base. The image's `reconforge doctor`, sample validation, audit-basic pack validation, and professional invoice-payment fixture run pass; the doctor reports zero errors with ten intentional sample warnings, and the professional decision digest is `06a65e9f3caf29c53929905b9fc20f14b89ee6aae2491e98c04356df12442717`. This is local container evidence, not hosted Docker parity or production deployment evidence.
 
   - id: E-449
     priority: P0
@@ -1367,6 +1367,22 @@ tasks:
     status: completed
     depends_on: [E-450]
     exit_evidence: On PostgreSQL 17.10, an isolated database and non-privileged application role ran the exact live 10K-effects and 100K-effects durable-job tests. Both passed with exit 0 in 423.6s combined and the database was removed in cleanup. This proves bounded single-host PostgreSQL correctness/concurrency for the declared synthetic tiers only; throughput sizing, soak, queue HA, host loss, cross-host fairness, RPO/RTO, and production capacity remain open.
+
+  - id: E-452
+    priority: P0
+    area: reliability
+    title: Installed reliability namespace collision closure
+    status: completed
+    depends_on: [E-451]
+    exit_evidence: Removed the duplicate `reconforge/reliability.py` module, retained the public API in `reconforge/reliability/__init__.py`, added ADR 0368 and a regression contract, and verified a fresh non-editable Python 3.12 environment can run `verify_ha_dr_quorum_simulation.py` with report digest `e7eff0ba7a4e6cf2b914797699518f43db99ef7af048e447f3673a38a0345c37`. Six focused HA/DR tests, Ruff, and diff-check pass. This fixes package importability; the result remains a simulation-only reliability claim.
+
+  - id: E-453
+    priority: P0
+    area: quality
+    title: Full local regression after reliability namespace repair
+    status: completed
+    depends_on: [E-452]
+    exit_evidence: Full `uv run --no-sync pytest -q --tb=short -ra` exits 0 in 353.3s after the namespace and documentation repairs, with declared capability skips and existing warnings only. Ruff, Mypy across 465 source files, Bandit, OSV pip-audit with no known vulnerabilities, supply-chain policy validation, package build, and diff-check also pass. This is local regression/package evidence; hosted matrices, external providers, independent HA/DR, and production approval remain external.
 
   - id: P4-PLAT-001
     priority: P4

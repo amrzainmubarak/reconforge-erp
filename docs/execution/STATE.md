@@ -4545,3 +4545,13 @@ an isolated PostgreSQL 17.10 database with the non-privileged role; cleanup
 removed the database. This strengthens the bounded single-host concurrency
 evidence only and leaves soak, HA, host-loss, RPO/RTO, and production capacity
 unverified.
+The installed distribution also exposed a real namespace collision: the old
+duplicate `reconforge/reliability.py` shadowed the `reconforge/reliability/`
+package in non-editable execution and broke the quorum simulation script. The
+duplicate was removed, ADR 0368 and a regression were added, and a fresh
+non-editable Python 3.12 environment now runs the script successfully. This is
+an importability fix, not deployed HA/DR evidence.
+After the namespace repair and YAML evidence correction, the complete local
+pytest/static/security/package gate is green again: pytest 0 in 353.3s, Mypy
+465 files, Ruff, Bandit, OSV audit, supply-chain policy, build, and diff-check
+all pass. Declared capability skips and existing warnings remain visible.

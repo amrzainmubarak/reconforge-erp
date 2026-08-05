@@ -146,7 +146,6 @@ include .github/scripts/verify_postgres_ha_dr_repeated.py
 include docs/execution/HA_DR_REPEATED_DOCKER_DRILL_2026-07-30.json
 include docs/schemas/ha_dr_repeated_drill_report.schema.json
 include tests/test_ha_dr_repeated_drill.py
-include reconforge/reliability.py
 include reconforge/reliability_sources.py
 include .github/scripts/verify_enterprise_reliability.py
 include .github/scripts/verify_otlp_http_collector.py
@@ -480,6 +479,7 @@ include docs/schemas/professional_invoice_payment_report.schema.json
 recursive-include control-packs/professional-invoice-payment *
 recursive-include examples/professional_invoice_payment *
 include docs/adr/0367-professional-invoice-payment-control-slice.md
+include docs/adr/0368-reliability-namespace-package-collision.md
 include docs/execution/S3_OBJECT_STORAGE_LIVE_DOCKER_DRILL_2026-08-05.json
 include tests/test_current_s3_object_storage_live_report.py
 include docs/adr/0229-durable-job-10k-tier-is-hardware-scoped.md

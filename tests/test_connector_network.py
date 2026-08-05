@@ -51,11 +51,15 @@ def _manifest(**changes: object) -> ConnectorManifest:
     return ConnectorManifest.model_validate(values)
 
 
-def _registration(manifest: ConnectorManifest | None = None) -> NetworkConnectorRegistration:
+def _registration(
+    manifest: ConnectorManifest | None = None,
+    *,
+    endpoint: str = "https://api.example.test/v1/records",
+) -> NetworkConnectorRegistration:
     return NetworkConnectorRegistration(
         registration_schema="network-connector-registration-v1",
         manifest=manifest or _manifest(),
-        endpoint="https://api.example.test/v1/records",
+        endpoint=endpoint,
         credential_reference="vault://tenant-a/connector-token",
     )
 
@@ -188,8 +192,8 @@ def test_runtime_fails_closed_for_secret_cursor_size_and_response_bounds() -> No
     [
         "http://api.example.test/v1/records",
         "https://user:pass@api.example.test/v1/records",
-        "https://api.example.test/v1/records?expand=all",
         "https://api.example.test/v1/records#fragment",
+        "https://api.example.test/v1/records?filter=hello world",
     ],
 )
 def test_manifest_rejects_unsafe_or_ambiguous_egress(destination: str) -> None:
@@ -207,6 +211,68 @@ def test_registration_rejects_undeclared_endpoint_and_unknown_fields() -> None:
         )
     with pytest.raises(ValidationError, match="Extra inputs"):
         NetworkConnectorRegistration.model_validate({**_registration().model_dump(), "writeback": True})
+
+
+def test_manifest_and_registration_accept_operator_declared_query_exactly() -> None:
+    endpoint = "https://api.example.test/v1/records?expand=all&page%5Bsize%5D=100"
+    manifest = _manifest(egress_destinations=[endpoint])
+    registration = _registration(manifest, endpoint=endpoint)
+    assert registration.endpoint == endpoint
+    assert manifest.egress_destinations == (endpoint,)
+    assert len(manifest.digest) == 64
+
+
+def test_public_network_read_uses_no_secret_and_never_emits_authorization() -> None:
+    manifest = _manifest(
+        authentication=AuthenticationMethod.NONE,
+        data_classification=DataClassification.PUBLIC,
+        secret_handling="No secret is required; the operator-declared public endpoint is read only.",
+    )
+    registration = NetworkConnectorRegistration(
+        registration_schema="network-connector-registration-v1",
+        manifest=manifest,
+        endpoint="https://api.example.test/v1/records",
+    )
+    transport = _Transport([NetworkResponse(200, b"{}")])
+    result = NetworkConnectorExecutor(transport).read(registration, idempotency_key="public-1")
+    assert result.attempts == 1
+    assert "Authorization" not in transport.calls[0][1]
+
+
+def test_public_network_conformance_replays_without_secret_resolution() -> None:
+    manifest = _manifest(
+        authentication=AuthenticationMethod.NONE,
+        data_classification=DataClassification.PUBLIC,
+        secret_handling="No secret is required; the operator-declared public endpoint is read only.",
+    )
+    registration = NetworkConnectorRegistration(
+        registration_schema="network-connector-registration-v1",
+        manifest=manifest,
+        endpoint="https://api.example.test/v1/records",
+    )
+    transport = _Transport([NetworkResponse(200, b"{}"), NetworkResponse(200, b"{}")])
+    result = verify_network_connector(
+        registration,
+        NetworkConnectorExecutor(transport),
+        idempotency_key="public-conformance-1",
+    )
+    assert "public_no_auth" in result.checks
+    assert all("Authorization" not in call[1] for call in transport.calls)
+
+
+def test_public_network_registration_rejects_credential_reference() -> None:
+    manifest = _manifest(
+        authentication=AuthenticationMethod.NONE,
+        data_classification=DataClassification.PUBLIC,
+        secret_handling="No secret is required; the operator-declared public endpoint is read only.",
+    )
+    with pytest.raises(ValidationError, match="cannot carry credential_reference"):
+        NetworkConnectorRegistration(
+            registration_schema="network-connector-registration-v1",
+            manifest=manifest,
+            endpoint="https://api.example.test/v1/records",
+            credential_reference="vault://tenant-a/should-not-be-used",
+        )
 
 
 def test_dns_answers_fail_closed_for_private_or_mixed_addresses() -> None:
@@ -251,8 +317,11 @@ def test_pinned_transport_preserves_hostname_and_never_follows_redirect() -> Non
         resolver=lambda _host, _port: ("93.184.216.34",), connection_factory=factory
     )
     response = transport.get(
-        "https://api.example.test/v1/records", headers={}, timeout_seconds=7, maximum_response_bytes=100
+        "https://api.example.test/v1/records?expand=all&page%5Bsize%5D=100",
+        headers={},
+        timeout_seconds=7,
+        maximum_response_bytes=100,
     )
     assert response.status == 302
     assert captured[0][0:4] == ("api.example.test", 443, "93.184.216.34", 7)
-    assert ("GET", "/v1/records", {}) in captured
+    assert ("GET", "/v1/records?expand=all&page%5Bsize%5D=100", {}) in captured

@@ -4455,6 +4455,49 @@
   approval; no GitHub publication occurs here.
 - **Rollback**: Supersede E-440 with the next exact-environment audit if the
   locked dependency graph changes; no runtime/data rollback is needed.
+
+### D-352: Preserve exact query strings for read-only connector destinations
+
+- **Date**: 2026-08-06
+- **Decision**: Permit fixed query strings in operator-declared HTTPS network
+  connector destinations and send them verbatim through the pinned transport.
+  Keep exact endpoint matching, public-DNS pinning, no redirects, secret
+  references in headers, and visible-ASCII/credential/fragment rejection.
+- **Rationale**: Public REST endpoints often require immutable filters or page
+  parameters. Rejecting all queries made the generic read-only connector unable
+  to represent those endpoints, while runtime query construction would weaken
+  the allowlist and replay contract.
+- **Verification**: Focused network, SDK, and database connector contracts pass
+  35/35, including query registration, request-target preservation, public
+  no-auth header isolation, redirect refusal, DNS checks, bounded retry, and
+  response/credential/cursor limits.
+- **Boundary**: This remains a read-only connector contract and does not prove
+  live provider availability, authentication interoperability, write-back,
+  production capacity, or deployment readiness. ADR: `0369-allowlisted-query-urls-in-readonly-network-connectors.md`.
+- **Rollback**: Restore query rejection and the prior request-target behavior;
+  no schema or data rollback is needed.
+
+### D-353: Permit explicitly public no-auth network reads
+
+- **Date**: 2026-08-06
+- **Decision**: Allow `AuthenticationMethod.NONE` only for read-only network
+  sources with an exact operator-declared HTTPS egress destination and rate
+  limit. Such registrations must omit `credential_reference` and the executor
+  must emit no authorization header. Database, SFTP, object-storage, payment,
+  and write-back registrations remain credentialed.
+- **Rationale**: Open public-data APIs do not require a secret, and fabricating
+  a secret-reference requirement would make a truthful public connector
+  contract impossible. Exact egress, DNS public-address pinning, TLS hostname
+  validation, no redirects, bounded retries, and response limits remain in
+  force.
+- **Verification**: Public registration/execution/replay tests pass without a
+  secret resolver; credentialed connector suites remain green and no-auth
+  registrations carrying a credential are rejected.
+- **Boundary**: This is a provider-neutral transport capability, not a live
+  public-data connector, availability, freshness, or production operations
+  claim. ADR: `0369-allowlisted-query-urls-in-readonly-network-connectors.md`.
+- **Rollback**: Remove the no-auth branch and restore mandatory credential
+  references; no migration or data rollback is needed.
 # ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
 
 Implemented and bounded the `professional.invoice-payment` module. It is local,

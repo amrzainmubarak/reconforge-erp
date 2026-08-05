@@ -5,9 +5,10 @@ provide live SAP/Odoo connectivity, credential handling, synchronization, or wri
 
 Every implementation entering the SDK must carry a validated `connector-manifest-v1`. The first
 schema deliberately permits read-only implementations only. Local adapters declare no authentication,
-network rate limit, or egress destination. A future network-source slice must require explicit
-authentication, exact egress policy, rate limits, a network sandbox, secret references rather than
-secret values, cursor and retry tests, and operator authorization.
+network rate limit, or egress destination. A future network-source slice must require an explicit
+authentication mode (public no-auth or secret-reference), exact egress policy, rate limits, a network
+sandbox, secret references rather than secret values for credentialed sources, cursor and retry tests,
+and operator authorization.
 
 Run the current synthetic local conformance boundary with:
 
@@ -32,7 +33,9 @@ that optional standards-library dependency, signed-package verification fails cl
 
 - No external package installation or dynamic code loading.
 - Trust input is versioned and supports active/revoked keys, but persistent administrative approval remains deployment-owned.
-- A provider-neutral read-only HTTPS runtime now has DNS/SSRF, TLS pinning, secret-reference, cursor, idempotency, retry, rate, and durable-job recovery tests; no live vendor registration or production secret resolver is bundled.
+- A provider-neutral read-only HTTPS runtime now has DNS/SSRF, TLS pinning, public no-auth/secret-reference
+  isolation, fixed-query preservation, cursor, idempotency, retry, rate, and durable-job recovery tests;
+  no live vendor registration or production secret resolver is bundled.
 - Process-local rate state does not prove a shared distributed provider quota.
 - No write-back path; manifest v1 rejects it.
 - No executable external connector installation, vendor certification, direct ERP connector, or production deployment claim.

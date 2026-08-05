@@ -4560,3 +4560,12 @@ boundary (11 passed); its one live test remains explicitly skipped because the
 Windows host has no native `pg_dump`/`pg_restore`/`createdb`/`dropdb`/`psql` set.
 The retry and fail-closed no-dump paths are therefore verified, while hosted
 native-tool execution remains open.
+The read-only network connector now preserves fixed query strings when they
+are part of an exact operator-declared HTTPS destination. Credentials,
+fragments, non-visible ASCII, undeclared endpoints, private DNS answers,
+redirects, unbounded retries, and oversized responses remain fail-closed.
+Focused network/SDK/database connector contracts pass 35/35 under ADR 0369.
+Public no-auth registrations emit no authorization header, while credentialed
+registrations require a secret reference. This enables fixed-parameter public
+REST endpoints but does not establish live provider availability,
+authentication interoperability, write-back, or production operations.

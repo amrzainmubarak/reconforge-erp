@@ -1392,6 +1392,14 @@ tasks:
     depends_on: [E-453]
     exit_evidence: PostgreSQL backup unit/security tests pass 11 contracts with one explicit live-service skip because this Windows host has no PostgreSQL native client-tool set. The retry test covers a successful portable `--file=...` fallback and the fail-closed no-dump path; encrypted backup, tamper, restore rollback, authorization, and command-safety contracts pass. Hosted native-tool execution remains external.
 
+  - id: E-455
+    priority: P4
+    area: connector_platform
+    title: Exact query preservation for read-only network connectors
+    status: completed
+    depends_on: [E-454]
+    exit_evidence: ADR 0369 and focused network/SDK tests pass. Operator-declared HTTPS egress destinations may include fixed query strings; public no-auth registrations emit no credential header, while credentialed registrations require secret references. Credentials in authority, fragments, non-visible ASCII, and undeclared endpoints remain rejected; the pinned transport preserves the exact path/query without runtime URL merging or redirect following. This enables fixed-parameter public REST endpoints but does not prove live provider availability, authentication interoperability, write-back, or production operations.
+
   - id: P4-PLAT-001
     priority: P4
     area: platform_breadth

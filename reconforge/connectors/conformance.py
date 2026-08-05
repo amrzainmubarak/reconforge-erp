@@ -11,7 +11,7 @@ from typing import Protocol
 
 import pandas as pd
 
-from reconforge.connectors.manifest import ConnectorCapability, ConnectorKind, ConnectorManifest
+from reconforge.connectors.manifest import AuthenticationMethod, ConnectorCapability, ConnectorKind, ConnectorManifest
 from reconforge.connectors.network import (
     ConnectorNetworkError,
     NetworkConnectorExecutor,
@@ -100,10 +100,15 @@ def verify_manifest_portfolio(manifests: Iterable[ConnectorManifest]) -> tuple[s
             raise ValueError(f"{manifest.connector_id} lacks synthetic/idempotent read guarantees")
         if not manifest.schema_versions or not manifest.threat_model:
             raise ValueError(f"{manifest.connector_id} lacks schema/threat declarations")
-        if manifest.kind in {ConnectorKind.NETWORK_SOURCE, ConnectorKind.DATABASE_SOURCE}:
+        if manifest.kind is ConnectorKind.NETWORK_SOURCE:
             if not manifest.network_required or not manifest.egress_destinations:
                 raise ValueError(f"{manifest.connector_id} lacks exact network egress")
-            if manifest.authentication.value != "secret_reference":
+            if manifest.authentication not in {AuthenticationMethod.NONE, AuthenticationMethod.SECRET_REFERENCE}:
+                raise ValueError(f"{manifest.connector_id} uses unsupported network authentication")
+        elif manifest.kind is ConnectorKind.DATABASE_SOURCE:
+            if not manifest.network_required or not manifest.egress_destinations:
+                raise ValueError(f"{manifest.connector_id} lacks exact network egress")
+            if manifest.authentication is not AuthenticationMethod.SECRET_REFERENCE:
                 raise ValueError(f"{manifest.connector_id} lacks secret-reference authentication")
         elif manifest.network_required or manifest.egress_destinations:
             raise ValueError(f"{manifest.connector_id} has network fields without network kind")
@@ -159,6 +164,11 @@ def verify_network_connector(
         or first.next_cursor != replay.next_cursor
     ):
         raise ValueError("network connector idempotent replay changed")
+    authentication_check = (
+        "secret_reference"
+        if manifest.authentication is AuthenticationMethod.SECRET_REFERENCE
+        else "public_no_auth"
+    )
     return ConformanceResult(
         connector_id=manifest.connector_id,
         manifest_digest=manifest.digest,
@@ -166,7 +176,7 @@ def verify_network_connector(
             "manifest_valid",
             "read_only",
             "exact_https_egress",
-            "secret_reference",
+            authentication_check,
             "rate_limit_declared",
             "bounded_retry_declared",
             "cursor_contract",

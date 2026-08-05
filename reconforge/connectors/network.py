@@ -32,7 +32,7 @@ class NetworkConnectorRegistration(BaseModel):
     registration_schema: str = Field(pattern=r"^network-connector-registration-v1$")
     manifest: ConnectorManifest
     endpoint: str = Field(min_length=1, max_length=2_048)
-    credential_reference: str = Field(pattern=r"^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,255}$")
+    credential_reference: str | None = Field(default=None, pattern=r"^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,255}$")
     timeout_seconds: int = Field(default=10, ge=1, le=60)
     maximum_response_bytes: int = Field(default=1_048_576, ge=1, le=16_777_216)
 
@@ -40,8 +40,12 @@ class NetworkConnectorRegistration(BaseModel):
     def validate_runtime_boundary(self) -> NetworkConnectorRegistration:
         if self.manifest.kind is not ConnectorKind.NETWORK_SOURCE or not self.manifest.network_required:
             raise ValueError("network registration requires a network-source manifest")
-        if self.manifest.authentication is not AuthenticationMethod.SECRET_REFERENCE:
-            raise ValueError("network registration v1 supports secret-reference authentication only")
+        if self.manifest.authentication not in {AuthenticationMethod.NONE, AuthenticationMethod.SECRET_REFERENCE}:
+            raise ValueError("network registration v1 supports no-auth or secret-reference authentication only")
+        if self.manifest.authentication is AuthenticationMethod.SECRET_REFERENCE and self.credential_reference is None:
+            raise ValueError("secret-reference authentication requires credential_reference")
+        if self.manifest.authentication is AuthenticationMethod.NONE and self.credential_reference is not None:
+            raise ValueError("no-auth network registration cannot carry credential_reference")
         if self.endpoint not in self.manifest.egress_destinations:
             raise ValueError("endpoint must exactly match one declared egress destination")
         if (urlsplit(self.endpoint).scheme or "").lower() != "https":
@@ -149,7 +153,12 @@ class PinnedHttpsGetTransport:
         addresses = resolve_public_addresses(host, port, resolver=self.resolver)
         connection = self.connection_factory(host, port, addresses[0], timeout_seconds, self.tls_context)
         try:
+            # The query is part of the operator-declared exact egress
+            # destination. It is never merged with runtime input, so preserving
+            # it does not widen the allowlist or create redirect-following.
             target = parsed.path or "/"
+            if parsed.query:
+                target += "?" + parsed.query
             connection.request("GET", target, headers=headers)
             response = connection.getresponse()
             body = response.read(maximum_response_bytes + 1)
@@ -210,9 +219,13 @@ class NetworkConnectorExecutor:
             raise ConnectorNetworkError("connector_idempotent_reads_required")
         if cursor is not None and not manifest.incremental_cursor:
             raise ConnectorNetworkError("connector_cursor_not_supported")
-        credential = self.secret_resolver.resolve(registration.credential_reference)
-        if not 16 <= len(credential) <= 4_096:
-            raise ConnectorNetworkError("connector_credential_invalid")
+        credential: bytes | None = None
+        if manifest.authentication is AuthenticationMethod.SECRET_REFERENCE:
+            if registration.credential_reference is None:
+                raise ConnectorNetworkError("connector_credential_missing")
+            credential = self.secret_resolver.resolve(registration.credential_reference)
+            if not 16 <= len(credential) <= 4_096:
+                raise ConnectorNetworkError("connector_credential_invalid")
         request_digest = _canonical_digest(
             {
                 "connector_id": manifest.connector_id,
@@ -223,18 +236,19 @@ class NetworkConnectorExecutor:
                 "manifest_digest": manifest.digest,
             }
         )
-        try:
-            credential_text = credential.decode("ascii")
-        except UnicodeDecodeError as exc:
-            raise ConnectorNetworkError("connector_credential_invalid") from exc
-        if any(ord(character) < 33 or ord(character) > 126 for character in credential_text):
-            raise ConnectorNetworkError("connector_credential_invalid")
         headers = {
             "Accept": "application/json",
-            "Authorization": "Bearer " + credential_text,
             "Idempotency-Key": idempotency_key,
             "User-Agent": "ReconForge-Connector/1",
         }
+        if credential is not None:
+            try:
+                credential_text = credential.decode("ascii")
+            except UnicodeDecodeError as exc:
+                raise ConnectorNetworkError("connector_credential_invalid") from exc
+            if any(ord(character) < 33 or ord(character) > 126 for character in credential_text):
+                raise ConnectorNetworkError("connector_credential_invalid")
+            headers["Authorization"] = "Bearer " + credential_text
         if cursor is not None:
             headers["X-ReconForge-Cursor"] = cursor
         attempt = 0

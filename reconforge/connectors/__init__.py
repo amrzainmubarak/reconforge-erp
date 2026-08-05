@@ -1,5 +1,15 @@
 """Safe, manifest-driven connector SDK contracts."""
 
+from reconforge.connectors.camt053 import (
+    CAMT053_SCHEMA_VERSION,
+    MAX_CAMT053_BYTES,
+    Camt053Balance,
+    Camt053Error,
+    Camt053Line,
+    Camt053Statement,
+    parse_camt053_bytes,
+    parse_camt053_file,
+)
 from reconforge.connectors.database_reference import (
     DATABASE_REFERENCE_ENDPOINT,
     DATABASE_REFERENCE_MANIFEST,
@@ -173,6 +183,14 @@ __all__ = [
     "DatabaseRecordRow",
     "ReferenceDatabaseConnector",
     "database_reference_registration",
+    "CAMT053_SCHEMA_VERSION",
+    "MAX_CAMT053_BYTES",
+    "Camt053Balance",
+    "Camt053Error",
+    "Camt053Line",
+    "Camt053Statement",
+    "parse_camt053_bytes",
+    "parse_camt053_file",
     "POSTGRES_DATABASE_ENDPOINT",
     "POSTGRES_DATABASE_MANIFEST",
     "PostgresDatabaseConnector",

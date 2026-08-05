@@ -5,6 +5,26 @@
 
 ## Decisions
 
+### D-294: Add a bounded offline CAMT.053 statement boundary
+- **Date**: 2026-08-05
+- **Context**: Banking statement formats are required for the connector
+  workstream, but a provider-neutral file parser must not be presented as a
+  live bank integration or payment capability.
+- **Decision**: Add one read-only CAMT.053 `BkToCstmrStmt/Stmt` parser with
+  `defusedxml`, an 8 MiB payload limit, a 100,000-entry limit, bounded text,
+  exact finite Decimal strings, stable entry/service references, explicit
+  booking/value dates, opening/closing balances, and a deterministic digest.
+  Expose it only through the local `parse-camt053` CLI and a closed JSON Schema.
+- **Rationale**: This creates a useful banking vertical input contract and
+  replayable evidence while preserving fail-closed XML, identity, date, and
+  amount semantics. It does not invent provider credentials, transport,
+  payment initiation, ERP mapping, or write-back semantics.
+- **Reversibility**: Remove the parser, schema, fixture, CLI command, tests,
+  manifest entries, ADR, and execution records; existing connector SDK
+  contracts remain unchanged.
+- **Verification**: Focused CAMT.053 and connector integration tests pass
+  locally; hosted provider interoperability remains unverified.
+
 ### D-293: Publish a PostgreSQL durable-job 100K-effect tier
 - **Date**: 2026-08-05
 - **Context**: The live PostgreSQL durable-job gate previously stopped at 10,000

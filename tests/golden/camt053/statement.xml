@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02">
+  <BkToCstmrStmt>
+    <GrpHdr><MsgId>MSG-CAMT-001</MsgId></GrpHdr>
+    <Stmt>
+      <Id>STMT-CAMT-001</Id>
+      <Acct><Id><IBAN>DE89370400440532013000</IBAN></Id></Acct>
+      <Bal>
+        <Tp><CdOrPrtry><Cd>OPBD</Cd></CdOrPrtry></Tp>
+        <Amt Ccy="EUR">1000.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>
+      </Bal>
+      <Bal>
+        <Tp><CdOrPrtry><Cd>CLBD</Cd></CdOrPrtry></Tp>
+        <Amt Ccy="EUR">1080.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>
+      </Bal>
+      <Ntry>
+        <NtryRef>ENTRY-CREDIT-001</NtryRef>
+        <Amt Ccy="EUR">100.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>
+        <BookgDt><Dt>2026-01-02</Dt></BookgDt>
+        <ValDt><Dt>2026-01-02</Dt></ValDt>
+        <AcctSvcrRef>BANK-REF-001</AcctSvcrRef>
+        <NtryDtls><TxDtls>
+          <Refs><EndToEndId>E2E-001</EndToEndId><TxId>TX-001</TxId></Refs>
+          <RmtInf><Ustrd>Customer settlement</Ustrd></RmtInf>
+        </TxDtls></NtryDtls>
+      </Ntry>
+      <Ntry>
+        <NtryRef>ENTRY-DEBIT-001</NtryRef>
+        <Amt Ccy="EUR">20.00</Amt><CdtDbtInd>DBIT</CdtDbtInd>
+        <BookgDt><Dt>2026-01-03</Dt></BookgDt>
+        <ValDt><Dt>2026-01-04</Dt></ValDt>
+        <AcctSvcrRef>BANK-REF-002</AcctSvcrRef>
+        <NtryDtls><TxDtls>
+          <Refs><EndToEndId>NOTPROVIDED</EndToEndId><TxId>TX-002</TxId></Refs>
+          <RmtInf><Ustrd>Service fee</Ustrd><Ustrd>January</Ustrd></RmtInf>
+        </TxDtls></NtryDtls>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>

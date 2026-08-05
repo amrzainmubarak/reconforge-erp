@@ -50,6 +50,7 @@ from reconforge.close import (
     write_close_checklist,
 )
 from reconforge.config import load_config, write_default_config
+from reconforge.connectors.camt053 import Camt053Error, parse_camt053_file
 from reconforge.connectors.package import (
     ConnectorPackageError,
     TrustedPublisherKey,
@@ -568,6 +569,26 @@ def connectors_verify_package_command(
     except (binascii.Error, ConnectorPackageError, OSError, ValueError) as exc:
         _safe_cli_error(exc)
     typer.echo(json.dumps(admitted.to_dict(), ensure_ascii=True, indent=2, sort_keys=True))
+
+
+@connectors_app.command("parse-camt053")
+def connectors_parse_camt053_command(
+    input_path: Annotated[Path, typer.Argument(help="Local ISO 20022 CAMT.053 XML statement path.")],
+    output_path: Annotated[Path | None, typer.Option("--output", help="Optional exact JSON output path.")] = None,
+) -> None:
+    """Parse one bounded CAMT.053 statement without network or provider I/O."""
+
+    try:
+        statement = parse_camt053_file(str(input_path))
+        rendered = json.dumps(statement.to_dict(), ensure_ascii=True, indent=2, sort_keys=True)
+        if output_path is None:
+            typer.echo(rendered)
+        else:
+            target = ensure_output_dir(output_path.parent) / output_path.name
+            target.write_text(rendered + "\n", encoding="utf-8", newline="\n")
+            typer.echo(f"CAMT.053 statement written: {target}")
+    except (Camt053Error, OSError) as exc:
+        _safe_cli_error(PlatformError(f"CAMT.053 input is invalid: {exc}"))
 
 
 @policy_app.command("analyze-conflicts")

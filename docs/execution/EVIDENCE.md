@@ -2,6 +2,24 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-388: Bounded CAMT.053 offline statement ingestion
+
+- Added `reconforge/connectors/camt053.py`, the closed schema
+  `docs/schemas/camt053_statement.schema.json`, a synthetic CAMT.053 golden
+  statement, and the read-only `reconforge connectors parse-camt053` command.
+- `uv run pytest -q tests/test_connector_camt053.py --tb=short` -> 9 passed.
+  The test covers deterministic source digests under formatting changes,
+  exact signed Decimal amounts, opening/closing balances, schema validation,
+  CLI/file replay, packaging membership, duplicate/missing identity, non-finite
+  amounts, date ordering, XXE rejection, multiple-statement refusal, and the
+  8 MiB bounded payload.
+- `uv run pytest -q tests/test_connector_camt053.py tests/test_connector_sdk.py
+  tests/test_connector_network.py --tb=short` -> 34 passed. Ruff and Mypy on
+  the changed connector/CLI/test surfaces pass.
+- Boundary: local synthetic read-only XML evidence only. No live bank/ERP
+  provider, credentials, network transport, payment/write-back, provider
+  acknowledgement, or production readiness claim is made.
+
 ## E-387: PostgreSQL durable-job 100K-effect tier
 
 - Added `hundred_k_profile()` with 16 workers, 2,500 jobs, forty partitions per

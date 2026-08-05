@@ -6,6 +6,23 @@ Updated: 2026-08-05
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-388 — Bounded CAMT.053 offline statement ingestion (complete bounded slice)
+
+- Added a strict local ISO 20022 CAMT.053 parser and `reconforge connectors
+  parse-camt053` CLI. The boundary accepts one `BkToCstmrStmt/Stmt`, preserves
+  exact finite Decimal amount text and signed direction, requires a stable
+  entry/service reference, validates booking/value-date ordering, and emits
+  opening/closing balances, references, remittance text, and a deterministic
+  source digest.
+- XML parsing uses `defusedxml`; payloads are capped at 8 MiB, entries at
+  100,000, and bounded text fields at 8 KiB. The closed JSON Schema, synthetic
+  golden fixture, packaging assertions, malformed-input tests, XXE rejection,
+  duplicate/missing identity tests, and CLI replay test all pass locally.
+- Boundary: this is a read-only file/bytes ingestion contract with no network,
+  bank credential, provider acknowledgement, payment initiation, ERP mapping,
+  or write-back. Named live bank/ERP providers and production deployment remain
+  open under P4-CON-001.
+
 ## E-387 — PostgreSQL durable-job 100K-effect tier (complete bounded slice)
 
 - Added `postgres-durable-job-load/100k-effects-v1`: 16 independent worker

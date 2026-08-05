@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schema/camt053-statement-v1.json",
+  "title": "ReconForge bounded CAMT.053 statement",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "message_id", "statement_id", "account_id", "opening_balance", "closing_balance", "lines", "source_digest"],
+  "properties": {
+    "schema_version": {"const": "camt.053.001-bounded-v1"},
+    "message_id": {"type": "string", "minLength": 1, "maxLength": 8192},
+    "statement_id": {"type": "string", "minLength": 1, "maxLength": 8192},
+    "account_id": {"type": "string", "minLength": 1, "maxLength": 8192},
+    "opening_balance": {"anyOf": [{"$ref": "#/$defs/balance"}, {"type": "null"}]},
+    "closing_balance": {"anyOf": [{"$ref": "#/$defs/balance"}, {"type": "null"}]},
+    "lines": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/line"}},
+    "source_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "amount": {"type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"},
+    "currency": {"type": "string", "pattern": "^[A-Z0-9]{3,12}$"},
+    "balance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["balance_type", "amount", "currency", "direction", "signed_amount"],
+      "properties": {
+        "balance_type": {"enum": ["opening", "closing"]},
+        "amount": {"$ref": "#/$defs/amount"},
+        "currency": {"$ref": "#/$defs/currency"},
+        "direction": {"enum": ["CRDT", "DBIT"]},
+        "signed_amount": {"$ref": "#/$defs/amount"}
+      }
+    },
+    "line": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["line_id", "account_id", "amount", "currency", "direction", "signed_amount", "booking_date", "value_date", "bank_reference", "end_to_end_id", "transaction_id", "remittance_information"],
+      "properties": {
+        "line_id": {"type": "string", "minLength": 1, "maxLength": 8192},
+        "account_id": {"type": "string", "minLength": 1, "maxLength": 8192},
+        "amount": {"$ref": "#/$defs/amount"},
+        "currency": {"$ref": "#/$defs/currency"},
+        "direction": {"enum": ["CRDT", "DBIT"]},
+        "signed_amount": {"$ref": "#/$defs/amount"},
+        "booking_date": {"type": "string", "format": "date"},
+        "value_date": {"type": "string", "format": "date"},
+        "bank_reference": {"type": "string", "minLength": 1, "maxLength": 8192},
+        "end_to_end_id": {"type": ["string", "null"], "maxLength": 8192},
+        "transaction_id": {"type": ["string", "null"], "maxLength": 8192},
+        "remittance_information": {"type": "string", "maxLength": 8192}
+      }
+    }
+  }
+}

@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-396: Python 3.11 all-extras CI ImportError reproduction
+
+- Fresh environment command:
+  `uv sync --locked --all-extras --no-editable --python 3.11` -> installed
+  locked `opentelemetry` 1.44.0, `cryptography` 50.0.0, `cbor2` 6.1.3,
+  `webauthn` 3.0.0, server and connector dependencies.
+- Focused current-head command:
+  `uv run --no-sync pytest -q tests/test_observability.py tests/test_signed_pack_lifecycle.py tests/test_upgrade_orchestrator.py tests/test_webauthn_service.py tests/test_api_webauthn.py tests/test_api_https_hosting.py tests/test_connector_package.py --tb=short`
+  -> 44 passed, 1 declared skip in Python 3.11.15.
+- This reproduces and clears the old collection boundary locally. Hosted
+  evidence for the current head remains intentionally absent while GitHub
+  publication is deferred.
+
 ## E-395: Disposable local HTTPS REST reader sandbox
 
 - `tests/test_connector_rest_reference.py` starts a short-lived TLS server and

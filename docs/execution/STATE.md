@@ -6,6 +6,16 @@ Updated: 2026-08-05
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-396 — Python 3.11 all-extras CI ImportError reproduction (passed current head)
+
+- A fresh disposable Python 3.11.15 environment created with
+  `uv sync --locked --all-extras --no-editable` installed the previously missing
+  `opentelemetry`, `cryptography`, `cbor2`, `webauthn`, server and connector
+  dependencies from the locked resolution.
+- The focused set matching the old CI collection failures passed 44 tests with
+  one declared skip. This is current-head dependency evidence; it does not
+  retroactively make the old hosted run green or prove every external workflow.
+
 ## E-395 — Disposable local HTTPS REST reader sandbox (complete bounded slice)
 
 - The reference REST reader now runs through a disposable local TLS server and

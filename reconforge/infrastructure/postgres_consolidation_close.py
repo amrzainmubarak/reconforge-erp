@@ -24,6 +24,9 @@ from reconforge.domain.consolidation_lifecycle import (
 from reconforge.domain.consolidation_statement import build_management_statement_package
 from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
 from reconforge.infrastructure.postgres_approvals import PostgresApprovalRepository
+from reconforge.infrastructure.postgres_intercompany_elimination import (
+    PostgresIntercompanyEliminationRepository,
+)
 from reconforge.platform.common import PlatformError, normalize_text, platform_id
 from reconforge.platform.inventory_values import MAX_AMOUNT_MINOR
 from reconforge.utils.money import Money
@@ -126,6 +129,46 @@ DO $$ DECLARE t text; BEGIN FOREACH t IN ARRAY ARRAY['consolidation_close_effect
  EXECUTE format('DROP TRIGGER IF EXISTS %I_immutable ON reconforge.%I', t, t);
  EXECUTE format('CREATE TRIGGER %I_immutable BEFORE UPDATE OR DELETE ON reconforge.%I FOR EACH ROW EXECUTE FUNCTION reconforge.reject_consolidation_close_child_mutation()', t, t);
 END LOOP; END $$;
+"""
+
+
+POSTGRES_CONSOLIDATION_INTERCOMPANY_LINK_SCHEMA_SQL = r"""
+CREATE TABLE IF NOT EXISTS reconforge.consolidation_close_intercompany_links (
+ tenant_id TEXT NOT NULL, id TEXT NOT NULL, run_id TEXT NOT NULL, artifact_id TEXT NOT NULL,
+ artifact_result_digest TEXT NOT NULL CHECK (artifact_result_digest ~ '^[a-f0-9]{64}$'),
+ matched_elimination_ids JSONB NOT NULL CHECK (jsonb_typeof(matched_elimination_ids) = 'array'),
+ unresolved_count INTEGER NOT NULL DEFAULT 0 CHECK (unresolved_count >= 0),
+ link_digest TEXT NOT NULL CHECK (link_digest ~ '^[a-f0-9]{64}$'), actor TEXT NOT NULL,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+ PRIMARY KEY (tenant_id,id), UNIQUE (tenant_id,run_id,artifact_id),
+ FOREIGN KEY (tenant_id,run_id) REFERENCES reconforge.consolidation_close_runs(tenant_id,id) ON DELETE RESTRICT,
+ FOREIGN KEY (tenant_id,artifact_id) REFERENCES reconforge.intercompany_elimination_artifacts(tenant_id,id) ON DELETE RESTRICT
+);
+CREATE INDEX IF NOT EXISTS consolidation_close_ic_links_run_idx
+ ON reconforge.consolidation_close_intercompany_links(tenant_id,run_id,created_at,id);
+ALTER TABLE reconforge.consolidation_close_intercompany_links ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reconforge.consolidation_close_intercompany_links FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_scope ON reconforge.consolidation_close_intercompany_links;
+CREATE POLICY tenant_scope ON reconforge.consolidation_close_intercompany_links
+ USING (tenant_id = current_setting('app.tenant_id', true))
+ WITH CHECK (tenant_id = current_setting('app.tenant_id', true));
+CREATE OR REPLACE FUNCTION reconforge.guard_consolidation_close_intercompany_link()
+RETURNS TRIGGER LANGUAGE plpgsql AS $reconforge$
+BEGIN
+ IF TG_OP = 'UPDATE' THEN
+  RAISE EXCEPTION 'consolidation close intercompany links are immutable' USING ERRCODE='check_violation';
+ END IF;
+ IF TG_OP = 'DELETE' THEN
+  RAISE EXCEPTION 'consolidation close intercompany links cannot be deleted' USING ERRCODE='check_violation';
+ END IF;
+ RETURN NEW;
+END
+$reconforge$;
+DROP TRIGGER IF EXISTS consolidation_close_intercompany_link_guard
+ ON reconforge.consolidation_close_intercompany_links;
+CREATE TRIGGER consolidation_close_intercompany_link_guard
+ BEFORE UPDATE OR DELETE ON reconforge.consolidation_close_intercompany_links
+ FOR EACH ROW EXECUTE FUNCTION reconforge.guard_consolidation_close_intercompany_link();
 """
 
 
@@ -540,6 +583,22 @@ class PostgresConsolidationCloseRepository:
                     actor=actor,
                     run_lines=run_lines,
                 )
+            elif from_status == "Prepared" and to_status == "Approved":
+                verified = self._verified_run(dict(row))
+                expected_intercompany = {
+                    item.elimination_id
+                    for item in verified["worksheet_object"].eliminations
+                    if item.elimination_type == "intercompany_transaction"
+                }
+                linked_intercompany = {
+                    elimination_id
+                    for evidence in verified.get("intercompany_evidence", [])
+                    for elimination_id in evidence["matched_elimination_ids"]
+                }
+                if expected_intercompany != linked_intercompany:
+                    raise PlatformError(
+                        "Every intercompany worksheet elimination requires a replay-verified source artifact before approval."
+                    )
             self.connection.execute(
                 f"UPDATE reconforge.consolidation_close_runs SET status=%s,row_version=row_version+1,{actor_field}=%s,reasons=jsonb_set(reasons,ARRAY[%s]::text[],to_jsonb(%s::text),true) WHERE tenant_id=%s AND id=%s",  # nosec B608
                 (to_status, actor, to_status.lower() + "_reason", reason, self.tenant_id, run_id),
@@ -554,6 +613,10 @@ class PostgresConsolidationCloseRepository:
     def approve_run(
         self, run_id: str, *, expected_version: int, reason: str, actor_label: str = "local-cli"
     ) -> dict[str, Any]:
+        # Intercompany eliminations are only approvable after their immutable
+        # source artifact has been bound to the close worksheet.  The check is
+        # intentionally in the transition transaction so a concurrent attach
+        # cannot race an approval.
         return self._transition(run_id, expected_version, "Prepared", "Approved", reason, actor_label, "approved_by")
 
     def post_run(
@@ -748,6 +811,212 @@ class PostgresConsolidationCloseRepository:
                 raise PlatformError("Consolidation run not found.")
             return self._verified_run(dict(row))
 
+    @staticmethod
+    def _worksheet_elimination_payload(item: Any) -> dict[str, object]:
+        """Return the exact proposal fields used for artifact binding."""
+
+        return {
+            "elimination_id": item.elimination_id,
+            "elimination_type": item.elimination_type,
+            "lines": [line.to_input_dict() for line in item.lines],
+            "prepared_at": item.prepared_at,
+            "prepared_by": item.prepared_by,
+            "rationale": item.rationale,
+            "version": item.version,
+        }
+
+    def _intercompany_artifact(self, artifact_id: str) -> dict[str, Any]:
+        row = self.connection.execute(
+            "SELECT * FROM reconforge.intercompany_elimination_artifacts WHERE tenant_id=%s AND id=%s",
+            (self.tenant_id, artifact_id),
+        ).fetchone()
+        if row is None:
+            raise PlatformError("Intercompany elimination artifact was not found.")
+        try:
+            return PostgresIntercompanyEliminationRepository._decode_row(row)
+        except Exception as exc:
+            raise PlatformError("Persisted intercompany evidence failed replay verification.") from exc
+
+    def _validate_intercompany_artifact_for_run(
+        self,
+        run: Mapping[str, Any],
+        artifact: Mapping[str, Any],
+    ) -> tuple[tuple[str, ...], int]:
+        worksheet = run.get("worksheet_object")
+        if not isinstance(worksheet, ConsolidationWorksheetResult):
+            raise PlatformError("Consolidation worksheet replay object is missing.")
+        if str(artifact.get("workspace_id")) != str(run.get("workspace_id")):
+            raise PlatformError("Intercompany evidence workspace does not match the consolidation run.")
+        if str(artifact.get("reporting_currency")) != worksheet.reporting_currency:
+            raise PlatformError("Intercompany evidence currency does not match the consolidation run.")
+        request_payload = artifact.get("request_payload")
+        if not isinstance(request_payload, Mapping):
+            raise PlatformError("Intercompany evidence request payload is invalid.")
+        if any(str(line.get("period_name")) != str(run["period_id"]) for line in request_payload.get("lines", []) if isinstance(line, Mapping)):
+            raise PlatformError("Intercompany evidence period does not match the consolidation run.")
+        resolutions = artifact.get("result_payload", {}).get("resolutions")
+        if not isinstance(resolutions, list):
+            raise PlatformError("Intercompany evidence resolutions are invalid.")
+        worksheet_items = {
+            item.elimination_id: item
+            for item in worksheet.eliminations
+            if item.elimination_type == "intercompany_transaction"
+        }
+        proposed_ids: list[str] = []
+        for resolution in resolutions:
+            if not isinstance(resolution, Mapping) or resolution.get("status") != "proposed":
+                continue
+            proposal = resolution.get("proposal")
+            if not isinstance(proposal, Mapping):
+                raise PlatformError("Intercompany proposed resolution is invalid.")
+            elimination_id = str(proposal.get("elimination_id", ""))
+            worksheet_item = worksheet_items.get(elimination_id)
+            if worksheet_item is None or self._json(dict(proposal)) != self._json(
+                self._worksheet_elimination_payload(worksheet_item)
+            ):
+                raise PlatformError("Intercompany evidence proposal does not reproduce the worksheet elimination.")
+            proposed_ids.append(elimination_id)
+        matched_ids = tuple(sorted(proposed_ids))
+        if not matched_ids:
+            raise PlatformError("Intercompany evidence contains no proposed elimination for this run.")
+        if len(set(matched_ids)) != len(matched_ids):
+            raise PlatformError("Intercompany evidence contains duplicate proposed eliminations.")
+        unresolved_count = sum(
+            1 for resolution in resolutions if isinstance(resolution, Mapping) and resolution.get("status") == "unresolved"
+        )
+        return matched_ids, unresolved_count
+
+    def _verified_intercompany_links(
+        self,
+        run: Mapping[str, Any],
+    ) -> list[dict[str, Any]]:
+        rows = self.connection.execute(
+            "SELECT * FROM reconforge.consolidation_close_intercompany_links "
+            "WHERE tenant_id=%s AND run_id=%s ORDER BY created_at,id",
+            (self.tenant_id, str(run["id"])),
+        ).fetchall()
+        result: list[dict[str, Any]] = []
+        seen_eliminations: set[str] = set()
+        for raw in rows:
+            item = dict(raw)
+            artifact = self._intercompany_artifact(str(item["artifact_id"]))
+            matched_ids, unresolved_count = self._validate_intercompany_artifact_for_run(run, artifact)
+            stored_ids = item.get("matched_elimination_ids")
+            if isinstance(stored_ids, str):
+                try:
+                    stored_ids = json.loads(stored_ids)
+                except json.JSONDecodeError as exc:
+                    raise PlatformError("Persisted intercompany link IDs are invalid.") from exc
+            if not isinstance(stored_ids, list) or tuple(sorted(str(value) for value in stored_ids)) != matched_ids:
+                raise PlatformError("Persisted intercompany link does not reproduce its artifact proposals.")
+            if seen_eliminations.intersection(matched_ids):
+                raise PlatformError("An intercompany worksheet elimination is linked more than once.")
+            seen_eliminations.update(matched_ids)
+            link_material = {
+                "artifact_id": str(item["artifact_id"]),
+                "artifact_result_digest": str(artifact["result_digest"]),
+                "matched_elimination_ids": list(matched_ids),
+                "run_id": str(run["id"]),
+                "schema_version": 1,
+            }
+            expected_digest = hashlib.sha256(self._json(link_material).encode("ascii")).hexdigest()
+            if (
+                str(item.get("artifact_result_digest")) != str(artifact["result_digest"])
+                or int(item.get("unresolved_count", 0)) != unresolved_count
+                or not hmac.compare_digest(expected_digest, str(item.get("link_digest")))
+            ):
+                raise PlatformError("Persisted intercompany close link failed digest verification.")
+            result.append(
+                {
+                    "id": str(item["id"]),
+                    "artifact_id": str(item["artifact_id"]),
+                    "artifact_result_digest": str(artifact["result_digest"]),
+                    "matched_elimination_ids": list(matched_ids),
+                    "unresolved_count": unresolved_count,
+                    "link_digest": str(item["link_digest"]),
+                    "actor": str(item["actor"]),
+                    "created_at": str(item["created_at"]),
+                    "posting": "not_available",
+                }
+            )
+        return result
+
+    def attach_intercompany_artifact(
+        self,
+        run_id: str,
+        artifact_id: str,
+        *,
+        workspace: str | None = None,
+        actor_label: str = "local-cli",
+    ) -> dict[str, Any]:
+        """Bind an immutable intercompany artifact to a prepared close run."""
+
+        actor = self._actor(actor_label)
+        with self.connection.transaction():
+            self._scope()
+            row = self.connection.execute(
+                "SELECT * FROM reconforge.consolidation_close_runs WHERE tenant_id=%s AND id=%s FOR UPDATE",
+                (self.tenant_id, run_id),
+            ).fetchone()
+            if row is None:
+                raise PlatformError("Consolidation run not found.")
+            run = self._verified_run(dict(row))
+            if workspace is not None and str(run["workspace_id"]) != normalize_text(workspace, default=""):
+                raise PlatformError("Workspace scope is not authorized.")
+            if str(run["status"]) != "Prepared":
+                raise PlatformError("Intercompany evidence can only be attached to a prepared run.")
+            artifact = self._intercompany_artifact(artifact_id)
+            matched_ids, unresolved_count = self._validate_intercompany_artifact_for_run(run, artifact)
+            existing = self.connection.execute(
+                "SELECT * FROM reconforge.consolidation_close_intercompany_links "
+                "WHERE tenant_id=%s AND run_id=%s AND artifact_id=%s",
+                (self.tenant_id, run_id, artifact_id),
+            ).fetchone()
+            link_material = {
+                "artifact_id": artifact_id,
+                "artifact_result_digest": str(artifact["result_digest"]),
+                "matched_elimination_ids": list(matched_ids),
+                "run_id": run_id,
+                "schema_version": 1,
+            }
+            link_digest = hashlib.sha256(self._json(link_material).encode("ascii")).hexdigest()
+            if existing is not None:
+                if str(existing["link_digest"]) != link_digest:
+                    raise PlatformError("Intercompany close link conflicts with immutable evidence.")
+                return dict(existing)
+            if any(
+                elimination_id in {
+                    linked_id
+                    for evidence in run.get("intercompany_evidence", [])
+                    for linked_id in evidence["matched_elimination_ids"]
+                }
+                for elimination_id in matched_ids
+            ):
+                raise PlatformError("An intercompany worksheet elimination is already linked to this run.")
+            link_id = platform_id("PGCCIL", self.tenant_id, run_id, artifact_id)
+            self.connection.execute(
+                "INSERT INTO reconforge.consolidation_close_intercompany_links("
+                "tenant_id,id,run_id,artifact_id,artifact_result_digest,matched_elimination_ids,"
+                "unresolved_count,link_digest,actor) VALUES(%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s)",
+                (
+                    self.tenant_id,
+                    link_id,
+                    run_id,
+                    artifact_id,
+                    artifact["result_digest"],
+                    self._json(list(matched_ids)),
+                    unresolved_count,
+                    link_digest,
+                    actor,
+                ),
+            )
+            return dict(
+                self.connection.execute(
+                    "SELECT * FROM reconforge.consolidation_close_intercompany_links WHERE tenant_id=%s AND id=%s",
+                    (self.tenant_id, link_id),
+                ).fetchone()
+            )
+
     def _verified_run(self, record: dict[str, Any]) -> dict[str, Any]:
         """Replay-check worksheet, journal lines, and effect metadata before exposure."""
 
@@ -804,6 +1073,7 @@ class PostgresConsolidationCloseRepository:
         record["management_statement"] = build_management_statement_package(verified).to_dict()
         record["journal_lines"] = actual_lines or expected_lines
         record["effects"] = effects
+        record["intercompany_evidence"] = self._verified_intercompany_links(record | {"worksheet_object": verified})
         record["close_bundle"] = build_consolidation_close_bundle(record).to_dict()
         return record
 

@@ -13349,3 +13349,27 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   also passed. The live-DSN-specific route test remains conditional and was
   not promoted as an independent live API claim by this run.
 - ADR: `docs/adr/0335-server-finance-core-api-adapter.md`.
+
+## E-386 — PostgreSQL close/intercompany evidence binding
+
+- `0064_pg_close_ic_links` adds an append-only, forced-RLS link table between a
+  prepared PostgreSQL close run and persisted `ice-*` intercompany artifacts.
+  The adapter replays each artifact and verifies exact proposal payloads,
+  source period, reporting currency, workspace, matched elimination IDs,
+  unresolved count, and a canonical link digest.
+- The server-only `POST /api/v1/consolidation-close/runs/{run_id}/intercompany-evidence`
+  route requires `finance_core.manage`. Approval of a prepared run fails
+  closed when any `intercompany_transaction` worksheet elimination lacks
+  exactly one bound artifact; the run detail and close bundle expose the bound
+  artifact result digests.
+- Local focused commands passed: schema/migration/exact replay/tamper tests,
+  API scope test, authorization inventory, close-bundle tests, Ruff, and Mypy.
+- The complete local `uv run pytest -q` suite passed 100%, together with full
+  Ruff, Mypy, Bandit, pip-audit, package build, and diff-check gates. Hosted
+  verification is pending for the resulting commit; no hosted claim is
+  promoted here yet.
+- Boundary: this is bounded control-journal/evidence provenance. It does not
+  prove statutory/legal-book posting, live ERP/bank interoperability,
+  write-back, throughput, HA/DR, compliance, certification, or production
+  readiness.
+- ADR: `docs/adr/0336-postgres-close-intercompany-evidence-binding.md`.

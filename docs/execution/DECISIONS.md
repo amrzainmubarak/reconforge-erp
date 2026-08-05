@@ -3573,3 +3573,23 @@
   live-DSN route lifecycle gate.
 - **Boundary**: no statutory posting, live vendor connector, write-back, scale,
   HA/DR, or production-readiness claim.
+
+### D-292: Bind intercompany proposals to prepared PostgreSQL close runs
+
+- **Date**: 2026-08-05
+
+- **Decision**: add an immutable `consolidation_close_intercompany_links`
+  table and a server-only attachment route. The PostgreSQL close adapter
+  replays the linked intercompany artifact, checks exact proposal fields,
+  workspace/period/currency, and stores a digest-bound matched-ID set. A
+  prepared run containing `intercompany_transaction` eliminations cannot be
+  approved until all such eliminations are covered exactly once.
+- **Rationale**: a persisted proposal and a persisted control journal need an
+  explicit provenance edge before maker-checker approval; matching by ID alone
+  would allow tampered or cross-period evidence.
+- **Verification**: ADR 0336, migration/schema contracts, exact proposal
+  replay tests, API scope test, close-bundle round-trip tests, and the full
+  local/hosted gates for the resulting head.
+- **Boundary**: bounded evidence/control-journal integration only; no
+  statutory/legal-book posting, live ERP/bank connector, write-back,
+  throughput, HA/DR, compliance, certification, or production-readiness claim.

@@ -61,6 +61,8 @@ def execute_postgres_consolidation_close(
     except PlatformError as exc:
         message = str(exc)
         lowered = message.casefold()
+        if "workspace scope" in lowered:
+            raise APIError(status_code=403, code="workspace_scope_denied", message=message) from exc
         if "not found" in lowered:
             raise APIError(status_code=404, code="consolidation_close_not_found", message=message) from exc
         if any(token in lowered for token in ("conflict", "changed concurrently", "immutable")):

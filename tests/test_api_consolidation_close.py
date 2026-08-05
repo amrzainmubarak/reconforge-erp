@@ -307,6 +307,9 @@ def test_consolidation_close_server_boundary_binds_workspace_before_exposure(
         def get_run(self, *_: object, **__: object) -> dict[str, object]:
             return {"id": "run-b", "workspace_id": "workspace-b"}
 
+        def attach_intercompany_artifact(self, *_: object, **__: object) -> dict[str, object]:
+            return {"id": "link-a", "artifact_id": "ice-" + "a" * 32, "matched_elimination_ids": ["ELIM-1"]}
+
     repository = Repository()
 
     def execute(_request: object, operation: object) -> object:
@@ -368,3 +371,16 @@ def test_consolidation_close_server_boundary_binds_workspace_before_exposure(
     detail = client.get("/api/v1/consolidation-close/runs/run-b", headers=headers)
     assert detail.status_code == 403
     assert detail.json()["error"]["code"] == "workspace_scope_denied"
+
+    attached = client.post(
+        "/api/v1/consolidation-close/runs/run-a/intercompany-evidence",
+        headers=headers,
+        json={"artifact_id": "ice-" + "a" * 32},
+    )
+    assert attached.status_code == 200
+    assert attached.json()["link"]["artifact_id"] == "ice-" + "a" * 32
+    assert scoped_permissions[-1] == {
+        "permission": "finance_core.manage",
+        "tenant_id": "tenant-a",
+        "workspace_id": "workspace-a",
+    }

@@ -3749,3 +3749,21 @@ publication and remote GitHub verification before a release Go decision.
   adapter; this slice does not prove statutory consolidation, legal-book
   posting, live ERP/bank interoperability, write-back, throughput, HA/DR, or
   production readiness.
+
+## E-386 — Bind intercompany evidence to PostgreSQL close runs
+
+- **Status:** implemented locally; hosted verification pending for this head.
+- Added `0064_pg_close_ic_links` and the forced-RLS immutable
+  `consolidation_close_intercompany_links` table. A prepared close run can bind
+  an existing `ice-*` artifact only through the server profile and
+  `finance_core.manage`; the adapter replays the artifact and compares exact
+  proposal fields, source period, reporting currency, workspace, matched IDs,
+  unresolved count, and link digest.
+- Approval now fails closed when a worksheet contains an
+  `intercompany_transaction` elimination without exactly one matching linked
+  artifact. Run detail and the additive close bundle expose the artifact
+  result digests and matched elimination IDs.
+- Focused schema/migration, exact replay/tamper, API-scope, and bundle tests
+  pass locally. This remains bounded control-journal/evidence provenance, not
+  statutory/legal-book posting, live ERP/bank write-back, throughput, HA/DR,
+  compliance, certification, or production readiness.

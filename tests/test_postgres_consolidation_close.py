@@ -12,10 +12,15 @@ from reconforge.application.consolidation_close import (
     ConsolidationCloseRepositoryProtocol,
     build_translation_evidence,
 )
+from reconforge.domain.intercompany_elimination import prepare_intercompany_eliminations
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings, set_local_tenant_scope
 from reconforge.infrastructure.postgres_consolidation_close import (
     POSTGRES_CONSOLIDATION_CLOSE_SCHEMA_SQL,
+    POSTGRES_CONSOLIDATION_INTERCOMPANY_LINK_SCHEMA_SQL,
     PostgresConsolidationCloseRepository,
+)
+from reconforge.infrastructure.postgres_intercompany_elimination import (
+    PostgresIntercompanyEliminationRepository,
 )
 from reconforge.platform.common import PlatformError
 
@@ -31,6 +36,26 @@ def test_postgres_consolidation_close_schema_is_tenant_scoped_and_exact() -> Non
     assert "consolidation_close_effect_lines" in schema
     assert "append-only" in schema
     assert "DOUBLE PRECISION" not in schema
+
+
+def test_postgres_close_intercompany_link_schema_is_immutable_and_tenant_scoped() -> None:
+    schema = POSTGRES_CONSOLIDATION_INTERCOMPANY_LINK_SCHEMA_SQL
+    assert "consolidation_close_intercompany_links" in schema
+    assert "FOREIGN KEY (tenant_id,artifact_id)" in schema
+    assert "FORCE ROW LEVEL SECURITY" in schema
+    assert "intercompany links are immutable" in schema
+    assert "cannot be deleted" in schema
+
+
+def test_postgres_close_intercompany_link_migration_is_linear_and_refuses_data_loss() -> None:
+    path = ROOT / "alembic/versions/0064_postgres_close_intercompany_links.py"
+    spec = importlib.util.spec_from_file_location("migration_0064", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.revision == "0064_pg_close_ic_links"
+    assert module.down_revision == "0063_pg_ic_elimination"
+    assert "refusing to discard close/intercompany evidence links" in path.read_text(encoding="utf-8")
 
 
 def test_postgres_consolidation_close_migration_is_linear_and_reversible() -> None:
@@ -125,6 +150,60 @@ def test_management_statement_projection_is_backend_neutral() -> None:
     )
 
 
+def test_intercompany_artifact_binding_requires_exact_replay_match() -> None:
+    """A close link must bind the complete deterministic proposal, not only its ID."""
+
+    from dataclasses import replace
+
+    from tests.test_intercompany_elimination import _line
+    from tests.test_sqlite_consolidation_close import _worksheet
+
+    base = _worksheet()
+    source_lines = (
+        _line("TX-A", "PARENT", "SUB", "100.00", account="IC-RECEIVABLE", period="2026-08"),
+        _line("TX-B", "SUB", "PARENT", "-100.00", account="IC-PAYABLE", period="2026-08"),
+    )
+    source = prepare_intercompany_eliminations(
+        source_lines,
+        reporting_currency="USD",
+        prepared_by=base.prepared_by,
+        prepared_at=base.prepared_at,
+    )
+    proposal = source.resolutions[0].proposal
+    assert proposal is not None
+    # Re-run the pure worksheet builder so its result digest and journal are
+    # bound to the intercompany_transaction proposal.
+    from reconforge.domain.consolidation_lifecycle import prepare_consolidation_worksheet
+
+    worksheet = prepare_consolidation_worksheet(replace(base.request, eliminations=(proposal,)))
+    artifact = {
+        "workspace_id": "workspace-a",
+        "reporting_currency": "USD",
+        "request_payload": {"lines": [line.to_dict() for line in source_lines]},
+        "result_payload": source.to_dict(),
+    }
+    run = {
+        "id": "run-a",
+        "workspace_id": "workspace-a",
+        "period_id": "2026-08",
+        "worksheet_object": worksheet,
+    }
+    repository = PostgresConsolidationCloseRepository(None, "tenant-a")
+    matched, unresolved = repository._validate_intercompany_artifact_for_run(run, artifact)
+    assert matched == (proposal.elimination_id,)
+    assert unresolved == 0
+    tampered_result = source.to_dict()
+    tampered_resolutions = list(tampered_result["resolutions"])
+    tampered_resolutions[0] = {
+        **tampered_resolutions[0],
+        "proposal": {**tampered_resolutions[0]["proposal"], "rationale": "tampered"},
+    }
+    tampered_result["resolutions"] = tampered_resolutions
+    tampered = {**artifact, "result_payload": tampered_result}
+    with pytest.raises(PlatformError, match="proposal does not reproduce"):
+        repository._validate_intercompany_artifact_for_run(run, tampered)
+
+
 @pytest.mark.skipif(
     not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"),
     reason="requires a live PostgreSQL application role",
@@ -152,11 +231,34 @@ def test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable() -
                 "GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.consolidation_close_periods,"
                 " reconforge.consolidation_close_runs,reconforge.consolidation_close_effects,"
                 " reconforge.consolidation_close_period_events,reconforge.consolidation_close_run_lines,"
-                " reconforge.consolidation_close_effect_lines,reconforge.certification_records TO " + app_user
+                " reconforge.consolidation_close_effect_lines,reconforge.consolidation_close_intercompany_links,"
+                " reconforge.intercompany_elimination_artifacts,reconforge.certification_records TO " + app_user
             )
             admin.execute(
                 "GRANT SELECT,INSERT,UPDATE ON reconforge.domain_audit_ledger_state,"
                 " reconforge.domain_audit_events,reconforge.outbox_events TO " + app_user
+            )
+            admin.execute(
+                "GRANT SELECT,INSERT ON reconforge.identity_users,reconforge.domain_workspaces TO " + app_user
+            )
+            admin.execute(
+                "INSERT INTO reconforge.domain_workspaces(tenant_id,id,name) VALUES (%s,%s,%s)",
+                (tenant_a, "close-ic", "Close intercompany"),
+            )
+            admin.execute(
+                "INSERT INTO reconforge.identity_users("
+                "tenant_id,id,username,display_name,password_hash,password_salt,password_iterations,password_algorithm"
+                ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+                (
+                    tenant_a,
+                    "consolidation-preparer",
+                    "consolidation-preparer",
+                    "Synthetic consolidation preparer",
+                    "x",
+                    "x",
+                    100000,
+                    "pbkdf2_sha256",
+                ),
             )
     finally:
         admin.close()
@@ -235,6 +337,64 @@ def test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable() -
         assert {str(effect["effect_type"]) for effect in detail["effects"]} == {"Posting", "Reversal"}
         assert all(str(effect["status"]) == "Committed" for effect in detail["effects"])
         assert all(len(effect["lines"]) == 2 for effect in detail["effects"])
+
+        # A prepared run with intercompany_transaction eliminations cannot be
+        # approved until its exact PostgreSQL proposal artifact is bound.
+        from dataclasses import replace
+
+        from reconforge.domain.consolidation_lifecycle import prepare_consolidation_worksheet
+        from tests.test_intercompany_elimination import _line
+
+        source_lines = (
+            _line("TX-A", "PARENT", "SUB", "100.00", account="IC-RECEIVABLE", period="2026-08"),
+            _line("TX-B", "SUB", "PARENT", "-100.00", account="IC-PAYABLE", period="2026-08"),
+        )
+        source_result = prepare_intercompany_eliminations(
+            source_lines,
+            reporting_currency="USD",
+            prepared_by=worksheet.prepared_by,
+            prepared_at=worksheet.prepared_at,
+        )
+        proposal = source_result.resolutions[0].proposal
+        assert proposal is not None
+        intercompany_worksheet = prepare_consolidation_worksheet(
+            replace(worksheet.request, eliminations=(proposal,))
+        )
+        intercompany_repo = PostgresIntercompanyEliminationRepository(connection, tenant_a)
+        artifact = intercompany_repo.persist(
+            source_lines,
+            source_result,
+            workspace="close-ic",
+            actor_label=worksheet.prepared_by,
+        )
+        intercompany_period = repository.create_period(
+            group_code=intercompany_worksheet.group_code,
+            period_id=intercompany_worksheet.period_id,
+            reporting_currency=intercompany_worksheet.reporting_currency,
+            period_start_date=intercompany_worksheet.period_start_date,
+            period_end_date=intercompany_worksheet.period_end_date,
+            reporting_date=intercompany_worksheet.reporting_date,
+            workspace="close-ic",
+            actor_label="period-preparer",
+        )
+        intercompany_run = repository.prepare_run(
+            run_number="RUN-IC-001",
+            worksheet=intercompany_worksheet,
+            workspace="close-ic",
+            actor_label=intercompany_worksheet.prepared_by,
+        )
+        linked = repository.attach_intercompany_artifact(
+            intercompany_run["id"], artifact["id"], actor_label="intercompany-linker"
+        )
+        assert linked["artifact_id"] == artifact["id"]
+        approved_intercompany = repository.approve_run(
+            intercompany_run["id"], expected_version=1, reason="Evidence linked", actor_label="close-reviewer-ic"
+        )
+        assert approved_intercompany["status"] == "Approved"
+        intercompany_detail = repository.get_run(intercompany_run["id"])
+        assert intercompany_detail["intercompany_evidence"][0]["artifact_result_digest"] == source_result.result_digest
+        assert intercompany_detail["close_bundle"]["intercompany_artifact_digests"] == [source_result.result_digest]
+        assert intercompany_period["workspace_id"] == "close-ic"
         with connection.transaction():
             set_local_tenant_scope(connection, tenant_a)
             with pytest.raises(psycopg.Error, match="append-only"):

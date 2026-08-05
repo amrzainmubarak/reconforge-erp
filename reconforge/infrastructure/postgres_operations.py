@@ -74,6 +74,7 @@ POSTGRES_MIGRATION_REVISIONS = (
     "0061_pg_writeback_intents",
     "0062_pg_outbox_consumer",
     "0063_pg_ic_elimination",
+    "0064_pg_close_ic_links",
 )
 
 

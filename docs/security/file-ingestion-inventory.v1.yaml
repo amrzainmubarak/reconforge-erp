@@ -740,9 +740,9 @@ direct_json_parser_allowlist:
     rationale: Parses only the append-only canonical write-back intent contract after tenant/workspace selection; Pydantic validation and digest comparison fail closed before a persisted status can be returned.
   - path: reconforge/infrastructure/postgres_consolidation_close.py
     parser: json.loads
-    call_count: 1
+    call_count: 2
     surface_id: FI-027
-    rationale: Parses only a bounded JSONB worksheet fallback before exact worksheet replay, canonical digest, and journal digest verification; malformed or conflicting persisted evidence fails closed.
+    rationale: Parses only bounded JSONB worksheet and close/intercompany-link arrays before exact replay, canonical digest, and journal/link digest verification; malformed or conflicting persisted evidence fails closed.
   - path: reconforge/infrastructure/postgres_consolidation_ppa.py
     parser: json.loads
     call_count: 1

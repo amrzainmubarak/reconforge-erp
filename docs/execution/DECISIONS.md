@@ -4273,3 +4273,15 @@
   approval follows.
 - **Rollback**: Supersede E-428 with the next exact-environment regression;
   no runtime/data rollback is required.
+
+### D-340: Record local static/security/package gates with audit boundary
+
+- **Date**: 2026-08-05
+- **Decision**: Retain the post-E-427 static, dependency, package, and diff
+  checks as local evidence while stating the pip-audit project exclusion.
+- **Verification**: Ruff, Mypy (453 files), Bandit, pip-audit 2.10.1, package
+  build, and `git diff --check` pass; known warnings remain visible.
+- **Boundary**: No hosted secret/dependency gate, signed SBOM/provenance,
+  trusted-builder assessment, or release approval follows.
+- **Rollback**: Supersede E-429 with the next exact-environment gate; no
+  runtime/data rollback is required.

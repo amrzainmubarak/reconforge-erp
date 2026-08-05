@@ -13997,3 +13997,15 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   hosted Python/security/Docker matrices or prove statutory close, live
   providers/write-back, independent HA/DR, distributed IAM, scale/soak,
   coherent breadth, or release approval.
+
+## E-429 — Static/security/package gates after hosted worker IAM
+
+- Ruff passes, Mypy reports no issues in 453 source files, and Bandit exits
+  cleanly with only the repository's existing nosec/test-comment warnings.
+- `uv run pip-audit --progress-spinner off` using pip-audit 2.10.1 reports no
+  known vulnerabilities; the local `reconforge-erp` distribution is explicitly
+  excluded because it is not published on PyPI. The package build and
+  `git diff --check` also pass.
+- Boundary: local dependency/security evidence only. The local-project audit
+  exclusion, hosted secret/dependency scans, signed SBOM/provenance, trusted
+  builder, and release approval remain unverified.

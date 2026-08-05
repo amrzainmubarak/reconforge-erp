@@ -77,6 +77,15 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
   statutory/legal-book close, independent HA/DR, distributed IAM, scale/soak,
   coherent breadth, and release approval remain open.
 
+## E-429 — Static/security/package gates after hosted worker IAM (passed locally)
+
+- Ruff passes; Mypy reports no issues in 453 source files; Bandit passes with
+  existing nosec/test-comment warnings; pip-audit 2.10.1 reports no known
+  vulnerabilities after excluding the local project distribution.
+- Package build and `git diff --check` pass. This is local evidence only; the
+  project exclusion, hosted supply-chain/provenance gates, signed artifacts,
+  and release approval remain explicit.
+
 ## E-407 — Acquisition deferred-tax bridge (passed locally)
 
 - Added `acquisition-deferred-tax-bridge-v1`, a deterministic non-posting

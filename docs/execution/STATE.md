@@ -6,6 +6,19 @@ Updated: 2026-08-05
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-398 — Live PostgreSQL tenant-administration policy gate (passed locally)
+
+- A fresh PostgreSQL 16 database with the non-superuser `reconforge_app`
+  (`NOBYPASSRLS`) exercised access administration, security governance, and
+  identity administration after upgrading through Alembic `0064`.
+- The three live contracts passed with tenant isolation, maker/checker and
+  lifecycle behavior, guarded downgrade/rollback evidence, and no cross-tenant
+  visibility. The first attempted run used the superuser and an already-used
+  database; it is not evidence and is retained only as a diagnostic boundary.
+- This promotes the tenant-wide route family to current local PostgreSQL
+  runtime evidence. It does not prove federation, distributed invalidation,
+  worker/export/UI adoption, independent HA/DR, or production IAM assurance.
+
 ## E-397 — Tenant-wide central policy re-evaluation (passed)
 
 - Added `enforce_server_tenant_permission`, which binds tenant-wide

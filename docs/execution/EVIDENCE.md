@@ -2,6 +2,23 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-398: Live PostgreSQL tenant-administration policy gate
+
+- On a fresh disposable PostgreSQL 16 database upgraded through Alembic
+  `0064`, with `RECONFORGE_TEST_POSTGRES_DSN` bound to the non-superuser
+  `reconforge_app` (`NOBYPASSRLS`) and the admin DSN reserved for provisioning,
+  the following passed:
+  `uv run pytest -q tests/test_postgres_security_governance.py::test_live_security_governance_is_atomic_runtime_enforced_and_tenant_isolated tests/test_postgres_access_administration.py::test_live_access_admin_is_atomic_tenant_isolated_and_invalidates_authority tests/test_postgres_identity_administration.py --tb=short`
+  -> 3 passed.
+- The gate exercised tenant isolation, central human/step-up authorization,
+  access lifecycle, security governance, identity/session lifecycle and
+  guarded downgrade/rollback behavior. The earlier superuser/dirty-database
+  attempt failed its intended RLS/cleanup assertions and is not counted.
+- Boundary: current local single-node PostgreSQL runtime evidence only. It does
+  not establish federation, distributed invalidation, worker/export/UI
+  adoption, independent HA/DR, live providers or production IAM assurance.
+  GitHub publication remains deferred by the owner.
+
 ## E-397: Tenant-wide central policy re-evaluation
 
 - Added `enforce_server_tenant_permission` with a request-tenant equality

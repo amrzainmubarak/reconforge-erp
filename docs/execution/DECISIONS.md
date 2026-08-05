@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-303: Promote tenant-wide policy enforcement only on a non-superuser fresh database
+- **Date**: 2026-08-05
+- **Context**: The new tenant-wide central-policy route boundary needed live
+  PostgreSQL evidence. A first attempt used a superuser and a previously used
+  database, so RLS cleanup assertions were not meaningful.
+- **Decision**: Retain only a fresh PostgreSQL 16 run with the non-superuser
+  `reconforge_app` (`NOBYPASSRLS`) as runtime evidence; record the superuser
+  attempt as diagnostic failure, not as a passing retry.
+- **Rationale**: A role that bypasses RLS cannot validate tenant isolation, and
+  contaminated state cannot validate guarded downgrade behavior.
+- **Reversibility**: Remove E-398 and its matrix entry if the runtime profile
+  is withdrawn; code and migrations are unchanged.
+- **Verification**: Access administration, security governance and identity
+  administration live contracts pass 3/3 on the fresh database.
+
 ### D-302: Bind tenant-wide administration to central policy at request time
 - **Date**: 2026-08-05
 - **Context**: PostgreSQL identity, role, scope-grant, and security-retention

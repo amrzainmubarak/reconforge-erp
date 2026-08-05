@@ -277,7 +277,7 @@ def enforce_server_scoped_permissions(
     *,
     permissions: frozenset[str],
     tenant_id: str,
-    workspace_id: str,
+    workspace_id: str | None,
     entity_id: str | None = None,
 ) -> None:
     """Re-evaluate one of several permissions against the server hierarchy.
@@ -359,6 +359,36 @@ def enforce_server_scoped_permission(
         tenant_id=tenant_id,
         workspace_id=workspace_id,
         entity_id=entity_id,
+    )
+
+
+def enforce_server_tenant_permission(
+    request: Request,
+    *,
+    permission: str,
+    tenant_id: str,
+) -> None:
+    """Re-evaluate a tenant-wide administrative permission in server mode.
+
+    Identity, access-policy, and retention administration are deliberately
+    tenant-scoped rather than workspace-scoped.  They still need the same
+    request-time central-policy re-evaluation as business routes, but forcing a
+    synthetic workspace would incorrectly deny valid tenant administrators.
+    """
+
+    # The tenant is a request-bound security boundary, not a caller-controlled
+    # argument.  Keep this check local to the tenant-wide helper so an
+    # administrative adapter cannot accidentally authorize a sibling tenant.
+    from reconforge.api.server_identity import request_tenant_id
+
+    if request_tenant_id(request) != tenant_id:
+        raise APIError(status_code=403, code="tenant_scope_denied", message="Tenant scope is not authorized.")
+
+    enforce_server_scoped_permissions(
+        request,
+        permissions=frozenset({permission}),
+        tenant_id=tenant_id,
+        workspace_id=None,
     )
 
 

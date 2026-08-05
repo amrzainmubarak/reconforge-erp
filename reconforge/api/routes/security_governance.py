@@ -10,7 +10,7 @@ from typing import Annotated, Literal, TypeVar
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import require_permission
+from reconforge.api.dependencies import enforce_server_tenant_permission, require_permission
 from reconforge.api.errors import APIError
 from reconforge.api.server_identity import (
     execute_postgres_security_governance,
@@ -147,6 +147,8 @@ class EvidenceRetentionResponse(BaseModel):
 def _service(
     request: Request,
     operation: Callable[[SecurityGovernanceApplicationService, str], ResultT],
+    *,
+    permission: str = "security.policy.manage",
 ) -> ResultT:
     if not server_identity_enabled(request):
         raise APIError(
@@ -156,6 +158,7 @@ def _service(
         )
 
     def execute(repository: PostgresSecurityGovernanceRepository, tenant_id: str) -> ResultT:
+        enforce_server_tenant_permission(request, permission=permission, tenant_id=tenant_id)
         service = SecurityGovernanceApplicationService(
             repository,
             clock=lambda: datetime.now(UTC).replace(microsecond=0),

@@ -10,7 +10,7 @@ from typing import Annotated, Literal, TypeVar, cast
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import require_permission
+from reconforge.api.dependencies import enforce_server_tenant_permission, require_permission
 from reconforge.api.errors import APIError
 from reconforge.api.server_identity import (
     execute_postgres_access_administration,
@@ -156,6 +156,8 @@ class PolicyAnalysisResponse(BaseModel):
 def _service(
     request: Request,
     operation: Callable[[AccessAdministrationApplicationService, str], ResultT],
+    *,
+    permission: str = "roles.manage",
 ) -> ResultT:
     if not server_identity_enabled(request):
         raise APIError(
@@ -165,6 +167,7 @@ def _service(
         )
 
     def execute(repository: PostgresAccessAdministrationRepository, tenant_id: str) -> ResultT:
+        enforce_server_tenant_permission(request, permission=permission, tenant_id=tenant_id)
         service = AccessAdministrationApplicationService(
             repository,
             clock=lambda: datetime.now(UTC).replace(microsecond=0),
@@ -387,5 +390,6 @@ def analyze_access_policy(
             approved_by=payload.approved_by,
             approved_at=payload.approved_at,
         ),
+        permission="security.policy.manage",
     )
     return result.to_dict()

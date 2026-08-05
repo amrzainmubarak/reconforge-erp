@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-302: Bind tenant-wide administration to central policy at request time
+- **Date**: 2026-08-05
+- **Context**: PostgreSQL identity, role, scope-grant, and security-retention
+  administration used human permission dependencies but did not uniformly
+  re-evaluate the same permission immediately before repository access.
+- **Decision**: Add `enforce_server_tenant_permission` with a request-tenant
+  equality guard and adopt it across the four tenant-wide administration route
+  families. Do not manufacture a workspace scope for resources that are
+  intentionally tenant-wide.
+- **Rationale**: This closes a real authorization boundary while preserving
+  least privilege, step-up requirements and local SQLite compatibility.
+- **Reversibility**: Remove the helper, route calls, ADR 0345 and E-397; no
+  migration or persisted-data change is needed.
+- **Verification**: Focused route and execution-scope tests pass 15/15.
+
 ### D-301: Exercise the reference REST reader through disposable HTTPS
 - **Date**: 2026-08-05
 - **Context**: The reference REST connector's schema, cursor and retry rules

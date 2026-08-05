@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-397: Tenant-wide central policy re-evaluation
+
+- Added `enforce_server_tenant_permission` with a request-tenant equality
+  guard and central-policy evaluation that intentionally omits workspace scope
+  for tenant-wide administration.
+- Adopted it before PostgreSQL repository access for access administration,
+  identity/session administration, scope grants, and security governance.
+- `uv run pytest -q tests/test_api_execution_scope.py tests/test_api_access_administration.py tests/test_api_security_governance.py tests/test_api_identity_administration.py --tb=short`
+  -> 15 passed. The tests cover tenant-wide allow and sibling-tenant refusal;
+  local SQLite compatibility remains unchanged.
+- Boundary: route-family evidence only. Distributed worker/export/UI policy
+  adoption, federation, cache invalidation across processes, live providers,
+  independent HA/DR and production IAM assurance remain open. GitHub
+  publication remains deferred by the owner.
+
 ## E-396: Python 3.11 all-extras CI ImportError reproduction
 
 - Fresh environment command:

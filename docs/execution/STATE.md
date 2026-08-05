@@ -6,6 +6,20 @@ Updated: 2026-08-05
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
 
+## E-397 — Tenant-wide central policy re-evaluation (passed)
+
+- Added `enforce_server_tenant_permission`, which binds tenant-wide
+  administration to the request tenant and re-evaluates the central policy
+  immediately before PostgreSQL repository access without inventing a
+  workspace scope.
+- Adopted the boundary for access roles/policies, identity/session
+  administration, workspace/entity scope grants, and integration/evidence
+  retention governance. Local SQLite compatibility is unchanged.
+- Focused execution-scope, access-administration, identity-administration and
+  security-governance tests pass. This closes only the tenant-wide route
+  family; worker/export/UI adoption, federation, distributed invalidation,
+  live providers, HA/DR and production IAM assurance remain open.
+
 ## E-396 — Python 3.11 all-extras CI ImportError reproduction (passed current head)
 
 - A fresh disposable Python 3.11.15 environment created with

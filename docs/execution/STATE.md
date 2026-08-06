@@ -4632,8 +4632,8 @@ it now has 133 unique tasks and valid YAML. This closes documentation
 serialization drift only and does not change the still-open hosted release,
 provider, HA/DR, or native-backup gates.
 The backlog has since grown with the current HA/DR, object-storage, and Redis
-runtime evidence entries; its latest parse is 137 unique tasks (E-460 through
-E-470 included).
+runtime and current-tree gate entries; its latest parse is 141 unique tasks
+(E-460 through E-474 included).
 The fresh repeated PostgreSQL HA/DR drill now provides stronger bounded runtime
 evidence: three Docker 17.10 primary/standby cycles passed encrypted restore,
 fencing, partition refusal, manual failover/failback, zero-loss sentinel replay,

@@ -81,6 +81,37 @@ class GroupedMatchingReplayResult:
         }
 
 
+def run_grouped_matching_replay_fault_matrix(
+    directory: Path,
+    *,
+    profile: GroupedMatchingReplayProfile | None = None,
+) -> tuple[GroupedMatchingReplayResult, ...]:
+    """Exercise crash/resume after every non-terminal partition checkpoint.
+
+    Each fault point runs against a fresh SQLite database.  The matrix keeps
+    the existing bounded profile and public replay verifier, while making the
+    recovery contract explicit for every resumable checkpoint rather than only
+    the first partition.
+    """
+
+    declared = profile or GroupedMatchingReplayProfile()
+    partition_count = len(_partition_requests())
+    fault_points = tuple(range(1, partition_count))
+    results: list[GroupedMatchingReplayResult] = []
+    for fault_point in fault_points:
+        point_profile = GroupedMatchingReplayProfile(
+            profile_id=f"{declared.profile_id}/fault-{fault_point}",
+            fault_after_partition=fault_point,
+            retry_ceiling=declared.retry_ceiling,
+        )
+        result = run_grouped_matching_replay_profile(
+            directory / f"fault-{fault_point}.db", profile=point_profile
+        )
+        verify_grouped_matching_replay(result)
+        results.append(result)
+    return tuple(results)
+
+
 LIMITATIONS = (
     "Synthetic SQLite replay only; PostgreSQL matcher parity is not exercised by this profile.",
     "The portfolio is bounded to four partitions and is not a 10K/100K/1M performance claim.",
@@ -348,6 +379,7 @@ def verify_grouped_matching_replay(result: GroupedMatchingReplayResult) -> None:
 __all__ = [
     "GroupedMatchingReplayProfile",
     "GroupedMatchingReplayResult",
+    "run_grouped_matching_replay_fault_matrix",
     "run_grouped_matching_replay_profile",
     "verify_grouped_matching_replay",
 ]

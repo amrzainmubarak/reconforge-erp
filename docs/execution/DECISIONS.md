@@ -4991,3 +4991,20 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Reversibility**: Remove the registration field, transport, tests, ADR,
   manifest entry, and evidence; no migration or persisted-data rollback is
   required.
+
+### D-316: Cover every grouped-matching resume checkpoint
+
+- **Date**: 2026-08-06
+- **Context**: The replay harness injected only a first-partition fault, leaving
+  later resumable checkpoints unexercised.
+- **Decision**: Add a bounded fault matrix over fresh SQLite databases for every
+  non-terminal partition checkpoint, reusing the public replay profile and
+  verifier rather than adding a second matching implementation.
+- **Verification**: The focused replay/adversarial suite passes 10/10; fault
+  points 1, 2, and 3 all preserve the baseline digest, parity, mutation guard,
+  zero duplicate effects, and terminal queue state.
+- **Boundary**: This is synthetic SQLite failure-injection evidence only. It
+  does not establish PostgreSQL parity, distributed queue failure, mutation
+  tool score, throughput, or production reliability.
+- **Reversibility**: Remove the harness, test, ADR, manifest entry, and
+  evidence; no migration or persisted-data rollback is required.

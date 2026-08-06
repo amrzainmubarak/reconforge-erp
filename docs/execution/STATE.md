@@ -4632,8 +4632,8 @@ it now has 133 unique tasks and valid YAML. This closes documentation
 serialization drift only and does not change the still-open hosted release,
 provider, HA/DR, or native-backup gates.
 The backlog has since grown with the current HA/DR, object-storage, and Redis
-runtime and current-tree gate entries; its latest parse is 155 unique tasks
-(E-460 through E-488 included).
+runtime and current-tree gate entries; its latest parse is 156 unique tasks
+(E-460 through E-489 included).
 The fresh repeated PostgreSQL HA/DR drill now provides stronger bounded runtime
 evidence: three Docker 17.10 primary/standby cycles passed encrypted restore,
 fencing, partition refusal, manual failover/failback, zero-loss sentinel replay,
@@ -4742,3 +4742,9 @@ current tree collected 2,570 tests and reached 100% with no collection or
 executed failure. Declared live-service/platform skips and existing warnings
 remain; hosted CI, native backup tools, live providers, distributed scale,
 HA/DR, and release approval are still external gates.
+The advanced matching replay harness now also runs a fault matrix against fresh
+SQLite databases for every non-terminal checkpoint (partitions 1, 2, and 3).
+All three cases reproduce the uninterrupted effect digest, retain parity and
+the mutation guard, leave no duplicate effects, and drain the queue. This
+strengthens bounded replay evidence only; PostgreSQL/distributed queue failure,
+mutation-tool score, throughput, and production SLOs remain open.

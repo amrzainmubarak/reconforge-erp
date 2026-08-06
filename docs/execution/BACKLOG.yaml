@@ -1669,3 +1669,11 @@ tasks:
     status: completed
     depends_on: [E-487]
     exit_evidence: The current Windows/Python 3.12 tree collects 2570 tests and `uv run --no-sync pytest -q --tb=short -ra` reaches 100% with no collection or executed failure. Only declared live PostgreSQL/Redis/object-storage/network/platform capability skips and existing framework/legacy-input warnings remain. This is local compatibility evidence only; hosted CI, native backup tooling, live providers, distributed scale, HA/DR, and production release approval remain external.
+
+  - id: E-489
+    priority: P0
+    area: advanced_matching
+    title: Grouped-matching checkpoint fault matrix
+    status: completed
+    depends_on: [P4-MAT-001, E-488]
+    exit_evidence: "`run_grouped_matching_replay_fault_matrix` runs the public grouped replay profile against fresh SQLite databases with injected faults after every non-terminal checkpoint (partitions 1, 2, and 3). The focused replay/adversarial suite passes 10/10; all cases reproduce the uninterrupted effect digest, preserve strategy/application parity and the mutation guard, leave zero duplicate effects, and drain queue/running state. This is bounded SQLite failure-injection evidence only, not PostgreSQL parity, distributed queue failure, mutation-tool score, throughput, or production SLO evidence."

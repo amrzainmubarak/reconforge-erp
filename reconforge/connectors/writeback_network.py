@@ -62,6 +62,7 @@ class WritebackNetworkRegistration(BaseModel):
     connector_id: str = Field(pattern=_ID_PATTERN)
     version: str = Field(pattern=r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$")
     endpoint: str = Field(min_length=1, max_length=2_048)
+    recovery_endpoint: str | None = Field(default=None, min_length=1, max_length=2_048)
     egress_destinations: tuple[str, ...] = Field(min_length=1, max_length=8)
     credential_reference: str = Field(pattern=_SECRET_REFERENCE_PATTERN)
     allowed_operations: frozenset[str] = Field(min_length=1, max_length=64)
@@ -111,6 +112,25 @@ class WritebackNetworkRegistration(BaseModel):
                 or destination_parts.fragment
             ):
                 raise ValueError("write-back egress destinations must be exact HTTPS URLs without credentials, query, or fragment")
+        if self.recovery_endpoint is not None:
+            recovery_parts = urlsplit(self.recovery_endpoint)
+            if (
+                recovery_parts.scheme.lower() != "https"
+                or not recovery_parts.hostname
+                or recovery_parts.username is not None
+                or recovery_parts.password is not None
+                or recovery_parts.query
+                or recovery_parts.fragment
+            ):
+                raise ValueError("write-back recovery endpoint must be an exact HTTPS URL without credentials, query, or fragment")
+            try:
+                recovery_port = recovery_parts.port
+            except ValueError as exc:
+                raise ValueError("write-back recovery endpoint port is invalid") from exc
+            if recovery_port is not None and not 1 <= recovery_port <= 65_535:
+                raise ValueError("write-back recovery endpoint port is invalid")
+            if self.recovery_endpoint not in self.egress_destinations:
+                raise ValueError("write-back recovery endpoint must be declared as an egress destination")
         return self
 
     @property
@@ -235,6 +255,58 @@ class PinnedHttpsPostTransport:
             raise
         except (OSError, http.client.HTTPException, ssl.SSLError) as exc:
             raise WritebackNetworkError("writeback_transport_failed") from exc
+        finally:
+            connection.close()
+
+
+@dataclass(frozen=True)
+class PinnedHttpsRecoveryTransport:
+    """HTTPS GET transport for an operator-declared idempotency status endpoint."""
+
+    resolver: AddressResolver = field(default=_system_resolver, repr=False, compare=False)
+    connection_factory: ConnectionFactory = field(default=_connection_factory, repr=False, compare=False)
+    tls_context: ssl.SSLContext = field(default_factory=ssl.create_default_context, repr=False, compare=False)
+
+    def recover(
+        self,
+        endpoint: str,
+        *,
+        headers: dict[str, str],
+        idempotency_key: str,
+        timeout_seconds: int,
+        maximum_response_bytes: int,
+    ) -> WritebackNetworkResponse:
+        if not isinstance(idempotency_key, str) or not idempotency_key:
+            raise WritebackNetworkError("writeback_recovery_idempotency_key_invalid")
+        parsed = urlsplit(endpoint)
+        if (
+            parsed.scheme.lower() != "https"
+            or not parsed.hostname
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise WritebackNetworkError("writeback_recovery_endpoint_invalid")
+        host = parsed.hostname
+        port = parsed.port or 443
+        addresses = resolve_public_addresses(host, port, resolver=self.resolver)
+        connection = self.connection_factory(host, port, addresses[0], timeout_seconds, self.tls_context)
+        try:
+            connection.request("GET", parsed.path or "/", headers=headers)
+            response = connection.getresponse()
+            response_body = response.read(maximum_response_bytes + 1)
+            if len(response_body) > maximum_response_bytes:
+                raise WritebackNetworkError("writeback_recovery_response_too_large")
+            return WritebackNetworkResponse(
+                status=int(response.status),
+                body=response_body,
+                content_type=response.getheader("Content-Type") or "",
+            )
+        except WritebackNetworkError:
+            raise
+        except (OSError, http.client.HTTPException, ssl.SSLError) as exc:
+            raise WritebackNetworkError("writeback_recovery_transport_failed") from exc
         finally:
             connection.close()
 
@@ -391,7 +463,7 @@ class WritebackNetworkExecutor:
         }
         try:
             response = transport.recover(
-                registration.endpoint,
+                registration.recovery_endpoint or registration.endpoint,
                 headers=headers,
                 idempotency_key=intent.idempotency_key,
                 timeout_seconds=registration.timeout_seconds,

@@ -4632,8 +4632,8 @@ it now has 133 unique tasks and valid YAML. This closes documentation
 serialization drift only and does not change the still-open hosted release,
 provider, HA/DR, or native-backup gates.
 The backlog has since grown with the current HA/DR, object-storage, and Redis
-runtime and current-tree gate entries; its latest parse is 153 unique tasks
-(E-460 through E-486 included).
+runtime and current-tree gate entries; its latest parse is 154 unique tasks
+(E-460 through E-487 included).
 The fresh repeated PostgreSQL HA/DR drill now provides stronger bounded runtime
 evidence: three Docker 17.10 primary/standby cycles passed encrypted restore,
 fencing, partition refusal, manual failover/failback, zero-loss sentinel replay,
@@ -4730,3 +4730,10 @@ matched/ambiguous/unmatched outcomes and no partial identity selection. This
 strengthens algorithm correctness evidence only; fuzzing, mutation score, live
 rates, PostgreSQL parity, performance, posting, write-back, and production
 assurance remain open.
+The write-back recovery boundary now also has a real pinned HTTPS transport:
+registrations bind an optional exact status URL to the egress allowlist, and the
+transport performs a bounded TLS GET with the original idempotency key and no
+body. The local TLS sandbox passed three POST retries followed by one GET
+recovery with zero additional POSTs. This is loopback/provider-neutral evidence;
+vendor status semantics, accounting posting, distributed idempotency, HA/DR,
+and production write-back remain open.

@@ -260,6 +260,7 @@ include tests/test_grouped_matching.py
 include tests/test_grouped_matching_adversarial.py
 include docs/adr/0215-bounded-grouped-matching-is-explainable-and-non-posting.md
 include docs/adr/0381-dense-grouped-matching-adversarial-contracts.md
+include docs/adr/0382-pinned-https-writeback-recovery-transport.md
 include docs/adr/0216-bounded-partial-settlement-keeps-residuals-visible.md
 include docs/adr/0217-bounded-non-overlapping-group-portfolio.md
 include reconforge/domain/carry_forward.py

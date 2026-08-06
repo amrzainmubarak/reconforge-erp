@@ -4970,3 +4970,24 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   performance, posting, write-back, or production readiness.
 - **Reversibility**: Remove the four tests, ADR, manifest entry, and evidence;
   no schema or persisted-data change is involved.
+
+### D-315: Make provider-status recovery an explicit pinned HTTPS GET
+
+- **Date**: 2026-08-06
+- **Context**: Recovery was safe only through an injected lookup boundary. A
+  production-shaped transport was needed without guessing vendor URL shapes or
+  turning recovery into a second mutation.
+- **Decision**: Add optional `recovery_endpoint` registration metadata, require
+  exact HTTPS/no-query/no-fragment validation and egress declaration, and use a
+  separate `PinnedHttpsRecoveryTransport` that performs a bounded GET with the
+  original idempotency key. The executor falls back to the mutation endpoint
+  only for backward-compatible injected transports.
+- **Verification**: The focused network suite passes 19/19, including a real
+  disposable TLS sandbox with three POST retries and one pinned GET recovery;
+  Ruff and Mypy pass.
+- **Boundary**: This proves a provider-neutral loopback transport only; vendor
+  status semantics, accounting posting, distributed idempotency, HA/DR, and
+  production write-back remain unverified.
+- **Reversibility**: Remove the registration field, transport, tests, ADR,
+  manifest entry, and evidence; no migration or persisted-data rollback is
+  required.

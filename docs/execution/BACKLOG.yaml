@@ -1653,3 +1653,11 @@ tasks:
     status: completed
     depends_on: [P4-MAT-001, E-456]
     exit_evidence: Four focused contracts combine fee-aware netting with equal-cost many-to-many alternatives, fee-aware FX conversion with permutation replay, dense candidate search-budget refusal, and mixed partition/currency rejection. All cases require explicit matched, ambiguous, or unmatched outcomes with no partial identity selection; tests pass 4/4 and the test/ADR are included in the source distribution. This is bounded algorithm correctness evidence, not fuzzing, mutation score, PostgreSQL parity, live-rate validation, performance, posting, or production evidence.
+
+  - id: E-487
+    priority: P0
+    area: connectors
+    title: Pinned HTTPS write-back recovery transport
+    status: completed
+    depends_on: [E-486, P4-CON-001]
+    exit_evidence: Network registrations may declare an exact HTTPS recovery_endpoint only when it is an explicit egress destination. PinnedHttpsRecoveryTransport performs bounded GET status lookup with the original idempotency key, public-address pinning, TLS, no request body, and no redirect-following; the executor uses it without a second POST. Focused transport tests pass 19/19, including a disposable local TLS sandbox with three POST retries followed by one real GET recovery. Ruff and Mypy pass; no provider/vendor, accounting, distributed-idempotency, HA/DR, or production-write-back claim is added.

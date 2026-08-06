@@ -53,8 +53,9 @@ that optional standards-library dependency, signed-package verification fails cl
   no live vendor registration or production secret resolver is bundled.
 - Process-local rate state does not prove a shared distributed provider quota.
 - No live vendor write-back. The opt-in transport package has a separate,
-  provider-specific idempotency-status recovery boundary that can acknowledge a
-  possibly accepted mutation without issuing a second POST; manifest v1 still
-  rejects executable external connector packages and no provider status API is
-  bundled.
+  provider-specific idempotency-status recovery boundary: an operator may
+  declare an exact HTTPS `recovery_endpoint`, and the pinned recovery transport
+  performs a bounded GET with the original idempotency key without issuing a
+  second POST. This is transport evidence only; manifest v1 still rejects
+  executable external connector packages and no vendor status API is bundled.
 - No executable external connector installation, vendor certification, live vendor connector, or production deployment claim.

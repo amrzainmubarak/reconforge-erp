@@ -20,6 +20,7 @@ from reconforge.connectors.conformance import (
     verify_writeback_retry_failure_injection,
 )
 from reconforge.connectors.writeback import (
+    WritebackIntent,
     WritebackPolicy,
     WritebackStatus,
     approve_writeback,
@@ -28,6 +29,7 @@ from reconforge.connectors.writeback import (
 )
 from reconforge.connectors.writeback_network import (
     PinnedHttpsPostTransport,
+    PinnedHttpsRecoveryTransport,
     WritebackNetworkError,
     WritebackNetworkExecutor,
     WritebackNetworkRegistration,
@@ -66,7 +68,7 @@ def _registration(**updates: object) -> WritebackNetworkRegistration:
     return WritebackNetworkRegistration.model_validate(values)
 
 
-def _dispatched_intent(payload: bytes = PAYLOAD):
+def _dispatched_intent(payload: bytes = PAYLOAD) -> WritebackIntent:
     proposed = _intent(
         connector_id=CONNECTOR_ID,
         payload_digest=hashlib.sha256(payload).hexdigest(),
@@ -83,7 +85,7 @@ def _dispatched_intent(payload: bytes = PAYLOAD):
     return dispatch_writeback(approved, policy=POLICY)
 
 
-def _compensation_requested_intent():
+def _compensation_requested_intent() -> WritebackIntent:
     return request_compensation(_dispatched_intent(), reason="provider accepted the original mutation but downstream state diverged")
 
 
@@ -164,6 +166,8 @@ def test_writeback_registration_is_explicit_and_canonical() -> None:
         _registration(endpoint="https://api.example.test/v1/writeback?unsafe=1", egress_destinations=("https://api.example.test/v1/writeback?unsafe=1",))
     with pytest.raises(ValidationError, match="canonically sorted"):
         _registration(egress_destinations=("https://z.example.test/writeback", "https://api.example.test/v1/writeback"))
+    with pytest.raises(ValidationError, match="declared as an egress"):
+        _registration(recovery_endpoint="https://api.example.test/v1/status")
 
 
 def test_network_dispatch_verifies_payload_sends_secret_only_to_transport_and_binds_ack() -> None:
@@ -197,14 +201,22 @@ def test_network_recovery_reads_provider_idempotency_status_without_resending_mu
         transport,
         payload_resolver=_Payloads(),
         secret_resolver=_Secrets(),
-    ).recover(intent, registration=_registration(), policy=POLICY, transport=recovery)
+    ).recover(
+        intent,
+        registration=_registration(
+            recovery_endpoint="https://api.example.test/v1/status",
+            egress_destinations=("https://api.example.test/v1/status", "https://api.example.test/v1/writeback"),
+        ),
+        policy=POLICY,
+        transport=recovery,
+    )
     assert receipt.intent.status is WritebackStatus.ACKNOWLEDGED
     assert receipt.intent.acknowledgement is not None
     assert receipt.intent.acknowledgement.idempotency_key == intent.idempotency_key
     assert transport.calls == []
     assert len(recovery.calls) == 1
     endpoint, headers, key, timeout, maximum = recovery.calls[0]
-    assert endpoint == "https://api.example.test/v1/writeback"
+    assert endpoint == "https://api.example.test/v1/status"
     assert key == intent.idempotency_key
     assert headers["Idempotency-Key"] == intent.idempotency_key
     assert headers["X-ReconForge-Recovery"] == "idempotency-status-v1"
@@ -514,6 +526,49 @@ def test_pinned_https_post_transport_preserves_hostname_and_never_follows_redire
     assert ("POST", "/v1/writeback", PAYLOAD, {"Idempotency-Key": "key-1"}) in captured
 
 
+def test_pinned_https_recovery_transport_uses_get_and_declared_status_key() -> None:
+    captured: list[tuple[object, ...]] = []
+
+    class _Response:
+        status = 200
+
+        def read(self, amount: int) -> bytes:
+            captured.append(("read", amount))
+            return _provider_body("key-1")
+
+        def getheader(self, name: str) -> str:
+            assert name == "Content-Type"
+            return "application/json"
+
+    class _Connection:
+        def request(self, method: str, target: str, *, headers: dict[str, str]) -> None:
+            captured.append((method, target, headers))
+
+        def getresponse(self) -> _Response:
+            return _Response()
+
+        def close(self) -> None:
+            captured.append(("close",))
+
+    def factory(host: str, port: int, address: str, timeout: int, context: object) -> _Connection:
+        captured.append((host, port, address, timeout, context))
+        return _Connection()
+
+    transport = PinnedHttpsRecoveryTransport(
+        resolver=lambda _host, _port: ("93.184.216.34",), connection_factory=factory
+    )
+    response = transport.recover(
+        "https://api.example.test/v1/status",
+        headers={"Idempotency-Key": "key-1"},
+        idempotency_key="key-1",
+        timeout_seconds=7,
+        maximum_response_bytes=1000,
+    )
+    assert response.status == 200
+    assert captured[0][0:4] == ("api.example.test", 443, "93.184.216.34", 7)
+    assert ("GET", "/v1/status", {"Idempotency-Key": "key-1"}) in captured
+
+
 def test_local_https_writeback_sandbox_exercises_real_tls_retry_and_idempotency(tmp_path: Path) -> None:
     """Exercise the real HTTPS transport against a disposable local provider sandbox.
 
@@ -525,6 +580,7 @@ def test_local_https_writeback_sandbox_exercises_real_tls_retry_and_idempotency(
 
     certificate, key = create_localhost_certificate(tmp_path)
     requests: list[tuple[dict[str, str], bytes]] = []
+    recovery_requests: list[dict[str, str]] = []
 
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
@@ -540,6 +596,16 @@ def test_local_https_writeback_sandbox_exercises_real_tls_retry_and_idempotency(
                 status = 200
                 response_body = _provider_body(self.headers.get("Idempotency-Key", ""))
             self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(response_body)))
+            self.send_header("Connection", "close")
+            self.end_headers()
+            self.wfile.write(response_body)
+
+        def do_GET(self) -> None:  # noqa: N802 - stdlib handler contract
+            recovery_requests.append(dict(self.headers))
+            response_body = _provider_body(self.headers.get("Idempotency-Key", ""))
+            self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(response_body)))
             self.send_header("Connection", "close")
@@ -595,6 +661,26 @@ def test_local_https_writeback_sandbox_exercises_real_tls_retry_and_idempotency(
             registration=_registration(endpoint=endpoint, egress_destinations=(endpoint,)),
             policy=POLICY,
         )
+        recovery_endpoint = f"https://localhost:{server.server_port}/v1/status"
+        recovery_intent = _dispatched_intent()
+        recovery = WritebackNetworkExecutor(
+            transport,
+            payload_resolver=_Payloads(),
+            secret_resolver=_Secrets(),
+        ).recover(
+            recovery_intent,
+            registration=_registration(
+                endpoint=endpoint,
+                recovery_endpoint=recovery_endpoint,
+                egress_destinations=tuple(sorted((endpoint, recovery_endpoint))),
+            ),
+            policy=POLICY,
+            transport=PinnedHttpsRecoveryTransport(
+                resolver=lambda _host, _port: ("93.184.216.34",),
+                connection_factory=factory,
+                tls_context=client_context,
+            ),
+        )
     finally:
         server.shutdown()
         server.server_close()
@@ -602,10 +688,13 @@ def test_local_https_writeback_sandbox_exercises_real_tls_retry_and_idempotency(
 
     assert receipt.attempts == 3
     assert len(requests) == 3
-    assert pinned_addresses == ["93.184.216.34"] * 3
+    assert len(recovery_requests) == 1
+    assert pinned_addresses == ["93.184.216.34"] * 4
     assert {headers["Idempotency-Key"] for headers, _body in requests} == {intent.idempotency_key}
     assert all(headers["Authorization"] == "Bearer synthetic-writeback-token-123" for headers, _body in requests)
     assert all(body == PAYLOAD for _headers, body in requests)
+    assert recovery_requests[0]["Idempotency-Key"] == recovery_intent.idempotency_key
+    assert recovery.intent.status is WritebackStatus.ACKNOWLEDGED
     assert receipt.intent.status is WritebackStatus.ACKNOWLEDGED
     assert receipt.intent.acknowledgement is not None
     assert receipt.intent.acknowledgement.provider_reference == "provider-1"

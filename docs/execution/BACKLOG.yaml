@@ -2470,3 +2470,36 @@ tasks:
       PostgreSQL/provider runtimes, independent HA/DR, and release approval
       remain external; GitHub publication remains deferred by owner
       instruction.
+  - id: E-538
+    priority: P1
+    area: enterprise_policy
+    title: Hierarchy-scoped PostgreSQL transactional outbox worker lane
+    status: completed
+    depends_on: [E-537, P4-IAM-001]
+    exit_evidence: >-
+      Migration `0073_pg_outbox_scope` adds nullable workspace, organization,
+      and legal-entity attribution, a scope-aware pending index, transaction
+      defaults, and explicit hierarchy RLS for outbox events. The repository
+      applies exact optional scope predicates to atomic claims and returns
+      attribution. The PostgreSQL worker accepts deterministic four-part lanes,
+      authorizes each lane before connection access, restores the exact scope
+      for claim/publish/failure transactions, and fails closed on hierarchy
+      mismatch. Focused outbox/worker/migration/policy contracts pass; ADR 0409
+      and the migration helper are packaged. Live providers, distributed queue
+      fairness, HA/DR, and production readiness remain external.
+  - id: E-539
+    priority: P0
+    area: quality
+    title: Regression and package gate after hierarchy-scoped outbox worker
+    status: completed
+    depends_on: [E-538]
+    exit_evidence: >-
+      The focused contract gate passes 29 tests with five declared live-
+      PostgreSQL skips. The full current tree collects 2,634 tests and passes
+      100% in 355.5 seconds with no collection or executed failure; Ruff,
+      Mypy (480 source files), Bandit, OSV pip-audit, package build/source
+      distribution (ADR 0409, migration 0073, and helper present), migration
+      registry, and git diff checks pass. Hosted CI/security/provenance, live
+      providers, distributed queue fairness, HA/DR, and production readiness
+      remain external; GitHub publication remains deferred by owner
+      instruction.

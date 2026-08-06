@@ -5507,3 +5507,29 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   HA/DR, and production IAM assurance remain open.
 - **Reversibility**: Remove the optional suppliers, filter parameters, tests,
   ADR, and manifest entry without changing stored schedules.
+
+### D-383: Carry exact hierarchy scope through PostgreSQL transactional outbox delivery
+
+- **Date**: 2026-08-06
+- **Context**: The transactional outbox had tenant RLS and atomic leasing, but
+  a hosted publisher could claim events from sibling workspaces or legal
+  entities within the same tenant. Scheduler and reconciliation lanes already
+  established the required hierarchy boundary.
+- **Decision**: Migration `0073_pg_outbox_scope` adds nullable workspace,
+  organization, and legal-entity attribution with transaction-local defaults,
+  a pending lookup index, and explicit hierarchy RLS. Repository claims bind
+  every supplied dimension and return attribution. The worker accepts a
+  deterministic four-part lane, authorizes it before connection access, and
+  restores the same scope for claim, publish, and failure transitions. Entity
+  lanes require organization; an attributed event that does not match a
+  supplied lane fails closed. Tenant-only callers remain compatible.
+- **Verification**: Focused outbox/worker/migration/policy tests pass, including
+  exact claim parameters, policy-before-connection, GUC propagation, and
+  invalid hierarchy refusal. Full regression and package evidence is recorded
+  separately as E-539 after the final gates.
+- **Boundary**: This is a PostgreSQL outbox scope contract, not proof of live
+  provider delivery, distributed queue fairness, HA/DR, throughput, or
+  production readiness.
+- **Reversibility**: Downgrade removes the scope index and columns and restores
+  the tenant-only policy; optional worker/repository scope can be removed
+  without rewriting legacy tenant-scoped events.

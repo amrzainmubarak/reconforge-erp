@@ -1188,6 +1188,9 @@ CREATE TABLE IF NOT EXISTS reconforge.outbox_events (
     last_error TEXT,
     dead_lettered_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    workspace_id TEXT DEFAULT NULLIF(current_setting('app.workspace_id', true), ''),
+    organization_id TEXT DEFAULT NULLIF(current_setting('app.organization_id', true), ''),
+    legal_entity_id TEXT DEFAULT NULLIF(current_setting('app.legal_entity_id', true), ''),
     PRIMARY KEY (tenant_id, event_id),
     FOREIGN KEY (tenant_id) REFERENCES reconforge.tenants(id) ON DELETE CASCADE,
     CHECK (status IN ('Pending', 'Claimed', 'Published', 'Dead'))
@@ -1341,6 +1344,20 @@ ALTER TABLE reconforge.audit_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reconforge.audit_events FORCE ROW LEVEL SECURITY;
 ALTER TABLE reconforge.outbox_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reconforge.outbox_events FORCE ROW LEVEL SECURITY;
+ALTER TABLE reconforge.outbox_events
+    ADD COLUMN IF NOT EXISTS workspace_id TEXT DEFAULT NULLIF(current_setting('app.workspace_id', true), '');
+ALTER TABLE reconforge.outbox_events
+    ALTER COLUMN workspace_id SET DEFAULT NULLIF(current_setting('app.workspace_id', true), '');
+ALTER TABLE reconforge.outbox_events
+    ADD COLUMN IF NOT EXISTS organization_id TEXT DEFAULT NULLIF(current_setting('app.organization_id', true), '');
+ALTER TABLE reconforge.outbox_events
+    ALTER COLUMN organization_id SET DEFAULT NULLIF(current_setting('app.organization_id', true), '');
+ALTER TABLE reconforge.outbox_events
+    ADD COLUMN IF NOT EXISTS legal_entity_id TEXT DEFAULT NULLIF(current_setting('app.legal_entity_id', true), '');
+ALTER TABLE reconforge.outbox_events
+    ALTER COLUMN legal_entity_id SET DEFAULT NULLIF(current_setting('app.legal_entity_id', true), '');
+CREATE INDEX IF NOT EXISTS idx_outbox_events_scope_pending
+    ON reconforge.outbox_events (tenant_id, workspace_id, organization_id, legal_entity_id, status, available_at);
 
 DO $reconforge$
 DECLARE
@@ -1360,4 +1377,21 @@ BEGIN
     END LOOP;
 END
 $reconforge$;
+
+DROP POLICY IF EXISTS tenant_scope ON reconforge.outbox_events;
+CREATE POLICY tenant_scope ON reconforge.outbox_events
+ USING (tenant_id = current_setting('app.tenant_id', true)
+   AND (NULLIF(current_setting('app.workspace_id', true), '') IS NULL
+        OR workspace_id = current_setting('app.workspace_id', true))
+   AND (NULLIF(current_setting('app.organization_id', true), '') IS NULL
+        OR organization_id = current_setting('app.organization_id', true))
+   AND (NULLIF(current_setting('app.legal_entity_id', true), '') IS NULL
+        OR legal_entity_id = current_setting('app.legal_entity_id', true)))
+ WITH CHECK (tenant_id = current_setting('app.tenant_id', true)
+   AND (NULLIF(current_setting('app.workspace_id', true), '') IS NULL
+        OR workspace_id = current_setting('app.workspace_id', true))
+   AND (NULLIF(current_setting('app.organization_id', true), '') IS NULL
+        OR organization_id = current_setting('app.organization_id', true))
+   AND (NULLIF(current_setting('app.legal_entity_id', true), '') IS NULL
+        OR legal_entity_id = current_setting('app.legal_entity_id', true)));
 """

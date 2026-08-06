@@ -104,6 +104,9 @@ class _FakeConnection:
                         None,
                         None,
                         "2026-07-23T00:00:00Z",
+                        "workspace-a",
+                        "org-a",
+                        "entity-a",
                     )
                 ]
             )
@@ -130,6 +133,9 @@ class _FakeConnection:
                         None,
                         self.dead_lettered_at,
                         "2026-07-23T00:00:00Z",
+                        "workspace-a",
+                        "org-a",
+                        "entity-a",
                     )
                 ]
             )
@@ -151,6 +157,10 @@ class _FakeFactory:
 
 def test_postgres_outbox_claim_and_transitions_are_tenant_scoped() -> None:
     assert "claimed_by TEXT" in POSTGRES_LEDGER_SCHEMA_SQL
+    assert "workspace_id TEXT DEFAULT NULLIF(current_setting('app.workspace_id'" in POSTGRES_LEDGER_SCHEMA_SQL
+    assert "organization_id TEXT DEFAULT NULLIF(current_setting('app.organization_id'" in POSTGRES_LEDGER_SCHEMA_SQL
+    assert "legal_entity_id TEXT DEFAULT NULLIF(current_setting('app.legal_entity_id'" in POSTGRES_LEDGER_SCHEMA_SQL
+    assert "idx_outbox_events_scope_pending" in POSTGRES_LEDGER_SCHEMA_SQL
     connection = _FakeConnection()
     repository = PostgresOutboxRepository(connection)
 
@@ -281,6 +291,68 @@ def test_postgres_outbox_worker_policy_allows_scoped_service_identity() -> None:
     )
     result = worker.process_once()
     assert result.published == 1
+
+
+def test_postgres_outbox_worker_processes_exact_hierarchy_lane() -> None:
+    connection = _FakeConnection()
+
+    def policy_context(tenant: str, workspace: str | None, entity: str | None) -> PolicyEvaluationContext:
+        return PolicyEvaluationContext(
+            user_id="outbox-scoped-worker",
+            username="outbox-scoped-worker",
+            user_permissions={"outbox.publish"},
+            principal_type="service_account",
+            tenant_id=tenant,
+            workspace_id=workspace,
+            entity_id=entity,
+            authorized_tenant_ids=frozenset({tenant}),
+            authorized_workspace_ids=frozenset({workspace}) if workspace else frozenset(),
+            authorized_entity_ids=frozenset({entity}) if entity else frozenset(),
+        )
+
+    worker = PostgresOutboxWorker(
+        _FakeFactory(connection),
+        tenant_supplier=lambda: ["tenant-without-scope-must-not-be-used"],
+        publisher=lambda _event: None,
+        settings=OutboxWorkerSettings(
+            worker_id="outbox-scoped-worker",
+            poll_interval_seconds=0,
+            policy_context_scope_supplier=policy_context,
+            scope_supplier=lambda: (("tenant_a", "workspace-a", "org-a", "entity-a"),),
+        ),
+    )
+
+    result = worker.process_once()
+
+    assert result.published == 1
+    assert any(
+        "set_config('app.organization_id'" in sql and params == ("org-a",)
+        for sql, params in connection.executed
+    )
+    assert any(
+        "set_config('app.legal_entity_id'" in sql and params == ("entity-a",)
+        for sql, params in connection.executed
+    )
+    claim_params = next(params for sql, params in connection.executed if "FOR UPDATE SKIP LOCKED" in sql)
+    assert claim_params[:4] == ("tenant_a", "workspace-a", "org-a", "entity-a")
+
+
+def test_postgres_outbox_worker_rejects_entity_lane_without_organization_before_connection() -> None:
+    class _NeverConnect:
+        def connect(self) -> Any:
+            raise AssertionError("invalid hierarchy must be rejected before connection access")
+
+    worker = PostgresOutboxWorker(
+        _NeverConnect(),
+        tenant_supplier=lambda: [],
+        publisher=lambda _event: None,
+        settings=OutboxWorkerSettings(
+            worker_id="outbox-invalid-scope",
+            scope_supplier=lambda: (("tenant_a", "workspace-a", None, "entity-a"),),
+        ),
+    )
+    with pytest.raises(PostgresOutboxWorkerError, match="requires organization"):
+        worker.process_once()
 
 
 def test_tenant_bound_postgres_adapter_satisfies_application_contract() -> None:

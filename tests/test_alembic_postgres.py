@@ -91,6 +91,22 @@ def test_reconciliation_entity_scope_migration_is_versioned_and_reversible() -> 
     assert "current_setting('app.legal_entity_id'" in schema
 
 
+def test_outbox_scope_migration_is_versioned_and_reversible() -> None:
+    migration = (ROOT / "alembic/versions/0073_postgres_outbox_scope.py").read_text(encoding="utf-8")
+    schema = (ROOT / "reconforge/infrastructure/postgres_outbox_scope.py").read_text(encoding="utf-8")
+
+    assert 'revision = "0073_pg_outbox_scope"' in migration
+    assert 'down_revision = "0072_pg_recon_entity_scope"' in migration
+    assert "POSTGRES_OUTBOX_SCOPE_SCHEMA_SQL" in migration
+    assert "workspace_id" in schema
+    assert "organization_id" in schema
+    assert "legal_entity_id" in schema
+    assert "idx_outbox_events_scope_pending" in schema
+    assert "DROP COLUMN IF EXISTS {column}" in migration
+    assert 'for column in ("legal_entity_id", "organization_id", "workspace_id")' in migration
+    assert "current_setting('app.legal_entity_id'" in schema
+
+
 def test_postgres_alembic_contract_has_no_repository_credentials() -> None:
     config = (ROOT / "alembic.ini").read_text(encoding="utf-8")
     env = (ROOT / "alembic" / "env.py").read_text(encoding="utf-8")

@@ -83,6 +83,7 @@ POSTGRES_MIGRATION_REVISIONS = (
     "0070_pg_ownership_change",
     "0071_pg_close_ownchg_links",
     "0072_pg_recon_entity_scope",
+    "0073_pg_outbox_scope",
 )
 
 

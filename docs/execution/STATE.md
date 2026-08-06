@@ -5188,3 +5188,20 @@ vulnerabilities; the package build succeeds and `SOURCES.txt` contains ADR
 0408; and `git diff --check` passes. Hosted CI/security/provenance, live
 PostgreSQL/provider runtimes, independent HA/DR, and release approval remain
 external. GitHub publication remains deferred by owner instruction.
+
+E-538 adds hierarchy-scoped PostgreSQL transactional-outbox delivery. Migration
+0073 adds nullable workspace/organization/legal-entity attribution, transaction
+defaults, a pending index, and explicit hierarchy RLS. Atomic claims bind the
+requested scope and return attribution; the worker authorizes deterministic
+four-part lanes before connection access, restores the same scope for every
+transition, and fails closed on mismatch. Focused outbox/worker/migration/
+policy contracts pass and ADR 0409 is packaged. Live providers, distributed
+queue fairness, HA/DR, throughput, and production readiness remain open.
+
+E-539 closes the regression/package gate for this slice: 2,634 collected tests
+pass 100% in 355.5 seconds with five declared live-PostgreSQL skips; Ruff,
+Mypy (480 source files), Bandit, OSV pip-audit, build/source-distribution,
+migration registry, and diff-check pass. Hosted CI/security/provenance, live
+providers, distributed queue fairness, HA/DR, and production readiness remain
+external. GitHub publication remains deferred by owner instruction until the
+complete objective is closed.

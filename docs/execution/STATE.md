@@ -5111,3 +5111,30 @@ the source distribution contains the new ADR, route, helper, and test; and
 git diff --check passes. Hosted CI/security/provenance, live PostgreSQL and
 provider runtimes, independent HA/DR, and release approval remain external.
 GitHub publication remains deferred by owner instruction.
+
+E-532 carries PostgreSQL reconciliation workspace attribution through the
+worker lane. The repository exposes an optional workspace lookup for bounded
+discovery; the worker accepts an explicit scope-aware service-account supplier,
+requires an exact tenant/workspace/entity context, rejects the legacy
+tenant-only supplier for a workspace run, and passes `workspace_id` into claim,
+streaming input, heartbeat, checkpoint, result, cancellation, and failure
+transactions. Focused worker, policy, and workspace-attribution contracts
+pass, including `app.workspace_id` propagation. Reconciliation runs still
+lack authoritative entity attribution; scheduler/outbox/export/UI adoption,
+federation, distributed invalidation, live PostgreSQL, scale, HA/DR, and
+production IAM remain open. ADR 0406 is packaged. GitHub publication remains
+deferred by owner instruction.
+
+E-533 closes the regression and package gate after the workspace worker slice:
+the exact current tree reaches 100% in the full pytest run (2,627 collected;
+no collection or executed failure; declared external-service/platform skips
+remain) in 405.5 seconds; Ruff passes; Mypy reports no issues in 478 source
+files; Bandit exits 0 with reviewed existing suppression/comment warnings;
+OSV pip-audit reports no known vulnerabilities for the editable-local
+environment; the focused phase/execution/parity/maturity plus worker suite
+passes 62 tests with two declared live-PostgreSQL skips; the package build
+succeeds and the source distribution contains ADR 0406; and `git diff --check`
+passes. Hosted
+CI/security/provenance, live PostgreSQL/provider runtimes, independent HA/DR,
+and release approval remain external. GitHub publication remains deferred by
+owner instruction.

@@ -12,6 +12,8 @@ from collections.abc import Callable
 
 from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext, audit_policy_decision
 
+WorkerPolicyContextSupplier = Callable[[str, str | None, str | None], PolicyEvaluationContext]
+
 
 def require_service_worker_policy(
     *,
@@ -19,18 +21,35 @@ def require_service_worker_policy(
     worker_id: str,
     actor_id: str,
     policy_context_supplier: Callable[[str], PolicyEvaluationContext] | None,
+    policy_context_scope_supplier: WorkerPolicyContextSupplier | None = None,
+    workspace_id: str | None = None,
+    entity_id: str | None = None,
     policy_permission: str,
     surface: str,
     error_factory: Callable[[str], Exception],
     policy: CentralPolicyEngine | None = None,
     request_id: str = "",
 ) -> None:
-    """Require a tenant-only, non-human central-policy decision before I/O."""
+    """Require a non-human central-policy decision for an exact worker scope.
 
-    if policy_context_supplier is None:
+    The one-argument supplier remains supported for legacy tenant-only workers.
+    A workspace/entity scope requires the explicit three-argument supplier so a
+    tenant-wide identity cannot accidentally process a narrower lane.
+    """
+
+    if policy_context_supplier is None and policy_context_scope_supplier is None:
         return
+    normalized_workspace = str(workspace_id).strip() if workspace_id is not None and str(workspace_id).strip() else None
+    normalized_entity = str(entity_id).strip() if entity_id is not None and str(entity_id).strip() else None
+    if policy_context_scope_supplier is None and (normalized_workspace is not None or normalized_entity is not None):
+        raise error_factory("A scope-aware worker policy supplier is required for scoped processing.")
     try:
-        context = policy_context_supplier(tenant_id)
+        if policy_context_scope_supplier is not None:
+            context = policy_context_scope_supplier(tenant_id, normalized_workspace, normalized_entity)
+        else:
+            if policy_context_supplier is None:  # Defensive branch for type narrowing and fail-closed behavior.
+                raise error_factory("A worker policy supplier is required when policy enforcement is enabled.")
+            context = policy_context_supplier(tenant_id)
     except Exception as exc:  # noqa: BLE001 - worker boundary must fail closed.
         raise error_factory("Unable to resolve worker policy context safely.") from exc
     if context.principal_type != "service_account":
@@ -38,8 +57,10 @@ def require_service_worker_policy(
     normalized_actor = actor_id.strip() or worker_id.strip()
     if context.user_id != normalized_actor:
         raise error_factory("Worker actor does not match policy identity.")
-    if context.tenant_id != tenant_id or context.workspace_id is not None or context.entity_id is not None:
-        raise error_factory("Worker policy scope does not match tenant lane scope.")
+    context_workspace = str(context.workspace_id).strip() if context.workspace_id is not None else None
+    context_entity = str(context.entity_id).strip() if context.entity_id is not None else None
+    if context.tenant_id != tenant_id or context_workspace != normalized_workspace or context_entity != normalized_entity:
+        raise error_factory("Worker policy scope does not match the requested processing scope.")
     permission = policy_permission.strip()
     if not permission:
         raise error_factory("Worker policy permission must be non-empty.")
@@ -61,4 +82,4 @@ def require_service_worker_policy(
         raise error_factory(f"Worker policy denied: {decision.reason_code}")
 
 
-__all__ = ["require_service_worker_policy"]
+__all__ = ["WorkerPolicyContextSupplier", "require_service_worker_policy"]

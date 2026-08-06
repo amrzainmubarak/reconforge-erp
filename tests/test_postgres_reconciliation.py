@@ -521,6 +521,81 @@ def test_postgres_reconciliation_worker_policy_allows_scoped_service_identity() 
     assert connection.run is not None and connection.run["execution_status"] == "Complete"
 
 
+def test_postgres_reconciliation_worker_propagates_workspace_scope_to_policy_and_transactions() -> None:
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+    _create_run(repository)
+    assert connection.run is not None
+    connection.run["workspace_id"] = "workspace-a"
+    policy_scopes: list[tuple[str, str | None, str | None]] = []
+
+    def policy_context(tenant: str, workspace: str | None, entity: str | None) -> PolicyEvaluationContext:
+        policy_scopes.append((tenant, workspace, entity))
+        return PolicyEvaluationContext(
+            user_id="scoped-worker",
+            username="scoped-worker",
+            user_permissions={"match.run"},
+            principal_type="service_account",
+            tenant_id=tenant,
+            workspace_id=workspace,
+            entity_id=entity,
+            authorized_tenant_ids=frozenset({tenant}),
+            authorized_workspace_ids=frozenset({workspace}) if workspace else frozenset(),
+        )
+
+    worker = PostgresReconciliationWorker(
+        _ConnectionFactory(connection),
+        tenant_supplier=lambda: ["tenant_a"],
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="scoped-worker",
+            policy_context_scope_supplier=policy_context,
+            poll_interval_seconds=0,
+        ),
+    )
+
+    summary = worker.process_once()
+
+    assert summary.completed == 1
+    assert ("tenant_a", "workspace-a", None) in policy_scopes
+    workspace_settings = [
+        params
+        for sql, params in connection.executed
+        if "set_config('app.workspace_id'" in sql
+    ]
+    assert workspace_settings
+    assert any(params == ("workspace-a",) for params in workspace_settings)
+
+
+def test_postgres_reconciliation_worker_rejects_legacy_policy_for_scoped_run() -> None:
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+    _create_run(repository)
+    assert connection.run is not None
+    connection.run["workspace_id"] = "workspace-a"
+
+    worker = PostgresReconciliationWorker(
+        _ConnectionFactory(connection),
+        tenant_supplier=lambda: ["tenant_a"],
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="legacy-worker",
+            policy_context_supplier=lambda tenant: PolicyEvaluationContext(
+                user_id="legacy-worker",
+                username="legacy-worker",
+                user_permissions={"match.run"},
+                principal_type="service_account",
+                tenant_id=tenant,
+                authorized_tenant_ids=frozenset({tenant}),
+            ),
+        ),
+    )
+
+    with pytest.raises(PostgresReconciliationWorkerError, match="scope-aware worker policy supplier"):
+        worker.process_once()
+    assert connection.run["execution_status"] == "Queued"
+
+
 def test_local_matcher_partitioning_is_deterministic_and_reports_progress() -> None:
     adapter = LocalDeterministicMatcherAdapter()
     progress: list[int] = []

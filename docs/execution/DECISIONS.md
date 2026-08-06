@@ -5435,3 +5435,28 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Reversibility**: Remove the route, helper, focused tests, ADR, docs, and
   manifest entries without a schema migration; existing repository and
   publication contracts remain unchanged.
+
+### D-380: Carry workspace scope through PostgreSQL reconciliation workers
+
+- **Date**: 2026-08-06
+- **Context**: The reconciliation worker had an optional central service-account
+  policy but claimed and persisted runs in tenant-only transactions. Workspace
+  attribution and RLS existed, so processing a workspace run required an
+  explicit, auditable scope contract rather than an implicit widening.
+- **Decision**: Preserve the one-argument tenant supplier for unscoped legacy
+  runs and add a three-argument `(tenant, workspace, entity)` supplier for
+  scoped processing. Discovery reads persisted workspace attribution only after
+  tenant authorization; claim SQL requires either the requested workspace or a
+  NULL workspace. Every subsequent worker transaction carries the same
+  workspace GUC. Entity is deliberately `None` because reconciliation runs do
+  not yet have an authoritative entity column.
+- **Verification**: The focused worker suite proves exact policy context,
+  workspace GUC propagation, scoped completion, and fail-closed rejection of a
+  legacy tenant-only supplier. The full regression and package gate passes
+  after the change.
+- **Boundary**: This is one worker lane, not universal IAM. Scheduler/outbox,
+  export/UI, federation, distributed invalidation, entity attribution, live
+  PostgreSQL, scale, HA/DR, and production readiness remain open.
+- **Reversibility**: Remove the optional supplier, attribution lookup, claim
+  predicate, transaction parameters, tests, and ADR without rewriting stored
+  runs; existing tenant-only callers remain compatible.

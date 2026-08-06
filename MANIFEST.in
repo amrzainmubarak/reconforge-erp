@@ -362,6 +362,7 @@ include docs/adr/0237-reference-payment-statement-is-read-only.md
 include docs/adr/0403-payment-statement-sandbox-transport-and-account-guard.md
 include docs/adr/0404-matching-result-replay-verification.md
 include docs/adr/0405-scoped-export-api-authority.md
+include docs/adr/0406-postgres-reconciliation-worker-workspace-scope.md
 include reconforge/api/server_scoped_exports.py
 include reconforge/api/routes/scoped_exports.py
 include tests/test_api_server_scoped_exports.py

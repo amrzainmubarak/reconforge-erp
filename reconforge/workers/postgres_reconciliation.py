@@ -11,7 +11,7 @@ from threading import Event
 from typing import Any, Protocol, cast
 
 from reconforge.application.matching import LEGACY_RECORD_IDENTITY_POLICY
-from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext, audit_policy_decision
+from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_reconciliation import (
     PostgresReconciliationBusyError,
@@ -31,6 +31,7 @@ from reconforge.utils.money import (
     FinancialInputPolicy,
     InvalidAmountError,
 )
+from reconforge.workers.policy import WorkerPolicyContextSupplier, require_service_worker_policy
 
 
 def _stable_partition_key(values: Sequence[object]) -> str:
@@ -477,6 +478,7 @@ class PostgresReconciliationWorkerSettings:
     lease_seconds: int = 300
     actor_id: str = ""
     policy_context_supplier: Callable[[str], PolicyEvaluationContext] | None = None
+    policy_context_scope_supplier: WorkerPolicyContextSupplier | None = None
     policy_permission: str = "match.run"
 
     def __post_init__(self) -> None:
@@ -664,51 +666,48 @@ class PostgresReconciliationWorker:
         self.tenant_supplier = tenant_supplier
         self.matcher = matcher
         self.settings = settings
-        self.policy = CentralPolicyEngine()
+
+    def _authorize_scope(
+        self,
+        tenant_id: str,
+        *,
+        workspace_id: str | None = None,
+        entity_id: str | None = None,
+        request_id: str = "",
+    ) -> None:
+        """Require a central service-account decision for one exact lane."""
+
+        require_service_worker_policy(
+            tenant_id=tenant_id,
+            worker_id=self.settings.worker_id,
+            actor_id=self.settings.audit_actor_id,
+            policy_context_supplier=self.settings.policy_context_supplier,
+            policy_context_scope_supplier=self.settings.policy_context_scope_supplier,
+            workspace_id=workspace_id,
+            entity_id=entity_id,
+            policy_permission=self.settings.policy_permission,
+            surface="postgres-reconciliation.worker.claim",
+            error_factory=PostgresReconciliationWorkerError,
+            request_id=request_id,
+        )
 
     def _authorize_tenant(self, tenant_id: str, *, request_id: str = "") -> None:
-        """Optionally require a central service-account decision before reads/claims."""
+        """Backward-compatible tenant-lane policy entry point."""
 
-        supplier = self.settings.policy_context_supplier
-        if supplier is None:
-            return
-        try:
-            context = supplier(tenant_id)
-        except Exception as exc:  # noqa: BLE001 - worker boundary adds safe context.
-            raise PostgresReconciliationWorkerError("Unable to resolve worker policy context safely.") from exc
-        if context.principal_type != "service_account":
-            raise PostgresReconciliationWorkerError("Reconciliation workers require a service-account principal.")
-        if context.user_id != self.settings.audit_actor_id:
-            raise PostgresReconciliationWorkerError("Worker actor does not match policy identity.")
-        if context.tenant_id != tenant_id or context.workspace_id is not None or context.entity_id is not None:
-            raise PostgresReconciliationWorkerError("Worker policy scope does not match tenant claim scope.")
-        decision = self.policy.evaluate(
-            context,
-            required_permission=self.settings.policy_permission.strip(),
-            enforce_sod=False,
-            enforce_ownership=False,
-        )
-        audit_policy_decision(
-            decision,
-            actor_id=context.user_id,
-            required_permissions=frozenset({self.settings.policy_permission.strip()}),
-            surface="postgres-reconciliation.worker.claim",
-            request_id=request_id,
-            principal_type=context.principal_type,
-        )
-        if not decision.allowed:
-            raise PostgresReconciliationWorkerError(f"Reconciliation worker policy denied: {decision.reason_code}")
+        self._authorize_scope(tenant_id, request_id=request_id)
 
     def _transaction(self) -> PostgresTenantBoundary:
         return PostgresTenantBoundary(self.connection_factory)
 
-    def _cancel_requested(self, tenant_id: str, run_id: str) -> bool:
-        with self._transaction().transaction(tenant_id) as connection:
+    def _cancel_requested(self, tenant_id: str, run_id: str, workspace_id: str | None = None) -> bool:
+        with self._transaction().transaction(tenant_id, workspace_id=workspace_id) as connection:
             record = PostgresReconciliationRepository(connection).get_run_metadata(tenant_id=tenant_id, run_id=run_id)
             return bool(record.get("cancel_requested", False))
 
-    def _heartbeat(self, tenant_id: str, run_id: str, progress: int) -> Mapping[str, Any]:
-        with self._transaction().transaction(tenant_id) as connection:
+    def _heartbeat(
+        self, tenant_id: str, run_id: str, progress: int, workspace_id: str | None = None
+    ) -> Mapping[str, Any]:
+        with self._transaction().transaction(tenant_id, workspace_id=workspace_id) as connection:
             return PostgresReconciliationRepository(connection).heartbeat_run(
                 tenant_id=tenant_id,
                 run_id=run_id,
@@ -730,10 +729,11 @@ class PostgresReconciliationWorker:
         *,
         tenant_id: str,
         run_id: str,
+        workspace_id: str | None,
         execution: ReconciliationExecutionResult,
         request_id: str,
     ) -> ReconciliationProcessResult:
-        with self._transaction().transaction(tenant_id) as connection:
+        with self._transaction().transaction(tenant_id, workspace_id=workspace_id) as connection:
             repository = PostgresReconciliationRepository(connection)
             metadata = repository.get_run_metadata(tenant_id=tenant_id, run_id=run_id)
             if bool(metadata.get("cancel_requested", False)):
@@ -775,12 +775,13 @@ class PostgresReconciliationWorker:
         *,
         tenant_id: str,
         run_id: str,
+        workspace_id: str | None,
         partition: ReconciliationPartitionResult,
         request_id: str,
     ) -> None:
         """Commit one partition's output and checkpoint in one transaction."""
 
-        with self._transaction().transaction(tenant_id) as connection:
+        with self._transaction().transaction(tenant_id, workspace_id=workspace_id) as connection:
             PostgresReconciliationRepository(connection).append_partition(
                 tenant_id=tenant_id,
                 run_id=run_id,
@@ -793,8 +794,15 @@ class PostgresReconciliationWorker:
                 reason="Deterministic partition output committed for resumable execution.",
             )
 
-    def _fail(self, tenant_id: str, run_id: str, error: str, request_id: str) -> ReconciliationProcessResult:
-        with self._transaction().transaction(tenant_id) as connection:
+    def _fail(
+        self,
+        tenant_id: str,
+        run_id: str,
+        error: str,
+        request_id: str,
+        workspace_id: str | None = None,
+    ) -> ReconciliationProcessResult:
+        with self._transaction().transaction(tenant_id, workspace_id=workspace_id) as connection:
             failed = PostgresReconciliationRepository(connection).fail_run(
                 tenant_id=tenant_id,
                 run_id=run_id,
@@ -820,9 +828,10 @@ class PostgresReconciliationWorker:
         *,
         tenant_id: str,
         run_id: str,
+        workspace_id: str | None,
         rule: Mapping[str, Any],
     ) -> Callable[[], Iterable[ReconciliationInputPartition]]:
-        """Create a lazy tenant-scoped server-cursor partition supplier."""
+        """Create a lazy tenant/workspace-scoped server-cursor supplier."""
 
         raw_fields = rule.get("partition_fields", ())
         if isinstance(raw_fields, str):
@@ -838,7 +847,7 @@ class PostgresReconciliationWorker:
         reference_field = str(rule.get("reference_field", "reference"))
 
         def supplier() -> Iterable[ReconciliationInputPartition]:
-            with self._transaction().transaction(tenant_id) as connection:
+            with self._transaction().transaction(tenant_id, workspace_id=workspace_id) as connection:
                 repository = PostgresReconciliationRepository(connection)
                 for values, left_records, right_records in repository.iter_input_partitions(
                     tenant_id=tenant_id,
@@ -856,18 +865,31 @@ class PostgresReconciliationWorker:
 
         return supplier
 
-    def process_run(self, *, tenant_id: str, run_id: str, request_id: str = "") -> ReconciliationProcessResult:
+    def process_run(
+        self,
+        *,
+        tenant_id: str,
+        run_id: str,
+        workspace_id: str | None = None,
+        request_id: str = "",
+    ) -> ReconciliationProcessResult:
         """Claim and execute one run using fresh connections for each phase."""
 
         self._authorize_tenant(tenant_id, request_id=request_id)
+        requested_workspace = str(workspace_id).strip() if workspace_id is not None else None
+        requested_workspace = requested_workspace or None
+        if requested_workspace is not None:
+            self._authorize_scope(tenant_id, workspace_id=requested_workspace, request_id=request_id)
+        workspace_scope = requested_workspace
         try:
-            with self._transaction().transaction(tenant_id) as connection:
+            with self._transaction().transaction(tenant_id, workspace_id=workspace_scope) as connection:
                 repository = PostgresReconciliationRepository(connection)
                 claimed = repository.claim_run(
                     tenant_id=tenant_id,
                     run_id=run_id,
                     worker_id=self.settings.worker_id,
                     lease_seconds=self.settings.lease_seconds,
+                    workspace_id=workspace_scope,
                 )
                 rule = self._rule_mapping(claimed)
                 partition_fields = rule.get("partition_fields", ())
@@ -879,20 +901,27 @@ class PostgresReconciliationWorker:
                     left_inputs = tuple(record for record in inputs if str(record.get("side", "")) == "Left")
                     right_inputs = tuple(record for record in inputs if str(record.get("side", "")) == "Right")
             partition_supplier = (
-                self._stream_input_supplier(tenant_id=tenant_id, run_id=run_id, rule=rule) if partition_fields else None
+                self._stream_input_supplier(
+                    tenant_id=tenant_id,
+                    run_id=run_id,
+                    workspace_id=workspace_scope,
+                    rule=rule,
+                )
+                if partition_fields
+                else None
             )
             context = ReconciliationExecutionContext(
                 run=claimed,
                 left_inputs=left_inputs,
                 right_inputs=right_inputs,
-                heartbeat=lambda progress: self._heartbeat(tenant_id, run_id, progress),
-                cancellation_requested=lambda: self._cancel_requested(tenant_id, run_id),
+                heartbeat=lambda progress: self._heartbeat(tenant_id, run_id, progress, workspace_scope),
+                cancellation_requested=lambda: self._cancel_requested(tenant_id, run_id, workspace_scope),
                 partition_supplier=partition_supplier,
             )
             context.raise_if_cancelled()
             partitioned_matcher = getattr(self.matcher, "iter_partition_results", None)
             if partition_fields and callable(partitioned_matcher):
-                with self._transaction().transaction(tenant_id) as connection:
+                with self._transaction().transaction(tenant_id, workspace_id=workspace_scope) as connection:
                     checkpoints = PostgresReconciliationRepository(connection).list_checkpoints(
                         tenant_id=tenant_id,
                         run_id=run_id,
@@ -909,12 +938,14 @@ class PostgresReconciliationWorker:
                     self._persist_partition(
                         tenant_id=tenant_id,
                         run_id=run_id,
+                        workspace_id=workspace_scope,
                         partition=partition,
                         request_id=request_id,
                     )
                 return self._persist_and_complete(
                     tenant_id=tenant_id,
                     run_id=run_id,
+                    workspace_id=workspace_scope,
                     execution=ReconciliationExecutionResult(),
                     request_id=request_id,
                 )
@@ -924,11 +955,12 @@ class PostgresReconciliationWorker:
             return self._persist_and_complete(
                 tenant_id=tenant_id,
                 run_id=run_id,
+                workspace_id=workspace_scope,
                 execution=execution,
                 request_id=request_id,
             )
         except ReconciliationCancellationRequested:
-            with self._transaction().transaction(tenant_id) as connection:
+            with self._transaction().transaction(tenant_id, workspace_id=workspace_scope) as connection:
                 cancelled = PostgresReconciliationRepository(connection).mark_cancelled(
                     tenant_id=tenant_id,
                     run_id=run_id,
@@ -942,7 +974,7 @@ class PostgresReconciliationWorker:
             raise
         except Exception as exc:  # noqa: BLE001 - failure is persisted and surfaced as a retryable run state.
             try:
-                return self._fail(tenant_id, run_id, str(exc), request_id)
+                return self._fail(tenant_id, run_id, str(exc), request_id, workspace_scope)
             except Exception as failure_exc:  # noqa: BLE001 - preserve both operational failures.
                 raise PostgresReconciliationWorkerError(
                     "Unable to persist reconciliation execution failure."
@@ -965,6 +997,7 @@ class PostgresReconciliationWorker:
                     tenant_id=tenant_id,
                     execution_status="active",
                     limit=self.settings.batch_size,
+                    include_workspace_id=True,
                 )
             discovered += len(runs)
             for run in runs:
@@ -973,6 +1006,11 @@ class PostgresReconciliationWorker:
                         self.process_run(
                             tenant_id=tenant_id,
                             run_id=str(run["id"]),
+                            workspace_id=(
+                                str(run.get("workspace_id")).strip()
+                                if run.get("workspace_id") is not None and str(run.get("workspace_id")).strip()
+                                else None
+                            ),
                             request_id=request_id,
                         )
                     )

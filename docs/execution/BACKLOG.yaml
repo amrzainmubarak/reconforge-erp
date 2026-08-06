@@ -2361,3 +2361,37 @@ tasks:
       `git diff --check` passes. Hosted CI/security/provenance, live PostgreSQL
       and provider runtimes, independent HA/DR, and release approval remain
       external; GitHub publication remains deferred by owner instruction.
+  - id: E-532
+    priority: P1
+    area: enterprise_policy
+    title: Workspace-scoped PostgreSQL reconciliation worker lane
+    status: completed
+    depends_on: [P4-IAM-001, E-531]
+    exit_evidence: >-
+      PostgreSQL reconciliation runs now expose workspace attribution through
+      the baseline schema and repository lookup. The worker accepts an
+      explicit `(tenant_id, workspace_id, entity_id)` policy supplier,
+      verifies exact central scope, rejects a legacy tenant-only supplier for
+      workspace runs, and passes workspace scope to claim, streaming inputs,
+      heartbeats, checkpoints, result persistence, cancellation, and failure
+      transactions. Focused reconciliation tests pass, including exact policy
+      scope and `app.workspace_id` propagation; ADR 0406 is packaged. Entity
+      attribution, scheduler/outbox/export/UI adoption, federation,
+      distributed invalidation, live PostgreSQL, scale, HA/DR, and production
+      IAM remain open.
+  - id: E-533
+    priority: P0
+    area: quality
+    title: Regression and package gate after workspace-scoped reconciliation worker
+    status: completed
+    depends_on: [E-532]
+    exit_evidence: >-
+      The corrected tree reaches 100% in the full pytest gate (2,627
+      collected; no collection or executed failure; declared external-service
+      and platform skips remain visible); Ruff, Mypy (478 source files),
+      Bandit, OSV pip-audit, the focused 62-test phase/execution/parity/
+      maturity/worker suite, package build with ADR 0406, source-distribution
+      membership, and git diff check pass. Hosted CI/security/provenance, live
+      PostgreSQL, providers/write-back, independent HA/DR, and release
+      approval remain external; GitHub publication remains deferred by owner
+      instruction.

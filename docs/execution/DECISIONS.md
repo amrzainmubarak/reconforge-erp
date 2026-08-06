@@ -4574,6 +4574,21 @@
   restore, cleanup, and rollback; this workflow change is not runtime evidence.
 - **Rollback**: Remove the bootstrap step and restore the prior runner
   dependency; no application migration or data rollback is involved.
+
+### D-359: Record the World Bank connector in the closed JSON parser inventory
+
+- **Date**: 2026-08-06
+- **Decision**: Classify the connector's single direct `json.loads` call under
+  FI-023, the existing bounded public-financial response surface, rather than
+  bypassing the repository AST allowlist.
+- **Verification**: `tests/test_file_ingestion_inventory.py::test_direct_json_parser_inventory_is_an_exact_ast_allowlist`
+  passes after the exact path/call-count/rationale entry and connector test
+  evidence are recorded.
+- **Boundary**: Inventory closure covers parser-call governance; it does not
+  authenticate the publisher, establish freshness, or make public data a
+  production source.
+- **Rollback**: Replace the direct parser with the central bounded reader or
+  remove the connector and its allowlist entry; no data migration is needed.
 # ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
 
 Implemented and bounded the `professional.invoice-payment` module. It is local,

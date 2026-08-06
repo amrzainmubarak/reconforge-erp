@@ -4604,3 +4604,8 @@ PostgreSQL client binaries before its live gates, removing the runner-image
 assumption behind the supplied backup failure. This is workflow hardening, not
 proof that hosted encrypted backup/restore passes; a fresh hosted run remains
 required and GitHub publication is intentionally deferred.
+The full local run exposed one legitimate inventory drift from the new network
+connector: its intentional direct JSON parse was not declared. I closed that
+drift by adding the exact FI-023 allowlist entry and connector test evidence;
+the focused inventory contract now passes. No parser call was hidden or
+silenced.

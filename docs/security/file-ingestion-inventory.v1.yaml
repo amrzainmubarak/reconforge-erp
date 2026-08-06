@@ -504,7 +504,7 @@ surfaces:
     policy_coverage: complete
     status: bounded
     controls: [SEC-C-001, SEC-C-002, SEC-C-004, SEC-C-005]
-    test_evidence: [tests/test_public_financial_evidence.py, tests/test_public_financial_evidence_workflow.py]
+    test_evidence: [tests/test_public_financial_evidence.py, tests/test_public_financial_evidence_workflow.py, tests/test_connector_world_bank_public.py]
     residual_risk_ids: [R-003, R-018]
     limitations:
       - Exact HTTPS hosts, response ceilings, media types, raw hashes, schemas, encodings, and Decimal rules bound the downloaded public snapshots but do not cryptographically authenticate the publisher or prevent an upstream correction from failing the run.
@@ -740,6 +740,11 @@ direct_tabular_parser_allowlist:
     surface_id: FI-023
     rationale: Parses only size- and hash-verified public responses after strict decoding, then requires an exact unique header set and complete rows before financial normalization.
 direct_json_parser_allowlist:
+  - path: reconforge/connectors/world_bank_public.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-023
+    rationale: Parses only the bounded HTTP response from the exact World Bank public reference endpoint; Decimal token hooks, closed Pydantic fields, finite-number validation, response-size limits, and canonical digest verification reject source drift before a page is returned.
   - path: reconforge/auth/repositories.py
     parser: json.loads
     call_count: 1

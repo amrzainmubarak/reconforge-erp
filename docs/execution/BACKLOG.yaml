@@ -2591,8 +2591,7 @@ tasks:
     depends_on: [E-544]
     exit_evidence: >-
       Checksum-verified Gitleaks 8.30.1 scans the current 563-commit local
-      history with zero leaks. The checked-out tree scan is blocked locally by
-      generated untracked benchmark/test output exceeding the two-minute scan
-      budget; hosted checkout scans must be rerun after publication. This is
-      local security evidence only and does not erase the supplied hosted leak
-      result until a fresh hosted run passes.
+      history with zero leaks and scans a clean archive of the current HEAD
+      tree with zero leaks. This is local security evidence only; the supplied
+      hosted leak result still requires a fresh hosted history/tree run after
+      publication.

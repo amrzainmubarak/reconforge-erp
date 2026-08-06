@@ -1661,3 +1661,11 @@ tasks:
     status: completed
     depends_on: [E-486, P4-CON-001]
     exit_evidence: Network registrations may declare an exact HTTPS recovery_endpoint only when it is an explicit egress destination. PinnedHttpsRecoveryTransport performs bounded GET status lookup with the original idempotency key, public-address pinning, TLS, no request body, and no redirect-following; the executor uses it without a second POST. Focused transport tests pass 19/19, including a disposable local TLS sandbox with three POST retries followed by one real GET recovery. Ruff and Mypy pass; no provider/vendor, accounting, distributed-idempotency, HA/DR, or production-write-back claim is added.
+
+  - id: E-488
+    priority: P0
+    area: quality
+    title: Current full local regression after pinned recovery transport
+    status: completed
+    depends_on: [E-487]
+    exit_evidence: The current Windows/Python 3.12 tree collects 2570 tests and `uv run --no-sync pytest -q --tb=short -ra` reaches 100% with no collection or executed failure. Only declared live PostgreSQL/Redis/object-storage/network/platform capability skips and existing framework/legacy-input warnings remain. This is local compatibility evidence only; hosted CI, native backup tooling, live providers, distributed scale, HA/DR, and production release approval remain external.

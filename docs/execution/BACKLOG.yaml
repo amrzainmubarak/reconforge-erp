@@ -1477,3 +1477,11 @@ tasks:
     status: completed
     depends_on: [E-463]
     exit_evidence: Ruff passes; Mypy reports no issues in 466 source files; Bandit exits 0 with existing reviewed nosec/comment warnings; OSV pip-audit reports no known vulnerabilities; the closed supply-chain validator reports status valid with zero active exceptions and zero npm integrity gaps; package build and git diff check pass. Hosted security/provenance/release approval remain external.
+
+  - id: E-465
+    priority: P0
+    area: security
+    title: Current full-history and tree secret scan
+    status: completed
+    depends_on: [E-464]
+    exit_evidence: Checksum-verified Gitleaks 8.30.1 scans the current 508-commit history and working tree with zero leaks. This reproduces local secret-scan cleanliness only; the previously supplied hosted finding and hosted security attestation remain external until the workflow is rerun.

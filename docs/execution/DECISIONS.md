@@ -4615,6 +4615,19 @@
   external providers, HA/DR, or production publication.
 - **Rollback**: Supersede E-464 with the next exact lock/source gate; no
   runtime or data rollback is needed.
+
+### D-362: Keep hosted secret-scan failure separate from local reproduction
+
+- **Date**: 2026-08-06
+- **Decision**: Record the clean current Gitleaks history/tree scan as local
+  evidence while retaining the hosted repository-security result as unresolved
+  until the exact workflow is rerun.
+- **Verification**: Gitleaks 8.30.1 scanned 508 commits and the current tree;
+  both scans exited 0 with no leaks.
+- **Boundary**: A local scan cannot attest GitHub checkout state, workflow
+  environment, or hosted security approval.
+- **Rollback**: Supersede E-465 with a fresh exact hosted/local paired scan;
+  no runtime or data rollback is needed.
 # ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
 
 Implemented and bounded the `professional.invoice-payment` module. It is local,

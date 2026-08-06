@@ -4619,3 +4619,7 @@ The final local static/package gate also passes on this head: Ruff, Mypy over
 and diff-check. The one new public-manifest Bandit suppression is narrowly
 scoped to a non-secret descriptive field; existing reviewed warnings remain
 visible. Hosted security/provenance and release approval remain open.
+Checksum-verified Gitleaks 8.30.1 also scanned all 508 local commits and the
+current tree with zero leaks. This local reproduction does not erase the
+previous hosted repository-security failure; the hosted workflow still must be
+rerun before any publication decision.

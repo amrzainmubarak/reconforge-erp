@@ -4559,6 +4559,21 @@
   freshness, bank/ERP interoperability, write-back, or production readiness.
 - **Rollback**: Remove the module/exports/tests/manifest entry; no migration
   or persistent-data rollback is needed.
+
+### D-358: Bootstrap native PostgreSQL tools explicitly in the hosted gate
+
+- **Date**: 2026-08-06
+- **Decision**: Install the Ubuntu distribution PostgreSQL client package in
+  `server-boundaries` before the live parity and backup tests, then assert the
+  five required binaries resolve from `pg_config --bindir`.
+- **Context**: The supplied hosted run exposed a native backup failure while
+  local Windows cannot provide the PostgreSQL client-tool set. Making the
+  dependency explicit removes an ambient-runner assumption; it does not hide
+  a failing backup test.
+- **Boundary**: A hosted rerun is still required to prove encrypted dump,
+  restore, cleanup, and rollback; this workflow change is not runtime evidence.
+- **Rollback**: Remove the bootstrap step and restore the prior runner
+  dependency; no application migration or data rollback is involved.
 # ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
 
 Implemented and bounded the `professional.invoice-payment` module. It is local,

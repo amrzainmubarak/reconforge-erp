@@ -4599,3 +4599,8 @@ Focused tests pass and an opt-in live run fetched the first 1,000-row page with
 source count 2,890. This is interoperability reference evidence only; source
 freshness/availability, ERP or bank vendor integration, write-back, and
 production operations remain open.
+The hosted `server-boundaries` workflow now bootstraps and verifies the native
+PostgreSQL client binaries before its live gates, removing the runner-image
+assumption behind the supplied backup failure. This is workflow hardening, not
+proof that hosted encrypted backup/restore passes; a fresh hosted run remains
+required and GitHub publication is intentionally deferred.

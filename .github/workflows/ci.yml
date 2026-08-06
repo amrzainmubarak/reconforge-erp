@@ -201,6 +201,16 @@ jobs:
           enable-cache: true
           cache-dependency-glob: uv.lock
 
+      - name: Install PostgreSQL native client tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y postgresql-client
+          test -x "$(pg_config --bindir)/pg_dump"
+          test -x "$(pg_config --bindir)/pg_restore"
+          test -x "$(pg_config --bindir)/createdb"
+          test -x "$(pg_config --bindir)/dropdb"
+          test -x "$(pg_config --bindir)/psql"
+
       - name: Install locked server dependencies
         run: uv sync --locked --extra dev --extra server --extra backup --no-editable --python 3.12
 

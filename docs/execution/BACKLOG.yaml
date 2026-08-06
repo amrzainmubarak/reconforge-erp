@@ -1445,3 +1445,11 @@ tasks:
     status: completed
     depends_on: [E-459]
     exit_evidence: The built-in `world-bank-public-readonly` connector pins dataset DS01556/resource RS00963 to three exact JSON page offsets, uses the shared public no-auth pinned-HTTPS executor, validates a closed finite-Decimal row schema, and emits request/canonical response digests. Focused tests report 6 passed and one opt-in live test fetched the first bounded 1,000-row page with source count 2,890. This is a community reference connector; freshness, provider SLA, ERP/bank integration, write-back, and production operations remain unclaimed.
+
+  - id: E-461
+    priority: P0
+    area: release_operations
+    title: Hosted PostgreSQL native-tool bootstrap for backup gate
+    status: in_progress
+    depends_on: [E-454]
+    exit_evidence: The server-boundaries workflow installs the distribution PostgreSQL client package before live tests and asserts that the versioned `pg_config` bindir contains `pg_dump`, `pg_restore`, `createdb`, `dropdb`, and `psql`. A fresh hosted run must still pass the encrypted backup/isolated restore test; local Windows cannot substitute for that hosted native-tool evidence.

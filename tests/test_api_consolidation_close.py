@@ -319,6 +319,9 @@ def test_consolidation_close_server_boundary_binds_workspace_before_exposure(
         def attach_ppa_artifact(self, *_: object, **__: object) -> dict[str, object]:
             return {"id": "link-ppa", "artifact_id": "ppa-" + "d" * 32, "entity_code": "SUB"}
 
+        def attach_ownership_change_artifact(self, *_: object, **__: object) -> dict[str, object]:
+            return {"id": "link-ownchg", "artifact_id": "ownchg-" + "e" * 32, "entity_code": "SUB"}
+
     repository = Repository()
 
     def execute(_request: object, operation: object) -> object:
@@ -388,6 +391,19 @@ def test_consolidation_close_server_boundary_binds_workspace_before_exposure(
     )
     assert attached.status_code == 200
     assert attached.json()["link"]["artifact_id"] == "ice-" + "a" * 32
+    assert scoped_permissions[-1] == {
+        "permission": "finance_core.manage",
+        "tenant_id": "tenant-a",
+        "workspace_id": "workspace-a",
+    }
+
+    ownership_change_attached = client.post(
+        "/api/v1/consolidation-close/runs/run-a/ownership-change-evidence",
+        headers=headers,
+        json={"artifact_id": "ownchg-" + "e" * 32},
+    )
+    assert ownership_change_attached.status_code == 200
+    assert ownership_change_attached.json()["link"]["entity_code"] == "SUB"
     assert scoped_permissions[-1] == {
         "permission": "finance_core.manage",
         "tenant_id": "tenant-a",

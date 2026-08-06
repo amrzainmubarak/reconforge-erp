@@ -70,6 +70,7 @@ class ConsolidationCloseBundle:
     impairment_artifact_digests: tuple[str, ...] = ()
     deferred_tax_artifact_digests: tuple[str, ...] = ()
     ppa_artifact_digests: tuple[str, ...] = ()
+    ownership_change_artifact_digests: tuple[str, ...] = ()
     schema_version: int = CONSOLIDATION_CLOSE_BUNDLE_SCHEMA_VERSION
     algorithm_version: str = CONSOLIDATION_CLOSE_BUNDLE_ALGORITHM_VERSION
 
@@ -107,6 +108,14 @@ class ConsolidationCloseBundle:
             "ppa_artifact_digests",
             _sequence_digest(self.ppa_artifact_digests, "Close bundle PPA artifacts"),
         )
+        object.__setattr__(
+            self,
+            "ownership_change_artifact_digests",
+            _sequence_digest(
+                self.ownership_change_artifact_digests,
+                "Close bundle ownership-change artifacts",
+            ),
+        )
         if self.evidence_scope != "local-control-journal-and-management-only":
             raise ConsolidationError("Close bundle evidence scope is unsupported.")
         if self.schema_version != CONSOLIDATION_CLOSE_BUNDLE_SCHEMA_VERSION:
@@ -124,6 +133,7 @@ class ConsolidationCloseBundle:
             "impairment_artifact_digests": list(self.impairment_artifact_digests),
             "deferred_tax_artifact_digests": list(self.deferred_tax_artifact_digests),
             "ppa_artifact_digests": list(self.ppa_artifact_digests),
+            "ownership_change_artifact_digests": list(self.ownership_change_artifact_digests),
             "journal_digest": self.journal_digest,
             "management_statement_digest": self.management_statement_digest,
             "period_id": self.period_id,
@@ -146,6 +156,7 @@ def _bundle_from_payload(payload: Mapping[str, object], *, bundle_digest: str) -
     had_impairment_field = "impairment_artifact_digests" in payload
     had_deferred_tax_field = "deferred_tax_artifact_digests" in payload
     had_ppa_field = "ppa_artifact_digests" in payload
+    had_ownership_change_field = "ownership_change_artifact_digests" in payload
     provisional = ConsolidationCloseBundle(
         workspace=cast(str, payload.get("workspace")),
         period_id=cast(str, payload.get("period_id")),
@@ -160,6 +171,9 @@ def _bundle_from_payload(payload: Mapping[str, object], *, bundle_digest: str) -
         impairment_artifact_digests=cast(tuple[str, ...], payload.get("impairment_artifact_digests", ())),
         deferred_tax_artifact_digests=cast(tuple[str, ...], payload.get("deferred_tax_artifact_digests", ())),
         ppa_artifact_digests=cast(tuple[str, ...], payload.get("ppa_artifact_digests", ())),
+        ownership_change_artifact_digests=cast(
+            tuple[str, ...], payload.get("ownership_change_artifact_digests", ())
+        ),
         evidence_scope=cast(str, payload.get("evidence_scope")),
         bundle_digest=bundle_digest,
         schema_version=cast(int, payload.get("schema_version")),
@@ -177,6 +191,8 @@ def _bundle_from_payload(payload: Mapping[str, object], *, bundle_digest: str) -
         expected_payload.pop("deferred_tax_artifact_digests", None)
     if not had_ppa_field:
         expected_payload.pop("ppa_artifact_digests", None)
+    if not had_ownership_change_field:
+        expected_payload.pop("ownership_change_artifact_digests", None)
     expected = _json_digest(expected_payload)
     if not hmac.compare_digest(expected, provisional.bundle_digest):
         raise ConsolidationError("Close bundle digest verification failed.")
@@ -272,6 +288,20 @@ def build_consolidation_close_bundle(run: Mapping[str, object]) -> Consolidation
     )
     if len(ppa_artifact_digests) != len(ppa_evidence):
         raise ConsolidationError("Close run contains an invalid PPA evidence link.")
+    ownership_change_evidence = run.get("ownership_change_evidence", [])
+    if not isinstance(ownership_change_evidence, Sequence) or isinstance(
+        ownership_change_evidence, (str, bytes, bytearray)
+    ):
+        raise ConsolidationError("Close run ownership-change evidence is invalid.")
+    ownership_change_artifact_digests = tuple(
+        sorted(
+            _digest(item.get("artifact_result_digest"), "Ownership-change artifact digest")
+            for item in ownership_change_evidence
+            if isinstance(item, Mapping)
+        )
+    )
+    if len(ownership_change_artifact_digests) != len(ownership_change_evidence):
+        raise ConsolidationError("Close run contains an invalid ownership-change evidence link.")
     payload: dict[str, object] = {
         "algorithm_version": CONSOLIDATION_CLOSE_BUNDLE_ALGORITHM_VERSION,
         "effect_digests": list(effect_digests),
@@ -280,6 +310,7 @@ def build_consolidation_close_bundle(run: Mapping[str, object]) -> Consolidation
         "impairment_artifact_digests": list(impairment_artifact_digests),
         "deferred_tax_artifact_digests": list(deferred_tax_artifact_digests),
         "ppa_artifact_digests": list(ppa_artifact_digests),
+        "ownership_change_artifact_digests": list(ownership_change_artifact_digests),
         "journal_digest": _digest(run.get("journal_digest"), "Run journal digest"),
         "management_statement_digest": statement_digest,
         "period_id": _identifier(run.get("period_id"), "Run period"),

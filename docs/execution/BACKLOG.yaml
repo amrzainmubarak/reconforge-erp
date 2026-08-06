@@ -2120,3 +2120,61 @@ tasks:
       and `git diff --check` passes. Hosted CI/security/provenance, live
       PostgreSQL availability, live providers/write-back, independent HA/DR,
       and release approval remain external.
+  - id: E-519
+    priority: P1
+    area: financial_consolidation
+    title: PostgreSQL ownership-change evidence persistence boundary
+    status: completed
+    depends_on: [P4-FIN-002, E-518]
+    exit_evidence: >-
+      Alembic `0070_pg_ownership_change` and
+      `PostgresConsolidationOwnershipChangeRepository` persist canonical
+      request/result JSONB under forced tenant RLS. The adapter reconstructs
+      and replays the typed request, recomputes request/result digests,
+      enforces distinct identity actors, emits creation audit evidence,
+      makes result-digest retries idempotent, and rejects posted/update/delete
+      paths. Static schema/migration contracts and deterministic repository
+      verification pass; live PostgreSQL remains capability-gated without its
+      DSN. This is policy-neutral non-posting evidence only.
+  - id: E-520
+    priority: P1
+    area: financial_consolidation
+    title: Bind ownership-change evidence to PostgreSQL close runs
+    status: completed
+    depends_on: [E-519]
+    exit_evidence: >-
+      Alembic `0071_pg_close_ownchg_links` adds a forced-RLS, append-only link
+      table with run/artifact/entity uniqueness and a data-loss-safe
+      downgrade. The PostgreSQL close repository replay-verifies the artifact,
+      binds period/currency/subsidiary entity to the worksheet, requires an
+      independent linker, exposes the result digest in the close bundle, and
+      retries by immutable digest. The server API exposes
+      `POST /api/v1/consolidation-close/{run_id}/ownership-change-evidence`
+      with strict IDs and scope-bound `finance_core.manage` authorization.
+      Focused static, bundle, API, and authorization contracts pass; live
+      PostgreSQL remains capability-gated without its DSN.
+  - id: E-521
+    priority: P0
+    area: quality
+    title: Full regression and package gate after ownership-change close binding
+    status: completed
+    depends_on: [E-520]
+    exit_evidence: >-
+      The exact current tree collects 2,614 tests and `uv run --no-sync
+      pytest -q --basetemp .pytest-tmp-e521c --tb=short -ra` exits 0 with no
+      collection or executed failure; declared PostgreSQL, Redis,
+      object-storage, network, and platform capability skips remain visible.
+      Ruff passes; Mypy reports no issues in 476 source files; Bandit exits 0
+      with reviewed existing suppression/comment warnings; OSV `pip-audit`
+      reports no known vulnerabilities (the local package is not published
+      on PyPI); `python -m build --no-isolation` succeeds and the source
+      distribution contains migrations 0070/0071, ADRs 0399/0400, the
+      ownership-change application/adapter, and tests; the authorization
+      inventory passes at 245 routes with digest
+      `edc399307cf840f553d238b984cb3e4f4ce7a15b5d65ca277d4c22aafe780b9b`;
+      parser/repository/parity inventories, maturity/phase-2 audits, YAML
+      parsing, and `git diff --check` pass. Live PostgreSQL ownership-change
+      and close-link runtime remain capability-gated without
+      `RECONFORGE_TEST_POSTGRES_DSN`; hosted CI/security/provenance, live
+      providers/write-back, independent HA/DR, and release approval remain
+      external.

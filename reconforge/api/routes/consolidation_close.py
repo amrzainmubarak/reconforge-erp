@@ -117,6 +117,14 @@ class PpaEvidenceAttachRequest(BaseModel):
     artifact_id: str = Field(pattern=r"^ppa-[0-9a-f]{32}$", min_length=36, max_length=36)
 
 
+class OwnershipChangeEvidenceAttachRequest(BaseModel):
+    """Strict reference to one immutable PostgreSQL ownership-change artifact."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    artifact_id: str = Field(pattern=r"^ownchg-[0-9a-f]{32}$", min_length=39, max_length=39)
+
+
 def _assert_prepared_actor(worksheet: ConsolidationWorksheetResult, actor: str) -> None:
     if worksheet.prepared_by != actor:
         raise APIError(
@@ -760,6 +768,40 @@ def attach_ppa_evidence(
     link = execute_postgres_consolidation_close(
         request,
         lambda repository, _tenant: repository.attach_ppa_artifact(
+            run_id,
+            payload.artifact_id,
+            workspace=scope.workspace_id,
+            actor_label=current_user.id,
+        ),
+    )
+    return {"link": link, "source": _server_source()}
+
+
+@router.post("/runs/{run_id}/ownership-change-evidence")
+def attach_ownership_change_evidence(
+    run_id: str,
+    request: Request,
+    payload: OwnershipChangeEvidenceAttachRequest,
+    current_user: ConsolidationCertify,
+) -> dict[str, object]:
+    """Bind replay-verified, non-posting ownership-change evidence to a close run."""
+
+    if not server_consolidation_close_enabled(request):
+        raise APIError(
+            status_code=503,
+            code="consolidation_ownership_change_link_unavailable",
+            message="Ownership-change close evidence linking requires the PostgreSQL server profile.",
+        )
+    scope = _server_scope(request, "")
+    enforce_server_scoped_permission(
+        request,
+        permission="finance_core.manage",
+        tenant_id=scope.tenant_id,
+        workspace_id=scope.workspace_id,
+    )
+    link = execute_postgres_consolidation_close(
+        request,
+        lambda repository, _tenant: repository.attach_ownership_change_artifact(
             run_id,
             payload.artifact_id,
             workspace=scope.workspace_id,

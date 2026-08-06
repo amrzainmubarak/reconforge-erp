@@ -5290,3 +5290,43 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Reversibility**: The migration downgrade refuses non-empty links before
   dropping the trigger/function/index/table; old close bundles remain readable
   through the additive-field compatibility reader.
+
+### D-333: Persist ownership-change proposals as non-posting PostgreSQL evidence
+
+- **Date**: 2026-08-06
+- **Context**: The ownership-change adjustment domain produces an exact,
+  policy-neutral three-line proposal but had no tenant-RLS persistence or
+  replay boundary.
+- **Decision**: Add migration `0070_pg_ownership_change`, a backend-neutral
+  application service, and a forced-RLS append-only PostgreSQL repository.
+  Reconstruct the typed request from canonical JSONB, recompute both digests,
+  require distinct identity actors, make result retries idempotent, emit an
+  audit creation event, and refuse posted/update/delete paths.
+- **Verification**: Static schema/migration contracts and deterministic
+  repository verification pass. The live PostgreSQL runtime remains
+  capability-gated without `RECONFORGE_TEST_POSTGRES_DSN`.
+- **Boundary**: This does not determine statutory ownership-change treatment,
+  goodwill/tax policy, legal-book entries, journal posting, provider
+  write-back, or production readiness.
+- **Reversibility**: The downgrade refuses non-empty artifacts before dropping
+  the trigger/function/index/table.
+
+### D-334: Bind ownership-change evidence to the PostgreSQL close bundle
+
+- **Date**: 2026-08-06
+- **Context**: A tenant-scoped ownership-change artifact must be attributable
+  to the exact close worksheet that consumed it.
+- **Decision**: Add migration `0071_pg_close_ownchg_links` with forced RLS,
+  append-only triggers, run/artifact/entity uniqueness, and an immutable link
+  digest. Replay-verify the artifact, bind period/currency/subsidiary entity
+  to the worksheet, require a linker independent of the run preparer, and
+  include sorted result digests in the close bundle. Expose strict
+  `finance_core.manage`-protected server API linking while preserving old
+  bundle readability through an additive field.
+- **Verification**: Static migration/schema, bundle, focused API, and
+  authorization contracts pass. The live PostgreSQL link runtime remains
+  capability-gated without its DSN.
+- **Boundary**: This is evidence provenance, not statutory accounting,
+  journal posting, ERP/bank write-back, HA/DR, or production readiness.
+- **Reversibility**: The downgrade refuses non-empty links before dropping the
+  trigger/function/index/table.

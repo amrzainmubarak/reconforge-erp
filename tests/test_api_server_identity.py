@@ -758,6 +758,7 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
         POSTGRES_CONSOLIDATION_DEFERRED_TAX_LINK_SCHEMA_SQL,
         POSTGRES_CONSOLIDATION_IMPAIRMENT_LINK_SCHEMA_SQL,
         POSTGRES_CONSOLIDATION_INTERCOMPANY_LINK_SCHEMA_SQL,
+        POSTGRES_CONSOLIDATION_OWNERSHIP_CHANGE_LINK_SCHEMA_SQL,
         POSTGRES_CONSOLIDATION_PPA_LINK_SCHEMA_SQL,
     )
     from reconforge.infrastructure.postgres_consolidation_deferred_tax import (
@@ -768,6 +769,9 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
     )
     from reconforge.infrastructure.postgres_consolidation_ownership import (
         POSTGRES_CONSOLIDATION_OWNERSHIP_SCHEMA_SQL,
+    )
+    from reconforge.infrastructure.postgres_consolidation_ownership_change import (
+        POSTGRES_CONSOLIDATION_OWNERSHIP_CHANGE_SCHEMA_SQL,
     )
     from reconforge.infrastructure.postgres_consolidation_ppa import POSTGRES_CONSOLIDATION_PPA_SCHEMA_SQL
     from reconforge.infrastructure.postgres_domain import POSTGRES_DOMAIN_SCHEMA_SQL
@@ -832,6 +836,8 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             admin.execute(POSTGRES_CONSOLIDATION_OWNERSHIP_SCHEMA_SQL)
             admin.execute(POSTGRES_CONSOLIDATION_PPA_SCHEMA_SQL)
             admin.execute(POSTGRES_CONSOLIDATION_PPA_LINK_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_OWNERSHIP_CHANGE_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_OWNERSHIP_CHANGE_LINK_SCHEMA_SQL)
             admin.execute(POSTGRES_WRITEBACK_SCHEMA_SQL)
             admin.execute(POSTGRES_PRIVILEGED_SESSION_SCHEMA_SQL)
             admin.execute(
@@ -859,6 +865,8 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                     f"reconforge.consolidation_close_intercompany_links, reconforge.consolidation_close_impairment_links, "
                     f"reconforge.consolidation_close_deferred_tax_links, "
                     f"reconforge.consolidation_close_ppa_links, "
+                    f"reconforge.consolidation_ownership_change_artifacts, "
+                    f"reconforge.consolidation_close_ownership_change_links, "
                     f"reconforge.consolidation_impairment_artifacts, "
                     f"reconforge.consolidation_deferred_tax_artifacts, "
                     f"reconforge.intercompany_elimination_artifacts, "

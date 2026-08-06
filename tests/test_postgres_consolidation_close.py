@@ -14,6 +14,7 @@ from reconforge.application.consolidation_close import (
 )
 from reconforge.application.consolidation_deferred_tax import AcquisitionDeferredTaxApplicationService
 from reconforge.application.consolidation_impairment import ConsolidationImpairmentApplicationService
+from reconforge.application.consolidation_ownership_change import OwnershipChangeApplicationService
 from reconforge.application.consolidation_ppa import AcquisitionPpaApplicationService
 from reconforge.domain.intercompany_elimination import prepare_intercompany_eliminations
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings, set_local_tenant_scope
@@ -22,6 +23,7 @@ from reconforge.infrastructure.postgres_consolidation_close import (
     POSTGRES_CONSOLIDATION_DEFERRED_TAX_LINK_SCHEMA_SQL,
     POSTGRES_CONSOLIDATION_IMPAIRMENT_LINK_SCHEMA_SQL,
     POSTGRES_CONSOLIDATION_INTERCOMPANY_LINK_SCHEMA_SQL,
+    POSTGRES_CONSOLIDATION_OWNERSHIP_CHANGE_LINK_SCHEMA_SQL,
     POSTGRES_CONSOLIDATION_PPA_LINK_SCHEMA_SQL,
     PostgresConsolidationCloseRepository,
 )
@@ -30,6 +32,9 @@ from reconforge.infrastructure.postgres_consolidation_deferred_tax import (
 )
 from reconforge.infrastructure.postgres_consolidation_impairment import (
     PostgresConsolidationImpairmentRepository,
+)
+from reconforge.infrastructure.postgres_consolidation_ownership_change import (
+    PostgresConsolidationOwnershipChangeRepository,
 )
 from reconforge.infrastructure.postgres_consolidation_ppa import PostgresConsolidationPpaRepository
 from reconforge.infrastructure.postgres_intercompany_elimination import (
@@ -132,6 +137,27 @@ def test_postgres_close_ppa_link_migration_is_linear_and_refuses_data_loss() -> 
     assert module.revision == "0069_pg_close_ppa_links"
     assert module.down_revision == "0068_pg_close_deferred_tax_links"
     assert "refusing to discard close/PPA evidence links" in path.read_text(encoding="utf-8")
+
+
+def test_postgres_close_ownership_change_link_schema_is_immutable_and_tenant_scoped() -> None:
+    schema = POSTGRES_CONSOLIDATION_OWNERSHIP_CHANGE_LINK_SCHEMA_SQL
+    assert "consolidation_close_ownership_change_links" in schema
+    assert "consolidation_ownership_change_artifacts" in schema
+    assert "UNIQUE (tenant_id,run_id,entity_code)" in schema
+    assert "FORCE ROW LEVEL SECURITY" in schema
+    assert "consolidation close ownership-change links are immutable" in schema
+    assert "cannot be deleted" in schema
+
+
+def test_postgres_close_ownership_change_link_migration_is_linear_and_refuses_data_loss() -> None:
+    path = ROOT / "alembic/versions/0071_postgres_close_ownership_change_links.py"
+    spec = importlib.util.spec_from_file_location("migration_0071", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.revision == "0071_pg_close_ownchg_links"
+    assert module.down_revision == "0070_pg_ownership_change"
+    assert "refusing to discard close/ownership-change evidence links" in path.read_text(encoding="utf-8")
 
 
 def test_postgres_consolidation_close_migration_is_linear_and_reversible() -> None:
@@ -311,7 +337,8 @@ def test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable() -
                 " reconforge.consolidation_close_impairment_links,reconforge.consolidation_close_deferred_tax_links,"
                 " reconforge.consolidation_close_ppa_links,reconforge.intercompany_elimination_artifacts,"
                 " reconforge.consolidation_impairment_artifacts,reconforge.consolidation_deferred_tax_artifacts,"
-                " reconforge.consolidation_ppa_artifacts,reconforge.certification_records TO " + app_user
+                " reconforge.consolidation_ppa_artifacts,reconforge.consolidation_ownership_change_artifacts,"
+                " reconforge.consolidation_close_ownership_change_links,reconforge.certification_records TO " + app_user
             )
             admin.execute(
                 "GRANT SELECT,INSERT,UPDATE ON reconforge.domain_audit_ledger_state,"
@@ -518,10 +545,42 @@ def test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable() -
         assert ppa_detail["ppa_evidence"][0]["artifact_result_digest"] == ppa_artifact["result_digest"]
         assert ppa_detail["close_bundle"]["ppa_artifact_digests"] == [ppa_artifact["result_digest"]]
 
-        # A prepared run with intercompany_transaction eliminations cannot be
-        # approved until its exact PostgreSQL proposal artifact is bound.
         from dataclasses import replace
 
+        from tests.test_consolidation_ownership_changes import _request as ownership_change_request
+
+        ownership_artifact = OwnershipChangeApplicationService(
+            PostgresConsolidationOwnershipChangeRepository(connection, tenant_a)
+        ).prepare_and_persist(
+            replace(
+                ownership_change_request(),
+                period_id=worksheet.period_id,
+                effective_date="2026-08-01",
+                prepared_by="impairment-preparer",
+                approved_by="impairment-reviewer",
+            ),
+            actor_label="impairment-preparer",
+        )
+        ownership_run = repository.prepare_run(
+            run_number="RUN-OWNCHG-001", worksheet=worksheet, workspace="close", actor_label=worksheet.prepared_by
+        )
+        ownership_link = repository.attach_ownership_change_artifact(
+            ownership_run["id"],
+            ownership_artifact["id"],
+            workspace="close",
+            actor_label="close-reviewer",
+        )
+        assert ownership_link["artifact_id"] == ownership_artifact["id"]
+        ownership_detail = repository.get_run(ownership_run["id"])
+        assert ownership_detail["ownership_change_evidence"][0]["artifact_result_digest"] == ownership_artifact[
+            "result_digest"
+        ]
+        assert ownership_detail["close_bundle"]["ownership_change_artifact_digests"] == [
+            ownership_artifact["result_digest"]
+        ]
+
+        # A prepared run with intercompany_transaction eliminations cannot be
+        # approved until its exact PostgreSQL proposal artifact is bound.
         from reconforge.domain.consolidation_lifecycle import prepare_consolidation_worksheet
         from tests.test_intercompany_elimination import _line
 

@@ -633,6 +633,13 @@ include docs/adr/0397-postgres-close-deferred-tax-evidence-binding.md
 include alembic/versions/0068_postgres_close_deferred_tax_links.py
 include alembic/versions/0069_postgres_close_ppa_links.py
 include docs/adr/0398-postgres-close-ppa-evidence-binding.md
+include alembic/versions/0070_postgres_consolidation_ownership_change.py
+include alembic/versions/0071_postgres_close_ownership_change_links.py
+include reconforge/application/consolidation_ownership_change.py
+include reconforge/infrastructure/postgres_consolidation_ownership_change.py
+include docs/adr/0399-postgres-ownership-change-evidence-boundary.md
+include docs/adr/0400-postgres-close-ownership-change-evidence-binding.md
+include tests/test_postgres_consolidation_ownership_change.py
 include docs/schemas/consolidation_impairment_v1.schema.json
 include tests/test_consolidation_impairment.py
 include tests/test_postgres_consolidation_impairment.py

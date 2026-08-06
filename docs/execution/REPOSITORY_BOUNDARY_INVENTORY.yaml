@@ -56,6 +56,10 @@ application_services:
     service: ConsolidationImpairmentApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.postgres_consolidation_impairment.PostgresConsolidationImpairmentRepository
+  - file: consolidation_ownership_change.py
+    service: OwnershipChangeApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_consolidation_ownership_change.PostgresConsolidationOwnershipChangeRepository
   - file: writeback.py
     service: WritebackIntentApplicationService
     status: backend_neutral
@@ -210,4 +214,4 @@ summary:
   direct_sqlite: 0
   partial_repository: 0
   compatibility_adapter: 20
-  backend_neutral_application: 44
+  backend_neutral_application: 45

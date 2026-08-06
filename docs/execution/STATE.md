@@ -4969,3 +4969,32 @@ pip-audit, package build, authorization inventory (244 routes, digest
 diff-check pass. Hosted CI/security/provenance, live PostgreSQL availability,
 providers/write-back, independent HA/DR, and release approval remain external.
 GitHub publication remains deferred by owner instruction.
+
+E-519 adds the policy-neutral PostgreSQL ownership-change evidence boundary.
+Migration `0070_pg_ownership_change` and the backend-neutral application
+service persist canonical request/result JSONB under forced tenant RLS. Reads
+replay the domain request, verify request/result digests, require distinct
+preparer/approver identities, enforce `posted: false`, emit an audit event,
+and reject update/delete paths. This remains evidence provenance only: no
+statutory ownership accounting, goodwill/tax policy, journal posting,
+provider write-back, restore, HA/DR, or production claim follows.
+
+E-520 binds that immutable artifact to PostgreSQL consolidation close runs.
+Migration `0071_pg_close_ownchg_links` adds forced-RLS append-only links with
+run/artifact/entity uniqueness and data-loss-safe downgrade. The close
+repository replay-verifies the artifact, binds period/currency/entity to the
+worksheet, requires an independent linker, and includes sorted result digests
+in the close bundle. The server exposes strict, `finance_core.manage`-
+protected ownership-change evidence linking. The live PostgreSQL link runtime
+is still a declared skip without `RECONFORGE_TEST_POSTGRES_DSN`.
+
+E-521 closes the current local regression/static/package gate after the
+ownership-change binding: 2,614 tests pass with no collection or executed
+failure; Ruff, Mypy (476 files), Bandit, OSV pip-audit, package build,
+authorization inventory (245 routes, digest
+`edc399307cf840f553d238b984cb3e4f4ce7a15b5d65ca277d4c22aafe780b9b`), parser
+and repository inventories, maturity/phase-2 audits, YAML parsing, and
+diff-check pass. Capability-gated live PostgreSQL, hosted CI/security/
+provenance, live providers/write-back, independent HA/DR, and release
+approval remain external. GitHub publication remains deferred by owner
+instruction.

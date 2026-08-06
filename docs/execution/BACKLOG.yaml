@@ -2590,7 +2590,7 @@ tasks:
     status: completed
     depends_on: [E-544]
     exit_evidence: >-
-      Checksum-verified Gitleaks 8.30.1 scans the current 563-commit local
+      Checksum-verified Gitleaks 8.30.1 scans the current 565-commit local
       history with zero leaks and scans a clean archive of the current HEAD
       tree with zero leaks. This is local security evidence only; the supplied
       hosted leak result still requires a fresh hosted history/tree run after

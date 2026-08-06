@@ -116,6 +116,29 @@ class MatchingStrategyResult:
     exceptions: tuple[Mapping[str, object], ...]
     explanation_schema: str
 
+    def verify_against(self, request: MatchingStrategyRequest, *, manifest_digest: str) -> None:
+        """Fail closed when a strategy result is detached from its inputs.
+
+        Strategy adapters cross persistence and worker boundaries, so the
+        result must be checked again before it is exposed or committed.  The
+        verification recomputes both the canonical input fingerprint and the
+        result fingerprint; it does not trust a caller-supplied digest.
+        """
+
+        if self.manifest_digest != manifest_digest:
+            raise MatchingStrategyContractError("Strategy result manifest digest does not match the executing manifest.")
+        expected_input = request_digest(request, manifest_digest)
+        if self.input_digest != expected_input:
+            raise MatchingStrategyContractError("Strategy result input digest does not match the canonical request.")
+        expected_result = result_digest(
+            manifest_digest=manifest_digest,
+            input_digest=expected_input,
+            results=self.results,
+            exceptions=self.exceptions,
+        )
+        if self.decision_digest != expected_result:
+            raise MatchingStrategyContractError("Strategy result decision digest does not match its output.")
+
 
 class MatchingStrategy(Protocol):
     @property

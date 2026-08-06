@@ -2287,3 +2287,40 @@ tasks:
       `git diff --check` passes. Hosted CI/security/provenance, live PostgreSQL
       and provider runtimes, write-back, independent HA/DR, and release
       approval remain external.
+  - id: E-528
+    priority: P1
+    area: advanced_matching
+    title: Fail-closed replay verification for strategy results
+    status: completed
+    depends_on: [P4-MAT-001, E-527]
+    exit_evidence: >-
+      `MatchingStrategyResult.verify_against` now recomputes the canonical
+      manifest, input, and result digests before any indexed, grouped,
+      carry-forward, duplicate-detection, or reversal strategy result is
+      returned. Focused strategy, grouped-worker, sequential-worker,
+      carry-forward, reversal, and duplicate suites pass; adversarial tests
+      reject manifest, input, and output tampering. ADR 0404 and the strategy
+      contract test are included in the source-distribution manifest. This
+      closes result-envelope integrity only; it does not prove PostgreSQL
+      capacity, distributed consensus, live providers, or production readiness.
+  - id: E-529
+    priority: P0
+    area: quality
+    title: Focused regression gate after matching replay verification
+    status: completed
+    depends_on: [E-528]
+    exit_evidence: >-
+      The corrected current tree collects 2,623 tests and
+      `uv run --no-sync pytest -q --basetemp .pytest-tmp-e529b --tb=short -ra`
+      reaches 100% with no collection or executed failure; declared PostgreSQL,
+      Redis, object-storage, public-network, and platform capability skips
+      remain visible. Ruff passes; Mypy reports no issues in 476 source files;
+      Bandit exits 0 with reviewed existing nosec/comment warnings; OSV
+      `pip-audit` reports no known vulnerabilities while the local package is
+      not published on PyPI; phase/execution/parity/maturity and related
+      contract suites pass 39/39; `python -m build --no-isolation` succeeds
+      and source-distribution membership for ADR 0404 and the matching
+      strategy contract test passes; and `git diff --check` passes. Hosted
+      CI/security/provenance, live PostgreSQL and provider runtimes,
+      independent HA/DR, and release approval remain external; GitHub
+      publication remains deferred by owner instruction.

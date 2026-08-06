@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 
@@ -264,6 +265,43 @@ def test_grouped_strategy_is_registered_versioned_and_permutation_invariant() ->
     assert first.results[0]["left_record_ids"] == ("L1",)
     registry = MatchingStrategyRegistry((strategy,))
     assert registry.get(strategy.manifest.id, strategy.manifest.version) is strategy
+
+
+def test_strategy_result_replay_verifier_rejects_manifest_input_and_output_tampering() -> None:
+    strategy = GroupedSubsetSumStrategy()
+    request = MatchingStrategyRequest(
+        left_records=(
+            {"id": "L1", "amount": "100", "currency": "USD", "date": "2026-01-01", "partition": "AR"},
+        ),
+        right_records=(
+            {"id": "R1", "amount": "40", "currency": "USD", "date": "2026-01-01", "partition": "AR"},
+            {"id": "R2", "amount": "60", "currency": "USD", "date": "2026-01-01", "partition": "AR"},
+        ),
+        mode="one-to-many",
+    )
+    result = strategy.execute(request)
+
+    result.verify_against(request, manifest_digest=strategy.manifest.digest)
+
+    with pytest.raises(MatchingStrategyContractError, match="manifest digest"):
+        result.verify_against(request, manifest_digest="0" * 64)
+
+    changed_request = replace(
+        request,
+        left_records=({**request.left_records[0], "amount": "101"},) + request.left_records[1:],
+    )
+    with pytest.raises(MatchingStrategyContractError, match="input digest"):
+        result.verify_against(changed_request, manifest_digest=strategy.manifest.digest)
+
+    tampered = replace(result, results=tuple({**result.results[0], "status": "unmatched"} for _ in (0,)))
+    with pytest.raises(MatchingStrategyContractError, match="decision digest"):
+        tampered.verify_against(request, manifest_digest=strategy.manifest.digest)
+
+
+def test_matching_result_replay_verifier_is_in_source_distribution_manifest() -> None:
+    manifest = Path("MANIFEST.in").read_text(encoding="utf-8")
+    assert "include docs/adr/0404-matching-result-replay-verification.md" in manifest
+    assert "include tests/test_matching_strategy_contract.py" in manifest
 
 
 def test_grouped_strategy_supports_fee_aware_netting_fields_and_request_digest_variants() -> None:

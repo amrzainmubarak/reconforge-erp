@@ -5066,3 +5066,25 @@ documentation/test, and diff-check pass. Hosted CI/security/provenance, live
 PostgreSQL/provider runtimes, write-back, independent HA/DR, and release
 approval remain external. GitHub publication remains deferred by owner
 instruction.
+
+E-528 adds fail-closed replay verification to every current matching strategy.
+`MatchingStrategyResult.verify_against` recomputes the canonical manifest,
+input, and output digests before indexed, grouped, carry-forward,
+duplicate-detection, or reversal results cross a worker or persistence
+boundary. Focused strategy, grouped-worker, sequential-worker, carry-forward,
+reversal, and duplicate contracts pass; adversarial tests reject manifest,
+input, and output tampering. ADR 0404 and the strategy contract test are in
+the source distribution. This closes result-envelope integrity only; live
+PostgreSQL capacity, distributed consensus, providers, independent
+validation, HA/DR, and production readiness remain open. GitHub publication
+remains deferred by owner instruction.
+
+E-529 closes the current regression/static/package gate after the matching
+replay verifier. The tree collects 2,623 tests and reaches 100% with no
+collection or executed failure; declared PostgreSQL, Redis, object-storage,
+public-network, and platform skips remain visible. Ruff, Mypy (476 source
+files), Bandit, OSV pip-audit, 39/39 phase/execution/parity/maturity-related
+contracts, package build with ADR 0404 and the matching strategy contract test,
+and diff-check pass. Hosted CI/security/provenance, live PostgreSQL/provider
+runtimes, independent HA/DR, and release approval remain external. GitHub
+publication remains deferred by owner instruction.

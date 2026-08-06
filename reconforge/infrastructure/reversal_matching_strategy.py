@@ -74,7 +74,7 @@ class ReversalPairingStrategy:
         exceptions = () if decision.status != "ambiguous" else ({"reason_code": decision.reason_code, "decision_digest": decision.decision_digest},)
         manifest_digest = self.manifest.digest
         input_digest = request_digest(request, manifest_digest)
-        return MatchingStrategyResult(
+        result = MatchingStrategyResult(
             manifest_digest=manifest_digest,
             input_digest=input_digest,
             decision_digest=result_digest(manifest_digest=manifest_digest, input_digest=input_digest, results=results, exceptions=exceptions),
@@ -82,6 +82,8 @@ class ReversalPairingStrategy:
             exceptions=exceptions,
             explanation_schema=self.manifest.explanation_schema,
         )
+        result.verify_against(request, manifest_digest=manifest_digest)
+        return result
 
     @staticmethod
     def _record(item: Mapping[str, object], request: MatchingStrategyRequest, id_field: str) -> ReversalRecord:

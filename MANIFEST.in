@@ -360,6 +360,8 @@ include tests/test_connector_payment_statement.py
 include docs/connectors/reference-payment-statement-readonly.md
 include docs/adr/0237-reference-payment-statement-is-read-only.md
 include docs/adr/0403-payment-statement-sandbox-transport-and-account-guard.md
+include docs/adr/0404-matching-result-replay-verification.md
+include tests/test_matching_strategy_contract.py
 include reconforge/connectors/world_bank_public.py
 include tests/test_connector_world_bank_public.py
 include docs/adr/0370-world-bank-public-reference-connector.md

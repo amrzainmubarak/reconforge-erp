@@ -5389,3 +5389,23 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   production readiness claim follows.
 - **Reversibility**: Remove the optional guard, sandbox test, ADR, docs, and
   manifest entry; existing callers that omit the guard remain compatible.
+
+### D-378: Verify matching strategy envelopes before they cross a boundary
+
+- **Date**: 2026-08-06
+- **Context**: Strategy adapters calculate manifest, input, and output
+  digests, but there was no shared fail-closed check before a result reached a
+  worker, persistence boundary, or evidence consumer.
+- **Decision**: Add `MatchingStrategyResult.verify_against` and invoke it from
+  the indexed, grouped, carry-forward, duplicate-detection, and reversal
+  adapters. The verifier recomputes the canonical input and result digests and
+  rejects manifest, input, or output tampering.
+- **Verification**: Focused strategy, grouped-worker, sequential-worker,
+  carry-forward, reversal, and duplicate suites pass; adversarial tests cover
+  all three mismatch classes; ADR 0404 and the strategy contract test are in
+  the source-distribution manifest.
+- **Boundary**: This is deterministic result-envelope integrity only. It does
+  not establish PostgreSQL capacity, distributed consensus, live providers,
+  independent algorithm validation, or production readiness.
+- **Reversibility**: Remove the verifier calls, focused tests, ADR, and manifest
+  entry without a data migration; the existing result shape remains unchanged.

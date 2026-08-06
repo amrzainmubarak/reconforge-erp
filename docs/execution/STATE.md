@@ -4609,3 +4609,13 @@ connector: its intentional direct JSON parse was not declared. I closed that
 drift by adding the exact FI-023 allowlist entry and connector test evidence;
 the focused inventory contract now passes. No parser call was hidden or
 silenced.
+The current full local regression now exits 0 in 348.9s after the connector,
+inventory, and CI bootstrap changes. No executed test failed; declared live
+service capability skips and existing warnings remain visible. This closes the
+local compatibility gate, not the hosted release gate or the unresolved
+external HA/DR, vendor, and native-backup evidence.
+The final local static/package gate also passes on this head: Ruff, Mypy over
+466 source files, Bandit, OSV pip-audit, supply-chain policy, package build,
+and diff-check. The one new public-manifest Bandit suppression is narrowly
+scoped to a non-secret descriptive field; existing reviewed warnings remain
+visible. Hosted security/provenance and release approval remain open.

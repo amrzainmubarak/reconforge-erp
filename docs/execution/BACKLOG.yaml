@@ -1461,3 +1461,19 @@ tasks:
     status: completed
     depends_on: [E-460]
     exit_evidence: The single intentional `json.loads` call in `reconforge/connectors/world_bank_public.py` is explicitly declared under FI-023 with exact path, count, rationale, and connector test evidence. The AST inventory contract passes; no parser surface is hidden or exempted.
+
+  - id: E-463
+    priority: P0
+    area: quality
+    title: Current full local regression after connector and CI hardening
+    status: completed
+    depends_on: [E-462]
+    exit_evidence: `uv run --no-sync pytest -q --tb=short -ra` exits 0 in 348.9s on the current head. All collected tests pass with declared live PostgreSQL/Redis/object-storage/Windows/network capability skips and existing framework/legacy-input warnings only. This is local compatibility evidence and does not substitute for hosted CI or release approval.
+
+  - id: E-464
+    priority: P0
+    area: quality
+    title: Current static security dependency and package gate after connector closure
+    status: completed
+    depends_on: [E-463]
+    exit_evidence: Ruff passes; Mypy reports no issues in 466 source files; Bandit exits 0 with existing reviewed nosec/comment warnings; OSV pip-audit reports no known vulnerabilities; the closed supply-chain validator reports status valid with zero active exceptions and zero npm integrity gaps; package build and git diff check pass. Hosted security/provenance/release approval remain external.

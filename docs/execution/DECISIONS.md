@@ -4589,6 +4589,32 @@
   production source.
 - **Rollback**: Replace the direct parser with the central bounded reader or
   remove the connector and its allowlist entry; no data migration is needed.
+
+### D-360: Require a clean full regression after parser-inventory repair
+
+- **Date**: 2026-08-06
+- **Decision**: Promote the current local suite result only after rerunning the
+  complete pytest collection following the direct-parser inventory fix.
+- **Verification**: `uv run --no-sync pytest -q --tb=short -ra` exits 0 in
+  348.9s; all collected tests pass with only declared capability skips and
+  existing warnings.
+- **Boundary**: Local compatibility does not attest hosted CI, native
+  PostgreSQL backup/restore, external providers, HA/DR, or publication.
+- **Rollback**: Supersede E-463 with the next exact-environment full run; no
+  runtime or data rollback is needed.
+
+### D-361: Close the current static and package gate after connector lint repair
+
+- **Date**: 2026-08-06
+- **Decision**: Require the full static/security/dependency/package sequence on
+  the current connector head after import ordering and Bandit suppression are
+  corrected.
+- **Verification**: Ruff, Mypy (466 files), Bandit, OSV pip-audit, closed
+  supply-chain validation, package build, and diff-check all pass.
+- **Boundary**: Local gates do not attest hosted security, provenance,
+  external providers, HA/DR, or production publication.
+- **Rollback**: Supersede E-464 with the next exact lock/source gate; no
+  runtime or data rollback is needed.
 # ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
 
 Implemented and bounded the `professional.invoice-payment` module. It is local,

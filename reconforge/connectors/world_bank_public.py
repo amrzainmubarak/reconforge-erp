@@ -72,7 +72,7 @@ WORLD_BANK_PUBLIC_MANIFEST = ConnectorManifest(
     schema_versions=("world-bank-public-record-v1",),
     synthetic_sandbox=True,
     threat_model=("ssrf", "schema-confusion", "response-amplification", "source-drift"),
-    secret_handling="No secret is required; the exact public endpoint is read only.",
+    secret_handling="No secret is required; the exact public endpoint is read only.",  # nosec B106
     egress_destinations=tuple(world_bank_public_endpoint(skip) for skip in WORLD_BANK_PUBLIC_SKIPS),
     support_level=SupportLevel.COMMUNITY,
 )

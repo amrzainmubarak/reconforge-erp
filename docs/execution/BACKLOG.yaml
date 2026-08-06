@@ -1742,3 +1742,35 @@ tasks:
     status: completed
     depends_on: [E-495]
     exit_evidence: The current tree reaches 100% in the full local pytest regression with no collection or executed failure; declared capability skips and existing warnings remain visible. Ruff passes, Mypy reports no issues in 467 source files, Bandit exits 0 with reviewed nosec/comment warnings, OSV pip-audit reports no known vulnerabilities, package build succeeds, the new ADR is present in reconforge_erp.egg-info/SOURCES.txt, and git diff --check passes. Hosted CI/security/provenance, native backup tooling, and external runtime/release gates remain unverified.
+  - id: E-497
+    priority: P0
+    area: advanced_matching
+    title: Current PostgreSQL grouped-matching runtime and scale evidence
+    status: completed
+    depends_on: [E-496, P4-MAT-001]
+    exit_evidence: >-
+      Against the local PostgreSQL 16.14 service, the non-superuser,
+      non-BYPASSRLS reconforge_app role passes the grouped worker runtime suite
+      2/2, including tenant/workspace isolation, persisted group lineage, and
+      crash/resume without duplicate partition effects. The declared 500-
+      partition and 10,000-partition concurrent scale profile tests each pass
+      1/1 with every run/partition drained, all five declared modes completed,
+      expected result-row counts, zero duplicate result identities, zero failed
+      runs, and no active runs. This is bounded synthetic single-host evidence;
+      it does not prove production throughput, distributed capacity, cross-host
+      failure recovery, soak/SLO behavior, provider I/O, or completion of
+      P4-MAT-001.
+  - id: E-498
+    priority: P1
+    area: connectors
+    title: Opt-in public network connector runtime on current host
+    status: blocked
+    depends_on: [P4-CON-001, E-497]
+    exit_evidence: >-
+      Blocked on 2026-08-06: the opt-in World Bank public connector test reached
+      the pinned HTTPS connection but the current host returned WinError 10051
+      (unreachable network), surfaced as connector_transport_failed. No live
+      schema, response digest, or public-network interoperability claim is
+      promoted until the same test can run from an explicitly authorized
+      egress-enabled environment. Synthetic transport/fixture tests remain
+      separate and passing.

@@ -5069,3 +5069,33 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   readiness remain open.
 - **Reversibility**: Remove the two schema installs, grants, ADR, manifest entry,
   and evidence; no production migration or data rollback is required.
+
+### D-322: Promote only bounded PostgreSQL grouped-matching runtime evidence
+
+- **Date**: 2026-08-06
+- **Context**: The PostgreSQL grouped worker, checkpoint path, and scale
+  profiles existed, but their live cells were skipped when no DSN was present.
+- **Decision**: Execute the existing runtime, 500-partition, and 10K-partition
+  contracts against a local PostgreSQL service with a non-superuser,
+  non-BYPASSRLS role. Record structural outcomes only and do not widen the
+  P4-MAT-001 claim to production capacity or distributed reliability.
+- **Verification**: Runtime 2/2, 500-partition 1/1, and 10K-partition 1/1
+  passed; all declared work drained with zero duplicate result identities.
+- **Consequence**: PostgreSQL runtime evidence is stronger and current for this
+  bounded worker path. Cross-host capacity, soak/SLO behavior, provider I/O,
+  and the full advanced-matching exit remain open.
+- **Reversibility**: Documentation-only; remove ADR, manifest, backlog, state,
+  and evidence entries without changing runtime or data.
+
+### D-323: Keep unreachable public egress explicitly blocked
+
+- **Date**: 2026-08-06
+- **Context**: The opt-in World Bank public connector test reached the pinned
+  HTTPS transport but the current host returned WinError 10051.
+- **Decision**: Preserve the failure as a blocked gate. Do not bypass pinning,
+  replace the live call with a fixture, or promote schema/digest assertions as
+  public-network evidence.
+- **Consequence**: The connector remains synthetic/read-only evidence until an
+  authorized egress-enabled rerun succeeds; P4-CON-001 remains open.
+- **Reversibility**: Re-run the unchanged test with explicit egress and replace
+  only the blocked evidence after a successful real response.

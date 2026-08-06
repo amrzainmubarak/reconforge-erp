@@ -4634,8 +4634,9 @@ provider, HA/DR, or native-backup gates.
 The backlog has since grown with the current HA/DR, object-storage, and Redis
 runtime and current-tree gate entries; its latest parse is 161 unique tasks
 (E-460 through E-494 included).
-The server-identity fixture and final local gate entries extend that parse to
-163 unique tasks (E-495 and E-496 included): 153 completed, 8 in progress, and
+The server-identity fixture, final local gate, PostgreSQL grouped runtime, and
+public-network evidence entries extend that parse to 165 unique tasks
+(E-495 through E-498 included): 154 completed, 1 blocked, 8 in progress, and
 2 deferred. This administrative ratio is not a product-readiness percentage;
 the open workstreams and external release gates remain authoritative.
 The fresh repeated PostgreSQL HA/DR drill now provides stronger bounded runtime

@@ -5008,3 +5008,22 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   tool score, throughput, or production reliability.
 - **Reversibility**: Remove the harness, test, ADR, manifest entry, and
   evidence; no migration or persisted-data rollback is required.
+
+### D-317: Repeat durable-job load in isolated SQLite soak iterations
+
+- **Date**: 2026-08-06
+- **Context**: Durable-job load, cancellation, retry, backpressure, and
+  PostgreSQL correctness slices existed, but there was no retained repeated-run
+  soak artifact checking digest stability and queue drain across iterations.
+- **Decision**: Add a bounded `DurableJobSoakProfile` and manifest that reuses
+  the public load harness against a fresh SQLite database per iteration. Require
+  exact declared job/effect counts, one stable effect digest, zero duplicate
+  effects, and zero queued/running residue; retain runtime and peak memory as
+  observations without using them for capacity claims.
+- **Verification**: Focused soak/load tests pass, including manifest replay and
+  source-distribution membership.
+- **Boundary**: One-host SQLite repetition only; PostgreSQL/distributed soak,
+  queue HA, host-loss recovery, throughput/capacity/SLO, and production
+  readiness remain unverified.
+- **Reversibility**: Remove the profile, tests, ADR, manifest entry, and
+  evidence; no migration or persisted-data rollback is required.

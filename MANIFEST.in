@@ -253,6 +253,8 @@ include reconforge/benchmark/durable_job_retry.py
 include tests/test_durable_job_retry_profile.py
 include reconforge/benchmark/grouped_matching_replay.py
 include tests/test_grouped_matching_replay.py
+include reconforge/benchmark/durable_job_soak.py
+include tests/test_durable_job_soak.py
 include reconforge/workers/postgres_grouped_matching.py
 include tests/test_postgres_grouped_matching.py
 include docs/adr/0214-durable-job-cancellation-profile-is-structural-and-non-claim.md
@@ -262,6 +264,7 @@ include docs/adr/0215-bounded-grouped-matching-is-explainable-and-non-posting.md
 include docs/adr/0381-dense-grouped-matching-adversarial-contracts.md
 include docs/adr/0382-pinned-https-writeback-recovery-transport.md
 include docs/adr/0383-grouped-matching-checkpoint-fault-matrix.md
+include docs/adr/0384-durable-job-repeated-soak-profile.md
 include docs/adr/0216-bounded-partial-settlement-keeps-residuals-visible.md
 include docs/adr/0217-bounded-non-overlapping-group-portfolio.md
 include reconforge/domain/carry_forward.py

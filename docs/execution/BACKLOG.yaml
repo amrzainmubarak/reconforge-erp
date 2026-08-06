@@ -1685,3 +1685,11 @@ tasks:
     status: completed
     depends_on: [E-489]
     exit_evidence: The current tree reaches 100% in the full 2570-test local regression with no collection or executed failure; declared capability skips and existing warnings remain visible. Ruff passes, Mypy reports no issues in 466 source files, Bandit exits 0 with reviewed nosec/comment warnings, pip-audit reports no known OSV vulnerabilities, and the package build includes ADR 0383. Hosted CI/security/provenance and external runtime gates remain unverified.
+
+  - id: E-491
+    priority: P0
+    area: scalability
+    title: Repeated durable-job soak profile
+    status: completed
+    depends_on: [P4-SCL-001, E-490]
+    exit_evidence: "`run_durable_job_soak_profile` repeats the public bounded durable-job load harness over isolated SQLite databases for a declared 2-32 iteration tier. The focused soak/load suite passes; every iteration completes its declared jobs and partition effects, preserves the effect digest, records zero duplicate effects, and drains queued/running state. Runtime and peak memory are retained as observations only. This is one-host SQLite soak evidence, not PostgreSQL/distributed soak, capacity, SLO, host-loss recovery, or production readiness."

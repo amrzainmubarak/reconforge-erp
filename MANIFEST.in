@@ -364,6 +364,7 @@ include docs/adr/0404-matching-result-replay-verification.md
 include docs/adr/0405-scoped-export-api-authority.md
 include docs/adr/0406-postgres-reconciliation-worker-workspace-scope.md
 include docs/adr/0407-postgres-reconciliation-worker-entity-scope.md
+include docs/adr/0408-postgres-scheduler-scoped-worker.md
 include reconforge/infrastructure/postgres_reconciliation_entity_scope.py
 include alembic/versions/0072_postgres_reconciliation_entity_scope.py
 include reconforge/api/server_scoped_exports.py

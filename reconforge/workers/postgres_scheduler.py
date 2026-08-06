@@ -12,7 +12,7 @@ from reconforge.application.scheduler import ScheduleProcessResult, SchedulerApp
 from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_scheduler import PostgresScheduleRepository
-from reconforge.workers.policy import require_service_worker_policy
+from reconforge.workers.policy import WorkerPolicyContextSupplier, require_service_worker_policy
 
 
 class PostgresSchedulerWorkerError(RuntimeError):
@@ -31,6 +31,8 @@ class PostgresSchedulerWorkerSettings:
     max_tenants: int = 10_000
     actor_id: str = ""
     policy_context_supplier: Callable[[str], PolicyEvaluationContext] | None = None
+    policy_context_scope_supplier: WorkerPolicyContextSupplier | None = None
+    scope_supplier: Callable[[], Iterable[tuple[str, str | None, str | None]]] | None = None
     policy_permission: str = "schedule.run"
 
     def __post_init__(self) -> None:
@@ -109,6 +111,32 @@ class PostgresSchedulerWorker:
             raise PostgresSchedulerWorkerError("Scheduler tenant enumeration exceeds its configured bound.")
         return tenant_ids
 
+    def _lanes(self) -> tuple[tuple[str, str | None, str | None], ...]:
+        """Return deterministic tenant/workspace/entity lanes for one cycle."""
+
+        if self.settings.scope_supplier is None:
+            return tuple((tenant_id, None, None) for tenant_id in self._tenant_ids())
+        try:
+            lanes: set[tuple[str, str | None, str | None]] = set()
+            for raw_lane in self.settings.scope_supplier():
+                if not isinstance(raw_lane, tuple) or len(raw_lane) != 3:
+                    raise PostgresSchedulerWorkerError(
+                        "Scheduler scope supplier must return (tenant, workspace, entity) tuples."
+                    )
+                tenant_id = validate_tenant_id(raw_lane[0])
+                workspace_id = str(raw_lane[1] or "").strip() or None
+                entity_id = str(raw_lane[2] or "").strip() or None
+                if entity_id is not None and workspace_id is None:
+                    raise PostgresSchedulerWorkerError("Scheduler entity scope requires workspace scope.")
+                lanes.add((tenant_id, workspace_id, entity_id))
+            if len({tenant for tenant, _, _ in lanes}) > self.settings.max_tenants:
+                raise PostgresSchedulerWorkerError("Scheduler tenant enumeration exceeds its configured bound.")
+            return tuple(sorted(lanes, key=lambda lane: (lane[0], lane[1] or "", lane[2] or "")))
+        except PostgresSchedulerWorkerError:
+            raise
+        except Exception as exc:
+            raise PostgresSchedulerWorkerError("Unable to enumerate scheduler scope lanes.") from exc
+
     def process_once(self) -> tuple[ScheduleProcessResult, ...]:
         try:
             now = self.clock()
@@ -116,12 +144,15 @@ class PostgresSchedulerWorker:
                 raise PostgresSchedulerWorkerError("Scheduler clock must return a timezone-aware timestamp.")
             current = now.astimezone(UTC).replace(microsecond=0)
             results: list[ScheduleProcessResult] = []
-            for tenant_id in self._tenant_ids():
+            for tenant_id, workspace_id, entity_id in self._lanes():
                 require_service_worker_policy(
                     tenant_id=tenant_id,
                     worker_id=self.settings.worker_id,
                     actor_id=self.settings.audit_actor_id,
                     policy_context_supplier=self.settings.policy_context_supplier,
+                    policy_context_scope_supplier=self.settings.policy_context_scope_supplier,
+                    workspace_id=workspace_id,
+                    entity_id=entity_id,
                     policy_permission=self.settings.policy_permission,
                     surface="postgres-scheduler.worker.claim",
                     error_factory=PostgresSchedulerWorkerError,
@@ -133,6 +164,11 @@ class PostgresSchedulerWorker:
                         worker_id=self.settings.worker_id,
                         now=current,
                         limit=self.settings.batch_size,
+                        **(
+                            {"workspace_id": workspace_id, "entity_id": entity_id}
+                            if workspace_id is not None or entity_id is not None
+                            else {}
+                        ),
                     )
                     results.append(result)
                 finally:

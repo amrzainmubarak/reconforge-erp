@@ -142,3 +142,90 @@ def test_scheduler_worker_policy_allows_scoped_service_identity(monkeypatch: pyt
     )
     result = worker.process_once()
     assert result[0].dispatched == 1
+
+
+def test_scheduler_worker_scope_lane_requires_exact_policy_and_passes_scope(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory = _Factory()
+    calls: list[tuple[str, str | None, str | None]] = []
+
+    class Service:
+        def __init__(self, repository: object) -> None:
+            self.repository = repository
+
+        def process_due(
+            self,
+            *,
+            tenant_id: str,
+            worker_id: str,
+            now: datetime,
+            limit: int,
+            workspace_id: str | None = None,
+            entity_id: str | None = None,
+        ) -> ScheduleProcessResult:
+            calls.append((tenant_id, workspace_id, entity_id))
+            return ScheduleProcessResult(1, 1, 1, 1, 0, 0, 0, 0)
+
+    monkeypatch.setattr(worker_module, "SchedulerApplicationService", Service)
+
+    def policy_context(tenant: str, workspace: str | None, entity: str | None) -> PolicyEvaluationContext:
+        return PolicyEvaluationContext(
+            user_id="scoped-scheduler",
+            username="scoped-scheduler",
+            user_permissions={"schedule.run"},
+            principal_type="service_account",
+            tenant_id=tenant,
+            workspace_id=workspace,
+            entity_id=entity,
+            authorized_tenant_ids=frozenset({tenant}),
+            authorized_workspace_ids=frozenset({workspace}) if workspace else frozenset(),
+            authorized_entity_ids=frozenset({entity}) if entity else frozenset(),
+        )
+
+    worker = PostgresSchedulerWorker(
+        factory,
+        tenant_supplier=tuple,
+        settings=PostgresSchedulerWorkerSettings(
+            worker_id="scoped-scheduler",
+            policy_context_scope_supplier=policy_context,
+            scope_supplier=lambda: (("tenant_a", "workspace-a", "entity-a"),),
+            poll_interval_seconds=0,
+        ),
+        clock=lambda: datetime(2026, 7, 29, 12, tzinfo=UTC),
+    )
+
+    result = worker.process_once()
+
+    assert result[0].dispatched == 1
+    assert calls == [("tenant_a", "workspace-a", "entity-a")]
+    assert len(factory.connections) == 1 and factory.connections[0].closed
+
+
+def test_scheduler_worker_rejects_entity_lane_without_workspace_before_connection() -> None:
+    class _NeverConnect:
+        def connect(self) -> _Connection:
+            raise AssertionError("invalid scope must be rejected before connection access")
+
+    worker = PostgresSchedulerWorker(
+        _NeverConnect(),
+        tenant_supplier=tuple,
+        settings=PostgresSchedulerWorkerSettings(
+            worker_id="scoped-scheduler",
+            policy_context_scope_supplier=lambda tenant, workspace, entity: PolicyEvaluationContext(
+                user_id="scoped-scheduler",
+                username="scoped-scheduler",
+                user_permissions={"schedule.run"},
+                principal_type="service_account",
+                tenant_id=tenant,
+                workspace_id=workspace,
+                entity_id=entity,
+                authorized_tenant_ids=frozenset({tenant}),
+                authorized_workspace_ids=frozenset({workspace}) if workspace else frozenset(),
+                authorized_entity_ids=frozenset({entity}) if entity else frozenset(),
+            ),
+            scope_supplier=lambda: (("tenant_a", None, "entity-a"),),
+        ),
+    )
+    with pytest.raises(PostgresSchedulerWorkerError, match="requires workspace scope"):
+        worker.process_once()

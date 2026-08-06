@@ -2434,3 +2434,39 @@ tasks:
       CI/security/provenance, live PostgreSQL/provider runtimes, independent
       HA/DR, and release approval remain external; GitHub publication remains
       deferred by owner instruction.
+  - id: E-536
+    priority: P1
+    area: enterprise_policy
+    title: Workspace/entity-scoped PostgreSQL scheduler worker lane
+    status: completed
+    depends_on: [E-535, P4-IAM-001]
+    exit_evidence: >-
+      PostgreSQL scheduler settings now accept an optional scope-lane supplier
+      and exact three-argument service-account policy context. Scoped lanes are
+      authorized before connection access, require workspace when entity is
+      supplied, and pass deterministic workspace/entity filters through the
+      application service and PostgreSQL row-lock query. The repository keeps
+      the same scope while evaluating schedules and writing durable dispatch,
+      job, and notification evidence. Focused scheduler worker/application
+      contracts pass 9 tests with one declared live-PostgreSQL skip; Ruff and
+      Mypy pass. ADR 0408 is packaged. Outbox remains tenant-only in this
+      slice; universal worker/export/UI adoption, federation, live providers,
+      scale, HA/DR, and production IAM remain open.
+  - id: E-537
+    priority: P0
+    area: quality
+    title: Regression gate after scoped scheduler worker
+    status: completed
+    depends_on: [E-536]
+    exit_evidence: >-
+      The exact current tree collects 2,631 tests and the full pytest gate
+      passes 100% in 328.6 seconds with no collection or executed failure;
+      declared external-service/platform skips and existing warnings remain
+      visible. Ruff passes; Mypy reports no issues in 479 source files; Bandit
+      exits 0 with reviewed existing suppression/comment warnings; OSV
+      `pip-audit -s osv` reports no known vulnerabilities; `python -m build
+      --no-isolation` succeeds and `SOURCES.txt` contains ADR 0408; and
+      `git diff --check` passes. Hosted CI/security/provenance, live
+      PostgreSQL/provider runtimes, independent HA/DR, and release approval
+      remain external; GitHub publication remains deferred by owner
+      instruction.

@@ -132,6 +132,8 @@ class ScheduleRepositoryProtocol(Protocol):
         worker_id: str,
         now: datetime,
         limit: int = 50,
+        workspace_id: str | None = None,
+        entity_id: str | None = None,
     ) -> ScheduleProcessResult: ...
 
 
@@ -172,12 +174,25 @@ class SchedulerApplicationService:
         worker_id: str,
         now: datetime,
         limit: int = 50,
+        workspace_id: str | None = None,
+        entity_id: str | None = None,
     ) -> ScheduleProcessResult:
         if not 1 <= limit <= 1_000:
             raise SchedulerError("limit must be between 1 and 1000.")
+        normalized_tenant = _identifier(tenant_id, "tenant_id")
+        normalized_worker = _identifier(worker_id, "worker_id")
+        if workspace_id is None and entity_id is None:
+            return self.repository.process_due(
+                tenant_id=normalized_tenant,
+                worker_id=normalized_worker,
+                now=now,
+                limit=limit,
+            )
         return self.repository.process_due(
-            tenant_id=_identifier(tenant_id, "tenant_id"),
-            worker_id=_identifier(worker_id, "worker_id"),
+            tenant_id=normalized_tenant,
+            worker_id=normalized_worker,
             now=now,
             limit=limit,
+            workspace_id=None if workspace_id is None else _identifier(workspace_id, "workspace_id"),
+            entity_id=None if entity_id is None else _identifier(entity_id, "entity_id"),
         )

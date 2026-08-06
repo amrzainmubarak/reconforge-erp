@@ -5166,3 +5166,25 @@ migration 0072, and the schema helper; and `git diff --check` passes. Hosted
 CI/security/provenance, live PostgreSQL/provider runtimes, independent HA/DR,
 and release approval remain external. GitHub publication remains deferred by
 owner instruction.
+
+E-536 carries exact scope through the PostgreSQL scheduler lane. An optional
+deterministic `(tenant, workspace, entity)` supplier and three-argument policy
+context authorize each lane before connection access; entity lanes require a
+workspace; and workspace/entity filters flow through the application service
+into the PostgreSQL row-lock query. The same scope is restored before
+dispatch, durable-job, and notification writes. Focused scheduler/application
+contracts pass 9 tests with one declared live-PostgreSQL skip; Ruff and Mypy
+pass. ADR 0408 is packaged. The transactional outbox remains tenant-only in
+this slice, and universal IAM adoption, federation, distributed invalidation,
+live providers, scale, HA/DR, and production IAM assurance remain open.
+
+E-537 closes the scoped scheduler worker regression and package gate. The
+exact current tree collects 2,631 tests and the full pytest run passes 100% in
+328.6 seconds with no collection or executed failure; declared external
+service/platform skips and existing warnings remain visible. Ruff passes;
+Mypy reports no issues in 479 source files; Bandit exits 0 with reviewed
+existing suppression/comment warnings; OSV pip-audit reports no known
+vulnerabilities; the package build succeeds and `SOURCES.txt` contains ADR
+0408; and `git diff --check` passes. Hosted CI/security/provenance, live
+PostgreSQL/provider runtimes, independent HA/DR, and release approval remain
+external. GitHub publication remains deferred by owner instruction.

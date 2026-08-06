@@ -5487,3 +5487,23 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Reversibility**: Downgrade removes only the organization/entity columns,
   index, foreign keys, and entity-aware policy; legacy tenant/workspace
   behavior remains available.
+
+### D-382: Carry exact scope through PostgreSQL scheduler lanes
+
+- **Date**: 2026-08-06
+- **Context**: Scheduler rows already stored workspace and generic entity
+  attribution, but the worker authorized and claimed due schedules at tenant
+  scope. This left a widening path for a configured service identity.
+- **Decision**: Add an optional deterministic lane supplier and scope-aware
+  policy supplier. A scoped lane is authorized before connection access, then
+  workspace/entity predicates are applied to the PostgreSQL `FOR UPDATE
+  SKIP LOCKED` query and retained for all schedule dispatch side effects.
+  Tenant-only callers remain compatible; entity lanes require workspace.
+- **Verification**: Scoped worker tests pass exact policy, stable lane,
+  pre-connection rejection, and application/repository propagation checks;
+  the existing live PostgreSQL scheduler test remains capability-gated.
+- **Boundary**: Scheduler only. The transactional outbox, universal worker
+  surfaces, federation, distributed invalidation, live providers, scale,
+  HA/DR, and production IAM assurance remain open.
+- **Reversibility**: Remove the optional suppliers, filter parameters, tests,
+  ADR, and manifest entry without changing stored schedules.

@@ -10,6 +10,11 @@ entity-scoped, cursor-addressable, idempotent, and rejects non-finite or
 non-Decimal amount text, duplicate IDs, and mixed entity pages. Responses are
 canonicalized and hashed for replay evidence.
 
+Callers may pass `expected_entity_code` to `read_page`; a returned page that
+contains another entity fails closed. The focused suite also runs the real
+governed HTTPS transport against a disposable TLS sandbox with transient retry,
+cursor propagation, address pinning, and secret-redaction assertions.
+
 The allowlisted synthetic endpoint is:
 
 `https://erp.example.test/v1/ledger-lines`

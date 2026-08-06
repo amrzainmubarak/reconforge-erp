@@ -5351,3 +5351,22 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   PostgreSQL runtime, HA/DR, or production readiness claim.
 - **Reversibility**: Remove the command, focused tests, manifest entries, and
   ADR; underlying domain and PostgreSQL contracts remain compatible.
+
+### D-376: Exercise the ERP reference connector through the governed HTTPS sandbox
+
+- **Date**: 2026-08-06
+- **Context**: The ERP-shaped connector had injected transport/schema tests but
+  no local proof that its real pinned HTTPS composition, retry, cursor, and
+  secret-reference boundaries worked together.
+- **Decision**: Add an optional `expected_entity_code` post-response guard and
+  a disposable TLS sandbox test using the actual pinned GET transport and
+  network executor. The test injects only a short-lived synthetic certificate,
+  a public-address resolver seam, and a transient 503 before the valid page.
+- **Verification**: ERP, REST, network, and SDK focused tests pass 39/39;
+  canonical digest, idempotency/cursor headers, entity mismatch refusal,
+  address pinning, retry bounds, and secret non-disclosure are asserted.
+- **Boundary**: Loopback/provider-neutral evidence only; no live ERP vendor,
+  vault/TLS operations, provider-version certification, posting, write-back,
+  HA/DR, or production readiness claim follows.
+- **Reversibility**: Remove the optional guard, sandbox test, ADR, docs, and
+  manifest entry; existing callers that omit the guard remain compatible.

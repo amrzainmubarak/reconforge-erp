@@ -287,8 +287,10 @@ include docs/adr/0220-portfolio-partial-settlement-requires-explicit-policy.md
 include reconforge/connectors/rest_reference.py
 include reconforge/connectors/erp_reference.py
 include tests/test_connector_rest_reference.py
+include tests/test_connector_erp_reference.py
 include docs/connectors/reference-rest-readonly.md
 include docs/connectors/reference-erp-readonly.md
+include docs/adr/0402-reference-erp-sandbox-transport-and-entity-guard.md
 include docs/schemas/ha_dr_operational_profile.schema.json
 include docs/operations/HA_DR_OPERATIONAL_PROFILE_2026-07-30.json
 include tests/test_ha_dr_operational_profile.py

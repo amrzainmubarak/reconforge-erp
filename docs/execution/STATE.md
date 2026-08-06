@@ -5020,10 +5020,29 @@ hosted release gates, or the overall objective. GitHub publication remains
 deferred by owner instruction.
 
 E-523 closes the local regression/static/package gate after the CLI slice:
-2,616 collected tests pass with no collection or executed failure; declared
+2,617 collected tests pass with no collection or executed failure; declared
 PostgreSQL, Redis, object-storage, network, and platform skips remain visible.
 Ruff, Mypy (476 source files), Bandit, OSV pip-audit, package build including
 ADR 0401 and the CLI test, and diff-check pass. Hosted CI/security/provenance,
 native backup tools, live providers/write-back, independent HA/DR, and release
 approval remain external. GitHub publication remains deferred by owner
 instruction.
+
+E-524 adds the reference ERP HTTPS sandbox and expected-entity guard. The
+connector can now fail closed when a validated page is outside the requested
+entity scope, while the disposable TLS sandbox drives the real pinned GET
+transport and network executor through retry, cursor/idempotency headers,
+address pinning, canonical digest, and secret-redaction assertions. Focused
+ERP/REST/network/SDK tests pass 39/39. This is provider-neutral loopback
+evidence only; live ERP, vault, provider-version, posting, write-back, HA/DR,
+and production claims remain open. GitHub publication remains deferred by
+owner instruction.
+
+E-525 closes the post-ERP-sandbox regression and package gate: the exact tree
+collects 2,619 tests and reaches 100% with no collection or executed failure;
+declared external-service capability skips remain visible. Ruff, Mypy (476
+source files), Bandit, OSV pip-audit, 26/26 phase/execution/parity/maturity
+contracts, package build with ADR 0402 plus ERP connector docs/test, and
+diff-check pass. Hosted CI/security/provenance, live PostgreSQL/provider
+runtimes, write-back, independent HA/DR, and release approval remain external.
+GitHub publication remains deferred by owner instruction.

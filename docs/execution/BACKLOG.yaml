@@ -2212,3 +2212,40 @@ tasks:
       in the source distribution; and `git diff --check` passes. Hosted
       CI/security/provenance, native backup tooling, live providers/write-back,
       independent HA/DR, and release approval remain external.
+  - id: E-524
+    priority: P1
+    area: connector_platform
+    title: Reference ERP HTTPS sandbox and expected-entity guard
+    status: completed
+    depends_on: [P4-CON-001, E-523]
+    exit_evidence: >-
+      `reference-erp-readonly` now accepts an optional expected entity code and
+      fails closed when a validated page contains another entity. A disposable
+      TLS sandbox drives the real `PinnedHttpsGetTransport` and
+      `NetworkConnectorExecutor` through a transient 503, retry, cursor,
+      idempotency header, public-address pin, secret-reference header, closed
+      ledger schema, canonical response digest, and redaction assertions.
+      Focused ERP/REST/network/SDK tests pass 39/39; ADR 0402, connector docs,
+      manifest, and test membership align. This is provider-neutral loopback
+      evidence only; no live ERP vendor, vault, provider-version, accounting
+      posting, write-back, HA/DR, or production claim follows.
+  - id: E-525
+    priority: P0
+    area: quality
+    title: Full regression and package gate after ERP reference sandbox
+    status: completed
+    depends_on: [E-524]
+    exit_evidence: >-
+      The exact current tree collects 2,619 tests and
+      `uv run --no-sync pytest -q --basetemp .pytest-tmp-e524e --tb=short -ra`
+      exits 0 at 100% with no collection or executed failure; declared
+      PostgreSQL, Redis, object-storage, public-network, and platform capability
+      skips remain visible. Ruff passes; Mypy reports no issues in 476 source
+      files; Bandit exits 0 with reviewed existing nosec/comment warnings; OSV
+      `pip-audit` reports no known vulnerabilities while the local package is
+      not published on PyPI; phase/execution/parity/maturity contracts pass
+      26/26; `python -m build --no-isolation` succeeds and the source
+      distribution contains ADR 0402, ERP connector documentation, and the ERP
+      sandbox test; and `git diff --check` passes. Hosted CI/security/
+      provenance, live PostgreSQL and provider runtimes, write-back, independent
+      HA/DR, and release approval remain external.

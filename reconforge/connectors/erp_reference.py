@@ -124,7 +124,17 @@ class ReferenceErpConnector:
     executor: NetworkConnectorExecutor
     registration: NetworkConnectorRegistration
 
-    def read_page(self, *, idempotency_key: str, cursor: str | None = None) -> ReferenceErpRead:
+    def read_page(
+        self,
+        *,
+        idempotency_key: str,
+        cursor: str | None = None,
+        expected_entity_code: str | None = None,
+    ) -> ReferenceErpRead:
+        if expected_entity_code is not None:
+            expected_entity_code = expected_entity_code.strip()
+            if not expected_entity_code or len(expected_entity_code) > 64:
+                raise ConnectorNetworkError("reference_erp_entity_scope_invalid")
         result: ConnectorReadResult = self.executor.read(
             self.registration,
             idempotency_key=idempotency_key,
@@ -134,6 +144,10 @@ class ReferenceErpConnector:
             page = ReferenceErpLedgerPage.model_validate_json(result.response_body)
         except (ValidationError, ValueError) as exc:
             raise ConnectorNetworkError("reference_erp_response_schema_invalid") from exc
+        if expected_entity_code is not None and any(
+            line.entity_code != expected_entity_code for line in page.lines
+        ):
+            raise ConnectorNetworkError("reference_erp_entity_scope_mismatch")
         canonical_lines = tuple(
             sorted(
                 (line.model_dump(mode="json", by_alias=True) for line in page.lines),

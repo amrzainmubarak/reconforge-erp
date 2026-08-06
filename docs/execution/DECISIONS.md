@@ -5579,3 +5579,18 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   HA/DR, or production readiness.
 - **Reversibility**: With no receipt rows, downgrade removes only the additive
   scope columns/index and restores tenant-only RLS.
+
+### D-386: Return persisted hierarchy on consumer receipt envelopes
+
+- **Date**: 2026-08-06
+- **Context**: The scoped consumer receipt stored hierarchy attribution, but
+  the returned value exposed only tenant, event, digest, and status fields.
+- **Decision**: Add optional workspace, organization, and legal-entity fields
+  to `PostgresOutboxConsumerReceipt`; populate them for both initial apply and
+  duplicate replay without changing existing positional field order.
+- **Verification**: Focused consumer tests, full 2,638-test regression, Ruff,
+  Mypy, Bandit, pip-audit, build, and diff-check pass. Live PostgreSQL remains
+  capability-gated.
+- **Boundary**: This improves provenance at the database idempotency boundary;
+  it is not external broker exactly-once, provider acknowledgement, HA/DR, or
+  production evidence.

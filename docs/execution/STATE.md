@@ -5233,3 +5233,12 @@ package build/source membership, and diff-check pass. Hosted
 CI/security/provenance, live provider runtimes, external broker semantics,
 HA/DR, and release approval remain external. GitHub publication remains
 deferred by owner instruction.
+
+E-543 extends the scoped consumer result envelope so both first application
+and duplicate replay return the persisted workspace/organization/legal-entity
+attribution. Legacy tenant-only calls remain compatible. E-544 reruns the
+full 2,638-test regression and all local static/package gates successfully.
+E-545 records a checksum-verified local Gitleaks history scan with zero leaks;
+the supplied hosted security failure still requires a fresh hosted rerun after
+publication, and generated local benchmark output prevents treating the local
+directory scan as complete.

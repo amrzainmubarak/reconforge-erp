@@ -17,7 +17,9 @@ transaction-local defaults, a scope-aware receipt index, and explicit RLS to
 `outbox_consumer_receipts`. The consumer accepts optional hierarchy scope,
 restores it through `PostgresTenantBoundary`, reads the event attribution, and
 fails closed on a mismatch before invoking the effect. Receipt inserts retain
-the same attribution, while tenant-only legacy events remain compatible.
+the same attribution, while tenant-only legacy events remain compatible. The
+returned receipt envelope also includes the persisted hierarchy so callers
+cannot lose scope provenance during initial application or duplicate replay.
 
 Downgrade refuses to discard any receipt rows before removing the additive
 scope columns, preventing silent loss of exactly-once provenance.

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -42,6 +43,7 @@ def test_postgres_outbox_consumer_schema_is_forced_rls_and_immutable() -> None:
     assert "organization_id TEXT DEFAULT NULLIF(current_setting('app.organization_id'" in POSTGRES_OUTBOX_CONSUMER_SCHEMA_SQL
     assert "legal_entity_id TEXT DEFAULT NULLIF(current_setting('app.legal_entity_id'" in POSTGRES_OUTBOX_CONSUMER_SCHEMA_SQL
     assert "outbox_consumer_receipts_scope_event_idx" in POSTGRES_OUTBOX_CONSUMER_SCHEMA_SQL
+    assert "SELECT event_digest, effect_digest, workspace_id" in POSTGRES_OUTBOX_CONSUMER_SCHEMA_SQL or "SELECT event_digest, effect_digest, workspace_id" in (Path(__file__).resolve().parents[1] / "reconforge/infrastructure/postgres_outbox_consumer.py").read_text(encoding="utf-8")
 
 
 def test_postgres_outbox_consumer_digest_and_input_guards_are_bounded() -> None:

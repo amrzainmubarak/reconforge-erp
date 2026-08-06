@@ -150,6 +150,9 @@ class PostgresOutboxConsumerReceipt:
     event_digest: str
     effect_digest: str
     status: str
+    workspace_id: str | None = None
+    organization_id: str | None = None
+    legal_entity_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -234,7 +237,8 @@ class PostgresOutboxConsumer:
                     raise PostgresOutboxConsumerIntegrityError("event digest does not match the persisted outbox payload.")
                 existing = connection.execute(
                     """
-                    SELECT event_digest, effect_digest
+                    SELECT event_digest, effect_digest, workspace_id,
+                           organization_id, legal_entity_id
                     FROM reconforge.outbox_consumer_receipts
                     WHERE tenant_id=%s AND consumer_id=%s AND event_id=%s
                     """,
@@ -253,6 +257,9 @@ class PostgresOutboxConsumer:
                         event_digest=stored_digest,
                         effect_digest=str(existing[1]),
                         status="duplicate",
+                        workspace_id=(str(existing[2]).strip() if existing[2] is not None else None),
+                        organization_id=(str(existing[3]).strip() if existing[3] is not None else None),
+                        legal_entity_id=(str(existing[4]).strip() if existing[4] is not None else None),
                     )
                 try:
                     result = effect(connection)
@@ -278,6 +285,9 @@ class PostgresOutboxConsumer:
                     event_digest=payload_digest,
                     effect_digest=result_digest,
                     status="applied",
+                    workspace_id=workspace,
+                    organization_id=organization,
+                    legal_entity_id=legal_entity,
                 )
         except (
             PostgresOutboxConsumerValidationError,

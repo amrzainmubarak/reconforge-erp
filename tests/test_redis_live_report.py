@@ -69,3 +69,20 @@ def test_ci_uses_digest_pinned_redis_and_uploads_the_live_report() -> None:
     assert "RECONFORGE_REDIS_IMAGE_DIGEST" in environments
     assert "reconforge-redis-live-report" in "\n".join(str(step.get("with", "")) for step in job["steps"])
     assert any(step.get("name") == "Upload live Redis report" and step.get("if") == "always()" for step in job["steps"])
+
+
+def test_current_redis_live_report_is_schema_valid_and_digest_bound() -> None:
+    module = _module()
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    validator = jsonschema.Draft202012Validator(schema)
+    for name in (
+        "REDIS_LIVE_DOCKER_DRILL_2026-08-05.json",
+        "REDIS_LIVE_DOCKER_DRILL_2026-08-06.json",
+    ):
+        report = json.loads((ROOT / "docs" / "execution" / name).read_text(encoding="utf-8"))
+        validator.validate(report)
+        module.verify_report(report)
+        payload = dict(report)
+        supplied = str(payload.pop("report_digest"))
+        assert supplied == module._canonical_digest(payload)
+        assert all(bool(value) for value in report["observed"].values())

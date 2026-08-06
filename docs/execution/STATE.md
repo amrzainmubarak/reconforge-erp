@@ -4631,8 +4631,9 @@ The execution backlog itself was re-parsed after the latest evidence entries;
 it now has 133 unique tasks and valid YAML. This closes documentation
 serialization drift only and does not change the still-open hosted release,
 provider, HA/DR, or native-backup gates.
-The backlog has since grown with the current HA/DR and object-storage evidence
-entries; its latest parse is 136 unique tasks (E-460 through E-469 included).
+The backlog has since grown with the current HA/DR, object-storage, and Redis
+runtime evidence entries; its latest parse is 137 unique tasks (E-460 through
+E-470 included).
 The fresh repeated PostgreSQL HA/DR drill now provides stronger bounded runtime
 evidence: three Docker 17.10 primary/standby cycles passed encrypted restore,
 fencing, partition refusal, manual failover/failback, zero-loss sentinel replay,
@@ -4642,3 +4643,8 @@ The current MinIO object-storage drill also passes all five scoped integrity and
 cleanup invariants against the image digest recorded in E-469. This strengthens
 the local adapter evidence only; replication, KMS, cross-site durability,
 object-store HA, and production SLO remain open.
+The current Redis drill also passes tenant-key isolation, hashed-session-token
+storage, shared policy-generation visibility, and cleanup against its recorded
+image digest. This strengthens the local session/policy adapter evidence only;
+Redis replication, Sentinel/Cluster failover, cross-site durability, HA, and
+production SLO remain open.

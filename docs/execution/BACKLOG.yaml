@@ -1517,3 +1517,11 @@ tasks:
     status: completed
     depends_on: [E-468]
     exit_evidence: Against the current local MinIO image digest, the real boto3/object-storage adapter verifies hierarchical workspace isolation, immutable overwrite refusal, checksum tamper refusal, Object Lock delete refusal, and cleanup. The report digest is 0097839afbb3225bbab9ad8effe30dac79c57cc8ed1b3c1d6d0ca512d170957d; the claim remains single-node synthetic provider evidence.
+
+  - id: E-470
+    priority: P0
+    area: reliability
+    title: Current live Redis session and policy contract drill
+    status: completed
+    depends_on: [E-469]
+    exit_evidence: Against the current local redis:7-alpine image digest, verify_redis_live.py passes tenant-key isolation, hashed-session-token storage, shared policy-generation visibility, and cleanup. The report digest is f1c2d7ac3f08c8d49564e92461e13836c5e1d869e7fa877ad2cfa8ece1f59816; the claim remains single-node synthetic adapter evidence with no Redis HA or production SLO claim.

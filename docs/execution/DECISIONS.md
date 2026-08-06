@@ -4683,6 +4683,20 @@
   interoperability, object-store HA, or production SLO claim follows.
 - **Rollback**: Remove the dated report and latest assertion; no runtime/data
   rollback is needed.
+
+### D-367: Retain the current Redis runtime report as bounded evidence
+
+- **Date**: 2026-08-06
+- **Decision**: Commit the current disposable Redis report and validate it beside
+  the prior artifact, preserving the exact image digest, report digest, and
+  synthetic/single-node limitations.
+- **Verification**: The live adapter drill passes tenant-key isolation,
+  non-persistence of raw session tokens, shared policy generation, and cleanup;
+  the closed schema/digest test validates both dated reports.
+- **Boundary**: No replication, Sentinel/Cluster failover, cross-site
+  durability, Redis HA, or production SLO claim follows.
+- **Rollback**: Remove the dated report and latest assertion; no runtime/data
+  rollback is needed.
 # ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
 
 Implemented and bounded the `professional.invoice-payment` module. It is local,

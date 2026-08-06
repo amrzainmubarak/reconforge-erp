@@ -179,6 +179,21 @@ synthetic single-node, one-process boundary, not hosted availability,
 statutory accounting, production readiness, or a provider/write-back
 guarantee.
 
+The same profile exposes a bounded, read-only control-plane export:
+
+- `GET /api/v1/exports/scoped`
+
+The request requires `X-ReconForge-Tenant`, `X-ReconForge-Workspace`, a bearer
+session, and (when selecting them) authorized organization and legal-entity
+headers. It requires `reports.read`; the permission is re-evaluated against the
+selected tenant/workspace/entity before the RLS-backed PostgreSQL snapshot is
+read.
+The response is the canonical export artifact plus its SHA-256 digest and byte
+size. It never falls back to SQLite and does not publish to object storage or
+call an external provider. This is a bounded server API composition, not proof
+of distributed export workers, object-store durability, UI adoption, HA/DR, or
+production readiness.
+
 ## Endpoints
 
 Unauthenticated:

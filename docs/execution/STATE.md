@@ -5088,3 +5088,26 @@ contracts, package build with ADR 0404 and the matching strategy contract test,
 and diff-check pass. Hosted CI/security/provenance, live PostgreSQL/provider
 runtimes, independent HA/DR, and release approval remain external. GitHub
 publication remains deferred by owner instruction.
+
+E-530 adds the authenticated PostgreSQL scoped-control-plane export route at
+`GET /api/v1/exports/scoped`. The route requires `reports.read`, binds the
+request to the authenticated tenant/workspace hierarchy, re-evaluates the
+central policy for the selected tenant/workspace/entity before repository
+access, and returns the canonical artifact digest without SQLite fallback or
+object-store publication. The focused route
+contract passes; the boundary remains server-profile-only and does not prove
+worker/UI adoption, distributed IAM, live providers, HA/DR, or production
+readiness.
+
+E-531 closes the post-export regression and packaging gate. The exact tree
+collects 2,625 tests and the full pytest run reaches 100% with no collection
+or executed failure in 334.3 seconds; declared PostgreSQL, Redis,
+object-storage, public-network, and platform capability skips remain visible.
+Ruff passes; Mypy reports no issues in 478 source files; Bandit exits 0 with
+reviewed existing nosec/comment warnings; OSV pip-audit reports no known
+vulnerabilities for the editable-local environment; the phase/execution/
+parity/maturity inventory target passes 45/45; the package build succeeds and
+the source distribution contains the new ADR, route, helper, and test; and
+git diff --check passes. Hosted CI/security/provenance, live PostgreSQL and
+provider runtimes, independent HA/DR, and release approval remain external.
+GitHub publication remains deferred by owner instruction.

@@ -5409,3 +5409,29 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   independent algorithm validation, or production readiness.
 - **Reversibility**: Remove the verifier calls, focused tests, ADR, and manifest
   entry without a data migration; the existing result shape remains unchanged.
+
+### D-379: Expose scoped control-plane exports only through authenticated PostgreSQL server mode
+
+- **Date**: 2026-08-06
+- **Context**: The deterministic scoped-export repository already enforced
+  PostgreSQL row-level hierarchy bounds, but no API surface exposed its
+  snapshot. A route must not turn local SQLite or an unauthenticated request
+  into export authority.
+- **Decision**: Add `GET /api/v1/exports/scoped` as a read-only server-profile
+  boundary. It requires `reports.read`, derives tenant/workspace/organization/
+  legal-entity scope from the authenticated principal, re-evaluates the
+  selected tenant/workspace/entity centrally, and delegates to the RLS-backed
+  PostgreSQL repository. The response includes the canonical artifact, digest,
+  byte size, and explicit server-mode source. No SQLite fallback, object-store
+  publication, presigned URL, or provider network call is introduced.
+- **Verification**: The focused authenticated route test proves bearer
+  authentication, hierarchy propagation, central permission re-evaluation,
+  deterministic digest, closed response shape, and server-only fail-closed
+  behavior. The authorization inventory now contains 246 routes with digest
+  `3c2691031c4fbf406b6426d0ef684d705337a1ee4910c49488092dca7a7e1745`.
+- **Boundary**: This is bounded API composition only; it does not prove live
+  PostgreSQL availability, distributed IAM invalidation, object-store
+  durability, worker/UI adoption, HA/DR, or production readiness.
+- **Reversibility**: Remove the route, helper, focused tests, ADR, docs, and
+  manifest entries without a schema migration; existing repository and
+  publication contracts remain unchanged.

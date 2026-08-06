@@ -2324,3 +2324,40 @@ tasks:
       CI/security/provenance, live PostgreSQL and provider runtimes,
       independent HA/DR, and release approval remain external; GitHub
       publication remains deferred by owner instruction.
+  - id: E-530
+    priority: P1
+    area: enterprise_policy
+    title: Authenticated PostgreSQL scoped-export API boundary
+    status: completed
+    depends_on: [P4-IAM-001, E-529]
+    exit_evidence: >-
+      `GET /api/v1/exports/scoped` requires bearer authentication and
+      `reports.read`, binds tenant/workspace/organization/legal-entity headers
+      to the authenticated hierarchy, re-evaluates central server-scoped
+      permission including the selected entity, and delegates to the existing
+      RLS-backed snapshot. Focused route tests pass 2/2, including
+      server-only/no-SQLite-fallback denial;
+      deterministic artifact digest, scope, byte size, and the closed source
+      marker are asserted. ADR 0405 and the route/helper/test are included in
+      the source-distribution manifest. Worker/UI adoption, federation,
+      distributed invalidation, live providers, independent HA/DR, and
+      production IAM assurance remain open.
+  - id: E-531
+    priority: P0
+    area: quality
+    title: Regression and packaging gate after scoped export API boundary
+    status: completed
+    depends_on: [E-530]
+    exit_evidence: >-
+      The exact current tree collects 2,625 tests and the full pytest gate
+      reaches 100% with no collection or executed failure; declared PostgreSQL,
+      Redis, object-storage, public-network, and platform capability skips
+      remain visible. Ruff passes; Mypy reports no issues in 478 source files;
+      Bandit exits 0 with reviewed existing nosec/comment warnings; OSV
+      `pip-audit` reports no known vulnerabilities while the local package is
+      not published on PyPI; the phase/execution/parity/maturity inventory
+      target passes 45/45; `python -m build --no-isolation` succeeds and the
+      source distribution contains ADR 0405 plus the route/helper/test; and
+      `git diff --check` passes. Hosted CI/security/provenance, live PostgreSQL
+      and provider runtimes, independent HA/DR, and release approval remain
+      external; GitHub publication remains deferred by owner instruction.

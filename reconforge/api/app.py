@@ -67,6 +67,7 @@ from reconforge.api.routes import (
     roles,
     scim,
     scope_grants,
+    scoped_exports,
     security_center,
     security_governance,
     users,
@@ -188,6 +189,7 @@ def create_api_app(
     app.state.postgres_consolidation_impairment_factory = app.state.postgres_identity_factory
     app.state.postgres_consolidation_intercompany_factory = app.state.postgres_identity_factory
     app.state.postgres_evidence_factory = app.state.postgres_identity_factory
+    app.state.postgres_scoped_exports_factory = app.state.postgres_identity_factory
     app.state.postgres_reconciliation_factory = app.state.postgres_identity_factory
     app.state.postgres_writeback_factory = app.state.postgres_identity_factory
     app.state.federation_providers = dict(federation_providers or {})
@@ -353,6 +355,7 @@ def create_api_app(
     app.include_router(consolidation_intercompany.router, prefix="/api/v1")
     app.include_router(connectors.router, prefix="/api/v1")
     app.include_router(evidence.router, prefix="/api/v1")
+    app.include_router(scoped_exports.router, prefix="/api/v1")
     app.include_router(reconciliation.router, prefix="/api/v1")
     app.include_router(exceptions.router, prefix="/api/v1")
     app.include_router(metrics.router, prefix="/api/v1")
@@ -384,6 +387,7 @@ def create_api_app(
         consolidation_close.router,
         consolidation_ownership.router,
         evidence.router,
+        scoped_exports.router,
         consolidation_ppa.router,
         consolidation_deferred_tax.router,
         consolidation_impairment.router,

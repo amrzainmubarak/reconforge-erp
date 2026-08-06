@@ -5266,3 +5266,27 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Reversibility**: The migration downgrade refuses non-empty links before
   dropping the trigger/function/index/table; old close bundles remain readable
   through the additive-field compatibility reader.
+
+### D-332: Bind PPA evidence to the PostgreSQL close evidence bundle
+
+- **Date**: 2026-08-06
+- **Context**: A deterministic, non-posting acquisition PPA artifact must be
+  attributable to the exact close worksheet that consumed it; a tenant-wide
+  artifact lookup does not prove period, currency, or entity lineage.
+- **Decision**: Add migration `0069_pg_close_ppa_links` with forced RLS,
+  append-only triggers, run/artifact/entity uniqueness, and an immutable link
+  digest. Replay-verify the PPA artifact, bind period/currency/subsidiary
+  entity to the worksheet, require a linker independent of the run preparer,
+  and include sorted result digests in the close bundle. Expose the link only
+  through the PostgreSQL server API with strict IDs and
+  `finance_core.manage` authorization.
+- **Verification**: Static schema/migration contracts, close-bundle digest
+  coverage, focused API/authorization contracts, and the package manifest
+  alignment pass. The live PostgreSQL link runtime remains capability-gated
+  without `RECONFORGE_TEST_POSTGRES_DSN`.
+- **Boundary**: This is purchase-accounting evidence provenance, not valuation
+  policy, statutory recognition, goodwill approval, journal posting, ERP
+  write-back, HA/DR, or production readiness.
+- **Reversibility**: The migration downgrade refuses non-empty links before
+  dropping the trigger/function/index/table; old close bundles remain readable
+  through the additive-field compatibility reader.

@@ -4,7 +4,7 @@ phase: "Phase 4 — Global Capability Expansion"
 snapshot:
   evidence_base_commit: "5d401e70c3a0e3cf507c2c7cf635dfc99b01a9af"
   policy_change_commit: "the commit containing this file"
-  published: true
+  published: false
 status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
@@ -2079,6 +2079,44 @@ tasks:
       `0068`, ADRs 0396 and 0397, and the close/bundle tests; authorization
       inventory passes at 243 routes with digest
       `3455d30255baf6e130cc8ad55cbf2da25ff2364d48c77e0175e891d2671dee98`;
+      and `git diff --check` passes. Hosted CI/security/provenance, live
+      PostgreSQL availability, live providers/write-back, independent HA/DR,
+      and release approval remain external.
+  - id: E-517
+    priority: P1
+    area: financial_consolidation
+    title: Bind PPA evidence to PostgreSQL close runs
+    status: completed
+    depends_on: [E-515]
+    exit_evidence: >-
+      Alembic `0069_pg_close_ppa_links` adds a forced-RLS, append-only link
+      table with run/artifact/entity uniqueness and a data-loss-safe downgrade.
+      The PostgreSQL close repository replay-verifies the PPA artifact, binds
+      period/currency/subsidiary entity to the worksheet, requires an
+      independent linker, exposes the PPA result digest in the close bundle,
+      and retries by immutable digest. The server API exposes
+      `POST /api/v1/consolidation-close/{run_id}/ppa-evidence` with strict
+      artifact IDs and scope-bound `finance_core.manage` authorization.
+      Focused static, bundle, API, and authorization contracts pass; live
+      PostgreSQL remains capability-gated without its DSN.
+  - id: E-518
+    priority: P0
+    area: quality
+    title: Full regression and package gate after PPA close binding
+    status: completed
+    depends_on: [E-517]
+    exit_evidence: >-
+      The exact current tree collects 2,607 tests and reaches 100% with no
+      collection or executed failure; the close/impairment/deferred-tax/PPA
+      PostgreSQL runtimes remain declared skips because
+      `RECONFORGE_TEST_POSTGRES_DSN` is absent. Ruff passes; Mypy reports no
+      issues in 474 source files; Bandit exits 0 with reviewed existing
+      suppression/comment warnings; OSV `pip-audit` reports no known
+      vulnerabilities; the package build succeeds and
+      `reconforge_erp.egg-info/SOURCES.txt` contains migration `0069`, ADR
+      0398, and the close/PPA tests; authorization inventory passes at 244
+      routes with digest
+      `2e9808463d622cc82d134ed3660e0164d264d878b553c3e3afed49d5dcc19db2`;
       and `git diff --check` passes. Hosted CI/security/provenance, live
       PostgreSQL availability, live providers/write-back, independent HA/DR,
       and release approval remain external.

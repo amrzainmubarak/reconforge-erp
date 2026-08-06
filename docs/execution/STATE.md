@@ -4949,3 +4949,23 @@ digest `3455d30255baf6e130cc8ad55cbf2da25ff2364d48c77e0175e891d2671dee98`),
 and diff-check pass. Hosted CI/security/provenance, live PostgreSQL
 availability, providers/write-back, independent HA/DR, and release approval
 remain external.
+
+E-517 binds the non-posting PPA artifact to a PostgreSQL consolidation close
+run. Migration `0069_pg_close_ppa_links` adds forced-RLS, append-only
+run/artifact/entity links; the repository replays and validates period,
+currency, and subsidiary entity, requires an independent linker, and adds
+sorted PPA result digests to the close bundle. The server API exposes strict
+`finance_core.manage`-protected PPA linking. Static, bundle, and injected
+scope contracts pass; the live PostgreSQL link runtime is still a declared
+skip without `RECONFORGE_TEST_POSTGRES_DSN`. GitHub publication remains
+deferred by owner instruction.
+
+E-518 closes the post-PPA full regression/static/package gate: the exact tree
+collects 2,607 tests and reaches 100% with no collection or executed failure;
+close/impairment/deferred-tax/PPA PostgreSQL runtimes remain declared skips
+without `RECONFORGE_TEST_POSTGRES_DSN`; Ruff, Mypy (474 files), Bandit, OSV
+pip-audit, package build, authorization inventory (244 routes, digest
+`2e9808463d622cc82d134ed3660e0164d264d878b553c3e3afed49d5dcc19db2`), and
+diff-check pass. Hosted CI/security/provenance, live PostgreSQL availability,
+providers/write-back, independent HA/DR, and release approval remain external.
+GitHub publication remains deferred by owner instruction.

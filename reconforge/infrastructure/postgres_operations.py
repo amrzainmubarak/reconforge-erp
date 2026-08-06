@@ -79,6 +79,7 @@ POSTGRES_MIGRATION_REVISIONS = (
     "0066_pg_impairment",
     "0067_pg_close_impairment_links",
     "0068_pg_close_deferred_tax_links",
+    "0069_pg_close_ppa_links",
 )
 
 

@@ -30,6 +30,7 @@ from reconforge.infrastructure.postgres_consolidation_deferred_tax import (
 from reconforge.infrastructure.postgres_consolidation_impairment import (
     PostgresConsolidationImpairmentRepository,
 )
+from reconforge.infrastructure.postgres_consolidation_ppa import PostgresConsolidationPpaRepository
 from reconforge.infrastructure.postgres_intercompany_elimination import (
     PostgresIntercompanyEliminationRepository,
 )
@@ -251,6 +252,44 @@ DROP TRIGGER IF EXISTS consolidation_close_deferred_tax_link_guard
 CREATE TRIGGER consolidation_close_deferred_tax_link_guard
  BEFORE UPDATE OR DELETE ON reconforge.consolidation_close_deferred_tax_links
  FOR EACH ROW EXECUTE FUNCTION reconforge.guard_consolidation_close_deferred_tax_link();
+"""
+
+
+POSTGRES_CONSOLIDATION_PPA_LINK_SCHEMA_SQL = r"""
+CREATE TABLE IF NOT EXISTS reconforge.consolidation_close_ppa_links (
+ tenant_id TEXT NOT NULL, id TEXT NOT NULL, run_id TEXT NOT NULL, artifact_id TEXT NOT NULL,
+ artifact_result_digest TEXT NOT NULL CHECK (artifact_result_digest ~ '^[a-f0-9]{64}$'),
+ entity_code TEXT NOT NULL, link_digest TEXT NOT NULL CHECK (link_digest ~ '^[a-f0-9]{64}$'),
+ actor TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+ PRIMARY KEY (tenant_id,id), UNIQUE (tenant_id,run_id,artifact_id), UNIQUE (tenant_id,run_id,entity_code),
+ FOREIGN KEY (tenant_id,run_id) REFERENCES reconforge.consolidation_close_runs(tenant_id,id) ON DELETE RESTRICT,
+ FOREIGN KEY (tenant_id,artifact_id) REFERENCES reconforge.consolidation_ppa_artifacts(tenant_id,id) ON DELETE RESTRICT
+);
+CREATE INDEX IF NOT EXISTS consolidation_close_ppa_links_run_idx
+ ON reconforge.consolidation_close_ppa_links(tenant_id,run_id,created_at,id);
+ALTER TABLE reconforge.consolidation_close_ppa_links ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reconforge.consolidation_close_ppa_links FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_scope ON reconforge.consolidation_close_ppa_links;
+CREATE POLICY tenant_scope ON reconforge.consolidation_close_ppa_links
+ USING (tenant_id = current_setting('app.tenant_id', true))
+ WITH CHECK (tenant_id = current_setting('app.tenant_id', true));
+CREATE OR REPLACE FUNCTION reconforge.guard_consolidation_close_ppa_link()
+RETURNS TRIGGER LANGUAGE plpgsql AS $reconforge$
+BEGIN
+ IF TG_OP = 'UPDATE' THEN
+  RAISE EXCEPTION 'consolidation close PPA links are immutable' USING ERRCODE='check_violation';
+ END IF;
+ IF TG_OP = 'DELETE' THEN
+  RAISE EXCEPTION 'consolidation close PPA links cannot be deleted' USING ERRCODE='check_violation';
+ END IF;
+ RETURN NEW;
+END
+$reconforge$;
+DROP TRIGGER IF EXISTS consolidation_close_ppa_link_guard
+ ON reconforge.consolidation_close_ppa_links;
+CREATE TRIGGER consolidation_close_ppa_link_guard
+ BEFORE UPDATE OR DELETE ON reconforge.consolidation_close_ppa_links
+ FOR EACH ROW EXECUTE FUNCTION reconforge.guard_consolidation_close_ppa_link();
 """
 
 
@@ -1411,6 +1450,155 @@ class PostgresConsolidationCloseRepository:
                 ).fetchone()
             )
 
+    def _ppa_artifact(self, artifact_id: str) -> dict[str, Any]:
+        row = self.connection.execute(
+            "SELECT * FROM reconforge.consolidation_ppa_artifacts WHERE tenant_id=%s AND id=%s",
+            (self.tenant_id, artifact_id),
+        ).fetchone()
+        if row is None:
+            raise PlatformError("PPA evidence artifact was not found.")
+        try:
+            return PostgresConsolidationPpaRepository._decode_row(row)
+        except Exception as exc:
+            raise PlatformError("Persisted PPA evidence failed replay verification.") from exc
+
+    def _validate_ppa_artifact_for_run(
+        self,
+        run: Mapping[str, Any],
+        artifact: Mapping[str, Any],
+    ) -> str:
+        worksheet = run.get("worksheet_object")
+        if not isinstance(worksheet, ConsolidationWorksheetResult):
+            raise PlatformError("Consolidation worksheet replay object is missing.")
+        if str(artifact.get("reporting_currency")) != worksheet.reporting_currency:
+            raise PlatformError("PPA evidence currency does not match the consolidation run.")
+        if str(artifact.get("period_id")) != str(worksheet.period_id):
+            raise PlatformError("PPA evidence period does not match the consolidation run.")
+        entity_code = str(artifact.get("subsidiary_entity_code", ""))
+        worksheet_entities = {line.entity_code for item in worksheet.eliminations for line in item.lines}
+        if entity_code not in worksheet_entities:
+            raise PlatformError("PPA evidence entity is not present in the consolidation worksheet.")
+        return entity_code
+
+    def _verified_ppa_links(self, run: Mapping[str, Any]) -> list[dict[str, Any]]:
+        rows = self.connection.execute(
+            "SELECT * FROM reconforge.consolidation_close_ppa_links "
+            "WHERE tenant_id=%s AND run_id=%s ORDER BY created_at,id",
+            (self.tenant_id, str(run["id"])),
+        ).fetchall()
+        result: list[dict[str, Any]] = []
+        seen_entities: set[str] = set()
+        for raw in rows:
+            item = dict(raw)
+            artifact = self._ppa_artifact(str(item["artifact_id"]))
+            entity_code = self._validate_ppa_artifact_for_run(run, artifact)
+            if entity_code in seen_entities:
+                raise PlatformError("A PPA entity is linked more than once to this run.")
+            seen_entities.add(entity_code)
+            link_material = {
+                "artifact_id": str(item["artifact_id"]),
+                "artifact_result_digest": str(artifact["result_digest"]),
+                "entity_code": entity_code,
+                "run_id": str(run["id"]),
+                "schema_version": 1,
+            }
+            expected_digest = hashlib.sha256(self._json(link_material).encode("ascii")).hexdigest()
+            if (
+                str(item.get("artifact_result_digest")) != str(artifact["result_digest"])
+                or str(item.get("entity_code")) != entity_code
+                or not hmac.compare_digest(expected_digest, str(item.get("link_digest")))
+            ):
+                raise PlatformError("Persisted PPA close link failed digest verification.")
+            result_payload = artifact.get("result_payload")
+            if not isinstance(result_payload, Mapping):
+                raise PlatformError("Persisted PPA result payload is invalid.")
+            result.append(
+                {
+                    "id": str(item["id"]),
+                    "artifact_id": str(item["artifact_id"]),
+                    "artifact_result_digest": str(artifact["result_digest"]),
+                    "entity_code": entity_code,
+                    "period_id": str(artifact["period_id"]),
+                    "reporting_currency": str(artifact["reporting_currency"]),
+                    "fair_value_adjustment": result_payload.get("fair_value_adjustment"),
+                    "posted": result_payload.get("posted"),
+                    "link_digest": str(item["link_digest"]),
+                    "actor": str(item["actor"]),
+                    "created_at": str(item["created_at"]),
+                }
+            )
+        return result
+
+    def attach_ppa_artifact(
+        self,
+        run_id: str,
+        artifact_id: str,
+        *,
+        workspace: str | None = None,
+        actor_label: str = "local-cli",
+    ) -> dict[str, Any]:
+        """Bind immutable, non-posting PPA evidence to a prepared close run."""
+
+        actor = self._actor(actor_label)
+        with self.connection.transaction():
+            self._scope()
+            row = self.connection.execute(
+                "SELECT * FROM reconforge.consolidation_close_runs WHERE tenant_id=%s AND id=%s FOR UPDATE",
+                (self.tenant_id, run_id),
+            ).fetchone()
+            if row is None:
+                raise PlatformError("Consolidation run not found.")
+            run = self._verified_run(dict(row))
+            if workspace is not None and str(run["workspace_id"]) != normalize_text(workspace, default=""):
+                raise PlatformError("Workspace scope is not authorized.")
+            if str(run["status"]) != "Prepared":
+                raise PlatformError("PPA evidence can only be attached to a prepared run.")
+            if actor == str(run["prepared_by"]):
+                raise PlatformError("PPA evidence linking requires an actor independent of the run preparer.")
+            artifact = self._ppa_artifact(artifact_id)
+            entity_code = self._validate_ppa_artifact_for_run(run, artifact)
+            existing = self.connection.execute(
+                "SELECT * FROM reconforge.consolidation_close_ppa_links "
+                "WHERE tenant_id=%s AND run_id=%s AND artifact_id=%s",
+                (self.tenant_id, run_id, artifact_id),
+            ).fetchone()
+            link_material = {
+                "artifact_id": artifact_id,
+                "artifact_result_digest": str(artifact["result_digest"]),
+                "entity_code": entity_code,
+                "run_id": run_id,
+                "schema_version": 1,
+            }
+            link_digest = hashlib.sha256(self._json(link_material).encode("ascii")).hexdigest()
+            if existing is not None:
+                if str(existing["link_digest"]) != link_digest:
+                    raise PlatformError("PPA close link conflicts with immutable evidence.")
+                return dict(existing)
+            if any(entity_code == str(evidence["entity_code"]) for evidence in run.get("ppa_evidence", [])):
+                raise PlatformError("A PPA entity is already linked to this run.")
+            link_id = platform_id("PGCPPAL", self.tenant_id, run_id, artifact_id)
+            self.connection.execute(
+                "INSERT INTO reconforge.consolidation_close_ppa_links("
+                "tenant_id,id,run_id,artifact_id,artifact_result_digest,entity_code,link_digest,actor) "
+                "VALUES(%s,%s,%s,%s,%s,%s,%s,%s)",
+                (
+                    self.tenant_id,
+                    link_id,
+                    run_id,
+                    artifact_id,
+                    artifact["result_digest"],
+                    entity_code,
+                    link_digest,
+                    actor,
+                ),
+            )
+            return dict(
+                self.connection.execute(
+                    "SELECT * FROM reconforge.consolidation_close_ppa_links WHERE tenant_id=%s AND id=%s",
+                    (self.tenant_id, link_id),
+                ).fetchone()
+            )
+
     def _verified_run(self, record: dict[str, Any]) -> dict[str, Any]:
         """Replay-check worksheet, journal lines, and effect metadata before exposure."""
 
@@ -1470,6 +1658,7 @@ class PostgresConsolidationCloseRepository:
         record["intercompany_evidence"] = self._verified_intercompany_links(record | {"worksheet_object": verified})
         record["impairment_evidence"] = self._verified_impairment_links(record | {"worksheet_object": verified})
         record["deferred_tax_evidence"] = self._verified_deferred_tax_links(record | {"worksheet_object": verified})
+        record["ppa_evidence"] = self._verified_ppa_links(record | {"worksheet_object": verified})
         record["close_bundle"] = build_consolidation_close_bundle(record).to_dict()
         return record
 

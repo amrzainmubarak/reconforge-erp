@@ -316,6 +316,9 @@ def test_consolidation_close_server_boundary_binds_workspace_before_exposure(
         def attach_deferred_tax_artifact(self, *_: object, **__: object) -> dict[str, object]:
             return {"id": "link-dtax", "artifact_id": "dtax-" + "c" * 32, "entity_code": "SUB"}
 
+        def attach_ppa_artifact(self, *_: object, **__: object) -> dict[str, object]:
+            return {"id": "link-ppa", "artifact_id": "ppa-" + "d" * 32, "entity_code": "SUB"}
+
     repository = Repository()
 
     def execute(_request: object, operation: object) -> object:
@@ -411,6 +414,19 @@ def test_consolidation_close_server_boundary_binds_workspace_before_exposure(
     )
     assert impairment_attached.status_code == 200
     assert impairment_attached.json()["link"]["entity_code"] == "SUB"
+    assert scoped_permissions[-1] == {
+        "permission": "finance_core.manage",
+        "tenant_id": "tenant-a",
+        "workspace_id": "workspace-a",
+    }
+
+    ppa_attached = client.post(
+        "/api/v1/consolidation-close/runs/run-a/ppa-evidence",
+        headers=headers,
+        json={"artifact_id": "ppa-" + "d" * 32},
+    )
+    assert ppa_attached.status_code == 200
+    assert ppa_attached.json()["link"]["entity_code"] == "SUB"
     assert scoped_permissions[-1] == {
         "permission": "finance_core.manage",
         "tenant_id": "tenant-a",

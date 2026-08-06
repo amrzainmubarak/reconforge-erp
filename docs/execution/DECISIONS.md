@@ -5198,3 +5198,27 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   tax calculation, journal posting, ERP write-back, or production assurance.
 - **Reversibility**: Remove the domain/CLI/schema/test/registry/ADR/manifest
   and execution records; no migration or persisted-data rollback is required.
+
+### D-329: Persist impairment evidence under a separate PostgreSQL append-only boundary
+
+- **Date**: 2026-08-06
+- **Context**: The deterministic impairment artifact needs the same tenant,
+  maker-checker, audit, and replay guarantees as the other consolidation
+  evidence without silently becoming a posting engine.
+- **Decision**: Add migration `0066_pg_impairment`, a backend-neutral
+  `ConsolidationImpairmentApplicationService`, and a forced-RLS,
+  append-only `PostgresConsolidationImpairmentRepository`. Store canonical
+  request/result JSONB, recompute both digests, make retries idempotent by
+  tenant/result digest, and emit a creation audit event. Keep the live runtime
+  test capability-gated and record a skip as a skip.
+- **Verification**: Static schema/migration contracts pass; the runtime test is
+  prepared for the disposable non-superuser PostgreSQL gate. The current local
+  environment has no `RECONFORGE_TEST_POSTGRES_DSN`, so no live runtime pass is
+  claimed.
+- **Boundary**: The adapter refuses posted artifacts and update/delete paths;
+  it does not decide valuation methodology, CGU scope, tax, statutory
+  recognition, journal posting, ERP/bank write-back, restore, HA/DR, or
+  production readiness.
+- **Reversibility**: The migration downgrade refuses non-empty evidence before
+  dropping the trigger/table; removing the adapter and migration is safe only
+  after an explicit empty-table downgrade.

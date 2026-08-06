@@ -1938,3 +1938,38 @@ tasks:
       distribution; and git diff --check passes. This is local evidence only;
       hosted CI/security/provenance, live providers/write-back, independent
       HA/DR, and release approval remain external.
+  - id: E-509
+    priority: P1
+    area: postgres-parity
+    title: PostgreSQL impairment evidence persistence boundary
+    status: completed
+    depends_on: [E-507]
+    exit_evidence: >-
+      Alembic `0066_pg_impairment`,
+      `ConsolidationImpairmentApplicationService`, and the forced-RLS
+      `PostgresConsolidationImpairmentRepository` persist canonical request and
+      result JSONB with recomputed digests, idempotent tenant/result replay,
+      maker-checker foreign keys, audit creation, replay verification, and
+      append-only triggers. Static schema/migration contracts and the prepared
+      disposable PostgreSQL runtime test pass or declare the required
+      `RECONFORGE_TEST_POSTGRES_DSN` skip. This remains bounded non-posting
+      evidence; no valuation methodology, statutory recognition, journal
+      posting, write-back, restore, HA/DR, or production claim follows.
+  - id: E-510
+    priority: P0
+    area: quality
+    title: Full regression and package gate after impairment PostgreSQL boundary
+    status: completed
+    depends_on: [E-509]
+    exit_evidence: >-
+      The exact current tree collects 2,595 tests and reaches 100% with no
+      collection or executed failure; the impairment PostgreSQL runtime test
+      remains a declared skip because `RECONFORGE_TEST_POSTGRES_DSN` is absent.
+      Ruff passes; Mypy reports no issues in 472 source files; Bandit exits 0
+      with reviewed existing suppression/comment warnings; OSV pip-audit
+      reports no known vulnerabilities; the package build succeeds with
+      migration `0066_pg_impairment`, ADR 0394, the application/adapter, and
+      both runtime tests in the source distribution; and `git diff --check`
+      passes. Hosted CI/security/provenance, live PostgreSQL availability,
+      live providers/write-back, independent HA/DR, and release approval
+      remain external.

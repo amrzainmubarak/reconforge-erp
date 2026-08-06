@@ -52,6 +52,10 @@ application_services:
     service: AcquisitionDeferredTaxApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.postgres_consolidation_deferred_tax.PostgresConsolidationDeferredTaxRepository
+  - file: consolidation_impairment.py
+    service: ConsolidationImpairmentApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_consolidation_impairment.PostgresConsolidationImpairmentRepository
   - file: writeback.py
     service: WritebackIntentApplicationService
     status: backend_neutral
@@ -206,4 +210,4 @@ summary:
   direct_sqlite: 0
   partial_repository: 0
   compatibility_adapter: 20
-  backend_neutral_application: 43
+  backend_neutral_application: 44

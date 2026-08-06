@@ -1677,3 +1677,11 @@ tasks:
     status: completed
     depends_on: [P4-MAT-001, E-488]
     exit_evidence: "`run_grouped_matching_replay_fault_matrix` runs the public grouped replay profile against fresh SQLite databases with injected faults after every non-terminal checkpoint (partitions 1, 2, and 3). The focused replay/adversarial suite passes 10/10; all cases reproduce the uninterrupted effect digest, preserve strategy/application parity and the mutation guard, leave zero duplicate effects, and drain queue/running state. This is bounded SQLite failure-injection evidence only, not PostgreSQL parity, distributed queue failure, mutation-tool score, throughput, or production SLO evidence."
+
+  - id: E-490
+    priority: P0
+    area: quality
+    title: Full regression and static gates after checkpoint fault matrix
+    status: completed
+    depends_on: [E-489]
+    exit_evidence: The current tree reaches 100% in the full 2570-test local regression with no collection or executed failure; declared capability skips and existing warnings remain visible. Ruff passes, Mypy reports no issues in 466 source files, Bandit exits 0 with reviewed nosec/comment warnings, pip-audit reports no known OSV vulnerabilities, and the package build includes ADR 0383. Hosted CI/security/provenance and external runtime gates remain unverified.

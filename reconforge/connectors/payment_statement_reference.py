@@ -121,7 +121,17 @@ class ReferencePaymentStatementConnector:
     executor: NetworkConnectorExecutor
     registration: NetworkConnectorRegistration
 
-    def read_page(self, *, idempotency_key: str, cursor: str | None = None) -> PaymentStatementRead:
+    def read_page(
+        self,
+        *,
+        idempotency_key: str,
+        cursor: str | None = None,
+        expected_account_id: str | None = None,
+    ) -> PaymentStatementRead:
+        if expected_account_id is not None:
+            expected_account_id = expected_account_id.strip()
+            if not expected_account_id or len(expected_account_id) > 256:
+                raise ConnectorNetworkError("payment_statement_account_scope_invalid")
         result: ConnectorReadResult = self.executor.read(
             self.registration, idempotency_key=idempotency_key, cursor=cursor
         )
@@ -129,6 +139,10 @@ class ReferencePaymentStatementConnector:
             page = PaymentStatementPage.model_validate_json(result.response_body)
         except (ValidationError, ValueError) as exc:
             raise ConnectorNetworkError("payment_statement_response_schema_invalid") from exc
+        if expected_account_id is not None and any(
+            record.account_id != expected_account_id for record in page.records
+        ):
+            raise ConnectorNetworkError("payment_statement_account_scope_mismatch")
         canonical_records = tuple(
             sorted(
                 (record.model_dump(mode="json", by_alias=True) for record in page.records),

@@ -5370,3 +5370,22 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   HA/DR, or production readiness claim follows.
 - **Reversibility**: Remove the optional guard, sandbox test, ADR, docs, and
   manifest entry; existing callers that omit the guard remain compatible.
+
+### D-377: Exercise the payment-statement reference connector through the governed HTTPS sandbox
+
+- **Date**: 2026-08-06
+- **Context**: The payment-statement connector had injected schema/transport
+  tests but no local proof that its real pinned HTTPS composition, retry, cursor,
+  and secret-reference boundaries worked together.
+- **Decision**: Add an optional `expected_account_id` post-response guard and a
+  disposable TLS sandbox test using the actual pinned GET transport and network
+  executor.
+- **Verification**: Focused payment-statement, ERP, REST, network, and SDK
+  contracts require the account mismatch refusal, retry bound,
+  cursor/idempotency propagation, address pinning, canonical digest, and secret
+  non-disclosure.
+- **Boundary**: Loopback/provider-neutral evidence only; no live bank vendor,
+  licensed dialect, settlement, payment initiation, write-back, HA/DR, or
+  production readiness claim follows.
+- **Reversibility**: Remove the optional guard, sandbox test, ADR, docs, and
+  manifest entry; existing callers that omit the guard remain compatible.

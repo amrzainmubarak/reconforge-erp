@@ -5046,3 +5046,23 @@ contracts, package build with ADR 0402 plus ERP connector docs/test, and
 diff-check pass. Hosted CI/security/provenance, live PostgreSQL/provider
 runtimes, write-back, independent HA/DR, and release approval remain external.
 GitHub publication remains deferred by owner instruction.
+
+E-526 adds the payment-statement HTTPS sandbox and expected-account guard. The
+connector can now fail closed when a validated statement page is outside the
+requested bank-account scope, while the disposable TLS sandbox drives the real
+pinned GET transport and network executor through retry, cursor/idempotency
+headers, address pinning, canonical digest, and secret-redaction assertions.
+The focused payment-statement/ERP/REST/network/SDK suite passes 46/46. This is
+provider-neutral loopback evidence only; live bank, licensed dialect,
+settlement, payment initiation, write-back, HA/DR, and production claims remain
+open. GitHub publication remains deferred by owner instruction.
+
+E-527 closes the post-payment-statement regression and package gate: the exact
+tree collects 2,621 tests and reaches 100% with no collection or executed
+failure; declared external-service capability skips remain visible. Ruff,
+Mypy (476 source files), Bandit, OSV pip-audit, 26/26 phase/execution/parity/
+maturity contracts, package build with ADR 0403 plus payment-statement
+documentation/test, and diff-check pass. Hosted CI/security/provenance, live
+PostgreSQL/provider runtimes, write-back, independent HA/DR, and release
+approval remain external. GitHub publication remains deferred by owner
+instruction.

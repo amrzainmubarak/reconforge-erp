@@ -2249,3 +2249,41 @@ tasks:
       sandbox test; and `git diff --check` passes. Hosted CI/security/
       provenance, live PostgreSQL and provider runtimes, write-back, independent
       HA/DR, and release approval remain external.
+  - id: E-526
+    priority: P1
+    area: connector_platform
+    title: Payment-statement HTTPS sandbox and expected-account guard
+    status: completed
+    depends_on: [P4-CON-001, E-525]
+    exit_evidence: >-
+      `reference-payment-statement-readonly` now accepts an optional expected
+      account identifier and fails closed when a validated page contains
+      another account. A disposable TLS sandbox drives the real
+      `PinnedHttpsGetTransport` and `NetworkConnectorExecutor` through a
+      transient 503, retry, cursor, idempotency header, public-address pin,
+      secret-reference header, closed statement schema, canonical response
+      digest, and secret-redaction assertions. The focused payment-statement,
+      ERP, REST, network, and SDK suite passes 46/46; ADR 0403, connector docs,
+      manifest, and test membership align. This is provider-neutral loopback
+      evidence only; no live bank, licensed dialect, vault, settlement,
+      payment initiation, write-back, HA/DR, or production claim follows.
+  - id: E-527
+    priority: P0
+    area: quality
+    title: Full regression and package gate after payment-statement sandbox
+    status: completed
+    depends_on: [E-526]
+    exit_evidence: >-
+      The exact current tree collects 2,621 tests and
+      `uv run --no-sync pytest -q --basetemp .pytest-tmp-e527 --tb=short -ra`
+      exits 0 at 100% with no collection or executed failure; declared
+      PostgreSQL, Redis, object-storage, public-network, and platform capability
+      skips remain visible. Ruff passes; Mypy reports no issues in 476 source
+      files; Bandit exits 0 with reviewed existing nosec/comment warnings; OSV
+      `pip-audit` reports no known vulnerabilities while the local package is
+      not published on PyPI; phase/execution/parity/maturity contracts pass
+      26/26; `python -m build --no-isolation` and source-distribution
+      membership for ADR 0403, payment-statement docs, and its test pass; and
+      `git diff --check` passes. Hosted CI/security/provenance, live PostgreSQL
+      and provider runtimes, write-back, independent HA/DR, and release
+      approval remain external.

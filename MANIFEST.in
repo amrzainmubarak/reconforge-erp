@@ -342,6 +342,9 @@ include reconforge/connectors/payment_statement_reference.py
 include tests/test_connector_payment_statement.py
 include docs/connectors/reference-payment-statement-readonly.md
 include docs/adr/0237-reference-payment-statement-is-read-only.md
+include reconforge/connectors/world_bank_public.py
+include tests/test_connector_world_bank_public.py
+include docs/adr/0370-world-bank-public-reference-connector.md
 include docs/adr/0238-central-policy-amount-region-classification-bounds.md
 include reconforge/benchmark/durable_job_backpressure.py
 include tests/test_durable_job_backpressure.py

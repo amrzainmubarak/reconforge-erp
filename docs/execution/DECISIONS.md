@@ -4545,6 +4545,20 @@
   providers, independent HA/DR, production operations, or publication approval.
 - **Rollback**: Supersede E-459 with the next exact lock/source gate; no
   runtime or data rollback is required.
+
+### D-357: Add a closed World Bank public REST reference connector
+
+- **Date**: 2026-08-06
+- **Decision**: Add a built-in no-auth World Bank REST reference connector with
+  exact allowlisted page URLs, a closed finite-Decimal schema, bounded pages,
+  and canonical response digests.
+- **Verification**: Focused connector tests pass; the opt-in live transport
+  test fetched the first 1,000-row page and validated the 2,890-row source
+  count. The implementation is covered by ADR 0370.
+- **Boundary**: This proves a bounded public reference path, not provider SLA,
+  freshness, bank/ERP interoperability, write-back, or production readiness.
+- **Rollback**: Remove the module/exports/tests/manifest entry; no migration
+  or persistent-data rollback is needed.
 # ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
 
 Implemented and bounded the `professional.invoice-payment` module. It is local,

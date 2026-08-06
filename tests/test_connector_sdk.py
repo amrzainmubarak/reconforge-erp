@@ -12,6 +12,7 @@ from reconforge.connectors import (
     PAYMENT_STATEMENT_MANIFEST,
     REFERENCE_REST_MANIFEST,
     SFTP_REFERENCE_MANIFEST,
+    WORLD_BANK_PUBLIC_MANIFEST,
 )
 from reconforge.connectors.conformance import verify_manifest_portfolio, verify_read_only_connector
 from reconforge.connectors.manifest import ConnectorCapability
@@ -59,6 +60,7 @@ def test_reference_manifest_portfolio_is_read_only_and_governed() -> None:
             DATABASE_REFERENCE_MANIFEST,
             PAYMENT_STATEMENT_MANIFEST,
             ERP_REFERENCE_MANIFEST,
+            WORLD_BANK_PUBLIC_MANIFEST,
         )
     ) == (
         "reference-database-readonly",
@@ -67,6 +69,7 @@ def test_reference_manifest_portfolio_is_read_only_and_governed() -> None:
         "reference-payment-statement-readonly",
         "reference-rest-readonly",
         "reference-sftp-readonly",
+        "world-bank-public-readonly",
     )
 
 

@@ -4591,3 +4591,11 @@ The final local static/security/package gate is also green: Ruff, Mypy over
 supply-chain validator, package build, and diff-check all pass. Existing
 Bandit suppression warnings remain visible; hosted security/provenance and
 release approval remain external.
+The connector platform now includes a concrete World Bank public REST reference
+connector. It pins the DS01556/RS00963 dataset to three exact page offsets,
+uses no-auth public HTTPS through the shared pinned transport, rejects schema
+drift/non-finite values, and computes canonical permutation-stable digests.
+Focused tests pass and an opt-in live run fetched the first 1,000-row page with
+source count 2,890. This is interoperability reference evidence only; source
+freshness/availability, ERP or bank vendor integration, write-back, and
+production operations remain open.

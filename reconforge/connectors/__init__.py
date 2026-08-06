@@ -119,6 +119,15 @@ from reconforge.connectors.writeback_network import (
     WritebackNetworkResponse,
     WritebackProviderResponse,
 )
+from reconforge.connectors.world_bank_public import (
+    WORLD_BANK_PUBLIC_MANIFEST,
+    WorldBankPublicConnector,
+    WorldBankPublicPage,
+    WorldBankPublicRead,
+    WorldBankPublicRecord,
+    world_bank_public_endpoint,
+    world_bank_public_registration,
+)
 
 __all__ = [
     "AuthenticationMethod",
@@ -153,6 +162,13 @@ __all__ = [
     "WritebackNetworkRegistration",
     "WritebackNetworkResponse",
     "WritebackProviderResponse",
+    "WORLD_BANK_PUBLIC_MANIFEST",
+    "WorldBankPublicConnector",
+    "WorldBankPublicPage",
+    "WorldBankPublicRead",
+    "WorldBankPublicRecord",
+    "world_bank_public_endpoint",
+    "world_bank_public_registration",
     "SFTP_REFERENCE_ENDPOINT",
     "SFTP_REFERENCE_MANIFEST",
     "ReferenceSftpConnector",

@@ -4830,6 +4830,21 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Reversibility**: Remove the evidence entry and ADR; no runtime/data
   rollback is required.
 
+### D-310: Record the current PostgreSQL application-parity batch
+- **Date**: 2026-08-06
+- **Context**: After the API authorization correction, a broader live runtime
+  pass is needed to detect regressions across the stateful application ports.
+- **Decision**: Retain a fresh, disposable PostgreSQL 17.10 batch of 117
+  selected application and scope tests as bounded parity evidence; remove the
+  database after every run.
+- **Verification**: All 117 selected tests pass under the non-privileged
+  `reconforge_app` role; the Finance Core API live seam now injects both scope
+  resolver modules and both exact/any-of authorization helpers correctly.
+- **Boundary**: This does not close full parity, hosted backup tooling, live
+  ERP/bank providers/write-back, HA/DR, scale, or production readiness.
+- **Reversibility**: Remove the evidence entry and ADR; no runtime/data
+  rollback is required.
+
 ### D-308: Preserve FinanceRead any-of semantics in server scope checks
 - **Date**: 2026-08-06
 - **Context**: Live PostgreSQL API execution showed that an authorized

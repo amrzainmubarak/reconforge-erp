@@ -1605,3 +1605,11 @@ tasks:
     status: completed
     depends_on: [E-479]
     exit_evidence: uv run --no-sync pytest -q --tb=short -ra exits 0 in 354.3s on the current Windows/Python 3.12 tree after the FinanceRead helper and contract-test correction. No collection or executed test failed; declared live-service/platform skips and existing framework/legacy-input warnings remain visible. This is local compatibility evidence only; hosted matrices, hosted security/provenance, live ERP/bank providers and write-back, statutory accounting, independent HA/DR, and release approval remain external.
+
+  - id: E-481
+    priority: P0
+    area: postgres-parity
+    title: Current PostgreSQL application-parity batch
+    status: completed
+    depends_on: [E-479]
+    exit_evidence: A fresh PostgreSQL 17.10 migration-head database with the non-privileged reconforge_app role passes all 117 selected tests covering Finance Core API, master data, close, evidence, matching, payables, receivables, inventory, journals, approvals, controls, execution/job scope, workspace attribution, and workspace-period UoW. The disposable database is removed after verification. This is bounded single-node synthetic parity evidence; full parity inventory, hosted backup, live providers/write-back, HA/DR, scale, and production readiness remain open.

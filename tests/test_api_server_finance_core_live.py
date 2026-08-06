@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 from starlette.requests import Request
 
-from reconforge.api import create_api_app
+from reconforge.api import create_api_app, server_finance_core
 from reconforge.api.errors import APIError
 from reconforge.api.routes import finance_core as routes
 from reconforge.api.server_identity import RequestExecutionScope
@@ -112,7 +112,9 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
         )
         scope = RequestExecutionScope(tenant_a, workspace_a, f"org-{tenant_a}", f"entity-{tenant_a}")
         monkeypatch.setattr(routes, "request_execution_scope", lambda _request: scope)
+        monkeypatch.setattr(server_finance_core, "request_execution_scope", lambda _request: scope)
         monkeypatch.setattr(routes, "enforce_server_scoped_permission", lambda *_args, **_kwargs: None)
+        monkeypatch.setattr(routes, "enforce_server_scoped_permissions", lambda *_args, **_kwargs: None)
         maker = LocalUser(id="maker", username="maker", display_name="Maker")
         checker = LocalUser(id="checker", username="checker", display_name="Checker")
 

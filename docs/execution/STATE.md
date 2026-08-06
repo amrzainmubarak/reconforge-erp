@@ -4632,7 +4632,7 @@ it now has 133 unique tasks and valid YAML. This closes documentation
 serialization drift only and does not change the still-open hosted release,
 provider, HA/DR, or native-backup gates.
 The backlog has since grown with the current HA/DR, object-storage, and Redis
-runtime and current-tree gate entries; its latest parse is 147 unique tasks
+runtime and current-tree gate entries; its latest parse is 148 unique tasks
 (E-460 through E-479 included).
 The fresh repeated PostgreSQL HA/DR drill now provides stronger bounded runtime
 evidence: three Docker 17.10 primary/standby cycles passed encrypted restore,
@@ -4694,3 +4694,9 @@ executed failure; declared capability skips and existing warnings remain
 visible. This confirms current-tree compatibility after E-479 only and does not
 replace hosted security/provenance, live-provider, statutory, HA/DR, or release
 evidence.
+The subsequent PostgreSQL application-parity batch passes all 117 selected
+tests on a fresh migration-head 17.10 database under the non-privileged role,
+including Finance Core API, master data, close, evidence, matching,
+payables/receivables, inventory, journals, scopes, and workspace UoW. This is
+bounded single-node synthetic parity evidence only; full parity, hosted backup,
+providers/write-back, HA/DR, scale, and production approval remain open.

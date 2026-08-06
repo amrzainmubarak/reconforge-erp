@@ -603,3 +603,4 @@ include alembic/versions/0064_postgres_close_intercompany_links.py
 include docs/adr/0375-current-regression-after-postgres-period-fix.md
 include docs/adr/0376-live-api-finance-read-compatibility.md
 include docs/adr/0377-current-regression-after-api-auth-fix.md
+include docs/adr/0378-postgres-application-parity-batch.md

@@ -1453,3 +1453,11 @@ tasks:
     status: in_progress
     depends_on: [E-454]
     exit_evidence: The server-boundaries workflow installs the distribution PostgreSQL client package before live tests and asserts that the versioned `pg_config` bindir contains `pg_dump`, `pg_restore`, `createdb`, `dropdb`, and `psql`. A fresh hosted run must still pass the encrypted backup/isolated restore test; local Windows cannot substitute for that hosted native-tool evidence.
+
+  - id: E-462
+    priority: P0
+    area: security
+    title: World Bank connector direct JSON parser inventory closure
+    status: completed
+    depends_on: [E-460]
+    exit_evidence: The single intentional `json.loads` call in `reconforge/connectors/world_bank_public.py` is explicitly declared under FI-023 with exact path, count, rationale, and connector test evidence. The AST inventory contract passes; no parser surface is hidden or exempted.

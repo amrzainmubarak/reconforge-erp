@@ -1621,3 +1621,11 @@ tasks:
     status: completed
     depends_on: [P4-CON-001, E-481]
     exit_evidence: A separate injected WritebackRecoveryTransport and executor recovery path query provider status using the original idempotency key without resolving payloads or issuing a second POST. The focused network suite reports 18 passed, including zero-POST recovery and fail-closed 404/misbound acknowledgement contracts; Ruff and Mypy pass. This is provider-neutral synthetic recovery evidence only, not vendor status-API interoperability, distributed idempotency, accounting posting, HA/DR, or production write-back.
+
+  - id: E-483
+    priority: P0
+    area: connectors
+    title: Governed server write-back recovery route
+    status: completed
+    depends_on: [E-482, P4-IAM-001]
+    exit_evidence: Added the server-profile POST /api/v1/connectors/writeback/intents/{intent_id}/recover route behind connectors.writeback.reconcile. It is scope-bound and optimistic-versioned, accepts only DISPATCHED intents, persists only a verified provider-status acknowledgement, and never accepts or resolves a mutation payload. API and authorization-inventory tests pass 8/8; the closed inventory is 239 routes with digest 17c4bfc40da554070b4cf1589e49845f7a77a798654ac3dbb80eced0b567b388; Ruff and Mypy pass. This is synthetic injected recovery evidence only, not provider status-API interoperability, live ERP/bank write-back, accounting posting, distributed idempotency, HA/DR, or production readiness.

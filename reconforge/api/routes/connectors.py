@@ -27,6 +27,7 @@ from reconforge.connectors.writeback_network import (
     WritebackNetworkError,
     WritebackNetworkExecutor,
     WritebackNetworkRegistration,
+    WritebackRecoveryTransport,
 )
 from reconforge.infrastructure.sqlite_writeback import SQLiteWritebackIntentRepository, WritebackPersistenceError
 
@@ -59,6 +60,14 @@ class WritebackAcknowledgementRequest(BaseModel):
 
 
 class WritebackDispatchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    tenant_id: str = Field(min_length=1, max_length=256)
+    workspace_id: str = Field(min_length=1, max_length=256)
+    expected_version: int = Field(ge=1)
+
+
+class WritebackRecoveryRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     tenant_id: str = Field(min_length=1, max_length=256)
@@ -337,6 +346,110 @@ def dispatch_writeback_intent(
         "request_digest": dispatch.request_digest,
         "response_digest": dispatch.response_digest,
         "attempts": dispatch.attempts,
+    }
+
+
+@router.post("/writeback/intents/{intent_id}/recover")
+def recover_writeback_intent(
+    intent_id: str,
+    request: Request,
+    payload: WritebackRecoveryRequest,
+    current_user: WritebackReconciler,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """Recover an uncertain provider result without sending another mutation."""
+
+    del connection, current_user
+    if not server_writeback_enabled(request):
+        raise APIError(
+            status_code=503,
+            code="writeback_network_requires_server_profile",
+            message="Network write-back recovery requires an explicitly configured server profile.",
+        )
+    tenant_id, workspace_id = _require_server_scope(request, payload.tenant_id, payload.workspace_id)
+    enforce_server_scoped_permission(
+        request,
+        permission="connectors.writeback.reconcile",
+        tenant_id=tenant_id,
+        workspace_id=workspace_id,
+    )
+
+    def load(repository: object, tenant_id: str, workspace_id: str) -> _MarkedDispatch:
+        current = repository.get(intent_id=intent_id, tenant_id=tenant_id, workspace_id=workspace_id)  # type: ignore[attr-defined]
+        if current is None:
+            raise APIError(status_code=404, code="writeback_intent_not_found", message="Write-back intent was not found.")
+        intent = cast(WritebackIntent, current["intent"])
+        version = int(cast(int, current["version"]))
+        if version != payload.expected_version:
+            raise APIError(status_code=409, code="writeback_intent_version_conflict", message="Write-back intent version is stale.")
+        registration = _network_registration(request, intent.connector_id)
+        policy = WritebackPolicy(
+            connector_id=registration.connector_id,
+            allowed_operations=registration.allowed_operations,
+            feature_enabled=registration.feature_enabled,
+        )
+        if intent.status is WritebackStatus.ACKNOWLEDGED:
+            return {"already_acknowledged": True, "intent": intent, "version": version, "registration": registration, "policy": policy}
+        if intent.status is not WritebackStatus.DISPATCHED:
+            raise APIError(status_code=409, code="writeback_recovery_state_invalid", message="Only a dispatched write-back intent can be recovered.")
+        return {"already_acknowledged": False, "intent": intent, "version": version, "registration": registration, "policy": policy}
+
+    marked: _MarkedDispatch = execute_postgres_writeback(request, load)
+    if marked["already_acknowledged"]:
+        acknowledged = marked["intent"]
+        return {
+            "intent": acknowledged.model_dump(mode="json"),
+            "version": marked["version"],
+            "digest": acknowledged.digest,
+            "network_dispatch": "already_acknowledged",
+        }
+    executor = cast(WritebackNetworkExecutor, getattr(request.app.state, "writeback_network_executor", None))
+    recovery_transport = getattr(request.app.state, "writeback_recovery_transport", None)
+    if not isinstance(executor, WritebackNetworkExecutor) or not callable(getattr(recovery_transport, "recover", None)):
+        raise APIError(
+            status_code=503,
+            code="writeback_recovery_not_configured",
+            message="No provider idempotency-status recovery transport is configured.",
+        )
+    recovery_adapter = cast(WritebackRecoveryTransport, recovery_transport)
+    try:
+        recovery = executor.recover(
+            marked["intent"],
+            registration=marked["registration"],
+            policy=marked["policy"],
+            transport=recovery_adapter,
+        )
+    except WritebackNetworkError as exc:
+        raise APIError(status_code=502, code=str(exc), message="Provider write-back recovery failed safely; the intent remains retryable.") from exc
+    except Exception as exc:
+        raise APIError(status_code=502, code="writeback_recovery_failed", message="Provider write-back recovery failed safely; the intent remains retryable.") from exc
+
+    def persist_recovery(repository: object, tenant_id: str, workspace_id: str) -> _PersistedAcknowledgement:
+        current = repository.get(intent_id=intent_id, tenant_id=tenant_id, workspace_id=workspace_id)  # type: ignore[attr-defined]
+        if current is None:
+            raise APIError(status_code=404, code="writeback_intent_not_found", message="Write-back intent was not found.")
+        current_intent = cast(WritebackIntent, current["intent"])
+        current_version = int(cast(int, current["version"]))
+        if current_intent.status is WritebackStatus.ACKNOWLEDGED:
+            return {"intent": current_intent, "version": current_version}
+        if current_version != int(marked["version"]):
+            raise APIError(status_code=409, code="writeback_recovery_version_conflict", message="Write-back intent changed during provider recovery; retry with the same idempotency key.")
+        try:
+            stored = repository.put(recovery.intent, expected_version=current_version)  # type: ignore[attr-defined]
+        except (ValueError, WritebackPersistenceError) as exc:
+            raise APIError(status_code=409, code="writeback_recovery_persistence_conflict", message=str(exc)) from exc
+        return {"intent": stored, "version": current_version + 1}
+
+    persisted: _PersistedAcknowledgement = execute_postgres_writeback(request, persist_recovery)
+    intent = persisted["intent"]
+    return {
+        "intent": intent.model_dump(mode="json"),
+        "version": persisted["version"],
+        "digest": intent.digest,
+        "network_dispatch": "recovered",
+        "request_digest": recovery.request_digest,
+        "response_digest": recovery.response_digest,
+        "attempts": recovery.attempts,
     }
 
 

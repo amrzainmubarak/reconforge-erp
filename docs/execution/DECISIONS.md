@@ -4897,3 +4897,22 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   write-back.
 - **Reversibility**: Remove the protocol, executor method, tests, ADR, and
   evidence entry; no migration or persisted-data rollback is required.
+
+### D-311: Expose provider-status recovery through the server boundary
+- **Date**: 2026-08-06
+- **Context**: The recovery primitive was safe but not callable through the
+  authenticated server workflow. Operators need a scope-bound path that can
+  recover a dispatched intent without posting again.
+- **Decision**: Add `POST /api/v1/connectors/writeback/intents/{intent_id}/recover`
+  behind `connectors.writeback.reconcile`. It is server-profile-only, requires
+  the expected lifecycle version, rejects non-dispatched states, and persists
+  only the verified recovery acknowledgement.
+- **Verification**: API and authorization inventory tests pass 8/8; the closed
+  inventory is 239 routes with digest
+  `17c4bfc40da554070b4cf1589e49845f7a77a798654ac3dbb80eced0b567b388`; Ruff and
+  Mypy pass.
+- **Boundary**: No local network, provider status API, live ERP/bank mutation,
+  accounting posting, distributed idempotency, HA/DR, or production claim is
+  added.
+- **Reversibility**: Remove the route/request model/inventory expectation/tests,
+  ADR, and evidence entry; no migration or data rollback is required.

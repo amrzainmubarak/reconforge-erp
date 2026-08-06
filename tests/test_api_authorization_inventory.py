@@ -13,8 +13,8 @@ from reconforge.api.authorization import (
 )
 from reconforge.api.dependencies import require_any_permission, require_permission
 
-EXPECTED_ROUTE_COUNT = 238
-EXPECTED_DIGEST = "2fd93f143e0b3294bbc7159bc6a0f7e3e52b6e9351c6a285a2490e3cabe43086"
+EXPECTED_ROUTE_COUNT = 239
+EXPECTED_DIGEST = "17c4bfc40da554070b4cf1589e49845f7a77a798654ac3dbb80eced0b567b388"
 
 
 def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Path) -> None:

@@ -605,3 +605,4 @@ include docs/adr/0376-live-api-finance-read-compatibility.md
 include docs/adr/0377-current-regression-after-api-auth-fix.md
 include docs/adr/0378-postgres-application-parity-batch.md
 include docs/adr/0379-writeback-idempotency-recovery-lookup.md
+include docs/adr/0380-server-writeback-recovery-route.md

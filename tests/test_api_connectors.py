@@ -413,3 +413,138 @@ def test_writeback_dispatch_is_opt_in_server_scoped_and_idempotent(tmp_path: Pat
     assert compensated_replay.status_code == 200, compensated_replay.text
     assert compensated_replay.json()["network_dispatch"] == "already_compensated"
     assert transport.calls == 2
+
+
+def test_writeback_recovery_api_reads_provider_status_without_post(tmp_path: Path, monkeypatch: Any) -> None:
+    db_path = tmp_path / "writeback-recovery.db"
+    run_migrations(db_path)
+    connection = connect(db_path)
+    admin = LocalAuthService(connection).init_admin(username="admin", password="Secret-123")
+    LocalAuthService(connection).create_user(username="controller", password="Secret-123", role="controller")
+    connection.close()
+    app = create_api_app(db_path)
+    client = TestClient(app)
+    admin_login = client.post("/api/v1/auth/login", json={"username": "admin", "password": "Secret-123"})
+    admin_headers = {"Authorization": f"Bearer {admin_login.json()['access_token']}"}
+    controller_login = client.post(
+        "/api/v1/auth/login", json={"username": "controller", "password": "Secret-123"}
+    )
+    controller_headers = {"Authorization": f"Bearer {controller_login.json()['access_token']}"}
+    payload = _intent(requested_by=admin.id).model_dump(mode="json")
+    proposed = client.post("/api/v1/connectors/writeback/intents", json=payload, headers=admin_headers)
+    assert proposed.status_code == 200, proposed.text
+    approved = client.post(
+        f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/approve",
+        json={
+            "assurance": "mfa",
+            "reason": "independent provider review",
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+        },
+        headers=controller_headers,
+    )
+    assert approved.status_code == 200, approved.text
+
+    staged_connection = connect(db_path)
+    try:
+        repository = SQLiteWritebackIntentRepository(staged_connection)
+        current = repository.get(intent_id=payload["intent_id"], tenant_id="tenant-a", workspace_id="workspace-a")
+        assert current is not None
+        staged = dispatch_writeback(
+            current["intent"],
+            policy=WritebackPolicy(
+                connector_id="reference-rest-readonly",
+                allowed_operations=frozenset({"payment.create"}),
+                feature_enabled=True,
+            ),
+        )
+        repository.put(staged, expected_version=2)
+    finally:
+        staged_connection.close()
+
+    @dataclass
+    class PostTransport:
+        calls: int = 0
+
+        def post(self, *args: object, **kwargs: object) -> WritebackNetworkResponse:
+            del args, kwargs
+            self.calls += 1
+            raise AssertionError("recovery must not call POST")
+
+    @dataclass
+    class RecoveryTransport:
+        calls: int = 0
+
+        def recover(
+            self,
+            endpoint: str,
+            *,
+            headers: dict[str, str],
+            idempotency_key: str,
+            timeout_seconds: int,
+            maximum_response_bytes: int,
+        ) -> WritebackNetworkResponse:
+            del endpoint, headers, timeout_seconds, maximum_response_bytes
+            self.calls += 1
+            response = {
+                "accepted": True,
+                "idempotency_key": idempotency_key,
+                "provider_reference": "provider-recovered-1",
+            }
+            digest = hashlib.sha256(json.dumps(response, sort_keys=True, separators=(",", ":")).encode("ascii")).hexdigest()
+            return WritebackNetworkResponse(status=200, body=json.dumps({**response, "response_digest": digest}).encode("ascii"))
+
+    post_transport = PostTransport()
+    recovery_transport = RecoveryTransport()
+
+    class Payloads:
+        def resolve(self, intent: object) -> bytes:
+            raise AssertionError("recovery must not resolve a payload")
+
+    class Secrets:
+        def resolve(self, reference: str) -> bytes:
+            assert reference == "vault://tenant-a/writeback-token"
+            return b"synthetic-writeback-token-123"
+
+    app.state.writeback_network_executor = WritebackNetworkExecutor(
+        post_transport,
+        payload_resolver=Payloads(),
+        secret_resolver=Secrets(),
+    )
+    app.state.writeback_recovery_transport = recovery_transport
+    app.state.writeback_network_registrations = {
+        "reference-rest-readonly": WritebackNetworkRegistration.model_validate(
+            {
+                "registration_schema": "writeback-network-registration-v1",
+                "connector_id": "reference-rest-readonly",
+                "version": "1.0.0",
+                "endpoint": "https://api.example.test/v1/writeback",
+                "egress_destinations": ("https://api.example.test/v1/writeback",),
+                "credential_reference": "vault://tenant-a/writeback-token",
+                "allowed_operations": frozenset({"payment.create"}),
+                "feature_enabled": True,
+            }
+        )
+    }
+    monkeypatch.setattr(routes, "server_writeback_enabled", lambda _request: True)
+    monkeypatch.setattr(routes, "_require_server_scope", lambda _request, _tenant, _workspace: ("tenant-a", "workspace-a"))
+
+    def execute(_request: object, operation: object) -> object:
+        scoped = connect(db_path)
+        try:
+            return operation(SQLiteWritebackIntentRepository(scoped), "tenant-a", "workspace-a")  # type: ignore[operator]
+        finally:
+            scoped.close()
+
+    monkeypatch.setattr(routes, "execute_postgres_writeback", execute)
+    recovered = client.post(
+        f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/recover",
+        json={"tenant_id": "tenant-a", "workspace_id": "workspace-a", "expected_version": 3},
+        headers=controller_headers,
+    )
+    assert recovered.status_code == 200, recovered.text
+    assert recovered.json()["intent"]["status"] == "acknowledged"
+    assert recovered.json()["network_dispatch"] == "recovered"
+    assert recovered.json()["version"] == 4
+    assert recovery_transport.calls == 1
+    assert post_transport.calls == 0

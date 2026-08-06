@@ -5138,3 +5138,31 @@ passes. Hosted
 CI/security/provenance, live PostgreSQL/provider runtimes, independent HA/DR,
 and release approval remain external. GitHub publication remains deferred by
 owner instruction.
+
+E-534 carries PostgreSQL reconciliation attribution through organization and
+legal-entity scope. Migration `0072_pg_recon_entity_scope` adds nullable
+hierarchy columns, tenant-safe organization/entity foreign keys, a composite
+lookup index, and RLS predicates. Discovery returns immutable
+workspace/organization/entity attribution; claim SQL binds each supplied
+dimension or requires NULL for legacy runs; and every worker transaction
+restores the exact hierarchy through input streaming, heartbeat, checkpoint,
+completion, cancellation, and failure handling. The focused reconciliation,
+persisted-JSON, and Alembic contracts pass 66 tests with two declared
+live-PostgreSQL skips, including exact GUC and claim-parameter assertions.
+This is one worker lane only; universal IAM surface adoption, federation,
+distributed invalidation, live provider interoperability, scale, HA/DR, and
+production IAM assurance remain open. ADR 0407 is packaged. GitHub
+publication remains deferred by owner instruction.
+
+E-535 closes the entity-scoped worker regression and package gate. The exact
+current tree collects 2,629 tests and the full pytest run passes 100% in
+324.9 seconds with no collection or executed failure; declared external
+service/platform skips and existing warnings remain visible. Ruff passes;
+Mypy reports no issues in 479 source files; Bandit exits 0 with reviewed
+existing suppression/comment warnings; OSV pip-audit reports no known
+vulnerabilities; the migration registry matches all 72 linear Alembic
+revisions; the package build succeeds and `SOURCES.txt` contains ADR 0407,
+migration 0072, and the schema helper; and `git diff --check` passes. Hosted
+CI/security/provenance, live PostgreSQL/provider runtimes, independent HA/DR,
+and release approval remain external. GitHub publication remains deferred by
+owner instruction.

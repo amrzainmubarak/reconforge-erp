@@ -699,15 +699,38 @@ class PostgresReconciliationWorker:
     def _transaction(self) -> PostgresTenantBoundary:
         return PostgresTenantBoundary(self.connection_factory)
 
-    def _cancel_requested(self, tenant_id: str, run_id: str, workspace_id: str | None = None) -> bool:
-        with self._transaction().transaction(tenant_id, workspace_id=workspace_id) as connection:
+    def _cancel_requested(
+        self,
+        tenant_id: str,
+        run_id: str,
+        workspace_id: str | None = None,
+        entity_id: str | None = None,
+        organization_id: str | None = None,
+    ) -> bool:
+        with self._transaction().transaction(
+            tenant_id,
+            organization_id=organization_id,
+            workspace_id=workspace_id,
+            legal_entity_id=entity_id,
+        ) as connection:
             record = PostgresReconciliationRepository(connection).get_run_metadata(tenant_id=tenant_id, run_id=run_id)
             return bool(record.get("cancel_requested", False))
 
     def _heartbeat(
-        self, tenant_id: str, run_id: str, progress: int, workspace_id: str | None = None
+        self,
+        tenant_id: str,
+        run_id: str,
+        progress: int,
+        workspace_id: str | None = None,
+        entity_id: str | None = None,
+        organization_id: str | None = None,
     ) -> Mapping[str, Any]:
-        with self._transaction().transaction(tenant_id, workspace_id=workspace_id) as connection:
+        with self._transaction().transaction(
+            tenant_id,
+            organization_id=organization_id,
+            workspace_id=workspace_id,
+            legal_entity_id=entity_id,
+        ) as connection:
             return PostgresReconciliationRepository(connection).heartbeat_run(
                 tenant_id=tenant_id,
                 run_id=run_id,
@@ -730,10 +753,17 @@ class PostgresReconciliationWorker:
         tenant_id: str,
         run_id: str,
         workspace_id: str | None,
+        entity_id: str | None,
+        organization_id: str | None,
         execution: ReconciliationExecutionResult,
         request_id: str,
     ) -> ReconciliationProcessResult:
-        with self._transaction().transaction(tenant_id, workspace_id=workspace_id) as connection:
+        with self._transaction().transaction(
+            tenant_id,
+            organization_id=organization_id,
+            workspace_id=workspace_id,
+            legal_entity_id=entity_id,
+        ) as connection:
             repository = PostgresReconciliationRepository(connection)
             metadata = repository.get_run_metadata(tenant_id=tenant_id, run_id=run_id)
             if bool(metadata.get("cancel_requested", False)):
@@ -776,12 +806,19 @@ class PostgresReconciliationWorker:
         tenant_id: str,
         run_id: str,
         workspace_id: str | None,
+        entity_id: str | None,
+        organization_id: str | None,
         partition: ReconciliationPartitionResult,
         request_id: str,
     ) -> None:
         """Commit one partition's output and checkpoint in one transaction."""
 
-        with self._transaction().transaction(tenant_id, workspace_id=workspace_id) as connection:
+        with self._transaction().transaction(
+            tenant_id,
+            organization_id=organization_id,
+            workspace_id=workspace_id,
+            legal_entity_id=entity_id,
+        ) as connection:
             PostgresReconciliationRepository(connection).append_partition(
                 tenant_id=tenant_id,
                 run_id=run_id,
@@ -801,8 +838,15 @@ class PostgresReconciliationWorker:
         error: str,
         request_id: str,
         workspace_id: str | None = None,
+        entity_id: str | None = None,
+        organization_id: str | None = None,
     ) -> ReconciliationProcessResult:
-        with self._transaction().transaction(tenant_id, workspace_id=workspace_id) as connection:
+        with self._transaction().transaction(
+            tenant_id,
+            organization_id=organization_id,
+            workspace_id=workspace_id,
+            legal_entity_id=entity_id,
+        ) as connection:
             failed = PostgresReconciliationRepository(connection).fail_run(
                 tenant_id=tenant_id,
                 run_id=run_id,
@@ -829,6 +873,8 @@ class PostgresReconciliationWorker:
         tenant_id: str,
         run_id: str,
         workspace_id: str | None,
+        entity_id: str | None,
+        organization_id: str | None,
         rule: Mapping[str, Any],
     ) -> Callable[[], Iterable[ReconciliationInputPartition]]:
         """Create a lazy tenant/workspace-scoped server-cursor supplier."""
@@ -847,7 +893,12 @@ class PostgresReconciliationWorker:
         reference_field = str(rule.get("reference_field", "reference"))
 
         def supplier() -> Iterable[ReconciliationInputPartition]:
-            with self._transaction().transaction(tenant_id, workspace_id=workspace_id) as connection:
+            with self._transaction().transaction(
+                tenant_id,
+                organization_id=organization_id,
+                workspace_id=workspace_id,
+                legal_entity_id=entity_id,
+            ) as connection:
                 repository = PostgresReconciliationRepository(connection)
                 for values, left_records, right_records in repository.iter_input_partitions(
                     tenant_id=tenant_id,
@@ -871,6 +922,8 @@ class PostgresReconciliationWorker:
         tenant_id: str,
         run_id: str,
         workspace_id: str | None = None,
+        entity_id: str | None = None,
+        organization_id: str | None = None,
         request_id: str = "",
     ) -> ReconciliationProcessResult:
         """Claim and execute one run using fresh connections for each phase."""
@@ -878,11 +931,33 @@ class PostgresReconciliationWorker:
         self._authorize_tenant(tenant_id, request_id=request_id)
         requested_workspace = str(workspace_id).strip() if workspace_id is not None else None
         requested_workspace = requested_workspace or None
-        if requested_workspace is not None:
-            self._authorize_scope(tenant_id, workspace_id=requested_workspace, request_id=request_id)
+        requested_entity = str(entity_id).strip() if entity_id is not None else None
+        requested_entity = requested_entity or None
+        if requested_entity is not None and requested_workspace is None:
+            raise PostgresReconciliationWorkerError("Entity-scoped reconciliation requires a workspace scope.")
+        requested_organization = str(organization_id).strip() if organization_id is not None else None
+        requested_organization = requested_organization or None
+        if requested_entity is not None and requested_organization is None:
+            raise PostgresReconciliationWorkerError("Entity-scoped reconciliation requires an organization scope.")
+        if requested_organization is not None and requested_workspace is None:
+            raise PostgresReconciliationWorkerError("Organization-scoped reconciliation requires a workspace scope.")
+        if requested_workspace is not None or requested_entity is not None:
+            self._authorize_scope(
+                tenant_id,
+                workspace_id=requested_workspace,
+                entity_id=requested_entity,
+                request_id=request_id,
+            )
         workspace_scope = requested_workspace
+        entity_scope = requested_entity
+        organization_scope = requested_organization
         try:
-            with self._transaction().transaction(tenant_id, workspace_id=workspace_scope) as connection:
+            with self._transaction().transaction(
+                tenant_id,
+                organization_id=organization_scope,
+                workspace_id=workspace_scope,
+                legal_entity_id=entity_scope,
+            ) as connection:
                 repository = PostgresReconciliationRepository(connection)
                 claimed = repository.claim_run(
                     tenant_id=tenant_id,
@@ -890,6 +965,8 @@ class PostgresReconciliationWorker:
                     worker_id=self.settings.worker_id,
                     lease_seconds=self.settings.lease_seconds,
                     workspace_id=workspace_scope,
+                    legal_entity_id=entity_scope,
+                    organization_id=organization_scope,
                 )
                 rule = self._rule_mapping(claimed)
                 partition_fields = rule.get("partition_fields", ())
@@ -905,6 +982,8 @@ class PostgresReconciliationWorker:
                     tenant_id=tenant_id,
                     run_id=run_id,
                     workspace_id=workspace_scope,
+                    entity_id=entity_scope,
+                    organization_id=organization_scope,
                     rule=rule,
                 )
                 if partition_fields
@@ -914,14 +993,32 @@ class PostgresReconciliationWorker:
                 run=claimed,
                 left_inputs=left_inputs,
                 right_inputs=right_inputs,
-                heartbeat=lambda progress: self._heartbeat(tenant_id, run_id, progress, workspace_scope),
-                cancellation_requested=lambda: self._cancel_requested(tenant_id, run_id, workspace_scope),
+                heartbeat=lambda progress: self._heartbeat(
+                    tenant_id,
+                    run_id,
+                    progress,
+                    workspace_scope,
+                    entity_scope,
+                    organization_scope,
+                ),
+                cancellation_requested=lambda: self._cancel_requested(
+                    tenant_id,
+                    run_id,
+                    workspace_scope,
+                    entity_scope,
+                    organization_scope,
+                ),
                 partition_supplier=partition_supplier,
             )
             context.raise_if_cancelled()
             partitioned_matcher = getattr(self.matcher, "iter_partition_results", None)
             if partition_fields and callable(partitioned_matcher):
-                with self._transaction().transaction(tenant_id, workspace_id=workspace_scope) as connection:
+                with self._transaction().transaction(
+                    tenant_id,
+                    organization_id=organization_scope,
+                    workspace_id=workspace_scope,
+                    legal_entity_id=entity_scope,
+                ) as connection:
                     checkpoints = PostgresReconciliationRepository(connection).list_checkpoints(
                         tenant_id=tenant_id,
                         run_id=run_id,
@@ -939,6 +1036,8 @@ class PostgresReconciliationWorker:
                         tenant_id=tenant_id,
                         run_id=run_id,
                         workspace_id=workspace_scope,
+                        entity_id=entity_scope,
+                        organization_id=organization_scope,
                         partition=partition,
                         request_id=request_id,
                     )
@@ -946,6 +1045,8 @@ class PostgresReconciliationWorker:
                     tenant_id=tenant_id,
                     run_id=run_id,
                     workspace_id=workspace_scope,
+                    entity_id=entity_scope,
+                    organization_id=organization_scope,
                     execution=ReconciliationExecutionResult(),
                     request_id=request_id,
                 )
@@ -956,11 +1057,18 @@ class PostgresReconciliationWorker:
                 tenant_id=tenant_id,
                 run_id=run_id,
                 workspace_id=workspace_scope,
+                entity_id=entity_scope,
+                organization_id=organization_scope,
                 execution=execution,
                 request_id=request_id,
             )
         except ReconciliationCancellationRequested:
-            with self._transaction().transaction(tenant_id, workspace_id=workspace_scope) as connection:
+            with self._transaction().transaction(
+                tenant_id,
+                organization_id=organization_scope,
+                workspace_id=workspace_scope,
+                legal_entity_id=entity_scope,
+            ) as connection:
                 cancelled = PostgresReconciliationRepository(connection).mark_cancelled(
                     tenant_id=tenant_id,
                     run_id=run_id,
@@ -974,7 +1082,15 @@ class PostgresReconciliationWorker:
             raise
         except Exception as exc:  # noqa: BLE001 - failure is persisted and surfaced as a retryable run state.
             try:
-                return self._fail(tenant_id, run_id, str(exc), request_id, workspace_scope)
+                return self._fail(
+                    tenant_id,
+                    run_id,
+                    str(exc),
+                    request_id,
+                    workspace_scope,
+                    entity_scope,
+                    organization_scope,
+                )
             except Exception as failure_exc:  # noqa: BLE001 - preserve both operational failures.
                 raise PostgresReconciliationWorkerError(
                     "Unable to persist reconciliation execution failure."
@@ -997,7 +1113,7 @@ class PostgresReconciliationWorker:
                     tenant_id=tenant_id,
                     execution_status="active",
                     limit=self.settings.batch_size,
-                    include_workspace_id=True,
+                    include_scope=True,
                 )
             discovered += len(runs)
             for run in runs:
@@ -1009,6 +1125,18 @@ class PostgresReconciliationWorker:
                             workspace_id=(
                                 str(run.get("workspace_id")).strip()
                                 if run.get("workspace_id") is not None and str(run.get("workspace_id")).strip()
+                                else None
+                            ),
+                            entity_id=(
+                                str(run.get("legal_entity_id")).strip()
+                                if run.get("legal_entity_id") is not None
+                                and str(run.get("legal_entity_id")).strip()
+                                else None
+                            ),
+                            organization_id=(
+                                str(run.get("organization_id")).strip()
+                                if run.get("organization_id") is not None
+                                and str(run.get("organization_id")).strip()
                                 else None
                             ),
                             request_id=request_id,

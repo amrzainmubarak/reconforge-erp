@@ -5460,3 +5460,30 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Reversibility**: Remove the optional supplier, attribution lookup, claim
   predicate, transaction parameters, tests, and ADR without rewriting stored
   runs; existing tenant-only callers remain compatible.
+
+### D-381: Carry organization and legal-entity scope through PostgreSQL reconciliation workers
+
+- **Date**: 2026-08-06
+- **Context**: The workspace-scoped worker lane still had no authoritative
+  organization or legal-entity attribution. A workspace policy decision could
+  therefore process multiple entities unless the persisted run and every
+  transaction carried the same hierarchy.
+- **Decision**: Migration `0072_pg_recon_entity_scope` adds nullable
+  `organization_id` and `legal_entity_id` columns with tenant-safe foreign
+  keys, composite lookup indexing, and RLS predicates. Discovery reads the
+  immutable workspace/organization/entity tuple; claim SQL requires exact
+  supplied values or NULL for legacy runs; and the worker passes the tuple to
+  every transaction phase. Entity processing requires workspace and
+  organization scope before database I/O; tenant-only and workspace-only
+  callers remain compatible.
+- **Verification**: The focused reconciliation, persisted-JSON, and Alembic
+  suite passes 66 tests with two declared live-PostgreSQL skips. The entity
+  contract asserts exact policy context, all three GUC values, claim SQL
+  predicates/parameters, scoped completion, and missing-workspace rejection.
+- **Boundary**: This closes one PostgreSQL reconciliation worker lane only.
+  Universal worker/export/UI adoption, federation, distributed policy
+  invalidation, live providers, scale, HA/DR, and production IAM assurance
+  remain open.
+- **Reversibility**: Downgrade removes only the organization/entity columns,
+  index, foreign keys, and entity-aware policy; legacy tenant/workspace
+  behavior remains available.

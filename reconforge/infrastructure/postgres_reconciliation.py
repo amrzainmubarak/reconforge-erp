@@ -74,6 +74,8 @@ SET execution_status = 'Running', execution_worker_id = %s,
 WHERE tenant_id = %s AND id = %s AND status = 'Running'
   AND cancel_requested = FALSE
   AND workspace_id IS NULL
+  AND organization_id IS NULL
+  AND legal_entity_id IS NULL
   AND (execution_status = 'Queued' OR (execution_status = 'Running' AND execution_lease_until <= now()))
 RETURNING tenant_id, id, name, left_source, right_source, status, algorithm_version, rule_json,
     input_hash, idempotency_key, created_by, created_at, completed_at,
@@ -517,6 +519,7 @@ class PostgresReconciliationRepository:
         limit: int = 100,
         offset: int = 0,
         include_workspace_id: bool = False,
+        include_scope: bool = False,
     ) -> list[dict[str, Any]]:
         """List this tenant's run metadata in a stable page order.
 
@@ -548,28 +551,44 @@ class PostgresReconciliationRepository:
         parameters.extend((page_limit, page_offset))
         cursor = self.connection.execute(query, tuple(parameters))
         records = [self._record(row, self._RUN_COLUMNS) for row in cursor.fetchall()]
-        if include_workspace_id:
+        if include_workspace_id or include_scope:
             for record in records:
-                record["workspace_id"] = self.get_run_workspace_id(
+                scope = self.get_run_scope(
                     tenant_id=tenant,
                     run_id=str(record["id"]),
                 )
+                record["workspace_id"] = scope["workspace_id"]
+                if include_scope:
+                    record["organization_id"] = scope["organization_id"]
+                    record["legal_entity_id"] = scope["legal_entity_id"]
         return records
 
-    def get_run_workspace_id(self, *, tenant_id: str, run_id: str) -> str | None:
-        """Read the immutable workspace attribution for one run."""
+    def get_run_scope(self, *, tenant_id: str, run_id: str) -> dict[str, str | None]:
+        """Read immutable workspace/organization/legal-entity attribution for one run."""
 
         tenant = self._tenant(tenant_id)
         run = self._id(run_id, "run_id")
         row = self.connection.execute(
-            "SELECT workspace_id FROM reconforge.reconciliation_runs WHERE tenant_id = %s AND id = %s",
+            "SELECT workspace_id, organization_id, legal_entity_id "
+            "FROM reconforge.reconciliation_runs WHERE tenant_id = %s AND id = %s",
             (tenant, run),
         ).fetchone()
         if row is None:
             raise PostgresReconciliationNotFoundError("Reconciliation run was not found.")
-        value = self._row_value(row, "workspace_id", 0)
-        normalized = "" if value is None else str(value).strip()
-        return normalized or None
+        values = {
+            "workspace_id": self._row_value(row, "workspace_id", 0),
+            "organization_id": self._row_value(row, "organization_id", 1),
+            "legal_entity_id": self._row_value(row, "legal_entity_id", 2),
+        }
+        return {
+            key: (None if value is None or not str(value).strip() else str(value).strip())
+            for key, value in values.items()
+        }
+
+    def get_run_workspace_id(self, *, tenant_id: str, run_id: str) -> str | None:
+        """Read the immutable workspace attribution for one run."""
+
+        return self.get_run_scope(tenant_id=tenant_id, run_id=run_id)["workspace_id"]
 
     def _append_audit_outbox(
         self,
@@ -775,6 +794,8 @@ class PostgresReconciliationRepository:
         worker_id: str,
         lease_seconds: int = 300,
         workspace_id: str | None = None,
+        organization_id: str | None = None,
+        legal_entity_id: str | None = None,
     ) -> dict[str, Any]:
         """Claim a queued or expired run for one worker without committing."""
 
@@ -783,6 +804,12 @@ class PostgresReconciliationRepository:
         worker = self._text(worker_id, "worker_id", maximum=160)
         lease = self._lease_seconds(lease_seconds)
         workspace = None if workspace_id is None else self._text(workspace_id, "workspace_id", maximum=160)
+        organization = (
+            None if organization_id is None else self._text(organization_id, "organization_id", maximum=160)
+        )
+        legal_entity = (
+            None if legal_entity_id is None else self._text(legal_entity_id, "legal_entity_id", maximum=160)
+        )
         before = self._run_row(tenant, run, lock=True)
         if str(before["status"]) != "Running":
             # A concurrent worker may have completed (or failed/cancelled) a
@@ -803,6 +830,12 @@ class PostgresReconciliationRepository:
         if workspace is not None:
             query = query.replace("AND workspace_id IS NULL", "AND workspace_id = %s", 1)
             parameters = (*parameters, workspace)
+        if organization is not None:
+            query = query.replace("AND organization_id IS NULL", "AND organization_id = %s", 1)
+            parameters = (*parameters, organization)
+        if legal_entity is not None:
+            query = query.replace("AND legal_entity_id IS NULL", "AND legal_entity_id = %s", 1)
+            parameters = (*parameters, legal_entity)
         cursor = self.connection.execute(query, parameters)
         claimed_row = cursor.fetchone()
         if claimed_row is None:
@@ -1816,6 +1849,8 @@ CREATE TABLE IF NOT EXISTS reconforge.reconciliation_runs (
     tenant_id TEXT NOT NULL,
     id TEXT NOT NULL,
     workspace_id TEXT DEFAULT NULLIF(current_setting('app.workspace_id', true), ''),
+    organization_id TEXT DEFAULT NULLIF(current_setting('app.organization_id', true), ''),
+    legal_entity_id TEXT DEFAULT NULLIF(current_setting('app.legal_entity_id', true), ''),
     name TEXT NOT NULL,
     left_source TEXT NOT NULL,
     right_source TEXT NOT NULL,
@@ -1854,8 +1889,25 @@ CREATE TABLE IF NOT EXISTS reconforge.reconciliation_runs (
 ALTER TABLE reconforge.reconciliation_runs
     ADD COLUMN IF NOT EXISTS workspace_id TEXT DEFAULT NULLIF(current_setting('app.workspace_id', true), '');
 
+ALTER TABLE reconforge.reconciliation_runs
+    ADD COLUMN IF NOT EXISTS organization_id TEXT DEFAULT NULLIF(current_setting('app.organization_id', true), '');
+
+ALTER TABLE reconforge.reconciliation_runs
+    ALTER COLUMN organization_id
+    SET DEFAULT NULLIF(current_setting('app.organization_id', true), '');
+
+ALTER TABLE reconforge.reconciliation_runs
+    ADD COLUMN IF NOT EXISTS legal_entity_id TEXT DEFAULT NULLIF(current_setting('app.legal_entity_id', true), '');
+
+ALTER TABLE reconforge.reconciliation_runs
+    ALTER COLUMN legal_entity_id
+    SET DEFAULT NULLIF(current_setting('app.legal_entity_id', true), '');
+
 CREATE INDEX IF NOT EXISTS idx_reconciliation_runs_tenant_workspace
     ON reconforge.reconciliation_runs (tenant_id, workspace_id, created_at DESC, id);
+
+CREATE INDEX IF NOT EXISTS idx_reconciliation_runs_tenant_entity
+    ON reconforge.reconciliation_runs (tenant_id, organization_id, legal_entity_id, created_at DESC, id);
 
 CREATE TABLE IF NOT EXISTS reconforge.reconciliation_inputs (
     tenant_id TEXT NOT NULL,
@@ -2048,12 +2100,28 @@ CREATE POLICY tenant_scope ON reconforge.reconciliation_runs
             NULLIF(current_setting('app.workspace_id', true), '') IS NULL
             OR workspace_id = current_setting('app.workspace_id', true)
         )
+        AND (
+            NULLIF(current_setting('app.organization_id', true), '') IS NULL
+            OR organization_id = current_setting('app.organization_id', true)
+        )
+        AND (
+            NULLIF(current_setting('app.legal_entity_id', true), '') IS NULL
+            OR legal_entity_id = current_setting('app.legal_entity_id', true)
+        )
     )
     WITH CHECK (
         tenant_id = current_setting('app.tenant_id', true)
         AND (
             NULLIF(current_setting('app.workspace_id', true), '') IS NULL
             OR workspace_id = current_setting('app.workspace_id', true)
+        )
+        AND (
+            NULLIF(current_setting('app.organization_id', true), '') IS NULL
+            OR organization_id = current_setting('app.organization_id', true)
+        )
+        AND (
+            NULLIF(current_setting('app.legal_entity_id', true), '') IS NULL
+            OR legal_entity_id = current_setting('app.legal_entity_id', true)
         )
     );
 """

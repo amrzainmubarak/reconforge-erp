@@ -2395,3 +2395,42 @@ tasks:
       PostgreSQL, providers/write-back, independent HA/DR, and release
       approval remain external; GitHub publication remains deferred by owner
       instruction.
+  - id: E-534
+    priority: P1
+    area: enterprise_policy
+    title: Entity-scoped PostgreSQL reconciliation worker lane
+    status: completed
+    depends_on: [E-533, P4-IAM-001]
+    exit_evidence: >-
+      Migration `0072_pg_recon_entity_scope` adds nullable organization and
+      legal-entity attribution with tenant-safe foreign keys, an
+      organization/entity lookup index, and RLS predicates. Repository
+      discovery returns workspace/organization/entity scope; claim SQL binds
+      all supplied values or requires NULL for legacy runs; and the worker
+      carries the exact hierarchy through claim, streaming, heartbeat,
+      checkpoint, completion, cancellation, and failure transactions. The
+      focused reconciliation/persisted-JSON/Alembic suite passes 66 tests
+      with two declared live-PostgreSQL skips; exact GUC and claim-parameter
+      assertions pass. ADR 0407 and the migration/schema helper are packaged.
+      This closes one worker lane only; universal worker/export/UI adoption,
+      federation, distributed invalidation, live PostgreSQL promotion, scale,
+      HA/DR, and production IAM remain open.
+  - id: E-535
+    priority: P0
+    area: quality
+    title: Regression and package gate after entity-scoped reconciliation worker
+    status: completed
+    depends_on: [E-534]
+    exit_evidence: >-
+      The exact current tree collects 2,629 tests and the full pytest gate
+      passes 100% in 324.9 seconds with no collection or executed failure;
+      declared external-service/platform skips and existing warnings remain
+      visible. Ruff passes; Mypy reports no issues in 479 source files; Bandit
+      exits 0 with reviewed existing suppression/comment warnings; OSV
+      `pip-audit -s osv` reports no known vulnerabilities; the migration
+      registry test matches all 72 linear Alembic revisions; `python -m build
+      --no-isolation` succeeds and `SOURCES.txt` contains ADR 0407, migration
+      0072, and the schema helper; and `git diff --check` passes. Hosted
+      CI/security/provenance, live PostgreSQL/provider runtimes, independent
+      HA/DR, and release approval remain external; GitHub publication remains
+      deferred by owner instruction.

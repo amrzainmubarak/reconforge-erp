@@ -596,6 +596,71 @@ def test_postgres_reconciliation_worker_rejects_legacy_policy_for_scoped_run() -
     assert connection.run["execution_status"] == "Queued"
 
 
+def test_postgres_reconciliation_worker_propagates_entity_scope_and_rejects_missing_workspace() -> None:
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+    _create_run(repository)
+    assert connection.run is not None
+    connection.run["workspace_id"] = "workspace-a"
+    connection.run["organization_id"] = "org-a"
+    connection.run["legal_entity_id"] = "entity-a"
+
+    def policy_context(tenant: str, workspace: str | None, entity: str | None) -> PolicyEvaluationContext:
+        return PolicyEvaluationContext(
+            user_id="entity-worker",
+            username="entity-worker",
+            user_permissions={"match.run"},
+            principal_type="service_account",
+            tenant_id=tenant,
+            workspace_id=workspace,
+            entity_id=entity,
+            authorized_tenant_ids=frozenset({tenant}),
+            authorized_workspace_ids=frozenset({workspace}) if workspace else frozenset(),
+            authorized_entity_ids=frozenset({entity}) if entity else frozenset(),
+        )
+
+    worker = PostgresReconciliationWorker(
+        _ConnectionFactory(connection),
+        tenant_supplier=lambda: ["tenant_a"],
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="entity-worker",
+            policy_context_scope_supplier=policy_context,
+            poll_interval_seconds=0,
+        ),
+    )
+
+    summary = worker.process_once()
+
+    assert summary.completed == 1
+    entity_settings = [
+        params
+        for sql, params in connection.executed
+        if "set_config('app.legal_entity_id'" in sql
+    ]
+    assert any(params == ("entity-a",) for params in entity_settings)
+    organization_settings = [
+        params
+        for sql, params in connection.executed
+        if "set_config('app.organization_id'" in sql
+    ]
+    assert any(params == ("org-a",) for params in organization_settings)
+    claim_calls = [
+        (sql, params)
+        for sql, params in connection.executed
+        if "set execution_status = 'running'" in sql.lower()
+    ]
+    assert claim_calls
+    claim_sql, claim_params = claim_calls[0]
+    assert "workspace_id = %s" in claim_sql
+    assert "organization_id = %s" in claim_sql
+    assert "legal_entity_id = %s" in claim_sql
+    assert claim_params is not None and claim_params[-3:] == ("workspace-a", "org-a", "entity-a")
+
+    with pytest.raises(PostgresReconciliationWorkerError, match="requires a workspace scope"):
+        worker.process_run(tenant_id="tenant_a", run_id="run-a", entity_id="entity-a")
+
+
 def test_local_matcher_partitioning_is_deterministic_and_reports_progress() -> None:
     adapter = LocalDeterministicMatcherAdapter()
     progress: list[int] = []

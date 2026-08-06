@@ -71,6 +71,26 @@ def test_postgres_alembic_assets_are_declared_for_sdist_and_wheel() -> None:
     assert '"alembic/versions" = ["alembic/versions/*.py"]' in project
 
 
+def test_reconciliation_entity_scope_migration_is_versioned_and_reversible() -> None:
+    migration = (ROOT / "alembic/versions/0072_postgres_reconciliation_entity_scope.py").read_text(
+        encoding="utf-8"
+    )
+    schema = (ROOT / "reconforge/infrastructure/postgres_reconciliation_entity_scope.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'revision = "0072_pg_recon_entity_scope"' in migration
+    assert 'down_revision = "0071_pg_close_ownchg_links"' in migration
+    assert "POSTGRES_RECONCILIATION_ENTITY_SCOPE_SCHEMA_SQL" in migration
+    assert "legal_entity_id" in schema
+    assert "organization_id" in schema
+    assert "reconciliation_runs_tenant_legal_entity_fkey" in schema
+    assert "reconciliation_runs_tenant_organization_fkey" in schema
+    assert "DROP COLUMN IF EXISTS legal_entity_id" in migration
+    assert "DROP COLUMN IF EXISTS organization_id" in migration
+    assert "current_setting('app.legal_entity_id'" in schema
+
+
 def test_postgres_alembic_contract_has_no_repository_credentials() -> None:
     config = (ROOT / "alembic.ini").read_text(encoding="utf-8")
     env = (ROOT / "alembic" / "env.py").read_text(encoding="utf-8")

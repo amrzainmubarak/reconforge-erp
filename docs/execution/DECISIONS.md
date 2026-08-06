@@ -4775,6 +4775,20 @@
   unverified.
 - **Rollback**: Remove the evidence entry and ADR; no runtime/data rollback is
   required.
+
+### D-374: Promote the current PostgreSQL database-reference focus
+
+- **Date**: 2026-08-06
+- **Decision**: Retain the fresh migration-head database-reference runtime
+  result as bounded connector evidence.
+- **Verification**: The non-privileged PostgreSQL 17.10 live suite passes 3/3
+  for named read-only query, bounded row/digest, cursor/replay, and tenant
+  isolation behavior; the disposable database is removed afterward.
+- **Boundary**: Deployment-provided PostgreSQL views only; no live ERP/bank
+  vendor, schema certification, write-back, hosted provider, or production
+  interoperability claim follows.
+- **Rollback**: Remove the evidence entry and ADR; no runtime/data rollback is
+  required.
 # ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
 
 Implemented and bounded the `professional.invoice-payment` module. It is local,

@@ -1573,3 +1573,11 @@ tasks:
     status: completed
     depends_on: [P4-IAM-001]
     exit_evidence: A fresh PostgreSQL 17.10 database at migration head with the non-privileged reconforge_app role passes 23/23 selected live contracts for access administration, identity administration, security governance, delegations, policy analysis, service accounts, and privileged sessions in 19.1s. This is bounded single-node synthetic IAM evidence; federation interoperability, complete UI/job/export adoption, distributed invalidation, HA/DR, and production IAM assurance remain open.
+
+  - id: E-477
+    priority: P0
+    area: connectors
+    title: Current PostgreSQL database-reference live focus
+    status: completed
+    depends_on: [P4-CON-001]
+    exit_evidence: A fresh PostgreSQL 17.10 migration-head database with the non-privileged application role passes the database-reference connector live suite 3/3, including named read-only queries, bounded Decimal rows, cursor/replay, and tenant isolation; the database is removed after verification. This is deployment-provided view evidence only, not live ERP/bank vendor interoperability or write-back.

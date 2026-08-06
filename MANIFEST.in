@@ -600,3 +600,4 @@ include tests/test_api_server_finance_core_live.py
 include alembic/versions/0063_postgres_intercompany_eliminations.py
 include docs/adr/0336-postgres-close-intercompany-evidence-binding.md
 include alembic/versions/0064_postgres_close_intercompany_links.py
+include docs/adr/0375-current-regression-after-postgres-period-fix.md

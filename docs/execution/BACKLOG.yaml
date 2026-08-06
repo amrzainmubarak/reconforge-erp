@@ -1,5 +1,5 @@
 schema_version: 2
-updated_at: "2026-08-05"
+updated_at: "2026-08-06"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
   evidence_base_commit: "5d401e70c3a0e3cf507c2c7cf635dfc99b01a9af"
@@ -1581,3 +1581,11 @@ tasks:
     status: completed
     depends_on: [P4-CON-001]
     exit_evidence: A fresh PostgreSQL 17.10 migration-head database with the non-privileged application role passes the database-reference connector live suite 3/3, including named read-only queries, bounded Decimal rows, cursor/replay, and tenant isolation; the database is removed after verification. This is deployment-provided view evidence only, not live ERP/bank vendor interoperability or write-back.
+
+  - id: E-478
+    priority: P0
+    area: quality
+    title: Current full local regression after PostgreSQL period-binding fix
+    status: completed
+    depends_on: [E-475, E-476, E-477]
+    exit_evidence: uv run --no-sync pytest -q --tb=short -ra exits 0 in 356.4s on the current Windows/Python 3.12 tree with no collection or executed failure. Declared live-service/platform skips and existing framework/legacy-input warnings remain visible. This is local compatibility evidence only; hosted matrices, native backup-tool availability, hosted security/provenance, live ERP/bank providers and write-back, statutory accounting, independent HA/DR, and release approval remain external.

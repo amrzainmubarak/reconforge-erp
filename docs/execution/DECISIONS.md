@@ -4812,3 +4812,20 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   migration or persistent data rollback is required.
 - **Verification**: Focused tests, pack validation, full pytest, Ruff, Mypy,
   Bandit, OSV, supply-chain policy, build, and diff-check all pass locally.
+
+### D-307: Record the current full regression after the PostgreSQL period fix
+- **Date**: 2026-08-06
+- **Context**: E-475 corrected an internal PostgreSQL period-row identity being
+  compared with the close worksheet's business period. A fresh complete local
+  regression is required before treating the correction as compatible with the
+  rest of the tree.
+- **Decision**: Record the full `pytest` run as a local compatibility checkpoint
+  while retaining explicit external and hosted boundaries.
+- **Verification**: `uv run --no-sync pytest -q --tb=short -ra` exits 0 in
+  356.4 seconds; no collected or executed test failed, with only declared
+  capability skips and existing warnings.
+- **Boundary**: This does not close hosted CI, native backup-tool availability,
+  live ERP/bank interoperability or write-back, statutory accounting,
+  independent HA/DR, or production approval.
+- **Reversibility**: Remove the evidence entry and ADR; no runtime/data
+  rollback is required.

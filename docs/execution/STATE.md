@@ -1,6 +1,6 @@
 # Execution State
 
-Updated: 2026-08-05
+Updated: 2026-08-06
 
 ## Current phase
 
@@ -4632,8 +4632,8 @@ it now has 133 unique tasks and valid YAML. This closes documentation
 serialization drift only and does not change the still-open hosted release,
 provider, HA/DR, or native-backup gates.
 The backlog has since grown with the current HA/DR, object-storage, and Redis
-runtime and current-tree gate entries; its latest parse is 141 unique tasks
-(E-460 through E-477 included).
+runtime and current-tree gate entries; its latest parse is 145 unique tasks
+(E-460 through E-478 included).
 The fresh repeated PostgreSQL HA/DR drill now provides stronger bounded runtime
 evidence: three Docker 17.10 primary/standby cycles passed encrypted restore,
 fencing, partition refusal, manual failover/failback, zero-loss sentinel replay,
@@ -4676,3 +4676,9 @@ four-job lane cap, 24 rejected/retried submissions, complete 64-job/256-effect
 drain, zero duplicates, and exact per-lane fairness. This strengthens bounded
 single-host queue correctness only; capacity, queue HA, soak, RPO/RTO, and
 production SLO remain open.
+The current full regression after the PostgreSQL period-binding correction also
+exits 0 in 356.4s. No collected or executed test failed; declared external
+service/platform skips and existing warnings remain visible. This is a local
+compatibility checkpoint only; hosted matrices, native backup tooling, hosted
+security/provenance, live providers/write-back, statutory accounting,
+independent HA/DR, and production approval remain open.

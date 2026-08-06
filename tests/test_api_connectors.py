@@ -548,3 +548,12 @@ def test_writeback_recovery_api_reads_provider_status_without_post(tmp_path: Pat
     assert recovered.json()["version"] == 4
     assert recovery_transport.calls == 1
     assert post_transport.calls == 0
+    replay = client.post(
+        f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/recover",
+        json={"tenant_id": "tenant-a", "workspace_id": "workspace-a", "expected_version": 3},
+        headers=controller_headers,
+    )
+    assert replay.status_code == 200, replay.text
+    assert replay.json()["network_dispatch"] == "already_acknowledged"
+    assert recovery_transport.calls == 1
+    assert post_transport.calls == 0

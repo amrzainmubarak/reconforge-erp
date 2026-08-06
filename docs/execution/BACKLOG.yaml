@@ -1629,3 +1629,11 @@ tasks:
     status: completed
     depends_on: [E-482, P4-IAM-001]
     exit_evidence: Added the server-profile POST /api/v1/connectors/writeback/intents/{intent_id}/recover route behind connectors.writeback.reconcile. It is scope-bound and optimistic-versioned, accepts only DISPATCHED intents, persists only a verified provider-status acknowledgement, and never accepts or resolves a mutation payload. API and authorization-inventory tests pass 8/8; the closed inventory is 239 routes with digest 17c4bfc40da554070b4cf1589e49845f7a77a798654ac3dbb80eced0b567b388; Ruff and Mypy pass. This is synthetic injected recovery evidence only, not provider status-API interoperability, live ERP/bank write-back, accounting posting, distributed idempotency, HA/DR, or production readiness.
+
+  - id: E-484
+    priority: P0
+    area: connectors
+    title: Write-back recovery optimistic replay correction
+    status: completed
+    depends_on: [E-483]
+    exit_evidence: Recovery now accepts an exact replay with either the current acknowledged version or the original dispatched version, while stale versions remain rejected. The API regression proves the recovery lookup runs once, no POST is issued, and the replay returns already_acknowledged; the focused API/inventory suite passes 8/8. No migration or provider claim is added.

@@ -4632,8 +4632,8 @@ it now has 133 unique tasks and valid YAML. This closes documentation
 serialization drift only and does not change the still-open hosted release,
 provider, HA/DR, or native-backup gates.
 The backlog has since grown with the current HA/DR, object-storage, and Redis
-runtime and current-tree gate entries; its latest parse is 150 unique tasks
-(E-460 through E-483 included).
+runtime and current-tree gate entries; its latest parse is 151 unique tasks
+(E-460 through E-484 included).
 The fresh repeated PostgreSQL HA/DR drill now provides stronger bounded runtime
 evidence: three Docker 17.10 primary/standby cycles passed encrypted restore,
 fencing, partition refusal, manual failover/failback, zero-loss sentinel replay,
@@ -4711,3 +4711,7 @@ The recovery primitive is now reachable through the authenticated server route
 `connectors.writeback.reconcile` and the 239-route authorization inventory
 digest recorded in E-483. Local mode remains disabled; provider-specific status
 API interoperability and production write-back remain unverified.
+The route's optimistic replay was then corrected: a lost response can retry
+with the original dispatched version and receive `already_acknowledged` without
+another provider lookup. Stale versions still fail closed; no migration or
+external-provider claim was added.

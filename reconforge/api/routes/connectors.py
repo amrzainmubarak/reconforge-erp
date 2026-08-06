@@ -380,8 +380,6 @@ def recover_writeback_intent(
             raise APIError(status_code=404, code="writeback_intent_not_found", message="Write-back intent was not found.")
         intent = cast(WritebackIntent, current["intent"])
         version = int(cast(int, current["version"]))
-        if version != payload.expected_version:
-            raise APIError(status_code=409, code="writeback_intent_version_conflict", message="Write-back intent version is stale.")
         registration = _network_registration(request, intent.connector_id)
         policy = WritebackPolicy(
             connector_id=registration.connector_id,
@@ -389,7 +387,11 @@ def recover_writeback_intent(
             feature_enabled=registration.feature_enabled,
         )
         if intent.status is WritebackStatus.ACKNOWLEDGED:
+            if payload.expected_version not in {version, version - 1}:
+                raise APIError(status_code=409, code="writeback_intent_version_conflict", message="Write-back intent version is stale.")
             return {"already_acknowledged": True, "intent": intent, "version": version, "registration": registration, "policy": policy}
+        if version != payload.expected_version:
+            raise APIError(status_code=409, code="writeback_intent_version_conflict", message="Write-back intent version is stale.")
         if intent.status is not WritebackStatus.DISPATCHED:
             raise APIError(status_code=409, code="writeback_recovery_state_invalid", message="Only a dispatched write-back intent can be recovered.")
         return {"already_acknowledged": False, "intent": intent, "version": version, "registration": registration, "policy": policy}

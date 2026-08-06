@@ -4916,3 +4916,18 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   added.
 - **Reversibility**: Remove the route/request model/inventory expectation/tests,
   ADR, and evidence entry; no migration or data rollback is required.
+
+### D-312: Preserve write-back recovery replay idempotency
+- **Date**: 2026-08-06
+- **Context**: A successful recovery persists `DISPATCHED -> ACKNOWLEDGED` and
+  increments the lifecycle version. A lost API response must be replayable with
+  the original dispatched version without querying the provider again.
+- **Decision**: Accept `expected_version` equal to either the current
+  acknowledged version or its immediately preceding dispatched version when
+  returning `already_acknowledged`; stale versions remain rejected.
+- **Verification**: The API connector and authorization-inventory suite passes
+  8/8; the replay assertion confirms one provider lookup and zero POST calls.
+- **Boundary**: This is local optimistic-replay evidence only; it does not prove
+  provider idempotency, distributed coordination, live write-back, or HA/DR.
+- **Reversibility**: Remove the version condition, regression assertion, and
+  evidence entry; no migration or data rollback is required.

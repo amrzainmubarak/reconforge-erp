@@ -5120,3 +5120,23 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   PostgreSQL scale, and production readiness remain open.
 - **Reversibility**: Remove the strategy, domain module, test, architecture
   entry, manifest entry, ADR, and execution evidence; no migration is needed.
+
+### D-325: Make duplicate evidence selectable in Reconciliation-as-Code
+
+- **Date**: 2026-08-06
+- **Context**: The bounded duplicate strategy was executable through its direct
+  adapter but not selectable by a versioned RAC document or its embedded golden
+  tests. Treating duplicate groups as ordinary matches would make the evidence
+  contract ambiguous.
+- **Decision**: Add the explicit `duplicate_detection` strategy type,
+  `duplicate-detection` mode, and bounded strategy identity to RAC v1. Dispatch
+  through the existing strategy and add `duplicate_group_count` as an additive
+  expected/actual field. Duplicate groups remain evidence, never matches or
+  autonomous actions.
+- **Verification**: The dedicated RAC golden/schema suite and Phase 2
+  compatibility suite report 10 passed; Ruff and Mypy pass under ADR 0390.
+- **Boundary**: Declaration and simulation only; no approval, merge, delete,
+  fraud classification, provider interoperability, PostgreSQL execution, or
+  production claim.
+- **Reversibility**: Remove the additive contract/schema fields, dispatch
+  branch, tests, ADR, manifest entry, and evidence without a migration.

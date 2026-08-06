@@ -279,7 +279,8 @@
             "many_to_one",
             "many_to_many",
             "partial_settlement",
-            "portfolio"
+            "portfolio",
+            "duplicate_detection"
           ]
         },
         "strategy_id": {
@@ -290,6 +291,7 @@
           "enum": [
             "indexed-composite-one-to-one",
             "bounded-grouped-subset-sum",
+            "bounded-duplicate-detection",
             null
           ]
         },
@@ -303,7 +305,8 @@
             "many-to-one",
             "many-to-many",
             "partial-settlement",
-            "portfolio"
+            "portfolio",
+            "duplicate-detection"
           ]
         },
         "amount_tolerance": {
@@ -536,6 +539,10 @@
           "minimum": 0
         },
         "ambiguous_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "duplicate_group_count": {
           "type": "integer",
           "minimum": 0
         },

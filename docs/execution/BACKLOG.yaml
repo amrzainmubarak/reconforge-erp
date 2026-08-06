@@ -1807,3 +1807,35 @@ tasks:
       This is local evidence only; hosted CI/security/provenance, live
       providers/write-back, independent HA/DR, and release approval remain
       external.
+  - id: E-501
+    priority: P1
+    area: advanced_matching
+    title: Reconciliation-as-Code duplicate-detection adapter
+    status: completed
+    depends_on: [E-499]
+    exit_evidence: >-
+      Reconciliation-as-Code v1 now accepts duplicate_detection with the
+      bounded-duplicate-detection strategy identity and duplicate-detection
+      mode, dispatches embedded golden tests through the public adapter, and
+      reports an additive duplicate_group_count without relabeling duplicates
+      as financial matches. The closed JSON Schema, Pydantic contract, focused
+      golden tests, Phase 2 compatibility tests, Ruff, Mypy, ADR 0390, and
+      source-distribution manifest are aligned. This is a declaration and
+      simulation boundary only; it does not approve, merge, delete, post,
+      classify fraud, or prove live providers/PostgreSQL/production readiness.
+  - id: E-502
+    priority: P0
+    area: quality
+    title: Full regression and static gates after RAC duplicate adapter
+    status: completed
+    depends_on: [E-501]
+    exit_evidence: >-
+      The current tree completes the full local pytest regression with no
+      collection or executed failure and only declared capability skips and
+      existing framework/legacy-input warnings. Ruff passes; Mypy reports no
+      issues in 469 source files; Bandit exits 0 with reviewed existing
+      suppression/comment warnings; OSV pip-audit reports no known
+      vulnerabilities; the package build succeeds and git diff --check passes.
+      This is local evidence only; hosted CI/security/provenance, live
+      providers/write-back, independent HA/DR, and release approval remain
+      external.

@@ -4635,8 +4635,8 @@ The backlog has since grown with the current HA/DR, object-storage, and Redis
 runtime and current-tree gate entries; its latest parse is 161 unique tasks
 (E-460 through E-494 included).
 The server-identity fixture, final local gate, PostgreSQL grouped runtime,
-public-network evidence, canonical duplicate-detection, and final local-gate
-entries extend that parse to 167 unique tasks (E-495 through E-500 included): 156 completed, 1
+public-network evidence, canonical duplicate-detection, final local-gate, and
+RAC adapter and final local-gate entries extend that parse to 169 unique tasks (E-495 through E-502 included): 158 completed, 1
 blocked, 8 in progress, and
 2 deferred. This administrative ratio is not a product-readiness percentage;
  the open workstreams and external release gates remain authoritative.
@@ -4803,6 +4803,19 @@ manifest. This is exact duplicate evidence only; near-duplicate/probabilistic
 matching, fraud detection, provider interoperability, PostgreSQL scale, and
 production readiness remain open. GitHub publication remains deferred by owner
 instruction.
+
+E-501 exposes duplicate detection through Reconciliation-as-Code v1. The
+contract now accepts `duplicate_detection`/`duplicate-detection`, dispatches the
+bounded adapter in embedded golden tests, and reports an additive
+`duplicate_group_count` instead of treating duplicates as financial matches.
+The closed schema, Pydantic model, compatibility tests, and ADR 0390 align;
+live-provider/PostgreSQL execution and all production gates remain open.
+
+E-502 reran the complete local regression and release-quality gates after the
+RAC adapter: pytest exited 0 with no collection or executed failure; Ruff,
+Mypy (469 files), Bandit, OSV pip-audit, package build, and diff-check passed.
+Existing declared skips/warnings and all hosted/external release gates remain
+separate; GitHub publication remains deferred by owner instruction.
 
 E-500 reran the complete local regression and release-quality gates after the
 duplicate-detection slice: pytest exited 0 with no collection or executed

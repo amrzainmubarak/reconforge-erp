@@ -181,10 +181,23 @@ class MatchingStrategySpec(_ContractModel):
         "many_to_many",
         "partial_settlement",
         "portfolio",
+        "duplicate_detection",
     ]
-    strategy_id: Literal["indexed-composite-one-to-one", "bounded-grouped-subset-sum"] | None = None
+    strategy_id: Literal[
+        "indexed-composite-one-to-one",
+        "bounded-grouped-subset-sum",
+        "bounded-duplicate-detection",
+    ] | None = None
     strategy_version: str = "1.0.0"
-    mode: Literal["one-to-one", "one-to-many", "many-to-one", "many-to-many", "partial-settlement", "portfolio"] = "one-to-one"
+    mode: Literal[
+        "one-to-one",
+        "one-to-many",
+        "many-to-one",
+        "many-to-many",
+        "partial-settlement",
+        "portfolio",
+        "duplicate-detection",
+    ] = "one-to-one"
     amount_tolerance: str = "0"
     date_tolerance_days: int = Field(default=0, ge=0, le=3_660)
     confidence_weight: str = "1"
@@ -212,13 +225,22 @@ class MatchingStrategySpec(_ContractModel):
     @model_validator(mode="after")
     def validate_adapter_compatibility(self) -> MatchingStrategySpec:
         grouped = self.strategy_type in {"one_to_many", "many_to_one", "many_to_many", "partial_settlement", "portfolio"}
-        effective_id = self.strategy_id or ("bounded-grouped-subset-sum" if grouped else "indexed-composite-one-to-one")
-        expected_mode = self.strategy_type.replace("_", "-") if grouped else "one-to-one"
+        duplicate = self.strategy_type == "duplicate_detection"
+        effective_id = self.strategy_id or (
+            "bounded-grouped-subset-sum"
+            if grouped
+            else "bounded-duplicate-detection"
+            if duplicate
+            else "indexed-composite-one-to-one"
+        )
+        expected_mode = "duplicate-detection" if duplicate else self.strategy_type.replace("_", "-") if grouped else "one-to-one"
         if self.mode != expected_mode:
             raise ValueError("Matching strategy type and mode are incompatible.")
         if grouped and effective_id != "bounded-grouped-subset-sum":
             raise ValueError("Grouped matching modes require bounded-grouped-subset-sum.")
-        if not grouped and effective_id != "indexed-composite-one-to-one":
+        if duplicate and effective_id != "bounded-duplicate-detection":
+            raise ValueError("Duplicate-detection mode requires bounded-duplicate-detection.")
+        if not grouped and not duplicate and effective_id != "indexed-composite-one-to-one":
             raise ValueError("One-to-one matching modes require indexed-composite-one-to-one.")
         return self
 
@@ -228,6 +250,8 @@ class MatchingStrategySpec(_ContractModel):
             return self.strategy_id
         if self.strategy_type in {"one_to_many", "many_to_one", "many_to_many", "partial_settlement", "portfolio"}:
             return "bounded-grouped-subset-sum"
+        if self.strategy_type == "duplicate_detection":
+            return "bounded-duplicate-detection"
         return "indexed-composite-one-to-one"
 
 
@@ -285,6 +309,7 @@ class ExpectedResult(_ContractModel):
     unmatched_left_count: int = Field(ge=0)
     unmatched_right_count: int = Field(ge=0)
     ambiguous_count: int = Field(default=0, ge=0)
+    duplicate_group_count: int = Field(default=0, ge=0)
     decision_digest: str = Field(default="", pattern=r"^(?:[a-f0-9]{64})?$")
 
 
@@ -556,6 +581,7 @@ class ReconciliationAsCodeSpec(_ContractModel):
                 "unmatched_left_count",
                 "unmatched_right_count",
                 "ambiguous_count",
+                "duplicate_group_count",
             ):
                 if actual[field] != expected[field]:
                     mismatches.append(
@@ -619,6 +645,10 @@ class ReconciliationAsCodeSpec(_ContractModel):
             from reconforge.infrastructure.grouped_matching_strategy import GroupedSubsetSumStrategy
 
             output = GroupedSubsetSumStrategy().execute(request)
+        elif strategy.effective_strategy_id == "bounded-duplicate-detection":
+            from reconforge.infrastructure.duplicate_detection_strategy import DuplicateDetectionStrategy
+
+            output = DuplicateDetectionStrategy().execute(request)
         else:
             from tempfile import TemporaryDirectory
 
@@ -636,6 +666,7 @@ class ReconciliationAsCodeSpec(_ContractModel):
                     connection.close()
 
         payloads = [dict(result) for result in output.results]
+        duplicate_group_count = 0
         if strategy.effective_strategy_id == "bounded-grouped-subset-sum":
             decision = payloads[0] if payloads else {}
             status = str(decision.get("status", ""))
@@ -655,6 +686,19 @@ class ReconciliationAsCodeSpec(_ContractModel):
             unmatched_left_count = 0 if ambiguous_count else len(case.left_records) - len(selected_left)
             unmatched_right_count = 0 if ambiguous_count else len(case.right_records) - len(selected_right)
             matched_count = 1 if status == "matched" else 0
+        elif strategy.effective_strategy_id == "bounded-duplicate-detection":
+            duplicate_group_count = sum(
+                1 for item in payloads if str(item.get("status", "")).casefold() == "duplicate"
+            )
+            ambiguous_count = int(
+                any(
+                    str(item.get("reason_code", "")) == "DUPLICATE_DETECTION_BUDGET_EXCEEDED"
+                    for item in output.exceptions
+                )
+            )
+            matched_count = 0
+            unmatched_left_count = 0
+            unmatched_right_count = 0
         else:
             matched_count = sum(1 for item in payloads if str(item.get("status", "")).casefold() == "matched")
             ambiguous_count = sum(1 for item in payloads if str(item.get("status", "")).casefold() == "ambiguous")
@@ -673,6 +717,7 @@ class ReconciliationAsCodeSpec(_ContractModel):
             "unmatched_left_count": unmatched_left_count,
             "unmatched_right_count": unmatched_right_count,
             "ambiguous_count": ambiguous_count,
+            "duplicate_group_count": duplicate_group_count,
             "manifest_digest": output.manifest_digest,
             "input_digest": output.input_digest,
             "decision_digest": output.decision_digest,

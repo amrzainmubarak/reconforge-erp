@@ -1541,3 +1541,19 @@ tasks:
     status: completed
     depends_on: [P4-SCL-001]
     exit_evidence: The bounded postgres-durable-job-load/backpressure-tier-v1 profile passes on PostgreSQL 17.10 with a non-privileged role and 64/64 jobs, 256/256 effects, zero duplicates, four-lane fairness, queue cap four, 24 rejected bounded submissions, and zero final queued/running residue. Runtime is 1.5469s; effect digest 0e21f3ddd95c8704c00c16262aaff5dab9b443e22c9ccfd0a8fb17265abcf06c. This is one-host synthetic queue-cap evidence, not capacity, queue HA, soak, or production SLO.
+
+  - id: E-473
+    priority: P0
+    area: quality
+    title: Current full local regression after scale evidence
+    status: completed
+    depends_on: [E-472]
+    exit_evidence: uv run --no-sync pytest -q --tb=short -ra exits 0 in 364.3s on the current tree. No collection or executed test failed; declared live-service/platform skips and existing framework/legacy-input warnings remain visible. This is current local compatibility evidence only and does not replace hosted matrices or release approval.
+
+  - id: E-474
+    priority: P0
+    area: quality
+    title: Current static security package gate after scale evidence
+    status: completed
+    depends_on: [E-473]
+    exit_evidence: Ruff passes; Mypy reports no issues in 466 source files; package build succeeds and git diff check passes after the current benchmark/report additions. Existing Bandit/pip-audit/supply-chain/Gitleaks evidence remains green locally from E-464/E-465; hosted security/provenance/release approval remains external.

@@ -4725,6 +4725,30 @@
   production SLO claim follows.
 - **Rollback**: Remove the dated report, markdown section, and test assertion;
   no runtime/data rollback is required.
+
+### D-370: Record the current full local regression after scale evidence
+
+- **Date**: 2026-08-06
+- **Decision**: Promote the current full pytest run as a local compatibility
+  gate while retaining all declared skips and warnings in the evidence.
+- **Verification**: `uv run --no-sync pytest -q --tb=short -ra` exits 0 in
+  364.3s with no collection or executed failure.
+- **Boundary**: Local Windows evidence only; hosted matrix, live-provider,
+  independent HA/DR, and release approval gates remain external.
+- **Rollback**: Remove the evidence/backlog entry; no runtime/data rollback is
+  required.
+
+### D-371: Retain the final local static/package gate after scale evidence
+
+- **Date**: 2026-08-06
+- **Decision**: Record the final Ruff, Mypy, package-build, and diff-check pass
+  for the current head after the benchmark/report additions.
+- **Verification**: Ruff passes, Mypy reports no issues in 466 source files,
+  `python -m build --no-isolation` succeeds, and `git diff --check` passes.
+- **Boundary**: This does not replace hosted security, signed provenance,
+  repository-security, or release approval.
+- **Rollback**: Remove the evidence/backlog entry; no runtime/data rollback is
+  required.
 # ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
 
 Implemented and bounded the `professional.invoice-payment` module. It is local,

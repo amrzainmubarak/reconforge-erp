@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -58,3 +59,17 @@ def test_postgres_backpressure_profile_is_packaged_documented_and_selected_in_ci
     workflow = yaml.safe_load((root / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
     runs = [step.get("run", "") for step in workflow["jobs"]["server-boundaries"]["steps"]]
     assert any("test_live_postgres_durable_job_backpressure_profile" in run for run in runs)
+
+
+def test_current_postgres_backpressure_report_is_digest_bound() -> None:
+    root = Path(__file__).resolve().parents[1]
+    report = json.loads(
+        (root / "docs/execution/benchmarks/postgres-durable-job-backpressure-current-2026-08-06.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    supplied = str(report.pop("report_digest"))
+    canonical = json.dumps(report, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    assert supplied == hashlib.sha256(canonical).hexdigest()
+    assert report["invariants"]["completed_jobs"] == report["invariants"]["submitted_jobs"] == 64
+    assert report["invariants"]["observed_max_queue_depth"] == report["invariants"]["max_queued_jobs"] == 4

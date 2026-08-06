@@ -4711,6 +4711,20 @@
   parity, soak, provider I/O, SLO, or production claim follows.
 - **Rollback**: Remove the current report, markdown section, and test assertion;
   no runtime/data rollback is required.
+
+### D-369: Retain the current PostgreSQL backpressure rerun as bounded evidence
+
+- **Date**: 2026-08-06
+- **Decision**: Commit a digest-bound report for the current PostgreSQL
+  durable-job queue-cap run beside the historical artifact.
+- **Verification**: A non-privileged PostgreSQL 17.10 runtime completes all 64
+  jobs and 256 effects, enforces the four-job lane cap, records rejected/retried
+  submissions, and drains to zero queued/running residue with no duplicates.
+- **Boundary**: One host and synthetic workload; no capacity, queue HA,
+  automatic failover, host loss, cross-host fairness, soak, RPO/RTO, or
+  production SLO claim follows.
+- **Rollback**: Remove the dated report, markdown section, and test assertion;
+  no runtime/data rollback is required.
 # ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
 
 Implemented and bounded the `professional.invoice-payment` module. It is local,

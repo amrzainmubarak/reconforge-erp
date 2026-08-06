@@ -1,0 +1,47 @@
+{
+  "database": "PostgreSQL",
+  "effect_set_digest": "0e21f3ddd95c8704c00c16262aaff5dab9b443e22c9ccfd0a8fb17265abcf06c",
+  "environment": {
+    "cpu_count": 16,
+    "machine": "AMD64",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+    "python": "3.12.13"
+  },
+  "image": "postgres:17.10",
+  "invariants": {
+    "committed_partition_effects": 256,
+    "completed_jobs": 64,
+    "declared_partition_effects": 256,
+    "duplicate_partition_effects": 0,
+    "final_queue_depth": 0,
+    "final_running_depth": 0,
+    "jobs": 64,
+    "jobs_per_tenant": 16,
+    "max_queued_jobs": 4,
+    "observed_max_queue_depth": 4,
+    "partitions_per_job": 4,
+    "per_tenant_completions": {
+      "lane-00": 16,
+      "lane-01": 16,
+      "lane-02": 16,
+      "lane-03": 16
+    },
+    "rejected_attempts": 24,
+    "submitted_jobs": 64,
+    "tenants": 4,
+    "workers": 8
+  },
+  "limitations": [
+    "One PostgreSQL 17.10 host and independent producer/worker connections; this is bounded synthetic queue-cap correctness evidence.",
+    "Observed queue depth, rejected attempts, and runtime are workload observations, not capacity, throughput, or SLO claims.",
+    "Queue HA, automatic failover, host loss, cross-host fairness, soak, RPO/RTO, and production deployment remain unverified."
+  ],
+  "manifest_digest": "fba2057f2fd3ee53ed4a347214deb2b3e5199bebb656b98a72ef4a888da9d2a4",
+  "observed_runtime_seconds": 1.5469,
+  "profile_id": "postgres-durable-job-load/backpressure-tier-v1",
+  "report_digest": "60de637cf3633c14ae14ac763e9325c61cca97f82a27470cea096cb9f248d2c9",
+  "report_id": "postgres-durable-job-backpressure-current-2026-08-06",
+  "schema_version": 1,
+  "status": "verified"
+}

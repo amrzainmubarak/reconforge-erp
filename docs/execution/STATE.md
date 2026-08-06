@@ -4653,3 +4653,8 @@ identical effect and manifest digests and zero ambiguity, unmatched, engine, or
 permutation mismatches. This strengthens deterministic single-process algorithm
 evidence only; PostgreSQL parity, distributed capacity, soak, and production
 SLO remain open.
+The current PostgreSQL durable-job backpressure profile also passes with a
+four-job lane cap, 24 rejected/retried submissions, complete 64-job/256-effect
+drain, zero duplicates, and exact per-lane fairness. This strengthens bounded
+single-host queue correctness only; capacity, queue HA, soak, RPO/RTO, and
+production SLO remain open.

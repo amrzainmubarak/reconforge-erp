@@ -45,3 +45,16 @@ queue depth and retry count are workload observations, not throughput,
 capacity, SLO, or sizing claims. Queue HA, automatic failover, host loss,
 cross-host fairness, soak, RPO/RTO, and production deployment remain
 unverified.
+
+## Current rerun
+
+On 2026-08-06 the profile passed against the local PostgreSQL 17.10 service
+using the non-privileged `reconforge_app` role: 64/64 jobs and 256/256 effects
+completed, the queue cap stayed at four, 24 bounded submissions were rejected
+and retried, zero duplicate effects remained, and all four lanes completed
+16 jobs. Runtime was 1.5469s on Python 3.12.13/Windows 11. Effect digest is
+`0e21f3ddd95c8704c00c16262aaff5dab9b443e22c9ccfd0a8fb17265abcf06c` and the
+machine-readable current report is
+`postgres-durable-job-backpressure-current-2026-08-06.json` with report digest
+`60de637cf3633c14ae14ac763e9325c61cca97f82a27470cea096cb9f248d2c9`.
+The interpretation boundary above is unchanged.

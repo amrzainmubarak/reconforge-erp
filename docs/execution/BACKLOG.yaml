@@ -1533,3 +1533,11 @@ tasks:
     status: completed
     depends_on: [P4-MAT-001]
     exit_evidence: The declared grouped-matching 1M profile runs twice on the current tree with 250,000 partitions and 1,000,000 exact-USD records each. Both runs match all partitions with zero ambiguous/unmatched, cross-engine, or permutation mismatches; effect and manifest digests are equal. Current runtimes are 400.7786s and 377.1490s with traced peak memory 78.7229/78.4997 MiB under Python 3.12.13 on one Windows host. This is synthetic single-process algorithm evidence, not distributed capacity, PostgreSQL parity, soak, SLO, or production readiness.
+
+  - id: E-472
+    priority: P0
+    area: scale
+    title: Current PostgreSQL durable-job backpressure rerun
+    status: completed
+    depends_on: [P4-SCL-001]
+    exit_evidence: The bounded postgres-durable-job-load/backpressure-tier-v1 profile passes on PostgreSQL 17.10 with a non-privileged role and 64/64 jobs, 256/256 effects, zero duplicates, four-lane fairness, queue cap four, 24 rejected bounded submissions, and zero final queued/running residue. Runtime is 1.5469s; effect digest 0e21f3ddd95c8704c00c16262aaff5dab9b443e22c9ccfd0a8fb17265abcf06c. This is one-host synthetic queue-cap evidence, not capacity, queue HA, soak, or production SLO.

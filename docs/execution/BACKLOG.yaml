@@ -1873,3 +1873,34 @@ tasks:
       is local evidence only; hosted CI/security/provenance, native backup
       tooling, live providers/write-back, independent HA/DR, and release
       approval remain external.
+  - id: E-505
+    priority: P0
+    area: recovery
+    title: PostgreSQL native backup service connection argument
+    status: completed
+    depends_on: [E-461, E-504]
+    exit_evidence: >-
+      PostgresNativeBackupAdapter now passes the validated PGSERVICEFILE
+      service through an explicit --dbname argument for both pg_dump attempts;
+      the focused backup suite reports 11 passed with its declared disposable
+      service skip. A PostgreSQL 16 Alpine client using the same service-file
+      shape produced a non-empty 5,168,214-byte custom dump with the corrected
+      argv; the prior positional form attempted the local socket and failed.
+      This closes command construction only; hosted encrypted backup/restore,
+      native tool availability, key custody, and RPO/RTO remain external.
+  - id: E-506
+    priority: P0
+    area: quality
+    title: Full regression and static gates after PostgreSQL backup fix
+    status: completed
+    depends_on: [E-505]
+    exit_evidence: >-
+      The current tree collected 2,587 tests and reached 100% with no
+      collection or executed failure; declared service/platform/network skips
+      and existing framework/legacy-input warnings remain visible. Ruff,
+      Mypy reports no issues in 469 source files, Bandit exits 0 with reviewed
+      existing suppression/comment warnings, OSV pip-audit reports no known
+      vulnerabilities, the package build succeeds with ADR 0392 in the source
+      distribution, and git diff --check passes. This is local evidence only;
+      hosted CI/security/provenance, native backup restore, live providers/
+      write-back, independent HA/DR, and release approval remain external.

@@ -4637,7 +4637,7 @@ runtime and current-tree gate entries; its latest parse is 161 unique tasks
 The server-identity fixture, final local gate, PostgreSQL grouped runtime,
 public-network evidence, canonical duplicate-detection, final local-gate, RAC
 adapter, live Redis cache drill, and final local-gate entries extend that parse
-to 171 unique tasks (E-495 through E-504 included): 160 completed, 1 blocked,
+to 173 unique tasks (E-495 through E-506 included): 162 completed, 1 blocked,
 8 in progress, and 2 deferred. This administrative ratio is not a
 product-readiness percentage;
  the open workstreams and external release gates remain authoritative.
@@ -4834,6 +4834,21 @@ pip-audit, package build, and diff-check passed. Hosted CI/security/provenance,
 native backup tooling, live providers/write-back, independent HA/DR, and
 release approval remain external. GitHub publication remains deferred by owner
 instruction.
+
+E-505 fixed a real PostgreSQL native-backup command boundary: `pg_dump` now
+receives the validated service through `--dbname service=<name>` rather than a
+positional database argument. The focused backup suite reports 11 passes with
+one declared disposable-service skip, and a PostgreSQL 16 Alpine client
+produced a 5,168,214-byte custom dump using the corrected PGSERVICEFILE shape.
+This is command-construction evidence only; hosted encrypted backup/restore,
+key custody, cross-site recovery, and production RPO/RTO remain open.
+
+E-506 closed the required full regression/static/package gate after E-505:
+2,587 tests reached 100% with no collection or executed failure; Ruff, Mypy
+(469 files), Bandit, OSV pip-audit, package build, and diff-check passed.
+Hosted CI/security/provenance, native backup restore, live providers/
+write-back, independent HA/DR, and release approval remain external. GitHub
+publication remains deferred by owner instruction.
 
 E-500 reran the complete local regression and release-quality gates after the
 duplicate-detection slice: pytest exited 0 with no collection or executed

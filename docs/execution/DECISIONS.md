@@ -5160,3 +5160,22 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   production IAM assurance remain open.
 - **Reversibility**: Remove the drill branch, optional report field/schema
   compatibility, tests, ADR, manifest entry, and execution evidence.
+
+### D-327: Make pg_dump resolve the configured PostgreSQL service
+
+- **Date**: 2026-08-06
+- **Context**: The backup adapter supplied `service=<name>` as a positional
+  `pg_dump` database argument. The PostgreSQL client then attempted the local
+  socket instead of resolving the service file, leaving no dump artifact.
+- **Decision**: Pass `service=<name>` via the explicit `--dbname` option for
+  the primary and portable-file retry commands, preserving the validated
+  service name and no-shell argv boundary.
+- **Verification**: The focused backup suite reports 11 passed with its
+  declared disposable-service skip. A PostgreSQL 16 Alpine client generated a
+  non-empty 5,168,214-byte custom dump using the corrected service-file argv;
+  the prior positional form failed against the local socket.
+- **Boundary**: Command-construction evidence only; hosted encrypted
+  backup/restore, native-tool availability, key custody, cross-site recovery,
+  and production RPO/RTO remain open.
+- **Reversibility**: Restore the two argv tuples and focused assertion; no
+  migration or persisted data rollback is required.

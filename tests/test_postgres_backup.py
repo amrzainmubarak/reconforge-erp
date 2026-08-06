@@ -111,6 +111,7 @@ def test_postgres_native_backup_is_encrypted_and_uses_service_not_secret(tmp_pat
         "--no-privileges",
         "--file",
         runner.calls[0][5],
+        "--dbname",
         "service=reconforge_source",
     )
     assert all("password" not in value.casefold() for value in runner.calls[0])

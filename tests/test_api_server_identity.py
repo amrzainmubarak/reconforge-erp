@@ -1025,6 +1025,10 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             postgres_dsn=dsn,
             postgres_require_tls=False,
         )
+        # This legacy identity test intentionally exercises the PostgreSQL
+        # ledger compatibility boundary. The activated Finance Core adapter
+        # has its own live route contract and is disabled for this fixture.
+        app.state.postgres_finance_core_factory = None
         client = TestClient(app)
         headers = {"X-ReconForge-Tenant": tenant_a}
         login = client.post(

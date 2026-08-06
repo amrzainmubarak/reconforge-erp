@@ -1589,3 +1589,19 @@ tasks:
     status: completed
     depends_on: [E-475, E-476, E-477]
     exit_evidence: uv run --no-sync pytest -q --tb=short -ra exits 0 in 356.4s on the current Windows/Python 3.12 tree with no collection or executed failure. Declared live-service/platform skips and existing framework/legacy-input warnings remain visible. This is local compatibility evidence only; hosted matrices, native backup-tool availability, hosted security/provenance, live ERP/bank providers and write-back, statutory accounting, independent HA/DR, and release approval remain external.
+
+  - id: E-479
+    priority: P0
+    area: enterprise_policy
+    title: Live API FinanceRead authorization consistency closure
+    status: completed
+    depends_on: [P4-IAM-001, E-478]
+    exit_evidence: The server Finance Core scope helper now preserves the FinanceRead any-of contract (read/manage/validate) during its second scope re-check; manage routes remain exact-permission. The legacy identity live fixture explicitly selects its intended ledger compatibility boundary after Finance Core activation. A fresh PostgreSQL 17.10 migration-head database with the non-privileged role passes the selected live API suite 24/24, including emergency access, WebAuthn MFA/step-up, server identity, federation, SCIM, service accounts, and metrics. No migration is required; complete enterprise IAM, live providers, HA/DR, and production readiness remain open.
+
+  - id: E-480
+    priority: P0
+    area: quality
+    title: Current full local regression after API authorization fix
+    status: completed
+    depends_on: [E-479]
+    exit_evidence: uv run --no-sync pytest -q --tb=short -ra exits 0 in 354.3s on the current Windows/Python 3.12 tree after the FinanceRead helper and contract-test correction. No collection or executed test failed; declared live-service/platform skips and existing framework/legacy-input warnings remain visible. This is local compatibility evidence only; hosted matrices, hosted security/provenance, live ERP/bank providers and write-back, statutory accounting, independent HA/DR, and release approval remain external.

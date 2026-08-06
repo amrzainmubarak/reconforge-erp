@@ -4829,3 +4829,37 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   independent HA/DR, or production approval.
 - **Reversibility**: Remove the evidence entry and ADR; no runtime/data
   rollback is required.
+
+### D-308: Preserve FinanceRead any-of semantics in server scope checks
+- **Date**: 2026-08-06
+- **Context**: Live PostgreSQL API execution showed that an authorized
+  `finance_core.validate` emergency grant passed the route dependency but was
+  denied by a second exact `finance_core.read` scope check. WebAuthn summary
+  access exposed the same mismatch.
+- **Decision**: Re-evaluate FinanceRead routes with the same any-of contract
+  (`read`, `manage`, `validate`) while leaving manage/validate mutation routes
+  exact. Keep the legacy identity live fixture explicitly on its ledger
+  compatibility boundary.
+- **Verification**: Fresh PostgreSQL 17.10 non-privileged live API suite
+  passes 24/24 across emergency access, WebAuthn, identity, federation, SCIM,
+  service accounts, and metrics; Ruff, Mypy, and diff-check pass.
+- **Boundary**: This is route authorization consistency evidence, not complete
+  enterprise IAM, federation, live provider/write-back, HA/DR, or production
+  approval.
+- **Reversibility**: Revert the helper/fixture change and remove the evidence
+  entry and ADR; no migration or data rollback is required.
+
+### D-309: Record the current regression after the API authorization fix
+- **Date**: 2026-08-06
+- **Context**: The FinanceRead any-of correction changed a central route helper
+  and its unit contract; a complete local regression is required to validate
+  compatibility.
+- **Decision**: Record the fresh full pytest run as the current compatibility
+  checkpoint while preserving external release boundaries.
+- **Verification**: `uv run --no-sync pytest -q --tb=short -ra` exits 0 in
+  354.3 seconds with no collection or executed failure; only declared
+  capability skips and existing warnings remain.
+- **Boundary**: This is not hosted release approval, live provider/write-back,
+  statutory accounting, independent HA/DR, or production evidence.
+- **Reversibility**: Remove the evidence entry and ADR; no runtime/data
+  rollback is required.

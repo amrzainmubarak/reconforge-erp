@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from reconforge.api.dependencies import (
     enforce_server_scoped_permission,
+    enforce_server_scoped_permissions,
     enforce_server_tenant_permission,
     get_local_db,
     require_any_permission,
@@ -203,12 +204,24 @@ def _server_finance_workspace(request: Request, workspace: str, *, permission: s
             code="workspace_scope_denied",
             message="The requested workspace is outside the authenticated server scope.",
         )
-    enforce_server_scoped_permission(
-        request,
-        permission=permission,
-        tenant_id=scope.tenant_id,
-        workspace_id=scope.workspace_id,
-    )
+    if permission == "finance_core.read":
+        # FinanceRead is an any-of contract (read/manage/validate). Keep the
+        # server-side scope re-check identical to the route dependency so a
+        # deliberately delegated validation-only grant is not narrowed to
+        # read-only by the second check.
+        enforce_server_scoped_permissions(
+            request,
+            permissions=frozenset({"finance_core.read", "finance_core.manage", "finance_core.validate"}),
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
+    else:
+        enforce_server_scoped_permission(
+            request,
+            permission=permission,
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
     return scope.workspace_id
 
 

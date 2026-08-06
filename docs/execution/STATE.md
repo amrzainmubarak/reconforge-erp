@@ -4632,8 +4632,8 @@ it now has 133 unique tasks and valid YAML. This closes documentation
 serialization drift only and does not change the still-open hosted release,
 provider, HA/DR, or native-backup gates.
 The backlog has since grown with the current HA/DR, object-storage, and Redis
-runtime and current-tree gate entries; its latest parse is 145 unique tasks
-(E-460 through E-478 included).
+runtime and current-tree gate entries; its latest parse is 147 unique tasks
+(E-460 through E-479 included).
 The fresh repeated PostgreSQL HA/DR drill now provides stronger bounded runtime
 evidence: three Docker 17.10 primary/standby cycles passed encrypted restore,
 fencing, partition refusal, manual failover/failback, zero-loss sentinel replay,
@@ -4682,3 +4682,15 @@ service/platform skips and existing warnings remain visible. This is a local
 compatibility checkpoint only; hosted matrices, native backup tooling, hosted
 security/provenance, live providers/write-back, statutory accounting,
 independent HA/DR, and production approval remain open.
+The live API follow-up then found and fixed a real authorization-consistency
+defect: FinanceRead's any-of grant was narrowed to read-only during the second
+server scope check. The legacy identity fixture also explicitly selects the
+ledger compatibility boundary after Finance Core activation. On a fresh
+PostgreSQL 17.10 database, the selected live API suite passes 24/24. This is a
+route-consistency and bounded runtime closure only; complete enterprise IAM,
+federation, providers/write-back, HA/DR, and production approval remain open.
+The post-fix full local regression also exits 0 in 354.3s with no collection or
+executed failure; declared capability skips and existing warnings remain
+visible. This confirms current-tree compatibility after E-479 only and does not
+replace hosted security/provenance, live-provider, statutory, HA/DR, or release
+evidence.

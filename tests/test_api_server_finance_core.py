@@ -95,14 +95,19 @@ def test_server_finance_core_routes_use_scoped_adapter_and_never_local_fallback(
     user = LocalUser(id="user-a", username="alice", display_name="Alice")
     calls: list[tuple[str, dict[str, object]]] = []
     repository = _FakeFinanceRepository(calls)
-    permissions: list[dict[str, object]] = []
+    permission_checks: list[tuple[str, object]] = []
 
     monkeypatch.setattr(routes, "server_finance_core_enabled", lambda _request: True)
     monkeypatch.setattr(routes, "request_execution_scope", lambda _request: RequestExecutionScope("tenant-a", "workspace-a"))
     monkeypatch.setattr(
         routes,
         "enforce_server_scoped_permission",
-        lambda _request, **values: permissions.append(values),
+        lambda _request, **values: permission_checks.append(("exact", values["permission"])),
+    )
+    monkeypatch.setattr(
+        routes,
+        "enforce_server_scoped_permissions",
+        lambda _request, **values: permission_checks.append(("any", values["permissions"])),
     )
     monkeypatch.setattr(routes, "execute_postgres_finance_core", lambda _request, operation: operation(repository))
 
@@ -127,7 +132,8 @@ def test_server_finance_core_routes_use_scoped_adapter_and_never_local_fallback(
     assert dimensions["pagination"]["returned"] == 0
     assert journal["journal"]["workspace"] == "workspace-a"
     assert all(call[1].get("workspace") == "workspace-a" for call in calls if "workspace" in call[1])
-    assert {entry["permission"] for entry in permissions} == {"finance_core.read", "finance_core.manage"}
+    assert ("any", frozenset({"finance_core.read", "finance_core.manage", "finance_core.validate"})) in permission_checks
+    assert ("exact", "finance_core.manage") in permission_checks
 
 
 def test_server_finance_core_rejects_cross_workspace_payload_before_adapter(

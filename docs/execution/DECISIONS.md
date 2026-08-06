@@ -4669,6 +4669,20 @@
   no quorum/witness, no host-loss independence, and no production SLO claim.
 - **Rollback**: Remove the dated report and evidence entry; no runtime/data
   rollback is needed.
+
+### D-366: Retain the latest object-storage runtime report as bounded evidence
+
+- **Date**: 2026-08-06
+- **Decision**: Commit the latest disposable MinIO report and validate it beside
+  the previous artifact, preserving the exact image digest, report digest, and
+  synthetic/single-node limitations.
+- **Verification**: The live boto3 drill passes scope isolation, immutable
+  conflict, checksum tamper refusal, Object Lock deletion refusal, and cleanup;
+  the schema/digest test validates both dated reports.
+- **Boundary**: No replication, KMS, cross-site durability, provider
+  interoperability, object-store HA, or production SLO claim follows.
+- **Rollback**: Remove the dated report and latest assertion; no runtime/data
+  rollback is needed.
 # ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
 
 Implemented and bounded the `professional.invoice-payment` module. It is local,

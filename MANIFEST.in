@@ -500,6 +500,7 @@ include docs/adr/0231-grouped-matching-100k-is-partitioned-and-bounded.md
 include docs/execution/benchmarks/grouped-matching-100k-tier-v1.md
 include docs/adr/0232-grouped-matching-1m-is-partitioned-and-bounded.md
 include docs/execution/benchmarks/grouped-matching-1m-tier-v1.md
+include docs/execution/benchmarks/grouped-matching-1m-current-2026-08-06.json
 include reconforge/benchmark/grouped_matching_domain_scale.py
 include tests/test_grouped_matching_domain_scale.py
 include docs/adr/0305-grouped-matching-domain-diverse-scale.md

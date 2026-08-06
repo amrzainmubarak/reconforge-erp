@@ -4697,6 +4697,20 @@
   durability, Redis HA, or production SLO claim follows.
 - **Rollback**: Remove the dated report and latest assertion; no runtime/data
   rollback is needed.
+
+### D-368: Retain the current grouped-matching 1M rerun as bounded evidence
+
+- **Date**: 2026-08-06
+- **Decision**: Record two current-tree runs of the declared 1M grouped-matching
+  profile with a canonical machine-readable report and digest-bound test.
+- **Verification**: Both runs cover 250,000 partitions/1,000,000 records with
+  zero ambiguous, unmatched, cross-engine, or permutation mismatches and equal
+  effect/manifest digests.
+- **Boundary**: One Windows host/process, exact-USD synthetic four-record
+  partitions, bounded per-partition search; no distributed capacity, PostgreSQL
+  parity, soak, provider I/O, SLO, or production claim follows.
+- **Rollback**: Remove the current report, markdown section, and test assertion;
+  no runtime/data rollback is required.
 # ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
 
 Implemented and bounded the `professional.invoice-payment` module. It is local,

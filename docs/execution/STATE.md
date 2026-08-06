@@ -4648,3 +4648,8 @@ storage, shared policy-generation visibility, and cleanup against its recorded
 image digest. This strengthens the local session/policy adapter evidence only;
 Redis replication, Sentinel/Cluster failover, cross-site durability, HA, and
 production SLO remain open.
+The current grouped-matching 1M profile also ran twice from this tree with
+identical effect and manifest digests and zero ambiguity, unmatched, engine, or
+permutation mismatches. This strengthens deterministic single-process algorithm
+evidence only; PostgreSQL parity, distributed capacity, soak, and production
+SLO remain open.

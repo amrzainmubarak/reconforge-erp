@@ -43,3 +43,19 @@ provider I/O, FX/fees/partial settlement, ambiguity density, and domain-diverse
 financial workloads are not covered. The published per-partition record and
 search-evaluation ceilings remain active; this does not prove unbounded
 many-to-many search.
+
+## Current rerun
+
+On 2026-08-06 the same profile was rerun twice from the current tree under
+Python 3.12.13 on Windows 11 (`AMD64`, 16 logical CPUs). Both runs matched all
+250,000 partitions (1,000,000 records), with zero ambiguous/unmatched
+partitions, zero cross-engine mismatches, and zero permutation mismatches.
+Observed runtimes were 400.7786s and 377.1490s; traced peak memory was
+78.7229 MiB and 78.4997 MiB. The effect digest remained
+`05c76d8c2d30dcf8e85893ce777f5edc27324beb0465538fc76c2e6ea1c4124f`, and the
+current report's manifest digest is
+`341332dfd9840dbab9193c26d1ab0c4736c54a3151269b46481201a3c58183a7`.
+The machine-readable report is
+`grouped-matching-1m-current-2026-08-06.json` (report digest
+`326eda9b863a608da5b61ac72c626e1b16204a59b4719bb47b2cd78ea4355d25`).
+The interpretation boundary above is unchanged.

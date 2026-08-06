@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 
 from reconforge.benchmark.grouped_matching_scale import (
@@ -57,3 +59,17 @@ def test_grouped_matching_1m_profile_shape_is_declared() -> None:
     assert GROUPED_1M_PROFILE_ID == "grouped-matching/1m-record-true-many-to-many-v1"
     assert GROUPED_1M_PARTITIONS == 250_000
     assert GROUPED_1M_RECORDS == 1_000_000
+
+
+def test_current_grouped_matching_1m_report_is_digest_bound() -> None:
+    report = json.loads(
+        Path("docs/execution/benchmarks/grouped-matching-1m-current-2026-08-06.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    supplied = str(report.pop("report_digest"))
+    canonical = json.dumps(report, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    assert supplied == hashlib.sha256(canonical).hexdigest()
+    assert report["status"] == "verified"
+    assert report["invariants"]["effect_digest_equal"] is True
+    assert report["invariants"]["manifest_digest_equal"] is True

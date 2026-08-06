@@ -1525,3 +1525,11 @@ tasks:
     status: completed
     depends_on: [E-469]
     exit_evidence: Against the current local redis:7-alpine image digest, verify_redis_live.py passes tenant-key isolation, hashed-session-token storage, shared policy-generation visibility, and cleanup. The report digest is f1c2d7ac3f08c8d49564e92461e13836c5e1d869e7fa877ad2cfa8ece1f59816; the claim remains single-node synthetic adapter evidence with no Redis HA or production SLO claim.
+
+  - id: E-471
+    priority: P0
+    area: advanced_matching
+    title: Current grouped-matching 1M deterministic rerun
+    status: completed
+    depends_on: [P4-MAT-001]
+    exit_evidence: The declared grouped-matching 1M profile runs twice on the current tree with 250,000 partitions and 1,000,000 exact-USD records each. Both runs match all partitions with zero ambiguous/unmatched, cross-engine, or permutation mismatches; effect and manifest digests are equal. Current runtimes are 400.7786s and 377.1490s with traced peak memory 78.7229/78.4997 MiB under Python 3.12.13 on one Windows host. This is synthetic single-process algorithm evidence, not distributed capacity, PostgreSQL parity, soak, SLO, or production readiness.

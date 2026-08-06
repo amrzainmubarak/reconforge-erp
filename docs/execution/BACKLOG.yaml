@@ -2007,3 +2007,40 @@ tasks:
       `git diff --check` passes. Hosted CI/security/provenance, live
       PostgreSQL API runtime, live providers/write-back, independent HA/DR,
       and release approval remain external.
+  - id: E-513
+    priority: P1
+    area: financial_consolidation
+    title: Bind impairment evidence to PostgreSQL close runs
+    status: completed
+    depends_on: [E-511]
+    exit_evidence: >-
+      Alembic `0067_pg_close_impairment_links` adds a forced-RLS,
+      append-only link table with run/entity uniqueness and a data-loss-safe
+      downgrade. The PostgreSQL close repository replay-verifies the referenced
+      impairment artifact, binds period/currency/entity to the worksheet,
+      requires an independent linker, exposes the evidence in the close bundle,
+      and retries by immutable digest. The server API exposes
+      `POST /api/v1/consolidation-close/{run_id}/impairment-evidence` with
+      strict artifact IDs and scope-bound `finance_core.manage` authorization.
+      Static and local API/bundle contracts pass; the live PostgreSQL runtime is
+      capability-gated and not claimed without its DSN.
+  - id: E-514
+    priority: P0
+    area: quality
+    title: Full regression and package gate after close impairment binding
+    status: completed
+    depends_on: [E-513]
+    exit_evidence: >-
+      The exact current tree collects 2,601 tests and reaches 100% with no
+      collection or executed failure; the close/impairment PostgreSQL runtime
+      remains a declared skip because `RECONFORGE_TEST_POSTGRES_DSN` is absent.
+      Ruff passes; Mypy reports no issues in 474 source files; Bandit exits 0
+      with reviewed existing suppression/comment warnings; OSV `pip-audit`
+      reports no known vulnerabilities; the package build succeeds and
+      `reconforge_erp.egg-info/SOURCES.txt` contains migration `0067`, ADR
+      0396, and the close/bundle tests; the authorization inventory passes at
+      242 routes with digest
+      `7fb88ae62d503dd7fe060398b9fba9131396e4a6f3f3966002e3c5faae1a262a`;
+      and `git diff --check` passes. Hosted CI/security/provenance, live
+      PostgreSQL availability, live providers/write-back, independent HA/DR,
+      and release approval remain external.

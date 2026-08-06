@@ -67,6 +67,7 @@ class ConsolidationCloseBundle:
     evidence_scope: str
     bundle_digest: str
     intercompany_artifact_digests: tuple[str, ...] = ()
+    impairment_artifact_digests: tuple[str, ...] = ()
     schema_version: int = CONSOLIDATION_CLOSE_BUNDLE_SCHEMA_VERSION
     algorithm_version: str = CONSOLIDATION_CLOSE_BUNDLE_ALGORITHM_VERSION
 
@@ -89,6 +90,11 @@ class ConsolidationCloseBundle:
             "intercompany_artifact_digests",
             _sequence_digest(self.intercompany_artifact_digests, "Close bundle intercompany artifacts"),
         )
+        object.__setattr__(
+            self,
+            "impairment_artifact_digests",
+            _sequence_digest(self.impairment_artifact_digests, "Close bundle impairment artifacts"),
+        )
         if self.evidence_scope != "local-control-journal-and-management-only":
             raise ConsolidationError("Close bundle evidence scope is unsupported.")
         if self.schema_version != CONSOLIDATION_CLOSE_BUNDLE_SCHEMA_VERSION:
@@ -103,6 +109,7 @@ class ConsolidationCloseBundle:
             "effect_digests": list(self.effect_digests),
             "evidence_scope": self.evidence_scope,
             "intercompany_artifact_digests": list(self.intercompany_artifact_digests),
+            "impairment_artifact_digests": list(self.impairment_artifact_digests),
             "journal_digest": self.journal_digest,
             "management_statement_digest": self.management_statement_digest,
             "period_id": self.period_id,
@@ -122,6 +129,7 @@ class ConsolidationCloseBundle:
 
 def _bundle_from_payload(payload: Mapping[str, object], *, bundle_digest: str) -> ConsolidationCloseBundle:
     had_intercompany_field = "intercompany_artifact_digests" in payload
+    had_impairment_field = "impairment_artifact_digests" in payload
     provisional = ConsolidationCloseBundle(
         workspace=cast(str, payload.get("workspace")),
         period_id=cast(str, payload.get("period_id")),
@@ -133,6 +141,7 @@ def _bundle_from_payload(payload: Mapping[str, object], *, bundle_digest: str) -
         journal_digest=cast(str, payload.get("journal_digest")),
         effect_digests=cast(tuple[str, ...], payload.get("effect_digests", ())),
         intercompany_artifact_digests=cast(tuple[str, ...], payload.get("intercompany_artifact_digests", ())),
+        impairment_artifact_digests=cast(tuple[str, ...], payload.get("impairment_artifact_digests", ())),
         evidence_scope=cast(str, payload.get("evidence_scope")),
         bundle_digest=bundle_digest,
         schema_version=cast(int, payload.get("schema_version")),
@@ -144,6 +153,8 @@ def _bundle_from_payload(payload: Mapping[str, object], *, bundle_digest: str) -
     # additive field and digest it explicitly.
     if not had_intercompany_field:
         expected_payload.pop("intercompany_artifact_digests", None)
+    if not had_impairment_field:
+        expected_payload.pop("impairment_artifact_digests", None)
     expected = _json_digest(expected_payload)
     if not hmac.compare_digest(expected, provisional.bundle_digest):
         raise ConsolidationError("Close bundle digest verification failed.")
@@ -199,11 +210,26 @@ def build_consolidation_close_bundle(run: Mapping[str, object]) -> Consolidation
     )
     if len(intercompany_artifact_digests) != len(intercompany_evidence):
         raise ConsolidationError("Close run contains an invalid intercompany evidence link.")
+    impairment_evidence = run.get("impairment_evidence", [])
+    if not isinstance(impairment_evidence, Sequence) or isinstance(
+        impairment_evidence, (str, bytes, bytearray)
+    ):
+        raise ConsolidationError("Close run impairment evidence is invalid.")
+    impairment_artifact_digests = tuple(
+        sorted(
+            _digest(item.get("artifact_result_digest"), "Impairment artifact digest")
+            for item in impairment_evidence
+            if isinstance(item, Mapping)
+        )
+    )
+    if len(impairment_artifact_digests) != len(impairment_evidence):
+        raise ConsolidationError("Close run contains an invalid impairment evidence link.")
     payload: dict[str, object] = {
         "algorithm_version": CONSOLIDATION_CLOSE_BUNDLE_ALGORITHM_VERSION,
         "effect_digests": list(effect_digests),
         "evidence_scope": "local-control-journal-and-management-only",
         "intercompany_artifact_digests": list(intercompany_artifact_digests),
+        "impairment_artifact_digests": list(impairment_artifact_digests),
         "journal_digest": _digest(run.get("journal_digest"), "Run journal digest"),
         "management_statement_digest": statement_digest,
         "period_id": _identifier(run.get("period_id"), "Run period"),

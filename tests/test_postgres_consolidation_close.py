@@ -12,12 +12,17 @@ from reconforge.application.consolidation_close import (
     ConsolidationCloseRepositoryProtocol,
     build_translation_evidence,
 )
+from reconforge.application.consolidation_impairment import ConsolidationImpairmentApplicationService
 from reconforge.domain.intercompany_elimination import prepare_intercompany_eliminations
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings, set_local_tenant_scope
 from reconforge.infrastructure.postgres_consolidation_close import (
     POSTGRES_CONSOLIDATION_CLOSE_SCHEMA_SQL,
+    POSTGRES_CONSOLIDATION_IMPAIRMENT_LINK_SCHEMA_SQL,
     POSTGRES_CONSOLIDATION_INTERCOMPANY_LINK_SCHEMA_SQL,
     PostgresConsolidationCloseRepository,
+)
+from reconforge.infrastructure.postgres_consolidation_impairment import (
+    PostgresConsolidationImpairmentRepository,
 )
 from reconforge.infrastructure.postgres_intercompany_elimination import (
     PostgresIntercompanyEliminationRepository,
@@ -56,6 +61,27 @@ def test_postgres_close_intercompany_link_migration_is_linear_and_refuses_data_l
     assert module.revision == "0064_pg_close_ic_links"
     assert module.down_revision == "0063_pg_ic_elimination"
     assert "refusing to discard close/intercompany evidence links" in path.read_text(encoding="utf-8")
+
+
+def test_postgres_close_impairment_link_schema_is_immutable_and_tenant_scoped() -> None:
+    schema = POSTGRES_CONSOLIDATION_IMPAIRMENT_LINK_SCHEMA_SQL
+    assert "consolidation_close_impairment_links" in schema
+    assert "consolidation_impairment_artifacts" in schema
+    assert "UNIQUE (tenant_id,run_id,entity_code)" in schema
+    assert "FORCE ROW LEVEL SECURITY" in schema
+    assert "impairment links are immutable" in schema
+    assert "cannot be deleted" in schema
+
+
+def test_postgres_close_impairment_link_migration_is_linear_and_refuses_data_loss() -> None:
+    path = ROOT / "alembic/versions/0067_postgres_close_impairment_links.py"
+    spec = importlib.util.spec_from_file_location("migration_0067", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.revision == "0067_pg_close_impairment_links"
+    assert module.down_revision == "0066_pg_impairment"
+    assert "refusing to discard close/impairment evidence links" in path.read_text(encoding="utf-8")
 
 
 def test_postgres_consolidation_close_migration_is_linear_and_reversible() -> None:
@@ -232,7 +258,8 @@ def test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable() -
                 " reconforge.consolidation_close_runs,reconforge.consolidation_close_effects,"
                 " reconforge.consolidation_close_period_events,reconforge.consolidation_close_run_lines,"
                 " reconforge.consolidation_close_effect_lines,reconforge.consolidation_close_intercompany_links,"
-                " reconforge.intercompany_elimination_artifacts,reconforge.certification_records TO " + app_user
+                " reconforge.consolidation_close_impairment_links,reconforge.intercompany_elimination_artifacts,"
+                " reconforge.consolidation_impairment_artifacts,reconforge.certification_records TO " + app_user
             )
             admin.execute(
                 "GRANT SELECT,INSERT,UPDATE ON reconforge.domain_audit_ledger_state,"
@@ -254,6 +281,29 @@ def test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable() -
                     "consolidation-preparer",
                     "consolidation-preparer",
                     "Synthetic consolidation preparer",
+                    "x",
+                    "x",
+                    100000,
+                    "pbkdf2_sha256",
+                ),
+            )
+            admin.execute(
+                "INSERT INTO reconforge.identity_users("
+                "tenant_id,id,username,display_name,password_hash,password_salt,password_iterations,password_algorithm"
+                ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s),(%s,%s,%s,%s,%s,%s,%s,%s)",
+                (
+                    tenant_a,
+                    "impairment-preparer",
+                    "impairment-preparer",
+                    "Synthetic impairment preparer",
+                    "x",
+                    "x",
+                    100000,
+                    "pbkdf2_sha256",
+                    tenant_a,
+                    "impairment-reviewer",
+                    "impairment-reviewer",
+                    "Synthetic impairment reviewer",
                     "x",
                     "x",
                     100000,
@@ -337,6 +387,34 @@ def test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable() -
         assert {str(effect["effect_type"]) for effect in detail["effects"]} == {"Posting", "Reversal"}
         assert all(str(effect["status"]) == "Committed" for effect in detail["effects"])
         assert all(len(effect["lines"]) == 2 for effect in detail["effects"])
+
+        # A prepared close can bind one replay-verified, explicitly non-posting
+        # impairment artifact for an entity represented in the worksheet.
+        from tests.test_consolidation_impairment import _request
+
+        impairment_request = _request(
+            entity_code="SUB",
+            period_id=worksheet.period_id,
+            prepared_by="impairment-preparer",
+            approved_by="impairment-reviewer",
+        )
+        impairment_artifact = ConsolidationImpairmentApplicationService(
+            PostgresConsolidationImpairmentRepository(connection, tenant_a)
+        ).prepare_and_persist(impairment_request, actor_label="impairment-preparer")
+        impairment_run = repository.prepare_run(
+            run_number="RUN-IMP-001", worksheet=worksheet, workspace="close", actor_label=worksheet.prepared_by
+        )
+        impairment_link = repository.attach_impairment_artifact(
+            impairment_run["id"], impairment_artifact["id"], workspace="close", actor_label="close-reviewer"
+        )
+        assert impairment_link["artifact_id"] == impairment_artifact["id"]
+        impairment_detail = repository.get_run(impairment_run["id"])
+        assert impairment_detail["impairment_evidence"][0]["artifact_result_digest"] == impairment_artifact[
+            "result_digest"
+        ]
+        assert impairment_detail["close_bundle"]["impairment_artifact_digests"] == [
+            impairment_artifact["result_digest"]
+        ]
 
         # A prepared run with intercompany_transaction eliminations cannot be
         # approved until its exact PostgreSQL proposal artifact is bound.

@@ -51,6 +51,31 @@ def test_close_bundle_accepts_postgres_payload_digest_header_alias(tmp_path: Pat
     assert bundle.worksheet_result_digest == detail["worksheet"]["result_digest"]
 
 
+def test_close_bundle_binds_impairment_evidence_digests() -> None:
+    detail = {
+        "id": "RUN-IMP-1",
+        "period_id": "PERIOD-1",
+        "workspace_id": "WORKSPACE-1",
+        "status": "Prepared",
+        "worksheet": {
+            "result_digest": "a" * 64,
+        },
+        "worksheet_digest": "b" * 64,
+        "translation_evidence": {"result_digest": "c" * 64},
+        "management_statement": {
+            "artifact_digest": "d" * 64,
+            "worksheet_result_digest": "a" * 64,
+        },
+        "effects": [],
+        "journal_digest": "e" * 64,
+        "impairment_evidence": [{"artifact_result_digest": "f" * 64}],
+    }
+
+    bundle = build_consolidation_close_bundle(detail)
+    assert bundle.impairment_artifact_digests == ("f" * 64,)
+    assert verify_consolidation_close_bundle_payload(bundle.to_dict()).to_dict() == bundle.to_dict()
+
+
 def test_close_bundle_rejects_cross_run_statement_and_digest_tampering(tmp_path: Path) -> None:
     connection = _database(tmp_path)[1]
     repository, _period, run = _prepare(connection)

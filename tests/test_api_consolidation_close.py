@@ -310,6 +310,9 @@ def test_consolidation_close_server_boundary_binds_workspace_before_exposure(
         def attach_intercompany_artifact(self, *_: object, **__: object) -> dict[str, object]:
             return {"id": "link-a", "artifact_id": "ice-" + "a" * 32, "matched_elimination_ids": ["ELIM-1"]}
 
+        def attach_impairment_artifact(self, *_: object, **__: object) -> dict[str, object]:
+            return {"id": "link-imp", "artifact_id": "imp-" + "b" * 32, "entity_code": "SUB"}
+
     repository = Repository()
 
     def execute(_request: object, operation: object) -> object:
@@ -379,6 +382,19 @@ def test_consolidation_close_server_boundary_binds_workspace_before_exposure(
     )
     assert attached.status_code == 200
     assert attached.json()["link"]["artifact_id"] == "ice-" + "a" * 32
+    assert scoped_permissions[-1] == {
+        "permission": "finance_core.manage",
+        "tenant_id": "tenant-a",
+        "workspace_id": "workspace-a",
+    }
+
+    impairment_attached = client.post(
+        "/api/v1/consolidation-close/runs/run-a/impairment-evidence",
+        headers=headers,
+        json={"artifact_id": "imp-" + "b" * 32},
+    )
+    assert impairment_attached.status_code == 200
+    assert impairment_attached.json()["link"]["entity_code"] == "SUB"
     assert scoped_permissions[-1] == {
         "permission": "finance_core.manage",
         "tenant_id": "tenant-a",

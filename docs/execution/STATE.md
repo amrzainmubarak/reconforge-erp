@@ -4637,7 +4637,7 @@ runtime and current-tree gate entries; its latest parse is 161 unique tasks
 The server-identity fixture, final local gate, PostgreSQL grouped runtime,
 public-network evidence, canonical duplicate-detection, final local-gate, RAC
 adapter, live Redis cache drill, and final local-gate entries extend that parse
-to 179 unique tasks (E-495 through E-512 included): 168 completed, 1 blocked,
+to 181 unique tasks (E-495 through E-514 included): 170 completed, 1 blocked,
 8 in progress, and 2 deferred. This administrative ratio is not a
 product-readiness percentage;
  the open workstreams and external release gates remain authoritative.
@@ -4909,3 +4909,22 @@ failure; the impairment PostgreSQL runtime remains a declared skip without
 package build, authorization inventory, and diff-check passed. Hosted
 CI/security/provenance, live PostgreSQL API runtime, live providers/write-back,
 independent HA/DR, and release approval remain external.
+
+E-513 binds the non-posting impairment artifact to a PostgreSQL consolidation
+close run. Migration `0067_pg_close_impairment_links` adds forced-RLS,
+append-only run/artifact/entity links; the repository replays and validates
+period, currency, and worksheet entity, requires an independent linker, and
+adds sorted impairment result digests to the close bundle. The server API
+exposes strict `finance_core.manage`-protected impairment linking. Static,
+bundle, and injected scope contracts pass; the live PostgreSQL link runtime is
+still a declared skip without `RECONFORGE_TEST_POSTGRES_DSN`. GitHub
+publication remains deferred by owner instruction.
+
+E-514 closes the post-link full regression/static/package gate: the exact tree
+collects 2,601 tests and reaches 100% with no collection or executed failure;
+the close/impairment PostgreSQL runtime remains a declared skip without
+`RECONFORGE_TEST_POSTGRES_DSN`; Ruff, Mypy (474 files), Bandit, OSV pip-audit,
+package build, authorization inventory (242 routes, digest
+`7fb88ae62d503dd7fe060398b9fba9131396e4a6f3f3966002e3c5faae1a262a`), and
+diff-check pass. Hosted CI/security/provenance, live PostgreSQL availability,
+providers/write-back, independent HA/DR, and release approval remain external.

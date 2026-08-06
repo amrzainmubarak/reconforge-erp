@@ -5222,3 +5222,26 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Reversibility**: The migration downgrade refuses non-empty evidence before
   dropping the trigger/table; removing the adapter and migration is safe only
   after an explicit empty-table downgrade.
+
+### D-330: Bind impairment evidence to the PostgreSQL close evidence bundle
+
+- **Date**: 2026-08-06
+- **Context**: A separately persisted impairment artifact must be attributable
+  to the exact close worksheet that consumed it; a tenant-wide artifact lookup
+  alone is not sufficient lineage.
+- **Decision**: Add migration `0067_pg_close_impairment_links` with forced RLS,
+  append-only triggers, run/artifact/entity uniqueness, and an immutable link
+  digest. Validate the replay-verified artifact's business period, reporting
+  currency, and entity against the worksheet; require a linker independent of
+  the run preparer; and include sorted result digests in the close bundle.
+  Expose the operation only through the PostgreSQL server API with strict IDs
+  and `finance_core.manage` authorization.
+- **Verification**: Static migration/schema contracts, close-bundle digest
+  coverage, and injected server-scope route tests pass. The live PostgreSQL
+  link runtime remains capability-gated and is not claimed without its DSN.
+- **Boundary**: This is evidence provenance, not valuation methodology,
+  statutory impairment recognition, journal posting, ERP write-back, HA/DR, or
+  production readiness.
+- **Reversibility**: The migration downgrade refuses non-empty links before
+  dropping the trigger/function/index/table; the bundle reader preserves
+  compatibility with older payloads that lack the additive digest field.

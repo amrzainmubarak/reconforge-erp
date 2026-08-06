@@ -4931,3 +4931,23 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   provider idempotency, distributed coordination, live write-back, or HA/DR.
 - **Reversibility**: Remove the version condition, regression assertion, and
   evidence entry; no migration or data rollback is required.
+
+### D-313: Bootstrap the PostgreSQL write-back runtime in its target database
+
+- **Date**: 2026-08-06
+- **Context**: The live write-back persistence test connected its privileged
+  setup session to the configured database but did not install the shared RLS
+  foundation before creating the write-back table. A disposable runtime could
+  therefore not exercise the intended schema boundary.
+- **Decision**: Install `install_postgres_rls_schema` on the privileged
+  connection before `POSTGRES_WRITEBACK_SCHEMA_SQL`, then grant only the
+  declared schema/table privileges to the non-privileged role. Keep the test
+  database and role disposable and clean them in `finally`.
+- **Verification**: PostgreSQL 16.14 runtime passes
+  `tests/test_postgres_writeback.py` 2/2, including RLS, append-only,
+  idempotency, version conflict, and tenant-isolation assertions.
+- **Boundary**: This proves only a single-node synthetic persistence contract;
+  it does not prove a live provider status API, accounting posting, distributed
+  idempotency, HA/DR, or production write-back.
+- **Reversibility**: Restore the prior fixture setup; no application migration
+  or persisted-data change is involved.

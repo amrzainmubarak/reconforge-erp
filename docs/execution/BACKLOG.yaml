@@ -1637,3 +1637,11 @@ tasks:
     status: completed
     depends_on: [E-483]
     exit_evidence: Recovery now accepts an exact replay with either the current acknowledged version or the original dispatched version, while stale versions remain rejected. The API regression proves the recovery lookup runs once, no POST is issued, and the replay returns already_acknowledged; the focused API/inventory suite passes 8/8. No migration or provider claim is added.
+
+  - id: E-485
+    priority: P0
+    area: postgres-parity
+    title: Live PostgreSQL write-back history runtime closure
+    status: completed
+    depends_on: [E-481, E-484]
+    exit_evidence: A disposable PostgreSQL 16.14 database with a non-privileged application role passes tests/test_postgres_writeback.py 2/2, including forced-RLS tenant/workspace scope, idempotent append history, optimistic version conflict, sibling-tenant exclusion, and immutable UPDATE refusal. The test now installs the shared RLS foundation in the target database before the write-back schema; the database and role are removed after verification. This is bounded single-node synthetic persistence evidence, not live provider status-API interoperability, accounting posting, distributed idempotency, HA/DR, or production write-back.

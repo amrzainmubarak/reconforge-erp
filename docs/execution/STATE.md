@@ -4632,8 +4632,8 @@ it now has 133 unique tasks and valid YAML. This closes documentation
 serialization drift only and does not change the still-open hosted release,
 provider, HA/DR, or native-backup gates.
 The backlog has since grown with the current HA/DR, object-storage, and Redis
-runtime and current-tree gate entries; its latest parse is 151 unique tasks
-(E-460 through E-484 included).
+runtime and current-tree gate entries; its latest parse is 152 unique tasks
+(E-460 through E-485 included).
 The fresh repeated PostgreSQL HA/DR drill now provides stronger bounded runtime
 evidence: three Docker 17.10 primary/standby cycles passed encrypted restore,
 fencing, partition refusal, manual failover/failback, zero-loss sentinel replay,
@@ -4715,3 +4715,11 @@ The route's optimistic replay was then corrected: a lost response can retry
 with the original dispatched version and receive `already_acknowledged` without
 another provider lookup. Stale versions still fail closed; no migration or
 external-provider claim was added.
+The PostgreSQL write-back persistence fixture then installed the shared RLS
+foundation in the target disposable database before creating its write-back
+table. PostgreSQL 16.14 passed the live write-back history test 2/2 under a
+non-privileged role, including tenant/workspace scope, append-only history,
+idempotency, version conflict, and immutable-update refusal. This remains
+single-node synthetic persistence evidence; live provider status APIs,
+distributed idempotency, accounting posting, HA/DR, and production write-back
+remain open.

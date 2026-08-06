@@ -15,6 +15,7 @@ from reconforge.connectors.writeback import (
 from reconforge.infrastructure.postgres import (
     PostgresConnectionFactory,
     PostgresSettings,
+    install_postgres_rls_schema,
 )
 from reconforge.infrastructure.postgres_writeback import (
     POSTGRES_WRITEBACK_SCHEMA_SQL,
@@ -49,6 +50,7 @@ def test_live_postgres_writeback_history_is_scoped_idempotent_and_append_only() 
     connection = None
     try:
         with admin.transaction():
+            install_postgres_rls_schema(admin)
             admin.execute(POSTGRES_WRITEBACK_SCHEMA_SQL)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
             admin.execute(

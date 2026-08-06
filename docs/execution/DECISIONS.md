@@ -4878,3 +4878,22 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   statutory accounting, independent HA/DR, or production evidence.
 - **Reversibility**: Remove the evidence entry and ADR; no runtime/data
   rollback is required.
+
+### D-310: Separate write-back mutation from idempotency recovery
+- **Date**: 2026-08-06
+- **Context**: A provider may accept a write-back POST while the client loses
+  the acknowledgement. Retrying the mutation is only safe when the provider's
+  idempotency semantics are independently known; the generic transport had no
+  explicit recovery boundary.
+- **Decision**: Add an injected `WritebackRecoveryTransport` and an executor
+  recovery method that queries provider status with the original idempotency
+  key. Recovery never resolves the payload and never calls the mutation
+  transport. A missing or misbound status fails closed.
+- **Verification**: The focused network suite passes 18/18, including recovery
+  with zero POST calls and 404/misbound acknowledgement refusal; Ruff and Mypy
+  pass for the changed transport surface.
+- **Boundary**: This does not prove any ERP, bank, or payment provider status
+  API, distributed idempotency, accounting posting, HA/DR, or production
+  write-back.
+- **Reversibility**: Remove the protocol, executor method, tests, ADR, and
+  evidence entry; no migration or persisted-data rollback is required.

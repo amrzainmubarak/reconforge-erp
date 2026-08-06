@@ -166,6 +166,25 @@ class WritebackNetworkTransport(Protocol):
     ) -> WritebackNetworkResponse: ...
 
 
+class WritebackRecoveryTransport(Protocol):
+    """Injected provider lookup boundary for an uncertain POST outcome.
+
+    Providers that support idempotency must expose a read/status operation for
+    the same key.  The lookup is deliberately separate from ``post`` so an
+    adapter cannot silently turn recovery into a second mutation.
+    """
+
+    def recover(
+        self,
+        endpoint: str,
+        *,
+        headers: dict[str, str],
+        idempotency_key: str,
+        timeout_seconds: int,
+        maximum_response_bytes: int,
+    ) -> WritebackNetworkResponse: ...
+
+
 class WritebackPayloadResolver(Protocol):
     def resolve(self, intent: WritebackIntent) -> bytes: ...
 
@@ -335,6 +354,73 @@ class WritebackNetworkExecutor:
             attempts=attempts,
         )
 
+    def recover(
+        self,
+        intent: WritebackIntent,
+        *,
+        registration: WritebackNetworkRegistration,
+        policy: WritebackPolicy,
+        transport: WritebackRecoveryTransport,
+    ) -> WritebackNetworkDispatch:
+        """Recover an uncertain provider result without issuing another mutation.
+
+        This path is for a crash or connection loss after the provider may have
+        accepted the original POST.  It requires a provider-specific lookup
+        transport and the original idempotency key; no payload is resolved and
+        no POST is attempted.  Providers that cannot answer this lookup remain
+        explicitly unresolved and require operator handling.
+        """
+
+        policy.authorize(intent)
+        if not registration.feature_enabled or not intent.feature_enabled:
+            raise WritebackNetworkError("writeback_network_feature_disabled")
+        if intent.status is not WritebackStatus.DISPATCHED:
+            raise WritebackNetworkError("writeback_recovery_requires_dispatched")
+        if intent.connector_id != registration.connector_id:
+            raise WritebackNetworkError("writeback_connector_not_allowed")
+        if intent.operation not in registration.allowed_operations:
+            raise WritebackNetworkError("writeback_operation_not_allowed")
+        credential = _resolve_credential(self.secret_resolver, registration.credential_reference)
+        headers = {
+            "Accept": "application/json",
+            "Authorization": "Bearer " + credential,
+            "Idempotency-Key": intent.idempotency_key,
+            "User-Agent": "ReconForge-Writeback/1",
+            "X-ReconForge-Operation": intent.operation,
+            "X-ReconForge-Recovery": "idempotency-status-v1",
+        }
+        try:
+            response = transport.recover(
+                registration.endpoint,
+                headers=headers,
+                idempotency_key=intent.idempotency_key,
+                timeout_seconds=registration.timeout_seconds,
+                maximum_response_bytes=registration.maximum_response_bytes,
+            )
+        except WritebackNetworkError:
+            raise
+        except Exception as exc:
+            raise WritebackNetworkError("writeback_recovery_transport_failed") from exc
+        provider = self._validate_recovery_response(response, intent.idempotency_key, registration)
+        acknowledged = intent.model_copy(
+            update={
+                "status": WritebackStatus.ACKNOWLEDGED,
+                "acknowledgement": WritebackAcknowledgement(
+                    provider_reference=provider.provider_reference,
+                    acknowledged_at=datetime.now(UTC),
+                    response_digest=provider.response_digest,
+                    idempotency_key=provider.idempotency_key,
+                    accepted=provider.accepted,
+                ),
+            }
+        )
+        return WritebackNetworkDispatch(
+            intent=acknowledged,
+            request_digest=_canonical_request_digest(intent, registration),
+            response_digest=provider.response_digest,
+            attempts=1,
+        )
+
     def dispatch_compensation(
         self,
         intent: WritebackIntent,
@@ -458,6 +544,28 @@ class WritebackNetworkExecutor:
             return provider, attempts
         raise WritebackNetworkError(f"{error_prefix}_retry_exhausted")
 
+    @staticmethod
+    def _validate_recovery_response(
+        response: WritebackNetworkResponse,
+        idempotency_key: str,
+        registration: WritebackNetworkRegistration,
+    ) -> WritebackProviderResponse:
+        if len(response.body) > registration.maximum_response_bytes:
+            raise WritebackNetworkError("writeback_recovery_response_too_large")
+        if response.status == 404:
+            raise WritebackNetworkError("writeback_recovery_not_found")
+        if response.status < 200 or response.status >= 300:
+            raise WritebackNetworkError("writeback_recovery_http_failure")
+        if response.content_type.split(";", 1)[0].strip().lower() != "application/json":
+            raise WritebackNetworkError("writeback_recovery_response_content_type_invalid")
+        try:
+            provider = WritebackProviderResponse.model_validate_json(response.body)
+        except (TypeError, ValueError) as exc:
+            raise WritebackNetworkError("writeback_recovery_response_schema_invalid") from exc
+        if provider.idempotency_key != idempotency_key:
+            raise WritebackNetworkError("writeback_recovery_acknowledgement_mismatch")
+        return provider
+
     def _apply_rate_limit(self, registration: WritebackNetworkRegistration) -> None:
         now = self.clock()
         allowed_at = self._next_allowed_at.get(registration.connector_id, now)
@@ -480,6 +588,7 @@ __all__ = [
     "WritebackNetworkExecutor",
     "WritebackNetworkRegistration",
     "WritebackNetworkResponse",
+    "WritebackRecoveryTransport",
     "WritebackNetworkTransport",
     "WritebackPayloadResolver",
     "WritebackProviderResponse",

@@ -1613,3 +1613,11 @@ tasks:
     status: completed
     depends_on: [E-479]
     exit_evidence: A fresh PostgreSQL 17.10 migration-head database with the non-privileged reconforge_app role passes all 117 selected tests covering Finance Core API, master data, close, evidence, matching, payables, receivables, inventory, journals, approvals, controls, execution/job scope, workspace attribution, and workspace-period UoW. The disposable database is removed after verification. This is bounded single-node synthetic parity evidence; full parity inventory, hosted backup, live providers/write-back, HA/DR, scale, and production readiness remain open.
+
+  - id: E-482
+    priority: P0
+    area: connectors
+    title: Governed write-back idempotency recovery lookup
+    status: completed
+    depends_on: [P4-CON-001, E-481]
+    exit_evidence: A separate injected WritebackRecoveryTransport and executor recovery path query provider status using the original idempotency key without resolving payloads or issuing a second POST. The focused network suite reports 18 passed, including zero-POST recovery and fail-closed 404/misbound acknowledgement contracts; Ruff and Mypy pass. This is provider-neutral synthetic recovery evidence only, not vendor status-API interoperability, distributed idempotency, accounting posting, HA/DR, or production write-back.

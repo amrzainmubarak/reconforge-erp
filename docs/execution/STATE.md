@@ -4632,8 +4632,8 @@ it now has 133 unique tasks and valid YAML. This closes documentation
 serialization drift only and does not change the still-open hosted release,
 provider, HA/DR, or native-backup gates.
 The backlog has since grown with the current HA/DR, object-storage, and Redis
-runtime and current-tree gate entries; its latest parse is 148 unique tasks
-(E-460 through E-479 included).
+runtime and current-tree gate entries; its latest parse is 149 unique tasks
+(E-460 through E-482 included).
 The fresh repeated PostgreSQL HA/DR drill now provides stronger bounded runtime
 evidence: three Docker 17.10 primary/standby cycles passed encrypted restore,
 fencing, partition refusal, manual failover/failback, zero-loss sentinel replay,
@@ -4700,3 +4700,9 @@ including Finance Core API, master data, close, evidence, matching,
 payables/receivables, inventory, journals, scopes, and workspace UoW. This is
 bounded single-node synthetic parity evidence only; full parity, hosted backup,
 providers/write-back, HA/DR, scale, and production approval remain open.
+The write-back transport now has an explicit idempotency recovery boundary for
+uncertain provider outcomes. A provider-specific injected lookup can bind a
+status response to the original key without resolving a payload or issuing a
+second POST; the focused suite passes 18/18. Provider status-API
+interoperability, distributed idempotency, live ERP/bank write-back, accounting
+posting, HA/DR, and release approval remain open.

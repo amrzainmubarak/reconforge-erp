@@ -52,5 +52,9 @@ that optional standards-library dependency, signed-package verification fails cl
   isolation, fixed-query preservation, cursor, idempotency, retry, rate, and durable-job recovery tests;
   no live vendor registration or production secret resolver is bundled.
 - Process-local rate state does not prove a shared distributed provider quota.
-- No write-back path; manifest v1 rejects it.
+- No live vendor write-back. The opt-in transport package has a separate,
+  provider-specific idempotency-status recovery boundary that can acknowledge a
+  possibly accepted mutation without issuing a second POST; manifest v1 still
+  rejects executable external connector packages and no provider status API is
+  bundled.
 - No executable external connector installation, vendor certification, live vendor connector, or production deployment claim.

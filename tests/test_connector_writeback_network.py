@@ -133,6 +133,26 @@ class _Transport:
         return response
 
 
+@dataclass
+class _RecoveryTransport:
+    response: WritebackNetworkResponse | Exception
+    calls: list[tuple[str, dict[str, str], str, int, int]] = field(default_factory=list)
+
+    def recover(
+        self,
+        endpoint: str,
+        *,
+        headers: dict[str, str],
+        idempotency_key: str,
+        timeout_seconds: int,
+        maximum_response_bytes: int,
+    ) -> WritebackNetworkResponse:
+        self.calls.append((endpoint, dict(headers), idempotency_key, timeout_seconds, maximum_response_bytes))
+        if isinstance(self.response, Exception):
+            raise self.response
+        return self.response
+
+
 def test_writeback_registration_is_explicit_and_canonical() -> None:
     first = _registration()
     second = _registration()
@@ -167,6 +187,47 @@ def test_network_dispatch_verifies_payload_sends_secret_only_to_transport_and_bi
     assert headers["Authorization"].startswith("Bearer ")
     assert b"synthetic-writeback-token" not in receipt.intent.model_dump_json().encode()
     assert (timeout, maximum) == (7, 1_048_576)
+
+
+def test_network_recovery_reads_provider_idempotency_status_without_resending_mutation() -> None:
+    intent = _dispatched_intent()
+    transport = _Transport([])
+    recovery = _RecoveryTransport(WritebackNetworkResponse(200, _provider_body(intent.idempotency_key)))
+    receipt = WritebackNetworkExecutor(
+        transport,
+        payload_resolver=_Payloads(),
+        secret_resolver=_Secrets(),
+    ).recover(intent, registration=_registration(), policy=POLICY, transport=recovery)
+    assert receipt.intent.status is WritebackStatus.ACKNOWLEDGED
+    assert receipt.intent.acknowledgement is not None
+    assert receipt.intent.acknowledgement.idempotency_key == intent.idempotency_key
+    assert transport.calls == []
+    assert len(recovery.calls) == 1
+    endpoint, headers, key, timeout, maximum = recovery.calls[0]
+    assert endpoint == "https://api.example.test/v1/writeback"
+    assert key == intent.idempotency_key
+    assert headers["Idempotency-Key"] == intent.idempotency_key
+    assert headers["X-ReconForge-Recovery"] == "idempotency-status-v1"
+    assert (timeout, maximum) == (7, 1_048_576)
+
+
+def test_network_recovery_fails_closed_for_unknown_or_misbound_provider_status() -> None:
+    intent = _dispatched_intent()
+    executor = WritebackNetworkExecutor(_Transport([]), payload_resolver=_Payloads(), secret_resolver=_Secrets())
+    with pytest.raises(WritebackNetworkError, match="recovery_not_found"):
+        executor.recover(
+            intent,
+            registration=_registration(),
+            policy=POLICY,
+            transport=_RecoveryTransport(WritebackNetworkResponse(404, b"{}")),
+        )
+    with pytest.raises(WritebackNetworkError, match="recovery_acknowledgement_mismatch"):
+        executor.recover(
+            intent,
+            registration=_registration(),
+            policy=POLICY,
+            transport=_RecoveryTransport(WritebackNetworkResponse(200, _provider_body("wrong-key"))),
+        )
 
 
 def test_network_compensation_uses_separate_allowlist_key_and_payload_digest() -> None:

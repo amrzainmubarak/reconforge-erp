@@ -1565,3 +1565,11 @@ tasks:
     status: completed
     depends_on: [P4-FIN-002]
     exit_evidence: PostgreSQL consolidation ownership, close lifecycle/intercompany linking, PPA, and deferred-tax live contracts pass 18/18 on an isolated PostgreSQL 17.10 database with the non-privileged role. The close adapter now compares intercompany artifact period_name with the replay-verified worksheet business period, not the internal PGCCP period-row identity. No persisted-data migration is required; single-node/statutory/provider/hosted limits remain.
+
+  - id: E-476
+    priority: P0
+    area: enterprise_policy
+    title: Current PostgreSQL IAM/RLS contract focus
+    status: completed
+    depends_on: [P4-IAM-001]
+    exit_evidence: A fresh PostgreSQL 17.10 database at migration head with the non-privileged reconforge_app role passes 23/23 selected live contracts for access administration, identity administration, security governance, delegations, policy analysis, service accounts, and privileged sessions in 19.1s. This is bounded single-node synthetic IAM evidence; federation interoperability, complete UI/job/export adoption, distributed invalidation, HA/DR, and production IAM assurance remain open.

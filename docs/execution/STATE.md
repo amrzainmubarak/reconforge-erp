@@ -4633,7 +4633,7 @@ serialization drift only and does not change the still-open hosted release,
 provider, HA/DR, or native-backup gates.
 The backlog has since grown with the current HA/DR, object-storage, and Redis
 runtime and current-tree gate entries; its latest parse is 141 unique tasks
-(E-460 through E-475 included).
+(E-460 through E-476 included).
 The fresh repeated PostgreSQL HA/DR drill now provides stronger bounded runtime
 evidence: three Docker 17.10 primary/standby cycles passed encrypted restore,
 fencing, partition refusal, manual failover/failback, zero-loss sentinel replay,
@@ -4653,6 +4653,10 @@ identity mismatch in intercompany artifact binding; the isolated PostgreSQL
 17.10 financial contracts now pass 18/18. This is a correctness closure for the
 local adapter only; statutory policy, hosted CI, live providers, and HA/DR
 remain open.
+The fresh IAM/RLS focus also passes 23/23 selected PostgreSQL contracts under a
+non-privileged role. This strengthens local tenant isolation and policy lifecycle
+evidence only; federation interoperability, distributed invalidation, complete
+surface adoption, HA/DR, and production IAM assurance remain open.
 The final current-tree regression after these evidence artifacts exits 0 in
 364.3s, and the current Ruff/Mypy/package/diff gate remains green. This closes
 the local regression/package checkpoint only; declared external-service skips,

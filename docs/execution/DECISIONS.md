@@ -4761,6 +4761,20 @@
   hosted CI, providers, write-back, and HA/DR remain open.
 - **Rollback**: Revert the comparison logic; no migration or data rollback is
   required.
+
+### D-373: Promote the current PostgreSQL IAM contract focus
+
+- **Date**: 2026-08-06
+- **Decision**: Retain a fresh migration-head non-superuser runtime result for
+  the selected IAM/RLS administration and privileged-session contracts.
+- **Verification**: Access/identity/security governance, delegation,
+  policy-analysis, service-account, and privileged-session focus passes 23/23
+  in 19.1s on PostgreSQL 17.10.
+- **Boundary**: Synthetic single-node evidence only; federation, UI/job/export
+  adoption, distributed cache invalidation, HA/DR, and production IAM remain
+  unverified.
+- **Rollback**: Remove the evidence entry and ADR; no runtime/data rollback is
+  required.
 # ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
 
 Implemented and bounded the `professional.invoice-payment` module. It is local,

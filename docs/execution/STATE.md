@@ -4631,3 +4631,8 @@ The execution backlog itself was re-parsed after the latest evidence entries;
 it now has 133 unique tasks and valid YAML. This closes documentation
 serialization drift only and does not change the still-open hosted release,
 provider, HA/DR, or native-backup gates.
+The fresh repeated PostgreSQL HA/DR drill now provides stronger bounded runtime
+evidence: three Docker 17.10 primary/standby cycles passed encrypted restore,
+fencing, partition refusal, manual failover/failback, zero-loss sentinel replay,
+and cleanup. The report remains explicitly single-host/manual/synthetic and does
+not close cross-host DR, automatic failover, quorum, or production SLO gates.

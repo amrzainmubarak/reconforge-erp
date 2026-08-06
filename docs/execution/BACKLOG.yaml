@@ -1501,3 +1501,11 @@ tasks:
     status: completed
     depends_on: [E-466]
     exit_evidence: PyYAML parses docs/execution/BACKLOG.yaml successfully with 133 unique task IDs, including E-460 through E-466; targeted workflow/policy tests and git diff check pass. No evidence item is hidden behind invalid YAML.
+
+  - id: E-468
+    priority: P0
+    area: reliability
+    title: Current repeated PostgreSQL HA/DR and encrypted restore drill
+    status: completed
+    depends_on: [E-461]
+    exit_evidence: Three disposable Docker PostgreSQL 17.10 primary/standby cycles pass with zero acknowledged transaction loss, failover RTO 11.055-11.137 seconds, failback RTO 0.959-0.968 seconds, encrypted backup/isolated restore sentinel replay, primary fencing, partition write refusal, and complete labelled-resource cleanup. The committed report explicitly limits the claim to one host/failure domain, manual failover, synthetic data/key, and no quorum/witness or production SLO.

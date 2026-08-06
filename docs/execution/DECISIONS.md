@@ -4655,6 +4655,20 @@
   production gate.
 - **Rollback**: Restore the prior scalar text only if it remains valid YAML;
   no runtime/data rollback is needed.
+
+### D-365: Promote the latest bounded PostgreSQL HA/DR drill without widening claims
+
+- **Date**: 2026-08-06
+- **Decision**: Retain the latest three-run Docker primary/standby drill and
+  report it as current single-host runtime evidence, including encrypted
+  backup/restore and cleanup, while preserving all cross-domain limitations.
+- **Verification**: Three runs pass with zero acknowledged loss, failover RTO
+  11.055-11.137s, failback RTO 0.959-0.968s, fencing, partition refusal, and
+  complete cleanup; the report and schema test are committed.
+- **Boundary**: One host/failure domain, manual controller, synthetic data/key,
+  no quorum/witness, no host-loss independence, and no production SLO claim.
+- **Rollback**: Remove the dated report and evidence entry; no runtime/data
+  rollback is needed.
 # ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
 
 Implemented and bounded the `professional.invoice-payment` module. It is local,

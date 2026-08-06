@@ -83,6 +83,23 @@ def test_current_postgres_ha_dr_artifact_is_schema_valid_and_packaged() -> None:
     ).read_text(encoding="utf-8")
 
 
+def test_latest_postgres_ha_dr_artifact_is_schema_valid_and_reproducible() -> None:
+    artifact = json.loads(
+        (ROOT / "docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-06.json").read_text(encoding="utf-8")
+    )
+    schema = json.loads(
+        (ROOT / "docs/schemas/ha_dr_repeated_drill_report.schema.json").read_text(encoding="utf-8")
+    )
+    jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker()).validate(artifact)
+    assert artifact["summary"]["all_runs_passed"] is True
+    assert artifact["summary"]["zero_acknowledged_transaction_loss_runs"] == 3
+    assert artifact["summary"]["failover_rto_max_seconds"] == 11.137
+    assert artifact["summary"]["failback_rto_max_seconds"] == 0.968
+    assert "include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-06.json" in (
+        ROOT / "MANIFEST.in"
+    ).read_text(encoding="utf-8")
+
+
 def test_ci_runs_the_repeated_postgres_ha_dr_drill_and_uploads_its_report() -> None:
     workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
     job = workflow["jobs"]["postgres-ha-dr"]

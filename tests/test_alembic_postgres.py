@@ -107,6 +107,21 @@ def test_outbox_scope_migration_is_versioned_and_reversible() -> None:
     assert "current_setting('app.legal_entity_id'" in schema
 
 
+def test_outbox_consumer_scope_migration_is_versioned_and_reversible() -> None:
+    migration = (ROOT / "alembic/versions/0074_postgres_outbox_consumer_scope.py").read_text(encoding="utf-8")
+    schema = (ROOT / "reconforge/infrastructure/postgres_outbox_consumer_scope.py").read_text(encoding="utf-8")
+
+    assert 'revision = "0074_pg_outbox_consumer_scope"' in migration
+    assert 'down_revision = "0073_pg_outbox_scope"' in migration
+    assert "POSTGRES_OUTBOX_CONSUMER_SCOPE_SCHEMA_SQL" in migration
+    assert "outbox_consumer_receipts_scope_event_idx" in schema
+    assert "workspace_id" in schema
+    assert "organization_id" in schema
+    assert "legal_entity_id" in schema
+    assert "refusing to discard scoped outbox-consumer receipts" in migration
+    assert "DROP COLUMN IF EXISTS {column}" in migration
+
+
 def test_postgres_alembic_contract_has_no_repository_credentials() -> None:
     config = (ROOT / "alembic.ini").read_text(encoding="utf-8")
     env = (ROOT / "alembic" / "env.py").read_text(encoding="utf-8")

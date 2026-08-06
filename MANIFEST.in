@@ -369,6 +369,8 @@ include reconforge/infrastructure/postgres_reconciliation_entity_scope.py
 include alembic/versions/0072_postgres_reconciliation_entity_scope.py
 include alembic/versions/0073_postgres_outbox_scope.py
 include reconforge/infrastructure/postgres_outbox_scope.py
+include alembic/versions/0074_postgres_outbox_consumer_scope.py
+include reconforge/infrastructure/postgres_outbox_consumer_scope.py
 include reconforge/api/server_scoped_exports.py
 include reconforge/api/routes/scoped_exports.py
 include tests/test_api_server_scoped_exports.py
@@ -658,6 +660,7 @@ include docs/adr/0400-postgres-close-ownership-change-evidence-binding.md
 include tests/test_postgres_consolidation_ownership_change.py
 include docs/adr/0401-ownership-change-cli-is-local-non-posting.md
 include docs/adr/0409-postgres-outbox-hierarchy-scoped-worker.md
+include docs/adr/0410-postgres-outbox-consumer-hierarchy.md
 include tests/test_consolidation_cli.py
 include docs/schemas/consolidation_impairment_v1.schema.json
 include tests/test_consolidation_impairment.py

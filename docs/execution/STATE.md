@@ -5215,3 +5215,21 @@ full tree collects 2,637 tests and passes 100% in 335.9 seconds; Ruff, Mypy,
 Bandit, OSV pip-audit, build, and diff-check pass. Federation, route-wide
 adoption, distributed invalidation, live IAM providers, and production
 readiness remain open. GitHub publication remains deferred.
+
+E-541 closes the hierarchy attribution gap in PostgreSQL outbox consumer
+receipts. Migration 0074 adds nullable workspace/organization/legal-entity
+columns, transaction defaults, scope indexing, and explicit RLS. The consumer
+restores the requested hierarchy, verifies source-event attribution before
+effect invocation, and records immutable receipts with the same scope; legal
+entities require organizations. Downgrade refuses to discard non-empty
+receipts. Focused contracts pass; external broker exactly-once, throughput,
+HA/DR, and production readiness remain open.
+
+E-542 closes the regression/package gate for E-541. The current tree collects
+2,638 tests and passes 100% in 333.3 seconds with no collection or executed
+failure; declared live-service capability skips remain visible. Ruff, Mypy
+(481 source files), Bandit, OSV pip-audit, migration-registry contracts,
+package build/source membership, and diff-check pass. Hosted
+CI/security/provenance, live provider runtimes, external broker semantics,
+HA/DR, and release approval remain external. GitHub publication remains
+deferred by owner instruction.

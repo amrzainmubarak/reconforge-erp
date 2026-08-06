@@ -38,6 +38,10 @@ def test_postgres_outbox_consumer_schema_is_forced_rls_and_immutable() -> None:
     assert "event_digest TEXT NOT NULL CHECK" in POSTGRES_OUTBOX_CONSUMER_SCHEMA_SQL
     assert "outbox consumer receipts are immutable" in POSTGRES_OUTBOX_CONSUMER_SCHEMA_SQL
     assert "outbox consumer receipts cannot be deleted" in POSTGRES_OUTBOX_CONSUMER_SCHEMA_SQL
+    assert "workspace_id TEXT DEFAULT NULLIF(current_setting('app.workspace_id'" in POSTGRES_OUTBOX_CONSUMER_SCHEMA_SQL
+    assert "organization_id TEXT DEFAULT NULLIF(current_setting('app.organization_id'" in POSTGRES_OUTBOX_CONSUMER_SCHEMA_SQL
+    assert "legal_entity_id TEXT DEFAULT NULLIF(current_setting('app.legal_entity_id'" in POSTGRES_OUTBOX_CONSUMER_SCHEMA_SQL
+    assert "outbox_consumer_receipts_scope_event_idx" in POSTGRES_OUTBOX_CONSUMER_SCHEMA_SQL
 
 
 def test_postgres_outbox_consumer_digest_and_input_guards_are_bounded() -> None:
@@ -60,6 +64,15 @@ def test_postgres_outbox_consumer_digest_and_input_guards_are_bounded() -> None:
             event_id="event_a",
             event_digest=digest,
             effect=lambda _connection: None,
+        )
+    with pytest.raises(PostgresOutboxConsumerValidationError, match="requires organization"):
+        consumer.apply(
+            tenant_id="tenant_a",
+            consumer_id="consumer_a",
+            event_id="event_a",
+            event_digest=digest,
+            effect=lambda _connection: None,
+            legal_entity_id="entity-a",
         )
     assert re.fullmatch(r"[a-f0-9]{64}", digest)
 

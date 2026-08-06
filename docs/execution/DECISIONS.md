@@ -5556,3 +5556,26 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   production readiness remain open.
 - **Reversibility**: Remove the optional context field, cache dimension,
   supplier, and tests without changing stored authorization records.
+
+### D-385: Bind PostgreSQL outbox consumer receipts to event hierarchy
+
+- **Date**: 2026-08-06
+- **Context**: Publisher events now carry hierarchy attribution, while the
+  exactly-once consumer receipt table and transaction remained tenant-only.
+  A consumer could therefore recognize a receipt without proving the event
+  belonged to its requested business lane.
+- **Decision**: Migration `0074_pg_outbox_consumer_scope` adds nullable
+  workspace/organization/legal-entity columns, transaction-local defaults,
+  scope indexing, and explicit RLS. `PostgresOutboxConsumer.apply` accepts the
+  optional hierarchy, restores it through the tenant boundary, verifies the
+  source event attribution before invoking the effect, and writes immutable
+  receipts with the same scope. Downgrade refuses to discard non-empty receipt
+  rows.
+- **Verification**: Consumer schema, migration, validation, and outbox
+  contracts pass; legacy tenant-only events and calls remain compatible. The
+  live PostgreSQL consumer drill is still capability-gated.
+- **Boundary**: This is a database idempotency boundary only; it is not
+  external broker exactly-once delivery, provider acknowledgement, throughput,
+  HA/DR, or production readiness.
+- **Reversibility**: With no receipt rows, downgrade removes only the additive
+  scope columns/index and restores tenant-only RLS.

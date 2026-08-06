@@ -2521,3 +2521,39 @@ tasks:
       post-change full suite collects 2,637 tests and passes 100% in 335.9
       seconds; Ruff, Mypy (480 files), Bandit, pip-audit, build, and diff-check
       pass.
+  - id: E-541
+    priority: P1
+    area: scale
+    title: Hierarchy-scoped PostgreSQL outbox consumer receipts
+    status: completed
+    depends_on: [E-540, P4-SCL-001]
+    exit_evidence: >-
+      Migration `0074_pg_outbox_consumer_scope` adds nullable hierarchy
+      attribution, transaction defaults, a scope-aware receipt index, and
+      explicit RLS. The consumer restores the exact scope, verifies event
+      attribution before effect invocation, and writes the same scope into
+      immutable receipts; legal entities require organizations. Downgrade
+      refuses to discard non-empty receipts. Focused consumer/outbox/migration
+      contracts pass; ADR 0410 and the helper are packaged. External broker
+      exactly-once, provider acknowledgement, throughput, HA/DR, and
+      production readiness remain external.
+  - id: E-542
+    priority: P0
+    area: quality
+    title: Regression and package gate after scoped outbox consumer receipts
+    status: completed
+    depends_on: [E-541]
+    exit_evidence: >-
+      The current tree collects 2,638 tests and `uv run --no-sync pytest -q
+      --basetemp .pytest-tmp-e542 --tb=short -ra` exits 0 after 333.3 seconds
+      with no collection or executed failure; declared PostgreSQL, Redis,
+      object-storage, network, Windows, and platform capability skips remain
+      visible. Ruff passes; Mypy reports no issues in 481 source files; Bandit
+      exits 0 with reviewed existing suppression/comment warnings; OSV
+      `pip-audit -s osv` reports no known vulnerabilities; the migration
+      registry contracts pass with two declared live-PostgreSQL skips;
+      `python -m build --no-isolation` succeeds and `SOURCES.txt` contains
+      ADR 0410, migration 0074, the consumer scope helper, and its tests; and
+      `git diff --check` passes. Hosted CI/security/provenance, live provider
+      runtimes, external broker semantics, HA/DR, and release approval remain
+      external. GitHub publication remains deferred by owner instruction.

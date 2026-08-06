@@ -20,7 +20,10 @@ from reconforge.infrastructure.postgres import (
     PostgresConfigurationError,
     PostgresTenantBoundary,
     normalize_scope_id,
+    validate_legal_entity_id,
+    validate_organization_id,
     validate_tenant_id,
+    validate_workspace_id,
 )
 from reconforge.io.persisted import PersistedJsonError, decode_postgres_outbox_payload
 
@@ -49,6 +52,9 @@ CREATE TABLE IF NOT EXISTS reconforge.outbox_consumer_receipts (
     effect_digest TEXT NOT NULL CHECK (effect_digest ~ '^[a-f0-9]{64}$'),
     status TEXT NOT NULL DEFAULT 'applied' CHECK (status = 'applied'),
     applied_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    workspace_id TEXT DEFAULT NULLIF(current_setting('app.workspace_id', true), ''),
+    organization_id TEXT DEFAULT NULLIF(current_setting('app.organization_id', true), ''),
+    legal_entity_id TEXT DEFAULT NULLIF(current_setting('app.legal_entity_id', true), ''),
     PRIMARY KEY (tenant_id, consumer_id, event_id),
     FOREIGN KEY (tenant_id) REFERENCES reconforge.tenants(id) ON DELETE CASCADE,
     FOREIGN KEY (tenant_id, event_id)
@@ -56,12 +62,28 @@ CREATE TABLE IF NOT EXISTS reconforge.outbox_consumer_receipts (
 );
 CREATE INDEX IF NOT EXISTS outbox_consumer_receipts_event_idx
     ON reconforge.outbox_consumer_receipts(tenant_id, event_id, consumer_id);
+CREATE INDEX IF NOT EXISTS outbox_consumer_receipts_scope_event_idx
+    ON reconforge.outbox_consumer_receipts(
+        tenant_id, workspace_id, organization_id, legal_entity_id, event_id, consumer_id
+    );
 ALTER TABLE reconforge.outbox_consumer_receipts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reconforge.outbox_consumer_receipts FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_scope ON reconforge.outbox_consumer_receipts;
 CREATE POLICY tenant_scope ON reconforge.outbox_consumer_receipts
-    USING (tenant_id = current_setting('app.tenant_id', true))
-    WITH CHECK (tenant_id = current_setting('app.tenant_id', true));
+    USING (tenant_id = current_setting('app.tenant_id', true)
+       AND (NULLIF(current_setting('app.workspace_id', true), '') IS NULL
+            OR workspace_id = current_setting('app.workspace_id', true))
+       AND (NULLIF(current_setting('app.organization_id', true), '') IS NULL
+            OR organization_id = current_setting('app.organization_id', true))
+       AND (NULLIF(current_setting('app.legal_entity_id', true), '') IS NULL
+            OR legal_entity_id = current_setting('app.legal_entity_id', true)))
+    WITH CHECK (tenant_id = current_setting('app.tenant_id', true)
+       AND (NULLIF(current_setting('app.workspace_id', true), '') IS NULL
+            OR workspace_id = current_setting('app.workspace_id', true))
+       AND (NULLIF(current_setting('app.organization_id', true), '') IS NULL
+            OR organization_id = current_setting('app.organization_id', true))
+       AND (NULLIF(current_setting('app.legal_entity_id', true), '') IS NULL
+            OR legal_entity_id = current_setting('app.legal_entity_id', true)));
 CREATE OR REPLACE FUNCTION reconforge.guard_outbox_consumer_receipt()
 RETURNS TRIGGER LANGUAGE plpgsql AS $reconforge$
 BEGIN
@@ -144,6 +166,9 @@ class PostgresOutboxConsumer:
         event_id: str,
         event_digest: str,
         effect: Callable[[Any], object],
+        workspace_id: str | None = None,
+        organization_id: str | None = None,
+        legal_entity_id: str | None = None,
     ) -> PostgresOutboxConsumerReceipt:
         """Run ``effect`` once and atomically persist its receipt.
 
@@ -159,15 +184,32 @@ class PostgresOutboxConsumer:
         payload_digest = _digest(event_digest, "event_digest")
         if not callable(effect):
             raise PostgresOutboxConsumerValidationError("effect must be callable.")
+        try:
+            workspace = validate_workspace_id(str(workspace_id).strip() if workspace_id is not None else None)
+            organization = validate_organization_id(
+                str(organization_id).strip() if organization_id is not None else None
+            )
+            legal_entity = validate_legal_entity_id(
+                str(legal_entity_id).strip() if legal_entity_id is not None else None
+            )
+        except PostgresConfigurationError as exc:
+            raise PostgresOutboxConsumerValidationError(str(exc)) from exc
+        if legal_entity is not None and organization is None:
+            raise PostgresOutboxConsumerValidationError("legal_entity_id requires organization_id.")
         lock_key = f"outbox-consumer:{tenant}:{consumer}:{event}"
         try:
-            with PostgresTenantBoundary(self.connection_factory).transaction(tenant) as connection:
+            with PostgresTenantBoundary(self.connection_factory).transaction(
+                tenant,
+                organization_id=organization,
+                workspace_id=workspace,
+                legal_entity_id=legal_entity,
+            ) as connection:
                 # Serialize the same event/consumer pair without requiring
                 # UPDATE privilege on the append-only receipt table.
                 connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (lock_key,))
                 source_event = connection.execute(
                     """
-                    SELECT payload
+                    SELECT payload, workspace_id, organization_id, legal_entity_id
                     FROM reconforge.outbox_events
                     WHERE tenant_id=%s AND event_id=%s
                     """,
@@ -175,6 +217,15 @@ class PostgresOutboxConsumer:
                 ).fetchone()
                 if source_event is None:
                     raise PostgresOutboxConsumerIntegrityError("outbox event is not available for consumption.")
+                source_scope = tuple(str(value).strip() if value is not None else None for value in source_event[1:4])
+                requested_scope = (workspace, organization, legal_entity)
+                if any(
+                    requested is not None and requested != actual
+                    for requested, actual in zip(requested_scope, source_scope, strict=True)
+                ):
+                    raise PostgresOutboxConsumerIntegrityError(
+                        "outbox event hierarchy does not match the consumer scope."
+                    )
                 try:
                     source_digest = decode_postgres_outbox_payload(source_event[0]).checksum_sha256
                 except PersistedJsonError as exc:
@@ -214,10 +265,11 @@ class PostgresOutboxConsumer:
                     """
                     INSERT INTO reconforge.outbox_consumer_receipts(
                         tenant_id, consumer_id, event_id, event_digest,
-                        effect_digest, status, applied_at
-                    ) VALUES (%s, %s, %s, %s, %s, 'applied', now())
+                        effect_digest, status, applied_at, workspace_id,
+                        organization_id, legal_entity_id
+                    ) VALUES (%s, %s, %s, %s, %s, 'applied', now(), %s, %s, %s)
                     """,
-                    (tenant, consumer, event, payload_digest, result_digest),
+                    (tenant, consumer, event, payload_digest, result_digest, workspace, organization, legal_entity),
                 )
                 return PostgresOutboxConsumerReceipt(
                     tenant_id=tenant,

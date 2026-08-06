@@ -99,6 +99,11 @@ from reconforge.domain.consolidation_deferred_tax import (
     AcquisitionDeferredTaxItem,
     prepare_acquisition_deferred_tax_bridge,
 )
+from reconforge.domain.consolidation_impairment import (
+    ConsolidationImpairmentBridgeRequest,
+    ConsolidationImpairmentUnit,
+    prepare_consolidation_impairment_bridge,
+)
 from reconforge.domain.consolidation_ppa import (
     AcquisitionPpaItem,
     AcquisitionPurchasePriceAllocationRequest,
@@ -4388,6 +4393,76 @@ def consolidation_acquisition_deferred_tax_command(
             console.print(f"[green]Acquisition deferred-tax bridge written:[/green] {target}")
     except (ConsolidationError, OSError, TypeError, ValueError) as exc:
         _safe_cli_error(PlatformError(f"Acquisition deferred-tax input is invalid: {exc}"))
+
+
+@consolidation_app.command("impairment-bridge")
+def consolidation_impairment_bridge_command(
+    input_path: Annotated[Path, typer.Option("--input", help="JSON consolidation impairment request.")],
+    output_path: Annotated[Path | None, typer.Option("--output", help="Optional exact JSON output path.")] = None,
+) -> None:
+    """Prepare a deterministic, non-posting consolidation impairment bridge."""
+
+    try:
+        document = read_json_record_document(input_path, envelope_keys=("request",), allow_single_object=True)
+        if len(document.records) != 1:
+            raise PlatformError("Consolidation impairment input must contain exactly one JSON request object.")
+        raw = document.records[0]
+        expected = {
+            "impairment_test_id",
+            "entity_code",
+            "period_id",
+            "reporting_currency",
+            "units",
+            "policy_id",
+            "policy_version",
+            "source_reference",
+            "source_digest",
+            "prepared_by",
+            "prepared_at",
+            "approved_by",
+            "approved_at",
+        }
+        if set(raw) != expected:
+            raise PlatformError("Consolidation impairment input fields are not exactly the declared contract.")
+
+        def parse_money(value: object, field: str) -> Money:
+            if not isinstance(value, dict) or not isinstance(value.get("amount"), str) or not isinstance(value.get("currency"), str):
+                raise PlatformError(f"Consolidation impairment {field} must be a canonical money object.")
+            return Money.from_exact(value["amount"], value["currency"], strict_precision=True)
+
+        raw_units = raw["units"]
+        if not isinstance(raw_units, list):
+            raise PlatformError("Consolidation impairment units must be a JSON array.")
+        unit_fields = {
+            "unit_id",
+            "unit_kind",
+            "account_code",
+            "carrying_amount",
+            "recoverable_amount",
+            "source_reference",
+            "source_digest",
+        }
+        units: list[ConsolidationImpairmentUnit] = []
+        for index, raw_unit in enumerate(raw_units):
+            if not isinstance(raw_unit, dict) or set(raw_unit) != unit_fields:
+                raise PlatformError(f"Consolidation impairment unit {index} fields are not exactly the declared contract.")
+            values = dict(raw_unit)
+            values["carrying_amount"] = parse_money(raw_unit["carrying_amount"], f"unit {index} carrying_amount")
+            values["recoverable_amount"] = parse_money(raw_unit["recoverable_amount"], f"unit {index} recoverable_amount")
+            units.append(ConsolidationImpairmentUnit(**values))
+
+        values = dict(raw)
+        values["units"] = tuple(units)
+        result = prepare_consolidation_impairment_bridge(ConsolidationImpairmentBridgeRequest(**values))
+        rendered = json.dumps(result.to_dict(), sort_keys=True, indent=2)
+        if output_path is None:
+            console.print(rendered)
+        else:
+            target = ensure_output_dir(output_path.parent) / output_path.name
+            target.write_text(rendered + "\n", encoding="utf-8", newline="\n")
+            console.print(f"[green]Consolidation impairment bridge written:[/green] {target}")
+    except (ConsolidationError, OSError, TypeError, ValueError) as exc:
+        _safe_cli_error(PlatformError(f"Consolidation impairment input is invalid: {exc}"))
 
 
 @consolidation_app.command("intercompany-eliminations")

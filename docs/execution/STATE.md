@@ -4637,7 +4637,7 @@ runtime and current-tree gate entries; its latest parse is 161 unique tasks
 The server-identity fixture, final local gate, PostgreSQL grouped runtime,
 public-network evidence, canonical duplicate-detection, final local-gate, RAC
 adapter, live Redis cache drill, and final local-gate entries extend that parse
-to 173 unique tasks (E-495 through E-506 included): 162 completed, 1 blocked,
+to 175 unique tasks (E-495 through E-508 included): 164 completed, 1 blocked,
 8 in progress, and 2 deferred. This administrative ratio is not a
 product-readiness percentage;
  the open workstreams and external release gates remain authoritative.
@@ -4847,6 +4847,22 @@ E-506 closed the required full regression/static/package gate after E-505:
 2,587 tests reached 100% with no collection or executed failure; Ruff, Mypy
 (469 files), Bandit, OSV pip-audit, package build, and diff-check passed.
 Hosted CI/security/provenance, native backup restore, live providers/
+write-back, independent HA/DR, and release approval remain external. GitHub
+publication remains deferred by owner instruction.
+
+E-507 adds the bounded `consolidation-impairment-bridge-v1` artifact. It
+calculates exact per-unit impairment loss and recoverable headroom from
+source-bound carrying/recoverable inputs, preserves maker-checker and source
+lineage, verifies canonical digests and derived fields, validates the closed
+schema, and exposes a read-only CLI. The result is explicitly non-posting;
+valuation methodology, cash-generating-unit policy, statutory recognition,
+tax, journal posting, ERP write-back, and production readiness remain open.
+GitHub publication remains deferred by owner instruction.
+
+E-508 closes the post-impairment local gate: 2,592 tests reached 100% with no
+collection or executed failure; the focused impairment/module/threat-model
+suite passed 19 tests; Ruff, Mypy (470 files), Bandit, OSV pip-audit, package
+build, and diff-check passed. Hosted CI/security/provenance, live providers/
 write-back, independent HA/DR, and release approval remain external. GitHub
 publication remains deferred by owner instruction.
 

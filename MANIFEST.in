@@ -623,3 +623,6 @@ include docs/adr/0379-writeback-idempotency-recovery-lookup.md
 include docs/adr/0380-server-writeback-recovery-route.md
 include docs/adr/0391-live-redis-policy-cache-invalidation-drill.md
 include docs/adr/0392-postgres-backup-service-connection-argument.md
+include docs/adr/0393-consolidation-impairment-bridge-is-nonposting.md
+include docs/schemas/consolidation_impairment_v1.schema.json
+include tests/test_consolidation_impairment.py

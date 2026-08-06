@@ -1904,3 +1904,37 @@ tasks:
       distribution, and git diff --check passes. This is local evidence only;
       hosted CI/security/provenance, native backup restore, live providers/
       write-back, independent HA/DR, and release approval remain external.
+  - id: E-507
+    priority: P1
+    area: financial_consolidation
+    title: Deterministic consolidation impairment bridge
+    status: completed
+    depends_on: [P4-FIN-002, E-506]
+    exit_evidence: >-
+      `consolidation-impairment-bridge-v1` adds a bounded exact Decimal/Money
+      calculation over source-bound carrying and recoverable amounts. It
+      canonically orders units, exposes per-unit impairment loss and recoverable
+      headroom, enforces maker-checker lineage and currency policy, verifies
+      derived fields and digests, validates a closed JSON Schema, and exposes a
+      read-only CLI with `posted: false`. Focused domain/schema/CLI/tamper
+      tests, module registry, ADR 0393, and package membership pass. This is
+      a non-posting evidence artifact only: valuation methodology, cash-
+      generating-unit policy, tax, statutory recognition, journal posting,
+      write-back, and production readiness remain open.
+  - id: E-508
+    priority: P0
+    area: quality
+    title: Focused regression and package gate after impairment bridge
+    status: completed
+    depends_on: [E-507]
+    exit_evidence: >-
+      The focused impairment/module/threat-model suite passes 19/19; the full
+      current tree collects 2,592 tests and reaches 100% with no collection or
+      executed failure, with only declared capability skips and existing
+      warnings. Ruff passes; Mypy reports no issues in 470 source files;
+      Bandit exits 0 with reviewed existing suppression/comment warnings;
+      OSV pip-audit reports no known vulnerabilities; the package build
+      succeeds with ADR 0393, schema, domain module, and test in the source
+      distribution; and git diff --check passes. This is local evidence only;
+      hosted CI/security/provenance, live providers/write-back, independent
+      HA/DR, and release approval remain external.

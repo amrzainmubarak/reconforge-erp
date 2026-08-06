@@ -5179,3 +5179,22 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   and production RPO/RTO remain open.
 - **Reversibility**: Restore the two argv tuples and focused assertion; no
   migration or persisted data rollback is required.
+
+### D-328: Keep the consolidation impairment bridge non-posting
+
+- **Date**: 2026-08-06
+- **Context**: The consolidation workstream needed a reproducible impairment
+  calculation boundary without silently deciding valuation methodology,
+  cash-generating-unit policy, tax, or statutory journal treatment.
+- **Decision**: Add `consolidation-impairment-bridge-v1` as a pure exact
+  Decimal/Money artifact. Operators provide approved carrying and recoverable
+  amounts; the bridge exposes per-unit loss/headroom/status, aggregate totals,
+  source digests, maker-checker attribution, canonical replay, and
+  `posted: false`. The CLI accepts only the closed request contract and
+  performs no database mutation or network call.
+- **Verification**: `tests/test_consolidation_impairment.py` reports 5 passed;
+  the JSON Schema, registry, Ruff, and package manifest are aligned.
+- **Boundary**: This is not a statutory impairment engine, valuation opinion,
+  tax calculation, journal posting, ERP write-back, or production assurance.
+- **Reversibility**: Remove the domain/CLI/schema/test/registry/ADR/manifest
+  and execution records; no migration or persisted-data rollback is required.

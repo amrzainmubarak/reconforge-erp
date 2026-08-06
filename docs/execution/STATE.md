@@ -4637,7 +4637,7 @@ runtime and current-tree gate entries; its latest parse is 161 unique tasks
 The server-identity fixture, final local gate, PostgreSQL grouped runtime,
 public-network evidence, canonical duplicate-detection, final local-gate, RAC
 adapter, live Redis cache drill, and final local-gate entries extend that parse
-to 177 unique tasks (E-495 through E-510 included): 166 completed, 1 blocked,
+to 179 unique tasks (E-495 through E-512 included): 168 completed, 1 blocked,
 8 in progress, and 2 deferred. This administrative ratio is not a
 product-readiness percentage;
  the open workstreams and external release gates remain authoritative.
@@ -4891,3 +4891,21 @@ without `RECONFORGE_TEST_POSTGRES_DSN`; Ruff, Mypy (472 files), Bandit, OSV
 pip-audit, package build, and diff-check passed. Hosted CI/security/provenance,
 live PostgreSQL availability, live providers/write-back, independent HA/DR,
 and release approval remain external.
+
+E-511 exposes the impairment evidence boundary through the authenticated
+PostgreSQL server profile. The POST and GET routes use strict canonical
+Money/unit contracts, bind preparation to the authenticated actor, require an
+independent approver, re-evaluate tenant policy, and fail closed without
+PostgreSQL. Focused API/server-scope tests pass and the authorization inventory
+now contains 241 contracts with digest
+`4e456e05005444abe0e5a70c03f6d11177aa6629b58051e8ac773586b43158f2`. This is
+non-posting evidence only; GitHub publication remains deferred by owner
+instruction.
+
+E-512 closes the required current-tree regression/static/package gate after
+the API route: 2,598 tests reached 100% with no collection or executed
+failure; the impairment PostgreSQL runtime remains a declared skip without
+`RECONFORGE_TEST_POSTGRES_DSN`; Ruff, Mypy (474 files), Bandit, OSV pip-audit,
+package build, authorization inventory, and diff-check passed. Hosted
+CI/security/provenance, live PostgreSQL API runtime, live providers/write-back,
+independent HA/DR, and release approval remain external.

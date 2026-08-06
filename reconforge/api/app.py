@@ -45,6 +45,7 @@ from reconforge.api.routes import (
     connectors,
     consolidation_close,
     consolidation_deferred_tax,
+    consolidation_impairment,
     consolidation_intercompany,
     consolidation_ownership,
     consolidation_ppa,
@@ -184,6 +185,7 @@ def create_api_app(
     app.state.postgres_consolidation_ownership_factory = app.state.postgres_identity_factory
     app.state.postgres_ppa_factory = app.state.postgres_identity_factory
     app.state.postgres_deferred_tax_factory = app.state.postgres_identity_factory
+    app.state.postgres_consolidation_impairment_factory = app.state.postgres_identity_factory
     app.state.postgres_consolidation_intercompany_factory = app.state.postgres_identity_factory
     app.state.postgres_evidence_factory = app.state.postgres_identity_factory
     app.state.postgres_reconciliation_factory = app.state.postgres_identity_factory
@@ -347,6 +349,7 @@ def create_api_app(
     app.include_router(consolidation_ownership.router, prefix="/api/v1")
     app.include_router(consolidation_ppa.router, prefix="/api/v1")
     app.include_router(consolidation_deferred_tax.router, prefix="/api/v1")
+    app.include_router(consolidation_impairment.router, prefix="/api/v1")
     app.include_router(consolidation_intercompany.router, prefix="/api/v1")
     app.include_router(connectors.router, prefix="/api/v1")
     app.include_router(evidence.router, prefix="/api/v1")
@@ -383,6 +386,7 @@ def create_api_app(
         evidence.router,
         consolidation_ppa.router,
         consolidation_deferred_tax.router,
+        consolidation_impairment.router,
         consolidation_intercompany.router,
         connectors.router,
         reconciliation.router,

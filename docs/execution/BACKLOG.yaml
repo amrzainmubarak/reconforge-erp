@@ -1468,7 +1468,7 @@ tasks:
     title: Current full local regression after connector and CI hardening
     status: completed
     depends_on: [E-462]
-    exit_evidence: `uv run --no-sync pytest -q --tb=short -ra` exits 0 in 348.9s on the current head. All collected tests pass with declared live PostgreSQL/Redis/object-storage/Windows/network capability skips and existing framework/legacy-input warnings only. This is local compatibility evidence and does not substitute for hosted CI or release approval.
+    exit_evidence: uv run --no-sync pytest -q --tb=short -ra exits 0 in 348.9s on the current head. All collected tests pass with declared live PostgreSQL/Redis/object-storage/Windows/network capability skips and existing framework/legacy-input warnings only. This is local compatibility evidence and does not substitute for hosted CI or release approval.
 
   - id: E-464
     priority: P0
@@ -1492,4 +1492,12 @@ tasks:
     title: Connector SDK documentation drift closure
     status: completed
     depends_on: [E-460]
-    exit_evidence: `docs/connectors/sdk-foundation.md` now names the governed read-only reference portfolio and documents the concrete World Bank public connector, its exact endpoint/schema/digest boundary, opt-in live test, and non-production claims. No live SAP/Odoo/bank-vendor capability is implied.
+    exit_evidence: docs/connectors/sdk-foundation.md now names the governed read-only reference portfolio and documents the concrete World Bank public connector, its exact endpoint/schema/digest boundary, opt-in live test, and non-production claims. No live SAP/Odoo/bank-vendor capability is implied.
+
+  - id: E-467
+    priority: P0
+    area: documentation
+    title: Execution backlog YAML validity after evidence additions
+    status: completed
+    depends_on: [E-466]
+    exit_evidence: PyYAML parses docs/execution/BACKLOG.yaml successfully with 133 unique task IDs, including E-460 through E-466; targeted workflow/policy tests and git diff check pass. No evidence item is hidden behind invalid YAML.

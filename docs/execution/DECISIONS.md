@@ -4642,6 +4642,19 @@
   release approval.
 - **Rollback**: Restore the prior generic SDK wording; no code/data rollback is
   required.
+
+### D-364: Treat execution backlog serialization as a release gate
+
+- **Date**: 2026-08-06
+- **Decision**: Require the execution backlog to parse as YAML and contain
+  unique task IDs after every evidence append; leading backticks are removed
+  from plain scalar starts or quoted explicitly.
+- **Verification**: PyYAML parses 133 tasks with unique IDs; targeted workflow,
+  policy, and diff checks pass.
+- **Boundary**: Serialization validity does not prove any runtime, hosted, or
+  production gate.
+- **Rollback**: Restore the prior scalar text only if it remains valid YAML;
+  no runtime/data rollback is needed.
 # ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
 
 Implemented and bounded the `professional.invoice-payment` module. It is local,

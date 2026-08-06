@@ -4627,3 +4627,7 @@ The SDK documentation is now current with the implementation: it lists the
 governed reference portfolio and gives the World Bank connector's exact bounded
 usage and live-test command, without implying live SAP/Odoo/bank connectivity or
 write-back. GitHub publication remains deferred.
+The execution backlog itself was re-parsed after the latest evidence entries;
+it now has 133 unique tasks and valid YAML. This closes documentation
+serialization drift only and does not change the still-open hosted release,
+provider, HA/DR, or native-backup gates.

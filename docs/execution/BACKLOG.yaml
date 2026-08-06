@@ -1709,3 +1709,11 @@ tasks:
     status: completed
     depends_on: [E-492, E-461]
     exit_evidence: The live `server-boundaries` workflow now installs `uv sync --locked --all-extras --no-editable --python 3.12`, and `test_server_boundaries_installs_all_locked_extras_for_live_matrix` locks that contract. This prevents optional-dependency collection drift for observability, MFA/WebAuthn, federation, connector, backup, and server tests. A fresh hosted run is still required; this does not close native-tool, hosted runtime, security/provenance, or production gates.
+
+  - id: E-494
+    priority: P0
+    area: quality
+    title: Full regression and static gates after server-boundaries profile fix
+    status: completed
+    depends_on: [E-493]
+    exit_evidence: The current tree collects 2577 tests and the full `uv run --no-sync pytest -q --tb=short -ra` run exits 0 with no collection or executed failure; declared capability skips and existing warnings remain visible. Ruff passes; Mypy reports no issues in 467 source files; Bandit exits 0 with reviewed nosec/comment warnings; OSV pip-audit reports no known vulnerabilities; package build succeeds and `reconforge_erp.egg-info/SOURCES.txt` contains ADR 0385. Hosted CI/security/provenance and external runtime gates remain unverified.

@@ -4632,8 +4632,8 @@ it now has 133 unique tasks and valid YAML. This closes documentation
 serialization drift only and does not change the still-open hosted release,
 provider, HA/DR, or native-backup gates.
 The backlog has since grown with the current HA/DR, object-storage, and Redis
-runtime and current-tree gate entries; its latest parse is 160 unique tasks
-(E-460 through E-493 included).
+runtime and current-tree gate entries; its latest parse is 161 unique tasks
+(E-460 through E-494 included).
 The fresh repeated PostgreSQL HA/DR drill now provides stronger bounded runtime
 evidence: three Docker 17.10 primary/standby cycles passed encrypted restore,
 fencing, partition refusal, manual failover/failback, zero-loss sentinel replay,
@@ -4768,3 +4768,6 @@ profile because its selected matrix spans observability, MFA/WebAuthn,
 federation, connector, backup, and server dependencies. The workflow contract
 test protects this against partial-profile drift; only a fresh hosted run can
 prove native-tool and live runtime success.
+The post-fix local gate collected 2,577 tests and exited 0; Ruff, Mypy, Bandit,
+pip-audit, package build, and diff-check passed. This verifies local compatibility
+of the workflow contract only; it does not replace the required hosted rerun.

@@ -4635,10 +4635,11 @@ The backlog has since grown with the current HA/DR, object-storage, and Redis
 runtime and current-tree gate entries; its latest parse is 161 unique tasks
 (E-460 through E-494 included).
 The server-identity fixture, final local gate, PostgreSQL grouped runtime,
-public-network evidence, canonical duplicate-detection, final local-gate, and
-RAC adapter and final local-gate entries extend that parse to 169 unique tasks (E-495 through E-502 included): 158 completed, 1
-blocked, 8 in progress, and
-2 deferred. This administrative ratio is not a product-readiness percentage;
+public-network evidence, canonical duplicate-detection, final local-gate, RAC
+adapter, live Redis cache drill, and final local-gate entries extend that parse
+to 171 unique tasks (E-495 through E-504 included): 160 completed, 1 blocked,
+8 in progress, and 2 deferred. This administrative ratio is not a
+product-readiness percentage;
  the open workstreams and external release gates remain authoritative.
 The fresh repeated PostgreSQL HA/DR drill now provides stronger bounded runtime
 evidence: three Docker 17.10 primary/standby cycles passed encrypted restore,
@@ -4816,6 +4817,23 @@ RAC adapter: pytest exited 0 with no collection or executed failure; Ruff,
 Mypy (469 files), Bandit, OSV pip-audit, package build, and diff-check passed.
 Existing declared skips/warnings and all hosted/external release gates remain
 separate; GitHub publication remains deferred by owner instruction.
+
+E-503 extends the disposable live Redis drill to the actual optional
+`PolicyDecisionCache` boundary. Two independent cache instances use separate
+Redis clients; a repeat is served from the second local cache, then global
+invalidation in the first advances the shared generation and forces a fresh
+evaluation in the second. The current report records all five invariants true,
+including `policy_cache_cross_process_invalidation`, with digest
+`b7f35cc2e9741cf06587f951a57048f3b5f454e51b558e1e52dc41284d48091e`. This is
+single-node synthetic evidence only; Redis HA/failover, federation, complete
+surface adoption, and production IAM remain open.
+
+E-504 closed the required post-E-503 local gate: 2,587 tests reached 100% with
+no collection or executed failure; Ruff, Mypy (469 files), Bandit, OSV
+pip-audit, package build, and diff-check passed. Hosted CI/security/provenance,
+native backup tooling, live providers/write-back, independent HA/DR, and
+release approval remain external. GitHub publication remains deferred by owner
+instruction.
 
 E-500 reran the complete local regression and release-quality gates after the
 duplicate-detection slice: pytest exited 0 with no collection or executed

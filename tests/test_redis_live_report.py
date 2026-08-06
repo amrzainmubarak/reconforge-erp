@@ -35,6 +35,7 @@ def _report(module: Any) -> dict[str, object]:
             "tenant_key_isolation": True,
             "session_raw_token_absent": True,
             "policy_generation_shared": True,
+            "policy_cache_cross_process_invalidation": True,
             "cleanup": True,
         },
         "elapsed_ms": 1.0,
@@ -86,3 +87,12 @@ def test_current_redis_live_report_is_schema_valid_and_digest_bound() -> None:
         supplied = str(payload.pop("report_digest"))
         assert supplied == module._canonical_digest(payload)
         assert all(bool(value) for value in report["observed"].values())
+
+
+def test_historical_redis_live_report_keeps_v1_observation_compatibility() -> None:
+    module = _module()
+    historical = json.loads(
+        (ROOT / "docs" / "execution" / "REDIS_LIVE_DOCKER_DRILL_2026-08-05.json").read_text(encoding="utf-8")
+    )
+    assert "policy_cache_cross_process_invalidation" not in historical["observed"]
+    module.verify_report(historical)

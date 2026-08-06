@@ -1839,3 +1839,37 @@ tasks:
       This is local evidence only; hosted CI/security/provenance, live
       providers/write-back, independent HA/DR, and release approval remain
       external.
+  - id: E-503
+    priority: P1
+    area: enterprise-policy
+    title: Live Redis policy-cache cross-process invalidation drill
+    status: completed
+    depends_on: [E-470, P4-IAM-001]
+    exit_evidence: >-
+      The disposable live Redis contract now constructs two independent
+      PolicyDecisionCache instances over separate connection factories. The
+      first evaluation is cached per process, a repeat in the second process
+      is served locally, and global invalidation in the first process advances
+      the shared generation so the second process evaluates again. The current
+      report records tenant isolation, hashed-token storage, shared generation,
+      cross-process policy-cache invalidation, and cleanup as true; report
+      digest b7f35cc2e9741cf06587f951a57048f3b5f454e51b558e1e52dc41284d48091e.
+      This remains synthetic single-node cache evidence and does not prove
+      Redis HA, federation, complete surface adoption, or production IAM.
+  - id: E-504
+    priority: P0
+    area: quality
+    title: Full regression and static gates after live Redis cache drill
+    status: completed
+    depends_on: [E-503]
+    exit_evidence: >-
+      The current tree collected 2,587 tests and reached 100% with no
+      collection or executed failure; declared service/platform/network skips
+      and existing framework/legacy-input warnings remain visible. Ruff,
+      Mypy reports no issues in 469 source files, Bandit exits 0 with reviewed
+      existing suppression/comment warnings, OSV pip-audit reports no known
+      vulnerabilities, the package build succeeds with ADR 0391 and the live
+      verifier in the source distribution, and git diff --check passes. This
+      is local evidence only; hosted CI/security/provenance, native backup
+      tooling, live providers/write-back, independent HA/DR, and release
+      approval remain external.

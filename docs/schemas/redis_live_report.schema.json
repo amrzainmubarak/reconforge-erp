@@ -20,6 +20,7 @@
         "tenant_key_isolation": {"const": true},
         "session_raw_token_absent": {"const": true},
         "policy_generation_shared": {"const": true},
+        "policy_cache_cross_process_invalidation": {"const": true},
         "cleanup": {"const": true}
       }
     },

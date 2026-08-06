@@ -10,6 +10,8 @@ import time
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from reconforge.auth.policy import PolicyDecision, PolicyEvaluationContext
+from reconforge.auth.policy_cache import PolicyDecisionCache
 from reconforge.infrastructure.redis import (
     RedisConnectionFactory,
     RedisPolicyCacheVersionStore,
@@ -20,6 +22,35 @@ from reconforge.infrastructure.redis import (
 
 REPORT_ID = "redis-live-session-policy-v1"
 IMAGE_DIGEST_PREFIX = "sha256:"
+
+
+class _CountingPolicyEvaluator:
+    """Synthetic evaluator used only to prove cache invalidation semantics."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def evaluate(
+        self,
+        context: PolicyEvaluationContext,
+        *,
+        required_permission: str | None = None,
+        enforce_sod: bool = True,
+        enforce_ownership: bool = True,
+    ) -> PolicyDecision:
+        del context, required_permission, enforce_sod, enforce_ownership
+        self.calls += 1
+        return PolicyDecision(True, "synthetic_live_allow", granted_permission="close.manage")
+
+    def evaluate_any(
+        self,
+        context: PolicyEvaluationContext,
+        *,
+        required_permissions: frozenset[str],
+    ) -> PolicyDecision:
+        del context, required_permissions
+        self.calls += 1
+        return PolicyDecision(True, "synthetic_live_allow", granted_permission="close.manage")
 
 
 def _required(name: str) -> str:
@@ -61,6 +92,7 @@ def _run_contract() -> dict[str, object]:
         "tenant_key_isolation": False,
         "session_raw_token_absent": False,
         "policy_generation_shared": False,
+        "policy_cache_cross_process_invalidation": False,
         "cleanup": False,
     }
     cleanup_keys = (
@@ -95,6 +127,29 @@ def _run_contract() -> dict[str, object]:
         second_policy = RedisPolicyCacheVersionStore(second_factory)
         first_policy.bump_version()
         observed["policy_generation_shared"] = second_policy.current_version() == "1" and second_policy.bump_version() == "2"
+        context = PolicyEvaluationContext(
+            user_id="redis-live-user",
+            username="redis-live-user",
+            user_permissions={"close.manage"},
+            tenant_id="redis_live_a",
+            workspace_id="workspace-live",
+            authorized_tenant_ids=frozenset({"redis_live_a"}),
+            authorized_workspace_ids=frozenset({"workspace-live"}),
+        )
+        first_evaluator = _CountingPolicyEvaluator()
+        second_evaluator = _CountingPolicyEvaluator()
+        first_cache = PolicyDecisionCache(version_store=first_policy)
+        second_cache = PolicyDecisionCache(version_store=second_policy)
+        first_cache.evaluate(context, required_permission="close.manage", evaluator=first_evaluator)
+        second_cache.evaluate(context, required_permission="close.manage", evaluator=second_evaluator)
+        second_cache.evaluate(context, required_permission="close.manage", evaluator=second_evaluator)
+        first_cache.invalidate()
+        second_cache.evaluate(context, required_permission="close.manage", evaluator=second_evaluator)
+        observed["policy_cache_cross_process_invalidation"] = (
+            first_evaluator.calls == 1
+            and second_evaluator.calls == 2
+            and second_policy.current_version() == "3"
+        )
     finally:
         try:
             first_factory.client().delete(*cleanup_keys)
@@ -139,13 +194,17 @@ def verify_report(report: dict[str, object]) -> None:
     if set(report) != required or report["schema_version"] != "1.0.0" or report["report_id"] != REPORT_ID:
         raise ValueError("Live Redis report shape is invalid")
     observed = report["observed"]
-    if not isinstance(observed, dict) or set(observed) != {
+    legacy_observed = {
         "tenant_key_isolation",
         "session_raw_token_absent",
         "policy_generation_shared",
         "cleanup",
-    } or not all(observed.values()):
+    }
+    current_observed = legacy_observed | {"policy_cache_cross_process_invalidation"}
+    if not isinstance(observed, dict) or set(observed) not in (legacy_observed, current_observed) or not all(observed.values()):
         raise ValueError("Live Redis report invariant set is incomplete")
+    if "policy_cache_cross_process_invalidation" in observed and not observed["policy_cache_cross_process_invalidation"]:
+        raise ValueError("Live Redis policy-cache invalidation invariant is incomplete")
     supplied = report["report_digest"]
     payload = dict(report)
     payload.pop("report_digest")

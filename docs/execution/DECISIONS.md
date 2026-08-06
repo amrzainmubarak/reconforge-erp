@@ -5140,3 +5140,23 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   production claim.
 - **Reversibility**: Remove the additive contract/schema fields, dispatch
   branch, tests, ADR, manifest entry, and evidence without a migration.
+
+### D-326: Prove Redis-backed policy-cache invalidation across independent clients
+
+- **Date**: 2026-08-06
+- **Context**: Unit tests covered the shared-generation protocol, while the
+  existing live Redis drill only proved integer generation visibility and did
+  not exercise the actual `PolicyDecisionCache` boundary.
+- **Decision**: Extend the disposable live drill with two independent cache
+  instances and synthetic evaluator call counters. A global invalidation in
+  one instance must advance the Redis generation and force a fresh evaluation
+  in the other instance; only the generation integer is stored in Redis.
+- **Verification**: The current local Redis report records
+  `policy_cache_cross_process_invalidation: true` alongside tenant isolation,
+  hashed-token storage, shared generation, and cleanup. Historical reports
+  remain readable under the v1 observation compatibility rule.
+- **Boundary**: Single-node synthetic optimization evidence only; Redis
+  replication/failover, federation, full route/job/export adoption, and
+  production IAM assurance remain open.
+- **Reversibility**: Remove the drill branch, optional report field/schema
+  compatibility, tests, ADR, manifest entry, and execution evidence.

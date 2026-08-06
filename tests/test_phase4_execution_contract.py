@@ -76,3 +76,10 @@ def test_phase4_does_not_claim_unfinished_global_superiority() -> None:
     for task in phase4:
         evidence = str(task["exit_evidence"]).casefold()
         assert all(claim not in evidence for claim in forbidden)
+
+
+def test_server_boundaries_installs_all_locked_extras_for_live_matrix() -> None:
+    workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["server-boundaries"]["steps"]
+    install_commands = [str(step.get("run", "")) for step in steps if step.get("name") == "Install locked server dependencies"]
+    assert install_commands == ["uv sync --locked --all-extras --no-editable --python 3.12"]

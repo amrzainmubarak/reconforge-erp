@@ -5027,3 +5027,20 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   readiness remain unverified.
 - **Reversibility**: Remove the profile, tests, ADR, manifest entry, and
   evidence; no migration or persisted-data rollback is required.
+
+### D-318: Keep the live server-boundaries dependency profile complete
+
+- **Date**: 2026-08-06
+- **Context**: The server-boundaries job selects metrics, WebAuthn/MFA,
+  federation, connector, backup, and PostgreSQL tests, but its install command
+  named only a subset of extras. That allows hosted collection/runtime drift and
+  can reproduce missing optional-module failures.
+- **Decision**: Use the universal locked `--all-extras` resolution in that job,
+  and add a workflow contract test so a partial install cannot return silently.
+- **Verification**: The workflow contract test passes locally; the lock already
+  contains the declared optional packages. A fresh hosted run remains required.
+- **Boundary**: This fixes dependency-profile completeness only. It does not
+  prove hosted PostgreSQL backup/restore, live providers, security provenance,
+  or production readiness.
+- **Reversibility**: Restore the prior command and remove the contract test,
+  ADR, manifest entry, and evidence; no application migration is involved.

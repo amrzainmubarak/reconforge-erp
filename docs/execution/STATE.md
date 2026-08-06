@@ -4632,8 +4632,8 @@ it now has 133 unique tasks and valid YAML. This closes documentation
 serialization drift only and does not change the still-open hosted release,
 provider, HA/DR, or native-backup gates.
 The backlog has since grown with the current HA/DR, object-storage, and Redis
-runtime and current-tree gate entries; its latest parse is 159 unique tasks
-(E-460 through E-492 included).
+runtime and current-tree gate entries; its latest parse is 160 unique tasks
+(E-460 through E-493 included).
 The fresh repeated PostgreSQL HA/DR drill now provides stronger bounded runtime
 evidence: three Docker 17.10 primary/standby cycles passed encrypted restore,
 fencing, partition refusal, manual failover/failback, zero-loss sentinel replay,
@@ -4763,3 +4763,8 @@ collection or executed failure. Ruff/Mypy/Bandit/pip-audit passed and the
 package build included ADR 0384 plus the soak module/test. This is a local
 compatibility/package checkpoint only; hosted CI/security/provenance and
 external runtime gates remain separate.
+The live server-boundaries install is now pinned to the locked `--all-extras`
+profile because its selected matrix spans observability, MFA/WebAuthn,
+federation, connector, backup, and server dependencies. The workflow contract
+test protects this against partial-profile drift; only a fresh hosted run can
+prove native-tool and live runtime success.

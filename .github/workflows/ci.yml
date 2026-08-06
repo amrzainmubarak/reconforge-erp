@@ -212,7 +212,7 @@ jobs:
           test -x "$(pg_config --bindir)/psql"
 
       - name: Install locked server dependencies
-        run: uv sync --locked --extra dev --extra server --extra backup --no-editable --python 3.12
+        run: uv sync --locked --all-extras --no-editable --python 3.12
 
       - name: Create non-privileged PostgreSQL application role
         env:

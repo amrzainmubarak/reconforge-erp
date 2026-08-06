@@ -4771,3 +4771,17 @@ prove native-tool and live runtime success.
 The post-fix local gate collected 2,577 tests and exited 0; Ruff, Mypy, Bandit,
 pip-audit, package build, and diff-check passed. This verifies local compatibility
 of the workflow contract only; it does not replace the required hosted rerun.
+The server-identity PostgreSQL fixture then aligned itself with the complete
+close/PPA dependency contract: domain foundation, application master-data,
+identity, approvals, emergency access, service accounts, scope authority,
+intercompany artifacts, close links, and domain audit-ledger privileges are now
+installed/granted in migration order. A newly created disposable PostgreSQL
+16.14 database passes the live server-identity test; the configured service
+passes metrics parity and Alembic upgrade tests. This closes fixture drift and
+the misleading masked 503, not statutory consolidation, live providers/
+write-back, distributed scale, independent HA/DR, or production readiness.
+After that fixture repair, the full local regression again reached 100% with no
+collection or executed failure; Ruff, Mypy, Bandit, OSV pip-audit, package build,
+and diff-check all passed, and ADR 0386 is present in the source distribution.
+This is a local quality checkpoint only; hosted CI/security/provenance, native
+backup tooling, and external runtime/release gates remain open.

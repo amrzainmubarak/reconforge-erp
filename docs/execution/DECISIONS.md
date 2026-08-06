@@ -5044,3 +5044,28 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   or production readiness.
 - **Reversibility**: Restore the prior command and remove the contract test,
   ADR, manifest entry, and evidence; no application migration is involved.
+
+### D-321: Keep server identity close fixtures aligned with intercompany replay schemas
+
+- **Date**: 2026-08-06
+- **Context**: Consolidation-close replay verification queries the immutable
+  intercompany artifact and close-link tables during every run transition. The
+  server-identity PostgreSQL fixture installed only part of the migration
+  dependency graph, so a fresh database exposed missing domain, approval,
+  service-account, scope, intercompany, or audit-ledger relations as generic
+  503 responses.
+- **Decision**: Install the shared dependency schemas in migration order and
+  grant the non-privileged application role every route table plus the domain
+  audit ledger. Keep the runtime repository contract unchanged and fix fixture
+  drift rather than weakening replay verification or treating absent evidence
+  as empty evidence.
+- **Verification**: A newly created disposable PostgreSQL 16.14 database passes
+  the live server-identity API test with a non-superuser, non-BYPASSRLS role; the
+  configured service passes metrics parity and Alembic upgrade tests. The
+  missing-relation and permission failures were reproduced in PostgreSQL logs
+  before the fixture correction.
+- **Boundary**: Test-fixture/schema-contract closure only; statutory close,
+  live providers/write-back, distributed scale, independent HA/DR, and production
+  readiness remain open.
+- **Reversibility**: Remove the two schema installs, grants, ADR, manifest entry,
+  and evidence; no production migration or data rollback is required.

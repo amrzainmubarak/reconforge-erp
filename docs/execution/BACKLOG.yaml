@@ -1717,3 +1717,28 @@ tasks:
     status: completed
     depends_on: [E-493]
     exit_evidence: The current tree collects 2577 tests and the full `uv run --no-sync pytest -q --tb=short -ra` run exits 0 with no collection or executed failure; declared capability skips and existing warnings remain visible. Ruff passes; Mypy reports no issues in 467 source files; Bandit exits 0 with reviewed nosec/comment warnings; OSV pip-audit reports no known vulnerabilities; package build succeeds and `reconforge_erp.egg-info/SOURCES.txt` contains ADR 0385. Hosted CI/security/provenance and external runtime gates remain unverified.
+  - id: E-495
+    priority: P0
+    area: postgres-parity
+    title: Server identity close fixture restores intercompany evidence schema contract
+    status: completed
+    depends_on: [E-494]
+    exit_evidence: >-
+      The live PostgreSQL server-identity fixture now installs its complete
+      migration-order dependency graph: domain foundation, application
+      master-data, identity, approvals, emergency access, service accounts,
+      scope authority, intercompany artifacts, close links, and audit-ledger
+      access. A newly created disposable PostgreSQL 16.14 database with a
+      non-privileged application role passes the server-identity API test; the
+      configured PostgreSQL service passes the metrics parity and Alembic
+      upgrade tests. The fix prevents missing-relation and permission errors
+      from being masked as a false 503 during close/PPA execution; statutory
+      consolidation, live providers/write-back, HA/DR, distributed scale, and
+      production readiness remain open.
+  - id: E-496
+    priority: P0
+    area: quality
+    title: Full regression and static gates after server identity fixture repair
+    status: completed
+    depends_on: [E-495]
+    exit_evidence: The current tree reaches 100% in the full local pytest regression with no collection or executed failure; declared capability skips and existing warnings remain visible. Ruff passes, Mypy reports no issues in 467 source files, Bandit exits 0 with reviewed nosec/comment warnings, OSV pip-audit reports no known vulnerabilities, package build succeeds, the new ADR is present in reconforge_erp.egg-info/SOURCES.txt, and git diff --check passes. Hosted CI/security/provenance, native backup tooling, and external runtime/release gates remain unverified.

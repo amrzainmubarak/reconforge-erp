@@ -751,14 +751,21 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
     psycopg = pytest.importorskip("psycopg")
     from reconforge.api.routes.master_data import _server_id
     from reconforge.infrastructure.postgres import install_postgres_rls_schema
+    from reconforge.infrastructure.postgres_approvals import POSTGRES_APPROVALS_SCHEMA_SQL
     from reconforge.infrastructure.postgres_close import POSTGRES_CLOSE_SCHEMA_SQL
     from reconforge.infrastructure.postgres_consolidation_close import (
         POSTGRES_CONSOLIDATION_CLOSE_SCHEMA_SQL,
+        POSTGRES_CONSOLIDATION_INTERCOMPANY_LINK_SCHEMA_SQL,
     )
     from reconforge.infrastructure.postgres_consolidation_ownership import (
         POSTGRES_CONSOLIDATION_OWNERSHIP_SCHEMA_SQL,
     )
     from reconforge.infrastructure.postgres_consolidation_ppa import POSTGRES_CONSOLIDATION_PPA_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_domain import POSTGRES_DOMAIN_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_emergency_access import POSTGRES_EMERGENCY_ACCESS_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_intercompany_elimination import (
+        POSTGRES_INTERCOMPANY_ELIMINATION_SCHEMA_SQL,
+    )
     from reconforge.infrastructure.postgres_ledger import (
         POSTGRES_LEDGER_SCHEMA_SQL,
         PostgresLedgerRepository,
@@ -768,7 +775,12 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
         POSTGRES_MASTER_DATA_SCHEMA_SQL,
         PostgresMasterDataRepository,
     )
+    from reconforge.infrastructure.postgres_master_data_application import (
+        POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL,
+    )
     from reconforge.infrastructure.postgres_privileged_sessions import POSTGRES_PRIVILEGED_SESSION_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_scope_authority import POSTGRES_SCOPE_AUTHORITY_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_service_accounts import POSTGRES_SERVICE_ACCOUNT_SCHEMA_SQL
     from reconforge.infrastructure.postgres_writeback import POSTGRES_WRITEBACK_SCHEMA_SQL
 
     dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
@@ -790,12 +802,20 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
     try:
         with admin.transaction():
             install_postgres_rls_schema(admin)
+            admin.execute(POSTGRES_DOMAIN_SCHEMA_SQL)
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
             admin.execute(POSTGRES_FISCAL_PERIOD_SCHEMA_SQL)
+            admin.execute(POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL)
             admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
             admin.execute(POSTGRES_CLOSE_SCHEMA_SQL)
             admin.execute(POSTGRES_CONSOLIDATION_CLOSE_SCHEMA_SQL)
             admin.execute(POSTGRES_IDENTITY_SCHEMA_SQL)
+            admin.execute(POSTGRES_APPROVALS_SCHEMA_SQL)
+            admin.execute(POSTGRES_EMERGENCY_ACCESS_SCHEMA_SQL)
+            admin.execute(POSTGRES_SERVICE_ACCOUNT_SCHEMA_SQL)
+            admin.execute(POSTGRES_SCOPE_AUTHORITY_SCHEMA_SQL)
+            admin.execute(POSTGRES_INTERCOMPANY_ELIMINATION_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_INTERCOMPANY_LINK_SCHEMA_SQL)
             admin.execute(POSTGRES_CONSOLIDATION_OWNERSHIP_SCHEMA_SQL)
             admin.execute(POSTGRES_CONSOLIDATION_PPA_SCHEMA_SQL)
             admin.execute(POSTGRES_WRITEBACK_SCHEMA_SQL)
@@ -815,11 +835,15 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                     f"reconforge.legal_entities, reconforge.branches, reconforge.fiscal_periods, "
                     f"reconforge.ledger_accounts, "
                     f"reconforge.ledger_entries, reconforge.ledger_lines, reconforge.audit_events, "
+                    f"reconforge.domain_audit_ledger_state, reconforge.domain_audit_events, "
                     f"reconforge.outbox_events, reconforge.close_periods, reconforge.close_tasks, "
                     f"reconforge.close_task_dependencies, reconforge.certification_records, "
+                    f"reconforge.approval_requests, "
                     f"reconforge.consolidation_close_periods, reconforge.consolidation_close_runs, "
                     f"reconforge.consolidation_close_effects, reconforge.consolidation_close_period_events, "
                     f"reconforge.consolidation_close_run_lines, reconforge.consolidation_close_effect_lines, "
+                    f"reconforge.consolidation_close_intercompany_links, "
+                    f"reconforge.intercompany_elimination_artifacts, "
                     f"reconforge.consolidation_ppa_artifacts, reconforge.consolidation_ownership_interests, "
                     f"reconforge.connector_writeback_intents TO {app_user}"
                 )

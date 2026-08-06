@@ -629,6 +629,8 @@ include docs/adr/0394-postgres-impairment-evidence-boundary.md
 include docs/adr/0395-consolidation-impairment-server-api-boundary.md
 include docs/adr/0396-postgres-close-impairment-evidence-binding.md
 include alembic/versions/0067_postgres_close_impairment_links.py
+include docs/adr/0397-postgres-close-deferred-tax-evidence-binding.md
+include alembic/versions/0068_postgres_close_deferred_tax_links.py
 include docs/schemas/consolidation_impairment_v1.schema.json
 include tests/test_consolidation_impairment.py
 include tests/test_postgres_consolidation_impairment.py

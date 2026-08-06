@@ -755,8 +755,12 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
     from reconforge.infrastructure.postgres_close import POSTGRES_CLOSE_SCHEMA_SQL
     from reconforge.infrastructure.postgres_consolidation_close import (
         POSTGRES_CONSOLIDATION_CLOSE_SCHEMA_SQL,
+        POSTGRES_CONSOLIDATION_DEFERRED_TAX_LINK_SCHEMA_SQL,
         POSTGRES_CONSOLIDATION_IMPAIRMENT_LINK_SCHEMA_SQL,
         POSTGRES_CONSOLIDATION_INTERCOMPANY_LINK_SCHEMA_SQL,
+    )
+    from reconforge.infrastructure.postgres_consolidation_deferred_tax import (
+        POSTGRES_CONSOLIDATION_DEFERRED_TAX_SCHEMA_SQL,
     )
     from reconforge.infrastructure.postgres_consolidation_impairment import (
         POSTGRES_CONSOLIDATION_IMPAIRMENT_SCHEMA_SQL,
@@ -816,12 +820,14 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             admin.execute(POSTGRES_IDENTITY_SCHEMA_SQL)
             admin.execute(POSTGRES_APPROVALS_SCHEMA_SQL)
             admin.execute(POSTGRES_CONSOLIDATION_IMPAIRMENT_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_DEFERRED_TAX_SCHEMA_SQL)
             admin.execute(POSTGRES_EMERGENCY_ACCESS_SCHEMA_SQL)
             admin.execute(POSTGRES_SERVICE_ACCOUNT_SCHEMA_SQL)
             admin.execute(POSTGRES_SCOPE_AUTHORITY_SCHEMA_SQL)
             admin.execute(POSTGRES_INTERCOMPANY_ELIMINATION_SCHEMA_SQL)
             admin.execute(POSTGRES_CONSOLIDATION_INTERCOMPANY_LINK_SCHEMA_SQL)
             admin.execute(POSTGRES_CONSOLIDATION_IMPAIRMENT_LINK_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_DEFERRED_TAX_LINK_SCHEMA_SQL)
             admin.execute(POSTGRES_CONSOLIDATION_OWNERSHIP_SCHEMA_SQL)
             admin.execute(POSTGRES_CONSOLIDATION_PPA_SCHEMA_SQL)
             admin.execute(POSTGRES_WRITEBACK_SCHEMA_SQL)
@@ -849,7 +855,9 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                     f"reconforge.consolidation_close_effects, reconforge.consolidation_close_period_events, "
                     f"reconforge.consolidation_close_run_lines, reconforge.consolidation_close_effect_lines, "
                     f"reconforge.consolidation_close_intercompany_links, reconforge.consolidation_close_impairment_links, "
+                    f"reconforge.consolidation_close_deferred_tax_links, "
                     f"reconforge.consolidation_impairment_artifacts, "
+                    f"reconforge.consolidation_deferred_tax_artifacts, "
                     f"reconforge.intercompany_elimination_artifacts, "
                     f"reconforge.consolidation_ppa_artifacts, reconforge.consolidation_ownership_interests, "
                     f"reconforge.connector_writeback_intents TO {app_user}"

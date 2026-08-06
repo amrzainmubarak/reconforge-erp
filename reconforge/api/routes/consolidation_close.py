@@ -101,6 +101,14 @@ class ImpairmentEvidenceAttachRequest(BaseModel):
     artifact_id: str = Field(pattern=r"^imp-[0-9a-f]{32}$", min_length=36, max_length=36)
 
 
+class DeferredTaxEvidenceAttachRequest(BaseModel):
+    """Strict reference to one immutable PostgreSQL deferred-tax artifact."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    artifact_id: str = Field(pattern=r"^dtax-[0-9a-f]{32}$", min_length=37, max_length=37)
+
+
 def _assert_prepared_actor(worksheet: ConsolidationWorksheetResult, actor: str) -> None:
     if worksheet.prepared_by != actor:
         raise APIError(
@@ -676,6 +684,40 @@ def attach_impairment_evidence(
     link = execute_postgres_consolidation_close(
         request,
         lambda repository, _tenant: repository.attach_impairment_artifact(
+            run_id,
+            payload.artifact_id,
+            workspace=scope.workspace_id,
+            actor_label=current_user.id,
+        ),
+    )
+    return {"link": link, "source": _server_source()}
+
+
+@router.post("/runs/{run_id}/deferred-tax-evidence")
+def attach_deferred_tax_evidence(
+    run_id: str,
+    request: Request,
+    payload: DeferredTaxEvidenceAttachRequest,
+    current_user: ConsolidationCertify,
+) -> dict[str, object]:
+    """Bind replay-verified, non-posting deferred-tax evidence to a close run."""
+
+    if not server_consolidation_close_enabled(request):
+        raise APIError(
+            status_code=503,
+            code="consolidation_deferred_tax_link_unavailable",
+            message="Deferred-tax close evidence linking requires the PostgreSQL server profile.",
+        )
+    scope = _server_scope(request, "")
+    enforce_server_scoped_permission(
+        request,
+        permission="finance_core.manage",
+        tenant_id=scope.tenant_id,
+        workspace_id=scope.workspace_id,
+    )
+    link = execute_postgres_consolidation_close(
+        request,
+        lambda repository, _tenant: repository.attach_deferred_tax_artifact(
             run_id,
             payload.artifact_id,
             workspace=scope.workspace_id,

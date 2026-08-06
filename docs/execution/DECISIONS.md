@@ -5245,3 +5245,24 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Reversibility**: The migration downgrade refuses non-empty links before
   dropping the trigger/function/index/table; the bundle reader preserves
   compatibility with older payloads that lack the additive digest field.
+
+### D-331: Bind deferred-tax evidence to the PostgreSQL close evidence bundle
+
+- **Date**: 2026-08-06
+- **Context**: Deferred-tax evidence is a non-posting acquisition bridge, but
+  a close run must identify the exact tax result reviewed for its worksheet.
+- **Decision**: Add migration `0068_pg_close_deferred_tax_links` with forced
+  RLS, append-only triggers, run/artifact/entity uniqueness, and an immutable
+  link digest. Replay-verify the artifact, bind business period, currency, and
+  subsidiary entity to the worksheet, require a linker independent of the run
+  preparer, and include sorted result digests in the close bundle. Expose the
+  link only through the PostgreSQL server API with strict IDs and
+  `finance_core.manage` authorization.
+- **Verification**: Static migration/schema contracts, close-bundle digest
+  coverage, and injected server-scope route tests pass. The live PostgreSQL
+  link runtime remains capability-gated and is not claimed without its DSN.
+- **Boundary**: This is evidence provenance, not statutory tax recognition,
+  valuation, journal posting, ERP write-back, HA/DR, or production readiness.
+- **Reversibility**: The migration downgrade refuses non-empty links before
+  dropping the trigger/function/index/table; old close bundles remain readable
+  through the additive-field compatibility reader.

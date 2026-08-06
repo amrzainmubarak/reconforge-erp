@@ -12,14 +12,19 @@ from reconforge.application.consolidation_close import (
     ConsolidationCloseRepositoryProtocol,
     build_translation_evidence,
 )
+from reconforge.application.consolidation_deferred_tax import AcquisitionDeferredTaxApplicationService
 from reconforge.application.consolidation_impairment import ConsolidationImpairmentApplicationService
 from reconforge.domain.intercompany_elimination import prepare_intercompany_eliminations
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings, set_local_tenant_scope
 from reconforge.infrastructure.postgres_consolidation_close import (
     POSTGRES_CONSOLIDATION_CLOSE_SCHEMA_SQL,
+    POSTGRES_CONSOLIDATION_DEFERRED_TAX_LINK_SCHEMA_SQL,
     POSTGRES_CONSOLIDATION_IMPAIRMENT_LINK_SCHEMA_SQL,
     POSTGRES_CONSOLIDATION_INTERCOMPANY_LINK_SCHEMA_SQL,
     PostgresConsolidationCloseRepository,
+)
+from reconforge.infrastructure.postgres_consolidation_deferred_tax import (
+    PostgresConsolidationDeferredTaxRepository,
 )
 from reconforge.infrastructure.postgres_consolidation_impairment import (
     PostgresConsolidationImpairmentRepository,
@@ -82,6 +87,27 @@ def test_postgres_close_impairment_link_migration_is_linear_and_refuses_data_los
     assert module.revision == "0067_pg_close_impairment_links"
     assert module.down_revision == "0066_pg_impairment"
     assert "refusing to discard close/impairment evidence links" in path.read_text(encoding="utf-8")
+
+
+def test_postgres_close_deferred_tax_link_schema_is_immutable_and_tenant_scoped() -> None:
+    schema = POSTGRES_CONSOLIDATION_DEFERRED_TAX_LINK_SCHEMA_SQL
+    assert "consolidation_close_deferred_tax_links" in schema
+    assert "consolidation_deferred_tax_artifacts" in schema
+    assert "UNIQUE (tenant_id,run_id,entity_code)" in schema
+    assert "FORCE ROW LEVEL SECURITY" in schema
+    assert "deferred-tax links are immutable" in schema
+    assert "cannot be deleted" in schema
+
+
+def test_postgres_close_deferred_tax_link_migration_is_linear_and_refuses_data_loss() -> None:
+    path = ROOT / "alembic/versions/0068_postgres_close_deferred_tax_links.py"
+    spec = importlib.util.spec_from_file_location("migration_0068", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.revision == "0068_pg_close_deferred_tax_links"
+    assert module.down_revision == "0067_pg_close_impairment_links"
+    assert "refusing to discard close/deferred-tax evidence links" in path.read_text(encoding="utf-8")
 
 
 def test_postgres_consolidation_close_migration_is_linear_and_reversible() -> None:
@@ -414,6 +440,32 @@ def test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable() -
         ]
         assert impairment_detail["close_bundle"]["impairment_artifact_digests"] == [
             impairment_artifact["result_digest"]
+        ]
+
+        from tests.test_consolidation_deferred_tax import _request as deferred_tax_request
+
+        deferred_request = deferred_tax_request(
+            subsidiary_entity_code="SUB",
+            period_id=worksheet.period_id,
+            prepared_by="impairment-preparer",
+            approved_by="impairment-reviewer",
+        )
+        deferred_artifact = AcquisitionDeferredTaxApplicationService(
+            PostgresConsolidationDeferredTaxRepository(connection, tenant_a)
+        ).prepare_and_persist(deferred_request, actor_label="impairment-preparer")
+        deferred_run = repository.prepare_run(
+            run_number="RUN-DTAX-001", worksheet=worksheet, workspace="close", actor_label=worksheet.prepared_by
+        )
+        deferred_link = repository.attach_deferred_tax_artifact(
+            deferred_run["id"], deferred_artifact["id"], workspace="close", actor_label="close-reviewer"
+        )
+        assert deferred_link["artifact_id"] == deferred_artifact["id"]
+        deferred_detail = repository.get_run(deferred_run["id"])
+        assert deferred_detail["deferred_tax_evidence"][0]["artifact_result_digest"] == deferred_artifact[
+            "result_digest"
+        ]
+        assert deferred_detail["close_bundle"]["deferred_tax_artifact_digests"] == [
+            deferred_artifact["result_digest"]
         ]
 
         # A prepared run with intercompany_transaction eliminations cannot be

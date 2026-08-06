@@ -34,8 +34,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_postgres_operations_schema_and_revision_registry_are_explicit() -> None:
     assert POSTGRES_OPERATIONS_SCHEMA_SQL.count("FORCE ROW LEVEL SECURITY") == 2
     assert "FOREIGN KEY (tenant_id, workspace_id)" in POSTGRES_OPERATIONS_SCHEMA_SQL
-    assert POSTGRES_MIGRATION_REVISIONS[-1] == "0067_pg_close_impairment_links"
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 67
+    assert POSTGRES_MIGRATION_REVISIONS[-1] == "0068_pg_close_deferred_tax_links"
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 68
 
 
 def test_postgres_operations_revision_registry_matches_the_linear_alembic_chain() -> None:

@@ -132,6 +132,16 @@ close_impairment_link_runtime_gate:
   covered_live_boundaries: [ConsolidationCloseApplicationService]
   migration_head: "0067_pg_close_impairment_links"
   limitations: [no_current_live_runtime, single_node_when_available, synthetic_data, non_posting_evidence_only, no_valuation_methodology, no_statutory_accounting, no_restore_drill, no_ha, no_rpo_rto_claim, no_erp_writeback]
+close_deferred_tax_link_runtime_gate:
+  id: E-515
+  executed_at: "2026-08-06"
+  database: "PostgreSQL disposable runtime when configured"
+  application_role: reconforge_app
+  focused_tests: 1
+  focused_result: declared_skip_without_RECONFORGE_TEST_POSTGRES_DSN
+  covered_live_boundaries: [ConsolidationCloseApplicationService]
+  migration_head: "0068_pg_close_deferred_tax_links"
+  limitations: [no_current_live_runtime, single_node_when_available, synthetic_data, non_posting_evidence_only, no_statutory_tax_accounting, no_restore_drill, no_ha, no_rpo_rto_claim, no_erp_writeback]
 delegation_runtime_gate:
   id: E-302
   executed_at: "2026-08-03"
@@ -156,7 +166,7 @@ policy_analysis_runtime_gate:
   limitations: [single_node, synthetic_data, currency_agnostic_amount_bounds, no_provider_federation, no_distributed_cache_invalidation, no_route_coverage]
 allowed_statuses: [live_verified_current, live_test_available, contract_only, absent, not_applicable]
 boundaries:
-  - {file: consolidation_close.py, service: ConsolidationCloseApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_close.PostgresConsolidationCloseRepository, test: tests/test_postgres_consolidation_close.py, risk: single_node_control_journal_and_impairment_link_evidence_only_no_erp_writeback_or_restore_ha_evidence}
+  - {file: consolidation_close.py, service: ConsolidationCloseApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_close.PostgresConsolidationCloseRepository, test: tests/test_postgres_consolidation_close.py, risk: single_node_control_journal_and_nonposting_tax_impairment_link_evidence_only_no_erp_writeback_or_restore_ha_evidence}
   - {file: consolidation_ownership.py, service: ConsolidationOwnershipApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_ownership.PostgresConsolidationOwnershipRepository, test: tests/test_postgres_consolidation_ownership.py, risk: single_node_runtime_only_no_restore_or_ha_evidence}
   - {file: consolidation_ppa.py, service: AcquisitionPpaApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_ppa.PostgresConsolidationPpaRepository, test: tests/test_postgres_consolidation_ppa_runtime.py, risk: single_node_synthetic_non_posting_only_no_statutory_or_writeback}
   - {file: consolidation_deferred_tax.py, service: AcquisitionDeferredTaxApplicationService, status: contract_only, adapter: reconforge.infrastructure.postgres_consolidation_deferred_tax.PostgresConsolidationDeferredTaxRepository, test: tests/test_postgres_consolidation_deferred_tax_runtime.py, risk: local_runtime_only_not_promoted_to_current_ci_gate_non_posting_only_no_statutory_or_writeback}

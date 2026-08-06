@@ -5330,3 +5330,24 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   journal posting, ERP/bank write-back, HA/DR, or production readiness.
 - **Reversibility**: The downgrade refuses non-empty links before dropping the
   trigger/function/index/table.
+
+### D-375: Expose ownership-change preparation through a local non-posting CLI
+
+- **Date**: 2026-08-06
+- **Context**: The deterministic ownership-change domain contract and its
+  PostgreSQL evidence boundary were not available through one first-party
+  local operator command.
+- **Decision**: Add `reconforge consolidation ownership-change` with a closed
+  JSON request contract, exact Decimal percentage parsing, canonical Money
+  parsing, and a digest-bound `posted: false` JSON result. Reject unknown
+  fields and invalid lineage/actor/currency inputs through the shared
+  fail-closed CLI path. Do not persist, post, contact providers, or mutate
+  inputs from this command.
+- **Verification**: Focused CLI/domain tests cover balanced output, digest
+  presence, output-file handling, and unknown-field rejection; ADR 0401 and
+  the test are included in the source distribution.
+- **Boundary**: Local synthetic operator evidence only; no statutory
+  ownership-change treatment, journal posting, ERP/bank write-back, live
+  PostgreSQL runtime, HA/DR, or production readiness claim.
+- **Reversibility**: Remove the command, focused tests, manifest entries, and
+  ADR; underlying domain and PostgreSQL contracts remain compatible.

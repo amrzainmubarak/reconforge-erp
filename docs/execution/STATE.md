@@ -4960,6 +4960,15 @@ scope contracts pass; the live PostgreSQL link runtime is still a declared
 skip without `RECONFORGE_TEST_POSTGRES_DSN`. GitHub publication remains
 deferred by owner instruction.
 
+E-523 closes the local regression/static/package gate after the CLI slice:
+2,617 collected tests pass with no collection or executed failure; declared
+PostgreSQL, Redis, object-storage, network, and platform skips remain visible.
+Ruff, Mypy (476 source files), Bandit, OSV pip-audit, package build including
+ADR 0401 and the CLI test, and diff-check pass. Hosted CI/security/provenance,
+native backup tools, live providers/write-back, independent HA/DR, and release
+approval remain external. GitHub publication remains deferred by owner
+instruction.
+
 E-518 closes the post-PPA full regression/static/package gate: the exact tree
 collects 2,607 tests and reaches 100% with no collection or executed failure;
 close/impairment/deferred-tax/PPA PostgreSQL runtimes remain declared skips
@@ -4996,5 +5005,25 @@ authorization inventory (245 routes, digest
 and repository inventories, maturity/phase-2 audits, YAML parsing, and
 diff-check pass. Capability-gated live PostgreSQL, hosted CI/security/
 provenance, live providers/write-back, independent HA/DR, and release
+approval remain external. GitHub publication remains deferred by owner
+instruction.
+
+E-522 adds the local `reconforge consolidation ownership-change` command.
+It accepts one bounded JSON request with exact Decimal ownership percentages
+and canonical Money, invokes the existing policy-neutral domain contract, and
+emits a balanced digest-bound `posted: false` result without persistence,
+provider I/O, or input mutation. Focused CLI/domain contracts pass; ADR 0401,
+the CLI test, and the source-distribution manifest are aligned. This improves
+local operator usability only and does not close statutory ownership-change
+policy, journal posting, PostgreSQL live runtime, provider write-back, HA/DR,
+hosted release gates, or the overall objective. GitHub publication remains
+deferred by owner instruction.
+
+E-523 closes the local regression/static/package gate after the CLI slice:
+2,616 collected tests pass with no collection or executed failure; declared
+PostgreSQL, Redis, object-storage, network, and platform skips remain visible.
+Ruff, Mypy (476 source files), Bandit, OSV pip-audit, package build including
+ADR 0401 and the CLI test, and diff-check pass. Hosted CI/security/provenance,
+native backup tools, live providers/write-back, independent HA/DR, and release
 approval remain external. GitHub publication remains deferred by owner
 instruction.

@@ -104,6 +104,10 @@ from reconforge.domain.consolidation_impairment import (
     ConsolidationImpairmentUnit,
     prepare_consolidation_impairment_bridge,
 )
+from reconforge.domain.consolidation_ownership_changes import (
+    OwnershipChangeAdjustmentRequest,
+    prepare_ownership_change_adjustment,
+)
 from reconforge.domain.consolidation_ppa import (
     AcquisitionPpaItem,
     AcquisitionPurchasePriceAllocationRequest,
@@ -4463,6 +4467,72 @@ def consolidation_impairment_bridge_command(
             console.print(f"[green]Consolidation impairment bridge written:[/green] {target}")
     except (ConsolidationError, OSError, TypeError, ValueError) as exc:
         _safe_cli_error(PlatformError(f"Consolidation impairment input is invalid: {exc}"))
+
+
+@consolidation_app.command("ownership-change")
+def consolidation_ownership_change_command(
+    input_path: Annotated[Path, typer.Option("--input", help="JSON ownership-change adjustment request.")],
+    output_path: Annotated[Path | None, typer.Option("--output", help="Optional exact JSON output path.")] = None,
+) -> None:
+    """Prepare a deterministic, balanced, non-posting ownership-change proposal."""
+
+    try:
+        document = read_json_record_document(input_path, envelope_keys=("request",), allow_single_object=True)
+        if len(document.records) != 1:
+            raise PlatformError("Ownership-change input must contain exactly one JSON request object.")
+        raw = document.records[0]
+        expected = {
+            "change_id",
+            "subsidiary_entity_code",
+            "period_id",
+            "effective_date",
+            "reporting_currency",
+            "prior_group_ownership_percentage",
+            "new_group_ownership_percentage",
+            "net_assets",
+            "consideration_effect",
+            "nci_account_code",
+            "consideration_account_code",
+            "parent_equity_account_code",
+            "policy_id",
+            "policy_version",
+            "source_reference",
+            "source_digest",
+            "prepared_by",
+            "prepared_at",
+            "approved_by",
+            "approved_at",
+        }
+        if set(raw) != expected:
+            raise PlatformError("Ownership-change input fields are not exactly the declared contract.")
+
+        def parse_money(value: object, field: str) -> Money:
+            if (
+                not isinstance(value, dict)
+                or not isinstance(value.get("amount"), str)
+                or not isinstance(value.get("currency"), str)
+            ):
+                raise PlatformError(f"Ownership-change {field} must be a canonical money object.")
+            return Money.from_exact(value["amount"], value["currency"], strict_precision=True)
+
+        values = dict(raw)
+        for field in ("prior_group_ownership_percentage", "new_group_ownership_percentage"):
+            try:
+                values[field] = parse_exact_amount(raw[field])
+            except (TypeError, ValueError) as exc:
+                raise PlatformError(f"Ownership-change {field} must be exact decimal text.") from exc
+        values["net_assets"] = parse_money(raw["net_assets"], "net_assets")
+        values["consideration_effect"] = parse_money(raw["consideration_effect"], "consideration_effect")
+        result = prepare_ownership_change_adjustment(OwnershipChangeAdjustmentRequest(**values))
+        rendered = json.dumps(result.to_dict(), sort_keys=True, indent=2)
+        if output_path is None:
+            console.print(rendered)
+        else:
+            target = ensure_output_dir(output_path.parent) / output_path.name
+            target.write_text(rendered + "\n", encoding="utf-8", newline="\n")
+            console.print(f"[green]Ownership-change proposal written:[/green] {target}")
+    except (ConsolidationError, OSError, TypeError, ValueError) as exc:
+        _safe_cli_error(PlatformError(f"Ownership-change input is invalid: {exc}"))
 
 
 @consolidation_app.command("intercompany-eliminations")

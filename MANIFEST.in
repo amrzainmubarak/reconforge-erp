@@ -640,6 +640,8 @@ include reconforge/infrastructure/postgres_consolidation_ownership_change.py
 include docs/adr/0399-postgres-ownership-change-evidence-boundary.md
 include docs/adr/0400-postgres-close-ownership-change-evidence-binding.md
 include tests/test_postgres_consolidation_ownership_change.py
+include docs/adr/0401-ownership-change-cli-is-local-non-posting.md
+include tests/test_consolidation_cli.py
 include docs/schemas/consolidation_impairment_v1.schema.json
 include tests/test_consolidation_impairment.py
 include tests/test_postgres_consolidation_impairment.py

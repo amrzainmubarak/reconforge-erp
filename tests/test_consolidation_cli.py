@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import json
+from decimal import Decimal
 from pathlib import Path
 
 from typer.testing import CliRunner
 
 from reconforge.cli import app
+from tests.test_consolidation_ownership_changes import _request as ownership_change_request
 from tests.test_sqlite_consolidation_close import _database, _prepare
 
 runner = CliRunner()
@@ -47,3 +50,50 @@ def test_consolidation_cli_run_is_replay_fail_closed_for_unknown_id(tmp_path: Pa
 
     assert result.exit_code == 1
     assert "not found" in result.output.lower()
+
+
+def test_consolidation_cli_ownership_change_emits_balanced_non_posting_result(tmp_path: Path) -> None:
+    input_path = tmp_path / "ownership-change.json"
+    output_path = tmp_path / "ownership-change-result.json"
+    input_path.write_text(json.dumps({"request": [ownership_change_request().to_dict()]}), encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "consolidation",
+            "ownership-change",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["posted"] is False
+    assert payload["result_digest"]
+    assert sum((Decimal(line["amount"]["amount"]) for line in payload["lines"]), Decimal("0")) == Decimal("0")
+    assert "Ownership-change proposal written" in result.output
+
+
+def test_consolidation_cli_ownership_change_rejects_unknown_fields(tmp_path: Path) -> None:
+    input_path = tmp_path / "ownership-change-invalid.json"
+    payload = ownership_change_request().to_dict()
+    payload["unexpected"] = "reject-me"
+    input_path.write_text(json.dumps({"request": [payload]}), encoding="utf-8")
+
+    result = runner.invoke(app, ["consolidation", "ownership-change", "--input", str(input_path)])
+
+    assert result.exit_code == 1
+    assert "exactly the declared contract" in result.output
+
+
+def test_consolidation_cli_ownership_change_accepts_direct_record(tmp_path: Path) -> None:
+    input_path = tmp_path / "ownership-change-direct.json"
+    input_path.write_text(json.dumps(ownership_change_request().to_dict()), encoding="utf-8")
+
+    result = runner.invoke(app, ["consolidation", "ownership-change", "--input", str(input_path)])
+
+    assert result.exit_code == 0
+    assert '"posted": false' in result.output

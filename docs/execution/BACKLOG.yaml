@@ -2178,3 +2178,37 @@ tasks:
       `RECONFORGE_TEST_POSTGRES_DSN`; hosted CI/security/provenance, live
       providers/write-back, independent HA/DR, and release approval remain
       external.
+  - id: E-522
+    priority: P1
+    area: financial_consolidation
+    title: Local ownership-change non-posting CLI boundary
+    status: completed
+    depends_on: [E-521]
+    exit_evidence: >-
+      `reconforge consolidation ownership-change` accepts exactly one bounded
+      JSON request record, parses ownership percentages as exact Decimal text
+      and money as canonical Money, invokes the existing pure-domain contract,
+      and emits only a balanced digest-bound `posted: false` result. Focused
+      CLI/domain tests pass 14/14, unknown fields fail closed, the package
+      manifest contains ADR 0401 and the CLI test. This is a local synthetic
+      operator surface only; PostgreSQL live runtime, statutory ownership-change
+      policy, journal posting, provider write-back, HA/DR, and production
+      approval remain external.
+  - id: E-523
+    priority: P0
+    area: quality
+    title: Full regression and package gate after ownership-change CLI
+    status: completed
+    depends_on: [E-522]
+    exit_evidence: >-
+      The exact current tree collects 2,617 tests and
+      `uv run --no-sync pytest -q --basetemp .pytest-tmp-e522c --tb=short -ra`
+      exits 0 with no collection or executed failure; declared PostgreSQL,
+      Redis, object-storage, network, and platform capability skips remain
+      visible. Ruff passes; Mypy reports no issues in 476 source files; Bandit
+      exits 0 with existing reviewed nosec/comment warnings; OSV `pip-audit`
+      reports no known vulnerabilities while the local package is not on PyPI;
+      `python -m build --no-isolation` succeeds with ADR 0401 and the CLI test
+      in the source distribution; and `git diff --check` passes. Hosted
+      CI/security/provenance, native backup tooling, live providers/write-back,
+      independent HA/DR, and release approval remain external.

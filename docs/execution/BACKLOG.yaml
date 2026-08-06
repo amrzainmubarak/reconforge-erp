@@ -2503,3 +2503,21 @@ tasks:
       providers, distributed queue fairness, HA/DR, and production readiness
       remain external; GitHub publication remains deferred by owner
       instruction.
+  - id: E-540
+    priority: P1
+    area: enterprise_policy
+    title: Organization-aware worker policy and cache boundary
+    status: completed
+    depends_on: [E-539, P4-IAM-001]
+    exit_evidence: >-
+      Central policy now evaluates `organization_id` with deny-by-default
+      authorization, and the allowed-only policy cache includes organization
+      scope in its key and targeted invalidation. Outbox organization lanes
+      require a dedicated four-argument hierarchy policy supplier; a legacy
+      three-argument supplier fails closed before database access. Focused
+      policy/cache/outbox contracts pass and the full regression gate remains
+      green. This is an authorization primitive, not complete federation,
+      provider IAM, distributed invalidation, or production readiness. The
+      post-change full suite collects 2,637 tests and passes 100% in 335.9
+      seconds; Ruff, Mypy (480 files), Bandit, pip-audit, build, and diff-check
+      pass.

@@ -22,7 +22,10 @@ LOCKED` claim query and returns the hierarchy for verification.
 
 `PostgresOutboxWorker` accepts deterministic four-part lanes
 `(tenant, workspace, organization, legal_entity)`. Each lane is validated and
-policy-authorized before connection access; every claim, publish, and failure
+policy-authorized before connection access. Organization scope uses a separate
+four-argument policy supplier and is also part of the central ABAC context and
+cache invalidation key; a three-argument workspace/entity supplier cannot
+silently authorize an organization lane. Every claim, publish, and failure
 transaction restores the exact PostgreSQL transaction scope. A legal entity
 requires an organization. A scoped event whose returned attribution does not
 match its lane fails closed. Tenant-only suppliers remain compatible for

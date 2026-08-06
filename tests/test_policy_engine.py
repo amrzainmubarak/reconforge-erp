@@ -276,6 +276,33 @@ def test_any_permission_contract_still_enforces_abac_scope() -> None:
     assert decision.reason_code == "tenant_scope_denied"
 
 
+def test_organization_scope_is_centralized_and_deny_by_default() -> None:
+    denied = CentralPolicyEngine().evaluate(
+        PolicyEvaluationContext(
+            user_id="U-org",
+            username="controller",
+            user_permissions={"outbox.publish"},
+            organization_id="org-b",
+            authorized_organization_ids=frozenset({"org-a"}),
+        ),
+        required_permission="outbox.publish",
+    )
+    assert not denied.allowed
+    assert denied.reason_code == "organization_scope_denied"
+
+    allowed = CentralPolicyEngine().evaluate(
+        PolicyEvaluationContext(
+            user_id="U-org",
+            username="controller",
+            user_permissions={"outbox.publish"},
+            organization_id="org-a",
+            authorized_organization_ids=frozenset({"org-a"}),
+        ),
+        required_permission="outbox.publish",
+    )
+    assert allowed.allowed
+
+
 @pytest.mark.parametrize(
     ("amount", "minimum", "maximum", "expected_code"),
     [

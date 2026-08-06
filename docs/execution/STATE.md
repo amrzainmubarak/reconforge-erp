@@ -5205,3 +5205,13 @@ migration registry, and diff-check pass. Hosted CI/security/provenance, live
 providers, distributed queue fairness, HA/DR, and production readiness remain
 external. GitHub publication remains deferred by owner instruction until the
 complete objective is closed.
+
+E-540 adds the organization-aware policy primitive. Central ABAC now evaluates
+organization scope deny-by-default, the allowed-only cache keys and invalidates
+organization scope, and outbox organization lanes require a four-argument
+hierarchy policy supplier. Legacy three-argument suppliers fail closed before
+database access. Focused policy/cache/outbox contracts pass. The post-change
+full tree collects 2,637 tests and passes 100% in 335.9 seconds; Ruff, Mypy,
+Bandit, OSV pip-audit, build, and diff-check pass. Federation, route-wide
+adoption, distributed invalidation, live IAM providers, and production
+readiness remain open. GitHub publication remains deferred.

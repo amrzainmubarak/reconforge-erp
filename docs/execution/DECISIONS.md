@@ -5533,3 +5533,26 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Reversibility**: Downgrade removes the scope index and columns and restores
   the tenant-only policy; optional worker/repository scope can be removed
   without rewriting legacy tenant-scoped events.
+
+### D-384: Treat organization as a first-class policy scope
+
+- **Date**: 2026-08-06
+- **Context**: PostgreSQL outbox lanes now carry organization attribution, but
+  the central policy context and allowed-only cache previously modeled only
+  tenant/workspace/entity. A workspace/entity policy callback could therefore
+  authorize an organization lane without evaluating that dimension.
+- **Decision**: Add optional `organization_id` and
+  `authorized_organization_ids` to `PolicyEvaluationContext` and central ABAC
+  checks. Include organization in the policy-cache entry and provide targeted
+  organization invalidation. Organization-scoped workers must use an explicit
+  four-argument hierarchy policy supplier; legacy three-argument suppliers
+  fail closed when an organization is requested.
+- **Verification**: Policy, cache, and PostgreSQL outbox contracts prove
+  organization deny-by-default, cache invalidation, exact hierarchy context,
+  and pre-connection rejection of an incompatible supplier. Existing
+  tenant/workspace callers remain compatible.
+- **Boundary**: This closes a reusable policy primitive only; federation,
+  route-wide adoption, distributed invalidation, live IAM providers, and
+  production readiness remain open.
+- **Reversibility**: Remove the optional context field, cache dimension,
+  supplier, and tests without changing stored authorization records.

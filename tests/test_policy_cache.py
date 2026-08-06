@@ -60,6 +60,29 @@ def test_allowed_decision_is_bounded_and_scope_invalidation_isolated() -> None:
     assert evaluator.calls == 3
 
 
+def test_organization_scope_is_part_of_cache_invalidation() -> None:
+    cache = PolicyDecisionCache()
+    evaluator = _CountingEvaluator(PolicyDecision(True, "allowed", granted_permission="close.manage"))
+    context = replace(
+        _context("tenant-a"),
+        organization_id="organization-a",
+        authorized_organization_ids=frozenset({"organization-a"}),
+    )
+    cache.evaluate(context, required_permission="close.manage", evaluator=evaluator)
+    cache.evaluate(context, required_permission="close.manage", evaluator=evaluator)
+    assert evaluator.calls == 1
+    assert cache.invalidate(tenant_id="tenant-a", organization_id="organization-a") == 1
+    cache.evaluate(context, required_permission="close.manage", evaluator=evaluator)
+    assert evaluator.calls == 2
+
+    try:
+        cache.invalidate(organization_id="organization-a")
+    except PolicyCacheError:
+        pass
+    else:
+        raise AssertionError("organization invalidation without tenant was accepted")
+
+
 def test_denials_and_delegations_are_never_cached() -> None:
     cache = PolicyDecisionCache()
     denied = _CountingEvaluator(PolicyDecision(False, "denied", "permission_missing"))

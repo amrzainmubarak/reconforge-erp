@@ -84,6 +84,7 @@ class PolicyEvaluationContext:
     required_step_up_method: str | None = None
     step_up_method: str | None = None
     tenant_id: str | None = None
+    organization_id: str | None = None
     workspace_id: str | None = None
     entity_id: str | None = None
     period_id: str | None = None
@@ -93,6 +94,7 @@ class PolicyEvaluationContext:
     minimum_amount: Decimal | None = None
     maximum_amount: Decimal | None = None
     authorized_tenant_ids: frozenset[str] = field(default_factory=frozenset)
+    authorized_organization_ids: frozenset[str] = field(default_factory=frozenset)
     authorized_workspace_ids: frozenset[str] = field(default_factory=frozenset)
     authorized_entity_ids: frozenset[str] = field(default_factory=frozenset)
     authorized_period_ids: frozenset[str] = field(default_factory=frozenset)
@@ -247,6 +249,7 @@ class CentralPolicyEngine:
         # 3. Enforce every supplied resource scope. Empty grants deny scoped access.
         scope_checks = (
             ("tenant", ctx.tenant_id, ctx.authorized_tenant_ids),
+            ("organization", ctx.organization_id, ctx.authorized_organization_ids),
             ("workspace", ctx.workspace_id, ctx.authorized_workspace_ids),
             ("entity", ctx.entity_id, ctx.authorized_entity_ids),
             ("period", ctx.period_id, ctx.authorized_period_ids),
@@ -340,6 +343,7 @@ def evaluate_principal_access(
     action: str | None = None,
     prior_actions: list[tuple[str, str, str, str]] | None = None,
     tenant_id: str | None = None,
+    organization_id: str | None = None,
     workspace_id: str | None = None,
     entity_id: str | None = None,
     period_id: str | None = None,
@@ -349,6 +353,7 @@ def evaluate_principal_access(
     minimum_amount: Decimal | None = None,
     maximum_amount: Decimal | None = None,
     authorized_tenant_ids: frozenset[str] = frozenset(),
+    authorized_organization_ids: frozenset[str] = frozenset(),
     authorized_workspace_ids: frozenset[str] = frozenset(),
     authorized_entity_ids: frozenset[str] = frozenset(),
     authorized_period_ids: frozenset[str] = frozenset(),
@@ -371,6 +376,7 @@ def evaluate_principal_access(
         step_up_active=principal.step_up_active,
         step_up_enforced=True,
         tenant_id=tenant_id,
+        organization_id=organization_id,
         workspace_id=workspace_id,
         entity_id=entity_id,
         period_id=period_id,
@@ -380,6 +386,7 @@ def evaluate_principal_access(
         minimum_amount=minimum_amount,
         maximum_amount=maximum_amount,
         authorized_tenant_ids=authorized_tenant_ids,
+        authorized_organization_ids=authorized_organization_ids,
         authorized_workspace_ids=authorized_workspace_ids,
         authorized_entity_ids=authorized_entity_ids,
         authorized_period_ids=authorized_period_ids,

@@ -15,7 +15,7 @@ from threading import Event
 
 from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.platform.outbox import OutboxEvent, OutboxProcessResult, OutboxPublisher, OutboxService
-from reconforge.workers.policy import WorkerPolicyContextSupplier
+from reconforge.workers.policy import WorkerPolicyContextSupplier, WorkerPolicyHierarchyContextSupplier
 
 
 class OutboxWorkerError(RuntimeError):
@@ -35,6 +35,7 @@ class OutboxWorkerSettings:
     actor_id: str = ""
     policy_context_supplier: Callable[[str], PolicyEvaluationContext] | None = None
     policy_context_scope_supplier: WorkerPolicyContextSupplier | None = None
+    policy_context_hierarchy_supplier: WorkerPolicyHierarchyContextSupplier | None = None
     scope_supplier: Callable[[], Iterable[tuple[str, str | None, str | None, str | None]]] | None = None
     max_tenants: int = 10_000
     policy_permission: str = "outbox.publish"

@@ -108,7 +108,9 @@ class PolicyDecisionCache:
         self._max_entries = max_entries
         self._policy_version = policy_version
         self._version_store = version_store
-        self._entries: OrderedDict[str, tuple[PolicyDecision, str | None, str | None]] = OrderedDict()
+        self._entries: OrderedDict[
+            str, tuple[PolicyDecision, str | None, str | None, str | None]
+        ] = OrderedDict()
         self._lock = RLock()
 
     def evaluate(
@@ -166,7 +168,7 @@ class PolicyDecisionCache:
         if not decision.allowed:
             return decision
         with self._lock:
-            self._entries[key] = (decision, context.tenant_id, context.workspace_id)
+            self._entries[key] = (decision, context.tenant_id, context.organization_id, context.workspace_id)
             self._entries.move_to_end(key)
             while len(self._entries) > self._max_entries:
                 self._entries.popitem(last=False)
@@ -202,12 +204,18 @@ class PolicyDecisionCache:
             evaluator=evaluator,
         )
 
-    def invalidate(self, *, tenant_id: str | None = None, workspace_id: str | None = None) -> int:
+    def invalidate(
+        self,
+        *,
+        tenant_id: str | None = None,
+        organization_id: str | None = None,
+        workspace_id: str | None = None,
+    ) -> int:
         """Remove entries matching the supplied scope; no arguments clears all."""
 
-        if workspace_id is not None and tenant_id is None:
-            raise PolicyCacheError("workspace invalidation requires tenant_id")
-        if self._version_store is not None and tenant_id is None and workspace_id is None:
+        if (workspace_id is not None or organization_id is not None) and tenant_id is None:
+            raise PolicyCacheError("workspace or organization invalidation requires tenant_id")
+        if self._version_store is not None and tenant_id is None and organization_id is None and workspace_id is None:
             with suppress(Exception):
                 self._version_store.bump_version()
         with self._lock:
@@ -217,8 +225,10 @@ class PolicyDecisionCache:
                 return removed
             keys = [
                 key
-                for key, (_decision, entry_tenant, entry_workspace) in self._entries.items()
-                if entry_tenant == tenant_id and (workspace_id is None or entry_workspace == workspace_id)
+                for key, (_decision, entry_tenant, entry_organization, entry_workspace) in self._entries.items()
+                if entry_tenant == tenant_id
+                and (organization_id is None or entry_organization == organization_id)
+                and (workspace_id is None or entry_workspace == workspace_id)
             ]
             for key in keys:
                 del self._entries[key]

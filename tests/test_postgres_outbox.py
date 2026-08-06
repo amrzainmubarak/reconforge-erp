@@ -296,16 +296,23 @@ def test_postgres_outbox_worker_policy_allows_scoped_service_identity() -> None:
 def test_postgres_outbox_worker_processes_exact_hierarchy_lane() -> None:
     connection = _FakeConnection()
 
-    def policy_context(tenant: str, workspace: str | None, entity: str | None) -> PolicyEvaluationContext:
+    def policy_context(
+        tenant: str,
+        workspace: str | None,
+        organization: str | None,
+        entity: str | None,
+    ) -> PolicyEvaluationContext:
         return PolicyEvaluationContext(
             user_id="outbox-scoped-worker",
             username="outbox-scoped-worker",
             user_permissions={"outbox.publish"},
             principal_type="service_account",
             tenant_id=tenant,
+            organization_id=organization,
             workspace_id=workspace,
             entity_id=entity,
             authorized_tenant_ids=frozenset({tenant}),
+            authorized_organization_ids=frozenset({organization}) if organization else frozenset(),
             authorized_workspace_ids=frozenset({workspace}) if workspace else frozenset(),
             authorized_entity_ids=frozenset({entity}) if entity else frozenset(),
         )
@@ -317,7 +324,7 @@ def test_postgres_outbox_worker_processes_exact_hierarchy_lane() -> None:
         settings=OutboxWorkerSettings(
             worker_id="outbox-scoped-worker",
             poll_interval_seconds=0,
-            policy_context_scope_supplier=policy_context,
+            policy_context_hierarchy_supplier=policy_context,
             scope_supplier=lambda: (("tenant_a", "workspace-a", "org-a", "entity-a"),),
         ),
     )
@@ -335,6 +342,32 @@ def test_postgres_outbox_worker_processes_exact_hierarchy_lane() -> None:
     )
     claim_params = next(params for sql, params in connection.executed if "FOR UPDATE SKIP LOCKED" in sql)
     assert claim_params[:4] == ("tenant_a", "workspace-a", "org-a", "entity-a")
+
+
+def test_postgres_outbox_worker_requires_hierarchy_policy_for_organization_lane() -> None:
+    worker = PostgresOutboxWorker(
+        _FakeFactory(_FakeConnection()),
+        tenant_supplier=lambda: [],
+        publisher=lambda _event: None,
+        settings=OutboxWorkerSettings(
+            worker_id="outbox-organization-policy",
+            policy_context_scope_supplier=lambda tenant, workspace, entity: PolicyEvaluationContext(
+                user_id="outbox-organization-policy",
+                username="outbox-organization-policy",
+                user_permissions={"outbox.publish"},
+                principal_type="service_account",
+                tenant_id=tenant,
+                workspace_id=workspace,
+                entity_id=entity,
+                authorized_tenant_ids=frozenset({tenant}),
+                authorized_workspace_ids=frozenset({workspace}) if workspace else frozenset(),
+                authorized_entity_ids=frozenset({entity}) if entity else frozenset(),
+            ),
+            scope_supplier=lambda: (("tenant_a", None, "org-a", None),),
+        ),
+    )
+    with pytest.raises(PostgresOutboxWorkerError, match="hierarchy-aware"):
+        worker.process_once()
 
 
 def test_postgres_outbox_worker_rejects_entity_lane_without_organization_before_connection() -> None:

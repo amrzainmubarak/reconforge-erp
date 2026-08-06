@@ -44,6 +44,7 @@ class PostgresOutboxWorker:
         tenant_id: str,
         *,
         workspace_id: str | None = None,
+        organization_id: str | None = None,
         legal_entity_id: str | None = None,
     ) -> None:
         require_service_worker_policy(
@@ -52,7 +53,9 @@ class PostgresOutboxWorker:
             actor_id=self.settings.audit_actor_id,
             policy_context_supplier=self.settings.policy_context_supplier,
             policy_context_scope_supplier=self.settings.policy_context_scope_supplier,
+            policy_context_hierarchy_supplier=self.settings.policy_context_hierarchy_supplier,
             workspace_id=workspace_id,
+            organization_id=organization_id,
             entity_id=legal_entity_id,
             policy_permission=self.settings.policy_permission,
             surface="postgres-outbox.worker.claim",
@@ -137,7 +140,12 @@ class PostgresOutboxWorker:
         dead_lettered_count = 0
         for tenant_id, workspace_id, organization_id, legal_entity_id in self._lanes():
             try:
-                self._authorize_scope(tenant_id, workspace_id=workspace_id, legal_entity_id=legal_entity_id)
+                self._authorize_scope(
+                    tenant_id,
+                    workspace_id=workspace_id,
+                    organization_id=organization_id,
+                    legal_entity_id=legal_entity_id,
+                )
                 with PostgresTenantBoundary(self.connection_factory).transaction(
                     tenant_id,
                     organization_id=organization_id,

@@ -13,6 +13,9 @@ from collections.abc import Callable
 from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext, audit_policy_decision
 
 WorkerPolicyContextSupplier = Callable[[str, str | None, str | None], PolicyEvaluationContext]
+WorkerPolicyHierarchyContextSupplier = Callable[
+    [str, str | None, str | None, str | None], PolicyEvaluationContext
+]
 
 
 def require_service_worker_policy(
@@ -22,7 +25,9 @@ def require_service_worker_policy(
     actor_id: str,
     policy_context_supplier: Callable[[str], PolicyEvaluationContext] | None,
     policy_context_scope_supplier: WorkerPolicyContextSupplier | None = None,
+    policy_context_hierarchy_supplier: WorkerPolicyHierarchyContextSupplier | None = None,
     workspace_id: str | None = None,
+    organization_id: str | None = None,
     entity_id: str | None = None,
     policy_permission: str,
     surface: str,
@@ -37,14 +42,25 @@ def require_service_worker_policy(
     tenant-wide identity cannot accidentally process a narrower lane.
     """
 
-    if policy_context_supplier is None and policy_context_scope_supplier is None:
+    if policy_context_supplier is None and policy_context_scope_supplier is None and policy_context_hierarchy_supplier is None:
         return
     normalized_workspace = str(workspace_id).strip() if workspace_id is not None and str(workspace_id).strip() else None
+    normalized_organization = (
+        str(organization_id).strip() if organization_id is not None and str(organization_id).strip() else None
+    )
     normalized_entity = str(entity_id).strip() if entity_id is not None and str(entity_id).strip() else None
-    if policy_context_scope_supplier is None and (normalized_workspace is not None or normalized_entity is not None):
+    if policy_context_hierarchy_supplier is None and normalized_organization is not None:
+        raise error_factory("A hierarchy-aware worker policy supplier is required for organization-scoped processing.")
+    if policy_context_hierarchy_supplier is None and policy_context_scope_supplier is None and (
+        normalized_workspace is not None or normalized_entity is not None
+    ):
         raise error_factory("A scope-aware worker policy supplier is required for scoped processing.")
     try:
-        if policy_context_scope_supplier is not None:
+        if policy_context_hierarchy_supplier is not None:
+            context = policy_context_hierarchy_supplier(
+                tenant_id, normalized_workspace, normalized_organization, normalized_entity
+            )
+        elif policy_context_scope_supplier is not None:
             context = policy_context_scope_supplier(tenant_id, normalized_workspace, normalized_entity)
         else:
             if policy_context_supplier is None:  # Defensive branch for type narrowing and fail-closed behavior.
@@ -59,7 +75,13 @@ def require_service_worker_policy(
         raise error_factory("Worker actor does not match policy identity.")
     context_workspace = str(context.workspace_id).strip() if context.workspace_id is not None else None
     context_entity = str(context.entity_id).strip() if context.entity_id is not None else None
-    if context.tenant_id != tenant_id or context_workspace != normalized_workspace or context_entity != normalized_entity:
+    context_organization = str(context.organization_id).strip() if context.organization_id is not None else None
+    if (
+        context.tenant_id != tenant_id
+        or context_organization != normalized_organization
+        or context_workspace != normalized_workspace
+        or context_entity != normalized_entity
+    ):
         raise error_factory("Worker policy scope does not match the requested processing scope.")
     permission = policy_permission.strip()
     if not permission:
@@ -82,4 +104,8 @@ def require_service_worker_policy(
         raise error_factory(f"Worker policy denied: {decision.reason_code}")
 
 
-__all__ = ["WorkerPolicyContextSupplier", "require_service_worker_policy"]
+__all__ = [
+    "WorkerPolicyContextSupplier",
+    "WorkerPolicyHierarchyContextSupplier",
+    "require_service_worker_policy",
+]

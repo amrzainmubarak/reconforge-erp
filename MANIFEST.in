@@ -452,6 +452,7 @@ include docs/execution/REDIS_LIVE_DOCKER_DRILL_2026-08-06.json
 include tests/test_redis_live_report.py
 include docs/adr/0363-live-redis-session-policy-contract-drill.md
 include docs/adr/0371-current-redis-live-drill.md
+include docs/adr/0372-postgres-close-business-period-binding.md
 include reconforge/domain/retail_settlement.py
 include reconforge/application/retail_settlement.py
 include reconforge/cli_retail_settlement.py

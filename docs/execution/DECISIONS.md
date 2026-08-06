@@ -4749,6 +4749,18 @@
   repository-security, or release approval.
 - **Rollback**: Remove the evidence/backlog entry; no runtime/data rollback is
   required.
+
+### D-372: Correct PostgreSQL close intercompany period binding
+
+- **Date**: 2026-08-06
+- **Decision**: Treat `run.period_id` as an internal row identity and bind
+  source artifact periods to the verified worksheet business period instead.
+- **Verification**: The isolated PostgreSQL 17.10 financial-close focus passes
+  ownership, intercompany close, PPA, and deferred-tax contracts 18/18.
+- **Boundary**: This is a local PostgreSQL correctness fix; statutory policy,
+  hosted CI, providers, write-back, and HA/DR remain open.
+- **Rollback**: Revert the comparison logic; no migration or data rollback is
+  required.
 # ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
 
 Implemented and bounded the `professional.invoice-payment` module. It is local,

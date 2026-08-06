@@ -852,7 +852,15 @@ class PostgresConsolidationCloseRepository:
         request_payload = artifact.get("request_payload")
         if not isinstance(request_payload, Mapping):
             raise PlatformError("Intercompany evidence request payload is invalid.")
-        if any(str(line.get("period_name")) != str(run["period_id"]) for line in request_payload.get("lines", []) if isinstance(line, Mapping)):
+        # `run["period_id"]` is the internal PostgreSQL period row identity
+        # (`PGCCP-*`), while source evidence carries the business period name
+        # (for example, `2026-08`). Bind the artifact to the replay-verified
+        # worksheet period instead of comparing unlike identifiers.
+        if any(
+            str(line.get("period_name")) != str(worksheet.period_id)
+            for line in request_payload.get("lines", [])
+            if isinstance(line, Mapping)
+        ):
             raise PlatformError("Intercompany evidence period does not match the consolidation run.")
         resolutions = artifact.get("result_payload", {}).get("resolutions")
         if not isinstance(resolutions, list):

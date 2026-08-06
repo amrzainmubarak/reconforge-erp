@@ -1557,3 +1557,11 @@ tasks:
     status: completed
     depends_on: [E-473]
     exit_evidence: Ruff passes; Mypy reports no issues in 466 source files; package build succeeds and git diff check passes after the current benchmark/report additions. Existing Bandit/pip-audit/supply-chain/Gitleaks evidence remains green locally from E-464/E-465; hosted security/provenance/release approval remains external.
+
+  - id: E-475
+    priority: P0
+    area: financial_consolidation
+    title: PostgreSQL close intercompany business-period binding regression closure
+    status: completed
+    depends_on: [P4-FIN-002]
+    exit_evidence: PostgreSQL consolidation ownership, close lifecycle/intercompany linking, PPA, and deferred-tax live contracts pass 18/18 on an isolated PostgreSQL 17.10 database with the non-privileged role. The close adapter now compares intercompany artifact period_name with the replay-verified worksheet business period, not the internal PGCCP period-row identity. No persisted-data migration is required; single-node/statutory/provider/hosted limits remain.

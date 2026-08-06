@@ -4632,8 +4632,8 @@ it now has 133 unique tasks and valid YAML. This closes documentation
 serialization drift only and does not change the still-open hosted release,
 provider, HA/DR, or native-backup gates.
 The backlog has since grown with the current HA/DR, object-storage, and Redis
-runtime and current-tree gate entries; its latest parse is 158 unique tasks
-(E-460 through E-491 included).
+runtime and current-tree gate entries; its latest parse is 159 unique tasks
+(E-460 through E-492 included).
 The fresh repeated PostgreSQL HA/DR drill now provides stronger bounded runtime
 evidence: three Docker 17.10 primary/standby cycles passed encrypted restore,
 fencing, partition refusal, manual failover/failback, zero-loss sentinel replay,
@@ -4758,3 +4758,8 @@ effect digest, has no duplicate partition effects, and drains queued/running
 state; runtime and peak memory remain observations only. This closes a local
 repetition contract, not PostgreSQL/distributed soak, queue HA, host-loss
 recovery, capacity, SLO, or production readiness.
+The post-soak full gate then collected 2,576 tests and exited 0 with no
+collection or executed failure. Ruff/Mypy/Bandit/pip-audit passed and the
+package build included ADR 0384 plus the soak module/test. This is a local
+compatibility/package checkpoint only; hosted CI/security/provenance and
+external runtime gates remain separate.

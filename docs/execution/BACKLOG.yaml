@@ -1693,3 +1693,11 @@ tasks:
     status: completed
     depends_on: [P4-SCL-001, E-490]
     exit_evidence: "`run_durable_job_soak_profile` repeats the public bounded durable-job load harness over isolated SQLite databases for a declared 2-32 iteration tier. The focused soak/load suite passes; every iteration completes its declared jobs and partition effects, preserves the effect digest, records zero duplicate effects, and drains queued/running state. Runtime and peak memory are retained as observations only. This is one-host SQLite soak evidence, not PostgreSQL/distributed soak, capacity, SLO, host-loss recovery, or production readiness."
+
+  - id: E-492
+    priority: P0
+    area: quality
+    title: Full regression and static gates after durable-job soak profile
+    status: completed
+    depends_on: [E-491]
+    exit_evidence: The current tree collects 2576 tests and the full `uv run --no-sync pytest -q --tb=short -ra` run exits 0 with no collection or executed failure; declared capability skips and existing warnings remain visible. Ruff passes; Mypy reports no issues in 467 source files; Bandit exits 0 with reviewed nosec/comment warnings; OSV pip-audit reports no known vulnerabilities; package build succeeds and `reconforge_erp.egg-info/SOURCES.txt` contains ADR 0384 plus the soak module and test. Hosted CI/security/provenance and external runtime gates remain unverified.

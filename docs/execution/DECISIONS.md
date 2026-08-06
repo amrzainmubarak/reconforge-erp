@@ -4951,3 +4951,22 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   idempotency, HA/DR, or production write-back.
 - **Reversibility**: Restore the prior fixture setup; no application migration
   or persisted-data change is involved.
+
+### D-314: Keep dense grouped-matching ambiguity fail-closed
+
+- **Date**: 2026-08-06
+- **Context**: Fee-aware netting and FX conversion were covered by focused
+  cases, but their combination with dense equal-cost candidates and exhausted
+  search budgets needed an explicit adversarial contract.
+- **Decision**: Add a bounded four-case suite without changing the public
+  matcher API. Equal-cost alternatives must remain `GROUP_MATCH_AMBIGUOUS`,
+  budget exhaustion must return no selected identities, and mixed partition or
+  currency candidates must remain unmatched. FX/fee replay must preserve its
+  digest under input permutation.
+- **Verification**: `tests/test_grouped_matching_adversarial.py` passes 4/4;
+  Ruff/Mypy and source-distribution membership pass under ADR 0381.
+- **Boundary**: This is algorithm correctness evidence only. It does not
+  establish fuzzing, mutation score, PostgreSQL parity, live-rate correctness,
+  performance, posting, write-back, or production readiness.
+- **Reversibility**: Remove the four tests, ADR, manifest entry, and evidence;
+  no schema or persisted-data change is involved.

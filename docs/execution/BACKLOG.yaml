@@ -1645,3 +1645,11 @@ tasks:
     status: completed
     depends_on: [E-481, E-484]
     exit_evidence: A disposable PostgreSQL 16.14 database with a non-privileged application role passes tests/test_postgres_writeback.py 2/2, including forced-RLS tenant/workspace scope, idempotent append history, optimistic version conflict, sibling-tenant exclusion, and immutable UPDATE refusal. The test now installs the shared RLS foundation in the target database before the write-back schema; the database and role are removed after verification. This is bounded single-node synthetic persistence evidence, not live provider status-API interoperability, accounting posting, distributed idempotency, HA/DR, or production write-back.
+
+  - id: E-486
+    priority: P0
+    area: advanced_matching
+    title: Dense grouped-matching fee and FX adversarial contracts
+    status: completed
+    depends_on: [P4-MAT-001, E-456]
+    exit_evidence: Four focused contracts combine fee-aware netting with equal-cost many-to-many alternatives, fee-aware FX conversion with permutation replay, dense candidate search-budget refusal, and mixed partition/currency rejection. All cases require explicit matched, ambiguous, or unmatched outcomes with no partial identity selection; tests pass 4/4 and the test/ADR are included in the source distribution. This is bounded algorithm correctness evidence, not fuzzing, mutation score, PostgreSQL parity, live-rate validation, performance, posting, or production evidence.

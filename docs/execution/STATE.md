@@ -4632,8 +4632,8 @@ it now has 133 unique tasks and valid YAML. This closes documentation
 serialization drift only and does not change the still-open hosted release,
 provider, HA/DR, or native-backup gates.
 The backlog has since grown with the current HA/DR, object-storage, and Redis
-runtime and current-tree gate entries; its latest parse is 152 unique tasks
-(E-460 through E-485 included).
+runtime and current-tree gate entries; its latest parse is 153 unique tasks
+(E-460 through E-486 included).
 The fresh repeated PostgreSQL HA/DR drill now provides stronger bounded runtime
 evidence: three Docker 17.10 primary/standby cycles passed encrypted restore,
 fencing, partition refusal, manual failover/failback, zero-loss sentinel replay,
@@ -4723,3 +4723,10 @@ idempotency, version conflict, and immutable-update refusal. This remains
 single-node synthetic persistence evidence; live provider status APIs,
 distributed idempotency, accounting posting, HA/DR, and production write-back
 remain open.
+The grouped-matching follow-up adds four bounded adversarial contracts combining
+fee/netting equal optima, fee-aware FX permutation replay, dense search-budget
+refusal, and mixed partition/currency rejection. All four pass with explicit
+matched/ambiguous/unmatched outcomes and no partial identity selection. This
+strengthens algorithm correctness evidence only; fuzzing, mutation score, live
+rates, PostgreSQL parity, performance, posting, write-back, and production
+assurance remain open.

@@ -5099,3 +5099,24 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   authorized egress-enabled rerun succeeds; P4-CON-001 remains open.
 - **Reversibility**: Re-run the unchanged test with explicit egress and replace
   only the blocked evidence after a successful real response.
+
+### D-324: Preserve duplicate rows while publishing bounded canonical evidence
+
+- **Date**: 2026-08-06
+- **Context**: Duplicate occurrence lineage existed inside the legacy matcher,
+  but callers could not request a standalone, versioned duplicate-evidence
+  operation. Silent de-duplication would destroy auditability and malformed
+  numeric values must not be normalized into a financial result.
+- **Decision**: Add `bounded-duplicate-detection@1.0.0` as an experimental
+  strategy. It groups each side by a canonical projection, normalizes exact
+  Decimal amounts, assigns stable occurrence ordinals, exposes duplicate and
+  unique groups, and refuses binary floats, repeated identities, and ceiling
+  breaches. It never mutates, deletes, or merges records.
+- **Verification**: Focused strategy/domain and matching-contract tests report
+  27 passed; Ruff and Mypy pass for the new surface; architecture and source
+  distribution manifest entries agree under ADR 0389.
+- **Boundary**: Exact duplicate evidence only. Near-duplicate similarity,
+  probabilistic matching, fraud detection, provider interoperability,
+  PostgreSQL scale, and production readiness remain open.
+- **Reversibility**: Remove the strategy, domain module, test, architecture
+  entry, manifest entry, ADR, and execution evidence; no migration is needed.

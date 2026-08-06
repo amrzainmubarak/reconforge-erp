@@ -1774,3 +1774,36 @@ tasks:
       promoted until the same test can run from an explicitly authorized
       egress-enabled environment. Synthetic transport/fixture tests remain
       separate and passing.
+  - id: E-499
+    priority: P1
+    area: advanced_matching
+    title: Bounded canonical duplicate-detection strategy and occurrence lineage
+    status: completed
+    depends_on: [P4-MAT-001, E-497]
+    exit_evidence: >-
+      The experimental bounded-duplicate-detection@1.0.0 strategy groups each
+      input side by a canonical projection, normalizes exact Decimal amounts,
+      rejects binary floats and duplicate identities, preserves every visible
+      occurrence with deterministic ordinals, and fails closed with an explicit
+      ambiguous result at its published ceilings. Focused strategy/domain tests,
+      permutation-digest checks, custom identity fields, architecture-manifest
+      alignment, Ruff, and Mypy pass under ADR 0389. This is exact duplicate
+      evidence only; near-duplicate similarity, probabilistic matching, fraud
+      detection, provider interoperability, PostgreSQL scale, and production
+      readiness remain open.
+  - id: E-500
+    priority: P0
+    area: quality
+    title: Full regression and static gates after duplicate-detection strategy
+    status: completed
+    depends_on: [E-499]
+    exit_evidence: >-
+      The current tree completes the full local pytest regression with no
+      collection or executed failure and only declared capability skips and
+      existing framework/legacy-input warnings. Ruff passes; Mypy reports no
+      issues in 469 source files; Bandit exits 0 with reviewed existing
+      suppression/comment warnings; OSV pip-audit reports no known
+      vulnerabilities; the package build succeeds and git diff --check passes.
+      This is local evidence only; hosted CI/security/provenance, live
+      providers/write-back, independent HA/DR, and release approval remain
+      external.

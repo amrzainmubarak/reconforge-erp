@@ -4634,11 +4634,12 @@ provider, HA/DR, or native-backup gates.
 The backlog has since grown with the current HA/DR, object-storage, and Redis
 runtime and current-tree gate entries; its latest parse is 161 unique tasks
 (E-460 through E-494 included).
-The server-identity fixture, final local gate, PostgreSQL grouped runtime, and
-public-network evidence entries extend that parse to 165 unique tasks
-(E-495 through E-498 included): 154 completed, 1 blocked, 8 in progress, and
+The server-identity fixture, final local gate, PostgreSQL grouped runtime,
+public-network evidence, canonical duplicate-detection, and final local-gate
+entries extend that parse to 167 unique tasks (E-495 through E-500 included): 156 completed, 1
+blocked, 8 in progress, and
 2 deferred. This administrative ratio is not a product-readiness percentage;
-the open workstreams and external release gates remain authoritative.
+ the open workstreams and external release gates remain authoritative.
 The fresh repeated PostgreSQL HA/DR drill now provides stronger bounded runtime
 evidence: three Docker 17.10 primary/standby cycles passed encrypted restore,
 fencing, partition refusal, manual failover/failback, zero-loss sentinel replay,
@@ -4790,3 +4791,22 @@ collection or executed failure; Ruff, Mypy, Bandit, OSV pip-audit, package build
 and diff-check all passed, and ADR 0386 is present in the source distribution.
 This is a local quality checkpoint only; hosted CI/security/provenance, native
 backup tooling, and external runtime/release gates remain open.
+
+E-499 adds the experimental bounded canonical duplicate-detection strategy.
+It groups each input side by an explicit or default canonical projection,
+normalizes exact Decimal amounts, preserves every occurrence with stable
+ordinals, and exposes duplicate/unique groups without silent de-duplication.
+Repeated identities, binary floats, malformed amounts, and published input
+ceilings fail closed; permutation-stable input/decision digests are covered by
+27 focused strategy/contract tests, Ruff, Mypy, ADR 0389, and the architecture
+manifest. This is exact duplicate evidence only; near-duplicate/probabilistic
+matching, fraud detection, provider interoperability, PostgreSQL scale, and
+production readiness remain open. GitHub publication remains deferred by owner
+instruction.
+
+E-500 reran the complete local regression and release-quality gates after the
+duplicate-detection slice: pytest exited 0 with no collection or executed
+failure; Ruff, Mypy (469 files), Bandit, OSV pip-audit, package build, and
+diff-check passed. Existing declared skips/warnings and all hosted/external
+release gates remain separate; GitHub publication remains deferred by owner
+instruction.

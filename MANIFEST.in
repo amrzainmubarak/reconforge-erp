@@ -269,6 +269,8 @@ include docs/adr/0385-server-boundaries-use-the-locked-all-extras-profile.md
 include docs/adr/0386-server-identity-close-fixture-installs-intercompany-evidence-schema.md
 include docs/adr/0387-postgres-grouped-matching-runtime-scale-evidence.md
 include docs/adr/0388-public-network-egress-blocked-runtime-evidence.md
+include docs/adr/0389-bounded-duplicate-detection-evidence.md
+include tests/test_duplicate_detection_strategy.py
 include docs/adr/0216-bounded-partial-settlement-keeps-residuals-visible.md
 include docs/adr/0217-bounded-non-overlapping-group-portfolio.md
 include reconforge/domain/carry_forward.py

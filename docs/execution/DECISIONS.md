@@ -4628,6 +4628,20 @@
   environment, or hosted security approval.
 - **Rollback**: Supersede E-465 with a fresh exact hosted/local paired scan;
   no runtime or data rollback is needed.
+
+### D-363: Keep connector SDK documentation aligned with the reference portfolio
+
+- **Date**: 2026-08-06
+- **Decision**: Update the SDK foundation document to describe the governed
+  read-only reference connectors and the concrete World Bank test path, while
+  preserving the explicit no-live-vendor/no-write-back boundary.
+- **Verification**: Documentation names exact endpoint/schema/digest behavior,
+  opt-in live execution, and the non-production claim boundary; connector
+  focused tests and package build remain green.
+- **Boundary**: Documentation alignment is not provider interoperability or
+  release approval.
+- **Rollback**: Restore the prior generic SDK wording; no code/data rollback is
+  required.
 # ADR 0367 evidence note — professional invoice-to-payment control (2026-08-05)
 
 Implemented and bounded the `professional.invoice-payment` module. It is local,

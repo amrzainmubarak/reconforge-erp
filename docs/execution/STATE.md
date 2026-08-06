@@ -4623,3 +4623,7 @@ Checksum-verified Gitleaks 8.30.1 also scanned all 508 local commits and the
 current tree with zero leaks. This local reproduction does not erase the
 previous hosted repository-security failure; the hosted workflow still must be
 rerun before any publication decision.
+The SDK documentation is now current with the implementation: it lists the
+governed reference portfolio and gives the World Bank connector's exact bounded
+usage and live-test command, without implying live SAP/Odoo/bank connectivity or
+write-back. GitHub publication remains deferred.

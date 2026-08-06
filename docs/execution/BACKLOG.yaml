@@ -1485,3 +1485,11 @@ tasks:
     status: completed
     depends_on: [E-464]
     exit_evidence: Checksum-verified Gitleaks 8.30.1 scans the current 508-commit history and working tree with zero leaks. This reproduces local secret-scan cleanliness only; the previously supplied hosted finding and hosted security attestation remain external until the workflow is rerun.
+
+  - id: E-466
+    priority: P4
+    area: documentation
+    title: Connector SDK documentation drift closure
+    status: completed
+    depends_on: [E-460]
+    exit_evidence: `docs/connectors/sdk-foundation.md` now names the governed read-only reference portfolio and documents the concrete World Bank public connector, its exact endpoint/schema/digest boundary, opt-in live test, and non-production claims. No live SAP/Odoo/bank-vendor capability is implied.

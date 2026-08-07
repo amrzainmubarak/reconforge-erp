@@ -2829,3 +2829,32 @@ tasks:
       package build, Ruff, Mypy, and diff-check pass. Hosted CI/security/
       provenance, live providers, federation, HA/DR, and release approval
       remain external.
+  - id: E-562
+    priority: P1
+    area: enterprise_policy
+    title: Tenant-scoped server policy hierarchy binding
+    status: completed
+    depends_on: [E-560]
+    exit_evidence: >-
+      Central server ABAC now normalizes organization and legal-entity headers
+      for tenant-scoped calls as well as workspace-scoped calls. Explicit/header
+      mismatches and legal-entity-without-parent fail closed before policy
+      evaluation, while existing workspace behavior and SQLite compatibility are
+      preserved. Execution-scope and PPA/impairment/deferred-tax contracts pass
+      23 focused tests; Ruff, Mypy, and ADR 0417 package membership pass. The
+      dependent evidence schemas remain tenant-only, so row-level multi-entity
+      isolation, federation, HA/DR, and production IAM remain open.
+  - id: E-563
+    priority: P0
+    area: quality
+    title: Full regression gate after tenant-scoped policy hierarchy
+    status: completed
+    depends_on: [E-562]
+    exit_evidence: >-
+      The current tree collects 2,647 tests and
+      `uv run --no-sync pytest -q --basetemp .pytest-tmp-e563 --tb=short -ra`
+      exits 0 in 404.2 seconds with no collection or executed failure. Declared
+      PostgreSQL, Redis, object-storage, network, Windows, and platform skips
+      remain visible; package build, Ruff, Mypy, and diff-check pass. Hosted
+      CI/security/provenance, live providers, federation, HA/DR, and release
+      approval remain external.

@@ -300,22 +300,42 @@ def enforce_server_scoped_permissions(
 
     if request_tenant_id(request) != tenant_id:
         raise APIError(status_code=403, code="tenant_scope_denied", message="Tenant scope is not authorized.")
-    if workspace_id is not None:
-        raw_organization = request.headers.get("x-reconforge-organization", "").strip()
-        header_organization = None
-        if raw_organization:
-            try:
-                header_organization = normalize_scope_id(raw_organization, field_name="organization_id")
-            except PostgresConfigurationError as exc:
-                raise APIError(status_code=400, code="invalid_execution_scope", message=str(exc)) from exc
-        if organization_id is None:
-            organization_id = header_organization
-        elif header_organization is not None and organization_id != header_organization:
-            raise APIError(
-                status_code=403,
-                code="organization_scope_denied",
-                message="Organization scope is not authorized.",
-            )
+    raw_organization = request.headers.get("x-reconforge-organization", "").strip()
+    raw_entity = request.headers.get("x-reconforge-legal-entity", "").strip()
+    header_organization = None
+    header_entity = None
+    if raw_organization:
+        try:
+            header_organization = normalize_scope_id(raw_organization, field_name="organization_id")
+        except PostgresConfigurationError as exc:
+            raise APIError(status_code=400, code="invalid_execution_scope", message=str(exc)) from exc
+    if raw_entity:
+        try:
+            header_entity = normalize_scope_id(raw_entity, field_name="legal_entity_id")
+        except PostgresConfigurationError as exc:
+            raise APIError(status_code=400, code="invalid_execution_scope", message=str(exc)) from exc
+    if organization_id is None:
+        organization_id = header_organization
+    elif header_organization is not None and organization_id != header_organization:
+        raise APIError(
+            status_code=403,
+            code="organization_scope_denied",
+            message="Organization scope is not authorized.",
+        )
+    if entity_id is None:
+        entity_id = header_entity
+    elif header_entity is not None and entity_id != header_entity:
+        raise APIError(
+            status_code=403,
+            code="entity_scope_denied",
+            message="Legal-entity scope is not authorized.",
+        )
+    if entity_id is not None and organization_id is None:
+        raise APIError(
+            status_code=400,
+            code="organization_scope_required",
+            message="Legal-entity scope requires an organization scope.",
+        )
     principal = getattr(request.state, "server_principal", None)
     if not isinstance(principal, ServerPrincipal):
         principal = current_server_principal()

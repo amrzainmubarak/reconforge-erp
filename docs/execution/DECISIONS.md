@@ -5715,3 +5715,16 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   5 tests with exact hierarchy assertions; Ruff/Mypy pass and ADR 0416 is packaged.
 - **Boundary**: One route family only; posting, providers/write-back, distributed
   IAM, HA/DR, and production readiness remain open.
+
+### D-395: Normalize optional hierarchy for tenant-scoped server policy calls
+
+- **Date**: 2026-08-07
+- **Context**: Tenant-only evidence routes passed `workspace_id=None`, and the
+  central policy helper therefore skipped organization/legal-entity headers.
+- **Decision**: Bind and validate optional organization/entity headers for every
+  server policy call; reject explicit/header mismatches and entity scopes with
+  no organization parent.
+- **Verification**: Execution-scope plus PPA/impairment/deferred-tax contracts
+  pass 23 focused tests; Ruff/Mypy pass and ADR 0417 is packaged.
+- **Boundary**: Tenant-only persistence remains tenant-only; this is not
+  multi-entity row isolation, complete IAM, federation, HA/DR, or production readiness.

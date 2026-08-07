@@ -5326,3 +5326,11 @@ product failure: `pending` is not an allowed backlog status. Changing it to
 the declared `in_progress` value restored the execution contract; the rerun
 passed all 2,647 tests in 337.1 seconds, so E-561 is now complete. The initial
 failure remains recorded in EVIDENCE.md.
+
+E-562 generalizes the central policy boundary to tenant-scoped calls: optional
+organization/legal-entity headers are normalized and fail closed on mismatch or
+missing parent even when no workspace is selected. Twenty-three focused policy
+and dependent-route tests pass and ADR 0417 is packaged. E-563 then passed all
+2,647 tests in 404.2 seconds with declared external-service skips visible;
+tenant-only persistence, hosted release evidence, and GitHub publication remain
+deferred.

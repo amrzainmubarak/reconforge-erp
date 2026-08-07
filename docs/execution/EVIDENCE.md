@@ -14613,3 +14613,10 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   `uv run pytest -q tests/test_connector_network.py` passes 26/26; Ruff and
   implementation Mypy pass. This is still process-local synthetic evidence,
   not distributed coordination, live provider, vault, or production-SLO proof.
+- E-602 hosted PostgreSQL native-tool bootstrap contract (2026-08-07):
+  `tests/test_phase4_execution_contract.py` requires the `server-boundaries`
+  workflow to install `postgresql-client` before locked dependencies and to
+  check executable `pg_dump`, `pg_restore`, `createdb`, `dropdb`, and `psql`
+  under `pg_config --bindir`. The focused phase-4 plus connector command passes
+  37/37; Ruff and diff-check pass. This is local workflow-intent evidence;
+  hosted encrypted backup/restore and production DR evidence remain external.

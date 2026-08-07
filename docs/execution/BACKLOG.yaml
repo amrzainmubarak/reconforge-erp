@@ -3478,3 +3478,17 @@ tasks:
       process-local synthetic isolation evidence only; it does not prove
       distributed coordination, live provider behavior, vault operation, or
       production SLOs.
+  - id: E-602
+    priority: P1
+    area: release_operations
+    title: Lock the hosted PostgreSQL native-tool bootstrap contract
+    status: completed
+    depends_on: [E-461]
+    exit_evidence: >-
+      A repository contract test now requires the server-boundaries workflow
+      to install the distribution PostgreSQL client package before locked
+      dependencies and to assert executable pg_dump, pg_restore, createdb,
+      dropdb, and psql paths under pg_config --bindir. The focused phase-4 and
+      connector suites pass 37/37 with Ruff and diff-check. This proves
+      workflow intent locally only; a fresh hosted encrypted backup/restore
+      run, HA/DR, RPO/RTO, and production release evidence remain required.

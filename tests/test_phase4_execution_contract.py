@@ -83,3 +83,17 @@ def test_server_boundaries_installs_all_locked_extras_for_live_matrix() -> None:
     steps = workflow["jobs"]["server-boundaries"]["steps"]
     install_commands = [str(step.get("run", "")) for step in steps if step.get("name") == "Install locked server dependencies"]
     assert install_commands == ["uv sync --locked --all-extras --no-editable --python 3.12"]
+
+
+def test_server_boundaries_bootstraps_versioned_postgres_native_tools_before_live_tests() -> None:
+    workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["server-boundaries"]["steps"]
+    names = [str(step.get("name", "")) for step in steps]
+    native_index = names.index("Install PostgreSQL native client tools")
+    dependency_index = names.index("Install locked server dependencies")
+    assert native_index < dependency_index
+    native_run = str(steps[native_index]["run"])
+    assert "sudo apt-get install --no-install-recommends -y postgresql-client" in native_run
+    assert "pg_config --bindir" in native_run
+    for tool in ("pg_dump", "pg_restore", "createdb", "dropdb", "psql"):
+        assert f'test -x "$(pg_config --bindir)/{tool}"' in native_run

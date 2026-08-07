@@ -6218,3 +6218,19 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: This is process-local synthetic isolation only; it does not
   establish distributed quota/circuit coordination, live provider behavior,
   vault operation, or production SLOs.
+
+### D-428: Fail closed when hosted PostgreSQL native tools are absent
+
+- **Date**: 2026-08-07
+- **Context**: The backup gate previously depended on ambient runner tools, so
+  a missing or wrapper-only PostgreSQL client could produce no dump without a
+  repository-level workflow signal.
+- **Decision**: Install the distribution `postgresql-client` package in
+  `server-boundaries`, resolve the versioned client bindir through
+  `pg_config --bindir`, and require all five native binaries before live tests.
+  Protect the contract with a YAML workflow test.
+- **Verification**: The phase-4 and connector focused suites pass 37/37, and
+  Ruff plus diff-check pass.
+- **Boundary**: Hosted execution, encrypted restore, HA/DR, RPO/RTO, and
+  production release evidence remain unverified until a fresh runner completes
+  the live gate.

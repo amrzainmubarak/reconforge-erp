@@ -5637,3 +5637,11 @@ does not block another lane, and invalid threshold/window values are refused.
 The focused network suite passes 26 tests; implementation Ruff and Mypy pass.
 This remains process-local synthetic evidence only, not distributed quota or
 live-provider behavior. GitHub publication remains deferred by owner policy.
+
+E-602 adds a repository contract for the hosted PostgreSQL native-tool
+bootstrap. It requires `server-boundaries` to install `postgresql-client`
+before locked dependencies and to resolve executable `pg_dump`, `pg_restore`,
+`createdb`, `dropdb`, and `psql` from `pg_config --bindir`. The focused phase-4
+and connector suites pass 37 tests with Ruff and diff-check. A fresh hosted
+encrypted backup/restore run is still required. GitHub publication remains
+deferred by owner policy.

@@ -90,6 +90,7 @@ POSTGRES_MIGRATION_REVISIONS = (
     "0077_pg_imp_tax_scope",
     "0078_pg_close_scope",
     "0079_pg_job_cursor",
+    "0080_pg_retail_settlement",
 )
 
 

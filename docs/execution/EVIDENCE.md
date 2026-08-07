@@ -14642,3 +14642,16 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   mode refuses explicitly until parity exists; no live retail provider,
   Studio/accessibility, posting, write-back, HA/DR, or production evidence
   follows.
+- E-605 PostgreSQL retail settlement persistence parity (2026-08-07):
+  migration `0080_pg_retail_settlement` and
+  `PostgresRetailSettlementRepository` add bounded JSONB storage, forced
+  tenant/workspace RLS, immutable update/delete guards, transaction-scoped
+  idempotent replay, and conflict refusal. The server API selects this
+  adapter through `PostgresTenantBoundary`; it never falls back to SQLite.
+  Schema/migration, server-scope, module, threat-model, and focused API tests
+  pass. The opt-in live non-privileged PostgreSQL test is skipped in this
+  environment because `RECONFORGE_TEST_POSTGRES_DSN` is not configured. This
+  does not establish hosted PostgreSQL parity, HA/DR, provider authenticity,
+  posting, write-back, or production retail operations. The full local pytest
+  regression exits 0 in 370.6 seconds; Ruff, Mypy (495 source files), Bandit,
+  OSV pip-audit, supply-chain validation, package build, and diff-check pass.

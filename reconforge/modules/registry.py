@@ -414,7 +414,7 @@ _MODULES = (
         capability_status="implemented",
         summary="Safe local validation and canonical projection support for export-based ERP profiles.",
         default_enabled=True,
-        interfaces=("artifacts", "cli", "library"),
+        interfaces=("api", "artifacts", "cli", "library"),
         import_contracts=("export-profile-mapping.v1", "local-csv-xlsx-headers.v1"),
         export_contracts=("mapping-validation-report.v1", "profile-template.v1"),
         data_classification=("export-header-metadata", "mapping-configuration"),
@@ -515,14 +515,20 @@ _MODULES = (
         export_contracts=("retail-settlement-report.v1",),
         data_classification=("financial-sensitive", "payment-control-data", "source-export-metadata"),
         retention_note=(
-            "Source exports and reports remain in operator-selected local paths; no processor credentials or "
-            "payment data are transmitted by this module."
+            "Reports remain in operator-selected SQLite paths or an explicitly configured tenant-scoped PostgreSQL "
+            "evidence store; processor credentials and payment data are never resolved or transmitted by this module."
         ),
         activation_note=(
-            "Run explicitly with two local JSON exports. The slice is non-posting and provider-neutral; it does "
-            "not imply a live card processor, ERP connector, write-back, or settlement finality."
+            "Run explicitly with two bounded JSON exports. Persistence is authenticated and replay-verified in local "
+            "or server mode, but the slice remains non-posting and provider-neutral; it does not imply a live card "
+            "processor, ERP connector, write-back, or settlement finality."
         ),
-        test_evidence=("tests/test_retail_settlement.py",),
+        test_evidence=(
+            "tests/test_api_retail_settlement.py",
+            "tests/test_api_server_retail_settlement.py",
+            "tests/test_postgres_retail_settlement.py",
+            "tests/test_retail_settlement.py",
+        ),
     ),
     ModuleDescriptor(
         module_id="bank.cash-reconciliation",

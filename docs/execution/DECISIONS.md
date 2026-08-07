@@ -6271,3 +6271,20 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: Local API/CLI composition only; no Studio, PostgreSQL parity,
   live processor authenticity, posting, write-back, HA/DR, or production
   retail claim follows.
+
+### D-431: Use a forced-RLS PostgreSQL adapter for server retail evidence
+
+- **Date**: 2026-08-07
+- **Context**: E-604 intentionally refused server-mode retail persistence to
+  avoid a silent SQLite fallback. A server deployment needs a real adapter
+  before the route can be promoted beyond the local profile.
+- **Decision**: Migration `0080_pg_retail_settlement` stores the bounded report
+  as JSONB with scalar digest projections, forced tenant/workspace RLS, and an
+  immutable trigger. `PostgresRetailSettlementRepository` validates the outer
+  and nested digests on write/read, locks the decision key transaction-locally,
+  and treats same-artifact replay as idempotent while refusing a conflicting
+  artifact. The API binds body/query workspace to the authenticated request
+  scope and selects PostgreSQL explicitly in server mode.
+- **Boundary**: This is persistence and scope-parity evidence only. It does
+  not establish hosted CI, HA/DR, live processor authenticity, posting,
+  write-back, Studio/accessibility, or production retail operations.

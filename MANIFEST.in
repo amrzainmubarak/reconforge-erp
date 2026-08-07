@@ -107,7 +107,10 @@ include docs/adr/0446-network-connector-circuit-breaker.md
 include docs/adr/0447-hosted-postgres-native-tool-bootstrap.md
 include docs/adr/0448-retail-settlement-persistence.md
 include docs/adr/0449-retail-settlement-local-api-boundary.md
+include docs/adr/0450-postgres-retail-settlement-parity.md
 include reconforge/infrastructure/sqlite_retail_settlement.py
+include reconforge/infrastructure/postgres_retail_settlement.py
+include reconforge/api/server_retail_settlement.py
 include tests/test_sqlite_retail_settlement.py
 include docs/adr/0339-connectors-boundary-is-an-evidence-bounded-module.md
 include docs/connectors/camt053-bounded-readonly.md
@@ -529,6 +532,8 @@ include reconforge/cli_retail_settlement.py
 include reconforge/api/routes/retail_settlement.py
 include tests/test_retail_settlement.py
 include tests/test_api_retail_settlement.py
+include tests/test_api_server_retail_settlement.py
+include tests/test_postgres_retail_settlement.py
 include docs/schemas/retail_settlement_report.schema.json
 include docs/retail-pos-settlement.md
 include docs/adr/0364-retail-pos-settlement-control-slice.md

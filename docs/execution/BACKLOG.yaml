@@ -3525,3 +3525,22 @@ tasks:
       mode refuses this local-only boundary until PostgreSQL parity exists;
       live retail providers, posting, write-back, HA/DR, and production retail
       operations remain open.
+  - id: E-605
+    priority: P1
+    area: platform-breadth
+    title: Add PostgreSQL retail settlement persistence parity
+    status: completed
+    depends_on: [E-604, E-461, P4-PLAT-001]
+    exit_evidence: >-
+      Migration `0080_pg_retail_settlement` and
+      `PostgresRetailSettlementRepository` provide JSONB report persistence,
+      tenant/workspace RLS, immutable triggers, bounded replay verification,
+      idempotent digest replay, and explicit conflict refusal. Server API
+      routes select this adapter through the authenticated PostgreSQL boundary
+      and never fall back to SQLite. Local schema/API/migration contracts pass;
+      the opt-in non-privileged live PostgreSQL drill is declared skipped
+      because the capability service is unavailable. The full local pytest
+      regression exits 0 in 370.6 seconds, Ruff/Mypy/Bandit, pip-audit,
+      supply-chain validation, package build, and diff-check pass. Hosted
+      native-tool bootstrap, HA/DR, provider authenticity, posting, write-back,
+      and production retail operations remain open.

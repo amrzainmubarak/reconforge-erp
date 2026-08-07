@@ -41,8 +41,13 @@ def _report(tmp_path: Path) -> dict[str, object]:
 def test_retail_api_boundary_is_packaged() -> None:
     manifest = Path("MANIFEST.in").read_text(encoding="utf-8")
     assert "include docs/adr/0449-retail-settlement-local-api-boundary.md" in manifest
+    assert "include docs/adr/0450-postgres-retail-settlement-parity.md" in manifest
     assert "include reconforge/api/routes/retail_settlement.py" in manifest
+    assert "include reconforge/api/server_retail_settlement.py" in manifest
+    assert "include reconforge/infrastructure/postgres_retail_settlement.py" in manifest
     assert "include tests/test_api_retail_settlement.py" in manifest
+    assert "include tests/test_api_server_retail_settlement.py" in manifest
+    assert "include tests/test_postgres_retail_settlement.py" in manifest
 
 
 def test_local_retail_api_persists_reads_and_isolates_workspace(tmp_path: Path) -> None:

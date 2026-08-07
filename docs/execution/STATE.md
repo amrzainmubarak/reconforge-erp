@@ -5668,3 +5668,14 @@ API/CLI/repository tests, full pytest (exit 0 in 370.0 seconds), and
 static/package gates pass. PostgreSQL parity,
 Retail Studio, live providers, posting, write-back, HA/DR, and production
 operations remain open. GitHub publication remains deferred by owner policy.
+
+E-605 adds the PostgreSQL retail settlement adapter and migration `0080`. The
+server routes now bind workspace to the authenticated execution scope and use
+forced tenant/workspace RLS, immutable triggers, bounded report replay, and
+transaction-scoped idempotent inserts. Local contract tests and focused API,
+migration, module, and threat-model tests pass. The live non-privileged
+PostgreSQL drill is explicitly skipped because the current environment has no
+`RECONFORGE_TEST_POSTGRES_DSN`; hosted native-tool, HA/DR, live provider,
+posting, write-back, Studio, and production evidence remain open. The full
+local regression exits 0 in 370.6 seconds and static/security/dependency/
+package gates pass. GitHub publication remains deferred by owner policy.

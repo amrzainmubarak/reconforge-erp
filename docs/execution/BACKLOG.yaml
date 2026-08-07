@@ -3034,3 +3034,18 @@ tasks:
       Ruff, Mypy, package build, and diff-check pass. This is resource-reuse
       correctness only, not throughput, capacity, soak, HA/DR, or production
       sizing evidence.
+  - id: E-576
+    priority: P0
+    area: quality
+    title: Close PostgreSQL metrics parity fixture dependencies
+    status: completed
+    depends_on: [E-575]
+    exit_evidence: >-
+      The live metrics parity gate installs the exact close, exception,
+      evidence, control, reconciliation, and matching schemas consumed by the
+      repository before installing metrics. Focused/static contracts pass with
+      one declared local live-PostgreSQL skip; the current 2,655-test full
+      regression exits 0 in 358.7 seconds, package build and diff-check pass,
+      and no fallback metric is added. This fixes test-environment completeness
+      only and does not claim provider, statutory, throughput, HA/DR, or
+      production readiness.

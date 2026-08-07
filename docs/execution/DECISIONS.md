@@ -5818,3 +5818,17 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   required for closure.
 - **Boundary**: This is not throughput, capacity, distributed scheduling,
   HA/DR, or production sizing evidence.
+
+### D-402: Close the PostgreSQL metrics parity fixture dependency graph
+
+- **Date**: 2026-08-07
+- **Context**: The reported live metrics failure came from a parity fixture
+  that installed metrics and domain tables but omitted tables queried by
+  close, exceptions, evidence, controls, reconciliation, and matching metrics.
+- **Decision**: Install those exact dependency schemas in the live parity test,
+  preserving least-privilege grants and the SQLite comparison. Do not add
+  production fallbacks or fabricated zero metrics.
+- **Verification**: Focused/static contracts and the full local gate must pass;
+  hosted PostgreSQL is the runtime verification surface.
+- **Boundary**: No statutory metrics, provider, throughput, HA/DR, or
+  production-readiness claim follows.

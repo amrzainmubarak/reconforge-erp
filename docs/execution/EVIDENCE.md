@@ -14361,3 +14361,11 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   current 2,655-test full regression exits 0 in 358.4 seconds, package build,
   Ruff, Mypy, and diff-check pass. This proves resource reuse correctness only,
   not throughput, capacity, soak, HA/DR, or production sizing.
+- E-576 PostgreSQL metrics parity fixture dependency closure (2026-08-07):
+  the live metrics test now installs the close-application, exception,
+  evidence-application, control-testing, reconciliation, and matching schemas
+  required by the repository queries before installing metrics. Focused local
+  collection is capability-gated without PostgreSQL; hosted server-boundary
+  execution remains required. The current 2,655-test full regression exits 0
+  in 358.7 seconds, package build and diff-check pass, and no fallback or
+  fabricated metric is introduced.

@@ -5395,3 +5395,11 @@ pass with one declared live-PostgreSQL skip; the current 2,655-test regression
 exits 0 in 358.4 seconds, package build/Ruff/Mypy/diff-check pass. This remains
 resource-reuse evidence only, not capacity, soak, HA/DR, or production sizing
 proof.
+
+E-576 closes the reported PostgreSQL metrics gate at its root: the parity
+fixture now installs every schema family referenced by the metrics queries
+instead of allowing an absent table to surface as a generic operation failure.
+Focused/static contracts pass with one declared local live-PostgreSQL skip; the
+current 2,655-test regression exits 0 in 358.7 seconds, package build and
+diff-check pass. Live hosted PostgreSQL execution remains the required runtime
+check.

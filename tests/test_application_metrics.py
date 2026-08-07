@@ -15,14 +15,20 @@ from reconforge.infrastructure.postgres import (
     PostgresTenantBoundary,
     install_postgres_rls_schema,
 )
+from reconforge.infrastructure.postgres_close_application import POSTGRES_CLOSE_APPLICATION_SCHEMA_SQL
+from reconforge.infrastructure.postgres_controls import install_postgres_control_testing_schema
 from reconforge.infrastructure.postgres_domain import (
     PostgresDomainUnitOfWork,
     install_postgres_domain_schema,
 )
+from reconforge.infrastructure.postgres_evidence_application import POSTGRES_EVIDENCE_APPLICATION_SCHEMA_SQL
+from reconforge.infrastructure.postgres_exceptions import POSTGRES_EXCEPTIONS_SCHEMA_SQL
+from reconforge.infrastructure.postgres_matching import POSTGRES_MATCHING_APPLICATION_SCHEMA_SQL
 from reconforge.infrastructure.postgres_metrics import (
     PostgresMetricsRepository,
     install_postgres_metrics_schema,
 )
+from reconforge.infrastructure.postgres_reconciliation import POSTGRES_RECONCILIATION_SCHEMA_SQL
 from reconforge.infrastructure.sqlite_metrics import SQLiteMetricsRepository
 
 
@@ -44,6 +50,12 @@ def test_live_postgres_metrics_and_sqlite_parity(tmp_path: Path) -> None:
         with admin.transaction():
             install_postgres_rls_schema(admin)
             install_postgres_domain_schema(admin)
+            admin.execute(POSTGRES_CLOSE_APPLICATION_SCHEMA_SQL)
+            admin.execute(POSTGRES_EXCEPTIONS_SCHEMA_SQL)
+            admin.execute(POSTGRES_EVIDENCE_APPLICATION_SCHEMA_SQL)
+            install_postgres_control_testing_schema(admin)
+            admin.execute(POSTGRES_RECONCILIATION_SCHEMA_SQL)
+            admin.execute(POSTGRES_MATCHING_APPLICATION_SCHEMA_SQL)
             install_postgres_metrics_schema(admin)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
             admin.execute(

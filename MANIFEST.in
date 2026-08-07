@@ -662,6 +662,12 @@ include docs/adr/0401-ownership-change-cli-is-local-non-posting.md
 include docs/adr/0409-postgres-outbox-hierarchy-scoped-worker.md
 include docs/adr/0410-postgres-outbox-consumer-hierarchy.md
 include docs/adr/0411-server-policy-organization-scope.md
+include docs/adr/0412-durable-jobs-organization-scope.md
+include reconforge/infrastructure/postgres_job_organization_scope.py
+include alembic/versions/0075_postgres_job_organization_scope.py
+include tests/test_durable_job_application.py
+include tests/test_postgres_job_scope.py
+include tests/test_governed_jobs_policy.py
 include tests/test_consolidation_cli.py
 include docs/schemas/consolidation_impairment_v1.schema.json
 include tests/test_consolidation_impairment.py

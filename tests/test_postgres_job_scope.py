@@ -34,6 +34,7 @@ def test_job_scope_policies_cover_parent_and_all_worker_evidence() -> None:
     ):
         assert table_name in normalized
     assert "app.workspace_id" in normalized
+    assert "app.organization_id" in normalized
     assert "app.entity_id" in normalized
     connection = _Connection()
     install_postgres_job_scope_schema(connection)

@@ -1485,6 +1485,7 @@ BACKUP_INSERT_COLUMNS = {
         "idempotency_key",
         "tenant_id",
         "workspace_id",
+        "organization_id",
         "entity_id",
         "input_digest",
         "config_digest",
@@ -2182,11 +2183,11 @@ BACKUP_INSERT_QUERIES = {
     "durable_jobs": """
         INSERT INTO durable_jobs (
             id, schema_version, version, status, idempotency_scope, idempotency_key,
-            tenant_id, workspace_id, entity_id, input_digest, config_digest, worker_version,
+            tenant_id, workspace_id, organization_id, entity_id, input_digest, config_digest, worker_version,
             completed_units, total_units, checkpoint_digest, retry_count, retry_ceiling,
             safe_error_code, created_at, updated_at, started_at, completed_at,
             output_manifest_schema_version, output_manifest_digest, output_manifest_reference
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "durable_job_transitions": """
         INSERT INTO durable_job_transitions (

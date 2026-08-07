@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -64,4 +65,16 @@ def test_governed_cancel_rejects_self_approval_and_scope_confusion(tmp_path: Pat
             tenant_id="tenant-b", workspace_id="workspace-a", job_id="JOB-GOVERNED-1",
             actor_id="operator", occurred_at="2026-08-02T10:01:00Z",
             policy_context=_context(permissions={"close.manage"}), required_permission="close.manage",
+        )
+
+
+def test_governed_submit_rejects_organization_scope_confusion(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+    submission = replace(_submission(), organization_id="organization-b")
+    with pytest.raises(JobAuthorizationError, match="organization"):
+        service.submit(
+            submission,
+            actor_id="operator",
+            policy_context=_context(permissions={"close.manage"}),
+            required_permission="close.manage",
         )

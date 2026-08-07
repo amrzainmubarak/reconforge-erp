@@ -85,6 +85,7 @@ POSTGRES_MIGRATION_REVISIONS = (
     "0072_pg_recon_entity_scope",
     "0073_pg_outbox_scope",
     "0074_pg_outbox_consumer_scope",
+    "0075_pg_job_organization_scope",
 )
 
 

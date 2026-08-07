@@ -197,12 +197,14 @@ class DurableJob:
     completed_at: str
     output_manifest: JobOutputManifest | None
     schema_version: int = JOB_SCHEMA_VERSION
+    organization_id: str = ""
 
     def __post_init__(self) -> None:
         if self.schema_version != JOB_SCHEMA_VERSION:
             raise JobInvariantError("Unsupported durable-job schema version.")
         for field in ("id", "idempotency_scope", "idempotency_key", "tenant_id", "workspace_id", "worker_version"):
             object.__setattr__(self, field, _identifier(getattr(self, field), field))
+        object.__setattr__(self, "organization_id", _identifier(self.organization_id, "organization_id", optional=True))
         object.__setattr__(self, "entity_id", _identifier(self.entity_id, "entity_id", optional=True))
         object.__setattr__(self, "input_digest", _digest(self.input_digest, "input_digest"))
         object.__setattr__(self, "config_digest", _digest(self.config_digest, "config_digest"))
@@ -262,6 +264,7 @@ class DurableJob:
         idempotency_key: str,
         tenant_id: str,
         workspace_id: str,
+        organization_id: str = "",
         entity_id: str = "",
         input_digest: str,
         config_digest: str,
@@ -278,6 +281,7 @@ class DurableJob:
             idempotency_key=idempotency_key,
             tenant_id=tenant_id,
             workspace_id=workspace_id,
+            organization_id=organization_id,
             entity_id=entity_id,
             input_digest=input_digest,
             config_digest=config_digest,

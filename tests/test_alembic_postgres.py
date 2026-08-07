@@ -122,6 +122,19 @@ def test_outbox_consumer_scope_migration_is_versioned_and_reversible() -> None:
     assert "DROP COLUMN IF EXISTS {column}" in migration
 
 
+def test_durable_job_organization_scope_migration_is_versioned_and_reversible() -> None:
+    migration = (ROOT / "alembic/versions/0075_postgres_job_organization_scope.py").read_text(encoding="utf-8")
+    schema = (ROOT / "reconforge/infrastructure/postgres_job_organization_scope.py").read_text(encoding="utf-8")
+
+    assert 'revision = "0075_pg_job_organization_scope"' in migration
+    assert 'down_revision = "0074_pg_outbox_consumer_scope"' in migration
+    assert "POSTGRES_JOB_ORGANIZATION_SCOPE_SCHEMA_SQL" in migration
+    assert "ADD COLUMN IF NOT EXISTS organization_id" in schema
+    assert "app.organization_id" in schema
+    assert "durable_jobs_org_scope_status_idx" in schema
+    assert "DROP COLUMN IF EXISTS organization_id" in migration
+
+
 def test_postgres_alembic_contract_has_no_repository_credentials() -> None:
     config = (ROOT / "alembic.ini").read_text(encoding="utf-8")
     env = (ROOT / "alembic" / "env.py").read_text(encoding="utf-8")

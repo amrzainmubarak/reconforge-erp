@@ -5625,3 +5625,22 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   exceptions, zero npm integrity gaps, and no pip/npm findings.
 - **Boundary**: Local evidence cannot substitute for hosted security or release
   attestation.
+
+### D-389: Carry organization scope through durable-job lanes
+
+- **Date**: 2026-08-07
+- **Context**: Durable jobs had tenant/workspace/entity lanes while central
+  policy and other PostgreSQL workers also authorized organization scope.
+- **Decision**: Add optional organization attribution to the aggregate,
+  submission, scheduler lane, worker claim, SQLite migration 33, and
+  PostgreSQL revision 0075. Queue bounds, idempotent replay, backup import /
+  export, claim filters, transaction-local settings, and RLS use the same
+  hierarchy; legacy tenant/workspace jobs remain compatible.
+- **Verification**: Focused durable-job, backup/restore, scheduler, migration
+  chain, and package tests pass. Full regression is tracked by E-550; live
+  PostgreSQL remains capability-gated.
+- **Boundary**: This is a durable-job isolation/provenance primitive, not
+  distributed queue fairness, provider IAM, HA/DR, or production readiness.
+- **Reversibility**: PostgreSQL downgrade removes the additive column/index and
+  restores the prior policy. SQLite rollback requires a pre-migration backup
+  rather than an implicit destructive downgrade.

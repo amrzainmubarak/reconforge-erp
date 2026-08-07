@@ -92,6 +92,44 @@ def test_worker_lease_lifecycle_fences_progress_and_releases_on_completion(tmp_p
     connection.close()
 
 
+def test_sqlite_durable_job_preserves_organization_scope_and_claim_filter(tmp_path: Path) -> None:
+    database_path = tmp_path / "organization-jobs.db"
+    run_migrations(database_path)
+    connection = connect(database_path, require_exists=True)
+    repository = SQLiteDurableJobRepository(connection)
+    application = DurableJobApplicationService(repository)
+    worker = DurableJobWorkerService(repository)
+    first = replace(
+        _submission(job_id="JOB-ORG-A", idempotency_key="org-a"),
+        organization_id="ORG-A",
+    )
+    second = replace(
+        _submission(job_id="JOB-ORG-B", idempotency_key="org-b"),
+        organization_id="ORG-B",
+    )
+    persisted, created = application.submit(first, actor_id="scheduler-1")
+    replayed, replay_created = application.submit(first, actor_id="scheduler-2")
+    application.submit(second, actor_id="scheduler-1")
+
+    assert created is True
+    assert replay_created is False
+    assert persisted.organization_id == replayed.organization_id == "ORG-A"
+    assert connection.execute(
+        "SELECT organization_id FROM durable_jobs WHERE id = ?", (first.job_id,)
+    ).fetchone()[0] == "ORG-A"
+    claimed = worker.claim(
+        tenant_id=first.tenant_id,
+        workspace_id=first.workspace_id,
+        organization_id="ORG-A",
+        entity_id=first.entity_id,
+        worker_id="worker-org-a",
+        occurred_at="2026-07-27T08:00:01Z",
+        lease_expires_at="2026-07-27T08:00:04Z",
+    )
+    assert claimed is not None and claimed.job.id == first.job_id
+    connection.close()
+
+
 def test_round_robin_scheduler_alternates_exact_lanes_without_cross_lane_claims(tmp_path: Path) -> None:
     database_path = tmp_path / "fair-lanes.db"
     run_migrations(database_path)

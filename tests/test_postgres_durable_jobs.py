@@ -70,6 +70,8 @@ def _submission(tenant_id: str) -> JobSubmission:
 def test_postgres_job_schema_has_rls_idempotency_and_version_guards() -> None:
     assert "FORCE ROW LEVEL SECURITY" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
     assert "UNIQUE (tenant_id, idempotency_scope, idempotency_key)" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
+    assert "organization_id TEXT" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
+    assert "durable_jobs_org_scope_status_idx" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
     assert "PRIMARY KEY (tenant_id, job_id, job_version)" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
     assert "completed_units <= total_units" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
 

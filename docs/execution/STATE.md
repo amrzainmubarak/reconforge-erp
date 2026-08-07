@@ -5251,3 +5251,12 @@ adoption, live IAM/provider runtime, HA/DR, and hosted approval remain open.
 E-548 also passes the local closed supply-chain policy validator with zero
 active exceptions and zero npm integrity gaps. Hosted security jobs and
 required-context status still need a fresh external run.
+
+E-549 adds organization scope to durable jobs across the domain, SQLite, and
+PostgreSQL modes. Migration 33 and PostgreSQL revision 0075 preserve the
+hierarchy in replay identity, queue bounds, claims, evidence reads/writes,
+backup import/export, and RLS. Focused checks and package build pass; live
+PostgreSQL remains capability-gated. E-550 closes the 2,642-test full
+regression and static/security/package gates; live PostgreSQL, hosted
+CI/security/provenance, HA/DR, and release approval remain external. GitHub
+publication remains deferred by owner instruction.

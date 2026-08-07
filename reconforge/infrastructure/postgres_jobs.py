@@ -36,6 +36,7 @@ _JOB_COLUMNS = (
     "idempotency_key",
     "tenant_id",
     "workspace_id",
+    "organization_id",
     "entity_id",
     "input_digest",
     "config_digest",
@@ -79,6 +80,7 @@ def _decode_job(row: Any) -> DurableJob:
             idempotency_key=str(values["idempotency_key"]),
             tenant_id=str(values["tenant_id"]),
             workspace_id=str(values["workspace_id"]),
+            organization_id="" if values["organization_id"] is None else str(values["organization_id"]),
             entity_id=str(values["entity_id"]),
             input_digest=str(values["input_digest"]),
             config_digest=str(values["config_digest"]),
@@ -110,6 +112,7 @@ def _job_values(job: DurableJob) -> tuple[object, ...]:
         job.idempotency_key,
         job.tenant_id,
         job.workspace_id,
+        job.organization_id or None,
         job.entity_id,
         job.input_digest,
         job.config_digest,
@@ -136,6 +139,7 @@ def _same_submission(left: DurableJob, right: DurableJob) -> bool:
         "idempotency_key",
         "tenant_id",
         "workspace_id",
+        "organization_id",
         "entity_id",
         "input_digest",
         "config_digest",
@@ -158,12 +162,18 @@ class PostgresDurableJobRepository:
         tenant_id: str,
         *,
         workspace_id: str = "",
+        organization_id: str = "",
         entity_id: str = "",
     ) -> Iterator[None]:
         tenant = validate_tenant_id(tenant_id)
         try:
             with self.connection.transaction():
-                set_local_tenant_scope(self.connection, tenant, workspace_id=workspace_id or None)
+                set_local_tenant_scope(
+                    self.connection,
+                    tenant,
+                    organization_id=organization_id or None,
+                    workspace_id=workspace_id or None,
+                )
                 self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (entity_id,))
                 yield
         except PostgresJobRepositoryError:
@@ -178,7 +188,12 @@ class PostgresDurableJobRepository:
             raise PostgresJobRepositoryError("Only a new queued job may be submitted.")
         columns = ", ".join(_JOB_COLUMNS)
         placeholders = ", ".join("%s" for _ in _JOB_COLUMNS)
-        with self._transaction(job.tenant_id, workspace_id=job.workspace_id, entity_id=job.entity_id):
+        with self._transaction(
+            job.tenant_id,
+            organization_id=job.organization_id,
+            workspace_id=job.workspace_id,
+            entity_id=job.entity_id,
+        ):
             try:
                 inserted = self.connection.execute(
                     # SQL identifiers come only from the immutable module-level _JOB_COLUMNS tuple.
@@ -233,8 +248,16 @@ class PostgresDurableJobRepository:
             raise PostgresJobRepositoryError("Only a new queued job may be submitted.")
         columns = ", ".join(_JOB_COLUMNS)
         placeholders = ", ".join("%s" for _ in _JOB_COLUMNS)
-        lane_lock_key = f"reconforge:durable-job-lane:{job.tenant_id}:{job.workspace_id}:{job.entity_id}"
-        with self._transaction(job.tenant_id, workspace_id=job.workspace_id, entity_id=job.entity_id):
+        lane_lock_key = (
+            f"reconforge:durable-job-lane:{job.tenant_id}:{job.organization_id}:"
+            f"{job.workspace_id}:{job.entity_id}"
+        )
+        with self._transaction(
+            job.tenant_id,
+            organization_id=job.organization_id,
+            workspace_id=job.workspace_id,
+            entity_id=job.entity_id,
+        ):
             self.connection.execute(
                 "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
                 (lane_lock_key,),
@@ -304,7 +327,12 @@ class PostgresDurableJobRepository:
             if row is None:
                 return None
             job = _decode_job(row)
-            set_local_tenant_scope(self.connection, job.tenant_id, workspace_id=job.workspace_id)
+            set_local_tenant_scope(
+                self.connection,
+                job.tenant_id,
+                organization_id=job.organization_id or None,
+                workspace_id=job.workspace_id,
+            )
             self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (job.entity_id,))
             scoped = self.connection.execute(
                 "SELECT " + columns + " FROM reconforge.durable_jobs WHERE tenant_id = %s AND id = %s",  # nosec B608
@@ -409,6 +437,7 @@ class PostgresDurableJobRepository:
         *,
         tenant_id: str,
         workspace_id: str | None = None,
+        organization_id: str | None = None,
         entity_id: str | None = None,
         worker_id: str,
         occurred_at: str,
@@ -417,6 +446,7 @@ class PostgresDurableJobRepository:
         columns = ", ".join(f"jobs.{column}" for column in _JOB_COLUMNS)
         with self._transaction(
             tenant_id,
+            organization_id=organization_id or "",
             workspace_id=workspace_id or "",
             entity_id=entity_id or "",
         ):
@@ -430,6 +460,7 @@ class PostgresDurableJobRepository:
                 LEFT JOIN reconforge.durable_job_leases leases
                   ON leases.tenant_id = jobs.tenant_id AND leases.job_id = jobs.id
                 WHERE jobs.tenant_id = %s
+                  AND (%s::text IS NULL OR jobs.organization_id = %s::text)
                   AND (%s::text IS NULL OR jobs.workspace_id = %s::text)
                   AND (%s::text IS NULL OR jobs.entity_id = %s::text)
                   AND (
@@ -443,6 +474,8 @@ class PostgresDurableJobRepository:
                 """,  # nosec B608
                 (
                     tenant_id,
+                    organization_id,
+                    organization_id,
                     workspace_id,
                     workspace_id,
                     entity_id,
@@ -454,7 +487,12 @@ class PostgresDurableJobRepository:
             if row is None:
                 return None
             previous = _decode_job(row)
-            set_local_tenant_scope(self.connection, previous.tenant_id, workspace_id=previous.workspace_id)
+            set_local_tenant_scope(
+                self.connection,
+                previous.tenant_id,
+                organization_id=previous.organization_id or None,
+                workspace_id=previous.workspace_id,
+            )
             self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (previous.entity_id,))
             # Re-read the lease after locking the job row.  Under concurrent
             # PostgreSQL plans a LEFT JOIN can expose a stale/missing lease
@@ -530,13 +568,18 @@ class PostgresDurableJobRepository:
             raise PostgresJobConflictError("Durable-job lease is expired or was not extended.")
         with self._transaction(lease.tenant_id):
             scope_row = self.connection.execute(
-                "SELECT workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
+                "SELECT organization_id, workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
                 (lease.tenant_id, lease.job_id),
             ).fetchone()
             if scope_row is None:
                 raise PostgresJobConflictError("Durable-job lease target no longer exists.")
-            set_local_tenant_scope(self.connection, lease.tenant_id, workspace_id=str(scope_row[0]))
-            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[1]),))
+            set_local_tenant_scope(
+                self.connection,
+                lease.tenant_id,
+                organization_id=str(scope_row[0]) or None,
+                workspace_id=str(scope_row[1]),
+            )
+            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[2]),))
             cursor = self.connection.execute(
                 """
                 UPDATE reconforge.durable_job_leases SET renewed_at=%s, expires_at=%s
@@ -607,6 +650,7 @@ class PostgresDurableJobRepository:
         self._validate_transition(previous, changed, event)
         with self._transaction(
             previous.tenant_id,
+            organization_id=previous.organization_id,
             workspace_id=previous.workspace_id,
             entity_id=previous.entity_id,
         ):
@@ -634,6 +678,7 @@ class PostgresDurableJobRepository:
             raise PostgresJobRepositoryError("Partition effect time does not match transition evidence.")
         with self._transaction(
             previous.tenant_id,
+            organization_id=previous.organization_id,
             workspace_id=previous.workspace_id,
             entity_id=previous.entity_id,
         ):
@@ -677,13 +722,18 @@ class PostgresDurableJobRepository:
     def list_partition_effects(self, *, tenant_id: str, job_id: str) -> list[JobPartitionEffect]:
         with self._transaction(tenant_id):
             scope_row = self.connection.execute(
-                "SELECT workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
+                "SELECT organization_id, workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
                 (tenant_id, job_id),
             ).fetchone()
             if scope_row is None:
                 return []
-            set_local_tenant_scope(self.connection, tenant_id, workspace_id=str(scope_row[0]))
-            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[1]),))
+            set_local_tenant_scope(
+                self.connection,
+                tenant_id,
+                organization_id=str(scope_row[0]) or None,
+                workspace_id=str(scope_row[1]),
+            )
+            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[2]),))
             rows = self.connection.execute(
                 """
                 SELECT job_id, partition_key, ordinal, completed_units, input_digest,
@@ -710,13 +760,18 @@ class PostgresDurableJobRepository:
     def list_transitions(self, *, tenant_id: str, job_id: str) -> list[dict[str, Any]]:
         with self._transaction(tenant_id):
             scope_row = self.connection.execute(
-                "SELECT workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
+                "SELECT organization_id, workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
                 (tenant_id, job_id),
             ).fetchone()
             if scope_row is None:
                 return []
-            set_local_tenant_scope(self.connection, tenant_id, workspace_id=str(scope_row[0]))
-            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[1]),))
+            set_local_tenant_scope(
+                self.connection,
+                tenant_id,
+                organization_id=str(scope_row[0]) or None,
+                workspace_id=str(scope_row[1]),
+            )
+            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[2]),))
             cursor = self.connection.execute(
                 """
                 SELECT job_version, from_status, to_status, actor_id, occurred_at, reason_code
@@ -731,13 +786,18 @@ class PostgresDurableJobRepository:
     def list_lease_events(self, *, tenant_id: str, job_id: str) -> list[dict[str, Any]]:
         with self._transaction(tenant_id):
             scope_row = self.connection.execute(
-                "SELECT workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
+                "SELECT organization_id, workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
                 (tenant_id, job_id),
             ).fetchone()
             if scope_row is None:
                 return []
-            set_local_tenant_scope(self.connection, tenant_id, workspace_id=str(scope_row[0]))
-            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[1]),))
+            set_local_tenant_scope(
+                self.connection,
+                tenant_id,
+                organization_id=str(scope_row[0]) or None,
+                workspace_id=str(scope_row[1]),
+            )
+            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[2]),))
             cursor = self.connection.execute(
                 """
                 SELECT event_sequence, generation, action, owner_id, occurred_at, expires_at
@@ -758,7 +818,9 @@ CREATE TABLE IF NOT EXISTS reconforge.durable_jobs (
     status TEXT NOT NULL CHECK (status IN ('queued','running','paused','retrying','failed','completed','cancelled')),
     idempotency_scope TEXT NOT NULL, idempotency_key TEXT NOT NULL,
     tenant_id TEXT NOT NULL REFERENCES reconforge.tenants(id) ON DELETE CASCADE,
-    workspace_id TEXT NOT NULL, entity_id TEXT NOT NULL DEFAULT '',
+    workspace_id TEXT NOT NULL,
+    organization_id TEXT DEFAULT NULLIF(current_setting('app.organization_id', true), ''),
+    entity_id TEXT NOT NULL DEFAULT '',
     input_digest TEXT NOT NULL CHECK (input_digest ~ '^[0-9a-f]{64}$'),
     config_digest TEXT NOT NULL CHECK (config_digest ~ '^[0-9a-f]{64}$'),
     worker_version TEXT NOT NULL,
@@ -774,6 +836,8 @@ CREATE TABLE IF NOT EXISTS reconforge.durable_jobs (
     PRIMARY KEY (tenant_id, id),
     UNIQUE (tenant_id, idempotency_scope, idempotency_key)
 );
+CREATE INDEX IF NOT EXISTS durable_jobs_org_scope_status_idx
+    ON reconforge.durable_jobs(tenant_id, organization_id, workspace_id, status, created_at, id);
 CREATE TABLE IF NOT EXISTS reconforge.durable_job_transitions (
     tenant_id TEXT NOT NULL, job_id TEXT NOT NULL, job_version BIGINT NOT NULL,
     from_status TEXT NOT NULL, to_status TEXT NOT NULL, actor_id TEXT NOT NULL,

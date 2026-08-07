@@ -34,6 +34,7 @@ _JOB_COLUMNS = (
     "idempotency_key",
     "tenant_id",
     "workspace_id",
+    "organization_id",
     "entity_id",
     "input_digest",
     "config_digest",
@@ -76,6 +77,7 @@ def _job_from_row(row: sqlite3.Row) -> DurableJob:
         idempotency_key=str(_row_value(row, "idempotency_key")),
         tenant_id=str(_row_value(row, "tenant_id")),
         workspace_id=str(_row_value(row, "workspace_id")),
+        organization_id=str(_row_value(row, "organization_id") or ""),
         entity_id=str(_row_value(row, "entity_id")),
         input_digest=str(_row_value(row, "input_digest")),
         config_digest=str(_row_value(row, "config_digest")),
@@ -112,6 +114,7 @@ def _job_values(job: DurableJob) -> tuple[object, ...]:
         job.idempotency_key,
         job.tenant_id,
         job.workspace_id,
+        job.organization_id,
         job.entity_id,
         job.input_digest,
         job.config_digest,
@@ -138,6 +141,7 @@ def _same_submission(left: DurableJob, right: DurableJob) -> bool:
         "idempotency_key",
         "tenant_id",
         "workspace_id",
+        "organization_id",
         "entity_id",
         "input_digest",
         "config_digest",
@@ -236,7 +240,7 @@ class SQLiteDurableJobRepository:
     ) -> tuple[DurableJob, bool]:
         """Submit atomically while bounding queued work in one execution lane.
 
-        The lane is `(tenant_id, workspace_id, entity_id)`. SQLite's
+        The lane is `(tenant_id, organization_id, workspace_id, entity_id)`. SQLite's
         `BEGIN IMMEDIATE` serializes competing writers, so the count and
         insert cannot pass the cap independently.
         """
@@ -271,10 +275,10 @@ class SQLiteDurableJobRepository:
                 self.connection.execute(
                     """
                     SELECT COUNT(*) FROM durable_jobs
-                    WHERE tenant_id = ? AND workspace_id = ? AND entity_id = ?
+                    WHERE tenant_id = ? AND organization_id = ? AND workspace_id = ? AND entity_id = ?
                       AND status IN ('queued', 'retrying')
                     """,
-                    (job.tenant_id, job.workspace_id, job.entity_id),
+                    (job.tenant_id, job.organization_id, job.workspace_id, job.entity_id),
                 ).fetchone()[0]
             )
             if queued >= max_queued_jobs:
@@ -434,6 +438,7 @@ class SQLiteDurableJobRepository:
         *,
         tenant_id: str,
         workspace_id: str | None = None,
+        organization_id: str | None = None,
         entity_id: str | None = None,
         worker_id: str,
         occurred_at: str,
@@ -456,6 +461,7 @@ class SQLiteDurableJobRepository:
                 LEFT JOIN durable_job_leases leases ON leases.job_id = jobs.id
                 WHERE jobs.tenant_id = ?
                   AND (? IS NULL OR jobs.workspace_id = ?)
+                  AND (? IS NULL OR jobs.organization_id = ?)
                   AND (? IS NULL OR jobs.entity_id = ?)
                   AND (
                     jobs.status = 'queued'
@@ -472,6 +478,8 @@ class SQLiteDurableJobRepository:
                     tenant_id,
                     workspace_id,
                     workspace_id,
+                    organization_id,
+                    organization_id,
                     entity_id,
                     entity_id,
                     occurred_at,

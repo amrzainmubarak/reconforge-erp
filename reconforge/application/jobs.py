@@ -62,6 +62,7 @@ class DurableJobWorkerRepositoryProtocol(DurableJobRepositoryProtocol, Protocol)
         *,
         tenant_id: str,
         workspace_id: str | None = None,
+        organization_id: str | None = None,
         entity_id: str | None = None,
         worker_id: str,
         occurred_at: str,
@@ -116,6 +117,7 @@ class JobSubmission:
     total_units: int
     retry_ceiling: int
     created_at: str
+    organization_id: str = ""
 
 
 def _job_from_submission(submission: JobSubmission) -> DurableJob:
@@ -125,6 +127,7 @@ def _job_from_submission(submission: JobSubmission) -> DurableJob:
         idempotency_key=submission.idempotency_key,
         tenant_id=submission.tenant_id,
         workspace_id=submission.workspace_id,
+        organization_id=submission.organization_id,
         entity_id=submission.entity_id,
         input_digest=submission.input_digest,
         config_digest=submission.config_digest,
@@ -150,10 +153,13 @@ class DurableJobLane:
     tenant_id: str
     workspace_id: str
     entity_id: str
+    organization_id: str = ""
 
     def __post_init__(self) -> None:
         if not all((self.tenant_id.strip(), self.workspace_id.strip(), self.entity_id.strip())):
             raise ValueError("durable-job lane identifiers must be non-empty")
+        if not isinstance(self.organization_id, str):
+            raise ValueError("durable-job organization_id must be text")
 
 
 @dataclass(frozen=True)
@@ -309,6 +315,7 @@ class GovernedDurableJobApplicationService:
             required_permission=required_permission,
             tenant_id=submission.tenant_id,
             workspace_id=submission.workspace_id,
+            organization_id=submission.organization_id or None,
             object_id=submission.job_id,
             action="submit",
         )
@@ -329,6 +336,7 @@ class GovernedDurableJobApplicationService:
             required_permission=required_permission,
             tenant_id=submission.tenant_id,
             workspace_id=submission.workspace_id,
+            organization_id=submission.organization_id or None,
             object_id=submission.job_id,
             action="submit_bounded",
         )
@@ -343,6 +351,7 @@ class GovernedDurableJobApplicationService:
         *,
         tenant_id: str,
         workspace_id: str,
+        organization_id: str | None = None,
         job_id: str,
         actor_id: str,
         occurred_at: str,
@@ -355,6 +364,7 @@ class GovernedDurableJobApplicationService:
             required_permission=required_permission,
             tenant_id=tenant_id,
             workspace_id=workspace_id,
+            organization_id=organization_id,
             object_id=job_id,
             action="cancel",
         )
@@ -370,6 +380,7 @@ class GovernedDurableJobApplicationService:
         required_permission: str,
         tenant_id: str,
         workspace_id: str,
+        organization_id: str | None,
         object_id: str,
         action: str,
     ) -> PolicyDecision:
@@ -385,6 +396,8 @@ class GovernedDurableJobApplicationService:
             raise JobAuthorizationError(f"job policy denied: {decision.reason_code}")
         if context.tenant_id != tenant_id or context.workspace_id != workspace_id:
             raise JobAuthorizationError("job policy scope does not match mutation scope")
+        if context.organization_id != organization_id:
+            raise JobAuthorizationError("job policy organization does not match mutation scope")
         return decision
 
 
@@ -405,6 +418,7 @@ class DurableJobWorkerService:
         *,
         tenant_id: str,
         workspace_id: str | None = None,
+        organization_id: str | None = None,
         entity_id: str | None = None,
         worker_id: str,
         occurred_at: str,
@@ -415,6 +429,7 @@ class DurableJobWorkerService:
             claimed = self._repository.claim_next(
                 tenant_id=tenant_id,
                 workspace_id=workspace_id,
+                organization_id=organization_id,
                 entity_id=entity_id,
                 worker_id=worker_id,
                 occurred_at=occurred_at,
@@ -666,6 +681,7 @@ class GovernedDurableJobWorkerService:
         *,
         tenant_id: str,
         workspace_id: str | None = None,
+        organization_id: str | None = None,
         entity_id: str | None = None,
         worker_id: str,
         occurred_at: str,
@@ -681,6 +697,7 @@ class GovernedDurableJobWorkerService:
             worker_id=worker_id,
             tenant_id=tenant_id,
             workspace_id=workspace_id,
+            organization_id=organization_id,
             entity_id=entity_id,
             required_permission=required_permission,
             request_id=request_id,
@@ -688,6 +705,7 @@ class GovernedDurableJobWorkerService:
         return self._worker.claim(
             tenant_id=tenant_id,
             workspace_id=workspace_id,
+            organization_id=organization_id,
             entity_id=entity_id,
             worker_id=worker_id,
             occurred_at=occurred_at,
@@ -701,6 +719,7 @@ class GovernedDurableJobWorkerService:
         worker_id: str,
         tenant_id: str,
         workspace_id: str | None,
+        organization_id: str | None,
         entity_id: str | None,
         required_permission: str,
         request_id: str,
@@ -713,6 +732,8 @@ class GovernedDurableJobWorkerService:
             raise JobAuthorizationError("worker actor does not match policy identity")
         if context.tenant_id != tenant_id or context.workspace_id != workspace_id:
             raise JobAuthorizationError("worker policy scope does not match claim scope")
+        if context.organization_id != organization_id:
+            raise JobAuthorizationError("worker policy organization does not match claim scope")
         if context.entity_id is not None and context.entity_id != entity_id:
             raise JobAuthorizationError("worker policy entity does not match claim scope")
         decision = self._policy.evaluate(
@@ -771,6 +792,7 @@ class RoundRobinDurableJobScheduler:
             leased = self._worker.claim(
                 tenant_id=lane.tenant_id,
                 workspace_id=lane.workspace_id,
+                organization_id=lane.organization_id or None,
                 entity_id=lane.entity_id,
                 worker_id=worker_id,
                 occurred_at=occurred_at,

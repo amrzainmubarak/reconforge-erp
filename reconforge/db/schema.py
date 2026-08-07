@@ -3371,6 +3371,12 @@ BEGIN
 END;
 """
 
+DURABLE_JOB_ORGANIZATION_MIGRATION_SQL = """
+ALTER TABLE durable_jobs ADD COLUMN organization_id TEXT NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_durable_jobs_org_scope_status
+ON durable_jobs (tenant_id, organization_id, workspace_id, status, created_at, id);
+"""
+
 IDEMPOTENCY_RECORDS_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS idempotency_records (
     schema_version INTEGER NOT NULL CHECK (schema_version = 1),

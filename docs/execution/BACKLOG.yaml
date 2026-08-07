@@ -2636,3 +2636,38 @@ tasks:
       zero npm integrity gaps, and no recorded pip/npm findings. This is local
       policy/configuration evidence; hosted Gitleaks, npm audit, provenance,
       and required-security-context reruns remain external.
+  - id: E-549
+    priority: P1
+    area: scale
+    title: Organization-scoped durable jobs across local and PostgreSQL modes
+    status: completed
+    depends_on: [E-547, P4-SCL-001]
+    exit_evidence: >-
+      DurableJob, submissions, scheduler lanes, and worker claims now carry an
+      optional organization identifier. SQLite migration 33 persists it and
+      binds replay identity, bounded queue counts, backup import/export, and
+      claim filters. PostgreSQL migration `0075_pg_job_organization_scope`
+      adds nullable attribution, transaction-local defaults, an indexed lane,
+      and organization-aware RLS; repository reads/writes restore the exact
+      hierarchy. Focused job, backup, migration, scheduler, and package gates
+      pass. Live PostgreSQL remains capability-gated; distributed fairness,
+      provider IAM, HA/DR, and production readiness remain external.
+  - id: E-550
+    priority: P0
+    area: quality
+    title: Regression and package gate after durable-job organization scope
+    status: completed
+    depends_on: [E-549]
+    exit_evidence: >-
+      The current tree collects 2,642 tests and `uv run --no-sync pytest -q
+      --basetemp .pytest-tmp-e550d --tb=short -ra` exits 0 in 335.8 seconds
+      with no collection or executed failure; declared PostgreSQL, Redis,
+      object-storage, network, Windows, and platform capability skips remain
+      visible. Ruff passes; Mypy reports no issues in 482 source files; Bandit
+      exits 0 with reviewed existing suppression/comment warnings; OSV
+      `pip-audit -s osv --timeout 60 --progress-spinner off` reports no known
+      vulnerabilities; migration registry and focused durable-job/backup/
+      scheduler contracts pass; `python -m build --no-isolation` succeeds and
+      `SOURCES.txt` contains ADR 0412, migration 0075, and the organization
+      scope helper; and `git diff --check` passes. Live PostgreSQL, hosted
+      CI/security/provenance, HA/DR, and release approval remain external.

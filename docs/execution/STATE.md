@@ -5630,3 +5630,10 @@ injection and zero transport calls while open. This is local synthetic
 resilience evidence only; distributed quota coordination, live provider
 availability, vault operation, and production SLOs remain unverified. GitHub
 publication remains deferred by owner policy.
+
+E-601 extends the circuit evidence with scope-isolation and configuration-bound
+regressions. A circuit opened for one declared endpoint or credential reference
+does not block another lane, and invalid threshold/window values are refused.
+The focused network suite passes 26 tests; implementation Ruff and Mypy pass.
+This remains process-local synthetic evidence only, not distributed quota or
+live-provider behavior. GitHub publication remains deferred by owner policy.

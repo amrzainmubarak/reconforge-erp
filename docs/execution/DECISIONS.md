@@ -6203,3 +6203,18 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   proves no transport call while open and one-attempt recovery after expiry.
 - **Boundary**: Process-local synthetic resilience only; no distributed quota,
   live provider availability, vault, or production SLO claim follows.
+
+### D-427: Keep network circuit state lane-scoped and bounded
+
+- **Date**: 2026-08-07
+- **Context**: A process-local circuit must not let one declared destination or
+  credential lane suppress an independent connector lane, and unsafe operator
+  bounds must not be accepted.
+- **Decision**: Bind circuit state to connector, exact endpoint, and credential
+  reference (or public lane); reject thresholds outside 1..100 and open windows
+  outside 0..3600 seconds.
+- **Verification**: Focused network tests pass 26/26, including endpoint and
+  credential isolation plus invalid-bound refusal.
+- **Boundary**: This is process-local synthetic isolation only; it does not
+  establish distributed quota/circuit coordination, live provider behavior,
+  vault operation, or production SLOs.

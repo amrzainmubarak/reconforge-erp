@@ -3464,3 +3464,17 @@ tasks:
       local resilience evidence only; distributed quota coordination, live
       provider availability, vault operation, and production SLOs remain
       unverified.
+  - id: E-601
+    priority: P2
+    area: connector_platform
+    title: Prove connector circuit scope isolation and bounds
+    status: completed
+    depends_on: [E-600, P4-CON-001]
+    exit_evidence: >-
+      Network circuit tests prove that an opened lane for one declared
+      endpoint or credential reference does not block another lane, and that
+      invalid threshold/window settings fail closed. The focused network suite
+      passes 26/26 with Ruff and Mypy on the implementation. This strengthens
+      process-local synthetic isolation evidence only; it does not prove
+      distributed coordination, live provider behavior, vault operation, or
+      production SLOs.

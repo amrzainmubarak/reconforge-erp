@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -66,7 +67,10 @@ def _registration(
 
 class _Secrets:
     def resolve(self, reference: str) -> bytes:
-        assert reference == "vault://tenant-a/connector-token"
+        assert reference in {
+            "vault://tenant-a/connector-token",
+            "vault://tenant-b/connector-token",
+        }
         return b"synthetic-token-value-123"
 
 
@@ -196,6 +200,63 @@ def test_network_circuit_breaker_fails_fast_and_recovers_after_open_window() -> 
     assert result.response_body == b"recovered"
     assert result.attempts == 1
     assert len(transport.calls) == 4
+
+
+@pytest.mark.parametrize(
+    ("registration_change", "responses"),
+    [
+        (
+            {"endpoint": "https://api.example.test/v1/other-records"},
+            [NetworkResponse(503, b"ignored"), NetworkResponse(503, b"ignored"), NetworkResponse(503, b"ignored"), NetworkResponse(200, b"other")],
+        ),
+        (
+            {"credential_reference": "vault://tenant-b/connector-token"},
+            [NetworkResponse(503, b"ignored"), NetworkResponse(503, b"ignored"), NetworkResponse(503, b"ignored"), NetworkResponse(200, b"other")],
+        ),
+    ],
+)
+def test_network_circuit_state_isolated_by_endpoint_and_credential(
+    registration_change: dict[str, str], responses: list[NetworkResponse | Exception]
+) -> None:
+    endpoint = "https://api.example.test/v1/other-records"
+    manifest = _manifest(
+        egress_destinations=[endpoint, "https://api.example.test/v1/records"],
+    )
+    first = _registration(manifest)
+    second = _registration(manifest, endpoint=endpoint) if "endpoint" in registration_change else _registration(manifest)
+    if "credential_reference" in registration_change:
+        second = _registration(manifest)
+        second = second.model_copy(update=registration_change)
+    transport = _Transport(responses)
+    executor = NetworkConnectorExecutor(
+        transport,
+        secret_resolver=_Secrets(),
+        circuit_failure_threshold=1,
+        circuit_open_seconds=30,
+        clock=lambda: 0.0,
+    )
+    with pytest.raises(ConnectorNetworkError, match="retry_exhausted"):
+        executor.read(first, idempotency_key="scope-1")
+    result = executor.read(second, idempotency_key="scope-2")
+    assert result.response_body == b"other"
+    assert len(transport.calls) == 4
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("circuit_failure_threshold", 0),
+        ("circuit_failure_threshold", 101),
+        ("circuit_failure_threshold", True),
+        ("circuit_open_seconds", -1),
+        ("circuit_open_seconds", 3_601),
+        ("circuit_open_seconds", True),
+    ],
+)
+def test_network_circuit_policy_bounds_are_fail_closed(field: str, value: object) -> None:
+    invalid_kwargs: dict[str, Any] = {field: value}
+    with pytest.raises(ValueError, match=field):
+        NetworkConnectorExecutor(_Transport([]), **invalid_kwargs)
 
 
 def test_formal_failure_injection_conformance_is_bounded_and_provider_neutral() -> None:

@@ -14607,3 +14607,9 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   Mypy pass. This is synthetic local resilience evidence only; distributed
   quota coordination, live provider availability, vault operation, and
   production SLOs remain unverified.
+- E-601 circuit scope isolation and configuration bounds (2026-08-07):
+  `tests/test_connector_network.py` adds endpoint/credential-lane isolation
+  regressions and fail-closed threshold/window validation. The focused command
+  `uv run pytest -q tests/test_connector_network.py` passes 26/26; Ruff and
+  implementation Mypy pass. This is still process-local synthetic evidence,
+  not distributed coordination, live provider, vault, or production-SLO proof.

@@ -15,7 +15,12 @@ from reconforge.domain.consolidation_deferred_tax import (
     prepare_acquisition_deferred_tax_bridge,
     verify_acquisition_deferred_tax_bridge_payload,
 )
-from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
+from reconforge.infrastructure.postgres import (
+    set_local_tenant_scope,
+    validate_legal_entity_id,
+    validate_organization_id,
+    validate_tenant_id,
+)
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.platform.common import PlatformError, normalize_text
 
@@ -104,9 +109,19 @@ def _payload(value: object, field: str) -> dict[str, object]:
 class PostgresConsolidationDeferredTaxRepository:
     """Persist verified deferred-tax evidence without opening a posting path."""
 
-    def __init__(self, connection: Any, tenant_id: str) -> None:
+    def __init__(
+        self,
+        connection: Any,
+        tenant_id: str,
+        organization_id: str | None = None,
+        legal_entity_id: str | None = None,
+    ) -> None:
         self.connection = connection
         self.tenant_id = validate_tenant_id(tenant_id)
+        self.organization_id = validate_organization_id(organization_id)
+        self.legal_entity_id = validate_legal_entity_id(legal_entity_id)
+        if self.legal_entity_id is not None and self.organization_id is None:
+            raise PlatformError("Deferred-tax legal-entity scope requires organization scope.")
 
     @staticmethod
     def _actor(value: str) -> str:
@@ -116,10 +131,27 @@ class PostgresConsolidationDeferredTaxRepository:
         return actor
 
     def _scope(self) -> None:
-        set_local_tenant_scope(self.connection, self.tenant_id)
+        set_local_tenant_scope(
+            self.connection,
+            self.tenant_id,
+            self.organization_id,
+            legal_entity_id=self.legal_entity_id,
+        )
+
+    def _scope_where(self) -> str:
+        return (
+            "tenant_id=%s AND organization_id IS NOT DISTINCT FROM %s "
+            "AND legal_entity_id IS NOT DISTINCT FROM %s"
+        )
+
+    def _scope_params(self) -> tuple[str, str | None, str | None]:
+        return self.tenant_id, self.organization_id, self.legal_entity_id
 
     def _artifact_id(self, request: AcquisitionDeferredTaxBridgeRequest) -> str:
-        digest = hashlib.sha256(f"{self.tenant_id}|{request.digest}".encode("ascii")).hexdigest()
+        scope_prefix = f"{self.tenant_id}|{self.organization_id or ''}|{self.legal_entity_id or ''}"
+        if self.organization_id is None and self.legal_entity_id is None:
+            scope_prefix = self.tenant_id
+        digest = hashlib.sha256(f"{scope_prefix}|{request.digest}".encode("ascii")).hexdigest()
         return f"dtax-{digest[:32]}"
 
     @staticmethod
@@ -183,6 +215,8 @@ class PostgresConsolidationDeferredTaxRepository:
             "approved_by": str(_row_value(row, "approved_by", 12)),
             "approved_at": str(_row_value(row, "approved_at", 13)),
             "created_at": str(_row_value(row, "created_at", 14)),
+            "organization_id": _row_value(row, "organization_id", 15),
+            "legal_entity_id": _row_value(row, "legal_entity_id", 16),
         }
 
     def persist(
@@ -204,8 +238,10 @@ class PostgresConsolidationDeferredTaxRepository:
             with self.connection.transaction():
                 self._scope()
                 existing = self.connection.execute(
-                    "SELECT * FROM reconforge.consolidation_deferred_tax_artifacts WHERE tenant_id=%s AND id=%s",
-                    (self.tenant_id, identifier),
+                    "SELECT * FROM reconforge.consolidation_deferred_tax_artifacts WHERE "
+                    + self._scope_where()
+                    + " AND id=%s",
+                    (*self._scope_params(), identifier),
                 ).fetchone()
                 if existing is not None:
                     stored = self._decode_row(existing)
@@ -213,8 +249,10 @@ class PostgresConsolidationDeferredTaxRepository:
                         raise PlatformError("Deferred-tax artifact identifier conflicts with immutable evidence.")
                     return stored
                 duplicate = self.connection.execute(
-                    "SELECT * FROM reconforge.consolidation_deferred_tax_artifacts WHERE tenant_id=%s AND result_digest=%s",
-                    (self.tenant_id, result.result_digest),
+                    "SELECT * FROM reconforge.consolidation_deferred_tax_artifacts WHERE "
+                    + self._scope_where()
+                    + " AND result_digest=%s",
+                    (*self._scope_params(), result.result_digest),
                 ).fetchone()
                 if duplicate is not None:
                     stored = self._decode_row(duplicate)
@@ -225,8 +263,8 @@ class PostgresConsolidationDeferredTaxRepository:
                     """INSERT INTO reconforge.consolidation_deferred_tax_artifacts(
                          tenant_id,id,acquisition_id,subsidiary_entity_code,period_id,acquisition_date,
                          reporting_currency,request_digest,result_digest,request_payload,result_payload,
-                         prepared_by,approved_by,approved_at)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,CAST(%s AS jsonb),CAST(%s AS jsonb),%s,%s,%s)""",
+                         prepared_by,approved_by,approved_at,organization_id,legal_entity_id)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,CAST(%s AS jsonb),CAST(%s AS jsonb),%s,%s,%s,%s,%s)""",
                     (
                         self.tenant_id,
                         identifier,
@@ -242,6 +280,8 @@ class PostgresConsolidationDeferredTaxRepository:
                         request.prepared_by,
                         request.approved_by,
                         request.approved_at,
+                        self.organization_id,
+                        self.legal_entity_id,
                     ),
                 )
                 PostgresAuditEventRepository(self.connection, self.tenant_id).append(
@@ -261,6 +301,8 @@ class PostgresConsolidationDeferredTaxRepository:
                 return {
                     "id": identifier,
                     "tenant_id": self.tenant_id,
+                    "organization_id": self.organization_id,
+                    "legal_entity_id": self.legal_entity_id,
                     "acquisition_id": request.acquisition_id,
                     "period_id": request.period_id,
                     "request_digest": request.digest,
@@ -280,8 +322,10 @@ class PostgresConsolidationDeferredTaxRepository:
             with self.connection.transaction():
                 self._scope()
                 row = self.connection.execute(
-                    "SELECT * FROM reconforge.consolidation_deferred_tax_artifacts WHERE tenant_id=%s AND id=%s",
-                    (self.tenant_id, artifact_id),
+                    "SELECT * FROM reconforge.consolidation_deferred_tax_artifacts WHERE "
+                    + self._scope_where()
+                    + " AND id=%s",
+                    (*self._scope_params(), artifact_id),
                 ).fetchone()
                 if row is None:
                     raise PostgresConsolidationDeferredTaxError("Deferred-tax artifact was not found.")

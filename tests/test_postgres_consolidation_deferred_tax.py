@@ -5,6 +5,9 @@ from pathlib import Path
 from reconforge.infrastructure.postgres_consolidation_deferred_tax import (
     POSTGRES_CONSOLIDATION_DEFERRED_TAX_SCHEMA_SQL,
 )
+from reconforge.infrastructure.postgres_consolidation_impairment_deferred_tax_scope import (
+    POSTGRES_CONSOLIDATION_IMPAIRMENT_DEFERRED_TAX_SCOPE_SCHEMA_SQL,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -33,3 +36,6 @@ def test_postgres_deferred_tax_migration_is_linear_and_refuses_data_loss() -> No
     assert 'revision = "0065_pg_deferred_tax"' in migration
     assert 'down_revision = "0064_pg_close_ic_links"' in migration
     assert "refusing to discard consolidation deferred-tax evidence" in migration
+    assert "consolidation_deferred_tax_scope_result_digest_key" in (
+        POSTGRES_CONSOLIDATION_IMPAIRMENT_DEFERRED_TAX_SCOPE_SCHEMA_SQL
+    )

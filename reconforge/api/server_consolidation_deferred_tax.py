@@ -8,7 +8,7 @@ from typing import TypeVar
 from fastapi import Request
 
 from reconforge.api.errors import APIError
-from reconforge.api.server_identity import request_tenant_id
+from reconforge.api.server_identity import request_optional_hierarchy, request_tenant_id
 from reconforge.infrastructure.postgres import (
     PostgresConfigurationError,
     PostgresConnectionFactory,
@@ -49,9 +49,17 @@ def execute_postgres_deferred_tax(request: Request, operation: DeferredTaxOperat
             message="PostgreSQL consolidation deferred-tax persistence is not configured.",
         )
     tenant_id = request_tenant_id(request)
+    organization_id, legal_entity_id = request_optional_hierarchy(request)
     try:
-        with PostgresTenantBoundary(factory).transaction(tenant_id) as connection:
-            return operation(PostgresConsolidationDeferredTaxRepository(connection, tenant_id), tenant_id)
+        with PostgresTenantBoundary(factory).transaction(
+            tenant_id,
+            organization_id=organization_id,
+            legal_entity_id=legal_entity_id,
+        ) as connection:
+            return operation(
+                PostgresConsolidationDeferredTaxRepository(connection, tenant_id, organization_id, legal_entity_id),
+                tenant_id,
+            )
     except APIError:
         raise
     except PlatformError as exc:

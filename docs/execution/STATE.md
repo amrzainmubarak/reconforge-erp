@@ -5342,3 +5342,10 @@ contracts and package membership pass; E-565 then passed all 2,650 tests in
 380.5 seconds with declared external-service skips visible. Impairment and
 deferred-tax persistence still require equivalent migrations, and GitHub
 publication remains deferred.
+
+E-566 extends the storage-side hierarchy closure from PPA to impairment and
+deferred-tax artifacts with migration 0077, scoped uniqueness/RLS, repository
+filters, and server GUC propagation. E-567 then passed the 2,651-test local
+regression in 337.0 seconds, alongside focused contracts, package build, Ruff,
+Mypy, and diff-check. Live hierarchy PostgreSQL, statutory posting/judgment,
+providers, HA/DR, and GitHub publication remain deferred.

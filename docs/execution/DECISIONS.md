@@ -5742,3 +5742,17 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   contracts pass; live PostgreSQL hierarchy isolation is still required.
 - **Boundary**: This closes PPA evidence storage only; impairment/deferred-tax
   tables, statutory posting, providers/write-back, HA/DR, and production IAM remain open.
+
+### D-397: Persist hierarchy attribution for impairment and deferred-tax evidence
+
+- **Date**: 2026-08-07
+- **Context**: PPA hierarchy storage was closed, but the adjacent impairment and
+  deferred-tax tables still exposed only tenant RLS.
+- **Decision**: Add one additive migration for both tables with nullable scope,
+  foreign keys, scoped digest uniqueness, hierarchy RLS, NULL-aware repository
+  predicates, and server transaction propagation.
+- **Verification**: Focused schema/API/repository contracts, the 2,651-test
+  full regression, package build, Ruff, Mypy, and diff-check pass; declared
+  external-service skips remain visible.
+- **Boundary**: No live hierarchy PostgreSQL run, statutory judgment/posting,
+  providers/write-back, HA/DR, or production readiness is claimed.

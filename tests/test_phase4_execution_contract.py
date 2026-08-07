@@ -85,6 +85,19 @@ def test_server_boundaries_installs_all_locked_extras_for_live_matrix() -> None:
     assert install_commands == ["uv sync --locked --all-extras --no-editable --python 3.12"]
 
 
+def test_test_matrix_verifies_optional_imports_after_all_extra_sync() -> None:
+    workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["test"]["steps"]
+    names = [str(step.get("name", "")) for step in steps]
+    install_index = names.index("Install locked dependencies")
+    verify_index = names.index("Verify optional test dependency surface")
+    assert install_index < verify_index
+    command = str(steps[verify_index]["run"])
+    assert "uv run --no-sync python -c" in command
+    for module in ("cbor2", "cryptography", "opentelemetry.sdk"):
+        assert module in command
+
+
 def test_server_boundaries_bootstraps_versioned_postgres_native_tools_before_live_tests() -> None:
     workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
     steps = workflow["jobs"]["server-boundaries"]["steps"]

@@ -14666,3 +14666,10 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   mobile paths. This is local synthetic UI evidence only: it does not prove
   live browser authentication, provider authenticity, settlement finality,
   posting, write-back, hosted deployment, HA/DR, or production readiness.
+- E-607 all-extra CI import guard (2026-08-07): the Python test matrix now
+  probes `cbor2`, `cryptography`, and `opentelemetry.sdk` immediately after
+  `uv sync --locked --all-extras`; the phase-4 workflow contract test verifies
+  ordering and all three module names. The focused contract command passes
+  7/7 and a local Python 3.11 isolated all-extra sync imported all three
+  modules. This is a workflow-intent and local-installation observation, not
+  a hosted rerun or proof of live PostgreSQL/Redis/backup behavior.

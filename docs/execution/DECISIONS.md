@@ -6304,3 +6304,18 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   call the authenticated retail API, post accounting entries, or write back.
   Live browser authentication, source authenticity, settlement finality,
   hosted deployment, HA/DR, and production retail operations remain open.
+
+### D-433: Fail fast when CI's all-extra test environment is incomplete
+
+- **Date**: 2026-08-07
+- **Context**: A historical hosted test matrix collected modules that require
+  `cbor2`, `cryptography`, and OpenTelemetry while the installed environment
+  did not expose those optional imports. The existing `--all-extras` intent
+  was not independently visible in the job log before collection.
+- **Decision**: Keep the locked `--all-extras` installation as the single CI
+  dependency contract and add an immediate import probe for the optional test
+  surface before Ruff, Mypy, and Pytest. The probe is diagnostic only; it does
+  not add network access, fallback packages, or production dependencies.
+- **Boundary**: This proves CI configuration intent and gives a precise
+  dependency failure signal. It does not substitute for a hosted rerun,
+  package provenance, or green PostgreSQL/Redis/backup runtime evidence.

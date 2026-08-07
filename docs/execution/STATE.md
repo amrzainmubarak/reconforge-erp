@@ -5690,3 +5690,11 @@ review surface only; live browser authentication, provider authenticity,
 settlement finality, posting, write-back, hosted deployment, HA/DR, and
 production retail evidence remain open. GitHub publication remains deferred
 by owner policy.
+
+E-607 adds an explicit CI import probe immediately after the locked all-extra
+installation for `cbor2`, `cryptography`, and `opentelemetry.sdk`. The local
+workflow contract passes 7/7 and an isolated Python 3.11 all-extra sync
+imports all three modules. This gives a precise pre-collection failure signal;
+it is not hosted CI evidence and does not close live PostgreSQL/Redis/native
+backup, HA/DR, provider, or production gates. GitHub publication remains
+deferred by owner policy.

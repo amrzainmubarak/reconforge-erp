@@ -3562,3 +3562,17 @@ tasks:
       browser authentication, processor authenticity, settlement finality,
       posting, write-back, hosted deployment, HA/DR, and production retail
       operations remain open.
+  - id: E-607
+    priority: P1
+    area: release_operations
+    title: Guard the CI all-extra test dependency surface
+    status: completed
+    depends_on: [E-606, E-461]
+    exit_evidence: >-
+      The Python test matrix retains `uv sync --locked --all-extras` and now
+      imports `cbor2`, `cryptography`, and `opentelemetry.sdk` before test
+      collection. The phase-4 workflow contract test passes 7/7, and a local
+      isolated Python 3.11 all-extra sync imported all three modules. This
+      closes only the diagnostic dependency-install contract; hosted CI must
+      still rerun, and PostgreSQL/Redis/native backup runtime evidence remains
+      external.

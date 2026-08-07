@@ -35,6 +35,12 @@ jobs:
       - name: Install locked dependencies
         run: uv sync --locked --all-extras --no-editable --python "${{ matrix.python-version }}"
 
+      - name: Verify optional test dependency surface
+        run: >-
+          uv run --no-sync python -c
+          "import cbor2, cryptography, opentelemetry.sdk;
+          print('optional test dependencies: cbor2, cryptography, opentelemetry.sdk')"
+
       - name: Ruff
         run: uv run --no-sync ruff check .
 

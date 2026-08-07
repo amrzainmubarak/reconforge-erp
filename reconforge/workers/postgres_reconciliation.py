@@ -7,7 +7,7 @@ import json
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from threading import Event
+from threading import Event, Lock
 from typing import Any, Protocol, cast
 
 from reconforge.application.matching import LEGACY_RECORD_IDENTITY_POLICY
@@ -576,13 +576,39 @@ class PostgresReconciliationScheduler:
         # worker; rebuilding the object on every poll cycle would churn those
         # resources and defeat the scheduler's bounded-runtime contract.
         self._workers: dict[str, PostgresReconciliationWorker] = {}
+        self._worker_lock = Lock()
+        self._closed = False
 
     def _worker_for(self, worker_id: str) -> PostgresReconciliationWorker:
-        worker = self._workers.get(worker_id)
-        if worker is None:
-            worker = self.worker_factory(worker_id)
-            self._workers[worker_id] = worker
-        return worker
+        with self._worker_lock:
+            if self._closed:
+                raise PostgresReconciliationSchedulerError("scheduler is closed")
+            worker = self._workers.get(worker_id)
+            if worker is None:
+                worker = self.worker_factory(worker_id)
+                self._workers[worker_id] = worker
+            return worker
+
+    def close(self) -> None:
+        """Close cached workers once, preserving caller-owned lifecycle hooks."""
+
+        with self._worker_lock:
+            if self._closed:
+                return
+            self._closed = True
+            workers = tuple(self._workers.values())
+            self._workers.clear()
+        first_error: Exception | None = None
+        for worker in workers:
+            closer = getattr(worker, "close", None)
+            if not callable(closer):
+                continue
+            try:
+                closer()
+            except Exception as exc:  # noqa: BLE001 - close all workers before surfacing failure.
+                first_error = first_error or exc
+        if first_error is not None:
+            raise PostgresReconciliationSchedulerError("A reconciliation scheduler worker failed to close safely.") from first_error
 
     def process_once(self) -> ReconciliationWorkerRunSummary:
         """Execute one bounded cycle per worker and aggregate outcomes."""
@@ -678,6 +704,17 @@ class PostgresReconciliationWorker:
         self.tenant_supplier = tenant_supplier
         self.matcher = matcher
         self.settings = settings
+        self._closed = False
+
+    def close(self) -> None:
+        """Delegate optional connection-factory cleanup to the worker owner."""
+
+        if self._closed:
+            return
+        self._closed = True
+        closer = getattr(self.connection_factory, "close", None)
+        if callable(closer):
+            closer()
 
     def _authorize_scope(
         self,

@@ -3105,3 +3105,20 @@ tasks:
       not throughput,
       fairness, capacity, soak, distributed scheduling, HA/DR, or production
       sizing evidence.
+  - id: E-581
+    priority: P1
+    area: reliability
+    title: Add explicit reconciliation worker lifecycle close
+    status: completed
+    depends_on: [E-580, P4-SCL-001]
+    exit_evidence: >-
+      The cached reconciliation scheduler now exposes an idempotent `close()`
+      hook that detaches workers, invokes each optional worker close hook once,
+      and rejects later cycles; the PostgreSQL worker delegates once to its
+      optional connection-factory close hook. Focused lifecycle tests, Ruff,
+      Mypy, package build, and diff-check pass; the current 2,655-test full
+      local regression exits 0 in 359.6 seconds with declared
+      external-service/platform skips. This is lifecycle correctness only, not
+      provider availability,
+      throughput, fairness, capacity, soak, distributed scheduling, HA/DR, or
+      production operations evidence.

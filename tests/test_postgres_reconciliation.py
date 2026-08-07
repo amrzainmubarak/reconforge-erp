@@ -1044,6 +1044,7 @@ def test_postgres_reconciliation_worker_resumes_after_unhandled_crash_and_lease_
 def test_postgres_reconciliation_scheduler_aggregates_worker_slots() -> None:
     created: list[str] = []
     factory_calls: list[str] = []
+    closed: list[str] = []
 
     class _Worker:
         def __init__(self, worker_id: str) -> None:
@@ -1052,6 +1053,9 @@ def test_postgres_reconciliation_scheduler_aggregates_worker_slots() -> None:
         def process_once(self) -> ReconciliationWorkerRunSummary:
             created.append(self.worker_id)
             return ReconciliationWorkerRunSummary(cycles=1, discovered=2, completed=1, failed=0, cancelled=0, skipped=1)
+
+        def close(self) -> None:
+            closed.append(self.worker_id)
 
     def factory(worker_id: str) -> _Worker:
         factory_calls.append(worker_id)
@@ -1066,8 +1070,33 @@ def test_postgres_reconciliation_scheduler_aggregates_worker_slots() -> None:
     assert created == ["worker-a", "worker-b", "worker-a", "worker-b"]
     assert factory_calls == ["worker-a", "worker-b"]
     assert second == summary
+    scheduler.close()
+    scheduler.close()
+    assert closed == ["worker-a", "worker-b"]
+    with pytest.raises(PostgresReconciliationSchedulerError, match="scheduler is closed"):
+        scheduler.process_once()
     with pytest.raises(PostgresReconciliationSchedulerError, match="between 1 and 64"):
         PostgresReconciliationScheduler(_Worker, worker_ids=[])
+
+
+def test_postgres_reconciliation_worker_close_is_idempotent_and_delegates() -> None:
+    class _ClosableFactory:
+        def __init__(self) -> None:
+            self.closed = 0
+
+        def close(self) -> None:
+            self.closed += 1
+
+    factory = _ClosableFactory()
+    worker = PostgresReconciliationWorker(
+        factory,
+        tenant_supplier=lambda: [],
+        matcher=lambda _context: ReconciliationExecutionResult(results=(), exceptions=()),
+        settings=PostgresReconciliationWorkerSettings(worker_id="close-worker", poll_interval_seconds=0),
+    )
+    worker.close()
+    worker.close()
+    assert factory.closed == 1
 
 
 def test_postgres_reconciliation_execution_failure_is_retryable_and_busy_runs_are_skipped() -> None:

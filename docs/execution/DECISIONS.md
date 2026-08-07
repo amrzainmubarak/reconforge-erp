@@ -5887,3 +5887,18 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   full regression are required.
 - **Boundary**: Resource reuse only; no throughput, fairness, capacity, soak,
   distributed scheduling, HA/DR, or production sizing claim follows.
+
+### D-407: Add explicit reconciliation worker lifecycle close
+
+- **Date**: 2026-08-07
+- **Context**: Cached workers can retain pools or other managed resources after
+  the scheduler loop stops.
+- **Decision**: Add an idempotent scheduler `close()` that detaches workers and
+  calls each optional worker hook once; add an idempotent worker `close()` that
+  delegates to an optional connection-factory hook. Callers stop polling before
+  close; concurrent-cycle coordination remains outside this boundary.
+- **Verification**: Focused lifecycle tests prove cleanup, closed-cycle
+  rejection, and repeated-close behavior; full static/package/regression gates
+  are required.
+- **Boundary**: Lifecycle correctness only; no provider, throughput, fairness,
+  capacity, soak, distributed scheduling, HA/DR, or production claim follows.

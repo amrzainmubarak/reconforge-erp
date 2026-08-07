@@ -5431,3 +5431,10 @@ cycles. The focused contract, Ruff, Mypy, package build, diff-check, and the
 external-service/platform skips). This does not prove throughput, fairness,
 capacity, soak, distributed scheduling, HA/DR, or production sizing; hosted
 providers and GitHub publication remain deferred.
+
+E-581 adds explicit lifecycle closure for the cached reconciliation workers.
+`PostgresReconciliationScheduler.close()` is idempotent, invokes each optional
+worker hook once, and rejects later cycles; the PostgreSQL worker delegates once
+to its optional connection-factory close hook. Focused lifecycle tests and
+static checks pass; the caller must stop polling before close. Provider
+availability, throughput, HA/DR, and GitHub publication remain deferred.

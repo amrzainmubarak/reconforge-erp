@@ -14398,3 +14398,12 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   declared external-service/platform skips, and Ruff, Mypy, package build, and
   diff-check pass. No throughput, fairness, capacity, soak, distributed
   scheduling, HA/DR, or production sizing claim follows.
+- E-581 reconciliation worker lifecycle close (2026-08-07): the cached
+  scheduler detaches workers on an idempotent `close()`, invokes each optional
+  worker hook once, rejects later cycles, and the PostgreSQL worker delegates
+  once to an optional connection-factory close hook. Focused lifecycle tests,
+  Ruff, Mypy, package build, and diff-check pass; the current 2,655-test full
+  local regression exits 0 in 359.6 seconds with declared external-service/
+  platform skips. This is lifecycle correctness only, not provider
+  availability, throughput, fairness, capacity, soak, distributed scheduling,
+  HA/DR, or production operations evidence.

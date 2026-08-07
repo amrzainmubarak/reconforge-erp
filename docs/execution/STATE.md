@@ -5277,3 +5277,15 @@ all-extras profile: 48 tests pass, one live-PostgreSQL test is declared skipped,
 and `cbor2`, `cryptography`, and `opentelemetry.sdk` import successfully. This
 is local dependency evidence; hosted matrix/security reruns and publication
 remain deferred.
+
+E-554 closes the RAC declaration gap for existing sequential adapters. The
+closed contract now supports carry-forward, sequence-window, and reversal
+pairing, with digest-verified local simulations and visible residual/pair
+counts. The focused 45-test gate, schema validation, and package membership
+pass. PostgreSQL worker runtime, cross-engine/scale evidence, posting,
+provider interoperability, and GitHub publication remain deferred.
+
+E-555 reruns the complete local regression after this slice: 2,647 tests pass
+in 380.3 seconds with no collection or executed failure and declared external
+service/platform skips visible. Hosted CI/security/provenance, live providers,
+HA/DR, release approval, and GitHub publication remain deferred.

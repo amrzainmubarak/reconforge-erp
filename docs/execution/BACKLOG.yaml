@@ -2711,3 +2711,33 @@ tasks:
       cryptography, and opentelemetry SDK also succeed. The local verification
       confirms the workflow's dependency profile; a fresh hosted matrix rerun
       is still required for release approval.
+  - id: E-554
+    priority: P1
+    area: advanced_matching
+    title: Reconciliation-as-Code sequential strategy adapters
+    status: completed
+    depends_on: [P4-MAT-001, E-501]
+    exit_evidence: >-
+      RAC v1 now accepts carry-forward, sequence-window, and reversal-pairing
+      strategy declarations, resolves only to the existing bounded strategy
+      identities, dispatches through digest-verified adapters, and reports
+      residual/pair counts in embedded synthetic tests. The closed JSON Schema,
+      focused Golden cases, rejection of incompatible adapters, Ruff, Mypy, and
+      package membership pass. This is experimental read-only simulation only;
+      PostgreSQL worker runtime, cross-engine parity, scale, posting, and
+      provider/write-back remain open.
+  - id: E-555
+    priority: P0
+    area: quality
+    title: Full regression and package gate after sequential RAC adapters
+    status: completed
+    depends_on: [E-554]
+    exit_evidence: >-
+      The current tree collects 2,647 tests and
+      `uv run --no-sync pytest -q --basetemp .pytest-tmp-e555 --tb=short -ra`
+      exits 0 in 380.3 seconds with no collection or executed failure. Declared
+      PostgreSQL, Redis, object-storage, public-network, Windows, and platform
+      capability skips remain visible. Ruff, Mypy (482 source files), package
+      build/source membership for ADR 0413 and the RAC test, and diff-check pass;
+      hosted CI/security/provenance, live providers, HA/DR, and release approval
+      remain external.

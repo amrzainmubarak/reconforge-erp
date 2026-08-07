@@ -280,7 +280,10 @@
             "many_to_many",
             "partial_settlement",
             "portfolio",
-            "duplicate_detection"
+            "duplicate_detection",
+            "carry_forward",
+            "sequence_window",
+            "reversal_pairing"
           ]
         },
         "strategy_id": {
@@ -292,6 +295,8 @@
             "indexed-composite-one-to-one",
             "bounded-grouped-subset-sum",
             "bounded-duplicate-detection",
+            "bounded-carry-forward-fifo",
+            "bounded-reversal-pairing",
             null
           ]
         },
@@ -306,7 +311,10 @@
             "many-to-many",
             "partial-settlement",
             "portfolio",
-            "duplicate-detection"
+            "duplicate-detection",
+            "carry-forward",
+            "sequence-window",
+            "reversal-pairing"
           ]
         },
         "amount_tolerance": {

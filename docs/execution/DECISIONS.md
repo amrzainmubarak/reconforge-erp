@@ -5659,3 +5659,19 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   passes.
 - **Boundary**: This covers local SQLite backup compatibility only, not native
   PostgreSQL restore, cross-site disaster recovery, or production RPO/RTO.
+
+### D-391: Keep sequential RAC adapters bounded and non-posting
+
+- **Date**: 2026-08-07
+- **Context**: Tested carry-forward, sequence-window, and reversal-pairing
+  strategies were available to the PostgreSQL worker but could not be declared
+  by Reconciliation-as-Code.
+- **Decision**: Add only explicit strategy-type/mode mappings to the existing
+  bounded adapters. Reuse their exact Decimal, partition, date-window,
+  candidate/search ceilings, ambiguity, and digest contracts; expose no new
+  posting or provider path.
+- **Verification**: The closed RAC schema and 45-test focused gate pass,
+  including Golden allocation/residual and explicit reversal-link cases.
+- **Boundary**: Declaration and local simulation only; PostgreSQL runtime,
+  cross-engine parity, large-scale performance, settlement posting, and
+  provider write-back remain unverified.

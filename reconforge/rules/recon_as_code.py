@@ -182,11 +182,16 @@ class MatchingStrategySpec(_ContractModel):
         "partial_settlement",
         "portfolio",
         "duplicate_detection",
+        "carry_forward",
+        "sequence_window",
+        "reversal_pairing",
     ]
     strategy_id: Literal[
         "indexed-composite-one-to-one",
         "bounded-grouped-subset-sum",
         "bounded-duplicate-detection",
+        "bounded-carry-forward-fifo",
+        "bounded-reversal-pairing",
     ] | None = None
     strategy_version: str = "1.0.0"
     mode: Literal[
@@ -197,6 +202,9 @@ class MatchingStrategySpec(_ContractModel):
         "partial-settlement",
         "portfolio",
         "duplicate-detection",
+        "carry-forward",
+        "sequence-window",
+        "reversal-pairing",
     ] = "one-to-one"
     amount_tolerance: str = "0"
     date_tolerance_days: int = Field(default=0, ge=0, le=3_660)
@@ -226,21 +234,41 @@ class MatchingStrategySpec(_ContractModel):
     def validate_adapter_compatibility(self) -> MatchingStrategySpec:
         grouped = self.strategy_type in {"one_to_many", "many_to_one", "many_to_many", "partial_settlement", "portfolio"}
         duplicate = self.strategy_type == "duplicate_detection"
+        sequential = self.strategy_type in {"carry_forward", "sequence_window", "reversal_pairing"}
         effective_id = self.strategy_id or (
             "bounded-grouped-subset-sum"
             if grouped
             else "bounded-duplicate-detection"
             if duplicate
+            else "bounded-carry-forward-fifo"
+            if self.strategy_type in {"carry_forward", "sequence_window"}
+            else "bounded-reversal-pairing"
+            if sequential
             else "indexed-composite-one-to-one"
         )
-        expected_mode = "duplicate-detection" if duplicate else self.strategy_type.replace("_", "-") if grouped else "one-to-one"
+        expected_mode = (
+            "duplicate-detection"
+            if duplicate
+            else self.strategy_type.replace("_", "-")
+            if grouped or sequential
+            else "one-to-one"
+        )
         if self.mode != expected_mode:
             raise ValueError("Matching strategy type and mode are incompatible.")
         if grouped and effective_id != "bounded-grouped-subset-sum":
             raise ValueError("Grouped matching modes require bounded-grouped-subset-sum.")
         if duplicate and effective_id != "bounded-duplicate-detection":
             raise ValueError("Duplicate-detection mode requires bounded-duplicate-detection.")
-        if not grouped and not duplicate and effective_id != "indexed-composite-one-to-one":
+        if sequential and (
+            effective_id
+            != (
+                "bounded-reversal-pairing"
+                if self.strategy_type == "reversal_pairing"
+                else "bounded-carry-forward-fifo"
+            )
+        ):
+            raise ValueError("Sequential matching modes require their bounded sequential strategy.")
+        if not grouped and not duplicate and not sequential and effective_id != "indexed-composite-one-to-one":
             raise ValueError("One-to-one matching modes require indexed-composite-one-to-one.")
         return self
 
@@ -252,6 +280,10 @@ class MatchingStrategySpec(_ContractModel):
             return "bounded-grouped-subset-sum"
         if self.strategy_type == "duplicate_detection":
             return "bounded-duplicate-detection"
+        if self.strategy_type in {"carry_forward", "sequence_window"}:
+            return "bounded-carry-forward-fifo"
+        if self.strategy_type == "reversal_pairing":
+            return "bounded-reversal-pairing"
         return "indexed-composite-one-to-one"
 
 
@@ -649,6 +681,14 @@ class ReconciliationAsCodeSpec(_ContractModel):
             from reconforge.infrastructure.duplicate_detection_strategy import DuplicateDetectionStrategy
 
             output = DuplicateDetectionStrategy().execute(request)
+        elif strategy.effective_strategy_id == "bounded-carry-forward-fifo":
+            from reconforge.infrastructure.carry_forward_strategy import CarryForwardFifoStrategy
+
+            output = CarryForwardFifoStrategy().execute(request)
+        elif strategy.effective_strategy_id == "bounded-reversal-pairing":
+            from reconforge.infrastructure.reversal_matching_strategy import ReversalPairingStrategy
+
+            output = ReversalPairingStrategy().execute(request)
         else:
             from tempfile import TemporaryDirectory
 
@@ -699,6 +739,20 @@ class ReconciliationAsCodeSpec(_ContractModel):
             matched_count = 0
             unmatched_left_count = 0
             unmatched_right_count = 0
+        elif strategy.effective_strategy_id in {"bounded-carry-forward-fifo", "bounded-reversal-pairing"}:
+            decision = payloads[0] if payloads else {}
+            if strategy.effective_strategy_id == "bounded-carry-forward-fifo":
+                matched_items = decision.get("allocations", ())
+                unmatched_left = decision.get("unmatched_obligation_ids", ())
+                unmatched_right = decision.get("unmatched_settlement_ids", ())
+            else:
+                matched_items = decision.get("pairs", ())
+                unmatched_left = decision.get("unmatched_original_ids", ())
+                unmatched_right = decision.get("unmatched_reversal_ids", ())
+            matched_count = len(matched_items) if isinstance(matched_items, list | tuple) else 0
+            unmatched_left_count = len(unmatched_left) if isinstance(unmatched_left, list | tuple) else 0
+            unmatched_right_count = len(unmatched_right) if isinstance(unmatched_right, list | tuple) else 0
+            ambiguous_count = int(str(decision.get("status", "")).casefold() == "ambiguous")
         else:
             matched_count = sum(1 for item in payloads if str(item.get("status", "")).casefold() == "matched")
             ambiguous_count = sum(1 for item in payloads if str(item.get("status", "")).casefold() == "ambiguous")

@@ -1,5 +1,5 @@
 schema_version: 1
-updated_at: "2026-08-06"
+updated_at: "2026-08-07"
 claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
@@ -172,6 +172,16 @@ close_ownership_change_link_runtime_gate:
   covered_live_boundaries: [ConsolidationCloseApplicationService, OwnershipChangeApplicationService]
   migration_head: "0071_pg_close_ownchg_links"
   limitations: [no_current_live_runtime, single_node_when_available, synthetic_data, non_posting_evidence_only, no_statutory_accounting, no_restore_drill, no_ha, no_rpo_rto_claim, no_erp_writeback]
+close_hierarchy_scope_gate:
+  id: E-570
+  executed_at: "2026-08-07"
+  database: "PostgreSQL disposable runtime when configured"
+  application_role: reconforge_app
+  focused_tests: 39
+  focused_result: static_contracts_passed_live_runtime_declared_skip
+  covered_live_boundaries: [ConsolidationCloseApplicationService]
+  migration_head: "0078_pg_close_scope"
+  limitations: [no_current_live_hierarchy_runtime, single_node_when_available, synthetic_data, non_posting_control_journal_only, no_statutory_accounting, no_restore_drill, no_ha, no_rpo_rto_claim, no_erp_writeback]
 delegation_runtime_gate:
   id: E-302
   executed_at: "2026-08-03"
@@ -196,7 +206,7 @@ policy_analysis_runtime_gate:
   limitations: [single_node, synthetic_data, currency_agnostic_amount_bounds, no_provider_federation, no_distributed_cache_invalidation, no_route_coverage]
 allowed_statuses: [live_verified_current, live_test_available, contract_only, absent, not_applicable]
 boundaries:
-  - {file: consolidation_close.py, service: ConsolidationCloseApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_close.PostgresConsolidationCloseRepository, test: tests/test_postgres_consolidation_close.py, risk: single_node_control_journal_and_nonposting_tax_impairment_ppa_link_evidence_only_no_erp_writeback_or_restore_ha_evidence}
+  - {file: consolidation_close.py, service: ConsolidationCloseApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_close.PostgresConsolidationCloseRepository, test: tests/test_postgres_consolidation_close.py, current_migration_head: "0078_pg_close_scope", risk: single_node_control_journal_and_nonposting_tax_impairment_ppa_link_evidence_only_hierarchy_runtime_rerun_required_no_erp_writeback_or_restore_ha_evidence}
   - {file: consolidation_ownership.py, service: ConsolidationOwnershipApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_ownership.PostgresConsolidationOwnershipRepository, test: tests/test_postgres_consolidation_ownership.py, risk: single_node_runtime_only_no_restore_or_ha_evidence}
   - {file: consolidation_ppa.py, service: AcquisitionPpaApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_ppa.PostgresConsolidationPpaRepository, test: tests/test_postgres_consolidation_ppa_runtime.py, risk: single_node_synthetic_non_posting_only_no_statutory_or_writeback}
   - {file: consolidation_ownership_change.py, service: OwnershipChangeApplicationService, status: contract_only, adapter: reconforge.infrastructure.postgres_consolidation_ownership_change.PostgresConsolidationOwnershipChangeRepository, test: tests/test_postgres_consolidation_ownership_change.py, risk: no_current_live_runtime_non_posting_only_no_statutory_or_writeback}

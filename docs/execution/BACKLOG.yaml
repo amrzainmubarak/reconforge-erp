@@ -2978,3 +2978,14 @@ tasks:
       and diff-check pass, and the package contains ADR 0421, migration 0078,
       and its helper. Hosted CI/security/provenance, live PostgreSQL,
       providers, federation, HA/DR, and release approval remain external.
+  - id: E-572
+    priority: P1
+    area: quality
+    title: Reconcile PostgreSQL parity inventory with close hierarchy head
+    status: completed
+    depends_on: [E-571]
+    exit_evidence: >-
+      The parity inventory now records `0078_pg_close_scope`, the static
+      close-hierarchy gate, and the explicit requirement to rerun the
+      historical live close claim before promoting hierarchy runtime evidence.
+      No live status is upgraded by this documentation-only boundary update.

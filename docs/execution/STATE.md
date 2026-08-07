@@ -5350,6 +5350,11 @@ regression in 337.0 seconds, alongside focused contracts, package build, Ruff,
 Mypy, and diff-check. Live hierarchy PostgreSQL, statutory posting/judgment,
 providers, HA/DR, and GitHub publication remain deferred.
 
+E-572 reconciles `POSTGRES_PARITY_INVENTORY.yaml` with migration head 0078 and
+records that the existing live close claim must be rerun before hierarchy
+runtime evidence can be promoted. This is a documentation boundary update,
+not live PostgreSQL proof.
+
 E-568 closes a scope-reset defect in the PostgreSQL close path: authenticated
 organization/workspace/legal-entity context is now preserved by the close and
 certification approval repositories whenever they set transaction-local GUCs,

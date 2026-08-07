@@ -5943,3 +5943,16 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   build, and diff-check gates must pass.
 - **Boundary**: Lifecycle instrumentation only; no collector, alerting,
   capacity, HA/DR, or production SLO claim follows.
+
+### D-411: Keep migration status registry explicit and fail closed
+
+- **Date**: 2026-08-07
+- **Context**: Hosted diagnostics reported an unsupported PostgreSQL revision;
+  local status must not silently widen the accepted migration chain.
+- **Decision**: Validate against the explicit linear revision registry, reject
+  unknown revisions, close resources on connected paths, and reject blank
+  locators before attempting a connection.
+- **Verification**: Synthetic current-head, unknown-revision, closure, and
+  no-connect tests pass; hosted Alembic execution remains a separate gate.
+- **Boundary**: Local provider contract only; no hosted migration or production
+  readiness claim follows.

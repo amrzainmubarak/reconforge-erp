@@ -5458,3 +5458,11 @@ optional safe low-cardinality transitions; checkpoints and partition effects
 remain intentionally uninstrumented for scale. The current 2,660-test full
 regression, Mypy, package build, and diff checks pass. Collector delivery,
 alerting, capacity, HA/DR, and GitHub publication remain deferred.
+
+E-585 closes the local migration-status contract around the reported CI
+failure: current-head and unknown-revision behavior are explicit, connections
+close deterministically, and blank locators fail before connection access.
+Five focused tests, phase execution contracts, and the 2,663-test full
+regression pass (336.4 seconds), with Mypy, package build, and diff-check
+passing. A fresh hosted Alembic upgrade is still required before promoting
+E-461.

@@ -3171,3 +3171,19 @@ tasks:
       source distribution, and git diff-check passes. This is instrumentation
       evidence only, not collector delivery, alerting, throughput, capacity,
       HA/DR, or production SLO evidence.
+  - id: E-585
+    priority: P0
+    area: release_operations
+    title: Harden PostgreSQL migration status revision contract
+    status: completed
+    depends_on: [E-461, E-584]
+    exit_evidence: >-
+      Synthetic PostgreSQL migration-status contracts prove current-head
+      success, deterministic empty pending revisions, unknown-revision refusal,
+      connection closure on connected paths, and blank-locator rejection before
+      connection access. Five focused tests and the phase execution contracts
+      pass; the current 2,663-test full local regression exits 0 in 336.4
+      seconds, Mypy reports no issues in 485 source files, Ruff/package build/
+      diff-check pass, and the ADR is present in the source distribution. This
+      remains application contract evidence and does not replace a fresh hosted
+      Alembic run.

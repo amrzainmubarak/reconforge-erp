@@ -14434,3 +14434,11 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   issues in 485 source files, Ruff/package build/diff-check pass, and ADR 0430
   is present in the source distribution. Collector delivery, alerting,
   throughput, capacity, HA/DR, and production SLO evidence remain external.
+- E-585 PostgreSQL migration-status contract (2026-08-07): synthetic provider
+  tests pass for current-head success, unknown-revision refusal, connection
+  closure, and blank-locator no-connect behavior. This protects the explicit
+  migration registry locally; the phase execution contracts and current
+  2,663-test full regression exit 0 in 336.4 seconds, Mypy (485 files), Ruff,
+  package build, and diff-check also pass, with ADR 0431 in the source
+  distribution. A fresh hosted Alembic upgrade and server-boundary rerun
+  remain required.

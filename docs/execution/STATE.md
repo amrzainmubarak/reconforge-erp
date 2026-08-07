@@ -5403,3 +5403,10 @@ Focused/static contracts pass with one declared local live-PostgreSQL skip; the
 current 2,655-test regression exits 0 in 358.7 seconds, package build and
 diff-check pass. Live hosted PostgreSQL execution remains the required runtime
 check.
+
+E-577 closes the Bandit B608 findings exposed during the security rerun. The
+eight hierarchy query compositions now carry precise line-level rationale:
+`_scope_where()` is a fixed internal allowlist and all values are bound
+parameters. Full Bandit reports no failed findings; Ruff/Mypy and focused
+security tests pass. This is scanner coverage only, not penetration testing or
+production assurance.

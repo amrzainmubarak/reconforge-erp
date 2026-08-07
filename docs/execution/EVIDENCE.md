@@ -14369,3 +14369,10 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   execution remains required. The current 2,655-test full regression exits 0
   in 358.7 seconds, package build and diff-check pass, and no fallback or
   fabricated metric is introduced.
+- E-577 Bandit B608 closure (2026-08-07): eight hierarchy-scoped read
+  compositions in PPA, impairment, and deferred-tax repositories now carry
+  precise line-level rationale for their fixed internal `_scope_where()`
+  clauses; values remain parameterized. `uv run --no-sync bandit -q -r
+  reconforge` reports no failed findings, while existing reviewed nosec
+  informational warnings remain. This is scanner coverage only, not
+  penetration testing or production security assurance.

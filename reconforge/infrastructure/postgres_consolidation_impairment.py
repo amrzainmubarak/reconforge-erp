@@ -236,7 +236,7 @@ class PostgresConsolidationImpairmentRepository:
             with self.connection.transaction():
                 self._scope()
                 existing = self.connection.execute(
-                    "SELECT * FROM reconforge.consolidation_impairment_artifacts WHERE "
+                    "SELECT * FROM reconforge.consolidation_impairment_artifacts WHERE "  # nosec B608 - scope SQL is fixed internal clauses; values are parameters.
                     + self._scope_where()
                     + " AND id=%s",
                     (*self._scope_params(), identifier),
@@ -247,7 +247,7 @@ class PostgresConsolidationImpairmentRepository:
                         raise PlatformError("Impairment artifact identifier conflicts with immutable evidence.")
                     return stored
                 duplicate = self.connection.execute(
-                    "SELECT * FROM reconforge.consolidation_impairment_artifacts WHERE "
+                    "SELECT * FROM reconforge.consolidation_impairment_artifacts WHERE "  # nosec B608 - scope SQL is fixed internal clauses; values are parameters.
                     + self._scope_where()
                     + " AND result_digest=%s",
                     (*self._scope_params(), result.result_digest),
@@ -321,7 +321,7 @@ class PostgresConsolidationImpairmentRepository:
             with self.connection.transaction():
                 self._scope()
                 row = self.connection.execute(
-                    "SELECT * FROM reconforge.consolidation_impairment_artifacts WHERE "
+                    "SELECT * FROM reconforge.consolidation_impairment_artifacts WHERE "  # nosec B608 - scope SQL is fixed internal clauses; values are parameters.
                     + self._scope_where()
                     + " AND id=%s",
                     (*self._scope_params(), artifact_id),

@@ -5832,3 +5832,15 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   hosted PostgreSQL is the runtime verification surface.
 - **Boundary**: No statutory metrics, provider, throughput, HA/DR, or
   production-readiness claim follows.
+
+### D-403: Document fixed hierarchy SQL clauses for Bandit
+
+- **Date**: 2026-08-07
+- **Context**: Bandit B608 reported eight scoped-read compositions whose only
+  dynamic fragment is a private fixed hierarchy predicate selector.
+- **Decision**: Keep parameterized values and add line-level B608 rationale;
+  do not disable the rule globally or accept user-controlled SQL.
+- **Verification**: Full Bandit reports no failed findings; Ruff, Mypy, focused
+  repository/security tests, and the current full regression remain green.
+- **Boundary**: Scanner coverage only; no penetration-test or production-
+  security-assurance claim follows.

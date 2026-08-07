@@ -217,7 +217,7 @@ class PostgresConsolidationPpaRepository:
             with self.connection.transaction():
                 self._scope()
                 existing = self.connection.execute(
-                    "SELECT * FROM reconforge.consolidation_ppa_artifacts WHERE "
+                    "SELECT * FROM reconforge.consolidation_ppa_artifacts WHERE "  # nosec B608 - scope SQL is fixed internal clauses; values are parameters.
                     + self._scope_where()
                     + " AND id=%s",
                     (*self._scope_params(), identifier),
@@ -290,7 +290,7 @@ class PostgresConsolidationPpaRepository:
             with self.connection.transaction():
                 self._scope()
                 row = self.connection.execute(
-                    "SELECT * FROM reconforge.consolidation_ppa_artifacts WHERE "
+                    "SELECT * FROM reconforge.consolidation_ppa_artifacts WHERE "  # nosec B608 - scope SQL is fixed internal clauses; values are parameters.
                     + self._scope_where()
                     + " AND id=%s",
                     (*self._scope_params(), artifact_id),

@@ -3049,3 +3049,16 @@ tasks:
       and no fallback metric is added. This fixes test-environment completeness
       only and does not claim provider, statutory, throughput, HA/DR, or
       production readiness.
+  - id: E-577
+    priority: P0
+    area: security
+    title: Close Bandit B608 findings on fixed hierarchy clauses
+    status: completed
+    depends_on: [E-576]
+    exit_evidence: >-
+      Eight B608 findings in PPA, impairment, and deferred-tax scoped reads
+      are now documented with line-level rationale: `_scope_where()` is a
+      fixed internal allowlist and values remain parameterized. Full Bandit
+      reports no failed findings; Ruff, Mypy, focused security/repository
+      tests, and the current full regression remain green. This is scanner
+      coverage evidence only, not penetration testing or production assurance.

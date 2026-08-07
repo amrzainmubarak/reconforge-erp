@@ -48,3 +48,4 @@ def test_postgres_ppa_scope_migration_is_hierarchy_bound_and_reversible() -> Non
     assert "current_setting('app.legal_entity_id'" in sql
     assert "DROP COLUMN IF EXISTS organization_id" in migration
     assert "DROP COLUMN IF EXISTS legal_entity_id" in migration
+    assert "refusing to discard consolidation PPA hierarchy attribution" in migration

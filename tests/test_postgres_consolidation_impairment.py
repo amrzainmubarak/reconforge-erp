@@ -53,3 +53,5 @@ def test_impairment_deferred_tax_scope_migration_is_hierarchy_bound() -> None:
     assert "current_setting('app.legal_entity_id'" in sql
     assert "DROP COLUMN IF EXISTS organization_id" in migration
     assert "DROP COLUMN IF EXISTS legal_entity_id" in migration
+    assert "refusing to discard consolidation impairment hierarchy attribution" in migration
+    assert "refusing to discard consolidation deferred-tax hierarchy attribution" in migration

@@ -21,6 +21,22 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.execute(
+        """
+        DO $reconforge$
+        BEGIN
+          IF EXISTS (
+            SELECT 1
+            FROM reconforge.outbox_events
+            WHERE workspace_id IS NOT NULL
+               OR organization_id IS NOT NULL
+               OR legal_entity_id IS NOT NULL
+          ) THEN
+            RAISE EXCEPTION 'refusing to discard outbox hierarchy attribution';
+          END IF;
+        END $reconforge$;
+        """
+    )
     op.execute("DROP INDEX IF EXISTS reconforge.idx_outbox_events_scope_pending")
     op.execute("DROP POLICY IF EXISTS tenant_scope ON reconforge.outbox_events")
     op.execute(

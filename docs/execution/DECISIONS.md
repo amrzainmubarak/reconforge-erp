@@ -5789,3 +5789,18 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   and package evidence are tracked by E-571.
 - **Boundary**: No live PostgreSQL hierarchy isolation, statutory posting,
   provider write-back, HA/DR, or production release approval is claimed.
+
+### D-400: Refuse hierarchy-attribution loss during PostgreSQL downgrades
+
+- **Date**: 2026-08-07
+- **Context**: The downgrade paths for earlier hierarchy migrations could drop
+  non-NULL scope attribution without an evidence-preserving check.
+- **Decision**: Add database-side, pre-mutation guards to migrations 0072,
+  0073, 0075, 0076, and 0077. A downgrade now fails closed when affected rows
+  carry hierarchy attribution and retains legacy downgrade behavior only for
+  empty/legacy-only tables.
+- **Verification**: Static migration contracts and the full local gate must
+  pass; a live PostgreSQL downgrade drill remains required before runtime
+  promotion.
+- **Boundary**: No live PostgreSQL downgrade, statutory accounting, provider
+  write-back, HA/DR, or production readiness is claimed.

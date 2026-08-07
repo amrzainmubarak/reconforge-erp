@@ -21,6 +21,20 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.execute(
+        """
+        DO $reconforge$
+        BEGIN
+          IF EXISTS (
+            SELECT 1
+            FROM reconforge.reconciliation_runs
+            WHERE organization_id IS NOT NULL OR legal_entity_id IS NOT NULL
+          ) THEN
+            RAISE EXCEPTION 'refusing to discard reconciliation hierarchy attribution';
+          END IF;
+        END $reconforge$;
+        """
+    )
     op.execute("DROP INDEX IF EXISTS reconforge.idx_reconciliation_runs_tenant_entity")
     op.execute(
         "ALTER TABLE reconforge.reconciliation_runs "

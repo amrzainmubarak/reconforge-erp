@@ -14345,3 +14345,11 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - E-571 full regression gate after close hierarchy persistence (2026-08-07): the current tree collects 2,655 tests and `uv run --no-sync pytest -q --basetemp .pytest-tmp-e571 --tb=short -ra` exits 0 in 338.4 seconds with no executed failure; declared PostgreSQL, Redis, object-storage, network, Windows, and platform skips remain visible. `uv run --no-sync python -m build --no-isolation`, Ruff, Mypy, and diff-check pass, and the package contains ADR 0421, migration 0078, and its helper. Hosted CI/security/provenance, live PostgreSQL, providers, federation, HA/DR, and release approval remain external.
 - E-572 PostgreSQL parity-inventory reconciliation (2026-08-07): `POSTGRES_PARITY_INVENTORY.yaml` now records migration head `0078_pg_close_scope`, a 39-test static close-hierarchy gate with live runtime declared skipped, and an explicit rerun requirement on the historical `ConsolidationCloseApplicationService` live claim. The inventory timestamp and risk boundary are current; no live hierarchy promotion is made.
 - E-573 reported CI-gate triage (2026-08-07): the locked Python 3.11 selected security/dependency tests report 48 passed and one declared live-PostgreSQL skip; `validate_supply_chain_policy.py` returns `status: valid` with zero active exceptions and zero npm integrity gaps. Gitleaks 8.30.1 reports no leaks in full Git history and in a clean `git archive` checkout. The current CI workflow installs PostgreSQL native client tools and targets migration head 0078. Live server-boundary reproduction is blocked on this Windows host because Docker and native PostgreSQL services are unavailable; hosted rerun remains external.
+- E-574 hierarchy downgrade data-loss guards (2026-08-07): migration
+  downgrades `0072`, `0073`, `0075`, `0076`, and `0077` now run database-side
+  pre-mutation checks and raise stable refusal messages when non-NULL
+  organization, legal-entity, or workspace attribution exists. Focused
+  migration contracts pass; the current 2,655-test full regression exits 0 in
+  373.8 seconds with declared external-service/platform skips, Ruff, Mypy,
+  package build, and diff-check pass. No live PostgreSQL downgrade, provider,
+  statutory, HA/DR, or production evidence is claimed.

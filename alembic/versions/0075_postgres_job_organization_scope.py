@@ -21,6 +21,20 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.execute(
+        """
+        DO $reconforge$
+        BEGIN
+          IF EXISTS (
+            SELECT 1
+            FROM reconforge.durable_jobs
+            WHERE organization_id IS NOT NULL
+          ) THEN
+            RAISE EXCEPTION 'refusing to discard durable-job organization attribution';
+          END IF;
+        END $reconforge$;
+        """
+    )
     op.execute("DROP INDEX IF EXISTS reconforge.durable_jobs_org_scope_status_idx")
     op.execute("DROP POLICY IF EXISTS tenant_scope ON reconforge.durable_jobs")
     op.execute(

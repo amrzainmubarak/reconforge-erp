@@ -5378,3 +5378,12 @@ and migration contracts pass. E-571 then passed all 2,655 collected tests in
 338.4 seconds, package build, Ruff, Mypy, and diff-check with declared
 external-service skips visible. Live hierarchy PostgreSQL, statutory posting,
 providers, HA/DR, and GitHub publication remain deferred.
+
+E-574 closes a migration-safety gap found during the continuation audit:
+PostgreSQL downgrades for reconciliation, outbox, durable-job, PPA,
+impairment, and deferred-tax hierarchy slices now check for non-NULL
+attribution in a database-side guard before removing scope columns. Static
+contracts pass; the current 2,655-test full regression exits 0 in 373.8
+seconds, package build/Ruff/Mypy/diff-check pass, and declared external-service
+skips remain visible. Live downgrade execution, providers, statutory posting,
+HA/DR, and GitHub publication remain deferred.

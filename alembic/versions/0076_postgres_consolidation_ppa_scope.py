@@ -21,6 +21,20 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.execute(
+        """
+        DO $reconforge$
+        BEGIN
+          IF EXISTS (
+            SELECT 1
+            FROM reconforge.consolidation_ppa_artifacts
+            WHERE organization_id IS NOT NULL OR legal_entity_id IS NOT NULL
+          ) THEN
+            RAISE EXCEPTION 'refusing to discard consolidation PPA hierarchy attribution';
+          END IF;
+        END $reconforge$;
+        """
+    )
     op.execute("DROP INDEX IF EXISTS reconforge.consolidation_ppa_hierarchy_scope_idx")
     op.execute("DROP POLICY IF EXISTS tenant_scope ON reconforge.consolidation_ppa_artifacts")
     op.execute(

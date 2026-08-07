@@ -3004,3 +3004,18 @@ tasks:
       PostgreSQL client tools and migrates to head 0078. Full live
       server-boundary reproduction is blocked locally because Docker and native
       PostgreSQL services are unavailable; hosted rerun remains required.
+  - id: E-574
+    priority: P1
+    area: data_safety
+    title: Guard hierarchy migration downgrades against silent attribution loss
+    status: completed
+    depends_on: [E-573]
+    exit_evidence: >-
+      PostgreSQL downgrade paths for reconciliation runs, outbox events,
+      durable jobs, PPA artifacts, impairment artifacts, and deferred-tax
+      artifacts now refuse before mutation when non-NULL hierarchy attribution
+      exists. Focused migration contracts pass; the full current collection of
+      2,655 tests exits 0 in 373.8 seconds with declared external-service and
+      platform skips; Ruff, Mypy, package build, and diff-check pass. Live
+      PostgreSQL downgrade execution remains required; no provider, statutory,
+      HA/DR, or production claim follows.

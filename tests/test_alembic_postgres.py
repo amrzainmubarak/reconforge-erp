@@ -88,6 +88,7 @@ def test_reconciliation_entity_scope_migration_is_versioned_and_reversible() -> 
     assert "reconciliation_runs_tenant_organization_fkey" in schema
     assert "DROP COLUMN IF EXISTS legal_entity_id" in migration
     assert "DROP COLUMN IF EXISTS organization_id" in migration
+    assert "refusing to discard reconciliation hierarchy attribution" in migration
     assert "current_setting('app.legal_entity_id'" in schema
 
 
@@ -104,6 +105,7 @@ def test_outbox_scope_migration_is_versioned_and_reversible() -> None:
     assert "idx_outbox_events_scope_pending" in schema
     assert "DROP COLUMN IF EXISTS {column}" in migration
     assert 'for column in ("legal_entity_id", "organization_id", "workspace_id")' in migration
+    assert "refusing to discard outbox hierarchy attribution" in migration
     assert "current_setting('app.legal_entity_id'" in schema
 
 
@@ -133,6 +135,7 @@ def test_durable_job_organization_scope_migration_is_versioned_and_reversible() 
     assert "app.organization_id" in schema
     assert "durable_jobs_org_scope_status_idx" in schema
     assert "DROP COLUMN IF EXISTS organization_id" in migration
+    assert "refusing to discard durable-job organization attribution" in migration
 
 
 def test_postgres_alembic_contract_has_no_repository_credentials() -> None:

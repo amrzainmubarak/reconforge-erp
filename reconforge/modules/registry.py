@@ -510,7 +510,7 @@ _MODULES = (
         ),
         default_enabled=False,
         dependencies=("platform.core",),
-        interfaces=("artifacts", "cli", "library"),
+        interfaces=("artifacts", "cli", "library", "modern-studio"),
         import_contracts=("retail-pos-batch-export.v1", "retail-processor-settlement-export.v1"),
         export_contracts=("retail-settlement-report.v1",),
         data_classification=("financial-sensitive", "payment-control-data", "source-export-metadata"),
@@ -528,6 +528,8 @@ _MODULES = (
             "tests/test_api_server_retail_settlement.py",
             "tests/test_postgres_retail_settlement.py",
             "tests/test_retail_settlement.py",
+            "apps/web/src/components/RetailSettlementStudio.test.tsx",
+            "apps/web/e2e/accessibility.spec.ts",
         ),
     ),
     ModuleDescriptor(

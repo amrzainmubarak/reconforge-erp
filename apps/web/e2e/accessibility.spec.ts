@@ -24,7 +24,7 @@ async function expectNoWcagViolations(page: Page) {
 
 test("critical English and Arabic Studio routes pass the automated WCAG regression gate", async ({ page }) => {
   await mockLiveContract(page);
-  const criticalRoutes = ["/", "/exceptions", "/evidence", "/inventory", "/mapping", "/rules", "/live", "/admin-audit"];
+  const criticalRoutes = ["/", "/exceptions", "/evidence", "/inventory", "/retail-settlement", "/mapping", "/rules", "/live", "/admin-audit"];
   for (const path of criticalRoutes) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -112,6 +112,16 @@ test("evidence view exposes redaction state without leaking source filesystem pa
   expect(text).not.toMatch(/[A-Za-z]:\\/);
   expect(text).not.toMatch(/\/(?:home|Users|var|tmp)\//);
   expect(await page.locator('[data-source-path], [data-raw-record], [data-secret]').count()).toBe(0);
+});
+
+test("retail settlement view exposes replay evidence without write or provider claims", async ({ page }) => {
+  await page.goto("/retail-settlement");
+  await expect(page.getByRole("heading", { level: 1, name: "Retail settlement control center" })).toBeVisible();
+  await expect(page.getByText("POS_SETTLEMENT_VARIANCE_ABOVE_TOLERANCE")).toBeVisible();
+  await expect(page.locator("p.retail-boundary")).toHaveText("Synthetic, read-only evidence only; no processor call, payment action, accounting posting, or ERP write-back is available from this Studio route.");
+  await expect(page.locator("main button")).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Settlement status" })).toBeVisible();
+  await expect(page.locator("main")).not.toContainText("password");
 });
 
 test("mobile English and Arabic landmarks remain usable without serious WCAG violations", async ({ page }) => {

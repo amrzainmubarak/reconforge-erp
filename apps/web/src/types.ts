@@ -273,7 +273,43 @@ export interface InventoryControlContract {
   notices: string[];
 }
 
-export type StudioPage = "dashboard" | "exceptions" | "evidence" | "inventory" | "mapping" | "rules" | "live" | "adminAudit";
+export type RetailSettlementStatus = "matched" | "exception" | "unmatched_pos" | "unmatched_settlement" | "ambiguous";
+
+export interface RetailSettlementDecision {
+  batch_id: string;
+  store_id: string;
+  status: RetailSettlementStatus;
+  settlement_ids: string[];
+  expected_card_net: string;
+  settlement_net: string | null;
+  net_variance: string | null;
+  currency: string;
+  reason_code: string;
+}
+
+export interface RetailSettlementStudioContract {
+  schema_version: 1;
+  synthetic_data_only: true;
+  synthetic_data_marker: "SYNTHETIC_RETAIL_SETTLEMENT_UI_ONLY";
+  generated_at: string;
+  source: ContractSource;
+  algorithm_version: string;
+  decision_digest: string;
+  artifact_digest: string;
+  tolerance: string;
+  currency: string;
+  summary: {
+    total: number;
+    matched: number;
+    exceptions: number;
+    unmatched: number;
+    ambiguous: number;
+  };
+  decisions: RetailSettlementDecision[];
+  notices: string[];
+}
+
+export type StudioPage = "dashboard" | "exceptions" | "evidence" | "inventory" | "retailSettlement" | "mapping" | "rules" | "live" | "adminAudit";
 
 export interface StudioOverview {
   schema_version: 1;

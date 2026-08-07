@@ -108,6 +108,7 @@ include docs/adr/0447-hosted-postgres-native-tool-bootstrap.md
 include docs/adr/0448-retail-settlement-persistence.md
 include docs/adr/0449-retail-settlement-local-api-boundary.md
 include docs/adr/0450-postgres-retail-settlement-parity.md
+include docs/adr/0451-retail-studio-evidence-view.md
 include reconforge/infrastructure/sqlite_retail_settlement.py
 include reconforge/infrastructure/postgres_retail_settlement.py
 include reconforge/api/server_retail_settlement.py

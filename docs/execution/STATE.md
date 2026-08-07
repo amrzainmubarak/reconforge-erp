@@ -5679,3 +5679,14 @@ PostgreSQL drill is explicitly skipped because the current environment has no
 posting, write-back, Studio, and production evidence remain open. The full
 local regression exits 0 in 370.6 seconds and static/security/dependency/
 package gates pass. GitHub publication remains deferred by owner policy.
+
+E-606 adds the read-only modern Studio route `/retail-settlement`. It consumes
+one synthetic-only projection of the deterministic report, validates exact
+decimal strings/digest shapes/status and summary invariants, and exposes
+English/Arabic filtering, variance reasons, and replay evidence without a
+second calculation or write path. Web typecheck, 58 component tests, build,
+and 6/6 accessibility E2E tests pass. This closes the local retail Studio
+review surface only; live browser authentication, provider authenticity,
+settlement finality, posting, write-back, hosted deployment, HA/DR, and
+production retail evidence remain open. GitHub publication remains deferred
+by owner policy.

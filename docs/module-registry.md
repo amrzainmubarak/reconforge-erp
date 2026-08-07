@@ -23,11 +23,12 @@ The experimental `inventory.core` entry currently declares migrations 9 through 
 The experimental `retail.settlement` entry is an implemented, non-posting
 artifact slice for exported POS batches and processor settlements. It exposes
 exact refunds/fees/chargebacks, unmatched and ambiguous outcomes, and a
-digest-bound report through the local CLI/library and authenticated API. Local
-SQLite and the explicit PostgreSQL server profile persist replay-verified,
-workspace-scoped evidence; the server path refuses silent SQLite fallback. It
-is not a live processor connector, a payment/fraud product, an ERP write-back
-path, or a complete retail module.
+digest-bound report through the local CLI/library, authenticated API, and the
+read-only English/Arabic modern Studio projection. Local SQLite and the
+explicit PostgreSQL server profile persist replay-verified, workspace-scoped
+evidence; the server path refuses silent SQLite fallback. It is not a live
+processor connector, a payment/fraud product, an ERP write-back path, or a
+complete retail module.
 
 The experimental `bank.cash-reconciliation` entry is an implemented, non-posting
 artifact slice for a local CAMT.053 statement and ledger export. It exposes

@@ -1,9 +1,10 @@
-import type { AdminAccessPermission, AdminAccessRole, AdminAccessRoleChange, AdminAuditEvent, AdminAuditPage, AdminAuditVerification, AdminIdentitySession, AdminIdentityUser, AdminIdentityUserStatusChange, AdminIntegration, AdminRetentionPolicy, AdminSecuritySnapshot, AdminSessionRevocation, AdminUserRoleAssignment, BrowserAdminSession, EvidenceBinderContract, ExceptionQueueContract, InventoryControlContract, LiveStudioContract, LiveStudioMetric, StudioOverview } from "./types";
+import type { AdminAccessPermission, AdminAccessRole, AdminAccessRoleChange, AdminAuditEvent, AdminAuditPage, AdminAuditVerification, AdminIdentitySession, AdminIdentityUser, AdminIdentityUserStatusChange, AdminIntegration, AdminRetentionPolicy, AdminSecuritySnapshot, AdminSessionRevocation, AdminUserRoleAssignment, BrowserAdminSession, EvidenceBinderContract, ExceptionQueueContract, InventoryControlContract, LiveStudioContract, LiveStudioMetric, RetailSettlementStudioContract, StudioOverview } from "./types";
 
 const OVERVIEW_URL = `${import.meta.env.BASE_URL}demo/studio-overview.json`;
 const EXCEPTIONS_URL = `${import.meta.env.BASE_URL}demo/studio-exceptions.json`;
 const EVIDENCE_URL = `${import.meta.env.BASE_URL}demo/studio-evidence.json`;
 const INVENTORY_URL = `${import.meta.env.BASE_URL}demo/studio-inventory.json`;
+const RETAIL_SETTLEMENT_URL = `${import.meta.env.BASE_URL}demo/studio-retail-settlement.json`;
 const metricFormats = new Set(["percent", "count", "days"]);
 const metricTones = new Set(["positive", "critical", "warning", "neutral"]);
 const riskRatings = new Set(["critical", "high", "medium", "low"]);
@@ -16,6 +17,10 @@ const financeEntryStatuses = new Set(["", "Draft", "Validated", "Voided"]);
 const showcaseStatuses = new Set(["strong", "watch", "attention"]);
 const controlDomains = new Set(["close", "evidence", "matching", "controls"]);
 const exactQuantity = /^-?(?:0|[1-9]\d*)(?:\.\d{1,6})?$/;
+const exactMoney = /^-?(?:0|[1-9]\d*)(?:\.\d{1,6})?$/;
+const currencyCode = /^[A-Z]{3}$/;
+const digest = /^[a-f0-9]{64}$/;
+const retailStatuses = new Set(["matched", "exception", "unmatched_pos", "unmatched_settlement", "ambiguous"]);
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -348,6 +353,57 @@ function isInventoryControl(value: unknown): value is InventoryControlContract {
   );
 }
 
+function isRetailSettlementDecision(value: unknown, expectedCurrency: string): boolean {
+  if (!isObject(value)) return false;
+  if (!hasTextFields(value, ["batch_id", "store_id", "expected_card_net", "currency", "reason_code"])) return false;
+  if (!retailStatuses.has(String(value.status)) || !exactMoney.test(String(value.expected_card_net))) return false;
+  if (!Array.isArray(value.settlement_ids) || value.settlement_ids.length > 100 || !value.settlement_ids.every(isText)) return false;
+  if (value.settlement_net !== null && (!isText(value.settlement_net) || !exactMoney.test(value.settlement_net))) return false;
+  if (value.net_variance !== null && (!isText(value.net_variance) || !exactMoney.test(value.net_variance))) return false;
+  return value.currency === expectedCurrency && String(value.batch_id).length <= 120 && String(value.store_id).length <= 120;
+}
+
+function retailSettlementSummaryIsConsistent(value: Record<string, unknown>): boolean {
+  const summary = value.summary as Record<string, unknown>;
+  const decisions = value.decisions as Array<Record<string, unknown>>;
+  const statuses = decisions.map((decision) => String(decision.status));
+  const unmatched = statuses.filter((status) => status === "unmatched_pos" || status === "unmatched_settlement").length;
+  return (
+    summary.total === decisions.length &&
+    summary.matched === statuses.filter((status) => status === "matched").length &&
+    summary.exceptions === statuses.filter((status) => status === "exception").length &&
+    summary.unmatched === unmatched &&
+    summary.ambiguous === statuses.filter((status) => status === "ambiguous").length &&
+    new Set(decisions.map((decision) => String(decision.batch_id))).size === decisions.length
+  );
+}
+
+function isRetailSettlementStudio(value: unknown): value is RetailSettlementStudioContract {
+  if (!isObject(value)) return false;
+  return (
+    value.schema_version === 1 &&
+    value.synthetic_data_only === true &&
+    value.synthetic_data_marker === "SYNTHETIC_RETAIL_SETTLEMENT_UI_ONLY" &&
+    isText(value.generated_at) &&
+    isContractSource(value.source) &&
+    isText(value.algorithm_version) &&
+    digest.test(String(value.decision_digest)) &&
+    digest.test(String(value.artifact_digest)) &&
+    exactMoney.test(String(value.tolerance)) &&
+    !String(value.tolerance).startsWith("-") &&
+    isText(value.currency) &&
+    currencyCode.test(value.currency) &&
+    hasCountFields(value.summary, ["total", "matched", "exceptions", "unmatched", "ambiguous"]) &&
+    Array.isArray(value.decisions) &&
+    value.decisions.length > 0 &&
+    value.decisions.length <= 10_000 &&
+    value.decisions.every((decision) => isRetailSettlementDecision(decision, value.currency as string)) &&
+    Array.isArray(value.notices) &&
+    value.notices.every(isText) &&
+    retailSettlementSummaryIsConsistent(value)
+  );
+}
+
 function isExecutiveBrief(value: unknown): boolean {
   return (
     isObject(value) &&
@@ -467,6 +523,10 @@ export async function loadEvidenceBinder(signal?: AbortSignal): Promise<Evidence
 
 export async function loadInventoryControl(signal?: AbortSignal): Promise<InventoryControlContract> {
   return loadContract(INVENTORY_URL, isInventoryControl, "inventory control", signal);
+}
+
+export async function loadRetailSettlementStudio(signal?: AbortSignal): Promise<RetailSettlementStudioContract> {
+  return loadContract(RETAIL_SETTLEMENT_URL, isRetailSettlementStudio, "retail settlement", signal);
 }
 
 async function loadContract<T>(

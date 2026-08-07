@@ -14655,3 +14655,14 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   posting, write-back, or production retail operations. The full local pytest
   regression exits 0 in 370.6 seconds; Ruff, Mypy (495 source files), Bandit,
   OSV pip-audit, supply-chain validation, package build, and diff-check pass.
+- E-606 retail settlement modern Studio projection (2026-08-07):
+  `/retail-settlement` adds a lazy-loaded, read-only English/Arabic view over
+  a synthetic projection of the deterministic retail report. The browser
+  validates exact decimal strings, bounded status values, unique batch IDs,
+  summary counts, and digest shapes before rendering status filtering,
+  variance reasons, and replay evidence. Web typecheck passes; the component
+  suite passes 58/58; the production build passes; and the accessibility E2E
+  suite passes 6/6 with WCAG checks across English, Arabic, desktop, and
+  mobile paths. This is local synthetic UI evidence only: it does not prove
+  live browser authentication, provider authenticity, settlement finality,
+  posting, write-back, hosted deployment, HA/DR, or production readiness.

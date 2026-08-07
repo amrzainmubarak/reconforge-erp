@@ -22,6 +22,7 @@ const pageLabels: Record<StudioPage, MessageKey> = {
   exceptions: "exceptions",
   evidence: "evidence",
   inventory: "inventory",
+  retailSettlement: "retailSettlement",
   mapping: "mappingStudio",
   rules: "ruleStudio",
   live: "liveStudio",
@@ -61,7 +62,7 @@ export function Topbar({
         <Menu size={20} />
       </button>
       <div className="breadcrumbs" aria-label={translate("breadcrumb")}>
-        <span>{translate(activePage === "dashboard" ? "overview" : activePage === "inventory" ? "operations" : activePage === "mapping" || activePage === "rules" || activePage === "live" ? "platform" : activePage === "adminAudit" ? "platform" : "finance")}</span>
+        <span>{translate(activePage === "dashboard" ? "overview" : activePage === "inventory" ? "operations" : activePage === "mapping" || activePage === "rules" || activePage === "live" || activePage === "adminAudit" ? "platform" : "finance")}</span>
         <span aria-hidden="true">/</span>
         <strong>{translate(pageLabels[activePage])}</strong>
       </div>

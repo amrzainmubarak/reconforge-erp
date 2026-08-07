@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "synthetic_data_only": true,
+  "synthetic_data_marker": "SYNTHETIC_RETAIL_SETTLEMENT_UI_ONLY",
+  "generated_at": "2026-08-04T00:00:00Z",
+  "source": {
+    "kind": "reconforge-enterprise-demo",
+    "local_first": true,
+    "external_calls": false
+  },
+  "algorithm_version": "retail-pos-settlement-v1",
+  "decision_digest": "7a651eee16c1e376b9e66edd670f0d0aa2ae80c6f29f2f1d82ab293e14b123ac",
+  "artifact_digest": "076b83f8b20088e10161c268f22d995229a7c04edc3f2ce670547378d4eb5c35",
+  "tolerance": "0.01",
+  "currency": "USD",
+  "summary": {
+    "total": 3,
+    "matched": 1,
+    "exceptions": 1,
+    "unmatched": 1,
+    "ambiguous": 0
+  },
+  "decisions": [
+    {
+      "batch_id": "POS-100",
+      "store_id": "STORE-01",
+      "status": "matched",
+      "settlement_ids": ["SET-100"],
+      "expected_card_net": "93.00",
+      "settlement_net": "93.00",
+      "net_variance": "0.00",
+      "currency": "USD",
+      "reason_code": "POS_SETTLEMENT_RECONCILED"
+    },
+    {
+      "batch_id": "POS-101",
+      "store_id": "STORE-01",
+      "status": "exception",
+      "settlement_ids": ["SET-101"],
+      "expected_card_net": "49.00",
+      "settlement_net": "48.50",
+      "net_variance": "-0.50",
+      "currency": "USD",
+      "reason_code": "POS_SETTLEMENT_VARIANCE_ABOVE_TOLERANCE"
+    },
+    {
+      "batch_id": "POS-102",
+      "store_id": "STORE-02",
+      "status": "unmatched_pos",
+      "settlement_ids": [],
+      "expected_card_net": "30.00",
+      "settlement_net": null,
+      "net_variance": null,
+      "currency": "USD",
+      "reason_code": "POS_BATCH_HAS_NO_SETTLEMENT"
+    }
+  ],
+  "notices": [
+    "Synthetic projection of the deterministic retail settlement report; no processor data or network call is used.",
+    "Exceptions are evidence for review only. This Studio route does not post, settle, or write back to an ERP."
+  ]
+}

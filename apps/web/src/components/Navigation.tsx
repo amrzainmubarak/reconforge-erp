@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ClipboardCheck,
   Code2,
+  CreditCard,
   Factory,
   FileChartColumn,
   FileInput,
@@ -52,6 +53,7 @@ export const navigationGroups: NavigationGroup[] = [
       { key: "exceptions", label: "exceptions", icon: ShieldCheck, page: "exceptions", status: "foundation" },
       { key: "evidence", label: "evidence", icon: Archive, page: "evidence", status: "foundation" },
       { key: "close", label: "close", icon: ClipboardCheck, href: `${currentStudio}/close`, status: "foundation" },
+      { key: "retail-settlement", label: "retailSettlement", icon: CreditCard, page: "retailSettlement", status: "foundation" },
     ],
   },
   {

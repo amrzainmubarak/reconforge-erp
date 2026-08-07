@@ -884,7 +884,7 @@ modules:
     capability_status: implemented
     threat_model_status: evidence-bounded
     owner: platform-security
-    interfaces: [artifacts, cli, library]
+    interfaces: [artifacts, cli, library, modern-studio]
     module_data_classifications: [financial-sensitive, payment-control-data, source-export-metadata]
     architecture_boundaries: [TB-001, TB-003, TB-007]
     assets:
@@ -922,12 +922,12 @@ modules:
         residual_risk_ids: [R-014, R-017]
         limitations:
           - Hashes are not signatures and the module does not authorize disclosure, retention, or downstream posting.
-    module_test_evidence: [tests/test_retail_settlement.py, tests/test_api_retail_settlement.py, tests/test_api_server_retail_settlement.py, tests/test_postgres_retail_settlement.py, tests/test_file_ingestion_inventory.py, tests/test_v03_platform.py]
+    module_test_evidence: [tests/test_retail_settlement.py, tests/test_api_retail_settlement.py, tests/test_api_server_retail_settlement.py, tests/test_postgres_retail_settlement.py, apps/web/src/components/RetailSettlementStudio.test.tsx, apps/web/e2e/accessibility.spec.ts, tests/test_file_ingestion_inventory.py, tests/test_v03_platform.py]
     assumptions:
       - Operators provide authorized exports and independently review provider references, fees, refunds, and chargebacks.
       - The control remains non-posting and no processor credential or network endpoint is configured through this module.
     out_of_scope:
-      - Live processor/ERP connectors, settlement finality, fraud controls, statutory posting, write-back, Studio/accessibility, HA/DR, and production availability.
+      - Live processor/ERP connectors, settlement finality, fraud controls, statutory posting, write-back, hosted Studio deployment, HA/DR, and production availability.
 
   - module_id: studio.modern
     registry_maturity: experimental
@@ -939,7 +939,7 @@ modules:
     architecture_boundaries: [TB-006, TB-007]
     assets:
       - id: synthetic-studio-contracts
-        description: Marked synthetic overview, exception, evidence, inventory, and screenshot artifacts.
+        description: Marked synthetic overview, exception, evidence, inventory, retail-settlement, and screenshot artifacts.
         data_class: DC-001
         objectives: [integrity, availability]
       - id: frontend-build-and-rendering-surface

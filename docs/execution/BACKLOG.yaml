@@ -3544,3 +3544,21 @@ tasks:
       supply-chain validation, package build, and diff-check pass. Hosted
       native-tool bootstrap, HA/DR, provider authenticity, posting, write-back,
       and production retail operations remain open.
+  - id: E-606
+    priority: P2
+    area: platform-breadth
+    title: Add an accessible retail settlement Studio evidence view
+    status: completed
+    depends_on: [E-605, P4-PLAT-001]
+    exit_evidence: >-
+      The modern Studio adds `/retail-settlement` and consumes a strict
+      synthetic-only projection of the deterministic retail report. The
+      browser validates exact decimal strings, digest shapes, status values,
+      unique batch IDs, and summary consistency before rendering read-only
+      filtering, variance reasons, and replay digests. English/Arabic labels,
+      RTL rendering, and the route's WCAG regression are covered. Web
+      typecheck, 58 component tests, production build, and 6 accessibility
+      E2E tests pass. This closes only the local Studio projection; live API
+      browser authentication, processor authenticity, settlement finality,
+      posting, write-back, hosted deployment, HA/DR, and production retail
+      operations remain open.

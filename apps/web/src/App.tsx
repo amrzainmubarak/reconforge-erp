@@ -14,6 +14,7 @@ const Dashboard = lazy(() => import("./components/Dashboard").then((module) => (
 const ExceptionQueue = lazy(() => import("./components/ExceptionQueue").then((module) => ({ default: module.ExceptionQueue })));
 const EvidenceBinder = lazy(() => import("./components/EvidenceBinder").then((module) => ({ default: module.EvidenceBinder })));
 const InventoryControl = lazy(() => import("./components/InventoryControl").then((module) => ({ default: module.InventoryControl })));
+const RetailSettlementStudio = lazy(() => import("./components/RetailSettlementStudio").then((module) => ({ default: module.RetailSettlementStudio })));
 const MappingStudio = lazy(() => import("./components/MappingStudio").then((module) => ({ default: module.MappingStudio })));
 const RuleStudio = lazy(() => import("./components/RuleStudio").then((module) => ({ default: module.RuleStudio })));
 const LiveStudio = lazy(() => import("./components/LiveStudio").then((module) => ({ default: module.LiveStudio })));
@@ -24,6 +25,7 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/exceptions")) return "exceptions";
   if (normalized.endsWith("/evidence")) return "evidence";
   if (normalized.endsWith("/inventory")) return "inventory";
+  if (normalized.endsWith("/retail-settlement")) return "retailSettlement";
   if (normalized.endsWith("/mapping")) return "mapping";
   if (normalized.endsWith("/rules")) return "rules";
   if (normalized.endsWith("/live")) return "live";
@@ -168,6 +170,9 @@ export default function App() {
         ) : null}
         {activePage === "inventory" ? (
           <Suspense fallback={<LoadingView translate={t} />}><InventoryControl translate={t} /></Suspense>
+        ) : null}
+        {activePage === "retailSettlement" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><RetailSettlementStudio translate={t} /></Suspense>
         ) : null}
         {activePage === "mapping" ? (
           <Suspense fallback={<LoadingView translate={t} />}><MappingStudio translate={t} /></Suspense>

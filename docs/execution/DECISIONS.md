@@ -6288,3 +6288,19 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: This is persistence and scope-parity evidence only. It does
   not establish hosted CI, HA/DR, live processor authenticity, posting,
   write-back, Studio/accessibility, or production retail operations.
+
+### D-432: Keep the retail Studio view projection-only and read-only
+
+- **Date**: 2026-08-07
+- **Context**: E-605 completed local/API/PostgreSQL retail evidence paths, but
+  the modern Studio had no review surface for that evidence.
+- **Decision**: Add `/retail-settlement` as a lazy-loaded React route backed by
+  one synthetic-only, versioned projection of the deterministic report. The
+  browser validates exact decimal strings, bounded status values, digest
+  shapes, unique batch IDs, and summary consistency. It displays English and
+  Arabic labels, status filtering, variance reasons, algorithm/digest fields,
+  and a visible non-posting/provider boundary.
+- **Boundary**: The view does not calculate a second result, call a provider,
+  call the authenticated retail API, post accounting entries, or write back.
+  Live browser authentication, source authenticity, settlement finality,
+  hosted deployment, HA/DR, and production retail operations remain open.

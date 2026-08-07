@@ -3166,7 +3166,7 @@ tasks:
       telemetry, record persistence failures before propagation, and exclude
       tenant, workspace, job, worker, partition, amount, and payload details.
       The focused observability contract passes; the current 2,660-test full
-      local regression exits 0 in 340.8 seconds, Mypy reports no issues in 485
+      local regression exits 0 in 339.1 seconds, Mypy reports no issues in 485
       source files, Ruff and package build pass, ADR 0430 is present in the
       source distribution, and git diff-check passes. This is instrumentation
       evidence only, not collector delivery, alerting, throughput, capacity,

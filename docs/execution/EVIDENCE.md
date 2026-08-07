@@ -14384,3 +14384,8 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   diff-check pass; hosted server-boundaries remains the only valid runtime
   proof, and no migration/backup/HA/DR production claim follows from this test
   correction.
+- E-579 Redis shutdown lifecycle registration (2026-08-07): server-profile API
+  construction now registers `RedisConnectionFactory.close` on the FastAPI
+  shutdown hooks whenever Redis is configured. The foundation test verifies the
+  callback without network I/O; this is lifecycle evidence only and does not
+  claim Redis availability, HA/DR, throughput, or production SLOs.

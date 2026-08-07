@@ -5859,3 +5859,16 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   PostgreSQL server-boundaries run is still required for runtime evidence.
 - **Boundary**: This removes test drift only; it does not prove hosted
   migration, backup/restore, HA/DR, provider, or production readiness.
+
+### D-405: Register Redis client shutdown cleanup in server profiles
+
+- **Date**: 2026-08-07
+- **Context**: PostgreSQL pool cleanup was registered on application shutdown,
+  but the reusable optional Redis client was not.
+- **Decision**: Register the existing lazy `RedisConnectionFactory.close`
+  callback when `redis_url` is configured; keep local mode and lazy import
+  behavior unchanged.
+- **Verification**: The API foundation contract verifies the shutdown callback
+  without opening Redis; full local gates remain required.
+- **Boundary**: Lifecycle registration only; no Redis availability, HA/DR,
+  throughput, or production SLO claim follows.

@@ -129,6 +129,9 @@ def test_policy_cache_uses_shared_redis_generation_only_when_explicitly_configur
     )
     assert isinstance(server_api.state.policy_cache_version_store, RedisPolicyCacheVersionStore)
     assert isinstance(server_api.state.policy_decision_cache, PolicyDecisionCache)
+    redis_factory = server_api.state.redis_store.connection_factory
+    assert any(getattr(handler, "__self__", None) is redis_factory for handler in server_api.router.on_shutdown)
+    redis_factory.close()
 
 
 class _AllowedEvaluator:

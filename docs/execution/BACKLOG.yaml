@@ -3075,3 +3075,16 @@ tasks:
       local regression, Ruff, Mypy, package build, and diff-check pass. The
       hosted server-boundaries run remains required because local Windows
       cannot substitute for live PostgreSQL runtime evidence.
+  - id: E-579
+    priority: P1
+    area: reliability
+    title: Register Redis server-profile shutdown cleanup
+    status: completed
+    depends_on: [E-578]
+    exit_evidence: >-
+      `create_api_app` now registers the existing lazy Redis connection
+      factory's `close()` callback whenever a Redis server profile is enabled.
+      The API foundation contract verifies the callback without opening a
+      network connection; focused tests, Ruff, Mypy, package build, and diff
+      checks must pass. This is lifecycle evidence only, not Redis availability,
+      HA/DR, throughput, or production SLO evidence.

@@ -211,6 +211,7 @@ def create_api_app(
     if redis_url is not None:
         redis_factory = RedisConnectionFactory(RedisSettings(url=redis_url, require_tls=redis_require_tls))
         app.state.redis_store = TenantRedisStore(redis_factory)
+        app.router.add_event_handler("shutdown", redis_factory.close)
     else:
         app.state.redis_store = None
     app.state.login_failures = defaultdict(deque)

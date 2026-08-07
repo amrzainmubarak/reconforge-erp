@@ -674,6 +674,7 @@ include docs/adr/0422-hierarchy-downgrade-data-loss-guards.md
 include docs/adr/0423-bounded-postgres-server-pool.md
 include docs/adr/0424-postgres-metrics-parity-schema-closure.md
 include docs/adr/0425-bandit-allowlist-for-fixed-hierarchy-clauses.md
+include docs/adr/0426-server-redis-shutdown-cleanup.md
 include reconforge/infrastructure/postgres_job_organization_scope.py
 include reconforge/infrastructure/postgres_consolidation_ppa_scope.py
 include reconforge/infrastructure/postgres_consolidation_impairment_deferred_tax_scope.py

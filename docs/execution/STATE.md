@@ -5417,3 +5417,9 @@ registry and migration chain. Static contracts, the 2,655-test full local
 regression, Ruff, Mypy, package build, and diff-check pass. The actual
 PostgreSQL migration run remains hosted-only on this Windows environment, so
 GitHub publication and final objective closure remain deferred.
+
+E-579 closes the adjacent server lifecycle leak: Redis server profiles now
+register the existing lazy client factory's `close()` callback on application
+shutdown, matching PostgreSQL pool cleanup. The contract is local and does not
+open a network connection; Redis availability, replication, HA/DR, and hosted
+runtime evidence remain external. GitHub publication remains deferred.

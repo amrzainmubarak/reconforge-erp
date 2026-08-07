@@ -14577,3 +14577,12 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   487 source files, Ruff, Bandit, pip-audit, package build, source-distribution
   membership, and diff-check pass. No live provider or production isolation
   claim follows.
+- E-598 retail settlement replay integrity (2026-08-07):
+  `verify_retail_settlement_report` now validates the nested decision digest,
+  canonical decision ordering, and derived status counts after the outer
+  artifact digest. The focused command
+  `uv run pytest -q tests/test_retail_settlement.py` passes 10/10, including a
+  regression that mutates a monetary decision, recomputes the outer digest,
+  and is still refused. This is serialized local artifact-integrity evidence;
+  it does not prove source authenticity, live processor settlement, database
+  persistence, journal posting, write-back, or production retail operations.

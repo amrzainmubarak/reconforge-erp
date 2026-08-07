@@ -5602,3 +5602,12 @@ capacity, and production SLO evidence remain open. The full repository
 regression collected 2,723 tests and exited 0 in 360.3 seconds with declared
 capability skips and existing warnings only. GitHub publication remains
 deferred by owner policy.
+
+E-598 hardens the retail POS settlement report reader. The serialized run now
+rebuilds and checks its nested decision digest, canonical decision ordering,
+and status-count projection after the outer artifact digest. The focused
+retail suite passes 10/10, including rejection of a changed monetary decision
+even when the outer envelope is recomputed. This is local serialized
+artifact-integrity evidence only; source authenticity, live provider
+settlement, persistence, posting, write-back, and production retail evidence
+remain open. GitHub publication remains deferred by owner policy.

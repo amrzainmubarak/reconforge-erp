@@ -3419,3 +3419,18 @@ tasks:
       PostgreSQL lock behavior, cross-host fairness,
       throughput, queue HA/failover, soak, capacity, and production SLOs
       remain open.
+  - id: E-598
+    priority: P2
+    area: platform-breadth
+    title: Nested retail-settlement replay integrity
+    status: completed
+    depends_on: [P4-PLAT-001]
+    exit_evidence: >-
+      Retail settlement report readers now verify the nested decision digest,
+      canonical decision ordering, and status-count projection after checking
+      the outer artifact digest. A focused regression rejects a changed
+      monetary decision even when an attacker recomputes the outer envelope;
+      the producer and reader share the same canonical digest helper. This is
+      serialized local artifact-integrity evidence only, not source
+      authenticity, live provider settlement, persistence, posting, write-back,
+      or production retail evidence.

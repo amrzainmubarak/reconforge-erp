@@ -6159,3 +6159,18 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: This is local SQLite lock/serialization evidence only, not
   PostgreSQL, cross-host fairness, throughput, queue HA/failover, soak,
   capacity, or production SLO evidence.
+
+### D-424: Verify nested retail-settlement replay integrity
+
+- **Date**: 2026-08-07
+- **Context**: The retail settlement report reader checked only its outer
+  artifact digest, so a caller could alter serialized decision data and then
+  recompute that envelope.
+- **Decision**: Keep the existing report shape and add a shared canonical
+  helper for the nested decision digest. Require canonical decision ordering
+  and derived status counts before accepting a report.
+- **Verification**: The focused retail suite passes 10/10, including a
+  monetary-decision mutation whose recomputed outer digest is still refused.
+- **Boundary**: This protects serialized artifact integrity only. It is not a
+  signature, source-authenticity proof, live provider settlement, persistence,
+  posting, write-back, or production retail evidence.

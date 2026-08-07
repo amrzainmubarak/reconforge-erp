@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from decimal import Decimal
 from pathlib import Path
@@ -142,6 +143,28 @@ def test_retail_settlement_report_is_digest_bound(tmp_path: Path) -> None:
     assert payload["decision_digest"] == run.decision_digest
     path.write_text(path.read_text(encoding="utf-8").replace('"status": "matched"', '"status": "exception"'), encoding="utf-8")
     with pytest.raises(RetailSettlementError, match="digest verification failed"):
+        verify_retail_settlement_report(path)
+
+
+def test_retail_settlement_report_rejects_nested_decision_tampering_even_with_new_outer_digest(
+    tmp_path: Path,
+) -> None:
+    run = run_retail_settlement((_pos(),), (_settlement(),), tolerance=_money("0.01"))
+    path = tmp_path / "report.json"
+    write_retail_settlement_report(run, path)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["decisions"][0]["net_variance"]["amount"] = "1.00"
+    payload["artifact_digest"] = ""  # recompute the outer envelope below
+    payload["artifact_digest"] = hashlib.sha256(
+        json.dumps(
+            {key: value for key, value in payload.items() if key != "artifact_digest"},
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+        ).encode("ascii")
+    ).hexdigest()
+    path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    with pytest.raises(RetailSettlementError, match="decision digest verification failed"):
         verify_retail_settlement_report(path)
 
 

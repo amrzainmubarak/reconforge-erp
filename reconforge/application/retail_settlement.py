@@ -13,6 +13,7 @@ from reconforge.domain.retail_settlement import (
     RetailSettlementError,
     RetailSettlementRun,
     run_retail_settlement,
+    verify_retail_settlement_payload,
 )
 from reconforge.io.records import RecordIngressError, read_json_record_document
 from reconforge.io.structured import StructuredDocumentError, read_json_document
@@ -149,6 +150,12 @@ def verify_retail_settlement_report(path: Path) -> dict[str, Any]:
     ).hexdigest()
     if not isinstance(artifact_digest, str) or artifact_digest != expected:
         raise RetailSettlementError("retail settlement report digest verification failed.")
+    try:
+        verify_retail_settlement_payload(payload)
+    except RetailSettlementError:
+        raise
+    except (KeyError, TypeError, ValueError) as exc:
+        raise RetailSettlementError("retail settlement report replay verification failed.") from exc
     return payload
 
 

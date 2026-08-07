@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
 from typing import Literal
@@ -77,6 +78,82 @@ def _money_dict(value: Money) -> dict[str, object]:
 def _digest(payload: object) -> str:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _decision_sort_key(item: Mapping[str, object]) -> tuple[str, str, str, tuple[str, ...]]:
+    """Return the stable ordering key used by every settlement artifact."""
+
+    store_id = item.get("store_id")
+    batch_id = item.get("batch_id")
+    status = item.get("status")
+    settlement_ids = item.get("settlement_ids")
+    if not isinstance(store_id, str) or not isinstance(batch_id, str) or not isinstance(status, str):
+        raise RetailSettlementError("settlement decision identity is invalid.")
+    if not isinstance(settlement_ids, list) or any(not isinstance(value, str) for value in settlement_ids):
+        raise RetailSettlementError("settlement decision references are invalid.")
+    return store_id, batch_id, status, tuple(settlement_ids)
+
+
+def retail_settlement_decision_digest(
+    *,
+    algorithm_version: object,
+    schema_version: object,
+    tolerance: object,
+    input_digests: object,
+    decisions: object,
+) -> str:
+    """Rebuild the canonical decision digest from a serialized run payload.
+
+    This deliberately accepts serialized values so report readers can verify the
+    exact bytes that were persisted without silently normalizing a mutated
+    decision back into a valid in-memory object.
+    """
+
+    if not isinstance(input_digests, list) or any(not isinstance(value, str) for value in input_digests):
+        raise RetailSettlementError("settlement input digests are invalid.")
+    if not isinstance(decisions, list) or any(not isinstance(value, dict) for value in decisions):
+        raise RetailSettlementError("settlement decisions are invalid.")
+    return _digest(
+        {
+            "algorithm_version": algorithm_version,
+            "decisions": decisions,
+            "input_digests": sorted(input_digests),
+            "schema_version": schema_version,
+            "tolerance": tolerance,
+        }
+    )
+
+
+def verify_retail_settlement_payload(payload: Mapping[str, object]) -> None:
+    """Verify canonical ordering, status counts, and the nested decision digest."""
+
+    if payload.get("schema_version") != RETAIL_SETTLEMENT_SCHEMA_VERSION:
+        raise RetailSettlementError("retail settlement schema version is unsupported.")
+    if payload.get("algorithm_version") != RETAIL_SETTLEMENT_ALGORITHM_VERSION:
+        raise RetailSettlementError("retail settlement algorithm version is unsupported.")
+    decisions = payload.get("decisions")
+    if not isinstance(decisions, list) or any(not isinstance(value, dict) for value in decisions):
+        raise RetailSettlementError("retail settlement decisions are invalid.")
+    if decisions != sorted(decisions, key=_decision_sort_key):
+        raise RetailSettlementError("retail settlement decisions are not canonical.")
+    statuses = {"matched", "exception", "unmatched_pos", "unmatched_settlement", "ambiguous"}
+    counts: dict[str, int] = {}
+    for decision in decisions:
+        status = decision.get("status")
+        if status not in statuses:
+            raise RetailSettlementError("retail settlement decision status is invalid.")
+        counts[status] = counts.get(status, 0) + 1
+    if payload.get("status_counts") != dict(sorted(counts.items())):
+        raise RetailSettlementError("retail settlement status counts are inconsistent.")
+    expected = retail_settlement_decision_digest(
+        algorithm_version=payload.get("algorithm_version"),
+        schema_version=payload.get("schema_version"),
+        tolerance=payload.get("tolerance"),
+        input_digests=payload.get("input_digests"),
+        decisions=decisions,
+    )
+    if payload.get("decision_digest") != expected:
+        raise RetailSettlementError("retail settlement decision digest verification failed.")
 
 
 @dataclass(frozen=True)
@@ -386,7 +463,13 @@ def run_retail_settlement(
         tolerance,
         tuple(sorted(input_digests)),
         ordered,
-        _digest(payload),
+        retail_settlement_decision_digest(
+            algorithm_version=payload["algorithm_version"],
+            schema_version=payload["schema_version"],
+            tolerance=payload["tolerance"],
+            input_digests=payload["input_digests"],
+            decisions=payload["decisions"],
+        ),
     )
 
 
@@ -398,5 +481,7 @@ __all__ = [
     "RetailSettlementDecision",
     "RetailSettlementError",
     "RetailSettlementRun",
+    "retail_settlement_decision_digest",
     "run_retail_settlement",
+    "verify_retail_settlement_payload",
 ]

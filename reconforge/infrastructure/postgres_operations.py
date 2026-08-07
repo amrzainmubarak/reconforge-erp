@@ -88,6 +88,7 @@ POSTGRES_MIGRATION_REVISIONS = (
     "0075_pg_job_organization_scope",
     "0076_pg_consolidation_ppa_scope",
     "0077_pg_imp_tax_scope",
+    "0078_pg_close_scope",
 )
 
 

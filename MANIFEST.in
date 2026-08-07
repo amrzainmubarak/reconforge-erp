@@ -669,12 +669,15 @@ include docs/adr/0415-evidence-hierarchy-policy-re-evaluation.md
 include docs/adr/0416-intercompany-hierarchy-policy-re-evaluation.md
 include docs/adr/0417-tenant-scoped-policy-hierarchy.md
 include docs/adr/0420-postgres-close-hierarchy-scope-propagation.md
+include docs/adr/0421-postgres-close-hierarchy-persistence.md
 include reconforge/infrastructure/postgres_job_organization_scope.py
 include reconforge/infrastructure/postgres_consolidation_ppa_scope.py
 include reconforge/infrastructure/postgres_consolidation_impairment_deferred_tax_scope.py
 include alembic/versions/0075_postgres_job_organization_scope.py
 include alembic/versions/0076_postgres_consolidation_ppa_scope.py
 include alembic/versions/0077_postgres_consolidation_impairment_deferred_tax_scope.py
+include reconforge/infrastructure/postgres_consolidation_close_scope.py
+include alembic/versions/0078_postgres_consolidation_close_scope.py
 include tests/test_durable_job_application.py
 include tests/test_postgres_job_scope.py
 include tests/test_governed_jobs_policy.py

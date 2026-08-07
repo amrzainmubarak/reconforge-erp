@@ -5772,3 +5772,20 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: Close-table hierarchy persistence, live RLS isolation,
   statutory posting, providers/write-back, HA/DR, and production readiness
   remain open.
+
+### D-399: Persist hierarchy attribution across PostgreSQL close tables
+
+- **Date**: 2026-08-07
+- **Context**: Close repositories restored the authenticated hierarchy, but
+  close periods, runs, lifecycle rows, journal lines, and evidence links still
+  stored only tenant identity at the database boundary.
+- **Decision**: Add migration `0078_pg_close_scope` with nullable transactional
+  organization/legal-entity attribution, tenant-safe foreign keys, hierarchy
+  indexes, workspace-aware RLS for period/run rows, hierarchy RLS for all close
+  records, and `UNIQUE NULLS NOT DISTINCT` scoped identities. Preserve legacy
+  NULL rows and refuse rollback when attribution would be discarded.
+- **Verification**: Focused close/migration contracts pass 39 tests with four
+  declared live-service skips; Ruff, Mypy, and diff-check pass. Full regression
+  and package evidence are tracked by E-571.
+- **Boundary**: No live PostgreSQL hierarchy isolation, statutory posting,
+  provider write-back, HA/DR, or production release approval is claimed.

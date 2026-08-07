@@ -2947,3 +2947,34 @@ tasks:
       contract suite, Ruff, Mypy, and diff-check pass. Package build remains
       part of the final local gate; hosted CI/security/provenance, live
       providers, federation, HA/DR, and release approval remain external.
+  - id: E-570
+    priority: P1
+    area: financial_consolidation
+    title: PostgreSQL consolidation-close hierarchy persistence
+    status: completed
+    depends_on: [E-568]
+    exit_evidence: >-
+      Migration `0078_pg_close_scope` and its packaged schema helper add
+      nullable organization/legal-entity attribution, tenant-safe foreign
+      keys, hierarchy indexes, workspace-aware policies for close periods and
+      runs, hierarchy RLS for all eleven close tables, and NULL-aware scoped
+      uniqueness. Downgrade refuses to discard non-NULL hierarchy attribution
+      and restores the legacy tenant-only policies and uniqueness constraints.
+      Focused migration/schema/close contracts, Ruff, Mypy, and diff-check
+      pass; live PostgreSQL isolation and provider/statutory operations remain
+      external.
+  - id: E-571
+    priority: P0
+    area: quality
+    title: Full regression gate after close hierarchy persistence
+    status: completed
+    depends_on: [E-570]
+    exit_evidence: >-
+      The current tree collects 2,655 tests and
+      `uv run --no-sync pytest -q --basetemp .pytest-tmp-e571 --tb=short -ra`
+      exits 0 in 338.4 seconds with no executed failure; declared PostgreSQL,
+      Redis, object-storage, network, Windows, and platform skips remain
+      visible. `uv run --no-sync python -m build --no-isolation`, Ruff, Mypy,
+      and diff-check pass, and the package contains ADR 0421, migration 0078,
+      and its helper. Hosted CI/security/provenance, live PostgreSQL,
+      providers, federation, HA/DR, and release approval remain external.

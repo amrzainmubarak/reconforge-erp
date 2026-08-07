@@ -5358,3 +5358,12 @@ pass; E-569 then passed the 2,653-test full regression in 336.9 seconds with
 the declared external-service skips visible. Package build is rerun after this
 update. This does not yet provide close-table hierarchy persistence or live
 multi-entity RLS evidence.
+
+E-570 adds the missing PostgreSQL close-table persistence boundary. Migration
+0078 adds organization/legal-entity attribution, tenant-safe references,
+hierarchy indexes, workspace-aware period/run policies, all-table hierarchy
+RLS, and NULL-aware scoped identities with a guarded rollback. Focused static
+and migration contracts pass. E-571 then passed all 2,655 collected tests in
+338.4 seconds, package build, Ruff, Mypy, and diff-check with declared
+external-service skips visible. Live hierarchy PostgreSQL, statutory posting,
+providers, HA/DR, and GitHub publication remain deferred.

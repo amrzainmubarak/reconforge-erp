@@ -29,6 +29,9 @@ from reconforge.infrastructure.postgres_consolidation_close import (
     POSTGRES_CONSOLIDATION_PPA_LINK_SCHEMA_SQL,
     PostgresConsolidationCloseRepository,
 )
+from reconforge.infrastructure.postgres_consolidation_close_scope import (
+    POSTGRES_CONSOLIDATION_CLOSE_SCOPE_SCHEMA_SQL,
+)
 from reconforge.infrastructure.postgres_consolidation_deferred_tax import (
     PostgresConsolidationDeferredTaxRepository,
 )
@@ -112,6 +115,48 @@ def test_postgres_consolidation_close_schema_is_tenant_scoped_and_exact() -> Non
     assert "consolidation_close_effect_lines" in schema
     assert "append-only" in schema
     assert "DOUBLE PRECISION" not in schema
+
+
+def test_postgres_close_hierarchy_scope_schema_is_additive_and_reversible() -> None:
+    schema = POSTGRES_CONSOLIDATION_CLOSE_SCOPE_SCHEMA_SQL
+    for table_name in (
+        "consolidation_close_periods",
+        "consolidation_close_runs",
+        "consolidation_close_effects",
+        "consolidation_close_period_events",
+        "consolidation_close_run_lines",
+        "consolidation_close_effect_lines",
+        "consolidation_close_intercompany_links",
+        "consolidation_close_impairment_links",
+        "consolidation_close_deferred_tax_links",
+        "consolidation_close_ppa_links",
+        "consolidation_close_ownership_change_links",
+    ):
+        assert table_name in schema
+    assert "ADD COLUMN IF NOT EXISTS organization_id" in schema
+    assert "ADD COLUMN IF NOT EXISTS legal_entity_id" in schema
+    assert "organization_scope_fkey" in schema
+    assert "legal_entity_scope_fkey" in schema
+    assert "hierarchy_scope" in schema
+    assert "UNIQUE NULLS NOT DISTINCT" in schema
+    assert "consolidation_close_impairment_links_hierarchy_entity_unique" in schema
+
+
+def test_postgres_close_hierarchy_scope_migration_is_linear_and_guarded() -> None:
+    path = ROOT / "alembic/versions/0078_postgres_consolidation_close_scope.py"
+    spec = importlib.util.spec_from_file_location("migration_0078", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.revision == "0078_pg_close_scope"
+    assert module.down_revision == "0077_pg_imp_tax_scope"
+    migration = path.read_text(encoding="utf-8")
+    assert "POSTGRES_CONSOLIDATION_CLOSE_SCOPE_SCHEMA_SQL" in migration
+    assert "refusing to discard close hierarchy attribution" in migration
+    assert "consolidation_close_periods_tenant_id_workspace_id_group_code_period_name_key" in migration
+    assert "CREATE POLICY tenant_isolation" in migration
+    assert "DROP COLUMN IF EXISTS legal_entity_id" in migration
+    assert "DROP COLUMN IF EXISTS organization_id" in migration
 
 
 def test_postgres_close_intercompany_link_schema_is_immutable_and_tenant_scoped() -> None:

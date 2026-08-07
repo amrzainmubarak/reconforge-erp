@@ -1,6 +1,6 @@
 schema_version: 1
 inventory_id: reconforge-file-ingestion
-reviewed_on: "2026-08-01"
+reviewed_on: "2026-08-07"
 owner: platform-security
 claim_boundary: >-
   This inventory proves repository-visible parser coverage and bounded controls only. It does not prove
@@ -749,6 +749,23 @@ surfaces:
       - The response is untrusted provider data; the governed HTTPS executor, bounded response size, exact endpoint path, closed Pydantic schema, Decimal checks, company guard, retry ceiling, and canonical digest fail closed before a page is returned.
       - This is synthetic transport evidence only. It does not authenticate an ERPNext tenant, establish provider SLA, authorize posting, or enable write-back.
     next_action: Add a separately reviewed live ERPNext sandbox and provider-version conformance run before promoting beyond bounded connector evidence.
+  - id: FI-038
+    name: CAMT.053 bank statement network response
+    module_ids: [connectors.boundary]
+    trust: untrusted-network
+    entrypoints:
+      - reconforge/connectors/bank_statement_camt053.py::BankStatementCamt053Connector.read_statement
+    formats: [xml]
+    parser_families: [defusedxml]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_connector_bank_statement_camt053.py, tests/test_connector_camt053.py, tests/test_connector_network.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The response is untrusted provider data; exact HTTPS egress, runtime secret isolation, 8 MiB response and parser limits, defusedxml entity-expansion refusal, closed CAMT shape, account guard, retry ceiling, and response/source digests fail closed before a statement is returned.
+      - This is synthetic transport evidence only. It does not authenticate a bank source, establish provider dialect completeness or SLA, prove certificate lifecycle, authorize payment or posting, or enable ERP write-back.
+    next_action: Add a separately reviewed bank sandbox with provider-version CAMT conformance fixtures and certificate or credential lifecycle evidence before promoting beyond bounded connector evidence.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader
@@ -912,3 +929,9 @@ direct_yaml_parser_allowlist:
     call_count: 1
     surface_id: FI-010
     rationale: The centralized compatibility branch retains safe construction after the bounded structured-document preflight.
+direct_xml_parser_allowlist:
+  - path: reconforge/connectors/camt053.py
+    parser: defusedxml.ElementTree.fromstring
+    call_count: 1
+    surface_id: FI-038
+    rationale: Parses only bounded CAMT.053 bytes after the governed network or local boundary; defusedxml rejects entity expansion and the closed parser enforces statement, identity, Decimal, date, text, and entry-count limits.

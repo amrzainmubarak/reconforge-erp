@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+- E-589 CAMT.053 HTTPS bank-statement source (2026-08-07): the new read-only
+  adapter composes the governed HTTPS executor with the bounded `defusedxml`
+  parser, exact endpoint path, runtime secret reference, 8 MiB response cap,
+  optional expected-account guard, and request/raw-response/normalized-source
+  digests. Synthetic tests cover endpoint widening, malformed response,
+  account mismatch, and secret isolation; parser inventory, module registry,
+  and source packaging are closed. Full local regression and static/package
+  the 2,697-test full local regression exits 0 in 349.8 seconds; Mypy reports
+  no issues in 488 source files; Ruff, Bandit, pip-audit, package build,
+  source-distribution membership, and diff-check pass. No live bank dialect,
+  authenticity, certificate lifecycle, settlement, posting, write-back, or
+  production availability claim follows.
+
 ## E-403 — Full local post-E-402 quality gates
 
 - `uv run pytest -q --tb=short` -> exit 0 in 330.3 seconds; declared skips and

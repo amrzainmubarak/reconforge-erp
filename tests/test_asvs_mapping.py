@@ -163,7 +163,7 @@ def test_asvs_selected_ids_levels_and_summary_are_exact() -> None:
             "not_applicable": counts["not_applicable"],
         },
     }
-    assert counts == {"implemented": 4, "partial": 33, "planned": 10, "not_applicable": 8}
+    assert counts == {"implemented": 4, "partial": 34, "planned": 10, "not_applicable": 7}
 
 
 def test_asvs_statuses_have_evidence_and_residual_boundaries() -> None:

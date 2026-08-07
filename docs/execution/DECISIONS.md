@@ -6006,3 +6006,20 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   and digest binding.
 - **Boundary**: No claim of live provider filtering completeness or production
   tenant isolation follows without a real ERPNext runtime.
+
+### D-415: Compose the bank-statement HTTPS source with the bounded CAMT parser
+
+- **Date**: 2026-08-07
+- **Context**: ReconForge had a deterministic local CAMT.053 boundary and a
+  governed HTTPS executor, but no banking source adapter connecting those
+  contracts.
+- **Decision**: Add a read-only CAMT.053 HTTPS adapter with one exact endpoint
+  path, runtime secret-reference credentials, the existing 8 MiB parser limit,
+  optional expected-account isolation, and separate request/raw-response/
+  normalized-source digests. Keep cursor and write capabilities disabled.
+- **Verification**: Synthetic transport tests, malformed XML/XXE parser tests,
+  account-scope tests, parser-inventory closure, packaging, full regression,
+  and static/security/package gates pass locally.
+- **Boundary**: Provider dialect, source authenticity, certificate or
+  credential lifecycle, settlement, posting, write-back, and production
+  availability remain unverified.

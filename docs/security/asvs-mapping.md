@@ -93,8 +93,9 @@ away:
   unverified;
 - failed-authorization logging and a complete classified log inventory are
   planned; and
-- OAuth/OIDC, self-contained tokens, GraphQL, WebSocket, XML, and WebRTC must
-  be reassessed before those surfaces are introduced.
+- OAuth/OIDC, self-contained tokens, GraphQL, WebSocket, and WebRTC must be
+  reassessed before those surfaces are introduced. The current XML assessment
+  is limited to the bounded CAMT.053 parser and its synthetic transport tests.
 
 ## Maintenance gate
 

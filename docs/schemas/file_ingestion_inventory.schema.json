@@ -16,7 +16,8 @@
     "surfaces",
     "direct_tabular_parser_allowlist",
     "direct_json_parser_allowlist",
-    "direct_yaml_parser_allowlist"
+    "direct_yaml_parser_allowlist",
+    "direct_xml_parser_allowlist"
   ],
   "properties": {
     "schema_version": {"const": 1},
@@ -52,6 +53,11 @@
       "type": "array",
       "minItems": 1,
       "items": {"$ref": "#/$defs/yaml_parser_allowlist_entry"}
+    },
+    "direct_xml_parser_allowlist": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/xml_parser_allowlist_entry"}
     }
   },
   "$defs": {
@@ -204,13 +210,13 @@
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": {"enum": ["csv", "xls", "xlsx", "json", "yaml", "sqlite", "text"]}
+          "items": {"enum": ["csv", "xls", "xlsx", "json", "yaml", "xml", "sqlite", "text"]}
         },
         "parser_families": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": {"enum": ["csv-stdlib", "duckdb", "json-stdlib", "openpyxl", "pandas", "pyyaml", "sqlite"]}
+          "items": {"enum": ["csv-stdlib", "defusedxml", "duckdb", "json-stdlib", "openpyxl", "pandas", "pyyaml", "sqlite"]}
         },
         "policy_coverage": {"enum": ["complete", "partial", "none", "not-applicable"]},
         "status": {"enum": ["bounded", "partial", "planned", "excluded"]},
@@ -270,6 +276,18 @@
       "properties": {
         "path": {"$ref": "#/$defs/repository_path"},
         "parser": {"enum": ["json.load", "json.loads"]},
+        "call_count": {"type": "integer", "minimum": 1, "maximum": 20},
+        "surface_id": {"type": "string", "pattern": "^FI-[0-9]{3}$"},
+        "rationale": {"type": "string", "minLength": 20, "maxLength": 300}
+      }
+    },
+    "xml_parser_allowlist_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "parser", "call_count", "surface_id", "rationale"],
+      "properties": {
+        "path": {"$ref": "#/$defs/repository_path"},
+        "parser": {"enum": ["defusedxml.ElementTree.fromstring"]},
         "call_count": {"type": "integer", "minimum": 1, "maximum": 20},
         "surface_id": {"type": "string", "pattern": "^FI-[0-9]{3}$"},
         "rationale": {"type": "string", "minLength": 20, "maxLength": 300}

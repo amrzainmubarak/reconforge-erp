@@ -1,5 +1,5 @@
 schema_version: 2
-updated_at: "2026-08-06"
+updated_at: "2026-08-07"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
   evidence_base_commit: "5d401e70c3a0e3cf507c2c7cf635dfc99b01a9af"
@@ -3247,3 +3247,23 @@ tasks:
       known vulnerabilities excluding the local unpublished distribution, and
       the package build/source-distribution membership/diff-check pass. No live
       ERPNext or production isolation claim follows.
+  - id: E-589
+    priority: P1
+    area: connectors
+    title: Add governed CAMT.053 HTTPS bank-statement read boundary
+    status: completed
+    depends_on: [P4-CON-001, E-588]
+    exit_evidence: >-
+      The read-only bank-statement adapter composes the existing bounded
+      defusedxml CAMT.053 parser with the governed HTTPS executor. It binds an
+      exact provider path, resolves credentials only at runtime, caps responses
+      at 8 MiB, optionally enforces the expected account identifier, and
+      returns request, raw-response, and normalized-source digests. Endpoint
+      hardening, malformed-response refusal, account mismatch refusal, secret
+      non-disclosure, parser-inventory, module-registry, packaging, focused
+      regression, full local regression (2,697 tests in 349.8 seconds),
+      Mypy (488 source files), Ruff, Bandit, pip-audit, package build,
+      source-distribution membership, and diff-check pass. This is synthetic provider evidence
+      only; it does not establish a bank dialect, source authenticity,
+      certificate lifecycle, settlement, posting, write-back, or production
+      availability.

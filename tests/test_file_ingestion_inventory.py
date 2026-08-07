@@ -90,6 +90,31 @@ def _production_yaml_parser_calls() -> Counter[tuple[str, str]]:
     return calls
 
 
+def _production_xml_parser_calls() -> Counter[tuple[str, str]]:
+    calls: Counter[tuple[str, str]] = Counter()
+    for path in sorted((ROOT / "reconforge").rglob("*.py")):
+        relative = path.relative_to(ROOT).as_posix()
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=relative)
+        element_tree_aliases = {
+            alias.asname or alias.name
+            for node in tree.body
+            if isinstance(node, ast.ImportFrom)
+            and node.module == "defusedxml"
+            for alias in node.names
+            if alias.name == "ElementTree"
+        }
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id in element_tree_aliases
+                and node.func.attr == "fromstring"
+            ):
+                calls[(relative, "defusedxml.ElementTree.fromstring")] += 1
+    return calls
+
+
 def _production_json_parser_calls() -> Counter[tuple[str, str]]:
     calls: Counter[tuple[str, str]] = Counter()
     for path in sorted((ROOT / "reconforge").rglob("*.py")):
@@ -251,3 +276,16 @@ def test_direct_yaml_parser_inventory_is_an_exact_ast_allowlist() -> None:
         declared[key] = int(entry["call_count"])
 
     assert _production_yaml_parser_calls() == declared
+
+
+def test_direct_xml_parser_inventory_is_an_exact_ast_allowlist() -> None:
+    inventory = _inventory()
+    declared: Counter[tuple[str, str]] = Counter()
+    known_surfaces = {surface["id"] for surface in inventory["surfaces"]}
+    for entry in inventory["direct_xml_parser_allowlist"]:
+        key = (entry["path"], entry["parser"])
+        assert key not in declared
+        assert entry["surface_id"] in known_surfaces
+        declared[key] = int(entry["call_count"])
+
+    assert _production_xml_parser_calls() == declared

@@ -1,5 +1,13 @@
 """Safe, manifest-driven connector SDK contracts."""
 
+from reconforge.connectors.bank_statement_camt053 import (
+    BANK_STATEMENT_CAMT053_ENDPOINT,
+    BANK_STATEMENT_CAMT053_MANIFEST,
+    BANK_STATEMENT_CAMT053_PATH,
+    BankStatementCamt053Connector,
+    BankStatementCamt053Read,
+    bank_statement_camt053_registration,
+)
 from reconforge.connectors.camt053 import (
     CAMT053_SCHEMA_VERSION,
     MAX_CAMT053_BYTES,
@@ -231,6 +239,12 @@ __all__ = [
     "parse_camt053_bytes",
     "parse_camt053_file",
     "project_camt053_to_payment_statement_pages",
+    "BANK_STATEMENT_CAMT053_ENDPOINT",
+    "BANK_STATEMENT_CAMT053_MANIFEST",
+    "BANK_STATEMENT_CAMT053_PATH",
+    "BankStatementCamt053Connector",
+    "BankStatementCamt053Read",
+    "bank_statement_camt053_registration",
     "POSTGRES_DATABASE_ENDPOINT",
     "POSTGRES_DATABASE_MANIFEST",
     "PostgresDatabaseConnector",

@@ -1,6 +1,6 @@
 # Execution State
 
-Updated: 2026-08-06
+Updated: 2026-08-07
 
 ## Current phase
 
@@ -5498,3 +5498,15 @@ The current 2,689-test full regression passes in 349.2 seconds; Mypy (487
 files), Ruff, Bandit, pip-audit, package build, source membership, and
 diff-check pass. Live ERPNext filtering and production isolation remain
 external.
+
+E-589 adds a bounded CAMT.053 HTTPS bank-statement source on top of the
+existing `defusedxml` parser and governed network executor. The adapter uses an
+exact HTTPS path, runtime secret-reference authentication, an 8 MiB response
+ceiling, optional expected-account isolation, and request/raw-response/
+normalized-source digests. Focused connector, parser-inventory, registry, and
+network tests pass. The full 2,697-test local regression exits 0 in 349.8
+seconds; Mypy reports no issues in 488 source files; Ruff, Bandit, pip-audit,
+package build, source-distribution membership, and diff-check pass. Provider
+dialect, source authenticity, certificate and credential lifecycle, settlement,
+posting, write-back, and production availability remain external; GitHub
+publication remains deferred.

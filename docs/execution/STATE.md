@@ -5241,3 +5241,10 @@ full 2,638-test regression and all local static/package gates successfully.
 E-545 records checksum-verified local Gitleaks history and clean-archive tree
 scans with zero leaks; the supplied hosted security failure still requires a
 fresh hosted rerun after publication.
+
+E-546 adds organization binding to central server policy re-evaluation. For
+workspace-scoped server requests the helper derives the organization from the
+validated header when needed, passes authorized organization IDs into ABAC, and
+rejects explicit/header mismatch before evaluation. E-547 records a green
+2,638-test regression and local static/package gate; universal surface
+adoption, live IAM/provider runtime, HA/DR, and hosted approval remain open.

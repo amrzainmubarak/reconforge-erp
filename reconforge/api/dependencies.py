@@ -37,6 +37,7 @@ from reconforge.db.tenancy import (
     TenantDatabaseRouter,
     TenantRoutingError,
 )
+from reconforge.infrastructure.postgres import PostgresConfigurationError, normalize_scope_id
 from reconforge.platform.common import ServerPrincipal, current_server_principal, server_principal_context
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -278,6 +279,7 @@ def enforce_server_scoped_permissions(
     permissions: frozenset[str],
     tenant_id: str,
     workspace_id: str | None,
+    organization_id: str | None = None,
     entity_id: str | None = None,
 ) -> None:
     """Re-evaluate one of several permissions against the server hierarchy.
@@ -298,6 +300,22 @@ def enforce_server_scoped_permissions(
 
     if request_tenant_id(request) != tenant_id:
         raise APIError(status_code=403, code="tenant_scope_denied", message="Tenant scope is not authorized.")
+    if workspace_id is not None:
+        raw_organization = request.headers.get("x-reconforge-organization", "").strip()
+        header_organization = None
+        if raw_organization:
+            try:
+                header_organization = normalize_scope_id(raw_organization, field_name="organization_id")
+            except PostgresConfigurationError as exc:
+                raise APIError(status_code=400, code="invalid_execution_scope", message=str(exc)) from exc
+        if organization_id is None:
+            organization_id = header_organization
+        elif header_organization is not None and organization_id != header_organization:
+            raise APIError(
+                status_code=403,
+                code="organization_scope_denied",
+                message="Organization scope is not authorized.",
+            )
     principal = getattr(request.state, "server_principal", None)
     if not isinstance(principal, ServerPrincipal):
         principal = current_server_principal()
@@ -314,9 +332,11 @@ def enforce_server_scoped_permissions(
         step_up_method=principal.step_up_method,
         tenant_id=tenant_id,
         workspace_id=workspace_id,
+        organization_id=organization_id,
         entity_id=entity_id,
         authorized_tenant_ids=frozenset({tenant_id}),
         authorized_workspace_ids=principal.authorized_workspace_ids,
+        authorized_organization_ids=principal.authorized_organization_ids,
         authorized_entity_ids=principal.authorized_legal_entity_ids,
     )
     decision = _evaluate_any_policy(request, context, required_permissions=permissions)
@@ -333,6 +353,7 @@ def enforce_server_scoped_permissions(
     code = decision.reason_code if decision.reason_code in {
         "tenant_scope_denied",
         "workspace_scope_denied",
+        "organization_scope_denied",
         "entity_scope_denied",
         "step_up_required",
         "mfa_required",
@@ -342,6 +363,7 @@ def enforce_server_scoped_permissions(
         "mfa_required": "User-verified WebAuthn MFA is required.",
         "tenant_scope_denied": "Tenant scope is not authorized.",
         "workspace_scope_denied": "Workspace scope is not authorized.",
+        "organization_scope_denied": "Organization scope is not authorized.",
         "entity_scope_denied": "Legal-entity scope is not authorized.",
     }.get(code, "Permission denied.")
     raise APIError(status_code=403, code=code, message=message)
@@ -353,6 +375,7 @@ def enforce_server_scoped_permission(
     permission: str,
     tenant_id: str,
     workspace_id: str,
+    organization_id: str | None = None,
     entity_id: str | None = None,
 ) -> None:
     """Re-evaluate one permission against the selected server hierarchy."""
@@ -362,6 +385,7 @@ def enforce_server_scoped_permission(
         permissions=frozenset({permission}),
         tenant_id=tenant_id,
         workspace_id=workspace_id,
+        organization_id=organization_id,
         entity_id=entity_id,
     )
 

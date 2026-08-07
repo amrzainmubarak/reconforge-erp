@@ -5594,3 +5594,18 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: This improves provenance at the database idempotency boundary;
   it is not external broker exactly-once, provider acknowledgement, HA/DR, or
   production evidence.
+
+### D-387: Bind server policy re-evaluation to organization scope
+
+- **Date**: 2026-08-07
+- **Context**: Central server policy re-evaluation carried tenant/workspace
+  and optional entity dimensions but could omit the organization header.
+- **Decision**: Add optional organization scope to the helper and context;
+  derive it from `X-ReconForge-Organization` for workspace requests and fail
+  closed on explicit/header mismatch before policy evaluation.
+- **Verification**: Focused execution-scope tests pass 21/21; the full 2,638
+  test regression, Ruff, Mypy, Bandit, pip-audit, build, and diff-check pass;
+  ADR 0411 is packaged.
+- **Boundary**: This is a central request-policy primitive only; universal
+  route/job/export/UI adoption, federation, live IAM, HA/DR, and production
+  readiness remain open.

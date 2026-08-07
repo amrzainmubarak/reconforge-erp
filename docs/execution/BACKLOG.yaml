@@ -2595,3 +2595,32 @@ tasks:
       tree with zero leaks. This is local security evidence only; the supplied
       hosted leak result still requires a fresh hosted history/tree run after
       publication.
+  - id: E-546
+    priority: P1
+    area: enterprise_policy
+    title: Organization-bound server policy re-evaluation
+    status: completed
+    depends_on: [E-540]
+    exit_evidence: >-
+      `enforce_server_scoped_permissions` now carries an optional organization
+      scope, derives it from `X-ReconForge-Organization` for workspace-scoped
+      server requests, rejects explicit/header mismatches before policy
+      evaluation, and passes authorized organization IDs into central ABAC.
+      Focused execution-scope tests pass 21/21; ADR 0411 is packaged. This is a
+      central request-policy primitive, not universal route/job/export/UI
+      adoption, federation, live IAM, PostgreSQL runtime, or production
+      readiness.
+  - id: E-547
+    priority: P0
+    area: quality
+    title: Regression and static/package gate after organization policy binding
+    status: completed
+    depends_on: [E-546]
+    exit_evidence: >-
+      The current tree collects 2,638 tests and `uv run --no-sync pytest -q
+      --basetemp .pytest-tmp-e547 --tb=short -ra` exits 0 after 381.3 seconds
+      with no collection or executed failure; declared live-service skips
+      remain visible. Ruff, Mypy (481 source files), Bandit, OSV
+      `pip-audit -s osv`, package build/source membership, and `git diff --check`
+      pass. Hosted CI/security/provenance, live PostgreSQL/provider runtimes,
+      federation, HA/DR, and release approval remain external.

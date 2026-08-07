@@ -177,6 +177,75 @@ def test_server_scoped_permission_allows_granted_workspace_and_audits_without_ra
     )
 
 
+def test_server_scoped_permission_binds_organization_header_and_grant(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from fastapi import FastAPI
+
+    app = FastAPI()
+    app.state.policy_decision_cache = None
+    import reconforge.api.dependencies as dependencies
+
+    monkeypatch.setattr(dependencies, "server_identity_enabled", lambda _request: True)
+    request = _request(
+        {
+            "X-ReconForge-Tenant": "tenant-a",
+            "X-ReconForge-Workspace": "workspace-a",
+            "X-ReconForge-Organization": "organization-a",
+        },
+        ServerPrincipal(
+            user=LocalUser(id="user-a", username="alice", display_name="Alice"),
+            permissions=frozenset({"finance_core.manage"}),
+            step_up_active=True,
+            authorized_workspace_ids=frozenset({"workspace-a"}),
+            authorized_organization_ids=frozenset({"organization-a"}),
+        ),
+    )
+    request.scope["app"] = app
+    enforce_server_scoped_permission(
+        request,
+        permission="finance_core.manage",
+        tenant_id="tenant-a",
+        workspace_id="workspace-a",
+    )
+
+
+def test_server_scoped_permission_rejects_explicit_organization_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from fastapi import FastAPI
+
+    app = FastAPI()
+    app.state.policy_decision_cache = None
+    import reconforge.api.dependencies as dependencies
+
+    monkeypatch.setattr(dependencies, "server_identity_enabled", lambda _request: True)
+    request = _request(
+        {
+            "X-ReconForge-Tenant": "tenant-a",
+            "X-ReconForge-Workspace": "workspace-a",
+            "X-ReconForge-Organization": "organization-a",
+        },
+        ServerPrincipal(
+            user=LocalUser(id="user-a", username="alice", display_name="Alice"),
+            permissions=frozenset({"finance_core.manage"}),
+            step_up_active=True,
+            authorized_workspace_ids=frozenset({"workspace-a"}),
+            authorized_organization_ids=frozenset({"organization-a", "organization-b"}),
+        ),
+    )
+    request.scope["app"] = app
+    with pytest.raises(APIError) as denied:
+        enforce_server_scoped_permission(
+            request,
+            permission="finance_core.manage",
+            tenant_id="tenant-a",
+            workspace_id="workspace-a",
+            organization_id="organization-b",
+        )
+    assert denied.value.code == "organization_scope_denied"
+
+
 def test_server_scoped_permission_rejects_caller_supplied_sibling_tenant(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

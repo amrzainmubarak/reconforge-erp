@@ -661,6 +661,7 @@ include tests/test_postgres_consolidation_ownership_change.py
 include docs/adr/0401-ownership-change-cli-is-local-non-posting.md
 include docs/adr/0409-postgres-outbox-hierarchy-scoped-worker.md
 include docs/adr/0410-postgres-outbox-consumer-hierarchy.md
+include docs/adr/0411-server-policy-organization-scope.md
 include tests/test_consolidation_cli.py
 include docs/schemas/consolidation_impairment_v1.schema.json
 include tests/test_consolidation_impairment.py

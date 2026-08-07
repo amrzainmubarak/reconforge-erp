@@ -5314,3 +5314,15 @@ E-559 reruns the complete local regression after the evidence hierarchy slice:
 declared external service/platform skips visible. Hosted CI/security/provenance,
 live providers, federation, HA/DR, release approval, and GitHub publication
 remain deferred.
+
+E-560 extends the hierarchy policy closure to the intercompany evidence API:
+prepare and read now pass tenant/workspace/organization/legal-entity into ABAC
+before PostgreSQL access. Five focused route contracts pass and ADR 0416 is
+packaged. The required full regression for this new slice is still pending;
+GitHub publication remains deferred.
+
+The first E-561 attempt exposed a documentation-contract failure rather than a
+product failure: `pending` is not an allowed backlog status. Changing it to
+the declared `in_progress` value restored the execution contract; the rerun
+passed all 2,647 tests in 337.1 seconds, so E-561 is now complete. The initial
+failure remains recorded in EVIDENCE.md.

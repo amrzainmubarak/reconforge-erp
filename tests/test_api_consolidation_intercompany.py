@@ -69,9 +69,16 @@ def test_intercompany_api_computes_with_authenticated_actor(tmp_path: Path, monk
     monkeypatch.setattr(
         routes,
         "request_execution_scope",
-        lambda _request: RequestExecutionScope(tenant_id="tenant-a", workspace_id="default"),
+        lambda _request: RequestExecutionScope(
+            tenant_id="tenant-a", workspace_id="default", organization_id="org-a", legal_entity_id="entity-a"
+        ),
     )
-    monkeypatch.setattr(routes, "enforce_server_scoped_permission", lambda *_args, **_kwargs: None)
+    scoped_permissions: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        routes,
+        "enforce_server_scoped_permission",
+        lambda _request, **kwargs: scoped_permissions.append(kwargs),
+    )
     created = client.post("/api/v1/consolidation-intercompany-eliminations", headers=headers, json=_body())
     assert created.status_code == 200, created.text
     assert created.json()["artifact"]["posting"] == "not_available"
@@ -84,6 +91,22 @@ def test_intercompany_api_computes_with_authenticated_actor(tmp_path: Path, monk
         headers=headers,
     )
     assert loaded.status_code == 200
+    assert scoped_permissions == [
+        {
+            "permission": "finance_core.manage",
+            "tenant_id": "tenant-a",
+            "workspace_id": "default",
+            "organization_id": "org-a",
+            "entity_id": "entity-a",
+        },
+        {
+            "permission": "finance_core.read",
+            "tenant_id": "tenant-a",
+            "workspace_id": "default",
+            "organization_id": "org-a",
+            "entity_id": "entity-a",
+        },
+    ]
     invalid = _body()
     invalid["unexpected"] = True
     assert client.post(

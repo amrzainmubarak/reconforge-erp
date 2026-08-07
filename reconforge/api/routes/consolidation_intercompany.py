@@ -102,6 +102,8 @@ def _scope_for_payload(request: Request, workspace: str) -> RequestExecutionScop
         permission="finance_core.manage",
         tenant_id=scope.tenant_id,
         workspace_id=scope.workspace_id,
+        organization_id=scope.organization_id,
+        entity_id=scope.legal_entity_id,
     )
     return scope
 
@@ -150,6 +152,8 @@ def get_intercompany(
         permission="finance_core.read",
         tenant_id=scope.tenant_id,
         workspace_id=scope.workspace_id,
+        organization_id=scope.organization_id,
+        entity_id=scope.legal_entity_id,
     )
     artifact = execute_postgres_consolidation_intercompany(
         request,

@@ -5703,3 +5703,15 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   four-part scope assertions; Ruff/Mypy pass and ADR 0415 is packaged.
 - **Boundary**: This is one route family, not complete API/job/export/UI IAM,
   federation, distributed invalidation, live providers, HA/DR, or production IAM.
+
+### D-394: Bind intercompany policy checks to the full execution hierarchy
+
+- **Date**: 2026-08-07
+- **Context**: Intercompany PostgreSQL RLS restored organization/entity scope,
+  but prepare/read ABAC calls supplied only tenant/workspace.
+- **Decision**: Forward organization and legal-entity scope to both route policy
+  checks while preserving workspace payload validation and non-posting behavior.
+- **Verification**: Focused intercompany/reconciliation/evidence contracts pass
+  5 tests with exact hierarchy assertions; Ruff/Mypy pass and ADR 0416 is packaged.
+- **Boundary**: One route family only; posting, providers/write-back, distributed
+  IAM, HA/DR, and production readiness remain open.

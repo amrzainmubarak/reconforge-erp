@@ -5451,3 +5451,10 @@ ObservabilityRuntime; failure transitions are recorded before the original
 error is raised, and no tenant/record/amount identifiers are exported. The
 current 2,660-test regression and static checks pass. Collector delivery,
 alerting, capacity, HA/DR, and GitHub publication remain deferred.
+
+E-584 completes the durable-job terminal worker telemetry boundary: completion,
+final-partition completion, retry, failure, pause, and cancellation now emit
+optional safe low-cardinality transitions; checkpoints and partition effects
+remain intentionally uninstrumented for scale. The current 2,660-test full
+regression, Mypy, package build, and diff checks pass. Collector delivery,
+alerting, capacity, HA/DR, and GitHub publication remain deferred.

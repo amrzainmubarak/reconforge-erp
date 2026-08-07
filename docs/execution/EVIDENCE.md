@@ -14425,3 +14425,12 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   with declared external-service/platform skips, and Ruff, Mypy, package build,
   and diff-check pass. Collector delivery, alerting, throughput, capacity,
   HA/DR, and production SLO evidence remain external.
+- E-584 durable-job terminal worker telemetry (2026-08-07): completion,
+  final-partition completion, retry, failure, pause, and cancellation now emit
+  optional closed low-cardinality spans/job transitions; persistence errors are
+  recorded before propagation, and no tenant/workspace/job/worker/partition or
+  payload data is exported. The focused observability contract passes; the
+  current 2,660-test full regression exits 0 in 340.8 seconds, Mypy reports no
+  issues in 485 source files, Ruff/package build/diff-check pass, and ADR 0430
+  is present in the source distribution. Collector delivery, alerting,
+  throughput, capacity, HA/DR, and production SLO evidence remain external.

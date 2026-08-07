@@ -5930,3 +5930,16 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   Mypy, package build, and diff-check must pass.
 - **Boundary**: Instrumentation only; no collector, alerting, capacity, HA/DR,
   or production SLO claim follows.
+
+### D-410: Bound durable-job telemetry to terminal transitions
+
+- **Date**: 2026-08-07
+- **Context**: Claim visibility did not cover worker terminal outcomes, while
+  per-partition spans would impose unbounded telemetry volume.
+- **Decision**: Instrument only terminal durable-job operations with the closed
+  low-cardinality telemetry contract. Record persistence errors before
+  re-raising; never attach job, tenant, worker, partition, or payload data.
+- **Verification**: Focused observability, full regression, Ruff, Mypy, package
+  build, and diff-check gates must pass.
+- **Boundary**: Lifecycle instrumentation only; no collector, alerting,
+  capacity, HA/DR, or production SLO claim follows.

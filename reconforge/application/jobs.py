@@ -558,14 +558,28 @@ class DurableJobWorkerService:
             effect_reference=effect_reference,
             committed_at=occurred_at,
         )
-        return self._repository.persist_owned_effect_transition(
-            leased_job.job,
-            changed,
-            event,
-            effect,
-            lease=leased_job.lease,
-            release_lease=True,
-        )
+        attributes: dict[str, object] = {
+            "job.type": "durable",
+            "job.status": JobStatus.COMPLETED.value,
+            "reconforge.operation": "complete_partition",
+        }
+        with self._observability.span("reconforge.job.complete_partition", attributes) as span:
+            try:
+                persisted = self._repository.persist_owned_effect_transition(
+                    leased_job.job,
+                    changed,
+                    event,
+                    effect,
+                    lease=leased_job.lease,
+                    release_lease=True,
+                )
+            except Exception:
+                self._observability.record_job({**attributes, "reconforge.result": "error"})
+                raise
+            if span is not None:
+                span.set_attribute("reconforge.result", "persisted")
+            self._observability.record_job({**attributes, "reconforge.result": "persisted"})
+            return persisted
 
     def complete(
         self,
@@ -582,13 +596,27 @@ class DurableJobWorkerService:
             completed_units=leased_job.job.total_units,
             output_manifest=output_manifest,
         )
-        return self._repository.persist_owned_transition(
-            leased_job.job,
-            changed,
-            event,
-            lease=leased_job.lease,
-            release_lease=True,
-        )
+        attributes: dict[str, object] = {
+            "job.type": "durable",
+            "job.status": JobStatus.COMPLETED.value,
+            "reconforge.operation": "complete",
+        }
+        with self._observability.span("reconforge.job.complete", attributes) as span:
+            try:
+                persisted = self._repository.persist_owned_transition(
+                    leased_job.job,
+                    changed,
+                    event,
+                    lease=leased_job.lease,
+                    release_lease=True,
+                )
+            except Exception:
+                self._observability.record_job({**attributes, "reconforge.result": "error"})
+                raise
+            if span is not None:
+                span.set_attribute("reconforge.result", "persisted")
+            self._observability.record_job({**attributes, "reconforge.result": "persisted"})
+            return persisted
 
 
     def schedule_retry(self, leased_job: LeasedJob, *, occurred_at: str) -> DurableJob:
@@ -597,6 +625,7 @@ class DurableJobWorkerService:
             to_status=JobStatus.RETRYING,
             occurred_at=occurred_at,
             reason_code="TRANSIENT_FAILURE",
+            operation="schedule_retry",
         )
 
     def fail(
@@ -612,6 +641,7 @@ class DurableJobWorkerService:
             occurred_at=occurred_at,
             reason_code="TERMINAL_FAILURE",
             safe_error_code=safe_error_code,
+            operation="fail",
         )
 
     def pause(self, leased_job: LeasedJob, *, occurred_at: str) -> DurableJob:
@@ -620,6 +650,7 @@ class DurableJobWorkerService:
             to_status=JobStatus.PAUSED,
             occurred_at=occurred_at,
             reason_code="OPERATOR_PAUSE",
+            operation="pause",
         )
 
     def cancel(self, leased_job: LeasedJob, *, occurred_at: str) -> DurableJob:
@@ -628,6 +659,7 @@ class DurableJobWorkerService:
             to_status=JobStatus.CANCELLED,
             occurred_at=occurred_at,
             reason_code="CANCELLED",
+            operation="cancel",
         )
 
     def _finish_with_status(
@@ -638,6 +670,7 @@ class DurableJobWorkerService:
         occurred_at: str,
         reason_code: str,
         safe_error_code: str = "",
+        operation: str = "finish",
     ) -> DurableJob:
         changed, event = leased_job.job.transition(
             to_status,
@@ -646,13 +679,27 @@ class DurableJobWorkerService:
             reason_code=reason_code,
             safe_error_code=safe_error_code,
         )
-        return self._repository.persist_owned_transition(
-            leased_job.job,
-            changed,
-            event,
-            lease=leased_job.lease,
-            release_lease=True,
-        )
+        attributes: dict[str, object] = {
+            "job.type": "durable",
+            "job.status": to_status.value,
+            "reconforge.operation": operation,
+        }
+        with self._observability.span(f"reconforge.job.{operation}", attributes) as span:
+            try:
+                persisted = self._repository.persist_owned_transition(
+                    leased_job.job,
+                    changed,
+                    event,
+                    lease=leased_job.lease,
+                    release_lease=True,
+                )
+            except Exception:
+                self._observability.record_job({**attributes, "reconforge.result": "error"})
+                raise
+            if span is not None:
+                span.set_attribute("reconforge.result", "persisted")
+            self._observability.record_job({**attributes, "reconforge.result": "persisted"})
+            return persisted
 
 
 class GovernedDurableJobWorkerService:

@@ -2858,3 +2858,33 @@ tasks:
       remain visible; package build, Ruff, Mypy, and diff-check pass. Hosted
       CI/security/provenance, live providers, federation, HA/DR, and release
       approval remain external.
+  - id: E-564
+    priority: P1
+    area: financial_consolidation
+    title: PostgreSQL PPA hierarchy attribution
+    status: completed
+    depends_on: [E-562, P4-FIN-002]
+    exit_evidence: >-
+      Migration `0076_pg_consolidation_ppa_scope` adds nullable organization and
+      legal-entity attribution, foreign keys, hierarchy-aware RLS, scoped result
+      uniqueness, and a rollback that restores the tenant-only policy. The PPA
+      repository and server adapter carry optional hierarchy, preserve unscoped
+      legacy digest identity, and prevent scoped requests from reading NULL
+      legacy rows. Static/schema/API/replay contracts and package membership
+      pass; live PostgreSQL hierarchy isolation, statutory accounting, provider
+      write-back, HA/DR, and production readiness remain open.
+  - id: E-565
+    priority: P0
+    area: quality
+    title: Full regression gate after PPA hierarchy attribution
+    status: completed
+    depends_on: [E-564]
+    exit_evidence: >-
+      The current tree collects 2,650 tests and
+      `uv run --no-sync pytest -q --basetemp .pytest-tmp-e565 --tb=short -ra`
+      exits 0 in 380.5 seconds with no collection or executed failure. Declared
+      PostgreSQL, Redis, object-storage, network, Windows, and platform skips
+      remain visible; package build includes ADR 0418, migration 0076, and the
+      scope helper; Ruff, Mypy, and diff-check pass. Hosted CI/security/
+      provenance, live providers, federation, HA/DR, and release approval
+      remain external.

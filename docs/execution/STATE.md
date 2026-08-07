@@ -5334,3 +5334,11 @@ and dependent-route tests pass and ADR 0417 is packaged. E-563 then passed all
 2,647 tests in 404.2 seconds with declared external-service skips visible;
 tenant-only persistence, hosted release evidence, and GitHub publication remain
 deferred.
+
+E-564 begins closing the storage-side gap for consolidation evidence: PPA
+artifacts now have an additive migration, hierarchy-aware RLS and uniqueness,
+optional repository/API scope, and explicit legacy-row compatibility. Focused
+contracts and package membership pass; E-565 then passed all 2,650 tests in
+380.5 seconds with declared external-service skips visible. Impairment and
+deferred-tax persistence still require equivalent migrations, and GitHub
+publication remains deferred.

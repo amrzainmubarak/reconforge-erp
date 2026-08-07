@@ -5728,3 +5728,17 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   pass 23 focused tests; Ruff/Mypy pass and ADR 0417 is packaged.
 - **Boundary**: Tenant-only persistence remains tenant-only; this is not
   multi-entity row isolation, complete IAM, federation, HA/DR, or production readiness.
+
+### D-396: Persist hierarchy attribution for PostgreSQL PPA evidence
+
+- **Date**: 2026-08-07
+- **Context**: PPA central ABAC accepted organization/entity scope, but the
+  immutable PostgreSQL table retained only tenant identity.
+- **Decision**: Add nullable hierarchy columns, transaction defaults, foreign
+  keys, RLS predicates, scoped digest uniqueness, and optional repository/API
+  scope. Preserve tenant-only legacy identity and make scoped reads fail closed
+  against NULL-attributed legacy rows.
+- **Verification**: Static migration, repository, API, replay, and package
+  contracts pass; live PostgreSQL hierarchy isolation is still required.
+- **Boundary**: This closes PPA evidence storage only; impairment/deferred-tax
+  tables, statutory posting, providers/write-back, HA/DR, and production IAM remain open.

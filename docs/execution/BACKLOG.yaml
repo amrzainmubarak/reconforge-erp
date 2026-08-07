@@ -2698,3 +2698,16 @@ tasks:
       capability skips remain visible. Existing local static, security, package,
       and diff gates remain green; hosted CI/security/provenance, live database
       restore, HA/DR, and release approval remain external.
+  - id: E-553
+    priority: P0
+    area: quality
+    title: Python 3.11 all-extras dependency collection regression
+    status: completed
+    depends_on: [E-552]
+    exit_evidence: >-
+      Under the locked all-extras Python 3.11 profile, the seven historical
+      dependency-sensitive test modules pass 48 tests with one declared live
+      PostgreSQL skip and no collection ImportError. Direct imports of cbor2,
+      cryptography, and opentelemetry SDK also succeed. The local verification
+      confirms the workflow's dependency profile; a fresh hosted matrix rerun
+      is still required for release approval.

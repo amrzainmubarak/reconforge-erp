@@ -5271,3 +5271,9 @@ E-552 reruns the complete local regression after that coverage: 2,643 tests pass
 in 335.4 seconds with no collection or executed failure, while declared service
 and platform skips remain visible. Hosted CI/security/provenance, live database
 restore, HA/DR, release approval, and GitHub publication remain deferred.
+
+E-553 verifies the historical Python 3.11 dependency failures under the locked
+all-extras profile: 48 tests pass, one live-PostgreSQL test is declared skipped,
+and `cbor2`, `cryptography`, and `opentelemetry.sdk` import successfully. This
+is local dependency evidence; hosted matrix/security reruns and publication
+remain deferred.

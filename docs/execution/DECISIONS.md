@@ -5067,6 +5067,7 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: Test-fixture/schema-contract closure only; statutory close,
   live providers/write-back, distributed scale, independent HA/DR, and production
   readiness remain open.
+
 - **Reversibility**: Remove the two schema installs, grants, ADR, manifest entry,
   and evidence; no production migration or data rollback is required.
 
@@ -5609,3 +5610,18 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: This is a central request-policy primitive only; universal
   route/job/export/UI adoption, federation, live IAM, HA/DR, and production
   readiness remain open.
+
+### D-388: Keep hosted security findings separated from local policy evidence
+
+- **Date**: 2026-08-07
+- **Context**: The supplied hosted security run reported a Gitleaks finding and
+  therefore failed its required context, while the current local tree needed
+  an independently reproducible policy check.
+- **Decision**: Record local supply-chain validator and clean Gitleaks results
+  as local evidence only; do not downgrade the hosted failure or claim release
+  approval until hosted history/tree, npm audit, provenance, and required-context
+  jobs rerun successfully.
+- **Verification**: The local validator returns `status=valid`, zero active
+  exceptions, zero npm integrity gaps, and no pip/npm findings.
+- **Boundary**: Local evidence cannot substitute for hosted security or release
+  attestation.

@@ -2624,3 +2624,15 @@ tasks:
       `pip-audit -s osv`, package build/source membership, and `git diff --check`
       pass. Hosted CI/security/provenance, live PostgreSQL/provider runtimes,
       federation, HA/DR, and release approval remain external.
+  - id: E-548
+    priority: P0
+    area: security
+    title: Local supply-chain policy gate after hosted security findings
+    status: completed
+    depends_on: [E-545, E-547]
+    exit_evidence: >-
+      `uv run --no-sync python .github/scripts/validate_supply_chain_policy.py
+      --project-root .` returns status `valid`, with zero active exceptions,
+      zero npm integrity gaps, and no recorded pip/npm findings. This is local
+      policy/configuration evidence; hosted Gitleaks, npm audit, provenance,
+      and required-security-context reruns remain external.

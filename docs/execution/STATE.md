@@ -5248,3 +5248,6 @@ validated header when needed, passes authorized organization IDs into ABAC, and
 rejects explicit/header mismatch before evaluation. E-547 records a green
 2,638-test regression and local static/package gate; universal surface
 adoption, live IAM/provider runtime, HA/DR, and hosted approval remain open.
+E-548 also passes the local closed supply-chain policy validator with zero
+active exceptions and zero npm integrity gaps. Hosted security jobs and
+required-context status still need a fresh external run.

@@ -5289,3 +5289,15 @@ E-555 reruns the complete local regression after this slice: 2,647 tests pass
 in 380.3 seconds with no collection or executed failure and declared external
 service/platform skips visible. Hosted CI/security/provenance, live providers,
 HA/DR, release approval, and GitHub publication remain deferred.
+
+E-556 closes the reconciliation read-policy gap locally: five read surfaces and
+the mutation guards re-evaluate the full tenant/workspace/organization/entity
+hierarchy immediately before PostgreSQL access. The synthetic route/scope gate
+passes 14 tests and ADR 0414 is packaged. Complete enterprise IAM adoption,
+live PostgreSQL, federation, HA/DR, and GitHub publication remain deferred.
+
+E-557 reruns the complete local regression after the IAM route slice: 2,647 tests
+pass in 340.7 seconds with no collection or executed failure and declared
+external service/platform skips visible. Hosted CI/security/provenance, live
+PostgreSQL, federation, HA/DR, release approval, and GitHub publication remain
+deferred.

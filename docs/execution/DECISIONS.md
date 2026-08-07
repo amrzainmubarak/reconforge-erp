@@ -5675,3 +5675,18 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: Declaration and local simulation only; PostgreSQL runtime,
   cross-engine parity, large-scale performance, settlement posting, and
   provider write-back remain unverified.
+
+### D-392: Bind reconciliation reads to the same hierarchy as writes
+
+- **Date**: 2026-08-07
+- **Context**: Reconciliation read dependencies checked global permissions, but
+  only mutations invoked central server-scope re-evaluation before PostgreSQL
+  access.
+- **Decision**: Add an any-of read guard to run listing, detail, and child reads;
+  pass optional organization/legal-entity scope to both read and mutation
+  guards. Preserve local SQLite compatibility and the existing transaction RLS
+  boundary.
+- **Verification**: The route fixture passes 14 tests and asserts exact
+  hierarchy values for all eleven read/write calls; Ruff/Mypy pass.
+- **Boundary**: This is one reconciliation route family, not complete API/job/
+  export/UI IAM, federation, distributed revocation, HA/DR, or production IAM.

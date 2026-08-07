@@ -101,7 +101,7 @@ def test_server_reconciliation_routes_are_tenant_scoped_and_read_only(tmp_path: 
     monkeypatch.setattr(
         reconciliation_routes,
         "request_execution_scope",
-        lambda _request: RequestExecutionScope("tenant-a", "workspace-a"),
+        lambda _request: RequestExecutionScope("tenant-a", "workspace-a", "org-a", "entity-a"),
     )
     monkeypatch.setattr(
         reconciliation_routes,
@@ -243,38 +243,34 @@ def test_server_reconciliation_routes_are_tenant_scoped_and_read_only(tmp_path: 
     assert cancelled.json()["run"]["cancel_requested"] is True
     assert requeued.status_code == 200
     assert requeued.json()["run"]["execution_status"] == "Queued"
-    assert scoped_permissions == [
+    assert len(scoped_permissions) == 11
+    assert scoped_permissions[:4] == [
         {
             "permissions": frozenset({"reconciliation.manage", "match.run"}),
             "tenant_id": "tenant-a",
             "workspace_id": "workspace-a",
-        },
+            "organization_id": "org-a",
+            "entity_id": "entity-a",
+        }
+    ] * 4
+    assert scoped_permissions[4:9] == [
+        {
+            "permissions": frozenset({"reconciliation.read", "reconciliation.manage", "match.read", "match.run"}),
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+            "organization_id": "org-a",
+            "entity_id": "entity-a",
+        }
+    ] * 5
+    assert scoped_permissions[9:] == [
         {
             "permissions": frozenset({"reconciliation.manage", "match.run"}),
             "tenant_id": "tenant-a",
             "workspace_id": "workspace-a",
-        },
-        {
-            "permissions": frozenset({"reconciliation.manage", "match.run"}),
-            "tenant_id": "tenant-a",
-            "workspace_id": "workspace-a",
-        },
-        {
-            "permissions": frozenset({"reconciliation.manage", "match.run"}),
-            "tenant_id": "tenant-a",
-            "workspace_id": "workspace-a",
-        },
-        {
-            "permissions": frozenset({"reconciliation.manage", "match.run"}),
-            "tenant_id": "tenant-a",
-            "workspace_id": "workspace-a",
-        },
-        {
-            "permissions": frozenset({"reconciliation.manage", "match.run"}),
-            "tenant_id": "tenant-a",
-            "workspace_id": "workspace-a",
-        },
-    ]
+            "organization_id": "org-a",
+            "entity_id": "entity-a",
+        }
+    ] * 2
 
 
 def test_server_reconciliation_routes_require_read_permission(tmp_path: Path, monkeypatch: Any) -> None:

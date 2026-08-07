@@ -2741,3 +2741,31 @@ tasks:
       build/source membership for ADR 0413 and the RAC test, and diff-check pass;
       hosted CI/security/provenance, live providers, HA/DR, and release approval
       remain external.
+  - id: E-556
+    priority: P1
+    area: enterprise_policy
+    title: Reconciliation API read-scope re-evaluation
+    status: completed
+    depends_on: [P4-IAM-001, E-546]
+    exit_evidence: >-
+      Reconciliation run listing, detail, inputs, results, and exceptions now
+      re-evaluate the central any-of read policy immediately before the
+      PostgreSQL operation. Mutation guards also carry optional organization and
+      legal-entity scope. The synthetic server-identity route contract passes
+      14 tests with exact hierarchy assertions; ADR 0414 and package membership
+      pass. Complete route/job/export/UI adoption, federation, distributed
+      revocation, live PostgreSQL, HA/DR, and production IAM remain open.
+  - id: E-557
+    priority: P0
+    area: quality
+    title: Full regression gate after reconciliation read-scope policy
+    status: completed
+    depends_on: [E-556]
+    exit_evidence: >-
+      The current tree collects 2,647 tests and
+      `uv run --no-sync pytest -q --basetemp .pytest-tmp-e557 --tb=short -ra`
+      exits 0 in 340.7 seconds with no collection or executed failure. Declared
+      external-service and platform skips remain visible; Ruff, Mypy (482 source
+      files), package build/source membership, and diff-check pass. Hosted
+      CI/security/provenance, live PostgreSQL, federation, HA/DR, and release
+      approval remain external.

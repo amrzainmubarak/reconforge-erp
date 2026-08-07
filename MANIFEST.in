@@ -664,12 +664,14 @@ include docs/adr/0410-postgres-outbox-consumer-hierarchy.md
 include docs/adr/0411-server-policy-organization-scope.md
 include docs/adr/0412-durable-jobs-organization-scope.md
 include docs/adr/0413-reconciliation-as-code-sequential-strategy-adapters.md
+include docs/adr/0414-reconciliation-read-scope-re-evaluation.md
 include reconforge/infrastructure/postgres_job_organization_scope.py
 include alembic/versions/0075_postgres_job_organization_scope.py
 include tests/test_durable_job_application.py
 include tests/test_postgres_job_scope.py
 include tests/test_governed_jobs_policy.py
 include tests/test_reconciliation_as_code_sequential.py
+include tests/test_api_server_reconciliation.py
 include tests/test_consolidation_cli.py
 include docs/schemas/consolidation_impairment_v1.schema.json
 include tests/test_consolidation_impairment.py

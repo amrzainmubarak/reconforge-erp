@@ -91,6 +91,20 @@ def _enforce_server_run_scope(request: Request) -> None:
         permissions=frozenset({"reconciliation.manage", "match.run"}),
         tenant_id=scope.tenant_id,
         workspace_id=scope.workspace_id,
+        organization_id=scope.organization_id,
+        entity_id=scope.legal_entity_id,
+    )
+
+
+def _enforce_server_read_scope(request: Request) -> None:
+    scope = request_execution_scope(request)
+    enforce_server_scoped_permissions(
+        request,
+        permissions=frozenset({"reconciliation.read", "reconciliation.manage", "match.read", "match.run"}),
+        tenant_id=scope.tenant_id,
+        workspace_id=scope.workspace_id,
+        organization_id=scope.organization_id,
+        entity_id=scope.legal_entity_id,
     )
 
 
@@ -206,6 +220,7 @@ def list_runs(
     """List tenant-scoped reconciliation run metadata."""
 
     _server_only(request)
+    _enforce_server_read_scope(request)
     runs = execute_postgres_reconciliation(
         request,
         lambda repository, tenant: repository.list_runs(
@@ -228,6 +243,7 @@ def get_run(
     """Return persisted run metadata; child collections have paginated endpoints."""
 
     _server_only(request)
+    _enforce_server_read_scope(request)
     run = execute_postgres_reconciliation(
         request,
         lambda repository, tenant: repository.get_run_metadata(tenant_id=tenant, run_id=run_id),
@@ -292,6 +308,7 @@ def _list_children(
     offset: int,
 ) -> dict[str, object]:
     _server_only(request)
+    _enforce_server_read_scope(request)
     records = execute_postgres_reconciliation(
         request,
         lambda repository, tenant: operation(

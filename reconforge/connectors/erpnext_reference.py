@@ -163,6 +163,7 @@ class ErpNextConnector:
         idempotency_key: str,
         cursor: str | None = None,
         expected_company: str | None = None,
+        page_length: int | None = None,
     ) -> ErpNextRead:
         if cursor is not None and (not cursor.isdecimal() or int(cursor) < 0 or len(cursor) > 12):
             raise ConnectorNetworkError("erpnext_cursor_invalid")
@@ -170,10 +171,28 @@ class ErpNextConnector:
             expected_company = expected_company.strip()
             if not expected_company or len(expected_company) > 160:
                 raise ConnectorNetworkError("erpnext_company_scope_invalid")
+        if page_length is not None and (isinstance(page_length, bool) or not 1 <= page_length <= 10_000):
+            raise ConnectorNetworkError("erpnext_page_length_invalid")
+        query_parameters: list[tuple[str, str]] = []
+        if expected_company is not None:
+            query_parameters.append(
+                (
+                    "filters",
+                    json.dumps(
+                        [["company", "=", expected_company]],
+                        ensure_ascii=True,
+                        separators=(",", ":"),
+                    ),
+                )
+            )
+        if page_length is not None:
+            query_parameters.append(("limit_page_length", str(page_length)))
+        query_parameters.sort()
         result: ConnectorReadResult = self.executor.read(
             self.registration,
             idempotency_key=idempotency_key,
             cursor=cursor,
+            query_parameters=tuple(query_parameters),
         )
         try:
             document = json.loads(result.response_body)

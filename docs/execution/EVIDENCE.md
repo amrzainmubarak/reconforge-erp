@@ -14465,3 +14465,13 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   files, Ruff, Bandit, pip-audit, package build, source-distribution
   membership, and diff-check pass. This is synthetic draft/transport evidence;
   no live ERPNext posting or production write-back claim follows.
+- E-588 ERPNext provider-side company filtering (2026-08-07): the governed
+  network executor accepts only bounded sorted query parameters, preserves
+  fixed operator query text, and binds the resulting endpoint into the request
+  digest. The ERPNext GL Entry adapter sends a JSON `filters` company predicate
+  when scope is supplied, enforces `limit_page_length` bounds, and retains the
+  response-level company guard. Focused network/ERPNext tests pass; the current
+  2,689-test full regression exits 0 in 349.2 seconds, Mypy reports no issues in
+  487 source files, Ruff, Bandit, pip-audit, package build, source-distribution
+  membership, and diff-check pass. No live provider or production isolation
+  claim follows.

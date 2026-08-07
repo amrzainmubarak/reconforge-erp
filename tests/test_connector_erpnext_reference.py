@@ -57,12 +57,17 @@ def test_erpnext_gl_entry_read_uses_token_auth_cursor_query_and_company_guard() 
     )
     connector, transport = _connector(body)
 
-    result = connector.read_gl_entries(idempotency_key="erpnext-run-1", cursor="25", expected_company="Acme")
+    result = connector.read_gl_entries(
+        idempotency_key="erpnext-run-1", cursor="25", expected_company="Acme", page_length=500
+    )
 
     assert [entry.entry_id for entry in result.page.entries] == ["GL-2", "GL-1"]
     assert result.page.next_cursor == "50"
     assert result.page.entries[0].signed_amount == -20
-    assert transport.calls[0][0] == ERP_NEXT_ENDPOINT + "?limit_start=25"
+    assert transport.calls[0][0] == (
+        ERP_NEXT_ENDPOINT
+        + '?filters=%5B%5B%22company%22%2C%22%3D%22%2C%22Acme%22%5D%5D&limit_page_length=500&limit_start=25'
+    )
     assert transport.calls[0][1]["Authorization"] == "token api-key:api-secret"
     assert transport.calls[0][1]["X-ReconForge-Cursor"] == "25"
     assert result.response_digest
@@ -93,6 +98,16 @@ def test_erpnext_gl_entry_rejects_invalid_cursor_before_transport() -> None:
     assert transport.calls == []
 
 
+@pytest.mark.parametrize("page_length", [0, 10_001, True])
+def test_erpnext_gl_entry_rejects_invalid_page_length_before_transport(page_length: object) -> None:
+    connector, transport = _connector(b'{"data":[]}')
+
+    with pytest.raises(ConnectorNetworkError, match="page_length_invalid"):
+        connector.read_gl_entries(idempotency_key="erpnext-page-length", page_length=page_length)  # type: ignore[arg-type]
+
+    assert transport.calls == []
+
+
 @pytest.mark.parametrize(
     "endpoint",
     [
@@ -114,5 +129,7 @@ def test_erpnext_connector_contract_is_packaged_and_documented() -> None:
     assert "include tests/test_connector_erpnext_reference.py" in manifest
     assert "include docs/connectors/erpnext-gl-entry-readonly.md" in manifest
     assert "include docs/adr/0432-erpnext-read-only-connector-contract.md" in manifest
+    assert "include docs/adr/0434-erpnext-provider-side-company-filter.md" in manifest
     assert (root / "docs/connectors/erpnext-gl-entry-readonly.md").is_file()
     assert (root / "docs/adr/0432-erpnext-read-only-connector-contract.md").is_file()
+    assert (root / "docs/adr/0434-erpnext-provider-side-company-filter.md").is_file()

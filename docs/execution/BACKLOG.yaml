@@ -3228,3 +3228,22 @@ tasks:
       package build/source-distribution membership/diff-check pass. This is a
       draft payload and synthetic transport boundary, not live ERPNext posting,
       account mapping, compensation delivery, or production write-back.
+  - id: E-588
+    priority: P1
+    area: connectors
+    title: Bind ERPNext company scope in provider-side read queries
+    status: completed
+    depends_on: [E-586, E-587]
+    exit_evidence: >-
+      The governed network executor now accepts a closed, sorted,
+      digest-bound tuple of bounded query parameters while preserving existing
+      fixed query text. ERPNext GL Entry reads send a Frappe `filters` company
+      predicate when scope is supplied, support bounded limit_page_length, and
+      retain response-level one-company validation. Focused network/ERPNext
+      tests prove URL encoding, fixed-query preservation, duplicate/control
+      rejection, page-length refusal, and request-digest binding. The current
+      2,689-test full local regression exits 0 in 349.2 seconds, Mypy reports
+      no issues in 487 source files, Ruff and Bandit pass, pip-audit reports no
+      known vulnerabilities excluding the local unpublished distribution, and
+      the package build/source-distribution membership/diff-check pass. No live
+      ERPNext or production isolation claim follows.

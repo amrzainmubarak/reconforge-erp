@@ -7,11 +7,14 @@ resources, `token` authentication, and `limit_start` pagination in its
 It runs through the governed HTTPS
 executor and supports ERPNext's `token` authorization format, bounded
 `limit_start` pagination, exact Decimal debit/credit text, company scoping,
-idempotent reads, retry limits, and canonical response digests.
+provider-side company filters, bounded `limit_page_length`, idempotent reads,
+retry limits, and canonical response digests.
 
 The operator supplies an HTTPS endpoint whose path is exactly
-`/api/resource/GL%20Entry` and a secret reference. The token is resolved only
-at runtime; it is never persisted, logged, or returned. The connector preserves
+`/api/resource/GL%20Entry` and a secret reference. When a company scope is
+provided, the adapter sends an exact Frappe `filters` query and still rejects a
+response containing a different company. The token is resolved only at
+runtime; it is never persisted, logged, or returned. The connector preserves
 debit and credit source fields and exposes a derived signed amount without
 posting or mutating ERPNext.
 

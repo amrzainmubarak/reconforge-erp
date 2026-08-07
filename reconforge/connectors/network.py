@@ -6,6 +6,7 @@ import hashlib
 import http.client
 import ipaddress
 import json
+import re
 import socket
 import ssl
 import time
@@ -21,6 +22,9 @@ from reconforge.connectors.manifest import AuthenticationMethod, ConnectorKind, 
 MAX_CURSOR_BYTES = 4_096
 MAX_IDEMPOTENCY_KEY_BYTES = 200
 _CURSOR_PARAMETER_PATTERN = r"^[A-Za-z][A-Za-z0-9_]{0,63}$"
+_QUERY_PARAMETER_PATTERN = r"^[A-Za-z][A-Za-z0-9_]{0,63}$"
+MAX_QUERY_PARAMETERS = 16
+MAX_QUERY_PARAMETER_VALUE_BYTES = 4_096
 
 
 class ConnectorNetworkError(RuntimeError):
@@ -226,12 +230,33 @@ class NetworkConnectorExecutor:
         *,
         idempotency_key: str,
         cursor: str | None = None,
+        query_parameters: tuple[tuple[str, str], ...] = (),
     ) -> ConnectorReadResult:
         key_bytes = idempotency_key.encode("utf-8")
         if not key_bytes or len(key_bytes) > MAX_IDEMPOTENCY_KEY_BYTES or any(ord(char) < 33 for char in idempotency_key):
             raise ConnectorNetworkError("connector_idempotency_key_invalid")
         if cursor is not None and (not cursor or len(cursor.encode("utf-8")) > MAX_CURSOR_BYTES):
             raise ConnectorNetworkError("connector_cursor_invalid")
+        if not isinstance(query_parameters, tuple) or len(query_parameters) > MAX_QUERY_PARAMETERS:
+            raise ConnectorNetworkError("connector_query_parameters_invalid")
+        query_keys: set[str] = set()
+        for item in query_parameters:
+            if not isinstance(item, tuple) or len(item) != 2:
+                raise ConnectorNetworkError("connector_query_parameters_invalid")
+            key, value = item
+            if (
+                not isinstance(key, str)
+                or not isinstance(value, str)
+                or key in query_keys
+                or re.fullmatch(_QUERY_PARAMETER_PATTERN, key) is None
+                or len(key.encode("utf-8")) > 64
+                or len(value.encode("utf-8")) > MAX_QUERY_PARAMETER_VALUE_BYTES
+                or any(ord(character) < 33 or ord(character) == 127 for character in value)
+            ):
+                raise ConnectorNetworkError("connector_query_parameters_invalid")
+            query_keys.add(key)
+        if tuple(sorted(query_parameters)) != query_parameters:
+            raise ConnectorNetworkError("connector_query_parameters_invalid")
         manifest = registration.manifest
         if not manifest.idempotent_reads:
             raise ConnectorNetworkError("connector_idempotent_reads_required")
@@ -245,16 +270,23 @@ class NetworkConnectorExecutor:
             if not 16 <= len(credential) <= 4_096:
                 raise ConnectorNetworkError("connector_credential_invalid")
         request_endpoint = registration.endpoint
+        parsed_endpoint = urlsplit(request_endpoint)
+        existing_query_keys = {key for key, _value in parse_qsl(parsed_endpoint.query, keep_blank_values=True)}
+        if query_keys.intersection(existing_query_keys):
+            raise ConnectorNetworkError("connector_query_parameters_invalid")
+        if registration.cursor_query_parameter is not None and registration.cursor_query_parameter in query_keys:
+            raise ConnectorNetworkError("connector_query_parameters_invalid")
+        runtime_query_items = list(query_parameters)
         if cursor is not None and registration.cursor_query_parameter is not None:
-            parsed_endpoint = urlsplit(request_endpoint)
-            query_items = parse_qsl(parsed_endpoint.query, keep_blank_values=True)
-            query_items.append((registration.cursor_query_parameter, cursor))
+            runtime_query_items.append((registration.cursor_query_parameter, cursor))
+        if runtime_query_items:
+            runtime_query = urlencode(runtime_query_items)
             request_endpoint = urlunsplit(
                 (
                     parsed_endpoint.scheme,
                     parsed_endpoint.netloc,
                     parsed_endpoint.path,
-                    urlencode(query_items),
+                    parsed_endpoint.query + ("&" if parsed_endpoint.query else "") + runtime_query,
                     parsed_endpoint.fragment,
                 )
             )

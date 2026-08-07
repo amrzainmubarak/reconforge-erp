@@ -299,6 +299,7 @@ include reconforge/connectors/erpnext_writeback.py
 include tests/test_connector_erpnext_writeback.py
 include docs/connectors/erpnext-journal-entry-writeback.md
 include docs/adr/0433-erpnext-draft-journal-entry-writeback.md
+include docs/adr/0434-erpnext-provider-side-company-filter.md
 include docs/schemas/ha_dr_operational_profile.schema.json
 include docs/operations/HA_DR_OPERATIONAL_PROFILE_2026-07-30.json
 include tests/test_ha_dr_operational_profile.py

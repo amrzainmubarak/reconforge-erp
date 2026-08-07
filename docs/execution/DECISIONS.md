@@ -5990,3 +5990,19 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   static/package gates pass.
 - **Boundary**: No live tenant, posting, account mapping, compensation
   endpoint, provider-version certification, or production write-back claim.
+
+### D-414: Send ERPNext company scope to the provider and retain local guard
+
+- **Date**: 2026-08-07
+- **Context**: Local page validation prevented mixed-company evidence but did
+  not prevent an unfiltered provider response from carrying out-of-scope rows.
+- **Decision**: Add a closed query-parameter contract to the network executor.
+  ERPNext sends Frappe's exact JSON company filter and optional bounded page
+  length; fixed operator query text is preserved and all runtime query data is
+  request-digest bound. Keep the response-level company guard as defense in
+  depth.
+- **Verification**: Focused synthetic tests cover canonical ordering, URL
+  encoding, duplicate/control rejection, fixed-query preservation, page limits,
+  and digest binding.
+- **Boundary**: No claim of live provider filtering completeness or production
+  tenant isolation follows without a real ERPNext runtime.

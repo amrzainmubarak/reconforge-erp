@@ -5486,3 +5486,15 @@ compatibility, and secret isolation. The current 2,681-test full regression
 passes in 406.9 seconds; Mypy (487 files), Ruff, Bandit, pip-audit, package
 build, source membership, and diff-check pass. Live ERPNext posting, account
 mapping, compensation, and production write-back remain external.
+
+E-588 closes the provider-side scope refinement for ERPNext GL Entry reads.
+The network executor now validates and digest-binds bounded sorted query
+parameters without rewriting operator-declared query text. ERPNext sends an
+exact company `filters` predicate when scope is requested and accepts a
+bounded `limit_page_length`; the local response/company guard remains in
+place. Focused network/ERPNext tests cover URL construction, fixed-query
+preservation, duplicate/control rejection, page limits, and digest binding.
+The current 2,689-test full regression passes in 349.2 seconds; Mypy (487
+files), Ruff, Bandit, pip-audit, package build, source membership, and
+diff-check pass. Live ERPNext filtering and production isolation remain
+external.

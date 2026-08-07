@@ -100,6 +100,40 @@ def test_network_read_is_exact_idempotent_cursor_bound_and_secret_redacted() -> 
     assert b"synthetic-token" not in result.response_body
 
 
+def test_network_read_binds_sorted_query_parameters_without_rewriting_fixed_query() -> None:
+    transport = _Transport([NetworkResponse(200, b"{}")])
+    registration = _registration(
+        manifest=_manifest(egress_destinations=["https://api.example.test/v1/records?fixed=1"]),
+        endpoint="https://api.example.test/v1/records?fixed=1",
+    )
+    result = NetworkConnectorExecutor(transport, secret_resolver=_Secrets()).read(
+        registration,
+        idempotency_key="query-1",
+        query_parameters=(("filters", "[[\"company\",\"=\",\"Acme\"]]"), ("limit", "50")),
+    )
+
+    assert transport.calls[0][0] == (
+        "https://api.example.test/v1/records?fixed=1&filters=%5B%5B%22company%22%2C%22%3D%22%2C%22Acme%22%5D%5D&limit=50"
+    )
+    assert result.request_digest
+
+
+@pytest.mark.parametrize(
+    "query_parameters",
+    [
+        (("limit", "1"), ("filters", "x")),
+        (("limit", "1"), ("limit", "2")),
+        (("bad key", "1"),),
+        (("limit", "a\nb"),),
+    ],
+)
+def test_network_read_rejects_ambiguous_query_parameters(query_parameters: tuple[tuple[str, str], ...]) -> None:
+    with pytest.raises(ConnectorNetworkError, match="query_parameters_invalid"):
+        NetworkConnectorExecutor(_Transport([]), secret_resolver=_Secrets()).read(
+            _registration(), idempotency_key="query-invalid", query_parameters=query_parameters
+        )
+
+
 def test_formal_network_conformance_replays_identically() -> None:
     transport = _Transport(
         [NetworkResponse(200, b'{"records":[]}', "cursor-2"), NetworkResponse(200, b'{"records":[]}', "cursor-2")]

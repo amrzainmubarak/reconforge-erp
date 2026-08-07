@@ -5902,3 +5902,16 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   are required.
 - **Boundary**: Lifecycle correctness only; no provider, throughput, fairness,
   capacity, soak, distributed scheduling, HA/DR, or production claim follows.
+
+### D-408: Serialize scheduler cycles with lifecycle close
+
+- **Date**: 2026-08-07
+- **Context**: A concurrent caller could otherwise close a cached worker while
+  its bounded cycle callback was still running.
+- **Decision**: Use one re-entrant lifecycle lock for cycle execution, worker
+  lookup, and close. A concurrent close waits for the active cycle; the caller
+  should still stop polling before shutdown.
+- **Verification**: Focused lifecycle tests and full static/package/regression
+  gates must pass.
+- **Boundary**: Lifecycle serialization only; no throughput, fairness,
+  capacity, soak, distributed scheduling, HA/DR, or production claim follows.

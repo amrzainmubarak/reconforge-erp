@@ -3122,3 +3122,19 @@ tasks:
       provider availability,
       throughput, fairness, capacity, soak, distributed scheduling, HA/DR, or
       production operations evidence.
+  - id: E-582
+    priority: P1
+    area: reliability
+    title: Serialize reconciliation scheduler cycles with lifecycle close
+    status: completed
+    depends_on: [E-581, P4-SCL-001]
+    exit_evidence: >-
+      Reconciliation scheduler cycles now share a re-entrant lifecycle lock
+      with worker lookup and close, preventing a concurrent shutdown from
+      closing a cached worker during its bounded callback. Focused scheduler
+      lifecycle tests, Ruff, Mypy, package build, and diff-check pass; the
+      current 2,655-test full local regression exits 0 in 358.5 seconds with
+      declared external-service/platform skips. This is lifecycle
+      serialization only, not
+      throughput, fairness, capacity, soak, distributed scheduling, HA/DR, or
+      production operations evidence.

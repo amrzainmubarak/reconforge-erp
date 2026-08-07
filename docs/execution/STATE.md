@@ -5438,3 +5438,9 @@ worker hook once, and rejects later cycles; the PostgreSQL worker delegates once
 to its optional connection-factory close hook. Focused lifecycle tests and
 static checks pass; the caller must stop polling before close. Provider
 availability, throughput, HA/DR, and GitHub publication remain deferred.
+
+E-582 serializes scheduler cycles with lifecycle close through the same
+re-entrant lock. A concurrent shutdown therefore waits for the active bounded
+cycle before closing cached workers. This is lifecycle serialization evidence,
+not throughput, fairness, capacity, soak, distributed scheduling, HA/DR, or
+production operations evidence.

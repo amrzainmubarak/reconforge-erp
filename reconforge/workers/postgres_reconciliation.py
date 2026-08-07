@@ -7,7 +7,7 @@ import json
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from threading import Event, Lock
+from threading import Event, RLock
 from typing import Any, Protocol, cast
 
 from reconforge.application.matching import LEGACY_RECORD_IDENTITY_POLICY
@@ -576,7 +576,7 @@ class PostgresReconciliationScheduler:
         # worker; rebuilding the object on every poll cycle would churn those
         # resources and defeat the scheduler's bounded-runtime contract.
         self._workers: dict[str, PostgresReconciliationWorker] = {}
-        self._worker_lock = Lock()
+        self._worker_lock = RLock()
         self._closed = False
 
     def _worker_for(self, worker_id: str) -> PostgresReconciliationWorker:
@@ -612,6 +612,14 @@ class PostgresReconciliationScheduler:
 
     def process_once(self) -> ReconciliationWorkerRunSummary:
         """Execute one bounded cycle per worker and aggregate outcomes."""
+
+        # Serialize cycles with close so a caller stopping the loop cannot
+        # close a cached worker while its process_once callback is active.
+        with self._worker_lock:
+            return self._process_once()
+
+    def _process_once(self) -> ReconciliationWorkerRunSummary:
+        """Run one cycle while the lifecycle lock is held by the caller."""
 
         try:
             with ThreadPoolExecutor(

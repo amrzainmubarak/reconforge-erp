@@ -5260,3 +5260,14 @@ PostgreSQL remains capability-gated. E-550 closes the 2,642-test full
 regression and static/security/package gates; live PostgreSQL, hosted
 CI/security/provenance, HA/DR, and release approval remain external. GitHub
 publication remains deferred by owner instruction.
+
+E-551 proves additive backup compatibility for this slice: a schema-version-32
+SQLite backup containing a durable job without organization attribution restores
+and upgrades to the current schema with an empty legacy scope. The focused
+regression and complete backup/export suite pass. PostgreSQL native restore,
+cross-site recovery, RPO/RTO, and GitHub publication remain deferred.
+
+E-552 reruns the complete local regression after that coverage: 2,643 tests pass
+in 335.4 seconds with no collection or executed failure, while declared service
+and platform skips remain visible. Hosted CI/security/provenance, live database
+restore, HA/DR, release approval, and GitHub publication remain deferred.

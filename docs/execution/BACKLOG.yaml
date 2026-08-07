@@ -2671,3 +2671,30 @@ tasks:
       `SOURCES.txt` contains ADR 0412, migration 0075, and the organization
       scope helper; and `git diff --check` passes. Live PostgreSQL, hosted
       CI/security/provenance, HA/DR, and release approval remain external.
+  - id: E-551
+    priority: P1
+    area: reliability
+    title: Legacy durable-job backup restore after organization-scope migration
+    status: completed
+    depends_on: [E-549]
+    exit_evidence: >-
+      A schema-version-32 backup containing a durable job without the additive
+      organization field restores successfully, upgrades to the current schema,
+      and materializes the documented empty legacy organization scope. The
+      dedicated regression and the complete SQLite backup/export suite pass.
+      This proves additive local-backup compatibility only; PostgreSQL native
+      backup/restore, cross-site recovery, and production RPO/RTO remain external.
+  - id: E-552
+    priority: P0
+    area: quality
+    title: Full regression gate after legacy backup compatibility coverage
+    status: completed
+    depends_on: [E-551]
+    exit_evidence: >-
+      The current tree collects 2,643 tests and
+      `uv run --no-sync pytest -q --basetemp .pytest-tmp-e552 --tb=short -ra`
+      exits 0 in 335.4 seconds with no collection or executed failure. The
+      declared PostgreSQL, Redis, object-storage, network, Windows, and platform
+      capability skips remain visible. Existing local static, security, package,
+      and diff gates remain green; hosted CI/security/provenance, live database
+      restore, HA/DR, and release approval remain external.

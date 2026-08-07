@@ -5644,3 +5644,18 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Reversibility**: PostgreSQL downgrade removes the additive column/index and
   restores the prior policy. SQLite rollback requires a pre-migration backup
   rather than an implicit destructive downgrade.
+
+### D-390: Preserve legacy durable-job backups across additive organization scope
+
+- **Date**: 2026-08-07
+- **Context**: SQLite durable jobs gained a non-null organization scope in
+  migration 33, while existing schema-version-32 backup documents do not carry
+  that field.
+- **Decision**: Keep restore column selection additive and rely on the declared
+  SQLite default for the missing legacy field; do not rewrite historical backup
+  documents or invent an organization identity.
+- **Verification**: A schema-version-32 backup regression restores, upgrades,
+  and verifies an empty organization scope; the complete backup/export suite
+  passes.
+- **Boundary**: This covers local SQLite backup compatibility only, not native
+  PostgreSQL restore, cross-site disaster recovery, or production RPO/RTO.

@@ -5520,3 +5520,18 @@ FI-039 parser inventory pass. The full 2,710-test local regression exits 0 in
 pip-audit, package build, source-distribution membership, and diff-check pass.
 Live ERPNext tenant, provider version, settlement, posting, write-back, and
 production evidence remain external.
+
+E-591 closes the shared provider read-manifest conformance boundary. The
+reference Connector SDK portfolio now includes the bounded CAMT.053 HTTPS
+source and ERPNext GL Entry/Payment Entry registrations. A synthetic replay
+test runs each registration twice through the governed executor and requires
+read-only capability, exact HTTPS egress, secret-reference authentication,
+bounded retry/cursor declarations, identical request/response identity, and
+bounded 503/429 transient recovery.
+The focused SDK/provider connector suite passes; the 2,713-test local
+regression exits 0 in 355.7 seconds, Mypy covers 489 source files without
+issues, and Ruff/Bandit/pip-audit/build/archive-membership/diff-check pass.
+This aligns the provider-specific adapters with one common safety contract; it
+does not establish live bank/ERP interoperability, source authenticity,
+settlement, posting, write-back, or production availability. GitHub publication
+remains deferred by owner policy.

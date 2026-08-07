@@ -6039,3 +6039,22 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   static/security/package gates must pass.
 - **Boundary**: Tenant/provider-version conformance, account mapping,
   settlement, posting, write-back, and production availability remain open.
+
+### D-417: Require common replay conformance for provider read registrations
+
+- **Date**: 2026-08-07
+- **Context**: The CAMT.053 HTTPS and ERPNext read adapters each had direct
+  tests, but the shared SDK portfolio did not prove that every provider
+  registration obeyed the same manifest and replay boundary.
+- **Decision**: Include the CAMT.053 HTTPS source and ERPNext GL Entry/Payment
+  Entry sources in the reference manifest portfolio, and run each registration
+  twice through the governed executor with a synthetic transport. Require
+  read-only capability, exact HTTPS egress, secret-reference authentication,
+  bounded retry/cursor declarations, identical request/response identity, and
+  bounded recovery from synthetic 503/429 transient statuses.
+- **Verification**: Focused provider/SDK tests pass; the 2,713-test local
+  regression, Mypy, Ruff, Bandit, pip-audit, package/archive, and diff gates
+  pass locally.
+- **Boundary**: Synthetic SDK evidence does not establish live bank/ERP
+  interoperability, source authenticity, settlement, posting, write-back, or
+  production availability.

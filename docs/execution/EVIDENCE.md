@@ -24,6 +24,20 @@ This file records commands and observed results. It does not convert a dirty wor
   source files; Ruff, Bandit, pip-audit, package build, source-distribution
   membership, and diff-check pass. No live ERPNext tenant, provider-version,
   settlement, posting, write-back, or production availability claim follows.
+- E-591 provider read-manifest portfolio conformance (2026-08-07): the common
+  Connector SDK portfolio now includes the bounded CAMT.053 HTTPS and ERPNext
+  GL Entry/Payment Entry read registrations. `tests/test_connector_sdk.py`
+  proves the complete manifest set is read-only and governed, then replays each
+  provider registration twice through a synthetic transport and secret resolver
+  with identical request/response identity, exact HTTPS egress, secret-reference
+  authentication, bounded retry/cursor declarations, and 503/429 transient
+  recovery within the declared attempt ceiling. The focused SDK and
+  provider connector tests pass; the 2,713-test full local regression exits 0
+  in 355.7 seconds; Mypy reports no issues in 489 source files; Ruff, Bandit,
+  pip-audit, package build, sdist/wheel archive membership, and diff-check pass.
+  This is SDK contract evidence only; live provider interoperability, source
+  authenticity, settlement, posting, write-back, and production availability
+  remain open.
 
 ## E-403 — Full local post-E-402 quality gates
 

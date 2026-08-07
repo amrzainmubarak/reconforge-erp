@@ -3285,3 +3285,26 @@ tasks:
       remains synthetic provider evidence and does not establish a live tenant,
       provider-version conformance, settlement, posting, write-back, or
       production availability.
+  - id: E-591
+    priority: P1
+    area: connectors
+    title: Close the provider read-manifest portfolio conformance boundary
+    status: completed
+    depends_on: [E-589, E-590, P4-CON-001]
+    exit_evidence: >-
+      The shared Connector SDK portfolio now includes the bounded CAMT.053
+      HTTPS source and ERPNext GL Entry/Payment Entry read manifests. A common
+      synthetic replay test proves read-only capability, exact HTTPS egress,
+      secret-reference authentication, bounded retry/cursor declarations, and
+      identical request/response identity across two reads for each provider
+      registration, plus bounded recovery from synthetic 503/429 transient
+      statuses. Focused SDK tests pass; the complete local regression,
+      static/security/package gates, source-distribution membership, and
+      diff-check pass: the 2,713-test full local regression exits 0 in 355.7
+      seconds, Mypy reports no issues in 489 source files, Ruff and Bandit
+      pass, pip-audit reports no known vulnerabilities excluding the local
+      unpublished distribution, the sdist/wheel contain the new ADR/test and
+      connector package, and diff-check passes. This remains SDK contract
+      evidence only and does not establish live provider interoperability,
+      source authenticity, settlement, posting, write-back, or production
+      availability.

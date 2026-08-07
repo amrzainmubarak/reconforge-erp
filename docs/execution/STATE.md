@@ -5591,3 +5591,14 @@ throughput, queue HA/failover, soak, capacity, and production readiness remain
 open. The full repository regression collected 2,722 tests and exited 0 in
 373.9 seconds with declared capability skips and existing warnings only.
 GitHub publication remains deferred by owner policy.
+
+E-597 extends the scheduler cursor evidence with two independent SQLite
+connections reserving the same lane sequence from separate executor threads.
+Twelve reservations commit with six selections per lane, final index zero, and
+cursor version twelve; connections are created and closed inside their owning
+threads. This is local transaction-serialization evidence only. PostgreSQL
+lock behavior, cross-host fairness, throughput, queue HA/failover, soak,
+capacity, and production SLO evidence remain open. The full repository
+regression collected 2,723 tests and exited 0 in 360.3 seconds with declared
+capability skips and existing warnings only. GitHub publication remains
+deferred by owner policy.

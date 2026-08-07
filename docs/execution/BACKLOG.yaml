@@ -3401,3 +3401,21 @@ tasks:
       is bounded shared-cursor coordination evidence only; distributed
       throughput, cross-host fairness SLOs, queue HA/failover, soak, capacity,
       and production readiness remain open.
+  - id: E-597
+    priority: P1
+    area: high_volume_operations
+    title: Exercise persistent scheduler cursor under two-connection contention
+    status: completed
+    depends_on: [E-596, P4-SCL-001]
+    exit_evidence: >-
+      Two independent SQLite connections reserve the same tenant-scoped
+      scheduler cursor from separate executor threads. Twelve reservations
+      commit with six selections per lane, final next_index zero, and cursor
+      version twelve; each connection is created and closed in its owning
+      thread. The focused durable-job suite, static/security, and package gates
+      pass. The full repository regression collected 2,723 tests and exited 0
+      in 360.3 seconds with declared capability skips and existing warnings
+      only. This is local SQLite transaction-serialization evidence only;
+      PostgreSQL lock behavior, cross-host fairness,
+      throughput, queue HA/failover, soak, capacity, and production SLOs
+      remain open.

@@ -6127,3 +6127,35 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: Targeted mutation only; no domain-wide mutation score,
   PostgreSQL parity, distributed fault campaign, live-rate validation, or
   production sizing claim follows.
+
+### D-422: Persist durable-job scheduler cursor state
+
+- **Date**: 2026-08-07
+- **Context**: The process-scoped round-robin scheduler reset its cursor on
+  restart and could not coordinate independent scheduler loops.
+- **Decision**: Add tenant-scoped SQLite migration 34 and PostgreSQL migration
+  `0079_pg_job_cursor`, bind each scheduler key to an ordered SHA-256 lane
+  digest and count, reserve/advance the cursor atomically, and fail closed on
+  lane drift. Restrict persistent scheduler lanes to one tenant for RLS-safe
+  service operation; retain the process-scoped class for compatibility.
+- **Verification**: Restart/drift SQLite contracts, migration chain,
+  backup/export, PostgreSQL schema/RLS/Alembic/grant contracts, Ruff, Mypy,
+  focused tests, and package checks pass.
+- **Boundary**: This proves bounded shared-cursor coordination, not live
+  cross-host fairness SLOs, throughput, queue HA/failover, soak, capacity, or
+  production readiness.
+
+### D-423: Treat two-connection SQLite cursor contention as bounded evidence
+
+- **Date**: 2026-08-07
+- **Context**: Restart continuity did not exercise concurrent transaction
+  serialization for the persistent scheduler cursor.
+- **Decision**: Use two independently created SQLite connections in separate
+  executor threads, reserve twelve positions under one scheduler key, and
+  require balanced lane counts and the exact final cursor version/index.
+- **Verification**: The focused durable-job application suite passes; each
+  connection is created and closed inside its owning thread to respect SQLite
+  thread affinity.
+- **Boundary**: This is local SQLite lock/serialization evidence only, not
+  PostgreSQL, cross-host fairness, throughput, queue HA/failover, soak,
+  capacity, or production SLO evidence.

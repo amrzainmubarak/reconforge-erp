@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
 
@@ -260,6 +261,44 @@ def test_persistent_round_robin_scheduler_coordinates_restarts_and_rejects_lane_
             occurred_at="2026-07-27T08:11:05Z",
         )
     connection.close()
+
+
+def test_persistent_scheduler_cursor_serializes_two_sqlite_connections(tmp_path: Path) -> None:
+    database_path = tmp_path / "persistent-fair-contention.db"
+    run_migrations(database_path)
+
+    def reserve_batch(prefix: str) -> list[int]:
+        connection = connect(database_path, require_exists=True)
+        try:
+            repository = SQLiteDurableJobRepository(connection)
+            return [
+                repository.reserve_round_robin_lane(
+                    tenant_id="TENANT-CONTENTION",
+                    scheduler_key="contention-scheduler",
+                    lane_digest="c" * 64,
+                    lane_count=2,
+                    occurred_at=f"2026-07-27T08:20:{prefix}{index:02d}Z",
+                )
+                for index in range(6)
+            ]
+        finally:
+            connection.close()
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(reserve_batch, "1")
+        second = executor.submit(reserve_batch, "2")
+        selected = first.result() + second.result()
+    inspection_connection = connect(database_path, require_exists=True)
+    try:
+        cursor = inspection_connection.execute(
+            "SELECT next_index, version FROM durable_job_scheduler_cursors "
+            "WHERE tenant_id = ? AND scheduler_key = ?",
+            ("TENANT-CONTENTION", "contention-scheduler"),
+        ).fetchone()
+    finally:
+        inspection_connection.close()
+    assert sorted(selected).count(0) == sorted(selected).count(1) == 6
+    assert tuple(cursor) == (0, 12)
 
 
 def test_bounded_submission_is_atomic_idempotent_and_lane_scoped(tmp_path: Path) -> None:

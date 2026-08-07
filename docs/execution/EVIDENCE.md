@@ -2,6 +2,16 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+- E-597 persistent scheduler cursor contention (2026-08-07): two independent
+  SQLite connections reserve the same tenant-scoped scheduler cursor from
+  separate executor threads. Twelve reservations commit with six selections
+  per lane, final next_index zero, and cursor version twelve; each connection
+  is created and closed in its owning thread. The focused durable-job contract
+  passes. The full repository regression collected 2,723 tests and exited 0 in
+  360.3 seconds with declared capability skips and existing warnings only. This
+  is local SQLite transaction-serialization evidence only; live PostgreSQL
+  lock behavior, cross-host fairness, throughput, queue HA/failover, soak,
+  capacity, and production SLO evidence remain open.
 - E-596 persistent durable-job scheduler cursor (2026-08-07): SQLite
   migration 34 and PostgreSQL migration `0079_pg_job_cursor` add a
   tenant-scoped cursor bound to an ordered lane digest/count. The persistent

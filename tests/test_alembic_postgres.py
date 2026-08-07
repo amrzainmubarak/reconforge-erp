@@ -138,6 +138,19 @@ def test_durable_job_organization_scope_migration_is_versioned_and_reversible() 
     assert "refusing to discard durable-job organization attribution" in migration
 
 
+def test_durable_job_scheduler_cursor_migration_is_tenant_scoped_and_guarded() -> None:
+    migration = (
+        ROOT / "alembic/versions/0079_postgres_durable_job_scheduler_cursor.py"
+    ).read_text(encoding="utf-8")
+
+    assert 'revision = "0079_pg_job_cursor"' in migration
+    assert 'down_revision = "0078_pg_close_scope"' in migration
+    assert "durable_job_scheduler_cursors" in migration
+    assert "ENABLE ROW LEVEL SECURITY" in migration
+    assert "FORCE ROW LEVEL SECURITY" in migration
+    assert "refuses non-empty scheduler cursor state" in migration
+
+
 def test_postgres_alembic_contract_has_no_repository_credentials() -> None:
     config = (ROOT / "alembic.ini").read_text(encoding="utf-8")
     env = (ROOT / "alembic" / "env.py").read_text(encoding="utf-8")

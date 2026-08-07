@@ -3396,7 +3396,7 @@ tasks:
       restart and lane-drift contracts pass, backup/export includes cursor
       state, and PostgreSQL schema/RLS/Alembic/grant contracts are packaged.
       Focused durable-job, migration, backup, and static gates pass. The full
-      repository regression collected 2,721 tests and exited 0 in 364.4
+      repository regression collected 2,722 tests and exited 0 in 373.9
       seconds with declared capability skips and existing warnings only. This
       is bounded shared-cursor coordination evidence only; distributed
       throughput, cross-host fairness SLOs, queue HA/failover, soak, capacity,

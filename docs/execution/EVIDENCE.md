@@ -10,7 +10,7 @@ This file records commands and observed results. It does not convert a dirty wor
   backup/export carries cursor state. Focused durable-job/migration/backup
   tests, PostgreSQL schema/RLS/Alembic/grant contracts, Ruff, Mypy, and package
   checks pass. The full repository regression collected 2,721 tests and exited
-  0 in 364.4 seconds with declared capability skips and existing warnings only.
+  0 in 373.9 seconds with declared capability skips and existing warnings only.
   Live PostgreSQL multi-process/cross-host fairness, throughput, queue
   HA/failover, soak, capacity, and production readiness remain open.
 - E-594 grouped-matching property/fuzz campaign (2026-08-07): three

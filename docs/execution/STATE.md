@@ -5588,6 +5588,6 @@ included in local backup/export. Focused durable-job, migration, backup,
 Alembic/static, and package contracts pass. This is bounded shared-cursor
 coordination evidence only; live PostgreSQL multi-process/cross-host fairness,
 throughput, queue HA/failover, soak, capacity, and production readiness remain
-open. The full repository regression collected 2,721 tests and exited 0 in
-364.4 seconds with declared capability skips and existing warnings only.
+open. The full repository regression collected 2,722 tests and exited 0 in
+373.9 seconds with declared capability skips and existing warnings only.
 GitHub publication remains deferred by owner policy.

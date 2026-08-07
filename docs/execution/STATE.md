@@ -5510,3 +5510,13 @@ package build, source-distribution membership, and diff-check pass. Provider
 dialect, source authenticity, certificate and credential lifecycle, settlement,
 posting, write-back, and production availability remain external; GitHub
 publication remains deferred.
+
+E-590 adds a bounded ERPNext Payment Entry read-only adapter. It binds the
+exact resource path, token auth, `limit_start` pagination, provider-side JSON
+company filter, local company guard, exact paid/received Decimal text, and
+canonical response digest. Focused schema/auth/endpoint/secret tests and the
+FI-039 parser inventory pass. The full 2,710-test local regression exits 0 in
+357.1 seconds; Mypy reports no issues in 489 source files; Ruff, Bandit,
+pip-audit, package build, source-distribution membership, and diff-check pass.
+Live ERPNext tenant, provider version, settlement, posting, write-back, and
+production evidence remain external.

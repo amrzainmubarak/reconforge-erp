@@ -3267,3 +3267,21 @@ tasks:
       only; it does not establish a bank dialect, source authenticity,
       certificate lifecycle, settlement, posting, write-back, or production
       availability.
+  - id: E-590
+    priority: P1
+    area: connectors
+    title: Add governed ERPNext Payment Entry read-only source
+    status: completed
+    depends_on: [E-588, P4-CON-001]
+    exit_evidence: >-
+      The provider-specific ERPNext Payment Entry adapter uses the governed
+      HTTPS executor, token authorization, exact resource path, bounded
+      limit_start pagination, provider-side and local company scope, exact
+      paid/received Decimal text, duplicate/zero-page refusal, canonical
+      response digest, endpoint hardening, secret non-disclosure, parser
+      inventory closure, packaging, focused regression, full local regression
+      (2,710 tests in 357.1 seconds), Mypy (489 source files),
+      static/security/package gates, and source-distribution membership. This
+      remains synthetic provider evidence and does not establish a live tenant,
+      provider-version conformance, settlement, posting, write-back, or
+      production availability.

@@ -766,6 +766,23 @@ surfaces:
       - The response is untrusted provider data; exact HTTPS egress, runtime secret isolation, 8 MiB response and parser limits, defusedxml entity-expansion refusal, closed CAMT shape, account guard, retry ceiling, and response/source digests fail closed before a statement is returned.
       - This is synthetic transport evidence only. It does not authenticate a bank source, establish provider dialect completeness or SLA, prove certificate lifecycle, authorize payment or posting, or enable ERP write-back.
     next_action: Add a separately reviewed bank sandbox with provider-version CAMT conformance fixtures and certificate or credential lifecycle evidence before promoting beyond bounded connector evidence.
+  - id: FI-039
+    name: ERPNext Payment Entry network response
+    module_ids: [connectors.boundary]
+    trust: untrusted-network
+    entrypoints:
+      - reconforge/connectors/erpnext_payment_reference.py::ErpNextPaymentEntryConnector.read_payment_entries
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_connector_erpnext_payment_reference.py, tests/test_connector_network.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The response is untrusted provider data; the governed HTTPS executor, exact Payment Entry resource path, bounded response and cursor limits, closed Pydantic schema, Decimal checks, company guard, retry ceiling, and canonical digest fail closed before a page is returned.
+      - This is synthetic transport evidence only. It does not authenticate an ERPNext tenant, establish provider-version compatibility, authorize payment or accounting posting, settle a bank item, or enable write-back.
+    next_action: Add a separately reviewed live ERPNext sandbox with provider-version Payment Entry conformance fixtures before promoting beyond bounded connector evidence.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader
@@ -818,6 +835,11 @@ direct_json_parser_allowlist:
     call_count: 1
     surface_id: FI-037
     rationale: Parses only the bounded ERPNext GL Entry response after the governed HTTPS executor, exact resource-path allowlist, token-reference isolation, retry/response ceilings, closed debit/credit schema, company scope, and canonical digest checks are applied.
+  - path: reconforge/connectors/erpnext_payment_reference.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-039
+    rationale: Parses only the bounded ERPNext Payment Entry response after the governed HTTPS executor, exact resource-path allowlist, token-reference isolation, retry/response ceilings, closed paid/received Decimal schema, company scope, and canonical digest checks are applied.
   - path: reconforge/auth/repositories.py
     parser: json.loads
     call_count: 1

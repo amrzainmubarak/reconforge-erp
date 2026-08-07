@@ -605,7 +605,7 @@ modules:
         residual_risk_ids: [R-017]
         limitations:
           - Synthetic transports and local projections do not prove a customer provider's tenant isolation, TLS identity, or operational network policy.
-    module_test_evidence: [tests/test_connector_bank_statement_camt053.py, tests/test_connector_camt053.py, tests/test_connector_network.py, tests/test_connector_package.py, tests/test_connector_sdk.py]
+    module_test_evidence: [tests/test_connector_bank_statement_camt053.py, tests/test_connector_camt053.py, tests/test_connector_erpnext_payment_reference.py, tests/test_connector_network.py, tests/test_connector_package.py, tests/test_connector_sdk.py]
     assumptions:
       - Operators classify statements, endpoint registrations, and provider credentials correctly and review all external activation decisions.
       - CAMT.053 and payment-statement projections remain read-only until a separately approved provider conformance profile exists.

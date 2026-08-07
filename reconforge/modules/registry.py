@@ -471,6 +471,7 @@ _MODULES = (
         test_evidence=(
             "tests/test_connector_camt053.py",
             "tests/test_connector_bank_statement_camt053.py",
+            "tests/test_connector_erpnext_payment_reference.py",
             "tests/test_connector_network.py",
             "tests/test_connector_package.py",
             "tests/test_connector_sdk.py",

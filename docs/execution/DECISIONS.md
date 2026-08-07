@@ -6023,3 +6023,19 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: Provider dialect, source authenticity, certificate or
   credential lifecycle, settlement, posting, write-back, and production
   availability remain unverified.
+
+### D-416: Keep ERPNext Payment Entry reads closed and mutation-free
+
+- **Date**: 2026-08-07
+- **Context**: ERPNext GL Entry coverage did not expose the separate Payment
+  Entry source shape needed for payment-control reconciliation.
+- **Decision**: Add a read-only Payment Entry adapter with an exact resource
+  path, token credentials, bounded offset pagination, provider-side and local
+  company scope, exact paid/received Decimal text, duplicate/zero-page
+  refusal, and deterministic response digests. No payment initiation or
+  posting capability is added.
+- **Verification**: Synthetic transport tests, parser-inventory closure,
+  endpoint hardening, secret isolation, packaging, full regression, and
+  static/security/package gates must pass.
+- **Boundary**: Tenant/provider-version conformance, account mapping,
+  settlement, posting, write-back, and production availability remain open.

@@ -8,12 +8,22 @@ This file records commands and observed results. It does not convert a dirty wor
   optional expected-account guard, and request/raw-response/normalized-source
   digests. Synthetic tests cover endpoint widening, malformed response,
   account mismatch, and secret isolation; parser inventory, module registry,
-  and source packaging are closed. Full local regression and static/package
-  the 2,697-test full local regression exits 0 in 349.8 seconds; Mypy reports
-  no issues in 488 source files; Ruff, Bandit, pip-audit, package build,
-  source-distribution membership, and diff-check pass. No live bank dialect,
+  and source packaging are closed. The 2,697-test full local regression exits
+  0 in 349.8 seconds; Mypy reports no issues in 488 source files; Ruff,
+  Bandit, pip-audit, package build, source-distribution membership, and
+  diff-check pass. No live bank dialect,
   authenticity, certificate lifecycle, settlement, posting, write-back, or
   production availability claim follows.
+- E-590 ERPNext Payment Entry read-only source (2026-08-07): the adapter binds
+  the exact Payment Entry resource path, token authorization, bounded
+  `limit_start` pagination, provider-side company filter, local company guard,
+  exact paid/received Decimal text, and canonical response digest. Synthetic
+  schema, zero/non-finite/duplicate/mixed-company, endpoint, page-limit, and
+  secret-isolation tests plus FI-039 parser inventory are closed. The 2,710-test
+  full local regression exits 0 in 357.1 seconds; Mypy reports no issues in 489
+  source files; Ruff, Bandit, pip-audit, package build, source-distribution
+  membership, and diff-check pass. No live ERPNext tenant, provider-version,
+  settlement, posting, write-back, or production availability claim follows.
 
 ## E-403 — Full local post-E-402 quality gates
 

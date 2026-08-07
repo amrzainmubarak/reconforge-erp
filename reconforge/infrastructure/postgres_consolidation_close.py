@@ -22,7 +22,13 @@ from reconforge.domain.consolidation_lifecycle import (
     verify_consolidation_worksheet_payload,
 )
 from reconforge.domain.consolidation_statement import build_management_statement_package
-from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
+from reconforge.infrastructure.postgres import (
+    set_local_tenant_scope,
+    validate_legal_entity_id,
+    validate_organization_id,
+    validate_tenant_id,
+    validate_workspace_id,
+)
 from reconforge.infrastructure.postgres_approvals import PostgresApprovalRepository
 from reconforge.infrastructure.postgres_consolidation_deferred_tax import (
     PostgresConsolidationDeferredTaxRepository,
@@ -336,9 +342,21 @@ CREATE TRIGGER consolidation_close_ownership_change_link_guard
 
 
 class PostgresConsolidationCloseRepository:
-    def __init__(self, connection: Any, tenant_id: str) -> None:
+    def __init__(
+        self,
+        connection: Any,
+        tenant_id: str,
+        organization_id: str | None = None,
+        workspace_id: str | None = None,
+        legal_entity_id: str | None = None,
+    ) -> None:
         self.connection = connection
         self.tenant_id = validate_tenant_id(tenant_id)
+        self.organization_id = validate_organization_id(organization_id)
+        self.workspace_id = validate_workspace_id(workspace_id)
+        self.legal_entity_id = validate_legal_entity_id(legal_entity_id)
+        if self.legal_entity_id is not None and self.organization_id is None:
+            raise PlatformError("Consolidation close legal-entity scope requires organization scope.")
 
     @staticmethod
     def _actor(value: str) -> str:
@@ -352,7 +370,13 @@ class PostgresConsolidationCloseRepository:
         return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True, default=str)
 
     def _scope(self) -> None:
-        set_local_tenant_scope(self.connection, self.tenant_id)
+        set_local_tenant_scope(
+            self.connection,
+            self.tenant_id,
+            self.organization_id,
+            workspace_id=self.workspace_id,
+            legal_entity_id=self.legal_entity_id,
+        )
 
     @staticmethod
     def _worksheet_lines(
@@ -837,7 +861,13 @@ class PostgresConsolidationCloseRepository:
             ).fetchone()
             if period is None:
                 raise PlatformError("Consolidation period not found.")
-            return PostgresApprovalRepository(self.connection, self.tenant_id).prepare_certification(
+            return PostgresApprovalRepository(
+                self.connection,
+                self.tenant_id,
+                organization_id=self.organization_id,
+                workspace_id=self.workspace_id,
+                legal_entity_id=self.legal_entity_id,
+            ).prepare_certification(
                 object_type="consolidation_close_run",
                 object_id=str(verified["id"]),
                 period_name=str(period["period_name"]),
@@ -867,7 +897,13 @@ class PostgresConsolidationCloseRepository:
             verified = self._verified_run(dict(run))
             if str(verified["status"]) not in {"Posted", "Reversed"}:
                 raise PlatformError("Only a posted or reversed consolidation run can be certified.")
-            return PostgresApprovalRepository(self.connection, self.tenant_id).review_certification(
+            return PostgresApprovalRepository(
+                self.connection,
+                self.tenant_id,
+                organization_id=self.organization_id,
+                workspace_id=self.workspace_id,
+                legal_entity_id=self.legal_entity_id,
+            ).review_certification(
                 object_type="consolidation_close_run",
                 object_id=str(verified["id"]),
                 note=note,
@@ -887,7 +923,13 @@ class PostgresConsolidationCloseRepository:
             if row is None:
                 raise PlatformError("Consolidation run not found.")
             self._verified_run(dict(row))
-            return PostgresApprovalRepository(self.connection, self.tenant_id)._certification(
+            return PostgresApprovalRepository(
+                self.connection,
+                self.tenant_id,
+                organization_id=self.organization_id,
+                workspace_id=self.workspace_id,
+                legal_entity_id=self.legal_entity_id,
+            )._certification(
                 "consolidation_close_run", run_id
             )
 

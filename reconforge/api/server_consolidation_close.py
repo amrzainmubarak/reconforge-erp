@@ -55,7 +55,16 @@ def execute_postgres_consolidation_close(
             workspace_id=scope.workspace_id,
             legal_entity_id=scope.legal_entity_id,
         ) as connection:
-            return operation(PostgresConsolidationCloseRepository(connection, scope.tenant_id), scope.tenant_id)
+            return operation(
+                PostgresConsolidationCloseRepository(
+                    connection,
+                    scope.tenant_id,
+                    organization_id=scope.organization_id,
+                    workspace_id=scope.workspace_id,
+                    legal_entity_id=scope.legal_entity_id,
+                ),
+                scope.tenant_id,
+            )
     except APIError:
         raise
     except PlatformError as exc:

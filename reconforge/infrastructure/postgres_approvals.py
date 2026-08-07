@@ -7,7 +7,13 @@ from contextlib import contextmanager
 from typing import Any
 
 from reconforge.auth.rbac import same_actor
-from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
+from reconforge.infrastructure.postgres import (
+    set_local_tenant_scope,
+    validate_legal_entity_id,
+    validate_organization_id,
+    validate_tenant_id,
+    validate_workspace_id,
+)
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.io.persisted import PersistedJsonError, encode_postgres_outbox_payload
 from reconforge.platform.common import PlatformError, normalize_key, normalize_text, platform_id
@@ -82,15 +88,33 @@ class PostgresApprovalsError(RuntimeError):
 class PostgresApprovalRepository:
     """Implement the complete approval Application port for one tenant."""
 
-    def __init__(self, connection: Any, tenant_id: str) -> None:
+    def __init__(
+        self,
+        connection: Any,
+        tenant_id: str,
+        organization_id: str | None = None,
+        workspace_id: str | None = None,
+        legal_entity_id: str | None = None,
+    ) -> None:
         self.connection = connection
         self.tenant_id = validate_tenant_id(tenant_id)
+        self.organization_id = validate_organization_id(organization_id)
+        self.workspace_id = validate_workspace_id(workspace_id)
+        self.legal_entity_id = validate_legal_entity_id(legal_entity_id)
+        if self.legal_entity_id is not None and self.organization_id is None:
+            raise PlatformError("Approval legal-entity scope requires organization scope.")
 
     @contextmanager
     def _transaction(self) -> Iterator[None]:
         try:
             with self.connection.transaction():
-                set_local_tenant_scope(self.connection, self.tenant_id)
+                set_local_tenant_scope(
+                    self.connection,
+                    self.tenant_id,
+                    self.organization_id,
+                    workspace_id=self.workspace_id,
+                    legal_entity_id=self.legal_entity_id,
+                )
                 yield
         except (PlatformError, PostgresApprovalsError):
             raise

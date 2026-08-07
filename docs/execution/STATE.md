@@ -5349,3 +5349,12 @@ filters, and server GUC propagation. E-567 then passed the 2,651-test local
 regression in 337.0 seconds, alongside focused contracts, package build, Ruff,
 Mypy, and diff-check. Live hierarchy PostgreSQL, statutory posting/judgment,
 providers, HA/DR, and GitHub publication remain deferred.
+
+E-568 closes a scope-reset defect in the PostgreSQL close path: authenticated
+organization/workspace/legal-entity context is now preserved by the close and
+certification approval repositories whenever they set transaction-local GUCs,
+and the server adapter passes the complete execution scope. Focused contracts
+pass; E-569 then passed the 2,653-test full regression in 336.9 seconds with
+the declared external-service skips visible. Package build is rerun after this
+update. This does not yet provide close-table hierarchy persistence or live
+multi-entity RLS evidence.

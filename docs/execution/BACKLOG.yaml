@@ -2917,3 +2917,33 @@ tasks:
       remain visible; the migration chain, focused contracts, Ruff, Mypy,
       package build, and diff-check also pass. Hosted CI/security/provenance,
       live providers, federation, HA/DR, and release approval remain external.
+  - id: E-568
+    priority: P1
+    area: enterprise_policy
+    title: Preserve hierarchy through PostgreSQL close and approval scope resets
+    status: completed
+    depends_on: [E-567]
+    exit_evidence: >-
+      `PostgresConsolidationCloseRepository` and `PostgresApprovalRepository`
+      now retain optional organization/workspace/legal-entity scope whenever
+      they reset transaction-local PostgreSQL settings. The server close
+      adapter passes the authenticated four-part scope, and invalid entity
+      parentage fails before database access. Focused scope-capture contracts
+      pass; close-table hierarchy persistence, live isolation, statutory
+      posting, providers/write-back, HA/DR, and production readiness remain
+      separate open work.
+  - id: E-569
+    priority: P0
+    area: quality
+    title: Full regression gate after close hierarchy propagation
+    status: completed
+    depends_on: [E-568]
+    exit_evidence: >-
+      The current tree collects 2,653 tests and
+      `uv run --no-sync pytest -q --basetemp .pytest-tmp-e569 --tb=short -ra`
+      exits 0 in 336.9 seconds with no collection or executed failure. Declared
+      PostgreSQL, Redis, object-storage, network, Windows, and platform skips
+      remain visible; focused close/approval contracts, the migration/phase
+      contract suite, Ruff, Mypy, and diff-check pass. Package build remains
+      part of the final local gate; hosted CI/security/provenance, live
+      providers, federation, HA/DR, and release approval remain external.

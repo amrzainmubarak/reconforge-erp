@@ -5756,3 +5756,19 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   external-service skips remain visible.
 - **Boundary**: No live hierarchy PostgreSQL run, statutory judgment/posting,
   providers/write-back, HA/DR, or production readiness is claimed.
+
+### D-398: Preserve hierarchy through PostgreSQL close scope resets
+
+- **Date**: 2026-08-07
+- **Context**: The authenticated close request carried four-part scope into the
+  connection boundary, but repository and certification resets restored only
+  the tenant GUCs.
+- **Decision**: Make organization, workspace, and legal-entity constructor
+  scope explicit and restore all five transaction-local settings in close and
+  approval repositories; reject an entity without its organization parent.
+- **Verification**: Scope-capture and invalid-parent focused contracts pass;
+  the 2,653-test full regression, Ruff, Mypy, and diff-check pass; package
+  build is rerun after this documentation update.
+- **Boundary**: Close-table hierarchy persistence, live RLS isolation,
+  statutory posting, providers/write-back, HA/DR, and production readiness
+  remain open.

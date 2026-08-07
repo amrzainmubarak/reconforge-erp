@@ -668,6 +668,7 @@ include docs/adr/0414-reconciliation-read-scope-re-evaluation.md
 include docs/adr/0415-evidence-hierarchy-policy-re-evaluation.md
 include docs/adr/0416-intercompany-hierarchy-policy-re-evaluation.md
 include docs/adr/0417-tenant-scoped-policy-hierarchy.md
+include docs/adr/0420-postgres-close-hierarchy-scope-propagation.md
 include reconforge/infrastructure/postgres_job_organization_scope.py
 include reconforge/infrastructure/postgres_consolidation_ppa_scope.py
 include reconforge/infrastructure/postgres_consolidation_impairment_deferred_tax_scope.py

@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import inspect
 import os
+from contextlib import contextmanager
 from pathlib import Path
 from uuid import uuid4
 
@@ -18,6 +19,7 @@ from reconforge.application.consolidation_ownership_change import OwnershipChang
 from reconforge.application.consolidation_ppa import AcquisitionPpaApplicationService
 from reconforge.domain.intercompany_elimination import prepare_intercompany_eliminations
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings, set_local_tenant_scope
+from reconforge.infrastructure.postgres_approvals import PostgresApprovalRepository
 from reconforge.infrastructure.postgres_consolidation_close import (
     POSTGRES_CONSOLIDATION_CLOSE_SCHEMA_SQL,
     POSTGRES_CONSOLIDATION_DEFERRED_TAX_LINK_SCHEMA_SQL,
@@ -43,6 +45,62 @@ from reconforge.infrastructure.postgres_intercompany_elimination import (
 from reconforge.platform.common import PlatformError
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+class _ScopeCaptureConnection:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, tuple[object, ...] | None]] = []
+
+    def execute(self, query: str, params: tuple[object, ...] | None = None) -> None:
+        self.calls.append((query, params))
+
+    @contextmanager
+    def transaction(self):
+        yield
+
+
+def test_close_and_approval_repositories_preserve_full_hierarchy_scope() -> None:
+    connection = _ScopeCaptureConnection()
+    close = PostgresConsolidationCloseRepository(
+        connection,
+        "tenant-a",
+        organization_id="organization-a",
+        workspace_id="workspace-a",
+        legal_entity_id="entity-a",
+    )
+    close._scope()
+    assert [params for query, params in connection.calls if "set_config" in query] == [
+        ("tenant-a",),
+        ("organization-a",),
+        ("workspace-a",),
+        ("entity-a",),
+        ("entity-a",),
+    ]
+
+    connection.calls.clear()
+    approval = PostgresApprovalRepository(
+        connection,
+        "tenant-a",
+        organization_id="organization-a",
+        workspace_id="workspace-a",
+        legal_entity_id="entity-a",
+    )
+    with approval._transaction():
+        pass
+    assert [params for query, params in connection.calls if "set_config" in query] == [
+        ("tenant-a",),
+        ("organization-a",),
+        ("workspace-a",),
+        ("entity-a",),
+        ("entity-a",),
+    ]
+
+
+def test_close_hierarchy_rejects_entity_without_organization() -> None:
+    with pytest.raises(PlatformError, match="requires organization"):
+        PostgresConsolidationCloseRepository(None, "tenant-a", legal_entity_id="entity-a")
+    with pytest.raises(PlatformError, match="requires organization"):
+        PostgresApprovalRepository(None, "tenant-a", legal_entity_id="entity-a")
 
 
 def test_postgres_consolidation_close_schema_is_tenant_scoped_and_exact() -> None:

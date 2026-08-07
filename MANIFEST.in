@@ -103,6 +103,7 @@ include docs/adr/0442-durable-job-persistent-scheduler-cursor.md
 include docs/adr/0443-durable-job-scheduler-cursor-contention.md
 include docs/adr/0444-retail-settlement-replay-integrity.md
 include docs/adr/0445-cross-industry-decision-artifact-replay-integrity.md
+include docs/adr/0446-network-connector-circuit-breaker.md
 include docs/adr/0339-connectors-boundary-is-an-evidence-bounded-module.md
 include docs/connectors/camt053-bounded-readonly.md
 include docs/execution/P3_ENT_007_EXIT_AUDIT.yaml

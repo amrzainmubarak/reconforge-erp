@@ -14598,3 +14598,12 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   serialized local artifact-integrity evidence only; source authenticity, live
   providers, persistence, posting, write-back, and production operations stay
   unverified.
+- E-600 network-connector circuit breaker (2026-08-07):
+  `NetworkConnectorExecutor` now tracks a bounded process-local circuit per
+  connector/declared endpoint. Exhausted retryable transport or 5xx failures
+  open the circuit, the next read fails fast without transport I/O, and a read
+  after the bounded window succeeds and clears state. The focused command
+  `uv run pytest -q tests/test_connector_network.py` passes 24/24; Ruff and
+  Mypy pass. This is synthetic local resilience evidence only; distributed
+  quota coordination, live provider availability, vault operation, and
+  production SLOs remain unverified.

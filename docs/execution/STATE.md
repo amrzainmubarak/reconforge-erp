@@ -5621,3 +5621,12 @@ regression for each module. This is serialized local artifact-integrity
 evidence only; source authenticity, live provider operations, persistence,
 posting, write-back, and production readiness remain open. GitHub publication
 remains deferred by owner policy.
+
+E-600 adds a bounded process-local circuit breaker to the provider-neutral
+network connector executor. Per connector/endpoint, exhausted retryable
+transport or 5xx failures now open a fail-fast window; a later successful read
+clears the state. The focused network suite passes 24 tests with failure
+injection and zero transport calls while open. This is local synthetic
+resilience evidence only; distributed quota coordination, live provider
+availability, vault operation, and production SLOs remain unverified. GitHub
+publication remains deferred by owner policy.

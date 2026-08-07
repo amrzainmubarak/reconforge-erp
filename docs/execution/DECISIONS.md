@@ -6189,3 +6189,17 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   included in the source distribution.
 - **Boundary**: Serialized artifact integrity only; no source authenticity,
   live provider, persistence, posting, write-back, or production claim follows.
+
+### D-426: Fail fast on repeated network-connector dependency failures
+
+- **Date**: 2026-08-07
+- **Context**: Bounded per-read retries did not stop later reads from
+  repeating the same retry loop during a provider outage.
+- **Decision**: Track an in-memory circuit per connector and exact endpoint.
+  Open it after a bounded number of exhausted retryable transport/5xx failures,
+  refuse reads during the window, and clear state after a successful recovery.
+  Permanent HTTP and local response-policy errors do not open it.
+- **Verification**: The network focused suite passes 24/24; the circuit test
+  proves no transport call while open and one-attempt recovery after expiry.
+- **Boundary**: Process-local synthetic resilience only; no distributed quota,
+  live provider availability, vault, or production SLO claim follows.

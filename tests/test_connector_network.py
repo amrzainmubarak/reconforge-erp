@@ -168,6 +168,36 @@ def test_transient_retry_is_bounded_and_permanent_failure_is_not_retried() -> No
     assert len(permanent.calls) == 1
 
 
+def test_network_circuit_breaker_fails_fast_and_recovers_after_open_window() -> None:
+    transport = _Transport(
+        [
+            NetworkResponse(503, b"ignored"),
+            NetworkResponse(503, b"ignored"),
+            NetworkResponse(503, b"ignored"),
+            NetworkResponse(200, b"recovered"),
+        ]
+    )
+    now = [0.0]
+    executor = NetworkConnectorExecutor(
+        transport,
+        secret_resolver=_Secrets(),
+        circuit_failure_threshold=1,
+        circuit_open_seconds=5,
+        clock=lambda: now[0],
+    )
+    with pytest.raises(ConnectorNetworkError, match="retry_exhausted"):
+        executor.read(_registration(), idempotency_key="circuit-1")
+    assert len(transport.calls) == 3
+    with pytest.raises(ConnectorNetworkError, match="circuit_open"):
+        executor.read(_registration(), idempotency_key="circuit-2")
+    assert len(transport.calls) == 3
+    now[0] = 5.0
+    result = executor.read(_registration(), idempotency_key="circuit-3")
+    assert result.response_body == b"recovered"
+    assert result.attempts == 1
+    assert len(transport.calls) == 4
+
+
 def test_formal_failure_injection_conformance_is_bounded_and_provider_neutral() -> None:
     waits: list[float] = []
     result = verify_network_retry_failure_injection(

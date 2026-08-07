@@ -3449,3 +3449,18 @@ tasks:
       three modules. This is serialized local artifact-integrity evidence only,
       not source authenticity, live provider settlement, persistence, posting,
       write-back, or production operations evidence.
+  - id: E-600
+    priority: P1
+    area: connector_platform
+    title: Bounded network-connector circuit breaker
+    status: completed
+    depends_on: [E-591, P4-CON-001]
+    exit_evidence: >-
+      NetworkConnectorExecutor now keeps a process-local circuit per connector
+      and declared endpoint. Bounded exhausted retryable transport/5xx
+      failures open the circuit, subsequent reads fail fast without transport
+      I/O, and a bounded expiry permits recovery and clears state on success.
+      Focused synthetic failure-injection tests and static gates pass. This is
+      local resilience evidence only; distributed quota coordination, live
+      provider availability, vault operation, and production SLOs remain
+      unverified.

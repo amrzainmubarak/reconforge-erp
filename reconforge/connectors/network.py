@@ -9,6 +9,7 @@ import json
 import re
 import socket
 import ssl
+import threading
 import time
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
@@ -223,6 +224,21 @@ class NetworkConnectorExecutor:
     sleeper: Sleeper = field(default=lambda _seconds: None, repr=False)
     _next_allowed_at: dict[str, float] = field(default_factory=dict, init=False, repr=False)
     clock: Callable[[], float] = field(default=time.monotonic, repr=False)
+    circuit_failure_threshold: int = 3
+    circuit_open_seconds: float = 30.0
+    _circuit_failures: dict[str, int] = field(default_factory=dict, init=False, repr=False)
+    _circuit_open_until: dict[str, float] = field(default_factory=dict, init=False, repr=False)
+    _circuit_lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.circuit_failure_threshold, int) or isinstance(self.circuit_failure_threshold, bool):
+            raise ValueError("circuit_failure_threshold must be an integer")
+        if not 1 <= self.circuit_failure_threshold <= 100:
+            raise ValueError("circuit_failure_threshold must be between 1 and 100")
+        if isinstance(self.circuit_open_seconds, bool) or not isinstance(self.circuit_open_seconds, (int, float)):
+            raise ValueError("circuit_open_seconds must be numeric")
+        if not 0 <= float(self.circuit_open_seconds) <= 3_600:
+            raise ValueError("circuit_open_seconds must be between 0 and 3600")
 
     def read(
         self,
@@ -262,6 +278,10 @@ class NetworkConnectorExecutor:
             raise ConnectorNetworkError("connector_idempotent_reads_required")
         if cursor is not None and not manifest.incremental_cursor:
             raise ConnectorNetworkError("connector_cursor_not_supported")
+        circuit_key = (
+            f"{manifest.connector_id}|{registration.endpoint}|{registration.credential_reference or 'public'}"
+        )
+        self._ensure_circuit_available(circuit_key)
         credential: bytes | None = None
         if manifest.authentication is AuthenticationMethod.SECRET_REFERENCE:
             if registration.credential_reference is None:
@@ -329,11 +349,14 @@ class NetworkConnectorExecutor:
                     maximum_response_bytes=registration.maximum_response_bytes,
                 )
             except ConnectorNetworkError as exc:
-                if str(exc) not in {
+                retryable_transport = str(exc) in {
                     "connector_destination_resolution_failed",
                     "connector_destination_resolution_empty",
                     "connector_transport_failed",
-                } or attempt >= manifest.retry_policy.maximum_attempts:
+                }
+                if not retryable_transport or attempt >= manifest.retry_policy.maximum_attempts:
+                    if retryable_transport:
+                        self._record_circuit_failure(circuit_key)
                     raise
                 self._retry_wait(manifest, attempt)
                 continue
@@ -346,6 +369,7 @@ class NetworkConnectorExecutor:
             ):
                 raise ConnectorNetworkError("connector_response_cursor_invalid")
             if 200 <= response.status < 300:
+                self._record_circuit_success(circuit_key)
                 return ConnectorReadResult(
                     response_body=response.body,
                     next_cursor=response.next_cursor,
@@ -356,9 +380,33 @@ class NetworkConnectorExecutor:
             if response.status not in {408, 425, 429} and not 500 <= response.status < 600:
                 raise ConnectorNetworkError("connector_permanent_http_failure")
             if attempt >= manifest.retry_policy.maximum_attempts:
+                self._record_circuit_failure(circuit_key)
                 raise ConnectorNetworkError("connector_retry_exhausted")
             self._retry_wait(manifest, attempt)
         raise ConnectorNetworkError("connector_retry_exhausted")
+
+    def _ensure_circuit_available(self, circuit_key: str) -> None:
+        with self._circuit_lock:
+            open_until = self._circuit_open_until.get(circuit_key)
+            if open_until is None:
+                return
+            now = self.clock()
+            if now < open_until:
+                raise ConnectorNetworkError("connector_circuit_open")
+            self._circuit_open_until.pop(circuit_key, None)
+            self._circuit_failures.pop(circuit_key, None)
+
+    def _record_circuit_failure(self, circuit_key: str) -> None:
+        with self._circuit_lock:
+            failures = self._circuit_failures.get(circuit_key, 0) + 1
+            self._circuit_failures[circuit_key] = failures
+            if failures >= self.circuit_failure_threshold:
+                self._circuit_open_until[circuit_key] = self.clock() + float(self.circuit_open_seconds)
+
+    def _record_circuit_success(self, circuit_key: str) -> None:
+        with self._circuit_lock:
+            self._circuit_failures.pop(circuit_key, None)
+            self._circuit_open_until.pop(circuit_key, None)
 
     def _apply_rate_limit(self, manifest: ConnectorManifest) -> None:
         rate = manifest.rate_limit_per_minute

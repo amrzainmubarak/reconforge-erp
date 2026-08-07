@@ -5568,3 +5568,14 @@ improves synthetic property/fuzz evidence only; mutation-tool score,
 PostgreSQL parity, distributed fault coverage, live-rate validation, and
 production sizing remain open. GitHub publication remains deferred by owner
 policy.
+
+E-595 adds a dependency-free targeted source-mutation campaign for grouped
+matching. A disposable child package runs a closed contract against three
+explicit mutants covering partial settlement, date-window boundaries, and
+absolute-difference handling; the baseline passes and all three mutants are
+killed (3/3, zero survivors). The focused grouped suite reaches 27 tests.
+The full repository regression collected 2,720 tests and exited 0 in 365.1
+seconds with declared capability skips and existing warnings only. This is a
+targeted mutation result, not a domain-wide score; PostgreSQL parity,
+distributed fault coverage, live-rate validation, and production sizing remain
+open. GitHub publication remains deferred by owner policy.

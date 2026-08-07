@@ -3364,3 +3364,21 @@ tasks:
       live-rate validation, or production sizing. The full repository
       regression collected 2,719 tests and exited 0 in 368.6 seconds; declared
       capability skips and existing warnings remain visible.
+  - id: E-595
+    priority: P1
+    area: advanced_matching
+    title: Add targeted source mutation campaign for grouped matching
+    status: completed
+    depends_on: [E-594, P4-MAT-001]
+    exit_evidence: >-
+      A dependency-free disposable-child harness mutates three explicit
+      grouped-matching source expressions: partial-settlement acceptance,
+      date-window boundary comparison, and signed-difference absolute-value
+      handling. The unmutated child contract passes and all three mutants are
+      killed (3/3, zero survivors) through a subprocess pytest boundary. The
+      focused grouped suite passes 27 tests, the ADR/source files are packaged,
+      and static/package/security gates remain green. This is a targeted
+      mutation result, not a domain-wide mutation score or PostgreSQL,
+      distributed, live-rate, or production evidence. The full repository
+      regression collected 2,720 tests and exited 0 in 365.1 seconds; declared
+      capability skips and existing warnings remain visible.

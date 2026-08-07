@@ -6111,3 +6111,19 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: This is synthetic bounded property/fuzz evidence, not a
   source-code mutation score, PostgreSQL parity, distributed fault campaign,
   live-rate validation, or production sizing claim.
+
+### D-421: Add targeted source mutation for grouped matching
+
+- **Date**: 2026-08-07
+- **Context**: E-594 added generated property/fuzz checks, while the matching
+  gap still distinguished request-level sentinels from source mutation.
+- **Decision**: Use a dependency-free disposable child package and a closed
+  subprocess pytest contract. Mutate only three named source expressions and
+  require the baseline to pass and every mutant to fail.
+- **Verification**: The campaign kills 3/3 mutants with zero survivors; the
+  combined focused grouped suite passes 27 tests; the full repository
+  regression collected 2,720 tests and exited 0 in 365.1 seconds; the
+  ADR/source files are source-distribution members.
+- **Boundary**: Targeted mutation only; no domain-wide mutation score,
+  PostgreSQL parity, distributed fault campaign, live-rate validation, or
+  production sizing claim follows.

@@ -14,6 +14,17 @@ This file records commands and observed results. It does not convert a dirty wor
   not established. The full repository regression collected 2,719 tests and
   exited 0 in 368.6 seconds with declared capability skips and existing
   warnings only.
+- E-595 grouped-matching source mutation campaign (2026-08-07): the
+  dependency-free harness copies the target module into a disposable child
+  package and runs a closed subprocess contract against three explicit
+  mutants (partial-settlement acceptance, date-window boundary, and absolute
+  difference). The baseline passes and all three mutants are killed (3/3,
+  zero survivors). The focused grouped suite passes 27 tests. This is targeted
+  source-mutation evidence only; it is not a domain-wide mutation score,
+  PostgreSQL parity, distributed fault coverage, live-rate validation, or
+  production sizing. The full repository regression collected 2,720 tests and
+  exited 0 in 365.1 seconds with declared capability skips and existing
+  warnings only.
 - E-593 provider HTTPS sandbox runtime (2026-08-07): a temporary localhost
   certificate and injected public-address resolver exercise the real
   `PinnedHttpsGetTransport` for CAMT.053 and ERPNext GL Entry/Payment Entry

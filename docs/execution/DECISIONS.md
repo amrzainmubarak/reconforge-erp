@@ -6174,3 +6174,18 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: This protects serialized artifact integrity only. It is not a
   signature, source-authenticity proof, live provider settlement, persistence,
   posting, write-back, or production retail evidence.
+
+### D-425: Share nested decision integrity across industry controls
+
+- **Date**: 2026-08-07
+- **Context**: Bank, manufacturing, and professional invoice/payment reports
+  each carried a decision digest but only checked their outer artifact hash.
+- **Decision**: Use one small domain helper for canonical serialized decision
+  ordering, sorted unique input fingerprints, status-count derivation, and
+  nested digest verification; retain per-module schema, algorithm, status, and
+  ordering contracts.
+- **Verification**: Focused bank/manufacturing/professional suites pass 21/21,
+  including an outer-rehash tamper regression for every module; the helper is
+  included in the source distribution.
+- **Boundary**: Serialized artifact integrity only; no source authenticity,
+  live provider, persistence, posting, write-back, or production claim follows.

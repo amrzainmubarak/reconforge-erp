@@ -3434,3 +3434,18 @@ tasks:
       serialized local artifact-integrity evidence only, not source
       authenticity, live provider settlement, persistence, posting, write-back,
       or production retail evidence.
+  - id: E-599
+    priority: P2
+    area: platform-breadth
+    title: Cross-industry decision-artifact replay integrity
+    status: completed
+    depends_on: [E-598, P4-PLAT-001]
+    exit_evidence: >-
+      Bank-statement, manufacturing-cost, and professional invoice/payment
+      report readers now share a provider-neutral nested decision-artifact
+      verifier. It checks schema/algorithm identity, canonical decision order,
+      sorted unique input fingerprints, derived status counts, and the exact
+      decision digest; focused outer-rehash tamper regressions pass for all
+      three modules. This is serialized local artifact-integrity evidence only,
+      not source authenticity, live provider settlement, persistence, posting,
+      write-back, or production operations evidence.

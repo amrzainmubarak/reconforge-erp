@@ -14,6 +14,7 @@ from reconforge.domain.bank_statement_control import (
     BankStatementControlRun,
     BankStatementRecord,
     run_bank_statement_control,
+    verify_bank_statement_payload,
 )
 from reconforge.io.records import RecordIngressError, read_json_record_document
 from reconforge.utils.money import Money
@@ -140,6 +141,7 @@ def verify_bank_statement_report(path: Path) -> dict[str, Any]:
     ).hexdigest()
     if not isinstance(artifact_digest, str) or artifact_digest != expected:
         raise BankStatementControlError("bank statement report digest verification failed.")
+    verify_bank_statement_payload(payload)
     return payload
 
 

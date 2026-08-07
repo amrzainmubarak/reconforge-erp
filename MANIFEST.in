@@ -102,6 +102,7 @@ include docs/adr/0441-grouped-matching-source-mutation.md
 include docs/adr/0442-durable-job-persistent-scheduler-cursor.md
 include docs/adr/0443-durable-job-scheduler-cursor-contention.md
 include docs/adr/0444-retail-settlement-replay-integrity.md
+include docs/adr/0445-cross-industry-decision-artifact-replay-integrity.md
 include docs/adr/0339-connectors-boundary-is-an-evidence-bounded-module.md
 include docs/connectors/camt053-bounded-readonly.md
 include docs/execution/P3_ENT_007_EXIT_AUDIT.yaml
@@ -526,6 +527,7 @@ include docs/adr/0364-retail-pos-settlement-control-slice.md
 recursive-include control-packs/retail-pos-settlement *
 recursive-include examples/retail_settlement *
 include reconforge/domain/bank_statement_control.py
+include reconforge/domain/decision_artifact.py
 include reconforge/application/bank_statement_control.py
 include reconforge/cli_bank_statement_control.py
 include tests/test_bank_statement_control.py

@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 import re
 from dataclasses import dataclass
 from datetime import date
 from typing import Literal
 
+from reconforge.domain.decision_artifact import canonical_decision_digest, verify_canonical_decision_payload
 from reconforge.utils.money import Money
 
 PROFESSIONAL_INVOICE_PAYMENT_SCHEMA_VERSION = 1
@@ -47,12 +46,6 @@ def _reference(value: object) -> str:
 
 def _money_dict(value: Money | None) -> dict[str, object] | None:
     return value.to_canonical_dict() if value is not None else None
-
-
-def _digest(payload: object) -> str:
-    return hashlib.sha256(
-        json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
-    ).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -231,8 +224,36 @@ def run_professional_invoice_payment_control(
         payment_window_days,
         tuple(sorted(set(input_digests))),
         ordered,
-        _digest(payload),
+        canonical_decision_digest(payload),
     )
+
+
+def verify_professional_invoice_payment_payload(payload: dict[str, object]) -> None:
+    """Verify the serialized invoice/payment decision projection."""
+
+    try:
+        verify_canonical_decision_payload(
+            payload,
+            expected_schema_version=PROFESSIONAL_INVOICE_PAYMENT_SCHEMA_VERSION,
+            expected_algorithm_version=PROFESSIONAL_INVOICE_PAYMENT_ALGORITHM_VERSION,
+            digest_fields=(
+                "algorithm_version",
+                "amount_tolerance",
+                "decisions",
+                "input_digests",
+                "payment_window_days",
+                "schema_version",
+            ),
+            decision_sort_key=lambda item: (
+                str(item.get("client_id")),
+                str(item.get("invoice_id")),
+                str(item.get("status")),
+                str(item.get("payment_ids", [])),
+            ),
+            allowed_statuses=frozenset({"matched", "exception", "unmatched_invoice", "unmatched_payment", "ambiguous"}),
+        )
+    except ValueError as exc:
+        raise ProfessionalInvoicePaymentError("professional invoice/payment report replay verification failed.") from exc
 
 
 __all__ = [
@@ -244,4 +265,5 @@ __all__ = [
     "ProfessionalInvoiceRecord",
     "ProfessionalPaymentRecord",
     "run_professional_invoice_payment_control",
+    "verify_professional_invoice_payment_payload",
 ]

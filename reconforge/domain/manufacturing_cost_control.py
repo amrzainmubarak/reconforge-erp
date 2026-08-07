@@ -7,14 +7,13 @@ inventory, WIP, or general-ledger entries.
 
 from __future__ import annotations
 
-import hashlib
-import json
 import re
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from typing import Literal, cast
 
+from reconforge.domain.decision_artifact import canonical_decision_digest, verify_canonical_decision_payload
 from reconforge.utils.money import Money, Quantity
 
 MANUFACTURING_CONTROL_SCHEMA_VERSION = 1
@@ -79,12 +78,6 @@ def _money_dict(value: Money) -> dict[str, object]:
 
 def _quantity_dict(value: Quantity) -> dict[str, object]:
     return {"scale": value.scale, "unit": value.unit, "value": str(value.value)}
-
-
-def _digest(payload: object) -> str:
-    return hashlib.sha256(
-        json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
-    ).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -378,8 +371,35 @@ def run_manufacturing_cost_control(
         max_scrap_quantity,
         tuple(sorted(set(input_digests))),
         ordered,
-        _digest(payload),
+        canonical_decision_digest(payload),
     )
+
+
+def verify_manufacturing_payload(payload: dict[str, object]) -> None:
+    """Verify the serialized manufacturing decision projection."""
+
+    try:
+        verify_canonical_decision_payload(
+            payload,
+            expected_schema_version=MANUFACTURING_CONTROL_SCHEMA_VERSION,
+            expected_algorithm_version=MANUFACTURING_CONTROL_ALGORITHM_VERSION,
+            digest_fields=(
+                "algorithm_version",
+                "amount_tolerance",
+                "decisions",
+                "input_digests",
+                "max_scrap_quantity",
+                "schema_version",
+            ),
+            decision_sort_key=lambda item: (
+                str(item.get("order_id")),
+                str(item.get("status")),
+                str(item.get("reason_codes", [])),
+            ),
+            allowed_statuses=frozenset({"reconciled", "exception", "unmatched"}),
+        )
+    except ValueError as exc:
+        raise ManufacturingControlError("manufacturing report replay verification failed.") from exc
 
 
 __all__ = [
@@ -393,4 +413,5 @@ __all__ = [
     "ProductionOrder",
     "ScrapEvent",
     "run_manufacturing_cost_control",
+    "verify_manufacturing_payload",
 ]

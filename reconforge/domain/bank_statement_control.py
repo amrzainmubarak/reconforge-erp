@@ -7,13 +7,12 @@ journal, or authenticate that either source was produced by a bank/ERP.
 
 from __future__ import annotations
 
-import hashlib
-import json
 import re
 from dataclasses import dataclass
 from datetime import date
 from typing import Literal
 
+from reconforge.domain.decision_artifact import canonical_decision_digest, verify_canonical_decision_payload
 from reconforge.utils.money import Money
 
 BANK_STATEMENT_CONTROL_SCHEMA_VERSION = 1
@@ -43,12 +42,6 @@ def _iso_date(value: object, field: str) -> str:
 
 def _money_dict(value: Money | None) -> dict[str, object] | None:
     return value.to_canonical_dict() if value is not None else None
-
-
-def _digest(payload: object) -> str:
-    return hashlib.sha256(
-        json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
-    ).hexdigest()
 
 
 def normalize_bank_reference(value: object) -> str:
@@ -234,8 +227,36 @@ def run_bank_statement_control(
         date_window_days,
         tuple(sorted(set(input_digests))),
         ordered,
-        _digest(payload),
+        canonical_decision_digest(payload),
     )
+
+
+def verify_bank_statement_payload(payload: dict[str, object]) -> None:
+    """Verify the serialized bank-control decision projection."""
+
+    try:
+        verify_canonical_decision_payload(
+            payload,
+            expected_schema_version=BANK_STATEMENT_CONTROL_SCHEMA_VERSION,
+            expected_algorithm_version=BANK_STATEMENT_CONTROL_ALGORITHM_VERSION,
+            digest_fields=(
+                "algorithm_version",
+                "amount_tolerance",
+                "date_window_days",
+                "decisions",
+                "input_digests",
+                "schema_version",
+            ),
+            decision_sort_key=lambda item: (
+                str(item.get("account_id")),
+                str(item.get("bank_line_id")),
+                str(item.get("status")),
+                str(item.get("ledger_record_ids", [])),
+            ),
+            allowed_statuses=frozenset({"matched", "exception", "unmatched_bank", "unmatched_ledger", "ambiguous"}),
+        )
+    except ValueError as exc:
+        raise BankStatementControlError("bank statement report replay verification failed.") from exc
 
 
 __all__ = [
@@ -248,4 +269,5 @@ __all__ = [
     "BankStatementRecord",
     "normalize_bank_reference",
     "run_bank_statement_control",
+    "verify_bank_statement_payload",
 ]

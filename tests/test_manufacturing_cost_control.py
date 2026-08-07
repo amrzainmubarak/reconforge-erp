@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from decimal import Decimal
 from pathlib import Path
@@ -121,6 +122,22 @@ def test_manufacturing_report_is_schema_and_digest_bound(tmp_path: Path) -> None
         verify_manufacturing_report(output)
     with pytest.raises(ValidationError):
         Draft202012Validator(schema).validate(payload)
+
+
+def test_manufacturing_report_rejects_nested_decision_tampering_after_outer_rehash(tmp_path: Path) -> None:
+    run = run_manufacturing_cost_control_files(
+        ORDERS, ISSUES, COMPLETIONS, SCRAP, currency="EUR", tolerance="0.01", max_scrap_quantity="5"
+    )
+    output = tmp_path / "manufacturing-nested-tamper.json"
+    write_manufacturing_report(run, output)
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    payload["decisions"][0]["reason_codes"] = ["TAMPERED"]
+    payload["artifact_digest"] = hashlib.sha256(
+        json.dumps({key: value for key, value in payload.items() if key != "artifact_digest"}, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    ).hexdigest()
+    output.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ManufacturingControlError, match="replay verification failed"):
+        verify_manufacturing_report(output)
 
 
 def test_manufacturing_cli_writes_replayable_artifact(tmp_path: Path) -> None:

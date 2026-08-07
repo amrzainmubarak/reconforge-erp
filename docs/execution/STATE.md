@@ -5611,3 +5611,13 @@ even when the outer envelope is recomputed. This is local serialized
 artifact-integrity evidence only; source authenticity, live provider
 settlement, persistence, posting, write-back, and production retail evidence
 remain open. GitHub publication remains deferred by owner policy.
+
+E-599 extends the same nested decision-artifact integrity contract to the
+bank-statement, manufacturing-cost, and professional invoice/payment modules.
+The shared verifier checks schema/algorithm identity, canonical decision order,
+sorted unique input fingerprints, derived status counts, and the exact nested
+digest. Focused module suites pass 21 tests, including an outer-rehash tamper
+regression for each module. This is serialized local artifact-integrity
+evidence only; source authenticity, live provider operations, persistence,
+posting, write-back, and production readiness remain open. GitHub publication
+remains deferred by owner policy.

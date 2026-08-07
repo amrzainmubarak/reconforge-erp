@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -107,6 +108,20 @@ def test_professional_report_is_schema_and_digest_bound(tmp_path: Path) -> None:
         verify_professional_invoice_payment_report(output)
     with pytest.raises(ValidationError):
         Draft202012Validator(schema).validate(payload)
+
+
+def test_professional_report_rejects_nested_decision_tampering_after_outer_rehash(tmp_path: Path) -> None:
+    run = run_professional_invoice_payment_control_files(INVOICES, PAYMENTS, currency="USD", tolerance="0.01")
+    output = tmp_path / "professional-nested-tamper.json"
+    write_professional_invoice_payment_report(run, output)
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    payload["decisions"][0]["reason_code"] = "TAMPERED"
+    payload["artifact_digest"] = hashlib.sha256(
+        json.dumps({key: value for key, value in payload.items() if key != "artifact_digest"}, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    ).hexdigest()
+    output.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ProfessionalInvoicePaymentError, match="replay verification failed"):
+        verify_professional_invoice_payment_report(output)
 
 
 def test_professional_control_cli_writes_replayable_artifact(tmp_path: Path) -> None:

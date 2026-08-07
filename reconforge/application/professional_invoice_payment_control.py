@@ -13,6 +13,7 @@ from reconforge.domain.professional_invoice_payment_control import (
     ProfessionalInvoiceRecord,
     ProfessionalPaymentRecord,
     run_professional_invoice_payment_control,
+    verify_professional_invoice_payment_payload,
 )
 from reconforge.io.records import RecordIngressError, read_json_record_document
 from reconforge.utils.money import Money
@@ -134,6 +135,7 @@ def verify_professional_invoice_payment_report(path: Path) -> dict[str, Any]:
     ).hexdigest()
     if not isinstance(artifact_digest, str) or artifact_digest != expected:
         raise ProfessionalInvoicePaymentError("professional invoice/payment report digest verification failed.")
+    verify_professional_invoice_payment_payload(payload)
     return payload
 
 

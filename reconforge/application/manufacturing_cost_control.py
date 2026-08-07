@@ -14,6 +14,7 @@ from reconforge.domain.manufacturing_cost_control import (
     ProductionOrder,
     ScrapEvent,
     run_manufacturing_cost_control,
+    verify_manufacturing_payload,
 )
 from reconforge.io.records import RecordIngressError, read_json_record_document
 from reconforge.utils.money import Money, Quantity
@@ -186,6 +187,7 @@ def verify_manufacturing_report(path: Path) -> dict[str, Any]:
     ).hexdigest()
     if not isinstance(artifact_digest, str) or artifact_digest != expected:
         raise ManufacturingControlError("manufacturing report digest verification failed.")
+    verify_manufacturing_payload(payload)
     return payload
 
 

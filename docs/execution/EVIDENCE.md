@@ -14586,3 +14586,15 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   and is still refused. This is serialized local artifact-integrity evidence;
   it does not prove source authenticity, live processor settlement, database
   persistence, journal posting, write-back, or production retail operations.
+- E-599 cross-industry decision-artifact replay integrity (2026-08-07):
+  bank-statement, manufacturing-cost, and professional invoice/payment report
+  readers now share a provider-neutral nested verifier for schema/algorithm
+  identity, canonical decision order, sorted unique input fingerprints,
+  status counts, and the exact decision digest. The focused command
+  `uv run pytest -q tests/test_bank_statement_control.py
+  tests/test_manufacturing_cost_control.py
+  tests/test_professional_invoice_payment_control.py` passes 21/21,
+  including an outer-rehash tamper regression for each module. This is
+  serialized local artifact-integrity evidence only; source authenticity, live
+  providers, persistence, posting, write-back, and production operations stay
+  unverified.

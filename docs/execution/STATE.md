@@ -5423,3 +5423,11 @@ register the existing lazy client factory's `close()` callback on application
 shutdown, matching PostgreSQL pool cleanup. The contract is local and does not
 open a network connection; Redis availability, replication, HA/DR, and hosted
 runtime evidence remain external. GitHub publication remains deferred.
+
+E-580 closes a bounded scheduler resource-churn defect: each configured
+reconciliation worker slot now reuses one lazily-created worker across polling
+cycles. The focused contract, Ruff, Mypy, package build, diff-check, and the
+2,655-test full local regression pass (385.1 seconds, with declared
+external-service/platform skips). This does not prove throughput, fairness,
+capacity, soak, distributed scheduling, HA/DR, or production sizing; hosted
+providers and GitHub publication remain deferred.

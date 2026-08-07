@@ -3088,3 +3088,20 @@ tasks:
       network connection; focused tests, Ruff, Mypy, package build, and diff
       checks must pass. This is lifecycle evidence only, not Redis availability,
       HA/DR, throughput, or production SLO evidence.
+  - id: E-580
+    priority: P1
+    area: scale
+    title: Reuse reconciliation scheduler workers across polling cycles
+    status: completed
+    depends_on: [E-579, P4-SCL-001]
+    exit_evidence: >-
+      `PostgresReconciliationScheduler` now lazily caches one injected worker
+      instance per stable worker slot and reuses it on later bounded cycles,
+      preventing avoidable lifecycle/resource churn. The focused scheduler
+      contract proves factory calls occur once per slot across two cycles;
+      Ruff and Mypy pass; package build and diff-check pass; and the current
+      2,655-test full local regression exits 0 in 385.1 seconds with declared
+      external-service/platform skips. This is resource-reuse correctness only,
+      not throughput,
+      fairness, capacity, soak, distributed scheduling, HA/DR, or production
+      sizing evidence.

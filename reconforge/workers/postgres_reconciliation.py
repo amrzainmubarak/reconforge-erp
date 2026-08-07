@@ -571,6 +571,18 @@ class PostgresReconciliationScheduler:
         self.worker_factory = worker_factory
         self.worker_ids = identifiers
         self.poll_interval_seconds = float(poll_interval_seconds)
+        # Keep one worker instance per stable slot. Deployments may attach a
+        # bounded connection pool or other lifecycle-scoped resources to a
+        # worker; rebuilding the object on every poll cycle would churn those
+        # resources and defeat the scheduler's bounded-runtime contract.
+        self._workers: dict[str, PostgresReconciliationWorker] = {}
+
+    def _worker_for(self, worker_id: str) -> PostgresReconciliationWorker:
+        worker = self._workers.get(worker_id)
+        if worker is None:
+            worker = self.worker_factory(worker_id)
+            self._workers[worker_id] = worker
+        return worker
 
     def process_once(self) -> ReconciliationWorkerRunSummary:
         """Execute one bounded cycle per worker and aggregate outcomes."""
@@ -579,7 +591,7 @@ class PostgresReconciliationScheduler:
             with ThreadPoolExecutor(
                 max_workers=len(self.worker_ids), thread_name_prefix="reconforge-reconciliation"
             ) as pool:
-                futures = [pool.submit(self.worker_factory(worker_id).process_once) for worker_id in self.worker_ids]
+                futures = [pool.submit(self._worker_for(worker_id).process_once) for worker_id in self.worker_ids]
                 cycles = [future.result() for future in futures]
         except PostgresReconciliationSchedulerError:
             raise

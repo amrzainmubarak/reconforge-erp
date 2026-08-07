@@ -1043,6 +1043,7 @@ def test_postgres_reconciliation_worker_resumes_after_unhandled_crash_and_lease_
 
 def test_postgres_reconciliation_scheduler_aggregates_worker_slots() -> None:
     created: list[str] = []
+    factory_calls: list[str] = []
 
     class _Worker:
         def __init__(self, worker_id: str) -> None:
@@ -1052,10 +1053,19 @@ def test_postgres_reconciliation_scheduler_aggregates_worker_slots() -> None:
             created.append(self.worker_id)
             return ReconciliationWorkerRunSummary(cycles=1, discovered=2, completed=1, failed=0, cancelled=0, skipped=1)
 
-    scheduler = PostgresReconciliationScheduler(_Worker, worker_ids=["worker-b", "worker-a"], poll_interval_seconds=0)
+    def factory(worker_id: str) -> _Worker:
+        factory_calls.append(worker_id)
+        return _Worker(worker_id)
+
+    scheduler = PostgresReconciliationScheduler(factory, worker_ids=["worker-b", "worker-a"], poll_interval_seconds=0)
     summary = scheduler.process_once()
     assert created == ["worker-a", "worker-b"]
+    assert factory_calls == ["worker-a", "worker-b"]
     assert summary == ReconciliationWorkerRunSummary(cycles=2, discovered=4, completed=2, failed=0, cancelled=0, skipped=2)
+    second = scheduler.process_once()
+    assert created == ["worker-a", "worker-b", "worker-a", "worker-b"]
+    assert factory_calls == ["worker-a", "worker-b"]
+    assert second == summary
     with pytest.raises(PostgresReconciliationSchedulerError, match="between 1 and 64"):
         PostgresReconciliationScheduler(_Worker, worker_ids=[])
 

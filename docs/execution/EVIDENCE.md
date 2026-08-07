@@ -14389,3 +14389,12 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   shutdown hooks whenever Redis is configured. The foundation test verifies the
   callback without network I/O; this is lifecycle evidence only and does not
   claim Redis availability, HA/DR, throughput, or production SLOs.
+- E-580 reconciliation scheduler worker reuse (2026-08-07):
+  `PostgresReconciliationScheduler` lazily caches one worker per stable slot,
+  so repeated bounded polling cycles do not rebuild workers that may own pools
+  or other lifecycle-scoped resources. The focused scheduler test proves one
+  factory call per slot across two cycles and identical aggregate summaries;
+  the current 2,655-test full local regression exits 0 in 385.1 seconds with
+  declared external-service/platform skips, and Ruff, Mypy, package build, and
+  diff-check pass. No throughput, fairness, capacity, soak, distributed
+  scheduling, HA/DR, or production sizing claim follows.

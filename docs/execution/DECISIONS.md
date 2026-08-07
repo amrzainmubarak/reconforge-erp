@@ -5872,3 +5872,18 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   without opening Redis; full local gates remain required.
 - **Boundary**: Lifecycle registration only; no Redis availability, HA/DR,
   throughput, or production SLO claim follows.
+
+### D-406: Reuse reconciliation scheduler workers across cycles
+
+- **Date**: 2026-08-07
+- **Context**: The scheduler rebuilt a worker object for every polling cycle,
+  creating avoidable churn when workers own bounded pools or other managed
+  resources.
+- **Decision**: Lazily cache one injected worker per validated stable
+  `worker_id`; retain worker/factory ownership of resource cleanup and the
+  existing bounded one-cycle-per-slot execution model.
+- **Verification**: A two-cycle scheduler contract proves one factory call per
+  slot and stable aggregate results; Ruff, Mypy, package build, diff-check, and
+  full regression are required.
+- **Boundary**: Resource reuse only; no throughput, fairness, capacity, soak,
+  distributed scheduling, HA/DR, or production sizing claim follows.

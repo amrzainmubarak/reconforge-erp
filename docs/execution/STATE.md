@@ -5301,3 +5301,16 @@ pass in 340.7 seconds with no collection or executed failure and declared
 external service/platform skips visible. Hosted CI/security/provenance, live
 PostgreSQL, federation, HA/DR, release approval, and GitHub publication remain
 deferred.
+
+E-558 closes the evidence-route hierarchy gap locally: all PostgreSQL evidence
+reads, manage actions, and checksum verification now re-evaluate tenant,
+workspace, organization, and legal-entity scope before adapter access. The
+focused evidence/server-scope gate passes 10 tests and ADR 0415 is packaged.
+Complete API/job/export/UI IAM adoption, federation, live providers, HA/DR,
+release approval, and GitHub publication remain deferred.
+
+E-559 reruns the complete local regression after the evidence hierarchy slice:
+2,647 tests pass in 336.1 seconds with no collection or executed failure and
+declared external service/platform skips visible. Hosted CI/security/provenance,
+live providers, federation, HA/DR, release approval, and GitHub publication
+remain deferred.

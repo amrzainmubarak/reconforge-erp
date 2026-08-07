@@ -140,6 +140,8 @@ def _enforce_server_evidence_permission(request: Request, *, permission: str) ->
         permission=permission,
         tenant_id=scope.tenant_id,
         workspace_id=scope.workspace_id,
+        organization_id=scope.organization_id,
+        entity_id=scope.legal_entity_id,
     )
 
 
@@ -152,6 +154,8 @@ def _enforce_server_evidence_read_access(request: Request) -> None:
         permissions=frozenset({"evidence.read", "evidence.manage"}),
         tenant_id=scope.tenant_id,
         workspace_id=scope.workspace_id,
+        organization_id=scope.organization_id,
+        entity_id=scope.legal_entity_id,
     )
 
 

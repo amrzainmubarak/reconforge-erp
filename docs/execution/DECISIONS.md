@@ -5690,3 +5690,16 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   hierarchy values for all eleven read/write calls; Ruff/Mypy pass.
 - **Boundary**: This is one reconciliation route family, not complete API/job/
   export/UI IAM, federation, distributed revocation, HA/DR, or production IAM.
+
+### D-393: Bind evidence policy checks to the full execution hierarchy
+
+- **Date**: 2026-08-07
+- **Context**: Evidence PostgreSQL transactions already restored organization and
+  legal-entity scope, while route policy checks stopped at tenant/workspace.
+- **Decision**: Forward optional organization and legal-entity identifiers to
+  all evidence read, manage, and verify policy checks without changing local
+  SQLite behavior or the sensitive drill-down permission.
+- **Verification**: Evidence and server-scope contracts pass 10 tests with exact
+  four-part scope assertions; Ruff/Mypy pass and ADR 0415 is packaged.
+- **Boundary**: This is one route family, not complete API/job/export/UI IAM,
+  federation, distributed invalidation, live providers, HA/DR, or production IAM.

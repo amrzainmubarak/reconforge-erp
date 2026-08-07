@@ -2769,3 +2769,32 @@ tasks:
       files), package build/source membership, and diff-check pass. Hosted
       CI/security/provenance, live PostgreSQL, federation, HA/DR, and release
       approval remain external.
+  - id: E-558
+    priority: P1
+    area: enterprise_policy
+    title: Evidence API hierarchy policy re-evaluation
+    status: completed
+    depends_on: [E-556, E-557]
+    exit_evidence: >-
+      Every PostgreSQL evidence list, coverage, record, drill-down, registration,
+      link, requirement, and checksum-verification route now passes the optional
+      organization and legal-entity scope from the authenticated execution
+      context into central ABAC before adapter access. The focused evidence and
+      server-scope contracts pass 10 tests with exact hierarchy assertions, and
+      ADR 0415 is packaged. Complete API/job/export/UI IAM adoption, federation,
+      distributed invalidation, live providers, HA/DR, and production IAM remain
+      open.
+  - id: E-559
+    priority: P0
+    area: quality
+    title: Full regression gate after evidence hierarchy policy
+    status: completed
+    depends_on: [E-558]
+    exit_evidence: >-
+      The current tree collects 2,647 tests and
+      `uv run --no-sync pytest -q --basetemp .pytest-tmp-e558 --tb=short -ra`
+      exits 0 in 336.1 seconds with no collection or executed failure. Declared
+      PostgreSQL, Redis, object-storage, network, Windows, and platform skips
+      remain visible; package build and diff-check pass. Hosted CI/security/
+      provenance, live providers, federation, HA/DR, and release approval
+      remain external.

@@ -665,6 +665,7 @@ include docs/adr/0411-server-policy-organization-scope.md
 include docs/adr/0412-durable-jobs-organization-scope.md
 include docs/adr/0413-reconciliation-as-code-sequential-strategy-adapters.md
 include docs/adr/0414-reconciliation-read-scope-re-evaluation.md
+include docs/adr/0415-evidence-hierarchy-policy-re-evaluation.md
 include reconforge/infrastructure/postgres_job_organization_scope.py
 include alembic/versions/0075_postgres_job_organization_scope.py
 include tests/test_durable_job_application.py

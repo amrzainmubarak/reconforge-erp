@@ -114,7 +114,7 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
     monkeypatch.setattr(
         evidence_routes,
         "request_execution_scope",
-        lambda _request: RequestExecutionScope("tenant-a", "workspace-a"),
+        lambda _request: RequestExecutionScope("tenant-a", "workspace-a", "org-a", "entity-a"),
     )
     monkeypatch.setattr(
         evidence_routes,
@@ -186,12 +186,18 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
     assert verified.status_code == 200
     assert verified.json()["verification"]["ok"] is True
     assert coverage.status_code == 200
+    expected_hierarchy = {
+        "tenant_id": "tenant-a",
+        "workspace_id": "workspace-a",
+        "organization_id": "org-a",
+        "entity_id": "entity-a",
+    }
     assert scoped_permissions == [
-        {"permission": "evidence.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
-        {"permissions": frozenset({"evidence.read", "evidence.manage"}), "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
-        {"permissions": frozenset({"evidence.read", "evidence.manage"}), "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
-        {"permission": "evidence.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
-        {"permission": "evidence.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
-        {"permission": "evidence.verify", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
-        {"permissions": frozenset({"evidence.read", "evidence.manage"}), "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        {"permission": "evidence.manage", **expected_hierarchy},
+        {"permissions": frozenset({"evidence.read", "evidence.manage"}), **expected_hierarchy},
+        {"permissions": frozenset({"evidence.read", "evidence.manage"}), **expected_hierarchy},
+        {"permission": "evidence.manage", **expected_hierarchy},
+        {"permission": "evidence.manage", **expected_hierarchy},
+        {"permission": "evidence.verify", **expected_hierarchy},
+        {"permissions": frozenset({"evidence.read", "evidence.manage"}), **expected_hierarchy},
     ]

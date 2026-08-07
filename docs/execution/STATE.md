@@ -5410,3 +5410,10 @@ eight hierarchy query compositions now carry precise line-level rationale:
 parameters. Full Bandit reports no failed findings; Ruff/Mypy and focused
 security tests pass. This is scanner coverage only, not penetration testing or
 production assurance.
+
+E-578 closes the release-gate drift: the live Alembic migration-status
+assertion now names the supported `0078_pg_close_scope` head, matching the
+registry and migration chain. Static contracts, the 2,655-test full local
+regression, Ruff, Mypy, package build, and diff-check pass. The actual
+PostgreSQL migration run remains hosted-only on this Windows environment, so
+GitHub publication and final objective closure remain deferred.

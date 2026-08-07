@@ -3062,3 +3062,16 @@ tasks:
       reports no failed findings; Ruff, Mypy, focused security/repository
       tests, and the current full regression remain green. This is scanner
       coverage evidence only, not penetration testing or production assurance.
+  - id: E-578
+    priority: P0
+    area: quality
+    title: Align live Alembic status assertion with migration head 0078
+    status: completed
+    depends_on: [E-577]
+    exit_evidence: >-
+      The live PostgreSQL Alembic contract now asserts the current migration
+      head `0078_pg_close_scope` after upgrade, rather than the superseded
+      `0071_pg_close_ownchg_links` head. Static contracts, the 2,655-test full
+      local regression, Ruff, Mypy, package build, and diff-check pass. The
+      hosted server-boundaries run remains required because local Windows
+      cannot substitute for live PostgreSQL runtime evidence.

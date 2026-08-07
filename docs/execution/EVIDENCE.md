@@ -14376,3 +14376,11 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   reconforge` reports no failed findings, while existing reviewed nosec
   informational warnings remain. This is scanner coverage only, not
   penetration testing or production security assurance.
+- E-578 Alembic live-head assertion alignment (2026-08-07): the live
+  PostgreSQL migration contract no longer asserts the superseded
+  `0071_pg_close_ownchg_links` status and now expects the supported head
+  `0078_pg_close_scope`, matching the registry and Alembic chain. Static
+  contracts, the 2,655-test local regression, Ruff, Mypy, package build, and
+  diff-check pass; hosted server-boundaries remains the only valid runtime
+  proof, and no migration/backup/HA/DR production claim follows from this test
+  correction.

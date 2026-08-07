@@ -5844,3 +5844,18 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   repository/security tests, and the current full regression remain green.
 - **Boundary**: Scanner coverage only; no penetration-test or production-
   security-assurance claim follows.
+
+### D-404: Pin the live migration-status contract to the current Alembic head
+
+- **Date**: 2026-08-07
+- **Context**: The PostgreSQL live migration test still expected status
+  `0071_pg_close_ownchg_links`, while the supported linear registry and
+  Alembic chain now end at `0078_pg_close_scope`.
+- **Decision**: Update the live assertion to the current head. Do not weaken
+  `PostgresMigrationStatusProvider` or add compatibility aliases for a stale
+  test expectation.
+- **Verification**: Static Alembic/operations contracts, the 2,655-test full
+  local gate, Ruff, Mypy, package build, and diff-check pass; a fresh hosted
+  PostgreSQL server-boundaries run is still required for runtime evidence.
+- **Boundary**: This removes test drift only; it does not prove hosted
+  migration, backup/restore, HA/DR, provider, or production readiness.

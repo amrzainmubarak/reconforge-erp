@@ -8,8 +8,10 @@ from dataclasses import dataclass
 from typing import Any
 
 from reconforge.domain.jobs import (
+    SHA256_PATTERN,
     DurableJob,
     DurableJobBackpressureError,
+    DurableJobSchedulerCursorConflictError,
     JobLease,
     JobOutputManifest,
     JobPartitionEffect,
@@ -176,12 +178,77 @@ class PostgresDurableJobRepository:
                 )
                 self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (entity_id,))
                 yield
-        except PostgresJobRepositoryError:
+        except (PostgresJobRepositoryError, DurableJobSchedulerCursorConflictError):
             raise
         except DurableJobBackpressureError:
             raise
         except Exception as exc:
             raise PostgresJobRepositoryError("PostgreSQL durable-job operation failed.") from exc
+
+    def reserve_round_robin_lane(
+        self,
+        *,
+        tenant_id: str,
+        scheduler_key: str,
+        lane_digest: str,
+        lane_count: int,
+        occurred_at: str,
+    ) -> int:
+        """Atomically reserve the next lane for a shared scheduler key."""
+
+        if not scheduler_key.strip():
+            raise ValueError("scheduler_key must be non-empty")
+        if not isinstance(lane_count, int) or isinstance(lane_count, bool) or lane_count < 1:
+            raise ValueError("lane_count must be a positive integer")
+        if SHA256_PATTERN.fullmatch(lane_digest) is None:
+            raise ValueError("lane_digest must be a SHA-256 hex digest")
+        with self._transaction(tenant_id):
+            self.connection.execute(
+                """
+                INSERT INTO reconforge.durable_job_scheduler_cursors
+                    (tenant_id, scheduler_key, lane_digest, lane_count, next_index, version, updated_at)
+                VALUES (%s, %s, %s, %s, %s, 1, %s)
+                ON CONFLICT (tenant_id, scheduler_key) DO NOTHING
+                """,
+                (tenant_id, scheduler_key, lane_digest, lane_count, 1 % lane_count, occurred_at),
+            )
+            row = self.connection.execute(
+                """
+                SELECT lane_digest, lane_count, next_index, version
+                FROM reconforge.durable_job_scheduler_cursors
+                WHERE tenant_id = %s AND scheduler_key = %s
+                FOR UPDATE
+                """,
+                (tenant_id, scheduler_key),
+            ).fetchone()
+            if row is None:
+                raise DurableJobSchedulerCursorConflictError("scheduler cursor reservation could not be resolved")
+            digest = str(_value(row, "lane_digest", 0))
+            stored_count = int(_value(row, "lane_count", 1))
+            if digest != lane_digest or stored_count != lane_count:
+                raise DurableJobSchedulerCursorConflictError("scheduler key is bound to a different lane contract")
+            selected = int(_value(row, "next_index", 2))
+            version = int(_value(row, "version", 3))
+            updated = self.connection.execute(
+                """
+                UPDATE reconforge.durable_job_scheduler_cursors
+                SET next_index = %s, version = %s, updated_at = %s
+                WHERE tenant_id = %s AND scheduler_key = %s AND version = %s
+                """,
+                (
+                    (selected + 1) % lane_count,
+                    version + 1,
+                    occurred_at,
+                    tenant_id,
+                    scheduler_key,
+                    version,
+                ),
+            )
+            if updated.rowcount != 1:
+                raise DurableJobSchedulerCursorConflictError(
+                    "scheduler cursor changed before reservation could commit"
+                )
+            return selected
 
     def create_or_get(self, job: DurableJob, *, actor_id: str) -> tuple[DurableJob, bool]:
         if job.status is not JobStatus.QUEUED or job.version != 1:
@@ -873,6 +940,18 @@ CREATE TABLE IF NOT EXISTS reconforge.durable_job_partition_effects (
     FOREIGN KEY (tenant_id, job_id, job_version)
       REFERENCES reconforge.durable_job_transitions(tenant_id, job_id, job_version) DEFERRABLE INITIALLY DEFERRED
 );
+CREATE TABLE IF NOT EXISTS reconforge.durable_job_scheduler_cursors (
+    tenant_id TEXT NOT NULL REFERENCES reconforge.tenants(id) ON DELETE CASCADE,
+    scheduler_key TEXT NOT NULL,
+    lane_digest TEXT NOT NULL CHECK (lane_digest ~ '^[0-9a-f]{64}$'),
+    lane_count INTEGER NOT NULL CHECK (lane_count > 0),
+    next_index INTEGER NOT NULL CHECK (next_index >= 0 AND next_index < lane_count),
+    version BIGINT NOT NULL CHECK (version > 0),
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (tenant_id, scheduler_key)
+);
+CREATE INDEX IF NOT EXISTS durable_job_scheduler_cursors_updated_idx
+    ON reconforge.durable_job_scheduler_cursors(tenant_id, updated_at, scheduler_key);
 CREATE OR REPLACE FUNCTION reconforge.reject_durable_job_evidence_mutation()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN RAISE EXCEPTION 'Durable-job evidence is append-only'; END;
@@ -896,10 +975,12 @@ ALTER TABLE reconforge.durable_job_lease_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reconforge.durable_job_lease_events FORCE ROW LEVEL SECURITY;
 ALTER TABLE reconforge.durable_job_partition_effects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reconforge.durable_job_partition_effects FORCE ROW LEVEL SECURITY;
+ALTER TABLE reconforge.durable_job_scheduler_cursors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reconforge.durable_job_scheduler_cursors FORCE ROW LEVEL SECURITY;
 DO $reconforge$
 DECLARE table_name TEXT;
 BEGIN
-  FOREACH table_name IN ARRAY ARRAY['durable_jobs','durable_job_transitions','durable_job_leases','durable_job_lease_events','durable_job_partition_effects'] LOOP
+  FOREACH table_name IN ARRAY ARRAY['durable_jobs','durable_job_transitions','durable_job_leases','durable_job_lease_events','durable_job_partition_effects','durable_job_scheduler_cursors'] LOOP
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='reconforge' AND tablename=table_name AND policyname='tenant_scope') THEN
       EXECUTE format('CREATE POLICY tenant_scope ON reconforge.%I USING (tenant_id = current_setting(''app.tenant_id'', true)) WITH CHECK (tenant_id = current_setting(''app.tenant_id'', true))', table_name);
     END IF;

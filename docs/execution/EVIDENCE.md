@@ -2,6 +2,17 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+- E-596 persistent durable-job scheduler cursor (2026-08-07): SQLite
+  migration 34 and PostgreSQL migration `0079_pg_job_cursor` add a
+  tenant-scoped cursor bound to an ordered lane digest/count. The persistent
+  scheduler atomically reserves and advances one lane before the existing
+  lease-fenced worker claim; restart and lane-drift contracts pass, and local
+  backup/export carries cursor state. Focused durable-job/migration/backup
+  tests, PostgreSQL schema/RLS/Alembic/grant contracts, Ruff, Mypy, and package
+  checks pass. The full repository regression collected 2,721 tests and exited
+  0 in 364.4 seconds with declared capability skips and existing warnings only.
+  Live PostgreSQL multi-process/cross-host fairness, throughput, queue
+  HA/failover, soak, capacity, and production readiness remain open.
 - E-594 grouped-matching property/fuzz campaign (2026-08-07): three
   deterministic Hypothesis tests generate bounded Decimal amounts, fees,
   currencies, partitions, and dates. They verify permutation-stable decisions

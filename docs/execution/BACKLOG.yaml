@@ -3382,3 +3382,22 @@ tasks:
       distributed, live-rate, or production evidence. The full repository
       regression collected 2,720 tests and exited 0 in 365.1 seconds; declared
       capability skips and existing warnings remain visible.
+  - id: E-596
+    priority: P1
+    area: high_volume_operations
+    title: Coordinate durable-job scheduler lanes through persistent cursors
+    status: completed
+    depends_on: [E-491, E-595, P4-SCL-001]
+    exit_evidence: >-
+      SQLite migration 34 and PostgreSQL migration `0079_pg_job_cursor` add a
+      tenant-scoped scheduler cursor whose ordered lane digest and count are
+      immutable for a scheduler key. The new persistent scheduler atomically
+      reserves and advances one lane before a lease-fenced worker claim;
+      restart and lane-drift contracts pass, backup/export includes cursor
+      state, and PostgreSQL schema/RLS/Alembic/grant contracts are packaged.
+      Focused durable-job, migration, backup, and static gates pass. The full
+      repository regression collected 2,721 tests and exited 0 in 364.4
+      seconds with declared capability skips and existing warnings only. This
+      is bounded shared-cursor coordination evidence only; distributed
+      throughput, cross-host fairness SLOs, queue HA/failover, soak, capacity,
+      and production readiness remain open.

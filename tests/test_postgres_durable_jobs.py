@@ -74,6 +74,9 @@ def test_postgres_job_schema_has_rls_idempotency_and_version_guards() -> None:
     assert "durable_jobs_org_scope_status_idx" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
     assert "PRIMARY KEY (tenant_id, job_id, job_version)" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
     assert "completed_units <= total_units" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
+    assert "durable_job_scheduler_cursors" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
+    assert "lane_digest ~ '^[0-9a-f]{64}$'" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
+    assert "ALTER TABLE reconforge.durable_job_scheduler_cursors FORCE ROW LEVEL SECURITY" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
@@ -98,7 +101,8 @@ def test_live_postgres_job_application_contract_and_rls(tmp_path: Path) -> None:
                 f"GRANT SELECT, INSERT, UPDATE ON reconforge.durable_jobs, "
                 f"reconforge.durable_job_transitions, reconforge.durable_job_leases, "
                 f"reconforge.durable_job_lease_events, "
-                f"reconforge.durable_job_partition_effects TO {app_user}"
+                f"reconforge.durable_job_partition_effects, "
+                f"reconforge.durable_job_scheduler_cursors TO {app_user}"
             )
             admin.execute(
                 f"GRANT DELETE ON reconforge.durable_job_leases TO {app_user}"
@@ -719,7 +723,8 @@ def _run_live_postgres_durable_job_scale_profile(
             admin.execute(
                 f"GRANT SELECT, INSERT, UPDATE ON reconforge.durable_jobs, "
                 f"reconforge.durable_job_transitions, reconforge.durable_job_leases, "
-                f"reconforge.durable_job_lease_events, reconforge.durable_job_partition_effects TO {app_user}"
+                f"reconforge.durable_job_lease_events, reconforge.durable_job_partition_effects, "
+                f"reconforge.durable_job_scheduler_cursors TO {app_user}"
             )
             admin.execute(f"GRANT DELETE ON reconforge.durable_job_leases TO {app_user}")
             for tenant in tenants:
@@ -768,7 +773,8 @@ def _run_live_postgres_durable_job_backpressure_profile() -> None:
             admin.execute(
                 f"GRANT SELECT, INSERT, UPDATE ON reconforge.durable_jobs, "
                 f"reconforge.durable_job_transitions, reconforge.durable_job_leases, "
-                f"reconforge.durable_job_lease_events, reconforge.durable_job_partition_effects TO {app_user}"
+                f"reconforge.durable_job_lease_events, reconforge.durable_job_partition_effects, "
+                f"reconforge.durable_job_scheduler_cursors TO {app_user}"
             )
             admin.execute(f"GRANT DELETE ON reconforge.durable_job_leases TO {app_user}")
             for tenant in tenants:
@@ -840,7 +846,8 @@ def test_live_postgres_round_robin_scheduler_is_lane_scoped_and_deterministic() 
             admin.execute(
                 f"GRANT SELECT, INSERT, UPDATE ON reconforge.durable_jobs, "
                 f"reconforge.durable_job_transitions, reconforge.durable_job_leases, "
-                f"reconforge.durable_job_lease_events, reconforge.durable_job_partition_effects TO {app_user}"
+                f"reconforge.durable_job_lease_events, reconforge.durable_job_partition_effects, "
+                f"reconforge.durable_job_scheduler_cursors TO {app_user}"
             )
             admin.execute(f"GRANT DELETE ON reconforge.durable_job_leases TO {app_user}")
             admin.execute("INSERT INTO reconforge.tenants (id, name) VALUES (%s, %s)", (tenant_id, tenant_id))

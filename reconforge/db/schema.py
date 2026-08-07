@@ -3377,6 +3377,21 @@ CREATE INDEX IF NOT EXISTS idx_durable_jobs_org_scope_status
 ON durable_jobs (tenant_id, organization_id, workspace_id, status, created_at, id);
 """
 
+DURABLE_JOB_SCHEDULER_CURSOR_MIGRATION_SQL = """
+CREATE TABLE IF NOT EXISTS durable_job_scheduler_cursors (
+    tenant_id TEXT NOT NULL,
+    scheduler_key TEXT NOT NULL CHECK (length(scheduler_key) BETWEEN 1 AND 200),
+    lane_digest TEXT NOT NULL CHECK (length(lane_digest) = 64),
+    lane_count INTEGER NOT NULL CHECK (lane_count > 0),
+    next_index INTEGER NOT NULL CHECK (next_index >= 0 AND next_index < lane_count),
+    version INTEGER NOT NULL CHECK (version > 0),
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (tenant_id, scheduler_key)
+);
+CREATE INDEX IF NOT EXISTS idx_durable_job_scheduler_cursors_updated
+ON durable_job_scheduler_cursors (tenant_id, updated_at, scheduler_key);
+"""
+
 IDEMPOTENCY_RECORDS_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS idempotency_records (
     schema_version INTEGER NOT NULL CHECK (schema_version = 1),

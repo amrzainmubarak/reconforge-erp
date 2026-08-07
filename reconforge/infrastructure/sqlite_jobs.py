@@ -7,8 +7,10 @@ from dataclasses import dataclass
 from typing import Any
 
 from reconforge.domain.jobs import (
+    SHA256_PATTERN,
     DurableJob,
     DurableJobBackpressureError,
+    DurableJobSchedulerCursorConflictError,
     JobLease,
     JobOutputManifest,
     JobPartitionEffect,
@@ -165,6 +167,7 @@ class SQLiteDurableJobRepository:
             "durable_job_leases",
             "durable_job_lease_events",
             "durable_job_partition_effects",
+            "durable_job_scheduler_cursors",
         }
         tables = {
             str(row["name"])
@@ -177,6 +180,76 @@ class SQLiteDurableJobRepository:
         if self.connection.in_transaction:
             raise SQLiteJobRepositoryError("Durable-job repository requires an unambiguous transaction boundary.")
         self.connection.execute("BEGIN IMMEDIATE")
+
+    def reserve_round_robin_lane(
+        self,
+        *,
+        tenant_id: str,
+        scheduler_key: str,
+        lane_digest: str,
+        lane_count: int,
+        occurred_at: str,
+    ) -> int:
+        """Atomically reserve the next lane for all scheduler processes sharing a key."""
+
+        if not tenant_id.strip() or not scheduler_key.strip():
+            raise SQLiteJobRepositoryError("scheduler cursor scope is incomplete")
+        if not isinstance(lane_count, int) or isinstance(lane_count, bool) or lane_count < 1:
+            raise ValueError("lane_count must be a positive integer")
+        if SHA256_PATTERN.fullmatch(lane_digest) is None:
+            raise ValueError("lane_digest must be a SHA-256 hex digest")
+        self._begin()
+        try:
+            row = self.connection.execute(
+                """
+                SELECT lane_digest, lane_count, next_index, version
+                FROM durable_job_scheduler_cursors
+                WHERE tenant_id = ? AND scheduler_key = ?
+                """,
+                (tenant_id, scheduler_key),
+            ).fetchone()
+            if row is None:
+                selected = 0
+                self.connection.execute(
+                    """
+                    INSERT INTO durable_job_scheduler_cursors
+                        (tenant_id, scheduler_key, lane_digest, lane_count, next_index, version, updated_at)
+                    VALUES (?, ?, ?, ?, ?, 1, ?)
+                    """,
+                    (tenant_id, scheduler_key, lane_digest, lane_count, (selected + 1) % lane_count, occurred_at),
+                )
+            else:
+                if str(row["lane_digest"]) != lane_digest or int(row["lane_count"]) != lane_count:
+                    raise DurableJobSchedulerCursorConflictError("scheduler key is bound to a different lane contract")
+                selected = int(row["next_index"])
+                version = int(row["version"])
+                self.connection.execute(
+                    """
+                    UPDATE durable_job_scheduler_cursors
+                    SET next_index = ?, version = ?, updated_at = ?
+                    WHERE tenant_id = ? AND scheduler_key = ? AND version = ?
+                    """,
+                    (
+                        (selected + 1) % lane_count,
+                        version + 1,
+                        occurred_at,
+                        tenant_id,
+                        scheduler_key,
+                        version,
+                    ),
+                )
+                if self.connection.execute("SELECT changes()").fetchone()[0] != 1:
+                    raise DurableJobSchedulerCursorConflictError(
+                        "scheduler cursor changed before reservation could commit"
+                    )
+            self.connection.commit()
+            return selected
+        except (DurableJobSchedulerCursorConflictError, SQLiteJobRepositoryError):
+            self.connection.rollback()
+            raise
+        except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
+            raise SQLiteJobRepositoryError("Unable to reserve durable-job scheduler lane.") from exc
 
     def create_or_get(self, job: DurableJob, *, actor_id: str) -> tuple[DurableJob, bool]:
         """Create a queued job or replay the exact scoped idempotent submission."""

@@ -18,6 +18,7 @@ from reconforge.db.schema import (
     DURABLE_JOB_EFFECTS_SCHEMA_SQL,
     DURABLE_JOB_LEASES_SCHEMA_SQL,
     DURABLE_JOB_ORGANIZATION_MIGRATION_SQL,
+    DURABLE_JOB_SCHEDULER_CURSOR_MIGRATION_SQL,
     DURABLE_JOBS_SCHEMA_SQL,
     EVIDENCE_OBJECT_STORAGE_MIGRATION_SQL,
     FINANCE_CORE_SCHEMA_SQL,
@@ -117,6 +118,11 @@ MIGRATIONS = [
     Migration(version=31, name="connector_writeback_dispatch_permission", sql=WRITEBACK_DISPATCH_PERMISSION_SQL),
     Migration(version=32, name="connector_writeback_compensation_permission", sql=WRITEBACK_COMPENSATION_PERMISSION_SQL),
     Migration(version=33, name="durable_job_organization_scope", sql=DURABLE_JOB_ORGANIZATION_MIGRATION_SQL),
+    Migration(
+        version=34,
+        name="durable_job_scheduler_cursor_coordination",
+        sql=DURABLE_JOB_SCHEDULER_CURSOR_MIGRATION_SQL,
+    ),
 ]
 
 _MIGRATION_TABLE_SQL = """

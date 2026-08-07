@@ -44,8 +44,8 @@ def _database(tmp_path: Path) -> tuple[Path, sqlite3.Connection]:
 
 
 def test_latest_migrations_persist_effective_dated_ownership_and_replay_by_date(tmp_path: Path) -> None:
-    assert MIGRATIONS[-1].version == 33
-    assert MIGRATIONS[-1].name == "durable_job_organization_scope"
+    assert MIGRATIONS[-1].version == 34
+    assert MIGRATIONS[-1].name == "durable_job_scheduler_cursor_coordination"
     path, connection = _database(tmp_path)
     try:
         repository = SQLiteConsolidationOwnershipRepository(connection)

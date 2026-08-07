@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from hashlib import sha256
 from typing import Protocol
 
 from reconforge.auth.policy import (
@@ -14,6 +15,7 @@ from reconforge.auth.policy import (
 from reconforge.domain.jobs import (
     DurableJob,
     DurableJobBackpressureError,
+    DurableJobSchedulerCursorConflictError,
     JobLease,
     JobOutputManifest,
     JobPartitionEffect,
@@ -99,6 +101,20 @@ class DurableJobWorkerRepositoryProtocol(DurableJobRepositoryProtocol, Protocol)
     ) -> DurableJob: ...
 
     def list_partition_effects(self, *, tenant_id: str, job_id: str) -> list[JobPartitionEffect]: ...
+
+
+class DurableJobSchedulerCursorRepositoryProtocol(Protocol):
+    """Atomic shared cursor used by schedulers that span worker processes."""
+
+    def reserve_round_robin_lane(
+        self,
+        *,
+        tenant_id: str,
+        scheduler_key: str,
+        lane_digest: str,
+        lane_count: int,
+        occurred_at: str,
+    ) -> int: ...
 
 
 @dataclass(frozen=True)
@@ -849,4 +865,85 @@ class RoundRobinDurableJobScheduler:
                 self._cursor = (index + 1) % len(self._lanes)
                 return ScheduledDurableJob(lane=lane, leased_job=leased)
         self._cursor = (start + 1) % len(self._lanes)
+        return None
+
+
+def _durable_job_lane_digest(lanes: tuple[DurableJobLane, ...]) -> str:
+    """Hash the ordered lane contract so cursor state cannot silently drift."""
+
+    canonical = "\x1f".join(
+        "\x1e".join((lane.tenant_id, lane.organization_id, lane.workspace_id, lane.entity_id))
+        for lane in lanes
+    )
+    return sha256(canonical.encode("utf-8")).hexdigest()
+
+
+class PersistentRoundRobinDurableJobScheduler:
+    """Coordinate lane rotation through a backend-atomic durable cursor.
+
+    Unlike :class:`RoundRobinDurableJobScheduler`, the cursor is advanced in
+    shared storage before each lane probe. Multiple scheduler processes using
+    the same ``scheduler_key`` therefore consume a single deterministic
+    sequence. The worker claim remains separately lease-fenced; this contract
+    proves coordination/fairness, not throughput, failover, or production SLOs.
+    """
+
+    def __init__(
+        self,
+        worker: DurableJobWorkerService,
+        cursor_repository: DurableJobSchedulerCursorRepositoryProtocol,
+        lanes: tuple[DurableJobLane, ...],
+        *,
+        scheduler_key: str,
+    ) -> None:
+        if not lanes:
+            raise ValueError("at least one durable-job lane is required")
+        if len(set(lanes)) != len(lanes):
+            raise ValueError("durable-job lanes must be unique")
+        if not scheduler_key.strip():
+            raise ValueError("durable-job scheduler_key must be non-empty")
+        tenant_ids = {lane.tenant_id for lane in lanes}
+        if len(tenant_ids) != 1:
+            raise ValueError("persistent scheduler lanes must belong to one tenant")
+        self._worker = worker
+        self._cursor_repository = cursor_repository
+        self._lanes = lanes
+        self._scheduler_key = scheduler_key
+        self._lane_digest = _durable_job_lane_digest(lanes)
+
+    @property
+    def lanes(self) -> tuple[DurableJobLane, ...]:
+        return self._lanes
+
+    def claim(
+        self,
+        *,
+        worker_id: str,
+        occurred_at: str,
+        lease_expires_at: str,
+    ) -> ScheduledDurableJob | None:
+        """Reserve each candidate lane at most once, then attempt a fenced claim."""
+
+        for _ in range(len(self._lanes)):
+            index = self._cursor_repository.reserve_round_robin_lane(
+                tenant_id=self._lanes[0].tenant_id,
+                scheduler_key=self._scheduler_key,
+                lane_digest=self._lane_digest,
+                lane_count=len(self._lanes),
+                occurred_at=occurred_at,
+            )
+            if not 0 <= index < len(self._lanes):
+                raise DurableJobSchedulerCursorConflictError("durable-job cursor returned an invalid lane index")
+            lane = self._lanes[index]
+            leased = self._worker.claim(
+                tenant_id=lane.tenant_id,
+                workspace_id=lane.workspace_id,
+                organization_id=lane.organization_id or None,
+                entity_id=lane.entity_id,
+                worker_id=worker_id,
+                occurred_at=occurred_at,
+                lease_expires_at=lease_expires_at,
+            )
+            if leased is not None:
+                return ScheduledDurableJob(lane=lane, leased_job=leased)
         return None

@@ -153,6 +153,7 @@ BACKUP_TABLES = [
     "durable_job_leases",
     "durable_job_lease_events",
     "durable_job_partition_effects",
+    "durable_job_scheduler_cursors",
     "idempotency_records",
     "workflow_objects",
     "workflow_transitions",
@@ -290,6 +291,9 @@ BACKUP_SELECT_QUERIES = {
     "durable_job_leases": "SELECT * FROM durable_job_leases ORDER BY tenant_id, expires_at, job_id",
     "durable_job_lease_events": "SELECT * FROM durable_job_lease_events ORDER BY job_id, event_sequence",
     "durable_job_partition_effects": "SELECT * FROM durable_job_partition_effects ORDER BY job_id, ordinal",
+    "durable_job_scheduler_cursors": (
+        "SELECT * FROM durable_job_scheduler_cursors ORDER BY tenant_id, scheduler_key"
+    ),
     "idempotency_records": "SELECT * FROM idempotency_records ORDER BY tenant_id, scope, idempotency_key",
     "workflow_objects": "SELECT * FROM workflow_objects ORDER BY object_type, object_id",
     "workflow_transitions": "SELECT * FROM workflow_transitions ORDER BY object_type, from_status, to_status, id",
@@ -399,6 +403,7 @@ BACKUP_DELETE_QUERIES = {
     "durable_job_leases": "DELETE FROM durable_job_leases",
     "durable_job_lease_events": "DELETE FROM durable_job_lease_events",
     "durable_job_partition_effects": "DELETE FROM durable_job_partition_effects",
+    "durable_job_scheduler_cursors": "DELETE FROM durable_job_scheduler_cursors",
     "idempotency_records": "DELETE FROM idempotency_records",
     "workflow_objects": "DELETE FROM workflow_objects",
     "workflow_transitions": "DELETE FROM workflow_transitions",
@@ -1542,6 +1547,15 @@ BACKUP_INSERT_COLUMNS = {
         "committed_at",
         "job_version",
     ),
+    "durable_job_scheduler_cursors": (
+        "tenant_id",
+        "scheduler_key",
+        "lane_digest",
+        "lane_count",
+        "next_index",
+        "version",
+        "updated_at",
+    ),
     "idempotency_records": (
         "schema_version",
         "tenant_id",
@@ -2209,6 +2223,11 @@ BACKUP_INSERT_QUERIES = {
             job_id, partition_key, ordinal, completed_units, input_digest,
             output_digest, effect_reference, committed_at, job_version
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "durable_job_scheduler_cursors": """
+        INSERT INTO durable_job_scheduler_cursors (
+            tenant_id, scheduler_key, lane_digest, lane_count, next_index, version, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
     """,
     "idempotency_records": """
         INSERT INTO idempotency_records (

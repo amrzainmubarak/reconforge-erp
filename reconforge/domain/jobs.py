@@ -21,6 +21,10 @@ class DurableJobBackpressureError(RuntimeError):
     """Raised when a new job would exceed its bounded execution-lane queue."""
 
 
+class DurableJobSchedulerCursorConflictError(RuntimeError):
+    """Raised when a scheduler key is reused with a different lane contract."""
+
+
 class JobStatus(StrEnum):
     QUEUED = "queued"
     RUNNING = "running"

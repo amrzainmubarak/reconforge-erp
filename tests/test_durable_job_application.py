@@ -9,8 +9,10 @@ from reconforge.application.jobs import (
     DurableJobApplicationService,
     DurableJobLane,
     DurableJobNotFoundError,
+    DurableJobSchedulerCursorConflictError,
     DurableJobWorkerService,
     JobSubmission,
+    PersistentRoundRobinDurableJobScheduler,
     RoundRobinDurableJobScheduler,
 )
 from reconforge.db import connect, run_migrations
@@ -179,6 +181,84 @@ def test_round_robin_scheduler_alternates_exact_lanes_without_cross_lane_claims(
         occurred_at="2026-07-27T08:04:00Z",
         lease_expires_at="2026-07-27T08:05:00Z",
     ) is None
+    connection.close()
+
+
+def test_persistent_round_robin_scheduler_coordinates_restarts_and_rejects_lane_drift(tmp_path: Path) -> None:
+    database_path = tmp_path / "persistent-fair-lanes.db"
+    run_migrations(database_path)
+    connection = connect(database_path, require_exists=True)
+    repository = SQLiteDurableJobRepository(connection)
+    application = DurableJobApplicationService(repository)
+    worker = DurableJobWorkerService(repository)
+    lanes = (
+        DurableJobLane("TENANT-PERSISTENT", "WORKSPACE-A", "ENTITY-A"),
+        DurableJobLane("TENANT-PERSISTENT", "WORKSPACE-B", "ENTITY-B"),
+    )
+    for lane_index, lane in enumerate(lanes):
+        application.submit(
+            JobSubmission(
+                job_id=f"JOB-PERSISTENT-{lane_index}",
+                idempotency_scope="tenant/workspace/import",
+                idempotency_key=f"persistent-{lane_index}",
+                tenant_id=lane.tenant_id,
+                workspace_id=lane.workspace_id,
+                entity_id=lane.entity_id,
+                input_digest=(f"{lane_index}0" * 32)[:64],
+                config_digest="b" * 64,
+                worker_version="worker/1.0.0",
+                total_units=1,
+                retry_ceiling=0,
+                created_at=f"2026-07-27T08:10:0{lane_index}Z",
+            ),
+            actor_id="scheduler-persistent",
+        )
+
+    first = PersistentRoundRobinDurableJobScheduler(
+        worker, repository, lanes, scheduler_key="shared-scheduler"
+    )
+    first_claim = first.claim(
+        worker_id="worker-persistent-a",
+        occurred_at="2026-07-27T08:11:00Z",
+        lease_expires_at="2026-07-27T08:12:00Z",
+    )
+    assert first_claim is not None and first_claim.lane == lanes[0]
+    worker.cancel(first_claim.leased_job, occurred_at="2026-07-27T08:11:01Z")
+
+    restarted = PersistentRoundRobinDurableJobScheduler(
+        worker, repository, lanes, scheduler_key="shared-scheduler"
+    )
+    second_claim = restarted.claim(
+        worker_id="worker-persistent-b",
+        occurred_at="2026-07-27T08:11:02Z",
+        lease_expires_at="2026-07-27T08:12:00Z",
+    )
+    assert second_claim is not None and second_claim.lane == lanes[1]
+    worker.cancel(second_claim.leased_job, occurred_at="2026-07-27T08:11:03Z")
+    cursor = connection.execute(
+        "SELECT next_index, version FROM durable_job_scheduler_cursors "
+        "WHERE tenant_id = ? AND scheduler_key = ?",
+        ("TENANT-PERSISTENT", "shared-scheduler"),
+    ).fetchone()
+    assert tuple(cursor) == (0, 2)
+
+    drifted = (lanes[0], DurableJobLane("TENANT-PERSISTENT", "WORKSPACE-C", "ENTITY-C"))
+    with pytest.raises(DurableJobSchedulerCursorConflictError, match="different lane contract"):
+        PersistentRoundRobinDurableJobScheduler(
+            worker, repository, drifted, scheduler_key="shared-scheduler"
+        ).claim(
+            worker_id="worker-persistent-c",
+            occurred_at="2026-07-27T08:11:04Z",
+            lease_expires_at="2026-07-27T08:12:00Z",
+        )
+    with pytest.raises(ValueError, match="SHA-256"):
+        repository.reserve_round_robin_lane(
+            tenant_id="TENANT-PERSISTENT",
+            scheduler_key="invalid-digest",
+            lane_digest="g" * 64,
+            lane_count=2,
+            occurred_at="2026-07-27T08:11:05Z",
+        )
     connection.close()
 
 

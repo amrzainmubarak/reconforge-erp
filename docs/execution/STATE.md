@@ -5579,3 +5579,15 @@ seconds with declared capability skips and existing warnings only. This is a
 targeted mutation result, not a domain-wide score; PostgreSQL parity,
 distributed fault coverage, live-rate validation, and production sizing remain
 open. GitHub publication remains deferred by owner policy.
+
+E-596 adds a tenant-scoped persistent durable-job scheduler cursor to SQLite
+migration 34 and PostgreSQL migration `0079_pg_job_cursor`. The cursor binds an
+ordered lane digest and count to a scheduler key, advances atomically before a
+lease-fenced claim, survives scheduler restart, rejects lane drift, and is
+included in local backup/export. Focused durable-job, migration, backup,
+Alembic/static, and package contracts pass. This is bounded shared-cursor
+coordination evidence only; live PostgreSQL multi-process/cross-host fairness,
+throughput, queue HA/failover, soak, capacity, and production readiness remain
+open. The full repository regression collected 2,721 tests and exited 0 in
+364.4 seconds with declared capability skips and existing warnings only.
+GitHub publication remains deferred by owner policy.

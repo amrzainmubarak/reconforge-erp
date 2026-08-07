@@ -5355,6 +5355,12 @@ records that the existing live close claim must be rerun before hierarchy
 runtime evidence can be promoted. This is a documentation boundary update,
 not live PostgreSQL proof.
 
+E-573 triages the supplied CI failures: locked Python 3.11 security imports,
+the supply-chain policy, and clean-checkout Gitleaks scans are green locally;
+the workflow includes native PostgreSQL client bootstrap and head-0078
+migrations. Docker/native PostgreSQL are unavailable on this Windows host, so
+live server-boundary rerun and hosted promotion remain blocked externally.
+
 E-568 closes a scope-reset defect in the PostgreSQL close path: authenticated
 organization/workspace/legal-entity context is now preserved by the close and
 certification approval repositories whenever they set transaction-local GUCs,

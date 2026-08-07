@@ -2989,3 +2989,18 @@ tasks:
       close-hierarchy gate, and the explicit requirement to rerun the
       historical live close claim before promoting hierarchy runtime evidence.
       No live status is upgraded by this documentation-only boundary update.
+  - id: E-573
+    priority: P0
+    area: quality
+    title: Reproduce and triage the reported security and dependency gates
+    status: completed
+    depends_on: [E-572]
+    exit_evidence: >-
+      The locked Python 3.11 selected security/dependency tests report 48
+      passed and one declared live-PostgreSQL skip; the current 3.12 all-extras
+      environment is restored afterward. Supply-chain policy returns valid,
+      and Gitleaks 8.30.1 finds no leaks in Git history or a clean `git
+      archive` checkout. The current workflow already installs native
+      PostgreSQL client tools and migrates to head 0078. Full live
+      server-boundary reproduction is blocked locally because Docker and native
+      PostgreSQL services are unavailable; hosted rerun remains required.

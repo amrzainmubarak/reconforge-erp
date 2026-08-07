@@ -97,6 +97,7 @@ include docs/adr/0435-bank-statement-camt053-http-boundary.md
 include docs/adr/0437-connector-portfolio-conformance.md
 include docs/adr/0438-gitleaks-synthetic-observability-fingerprint.md
 include docs/adr/0439-provider-tls-sandbox-runtime.md
+include docs/adr/0440-grouped-matching-fuzz-campaign.md
 include docs/adr/0339-connectors-boundary-is-an-evidence-bounded-module.md
 include docs/connectors/camt053-bounded-readonly.md
 include docs/execution/P3_ENT_007_EXIT_AUDIT.yaml
@@ -267,6 +268,7 @@ include tests/test_postgres_grouped_matching.py
 include docs/adr/0214-durable-job-cancellation-profile-is-structural-and-non-claim.md
 include tests/test_grouped_matching.py
 include tests/test_grouped_matching_adversarial.py
+include tests/test_grouped_matching_fuzz.py
 include docs/adr/0215-bounded-grouped-matching-is-explainable-and-non-posting.md
 include docs/adr/0381-dense-grouped-matching-adversarial-contracts.md
 include docs/adr/0382-pinned-https-writeback-recovery-transport.md

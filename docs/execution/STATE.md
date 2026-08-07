@@ -5556,3 +5556,15 @@ and exited 0 in 366.5 seconds. Live provider tenants, dialect/version
 compatibility, source authenticity, settlement, posting, write-back, and
 production availability remain external. GitHub publication remains deferred
 by owner policy.
+
+E-594 adds bounded deterministic Hypothesis coverage for grouped matching.
+Generated Decimal amounts/fees, currencies, partitions, and dates exercise
+permutation-stable decisions/digests, closed selection invariants, budget
+refusal, portfolio non-overlap, and replay digest stability. Twenty focused
+grouped tests pass with the existing adversarial/replay/mutation contracts.
+The full repository regression collected 2,719 tests and exited 0 in 368.6
+seconds with declared capability skips and existing warnings only. This
+improves synthetic property/fuzz evidence only; mutation-tool score,
+PostgreSQL parity, distributed fault coverage, live-rate validation, and
+production sizing remain open. GitHub publication remains deferred by owner
+policy.

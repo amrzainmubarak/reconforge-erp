@@ -6093,3 +6093,21 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: Provider dialect/version, source authenticity, certificate or
   credential lifecycle, settlement, posting, write-back, and production
   availability remain open.
+
+### D-420: Add a bounded grouped-matching property/fuzz campaign
+
+- **Date**: 2026-08-07
+- **Context**: Grouped matching had adversarial, mutation-sentinel, and
+  checkpoint fault contracts, but the execution gap still listed broader
+  generated fuzz/property coverage as open.
+- **Decision**: Use deterministic Hypothesis generation at the public domain
+  boundary with finite record counts and explicit search ceilings. Assert
+  permutation-stable digests, closed selection invariants, budget refusal,
+  portfolio non-overlap, and replay digest stability.
+- **Verification**: Three new property/fuzz tests and the existing grouped
+  correctness/adversarial/replay/mutation tests pass 20/20; the full
+  repository regression collected 2,719 tests and exited 0 in 368.6 seconds;
+  the ADR and test are source-distribution members.
+- **Boundary**: This is synthetic bounded property/fuzz evidence, not a
+  source-code mutation score, PostgreSQL parity, distributed fault campaign,
+  live-rate validation, or production sizing claim.

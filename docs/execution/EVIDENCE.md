@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+- E-594 grouped-matching property/fuzz campaign (2026-08-07): three
+  deterministic Hypothesis tests generate bounded Decimal amounts, fees,
+  currencies, partitions, and dates. They verify permutation-stable decisions
+  and digests, closed currency/partition/date selection, fail-closed
+  search-budget refusal, portfolio non-overlap, and portfolio replay digest
+  stability. The focused grouped suite passes 20 tests including existing
+  adversarial, replay, and mutation contracts. This remains synthetic bounded
+  property/fuzz evidence; source-code mutation score, PostgreSQL parity,
+  distributed fault coverage, live-rate validation, and production sizing are
+  not established. The full repository regression collected 2,719 tests and
+  exited 0 in 368.6 seconds with declared capability skips and existing
+  warnings only.
 - E-593 provider HTTPS sandbox runtime (2026-08-07): a temporary localhost
   certificate and injected public-address resolver exercise the real
   `PinnedHttpsGetTransport` for CAMT.053 and ERPNext GL Entry/Payment Entry

@@ -3344,3 +3344,23 @@ tasks:
       availability. The full repository regression collected 2,716 tests and
       exited 0 in 366.5 seconds; this confirms repository compatibility but
       does not convert the bounded sandbox into live-provider evidence.
+  - id: E-594
+    priority: P1
+    area: advanced_matching
+    title: Add bounded property and fuzz coverage for grouped matching
+    status: completed
+    depends_on: [E-489, E-593, P4-MAT-001]
+    exit_evidence: >-
+      A deterministic Hypothesis campaign generates bounded grouped records
+      with varying Decimal amounts, fees, currencies, partitions, and dates.
+      It verifies permutation-stable decisions and digests, closed
+      currency/partition/date selection, fail-closed search-budget refusal,
+      portfolio non-overlap, and portfolio replay digest stability. The three
+      fuzz/property tests plus the existing grouped correctness, adversarial,
+      replay, and mutation contracts pass (20 focused tests); the ADR and
+      source-distribution membership are included. This is bounded synthetic
+      property/fuzz evidence only; it does not establish a source-code
+      mutation score, PostgreSQL parity, distributed queue fault coverage,
+      live-rate validation, or production sizing. The full repository
+      regression collected 2,719 tests and exited 0 in 368.6 seconds; declared
+      capability skips and existing warnings remain visible.

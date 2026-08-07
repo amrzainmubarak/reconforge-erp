@@ -1048,6 +1048,19 @@ def test_postgres_reconciliation_scheduler_aggregates_worker_slots() -> None:
     factory_calls: list[str] = []
     closed: list[str] = []
 
+    class _Telemetry:
+        def __init__(self) -> None:
+            self.spans: list[tuple[str, dict[str, object]]] = []
+            self.jobs: list[dict[str, object]] = []
+
+        @contextmanager
+        def span(self, name: str, attributes: dict[str, object]) -> Any:
+            self.spans.append((name, attributes))
+            yield None
+
+        def record_job(self, attributes: dict[str, object]) -> None:
+            self.jobs.append(attributes)
+
     class _Worker:
         def __init__(self, worker_id: str) -> None:
             self.worker_id = worker_id
@@ -1063,7 +1076,13 @@ def test_postgres_reconciliation_scheduler_aggregates_worker_slots() -> None:
         factory_calls.append(worker_id)
         return _Worker(worker_id)
 
-    scheduler = PostgresReconciliationScheduler(factory, worker_ids=["worker-b", "worker-a"], poll_interval_seconds=0)
+    telemetry = _Telemetry()
+    scheduler = PostgresReconciliationScheduler(
+        factory,
+        worker_ids=["worker-b", "worker-a"],
+        poll_interval_seconds=0,
+        observability=telemetry,
+    )
     summary = scheduler.process_once()
     assert created == ["worker-a", "worker-b"]
     assert factory_calls == ["worker-a", "worker-b"]
@@ -1072,6 +1091,10 @@ def test_postgres_reconciliation_scheduler_aggregates_worker_slots() -> None:
     assert created == ["worker-a", "worker-b", "worker-a", "worker-b"]
     assert factory_calls == ["worker-a", "worker-b"]
     assert second == summary
+    assert len(telemetry.spans) == 4
+    assert all(name == "reconforge.reconciliation.worker" for name, _attributes in telemetry.spans)
+    assert [item["job.status"] for item in telemetry.jobs] == ["completed"] * 4
+    assert all("tenant_id" not in item for item in telemetry.jobs)
     scheduler.close()
     scheduler.close()
     assert closed == ["worker-a", "worker-b"]
@@ -1138,6 +1161,34 @@ def test_postgres_reconciliation_scheduler_close_waits_for_active_cycle() -> Non
         closing.result(timeout=2)
 
     assert state["closed_during_cycle"] is False
+
+
+def test_postgres_reconciliation_scheduler_records_failure_telemetry() -> None:
+    jobs: list[dict[str, object]] = []
+
+    class _Telemetry:
+        @contextmanager
+        def span(self, _name: str, _attributes: dict[str, object]) -> Any:
+            yield None
+
+        def record_job(self, attributes: dict[str, object]) -> None:
+            jobs.append(attributes)
+
+    class _FailingWorker:
+        def process_once(self) -> ReconciliationWorkerRunSummary:
+            raise RuntimeError("synthetic worker fault")
+
+    scheduler = PostgresReconciliationScheduler(
+        lambda _worker_id: _FailingWorker(),
+        worker_ids=["worker-a"],
+        poll_interval_seconds=0,
+        observability=_Telemetry(),
+    )
+    with pytest.raises(PostgresReconciliationSchedulerError, match="cycle failed safely"):
+        scheduler.process_once()
+    assert [item["job.status"] for item in jobs] == ["failed"]
+    assert jobs[0]["reconforge.result"] == "error"
+    assert "worker_id" not in jobs[0]
 
 
 def test_postgres_reconciliation_execution_failure_is_retryable_and_busy_runs_are_skipped() -> None:

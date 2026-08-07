@@ -5908,10 +5908,25 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Date**: 2026-08-07
 - **Context**: A concurrent caller could otherwise close a cached worker while
   its bounded cycle callback was still running.
-- **Decision**: Use one re-entrant lifecycle lock for cycle execution, worker
-  lookup, and close. A concurrent close waits for the active cycle; the caller
-  should still stop polling before shutdown.
+- **Decision**: Use a cycle lock for cycle execution and close, distinct from
+  the worker-cache lock used by ThreadPool workers. A concurrent close waits
+  for the active cycle without blocking worker lookup; the caller should still
+  stop polling before shutdown.
 - **Verification**: Focused lifecycle tests and full static/package/regression
   gates must pass.
 - **Boundary**: Lifecycle serialization only; no throughput, fairness,
   capacity, soak, distributed scheduling, HA/DR, or production claim follows.
+
+### D-409: Add safe telemetry to reconciliation scheduler cycles
+
+- **Date**: 2026-08-07
+- **Context**: Scheduler outcomes lacked per-cycle operational visibility while
+  financial and tenant data must remain out of telemetry.
+- **Decision**: Accept optional disabled-by-default `ObservabilityRuntime`
+  instrumentation and emit only closed job/span attributes for operation,
+  status, type, and result. Record failures before re-raising; never attach
+  worker IDs, tenants, records, amounts, or connection details.
+- **Verification**: Synthetic telemetry injection, full regression, Ruff,
+  Mypy, package build, and diff-check must pass.
+- **Boundary**: Instrumentation only; no collector, alerting, capacity, HA/DR,
+  or production SLO claim follows.

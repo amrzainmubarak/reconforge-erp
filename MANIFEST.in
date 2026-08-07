@@ -677,6 +677,7 @@ include docs/adr/0425-bandit-allowlist-for-fixed-hierarchy-clauses.md
 include docs/adr/0426-server-redis-shutdown-cleanup.md
 include docs/adr/0427-reuse-reconciliation-scheduler-workers.md
 include docs/adr/0428-reconciliation-worker-lifecycle-close.md
+include docs/adr/0429-reconciliation-scheduler-safe-telemetry.md
 include reconforge/infrastructure/postgres_job_organization_scope.py
 include reconforge/infrastructure/postgres_consolidation_ppa_scope.py
 include reconforge/infrastructure/postgres_consolidation_impairment_deferred_tax_scope.py

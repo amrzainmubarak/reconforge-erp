@@ -14408,10 +14408,20 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   availability, throughput, fairness, capacity, soak, distributed scheduling,
   HA/DR, or production operations evidence.
 - E-582 reconciliation scheduler lifecycle serialization (2026-08-07): cycle
-  execution, worker lookup, and close now share a re-entrant lock, preventing a
-  concurrent shutdown from closing a worker during its bounded callback.
+  execution and close now share a cycle lock separate from the worker-cache
+  lock, preventing a concurrent shutdown from closing a worker during its
+  bounded callback without blocking worker-thread cache lookup.
   Focused lifecycle tests, Ruff, Mypy, package build, and diff-check pass; the
   current 2,659-test full local regression exits 0 in 358.3 seconds with
   declared external-service/platform skips. This is lifecycle serialization
   only, not throughput, fairness, capacity, soak, distributed scheduling,
   HA/DR, or production operations evidence.
+- E-583 reconciliation scheduler safe telemetry (2026-08-07): an optional
+  disabled-by-default `ObservabilityRuntime` now emits one closed
+  `reconforge.reconciliation.worker` span and job transition per bounded worker
+  cycle, including failure transitions before propagation. The synthetic sink
+  contract proves no tenant, record, amount, worker-ID, or connection detail is
+  exported; the current 2,660-test full regression exits 0 in 336.0 seconds
+  with declared external-service/platform skips, and Ruff, Mypy, package build,
+  and diff-check pass. Collector delivery, alerting, throughput, capacity,
+  HA/DR, and production SLO evidence remain external.

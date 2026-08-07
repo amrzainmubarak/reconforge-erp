@@ -5439,8 +5439,15 @@ to its optional connection-factory close hook. Focused lifecycle tests and
 static checks pass; the caller must stop polling before close. Provider
 availability, throughput, HA/DR, and GitHub publication remain deferred.
 
-E-582 serializes scheduler cycles with lifecycle close through the same
-re-entrant lock. A concurrent shutdown therefore waits for the active bounded
-cycle before closing cached workers. This is lifecycle serialization evidence,
-not throughput, fairness, capacity, soak, distributed scheduling, HA/DR, or
-production operations evidence.
+E-582 serializes scheduler cycles with lifecycle close through a cycle lock
+separate from the worker-cache lock. A concurrent shutdown therefore waits for
+the active bounded cycle without blocking worker-thread cache lookup. This is
+lifecycle serialization evidence, not throughput, fairness, capacity, soak,
+distributed scheduling, HA/DR, or production operations evidence.
+
+E-583 adds optional, disabled-by-default scheduler telemetry. Each Worker cycle
+emits a safe low-cardinality span and job transition through the existing
+ObservabilityRuntime; failure transitions are recorded before the original
+error is raised, and no tenant/record/amount identifiers are exported. The
+current 2,660-test regression and static checks pass. Collector delivery,
+alerting, capacity, HA/DR, and GitHub publication remain deferred.

@@ -3129,12 +3129,28 @@ tasks:
     status: completed
     depends_on: [E-581, P4-SCL-001]
     exit_evidence: >-
-      Reconciliation scheduler cycles now share a re-entrant lifecycle lock
-      with worker lookup and close, preventing a concurrent shutdown from
-      closing a cached worker during its bounded callback. Focused scheduler
-      lifecycle tests, Ruff, Mypy, package build, and diff-check pass; the
-      current 2,659-test full local regression exits 0 in 358.3 seconds with
-      declared external-service/platform skips. This is lifecycle
-      serialization only, not
+      Reconciliation scheduler cycles and close now share a cycle lock distinct
+      from the worker-cache lock, preventing a concurrent shutdown from closing
+      a cached worker during its bounded callback without blocking worker
+      lookup. Focused scheduler lifecycle tests, Ruff, Mypy, package build, and
+      diff-check pass; the current 2,659-test full local regression exits 0 in
+      358.3 seconds with declared external-service/platform skips. This is
+      lifecycle serialization only, not
       throughput, fairness, capacity, soak, distributed scheduling, HA/DR, or
       production operations evidence.
+  - id: E-583
+    priority: P1
+    area: observability
+    title: Instrument reconciliation scheduler worker cycles safely
+    status: completed
+    depends_on: [E-582, P4-SCL-001]
+    exit_evidence: >-
+      `PostgresReconciliationScheduler` accepts optional disabled-by-default
+      `ObservabilityRuntime` instrumentation. Each bounded worker cycle emits
+      a closed low-cardinality span/job transition, records failures before
+      surfacing them, and excludes worker IDs, tenants, record identifiers,
+      amounts, and connection details. The injected telemetry contract,
+      current 2,660-test full local regression exits 0 in 336.0 seconds, Ruff,
+      Mypy, package build, and diff-check pass. This is instrumentation evidence only, not collector
+      delivery, alerting, throughput, capacity, HA/DR, or production SLO
+      evidence.

@@ -16,9 +16,10 @@ cached workers, and invokes each worker's optional `close()` hook once. The
 operation is idempotent and reports a safe scheduler error after attempting all
 worker hooks. `PostgresReconciliationWorker.close()` delegates once to an
 optional connection-factory close hook. Scheduler cycles and close are
-serialized by the lifecycle lock, so a concurrent close waits for the active
-bounded cycle. The caller should still stop the polling loop before calling
-`close()`.
+serialized by a cycle lock distinct from the worker-cache lock, so a concurrent
+close waits for the active bounded cycle without blocking worker threads from
+looking up cached instances. The caller should still stop the polling loop
+before calling `close()`.
 
 ## Verification and boundary
 

@@ -7,7 +7,7 @@ import json
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from threading import Event, RLock
+from threading import Event, Lock
 from typing import Any, Protocol, cast
 
 from reconforge.application.matching import LEGACY_RECORD_IDENTITY_POLICY
@@ -24,6 +24,7 @@ from reconforge.io.persisted import (
     decode_postgres_reconciliation_lineage,
     decode_postgres_reconciliation_rule,
 )
+from reconforge.observability import ObservabilityRuntime
 from reconforge.reconciliation.deterministic_engine import DeterministicMatchingEngine
 from reconforge.utils.money import (
     LEGACY_FINANCIAL_INPUT_POLICY,
@@ -560,6 +561,7 @@ class PostgresReconciliationScheduler:
         *,
         worker_ids: Iterable[str],
         poll_interval_seconds: float = 5.0,
+        observability: ObservabilityRuntime | None = None,
     ) -> None:
         identifiers = tuple(sorted({str(value).strip() for value in worker_ids if str(value).strip()}))
         if not identifiers or len(identifiers) > 64:
@@ -571,12 +573,14 @@ class PostgresReconciliationScheduler:
         self.worker_factory = worker_factory
         self.worker_ids = identifiers
         self.poll_interval_seconds = float(poll_interval_seconds)
+        self.observability = observability or ObservabilityRuntime.disabled()
         # Keep one worker instance per stable slot. Deployments may attach a
         # bounded connection pool or other lifecycle-scoped resources to a
         # worker; rebuilding the object on every poll cycle would churn those
         # resources and defeat the scheduler's bounded-runtime contract.
         self._workers: dict[str, PostgresReconciliationWorker] = {}
-        self._worker_lock = RLock()
+        self._worker_lock = Lock()
+        self._cycle_lock = Lock()
         self._closed = False
 
     def _worker_for(self, worker_id: str) -> PostgresReconciliationWorker:
@@ -592,12 +596,13 @@ class PostgresReconciliationScheduler:
     def close(self) -> None:
         """Close cached workers once, preserving caller-owned lifecycle hooks."""
 
-        with self._worker_lock:
+        with self._cycle_lock:
             if self._closed:
                 return
-            self._closed = True
-            workers = tuple(self._workers.values())
-            self._workers.clear()
+            with self._worker_lock:
+                self._closed = True
+                workers = tuple(self._workers.values())
+                self._workers.clear()
         first_error: Exception | None = None
         for worker in workers:
             closer = getattr(worker, "close", None)
@@ -615,7 +620,7 @@ class PostgresReconciliationScheduler:
 
         # Serialize cycles with close so a caller stopping the loop cannot
         # close a cached worker while its process_once callback is active.
-        with self._worker_lock:
+        with self._cycle_lock:
             return self._process_once()
 
     def _process_once(self) -> ReconciliationWorkerRunSummary:
@@ -625,7 +630,7 @@ class PostgresReconciliationScheduler:
             with ThreadPoolExecutor(
                 max_workers=len(self.worker_ids), thread_name_prefix="reconforge-reconciliation"
             ) as pool:
-                futures = [pool.submit(self._worker_for(worker_id).process_once) for worker_id in self.worker_ids]
+                futures = [pool.submit(self._run_worker, worker_id) for worker_id in self.worker_ids]
                 cycles = [future.result() for future in futures]
         except PostgresReconciliationSchedulerError:
             raise
@@ -639,6 +644,22 @@ class PostgresReconciliationScheduler:
             cancelled=sum(item.cancelled for item in cycles),
             skipped=sum(item.skipped for item in cycles),
         )
+
+    def _run_worker(self, worker_id: str) -> ReconciliationWorkerRunSummary:
+        """Run one worker cycle with safe low-cardinality telemetry only."""
+
+        attributes = {
+            "job.type": "postgres_reconciliation",
+            "reconforge.operation": "worker_cycle",
+        }
+        with self.observability.span("reconforge.reconciliation.worker", attributes):
+            try:
+                summary = self._worker_for(worker_id).process_once()
+            except Exception:
+                self.observability.record_job({**attributes, "job.status": "failed", "reconforge.result": "error"})
+                raise
+        self.observability.record_job({**attributes, "job.status": "completed", "reconforge.result": "success"})
+        return summary
 
     def run(self, *, stop_event: Event | None = None, max_cycles: int | None = None) -> ReconciliationWorkerRunSummary:
         """Poll all configured workers until stopped or a bounded cycle count is reached."""

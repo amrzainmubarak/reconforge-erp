@@ -3207,3 +3207,24 @@ tasks:
       the package build/diff-check pass. It remains read-only synthetic
       provider evidence and does not replace a live ERPNext tenant or writeback
       approval.
+  - id: E-587
+    priority: P1
+    area: connectors
+    title: Add disabled-by-default ERPNext Journal Entry draft write-back boundary
+    status: completed
+    depends_on: [E-586, P4-CON-001]
+    exit_evidence: >-
+      The provider-specific ERPNext Journal Entry draft contract uses exact
+      Decimal debit/credit text, requires one positive side per line and exact
+      document balance, fixes `docstatus=0`, binds an exact HTTPS resource
+      path, and uses token authorization through the governed write-back
+      executor. Registration remains feature-disabled by default; synthetic
+      tests prove maker-checker/feature gating, payload digest and
+      acknowledgement binding, endpoint hardening, legacy Bearer digest
+      compatibility, and secret non-disclosure. The current 2,681-test full
+      local regression exits 0 in 406.9 seconds, Mypy reports no issues in 487
+      source files, Ruff and Bandit pass, pip-audit reports no known
+      vulnerabilities excluding the local unpublished distribution, and the
+      package build/source-distribution membership/diff-check pass. This is a
+      draft payload and synthetic transport boundary, not live ERPNext posting,
+      account mapping, compensation delivery, or production write-back.

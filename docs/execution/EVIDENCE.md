@@ -14454,3 +14454,14 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   Bandit, pip-audit, package build, source-distribution membership, and
   diff-check pass. Hosted/live ERPNext evidence remains external; this is not
   posting or write-back evidence.
+- E-587 ERPNext Journal Entry draft write-back (2026-08-07): the provider
+  adapter emits only a deterministic balanced `docstatus=0` payload with exact
+  Decimal text and one-sided lines. The write-back SDK adds a backward-
+  compatible `token` credential scheme; the registration is exact-path and
+  feature-disabled by default. Focused tests cover maker-checker/feature
+  gating, digest and acknowledgement binding, endpoint hardening, Bearer
+  compatibility, and secret non-disclosure. The current 2,681-test full
+  regression exits 0 in 406.9 seconds, Mypy reports no issues in 487 source
+  files, Ruff, Bandit, pip-audit, package build, source-distribution
+  membership, and diff-check pass. This is synthetic draft/transport evidence;
+  no live ERPNext posting or production write-back claim follows.

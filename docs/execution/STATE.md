@@ -5475,3 +5475,14 @@ digests, and hardened operator endpoints. The focused suite, parser inventory,
 phase contracts, 2,673-test full regression (337.0 seconds), Mypy on 486
 source files, Ruff, Bandit, pip-audit, package build, and diff-check pass. No
 live ERPNext, posting, or write-back claim is made.
+
+E-587 completes a bounded ERPNext write-back slice: a deterministic
+`docstatus=0` Journal Entry payload builder requires exact Decimal amounts,
+one positive side per line, and an exactly balanced document. The governed
+write-back registration is exact-path, token-authenticated, and disabled by
+default; synthetic transport tests prove maker-checker/feature gating,
+payload/acknowledgement binding, endpoint hardening, legacy Bearer digest
+compatibility, and secret isolation. The current 2,681-test full regression
+passes in 406.9 seconds; Mypy (487 files), Ruff, Bandit, pip-audit, package
+build, source membership, and diff-check pass. Live ERPNext posting, account
+mapping, compensation, and production write-back remain external.

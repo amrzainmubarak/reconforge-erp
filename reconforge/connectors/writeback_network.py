@@ -65,6 +65,7 @@ class WritebackNetworkRegistration(BaseModel):
     recovery_endpoint: str | None = Field(default=None, min_length=1, max_length=2_048)
     egress_destinations: tuple[str, ...] = Field(min_length=1, max_length=8)
     credential_reference: str = Field(pattern=_SECRET_REFERENCE_PATTERN)
+    credential_auth_scheme: Literal["bearer", "token"] = "bearer"
     allowed_operations: frozenset[str] = Field(min_length=1, max_length=64)
     allowed_compensation_operations: frozenset[str] = Field(default_factory=frozenset, max_length=64)
     feature_enabled: bool = False
@@ -135,8 +136,13 @@ class WritebackNetworkRegistration(BaseModel):
 
     @property
     def digest(self) -> str:
+        payload = self.model_dump(mode="json", exclude_none=False)
+        # Keep registrations created before provider-specific auth support
+        # replay-compatible. A non-default scheme remains digest-bound.
+        if self.credential_auth_scheme == "bearer":
+            payload.pop("credential_auth_scheme", None)
         encoded = json.dumps(
-            self.model_dump(mode="json", exclude_none=False),
+            payload,
             ensure_ascii=True,
             sort_keys=True,
             separators=(",", ":"),
@@ -363,6 +369,13 @@ def _resolve_credential(resolver: ConnectorSecretResolver, reference: str) -> st
     return text
 
 
+def _authorization_header(registration: WritebackNetworkRegistration, credential: str) -> str:
+    """Format a provider credential without exposing the raw secret."""
+
+    prefix = "token " if registration.credential_auth_scheme == "token" else "Bearer "
+    return prefix + credential
+
+
 @dataclass
 class WritebackNetworkExecutor:
     """Resolve, verify, and dispatch one approved intent with bounded retries."""
@@ -455,7 +468,7 @@ class WritebackNetworkExecutor:
         credential = _resolve_credential(self.secret_resolver, registration.credential_reference)
         headers = {
             "Accept": "application/json",
-            "Authorization": "Bearer " + credential,
+            "Authorization": _authorization_header(registration, credential),
             "Idempotency-Key": intent.idempotency_key,
             "User-Agent": "ReconForge-Writeback/1",
             "X-ReconForge-Operation": intent.operation,
@@ -573,7 +586,7 @@ class WritebackNetworkExecutor:
         credential = _resolve_credential(self.secret_resolver, registration.credential_reference)
         headers = {
             "Accept": "application/json",
-            "Authorization": "Bearer " + credential,
+            "Authorization": _authorization_header(registration, credential),
             "Content-Type": "application/json",
             "Idempotency-Key": idempotency_key,
             "User-Agent": "ReconForge-Writeback/1",

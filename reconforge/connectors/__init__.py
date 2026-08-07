@@ -42,6 +42,16 @@ from reconforge.connectors.erpnext_reference import (
     ErpNextRead,
     erpnext_registration,
 )
+from reconforge.connectors.erpnext_writeback import (
+    ERP_NEXT_JOURNAL_ENTRY_ENDPOINT,
+    ERP_NEXT_JOURNAL_ENTRY_OPERATION,
+    ERP_NEXT_JOURNAL_ENTRY_PATH,
+    ErpNextJournalEntryDraft,
+    ErpNextJournalEntryLine,
+    ErpNextJournalEntryPayload,
+    build_erpnext_journal_entry_payload,
+    erpnext_writeback_registration,
+)
 from reconforge.connectors.manifest import (
     AuthenticationMethod,
     ConnectorCapability,
@@ -242,6 +252,14 @@ __all__ = [
     "ErpNextGlEntryPage",
     "ErpNextRead",
     "erpnext_registration",
+    "ERP_NEXT_JOURNAL_ENTRY_ENDPOINT",
+    "ERP_NEXT_JOURNAL_ENTRY_OPERATION",
+    "ERP_NEXT_JOURNAL_ENTRY_PATH",
+    "ErpNextJournalEntryDraft",
+    "ErpNextJournalEntryLine",
+    "ErpNextJournalEntryPayload",
+    "build_erpnext_journal_entry_payload",
+    "erpnext_writeback_registration",
     "DataClassification",
     "PublisherKeyStatus",
     "RetryPolicy",

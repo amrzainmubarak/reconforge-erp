@@ -5972,3 +5972,21 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   isolation; full gates and hosted provider operation remain separate.
 - **Boundary**: No ERPNext tenant, posting, write-back, provider SLA, or
   production-readiness claim follows.
+
+### D-413: Keep ERPNext Journal Entry write-back disabled and balanced
+
+- **Date**: 2026-08-07
+- **Context**: ERPNext uses token authorization and exposes a Journal Entry
+  REST resource, but provider posting and account mapping are not verified in
+  the current environment.
+- **Decision**: Add a provider-specific draft payload builder with exact
+  Decimal text, one-sided account lines, exact document balance, and fixed
+  `docstatus=0`. Extend the write-back transport with a digest-bound optional
+  `token` scheme while preserving legacy Bearer registration digests. Keep the
+  ERPNext registration feature-disabled until an operator enables the existing
+  maker-checker and server-profile controls.
+- **Verification**: Synthetic payload, endpoint, gating, token-header,
+  acknowledgement, digest, and secret-isolation tests pass; full local and
+  static/package gates pass.
+- **Boundary**: No live tenant, posting, account mapping, compensation
+  endpoint, provider-version certification, or production write-back claim.

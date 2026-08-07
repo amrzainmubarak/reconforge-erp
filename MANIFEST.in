@@ -587,6 +587,10 @@ include tests/test_grouped_matching_domain_scale.py
 include docs/adr/0305-grouped-matching-domain-diverse-scale.md
 include docs/execution/benchmarks/grouped-matching-10k-domain-diverse-v1.md
 include docs/execution/benchmarks/grouped-matching-10k-domain-diverse-v1.json
+include reconforge/benchmark/evidence_index.py
+include tests/test_benchmark_evidence_index.py
+include .github/scripts/verify_benchmark_index.py
+include docs/execution/benchmarks/INDEX.v1.json
 include docs/schemas/grouped_matching_domain_scale.schema.json
 include reconforge/infrastructure/postgres_consolidation_close.py
 include tests/test_postgres_consolidation_close.py

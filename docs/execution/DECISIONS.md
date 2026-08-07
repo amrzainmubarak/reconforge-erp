@@ -6319,3 +6319,19 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: This proves CI configuration intent and gives a precise
   dependency failure signal. It does not substitute for a hosted rerun,
   package provenance, or green PostgreSQL/Redis/backup runtime evidence.
+
+### D-434: Index benchmark artifacts by content hash and declared boundary
+
+- **Date**: 2026-08-08
+- **Context**: Benchmark reports already carried structural digests and
+  environment observations, but selected files had no single machine-readable
+  index proving which artifact was intended, where it lived, or which digest
+  fields were evidence-bearing.
+- **Decision**: Add `benchmark-evidence-index-v1` with repository-relative
+  artifact paths, SHA-256 hashes, profile identities, digest-field allowlists,
+  workload families, status, and explicit non-production boundaries. A closed
+  verifier rejects path escape, symlinks, hash/profile drift, malformed digests,
+  and unsupported global claims before the Python test collection.
+- **Boundary**: The index verifies traceability of checked-in observations; it
+  does not rerun workloads, convert timing to an SLO, or establish distributed
+  capacity, provider authenticity, or production sizing.

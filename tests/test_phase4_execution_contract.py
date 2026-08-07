@@ -98,6 +98,18 @@ def test_test_matrix_verifies_optional_imports_after_all_extra_sync() -> None:
         assert module in command
 
 
+def test_test_matrix_verifies_checked_in_benchmark_evidence_before_collection() -> None:
+    workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["test"]["steps"]
+    names = [str(step.get("name", "")) for step in steps]
+    verify_index = names.index("Verify checked-in benchmark evidence index")
+    pytest_index = names.index("Pytest")
+    assert verify_index < pytest_index
+    assert str(steps[verify_index]["run"]) == (
+        "uv run --no-sync python .github/scripts/verify_benchmark_index.py --root ."
+    )
+
+
 def test_server_boundaries_bootstraps_versioned_postgres_native_tools_before_live_tests() -> None:
     workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
     steps = workflow["jobs"]["server-boundaries"]["steps"]

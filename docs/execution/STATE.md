@@ -1,6 +1,6 @@
 # Execution State
 
-Updated: 2026-08-07
+Updated: 2026-08-08
 
 ## Current phase
 
@@ -5698,3 +5698,15 @@ imports all three modules. This gives a precise pre-collection failure signal;
 it is not hosted CI evidence and does not close live PostgreSQL/Redis/native
 backup, HA/DR, provider, or production gates. GitHub publication remains
 deferred by owner policy.
+
+E-608 adds the machine-readable benchmark evidence index and verifier. Four
+selected matching/durable-job JSON artifacts are bound by repository-relative
+path, SHA-256, profile ID, declared digest fields, workload family, status,
+and non-production wording. The verifier passes local artifacts and rejects
+tampered hashes/path escape/global-claim fixtures; CI runs it before Pytest.
+The first full regression exposed the new JSON parser calls as an undeclared
+FI-040 inventory surface; that allowlist was added and the final full pytest
+exits 0 in 379.1 seconds with declared capability skips and existing warnings.
+This improves reproducibility of published observations only and does not
+close distributed capacity, hosted runtime, provider, HA/DR, or production
+gates. GitHub publication remains deferred by owner policy.

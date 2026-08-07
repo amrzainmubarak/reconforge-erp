@@ -14673,3 +14673,16 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   7/7 and a local Python 3.11 isolated all-extra sync imported all three
   modules. This is a workflow-intent and local-installation observation, not
   a hosted rerun or proof of live PostgreSQL/Redis/backup behavior.
+- E-608 benchmark evidence index (2026-08-08):
+  `docs/execution/benchmarks/INDEX.v1.json` indexes four selected 10K/1M and
+  PostgreSQL artifacts with exact repository-relative paths, SHA-256 hashes,
+  profile identities, digest fields, workload families, status, and explicit
+  non-production boundaries. `verify_benchmark_index.py` rejects hash drift,
+  path escape, symlinks, malformed digests, and global-claim wording. The
+  verifier and tamper/path/claim regressions pass 4/4; the CI test job calls it
+  before Pytest. The first full regression exposed the new two `json.loads`
+  calls as an undeclared FI-040 parser; the inventory was updated and the
+  final full `uv run --no-sync pytest -q --tb=short -ra` exits 0 in 379.1s
+  with declared capability skips and existing warnings. This is traceability
+  evidence only, not a new runtime, capacity, SLO, or production-sizing
+  result.

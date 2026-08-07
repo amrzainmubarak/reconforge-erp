@@ -41,6 +41,9 @@ jobs:
           "import cbor2, cryptography, opentelemetry.sdk;
           print('optional test dependencies: cbor2, cryptography, opentelemetry.sdk')"
 
+      - name: Verify checked-in benchmark evidence index
+        run: uv run --no-sync python .github/scripts/verify_benchmark_index.py --root .
+
       - name: Ruff
         run: uv run --no-sync ruff check .
 

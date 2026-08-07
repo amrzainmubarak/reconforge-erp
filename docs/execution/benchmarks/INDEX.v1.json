@@ -1,0 +1,60 @@
+{
+  "claim_boundary": "These are version-controlled synthetic observations with explicit environment and workload limits; they are not distributed capacity, production sizing, SLO, or provider-authenticity evidence.",
+  "entries": [
+    {
+      "artifact": "docs/execution/benchmarks/grouped-matching-10k-domain-diverse-v1.json",
+      "artifact_sha256": "1bf64290d2fe64e71157282990802b74252be5c68d07aeef0c429aa31879eeb2",
+      "claim_boundary": "One-host domain-diverse 10K algorithm correctness observation; not distributed capacity, PostgreSQL parity, or production sizing.",
+      "digest_fields": [
+        "decision_digest",
+        "manifest_digest"
+      ],
+      "engine": "local-grouped-strategy",
+      "profile_id": "grouped-matching/10k-domain-diverse-v1",
+      "status": "verified",
+      "workload_family": "advanced_matching"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/grouped-matching-1m-current-2026-08-06.json",
+      "artifact_sha256": "db065f2762bc2062518378cfaaf742a94c1e8d9c1205dddc3bc6d9350fe1d5fe",
+      "claim_boundary": "Two-run one-host exact USD 1M partitioned matching observation; not distributed capacity, FX/fee coverage, PostgreSQL parity, or production sizing.",
+      "digest_fields": [
+        "effect_digest",
+        "manifest_digest",
+        "report_digest"
+      ],
+      "engine": "local-grouped-strategy",
+      "profile_id": "grouped-matching/1m-record-true-many-to-many-v1",
+      "status": "verified",
+      "workload_family": "advanced_matching"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/postgres-grouped-matching-10k-partitions-v1.json",
+      "artifact_sha256": "7a539ec9fd5aa079c029d4a4f54c25c5a1cadb1f70b91a71170f2b44c2f204cc",
+      "claim_boundary": "Single-host synthetic PostgreSQL partition correctness observation; not cross-host fairness, queue HA, failover, or production sizing.",
+      "digest_fields": [
+        "effect_set_digest",
+        "manifest_digest"
+      ],
+      "engine": "postgresql-grouped-strategy",
+      "profile_id": "postgres-grouped-matching/10k-partitions-v1",
+      "status": "partial",
+      "workload_family": "postgresql_matching"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/postgres-durable-job-100k-effects-v1.json",
+      "artifact_sha256": "9cc7fce2cde17881528c60579112e18dbcc2fde1b9c62a1941fea010a2fd6181",
+      "claim_boundary": "Single-host synthetic PostgreSQL durable-job effect observation; not queue HA, host loss, cross-host fairness, RPO/RTO, or production sizing.",
+      "digest_fields": [
+        "effect_set_digest",
+        "manifest_digest"
+      ],
+      "engine": "postgresql-durable-job",
+      "profile_id": "postgres-durable-job-load/100k-effects-v1",
+      "status": "partial",
+      "workload_family": "durable_jobs"
+    }
+  ],
+  "index_id": "benchmark-evidence-index-v1",
+  "schema_version": 1
+}

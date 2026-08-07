@@ -1,6 +1,6 @@
 schema_version: 1
 inventory_id: reconforge-file-ingestion
-reviewed_on: "2026-08-07"
+reviewed_on: "2026-08-08"
 owner: platform-security
 claim_boundary: >-
   This inventory proves repository-visible parser coverage and bounded controls only. It does not prove
@@ -796,6 +796,23 @@ surfaces:
       - The response is untrusted provider data; the governed HTTPS executor, exact Payment Entry resource path, bounded response and cursor limits, closed Pydantic schema, Decimal checks, company guard, retry ceiling, and canonical digest fail closed before a page is returned.
       - This is synthetic transport evidence only. It does not authenticate an ERPNext tenant, establish provider-version compatibility, authorize payment or accounting posting, settle a bank item, or enable write-back.
     next_action: Add a separately reviewed live ERPNext sandbox with provider-version Payment Entry conformance fixtures before promoting beyond bounded connector evidence.
+  - id: FI-040
+    name: Checked-in benchmark evidence artifacts
+    module_ids: [reconciliation.core, platform.core]
+    trust: generated-local
+    entrypoints:
+      - reconforge/benchmark/evidence_index.py::verify_benchmark_index
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-006]
+    test_evidence: [tests/test_benchmark_evidence_index.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - The verifier reads only repository-selected JSON reports and requires exact paths, regular files, SHA-256 hashes, profile IDs, and declared digest fields before returning an index result.
+      - Hashes and report digests provide artifact integrity and replay references; they do not authenticate benchmark origin, hardware, workload truth, provider data, or production capacity.
+    next_action: Add signed release provenance and independently rerun selected profiles on supported hosted engine matrices before promoting performance claims.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader
@@ -853,6 +870,11 @@ direct_json_parser_allowlist:
     call_count: 1
     surface_id: FI-039
     rationale: Parses only the bounded ERPNext Payment Entry response after the governed HTTPS executor, exact resource-path allowlist, token-reference isolation, retry/response ceilings, closed paid/received Decimal schema, company scope, and canonical digest checks are applied.
+  - path: reconforge/benchmark/evidence_index.py
+    parser: json.loads
+    call_count: 2
+    surface_id: FI-040
+    rationale: Parses only repository-selected benchmark JSON before exact path, regular-file, SHA-256, profile, digest-field, and non-production claim-boundary verification; it does not accept operator uploads or network data.
   - path: reconforge/auth/repositories.py
     parser: json.loads
     call_count: 1

@@ -1,5 +1,5 @@
 schema_version: 2
-updated_at: "2026-08-07"
+updated_at: "2026-08-08"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
   evidence_base_commit: "5d401e70c3a0e3cf507c2c7cf635dfc99b01a9af"
@@ -3576,3 +3576,19 @@ tasks:
       closes only the diagnostic dependency-install contract; hosted CI must
       still rerun, and PostgreSQL/Redis/native backup runtime evidence remains
       external.
+  - id: E-608
+    priority: P1
+    area: advanced_matching
+    title: Index reproducible benchmark evidence artifacts
+    status: completed
+    depends_on: [E-607, P4-MAT-001, P4-SCL-001]
+    exit_evidence: >-
+      `benchmark-evidence-index-v1` binds four selected 10K/1M and PostgreSQL
+      JSON reports to repository-relative paths, SHA-256 hashes, profile IDs,
+      digest fields, workload families, status, and explicit non-production
+      boundaries. The closed verifier and four tamper/path/claim regressions
+      pass, package membership is recorded, and CI runs the verifier before
+      collection. The final full local pytest exits 0 in 379.1 seconds after
+      FI-040 inventory closure. This is evidence traceability only; it does
+      not establish distributed capacity, SLOs, provider authenticity, or
+      production sizing.

@@ -66,6 +66,21 @@ PY
 - This is local single-host and single-process evidence with explicit CPU/peak-memory capture; no network/database connector, crash-restart replay, or air-gap network-dispersed execution effects are included.
 - No 1M/10M profile claims are made.
 
+## Evidence index
+
+`docs/execution/benchmarks/INDEX.v1.json` is a closed index of selected
+machine-readable 10K/1M and PostgreSQL profiles. It verifies each artifact's
+repository-relative path, SHA-256, profile identity, declared digest fields,
+and non-production claim boundary without running the workload:
+
+```text
+uv run --no-sync python .github/scripts/verify_benchmark_index.py --root .
+```
+
+The index is a traceability gate, not a new performance result. It does not
+upgrade `partial` PostgreSQL entries, infer capacity from runtime, or replace
+hosted cross-engine, distributed, or production-sizing evidence.
+
 ## Next performance gates
 
 1. Add `match`/`exception` and ambiguity outcome percentages in a normalized format.

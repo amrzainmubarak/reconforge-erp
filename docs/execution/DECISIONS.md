@@ -6058,3 +6058,19 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: Synthetic SDK evidence does not establish live bank/ERP
   interoperability, source authenticity, settlement, posting, write-back, or
   production availability.
+
+### D-418: Keep Gitleaks false-positive suppression exact and test-bound
+
+- **Date**: 2026-08-07
+- **Context**: The current checksum-verified Gitleaks history scan classified
+  one literal observability redaction fixture as `generic-api-key`.
+- **Decision**: Retain the fixture because it tests that tenant, job, actor,
+  and worker identifiers do not reach telemetry. Add only the exact historical
+  commit/path/rule/line and checked-tree fingerprints to `.gitleaksignore`.
+  Do not add a broad rule, path, commit range, regex, or baseline.
+- **Verification**: Gitleaks 8.30.1 scans 602 commits with zero findings and
+  scans a clean 25.12 MB `git archive` checkout with zero findings. The local
+  generated workspace scan is explicitly excluded from evidence after a
+  6.30 GB/120-second timeout.
+- **Boundary**: This is local scanner evidence; hosted security attestation,
+  branch protection, and external credential safety remain unverified.

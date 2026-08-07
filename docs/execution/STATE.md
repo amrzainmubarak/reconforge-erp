@@ -5535,3 +5535,13 @@ This aligns the provider-specific adapters with one common safety contract; it
 does not establish live bank/ERP interoperability, source authenticity,
 settlement, posting, write-back, or production availability. GitHub publication
 remains deferred by owner policy.
+
+E-592 closes the current local Gitleaks finding without weakening secret
+scanning. The checksum-verified Gitleaks 8.30.1 scan reports no leaks across
+602 commits after recording only the exact historical and checked-tree
+fingerprints for the synthetic observability redaction fixture. A clean
+`git archive` checkout scan covers 25.12 MB and also exits clean. The local
+workspace scan is not release evidence because generated environments reach
+the 120-second timeout after reading about 6.30 GB. Hosted security
+attestation and branch enforcement remain external; GitHub publication remains
+deferred by owner policy.

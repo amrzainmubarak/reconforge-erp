@@ -2,6 +2,17 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+- E-592 current Gitleaks synthetic-observability finding (2026-08-07): the
+  checksum-verified Gitleaks 8.30.1 history scan found one generic-api-key
+  classification for the deliberately synthetic observability redaction
+  fixture in historical commit `a1dc6c77`. The exact commit/path/rule/line
+  fingerprint and exact checked-tree fingerprint are now recorded in
+  `.gitleaksignore`; no broad rule, path, commit-range, or baseline allowlist
+  was added. The current 602-commit history scan exits 0. A clean `git archive`
+  checkout scan covers 25.12 MB and exits 0. The local workspace scan is
+  blocked by generated environments: it reads about 6.30 GB and reaches the
+  120-second timeout, so it is not treated as release evidence. Hosted
+  security attestation remains external.
 - E-589 CAMT.053 HTTPS bank-statement source (2026-08-07): the new read-only
   adapter composes the governed HTTPS executor with the bounded `defusedxml`
   parser, exact endpoint path, runtime secret reference, 8 MiB response cap,

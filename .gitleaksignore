@@ -3,3 +3,7 @@
 # Synthetic partition fallback was flagged by the generic-api-key rule in the historical commit.
 b5eba23671fb4dddcebe87d3532c3ab6e00639cb:reconforge/workers/postgres_grouped_matching.py:generic-api-key:110
 tests/test_reliability_sources.py:generic-api-key:32
+# Synthetic observability redaction fixture was classified as a generic key;
+# the test asserts that these literal values never reach telemetry output.
+a1dc6c77fde298b27ce7ff0654fd4ea44a4c64c7:tests/test_observability.py:generic-api-key:127
+tests/test_observability.py:generic-api-key:127

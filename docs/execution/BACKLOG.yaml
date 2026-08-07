@@ -3308,3 +3308,20 @@ tasks:
       evidence only and does not establish live provider interoperability,
       source authenticity, settlement, posting, write-back, or production
       availability.
+  - id: E-592
+    priority: P0
+    area: release_operations
+    title: Close the current Gitleaks synthetic observability finding
+    status: completed
+    depends_on: [P0-SEC-008, E-591]
+    exit_evidence: >-
+      The checksum-verified Gitleaks 8.30.1 history scan identified one
+      synthetic observability redaction fixture as a generic API key. The
+      exact historical commit/path/rule/line fingerprint and exact checked-tree
+      fingerprint are recorded in `.gitleaksignore`; no broad rule, path,
+      commit-range, or baseline allowlist is added. The current 602-commit
+      history scan exits 0, and a clean git-archive checkout scan covers
+      25.12 MB and exits 0. The local workspace scan is explicitly not used as
+      release evidence because generated environments exceed its timeout.
+      This is local security evidence only; hosted security attestation and
+      branch enforcement remain external.

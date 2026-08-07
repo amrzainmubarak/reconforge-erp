@@ -105,6 +105,9 @@ include docs/adr/0444-retail-settlement-replay-integrity.md
 include docs/adr/0445-cross-industry-decision-artifact-replay-integrity.md
 include docs/adr/0446-network-connector-circuit-breaker.md
 include docs/adr/0447-hosted-postgres-native-tool-bootstrap.md
+include docs/adr/0448-retail-settlement-persistence.md
+include reconforge/infrastructure/sqlite_retail_settlement.py
+include tests/test_sqlite_retail_settlement.py
 include docs/adr/0339-connectors-boundary-is-an-evidence-bounded-module.md
 include docs/connectors/camt053-bounded-readonly.md
 include docs/execution/P3_ENT_007_EXIT_AUDIT.yaml

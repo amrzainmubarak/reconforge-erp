@@ -5645,3 +5645,15 @@ before locked dependencies and to resolve executable `pg_dump`, `pg_restore`,
 and connector suites pass 37 tests with Ruff and diff-check. A fresh hosted
 encrypted backup/restore run is still required. GitHub publication remains
 deferred by owner policy.
+
+E-603 adds SQLite migration 35 and `SQLiteRetailSettlementRepository` for
+workspace-scoped immutable retail settlement evidence. Repeated puts are
+idempotent, reads verify outer and nested replay digests plus persisted status
+and algorithm fields, tampering is refused, and local backup/restore includes
+the table. Retail persistence, backup/restore, inventory, and related focused
+tests pass; static/package gates are being rerun before the local commit. This
+is local SQLite evidence only. The full local pytest regression exits 0 in
+408.4 seconds with declared capability skips and existing warnings. Retail
+API/Studio, live processor authenticity, posting, write-back, PostgreSQL
+parity, HA/DR, and production operations remain open. GitHub publication
+remains deferred by owner policy.

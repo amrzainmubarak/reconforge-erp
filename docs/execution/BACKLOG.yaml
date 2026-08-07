@@ -3492,3 +3492,19 @@ tasks:
       connector suites pass 37/37 with Ruff and diff-check. This proves
       workflow intent locally only; a fresh hosted encrypted backup/restore
       run, HA/DR, RPO/RTO, and production release evidence remain required.
+  - id: E-603
+    priority: P2
+    area: platform-breadth
+    title: Persist retail settlement evidence locally
+    status: completed
+    depends_on: [E-602, P4-PLAT-001]
+    exit_evidence: >-
+      SQLite migration 35 and SQLiteRetailSettlementRepository persist
+      workspace-scoped, digest-bound retail settlement reports with immutable
+      triggers, idempotent replay, tamper refusal, and backup/restore replay.
+      Focused retail, persistence, inventory, and backup tests plus static and
+      package gates pass; the full local pytest regression exits 0 in 408.4
+      seconds with declared capability skips and existing warnings. This is
+      local persistence evidence only; API/Studio,
+      live processor, posting, write-back, PostgreSQL parity, HA/DR, and
+      production retail operations remain open.

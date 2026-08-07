@@ -29,10 +29,13 @@
     "structured_document_policy": {"$ref": "#/$defs/structured_document_policy"},
     "persisted_json_policies": {
       "type": "array",
-      "prefixItems": [{"$ref": "#/$defs/financial_idempotency_json_policy"}],
+      "prefixItems": [
+        {"$ref": "#/$defs/financial_idempotency_json_policy"},
+        {"$ref": "#/$defs/sqlite_retail_settlement_json_policy"}
+      ],
       "items": false,
       "minItems": 1,
-      "maxItems": 1
+      "maxItems": 2
     },
     "surfaces": {
       "type": "array",
@@ -160,6 +163,40 @@
         "implementation": {"const": "reconforge/io/persisted.py"},
         "schema_id": {"const": "financial-idempotency-response-object-v1"},
         "schema_path": {"const": "docs/schemas/financial_idempotency_response.schema.json"},
+        "max_utf8_bytes": {"type": "integer", "minimum": 1},
+        "max_nodes": {"type": "integer", "minimum": 1},
+        "max_depth": {"type": "integer", "minimum": 1},
+        "max_collection_items": {"type": "integer", "minimum": 1},
+        "max_scalar_characters": {"type": "integer", "minimum": 1},
+        "unique_keys": {"const": true},
+        "object_root": {"const": true},
+        "integer_number_tokens_only": {"const": true},
+        "canonical_producer_text": {"const": true}
+      }
+    },
+    "sqlite_retail_settlement_json_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "implementation",
+        "schema_id",
+        "schema_path",
+        "max_utf8_bytes",
+        "max_nodes",
+        "max_depth",
+        "max_collection_items",
+        "max_scalar_characters",
+        "unique_keys",
+        "object_root",
+        "integer_number_tokens_only",
+        "canonical_producer_text"
+      ],
+      "properties": {
+        "id": {"const": "sqlite-retail-settlement-json-v1"},
+        "implementation": {"const": "reconforge/io/persisted.py"},
+        "schema_id": {"const": "retail-settlement-report-object-v1"},
+        "schema_path": {"const": "docs/schemas/retail_settlement_report.schema.json"},
         "max_utf8_bytes": {"type": "integer", "minimum": 1},
         "max_nodes": {"type": "integer", "minimum": 1},
         "max_depth": {"type": "integer", "minimum": 1},

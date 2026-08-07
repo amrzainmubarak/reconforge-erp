@@ -64,6 +64,7 @@ BACKUP_TABLES = [
     "consolidation_run_lines",
     "consolidation_effects",
     "consolidation_effect_lines",
+    "retail_settlement_runs",
     "legal_entities",
     "branches",
     "periods",
@@ -202,6 +203,9 @@ BACKUP_SELECT_QUERIES = {
     "consolidation_effect_lines": (
         "SELECT * FROM consolidation_effect_lines ORDER BY effect_id, ordinal, id"
     ),
+    "retail_settlement_runs": (
+        "SELECT * FROM retail_settlement_runs ORDER BY workspace_id, created_at, id"
+    ),
     "legal_entities": "SELECT * FROM legal_entities ORDER BY entity_code, id",
     "branches": "SELECT * FROM branches ORDER BY organization_id, branch_code, id",
     "periods": "SELECT * FROM periods ORDER BY start_date, id",
@@ -314,6 +318,7 @@ BACKUP_DELETE_QUERIES = {
     "consolidation_run_lines": "DELETE FROM consolidation_run_lines",
     "consolidation_effects": "DELETE FROM consolidation_effects",
     "consolidation_effect_lines": "DELETE FROM consolidation_effect_lines",
+    "retail_settlement_runs": "DELETE FROM retail_settlement_runs",
     "legal_entities": "DELETE FROM legal_entities",
     "branches": "DELETE FROM branches",
     "periods": "DELETE FROM periods",
@@ -518,6 +523,18 @@ BACKUP_INSERT_COLUMNS = {
         "amount_decimal",
         "amount_minor",
         "currency_code",
+    ),
+    "retail_settlement_runs": (
+        "id",
+        "workspace_id",
+        "decision_digest",
+        "artifact_digest",
+        "algorithm_version",
+        "status_counts_json",
+        "payload_json",
+        "prepared_by",
+        "prepared_at",
+        "created_at",
     ),
     "legal_entities": (
         "id",
@@ -1682,6 +1699,12 @@ BACKUP_INSERT_QUERIES = {
         INSERT INTO consolidation_effect_lines (
             id, effect_id, run_line_id, ordinal, amount_decimal, amount_minor, currency_code
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    """,
+    "retail_settlement_runs": """
+        INSERT INTO retail_settlement_runs (
+            id, workspace_id, decision_digest, artifact_digest, algorithm_version,
+            status_counts_json, payload_json, prepared_by, prepared_at, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "legal_entities": """
         INSERT INTO legal_entities (

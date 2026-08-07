@@ -43,6 +43,19 @@ persisted_json_policies:
     object_root: true
     integer_number_tokens_only: true
     canonical_producer_text: true
+  - id: sqlite-retail-settlement-json-v1
+    implementation: reconforge/io/persisted.py
+    schema_id: retail-settlement-report-object-v1
+    schema_path: docs/schemas/retail_settlement_report.schema.json
+    max_utf8_bytes: 4194304
+    max_nodes: 100000
+    max_depth: 32
+    max_collection_items: 25000
+    max_scalar_characters: 262144
+    unique_keys: true
+    object_root: true
+    integer_number_tokens_only: true
+    canonical_producer_text: true
 surfaces:
   - id: FI-001
     name: Canonical reconciliation tabular reader

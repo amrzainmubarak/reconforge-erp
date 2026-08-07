@@ -6234,3 +6234,21 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: Hosted execution, encrypted restore, HA/DR, RPO/RTO, and
   production release evidence remain unverified until a fresh runner completes
   the live gate.
+
+### D-429: Persist retail settlement evidence in local SQLite
+
+- **Date**: 2026-08-07
+- **Context**: The experimental retail settlement report was deterministic and
+  digest-bound but had no durable, workspace-scoped local evidence boundary or
+  backup/restore coverage.
+- **Decision**: Add SQLite migration 35 and an append-only
+  `SQLiteRetailSettlementRepository`. Require `finance_core.manage`, derive a
+  stable workspace-scoped identity, make repeated puts idempotent, verify the
+  outer and nested decision digests plus persisted status/algorithm columns on
+  every read, and include the table in local backup/restore maps.
+- **Verification**: Retail persistence, tamper, migration, backup/restore,
+  inventory, and focused regression tests pass; package/static gates remain
+  release requirements.
+- **Boundary**: Local SQLite persistence only; no retail API/Studio, live
+  processor authenticity, settlement finality/fraud, posting, write-back,
+  PostgreSQL parity, HA/DR, or production retail claim follows.

@@ -34,6 +34,8 @@ SQLITE_LEGACY_IMPORT_SUMMARY_JSON_PROFILE = "sqlite-legacy-import-summary-json-v
 SQLITE_LEGACY_IMPORT_SUMMARY_SCHEMA = "sqlite-legacy-import-summary-object-v1"
 SQLITE_MATCHING_LINEAGE_JSON_PROFILE = "sqlite-matching-lineage-json-v1"
 SQLITE_MATCHING_LINEAGE_SCHEMA = "sqlite-matching-lineage-object-v1"
+SQLITE_RETAIL_SETTLEMENT_JSON_PROFILE = "sqlite-retail-settlement-json-v1"
+SQLITE_RETAIL_SETTLEMENT_SCHEMA = "retail-settlement-report-object-v1"
 CONSOLIDATION_WORKSHEET_JSON_PROFILE = "consolidation-worksheet-json-v1"
 CONSOLIDATION_WORKSHEET_SCHEMA = "consolidation-worksheet-v1"
 FINANCIAL_IDEMPOTENCY_JSON_POLICY = StructuredDocumentPolicy(
@@ -517,6 +519,39 @@ def decode_postgres_outbox_payload(value: object) -> PersistedJsonObjectDocument
         profile_id=POSTGRES_OUTBOX_JSON_PROFILE,
         schema_id=POSTGRES_OUTBOX_PAYLOAD_SCHEMA,
         reject_fractional_numbers=False,
+    )
+
+
+def decode_sqlite_retail_settlement(value: object) -> PersistedJsonObjectDocument:
+    """Decode one bounded persisted retail settlement report object."""
+
+    return _document(
+        str(value),
+        policy=POSTGRES_OUTBOX_JSON_POLICY,
+        profile_id=SQLITE_RETAIL_SETTLEMENT_JSON_PROFILE,
+        schema_id=SQLITE_RETAIL_SETTLEMENT_SCHEMA,
+        reject_fractional_numbers=True,
+    )
+
+
+def encode_sqlite_retail_settlement(payload: Mapping[str, Any]) -> PersistedJsonObjectDocument:
+    """Canonicalize a retail settlement report before SQLite persistence."""
+
+    try:
+        value = dict(payload)
+    except (TypeError, ValueError) as exc:
+        raise PersistedJsonError("persisted_json_object_required") from exc
+    _preflight_value(value, POSTGRES_OUTBOX_JSON_POLICY, reject_floats=True)
+    try:
+        text = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False)
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise PersistedJsonError("persisted_json_encoding_invalid") from exc
+    return _document(
+        text,
+        policy=POSTGRES_OUTBOX_JSON_POLICY,
+        profile_id=SQLITE_RETAIL_SETTLEMENT_JSON_PROFILE,
+        schema_id=SQLITE_RETAIL_SETTLEMENT_SCHEMA,
+        reject_fractional_numbers=True,
     )
 
 

@@ -14620,3 +14620,14 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   under `pg_config --bindir`. The focused phase-4 plus connector command passes
   37/37; Ruff and diff-check pass. This is local workflow-intent evidence;
   hosted encrypted backup/restore and production DR evidence remain external.
+- E-603 local retail settlement persistence (2026-08-07): migration 35 and
+  `SQLiteRetailSettlementRepository` add workspace-scoped immutable storage,
+  permission gating, idempotent identity, outer/nested replay verification,
+  status/algorithm column consistency checks, and backup/restore mapping.
+  `tests/test_sqlite_retail_settlement.py` plus backup/export regressions pass
+  39/39 after the backup integration, and the inventory-focused command passes
+  11/11. This is local synthetic SQLite persistence evidence only; retail
+  API/Studio, live processor authenticity/conformance, posting, write-back,
+  PostgreSQL parity, HA/DR, and production operations remain unverified. The
+  full local pytest regression exits 0 in 408.4 seconds with declared
+  capability skips and existing warnings.

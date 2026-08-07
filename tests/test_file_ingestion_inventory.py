@@ -14,6 +14,9 @@ from reconforge.io.persisted import (
     FINANCIAL_IDEMPOTENCY_JSON_POLICY,
     FINANCIAL_IDEMPOTENCY_JSON_PROFILE,
     FINANCIAL_IDEMPOTENCY_RESPONSE_SCHEMA,
+    POSTGRES_OUTBOX_JSON_POLICY,
+    SQLITE_RETAIL_SETTLEMENT_JSON_PROFILE,
+    SQLITE_RETAIL_SETTLEMENT_SCHEMA,
 )
 from reconforge.io.structured import (
     CURRENT_STRUCTURED_DOCUMENT_POLICY,
@@ -235,7 +238,22 @@ def test_documented_financial_idempotency_policy_is_exactly_runtime() -> None:
             "object_root": True,
             "integer_number_tokens_only": True,
             "canonical_producer_text": True,
-        }
+        },
+        {
+            "id": SQLITE_RETAIL_SETTLEMENT_JSON_PROFILE,
+            "implementation": "reconforge/io/persisted.py",
+            "schema_id": SQLITE_RETAIL_SETTLEMENT_SCHEMA,
+            "schema_path": "docs/schemas/retail_settlement_report.schema.json",
+            "max_utf8_bytes": POSTGRES_OUTBOX_JSON_POLICY.max_file_bytes,
+            "max_nodes": POSTGRES_OUTBOX_JSON_POLICY.max_nodes,
+            "max_depth": POSTGRES_OUTBOX_JSON_POLICY.max_depth,
+            "max_collection_items": POSTGRES_OUTBOX_JSON_POLICY.max_collection_items,
+            "max_scalar_characters": POSTGRES_OUTBOX_JSON_POLICY.max_scalar_characters,
+            "unique_keys": True,
+            "object_root": True,
+            "integer_number_tokens_only": True,
+            "canonical_producer_text": True,
+        },
     ]
 
 

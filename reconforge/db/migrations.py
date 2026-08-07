@@ -37,6 +37,7 @@ from reconforge.db.schema import (
     PAYABLES_SCHEMA_SQL,
     POLICY_DELEGATIONS_SCHEMA_SQL,
     RECEIVABLES_SCHEMA_SQL,
+    RETAIL_SETTLEMENT_SCHEMA_SQL,
     WORKFLOW_STATE_MACHINE_SCHEMA_SQL,
     WRITEBACK_APPROVAL_PERMISSION_SQL,
     WRITEBACK_COMPENSATION_PERMISSION_SQL,
@@ -123,6 +124,7 @@ MIGRATIONS = [
         name="durable_job_scheduler_cursor_coordination",
         sql=DURABLE_JOB_SCHEDULER_CURSOR_MIGRATION_SQL,
     ),
+    Migration(version=35, name="retail_settlement_persistence", sql=RETAIL_SETTLEMENT_SCHEMA_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """

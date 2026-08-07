@@ -193,7 +193,7 @@
           "uniqueItems": true,
           "items": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$"}
         },
-        "trust": {"enum": ["untrusted-local", "generated-local", "internal-persisted"]},
+        "trust": {"enum": ["untrusted-local", "untrusted-network", "generated-local", "internal-persisted"]},
         "entrypoints": {
           "type": "array",
           "minItems": 1,

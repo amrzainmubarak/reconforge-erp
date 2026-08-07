@@ -11,8 +11,8 @@ import ssl
 import time
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
-from typing import Any, Protocol
-from urllib.parse import urlsplit
+from typing import Any, Literal, Protocol
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -20,6 +20,7 @@ from reconforge.connectors.manifest import AuthenticationMethod, ConnectorKind, 
 
 MAX_CURSOR_BYTES = 4_096
 MAX_IDEMPOTENCY_KEY_BYTES = 200
+_CURSOR_PARAMETER_PATTERN = r"^[A-Za-z][A-Za-z0-9_]{0,63}$"
 
 
 class ConnectorNetworkError(RuntimeError):
@@ -33,6 +34,8 @@ class NetworkConnectorRegistration(BaseModel):
     manifest: ConnectorManifest
     endpoint: str = Field(min_length=1, max_length=2_048)
     credential_reference: str | None = Field(default=None, pattern=r"^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,255}$")
+    credential_auth_scheme: Literal["bearer", "token"] = "bearer"
+    cursor_query_parameter: str | None = Field(default=None, pattern=_CURSOR_PARAMETER_PATTERN)
     timeout_seconds: int = Field(default=10, ge=1, le=60)
     maximum_response_bytes: int = Field(default=1_048_576, ge=1, le=16_777_216)
 
@@ -46,6 +49,14 @@ class NetworkConnectorRegistration(BaseModel):
             raise ValueError("secret-reference authentication requires credential_reference")
         if self.manifest.authentication is AuthenticationMethod.NONE and self.credential_reference is not None:
             raise ValueError("no-auth network registration cannot carry credential_reference")
+        if self.cursor_query_parameter is not None and not self.manifest.incremental_cursor:
+            raise ValueError("cursor_query_parameter requires incremental cursor support")
+        if self.cursor_query_parameter is not None:
+            existing_query_keys = {key for key, _value in parse_qsl(urlsplit(self.endpoint).query, keep_blank_values=True)}
+            if self.cursor_query_parameter in existing_query_keys:
+                raise ValueError("cursor_query_parameter must not already exist in endpoint")
+        if self.manifest.authentication is AuthenticationMethod.NONE and self.credential_auth_scheme != "bearer":
+            raise ValueError("no-auth network registration cannot declare token authentication")
         if self.endpoint not in self.manifest.egress_destinations:
             raise ValueError("endpoint must exactly match one declared egress destination")
         if (urlsplit(self.endpoint).scheme or "").lower() != "https":
@@ -55,6 +66,13 @@ class NetworkConnectorRegistration(BaseModel):
     @property
     def digest(self) -> str:
         payload = self.model_dump(mode="json", exclude_none=False)
+        # Preserve v1 digests for registrations that use the original bearer
+        # header and header-only cursor behavior. New provider-specific modes
+        # remain digest-bound without invalidating existing durable jobs.
+        if self.credential_auth_scheme == "bearer":
+            payload.pop("credential_auth_scheme", None)
+        if self.cursor_query_parameter is None:
+            payload.pop("cursor_query_parameter", None)
         encoded = json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("ascii")
         return hashlib.sha256(encoded).hexdigest()
 
@@ -226,16 +244,31 @@ class NetworkConnectorExecutor:
             credential = self.secret_resolver.resolve(registration.credential_reference)
             if not 16 <= len(credential) <= 4_096:
                 raise ConnectorNetworkError("connector_credential_invalid")
-        request_digest = _canonical_digest(
-            {
-                "connector_id": manifest.connector_id,
-                "connector_version": manifest.version,
-                "cursor": cursor,
-                "endpoint": registration.endpoint,
-                "idempotency_key": idempotency_key,
-                "manifest_digest": manifest.digest,
-            }
-        )
+        request_endpoint = registration.endpoint
+        if cursor is not None and registration.cursor_query_parameter is not None:
+            parsed_endpoint = urlsplit(request_endpoint)
+            query_items = parse_qsl(parsed_endpoint.query, keep_blank_values=True)
+            query_items.append((registration.cursor_query_parameter, cursor))
+            request_endpoint = urlunsplit(
+                (
+                    parsed_endpoint.scheme,
+                    parsed_endpoint.netloc,
+                    parsed_endpoint.path,
+                    urlencode(query_items),
+                    parsed_endpoint.fragment,
+                )
+            )
+        request_payload: dict[str, object] = {
+            "connector_id": manifest.connector_id,
+            "connector_version": manifest.version,
+            "cursor": cursor,
+            "endpoint": registration.endpoint,
+            "idempotency_key": idempotency_key,
+            "manifest_digest": manifest.digest,
+        }
+        if request_endpoint != registration.endpoint:
+            request_payload["request_endpoint"] = request_endpoint
+        request_digest = _canonical_digest(request_payload)
         headers = {
             "Accept": "application/json",
             "Idempotency-Key": idempotency_key,
@@ -248,7 +281,8 @@ class NetworkConnectorExecutor:
                 raise ConnectorNetworkError("connector_credential_invalid") from exc
             if any(ord(character) < 33 or ord(character) > 126 for character in credential_text):
                 raise ConnectorNetworkError("connector_credential_invalid")
-            headers["Authorization"] = "Bearer " + credential_text
+            prefix = "token " if registration.credential_auth_scheme == "token" else "Bearer "
+            headers["Authorization"] = prefix + credential_text
         if cursor is not None:
             headers["X-ReconForge-Cursor"] = cursor
         attempt = 0
@@ -257,7 +291,7 @@ class NetworkConnectorExecutor:
             self._apply_rate_limit(manifest)
             try:
                 response = self.transport.get(
-                    registration.endpoint,
+                    request_endpoint,
                     headers=headers,
                     timeout_seconds=registration.timeout_seconds,
                     maximum_response_bytes=registration.maximum_response_bytes,

@@ -3187,3 +3187,23 @@ tasks:
       diff-check pass, and the ADR is present in the source distribution. This
       remains application contract evidence and does not replace a fresh hosted
       Alembic run.
+  - id: E-586
+    priority: P1
+    area: connectors
+    title: Add governed ERPNext GL Entry read-only connector
+    status: completed
+    depends_on: [P4-CON-001, E-585]
+    exit_evidence: >-
+      The provider-specific ERPNext GL Entry adapter must use the governed
+      HTTPS executor with token authorization, bounded limit_start pagination,
+      exact Decimal debit/credit validation, company-scoped pages, canonical
+      response digests, endpoint hardening, secret non-disclosure, focused
+      regression tests, full local regression, static/security/package gates,
+      parser-inventory closure, and source-distribution membership. The
+      focused connector/network/ERP suite and phase contracts pass; the current
+      2,673-test full local regression exits 0 in 337.0 seconds, Mypy reports no
+      issues in 486 source files, Ruff and Bandit pass, pip-audit reports no
+      known vulnerabilities excluding the local unpublished distribution, and
+      the package build/diff-check pass. It remains read-only synthetic
+      provider evidence and does not replace a live ERPNext tenant or writeback
+      approval.

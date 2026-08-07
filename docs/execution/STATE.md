@@ -5466,3 +5466,12 @@ Five focused tests, phase execution contracts, and the 2,663-test full
 regression pass (336.4 seconds), with Mypy, package build, and diff-check
 passing. A fresh hosted Alembic upgrade is still required before promoting
 E-461.
+
+E-586 completes a bounded ERPNext connector slice: the Connector SDK now
+supports backward-compatible provider auth schemes and fixed cursor query
+parameters, and a concrete ERPNext GL Entry read-only adapter validates exact
+debit/credit text, one company per page, bounded offset cursors, canonical
+digests, and hardened operator endpoints. The focused suite, parser inventory,
+phase contracts, 2,673-test full regression (337.0 seconds), Mypy on 486
+source files, Ruff, Bandit, pip-audit, package build, and diff-check pass. No
+live ERPNext, posting, or write-back claim is made.

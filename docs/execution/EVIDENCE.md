@@ -14442,3 +14442,15 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   package build, and diff-check also pass, with ADR 0431 in the source
   distribution. A fresh hosted Alembic upgrade and server-boundary rerun
   remain required.
+- E-586 ERPNext GL Entry read-only connector (2026-08-07): the governed
+  network registration adds backward-compatible `token` authorization and a
+  fixed `limit_start` cursor query mode; the provider adapter enforces the
+  exact `/api/resource/GL%20Entry` path, non-negative finite Decimal debit and
+  credit text, one-company pages, bounded numeric cursors, canonical response
+  digests, and secret non-disclosure. Focused ERPNext/network/ERP reference
+  tests pass. The parser inventory now records FI-037 and its schema accepts
+  the untrusted-network trust class; the current 2,673-test full regression
+  exits 0 in 337.0 seconds, Mypy reports no issues in 486 source files, Ruff,
+  Bandit, pip-audit, package build, source-distribution membership, and
+  diff-check pass. Hosted/live ERPNext evidence remains external; this is not
+  posting or write-back evidence.

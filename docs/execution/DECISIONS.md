@@ -5956,3 +5956,19 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   no-connect tests pass; hosted Alembic execution remains a separate gate.
 - **Boundary**: Local provider contract only; no hosted migration or production
   readiness claim follows.
+
+### D-412: Keep ERPNext reads provider-specific and mutation-free
+
+- **Date**: 2026-08-07
+- **Context**: The SDK had only a provider-neutral ERP example, while ERPNext
+  uses token authorization and offset pagination on its GL Entry resource.
+- **Decision**: Add a read-only ERPNext adapter over the governed HTTPS
+  executor. Bind an operator-owned HTTPS endpoint with the exact resource path,
+  send `token` credentials only at runtime, encode cursors through a fixed
+  `limit_start` query parameter, and reject mixed-company or ambiguous
+  debit/credit pages before producing evidence.
+- **Verification**: Focused synthetic transport tests cover auth, pagination,
+  schema, company scope, endpoint hardening, cursor refusal, and secret
+  isolation; full gates and hosted provider operation remain separate.
+- **Boundary**: No ERPNext tenant, posting, write-back, provider SLA, or
+  production-readiness claim follows.

@@ -32,6 +32,16 @@ from reconforge.connectors.erp_reference import (
     ReferenceErpRead,
     erp_reference_registration,
 )
+from reconforge.connectors.erpnext_reference import (
+    ERP_NEXT_ENDPOINT,
+    ERP_NEXT_GL_ENTRY_PATH,
+    ERP_NEXT_MANIFEST,
+    ErpNextConnector,
+    ErpNextGlEntry,
+    ErpNextGlEntryPage,
+    ErpNextRead,
+    erpnext_registration,
+)
 from reconforge.connectors.manifest import (
     AuthenticationMethod,
     ConnectorCapability,
@@ -224,6 +234,14 @@ __all__ = [
     "ReferenceErpLedgerPage",
     "ReferenceErpRead",
     "erp_reference_registration",
+    "ERP_NEXT_ENDPOINT",
+    "ERP_NEXT_GL_ENTRY_PATH",
+    "ERP_NEXT_MANIFEST",
+    "ErpNextConnector",
+    "ErpNextGlEntry",
+    "ErpNextGlEntryPage",
+    "ErpNextRead",
+    "erpnext_registration",
     "DataClassification",
     "PublisherKeyStatus",
     "RetryPolicy",

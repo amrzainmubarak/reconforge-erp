@@ -14631,3 +14631,14 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   PostgreSQL parity, HA/DR, and production operations remain unverified. The
   full local pytest regression exits 0 in 408.4 seconds with declared
   capability skips and existing warnings.
+- E-604 local retail settlement API/CLI boundary (2026-08-07): the CLI now
+  supports opt-in migration-aware `--persist --database` storage, and the
+  authenticated local API persists, lists, and reads workspace-scoped reports
+  through the same replay-verifying repository. Focused API tests pass 3/3,
+  retail CLI/repository tests pass, and the startup authorization inventory is
+  closed at 249 routes with digest
+  `39f5354d214e6454d008ca778ccf126609a7c64aa9fae4478a424823e4684736`.
+  The full local pytest regression exits 0 in 370.0 seconds. PostgreSQL server
+  mode refuses explicitly until parity exists; no live retail provider,
+  Studio/accessibility, posting, write-back, HA/DR, or production evidence
+  follows.

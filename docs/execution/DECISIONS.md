@@ -6252,3 +6252,22 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: Local SQLite persistence only; no retail API/Studio, live
   processor authenticity, settlement finality/fraud, posting, write-back,
   PostgreSQL parity, HA/DR, or production retail claim follows.
+
+### D-430: Keep retail API exposure local until PostgreSQL parity exists
+
+- **Date**: 2026-08-07
+- **Context**: E-603 made retail settlement evidence durable in local SQLite,
+  but exposing it through a server profile without a PostgreSQL adapter would
+  create a misleading persistence fallback and an unbounded authorization
+  surface.
+- **Decision**: Add a migration-aware CLI `--persist` option and authenticated
+  local `/api/v1/retail/settlements` POST/list/read routes. Writes require
+  `finance_core.manage`; reads use the existing finance read/manage/validate
+  any-of policy; report payloads are verified by the repository; server mode
+  fails explicitly with no SQLite fallback.
+- **Verification**: API/CLI tests prove authentication, workspace isolation,
+  idempotency, tamper refusal, list/read behavior, and the 249-route digest
+  inventory.
+- **Boundary**: Local API/CLI composition only; no Studio, PostgreSQL parity,
+  live processor authenticity, posting, write-back, HA/DR, or production
+  retail claim follows.

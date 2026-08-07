@@ -64,6 +64,7 @@ from reconforge.api.routes import (
     payables,
     receivables,
     reconciliation,
+    retail_settlement,
     roles,
     scim,
     scope_grants,
@@ -366,6 +367,7 @@ def create_api_app(
     app.include_router(evidence.router, prefix="/api/v1")
     app.include_router(scoped_exports.router, prefix="/api/v1")
     app.include_router(reconciliation.router, prefix="/api/v1")
+    app.include_router(retail_settlement.router, prefix="/api/v1")
     app.include_router(exceptions.router, prefix="/api/v1")
     app.include_router(metrics.router, prefix="/api/v1")
     app.include_router(payables.router, prefix="/api/v1")
@@ -403,6 +405,7 @@ def create_api_app(
         consolidation_intercompany.router,
         connectors.router,
         reconciliation.router,
+        retail_settlement.router,
         exceptions.router,
         metrics.router,
         payables.router,

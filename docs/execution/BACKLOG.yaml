@@ -3508,3 +3508,20 @@ tasks:
       local persistence evidence only; API/Studio,
       live processor, posting, write-back, PostgreSQL parity, HA/DR, and
       production retail operations remain open.
+  - id: E-604
+    priority: P2
+    area: platform-breadth
+    title: Expose local retail settlement evidence through CLI and API
+    status: completed
+    depends_on: [E-603, P4-PLAT-001]
+    exit_evidence: >-
+      The retail settlement CLI can opt into migration-aware local SQLite
+      persistence, and authenticated local API routes persist, list, and read
+      replay-verified reports with workspace isolation and idempotent replay.
+      The startup authorization inventory is closed at 249 routes with digest
+      39f5354d214e6454d008ca778ccf126609a7c64aa9fae4478a424823e4684736.
+      Focused API/CLI/repository tests, the full local pytest regression (exit
+      0 in 370.0 seconds), and static/package gates pass. Server
+      mode refuses this local-only boundary until PostgreSQL parity exists;
+      live retail providers, posting, write-back, HA/DR, and production retail
+      operations remain open.

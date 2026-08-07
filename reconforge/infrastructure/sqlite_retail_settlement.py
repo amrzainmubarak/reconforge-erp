@@ -96,21 +96,42 @@ class SQLiteRetailSettlementRepository:
     ) -> dict[str, Any]:
         if not isinstance(run, RetailSettlementRun):
             raise RetailSettlementPersistenceError("retail settlement run is invalid")
-        actor = self._actor(actor_label)
-        workspace_id = ensure_workspace(self.connection, workspace)
-        payload = _artifact_payload(run)
-        self._validate_payload(payload)
+        return self.put_payload(_artifact_payload(run), workspace=workspace, actor_label=actor_label)
+
+    def put_payload(
+        self,
+        payload: Mapping[str, object],
+        *,
+        workspace: str = "default",
+        actor_label: str = "local-cli",
+    ) -> dict[str, Any]:
+        """Persist one already-serialized report after full replay validation."""
+
+        if not isinstance(payload, Mapping):
+            raise RetailSettlementPersistenceError("retail settlement report is invalid")
+        payload_value = dict(payload)
         try:
-            encoded = encode_sqlite_retail_settlement(payload)
+            encoded = encode_sqlite_retail_settlement(payload_value)
         except PersistedJsonError as exc:
             raise RetailSettlementPersistenceError("retail settlement payload exceeds persistence bounds") from exc
-        run_id = platform_id("RTL", workspace_id, run.decision_digest)
+        self._validate_payload(payload_value)
+        decision_digest = payload_value.get("decision_digest")
+        algorithm_version = payload_value.get("algorithm_version")
+        status_counts = payload_value.get("status_counts")
+        artifact_digest = payload_value.get("artifact_digest")
+        if not all(isinstance(value, str) for value in (decision_digest, algorithm_version, artifact_digest)):
+            raise RetailSettlementPersistenceError("retail settlement report identity is invalid")
+        if not isinstance(status_counts, Mapping):
+            raise RetailSettlementPersistenceError("retail settlement report status counts are invalid")
+        actor = self._actor(actor_label)
+        workspace_id = ensure_workspace(self.connection, workspace)
+        run_id = platform_id("RTL", workspace_id, decision_digest)
         existing = self.connection.execute(
             "SELECT * FROM retail_settlement_runs WHERE id=?",
             (run_id,),
         ).fetchone()
         if existing is not None:
-            if str(existing["artifact_digest"]) != str(payload["artifact_digest"]):
+            if str(existing["artifact_digest"]) != artifact_digest:
                 raise RetailSettlementPersistenceError("retail settlement id conflicts with a different artifact")
             return self._row_to_public(existing)
         now = utc_now_text()
@@ -126,10 +147,10 @@ class SQLiteRetailSettlementRepository:
                 (
                     run_id,
                     workspace_id,
-                    run.decision_digest,
-                    str(payload["artifact_digest"]),
-                    run.algorithm_version,
-                    json.dumps(run.status_counts, sort_keys=True, separators=(",", ":"), ensure_ascii=True),
+                    decision_digest,
+                    artifact_digest,
+                    algorithm_version,
+                    json.dumps(status_counts, sort_keys=True, separators=(",", ":"), ensure_ascii=True),
                     encoded.text,
                     actor,
                     now,
@@ -144,8 +165,8 @@ class SQLiteRetailSettlementRepository:
                 action="retail_settlement_persisted",
                 metadata={
                     "workspace_id": workspace_id,
-                    "decision_digest": run.decision_digest,
-                    "artifact_digest": str(payload["artifact_digest"]),
+                    "decision_digest": decision_digest,
+                    "artifact_digest": artifact_digest,
                 },
             )
         except sqlite3.IntegrityError as exc:
@@ -155,7 +176,7 @@ class SQLiteRetailSettlementRepository:
                 (run_id,),
             ).fetchone()
             if raced is not None:
-                if str(raced["artifact_digest"]) == str(payload["artifact_digest"]):
+                if str(raced["artifact_digest"]) == artifact_digest:
                     return self._row_to_public(raced)
                 raise RetailSettlementPersistenceError(
                     "retail settlement id conflicts with a different artifact"
@@ -174,11 +195,21 @@ class SQLiteRetailSettlementRepository:
         ).fetchone()
         return None if row is None else self._row_to_public(row)
 
-    def list(self, *, workspace: str = "default") -> tuple[dict[str, Any], ...]:
+    def list(
+        self,
+        *,
+        workspace: str = "default",
+        limit: int = 100,
+        offset: int = 0,
+    ) -> tuple[dict[str, Any], ...]:
+        if isinstance(limit, bool) or not 1 <= limit <= 500:
+            raise RetailSettlementPersistenceError("retail settlement list limit is invalid")
+        if isinstance(offset, bool) or offset < 0:
+            raise RetailSettlementPersistenceError("retail settlement list offset is invalid")
         workspace_id = ensure_workspace(self.connection, workspace)
         rows = self.connection.execute(
-            "SELECT * FROM retail_settlement_runs WHERE workspace_id=? ORDER BY created_at,id",
-            (workspace_id,),
+            "SELECT * FROM retail_settlement_runs WHERE workspace_id=? ORDER BY created_at,id LIMIT ? OFFSET ?",
+            (workspace_id, limit, offset),
         ).fetchall()
         return tuple(self._row_to_public(row) for row in rows)
 

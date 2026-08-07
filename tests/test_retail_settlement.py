@@ -11,12 +11,14 @@ from typer.testing import CliRunner
 
 from reconforge.application.retail_settlement import verify_retail_settlement_report, write_retail_settlement_report
 from reconforge.cli import app
+from reconforge.db import connect
 from reconforge.domain.retail_settlement import (
     RetailPosBatch,
     RetailProcessorSettlement,
     RetailSettlementError,
     run_retail_settlement,
 )
+from reconforge.infrastructure.sqlite_retail_settlement import SQLiteRetailSettlementRepository
 from reconforge.rules.engine import execute_rule_pack
 from reconforge.rules.loader import load_rule_pack
 from reconforge.utils.money import Money
@@ -187,6 +189,42 @@ def test_retail_settlement_cli_and_fixture_are_replayable(tmp_path: Path) -> Non
     assert result.exit_code == 0, result.output
     payload = verify_retail_settlement_report(output)
     assert payload["status_counts"] == {"exception": 1, "matched": 1, "unmatched_pos": 1}
+
+
+def test_retail_settlement_cli_can_persist_verified_evidence_locally(tmp_path: Path) -> None:
+    output = tmp_path / "retail-report.json"
+    database = tmp_path / "retail.db"
+    result = runner.invoke(
+        app,
+        [
+            "retail",
+            "settlement",
+            "settlement-run",
+            "--pos-input",
+            "examples/retail_settlement/pos_batches.json",
+            "--settlement-input",
+            "examples/retail_settlement/settlements.json",
+            "--output",
+            str(output),
+            "--database",
+            str(database),
+            "--workspace",
+            "shop-a",
+            "--persist",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    report = verify_retail_settlement_report(output)
+    connection = connect(database, require_exists=True)
+    try:
+        stored = SQLiteRetailSettlementRepository(connection).get(
+            decision_digest=str(report["decision_digest"]),
+            workspace="shop-a",
+        )
+        assert stored is not None
+        assert stored["report"] == report
+    finally:
+        connection.close()
 
 
 def test_retail_settlement_report_schema_is_closed(tmp_path: Path) -> None:

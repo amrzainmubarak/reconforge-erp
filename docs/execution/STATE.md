@@ -5657,3 +5657,14 @@ is local SQLite evidence only. The full local pytest regression exits 0 in
 API/Studio, live processor authenticity, posting, write-back, PostgreSQL
 parity, HA/DR, and production operations remain open. GitHub publication
 remains deferred by owner policy.
+
+E-604 exposes that verified evidence through an opt-in CLI persistence flag and
+authenticated local API POST/list/read routes. The write route requires
+`finance_core.manage`, reads use the finance read/manage/validate policy, and
+server identity mode refuses explicitly rather than falling back to SQLite.
+The closed startup authorization inventory is now 249 routes with digest
+`39f5354d214e6454d008ca778ccf126609a7c64aa9fae4478a424823e4684736`. Focused
+API/CLI/repository tests, full pytest (exit 0 in 370.0 seconds), and
+static/package gates pass. PostgreSQL parity,
+Retail Studio, live providers, posting, write-back, HA/DR, and production
+operations remain open. GitHub publication remains deferred by owner policy.

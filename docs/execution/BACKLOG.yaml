@@ -3133,7 +3133,7 @@ tasks:
       with worker lookup and close, preventing a concurrent shutdown from
       closing a cached worker during its bounded callback. Focused scheduler
       lifecycle tests, Ruff, Mypy, package build, and diff-check pass; the
-      current 2,655-test full local regression exits 0 in 358.5 seconds with
+      current 2,659-test full local regression exits 0 in 358.3 seconds with
       declared external-service/platform skips. This is lifecycle
       serialization only, not
       throughput, fairness, capacity, soak, distributed scheduling, HA/DR, or

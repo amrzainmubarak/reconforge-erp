@@ -14411,7 +14411,7 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   execution, worker lookup, and close now share a re-entrant lock, preventing a
   concurrent shutdown from closing a worker during its bounded callback.
   Focused lifecycle tests, Ruff, Mypy, package build, and diff-check pass; the
-  current 2,655-test full local regression exits 0 in 358.5 seconds with
+  current 2,659-test full local regression exits 0 in 358.3 seconds with
   declared external-service/platform skips. This is lifecycle serialization
   only, not throughput, fairness, capacity, soak, distributed scheduling,
   HA/DR, or production operations evidence.

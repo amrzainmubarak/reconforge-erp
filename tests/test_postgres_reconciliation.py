@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
+from threading import Event, Lock
 from typing import Any
 from uuid import uuid4
 
@@ -1097,6 +1099,45 @@ def test_postgres_reconciliation_worker_close_is_idempotent_and_delegates() -> N
     worker.close()
     worker.close()
     assert factory.closed == 1
+
+
+def test_postgres_reconciliation_scheduler_close_waits_for_active_cycle() -> None:
+    entered = Event()
+    release = Event()
+    close_started = Event()
+    state_lock = Lock()
+    state = {"active": False, "closed_during_cycle": False}
+
+    class _Worker:
+        def process_once(self) -> ReconciliationWorkerRunSummary:
+            with state_lock:
+                state["active"] = True
+            entered.set()
+            assert release.wait(timeout=2)
+            with state_lock:
+                state["active"] = False
+            return ReconciliationWorkerRunSummary(cycles=1, discovered=0, completed=0, failed=0, cancelled=0, skipped=0)
+
+        def close(self) -> None:
+            with state_lock:
+                state["closed_during_cycle"] = bool(state["active"])
+
+    scheduler = PostgresReconciliationScheduler(lambda _worker_id: _Worker(), worker_ids=["worker-a"])
+
+    def close_scheduler() -> None:
+        close_started.set()
+        scheduler.close()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        cycle = pool.submit(scheduler.process_once)
+        assert entered.wait(timeout=2)
+        closing = pool.submit(close_scheduler)
+        assert close_started.wait(timeout=2)
+        release.set()
+        cycle.result(timeout=2)
+        closing.result(timeout=2)
+
+    assert state["closed_during_cycle"] is False
 
 
 def test_postgres_reconciliation_execution_failure_is_retryable_and_busy_runs_are_skipped() -> None:

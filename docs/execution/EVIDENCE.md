@@ -14353,3 +14353,11 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   373.8 seconds with declared external-service/platform skips, Ruff, Mypy,
   package build, and diff-check pass. No live PostgreSQL downgrade, provider,
   statutory, HA/DR, or production evidence is claimed.
+- E-575 bounded PostgreSQL server-profile connection reuse (2026-08-07):
+  `PostgresPooledConnectionFactory` subclasses the existing factory so server
+  capability checks remain compatible, leases through the rollback-on-release
+  bounded pool, exposes size/timeout bounds, and registers shutdown cleanup.
+  Focused foundation/API tests pass with one declared live-PostgreSQL skip; the
+  current 2,655-test full regression exits 0 in 358.4 seconds, package build,
+  Ruff, Mypy, and diff-check pass. This proves resource reuse correctness only,
+  not throughput, capacity, soak, HA/DR, or production sizing.

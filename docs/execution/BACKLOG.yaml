@@ -3019,3 +3019,18 @@ tasks:
       platform skips; Ruff, Mypy, package build, and diff-check pass. Live
       PostgreSQL downgrade execution remains required; no provider, statutory,
       HA/DR, or production claim follows.
+  - id: E-575
+    priority: P1
+    area: scale
+    title: Bound PostgreSQL server-profile connection reuse
+    status: completed
+    depends_on: [E-574, P4-SCL-001]
+    exit_evidence: >-
+      `PostgresPooledConnectionFactory` preserves existing factory subtype
+      checks while routing API server-profile leases through the bounded pool,
+      registering shutdown cleanup, and exposing explicit size/timeout bounds.
+      Focused foundation/API contracts pass with one declared live-PostgreSQL
+      skip; the current 2,655-test full regression exits 0 in 358.4 seconds;
+      Ruff, Mypy, package build, and diff-check pass. This is resource-reuse
+      correctness only, not throughput, capacity, soak, HA/DR, or production
+      sizing evidence.

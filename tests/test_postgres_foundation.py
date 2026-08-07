@@ -12,6 +12,7 @@ from reconforge.infrastructure.postgres import (
     PostgresConnectionFactory,
     PostgresConnectionPool,
     PostgresExecutionScope,
+    PostgresPooledConnectionFactory,
     PostgresSettings,
     PostgresTenantBoundary,
     PostgresUnavailableError,
@@ -157,6 +158,37 @@ def test_postgres_connection_pool_reuses_and_closes_bounded_connections() -> Non
     assert len(connections) == 1
     assert connections[0].events == ["rollback-release", "rollback-release"]
     pool.close()
+    assert connections[0].closed is True
+
+
+def test_pooled_connection_factory_reuses_connections_and_preserves_factory_type(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connections: list[_FakeConnection] = []
+
+    def fake_connect(_dsn: str, **_kwargs: object) -> _FakeConnection:
+        connection = _FakeConnection()
+        connections.append(connection)
+        return connection
+
+    monkeypatch.setattr(
+        "reconforge.infrastructure.postgres._load_psycopg",
+        lambda: SimpleNamespace(connect=fake_connect),
+    )
+
+    factory = PostgresPooledConnectionFactory(
+        PostgresSettings(dsn="postgresql://db/reconforge"),
+        max_size=1,
+        acquire_timeout_seconds=0.1,
+    )
+    assert isinstance(factory, PostgresConnectionFactory)
+    first = factory.connect()
+    first.close()
+    second = factory.connect()
+    second.close()
+
+    assert len(connections) == 1
+    factory.close()
     assert connections[0].closed is True
 
 

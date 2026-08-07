@@ -5387,3 +5387,11 @@ contracts pass; the current 2,655-test full regression exits 0 in 373.8
 seconds, package build/Ruff/Mypy/diff-check pass, and declared external-service
 skips remain visible. Live downgrade execution, providers, statutory posting,
 HA/DR, and GitHub publication remain deferred.
+
+E-575 closes the server-profile scale resource boundary: API construction now uses a bounded
+`PostgresPooledConnectionFactory` with explicit size/lease timeout and shutdown
+cleanup while retaining the existing factory subtype checks. Focused contracts
+pass with one declared live-PostgreSQL skip; the current 2,655-test regression
+exits 0 in 358.4 seconds, package build/Ruff/Mypy/diff-check pass. This remains
+resource-reuse evidence only, not capacity, soak, HA/DR, or production sizing
+proof.

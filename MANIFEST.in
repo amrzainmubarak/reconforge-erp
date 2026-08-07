@@ -671,6 +671,7 @@ include docs/adr/0417-tenant-scoped-policy-hierarchy.md
 include docs/adr/0420-postgres-close-hierarchy-scope-propagation.md
 include docs/adr/0421-postgres-close-hierarchy-persistence.md
 include docs/adr/0422-hierarchy-downgrade-data-loss-guards.md
+include docs/adr/0423-bounded-postgres-server-pool.md
 include reconforge/infrastructure/postgres_job_organization_scope.py
 include reconforge/infrastructure/postgres_consolidation_ppa_scope.py
 include reconforge/infrastructure/postgres_consolidation_impairment_deferred_tax_scope.py

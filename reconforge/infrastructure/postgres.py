@@ -264,6 +264,54 @@ class PostgresConnectionPool:
             self._condition.notify_all()
 
 
+class PostgresPooledConnectionFactory(PostgresConnectionFactory):
+    """PostgreSQL factory with bounded connection reuse for server profiles.
+
+    The class intentionally subclasses ``PostgresConnectionFactory`` so the
+    existing server capability checks remain source-compatible.  Each
+    request-scoped boundary still leases and closes a proxy; ``close`` returns
+    the underlying connection to the bounded pool rather than closing the TCP
+    socket.  Application shutdown must call :meth:`close` to release idle
+    connections.
+    """
+
+    def __init__(
+        self,
+        settings: PostgresSettings,
+        *,
+        max_size: int = 8,
+        acquire_timeout_seconds: float = 30.0,
+    ) -> None:
+        super().__init__(settings)
+        self._pool = PostgresConnectionPool(
+            PostgresConnectionFactory(settings),
+            max_size=max_size,
+            acquire_timeout_seconds=acquire_timeout_seconds,
+        )
+
+    def connect(self) -> Any:
+        """Lease one bounded pooled connection."""
+
+        return self._pool.connect()
+
+    def close(self) -> None:
+        """Close idle connections and prevent new leases."""
+
+        self._pool.close()
+
+    @property
+    def max_size(self) -> int:
+        """Return the configured maximum number of physical connections."""
+
+        return self._pool.max_size
+
+    @property
+    def acquire_timeout_seconds(self) -> float:
+        """Return the bounded lease wait timeout."""
+
+        return self._pool.acquire_timeout_seconds
+
+
 class _PooledPostgresConnection:
     """Minimal proxy whose close returns its underlying connection to a pool."""
 

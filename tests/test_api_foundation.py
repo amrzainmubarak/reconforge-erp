@@ -13,10 +13,28 @@ from reconforge.auth.policy_cache import PolicyDecisionCache
 from reconforge.cli import app
 from reconforge.db import run_migrations
 from reconforge.db.migrations import MIGRATIONS
+from reconforge.infrastructure.postgres import PostgresPooledConnectionFactory
 from reconforge.infrastructure.redis import RedisPolicyCacheVersionStore
 from reconforge.platform.common import is_trusted_local_mode
 
 runner = CliRunner()
+
+
+def test_server_profile_uses_a_bounded_postgres_pool_by_default(tmp_path: Path) -> None:
+    api = create_api_app(
+        tmp_path / "server.db",
+        tenant_db_root=tmp_path / "tenants",
+        postgres_dsn="postgresql://identity.test/reconforge",
+        postgres_pool_size=2,
+        postgres_pool_acquire_timeout_seconds=0.25,
+    )
+
+    factory = api.state.postgres_identity_factory
+    assert isinstance(factory, PostgresPooledConnectionFactory)
+    assert factory.max_size == 2
+    assert factory.acquire_timeout_seconds == 0.25
+    assert any(getattr(handler, "__self__", None) is factory for handler in api.router.on_shutdown)
+    factory.close()
 
 
 def test_api_health_and_version_work_without_auth(tmp_path: Path) -> None:

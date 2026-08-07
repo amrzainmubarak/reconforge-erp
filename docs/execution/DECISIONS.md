@@ -5804,3 +5804,17 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   promotion.
 - **Boundary**: No live PostgreSQL downgrade, statutory accounting, provider
   write-back, HA/DR, or production readiness is claimed.
+
+### D-401: Bound PostgreSQL server-profile connection reuse
+
+- **Date**: 2026-08-07
+- **Context**: Direct per-request connections can churn physical sockets under
+  concurrent server-profile requests even when each transaction closes safely.
+- **Decision**: Use the existing dependency-free pool behind a subtype-compatible
+  `PostgresPooledConnectionFactory` in `create_api_app`, with default maximum
+  eight connections, bounded acquisition, and registered shutdown cleanup.
+- **Verification**: Focused foundation/API tests prove reuse, configuration,
+  subtype compatibility, and cleanup; full regression and package gates remain
+  required for closure.
+- **Boundary**: This is not throughput, capacity, distributed scheduling,
+  HA/DR, or production sizing evidence.

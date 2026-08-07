@@ -13,6 +13,7 @@ import {
   Gauge,
   RadioTower,
   Layers3,
+  Landmark,
   PackageSearch,
   PanelLeftClose,
   PanelLeftOpen,
@@ -54,6 +55,7 @@ export const navigationGroups: NavigationGroup[] = [
       { key: "evidence", label: "evidence", icon: Archive, page: "evidence", status: "foundation" },
       { key: "close", label: "close", icon: ClipboardCheck, href: `${currentStudio}/close`, status: "foundation" },
       { key: "retail-settlement", label: "retailSettlement", icon: CreditCard, page: "retailSettlement", status: "foundation" },
+      { key: "bank-statement", label: "bankStatement", icon: Landmark, page: "bankStatement", status: "foundation" },
     ],
   },
   {

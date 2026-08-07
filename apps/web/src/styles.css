@@ -839,6 +839,26 @@ td:first-child small { display: block; margin-block-start: 2px; color: var(--tex
 .retail-digests dt { color: var(--text-tertiary); font-size: 9px; }
 .retail-digests dd { min-width: 0; margin: 0; }
 .retail-digests code { color: var(--brand); font-size: 9px; overflow-wrap: anywhere; }
+.workbench-hero--bank { background: radial-gradient(circle at 87% 5%, color-mix(in srgb, var(--brand-soft) 88%, transparent), transparent 34%), linear-gradient(135deg, var(--surface-raised), color-mix(in srgb, var(--surface-raised) 78%, var(--positive-soft))); }
+.bank-boundary { color: var(--text-secondary); }
+.bank-table table { min-width: 1040px; }
+.bank-table th:first-child { min-width: 145px; }
+.bank-table td, .bank-table th { vertical-align: top; }
+.bank-table code, .bank-digests code { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.bank-status--matched { background: var(--positive-soft); color: var(--positive); }
+.bank-status--exception, .bank-status--unmatched_bank, .bank-status--unmatched_ledger, .bank-status--ambiguous { background: var(--warning-soft); color: var(--warning); }
+.bank-status--exception { background: var(--critical-soft); color: var(--critical); }
+.bank-variance { font-weight: 750; }
+.bank-variance--zero { color: var(--positive); }
+.bank-variance--negative, .bank-variance--positive { color: var(--critical); }
+.bank-evidence-panel { display: grid; grid-template-columns: minmax(0, .75fr) minmax(0, 1.25fr); gap: 20px; align-items: start; margin-block-start: 13px; }
+.bank-evidence-panel strong { font-size: 13px; }
+.bank-evidence-panel p { margin: 5px 0 0; color: var(--text-secondary); font-size: 10px; }
+.bank-digests { display: grid; gap: 8px; margin: 0; }
+.bank-digests div { display: grid; grid-template-columns: 125px minmax(0, 1fr); gap: 10px; align-items: start; padding: 8px 10px; border-radius: 9px; background: var(--surface-muted); }
+.bank-digests dt { color: var(--text-tertiary); font-size: 9px; }
+.bank-digests dd { min-width: 0; margin: 0; }
+.bank-digests code { color: var(--brand); font-size: 9px; }
 
 .state-view { min-height: calc(100vh - var(--topbar-height)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 11px; padding: 30px; text-align: center; }
 .state-view h1, .state-view strong { margin: 0; font-size: 18px; }
@@ -1047,7 +1067,7 @@ html[data-density="compact"] td { padding-block: 7px; }
 .live-table code { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 @keyframes live-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .live-spinner { animation: none; } }
-@media (max-width: 720px) { .live-freshness { align-items: flex-start; flex-wrap: wrap; } .live-freshness span { width: 100%; margin: 0; } .retail-evidence-panel { grid-template-columns: 1fr; } .retail-digests div { grid-template-columns: 1fr; gap: 3px; } }
+@media (max-width: 720px) { .live-freshness { align-items: flex-start; flex-wrap: wrap; } .live-freshness span { width: 100%; margin: 0; } .retail-evidence-panel, .bank-evidence-panel { grid-template-columns: 1fr; } .retail-digests div, .bank-digests div { grid-template-columns: 1fr; gap: 3px; } }
 .admin-form { max-width: 620px; }
 .admin-form h2, .admin-form p, .admin-verification h2 { margin-block-start: 0; }
 .admin-form form { display: grid; gap: 14px; }

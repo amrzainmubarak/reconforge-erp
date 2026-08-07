@@ -309,7 +309,42 @@ export interface RetailSettlementStudioContract {
   notices: string[];
 }
 
-export type StudioPage = "dashboard" | "exceptions" | "evidence" | "inventory" | "retailSettlement" | "mapping" | "rules" | "live" | "adminAudit";
+export type BankStatementStatus = "matched" | "exception" | "unmatched_bank" | "unmatched_ledger" | "ambiguous";
+
+export interface BankStatementDecision {
+  bank_line_id: string;
+  account_id: string;
+  status: BankStatementStatus;
+  ledger_record_ids: string[];
+  amount_variance: string | null;
+  days_variance: number | null;
+  reason_code: string;
+}
+
+export interface BankStatementStudioContract {
+  schema_version: 1;
+  synthetic_data_only: true;
+  synthetic_data_marker: "SYNTHETIC_BANK_STATEMENT_UI_ONLY";
+  generated_at: string;
+  source: ContractSource;
+  algorithm_version: string;
+  decision_digest: string;
+  artifact_digest: string;
+  tolerance: string;
+  currency: string;
+  date_window_days: number;
+  summary: {
+    total: number;
+    matched: number;
+    exceptions: number;
+    unmatched: number;
+    ambiguous: number;
+  };
+  decisions: BankStatementDecision[];
+  notices: string[];
+}
+
+export type StudioPage = "dashboard" | "exceptions" | "evidence" | "inventory" | "retailSettlement" | "bankStatement" | "mapping" | "rules" | "live" | "adminAudit";
 
 export interface StudioOverview {
   schema_version: 1;

@@ -6335,3 +6335,22 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: The index verifies traceability of checked-in observations; it
   does not rerun workloads, convert timing to an SLO, or establish distributed
   capacity, provider authenticity, or production sizing.
+
+### D-435: Add a bounded bank statement Studio projection
+
+- **Date**: 2026-08-08
+- **Context**: The bank statement control already produced a deterministic,
+  digest-bound local artifact and CLI, but the modern Studio had no review
+  surface for its exact decisions and explicit non-posting boundary.
+- **Decision**: Add `/bank-statement` as a lazy-loaded, read-only English/Arabic
+  projection backed by a versioned synthetic contract. Validate the source
+  boundary, synthetic marker, exact amount strings, bounded status values,
+  unique IDs, summary counts, and replay digest shapes before rendering; show
+  filtering, variance reasons, algorithm identity, and evidence digests without
+  recalculating or mutating the control result.
+- **Verification**: Web typecheck, production build, the full 61-test component
+  suite, and the 7-test accessibility E2E suite pass; the module registry and
+  threat-model index record the modern Studio interface and evidence paths.
+- **Boundary**: This is local synthetic UI evidence only. It does not prove
+  authenticated live API behavior, bank/provider authenticity, payment
+  initiation, posting, ERP write-back, HA/DR, or production banking readiness.

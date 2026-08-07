@@ -3592,3 +3592,21 @@ tasks:
       FI-040 inventory closure. This is evidence traceability only; it does
       not establish distributed capacity, SLOs, provider authenticity, or
       production sizing.
+  - id: E-609
+    priority: P2
+    area: platform-breadth
+    title: Add a bounded bank statement Studio evidence view
+    status: completed
+    depends_on: [E-608, P4-PLAT-001]
+    exit_evidence: >-
+      The modern Studio adds `/bank-statement` as a lazy-loaded, read-only
+      English/Arabic projection of the deterministic bank statement control.
+      The browser contract validates the synthetic-only marker, source boundary,
+      exact decimal strings, bounded statuses, unique decision IDs, summary
+      consistency, and 64-character replay digests before rendering filtering,
+      variance reasons, and evidence fields. The module registry records the
+      modern Studio interface and browser test evidence; web typecheck, the
+      production build, the full 61-test component suite, and the 7-test
+      accessibility E2E suite pass. This is local synthetic UI evidence
+      only: no bank/provider call, payment initiation, posting, ERP write-back,
+      authenticated live API, HA/DR, or production banking claim follows.

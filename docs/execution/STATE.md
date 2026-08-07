@@ -5710,3 +5710,16 @@ exits 0 in 379.1 seconds with declared capability skips and existing warnings.
 This improves reproducibility of published observations only and does not
 close distributed capacity, hosted runtime, provider, HA/DR, or production
 gates. GitHub publication remains deferred by owner policy.
+
+E-609 adds the lazy-loaded `/bank-statement` modern Studio route as a strict,
+synthetic-only projection of the deterministic local bank statement control.
+The read-only English/Arabic view validates the contract marker, source
+boundary, exact decimal strings, bounded statuses, unique decision IDs,
+summary consistency, and replay digest shapes before showing filters, variance
+reasons, algorithm identity, and evidence digests. The module registry now
+declares the modern Studio interface and browser test evidence. Web typecheck,
+production build, the full component suite (61/61), and the accessibility E2E
+suite (7/7) pass. This is local synthetic UI evidence only; live bank/API/
+provider behavior, payment initiation, posting, write-back, HA/DR, and
+production banking evidence remain open.
+GitHub publication remains deferred by owner policy.

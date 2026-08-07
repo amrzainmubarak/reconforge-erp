@@ -24,7 +24,7 @@ async function expectNoWcagViolations(page: Page) {
 
 test("critical English and Arabic Studio routes pass the automated WCAG regression gate", async ({ page }) => {
   await mockLiveContract(page);
-  const criticalRoutes = ["/", "/exceptions", "/evidence", "/inventory", "/retail-settlement", "/mapping", "/rules", "/live", "/admin-audit"];
+  const criticalRoutes = ["/", "/exceptions", "/evidence", "/inventory", "/retail-settlement", "/bank-statement", "/mapping", "/rules", "/live", "/admin-audit"];
   for (const path of criticalRoutes) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -121,6 +121,16 @@ test("retail settlement view exposes replay evidence without write or provider c
   await expect(page.locator("p.retail-boundary")).toHaveText("Synthetic, read-only evidence only; no processor call, payment action, accounting posting, or ERP write-back is available from this Studio route.");
   await expect(page.locator("main button")).toHaveCount(0);
   await expect(page.getByRole("combobox", { name: "Settlement status" })).toBeVisible();
+  await expect(page.locator("main")).not.toContainText("password");
+});
+
+test("bank reconciliation view exposes replay evidence without write or provider claims", async ({ page }) => {
+  await page.goto("/bank-statement");
+  await expect(page.getByRole("heading", { level: 1, name: "Bank reconciliation control center" })).toBeVisible();
+  await expect(page.getByText("BANK_LEDGER_RECONCILED")).toHaveCount(2);
+  await expect(page.locator("p.bank-boundary")).toHaveText("Synthetic, read-only evidence only; no bank call, payment initiation, accounting posting, or ERP write-back is available from this Studio route.");
+  await expect(page.locator("main button")).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Bank status" })).toBeVisible();
   await expect(page.locator("main")).not.toContainText("password");
 });
 

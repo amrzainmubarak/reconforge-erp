@@ -544,7 +544,7 @@ _MODULES = (
         ),
         default_enabled=False,
         dependencies=("connectors.boundary", "platform.core"),
-        interfaces=("artifacts", "cli", "library"),
+        interfaces=("artifacts", "cli", "library", "modern-studio"),
         import_contracts=("camt053-statement.v1", "bank-ledger-export.v1"),
         export_contracts=("bank-statement-control-report.v1",),
         data_classification=("financial-sensitive", "payment-control-data", "source-export-metadata"),
@@ -556,7 +556,11 @@ _MODULES = (
             "Run explicitly with a bounded local CAMT.053 file and JSON ledger export. The control is non-posting "
             "and provider-neutral; live bank connectivity, payment initiation, and ERP write-back are separate gates."
         ),
-        test_evidence=("tests/test_bank_statement_control.py",),
+        test_evidence=(
+            "tests/test_bank_statement_control.py",
+            "apps/web/src/components/BankStatementStudio.test.tsx",
+            "apps/web/e2e/accessibility.spec.ts",
+        ),
     ),
     ModuleDescriptor(
         module_id="manufacturing.cost-control",

@@ -591,6 +591,9 @@ include reconforge/benchmark/evidence_index.py
 include tests/test_benchmark_evidence_index.py
 include .github/scripts/verify_benchmark_index.py
 include docs/execution/benchmarks/INDEX.v1.json
+include apps/web/src/components/BankStatementStudio.tsx
+include apps/web/src/components/BankStatementStudio.test.tsx
+include apps/web/public/demo/studio-bank-statement.json
 include docs/schemas/grouped_matching_domain_scale.schema.json
 include reconforge/infrastructure/postgres_consolidation_close.py
 include tests/test_postgres_consolidation_close.py

@@ -15,6 +15,7 @@ const ExceptionQueue = lazy(() => import("./components/ExceptionQueue").then((mo
 const EvidenceBinder = lazy(() => import("./components/EvidenceBinder").then((module) => ({ default: module.EvidenceBinder })));
 const InventoryControl = lazy(() => import("./components/InventoryControl").then((module) => ({ default: module.InventoryControl })));
 const RetailSettlementStudio = lazy(() => import("./components/RetailSettlementStudio").then((module) => ({ default: module.RetailSettlementStudio })));
+const BankStatementStudio = lazy(() => import("./components/BankStatementStudio").then((module) => ({ default: module.BankStatementStudio })));
 const MappingStudio = lazy(() => import("./components/MappingStudio").then((module) => ({ default: module.MappingStudio })));
 const RuleStudio = lazy(() => import("./components/RuleStudio").then((module) => ({ default: module.RuleStudio })));
 const LiveStudio = lazy(() => import("./components/LiveStudio").then((module) => ({ default: module.LiveStudio })));
@@ -26,6 +27,7 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/evidence")) return "evidence";
   if (normalized.endsWith("/inventory")) return "inventory";
   if (normalized.endsWith("/retail-settlement")) return "retailSettlement";
+  if (normalized.endsWith("/bank-statement")) return "bankStatement";
   if (normalized.endsWith("/mapping")) return "mapping";
   if (normalized.endsWith("/rules")) return "rules";
   if (normalized.endsWith("/live")) return "live";
@@ -35,7 +37,12 @@ function pageFromPath(pathname: string): StudioPage {
 
 function pathForPage(page: StudioPage): string {
   const base = import.meta.env.BASE_URL.replace(/\/+$/, "");
-  return page === "dashboard" ? `${base}/` || "/" : `${base}/${page}`;
+  const routeNames: Partial<Record<StudioPage, string>> = {
+    retailSettlement: "retail-settlement",
+    bankStatement: "bank-statement",
+    adminAudit: "admin-audit",
+  };
+  return page === "dashboard" ? `${base}/` || "/" : `${base}/${routeNames[page] ?? page}`;
 }
 
 export default function App() {
@@ -173,6 +180,9 @@ export default function App() {
         ) : null}
         {activePage === "retailSettlement" ? (
           <Suspense fallback={<LoadingView translate={t} />}><RetailSettlementStudio translate={t} /></Suspense>
+        ) : null}
+        {activePage === "bankStatement" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><BankStatementStudio translate={t} /></Suspense>
         ) : null}
         {activePage === "mapping" ? (
           <Suspense fallback={<LoadingView translate={t} />}><MappingStudio translate={t} /></Suspense>

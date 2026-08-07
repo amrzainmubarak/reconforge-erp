@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "synthetic_data_only": true,
+  "synthetic_data_marker": "SYNTHETIC_BANK_STATEMENT_UI_ONLY",
+  "generated_at": "2026-08-08T00:00:00Z",
+  "source": {
+    "kind": "reconforge-enterprise-demo",
+    "local_first": true,
+    "external_calls": false
+  },
+  "algorithm_version": "bank-statement-control-v1",
+  "decision_digest": "3bb2924b6af20aeb6285e9dfcbc46ad7dc46b845462f47e5b5d965fba4095d61",
+  "artifact_digest": "459510a87e4d5408abbc4a22e0b54f072a14edd1e74ed41ea437f63e49aeec86",
+  "tolerance": "0.01",
+  "currency": "EUR",
+  "date_window_days": 1,
+  "summary": {
+    "total": 3,
+    "matched": 2,
+    "exceptions": 0,
+    "unmatched": 1,
+    "ambiguous": 0
+  },
+  "decisions": [
+    {
+      "bank_line_id": "BANK-CREDIT-001",
+      "account_id": "DE89370400440532013000",
+      "status": "matched",
+      "ledger_record_ids": ["LEDGER-CREDIT-001"],
+      "amount_variance": "0.00",
+      "days_variance": 0,
+      "reason_code": "BANK_LEDGER_RECONCILED"
+    },
+    {
+      "bank_line_id": "BANK-DEBIT-001",
+      "account_id": "DE89370400440532013000",
+      "status": "matched",
+      "ledger_record_ids": ["LEDGER-DEBIT-001"],
+      "amount_variance": "0.00",
+      "days_variance": 0,
+      "reason_code": "BANK_LEDGER_RECONCILED"
+    },
+    {
+      "bank_line_id": "LEDGER-UNMATCHED-001",
+      "account_id": "DE89370400440532013000",
+      "status": "unmatched_ledger",
+      "ledger_record_ids": ["LEDGER-UNMATCHED-001"],
+      "amount_variance": null,
+      "days_variance": null,
+      "reason_code": "LEDGER_RECORD_HAS_NO_BANK_LINE"
+    }
+  ],
+  "notices": [
+    "This projection is synthetic and read-only; it does not authenticate a bank or post accounting entries."
+  ]
+}

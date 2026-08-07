@@ -23,6 +23,7 @@ const pageLabels: Record<StudioPage, MessageKey> = {
   evidence: "evidence",
   inventory: "inventory",
   retailSettlement: "retailSettlement",
+  bankStatement: "bankStatement",
   mapping: "mappingStudio",
   rules: "ruleStudio",
   live: "liveStudio",

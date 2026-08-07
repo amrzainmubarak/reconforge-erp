@@ -33,8 +33,9 @@ complete retail module.
 The experimental `bank.cash-reconciliation` entry is an implemented, non-posting
 artifact slice for a local CAMT.053 statement and ledger export. It exposes
 reference, exact amount, booking-date window, ambiguity, duplicate, unmatched,
-and digest verification outcomes. It is not a live bank connector, payment
-initiation path, ERP write-back path, or statutory posting engine.
+and digest verification outcomes through the local CLI/library and a read-only
+English/Arabic modern Studio projection. It is not a live bank connector,
+payment initiation path, ERP write-back path, or statutory posting engine.
 
 The experimental `manufacturing.cost-control` entry is an implemented,
 non-posting artifact slice for local production-order, material-issue,

@@ -14686,3 +14686,15 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   with declared capability skips and existing warnings. This is traceability
   evidence only, not a new runtime, capacity, SLO, or production-sizing
   result.
+- E-609 bank statement modern Studio projection (2026-08-08):
+  `/bank-statement` is a lazy-loaded, read-only English/Arabic view over a
+  strict synthetic-only projection of the deterministic local bank statement
+  report. The browser contract checks the source boundary, exact decimal
+  strings, bounded statuses, unique decision IDs, summary counts, and replay
+  digest shapes before rendering filtering, reasons, algorithm identity, and
+  evidence digests. Web typecheck, production build, and the full component
+  suite pass 61/61; the accessibility E2E suite passes 7/7, and module-registry
+  plus threat-model metadata cover the route. This is local synthetic UI
+  evidence only. It does not prove an authenticated
+  live API session, bank/provider authenticity, payment initiation, posting,
+  ERP write-back, HA/DR, or production banking operations.

@@ -96,6 +96,7 @@ include docs/connectors/bank-statement-camt053-readonly.md
 include docs/adr/0435-bank-statement-camt053-http-boundary.md
 include docs/adr/0437-connector-portfolio-conformance.md
 include docs/adr/0438-gitleaks-synthetic-observability-fingerprint.md
+include docs/adr/0439-provider-tls-sandbox-runtime.md
 include docs/adr/0339-connectors-boundary-is-an-evidence-bounded-module.md
 include docs/connectors/camt053-bounded-readonly.md
 include docs/execution/P3_ENT_007_EXIT_AUDIT.yaml

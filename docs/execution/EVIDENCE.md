@@ -2,6 +2,16 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+- E-593 provider HTTPS sandbox runtime (2026-08-07): a temporary localhost
+  certificate and injected public-address resolver exercise the real
+  `PinnedHttpsGetTransport` for CAMT.053 and ERPNext GL Entry/Payment Entry
+  reads. Three focused tests inject a first 503, then require successful retry,
+  closed-response parsing, account/company scope, exact query/cursor behavior,
+  and bearer/token isolation. The full repository regression collected 2,716
+  tests and exited 0 in 366.5 seconds. This is local adapter-to-transport
+  evidence only; no live bank/ERP tenant, provider dialect/version, source
+  authenticity, settlement, posting, write-back, or production availability
+  claim follows.
 - E-592 current Gitleaks synthetic-observability finding (2026-08-07): the
   checksum-verified Gitleaks 8.30.1 history scan found one generic-api-key
   classification for the deliberately synthetic observability redaction

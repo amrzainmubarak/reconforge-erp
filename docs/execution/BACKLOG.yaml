@@ -3325,3 +3325,22 @@ tasks:
       release evidence because generated environments exceed its timeout.
       This is local security evidence only; hosted security attestation and
       branch enforcement remain external.
+  - id: E-593
+    priority: P1
+    area: connectors
+    title: Exercise provider adapters through the pinned HTTPS sandbox
+    status: completed
+    depends_on: [E-589, E-590, E-591, P4-CON-001]
+    exit_evidence: >-
+      A local TLS sandbox uses a temporary localhost certificate, injected
+      public-address resolution, and the real PinnedHttpsGetTransport. CAMT.053
+      and ERPNext GL Entry/Payment Entry adapters each survive a synthetic 503
+      retry, parse the closed response, enforce account/company scope, preserve
+      cursor/query semantics, and expose bearer/token isolation. Three focused
+      tests, the ADR, source-distribution membership, and local static/package
+      gates pass. This is adapter-to-transport runtime evidence only; it does
+      not establish a live bank or ERPNext tenant, provider dialect/version,
+      source authenticity, settlement, posting, write-back, or production
+      availability. The full repository regression collected 2,716 tests and
+      exited 0 in 366.5 seconds; this confirms repository compatibility but
+      does not convert the bounded sandbox into live-provider evidence.

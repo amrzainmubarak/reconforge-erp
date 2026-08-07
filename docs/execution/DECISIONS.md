@@ -6074,3 +6074,22 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   6.30 GB/120-second timeout.
 - **Boundary**: This is local scanner evidence; hosted security attestation,
   branch protection, and external credential safety remain unverified.
+
+### D-419: Exercise provider adapters through a real local TLS transport
+
+- **Date**: 2026-08-07
+- **Context**: CAMT.053 and ERPNext adapters had provider-schema tests over an
+  injected transport, but no runtime test crossed the actual pinned HTTPS
+  connection boundary.
+- **Decision**: Use a per-test localhost certificate and an injected public
+  resolver with `PinnedHttpsGetTransport`. Exercise CAMT.053 and both ERPNext
+  readers through a first-503/second-200 server, checking auth scheme,
+  endpoint/query/cursor behavior, scope enforcement, and closed response
+  parsing.
+- **Verification**: Three focused TLS sandbox tests pass, and the full
+  repository regression collected 2,716 tests and exited 0 in 366.5 seconds;
+  the new ADR and test are required source-distribution members. The sandbox
+  remains local synthetic evidence and does not call a provider.
+- **Boundary**: Provider dialect/version, source authenticity, certificate or
+  credential lifecycle, settlement, posting, write-back, and production
+  availability remain open.

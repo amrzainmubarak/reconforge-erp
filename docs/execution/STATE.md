@@ -5545,3 +5545,14 @@ workspace scan is not release evidence because generated environments reach
 the 120-second timeout after reading about 6.30 GB. Hosted security
 attestation and branch enforcement remain external; GitHub publication remains
 deferred by owner policy.
+
+E-593 adds a local HTTPS runtime sandbox for the bounded CAMT.053 and ERPNext
+GL Entry/Payment Entry sources. Each adapter uses the actual pinned TLS
+transport with a temporary certificate, survives a synthetic 503 retry, parses
+the closed response, enforces account/company scope, retains cursor/query
+semantics, and proves bearer/token isolation. This strengthens the adapter
+transport boundary only. The full repository regression collected 2,716 tests
+and exited 0 in 366.5 seconds. Live provider tenants, dialect/version
+compatibility, source authenticity, settlement, posting, write-back, and
+production availability remain external. GitHub publication remains deferred
+by owner policy.

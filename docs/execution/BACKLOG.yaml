@@ -3610,3 +3610,20 @@ tasks:
       accessibility E2E suite pass. This is local synthetic UI evidence
       only: no bank/provider call, payment initiation, posting, ERP write-back,
       authenticated live API, HA/DR, or production banking claim follows.
+  - id: E-610
+    priority: P2
+    area: platform-breadth
+    title: Add a bounded manufacturing cost Studio evidence view
+    status: completed
+    depends_on: [E-609, P4-PLAT-001]
+    exit_evidence: >-
+      The modern Studio adds `/manufacturing-cost` as a lazy-loaded, read-only
+      English/Arabic projection of the deterministic manufacturing cost
+      control. The browser contract validates the synthetic-only marker, source
+      boundary, exact quantity and variance strings, bounded statuses, unique
+      order IDs, summary consistency, and 64-character replay digests before
+      rendering filters, production quantities, variance reasons, and evidence
+      fields. The module registry and threat-model index record the modern
+      Studio interface and browser evidence; no MRP/ERP call, inventory/WIP/GL
+      posting, write-back, authenticated live API, HA/DR, or production
+      manufacturing claim follows.

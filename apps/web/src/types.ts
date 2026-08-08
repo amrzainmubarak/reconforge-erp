@@ -344,7 +344,45 @@ export interface BankStatementStudioContract {
   notices: string[];
 }
 
-export type StudioPage = "dashboard" | "exceptions" | "evidence" | "inventory" | "retailSettlement" | "bankStatement" | "mapping" | "rules" | "live" | "adminAudit";
+export type ManufacturingCostStatus = "reconciled" | "exception" | "unmatched";
+
+export interface ManufacturingCostDecision {
+  order_id: string;
+  product_id: string;
+  status: ManufacturingCostStatus;
+  planned_quantity: string;
+  issued_quantity: string;
+  completed_quantity: string;
+  scrap_quantity: string;
+  material_cost_variance: string;
+  completion_cost_variance: string;
+  reason_codes: string[];
+}
+
+export interface ManufacturingCostStudioContract {
+  schema_version: 1;
+  synthetic_data_only: true;
+  synthetic_data_marker: "SYNTHETIC_MANUFACTURING_COST_UI_ONLY";
+  generated_at: string;
+  source: ContractSource;
+  algorithm_version: string;
+  decision_digest: string;
+  artifact_digest: string;
+  tolerance: string;
+  currency: string;
+  unit: string;
+  max_scrap_quantity: string;
+  summary: {
+    total: number;
+    reconciled: number;
+    exceptions: number;
+    unmatched: number;
+  };
+  decisions: ManufacturingCostDecision[];
+  notices: string[];
+}
+
+export type StudioPage = "dashboard" | "exceptions" | "evidence" | "inventory" | "retailSettlement" | "bankStatement" | "manufacturingCost" | "mapping" | "rules" | "live" | "adminAudit";
 
 export interface StudioOverview {
   schema_version: 1;

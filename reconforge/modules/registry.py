@@ -574,7 +574,7 @@ _MODULES = (
         ),
         default_enabled=False,
         dependencies=("inventory.core", "platform.core"),
-        interfaces=("artifacts", "cli", "library"),
+        interfaces=("artifacts", "cli", "library", "modern-studio"),
         import_contracts=("production-order-export.v1", "material-issue-export.v1", "completion-export.v1", "scrap-export.v1"),
         export_contracts=("manufacturing-cost-control-report.v1",),
         data_classification=("financial-sensitive", "inventory-control-data", "source-export-metadata"),
@@ -586,7 +586,11 @@ _MODULES = (
             "Run explicitly with bounded local JSON exports. The slice is non-posting and provider-neutral; standard "
             "cost policy, statutory valuation, ERP connectivity, and write-back remain separate gates."
         ),
-        test_evidence=("tests/test_manufacturing_cost_control.py",),
+        test_evidence=(
+            "tests/test_manufacturing_cost_control.py",
+            "apps/web/src/components/ManufacturingCostStudio.test.tsx",
+            "apps/web/e2e/accessibility.spec.ts",
+        ),
     ),
     ModuleDescriptor(
         module_id="professional.invoice-payment",

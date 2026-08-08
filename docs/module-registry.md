@@ -41,8 +41,9 @@ The experimental `manufacturing.cost-control` entry is an implemented,
 non-posting artifact slice for local production-order, material-issue,
 completion, and scrap exports. It exposes exact material/completion cost
 variances, planned-versus-completed quantities, scrap limits, unknown-order
-lineage, and digest-bound reports. It is not a statutory valuation engine, ERP
-connector, inventory/WIP/GL posting path, or complete manufacturing module.
+lineage, and digest-bound reports through the local CLI/library and a read-only
+English/Arabic modern Studio projection. It is not a statutory valuation engine,
+ERP connector, inventory/WIP/GL posting path, or complete manufacturing module.
 
 ## Maturity and capability are separate
 

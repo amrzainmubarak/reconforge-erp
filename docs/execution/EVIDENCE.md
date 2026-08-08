@@ -14698,3 +14698,15 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   evidence only. It does not prove an authenticated
   live API session, bank/provider authenticity, payment initiation, posting,
   ERP write-back, HA/DR, or production banking operations.
+- E-610 manufacturing cost modern Studio projection (2026-08-08):
+  `/manufacturing-cost` is a lazy-loaded, read-only English/Arabic view over a
+  strict synthetic-only projection of the deterministic manufacturing cost
+  report. The browser contract checks the source boundary, exact quantity and
+  variance strings, bounded statuses, unique order IDs, summary counts, and
+  replay digest shapes before rendering filtering, production quantities,
+  variance reasons, algorithm identity, and evidence digests. The module
+  registry and threat-model metadata cover the route; web typecheck, production
+  build, the full component suite pass 64/64, and the accessibility E2E suite
+  passes 8/8. Live MRP/ERP/API,
+  statutory valuation, inventory/WIP/GL posting, write-back, HA/DR, and
+  production manufacturing operations remain unverified.

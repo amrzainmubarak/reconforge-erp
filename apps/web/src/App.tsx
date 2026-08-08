@@ -16,6 +16,7 @@ const EvidenceBinder = lazy(() => import("./components/EvidenceBinder").then((mo
 const InventoryControl = lazy(() => import("./components/InventoryControl").then((module) => ({ default: module.InventoryControl })));
 const RetailSettlementStudio = lazy(() => import("./components/RetailSettlementStudio").then((module) => ({ default: module.RetailSettlementStudio })));
 const BankStatementStudio = lazy(() => import("./components/BankStatementStudio").then((module) => ({ default: module.BankStatementStudio })));
+const ManufacturingCostStudio = lazy(() => import("./components/ManufacturingCostStudio").then((module) => ({ default: module.ManufacturingCostStudio })));
 const MappingStudio = lazy(() => import("./components/MappingStudio").then((module) => ({ default: module.MappingStudio })));
 const RuleStudio = lazy(() => import("./components/RuleStudio").then((module) => ({ default: module.RuleStudio })));
 const LiveStudio = lazy(() => import("./components/LiveStudio").then((module) => ({ default: module.LiveStudio })));
@@ -28,6 +29,7 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/inventory")) return "inventory";
   if (normalized.endsWith("/retail-settlement")) return "retailSettlement";
   if (normalized.endsWith("/bank-statement")) return "bankStatement";
+  if (normalized.endsWith("/manufacturing-cost")) return "manufacturingCost";
   if (normalized.endsWith("/mapping")) return "mapping";
   if (normalized.endsWith("/rules")) return "rules";
   if (normalized.endsWith("/live")) return "live";
@@ -40,6 +42,7 @@ function pathForPage(page: StudioPage): string {
   const routeNames: Partial<Record<StudioPage, string>> = {
     retailSettlement: "retail-settlement",
     bankStatement: "bank-statement",
+    manufacturingCost: "manufacturing-cost",
     adminAudit: "admin-audit",
   };
   return page === "dashboard" ? `${base}/` || "/" : `${base}/${routeNames[page] ?? page}`;
@@ -183,6 +186,9 @@ export default function App() {
         ) : null}
         {activePage === "bankStatement" ? (
           <Suspense fallback={<LoadingView translate={t} />}><BankStatementStudio translate={t} /></Suspense>
+        ) : null}
+        {activePage === "manufacturingCost" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><ManufacturingCostStudio translate={t} /></Suspense>
         ) : null}
         {activePage === "mapping" ? (
           <Suspense fallback={<LoadingView translate={t} />}><MappingStudio translate={t} /></Suspense>

@@ -6354,3 +6354,23 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: This is local synthetic UI evidence only. It does not prove
   authenticated live API behavior, bank/provider authenticity, payment
   initiation, posting, ERP write-back, HA/DR, or production banking readiness.
+
+### D-436: Add a bounded manufacturing cost Studio projection
+
+- **Date**: 2026-08-08
+- **Context**: The manufacturing cost control already produced deterministic,
+  digest-bound local evidence and a CLI, while the modern Studio exposed no
+  review surface for production quantities, cost variances, and scrap reasons.
+- **Decision**: Add `/manufacturing-cost` as a lazy-loaded, read-only
+  English/Arabic projection backed by a versioned synthetic contract. Validate
+  the source boundary, synthetic marker, exact quantity/variance strings,
+  bounded statuses, unique order IDs, summary counts, and replay digest shapes
+  before rendering filters and evidence; do not recalculate, post, or mutate
+  the control result.
+- **Verification**: The module registry and threat-model index declare the
+  modern Studio interface and evidence paths; web typecheck, production build,
+  the full 64-test component suite, and the 8-test accessibility E2E suite
+  pass.
+- **Boundary**: This is local synthetic UI evidence only. It does not prove
+  authenticated live API behavior, MRP/ERP authenticity, statutory valuation,
+  inventory/WIP/GL posting, ERP write-back, HA/DR, or production readiness.

@@ -62,7 +62,7 @@ export const navigationGroups: NavigationGroup[] = [
     label: "operations",
     items: [
       { key: "inventory", label: "inventory", icon: Boxes, page: "inventory", status: "foundation" },
-      { key: "manufacturing", label: "manufacturing", icon: Factory, href: `${currentStudio}/wip`, status: "foundation" },
+      { key: "manufacturing", label: "manufacturingCost", icon: Factory, page: "manufacturingCost", status: "foundation" },
     ],
   },
   {

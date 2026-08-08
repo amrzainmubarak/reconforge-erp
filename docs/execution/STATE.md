@@ -5723,3 +5723,16 @@ suite (7/7) pass. This is local synthetic UI evidence only; live bank/API/
 provider behavior, payment initiation, posting, write-back, HA/DR, and
 production banking evidence remain open.
 GitHub publication remains deferred by owner policy.
+
+E-610 adds the lazy-loaded `/manufacturing-cost` modern Studio route as a
+strict, synthetic-only projection of the deterministic manufacturing cost
+control. The read-only English/Arabic view validates the contract marker,
+source boundary, exact quantity/variance strings, bounded statuses, unique
+order IDs, summary consistency, and replay digest shapes before showing
+production quantities, cost variances, scrap reasons, filters, and evidence
+digests. The module registry and threat-model index now declare the modern
+Studio interface and browser test evidence. This is local synthetic UI
+evidence only; web typecheck, production build, the full component suite
+(64/64), and the accessibility E2E suite (8/8) pass. Live MRP/ERP/API behavior,
+inventory/WIP/GL posting, write-back, HA/DR, and production manufacturing
+evidence remain open. GitHub publication remains deferred by owner policy.

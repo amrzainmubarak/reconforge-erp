@@ -24,7 +24,7 @@ async function expectNoWcagViolations(page: Page) {
 
 test("critical English and Arabic Studio routes pass the automated WCAG regression gate", async ({ page }) => {
   await mockLiveContract(page);
-  const criticalRoutes = ["/", "/exceptions", "/evidence", "/inventory", "/retail-settlement", "/bank-statement", "/mapping", "/rules", "/live", "/admin-audit"];
+  const criticalRoutes = ["/", "/exceptions", "/evidence", "/inventory", "/retail-settlement", "/bank-statement", "/manufacturing-cost", "/mapping", "/rules", "/live", "/admin-audit"];
   for (const path of criticalRoutes) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -131,6 +131,16 @@ test("bank reconciliation view exposes replay evidence without write or provider
   await expect(page.locator("p.bank-boundary")).toHaveText("Synthetic, read-only evidence only; no bank call, payment initiation, accounting posting, or ERP write-back is available from this Studio route.");
   await expect(page.locator("main button")).toHaveCount(0);
   await expect(page.getByRole("combobox", { name: "Bank status" })).toBeVisible();
+  await expect(page.locator("main")).not.toContainText("password");
+});
+
+test("manufacturing cost view exposes replay evidence without ERP or posting claims", async ({ page }) => {
+  await page.goto("/manufacturing-cost");
+  await expect(page.getByRole("heading", { level: 1, name: "Manufacturing cost control center" })).toBeVisible();
+  await expect(page.getByText("MATERIAL_COST_VARIANCE")).toBeVisible();
+  await expect(page.locator("p.manufacturing-boundary")).toHaveText("Synthetic, read-only evidence only; no MRP/ERP call, inventory posting, accounting posting, or write-back is available from this Studio route.");
+  await expect(page.locator("main button")).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Manufacturing status" })).toBeVisible();
   await expect(page.locator("main")).not.toContainText("password");
 });
 

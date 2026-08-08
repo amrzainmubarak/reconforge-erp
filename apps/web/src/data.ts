@@ -1,4 +1,4 @@
-import type { AdminAccessPermission, AdminAccessRole, AdminAccessRoleChange, AdminAuditEvent, AdminAuditPage, AdminAuditVerification, AdminIdentitySession, AdminIdentityUser, AdminIdentityUserStatusChange, AdminIntegration, AdminRetentionPolicy, AdminSecuritySnapshot, AdminSessionRevocation, AdminUserRoleAssignment, BankStatementStatus, BankStatementStudioContract, BrowserAdminSession, EvidenceBinderContract, ExceptionQueueContract, InventoryControlContract, LiveStudioContract, LiveStudioMetric, RetailSettlementStudioContract, StudioOverview } from "./types";
+import type { AdminAccessPermission, AdminAccessRole, AdminAccessRoleChange, AdminAuditEvent, AdminAuditPage, AdminAuditVerification, AdminIdentitySession, AdminIdentityUser, AdminIdentityUserStatusChange, AdminIntegration, AdminRetentionPolicy, AdminSecuritySnapshot, AdminSessionRevocation, AdminUserRoleAssignment, BankStatementStatus, BankStatementStudioContract, BrowserAdminSession, EvidenceBinderContract, ExceptionQueueContract, InventoryControlContract, LiveStudioContract, LiveStudioMetric, ManufacturingCostStatus, ManufacturingCostStudioContract, RetailSettlementStudioContract, StudioOverview } from "./types";
 
 const OVERVIEW_URL = `${import.meta.env.BASE_URL}demo/studio-overview.json`;
 const EXCEPTIONS_URL = `${import.meta.env.BASE_URL}demo/studio-exceptions.json`;
@@ -6,6 +6,7 @@ const EVIDENCE_URL = `${import.meta.env.BASE_URL}demo/studio-evidence.json`;
 const INVENTORY_URL = `${import.meta.env.BASE_URL}demo/studio-inventory.json`;
 const RETAIL_SETTLEMENT_URL = `${import.meta.env.BASE_URL}demo/studio-retail-settlement.json`;
 const BANK_STATEMENT_URL = `${import.meta.env.BASE_URL}demo/studio-bank-statement.json`;
+const MANUFACTURING_COST_URL = `${import.meta.env.BASE_URL}demo/studio-manufacturing-cost.json`;
 const metricFormats = new Set(["percent", "count", "days"]);
 const metricTones = new Set(["positive", "critical", "warning", "neutral"]);
 const riskRatings = new Set(["critical", "high", "medium", "low"]);
@@ -23,6 +24,7 @@ const currencyCode = /^[A-Z]{3}$/;
 const digest = /^[a-f0-9]{64}$/;
 const retailStatuses = new Set(["matched", "exception", "unmatched_pos", "unmatched_settlement", "ambiguous"]);
 const bankStatuses = new Set<BankStatementStatus>(["matched", "exception", "unmatched_bank", "unmatched_ledger", "ambiguous"]);
+const manufacturingStatuses = new Set<ManufacturingCostStatus>(["reconciled", "exception", "unmatched"]);
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -459,6 +461,60 @@ function isBankStatementStudio(value: unknown): value is BankStatementStudioCont
   );
 }
 
+function isManufacturingCostDecision(value: unknown, expectedUnit: string, expectedCurrency: string): boolean {
+  if (!isObject(value)) return false;
+  if (!hasTextFields(value, ["order_id", "product_id"])) return false;
+  if (typeof value.status !== "string" || !manufacturingStatuses.has(value.status as ManufacturingCostStatus)) return false;
+  const quantities = ["planned_quantity", "issued_quantity", "completed_quantity", "scrap_quantity"];
+  if (!quantities.every((field) => isText(value[field]) && exactQuantity.test(value[field] as string) && !String(value[field]).startsWith("-"))) return false;
+  if (!isText(value.material_cost_variance) || !exactMoney.test(value.material_cost_variance) || !isText(value.completion_cost_variance) || !exactMoney.test(value.completion_cost_variance)) return false;
+  if (!Array.isArray(value.reason_codes) || value.reason_codes.length < 1 || value.reason_codes.length > 20 || !value.reason_codes.every(isText)) return false;
+  return String(value.order_id).length <= 160 && String(value.product_id).length <= 160 && expectedUnit.length <= 16 && expectedCurrency.length === 3;
+}
+
+function manufacturingSummaryIsConsistent(value: Record<string, unknown>): boolean {
+  const summary = value.summary as Record<string, unknown>;
+  const decisions = value.decisions as Array<Record<string, unknown>>;
+  const statuses = decisions.map((decision) => String(decision.status));
+  return (
+    summary.total === decisions.length &&
+    summary.reconciled === statuses.filter((status) => status === "reconciled").length &&
+    summary.exceptions === statuses.filter((status) => status === "exception").length &&
+    summary.unmatched === statuses.filter((status) => status === "unmatched").length &&
+    new Set(decisions.map((decision) => String(decision.order_id))).size === decisions.length
+  );
+}
+
+function isManufacturingCostStudio(value: unknown): value is ManufacturingCostStudioContract {
+  if (!isObject(value)) return false;
+  return (
+    value.schema_version === 1 &&
+    value.synthetic_data_only === true &&
+    value.synthetic_data_marker === "SYNTHETIC_MANUFACTURING_COST_UI_ONLY" &&
+    isText(value.generated_at) &&
+    isContractSource(value.source) &&
+    isText(value.algorithm_version) &&
+    digest.test(String(value.decision_digest)) &&
+    digest.test(String(value.artifact_digest)) &&
+    exactMoney.test(String(value.tolerance)) &&
+    !String(value.tolerance).startsWith("-") &&
+    isText(value.currency) &&
+    currencyCode.test(value.currency) &&
+    isText(value.unit) &&
+    isText(value.max_scrap_quantity) &&
+    exactQuantity.test(value.max_scrap_quantity) &&
+    !String(value.max_scrap_quantity).startsWith("-") &&
+    hasCountFields(value.summary, ["total", "reconciled", "exceptions", "unmatched"]) &&
+    Array.isArray(value.decisions) &&
+    value.decisions.length > 0 &&
+    value.decisions.length <= 10_000 &&
+    value.decisions.every((decision) => isManufacturingCostDecision(decision, value.unit as string, value.currency as string)) &&
+    Array.isArray(value.notices) &&
+    value.notices.every(isText) &&
+    manufacturingSummaryIsConsistent(value)
+  );
+}
+
 function isExecutiveBrief(value: unknown): boolean {
   return (
     isObject(value) &&
@@ -586,6 +642,10 @@ export async function loadRetailSettlementStudio(signal?: AbortSignal): Promise<
 
 export async function loadBankStatementStudio(signal?: AbortSignal): Promise<BankStatementStudioContract> {
   return loadContract(BANK_STATEMENT_URL, isBankStatementStudio, "bank statement", signal);
+}
+
+export async function loadManufacturingCostStudio(signal?: AbortSignal): Promise<ManufacturingCostStudioContract> {
+  return loadContract(MANUFACTURING_COST_URL, isManufacturingCostStudio, "manufacturing cost", signal);
 }
 
 async function loadContract<T>(

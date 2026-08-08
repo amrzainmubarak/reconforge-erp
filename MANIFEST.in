@@ -594,6 +594,9 @@ include docs/execution/benchmarks/INDEX.v1.json
 include apps/web/src/components/BankStatementStudio.tsx
 include apps/web/src/components/BankStatementStudio.test.tsx
 include apps/web/public/demo/studio-bank-statement.json
+include apps/web/src/components/ManufacturingCostStudio.tsx
+include apps/web/src/components/ManufacturingCostStudio.test.tsx
+include apps/web/public/demo/studio-manufacturing-cost.json
 include docs/schemas/grouped_matching_domain_scale.schema.json
 include reconforge/infrastructure/postgres_consolidation_close.py
 include tests/test_postgres_consolidation_close.py

@@ -56,6 +56,7 @@ export const navigationGroups: NavigationGroup[] = [
       { key: "close", label: "close", icon: ClipboardCheck, href: `${currentStudio}/close`, status: "foundation" },
       { key: "retail-settlement", label: "retailSettlement", icon: CreditCard, page: "retailSettlement", status: "foundation" },
       { key: "bank-statement", label: "bankStatement", icon: Landmark, page: "bankStatement", status: "foundation" },
+      { key: "professional-invoice-payment", label: "professionalInvoicePayment", icon: FileChartColumn, page: "professionalInvoicePayment", status: "foundation" },
     ],
   },
   {

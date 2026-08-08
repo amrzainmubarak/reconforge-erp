@@ -382,7 +382,43 @@ export interface ManufacturingCostStudioContract {
   notices: string[];
 }
 
-export type StudioPage = "dashboard" | "exceptions" | "evidence" | "inventory" | "retailSettlement" | "bankStatement" | "manufacturingCost" | "mapping" | "rules" | "live" | "adminAudit";
+export type ProfessionalInvoicePaymentStatus = "matched" | "exception" | "unmatched_invoice" | "unmatched_payment" | "ambiguous";
+
+export interface ProfessionalInvoicePaymentDecision {
+  invoice_id: string;
+  client_id: string;
+  status: ProfessionalInvoicePaymentStatus;
+  payment_ids: string[];
+  amount_variance: string | null;
+  days_from_due_date: number | null;
+  reason_code: string;
+}
+
+export interface ProfessionalInvoicePaymentStudioContract {
+  schema_version: 1;
+  synthetic_data_only: true;
+  synthetic_data_marker: "SYNTHETIC_PROFESSIONAL_INVOICE_PAYMENT_UI_ONLY";
+  generated_at: string;
+  source: ContractSource;
+  algorithm_version: string;
+  decision_digest: string;
+  artifact_digest: string;
+  tolerance: string;
+  currency: string;
+  payment_window_days: number;
+  summary: {
+    total: number;
+    matched: number;
+    exceptions: number;
+    ambiguous: number;
+    unmatched_invoice: number;
+    unmatched_payment: number;
+  };
+  decisions: ProfessionalInvoicePaymentDecision[];
+  notices: string[];
+}
+
+export type StudioPage = "dashboard" | "exceptions" | "evidence" | "inventory" | "retailSettlement" | "bankStatement" | "manufacturingCost" | "professionalInvoicePayment" | "mapping" | "rules" | "live" | "adminAudit";
 
 export interface StudioOverview {
   schema_version: 1;

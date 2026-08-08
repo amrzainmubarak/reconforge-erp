@@ -45,6 +45,14 @@ lineage, and digest-bound reports through the local CLI/library and a read-only
 English/Arabic modern Studio projection. It is not a statutory valuation engine,
 ERP connector, inventory/WIP/GL posting path, or complete manufacturing module.
 
+The experimental `professional.invoice-payment` entry is an implemented,
+non-posting artifact slice for local professional-service invoice and payment
+exports. It exposes exact client, amount, due-date, ambiguity, unmatched, and
+unapplied-cash decisions through the local CLI/library and a read-only
+English/Arabic modern Studio projection. It is not a billing connector,
+receivables-allocation engine, revenue-recognition system, authenticated live
+API, or ERP write-back path.
+
 ## Maturity and capability are separate
 
 | Field | Allowed values | Meaning |

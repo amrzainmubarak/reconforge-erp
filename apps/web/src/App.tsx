@@ -17,6 +17,7 @@ const InventoryControl = lazy(() => import("./components/InventoryControl").then
 const RetailSettlementStudio = lazy(() => import("./components/RetailSettlementStudio").then((module) => ({ default: module.RetailSettlementStudio })));
 const BankStatementStudio = lazy(() => import("./components/BankStatementStudio").then((module) => ({ default: module.BankStatementStudio })));
 const ManufacturingCostStudio = lazy(() => import("./components/ManufacturingCostStudio").then((module) => ({ default: module.ManufacturingCostStudio })));
+const ProfessionalInvoicePaymentStudio = lazy(() => import("./components/ProfessionalInvoicePaymentStudio").then((module) => ({ default: module.ProfessionalInvoicePaymentStudio })));
 const MappingStudio = lazy(() => import("./components/MappingStudio").then((module) => ({ default: module.MappingStudio })));
 const RuleStudio = lazy(() => import("./components/RuleStudio").then((module) => ({ default: module.RuleStudio })));
 const LiveStudio = lazy(() => import("./components/LiveStudio").then((module) => ({ default: module.LiveStudio })));
@@ -30,6 +31,7 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/retail-settlement")) return "retailSettlement";
   if (normalized.endsWith("/bank-statement")) return "bankStatement";
   if (normalized.endsWith("/manufacturing-cost")) return "manufacturingCost";
+  if (normalized.endsWith("/professional-invoice-payment")) return "professionalInvoicePayment";
   if (normalized.endsWith("/mapping")) return "mapping";
   if (normalized.endsWith("/rules")) return "rules";
   if (normalized.endsWith("/live")) return "live";
@@ -43,6 +45,7 @@ function pathForPage(page: StudioPage): string {
     retailSettlement: "retail-settlement",
     bankStatement: "bank-statement",
     manufacturingCost: "manufacturing-cost",
+    professionalInvoicePayment: "professional-invoice-payment",
     adminAudit: "admin-audit",
   };
   return page === "dashboard" ? `${base}/` || "/" : `${base}/${routeNames[page] ?? page}`;
@@ -189,6 +192,9 @@ export default function App() {
         ) : null}
         {activePage === "manufacturingCost" ? (
           <Suspense fallback={<LoadingView translate={t} />}><ManufacturingCostStudio translate={t} /></Suspense>
+        ) : null}
+        {activePage === "professionalInvoicePayment" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><ProfessionalInvoicePaymentStudio translate={t} /></Suspense>
         ) : null}
         {activePage === "mapping" ? (
           <Suspense fallback={<LoadingView translate={t} />}><MappingStudio translate={t} /></Suspense>

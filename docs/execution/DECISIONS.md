@@ -6374,3 +6374,25 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Boundary**: This is local synthetic UI evidence only. It does not prove
   authenticated live API behavior, MRP/ERP authenticity, statutory valuation,
   inventory/WIP/GL posting, ERP write-back, HA/DR, or production readiness.
+
+### D-437: Add a bounded professional invoice/payment Studio projection
+
+- **Date**: 2026-08-08
+- **Context**: The professional invoice/payment control already produced
+  deterministic, digest-bound local evidence and a CLI, while the modern
+  Studio exposed no review surface for client/payment decisions, amount and
+  due-date variance, ambiguity, or unapplied cash.
+- **Decision**: Add `/professional-invoice-payment` as a lazy-loaded,
+  read-only English/Arabic projection backed by a versioned synthetic
+  contract. Validate the source boundary, synthetic marker, exact
+  amount/day strings, bounded statuses, unique decision IDs, summary counts,
+  and replay digest shapes before rendering filters and evidence; do not
+  recalculate, allocate, post, or mutate the control result.
+- **Verification**: The module registry and threat-model index declare the
+  modern Studio interface and evidence paths; web typecheck, production build,
+  the full component suite, and the accessibility E2E suite are the release
+  gates for this slice.
+- **Boundary**: This is local synthetic UI evidence only. It does not prove
+  authenticated live API behavior, billing/payment authenticity, receivables
+  allocation, revenue recognition, posting, ERP write-back, HA/DR, or
+  production readiness.

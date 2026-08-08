@@ -5592,6 +5592,21 @@ open. The full repository regression collected 2,722 tests and exited 0 in
 373.9 seconds with declared capability skips and existing warnings only.
 GitHub publication remains deferred by owner policy.
 
+E-611 adds the lazy-loaded `/professional-invoice-payment` modern Studio route
+as a strict, synthetic-only projection of the deterministic professional
+invoice/payment control. The read-only English/Arabic view validates the
+contract marker, source boundary, exact amount/day strings, bounded statuses,
+unique decision IDs, summary consistency, and replay digest shapes before
+showing client/payment references, variance reasons, filters, and evidence
+digests. The module registry and threat-model index now declare the modern
+Studio interface and browser test evidence. Live billing/provider/API behavior,
+receivables allocation, revenue recognition, posting, write-back, HA/DR, and
+production professional-services evidence remain open. Web TypeScript build,
+67/67 component tests, production build, and 9/9 accessibility E2E tests pass;
+the full local Python regression exits 0 in 483.8 seconds, with Ruff, Mypy
+(496 files), Bandit, pip-audit, supply-chain validation, package build, and
+diff-check passing. GitHub publication remains deferred by owner policy.
+
 E-597 extends the scheduler cursor evidence with two independent SQLite
 connections reserving the same lane sequence from separate executor threads.
 Twelve reservations commit with six selections per lane, final index zero, and

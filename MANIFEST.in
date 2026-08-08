@@ -565,6 +565,9 @@ include docs/schemas/professional_invoice_payment_report.schema.json
 recursive-include control-packs/professional-invoice-payment *
 recursive-include examples/professional_invoice_payment *
 include docs/adr/0367-professional-invoice-payment-control-slice.md
+include apps/web/public/demo/studio-professional-invoice-payment.json
+include apps/web/src/components/ProfessionalInvoicePaymentStudio.tsx
+include apps/web/src/components/ProfessionalInvoicePaymentStudio.test.tsx
 include docs/adr/0368-reliability-namespace-package-collision.md
 include docs/execution/S3_OBJECT_STORAGE_LIVE_DOCKER_DRILL_2026-08-05.json
 include docs/execution/S3_OBJECT_STORAGE_LIVE_DOCKER_DRILL_2026-08-06.json

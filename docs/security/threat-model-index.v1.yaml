@@ -826,7 +826,7 @@ modules:
     capability_status: implemented
     threat_model_status: evidence-bounded
     owner: platform-security
-    interfaces: [artifacts, cli, library]
+    interfaces: [artifacts, cli, library, modern-studio]
     module_data_classifications: [financial-sensitive, receivables-control-data, source-export-metadata]
     architecture_boundaries: [TB-001, TB-003, TB-007]
     assets:
@@ -872,12 +872,12 @@ modules:
         residual_risk_ids: [R-009]
         limitations:
           - This slice performs no network calls, receivables allocation, journal posting, billing authentication, or distributed quota enforcement.
-    module_test_evidence: [tests/test_professional_invoice_payment_control.py, tests/test_file_ingestion_inventory.py, tests/test_v03_platform.py]
+    module_test_evidence: [tests/test_professional_invoice_payment_control.py, tests/test_file_ingestion_inventory.py, tests/test_v03_platform.py, apps/web/src/components/ProfessionalInvoicePaymentStudio.test.tsx, apps/web/e2e/accessibility.spec.ts]
     assumptions:
       - Operators provide authorized invoice/payment exports and independently review all exceptions before allocation or posting.
       - The control remains non-posting and no billing credential or endpoint is configured through this module.
     out_of_scope:
-      - Live billing/payment connectivity, revenue recognition, receivables allocation, statutory posting, ERP write-back, persistence/API/Studio, HA/DR, and production availability.
+      - Live billing/payment connectivity, revenue recognition, receivables allocation, statutory posting, ERP write-back, authenticated live API behavior, HA/DR, and production availability.
 
   - module_id: retail.settlement
     registry_maturity: experimental

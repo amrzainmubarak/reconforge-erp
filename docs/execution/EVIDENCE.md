@@ -14710,3 +14710,17 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   passes 8/8. Live MRP/ERP/API,
   statutory valuation, inventory/WIP/GL posting, write-back, HA/DR, and
   production manufacturing operations remain unverified.
+- E-611 professional invoice/payment modern Studio projection (2026-08-08):
+  `/professional-invoice-payment` is a lazy-loaded, read-only English/Arabic
+  view over a strict synthetic-only projection of the deterministic
+  professional invoice/payment report. The browser contract checks the source
+  boundary, exact amount/day strings, bounded statuses, unique decision IDs,
+  summary counts, and replay digest shapes before rendering client/payment
+  references, variance reasons, filtering, and evidence digests. Live
+  billing/provider/API behavior, receivables allocation, revenue recognition,
+  posting, ERP write-back, HA/DR, and production professional-services
+  operations remain unverified. Web TypeScript build, 67/67 component tests,
+  production build, and 9/9 accessibility E2E tests pass; full local Python
+  pytest exits 0 in 483.8 seconds, Ruff, Mypy (496 files), Bandit, pip-audit,
+  supply-chain validation, package build, and diff-check pass. GitHub
+  publication remains deferred by owner policy.

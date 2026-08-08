@@ -604,7 +604,7 @@ _MODULES = (
         ),
         default_enabled=False,
         dependencies=("platform.core",),
-        interfaces=("artifacts", "cli", "library"),
+        interfaces=("artifacts", "cli", "library", "modern-studio"),
         import_contracts=("professional-invoice-export.v1", "professional-payment-export.v1"),
         export_contracts=("professional-invoice-payment-report.v1",),
         data_classification=("financial-sensitive", "receivables-control-data", "source-export-metadata"),
@@ -616,7 +616,11 @@ _MODULES = (
             "Run explicitly with bounded local JSON exports. The slice is non-posting and provider-neutral; "
             "receivables allocation, billing connectivity, and ERP write-back remain separate gates."
         ),
-        test_evidence=("tests/test_professional_invoice_payment_control.py",),
+        test_evidence=(
+            "tests/test_professional_invoice_payment_control.py",
+            "apps/web/src/components/ProfessionalInvoicePaymentStudio.test.tsx",
+            "apps/web/e2e/accessibility.spec.ts",
+        ),
     ),
     ModuleDescriptor(
         module_id="studio.modern",

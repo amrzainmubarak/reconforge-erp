@@ -1,4 +1,4 @@
-import type { AdminAccessPermission, AdminAccessRole, AdminAccessRoleChange, AdminAuditEvent, AdminAuditPage, AdminAuditVerification, AdminIdentitySession, AdminIdentityUser, AdminIdentityUserStatusChange, AdminIntegration, AdminRetentionPolicy, AdminSecuritySnapshot, AdminSessionRevocation, AdminUserRoleAssignment, BankStatementStatus, BankStatementStudioContract, BrowserAdminSession, EvidenceBinderContract, ExceptionQueueContract, InventoryControlContract, LiveStudioContract, LiveStudioMetric, ManufacturingCostStatus, ManufacturingCostStudioContract, RetailSettlementStudioContract, StudioOverview } from "./types";
+import type { AdminAccessPermission, AdminAccessRole, AdminAccessRoleChange, AdminAuditEvent, AdminAuditPage, AdminAuditVerification, AdminIdentitySession, AdminIdentityUser, AdminIdentityUserStatusChange, AdminIntegration, AdminRetentionPolicy, AdminSecuritySnapshot, AdminSessionRevocation, AdminUserRoleAssignment, BankStatementStatus, BankStatementStudioContract, BrowserAdminSession, EvidenceBinderContract, ExceptionQueueContract, InventoryControlContract, LiveStudioContract, LiveStudioMetric, ManufacturingCostStatus, ManufacturingCostStudioContract, ProfessionalInvoicePaymentStatus, ProfessionalInvoicePaymentStudioContract, RetailSettlementStudioContract, StudioOverview } from "./types";
 
 const OVERVIEW_URL = `${import.meta.env.BASE_URL}demo/studio-overview.json`;
 const EXCEPTIONS_URL = `${import.meta.env.BASE_URL}demo/studio-exceptions.json`;
@@ -7,6 +7,7 @@ const INVENTORY_URL = `${import.meta.env.BASE_URL}demo/studio-inventory.json`;
 const RETAIL_SETTLEMENT_URL = `${import.meta.env.BASE_URL}demo/studio-retail-settlement.json`;
 const BANK_STATEMENT_URL = `${import.meta.env.BASE_URL}demo/studio-bank-statement.json`;
 const MANUFACTURING_COST_URL = `${import.meta.env.BASE_URL}demo/studio-manufacturing-cost.json`;
+const PROFESSIONAL_INVOICE_PAYMENT_URL = `${import.meta.env.BASE_URL}demo/studio-professional-invoice-payment.json`;
 const metricFormats = new Set(["percent", "count", "days"]);
 const metricTones = new Set(["positive", "critical", "warning", "neutral"]);
 const riskRatings = new Set(["critical", "high", "medium", "low"]);
@@ -25,6 +26,7 @@ const digest = /^[a-f0-9]{64}$/;
 const retailStatuses = new Set(["matched", "exception", "unmatched_pos", "unmatched_settlement", "ambiguous"]);
 const bankStatuses = new Set<BankStatementStatus>(["matched", "exception", "unmatched_bank", "unmatched_ledger", "ambiguous"]);
 const manufacturingStatuses = new Set<ManufacturingCostStatus>(["reconciled", "exception", "unmatched"]);
+const professionalStatuses = new Set<ProfessionalInvoicePaymentStatus>(["matched", "exception", "unmatched_invoice", "unmatched_payment", "ambiguous"]);
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -515,6 +517,59 @@ function isManufacturingCostStudio(value: unknown): value is ManufacturingCostSt
   );
 }
 
+function isProfessionalInvoicePaymentDecision(value: unknown, expectedCurrency: string): boolean {
+  if (!isObject(value)) return false;
+  if (!hasTextFields(value, ["invoice_id", "client_id", "reason_code"])) return false;
+  if (typeof value.status !== "string" || !professionalStatuses.has(value.status as ProfessionalInvoicePaymentStatus)) return false;
+  if (!Array.isArray(value.payment_ids) || value.payment_ids.length > 100 || !value.payment_ids.every(isText)) return false;
+  if (value.amount_variance !== null && (!isText(value.amount_variance) || !exactMoney.test(value.amount_variance))) return false;
+  if (value.days_from_due_date !== null && (typeof value.days_from_due_date !== "number" || !Number.isInteger(value.days_from_due_date) || value.days_from_due_date < -366 || value.days_from_due_date > 366)) return false;
+  return String(value.invoice_id).length <= 160 && String(value.client_id).length <= 160 && expectedCurrency.length === 3;
+}
+
+function professionalSummaryIsConsistent(value: Record<string, unknown>): boolean {
+  const summary = value.summary as Record<string, unknown>;
+  const decisions = value.decisions as Array<Record<string, unknown>>;
+  const statuses = decisions.map((decision) => String(decision.status));
+  return (
+    summary.total === decisions.length &&
+    summary.matched === statuses.filter((status) => status === "matched").length &&
+    summary.exceptions === statuses.filter((status) => status === "exception").length &&
+    summary.ambiguous === statuses.filter((status) => status === "ambiguous").length &&
+    summary.unmatched_invoice === statuses.filter((status) => status === "unmatched_invoice").length &&
+    summary.unmatched_payment === statuses.filter((status) => status === "unmatched_payment").length &&
+    new Set(decisions.map((decision) => String(decision.invoice_id))).size === decisions.length
+  );
+}
+
+function isProfessionalInvoicePaymentStudio(value: unknown): value is ProfessionalInvoicePaymentStudioContract {
+  if (!isObject(value)) return false;
+  return (
+    value.schema_version === 1 &&
+    value.synthetic_data_only === true &&
+    value.synthetic_data_marker === "SYNTHETIC_PROFESSIONAL_INVOICE_PAYMENT_UI_ONLY" &&
+    isText(value.generated_at) &&
+    isContractSource(value.source) &&
+    isText(value.algorithm_version) &&
+    digest.test(String(value.decision_digest)) &&
+    digest.test(String(value.artifact_digest)) &&
+    exactMoney.test(String(value.tolerance)) &&
+    !String(value.tolerance).startsWith("-") &&
+    isText(value.currency) &&
+    currencyCode.test(value.currency) &&
+    isCount(value.payment_window_days) &&
+    value.payment_window_days <= 366 &&
+    hasCountFields(value.summary, ["total", "matched", "exceptions", "ambiguous", "unmatched_invoice", "unmatched_payment"]) &&
+    Array.isArray(value.decisions) &&
+    value.decisions.length > 0 &&
+    value.decisions.length <= 10_000 &&
+    value.decisions.every((decision) => isProfessionalInvoicePaymentDecision(decision, value.currency as string)) &&
+    Array.isArray(value.notices) &&
+    value.notices.every(isText) &&
+    professionalSummaryIsConsistent(value)
+  );
+}
+
 function isExecutiveBrief(value: unknown): boolean {
   return (
     isObject(value) &&
@@ -646,6 +701,10 @@ export async function loadBankStatementStudio(signal?: AbortSignal): Promise<Ban
 
 export async function loadManufacturingCostStudio(signal?: AbortSignal): Promise<ManufacturingCostStudioContract> {
   return loadContract(MANUFACTURING_COST_URL, isManufacturingCostStudio, "manufacturing cost", signal);
+}
+
+export async function loadProfessionalInvoicePaymentStudio(signal?: AbortSignal): Promise<ProfessionalInvoicePaymentStudioContract> {
+  return loadContract(PROFESSIONAL_INVOICE_PAYMENT_URL, isProfessionalInvoicePaymentStudio, "professional invoice/payment", signal);
 }
 
 async function loadContract<T>(

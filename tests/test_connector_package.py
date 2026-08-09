@@ -5,8 +5,6 @@ import json
 from pathlib import Path
 
 import pytest
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from typer.testing import CliRunner
 
 from reconforge.cli import app
@@ -22,6 +20,15 @@ from reconforge.connectors.package import (
     signature_payload,
 )
 from reconforge.plugins.registry import get_connector
+
+serialization_module = pytest.importorskip(
+    "cryptography.hazmat.primitives.serialization", reason="connector cryptography extra is optional"
+)
+ed25519_module = pytest.importorskip(
+    "cryptography.hazmat.primitives.asymmetric.ed25519", reason="connector cryptography extra is optional"
+)
+serialization = serialization_module
+Ed25519PrivateKey = ed25519_module.Ed25519PrivateKey
 
 runner = CliRunner()
 

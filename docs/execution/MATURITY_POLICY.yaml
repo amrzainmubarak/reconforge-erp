@@ -43,7 +43,7 @@ module_ceilings:
     evidence_claim: Live ERP connectors
   - module_id: professional.invoice-payment
     maximum_maturity: experimental
-    evidence_claim: Experimental professional invoice and payment control
+    evidence_claim: Experimental professional invoice and payment control with dual-mode persistence
   - module_id: reconciliation.core
     maximum_maturity: experimental
     evidence_claim: Deterministic reconciliation

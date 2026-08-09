@@ -15,9 +15,23 @@
       "workload_family": "advanced_matching"
     },
     {
+      "artifact": "docs/execution/benchmarks/grouped-matching-100k-current-2026-08-08.json",
+      "artifact_sha256": "e8daa0c31639653f9994a86986efd59b6733de21559e5e067fc90c8675391455",
+      "claim_boundary": "Single-run 100K partitioned synthetic observation; not distributed capacity, PostgreSQL parity, FX/fees/provider-I/O coverage, or production sizing.",
+      "digest_fields": [
+        "effect_digest",
+        "manifest_digest",
+        "report_digest"
+      ],
+      "engine": "local-grouped-strategy",
+      "profile_id": "grouped-matching/100k-record-true-many-to-many-v1",
+      "status": "verified",
+      "workload_family": "advanced_matching"
+    },
+    {
       "artifact": "docs/execution/benchmarks/grouped-matching-1m-current-2026-08-06.json",
-      "artifact_sha256": "db065f2762bc2062518378cfaaf742a94c1e8d9c1205dddc3bc6d9350fe1d5fe",
-      "claim_boundary": "Two-run one-host exact USD 1M partitioned matching observation; not distributed capacity, FX/fee coverage, PostgreSQL parity, or production sizing.",
+      "artifact_sha256": "c2b7e363c177cbfa19c87ce98076ebe70d4ee148311d7c05e5fbe5100c1b4279",
+      "claim_boundary": "Single-run one-host exact USD 1M partitioned matching observation; not distributed capacity, FX/fee coverage, PostgreSQL parity, or production sizing.",
       "digest_fields": [
         "effect_digest",
         "manifest_digest",

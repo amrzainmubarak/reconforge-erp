@@ -65,6 +65,7 @@ BACKUP_TABLES = [
     "consolidation_effects",
     "consolidation_effect_lines",
     "retail_settlement_runs",
+    "professional_invoice_payment_runs",
     "legal_entities",
     "branches",
     "periods",
@@ -206,6 +207,9 @@ BACKUP_SELECT_QUERIES = {
     "retail_settlement_runs": (
         "SELECT * FROM retail_settlement_runs ORDER BY workspace_id, created_at, id"
     ),
+    "professional_invoice_payment_runs": (
+        "SELECT * FROM professional_invoice_payment_runs ORDER BY workspace_id, created_at, id"
+    ),
     "legal_entities": "SELECT * FROM legal_entities ORDER BY entity_code, id",
     "branches": "SELECT * FROM branches ORDER BY organization_id, branch_code, id",
     "periods": "SELECT * FROM periods ORDER BY start_date, id",
@@ -319,6 +323,7 @@ BACKUP_DELETE_QUERIES = {
     "consolidation_effects": "DELETE FROM consolidation_effects",
     "consolidation_effect_lines": "DELETE FROM consolidation_effect_lines",
     "retail_settlement_runs": "DELETE FROM retail_settlement_runs",
+    "professional_invoice_payment_runs": "DELETE FROM professional_invoice_payment_runs",
     "legal_entities": "DELETE FROM legal_entities",
     "branches": "DELETE FROM branches",
     "periods": "DELETE FROM periods",
@@ -525,6 +530,18 @@ BACKUP_INSERT_COLUMNS = {
         "currency_code",
     ),
     "retail_settlement_runs": (
+        "id",
+        "workspace_id",
+        "decision_digest",
+        "artifact_digest",
+        "algorithm_version",
+        "status_counts_json",
+        "payload_json",
+        "prepared_by",
+        "prepared_at",
+        "created_at",
+    ),
+    "professional_invoice_payment_runs": (
         "id",
         "workspace_id",
         "decision_digest",
@@ -1702,6 +1719,12 @@ BACKUP_INSERT_QUERIES = {
     """,
     "retail_settlement_runs": """
         INSERT INTO retail_settlement_runs (
+            id, workspace_id, decision_digest, artifact_digest, algorithm_version,
+            status_counts_json, payload_json, prepared_by, prepared_at, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "professional_invoice_payment_runs": """
+        INSERT INTO professional_invoice_payment_runs (
             id, workspace_id, decision_digest, artifact_digest, algorithm_version,
             status_counts_json, payload_json, prepared_by, prepared_at, created_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

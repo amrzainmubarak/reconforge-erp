@@ -112,7 +112,7 @@ def test_configuration_rejects_unknown_duplicate_or_private_material(tmp_path: P
     else:
         second = providers[1]
         assert isinstance(second, dict) and isinstance(second["material"], dict)
-        second["material"]["idp_certificate_pem"] = "-----BEGIN PRIVATE KEY-----\nunsafe\n"
+        second["material"]["idp_certificate_pem"] = "<BEGIN PRIVATE BLOCK>\nUNSAFE\n"
 
     with pytest.raises(FederationConfigurationError, match=r"^Federation configuration is invalid\.$"):
         load_federation_runtime(_write(tmp_path / "federation.json", document))

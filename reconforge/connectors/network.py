@@ -124,9 +124,9 @@ def _system_resolver(host: str, port: int) -> tuple[str, ...]:
 def resolve_public_addresses(host: str, port: int, *, resolver: AddressResolver = _system_resolver) -> tuple[str, ...]:
     try:
         raw = tuple(resolver(host, port))
-        addresses = tuple(sorted({ipaddress.ip_address(value) for value in raw}, key=lambda value: value.packed))
     except (TypeError, ValueError) as exc:
         raise ConnectorNetworkError("connector_destination_resolution_invalid") from exc
+    addresses = tuple(sorted({ipaddress.ip_address(value) for value in raw}, key=lambda value: (value.version, value.packed)))
     if not addresses:
         raise ConnectorNetworkError("connector_destination_resolution_empty")
     if any(not address.is_global for address in addresses):
@@ -174,30 +174,41 @@ class PinnedHttpsGetTransport:
         host = parsed.hostname or ""
         port = parsed.port or 443
         addresses = resolve_public_addresses(host, port, resolver=self.resolver)
-        connection = self.connection_factory(host, port, addresses[0], timeout_seconds, self.tls_context)
-        try:
-            # The query is part of the operator-declared exact egress
-            # destination. It is never merged with runtime input, so preserving
-            # it does not widen the allowlist or create redirect-following.
-            target = parsed.path or "/"
-            if parsed.query:
-                target += "?" + parsed.query
-            connection.request("GET", target, headers=headers)
-            response = connection.getresponse()
-            body = response.read(maximum_response_bytes + 1)
-            if len(body) > maximum_response_bytes:
-                raise ConnectorNetworkError("connector_response_too_large")
-            return NetworkResponse(
-                status=int(response.status),
-                body=body,
-                next_cursor=response.getheader("X-ReconForge-Next-Cursor"),
-            )
-        except ConnectorNetworkError:
-            raise
-        except (OSError, http.client.HTTPException, ssl.SSLError) as exc:
-            raise ConnectorNetworkError("connector_transport_failed") from exc
-        finally:
-            connection.close()
+        last_error: OSError | http.client.HTTPException | ssl.SSLError | None = None
+        # Try every resolved public address before failing. This avoids single
+        # family/path outages while preserving the pinned destination and
+        # deterministic policy envelope for all attempts.
+        for address in addresses:
+            try:
+                connection = self.connection_factory(host, port, address, timeout_seconds, self.tls_context)
+                try:
+                    # The query is part of the operator-declared exact egress
+                    # destination. It is never merged with runtime input, so
+                    # preserving it does not widen the allowlist or create
+                    # redirect-following.
+                    target = parsed.path or "/"
+                    if parsed.query:
+                        target += "?" + parsed.query
+                    connection.request("GET", target, headers=headers)
+                    response = connection.getresponse()
+                    body = response.read(maximum_response_bytes + 1)
+                    if len(body) > maximum_response_bytes:
+                        raise ConnectorNetworkError("connector_response_too_large")
+                    return NetworkResponse(
+                        status=int(response.status),
+                        body=body,
+                        next_cursor=response.getheader("X-ReconForge-Next-Cursor"),
+                    )
+                finally:
+                    connection.close()
+            except ConnectorNetworkError:
+                raise
+            except (OSError, http.client.HTTPException, ssl.SSLError) as exc:
+                last_error = exc
+                continue
+        if last_error is None:
+            raise ConnectorNetworkError("connector_transport_failed")
+        raise ConnectorNetworkError("connector_transport_failed") from last_error
 
 
 @dataclass(frozen=True)

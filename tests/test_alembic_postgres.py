@@ -453,7 +453,10 @@ def test_alembic_upgrade_command_is_available_when_server_extra_is_installed(
     from alembic import command
     from reconforge.application.operations import MigrationStatus
     from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings
-    from reconforge.infrastructure.postgres_operations import PostgresMigrationStatusProvider
+    from reconforge.infrastructure.postgres_operations import (
+        POSTGRES_MIGRATION_REVISIONS,
+        PostgresMigrationStatusProvider,
+    )
 
     assert alembic is not None and isolated_postgres_migration_dsn
     config = Config(str(ROOT / "alembic.ini"))
@@ -605,5 +608,5 @@ def test_alembic_upgrade_command_is_available_when_server_extra_is_installed(
         PostgresConnectionFactory(PostgresSettings(dsn=os.environ["RECONFORGE_POSTGRES_DSN"], require_tls=False))
     )
     assert provider("migration-test") == MigrationStatus(
-        "0079_pg_job_cursor", "0079_pg_job_cursor", ()
+        POSTGRES_MIGRATION_REVISIONS[-1], POSTGRES_MIGRATION_REVISIONS[-1], ()
     )

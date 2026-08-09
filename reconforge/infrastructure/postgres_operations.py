@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+import ast
 from collections.abc import Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from reconforge.application.operations import MigrationStatus
 from reconforge.infrastructure.postgres import ConnectionFactory, validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 
-POSTGRES_MIGRATION_REVISIONS = (
+POSTGRES_MIGRATION_REVISIONS: tuple[str, ...] = (
     "0001_postgres_tenant_boundary",
     "0002_postgres_master_data",
     "0003_postgres_ledger",
@@ -91,6 +93,7 @@ POSTGRES_MIGRATION_REVISIONS = (
     "0078_pg_close_scope",
     "0079_pg_job_cursor",
     "0080_pg_retail_settlement",
+    "0081_pg_prof_invoice",
 )
 
 
@@ -179,15 +182,45 @@ class PostgresMigrationStatusProvider:
         if row is None:
             raise PostgresOperationsError("PostgreSQL migration state is empty.")
         current = str(row[0])
+        revisions = POSTGRES_MIGRATION_REVISIONS
+        if current not in revisions:
+            discovered = _discover_postgres_migration_revisions()
+            if discovered is not None and current in discovered:
+                revisions = discovered
+            else:
+                raise PostgresOperationsError("PostgreSQL migration revision is unsupported.")
         try:
-            current_index = POSTGRES_MIGRATION_REVISIONS.index(current)
-        except ValueError as exc:
+            current_index = revisions.index(current)
+        except ValueError as exc:  # pragma: no cover - defensive fallback
             raise PostgresOperationsError("PostgreSQL migration revision is unsupported.") from exc
         return MigrationStatus(
             current_version=current,
-            latest_version=POSTGRES_MIGRATION_REVISIONS[-1],
-            pending_versions=POSTGRES_MIGRATION_REVISIONS[current_index + 1 :],
+            latest_version=revisions[-1],
+            pending_versions=tuple(revisions[current_index + 1 :]),
         )
+
+
+def _discover_postgres_migration_revisions() -> tuple[str, ...] | None:
+    versions_dir = Path(__file__).resolve().parents[2] / "alembic" / "versions"
+    if not versions_dir.is_dir():
+        return None
+    revisions: list[str] = []
+    for path in sorted(versions_dir.glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        assignments = {
+            node.targets[0].id: ast.literal_eval(node.value)
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+            and node.targets[0].id in {"revision"}
+        }
+        revision = assignments.get("revision")
+        if isinstance(revision, str):
+            revisions.append(revision)
+        else:
+            return None
+    return tuple(revisions)
 
 
 POSTGRES_OPERATIONS_SCHEMA_SQL = """

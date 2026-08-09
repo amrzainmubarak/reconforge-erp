@@ -1,8 +1,52 @@
 # ReconForge Baseline Audit
 
 > Historical command snapshot. Its external-gate closure failure was superseded
-> by the owner/team release policy in E-251/D236; recorded command outcomes remain
-> historical evidence rather than current release state.
+> by the owner/team release policy in E-251/D236; recorded command outcomes
+> remain historical evidence rather than current release state.
+
+> Updated local refresh snapshot below reflects the latest local run in this
+> machine/session. "Passed/blocked" entries are environment-scoped and should not
+> be interpreted as cross-platform production evidence.
+
+## Latest refresh (2026-08-09)
+
+- Date: 2026-08-09
+- Host: Windows 11 / PowerShell
+- Working directory: `F:\reconforge-erp`
+- Python environment: `python 3.14.x` (local environment)
+
+### Python & Backend Checks
+- `python -m ruff check .` : Passed (Exit 0).
+- `python -m mypy reconforge` : Passed (Exit 0).
+- `python -m pytest` : Passed (Exit 0).
+  - Result: **2683 passed, 91 skipped** (23 warnings) in **356.71 s**.
+- `python -m bandit -q -r reconforge` : Passed (Exit 0), no blocking issues.
+- `python -m pip_audit` : Passed (Exit 0).
+  - No known vulnerabilities found.
+- `python -m build --no-isolation` : Passed.
+  - Built artifacts include `reconforge_erp-0.7.1.tar.gz` and `reconforge_erp-0.7.1-py3-none-any.whl`.
+- `git diff --check` : Passed (Exit 0), CRLF normalization note only.
+
+### Web Frontend Checks (apps/web)
+- `npm --prefix apps/web ci` : Passed (Exit 0).
+- `npm --prefix apps/web run typecheck` : Passed (Exit 0).
+- `npm --prefix apps/web run test:run` : Passed.
+  - Result: **12 files, 67 tests**.
+- `npm --prefix apps/web run build` : Passed (Exit 0).
+- `npm --prefix apps/web run e2e` : Passed (Exit 0).
+  - Result: **20 tests, 15 passed, 5 skipped**.
+
+### Platform CLI & Demo
+- `reconforge doctor` : Passed.
+- `reconforge validate examples/sample_data` : Passed with warnings only (0 errors).
+- `reconforge demo run --output output/baseline-demo` : Passed.
+  - Produced dashboard/executive/pack/artifact outputs in `output/baseline-demo`.
+
+### Docker
+- `docker build -t reconforge:baseline .` : Blocked (environment).
+  - Error: Docker API unavailable (`npipe:////./pipe/dockerDesktopLinuxEngine`).
+- `docker run --rm reconforge:baseline reconforge doctor` : Blocked (environment).
+  - Same Docker API connectivity issue above.
 
 ## Environment & Commands Execution Log
 

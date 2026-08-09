@@ -73,3 +73,17 @@ def test_current_grouped_matching_1m_report_is_digest_bound() -> None:
     assert report["status"] == "verified"
     assert report["invariants"]["effect_digest_equal"] is True
     assert report["invariants"]["manifest_digest_equal"] is True
+
+
+def test_current_grouped_matching_100k_report_is_digest_bound() -> None:
+    report = json.loads(
+        Path("docs/execution/benchmarks/grouped-matching-100k-current-2026-08-08.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    supplied = str(report.pop("report_digest"))
+    canonical = json.dumps(report, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    assert supplied == hashlib.sha256(canonical).hexdigest()
+    assert report["status"] == "verified"
+    assert report["invariants"]["effect_digest_equal"] is True
+    assert report["invariants"]["manifest_digest_equal"] is True

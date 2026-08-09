@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ipaddress
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -405,10 +406,99 @@ def test_dns_answers_fail_closed_for_private_or_mixed_addresses() -> None:
         "api.example.test", 443, resolver=lambda _host, _port: ("93.184.216.34",)
     ) == ("93.184.216.34",)
     for answers in [("127.0.0.1",), ("93.184.216.34", "169.254.169.254")]:
+        def _resolver(_host: str, _port: int, values: tuple[str, ...] = answers) -> tuple[str, ...]:
+            return values
+
         with pytest.raises(ConnectorNetworkError, match="not_public"):
             resolve_public_addresses(
-                "api.example.test", 443, resolver=lambda _host, _port, values=answers: values
+                "api.example.test", 443, resolver=_resolver
             )
+
+
+def test_pinned_transport_retries_resolved_addresses_until_success() -> None:
+    resolved_addresses = ("2606:4700:4401::ac40:9119", "93.184.216.34")
+    def _address_sort_key(item: str) -> tuple[int, bytes]:
+        address = ipaddress.ip_address(item)
+        return (address.version, address.packed)
+
+    expected_addresses = tuple(sorted(resolved_addresses, key=_address_sort_key))
+    call_order: list[str] = []
+
+    class _Response:
+        status = 200
+
+        def read(self, amount: int) -> bytes:
+            return b'{"records":[]}'
+
+        def getheader(self, name: str) -> None:
+            return None
+
+    class _Connection:
+        def __init__(self, address: str) -> None:
+            self._address = address
+
+        def request(self, method: str, target: str, *, headers: dict[str, str]) -> None:
+            del method, headers
+            if self._address == expected_addresses[0]:
+                raise OSError("unreachable")
+            assert target == "/v1/records"
+
+        def getresponse(self) -> _Response:
+            return _Response()
+
+        def close(self) -> None:
+            pass
+
+    def factory(_host: str, _port: int, address: str, _timeout: int, _context: object) -> _Connection:
+        call_order.append(address)
+        return _Connection(address)
+
+    transport = PinnedHttpsGetTransport(
+        resolver=lambda _host, _port: resolved_addresses,
+        connection_factory=factory,
+    )
+    response = transport.get(
+        "https://api.example.test/v1/records",
+        headers={},
+        timeout_seconds=5,
+        maximum_response_bytes=100,
+    )
+
+    assert response.status == 200
+    assert call_order == list(expected_addresses)
+
+
+def test_pinned_transport_reports_connector_transport_failed_when_all_addresses_unreachable() -> None:
+    resolved_addresses = ("93.184.216.34", "8.8.8.8")
+
+    class _Connection:
+        def __init__(self, _address: str) -> None:
+            pass
+
+        def request(self, method: str, target: str, *, headers: dict[str, str]) -> None:
+            del method, target, headers
+            raise OSError("unreachable")
+
+        def getresponse(self) -> object:
+            raise AssertionError("getresponse should not be called")
+
+        def close(self) -> None:
+            pass
+
+    def factory(_host: str, _port: int, _address: str, _timeout: int, _context: object) -> _Connection:
+        return _Connection(_address)
+
+    transport = PinnedHttpsGetTransport(
+        resolver=lambda _host, _port: resolved_addresses,
+        connection_factory=factory,
+    )
+    with pytest.raises(ConnectorNetworkError, match="connector_transport_failed"):
+        transport.get(
+            "https://api.example.test/v1/records",
+            headers={},
+            timeout_seconds=5,
+            maximum_response_bytes=100,
+        )
 
 
 def test_pinned_transport_preserves_hostname_and_never_follows_redirect() -> None:

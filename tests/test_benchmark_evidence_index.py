@@ -15,7 +15,7 @@ def test_benchmark_evidence_index_verifies_checked_in_artifacts() -> None:
     report = verify_benchmark_index(INDEX)
 
     assert report["index_id"] == "benchmark-evidence-index-v1"
-    assert len(report["verified_entries"]) == 4
+    assert len(report["verified_entries"]) == 5
     assert {entry["status"] for entry in report["verified_entries"]} == {"verified", "partial"}
     assert all(entry["digests"] for entry in report["verified_entries"])
 

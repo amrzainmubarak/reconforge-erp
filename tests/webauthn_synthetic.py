@@ -6,9 +6,12 @@ import base64
 import hashlib
 import json
 
-import cbor2
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import ec
+import pytest
+
+hashes = pytest.importorskip("cryptography.hazmat.primitives.hashes", reason="webauthn crypto extra is optional")
+ec = pytest.importorskip("cryptography.hazmat.primitives.asymmetric.ec", reason="webauthn crypto extra is optional")
+cbor2 = pytest.importorskip("cbor2", reason="webauthn cbor2 extra is optional")
+
 
 
 def b64(value: bytes) -> str:

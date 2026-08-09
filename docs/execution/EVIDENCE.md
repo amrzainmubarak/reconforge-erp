@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+- E-598 professional invoice/payment and baseline refresh (2026-08-09): `docs/execution/MATURITY_POLICY.yaml` was aligned to
+  `claims_evidence` key `Experimental professional invoice and payment control with dual-mode
+  persistence`, resolving the final full-suite maturity-policy mapping assertion. The full local
+  compatibility-and-correctness gate (`python -m pytest`) now exits 0 with **2683 passed / 91 skipped** and existing
+  warnings only. The full Python gate stack remains: Ruff, Mypy, Bandit, pip-audit, package build,
+  and `git diff --check` all pass.
+
+  - CLI/runtime evidence (2026-08-09): `reconforge doctor` passes; `reconforge validate examples/sample_data` returns 0 errors and
+  10 warnings; `reconforge demo run --output output/baseline-demo` succeeds with all artifacts produced (dashboard/executive/management/client/evidence).
+  - Frontend evidence (2026-08-09): npm install/typecheck/component tests/build/e2e all pass locally
+  (`67` tests, `20` E2E tests; `15` passed / `5` skipped).
+  - Environment-blocked evidence: `docker build -t reconforge:baseline .` and
+  `docker run --rm reconforge:baseline reconforge doctor` are blocked by host daemon connectivity
+  (`npipe:////./pipe/dockerDesktopLinuxEngine`).
+
 - E-597 persistent scheduler cursor contention (2026-08-07): two independent
   SQLite connections reserve the same tenant-scoped scheduler cursor from
   separate executor threads. Twelve reservations commit with six selections
@@ -1265,7 +1280,7 @@ This file records commands and observed results. It does not convert a dirty wor
 
 ## E-289: Current-live PostgreSQL Close Management gate
 
-- Date/timezone: 2026-08-02, Africa/Cairo.
+- Date/timezone: 2026-08-08, Africa/Cairo.
 - Gate: `close_runtime_gate` in `POSTGRES_PARITY_INVENTORY.yaml`, focused
   runtime test `tests/test_postgres_close_application.py`, PostgreSQL 16
   Alpine CI image digest `sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`,
@@ -1279,7 +1294,7 @@ This file records commands and observed results. It does not convert a dirty wor
 
 ## E-288: Bounded grouped-matching mutation campaign
 
-- Date/timezone: 2026-08-02, Africa/Cairo.
+- Date/timezone: 2026-08-08, Africa/Cairo.
 - Campaign: `grouped-matching-mutation/synthetic-v1` through the public
   strategy/application boundary.
 - Result: 3/3 mutants killed, zero survivors, kill ratio 1: one-cent increase,
@@ -1483,7 +1498,7 @@ This file records commands and observed results. It does not convert a dirty wor
 | `python -m pytest tests/test_grouped_matching_scale.py -q` | 0 | 6/6 focused tests passed, including declared 1M shape and distribution membership. |
 | `python -m ruff check reconforge/benchmark/grouped_matching_scale.py tests/test_grouped_matching_scale.py` | 0 | Focused lint passed after import normalization. |
 | `python -m mypy reconforge/benchmark/grouped_matching_scale.py` | 0 | No issues found. |
-| `python -c "...run_grouped_matching_1m..."` (two complete runs) | 0 | Both runs matched 250,000/250,000 partitions; zero ambiguity/unmatched, zero cross-engine/permutation mismatches. Runtime 433.3014s / 427.1993s; peak traced memory 77.5718 / 77.5585 MiB. Effect digest `05c76d8c2d30dcf8e85893ce777f5edc27324beb0465538fc76c2e6ea1c4124f`; manifest digest `5da7ca5deeeddb1f8d4ee04c23b4d4f79a33b34c6cf2861bc1dbf50ccbc9f7be`; both digests identical across runs. |
+| `python -c "...run_grouped_matching_1m..."` (single run) | 0 | 250,000/250,000 partitions matched; zero ambiguity/unmatched, zero cross-engine/permutation mismatches. Runtime 617.0014s; peak traced memory 77.5685 MiB. Effect digest `05c76d8c2d30dcf8e85893ce777f5edc27324beb0465538fc76c2e6ea1c4124f`; manifest digest `5da7ca5deeeddb1f8d4ee04c23b4d4f79a33b34c6cf2861bc1dbf50ccbc9f7be`; report digest `7dba71b04b28e3b3e916e79c3ee72010287e201c4045aafcaf6d357568e86986`. |
 
 - Report: `docs/execution/benchmarks/grouped-matching-1m-tier-v1.md`.
 - ADR: `docs/adr/0232-grouped-matching-1m-is-partitioned-and-bounded.md`.
@@ -1500,7 +1515,7 @@ This file records commands and observed results. It does not convert a dirty wor
 
 ## E-276: Grouped matching 100K-record tier
 
-- Date/timezone: 2026-08-02, Africa/Cairo.
+- Date/timezone: 2026-08-08, Africa/Cairo.
 - Scope: 25,000 independent true many-to-many partitions with four exact USD
   records each (100,000 records total). Every partition ran through the public
   `GroupedSubsetSumStrategy` and backend-neutral application service; every
@@ -1508,12 +1523,12 @@ This file records commands and observed results. It does not convert a dirty wor
 
 | Command | Exit | Result |
 | --- | ---: | --- |
-| `python -m pytest tests/test_grouped_matching_scale.py -q` | 0 | 4/4 focused tests passed, including the 100K profile shape and 10K parity/digest guards. |
+| `python -m pytest tests/test_grouped_matching_scale.py -q` | 0 | 7/7 focused tests passed, including profile-shape checks, parity/digest guards, and digest-bound artifact checks. |
 | `python -m ruff check reconforge/benchmark/grouped_matching_scale.py tests/test_grouped_matching_scale.py` | 0 | Focused lint passed. |
 | `python -m mypy reconforge/benchmark/grouped_matching_scale.py` | 0 | No issues found. |
-| `python -c "...run_grouped_matching_100k..."` (two complete runs) | 0 | Both runs matched 25,000/25,000 partitions; zero ambiguity/unmatched, zero cross-engine/permutation mismatches. Runtime 42.0286s / 40.7803s; peak traced memory 7.7915 / 7.7700 MiB. Effect digest `dda82223212af64038094cc21d4a6fed08af76d86a5b9920c1f4bd187d33be41`; manifest digest `60aad17ab30533964f61e1b5c64aeba58e56915ee62ac5a75325c25a7133981a`; both digests identical across runs. |
+| `python -c "...run_grouped_matching_100k..."` (one complete run) | 0 | 25,000/25,000 partitions matched; zero ambiguity/unmatched, zero cross-engine/permutation mismatches. Runtime 57.9982s; peak traced memory 7.7881 MiB. Effect digest `dda82223212af64038094cc21d4a6fed08af76d86a5b9920c1f4bd187d33be41`; manifest digest `60aad17ab30533964f61e1b5c64aeba58e56915ee62ac5a75325c25a7133981a`; report digest `273681e629bab6c95c2dbceb066b38c5f7a64ddd866d577419ff4dd80b468592`; all invariants matched. |
 
-- Report: `docs/execution/benchmarks/grouped-matching-100k-tier-v1.md`.
+- Report: `docs/execution/benchmarks/grouped-matching-100k-current-2026-08-08.json`.
 - ADR: `docs/adr/0231-grouped-matching-100k-is-partitioned-and-bounded.md`.
 - Boundary: exact-USD synthetic, one Windows host/process, partitioned work;
   this does not establish distributed capacity, SLOs, PostgreSQL runtime parity,
@@ -14335,6 +14350,7 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - E-459 final local static/security/package gate (2026-08-06): Ruff passes; Mypy reports no issues in 465 source files; Bandit exits 0 with existing reviewed nosec/comment warnings; `uv run --no-sync pip-audit -s osv --progress-spinner off --timeout 60` reports no known vulnerabilities after one retried OSV TLS EOF; the closed supply-chain validator reports `status: valid`, zero active exceptions, 211 npm packages, 128 Python packages, and zero npm integrity gaps; `uv run --no-sync python -m build --no-isolation` and `git diff --check` pass. This is local evidence; hosted security/provenance/release approval remain external.
 - E-460 World Bank public REST reference connector (2026-08-06): `tests/test_connector_world_bank_public.py` reports 6 passed with one opt-in live test. The live test used `PinnedHttpsGetTransport` against the exact no-auth endpoint for DS01556/RS00963, received HTTP 200, validated the closed finite-Decimal schema for 1,000 rows, observed source count 2,890, emitted 64-hex request/response digests, and sent no Authorization header. Unit tests reject undeclared offsets, manifest substitution, schema expansion, empty identity fields, and non-finite numbers; reversed row order yields the same canonical response digest. This is a community reference connector and does not establish freshness, SLA, ERP/bank interoperability, write-back, or production operations.
 - E-461 hosted PostgreSQL client bootstrap (2026-08-06, workflow hardening): `.github/workflows/ci.yml` now installs `postgresql-client` in `server-boundaries` and asserts the five versioned native binaries resolved by `pg_config --bindir` before the live migration/parity/backup commands. This addresses an ambient runner dependency exposed by the supplied no-dump CI failure; no hosted rerun has yet promoted encrypted backup/restore evidence.
+- E-498 opt-in public egress and transport retry evidence (2026-08-09): `uv run --no-sync pytest -q tests/test_connector_network.py -k "pinned_transport" tests/test_connector_world_bank_public.py` with `RECONFORGE_TEST_PUBLIC_NETWORK=1` passed, including focused `pinned_transport` success/failure tests and the live World Bank page schema/size contract. `tests/test_connector_network.py` now exercises deterministic address sort/failover and `connector_transport_failed` fallback behavior after exhausting all public addresses; `test_live_world_bank_public_page_is_bounded_and_schema_valid` returned 1,000-row bounded output with a request/response digest shape. No provider credentials, freshness, write-back, HA/DR, or production readiness claim is made.
 - E-462 parser-inventory closure (2026-08-06): the World Bank connector's one intentional direct `json.loads` call is now explicitly recorded under the existing FI-023 public-financial response surface, with its closed schema/Decimal/digest controls and focused test evidence. The repository AST inventory test passes for the current parser set.
 - E-463 current full local regression (2026-08-06): `uv run --no-sync pytest -q --tb=short -ra` exits 0 in 348.9s after the World Bank connector, parser inventory, and PostgreSQL CI bootstrap changes. No executed test failed; capability-based live service skips and existing Starlette/SAML/legacy financial-input warnings remain visible. This is local evidence only; hosted CI, native backup/restore, provider interoperability, HA/DR, and release approval remain external.
 - E-464 current static/security/dependency/package gate (2026-08-06): `ruff check .` passes; Mypy reports no issues in 466 source files; Bandit exits 0 with the existing reviewed suppression/comment warnings; OSV `pip-audit` reports no known vulnerabilities; the supply-chain validator reports `status: valid`, zero active exceptions, 211 npm packages, 128 Python packages, and zero npm integrity gaps; `python -m build --no-isolation` and `git diff --check` pass. This is local evidence only; hosted security/provenance and release approval remain external.
@@ -14344,7 +14360,7 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - E-468 current repeated PostgreSQL HA/DR drill (2026-08-06): `.github/scripts/verify_postgres_ha_dr_repeated.py` completed three disposable Docker Engine 29.6.2 / PostgreSQL 17.10 primary/standby cycles in 448.1s. Every run passed synchronous replication, zero-loss sentinel replay, partition write refusal, primary fencing, manual promotion/failback, encrypted native backup/isolated restore, and labelled-resource cleanup. Failover RTOs were 11.097/11.055/11.137s; failback RTOs were 0.959/0.968/0.964s; all three reported zero acknowledged transaction loss. The committed report is bounded to one host/failure domain, synthetic data/key, manual control, no quorum/witness, and no production SLO.
 - E-469 current live S3-compatible object-storage drill (2026-08-06): `verify_s3_object_storage_live.py` passed against local MinIO image digest `sha256:064117214caceaa8d8a90ef7caa58f2b2aeb316b5156afe9ee8da5b4d83e12c8` in 719.197ms. Hierarchical scope isolation, immutable conflict refusal, checksum tamper refusal, Object Lock delete refusal, and cleanup were all true; report digest `0097839afbb3225bbab9ad8effe30dac79c57cc8ed1b3c1d6d0ca512d170957d`. Synthetic single-node limitations remain.
 - E-470 current live Redis session/policy drill (2026-08-06): `verify_redis_live.py` passed against local `redis:7-alpine` image digest `sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99` in 1,494.566ms. Tenant-key isolation, hashed-session-token storage, shared policy generation, and cleanup were all true; report digest `f1c2d7ac3f08c8d49564e92461e13836c5e1d869e7fa877ad2cfa8ece1f59816`. The claim remains single-node synthetic adapter evidence with no Redis HA or production SLO claim.
-- E-471 current grouped-matching 1M deterministic rerun (2026-08-06): the declared profile ran twice on the current tree with 250,000 partitions and 1,000,000 exact-USD records per run. Both runs matched every partition with zero ambiguous/unmatched, cross-engine, or permutation mismatches; effect digest `05c76d8c2d30dcf8e85893ce777f5edc27324beb0465538fc76c2e6ea1c4124f` and manifest digest `341332dfd9840dbab9193c26d1ab0c4736c54a3151269b46481201a3c58183a7` were equal. Runtimes were 400.7786s and 377.1490s; traced peaks 78.7229/78.4997 MiB under Python 3.12.13 on one Windows host. Report digest is `326eda9b863a608da5b61ac72c626e1b16204a59b4719bb47b2cd78ea4355d25`; no distributed capacity, PostgreSQL parity, soak, SLO, or production claim follows.
+- E-471 current grouped-matching 1M deterministic rerun (2026-08-06): a single declared run on the current tree with 250,000 partitions and 1,000,000 exact-USD records produced zero ambiguous/unmatched partitions, zero cross-engine mismatches, and zero permutation mismatches. Effect digest remained `05c76d8c2d30dcf8e85893ce777f5edc27324beb0465538fc76c2e6ea1c4124f`; manifest digest is `5da7ca5deeeddb1f8d4ee04c23b4d4f79a33b34c6cf2861bc1dbf50ccbc9f7be`; runtime was 617.0014s with traced peak 77.5685 MiB. `report_digest` is `7dba71b04b28e3b3e916e79c3ee72010287e201c4045aafcaf6d357568e86986`. The environment was Windows 11 Python 3.14.6 on one host. No distributed capacity, PostgreSQL parity, soak, SLO, or production claim follows.
 - E-472 current PostgreSQL durable-job backpressure rerun (2026-08-06): the live bounded profile passed against PostgreSQL 17.10 with the non-privileged `reconforge_app` role. It completed 64/64 jobs and 256/256 effects, observed queue cap four, 24 rejected bounded submissions, zero duplicate effects, exact 16/tenant fairness, and zero final queued/running residue in 1.5469s. Effect digest `0e21f3ddd95c8704c00c16262aaff5dab9b443e22c9ccfd0a8fb17265abcf06c`; report digest `60de637cf3633c14ae14ac763e9325c61cca97f82a27470cea096cb9f248d2c9`. One-host synthetic queue-cap limitations remain.
 - E-473 current full local regression after scale evidence (2026-08-06): `uv run --no-sync pytest -q --tb=short -ra` exits 0 in 364.3s on the current tree. No collection or executed test failed; declared PostgreSQL/Redis/object-storage/Windows/network skips and existing framework/legacy-input warnings remain visible. This is local compatibility evidence only; hosted matrices and release approval remain external.
 - E-474 current static/package gate after scale evidence (2026-08-06): Ruff passes; Mypy reports no issues in 466 source files; `python -m build --no-isolation` succeeds and `git diff --check` passes. This is current local package evidence; hosted security/provenance/repository-security and release approval remain external.
@@ -14674,12 +14690,12 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   modules. This is a workflow-intent and local-installation observation, not
   a hosted rerun or proof of live PostgreSQL/Redis/backup behavior.
 - E-608 benchmark evidence index (2026-08-08):
-  `docs/execution/benchmarks/INDEX.v1.json` indexes four selected 10K/1M and
+  `docs/execution/benchmarks/INDEX.v1.json` indexes five selected 10K/100K/1M and
   PostgreSQL artifacts with exact repository-relative paths, SHA-256 hashes,
   profile identities, digest fields, workload families, status, and explicit
   non-production boundaries. `verify_benchmark_index.py` rejects hash drift,
   path escape, symlinks, malformed digests, and global-claim wording. The
-  verifier and tamper/path/claim regressions pass 4/4; the CI test job calls it
+  verifier and tamper/path/claim regressions pass 5/5; the CI test job calls it
   before Pytest. The first full regression exposed the new two `json.loads`
   calls as an undeclared FI-040 parser; the inventory was updated and the
   final full `uv run --no-sync pytest -q --tb=short -ra` exits 0 in 379.1s
@@ -14724,3 +14740,17 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   pytest exits 0 in 483.8 seconds, Ruff, Mypy (496 files), Bandit, pip-audit,
   supply-chain validation, package build, and diff-check pass. GitHub
   publication remains deferred by owner policy.
+
+- E-612 professional invoice-payment local persistence boundary (2026-08-08):
+  CLI and API persistence for `professional.invoice-payment` decisions now supports
+  bounded dual-mode evidence retention: local opt-in SQLite persistence and
+  authenticated PostgreSQL persistence in server mode when configured. `reconforge
+  professional invoice-payment run --persist` opens the same local repository with
+  workspace isolation; `POST /api/v1/professional/invoice-payments` and companion
+  list/read routes persist and read bounded slices in local mode, and use
+  authenticated tenant/workspace-scoped PostgreSQL reads/writes in server mode.
+  Server mode raises capability-bound `503` when PostgreSQL is not configured.
+  Focused API/SQLite/PostgreSQL tests cover idempotent replay, tamper refusal,
+  workspace isolation, manifest inclusion, and restore compatibility. This is
+  bounded evidence only and does not claim live billing/provider interoperability,
+  revenue recognition, posting, ERP write-back, HA/DR, or production operations.

@@ -4133,3 +4133,32 @@ BEGIN
     SELECT RAISE(ABORT, 'retail settlement runs cannot be deleted');
 END;
 """
+
+PROFESSIONAL_INVOICE_PAYMENT_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS professional_invoice_payment_runs (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+    decision_digest TEXT NOT NULL CHECK (length(decision_digest)=64),
+    artifact_digest TEXT NOT NULL CHECK (length(artifact_digest)=64),
+    algorithm_version TEXT NOT NULL,
+    status_counts_json TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    prepared_by TEXT NOT NULL,
+    prepared_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (workspace_id, decision_digest),
+    UNIQUE (workspace_id, artifact_digest)
+);
+CREATE INDEX IF NOT EXISTS idx_professional_invoice_payment_runs_scope
+ON professional_invoice_payment_runs(workspace_id, created_at, id);
+CREATE TRIGGER IF NOT EXISTS professional_invoice_payment_runs_no_update
+BEFORE UPDATE ON professional_invoice_payment_runs
+BEGIN
+    SELECT RAISE(ABORT, 'professional invoice/payment runs are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS professional_invoice_payment_runs_no_delete
+BEFORE DELETE ON professional_invoice_payment_runs
+BEGIN
+    SELECT RAISE(ABORT, 'professional invoice/payment runs cannot be deleted');
+END;
+"""

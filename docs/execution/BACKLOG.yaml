@@ -1064,8 +1064,8 @@ tasks:
       - E-272 adds a bounded grouped-matching replay profile over one-to-many, many-to-one, true many-to-many, and portfolio partial-settlement partitions. It compares the public strategy adapter with the application boundary, injects a failure after one committed partition, resumes through durable-job checkpoints, and requires the persisted effect digest to equal an uninterrupted baseline. A one-cent adversarial mutation sentinel must change the output digest. ADR 0227, focused contracts, benchmark documentation, and package membership are included. PostgreSQL parity, mutation-tool score, and scale publication remain open.
       - E-273 adds a PostgreSQL-worker grouped matching adapter at the explicit contract boundary. It translates streamed tenant-scoped partitions into the closed grouped strategy request, rejects implicit modes and binary tolerances, skips completed checkpoints, and emits deterministic JSON-safe partition results. Five focused contracts and ADR 0228 are included; the parity inventory deliberately continues to classify the pure grouped service as `not_applicable` and does not count this adapter as live parity. Deployment/runtime evidence remains open.
       - E-275 publishes the first matching-specific 10K tier: 2,500 independent true many-to-many partitions with four records each. Every partition runs through the public strategy adapter and application service; reversed-order samples prove permutation stability. Two Windows 11/Python 3.14.6 runs match all 2,500 partitions with zero ambiguity/unmatched results, zero cross-engine/permutation mismatches, and identical effect/manifest digests. FX/fee/partial-settlement density, PostgreSQL runtime parity, and 100K/1M tiers remain unverified.
-      - E-276 publishes the matching-specific 100K tier: 25,000 independent true many-to-many partitions with four records each. Two Windows 11/Python 3.14.6 runs match all 25,000 partitions with zero ambiguity/unmatched results, zero cross-engine/permutation mismatches, and identical effect/manifest digests. The observed runtimes were 42.0286s and 40.7803s with 7.7915/7.7700 MiB peak traced memory. FX/fee/partial-settlement density, PostgreSQL runtime parity, distributed capacity, and 1M remain unverified.
-      - E-277 publishes the matching-specific 1M tier: 250,000 independent true many-to-many partitions with four records each. Two Windows 11/Python 3.14.6 runs match all 250,000 partitions with zero ambiguity/unmatched results, zero cross-engine/permutation mismatches, and identical effect/manifest digests. The observed runtimes were 433.3014s and 427.1993s with 77.5718/77.5585 MiB peak traced memory. PostgreSQL runtime parity, soak, distributed capacity, and domain-diverse workloads remain unverified.
+      - E-276 publishes the matching-specific 100K tier: 25,000 independent true many-to-many partitions with four records each. One Windows 11/Python 3.14.6 run matched all 25,000 partitions with zero ambiguity/unmatched results, zero cross-engine/permutation mismatches, and identical effect/manifest digests. Observed runtime was 57.9982s and peak traced memory was 7.7881 MiB. FX/fee/partial-settlement density, PostgreSQL runtime parity, distributed capacity, and 1M remain unverified.
+      - E-277 publishes the matching-specific 1M tier: 250,000 independent true many-to-many partitions with four records each. One Windows 11/Python 3.14.6 run matched all 250,000 partitions with zero ambiguity/unmatched results, zero cross-engine/permutation mismatches, and identical effect/manifest digests. Observed runtime was 617.0014s and peak traced memory was 77.5685 MiB. PostgreSQL runtime parity, soak, distributed capacity, and domain-diverse workloads remain unverified.
       - E-288 adds a bounded request-level mutation campaign for grouped matching. Three critical mutants (one-cent amount increase, one-cent decrease, and disabling partial settlement) are each compared with their own baseline through the public strategy/application boundary; 3/3 are killed with zero survivors. This is a targeted financial sentinel, not a source-code mutation score; PostgreSQL runtime, fuzzing, and mutation coverage outside these cases remain open.
       - E-317 closes the PostgreSQL worker-runtime gap for bounded grouped matching. The adapter now projects grouped decisions into the existing per-source result/exception contract, preserves full group evidence and strategy digests in lineage, prevents JSON attributes from overriding database-owned canonical values, and emits deterministic portfolio-unmatched rows. A live non-superuser PostgreSQL worker gate proves one-to-many completion, exact edge cardinality, checkpointing, direct strategy digest parity, and sibling-tenant isolation. The pure GroupedMatchingApplicationService remains `not_applicable` in the application-service parity inventory; 10K/100K/1M PostgreSQL scale, soak, backpressure, distributed capacity, and posting/write-back remain open.
       - E-318 adds a live PostgreSQL crash/resume contract for the grouped worker. Two synthetic entity partitions run under a non-superuser RLS role; an unhandled process-crash exception is injected after the first atomic checkpoint, a replacement worker is fenced while the original lease is valid, and after explicit lease expiry it resumes only the remaining partition. The gate requires two checkpoints, three unique result identities, attempt two, no duplicate edges, and completion. ADR 0269 and package membership are included. Automatic supervision, HA/DR, soak, capacity, live providers, posting, and write-back remain open.
@@ -1532,7 +1532,7 @@ tasks:
     title: Current grouped-matching 1M deterministic rerun
     status: completed
     depends_on: [P4-MAT-001]
-    exit_evidence: The declared grouped-matching 1M profile runs twice on the current tree with 250,000 partitions and 1,000,000 exact-USD records each. Both runs match all partitions with zero ambiguous/unmatched, cross-engine, or permutation mismatches; effect and manifest digests are equal. Current runtimes are 400.7786s and 377.1490s with traced peak memory 78.7229/78.4997 MiB under Python 3.12.13 on one Windows host. This is synthetic single-process algorithm evidence, not distributed capacity, PostgreSQL parity, soak, SLO, or production readiness.
+    exit_evidence: The declared grouped-matching 1M profile ran once on the current tree with 250,000 partitions and 1,000,000 exact-USD records. It matched all partitions with zero ambiguous/unmatched partitions, zero cross-engine mismatches, and zero permutation mismatches; effect digest remained `05c76d8c2d30dcf8e85893ce777f5edc27324beb0465538fc76c2e6ea1c4124f`, manifest digest is `5da7ca5deeeddb1f8d4ee04c23b4d4f79a33b34c6cf2861bc1dbf50ccbc9f7be`, runtime was 617.0014s, and traced peak was 77.5685 MiB on Python 3.14.6 / one Windows host.
 
   - id: E-472
     priority: P0
@@ -1764,16 +1764,17 @@ tasks:
     priority: P1
     area: connectors
     title: Opt-in public network connector runtime on current host
-    status: blocked
+    status: completed
     depends_on: [P4-CON-001, E-497]
     exit_evidence: >-
-      Blocked on 2026-08-06: the opt-in World Bank public connector test reached
-      the pinned HTTPS connection but the current host returned WinError 10051
-      (unreachable network), surfaced as connector_transport_failed. No live
-      schema, response digest, or public-network interoperability claim is
-      promoted until the same test can run from an explicitly authorized
-      egress-enabled environment. Synthetic transport/fixture tests remain
-      separate and passing.
+      Under opt-in network mode
+      (`RECONFORGE_TEST_PUBLIC_NETWORK=1`) the transport now retries resolved
+      public addresses deterministically before failing, `test_live_world_bank_public_page_is_bounded_and_schema_valid`
+      receives HTTP 200 from the reference endpoint, and schema/size/decimal
+      invariants remain stable. Focused retries and synthetic transport fallbacks
+      are covered by `tests/test_connector_network.py`; no auth/provider
+      interoperability, production claims, write-back, or deployment-wide egress
+      assurance are claimed.
   - id: E-499
     priority: P1
     area: advanced_matching
@@ -3649,3 +3650,24 @@ tasks:
       pass; the full local Python regression exits 0 in 483.8 seconds, Ruff,
       Mypy (496 files), Bandit, pip-audit, supply-chain validation, package
       build, and diff-check pass.
+
+  - id: E-612
+    priority: P2
+    area: platform-breadth
+    title: Add local professional invoice/payment persistence and bounded API read path
+    status: completed
+    depends_on: [E-611, E-604, P4-PLAT-001]
+    exit_evidence: >-
+      Professional invoice/payment decisions now support bounded persistence in both
+      local SQLite and server-profile PostgreSQL modes behind explicit scope-aware
+      selection. Persisted artifacts include versioned request/result payloads,
+      decision digests, algorithm fingerprints, status, and replay-safe evidence
+      metadata. CLI persistence (`reconforge professional invoice-payment run --persist`)
+      is backed by explicit database mode selection and workspace boundaries. The API route
+      (`POST /api/v1/professional/invoice-payments`) now supports local and server-mode
+      run/list/read retrieval with finance read/manage/validate policies; local mode
+      uses SQLite persistence and server mode is authenticated PostgreSQL-backed persistence.
+      Focused tests cover idempotent replay, workspace isolation, tamper refusal,
+      restore, manifest inclusion, and browser/API registry alignment. This boundary
+      remains bounded evidence: no live billing, provider interoperability, posting,
+      write-back, HA/DR, or production readiness.

@@ -13,6 +13,9 @@ from reconforge.auth.webauthn_config import WebAuthnRuntime
 from reconforge.db import run_migrations
 from tests.webauthn_synthetic import authentication_response, registration_response
 
+pytest.importorskip("cbor2", reason="webauthn cbor2 extra is optional")
+pytest.importorskip("cryptography", reason="webauthn crypto extra is optional")
+
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL service")
 def test_live_http_webauthn_enrollment_mfa_step_up_replay_and_tenant_scope(

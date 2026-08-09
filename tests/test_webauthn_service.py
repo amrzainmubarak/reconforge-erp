@@ -4,9 +4,7 @@ import base64
 import hashlib
 import json
 
-import cbor2
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import ec
+import pytest
 
 from reconforge.auth.webauthn import (
     authentication_options,
@@ -16,6 +14,11 @@ from reconforge.auth.webauthn import (
 )
 from reconforge.auth.webauthn_config import WebAuthnRuntime
 from reconforge.infrastructure.postgres_webauthn import WebAuthnCredential
+
+cryptography_hashes = pytest.importorskip("cryptography.hazmat.primitives", reason="webauthn crypto extra is optional")
+hashes = cryptography_hashes.hashes
+ec = pytest.importorskip("cryptography.hazmat.primitives.asymmetric.ec", reason="webauthn crypto extra is optional")
+cbor2 = pytest.importorskip("cbor2", reason="webauthn cbor2 extra is optional")
 
 
 def _b64(value: bytes) -> str:

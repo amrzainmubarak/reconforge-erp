@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Literal, cast
 
 import pytest
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from jsonschema import Draft202012Validator
 
 import reconforge.upgrade.postgres_adapter as postgres_upgrade_module
@@ -50,6 +49,11 @@ from reconforge.upgrade.postgres_adapter import (
     postgres_revision_digest,
 )
 from reconforge.upgrade.sqlite_adapter import SQLiteUpgradeAdapter
+
+cryptography_ed25519 = pytest.importorskip(
+    "cryptography.hazmat.primitives.asymmetric.ed25519", reason="upgrade cryptography extra is optional"
+)
+Ed25519PrivateKey = cryptography_ed25519.Ed25519PrivateKey
 
 
 def _digest(value: str) -> str:

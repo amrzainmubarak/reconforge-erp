@@ -1,10 +1,26 @@
 # Execution State
 
-Updated: 2026-08-08
+Updated: 2026-08-09
 
 ## Current phase
 
 Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope remains complete)
+
+## E-498 — Opt-in public network runtime after transport address-retry hardening (passed locally)
+
+- `PinnedHttpsGetTransport` now retries every resolved public IPv4/IPv6 address
+  before returning `connector_transport_failed`, and it preserves deterministic
+  sorted attempt order plus the existing exact-allowlisted fixed query path.
+- New focused transport coverage now verifies:
+  1) first-address failure with second-address success,
+  2) all-address failure -> `connector_transport_failed`,
+  3) non-public destination fail-closed, and
+  4) schema/tamper boundary behavior under synthetic fixtures.
+- With `RECONFORGE_TEST_PUBLIC_NETWORK=1`, the live reference test
+  `test_live_world_bank_public_page_is_bounded_and_schema_valid` passes and returns
+  a bounded schema-valid page with request/response digests.
+- Boundary remains unchanged: synthetic read-only connector scope, no vendor write-back,
+  no SLA, no production deployment evidence.
 
 ## E-423 — PostgreSQL migration-head compatibility repair (passed locally)
 
@@ -4255,11 +4271,11 @@ publication and remote GitHub verification before a release Go decision.
   partition runs through `GroupedSubsetSumStrategy` and the backend-neutral
   application service; every 10,000th partition is replayed with reversed input
   order.
-- Two Windows 11/Python 3.14.6 runs matched all 250,000 partitions with zero
+- One Windows 11/Python 3.14.6 run matched all 250,000 partitions with zero
   ambiguity/unmatched results, zero cross-engine/permutation mismatches, and
   identical effect digest `05c76d8c2d30dcf8e85893ce777f5edc27324beb0465538fc76c2e6ea1c4124f`
   and manifest digest `5da7ca5deeeddb1f8d4ee04c23b4d4f79a33b34c6cf2861bc1dbf50ccbc9f7be`.
-  Runtime was 433.3014s / 427.1993s and peak traced memory was 77.5718 / 77.5585 MiB.
+  Runtime was 617.0014s and peak traced memory was 77.5685 MiB.
 - Boundary: exact USD synthetic, one-process partitioned evidence only.
   PostgreSQL runtime parity, distributed load, soak/SLOs, provider I/O, and
   domain-diverse financial workloads remain unverified.
@@ -4271,11 +4287,11 @@ publication and remote GitHub verification before a release Go decision.
   partition runs through `GroupedSubsetSumStrategy` and the backend-neutral
   application service; every 1,000th partition is replayed with reversed input
   order.
-- Two Windows 11/Python 3.14.6 runs matched all 25,000 partitions with zero
+- One Windows 11/Python 3.14.6 run matched all 25,000 partitions with zero
   ambiguity/unmatched results, zero cross-engine/permutation mismatches, and
   identical effect digest `dda82223212af64038094cc21d4a6fed08af76d86a5b9920c1f4bd187d33be41`
   and manifest digest `60aad17ab30533964f61e1b5c64aeba58e56915ee62ac5a75325c25a7133981a`.
-  Runtime was 42.0286s / 40.7803s and peak traced memory was 7.7915 / 7.7700 MiB.
+  Runtime was 57.9982s and peak traced memory was 7.7881 MiB.
 - Boundary: exact USD synthetic, one-process partitioned evidence only.
   PostgreSQL runtime parity, distributed load, soak/SLOs, financial-domain
   diversity, and 1M records remain unverified.
@@ -4471,7 +4487,7 @@ publication and remote GitHub verification before a release Go decision.
   entry `manufacturing.cost-control` is experimental/implemented and has no
   database, provider, network, posting, or write-back dependency.
 - Boundary: this does not prove statutory or standard-cost valuation policy, live
-  ERP/MRP interoperability, inventory/WIP/GL posting, write-back,
+  ERP/MRP interoperability, inventory or GL posting, write-back,
   persistence/API/Studio, HA/DR, production availability, or complete
   manufacturing breadth.
 - ADR: `docs/adr/0366-manufacturing-production-cost-control-slice.md`.
@@ -4673,7 +4689,7 @@ The final current-tree regression after these evidence artifacts exits 0 in
 the local regression/package checkpoint only; declared external-service skips,
 hosted matrices, hosted security/provenance, live vendor interoperability,
 independent HA/DR, and production approval remain open.
-The current grouped-matching 1M profile also ran twice from this tree with
+The current grouped-matching 1M profile also ran once from this tree with
 identical effect and manifest digests and zero ambiguity, unmatched, engine, or
 permutation mismatches. This strengthens deterministic single-process algorithm
 evidence only; PostgreSQL parity, distributed capacity, soak, and production
@@ -5601,11 +5617,30 @@ showing client/payment references, variance reasons, filters, and evidence
 digests. The module registry and threat-model index now declare the modern
 Studio interface and browser test evidence. Live billing/provider/API behavior,
 receivables allocation, revenue recognition, posting, write-back, HA/DR, and
-production professional-services evidence remain open. Web TypeScript build,
-67/67 component tests, production build, and 9/9 accessibility E2E tests pass;
-the full local Python regression exits 0 in 483.8 seconds, with Ruff, Mypy
-(496 files), Bandit, pip-audit, supply-chain validation, package build, and
-diff-check passing. GitHub publication remains deferred by owner policy.
+production professional-services evidence remain open. Web TypeScript checks and
+UI gates are verified:
+TypeScript build, `npm run typecheck`, `npm run test:run` (67/67), and
+`npm run build` pass; Playwright accessibility and UX evidence now includes
+15/15 executed Chromium paths plus 5 skipped (focused synthetic local flows),
+including same-origin sign-in/step-up, Arabic RTL, command-dialog focus flow,
+and admin/mapper disclosure boundaries.  The full local Python regression exits 0
+in 483.8 seconds, with Ruff, Mypy (496 files), Bandit, pip-audit, supply-chain
+validation, package build, and diff-check passing. GitHub publication remains
+deferred by owner policy.
+
+E-612 adds local persistence for the professional invoice/payment control:
+`reconforge professional invoice-payment run --persist` and the local
+SQLite-backed repository now store replayable decision artifacts, policy
+fingerprints, and workspace-scoped metadata. The same API surface
+`POST /api/v1/professional/invoice-payments` and list/read routes now support
+bounded dual-mode persistence: local mode persists to SQLite, while server mode
+routes to the authenticated PostgreSQL repository when the profile configures it.
+Server mode returns an explicit capability-bound 503 error when PostgreSQL
+selection is unavailable. Focused tests cover idempotent replay, tamper
+refusal, workspace isolation, manifest inclusion, and restore round-trips. This
+closes the dual-mode persistence boundary for this slice while keeping live
+billing/payment connectivity, posting, ERP write-back, HA/DR, and production
+operations out of scope.
 
 E-597 extends the scheduler cursor evidence with two independent SQLite
 connections reserving the same lane sequence from separate executor threads.
@@ -5714,7 +5749,7 @@ it is not hosted CI evidence and does not close live PostgreSQL/Redis/native
 backup, HA/DR, provider, or production gates. GitHub publication remains
 deferred by owner policy.
 
-E-608 adds the machine-readable benchmark evidence index and verifier. Four
+E-608 adds the machine-readable benchmark evidence index and verifier. Five
 selected matching/durable-job JSON artifacts are bound by repository-relative
 path, SHA-256, profile ID, declared digest fields, workload family, status,
 and non-production wording. The verifier passes local artifacts and rejects

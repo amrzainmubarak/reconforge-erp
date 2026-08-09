@@ -560,11 +560,20 @@ include docs/adr/0366-manufacturing-production-cost-control-slice.md
 include reconforge/domain/professional_invoice_payment_control.py
 include reconforge/application/professional_invoice_payment_control.py
 include reconforge/cli_professional_invoice_payment_control.py
+include reconforge/api/routes/professional_invoice_payment.py
+include reconforge/api/server_professional_invoice_payment.py
+include reconforge/infrastructure/sqlite_professional_invoice_payment.py
+include reconforge/infrastructure/postgres_professional_invoice_payment.py
 include tests/test_professional_invoice_payment_control.py
+include tests/test_api_professional_invoice_payment.py
+include tests/test_api_server_professional_invoice_payment.py
+include tests/test_postgres_professional_invoice_payment.py
+include tests/test_sqlite_professional_invoice_payment.py
 include docs/schemas/professional_invoice_payment_report.schema.json
 recursive-include control-packs/professional-invoice-payment *
 recursive-include examples/professional_invoice_payment *
 include docs/adr/0367-professional-invoice-payment-control-slice.md
+include docs/adr/0452-professional-invoice-payment-local-persistence.md
 include apps/web/public/demo/studio-professional-invoice-payment.json
 include apps/web/src/components/ProfessionalInvoicePaymentStudio.tsx
 include apps/web/src/components/ProfessionalInvoicePaymentStudio.test.tsx
@@ -582,6 +591,7 @@ include docs/adr/0230-grouped-matching-10k-is-partitioned-and-bounded.md
 include docs/execution/benchmarks/grouped-matching-10k-tier-v1.md
 include docs/adr/0231-grouped-matching-100k-is-partitioned-and-bounded.md
 include docs/execution/benchmarks/grouped-matching-100k-tier-v1.md
+include docs/execution/benchmarks/grouped-matching-100k-current-2026-08-08.json
 include docs/adr/0232-grouped-matching-1m-is-partitioned-and-bounded.md
 include docs/execution/benchmarks/grouped-matching-1m-tier-v1.md
 include docs/execution/benchmarks/grouped-matching-1m-current-2026-08-06.json

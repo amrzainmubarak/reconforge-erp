@@ -144,3 +144,32 @@ def test_professional_control_cli_writes_replayable_artifact(tmp_path: Path) -> 
     )
     assert result.exit_code == 0, result.output
     assert verify_professional_invoice_payment_report(output)["status_counts"]["ambiguous"] == 1
+
+
+def test_professional_control_cli_can_persist_local_evidence(tmp_path: Path) -> None:
+    output = tmp_path / "cli-persisted-report.json"
+    database = tmp_path / "cli-persisted.db"
+    result = runner.invoke(
+        app,
+        [
+            "professional",
+            "invoice-payment",
+            "run",
+            "--invoices-input",
+            str(INVOICES),
+            "--payments-input",
+            str(PAYMENTS),
+            "--currency",
+            "USD",
+            "--output",
+            str(output),
+            "--database",
+            str(database),
+            "--workspace",
+            "firm-a",
+            "--persist",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Persisted evidence ID:" in result.output
+    assert verify_professional_invoice_payment_report(output)["status_counts"]["matched"] == 2

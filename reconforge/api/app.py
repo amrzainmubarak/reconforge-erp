@@ -62,6 +62,7 @@ from reconforge.api.routes import (
     master_data,
     metrics,
     payables,
+    professional_invoice_payment,
     receivables,
     reconciliation,
     retail_settlement,
@@ -202,6 +203,7 @@ def create_api_app(
     app.state.postgres_reconciliation_factory = app.state.postgres_identity_factory
     app.state.postgres_writeback_factory = app.state.postgres_identity_factory
     app.state.postgres_retail_settlement_factory = app.state.postgres_identity_factory
+    app.state.postgres_professional_invoice_payment_factory = app.state.postgres_identity_factory
     app.state.federation_providers = dict(federation_providers or {})
     app.state.federation_verifiers = dict(federation_verifiers or {})
     app.state.federation_air_gap_mode = federation_air_gap_mode
@@ -369,6 +371,7 @@ def create_api_app(
     app.include_router(scoped_exports.router, prefix="/api/v1")
     app.include_router(reconciliation.router, prefix="/api/v1")
     app.include_router(retail_settlement.router, prefix="/api/v1")
+    app.include_router(professional_invoice_payment.router, prefix="/api/v1")
     app.include_router(exceptions.router, prefix="/api/v1")
     app.include_router(metrics.router, prefix="/api/v1")
     app.include_router(payables.router, prefix="/api/v1")
@@ -407,6 +410,7 @@ def create_api_app(
         connectors.router,
         reconciliation.router,
         retail_settlement.router,
+        professional_invoice_payment.router,
         exceptions.router,
         metrics.router,
         payables.router,

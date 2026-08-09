@@ -36,8 +36,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_postgres_operations_schema_and_revision_registry_are_explicit() -> None:
     assert POSTGRES_OPERATIONS_SCHEMA_SQL.count("FORCE ROW LEVEL SECURITY") == 2
     assert "FOREIGN KEY (tenant_id, workspace_id)" in POSTGRES_OPERATIONS_SCHEMA_SQL
-    assert POSTGRES_MIGRATION_REVISIONS[-1] == "0080_pg_retail_settlement"
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 80
+    assert POSTGRES_MIGRATION_REVISIONS[-1] == "0081_pg_prof_invoice"
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 81
 
 
 def test_postgres_operations_revision_registry_matches_the_linear_alembic_chain() -> None:
@@ -95,6 +95,24 @@ def test_postgres_migration_status_provider_accepts_current_head_and_closes_conn
     status = PostgresMigrationStatusProvider(factory)("migration-test")
 
     assert status.current_version == status.latest_version == POSTGRES_MIGRATION_REVISIONS[-1]
+    assert status.pending_versions == ()
+    assert factory.connect_calls == 1
+    assert factory.connection.closed is True
+
+
+def test_postgres_migration_status_provider_accepts_revision_known_in_discovered_chain(monkeypatch: pytest.MonkeyPatch) -> None:
+    legacy_revision = POSTGRES_MIGRATION_REVISIONS[0]
+    migrated_revision = "0099_postgres_new_feature"
+    factory = _MigrationConnectionFactory(migrated_revision)
+
+    monkeypatch.setattr(
+        "reconforge.infrastructure.postgres_operations._discover_postgres_migration_revisions",
+        lambda: (legacy_revision, migrated_revision),
+    )
+    status = PostgresMigrationStatusProvider(factory)("migration-test")
+
+    assert status.current_version == migrated_revision
+    assert status.latest_version == migrated_revision
     assert status.pending_versions == ()
     assert factory.connect_calls == 1
     assert factory.connection.closed is True

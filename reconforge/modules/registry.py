@@ -604,20 +604,26 @@ _MODULES = (
         ),
         default_enabled=False,
         dependencies=("platform.core",),
-        interfaces=("artifacts", "cli", "library", "modern-studio"),
+        interfaces=("api", "artifacts", "cli", "library", "modern-studio"),
         import_contracts=("professional-invoice-export.v1", "professional-payment-export.v1"),
         export_contracts=("professional-invoice-payment-report.v1",),
         data_classification=("financial-sensitive", "receivables-control-data", "source-export-metadata"),
         retention_note=(
-            "Invoice exports, payment exports, and reports remain in operator-selected local paths; the module "
-            "does not retain client credentials or contact a billing provider."
+            "Invoice exports and reports remain in operator-selected local paths; an opt-in local SQLite evidence "
+            "projection is workspace-scoped and immutable. The module does not retain client credentials or "
+            "contact a billing provider."
         ),
         activation_note=(
-            "Run explicitly with bounded local JSON exports. The slice is non-posting and provider-neutral; "
-            "receivables allocation, billing connectivity, and ERP write-back remain separate gates."
+            "Run explicitly with bounded local JSON exports or the authenticated local SQLite API. The slice is "
+            "non-posting and provider-neutral; PostgreSQL server persistence, receivables allocation, billing "
+            "connectivity, and ERP write-back remain separate gates."
         ),
         test_evidence=(
             "tests/test_professional_invoice_payment_control.py",
+            "tests/test_sqlite_professional_invoice_payment.py",
+            "tests/test_api_professional_invoice_payment.py",
+            "tests/test_api_server_professional_invoice_payment.py",
+            "tests/test_postgres_professional_invoice_payment.py",
             "apps/web/src/components/ProfessionalInvoicePaymentStudio.test.tsx",
             "apps/web/e2e/accessibility.spec.ts",
         ),

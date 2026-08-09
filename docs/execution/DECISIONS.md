@@ -6396,3 +6396,48 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   authenticated live API behavior, billing/payment authenticity, receivables
   allocation, revenue recognition, posting, ERP write-back, HA/DR, or
   production readiness.
+
+### D-438: Persist professional invoice/payment evidence in local and server profiles
+
+- **Date**: 2026-08-08
+- **Context**: E-611 delivered deterministic review UI and CLI flow for
+  professional invoice/payment decisions, but operations still lacked a bounded
+  evidence store and read API for replay and inspection across workspace
+  boundaries.
+- **Decision**: Add bounded persistence for `professional.invoice-payment` with
+  opt-in `--persist` and run/list/read API access in both local and server modes.
+  Local mode persists to SQLite; server mode uses the authenticated PostgreSQL
+  profile and tenant/workspace/organization/legal-entity scope binding. Persistence
+  keeps network dispatch disabled and emits replayable request/result evidence for
+  tamper detection.
+- **Verification**: Focused tests cover idempotent replay, workspace isolation,
+  tamper refusal, migration/restore, manifest inclusion, and dual-mode API/CLI
+  coverage in `tests/test_sqlite_professional_invoice_payment.py`,
+  `tests/test_api_professional_invoice_payment.py`,
+  `tests/test_api_server_professional_invoice_payment.py`,
+  `tests/test_postgres_professional_invoice_payment.py`, and
+  `tests/test_professional_invoice_payment_control.py`.
+- **Boundary**: This proves local and authenticated server-profile PostgreSQL
+  evidence persistence only. It does not claim live billing/payment
+  interoperability, posting, ERP write-back, HA/DR, or production readiness.
+- **Reversibility**: Remove the persistence/API slice, route, and evidence entry;
+  remove the migration and manifest changes. No runtime/data rollback is required
+  beyond migration cleanup.
+
+### D-439: Retry public no-auth connector transport across resolved addresses
+
+  - **Date**: 2026-08-09
+  - **Context**: The opt-in World Bank public transport could fail with
+    `connector_transport_failed` when the first resolved public address was
+    unreachable in the execution environment.
+  - **Decision**: Keep the existing trust model and exact-allowlist constraints,
+    but update `PinnedHttpsGetTransport` to iterate all resolved public addresses
+    in deterministic order before failing closed; preserve request/response digest
+    behavior and keep non-retryable schema/size errors fail-fast.
+  - **Verification**: Focused network transport tests verify success on second
+    address and full failover behavior, and the live public-world-bank reference
+    test passes under `RECONFORGE_TEST_PUBLIC_NETWORK=1` without changing
+    synthetic read-only boundaries.
+  - **Consequence**: This is transport resiliency evidence only; live provider
+    credentials, freshness guarantees, HA/DR, or production network operations are
+    not implied.

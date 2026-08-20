@@ -710,7 +710,7 @@ modules:
     capability_status: implemented
     threat_model_status: evidence-bounded
     owner: platform-security
-    interfaces: [artifacts, cli, library, modern-studio]
+    interfaces: [api, artifacts, cli, library, modern-studio]
     module_data_classifications: [financial-sensitive, inventory-control-data, source-export-metadata]
     architecture_boundaries: [TB-001, TB-003, TB-007]
     assets:
@@ -719,7 +719,7 @@ modules:
         data_class: DC-003
         objectives: [confidentiality, integrity, availability]
       - id: manufacturing-cost-report-and-digests
-        description: Exact cost/quantity decisions, source fingerprints, and digest-bound non-posting reports.
+        description: Exact cost/quantity decisions, source fingerprints, digest-bound non-posting reports, and workspace-scoped local evidence records.
         data_class: DC-005
         objectives: [integrity, auditability]
     actors: [ACT-001, ACT-002, ACT-003, ACT-006, ACT-007]
@@ -728,7 +728,7 @@ modules:
         status: partial
         attack_surface: JSON exports, identifiers, exact costs/quantities, dates, paths, and report verification.
         controls: [SEC-C-001, SEC-C-002]
-        test_evidence: [tests/test_manufacturing_cost_control.py, tests/test_file_ingestion_inventory.py, apps/web/src/components/ManufacturingCostStudio.test.tsx]
+        test_evidence: [tests/test_manufacturing_cost_control.py, tests/test_sqlite_manufacturing_cost_control.py, tests/test_postgres_manufacturing_cost_control.py, tests/test_api_manufacturing_cost_control.py, tests/test_api_server_manufacturing_cost_control.py, tests/test_file_ingestion_inventory.py, apps/web/src/components/ManufacturingCostStudio.test.tsx]
         residual_risk_ids: [R-018]
         limitations:
           - Bounded local ingress rejects malformed structures and resource abuse, but it does not authenticate ERP origin or scan for malware.
@@ -736,7 +736,7 @@ modules:
         status: bounded
         attack_surface: Standard-cost policy, exact extensions, completion cost, quantity limits, scrap, duplicate IDs, and unknown-order lineage.
         controls: [SEC-C-005, SEC-C-006]
-        test_evidence: [tests/test_manufacturing_cost_control.py, tests/test_v03_platform.py, apps/web/src/components/ManufacturingCostStudio.test.tsx]
+        test_evidence: [tests/test_manufacturing_cost_control.py, tests/test_sqlite_manufacturing_cost_control.py, tests/test_postgres_manufacturing_cost_control.py, tests/test_api_manufacturing_cost_control.py, tests/test_api_server_manufacturing_cost_control.py, tests/test_v03_platform.py, apps/web/src/components/ManufacturingCostStudio.test.tsx]
         residual_risk_ids: [R-003]
         limitations:
           - Exact arithmetic and replay digests do not establish statutory valuation policy, source completeness, or physical production truth.
@@ -744,7 +744,7 @@ modules:
         status: deployment-dependent
         attack_surface: Digest-bound reports, source fingerprints, output paths, and external recipients.
         controls: [SEC-C-006, SEC-C-007]
-        test_evidence: [tests/test_manufacturing_cost_control.py, apps/web/e2e/accessibility.spec.ts]
+        test_evidence: [tests/test_manufacturing_cost_control.py, tests/test_sqlite_manufacturing_cost_control.py, tests/test_postgres_manufacturing_cost_control.py, apps/web/e2e/accessibility.spec.ts]
         residual_risk_ids: [R-014, R-017]
         limitations:
           - Hashes are not signatures and the module does not authorize disclosure, retention, or downstream posting.
@@ -752,23 +752,23 @@ modules:
         status: deployment-dependent
         attack_surface: Future ERP connectors, credentials, network egress, and any attempted inventory/WIP/GL write-back.
         controls: [SEC-C-008, SEC-C-010]
-        test_evidence: [tests/test_manufacturing_cost_control.py]
+        test_evidence: [tests/test_manufacturing_cost_control.py, tests/test_postgres_manufacturing_cost_control.py, tests/test_api_manufacturing_cost_control.py, tests/test_api_server_manufacturing_cost_control.py]
         residual_risk_ids: [R-009]
         limitations:
           - This slice performs no network calls, inventory/WIP/GL posting, ERP authentication, or distributed quota enforcement.
-    module_test_evidence: [tests/test_manufacturing_cost_control.py, tests/test_file_ingestion_inventory.py, tests/test_v03_platform.py, apps/web/src/components/ManufacturingCostStudio.test.tsx, apps/web/e2e/accessibility.spec.ts]
+    module_test_evidence: [tests/test_manufacturing_cost_control.py, tests/test_sqlite_manufacturing_cost_control.py, tests/test_postgres_manufacturing_cost_control.py, tests/test_api_manufacturing_cost_control.py, tests/test_api_server_manufacturing_cost_control.py, tests/test_file_ingestion_inventory.py, tests/test_v03_platform.py, apps/web/src/components/ManufacturingCostStudio.test.tsx, apps/web/e2e/accessibility.spec.ts]
     assumptions:
       - Operators provide authorized exports and independently review cost, quantity, scrap, and lineage exceptions.
       - The control remains non-posting and no ERP credential or endpoint is configured through this module.
     out_of_scope:
-      - Live ERP/manufacturing connectivity, statutory valuation, inventory/WIP/GL posting, write-back, authenticated live API behavior, HA/DR, and production availability.
+      - Hosted PostgreSQL promotion, live ERP/manufacturing connectivity, statutory valuation, inventory/WIP/GL posting, write-back, provider authenticity, HA/DR, and production availability.
 
   - module_id: bank.cash-reconciliation
     registry_maturity: experimental
     capability_status: implemented
     threat_model_status: evidence-bounded
     owner: platform-security
-    interfaces: [artifacts, cli, library, modern-studio]
+    interfaces: [api, artifacts, cli, library, modern-studio]
     module_data_classifications: [financial-sensitive, payment-control-data, source-export-metadata]
     architecture_boundaries: [TB-001, TB-003, TB-007]
     assets:
@@ -777,7 +777,7 @@ modules:
         data_class: DC-003
         objectives: [confidentiality, integrity, availability]
       - id: bank-control-report-and-digests
-        description: Exact reference, amount, booking-date, ambiguity, unmatched, and replay decisions with input fingerprints.
+        description: Exact reference, amount, booking-date, ambiguity, unmatched, and replay decisions with input fingerprints retained in bounded SQLite or PostgreSQL evidence stores.
         data_class: DC-005
         objectives: [integrity, auditability]
     actors: [ACT-001, ACT-002, ACT-003, ACT-006, ACT-007]
@@ -786,7 +786,7 @@ modules:
         status: partial
         attack_surface: CAMT.053 XML, JSON ledger exports, identifiers, exact amounts, dates, paths, and report verification.
         controls: [SEC-C-001, SEC-C-002]
-        test_evidence: [tests/test_bank_statement_control.py, tests/test_file_ingestion_inventory.py, apps/web/src/components/BankStatementStudio.test.tsx]
+        test_evidence: [tests/test_bank_statement_control.py, tests/test_sqlite_bank_statement.py, tests/test_api_bank_statement.py, tests/test_postgres_bank_statement.py, tests/test_api_server_bank_statement.py, tests/test_file_ingestion_inventory.py, apps/web/src/components/BankStatementStudio.test.tsx]
         residual_risk_ids: [R-018]
         limitations:
           - Bounded local ingress rejects malformed structures and resource abuse, but it does not authenticate bank origin or scan for malware.
@@ -810,16 +810,16 @@ modules:
         status: deployment-dependent
         attack_surface: Future provider connectors, credentials, network egress, and any attempted ERP or bank write-back.
         controls: [SEC-C-008, SEC-C-010]
-        test_evidence: [tests/test_bank_statement_control.py, tests/test_connector_camt053.py]
+        test_evidence: [tests/test_bank_statement_control.py, tests/test_sqlite_bank_statement.py, tests/test_api_bank_statement.py, tests/test_postgres_bank_statement.py, tests/test_api_server_bank_statement.py, tests/test_connector_camt053.py]
         residual_risk_ids: [R-009]
         limitations:
           - This slice performs no network calls, payment initiation, live bank authentication, ERP write-back, or distributed quota enforcement.
-    module_test_evidence: [tests/test_bank_statement_control.py, tests/test_file_ingestion_inventory.py, tests/test_connector_camt053.py, apps/web/src/components/BankStatementStudio.test.tsx, apps/web/e2e/accessibility.spec.ts]
+    module_test_evidence: [tests/test_bank_statement_control.py, tests/test_sqlite_bank_statement.py, tests/test_api_bank_statement.py, tests/test_postgres_bank_statement.py, tests/test_api_server_bank_statement.py, tests/test_file_ingestion_inventory.py, tests/test_connector_camt053.py, apps/web/src/components/BankStatementStudio.test.tsx, apps/web/e2e/accessibility.spec.ts]
     assumptions:
       - Operators provide authorized CAMT.053 and ledger exports and independently review exceptions before any downstream action.
       - The control is non-posting and provider-neutral; no bank credential or endpoint is configured by the module.
     out_of_scope:
-      - Live bank/ERP connectivity, payment initiation, fraud controls, statutory posting, write-back, authenticated live API behavior, HA/DR, and production availability.
+      - Live bank/ERP connectivity, payment initiation, fraud controls, statutory posting, write-back, hosted API deployment, workers, HA/DR, and production availability.
 
   - module_id: professional.invoice-payment
     registry_maturity: experimental
@@ -878,6 +878,72 @@ modules:
       - The control remains non-posting and no billing credential or endpoint is configured through this module.
     out_of_scope:
       - Live billing/payment connectivity, revenue recognition, receivables allocation, statutory posting, ERP write-back, PostgreSQL server persistence, HA/DR, and production availability.
+
+  - module_id: individual.cashflow
+    registry_maturity: experimental
+    capability_status: implemented
+    threat_model_status: evidence-bounded
+    owner: platform-security
+    interfaces: [api, artifacts, cli, library, modern-studio]
+    module_data_classifications: [financial-sensitive, personal-finance-data, source-export-metadata]
+    architecture_boundaries: [TB-001, TB-003, TB-007]
+    assets:
+      - id: individual-cashflow-exports
+        description: Operator-selected individual or freelancer transaction and category-budget exports.
+        data_class: DC-003
+        objectives: [confidentiality, integrity, availability]
+      - id: individual-cashflow-report-and-digests
+        description: Exact period/category decisions, budget variance, input fingerprints, and replay digest.
+        data_class: DC-005
+        objectives: [integrity, auditability]
+    actors: [ACT-001, ACT-002, ACT-003, ACT-006, ACT-007]
+    threat_cases:
+      - threat_id: TM-T-001
+        status: partial
+        attack_surface: Bounded JSON exports, identifiers, exact amounts, dates, categories, paths, and report verification.
+        controls: [SEC-C-001, SEC-C-002]
+        test_evidence: [tests/test_individual_cashflow_control.py, tests/test_file_ingestion_inventory.py]
+        residual_risk_ids: [R-018]
+        limitations:
+          - Bounded local ingress rejects malformed structures and resource abuse, but it does not authenticate source origin or scan for malware.
+      - threat_id: TM-T-002
+        status: bounded
+        attack_surface: Currency policy, exact aggregation, category normalization, duplicate IDs, budget uniqueness, and canonical decision ordering.
+        controls: [SEC-C-005, SEC-C-006]
+        test_evidence: [tests/test_individual_cashflow_control.py, tests/test_api_individual_cashflow.py]
+        residual_risk_ids: [R-003]
+        limitations:
+          - Exact arithmetic and replay digests do not establish source completeness, tax treatment, income classification, or financial advice.
+      - threat_id: TM-T-003
+        status: partial
+        attack_surface: Authenticated local API access and permission-gated control invocation.
+        controls: [SEC-C-003]
+        test_evidence: [tests/test_api_individual_cashflow.py, tests/test_api_authorization_inventory.py]
+        residual_risk_ids: [R-011]
+        limitations:
+          - The API uses existing local RBAC permissions; enterprise federation, universal ABAC, and hosted deployment effectiveness remain outside this slice.
+      - threat_id: TM-T-006
+        status: deployment-dependent
+        attack_surface: Digest-bound JSON reports, source fingerprints, output paths, and external recipients.
+        controls: [SEC-C-006, SEC-C-007]
+        test_evidence: [tests/test_individual_cashflow_control.py, tests/test_individual_cashflow_cli.py]
+        residual_risk_ids: [R-014, R-017]
+        limitations:
+          - Hashes are not signatures and the module does not authorize disclosure, retention, posting, or downstream use.
+      - threat_id: TM-T-007
+        status: deployment-dependent
+        attack_surface: Future bank connectors, credentials, network egress, and attempted tax/accounting write-back.
+        controls: [SEC-C-008, SEC-C-010]
+        test_evidence: [tests/test_individual_cashflow_control.py, tests/test_api_individual_cashflow.py]
+        residual_risk_ids: [R-009]
+        limitations:
+          - This slice performs no network calls, bank authentication, tax filing, journal posting, or distributed quota enforcement.
+    module_test_evidence: [tests/test_individual_cashflow_control.py, tests/test_individual_cashflow_cli.py, tests/test_api_individual_cashflow.py, tests/test_file_ingestion_inventory.py, tests/test_api_authorization_inventory.py, apps/web/src/components/IndividualCashflowStudio.test.tsx, apps/web/e2e/accessibility.spec.ts]
+    assumptions:
+      - Operators provide authorized personal or freelancer exports and independently review all budget exceptions.
+      - The control remains non-posting and provider-neutral; no bank credential or endpoint is configured through the module.
+    out_of_scope:
+      - Live bank/ERP connectivity, tax or legal advice, statutory posting, write-back, hosted persistence, HA/DR, and production availability.
 
   - module_id: retail.settlement
     registry_maturity: experimental

@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "profile_id": "sequential-matching/1m-record-partitioned-v1",
+  "report_id": "sequential-matching-1m-current-2026-08-09",
+  "environment": {
+    "python": "3.14.6",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "processor": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+    "cpu_count": 16
+  },
+  "limitations": [
+    "One Windows host and one Python process; this is a partitioned algorithm observation, not distributed capacity or an SLO.",
+    "Each partition cycles exact-USD carry-forward, contiguous sequence-window, and explicit reversal-pairing fixtures; live providers, FX, fees, and statutory posting are not represented.",
+    "PostgreSQL-worker parity and permutation checks run at declared sample strides; this is not live PostgreSQL runtime or production sizing evidence.",
+    "The 1M observation remains one-host synthetic evidence; soak, distributed capacity, and live PostgreSQL parity remain unverified."
+  ],
+  "runs": [{"observed_runtime_seconds": 674.4884, "observed_peak_memory_mb": 62.8245}],
+  "invariants": {
+    "partitions": 200000,
+    "records": 1000000,
+    "matched_partitions": 200000,
+    "ambiguous_partitions": 0,
+    "unmatched_partitions": 0,
+    "unmatched_records": 133333,
+    "strategy_evaluations": 1000000,
+    "cross_engine_checks": 200,
+    "cross_engine_mismatches": 0,
+    "permutation_checks": 20,
+    "permutation_mismatches": 0,
+    "mutation_guard_passed": true,
+    "effect_digest_equal": true,
+    "manifest_digest_equal": true
+  },
+  "effect_digest": "6d06c9ad323d5912b058017ec545c0400a92c3cfc15ce4e0912968644a442734",
+  "manifest_digest": "55d9063e49da8758b247fa99a7966d07bb30663059331176edd539625bb250cf",
+  "report_digest": "d2fc70434cace43eb9d19882cb6c6b1f227734dc1eef38697736110d48f10df0"
+}

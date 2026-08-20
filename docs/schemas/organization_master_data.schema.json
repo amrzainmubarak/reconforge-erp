@@ -32,6 +32,7 @@
     },
     "workspace": {"$ref": "#/$defs/text"},
     "summary": {"$ref": "#/$defs/summary"},
+    "currency_registry": {"$ref": "#/$defs/currencyRegistry"},
     "currencies": {"$ref": "#/$defs/currencies"},
     "organizations": {"$ref": "#/$defs/organizations"},
     "legal_entities": {"$ref": "#/$defs/legalEntities"},
@@ -55,6 +56,37 @@
         "branches": {"type": "integer", "minimum": 0},
         "periods": {"type": "integer", "minimum": 0},
         "active_currencies": {"type": "integer", "minimum": 0}
+      }
+    },
+    "currencyRegistry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "scope", "status", "ok", "registry", "master_currency_count", "active_master_currency_count", "input_digest", "issues", "binding"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "scope": {"$ref": "#/$defs/text"},
+        "status": {"enum": ["consistent", "inconsistent"]},
+        "ok": {"type": "boolean"},
+        "registry": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["registry_version", "digest"],
+          "properties": {
+            "registry_version": {"$ref": "#/$defs/text"},
+            "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+          }
+        },
+        "master_currency_count": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "active_master_currency_count": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "input_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "binding": {
+          "oneOf": [
+            {"type": "object", "additionalProperties": false, "required": ["status"], "properties": {"status": {"const": "unbound"}}},
+            {"type": "object", "additionalProperties": false, "required": ["status", "registry_version", "registry_digest", "bound_at", "bound_by"], "properties": {"status": {"enum": ["current", "drifted"]}, "registry_version": {"$ref": "#/$defs/text"}, "registry_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "bound_at": {"$ref": "#/$defs/text"}, "bound_by": {"$ref": "#/$defs/text"}}},
+            {"type": "object", "additionalProperties": false, "required": ["status", "registry_version", "registry_digest"], "properties": {"status": {"const": "invalid"}, "registry_version": {"type": "string", "maxLength": 128}, "registry_digest": {"type": "string", "maxLength": 64}}}
+          ]
+        },
+        "issues": {"type": "array", "maxItems": 100000}
       }
     },
     "currencies": {

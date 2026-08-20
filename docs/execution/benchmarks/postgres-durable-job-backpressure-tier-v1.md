@@ -11,6 +11,8 @@
 | Jobs | 64 (16 per lane) |
 | Partitions/job | 4 |
 | Queue cap | 4 queued/retrying jobs per `(tenant, workspace, entity)` lane |
+| Submit retry ceiling | 1,000 attempts per job |
+| Retry delay | 2 ms initial, capped at 250 ms with exponential backoff |
 | Declared effects | 256 |
 
 ## Acceptance invariants
@@ -25,6 +27,8 @@
 - Forced-RLS tenant/workspace/entity scope remains isolated.
 - Queued/retrying and running depths are both zero after the drain.
 - Per-lane completion counts are exactly 16 each and integrity digests exist.
+- A producer cannot spin forever: queue-cap refusal is retried only within the
+  declared finite attempt budget and delay cap.
 
 ## Observed local run
 
@@ -44,7 +48,8 @@ PostgreSQL host and independent producer/worker connections. The observed
 queue depth and retry count are workload observations, not throughput,
 capacity, SLO, or sizing claims. Queue HA, automatic failover, host loss,
 cross-host fairness, soak, RPO/RTO, and production deployment remain
-unverified.
+unverified. The retry ceiling and backoff are benchmark safeguards, not
+production defaults.
 
 ## Current rerun
 

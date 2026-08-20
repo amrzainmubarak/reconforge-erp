@@ -8,9 +8,9 @@
 > machine/session. "Passed/blocked" entries are environment-scoped and should not
 > be interpreted as cross-platform production evidence.
 
-## Latest refresh (2026-08-09)
+## Latest refresh (2026-08-11)
 
-- Date: 2026-08-09
+- Date: 2026-08-11
 - Host: Windows 11 / PowerShell
 - Working directory: `F:\reconforge-erp`
 - Python environment: `python 3.14.x` (local environment)
@@ -18,8 +18,8 @@
 ### Python & Backend Checks
 - `python -m ruff check .` : Passed (Exit 0).
 - `python -m mypy reconforge` : Passed (Exit 0).
-- `python -m pytest` : Passed (Exit 0).
-  - Result: **2683 passed, 91 skipped** (23 warnings) in **356.71 s**.
+- `python -m pytest` : Passed (Exit 0) after full suite.
+  - Result: **2775 passed, 110 skipped** (23 warnings, `LegacyFinancialInputWarning`) in **557.82 s** (9m 17s).
 - `python -m bandit -q -r reconforge` : Passed (Exit 0), no blocking issues.
 - `python -m pip_audit` : Passed (Exit 0).
   - No known vulnerabilities found.
@@ -31,10 +31,10 @@
 - `npm --prefix apps/web ci` : Passed (Exit 0).
 - `npm --prefix apps/web run typecheck` : Passed (Exit 0).
 - `npm --prefix apps/web run test:run` : Passed.
-  - Result: **12 files, 67 tests**.
+  - Result: **13 files, 70 tests**.
 - `npm --prefix apps/web run build` : Passed (Exit 0).
 - `npm --prefix apps/web run e2e` : Passed (Exit 0).
-  - Result: **20 tests, 15 passed, 5 skipped**.
+  - Result: **21 tests, 16 passed, 5 skipped**.
 
 ### Platform CLI & Demo
 - `reconforge doctor` : Passed.
@@ -43,10 +43,21 @@
   - Produced dashboard/executive/pack/artifact outputs in `output/baseline-demo`.
 
 ### Docker
-- `docker build -t reconforge:baseline .` : Blocked (environment).
-  - Error: Docker API unavailable (`npipe:////./pipe/dockerDesktopLinuxEngine`).
-- `docker run --rm reconforge:baseline reconforge doctor` : Blocked (environment).
-  - Same Docker API connectivity issue above.
+- `docker build -t reconforge:baseline .` : Passed (Exit 0, 2.748 s).
+- `docker run --rm reconforge:baseline reconforge doctor` : Passed (Exit 0).
+  - Health snapshot: Package/config/output/validation all OK with 10 warnings, 0 errors.
+
+### Disposable PostgreSQL boundary checks
+- `uv run --no-sync pytest -q -ra tests/test_application_metrics.py::test_live_postgres_metrics_and_sqlite_parity tests/test_alembic_postgres.py::test_alembic_upgrade_command_is_available_when_server_extra_is_installed` : **Passed (2/2)**.
+  - Historical E-706 environment: Docker `postgres:16-alpine` 16.14, isolated database, Alembic head `0086_pg_close_reopened`, and a non-privileged `reconforge_app` role. The current source migration head is `0088_pg_currency_snapshot`; no live rerun of the new `0087`/`0088` migrations is implied here.
+- `uv run --no-sync pytest -q -rs tests/test_postgres_backup.py::test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup` : **Skipped (capability)**.
+  - Reason: Windows host has no native `pg_config`/`pg_dump`/`pg_restore` toolchain; hosted Linux bootstrap remains required for E-461.
+
+### Supply-chain and release-freeze checks
+- `uv run --isolated --python 3.11 --all-extras --locked --no-editable python -c "import cbor2, cryptography, opentelemetry.sdk.metrics"` : Passed.
+- `uv run --isolated --python 3.12 --all-extras --locked --no-editable pytest ...` (historical CI import-error modules) : Passed (48 passed, 1 declared live-PostgreSQL skip).
+- Gitleaks 8.30.1 full-history and working-tree scans : Passed (684 commits; 30.65 MB tree; zero findings).
+- `uv run --no-sync pytest -q tests/test_signed_release_pipeline.py` : Passed (17 tests), including the active D-485 freeze and explicit-closure guard.
 
 ## Environment & Commands Execution Log
 
@@ -98,3 +109,38 @@
 - `docker build -t reconforge:baseline .` : Passed. Exit 0, 2.748 s.
 - `docker run --rm reconforge:baseline reconforge doctor` : Passed. Exit 0, 5.124 s.
   - Health snapshot: Package/config/output/validation all OK with 0 errors and 10 warnings.
+
+## Latest refresh (2026-08-15)
+
+- Date: 2026-08-15
+- Host: Windows 11 + WSL2 Ubuntu for native-tool checks
+- Working directory: `F:\reconforge-erp`
+- Python environment: `python 3.14.x` (local session)
+
+### Python & Backend Checks
+- `python -m ruff check .` : Passed (latest local static run logged in recent baseline updates).
+- `python -m mypy reconforge` : Passed (no issues in 520 source files).
+- `python -m pytest` : Passed (local full-regression result logged as 100% in the local evidence set).
+- `python -m bandit -q -r reconforge` : Passed (informational warnings only).
+- `python -m pip_audit` : Passed (no vulnerabilities reported in the same snapshot window).
+- `python -m build --no-isolation` : Passed.
+- `git diff --check` : Passed.
+
+### Web Frontend Checks (apps/web)
+- `npm --prefix apps/web ci` : Passed.
+- `npm --prefix apps/web run typecheck` : Passed.
+- `npm --prefix apps/web run test:run` : Passed.
+- `npm --prefix apps/web run build` : Passed.
+- `npm --prefix apps/web run e2e` : Passed.
+
+### Platform CLI & Demo
+- `reconforge doctor` / `reconforge validate examples/sample_data` / `reconforge demo run --output output/baseline-demo` : Passed with documented local bounded warnings.
+
+### PostgreSQL Boundaries
+- `uv run --no-sync pytest tests/test_postgres_backup.py::test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup` :
+  Passed in WSL2 local boundary using disposable PostgreSQL 16 and local `pg_wrapper` shim. Hosted Linux native-tool gate (`E-461`) still open.
+- `postgres_durable_job` scale profiles: local one-host 1M synthetic durable-job evidence recorded for
+  `postgres-durable-job-load/1m-effects-v1` with documented manifest effect digests and boundary limits in `E-806`.
+
+### Boundary notes
+- This section reflects local, environment-scoped evidence and does not constitute hosted production assurance, capacity/SLO claims, or release-closure substitution for open gates.

@@ -1,0 +1,38 @@
+{
+  "database": "PostgreSQL",
+  "effect_digests": [
+    "4a80113a32b6af4986e9bf5e42e2462d65196022cbf34f6c21831bb306785865",
+    "4a80113a32b6af4986e9bf5e42e2462d65196022cbf34f6c21831bb306785865",
+    "4a80113a32b6af4986e9bf5e42e2462d65196022cbf34f6c21831bb306785865"
+  ],
+  "aggregate_effect_digest": "f964dd37df4ab4d2559a16a4b3eaaf619fb317b8b756905b83a6aa2e95390539",
+  "environment": {
+    "cpu_count": 16,
+    "database": "PostgreSQL",
+    "machine": "AMD64",
+    "platform": "Windows-10-10.0.26200-SP0",
+    "processor": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+    "python": "3.11.15"
+  },
+  "image": "postgres:16-alpine",
+  "invariants": {
+    "duplicate_partition_effects": 0,
+    "iterations": 3,
+    "jobs_per_iteration": 64,
+    "nonzero_queue_or_running_runs": 0,
+    "partitions_per_job": 4,
+    "total_jobs": 192,
+    "total_partition_effects": 768
+  },
+  "limitations": [
+    "Each iteration uses unique synthetic PostgreSQL tenant lanes in one disposable database host; this does not prove distributed or multi-host soak.",
+    "Observed runtime is hardware/load dependent and is not a throughput, capacity, SLO, RPO/RTO, or sizing claim.",
+    "The repeated tier is bounded to the declared PostgreSQL scale profile; larger tiers, queue HA, automatic failover, host loss, and production workload diversity remain unverified."
+  ],
+  "observed_runtime_seconds": 9.4047,
+  "profile_id": "postgres-durable-job-soak/repeated-small-tier-v1",
+  "report_digest": "ed6d63068cb6468c154b09cee2fe0abfe23e70703220e129f06333e8dd3b285a",
+  "report_id": "postgres-durable-job-soak-current-2026-08-10",
+  "schema_version": 1,
+  "status": "verified"
+}

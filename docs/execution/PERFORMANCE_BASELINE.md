@@ -87,3 +87,12 @@ hosted cross-engine, distributed, or production-sizing evidence.
 2. Add crash/restart replay benchmarks for this deterministic suite.
 3. Add 1M synthetic profile benchmark under controlled memory budget.
 4. Add grouped-matching, grouped ambiguity, and high-ambiguity candidate-density profiles to close throughput completeness.
+
+## E-674 PostgreSQL repeated durable-job observation (2026-08-10)
+
+The bounded `postgres-durable-job-soak/repeated-small-tier-v1` profile ran
+three 64-job/256-effect iterations on the local disposable PostgreSQL 16
+service. The observed wall time was 9.4047 seconds for 192 jobs; all effect
+digests were equal and queues drained. This timing is hardware- and workload-
+dependent and is deliberately not a throughput, capacity, SLO, or sizing
+claim. Distributed soak and production scheduling remain future gates.

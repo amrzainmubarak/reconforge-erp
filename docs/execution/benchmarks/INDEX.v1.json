@@ -3,7 +3,7 @@
   "entries": [
     {
       "artifact": "docs/execution/benchmarks/grouped-matching-10k-domain-diverse-v1.json",
-      "artifact_sha256": "1bf64290d2fe64e71157282990802b74252be5c68d07aeef0c429aa31879eeb2",
+      "artifact_sha256": "e9a3232efbf691a099bd5b2fd89b1aa0b398b905cd1dbb03be6da8ef5af6334c",
       "claim_boundary": "One-host domain-diverse 10K algorithm correctness observation; not distributed capacity, PostgreSQL parity, or production sizing.",
       "digest_fields": [
         "decision_digest",
@@ -43,6 +43,48 @@
       "workload_family": "advanced_matching"
     },
     {
+      "artifact": "docs/execution/benchmarks/sequential-matching-10k-current-2026-08-09.json",
+      "artifact_sha256": "60437b131772e6a1ecfb9c4d6bac73c1b8b1bfe02e4bc2bc5d67efe11a9d9395",
+      "claim_boundary": "One-host partitioned sequential 10K algorithm observation with full sampled adapter parity; not distributed capacity, live PostgreSQL, or production sizing.",
+      "digest_fields": [
+        "effect_digest",
+        "manifest_digest",
+        "report_digest"
+      ],
+      "engine": "local-sequential-strategy",
+      "profile_id": "sequential-matching/10k-record-partitioned-v1",
+      "status": "verified",
+      "workload_family": "advanced_matching"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/sequential-matching-100k-current-2026-08-09.json",
+      "artifact_sha256": "3ecd6f205620920264baba68e0e9c7e6532e8c08dda19812e8ede6b44068edfe",
+      "claim_boundary": "One-host partitioned sequential 100K algorithm observation with sampled adapter parity; not distributed capacity, live PostgreSQL, or production sizing.",
+      "digest_fields": [
+        "effect_digest",
+        "manifest_digest",
+        "report_digest"
+      ],
+      "engine": "local-sequential-strategy",
+      "profile_id": "sequential-matching/100k-record-partitioned-v1",
+      "status": "verified",
+      "workload_family": "advanced_matching"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/sequential-matching-1m-current-2026-08-09.json",
+      "artifact_sha256": "0e63d43c2f70dd07770287d222f2ba0a6fb1b188540aebd84aca0bd62ab41299",
+      "claim_boundary": "One-host partitioned sequential 1M algorithm observation with sampled adapter parity; not distributed 1M capacity, live PostgreSQL, soak, or production sizing.",
+      "digest_fields": [
+        "effect_digest",
+        "manifest_digest",
+        "report_digest"
+      ],
+      "engine": "local-sequential-strategy",
+      "profile_id": "sequential-matching/1m-record-partitioned-v1",
+      "status": "verified",
+      "workload_family": "advanced_matching"
+    },
+    {
       "artifact": "docs/execution/benchmarks/postgres-grouped-matching-10k-partitions-v1.json",
       "artifact_sha256": "7a539ec9fd5aa079c029d4a4f54c25c5a1cadb1f70b91a71170f2b44c2f204cc",
       "claim_boundary": "Single-host synthetic PostgreSQL partition correctness observation; not cross-host fairness, queue HA, failover, or production sizing.",
@@ -66,6 +108,58 @@
       "engine": "postgresql-durable-job",
       "profile_id": "postgres-durable-job-load/100k-effects-v1",
       "status": "partial",
+      "workload_family": "durable_jobs"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/postgres-durable-job-10k-effects-v1.json",
+      "artifact_sha256": "7f2b5aa02c0ebd242a23bfa16e240f91d2a4251e735444d866eabe66154f2d74",
+      "claim_boundary": "Single-host synthetic PostgreSQL durable-job effect observation; not queue HA, host loss, cross-host fairness, RPO/RTO, or production sizing.",
+      "digest_fields": [
+        "effect_set_digest",
+        "manifest_digest"
+      ],
+      "engine": "postgresql-durable-job",
+      "profile_id": "postgres-durable-job-load/10k-effects-v1",
+      "status": "partial",
+      "workload_family": "durable_jobs"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/postgres-durable-job-backpressure-tier-v1.json",
+      "artifact_sha256": "8c30d199bb4ae512b2e8734d4d9e003722c77de1e1612f1719cc5714edadcca1",
+      "claim_boundary": "Single-host synthetic PostgreSQL durable-job queue-cap backpressure observation; not queue HA, host loss, cross-host fairness, RPO/RTO, or production sizing.",
+      "digest_fields": [
+        "effect_set_digest",
+        "manifest_digest"
+      ],
+      "engine": "postgresql-durable-job",
+      "profile_id": "postgres-durable-job-load/backpressure-tier-v1",
+      "status": "partial",
+      "workload_family": "durable_jobs"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/postgres-durable-job-1m-effects-v1.json",
+      "artifact_sha256": "704a6794943620c19eb4b2d3f88d83e087688f6b7d89e8931901ba3e8a79cb6c",
+      "claim_boundary": "Single-host synthetic PostgreSQL durable-job effect observation; not queue HA, host loss, cross-host fairness, RPO/RTO, or production sizing.",
+      "digest_fields": [
+        "effect_set_digest",
+        "manifest_digest"
+      ],
+      "engine": "postgresql-durable-job",
+      "profile_id": "postgres-durable-job-load/1m-effects-v1",
+      "status": "partial",
+      "workload_family": "durable_jobs"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/postgres-durable-job-soak-current-2026-08-10.json",
+      "artifact_sha256": "c3baf77acdb2595ac9c38669ae00e02530af3b39de78405cee9fffc71a5e46cc",
+      "claim_boundary": "Single-host synthetic PostgreSQL repeated soak observation; not queue HA, host loss, cross-host fairness, RPO/RTO, or production sizing.",
+      "digest_fields": [
+        "aggregate_effect_digest",
+        "report_digest"
+      ],
+      "engine": "postgresql-durable-job",
+      "profile_id": "postgres-durable-job-soak/repeated-small-tier-v1",
+      "status": "verified",
       "workload_family": "durable_jobs"
     }
   ],

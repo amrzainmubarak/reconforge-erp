@@ -52,7 +52,14 @@ This is not a malware or authenticity claim. Legacy XLS receives only file-size 
 
 The inventory also closes direct stdlib JSON calls through an exact AST allowlist. FI-015 generated report/workflow/synthetic-demo readers and FI-016 local exception explanation use bounded stable readers; each explicitly selects display or exact-text JSON number representation. FI-013 decodes database, event, or Redis values and is not a filesystem-ingress claim. AP/AR idempotency uses canonical integer-token object JSON; audit metadata, PostgreSQL outbox payloads, PostgreSQL reconciliation rule/attributes/lineage/evidence, SQLite matching rules, and every public SQLite export `_json` field use finite bounded object JSON. Redis sessions use a narrower closed 16 KiB/four-field contract requiring a token digest and explicit UTC expiry. The reconciliation attributes profile preserves its 100,000-byte producer limit; its other three profiles and SQLite matching/export profiles use 4 MiB. All enforce explicit node/depth/collection/scalar ceilings. Audit verification and reconciliation rule decoding preserve backend fingerprint compatibility; SQLite matching preserves historical spaced rule text and policy defaults; Redis preserves tenant-key and TTL behavior; public export preserves all format-v1 field shapes and validates every payload before destination creation; corrupt outbox claims roll back before publisher handoff, and corrupt reconciliation/matching/session/export rows fail before downstream use without sentinel replacement. FI-017 parses already-loaded packaged currency-registry text, FI-037 bounds the provider-specific ERPNext response through the governed network and closed schema contracts, FI-038 bounds untrusted CAMT.053 XML through the governed network, `defusedxml`, and the closed parser contract, and FI-039 bounds ERPNext Payment Entry JSON through the governed network and closed schema. Every direct production `json.loads` call and direct CAMT XML parser call is allowlisted with an owning surface and test evidence; no call opens an operator-selected path directly.
 
-The authoritative inventory is [file-ingestion-inventory.v1.yaml](file-ingestion-inventory.v1.yaml). Its closed schema and AST-backed tests enumerate every direct pandas, standard-library delimited, PyYAML, and `defusedxml` CAMT parser call. A new direct parser fails the test until it is routed through the central policy or explicitly recorded with an owner, limitation, risk, and next action.
+Persisted currency-registry snapshots use a dedicated bounded 1 MB/integer-token
+object profile and are revalidated against their embedded digest/version before
+operation use. The authoritative inventory is
+[file-ingestion-inventory.v1.yaml](file-ingestion-inventory.v1.yaml). Its closed
+schema and AST-backed tests enumerate every direct pandas, standard-library
+delimited, PyYAML, and `defusedxml` CAMT parser call. A new direct parser fails
+the test until it is routed through the central policy or explicitly recorded
+with an owner, limitation, risk, and next action.
 
 ## Current budgets
 

@@ -20,6 +20,9 @@ module_ceilings:
   - module_id: finance.core
     maximum_maturity: experimental
     evidence_claim: Local SQLite backup/restore
+  - module_id: individual.cashflow
+    maximum_maturity: experimental
+    evidence_claim: Individual/freelancer cashflow control
   - module_id: inventory.core
     maximum_maturity: experimental
     evidence_claim: Open-source financial reconciliation and controls toolkit

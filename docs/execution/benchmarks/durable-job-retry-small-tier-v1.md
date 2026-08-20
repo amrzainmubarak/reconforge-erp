@@ -13,8 +13,11 @@ The required structural checks are:
 - duplicate `(job_id, partition_key)` effects are zero;
 - queued/retrying/running depth drains to zero;
 - retry count never exceeds the declared ceiling; and
-- effect and manifest digests are present and replayable.
+- effect and manifest digests are present and replayable;
+- delayed retry attempts follow bounded exponential backoff per retry attempt index:
+  `delay = min(max, base * (2**attempt))` with observed samples recorded.
 
 Runtime, throughput, and memory are deliberately not part of the digest. This
-is a small SQLite-only profile, not a PostgreSQL capacity, backoff/SLO, external
-side-effect compensation, or 10K/100K/1M/10M scale claim.
+is a small SQLite-only profile, not a PostgreSQL capacity, external-side-effect
+compensation, or 10K/100K/1M/10M scale claim. Provider-managed backoff policy,
+tenant-level fleet spread, and production retry-tuning are not claimed.

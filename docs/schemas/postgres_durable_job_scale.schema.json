@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://reconforge.local/schema/postgres-durable-job-scale-v1.json",
-  "title": "ReconForge PostgreSQL durable-job 10K/100K scale result",
+  "title": "ReconForge PostgreSQL durable-job 10K/100K/1M/10M scale result",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -28,15 +28,23 @@
   ],
   "properties": {
     "schema_version": {"const": 1},
-    "profile_id": {"type": "string", "enum": ["postgres-durable-job-load/10k-effects-v1", "postgres-durable-job-load/100k-effects-v1"]},
+    "profile_id": {
+      "type": "string",
+      "enum": [
+        "postgres-durable-job-load/10k-effects-v1",
+        "postgres-durable-job-load/100k-effects-v1",
+        "postgres-durable-job-load/1m-effects-v1",
+        "postgres-durable-job-load/10m-effects-v1"
+      ]
+    },
     "workers": {"const": 16},
     "jobs": {"const": 2500},
     "jobs_per_tenant": {"const": 625},
-    "partitions_per_job": {"type": "integer", "enum": [4, 40]},
+    "partitions_per_job": {"type": "integer", "enum": [4, 40, 400, 4000]},
     "tenants": {"const": 4},
-    "declared_partition_effects": {"type": "integer", "enum": [10000, 100000]},
+    "declared_partition_effects": {"type": "integer", "enum": [10000, 100000, 1000000, 10000000]},
     "completed_jobs": {"const": 2500},
-    "committed_partition_effects": {"type": "integer", "enum": [10000, 100000]},
+    "committed_partition_effects": {"type": "integer", "enum": [10000, 100000, 1000000, 10000000]},
     "duplicate_partition_effects": {"const": 0},
     "final_queue_depth": {"const": 0},
     "final_running_depth": {"const": 0},
@@ -73,6 +81,22 @@
         "partitions_per_job": {"const": 40},
         "declared_partition_effects": {"const": 100000},
         "committed_partition_effects": {"const": 100000}
+      }
+    },
+    {
+      "properties": {
+        "profile_id": {"const": "postgres-durable-job-load/1m-effects-v1"},
+        "partitions_per_job": {"const": 400},
+        "declared_partition_effects": {"const": 1000000},
+        "committed_partition_effects": {"const": 1000000}
+      }
+    },
+    {
+      "properties": {
+        "profile_id": {"const": "postgres-durable-job-load/10m-effects-v1"},
+        "partitions_per_job": {"const": 4000},
+        "declared_partition_effects": {"const": 10000000},
+        "committed_partition_effects": {"const": 10000000}
       }
     }
   ]

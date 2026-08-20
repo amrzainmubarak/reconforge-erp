@@ -14,6 +14,7 @@ import {
 
 import type { MessageKey } from "../i18n";
 import type { Locale, StudioPage, ThemePreference } from "../types";
+import { formatCount } from "../locale-format";
 
 export type OpenPanel = "notifications" | "quick" | "profile" | "accessibility" | null;
 
@@ -22,6 +23,11 @@ const pageLabels: Record<StudioPage, MessageKey> = {
   exceptions: "exceptions",
   evidence: "evidence",
   inventory: "inventory",
+  retailSettlement: "retailSettlement",
+  bankStatement: "bankStatement",
+  manufacturingCost: "manufacturingCost",
+  professionalInvoicePayment: "professionalInvoicePayment",
+  individualCashflow: "individualCashflow",
   mapping: "mappingStudio",
   rules: "ruleStudio",
   live: "liveStudio",
@@ -61,7 +67,7 @@ export function Topbar({
         <Menu size={20} />
       </button>
       <div className="breadcrumbs" aria-label={translate("breadcrumb")}>
-        <span>{translate(activePage === "dashboard" ? "overview" : activePage === "inventory" ? "operations" : activePage === "mapping" || activePage === "rules" || activePage === "live" ? "platform" : activePage === "adminAudit" ? "platform" : "finance")}</span>
+        <span>{translate(activePage === "dashboard" ? "overview" : activePage === "inventory" || activePage === "manufacturingCost" ? "operations" : activePage === "mapping" || activePage === "rules" || activePage === "live" || activePage === "adminAudit" ? "platform" : "finance")}</span>
         <span aria-hidden="true">/</span>
         <strong>{translate(pageLabels[activePage])}</strong>
       </div>
@@ -139,14 +145,15 @@ export function Topbar({
 interface NoticesPanelProps {
   notices: string[];
   translate: (key: MessageKey) => string;
+  locale: Locale;
 }
 
-export function NoticesPanel({ notices, translate }: NoticesPanelProps) {
+export function NoticesPanel({ notices, translate, locale }: NoticesPanelProps) {
   return (
     <section className="floating-panel notification-panel" aria-label={translate("notifications")}>
       <div className="floating-panel-header">
         <strong>{translate("notifications")}</strong>
-        <span>{notices.length}</span>
+        <span>{formatCount(notices.length, locale)}</span>
       </div>
       {notices.map((notice) => (
         <div className="notice-row" key={notice}>

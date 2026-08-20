@@ -2,19 +2,22 @@ import { Archive, CheckCircle2, FileCheck2, Fingerprint, Search, ShieldCheck } f
 import { useEffect, useMemo, useState } from "react";
 
 import { loadEvidenceBinder } from "../data";
+import type { Locale } from "../types";
 import type { MessageKey } from "../i18n";
 import type { EvidenceBinderContract } from "../types";
 import { ErrorView, LoadingView } from "./StateViews";
+import { formatCount } from "../locale-format";
 
 interface EvidenceBinderProps {
   translate: (key: MessageKey) => string;
+  locale: Locale;
 }
 
 function unique(values: string[]): string[] {
   return [...new Set(values)].sort((left, right) => left.localeCompare(right));
 }
 
-export function EvidenceBinder({ translate }: EvidenceBinderProps) {
+export function EvidenceBinder({ translate, locale }: EvidenceBinderProps) {
   const [data, setData] = useState<EvidenceBinderContract | null>(null);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
@@ -66,10 +69,10 @@ export function EvidenceBinder({ translate }: EvidenceBinderProps) {
       </header>
 
       <section className="workbench-stats workbench-stats--four" aria-label={translate("evidenceBinderTitle")}>
-        <article><span className="stat-icon"><FileCheck2 size={18} /></span><strong>{data.summary.total}</strong><small>{translate("totalRecords")}</small></article>
+        <article><span className="stat-icon"><FileCheck2 size={18} /></span><strong>{formatCount(data.summary.total, locale)}</strong><small>{translate("totalRecords")}</small></article>
         <article><span className="stat-icon"><CheckCircle2 size={18} /></span><strong>{data.summary.coverage_percent.toFixed(data.summary.coverage_percent % 1 ? 1 : 0)}%</strong><small>{translate("evidenceCoverage")}</small></article>
-        <article><span className="stat-icon"><Fingerprint size={18} /></span><strong>{data.summary.checksum_count}</strong><small>{translate("verifiedChecksums")}</small></article>
-        <article><span className="stat-icon"><ShieldCheck size={18} /></span><strong>{data.summary.available}</strong><small>{translate("availableEvidence")}</small></article>
+        <article><span className="stat-icon"><Fingerprint size={18} /></span><strong>{formatCount(data.summary.checksum_count, locale)}</strong><small>{translate("verifiedChecksums")}</small></article>
+        <article><span className="stat-icon"><ShieldCheck size={18} /></span><strong>{formatCount(data.summary.available, locale)}</strong><small>{translate("availableEvidence")}</small></article>
       </section>
 
       <section className="panel workbench-panel">
@@ -86,7 +89,7 @@ export function EvidenceBinder({ translate }: EvidenceBinderProps) {
             <option value="">{translate("allRedactions")}</option>
             {redactions.map((value) => <option value={value} key={value}>{value}</option>)}
           </select>
-          <span className="result-count" aria-live="polite"><strong>{filtered.length}</strong> {translate("results")}</span>
+          <span className="result-count" aria-live="polite"><strong>{formatCount(filtered.length, locale)}</strong> {translate("results")}</span>
         </div>
 
         {filtered.length ? (

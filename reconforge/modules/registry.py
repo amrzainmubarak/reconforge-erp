@@ -117,7 +117,7 @@ _MODULES = (
         version=__version__,
         maturity="experimental",
         capability_status="foundation",
-        summary="Local SQLite, users/RBAC, workflow, audit-ledger, API-session, and import/export foundations.",
+        summary="Local SQLite, users/RBAC, workflow, audit-ledger, API-session, policy-analysis, and import/export foundations.",
         network_requirement="loopback-optional",
         default_enabled=True,
         permissions=("audit.read", "audit.verify", "db.read", "roles.manage", "users.manage"),
@@ -125,7 +125,7 @@ _MODULES = (
         domain_events=("audit.event.appended", "workflow.transitioned"),
         interfaces=("api", "cli", "current-studio", "library"),
         import_contracts=("local-db-bridge.v1",),
-        export_contracts=("audit-ledger.v1", "local-db-export.v1"),
+        export_contracts=("audit-ledger.v1", "enterprise-policy-conflict-analysis.v1", "local-db-export.v1"),
         data_classification=("authentication-metadata", "financial-workflow-metadata"),
         retention_note="The operator controls the local SQLite file, backups, exports, and retention schedule.",
         activation_note="Available locally after explicit database initialization; the API binds to loopback by default.",
@@ -134,6 +134,10 @@ _MODULES = (
             "tests/test_db_backup_structured_ingress.py",
             "tests/test_db_export_import.py",
             "tests/test_db_import_structured_ingress.py",
+            "tests/test_policy_analysis.py",
+            "tests/test_postgres_policy_analysis.py",
+            "tests/test_postgres_policy_analysis_runtime.py",
+            "tests/test_postgres_policy_scopes.py",
             "tests/test_studio_auth.py",
             "tests/test_upgrade_orchestrator.py",
         ),
@@ -206,13 +210,14 @@ _MODULES = (
         capability_status="foundation",
         summary=(
             "Governed charts, account hierarchy, dimensions, journals, balanced entries, trial-balance controls, "
-            "deterministic multi-entity translation artifacts, and non-posting effective-ownership worksheets."
+            "deterministic multi-entity translation artifacts, non-posting effective-ownership worksheets, and a "
+            "governed local consolidation control-journal lifecycle."
         ),
         network_requirement="loopback-optional",
         default_enabled=True,
         dependencies=("platform.core", "platform.master-data"),
         permissions=("finance_core.manage", "finance_core.read", "finance_core.validate"),
-        migration_versions=(8,),
+        migration_versions=(8, 26),
         domain_events=(
             "accounting_dimension_upserted",
             "accounting_dimension_value_upserted",
@@ -222,12 +227,25 @@ _MODULES = (
             "ledger_entry_draft_saved",
             "ledger_entry_validated",
             "ledger_entry_voided",
+            "consolidation_period_created",
+            "consolidation_period_locked",
+            "consolidation_period_reopened",
+            "consolidation_reversal_prepared",
+            "consolidation_run_approved",
+            "consolidation_run_posted",
+            "consolidation_run_prepared",
+            "consolidation_run_reversed",
         ),
         interfaces=("api", "artifacts", "cli", "library"),
         import_contracts=("ledger-entry-lines.v1",),
         export_contracts=(
             "consolidation-translation-result.v1",
             "consolidation-worksheet.v1",
+            "consolidation-management-trial-balance.v1",
+            "ownership-change-adjustment.v1",
+            "acquisition-fair-value-goodwill-bridge.v1",
+            "acquisition-purchase-price-allocation.v1",
+            "consolidation-impairment-bridge.v1",
             "finance-core-snapshot.v1",
             "ledger-control-trial-balance.v1",
         ),
@@ -238,14 +256,25 @@ _MODULES = (
         ),
         retention_note="Records remain in the operator-selected local SQLite database and controlled local exports.",
         activation_note=(
-            "Requires migrations 7-8 for the ledger. Translation artifacts are immutable, propose an explicit "
-            "unposted CTA, and never write back to a source ERP. Worksheet v1 applies only explicit balanced "
-            "elimination proposals, reports effective ownership and NCI presentation, and has no posting effect."
+            "Requires migrations 7-8 for the local ledger and 25-26 for the optional consolidation lifecycle. "
+            "Translation and worksheet artifacts remain non-posting. Migration 25 persists only verified "
+            "worksheets and exact balanced control-journal effects through maker-checker, posting, reversal, and "
+            "period locks. It has a local SQLite/library boundary only and never mutates Finance Core entries, "
+            "legal books, or a source ERP."
         ),
         test_evidence=(
             "tests/test_consolidation_lifecycle.py",
             "tests/test_consolidation_translation.py",
+            "tests/test_consolidation_ownership_changes.py",
+            "tests/test_consolidation_acquisition.py",
+            "tests/test_consolidation_ppa.py",
+            "tests/test_consolidation_impairment.py",
+            "tests/test_consolidation_statement.py",
             "tests/test_finance_core.py",
+            "tests/test_sqlite_consolidation_close.py",
+            "tests/test_postgres_consolidation_ppa.py",
+            "tests/test_postgres_consolidation_ppa_runtime.py",
+            "tests/test_api_consolidation_ppa.py",
         ),
     ),
     ModuleDescriptor(
@@ -385,7 +414,7 @@ _MODULES = (
         capability_status="implemented",
         summary="Safe local validation and canonical projection support for export-based ERP profiles.",
         default_enabled=True,
-        interfaces=("artifacts", "cli", "library"),
+        interfaces=("api", "artifacts", "cli", "library"),
         import_contracts=("export-profile-mapping.v1", "local-csv-xlsx-headers.v1"),
         export_contracts=("mapping-validation-report.v1", "profile-template.v1"),
         data_classification=("export-header-metadata", "mapping-configuration"),
@@ -418,6 +447,37 @@ _MODULES = (
         test_evidence=("tests/test_p3_ent_008_exit_audit.py", "tests/test_signed_pack_lifecycle.py"),
     ),
     ModuleDescriptor(
+        module_id="connectors.boundary",
+        name="Governed connector boundaries",
+        version=__version__,
+        maturity="experimental",
+        capability_status="foundation",
+        summary=(
+            "Closed read-only connector manifests, bounded network contracts, signed package admission, "
+            "and offline CAMT.053 statement projection without provider-specific write-back."
+        ),
+        default_enabled=False,
+        dependencies=("platform.core",),
+        interfaces=("artifacts", "cli", "library"),
+        import_contracts=(
+            "bank-statement-camt053-http-v1",
+            "iso20022-camt053-v1",
+            "network-connector-registration-v1",
+        ),
+        export_contracts=("connector-manifest.v1", "payment-statement-pages.v1"),
+        data_classification=("financial-sensitive", "internal-configuration", "security-audit-sensitive", "secret"),
+        retention_note="Connector inputs and generated evidence remain in operator-selected local paths; credentials are deployment-owned and never persisted by the boundary.",
+        activation_note="Read-only provider-neutral and offline CAMT.053 paths require explicit operator activation; live vendor credentials, provider conformance, and write-back remain separately gated.",
+        test_evidence=(
+            "tests/test_connector_camt053.py",
+            "tests/test_connector_bank_statement_camt053.py",
+            "tests/test_connector_erpnext_payment_reference.py",
+            "tests/test_connector_network.py",
+            "tests/test_connector_package.py",
+            "tests/test_connector_sdk.py",
+        ),
+    ),
+    ModuleDescriptor(
         module_id="plugins.export",
         name="Local export-adapter plugins",
         version=__version__,
@@ -436,6 +496,180 @@ _MODULES = (
             "tests/test_file_ingestion_inventory.py",
             "tests/test_file_ingress_security.py",
             "tests/test_v03_platform.py",
+        ),
+    ),
+    ModuleDescriptor(
+        module_id="retail.settlement",
+        name="Retail POS settlement control",
+        version="1.0.0",
+        maturity="experimental",
+        capability_status="implemented",
+        summary=(
+            "Deterministic local reconciliation of exported POS batches and processor settlements with visible "
+            "fees, refunds, chargebacks, unmatched records, and ambiguity."
+        ),
+        default_enabled=False,
+        dependencies=("platform.core",),
+        interfaces=("artifacts", "cli", "library", "modern-studio"),
+        import_contracts=("retail-pos-batch-export.v1", "retail-processor-settlement-export.v1"),
+        export_contracts=("retail-settlement-report.v1",),
+        data_classification=("financial-sensitive", "payment-control-data", "source-export-metadata"),
+        retention_note=(
+            "Reports remain in operator-selected SQLite paths or an explicitly configured tenant-scoped PostgreSQL "
+            "evidence store; processor credentials and payment data are never resolved or transmitted by this module."
+        ),
+        activation_note=(
+            "Run explicitly with two bounded JSON exports. Persistence is authenticated and replay-verified in local "
+            "or server mode, but the slice remains non-posting and provider-neutral; it does not imply a live card "
+            "processor, ERP connector, write-back, or settlement finality."
+        ),
+        test_evidence=(
+            "tests/test_api_retail_settlement.py",
+            "tests/test_api_server_retail_settlement.py",
+            "tests/test_postgres_retail_settlement.py",
+            "tests/test_retail_settlement.py",
+            "apps/web/src/components/RetailSettlementStudio.test.tsx",
+            "apps/web/e2e/accessibility.spec.ts",
+        ),
+    ),
+    ModuleDescriptor(
+        module_id="bank.cash-reconciliation",
+        name="Bank statement to ledger control",
+        version="1.0.0",
+        maturity="experimental",
+        capability_status="implemented",
+        summary=(
+            "Deterministic local CAMT.053 and ledger-export control with reference, amount, date-window, "
+            "duplicate, unmatched, and ambiguity evidence."
+        ),
+        default_enabled=False,
+        dependencies=("connectors.boundary", "platform.core"),
+        interfaces=("api", "artifacts", "cli", "library", "modern-studio"),
+        import_contracts=("camt053-statement.v1", "bank-ledger-export.v1"),
+        export_contracts=("bank-statement-control-report.v1",),
+        data_classification=("financial-sensitive", "payment-control-data", "source-export-metadata"),
+        retention_note=(
+            "Statement exports, ledger exports, and reports remain in operator-selected local paths or an "
+            "authenticated workspace-scoped SQLite/PostgreSQL evidence store; the module does not retain "
+            "credentials or contact a bank."
+        ),
+        activation_note=(
+            "Run explicitly with a bounded local CAMT.053 file and JSON ledger export, then optionally persist the "
+            "replay-verified report through the authenticated local or server API. The control is non-posting and "
+            "provider-neutral; live bank connectivity, payment initiation, and ERP write-back are separate gates."
+        ),
+        test_evidence=(
+            "tests/test_bank_statement_control.py",
+            "tests/test_sqlite_bank_statement.py",
+            "tests/test_api_bank_statement.py",
+            "tests/test_postgres_bank_statement.py",
+            "tests/test_api_server_bank_statement.py",
+            "apps/web/src/components/BankStatementStudio.test.tsx",
+            "apps/web/e2e/accessibility.spec.ts",
+        ),
+    ),
+    ModuleDescriptor(
+        module_id="manufacturing.cost-control",
+        name="Manufacturing production cost control",
+        version="1.0.0",
+        maturity="experimental",
+        capability_status="implemented",
+        summary=(
+            "Deterministic local production-order control over material cost, completion cost, planned/completed "
+            "quantity, scrap, and source-order lineage."
+        ),
+        default_enabled=False,
+        dependencies=("inventory.core", "platform.core"),
+        interfaces=("api", "artifacts", "cli", "library", "modern-studio"),
+        import_contracts=("production-order-export.v1", "material-issue-export.v1", "completion-export.v1", "scrap-export.v1"),
+        export_contracts=("manufacturing-cost-control-report.v1",),
+        data_classification=("financial-sensitive", "inventory-control-data", "source-export-metadata"),
+        retention_note=(
+            "Source exports remain operator-selected inputs; replay-verified reports may be retained in the local "
+            "workspace evidence store. This module does not retain ERP credentials or post inventory, WIP, or "
+            "ledger entries."
+        ),
+        activation_note=(
+            "Run explicitly with bounded local JSON exports or the authenticated local evidence API. The slice is "
+            "non-posting and provider-neutral; standard cost policy, statutory valuation, ERP connectivity, and "
+            "write-back remain separate gates. PostgreSQL server persistence is available only in the explicit "
+            "server profile and remains a non-posting evidence boundary."
+        ),
+        test_evidence=(
+            "tests/test_manufacturing_cost_control.py",
+            "tests/test_sqlite_manufacturing_cost_control.py",
+            "tests/test_api_manufacturing_cost_control.py",
+            "apps/web/src/components/ManufacturingCostStudio.test.tsx",
+            "apps/web/e2e/accessibility.spec.ts",
+        ),
+    ),
+    ModuleDescriptor(
+        module_id="professional.invoice-payment",
+        name="Professional invoice and payment control",
+        version="1.0.0",
+        maturity="experimental",
+        capability_status="implemented",
+        summary=(
+            "Deterministic local invoice-to-payment control with exact amount, client, reference, due-date, "
+            "duplicate, ambiguous, and unapplied-cash evidence."
+        ),
+        default_enabled=False,
+        dependencies=("platform.core",),
+        interfaces=("api", "artifacts", "cli", "library", "modern-studio"),
+        import_contracts=("professional-invoice-export.v1", "professional-payment-export.v1"),
+        export_contracts=("professional-invoice-payment-report.v1",),
+        data_classification=("financial-sensitive", "receivables-control-data", "source-export-metadata"),
+        retention_note=(
+            "Invoice exports and reports remain in operator-selected local paths; an opt-in local SQLite evidence "
+            "projection is workspace-scoped and immutable. The module does not retain client credentials or "
+            "contact a billing provider."
+        ),
+        activation_note=(
+            "Run explicitly with bounded local JSON exports or the authenticated local SQLite API. The slice is "
+            "non-posting and provider-neutral; PostgreSQL server persistence, receivables allocation, billing "
+            "connectivity, and ERP write-back remain separate gates."
+        ),
+        test_evidence=(
+            "tests/test_professional_invoice_payment_control.py",
+            "tests/test_sqlite_professional_invoice_payment.py",
+            "tests/test_api_professional_invoice_payment.py",
+            "tests/test_api_server_professional_invoice_payment.py",
+            "tests/test_postgres_professional_invoice_payment.py",
+            "apps/web/src/components/ProfessionalInvoicePaymentStudio.test.tsx",
+            "apps/web/e2e/accessibility.spec.ts",
+        ),
+    ),
+    ModuleDescriptor(
+        module_id="individual.cashflow",
+        name="Individual and freelancer cashflow control",
+        version="1.0.0",
+        maturity="experimental",
+        capability_status="implemented",
+        summary=(
+            "Deterministic local income and expense control against optional category budgets with visible "
+            "over-budget, within-budget, unbudgeted, and no-activity evidence."
+        ),
+        default_enabled=False,
+        dependencies=("platform.core",),
+        interfaces=("api", "artifacts", "cli", "library", "modern-studio"),
+        import_contracts=("individual-cash-transaction-export.v1", "individual-cash-budget-export.v1"),
+        export_contracts=("individual-cashflow-control-report.v1",),
+        data_classification=("financial-sensitive", "personal-finance-data", "source-export-metadata"),
+        retention_note=(
+            "Transaction and budget exports remain in operator-selected local paths; reports are self-digesting "
+            "artifacts and are not persisted by this stateless API slice."
+        ),
+        activation_note=(
+            "Run explicitly with bounded local JSON exports or the authenticated local API. The control is "
+            "non-posting and provider-neutral; bank connectivity, tax advice, legal-book posting, and write-back "
+            "remain separate gates."
+        ),
+        test_evidence=(
+            "tests/test_individual_cashflow_control.py",
+            "tests/test_individual_cashflow_cli.py",
+            "tests/test_api_individual_cashflow.py",
+            "apps/web/src/components/IndividualCashflowStudio.test.tsx",
+            "apps/web/e2e/accessibility.spec.ts",
         ),
     ),
     ModuleDescriptor(

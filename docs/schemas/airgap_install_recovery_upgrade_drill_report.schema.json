@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/airgap_install_recovery_upgrade_drill_report.schema.json",
+  "title": "ReconForge current no-network install, identity recovery, and upgrade rollback drill",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "executed_at", "application_version", "runtime", "installation", "identity_recovery", "upgrade_rollback", "scope_status", "limitations"],
+  "properties": {
+    "schema": {"const": "reconforge-airgap-install-recovery-upgrade-drill-report-v1"},
+    "executed_at": {"const": "2026-08-05"},
+    "application_version": {"const": "0.7.1"},
+    "runtime": {
+      "type": "object", "additionalProperties": false,
+      "required": ["container_image", "container_image_digest", "network_mode", "root_filesystem", "bundle_mount", "writable_state"],
+      "properties": {
+        "container_image": {"const": "python:3.14.1-slim"},
+        "container_image_digest": {"const": "sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e"},
+        "network_mode": {"const": "none"},
+        "root_filesystem": {"const": "read-only"},
+        "bundle_mount": {"const": "read-only"},
+        "writable_state": {"const": "bounded-tmpfs-only"}
+      }
+    },
+    "installation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["application_version", "entry_count", "total_bytes", "bundle_manifest_sha256", "offline_install", "doctor_exit_zero", "cleanup_complete"],
+      "properties": {
+        "application_version": {"const": "0.7.1"},
+        "entry_count": {"const": 68},
+        "total_bytes": {"const": 100386256},
+        "bundle_manifest_sha256": {"const": "4be42566f0caba894140275186e9c679c6fbcc7c589c6c71cc8e33cafae94e99"},
+        "offline_install": {"const": true},
+        "doctor_exit_zero": {"const": true},
+        "cleanup_complete": {"const": true}
+      }
+    },
+    "identity_recovery": {
+      "type": "object", "additionalProperties": false,
+      "required": ["local_users_restored", "admin_permission_restored", "encrypted_backup", "wrong_key_rejected_atomically", "old_sessions_restored", "audit_chain_valid", "source_schema_version", "restored_schema_version", "operator_key_fingerprint"],
+      "properties": {
+        "local_users_restored": {"const": 2},
+        "admin_permission_restored": {"const": true},
+        "encrypted_backup": {"const": "AES-256-GCM"},
+        "wrong_key_rejected_atomically": {"const": true},
+        "old_sessions_restored": {"const": 0},
+        "audit_chain_valid": {"const": true},
+        "source_schema_version": {"const": 32},
+        "restored_schema_version": {"const": 32},
+        "operator_key_fingerprint": {"type": "string", "pattern": "^[a-f0-9]{16}$"}
+      }
+    },
+    "upgrade_rollback": {
+      "type": "object", "additionalProperties": false,
+      "required": ["from_version", "target_version", "network_inputs", "cutover_verified", "rollback_exact", "source_wheel_sha256", "target_wheel_sha256", "target_content_sha256", "rollback_sha256"],
+      "properties": {
+        "from_version": {"const": "0.7.0"},
+        "target_version": {"const": "0.7.1"},
+        "network_inputs": {"const": 0},
+        "cutover_verified": {"const": true},
+        "rollback_exact": {"const": true},
+        "source_wheel_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "target_wheel_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "target_content_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "rollback_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "scope_status": {"const": "verified-no-network-install-identity-recovery-and-exact-rollback"},
+    "limitations": {
+      "type": "array", "minItems": 5, "uniqueItems": true,
+      "items": {"enum": ["connected-bundle-assembly", "single-linux-runtime-single-run", "no-signature-trust", "no-physical-airgap-custody", "no-hardware-backed-key-custody", "no-oci-offline-verification", "no-production-readiness-claim"]}
+    }
+  }
+}

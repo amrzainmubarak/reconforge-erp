@@ -5,12 +5,12 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import asdict
 from datetime import UTC, datetime
-from typing import Annotated, TypeVar
+from typing import Annotated, Literal, TypeVar, cast
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import require_permission
+from reconforge.api.dependencies import enforce_server_tenant_permission, require_permission
 from reconforge.api.errors import APIError
 from reconforge.api.server_identity import (
     execute_postgres_access_administration,
@@ -22,11 +22,15 @@ from reconforge.application.access_administration import (
     AccessAdministrationError,
 )
 from reconforge.application.pagination import CursorCodec, CursorError, CursorPosition, cursor_scope_digest
+from reconforge.application.policy_analysis import PolicyAnalysisApplicationService
 from reconforge.auth.models import LocalUser
+from reconforge.auth.policy_analysis import PolicyAnalysisError
 from reconforge.infrastructure.postgres_access_administration import PostgresAccessAdministrationRepository
+from reconforge.infrastructure.postgres_policy_analysis import PostgresPolicyAnalysisRepository
 
 router = APIRouter(prefix="/admin/access", tags=["access-administration"])
 ManageAccess = Annotated[LocalUser, Depends(require_permission("roles.manage"))]
+ManagePolicy = Annotated[LocalUser, Depends(require_permission("security.policy.manage"))]
 PageLimit = Annotated[int, Query(ge=1, le=200)]
 CursorToken = Annotated[str | None, Query(max_length=4096)]
 ResultT = TypeVar("ResultT")
@@ -115,9 +119,45 @@ class UserRoleAssignmentResponse(BaseModel):
     state_digest: str
 
 
+class PolicyAnalysisRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    policy_version: str = Field(default="1.0.0", pattern=r"^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$")
+    require_scoped_privileged: bool = Field(default=True, strict=True)
+    approved_by: str = Field(min_length=1, max_length=160)
+    approved_at: str = Field(min_length=1, max_length=64)
+
+
+class PolicyAnalysisFindingResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    code: str
+    conflict_id: str
+    grant_ids: tuple[str, ...]
+    permissions: tuple[str, ...]
+    principal_id: str
+    reason: str
+    scope_digests: tuple[str, ...]
+    severity: Literal["critical", "high", "medium"]
+
+
+class PolicyAnalysisResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    active_grant_count: int
+    algorithm_version: str
+    findings: tuple[PolicyAnalysisFindingResponse, ...]
+    policy_id: str
+    policy_version: str
+    request_digest: str
+    result_digest: str
+    revoked_grant_count: int
+    schema_version: int
+    status: Literal["clear", "conflicts"]
+
+
 def _service(
     request: Request,
     operation: Callable[[AccessAdministrationApplicationService, str], ResultT],
+    *,
+    permission: str = "roles.manage",
 ) -> ResultT:
     if not server_identity_enabled(request):
         raise APIError(
@@ -127,6 +167,7 @@ def _service(
         )
 
     def execute(repository: PostgresAccessAdministrationRepository, tenant_id: str) -> ResultT:
+        enforce_server_tenant_permission(request, permission=permission, tenant_id=tenant_id)
         service = AccessAdministrationApplicationService(
             repository,
             clock=lambda: datetime.now(UTC).replace(microsecond=0),
@@ -138,6 +179,8 @@ def _service(
             if exc.code.endswith(("_invalid", "_too_large")):
                 status = 400
             raise APIError(status_code=status, code=exc.code, message=str(exc)) from exc
+        except PolicyAnalysisError as exc:
+            raise APIError(status_code=400, code="policy_analysis_invalid", message=str(exc)) from exc
 
     return execute_postgres_access_administration(request, execute)
 
@@ -320,3 +363,33 @@ def replace_access_user_roles(
         ),
     )
     return asdict(result)
+
+
+@router.post("/policy-analysis", response_model=PolicyAnalysisResponse)
+def analyze_access_policy(
+    payload: PolicyAnalysisRequest,
+    request: Request,
+    current_user: ManagePolicy,
+) -> dict[str, object]:
+    """Analyze the current PostgreSQL policy snapshot without mutating access."""
+
+    prepared_at = datetime.now(UTC).replace(microsecond=0)
+    result = _service(
+        request,
+        lambda service, tenant: PolicyAnalysisApplicationService(
+            PostgresPolicyAnalysisRepository(
+                cast(PostgresAccessAdministrationRepository, service.repository).connection,
+                tenant,
+            )
+        ).analyze(
+            policy_id="postgres-access-policy",
+            policy_version=payload.policy_version,
+            require_scoped_privileged=payload.require_scoped_privileged,
+            prepared_by=current_user.id,
+            prepared_at=prepared_at,
+            approved_by=payload.approved_by,
+            approved_at=payload.approved_at,
+        ),
+        permission="security.policy.manage",
+    )
+    return result.to_dict()

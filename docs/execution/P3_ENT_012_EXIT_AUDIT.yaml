@@ -5,7 +5,7 @@ task_id: P3-ENT-012
 status: verified
 scope: Bounded enterprise observability and operations stack with closed local policy, real sources, optional OTLP export, collector/file backend, capacity/reliability recovery, and incident lineage.
 gates:
-  - {id: reliability_policy_and_recovery_path, status: verified_focused, evidence: [reconforge/reliability.py, .github/scripts/verify_enterprise_reliability.py, docs/execution/ENTERPRISE_RELIABILITY_LOCAL_DRILL_2026-07-31.json, tests/test_enterprise_reliability_drill.py]}
+  - {id: reliability_policy_and_recovery_path, status: verified_focused, evidence: [reconforge/reliability/__init__.py, .github/scripts/verify_enterprise_reliability.py, docs/execution/ENTERPRISE_RELIABILITY_LOCAL_DRILL_2026-07-31.json, tests/test_enterprise_reliability_drill.py]}
   - {id: operational_source_and_cli_collection, status: verified_runtime, evidence: [reconforge/reliability_sources.py, tests/test_reliability_sources.py, docs/execution/RELIABILITY_CAPACITY_LOCAL_DRILL_2026-07-31.json]}
   - {id: capacity_and_recovery_exercise, status: verified_runtime, evidence: [docs/execution/RELIABILITY_CAPACITY_LOCAL_DRILL_2026-07-31.json, tests/test_reliability_capacity_drill.py]}
   - {id: postgres_reliability_parity, status: verified_disposable_runtime, evidence: [docs/execution/POSTGRES_RELIABILITY_DOCKER_DRILL_2026-07-31.json, .github/scripts/verify_postgres_reliability.py, tests/test_postgres_reliability_drill.py, tests/test_reliability_sources.py]}

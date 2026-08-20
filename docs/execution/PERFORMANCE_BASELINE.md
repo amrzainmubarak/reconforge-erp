@@ -66,9 +66,33 @@ PY
 - This is local single-host and single-process evidence with explicit CPU/peak-memory capture; no network/database connector, crash-restart replay, or air-gap network-dispersed execution effects are included.
 - No 1M/10M profile claims are made.
 
+## Evidence index
+
+`docs/execution/benchmarks/INDEX.v1.json` is a closed index of selected
+machine-readable 10K/1M and PostgreSQL profiles. It verifies each artifact's
+repository-relative path, SHA-256, profile identity, declared digest fields,
+and non-production claim boundary without running the workload:
+
+```text
+uv run --no-sync python .github/scripts/verify_benchmark_index.py --root .
+```
+
+The index is a traceability gate, not a new performance result. It does not
+upgrade `partial` PostgreSQL entries, infer capacity from runtime, or replace
+hosted cross-engine, distributed, or production-sizing evidence.
+
 ## Next performance gates
 
 1. Add `match`/`exception` and ambiguity outcome percentages in a normalized format.
 2. Add crash/restart replay benchmarks for this deterministic suite.
 3. Add 1M synthetic profile benchmark under controlled memory budget.
 4. Add grouped-matching, grouped ambiguity, and high-ambiguity candidate-density profiles to close throughput completeness.
+
+## E-674 PostgreSQL repeated durable-job observation (2026-08-10)
+
+The bounded `postgres-durable-job-soak/repeated-small-tier-v1` profile ran
+three 64-job/256-effect iterations on the local disposable PostgreSQL 16
+service. The observed wall time was 9.4047 seconds for 192 jobs; all effect
+digests were equal and queues drained. This timing is hardware- and workload-
+dependent and is deliberately not a throughput, capacity, SLO, or sizing
+claim. Distributed soak and production scheduling remain future gates.

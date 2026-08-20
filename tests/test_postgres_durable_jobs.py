@@ -1,29 +1,75 @@
 from __future__ import annotations
 
 import os
-from concurrent.futures import ThreadPoolExecutor
+import time
+from collections.abc import Callable
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import replace
+from multiprocessing import Process, get_context
 from pathlib import Path
+from threading import Lock
 from uuid import uuid4
 
 import pytest
 
 from reconforge.application.jobs import (
     DurableJobApplicationService,
+    DurableJobLane,
     DurableJobWorkerService,
+    GovernedDurableJobApplicationService,
+    JobAuthorizationError,
     JobSubmission,
+    PersistentRoundRobinDurableJobScheduler,
+    RoundRobinDurableJobScheduler,
+)
+from reconforge.auth.policy import PolicyEvaluationContext
+from reconforge.benchmark.postgres_durable_job_backpressure import (
+    default_profile as postgres_backpressure_profile,
+)
+from reconforge.benchmark.postgres_durable_job_backpressure import (
+    run_postgres_durable_job_backpressure_profile,
+    verify_postgres_durable_job_backpressure_result,
+)
+from reconforge.benchmark.postgres_durable_job_scale import (
+    PostgresDurableJobScaleProfile,
+    PostgresDurableJobScaleResult,
+    run_postgres_durable_job_scale_profile,
+    verify_postgres_durable_job_scale_result,
+)
+from reconforge.benchmark.postgres_durable_job_scale import (
+    default_profile as postgres_scale_profile,
+)
+from reconforge.benchmark.postgres_durable_job_scale import (
+    hundred_k_profile as postgres_scale_100k_profile,
+)
+from reconforge.benchmark.postgres_durable_job_scale import (
+    one_m_profile as postgres_scale_1m_profile,
+)
+from reconforge.benchmark.postgres_durable_job_scale import (
+    ten_k_profile as postgres_scale_10k_profile,
+)
+from reconforge.benchmark.postgres_durable_job_scale import (
+    ten_m_profile as postgres_scale_10m_profile,
+)
+from reconforge.benchmark.postgres_durable_job_soak import (
+    PostgresDurableJobSoakProfile,
+    run_postgres_durable_job_soak_profile,
+    verify_postgres_durable_job_soak_result,
 )
 from reconforge.db import connect, run_migrations
-from reconforge.domain.jobs import JobOutputManifest, JobPartitionEffect
+from reconforge.domain.jobs import DurableJobBackpressureError, JobOutputManifest, JobPartitionEffect
 from reconforge.infrastructure.postgres import (
     PostgresConnectionFactory,
+    PostgresPooledConnectionFactory,
     PostgresSettings,
     install_postgres_rls_schema,
+    set_local_tenant_scope,
 )
 from reconforge.infrastructure.postgres_jobs import (
     POSTGRES_DURABLE_JOB_SCHEMA_SQL,
     PostgresDurableJobRepository,
     PostgresJobConflictError,
+    _optional_scope_text,
     install_postgres_durable_job_schema,
 )
 from reconforge.infrastructure.sqlite_jobs import SQLiteDurableJobRepository
@@ -38,11 +84,129 @@ def _submission(tenant_id: str) -> JobSubmission:
     )
 
 
+def _claim_persistent_postgres_lane(
+    dsn: str,
+    tenant_id: str,
+    worker_id: str,
+    lanes: tuple[DurableJobLane, ...],
+) -> int | None:
+    """Claim one persistent lane from an independent spawned worker process."""
+
+    factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))
+    connection = factory.connect()
+    try:
+        repository = PostgresDurableJobRepository(connection)
+        worker = DurableJobWorkerService(repository)
+        scheduler = PersistentRoundRobinDurableJobScheduler(
+            worker,
+            repository,
+            lanes,
+            scheduler_key="multiprocess-fairness",
+        )
+        scheduled = scheduler.claim(
+            worker_id=worker_id,
+            occurred_at="2026-08-10T12:00:00Z",
+            lease_expires_at="2026-08-10T12:05:00Z",
+        )
+        if scheduled is None:
+            return None
+        lane_index = lanes.index(scheduled.lane)
+        worker.cancel(scheduled.leased_job, occurred_at="2026-08-10T12:00:01Z")
+        return lane_index
+    finally:
+        connection.close()
+
+
+def _crash_after_postgres_checkpoint(dsn: str, tenant_id: str, job_id: str) -> None:
+    """Simulate a worker process dying after its durable checkpoint commit."""
+
+    factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))
+    connection = factory.connect()
+    repository = PostgresDurableJobRepository(connection)
+    worker = DurableJobWorkerService(repository)
+    leased = worker.claim(
+        tenant_id=tenant_id,
+        worker_id="crashed-worker",
+        occurred_at="2026-08-10T13:00:00Z",
+        lease_expires_at="2026-08-10T13:00:01Z",
+    )
+    if leased is None or leased.job.id != job_id:
+        os._exit(2)
+    worker.commit_partition(
+        leased,
+        partition_key="crash/p1",
+        ordinal=1,
+        completed_units=1,
+        input_digest="3" * 64,
+        output_digest="4" * 64,
+        effect_reference="crash/p1",
+        occurred_at="2026-08-10T13:00:00Z",
+    )
+    # Deliberately skip lease release and connection cleanup. PostgreSQL must
+    # leave the durable checkpoint while the next worker takes over the expired
+    # lease with a higher generation.
+    os._exit(0)
+
+
+def _database_fault_after_postgres_checkpoint(
+    dsn: str,
+    tenant_id: str,
+    job_id: str,
+    ready_path: str,
+) -> None:
+    """Keep a checkpointed worker alive until its PostgreSQL backend is killed."""
+
+    factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))
+    connection = factory.connect()
+    ready = Path(ready_path)
+    try:
+        repository = PostgresDurableJobRepository(connection)
+        worker = DurableJobWorkerService(repository)
+        leased = worker.claim(
+            tenant_id=tenant_id,
+            worker_id="database-fault-worker",
+            occurred_at="2026-08-10T14:00:00Z",
+            lease_expires_at="2026-08-10T14:00:01Z",
+        )
+        if leased is None or leased.job.id != job_id:
+            os._exit(2)
+        worker.commit_partition(
+            leased,
+            partition_key="database-fault/p1",
+            ordinal=1,
+            completed_units=1,
+            input_digest="8" * 64,
+            output_digest="9" * 64,
+            effect_reference="database-fault/p1",
+            occurred_at="2026-08-10T14:00:00Z",
+        )
+        backend_pid = int(connection.execute("SELECT pg_backend_pid()").fetchone()[0])
+        ready.write_text(str(backend_pid), encoding="ascii")
+        while True:
+            time.sleep(0.05)
+            connection.execute("SELECT 1")
+    except Exception:
+        # The parent intentionally terminates this backend.  Exit cleanly only
+        # after the readiness marker proves the checkpoint was committed.
+        os._exit(0 if ready.exists() else 3)
+
+
 def test_postgres_job_schema_has_rls_idempotency_and_version_guards() -> None:
     assert "FORCE ROW LEVEL SECURITY" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
     assert "UNIQUE (tenant_id, idempotency_scope, idempotency_key)" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
+    assert "organization_id TEXT" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
+    assert "durable_jobs_org_scope_status_idx" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
     assert "PRIMARY KEY (tenant_id, job_id, job_version)" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
     assert "completed_units <= total_units" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
+    assert "durable_job_scheduler_cursors" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
+    assert "lane_digest ~ '^[0-9a-f]{64}$'" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
+    assert "ALTER TABLE reconforge.durable_job_scheduler_cursors FORCE ROW LEVEL SECURITY" in POSTGRES_DURABLE_JOB_SCHEMA_SQL
+
+
+def test_postgres_job_scope_preserves_sql_null_organization() -> None:
+    assert _optional_scope_text(None) is None
+    assert _optional_scope_text("") == ""
+    assert _optional_scope_text("org-a") == "org-a"
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
@@ -67,7 +231,8 @@ def test_live_postgres_job_application_contract_and_rls(tmp_path: Path) -> None:
                 f"GRANT SELECT, INSERT, UPDATE ON reconforge.durable_jobs, "
                 f"reconforge.durable_job_transitions, reconforge.durable_job_leases, "
                 f"reconforge.durable_job_lease_events, "
-                f"reconforge.durable_job_partition_effects TO {app_user}"
+                f"reconforge.durable_job_partition_effects, "
+                f"reconforge.durable_job_scheduler_cursors TO {app_user}"
             )
             admin.execute(
                 f"GRANT DELETE ON reconforge.durable_job_leases TO {app_user}"
@@ -78,6 +243,391 @@ def test_live_postgres_job_application_contract_and_rls(tmp_path: Path) -> None:
         try:
             repository = PostgresDurableJobRepository(connection)
             service = DurableJobApplicationService(repository)
+            governed = GovernedDurableJobApplicationService(service)
+
+            bounded_first_submission = replace(
+                _submission(tenant_b),
+                job_id="postgres-bounded-first-" + uuid4().hex[:8],
+                idempotency_scope="postgres-bounded",
+                idempotency_key="bounded-first-" + uuid4().hex[:8],
+            )
+            bounded_first, bounded_created = service.submit_bounded(
+                bounded_first_submission,
+                actor_id="bounded-submitter",
+                max_queued_jobs=1,
+            )
+            bounded_replay, bounded_replay_created = service.submit_bounded(
+                bounded_first_submission,
+                actor_id="bounded-replay",
+                max_queued_jobs=1,
+            )
+            assert bounded_created is True and bounded_replay_created is False
+            assert bounded_replay == bounded_first
+            bounded_snapshot = service.queue_snapshot(tenant_id=tenant_b)
+            assert bounded_snapshot.queue_depth == 1
+            assert bounded_snapshot.queued_count == 1
+            assert bounded_snapshot.leased_count == 0
+            assert service.queue_snapshot(tenant_id=tenant_a).total_count == 0
+            bounded_second_submission = replace(
+                _submission(tenant_b),
+                job_id="postgres-bounded-second-" + uuid4().hex[:8],
+                idempotency_scope="postgres-bounded",
+                idempotency_key="bounded-second-" + uuid4().hex[:8],
+            )
+            with pytest.raises(DurableJobBackpressureError, match="queue capacity"):
+                service.submit_bounded(
+                    bounded_second_submission,
+                    actor_id="bounded-submitter",
+                    max_queued_jobs=1,
+                )
+            assert repository.get(tenant_id=tenant_b, job_id=bounded_second_submission.job_id) is None
+
+            bounded_sibling_submission = replace(
+                _submission(tenant_a),
+                job_id="postgres-bounded-sibling-" + uuid4().hex[:8],
+                idempotency_scope="postgres-bounded",
+                idempotency_key="bounded-sibling-" + uuid4().hex[:8],
+            )
+            bounded_sibling, bounded_sibling_created = service.submit_bounded(
+                bounded_sibling_submission,
+                actor_id="bounded-submitter",
+                max_queued_jobs=1,
+            )
+            assert bounded_sibling_created is True and bounded_sibling.tenant_id == tenant_a
+            bounded_worker = DurableJobWorkerService(repository)
+            bounded_lease = bounded_worker.claim(
+                tenant_id=tenant_b,
+                worker_id="bounded-worker",
+                occurred_at="2026-07-27T09:59:01Z",
+                lease_expires_at="2026-07-27T10:09:00Z",
+            )
+            assert bounded_lease is not None and bounded_lease.job.id == bounded_first.id
+            running_snapshot = service.queue_snapshot(tenant_id=tenant_b)
+            assert running_snapshot.queue_depth == 0
+            assert running_snapshot.running_count == 1
+            assert running_snapshot.leased_count == 1
+            assert running_snapshot.oldest_running_at == "2026-07-27T09:59:01Z"
+            bounded_retrying = bounded_worker.schedule_retry(
+                bounded_lease,
+                occurred_at="2026-07-27T09:59:02Z",
+            )
+            retry_snapshot = service.queue_snapshot(tenant_id=tenant_b)
+            assert retry_snapshot.retrying_count == 1
+            assert retry_snapshot.queue_depth == 1
+            assert retry_snapshot.leased_count == 0
+            with pytest.raises(DurableJobBackpressureError, match="queue capacity"):
+                service.submit_bounded(
+                    bounded_second_submission,
+                    actor_id="bounded-submitter",
+                    max_queued_jobs=1,
+                )
+            bounded_retry_lease = bounded_worker.claim(
+                tenant_id=tenant_b,
+                worker_id="bounded-worker-recovery",
+                occurred_at="2026-07-27T09:59:03Z",
+                lease_expires_at="2026-07-27T10:09:00Z",
+            )
+            assert bounded_retry_lease is not None and bounded_retry_lease.job.id == bounded_retrying.id
+            bounded_worker.cancel(bounded_retry_lease, occurred_at="2026-07-27T09:59:04Z")
+            bounded_second, bounded_second_created = service.submit_bounded(
+                bounded_second_submission,
+                actor_id="bounded-submitter",
+                max_queued_jobs=1,
+            )
+            assert bounded_second_created is True and bounded_second.status.value == "queued"
+            service.cancel(
+                tenant_id=tenant_a,
+                job_id=bounded_sibling.id,
+                actor_id="bounded-submitter",
+                occurred_at="2026-07-27T09:59:05Z",
+            )
+            service.cancel(
+                tenant_id=tenant_b,
+                job_id=bounded_second.id,
+                actor_id="bounded-submitter",
+                occurred_at="2026-07-27T09:59:06Z",
+            )
+
+            # Bounded PostgreSQL parity/load slice: two tenant lanes contend
+            # over real claims and generation-fenced partition effects. This
+            # intentionally stays small and synthetic; it is not a capacity
+            # or production-SLO claim.
+            load_tenants = [tenant_a, tenant_b]
+            load_jobs_per_tenant = 3
+            load_partitions = 2
+            load_jobs: list[tuple[str, str]] = []
+            for tenant_index, tenant_id in enumerate(load_tenants):
+                for job_index in range(load_jobs_per_tenant):
+                    load_job_id = f"postgres-load-{tenant_index}-{job_index}-{uuid4().hex[:8]}"
+                    load_jobs.append((tenant_id, load_job_id))
+                    service.submit(
+                        JobSubmission(
+                            job_id=load_job_id,
+                            idempotency_scope="postgres-load",
+                            idempotency_key=load_job_id,
+                            tenant_id=tenant_id,
+                            workspace_id="workspace-a",
+                            entity_id="entity-a",
+                            input_digest="a" * 64,
+                            config_digest="b" * 64,
+                            worker_version="postgres-load-v1",
+                            total_units=load_partitions,
+                            retry_ceiling=2,
+                            created_at="2026-07-27T10:00:00Z",
+                        ),
+                        actor_id="load-submitter",
+                    )
+
+            def drain_postgres_load(tenant_id: str, worker_id: str) -> int:
+                worker_connection = factory.connect()
+                try:
+                    worker_repository = PostgresDurableJobRepository(worker_connection)
+                    worker = DurableJobWorkerService(worker_repository)
+                    completed = 0
+                    while completed < load_jobs_per_tenant:
+                        leased = worker.claim(
+                            tenant_id=tenant_id,
+                            worker_id=worker_id,
+                            occurred_at="2026-07-27T10:01:00Z",
+                            lease_expires_at="2026-07-27T10:11:00Z",
+                        )
+                        assert leased is not None
+                        for ordinal in range(1, load_partitions + 1):
+                            if ordinal == load_partitions:
+                                worker.complete_partition(
+                                    leased,
+                                    partition_key=f"partition/{ordinal}",
+                                    ordinal=ordinal,
+                                    input_digest="c" * 64,
+                                    output_digest="d" * 64,
+                                    effect_reference=f"postgres-load/{leased.job.id}/{ordinal}",
+                                    occurred_at=f"2026-07-27T10:01:0{ordinal}Z",
+                                    output_manifest=JobOutputManifest(
+                                        schema_version=1,
+                                        digest="e" * 64,
+                                        reference=f"manifest/{leased.job.id}",
+                                    ),
+                                )
+                            else:
+                                leased = worker.commit_partition(
+                                    leased,
+                                    partition_key=f"partition/{ordinal}",
+                                    ordinal=ordinal,
+                                    completed_units=ordinal,
+                                    input_digest="c" * 64,
+                                    output_digest="d" * 64,
+                                    effect_reference=f"postgres-load/{leased.job.id}/{ordinal}",
+                                    occurred_at=f"2026-07-27T10:01:0{ordinal}Z",
+                                )
+                        completed += 1
+                    return completed
+                finally:
+                    worker_connection.close()
+
+            with ThreadPoolExecutor(max_workers=len(load_tenants)) as executor:
+                assert list(
+                    executor.map(
+                        lambda item: drain_postgres_load(*item),
+                        [(tenant_id, f"postgres-load-worker-{index}") for index, tenant_id in enumerate(load_tenants)],
+                    )
+                ) == [load_jobs_per_tenant] * len(load_tenants)
+            for tenant_id, load_job_id in load_jobs:
+                effects = repository.list_partition_effects(tenant_id=tenant_id, job_id=load_job_id)
+                assert len(effects) == load_partitions
+                assert len({effect.partition_key for effect in effects}) == load_partitions
+                loaded = repository.get(tenant_id=tenant_id, job_id=load_job_id)
+                assert loaded is not None and loaded.status.value == "completed"
+
+            # Bounded same-tenant claim contention: two real PostgreSQL
+            # workers drain one queue concurrently. This proves SKIP LOCKED
+            # claim ownership and no-duplicate effects without implying a
+            # capacity, soak, or production-SLO result.
+            contention_jobs_per_tenant = 4
+            contention_partitions = 3
+            contention_jobs: list[str] = []
+            for job_index in range(contention_jobs_per_tenant):
+                contention_job_id = f"postgres-contention-{job_index}-{uuid4().hex[:8]}"
+                contention_jobs.append(contention_job_id)
+                service.submit(
+                    JobSubmission(
+                        job_id=contention_job_id,
+                        idempotency_scope="postgres-contention",
+                        idempotency_key=contention_job_id,
+                        tenant_id=tenant_a,
+                        workspace_id="workspace-a",
+                        entity_id="entity-a",
+                        input_digest="f" * 64,
+                        config_digest="0" * 64,
+                        worker_version="postgres-contention-v1",
+                        total_units=contention_partitions,
+                        retry_ceiling=2,
+                        created_at="2026-07-27T10:05:00Z",
+                    ),
+                    actor_id="contention-submitter",
+                )
+            completed_contention = 0
+            contention_lock = Lock()
+
+            def drain_contended_worker(worker_id: str) -> int:
+                nonlocal completed_contention
+                worker_connection = factory.connect()
+                try:
+                    worker_repository = PostgresDurableJobRepository(worker_connection)
+                    worker = DurableJobWorkerService(worker_repository)
+                    completed = 0
+                    while True:
+                        with contention_lock:
+                            if completed_contention >= len(contention_jobs):
+                                return completed
+                        leased = worker.claim(
+                            tenant_id=tenant_a,
+                            worker_id=worker_id,
+                            occurred_at="2026-07-27T10:06:00Z",
+                            lease_expires_at="2026-07-27T10:16:00Z",
+                        )
+                        if leased is None:
+                            time.sleep(0.01)
+                            continue
+                        for ordinal in range(1, contention_partitions + 1):
+                            if ordinal == contention_partitions:
+                                worker.complete_partition(
+                                    leased,
+                                    partition_key=f"contention/{ordinal}",
+                                    ordinal=ordinal,
+                                    input_digest="1" * 64,
+                                    output_digest="2" * 64,
+                                    effect_reference=f"postgres-contention/{leased.job.id}/{ordinal}",
+                                    occurred_at=f"2026-07-27T10:06:0{ordinal}Z",
+                                    output_manifest=JobOutputManifest(
+                                        schema_version=1,
+                                        digest="3" * 64,
+                                        reference=f"manifest/contention/{leased.job.id}",
+                                    ),
+                                )
+                            else:
+                                leased = worker.commit_partition(
+                                    leased,
+                                    partition_key=f"contention/{ordinal}",
+                                    ordinal=ordinal,
+                                    completed_units=ordinal,
+                                    input_digest="1" * 64,
+                                    output_digest="2" * 64,
+                                    effect_reference=f"postgres-contention/{leased.job.id}/{ordinal}",
+                                    occurred_at=f"2026-07-27T10:06:0{ordinal}Z",
+                                )
+                        completed += 1
+                        with contention_lock:
+                            completed_contention += 1
+                finally:
+                    worker_connection.close()
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                worker_counts = list(
+                    executor.map(
+                        drain_contended_worker,
+                        ("postgres-contention-worker-a", "postgres-contention-worker-b"),
+                    )
+                )
+            assert sum(worker_counts) == contention_jobs_per_tenant
+            assert completed_contention == contention_jobs_per_tenant
+            for contention_job_id in contention_jobs:
+                effects = repository.list_partition_effects(tenant_id=tenant_a, job_id=contention_job_id)
+                assert len(effects) == contention_partitions
+                assert len({effect.partition_key for effect in effects}) == contention_partitions
+                loaded = repository.get(tenant_id=tenant_a, job_id=contention_job_id)
+                assert loaded is not None and loaded.status.value == "completed"
+
+            retry_submission = JobSubmission(
+                job_id="postgres-retry-" + uuid4().hex[:8],
+                idempotency_scope="postgres-retry",
+                idempotency_key="postgres-retry-key",
+                tenant_id=tenant_a,
+                workspace_id="workspace-a",
+                entity_id="entity-a",
+                input_digest="f" * 64,
+                config_digest="7" * 64,
+                worker_version="postgres-retry-v1",
+                total_units=2,
+                retry_ceiling=2,
+                created_at="2026-07-27T10:20:00Z",
+            )
+            retry_job, retry_created = service.submit(retry_submission, actor_id="retry-submitter")
+            assert retry_created is True
+            retry_worker = DurableJobWorkerService(repository)
+            retry_leased = retry_worker.claim(
+                tenant_id=tenant_a,
+                worker_id="retry-worker-fault",
+                occurred_at="2026-07-27T10:20:01Z",
+                lease_expires_at="2026-07-27T10:30:00Z",
+            )
+            assert retry_leased is not None and retry_leased.job.id == retry_job.id
+            retry_leased = retry_worker.commit_partition(
+                retry_leased,
+                partition_key="retry/p1",
+                ordinal=1,
+                completed_units=1,
+                input_digest="8" * 64,
+                output_digest="9" * 64,
+                effect_reference="retry/p1",
+                occurred_at="2026-07-27T10:20:02Z",
+            )
+            retrying = retry_worker.schedule_retry(retry_leased, occurred_at="2026-07-27T10:20:03Z")
+            assert retrying.status.value == "retrying" and retrying.retry_count == 1
+            recovered = retry_worker.claim(
+                tenant_id=tenant_a,
+                worker_id="retry-worker-recovery",
+                occurred_at="2026-07-27T10:20:04Z",
+                lease_expires_at="2026-07-27T10:30:00Z",
+            )
+            assert recovered is not None and recovered.job.id == retry_job.id
+            assert [effect.partition_key for effect in retry_worker.completed_effects(recovered)] == ["retry/p1"]
+            retried_completed = retry_worker.complete_partition(
+                recovered,
+                partition_key="retry/p2",
+                ordinal=2,
+                input_digest="a" * 64,
+                output_digest="b" * 64,
+                effect_reference="retry/p2",
+                occurred_at="2026-07-27T10:20:05Z",
+                output_manifest=JobOutputManifest(
+                    schema_version=1,
+                    digest="c" * 64,
+                    reference="manifest/retry",
+                ),
+            )
+            assert retried_completed.status.value == "completed"
+            assert retried_completed.retry_count == 1
+            assert [row["reason_code"] for row in repository.list_transitions(
+                tenant_id=tenant_a, job_id=retry_job.id
+            )] == ["CREATED", "CLAIMED", "CHECKPOINTED", "TRANSIENT_FAILURE", "CLAIMED", "FINISHED"]
+            governed_submission = replace(
+                _submission(tenant_a), job_id="governed-postgres-job", idempotency_key="governed-postgres-key"
+            )
+            governed_context = PolicyEvaluationContext(
+                user_id="governed-operator", username="governed-operator",
+                user_permissions={"close.manage"}, tenant_id=tenant_a, workspace_id="workspace-a",
+                authorized_tenant_ids=frozenset({tenant_a}),
+                authorized_workspace_ids=frozenset({"workspace-a"}),
+            )
+            denied_context = replace(governed_context, user_permissions=set())
+            with pytest.raises(JobAuthorizationError, match="permission_missing"):
+                governed.submit(
+                    governed_submission, actor_id="governed-operator",
+                    policy_context=denied_context, required_permission="close.manage",
+                )
+            assert repository.get(tenant_id=tenant_a, job_id=governed_submission.job_id) is None
+            governed_job, governed_created = governed.submit(
+                governed_submission, actor_id="governed-operator",
+                policy_context=governed_context, required_permission="close.manage",
+            )
+            assert governed_created is True and governed_job.tenant_id == tenant_a
+            assert repository.get(tenant_id=tenant_b, job_id=governed_submission.job_id) is None
+            governed_cancelled = governed.cancel(
+                tenant_id=tenant_a, workspace_id="workspace-a", job_id=governed_submission.job_id,
+                actor_id="governed-operator", occurred_at="2026-07-27T09:00:15Z",
+                policy_context=governed_context, required_permission="close.manage",
+            )
+            assert governed_cancelled.status.value == "cancelled"
             concurrent_submission = replace(
                 _submission(tenant_a), idempotency_key="concurrent-key"
             )
@@ -289,4 +839,588 @@ def test_live_postgres_job_application_contract_and_rls(tmp_path: Path) -> None:
         finally:
             connection.close()
     finally:
+        admin.close()
+
+
+def _run_live_postgres_durable_job_scale_profile(
+    profile_factory: Callable[[], PostgresDurableJobScaleProfile], *, id_prefix: str
+) -> None:
+    """Run one declared PostgreSQL scale tier with isolated synthetic tenants."""
+
+    pytest.importorskip("psycopg")
+    dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
+    admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
+    app_user = os.environ.get("RECONFORGE_TEST_POSTGRES_APP_USER", "")
+    if not app_user:
+        pytest.skip("requires a non-privileged application role")
+    profile = profile_factory()
+    factory = PostgresPooledConnectionFactory(
+        PostgresSettings(dsn=dsn, require_tls=False),
+        max_size=profile.workers + 1,
+    )
+    admin_factory = PostgresConnectionFactory(PostgresSettings(dsn=admin_dsn, require_tls=False))
+    tenants = tuple(f"jobs_scale_{uuid4().hex[:8]}_{index}" for index in range(profile.tenants))
+    admin = admin_factory.connect()
+    connection = None
+    result: PostgresDurableJobScaleResult
+    pool_snapshot = None
+    try:
+        with admin.transaction():
+            install_postgres_rls_schema(admin)
+            install_postgres_durable_job_schema(admin)
+            admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            admin.execute(
+                f"GRANT SELECT, INSERT, UPDATE ON reconforge.durable_jobs, "
+                f"reconforge.durable_job_transitions, reconforge.durable_job_leases, "
+                f"reconforge.durable_job_lease_events, reconforge.durable_job_partition_effects, "
+                f"reconforge.durable_job_scheduler_cursors TO {app_user}"
+            )
+            admin.execute(f"GRANT DELETE ON reconforge.durable_job_leases TO {app_user}")
+            for tenant in tenants:
+                admin.execute("INSERT INTO reconforge.tenants (id, name) VALUES (%s, %s)", (tenant, tenant))
+        connection = factory.connect()
+        try:
+            repository = PostgresDurableJobRepository(connection)
+            result = run_postgres_durable_job_scale_profile(
+                factory.connect,
+                DurableJobApplicationService(repository),
+                tenants,
+                profile=profile,
+                id_prefix=id_prefix + uuid4().hex[:8],
+            )
+        finally:
+            connection.close()
+            connection = None
+        # Capture pool state only after releasing the caller-owned application
+        # connection; otherwise the snapshot includes this expected lease.
+        pool_snapshot = getattr(factory, "pool_snapshot", None)
+        verify_postgres_durable_job_scale_result(result, profile=profile)
+        print("postgres_durable_job_scale=" + result.to_manifest_text(), flush=True)
+        assert result.completed_jobs == profile.jobs
+        assert result.committed_partition_effects == profile.declared_partition_effects
+        assert result.duplicate_partition_effects == 0
+        assert result.final_queue_depth == result.final_running_depth == 0
+        if pool_snapshot is not None:
+            assert not pool_snapshot.closed
+            assert pool_snapshot.leased == 0
+            assert 1 <= pool_snapshot.total <= pool_snapshot.max_size
+    finally:
+        if connection is not None:
+            connection.close()
+        if hasattr(factory, "close"):
+            factory.close()
+        admin.close()
+
+
+def _skip_unless_heavy_postgres_scale_enabled() -> None:
+    if os.environ.get("RECONFORGE_RUN_EXTENDED_POSTGRES_SCALE", "").lower() not in {"1", "true", "yes"}:
+        raise pytest.skip("requires explicit RECONFORGE_RUN_EXTENDED_POSTGRES_SCALE opt-in for 1M/10M scale tiers")
+
+
+def _run_live_postgres_durable_job_backpressure_profile() -> None:
+    """Run the bounded PostgreSQL queue-cap profile with disposable tenants."""
+
+    pytest.importorskip("psycopg")
+    dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
+    admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
+    app_user = os.environ.get("RECONFORGE_TEST_POSTGRES_APP_USER", "")
+    if not app_user:
+        pytest.skip("requires a non-privileged application role")
+    factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))
+    admin_factory = PostgresConnectionFactory(PostgresSettings(dsn=admin_dsn, require_tls=False))
+    profile = postgres_backpressure_profile()
+    tenants = tuple(f"jobs_backpressure_{uuid4().hex[:8]}_{index}" for index in range(profile.tenants))
+    admin = admin_factory.connect()
+    connection = None
+    try:
+        with admin.transaction():
+            install_postgres_rls_schema(admin)
+            install_postgres_durable_job_schema(admin)
+            admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            admin.execute(
+                f"GRANT SELECT, INSERT, UPDATE ON reconforge.durable_jobs, "
+                f"reconforge.durable_job_transitions, reconforge.durable_job_leases, "
+                f"reconforge.durable_job_lease_events, reconforge.durable_job_partition_effects, "
+                f"reconforge.durable_job_scheduler_cursors TO {app_user}"
+            )
+            admin.execute(f"GRANT DELETE ON reconforge.durable_job_leases TO {app_user}")
+            for tenant in tenants:
+                admin.execute("INSERT INTO reconforge.tenants (id, name) VALUES (%s, %s)", (tenant, tenant))
+        connection = factory.connect()
+        result = run_postgres_durable_job_backpressure_profile(
+            factory.connect,
+            DurableJobApplicationService(PostgresDurableJobRepository(connection)),
+            tenants,
+            profile=profile,
+            id_prefix="PGBACKPRESSURE-" + uuid4().hex[:8],
+        )
+        verify_postgres_durable_job_backpressure_result(result, profile=profile)
+        print("postgres_durable_job_backpressure=" + result.to_manifest_text(), flush=True)
+        assert result.rejected_attempts > 0
+        assert result.observed_max_queue_depth <= profile.max_queued_jobs
+    finally:
+        if connection is not None:
+            connection.close()
+        admin.close()
+
+
+def _run_live_postgres_durable_job_soak_profile() -> None:
+    """Run the bounded repeated PostgreSQL tenant-lane soak profile."""
+
+    pytest.importorskip("psycopg")
+    dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
+    admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
+    app_user = os.environ.get("RECONFORGE_TEST_POSTGRES_APP_USER", "")
+    if not app_user:
+        pytest.skip("requires a non-privileged application role")
+    factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))
+    admin_factory = PostgresConnectionFactory(PostgresSettings(dsn=admin_dsn, require_tls=False))
+    profile = PostgresDurableJobSoakProfile()
+    tenant_sets = tuple(
+        tuple(f"jobs_soak_{iteration:02d}_{uuid4().hex[:8]}_{index}" for index in range(profile.declared_scale_profile.tenants))
+        for iteration in range(profile.iterations)
+    )
+    admin = admin_factory.connect()
+    connection = None
+    try:
+        with admin.transaction():
+            install_postgres_rls_schema(admin)
+            install_postgres_durable_job_schema(admin)
+            admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            admin.execute(
+                f"GRANT SELECT, INSERT, UPDATE ON reconforge.durable_jobs, "
+                f"reconforge.durable_job_transitions, reconforge.durable_job_leases, "
+                f"reconforge.durable_job_lease_events, reconforge.durable_job_partition_effects, "
+                f"reconforge.durable_job_scheduler_cursors TO {app_user}"
+            )
+            admin.execute(f"GRANT DELETE ON reconforge.durable_job_leases TO {app_user}")
+            for tenants in tenant_sets:
+                for tenant in tenants:
+                    admin.execute("INSERT INTO reconforge.tenants (id, name) VALUES (%s, %s)", (tenant, tenant))
+        connection = factory.connect()
+        result = run_postgres_durable_job_soak_profile(
+            factory.connect,
+            DurableJobApplicationService(PostgresDurableJobRepository(connection)),
+            tenant_sets,
+            profile=profile,
+            id_prefix="PGSOAK-" + uuid4().hex[:8],
+        )
+        verify_postgres_durable_job_soak_result(result, profile=profile)
+        print("postgres_durable_job_soak=" + result.to_manifest_text(), flush=True)
+        assert result.total_jobs == profile.iterations * profile.declared_scale_profile.jobs
+        assert result.total_partition_effects == profile.iterations * profile.declared_scale_profile.declared_partition_effects
+        assert len(set(result.effect_digests)) == 1
+    finally:
+        if connection is not None:
+            connection.close()
+        admin.close()
+
+
+@pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
+def test_live_postgres_durable_job_bounded_multi_worker_scale_profile() -> None:
+    """Exercise the repeatable 8-worker/256-effect PostgreSQL baseline."""
+
+    _run_live_postgres_durable_job_scale_profile(postgres_scale_profile, id_prefix="PGSCALE-")
+
+
+@pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
+def test_live_postgres_durable_job_backpressure_profile() -> None:
+    """Exercise the bounded PostgreSQL producer queue-cap profile."""
+
+    _run_live_postgres_durable_job_backpressure_profile()
+
+
+@pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
+def test_live_postgres_durable_job_soak_profile() -> None:
+    """Exercise the bounded three-iteration PostgreSQL repeated-load profile."""
+
+    _run_live_postgres_durable_job_soak_profile()
+
+
+@pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
+def test_live_postgres_durable_job_10k_multi_worker_scale_profile() -> None:
+    """Exercise the declared 16-worker/10K-effect PostgreSQL tier."""
+
+    _run_live_postgres_durable_job_scale_profile(postgres_scale_10k_profile, id_prefix="PGSCALE10K-")
+
+
+@pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
+def test_live_postgres_durable_job_100k_multi_worker_scale_profile() -> None:
+    """Exercise the declared 16-worker/100K-effect PostgreSQL tier."""
+
+    _run_live_postgres_durable_job_scale_profile(postgres_scale_100k_profile, id_prefix="PGSCALE100K-")
+
+
+@pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
+def test_live_postgres_durable_job_1m_multi_worker_scale_profile() -> None:
+    """Exercise the declared 16-worker/1M-effect PostgreSQL tier."""
+
+    _skip_unless_heavy_postgres_scale_enabled()
+    _run_live_postgres_durable_job_scale_profile(postgres_scale_1m_profile, id_prefix="PGSCALE1M-")
+
+
+@pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
+def test_live_postgres_durable_job_10m_multi_worker_scale_profile() -> None:
+    """Exercise the declared 16-worker/10M-effect PostgreSQL tier."""
+
+    _skip_unless_heavy_postgres_scale_enabled()
+    _run_live_postgres_durable_job_scale_profile(postgres_scale_10m_profile, id_prefix="PGSCALE10M-")
+
+
+@pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
+def test_live_postgres_round_robin_scheduler_is_lane_scoped_and_deterministic() -> None:
+    pytest.importorskip("psycopg")
+    dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
+    admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
+    app_user = os.environ.get("RECONFORGE_TEST_POSTGRES_APP_USER", "")
+    if not app_user:
+        pytest.skip("requires a non-privileged application role")
+    factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))
+    admin_factory = PostgresConnectionFactory(PostgresSettings(dsn=admin_dsn, require_tls=False))
+    tenant_id = "jobs_fair_" + uuid4().hex[:8]
+    admin = admin_factory.connect()
+    connection = None
+    try:
+        with admin.transaction():
+            install_postgres_rls_schema(admin)
+            install_postgres_durable_job_schema(admin)
+            admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            admin.execute(
+                f"GRANT SELECT, INSERT, UPDATE ON reconforge.durable_jobs, "
+                f"reconforge.durable_job_transitions, reconforge.durable_job_leases, "
+                f"reconforge.durable_job_lease_events, reconforge.durable_job_partition_effects, "
+                f"reconforge.durable_job_scheduler_cursors TO {app_user}"
+            )
+            admin.execute(f"GRANT DELETE ON reconforge.durable_job_leases TO {app_user}")
+            admin.execute("INSERT INTO reconforge.tenants (id, name) VALUES (%s, %s)", (tenant_id, tenant_id))
+        connection = factory.connect()
+        repository = PostgresDurableJobRepository(connection)
+        service = DurableJobApplicationService(repository)
+        worker = DurableJobWorkerService(repository)
+        lanes = (
+            DurableJobLane(tenant_id, "workspace-fair-a", "entity-fair-a"),
+            DurableJobLane(tenant_id, "workspace-fair-b", "entity-fair-b"),
+        )
+        for lane_index, lane in enumerate(lanes):
+            for ordinal in range(3):
+                service.submit(
+                    replace(
+                        _submission(tenant_id),
+                        job_id=f"postgres-fair-{lane_index}-{ordinal}-{uuid4().hex[:6]}",
+                        idempotency_scope="postgres-fair",
+                        idempotency_key=f"fair-{lane_index}-{ordinal}-{uuid4().hex[:6]}",
+                        workspace_id=lane.workspace_id,
+                        entity_id=lane.entity_id,
+                    ),
+                    actor_id="fair-scheduler",
+                )
+        scheduler = RoundRobinDurableJobScheduler(worker, lanes)
+        selected_lanes: list[DurableJobLane] = []
+        for ordinal in range(6):
+            scheduled = scheduler.claim(
+                worker_id="fair-worker",
+                occurred_at=f"2026-07-27T11:01:{ordinal:02d}Z",
+                lease_expires_at=f"2026-07-27T11:02:{ordinal:02d}Z",
+            )
+            assert scheduled is not None
+            selected_lanes.append(scheduled.lane)
+            assert scheduled.leased_job.job.workspace_id == scheduled.lane.workspace_id
+            assert scheduled.leased_job.job.entity_id == scheduled.lane.entity_id
+            worker.cancel(scheduled.leased_job, occurred_at=f"2026-07-27T11:01:{30 + ordinal:02d}Z")
+        assert selected_lanes == list(lanes) * 3
+        assert scheduler.claim(
+            worker_id="fair-worker",
+            occurred_at="2026-07-27T11:04:00Z",
+            lease_expires_at="2026-07-27T11:05:00Z",
+        ) is None
+    finally:
+        if connection is not None:
+            connection.close()
+        admin.close()
+
+
+@pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
+def test_live_postgres_persistent_scheduler_coordinates_spawned_processes() -> None:
+    """Prove shared lane reservation across two independent worker processes."""
+
+    pytest.importorskip("psycopg")
+    dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
+    admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
+    app_user = os.environ.get("RECONFORGE_TEST_POSTGRES_APP_USER", "")
+    if not app_user:
+        pytest.skip("requires a non-privileged application role")
+    factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))
+    admin_factory = PostgresConnectionFactory(PostgresSettings(dsn=admin_dsn, require_tls=False))
+    tenant_id = "jobs_multiprocess_" + uuid4().hex[:8]
+    lanes = (
+        DurableJobLane(tenant_id, "workspace-process-a", "entity-process-a"),
+        DurableJobLane(tenant_id, "workspace-process-b", "entity-process-b"),
+    )
+    admin = admin_factory.connect()
+    connection = None
+    try:
+        with admin.transaction():
+            install_postgres_rls_schema(admin)
+            install_postgres_durable_job_schema(admin)
+            admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            admin.execute(
+                f"GRANT SELECT, INSERT, UPDATE ON reconforge.durable_jobs, "
+                f"reconforge.durable_job_transitions, reconforge.durable_job_leases, "
+                f"reconforge.durable_job_lease_events, reconforge.durable_job_partition_effects, "
+                f"reconforge.durable_job_scheduler_cursors TO {app_user}"
+            )
+            admin.execute(f"GRANT DELETE ON reconforge.durable_job_leases TO {app_user}")
+            admin.execute("INSERT INTO reconforge.tenants (id, name) VALUES (%s, %s)", (tenant_id, tenant_id))
+
+        connection = factory.connect()
+        service = DurableJobApplicationService(PostgresDurableJobRepository(connection))
+        for lane_index, lane in enumerate(lanes):
+            service.submit(
+                replace(
+                    _submission(tenant_id),
+                    job_id=f"postgres-multiprocess-{lane_index}-{uuid4().hex[:8]}",
+                    idempotency_scope="postgres-multiprocess",
+                    idempotency_key=f"multiprocess-{lane_index}-{uuid4().hex[:8]}",
+                    workspace_id=lane.workspace_id,
+                    entity_id=lane.entity_id,
+                ),
+                actor_id="multiprocess-seeder",
+            )
+
+        # Spawn, rather than merely thread, the workers so each process creates
+        # its own psycopg connection and scheduler instance. The shared cursor
+        # must still hand out one lane per process in deterministic order.
+        with ProcessPoolExecutor(max_workers=2, mp_context=get_context("spawn")) as executor:
+            results = list(
+                executor.map(
+                    _claim_persistent_postgres_lane,
+                    (dsn, dsn),
+                    (tenant_id, tenant_id),
+                    ("multiprocess-worker-a", "multiprocess-worker-b"),
+                    (lanes, lanes),
+                )
+            )
+        with connection.transaction():
+            set_local_tenant_scope(connection, tenant_id)
+            cursor = connection.execute(
+                "SELECT next_index, version FROM reconforge.durable_job_scheduler_cursors "
+                "WHERE tenant_id=%s AND scheduler_key=%s",
+                (tenant_id, "multiprocess-fairness"),
+            ).fetchone()
+        lane_indexes = [result for result in results if result is not None]
+        assert len(lane_indexes) == 2
+        assert sorted(lane_indexes) == [0, 1]
+        assert tuple(cursor) == (1, 3)
+        with connection.transaction():
+            set_local_tenant_scope(connection, tenant_id)
+            assert connection.execute(
+                "SELECT COUNT(*) FROM reconforge.durable_job_leases WHERE tenant_id=%s",
+                (tenant_id,),
+            ).fetchone()[0] == 0
+    finally:
+        if connection is not None:
+            connection.close()
+        admin.close()
+
+
+@pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
+def test_live_postgres_worker_crash_after_checkpoint_resumes_without_duplicate_effect() -> None:
+    """Prove a new process resumes an expired lease from its durable checkpoint."""
+
+    pytest.importorskip("psycopg")
+    dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
+    admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
+    app_user = os.environ.get("RECONFORGE_TEST_POSTGRES_APP_USER", "")
+    if not app_user:
+        pytest.skip("requires a non-privileged application role")
+    factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))
+    admin_factory = PostgresConnectionFactory(PostgresSettings(dsn=admin_dsn, require_tls=False))
+    tenant_id = "jobs_crash_resume_" + uuid4().hex[:8]
+    admin = admin_factory.connect()
+    connection = None
+    try:
+        with admin.transaction():
+            install_postgres_rls_schema(admin)
+            install_postgres_durable_job_schema(admin)
+            admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            admin.execute(
+                f"GRANT SELECT, INSERT, UPDATE ON reconforge.durable_jobs, "
+                f"reconforge.durable_job_transitions, reconforge.durable_job_leases, "
+                f"reconforge.durable_job_lease_events, reconforge.durable_job_partition_effects "
+                f"TO {app_user}"
+            )
+            admin.execute(f"GRANT DELETE ON reconforge.durable_job_leases TO {app_user}")
+            admin.execute("INSERT INTO reconforge.tenants (id, name) VALUES (%s, %s)", (tenant_id, tenant_id))
+
+        connection = factory.connect()
+        repository = PostgresDurableJobRepository(connection)
+        service = DurableJobApplicationService(repository)
+        job, created = service.submit(
+            replace(
+                _submission(tenant_id),
+                job_id="postgres-crash-resume-" + uuid4().hex[:8],
+                idempotency_scope="postgres-crash-resume",
+                idempotency_key="crash-resume-" + uuid4().hex[:8],
+                total_units=2,
+            ),
+            actor_id="crash-resume-seeder",
+        )
+        assert created is True
+
+        crashed = Process(target=_crash_after_postgres_checkpoint, args=(dsn, tenant_id, job.id))
+        crashed.start()
+        crashed.join(timeout=30)
+        if crashed.is_alive():
+            crashed.terminate()
+            crashed.join(timeout=5)
+        assert not crashed.is_alive()
+        assert crashed.exitcode == 0
+
+        # Reconnect to model a fresh worker process and use a logical timestamp
+        # after the abandoned lease expiry; no wall-clock sleep is required.
+        connection.close()
+        connection = factory.connect()
+        recovery_repository = PostgresDurableJobRepository(connection)
+        recovery_worker = DurableJobWorkerService(recovery_repository)
+        resumed = recovery_worker.claim(
+            tenant_id=tenant_id,
+            worker_id="recovery-worker",
+            occurred_at="2026-08-10T13:01:00Z",
+            lease_expires_at="2026-08-10T13:02:00Z",
+        )
+        assert resumed is not None and resumed.job.id == job.id
+        assert resumed.lease.generation == 2
+        assert [effect.partition_key for effect in recovery_worker.completed_effects(resumed)] == ["crash/p1"]
+        completed = recovery_worker.complete_partition(
+            resumed,
+            partition_key="crash/p2",
+            ordinal=2,
+            input_digest="5" * 64,
+            output_digest="6" * 64,
+            effect_reference="crash/p2",
+            occurred_at="2026-08-10T13:01:01Z",
+            output_manifest=JobOutputManifest(
+                schema_version=1,
+                digest="7" * 64,
+                reference="manifest/crash-resume",
+            ),
+        )
+        assert completed.status.value == "completed"
+        effects = recovery_repository.list_partition_effects(tenant_id=tenant_id, job_id=job.id)
+        assert [effect.partition_key for effect in effects] == ["crash/p1", "crash/p2"]
+        assert [row["action"] for row in recovery_repository.list_lease_events(
+            tenant_id=tenant_id, job_id=job.id
+        )] == ["claimed", "taken_over", "released"]
+    finally:
+        if connection is not None:
+            connection.close()
+        admin.close()
+
+
+@pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
+def test_live_postgres_worker_database_fault_after_checkpoint_resumes_without_duplicate_effect(
+    tmp_path: Path,
+) -> None:
+    """Prove a replacement worker resumes after the database kills its session."""
+
+    pytest.importorskip("psycopg")
+    dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
+    admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
+    app_user = os.environ.get("RECONFORGE_TEST_POSTGRES_APP_USER", "")
+    if not app_user:
+        pytest.skip("requires a non-privileged application role")
+    factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))
+    admin_factory = PostgresConnectionFactory(PostgresSettings(dsn=admin_dsn, require_tls=False))
+    tenant_id = "jobs_database_fault_" + uuid4().hex[:8]
+    admin = admin_factory.connect()
+    connection = None
+    worker_process = None
+    try:
+        with admin.transaction():
+            install_postgres_rls_schema(admin)
+            install_postgres_durable_job_schema(admin)
+            admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            admin.execute(
+                f"GRANT SELECT, INSERT, UPDATE ON reconforge.durable_jobs, "
+                f"reconforge.durable_job_transitions, reconforge.durable_job_leases, "
+                f"reconforge.durable_job_lease_events, reconforge.durable_job_partition_effects "
+                f"TO {app_user}"
+            )
+            admin.execute(f"GRANT DELETE ON reconforge.durable_job_leases TO {app_user}")
+            admin.execute("INSERT INTO reconforge.tenants (id, name) VALUES (%s, %s)", (tenant_id, tenant_id))
+
+        connection = factory.connect()
+        repository = PostgresDurableJobRepository(connection)
+        service = DurableJobApplicationService(repository)
+        job, created = service.submit(
+            replace(
+                _submission(tenant_id),
+                job_id="postgres-database-fault-" + uuid4().hex[:8],
+                idempotency_scope="postgres-database-fault",
+                idempotency_key="database-fault-" + uuid4().hex[:8],
+                total_units=2,
+            ),
+            actor_id="database-fault-seeder",
+        )
+        assert created is True
+
+        ready_path = tmp_path / "postgres-database-fault-ready.txt"
+        worker_process = Process(
+            target=_database_fault_after_postgres_checkpoint,
+            args=(dsn, tenant_id, job.id, str(ready_path)),
+        )
+        worker_process.start()
+        deadline = time.monotonic() + 15
+        while not ready_path.exists() and time.monotonic() < deadline:
+            time.sleep(0.05)
+        assert ready_path.exists()
+        backend_pid = int(ready_path.read_text(encoding="ascii"))
+        with admin.transaction():
+            terminated = admin.execute("SELECT pg_terminate_backend(%s)", (backend_pid,)).fetchone()[0]
+        assert terminated is True
+        worker_process.join(timeout=15)
+        assert not worker_process.is_alive()
+        assert worker_process.exitcode == 0
+
+        connection.close()
+        connection = factory.connect()
+        recovery_repository = PostgresDurableJobRepository(connection)
+        recovery_worker = DurableJobWorkerService(recovery_repository)
+        resumed = recovery_worker.claim(
+            tenant_id=tenant_id,
+            worker_id="database-fault-recovery-worker",
+            occurred_at="2026-08-10T14:01:00Z",
+            lease_expires_at="2026-08-10T14:02:00Z",
+        )
+        assert resumed is not None and resumed.job.id == job.id
+        assert resumed.lease.generation == 2
+        assert [effect.partition_key for effect in recovery_worker.completed_effects(resumed)] == [
+            "database-fault/p1"
+        ]
+        completed = recovery_worker.complete_partition(
+            resumed,
+            partition_key="database-fault/p2",
+            ordinal=2,
+            input_digest="a" * 64,
+            output_digest="b" * 64,
+            effect_reference="database-fault/p2",
+            occurred_at="2026-08-10T14:01:01Z",
+            output_manifest=JobOutputManifest(
+                schema_version=1,
+                digest="c" * 64,
+                reference="manifest/database-fault-resume",
+            ),
+        )
+        assert completed.status.value == "completed"
+        effects = recovery_repository.list_partition_effects(tenant_id=tenant_id, job_id=job.id)
+        assert [effect.partition_key for effect in effects] == ["database-fault/p1", "database-fault/p2"]
+        assert [row["action"] for row in recovery_repository.list_lease_events(
+            tenant_id=tenant_id, job_id=job.id
+        )] == ["claimed", "taken_over", "released"]
+    finally:
+        if worker_process is not None and worker_process.is_alive():
+            worker_process.terminate()
+            worker_process.join(timeout=5)
+        if connection is not None:
+            connection.close()
         admin.close()

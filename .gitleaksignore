@@ -1,3 +1,19 @@
 # False-positive fingerprint for the literal idempotency_scope test keyword.
 11a033c650e6947f3454181e6043868e6db19430:tests/test_reliability_sources.py:generic-api-key:32
+# Current-tree fingerprint for the same synthetic idempotency-scope fixture.
 tests/test_reliability_sources.py:generic-api-key:32
+# Synthetic partition fallback was flagged by the generic-api-key rule in the historical commit.
+b5eba23671fb4dddcebe87d3532c3ab6e00639cb:reconforge/workers/postgres_grouped_matching.py:generic-api-key:110
+# Synthetic observability redaction fixture was classified as a generic key;
+# the test asserts that these literal values never reach telemetry output.
+a1dc6c77fde298b27ce7ff0654fd4ea44a4c64c7:tests/test_observability.py:generic-api-key:127
+tests/test_observability.py:generic-api-key:127
+# Historical false-positive benchmark wording from docs (generic-api-key rule).
+4659009fc6c33ca04c33486be62a50b915043c32:docs/execution/CLAIMS_EVIDENCE_MATRIX.md:generic-api-key:10
+4659009fc6c33ca04c33486be62a50b915043c32:docs/security/threat-model.md:generic-api-key:30
+4659009fc6c33ca04c33486be62a50b915043c32:docs/execution/STATE.md:generic-api-key:5736
+# Historical false-positive wording in the API replay-fence documentation;
+# current tree wording is intentionally neutralized, while history remains immutable.
+db48dad77c29debf8b09bc44d41f0f0f702fc479:docs/adr/0512-erpnext-payment-entry-api-replay-fence.md:generic-api-key:17
+db48dad77c29debf8b09bc44d41f0f0f702fc479:docs/execution/STATE.md:generic-api-key:12
+79cfbf8702cac19a61c16c16c59c574130e0e9d4:docs/adr/0438-gitleaks-synthetic-observability-fingerprint.md:generic-api-key:11

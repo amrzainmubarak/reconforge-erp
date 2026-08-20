@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/retail_settlement_report.schema.json",
+  "title": "ReconForge Retail Settlement Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["algorithm_version", "artifact_digest", "artifact_type", "decision_digest", "decisions", "input_digests", "schema_version", "status_counts", "tolerance"],
+  "properties": {
+    "algorithm_version": {"const": "retail-pos-settlement-v1"},
+    "artifact_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "artifact_type": {"const": "reconforge-retail-settlement"},
+    "decision_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "schema_version": {"const": 1},
+    "input_digests": {"type": "array", "items": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "uniqueItems": true},
+    "status_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "tolerance": {"$ref": "#/$defs/money"},
+    "decisions": {"type": "array", "items": {"$ref": "#/$defs/decision"}}
+  },
+  "$defs": {
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount", "currency", "currency_policy_digest", "currency_registry_digest", "currency_registry_version", "minor_units", "rounding_policy", "schema_version"],
+      "properties": {
+        "amount": {"type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"},
+        "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+        "currency_policy_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "currency_registry_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "currency_registry_version": {"type": "string", "minLength": 1},
+        "minor_units": {"type": "integer", "minimum": 0},
+        "rounding_policy": {"type": "string", "minLength": 1},
+        "schema_version": {"const": 1}
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["batch_id", "card_gross_variance", "expected_card_net", "net_variance", "pos_total_net_sales", "reason_code", "refund_variance", "settlement_ids", "settlement_net", "status", "store_id"],
+      "properties": {
+        "batch_id": {"type": "string", "minLength": 1},
+        "store_id": {"type": "string", "minLength": 1},
+        "status": {"enum": ["matched", "exception", "unmatched_pos", "unmatched_settlement", "ambiguous"]},
+        "reason_code": {"type": "string", "minLength": 1},
+        "settlement_ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "pos_total_net_sales": {"anyOf": [{"$ref": "#/$defs/money"}, {"type": "null"}]},
+        "expected_card_net": {"anyOf": [{"$ref": "#/$defs/money"}, {"type": "null"}]},
+        "settlement_net": {"anyOf": [{"$ref": "#/$defs/money"}, {"type": "null"}]},
+        "card_gross_variance": {"anyOf": [{"$ref": "#/$defs/money"}, {"type": "null"}]},
+        "refund_variance": {"anyOf": [{"$ref": "#/$defs/money"}, {"type": "null"}]},
+        "net_variance": {"anyOf": [{"$ref": "#/$defs/money"}, {"type": "null"}]}
+      }
+    }
+  }
+}

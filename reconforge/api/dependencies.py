@@ -27,7 +27,8 @@ from reconforge.api.server_identity import (
 )
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService
 from reconforge.auth.models import LocalUser
-from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext, audit_policy_decision
+from reconforge.auth.policy import CentralPolicyEngine, PolicyDecision, PolicyEvaluationContext, audit_policy_decision
+from reconforge.auth.policy_cache import PolicyDecisionCache
 from reconforge.auth.webauthn_config import WebAuthnRuntime
 from reconforge.db import DatabaseError, connect
 from reconforge.db.tenancy import (
@@ -36,6 +37,7 @@ from reconforge.db.tenancy import (
     TenantDatabaseRouter,
     TenantRoutingError,
 )
+from reconforge.infrastructure.postgres import PostgresConfigurationError, normalize_scope_id
 from reconforge.platform.common import ServerPrincipal, current_server_principal, server_principal_context
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -247,6 +249,189 @@ dynamic_policy_dependency.__reconforge_permissions__ = frozenset()
 dynamic_policy_dependency.__reconforge_permission_mode__ = "dynamic"
 
 
+def _evaluate_policy(
+    request: Request,
+    context: PolicyEvaluationContext,
+    *,
+    required_permission: str,
+) -> PolicyDecision:
+    cache = getattr(request.app.state, "policy_decision_cache", None)
+    if isinstance(cache, PolicyDecisionCache):
+        return cache.evaluate(context, required_permission=required_permission)
+    return CentralPolicyEngine().evaluate(context, required_permission=required_permission)
+
+
+def _evaluate_any_policy(
+    request: Request,
+    context: PolicyEvaluationContext,
+    *,
+    required_permissions: frozenset[str],
+) -> PolicyDecision:
+    cache = getattr(request.app.state, "policy_decision_cache", None)
+    if isinstance(cache, PolicyDecisionCache):
+        return cache.evaluate_any(context, required_permissions=required_permissions)
+    return CentralPolicyEngine().evaluate_any(context, required_permissions=required_permissions)
+
+
+def enforce_server_scoped_permissions(
+    request: Request,
+    *,
+    permissions: frozenset[str],
+    tenant_id: str,
+    workspace_id: str | None,
+    organization_id: str | None = None,
+    entity_id: str | None = None,
+) -> None:
+    """Re-evaluate one of several permissions against the server hierarchy.
+
+    The regular permission dependency proves that the principal has one of the
+    named capabilities. Server business routes must additionally bind that
+    capability to the caller-selected tenant/workspace/entity before touching a
+    repository. An explicit set preserves routes whose compatibility contract
+    intentionally accepts more than one permission.
+    Local SQLite routes intentionally keep their existing compatibility path.
+    """
+
+    if not permissions:
+        raise ValueError("At least one server-scoped permission is required.")
+    if not server_identity_enabled(request):
+        return
+    from reconforge.api.server_identity import request_tenant_id
+
+    if request_tenant_id(request) != tenant_id:
+        raise APIError(status_code=403, code="tenant_scope_denied", message="Tenant scope is not authorized.")
+    raw_organization = request.headers.get("x-reconforge-organization", "").strip()
+    raw_entity = request.headers.get("x-reconforge-legal-entity", "").strip()
+    header_organization = None
+    header_entity = None
+    if raw_organization:
+        try:
+            header_organization = normalize_scope_id(raw_organization, field_name="organization_id")
+        except PostgresConfigurationError as exc:
+            raise APIError(status_code=400, code="invalid_execution_scope", message=str(exc)) from exc
+    if raw_entity:
+        try:
+            header_entity = normalize_scope_id(raw_entity, field_name="legal_entity_id")
+        except PostgresConfigurationError as exc:
+            raise APIError(status_code=400, code="invalid_execution_scope", message=str(exc)) from exc
+    if organization_id is None:
+        organization_id = header_organization
+    elif header_organization is not None and organization_id != header_organization:
+        raise APIError(
+            status_code=403,
+            code="organization_scope_denied",
+            message="Organization scope is not authorized.",
+        )
+    if entity_id is None:
+        entity_id = header_entity
+    elif header_entity is not None and entity_id != header_entity:
+        raise APIError(
+            status_code=403,
+            code="entity_scope_denied",
+            message="Legal-entity scope is not authorized.",
+        )
+    if entity_id is not None and organization_id is None:
+        raise APIError(
+            status_code=400,
+            code="organization_scope_required",
+            message="Legal-entity scope requires an organization scope.",
+        )
+    principal = getattr(request.state, "server_principal", None)
+    if not isinstance(principal, ServerPrincipal):
+        principal = current_server_principal()
+    if principal is None:
+        raise APIError(status_code=401, code="auth_required", message="Authentication required.")
+    context = PolicyEvaluationContext(
+        user_id=principal.user.id,
+        username=principal.user.username,
+        user_permissions=principal.permissions,
+        principal_type=principal.principal_type,
+        step_up_active=principal.step_up_active,
+        step_up_enforced=True,
+        required_step_up_method=_required_step_up_method(request),
+        step_up_method=principal.step_up_method,
+        tenant_id=tenant_id,
+        workspace_id=workspace_id,
+        organization_id=organization_id,
+        entity_id=entity_id,
+        authorized_tenant_ids=frozenset({tenant_id}),
+        authorized_workspace_ids=principal.authorized_workspace_ids,
+        authorized_organization_ids=principal.authorized_organization_ids,
+        authorized_entity_ids=principal.authorized_legal_entity_ids,
+    )
+    decision = _evaluate_any_policy(request, context, required_permissions=permissions)
+    audit_policy_decision(
+        decision,
+        actor_id=principal.user.id,
+        required_permissions=permissions,
+        surface=f"server.scoped:{','.join(sorted(permissions))}",
+        request_id=str(getattr(request.state, "request_id", "")),
+        principal_type=principal.principal_type,
+    )
+    if decision.allowed:
+        return
+    code = decision.reason_code if decision.reason_code in {
+        "tenant_scope_denied",
+        "workspace_scope_denied",
+        "organization_scope_denied",
+        "entity_scope_denied",
+        "step_up_required",
+        "mfa_required",
+    } else "permission_denied"
+    message = {
+        "step_up_required": "Recent human reauthentication is required.",
+        "mfa_required": "User-verified WebAuthn MFA is required.",
+        "tenant_scope_denied": "Tenant scope is not authorized.",
+        "workspace_scope_denied": "Workspace scope is not authorized.",
+        "organization_scope_denied": "Organization scope is not authorized.",
+        "entity_scope_denied": "Legal-entity scope is not authorized.",
+    }.get(code, "Permission denied.")
+    raise APIError(status_code=403, code=code, message=message)
+
+
+def enforce_server_scoped_permission(
+    request: Request,
+    *,
+    permission: str,
+    tenant_id: str,
+    workspace_id: str,
+    organization_id: str | None = None,
+    entity_id: str | None = None,
+) -> None:
+    """Re-evaluate one permission against the selected server hierarchy."""
+
+    enforce_server_scoped_permissions(
+        request,
+        permissions=frozenset({permission}),
+        tenant_id=tenant_id,
+        workspace_id=workspace_id,
+        organization_id=organization_id,
+        entity_id=entity_id,
+    )
+
+
+def enforce_server_tenant_permission(
+    request: Request,
+    *,
+    permission: str,
+    tenant_id: str,
+) -> None:
+    """Re-evaluate a tenant-wide administrative permission in server mode.
+
+    Identity, access-policy, and retention administration are deliberately
+    tenant-scoped rather than workspace-scoped.  They still need the same
+    request-time central-policy re-evaluation as business routes, but forcing a
+    synthetic workspace would incorrectly deny valid tenant administrators.
+    """
+
+    enforce_server_scoped_permissions(
+        request,
+        permissions=frozenset({permission}),
+        tenant_id=tenant_id,
+        workspace_id=None,
+    )
+
+
 def require_permission(permission: str) -> Callable[..., LocalUser]:
     """Build a dependency requiring one local RBAC permission."""
 
@@ -263,7 +448,8 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
             principal = getattr(request.state, "server_principal", None)
             if not isinstance(principal, ServerPrincipal):
                 principal = current_server_principal()
-            decision = CentralPolicyEngine().evaluate(
+            decision = _evaluate_policy(
+                request,
                 PolicyEvaluationContext(
                     user_id=current_user.id if principal is not None else "",
                     username=current_user.username,
@@ -305,7 +491,8 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
             raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
         try:
             service = LocalAuthService(connection)
-            decision = CentralPolicyEngine().evaluate(
+            decision = _evaluate_policy(
+                request,
                 PolicyEvaluationContext(
                     user_id=current_user.id,
                     username=current_user.username,
@@ -348,7 +535,8 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
             principal = getattr(request.state, "server_principal", None)
             if not isinstance(principal, ServerPrincipal):
                 principal = current_server_principal()
-            decision = CentralPolicyEngine().evaluate_any(
+            decision = _evaluate_any_policy(
+                request,
                 PolicyEvaluationContext(
                     user_id=current_user.id if principal is not None else "",
                     username=current_user.username,
@@ -390,7 +578,8 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
             raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
         try:
             service = LocalAuthService(connection)
-            decision = CentralPolicyEngine().evaluate_any(
+            decision = _evaluate_any_policy(
+                request,
                 PolicyEvaluationContext(
                     user_id=current_user.id,
                     username=current_user.username,

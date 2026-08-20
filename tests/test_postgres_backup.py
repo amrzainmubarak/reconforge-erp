@@ -35,11 +35,15 @@ class _Runner:
         fail_restore: bool = False,
         fail_verification: bool = False,
         fail_rollback: bool = False,
+        omit_dump_attempts: int = 0,
+        fail_dump_attempts: int = 0,
     ) -> None:
         self.calls: list[tuple[str, ...]] = []
         self.fail_restore = fail_restore
         self.fail_verification = fail_verification
         self.fail_rollback = fail_rollback
+        self.omit_dump_attempts = omit_dump_attempts
+        self.fail_dump_attempts = fail_dump_attempts
 
     def run(self, argv: Sequence[str], *, timeout_seconds: int) -> int:
         assert timeout_seconds == 30
@@ -47,14 +51,39 @@ class _Runner:
         self.calls.append(call)
         executable = Path(call[0]).stem
         if executable == "pg_dump":
-            output = Path(call[call.index("--file") + 1])
-            output.write_bytes(b"PGDMP\x01\x0f confidential-database-content")
+            if self.fail_dump_attempts:
+                self.fail_dump_attempts -= 1
+                return 1
+            if self.omit_dump_attempts:
+                self.omit_dump_attempts -= 1
+            else:
+                if "--file" in call:
+                    output = Path(call[call.index("--file") + 1])
+                elif any(argument.startswith("--file=") for argument in call):
+                    for argument in call:
+                        if argument.startswith("--file="):
+                            output = Path(argument.split("=", 1)[1])
+                            break
+                else:
+                    short_file_index = call.index("-f")
+                    output = Path(call[short_file_index + 1])
+                output.write_bytes(b"PGDMP\x01\x0f confidential-database-content")
         if executable == "pg_restore" and "--list" not in call and self.fail_restore:
             return 1
         if executable == "psql" and self.fail_verification:
             return 1
         if executable == "dropdb" and self.fail_rollback:
             return 1
+        return 0
+
+
+class _StdoutFallbackRunner(_Runner):
+    """Simulate a client wrapper that streams a successful dump to stdout."""
+
+    def run_to_file(self, argv: Sequence[str], output_path: Path, *, timeout_seconds: int) -> int:
+        assert timeout_seconds == 30
+        self.calls.append(tuple(argv))
+        output_path.write_bytes(b"PGDMP\x01\x0f streamed-database-content")
         return 0
 
 
@@ -106,9 +135,102 @@ def test_postgres_native_backup_is_encrypted_and_uses_service_not_secret(tmp_pat
         "--no-privileges",
         "--file",
         runner.calls[0][5],
+        "--dbname",
         "service=reconforge_source",
     )
     assert all("password" not in value.casefold() for value in runner.calls[0])
+
+
+def test_backup_retries_portable_file_argument_when_success_has_no_dump(tmp_path: Path) -> None:
+    runner = _Runner(omit_dump_attempts=1)
+    adapter = _adapter(tmp_path, runner)
+
+    result = adapter.create_backup(tmp_path / "portable-retry.rfpgbackup", key=KEY)
+
+    dump_calls = [call for call in runner.calls if Path(call[0]).stem == "pg_dump"]
+    assert len(dump_calls) == 2
+    assert dump_calls[0][1:] == (
+        "--format=custom",
+        "--no-owner",
+        "--no-privileges",
+        "--file",
+        dump_calls[0][5],
+        "--dbname",
+        "service=reconforge_source",
+    )
+    assert any(
+        argument == "-f" or argument.startswith("--file=")
+        for argument in dump_calls[1]
+    )
+    assert len(dump_calls[1]) in {7, 8}
+    assert result.bytes_written > 0
+
+
+def test_backup_retries_to_equals_form_when_short_form_still_has_no_dump(tmp_path: Path) -> None:
+    runner = _Runner(omit_dump_attempts=2)
+    adapter = _adapter(tmp_path, runner)
+
+    result = adapter.create_backup(tmp_path / "portable-retry-equals.rfpgbackup", key=KEY)
+
+    dump_calls = [call for call in runner.calls if Path(call[0]).stem == "pg_dump"]
+    assert len(dump_calls) == 3
+    assert "--file" in dump_calls[0]
+    assert any(argument == "-f" for argument in dump_calls[1])
+    assert any(argument.startswith("--file=") for argument in dump_calls[2])
+    assert result.bytes_written > 0
+
+
+def test_backup_retries_to_next_form_when_command_invocation_fails(tmp_path: Path) -> None:
+    # Some environments expose pg_dump binaries where a specific syntax form fails,
+    # even though a fallback form succeeds.
+    runner = _Runner(fail_dump_attempts=2)
+    adapter = _adapter(tmp_path, runner)
+
+    result = adapter.create_backup(tmp_path / "invocation-failover.rfpgbackup", key=KEY)
+
+    dump_calls = [call for call in runner.calls if Path(call[0]).stem == "pg_dump"]
+    assert len(dump_calls) == 3
+    assert result.bytes_written > 0
+
+
+def test_backup_fails_closed_when_portable_retry_still_has_no_dump(tmp_path: Path) -> None:
+    runner = _Runner(omit_dump_attempts=3)
+
+    with pytest.raises(
+        PostgresBackupError,
+        match="no usable dump after all attempts",
+    ):
+        _adapter(tmp_path, runner).create_backup(tmp_path / "missing.rfpgbackup", key=KEY)
+
+
+def test_backup_fails_closed_with_no_stdout_fallback_runner_when_all_file_forms_fail(tmp_path: Path) -> None:
+    class _NoStdoutFallbackRunner(_Runner):
+        """Runner intentionally lacks run_to_file to emulate restricted wrappers."""
+
+    runner = _NoStdoutFallbackRunner(omit_dump_attempts=3)
+
+    with pytest.raises(
+        PostgresBackupError,
+        match="stdout fallback path was unavailable",
+    ):
+        _adapter(tmp_path, runner).create_backup(tmp_path / "fallback-missing.rfpgbackup", key=KEY)
+
+
+def test_backup_uses_native_stdout_fallback_after_file_forms_produce_no_dump(tmp_path: Path) -> None:
+    runner = _StdoutFallbackRunner(omit_dump_attempts=3)
+
+    result = _adapter(tmp_path, runner).create_backup(tmp_path / "stdout-fallback.rfpgbackup", key=KEY)
+
+    assert result.bytes_written > 0
+    dump_calls = [call for call in runner.calls if Path(call[0]).stem == "pg_dump"]
+    assert len(dump_calls) == 4
+    assert dump_calls[-1][1:] == (
+        "--format=custom",
+        "--no-owner",
+        "--no-privileges",
+        "--dbname",
+        "service=reconforge_source",
+    )
 
 
 def test_restore_creates_new_database_and_rollback_removes_partial_target(tmp_path: Path) -> None:

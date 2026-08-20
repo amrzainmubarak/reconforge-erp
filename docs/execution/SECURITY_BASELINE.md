@@ -1,16 +1,16 @@
 # Security Baseline
 
-Measured through 2026-07-26 against the dirty snapshot in `BASELINE.md` and `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
+Measured through 2026-08-07 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
 
 ## Measured gates
 
 | Gate | Result | Scope boundary |
 | --- | --- | --- |
 | `python -m bandit -q -r reconforge` | E-131 local exit 0, no findings | Notices cover eight reviewed `# nosec B608` sites: one allowlisted backup identifier site and seven durable-job sites whose SQL identifiers derive only from immutable module-level `_JOB_COLUMNS`; every data value remains parameterized. Suppressions remain manual-review points. |
-| Hash-exported locked Python audit | The current 118-package lock, including boto3 for the S3 server boundary, OpenTelemetry API/SDK for optional local instrumentation, cryptography 49.0.0 for optional encrypted backups, joserfc 1.7.4 for OIDC, and python3-saml 1.16.0 with xmlsec/lxml for SAML, passes pip-audit 2.10.1 with no known findings and the closed policy validator with zero active exceptions | Exact local graph and current advisory-service result only; hosted cross-version execution, reachability, provenance, malware, and license suitability are not proven; the SAML dependency deprecation warning remains monitored |
+| Hash-exported locked Python audit | The reviewed 128-package lock includes boto3 for the S3 server boundary, OpenTelemetry API/SDK for optional local instrumentation, cryptography 50.0.0 for optional encrypted backups, pyOpenSSL 26.4.0 for the WebAuthn stack, joserfc 1.7.4 for OIDC, and python3-saml 1.16.0 with xmlsec/lxml for SAML. Hosted Security `30856022993` and the CI Python 3.11/3.12 audit jobs pass on head `a4a35f8`; the prior 49.0.0 pin was rejected for CVE-2026-69247 and the current lock has no advisory exception. | Advisory results are time-bounded; reachability, provenance, malware, and license suitability are not proven; the SAML dependency deprecation warning remains monitored |
 | `npm.cmd --prefix apps/web audit --package-lock-only --audit-level=high` | Exit 0; 0 vulnerabilities reported | Covers the exact-version npm lock; all 211 current non-root entries have HTTPS registry resolution and embedded SRI |
-| Gitleaks 8.30.1 full history | Exit 0; 69 commits and about 4.73 MB scanned, no leaks found | Checksum-verified binary and default rules; detection is not proof that no secret existed or that external credentials are safe |
-| Gitleaks 8.30.1 checked tree | Initial scan identified one high-entropy idempotency test string; it was replaced with a behavior-equivalent low-entropy fixture, then exit 0 across about 15.02 MB | Generated/tool-owned paths only are excluded; output is 100% redacted and there is no baseline/commit/regex/stopword allowlist |
+| Gitleaks 8.30.1 full history | Exit 0; 602 commits and about 22.49 MB scanned after two exact historical fingerprints were recorded for synthetic test fixtures | Checksum-verified binary and default rules; exact fingerprints are limited to known non-secret test literals; detection is not proof that no secret existed or that external credentials are safe |
+| Gitleaks 8.30.1 checked tree | Exit 0 across a clean 25.12 MB `git archive` checkout; the workspace scan is not evidence because generated environments caused a 6.30 GB/120-second timeout | Only generated/tool-owned paths are excluded; output is 100% redacted and every suppression is an exact commit/path/rule/line or path/rule/line fingerprint |
 | Docker | Not run | Daemon unavailable; image contents and runtime user/permissions were not verified locally |
 
 ## Controls observed

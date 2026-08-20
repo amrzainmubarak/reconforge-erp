@@ -86,6 +86,8 @@ def test_reversal_database_guards_exact_effects_dependencies_and_history() -> No
     assert "original_consumption_id=c.id" in schema
     assert "x.quantity_scaled=c.quantity_scaled" in schema
     assert "x.value_minor=c.value_minor" in schema
+    assert schema.count("SECURITY DEFINER") == 3
+    assert schema.count("SET search_path = pg_catalog, reconforge") == 3
 
 
 def test_reversal_migration_is_linear_and_restores_layer_guard_on_downgrade() -> None:

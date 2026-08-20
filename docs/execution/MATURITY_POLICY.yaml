@@ -8,15 +8,27 @@ module_maturity_order:
   beta: 2
   stable: 3
 module_ceilings:
+  - module_id: bank.cash-reconciliation
+    maximum_maturity: experimental
+    evidence_claim: Experimental bank statement to ledger control
+  - module_id: connectors.boundary
+    maximum_maturity: experimental
+    evidence_claim: Bounded CAMT.053 offline statement ingestion
   - module_id: finance.controls
     maximum_maturity: experimental
     evidence_claim: Exact control-decision scores
   - module_id: finance.core
     maximum_maturity: experimental
     evidence_claim: Local SQLite backup/restore
+  - module_id: individual.cashflow
+    maximum_maturity: experimental
+    evidence_claim: Individual/freelancer cashflow control
   - module_id: inventory.core
     maximum_maturity: experimental
     evidence_claim: Open-source financial reconciliation and controls toolkit
+  - module_id: manufacturing.cost-control
+    maximum_maturity: experimental
+    evidence_claim: Experimental manufacturing production-cost control
   - module_id: mapping.profiles
     maximum_maturity: experimental
     evidence_claim: Works beside source systems; not a complete ERP
@@ -32,9 +44,15 @@ module_ceilings:
   - module_id: plugins.export
     maximum_maturity: experimental
     evidence_claim: Live ERP connectors
+  - module_id: professional.invoice-payment
+    maximum_maturity: experimental
+    evidence_claim: Experimental professional invoice and payment control with dual-mode persistence
   - module_id: reconciliation.core
     maximum_maturity: experimental
     evidence_claim: Deterministic reconciliation
+  - module_id: retail.settlement
+    maximum_maturity: experimental
+    evidence_claim: Experimental retail POS settlement control
   - module_id: studio.modern
     maximum_maturity: experimental
     evidence_claim: React Studio

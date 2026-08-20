@@ -1,0 +1,61 @@
+{
+  "executed_at": "2026-08-05",
+  "infrastructure": {
+    "docker_server": "Docker Engine 29.6.2",
+    "failure_domains_per_run": 1,
+    "node_count_per_run": 2,
+    "postgres_image": "postgres:17.10-alpine"
+  },
+  "limitations": [
+    "single_host_not_host_loss",
+    "no_cross_zone_or_cross_region",
+    "manual_controller_not_automatic_failover",
+    "no_quorum_or_witness",
+    "synthetic_data_and_key_only",
+    "three_runs_not_production_slo",
+    "no_enterprise_ready_claim"
+  ],
+  "profile": "docker-single-host-primary-synchronous-standby-v1",
+  "runs": [
+    {
+      "cleanup_passed": true,
+      "failback_rpo_transactions": 0,
+      "failback_rto_seconds": 0.981,
+      "failover_rpo_transactions": 0,
+      "failover_rto_seconds": 11.175,
+      "final_sequence": 4,
+      "run": 1
+    },
+    {
+      "cleanup_passed": true,
+      "failback_rpo_transactions": 0,
+      "failback_rto_seconds": 1.023,
+      "failover_rpo_transactions": 0,
+      "failover_rto_seconds": 11.084,
+      "final_sequence": 4,
+      "run": 2
+    },
+    {
+      "cleanup_passed": true,
+      "failback_rpo_transactions": 0,
+      "failback_rto_seconds": 0.99,
+      "failover_rpo_transactions": 0,
+      "failover_rto_seconds": 11.124,
+      "final_sequence": 4,
+      "run": 3
+    }
+  ],
+  "schema_version": 1,
+  "summary": {
+    "all_runs_passed": true,
+    "failback_rto_max_seconds": 1.023,
+    "failback_rto_median_seconds": 0.99,
+    "failback_rto_min_seconds": 0.981,
+    "failover_rto_max_seconds": 11.175,
+    "failover_rto_median_seconds": 11.124,
+    "failover_rto_min_seconds": 11.084,
+    "rto_ceiling_seconds": 60.0,
+    "run_count": 3,
+    "zero_acknowledged_transaction_loss_runs": 3
+  }
+}

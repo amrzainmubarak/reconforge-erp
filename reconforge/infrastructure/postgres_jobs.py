@@ -8,7 +8,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from reconforge.domain.jobs import (
+    SHA256_PATTERN,
     DurableJob,
+    DurableJobBackpressureError,
+    DurableJobQueueSnapshot,
+    DurableJobSchedulerCursorConflictError,
     JobLease,
     JobOutputManifest,
     JobPartitionEffect,
@@ -35,6 +39,7 @@ _JOB_COLUMNS = (
     "idempotency_key",
     "tenant_id",
     "workspace_id",
+    "organization_id",
     "entity_id",
     "input_digest",
     "config_digest",
@@ -78,6 +83,7 @@ def _decode_job(row: Any) -> DurableJob:
             idempotency_key=str(values["idempotency_key"]),
             tenant_id=str(values["tenant_id"]),
             workspace_id=str(values["workspace_id"]),
+            organization_id="" if values["organization_id"] is None else str(values["organization_id"]),
             entity_id=str(values["entity_id"]),
             input_digest=str(values["input_digest"]),
             config_digest=str(values["config_digest"]),
@@ -109,6 +115,7 @@ def _job_values(job: DurableJob) -> tuple[object, ...]:
         job.idempotency_key,
         job.tenant_id,
         job.workspace_id,
+        job.organization_id or None,
         job.entity_id,
         job.input_digest,
         job.config_digest,
@@ -135,6 +142,7 @@ def _same_submission(left: DurableJob, right: DurableJob) -> bool:
         "idempotency_key",
         "tenant_id",
         "workspace_id",
+        "organization_id",
         "entity_id",
         "input_digest",
         "config_digest",
@@ -143,6 +151,12 @@ def _same_submission(left: DurableJob, right: DurableJob) -> bool:
         "retry_ceiling",
     )
     return all(getattr(left, field) == getattr(right, field) for field in fields)
+
+
+def _optional_scope_text(value: object) -> str | None:
+    """Preserve SQL NULL scope values instead of turning them into ``"None"``."""
+
+    return None if value is None else str(value)
 
 
 @dataclass
@@ -157,25 +171,103 @@ class PostgresDurableJobRepository:
         tenant_id: str,
         *,
         workspace_id: str = "",
+        organization_id: str = "",
         entity_id: str = "",
     ) -> Iterator[None]:
         tenant = validate_tenant_id(tenant_id)
         try:
             with self.connection.transaction():
-                set_local_tenant_scope(self.connection, tenant, workspace_id=workspace_id or None)
+                set_local_tenant_scope(
+                    self.connection,
+                    tenant,
+                    organization_id=organization_id or None,
+                    workspace_id=workspace_id or None,
+                )
                 self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (entity_id,))
                 yield
-        except PostgresJobRepositoryError:
+        except (PostgresJobRepositoryError, DurableJobSchedulerCursorConflictError):
+            raise
+        except DurableJobBackpressureError:
             raise
         except Exception as exc:
             raise PostgresJobRepositoryError("PostgreSQL durable-job operation failed.") from exc
+
+    def reserve_round_robin_lane(
+        self,
+        *,
+        tenant_id: str,
+        scheduler_key: str,
+        lane_digest: str,
+        lane_count: int,
+        occurred_at: str,
+    ) -> int:
+        """Atomically reserve the next lane for a shared scheduler key."""
+
+        if not scheduler_key.strip():
+            raise ValueError("scheduler_key must be non-empty")
+        if not isinstance(lane_count, int) or isinstance(lane_count, bool) or lane_count < 1:
+            raise ValueError("lane_count must be a positive integer")
+        if SHA256_PATTERN.fullmatch(lane_digest) is None:
+            raise ValueError("lane_digest must be a SHA-256 hex digest")
+        with self._transaction(tenant_id):
+            self.connection.execute(
+                """
+                INSERT INTO reconforge.durable_job_scheduler_cursors
+                    (tenant_id, scheduler_key, lane_digest, lane_count, next_index, version, updated_at)
+                VALUES (%s, %s, %s, %s, %s, 1, %s)
+                ON CONFLICT (tenant_id, scheduler_key) DO NOTHING
+                """,
+                (tenant_id, scheduler_key, lane_digest, lane_count, 1 % lane_count, occurred_at),
+            )
+            row = self.connection.execute(
+                """
+                SELECT lane_digest, lane_count, next_index, version
+                FROM reconforge.durable_job_scheduler_cursors
+                WHERE tenant_id = %s AND scheduler_key = %s
+                FOR UPDATE
+                """,
+                (tenant_id, scheduler_key),
+            ).fetchone()
+            if row is None:
+                raise DurableJobSchedulerCursorConflictError("scheduler cursor reservation could not be resolved")
+            digest = str(_value(row, "lane_digest", 0))
+            stored_count = int(_value(row, "lane_count", 1))
+            if digest != lane_digest or stored_count != lane_count:
+                raise DurableJobSchedulerCursorConflictError("scheduler key is bound to a different lane contract")
+            selected = int(_value(row, "next_index", 2))
+            version = int(_value(row, "version", 3))
+            updated = self.connection.execute(
+                """
+                UPDATE reconforge.durable_job_scheduler_cursors
+                SET next_index = %s, version = %s, updated_at = %s
+                WHERE tenant_id = %s AND scheduler_key = %s AND version = %s
+                """,
+                (
+                    (selected + 1) % lane_count,
+                    version + 1,
+                    occurred_at,
+                    tenant_id,
+                    scheduler_key,
+                    version,
+                ),
+            )
+            if updated.rowcount != 1:
+                raise DurableJobSchedulerCursorConflictError(
+                    "scheduler cursor changed before reservation could commit"
+                )
+            return selected
 
     def create_or_get(self, job: DurableJob, *, actor_id: str) -> tuple[DurableJob, bool]:
         if job.status is not JobStatus.QUEUED or job.version != 1:
             raise PostgresJobRepositoryError("Only a new queued job may be submitted.")
         columns = ", ".join(_JOB_COLUMNS)
         placeholders = ", ".join("%s" for _ in _JOB_COLUMNS)
-        with self._transaction(job.tenant_id, workspace_id=job.workspace_id, entity_id=job.entity_id):
+        with self._transaction(
+            job.tenant_id,
+            organization_id=job.organization_id,
+            workspace_id=job.workspace_id,
+            entity_id=job.entity_id,
+        ):
             try:
                 inserted = self.connection.execute(
                     # SQL identifiers come only from the immutable module-level _JOB_COLUMNS tuple.
@@ -211,6 +303,93 @@ class PostgresDurableJobRepository:
                 raise PostgresJobConflictError("Durable job identity or idempotency scope conflicts.") from exc
         return job, True
 
+    def create_or_get_bounded(
+        self,
+        job: DurableJob,
+        *,
+        actor_id: str,
+        max_queued_jobs: int,
+    ) -> tuple[DurableJob, bool]:
+        """Submit atomically while bounding queued work in one execution lane.
+
+        A transaction-scoped advisory lock serializes the count-and-insert
+        critical section even when the lane has no existing row to lock.
+        """
+
+        if isinstance(max_queued_jobs, bool) or not isinstance(max_queued_jobs, int) or max_queued_jobs < 1:
+            raise ValueError("max_queued_jobs must be a positive integer")
+        if job.status is not JobStatus.QUEUED or job.version != 1:
+            raise PostgresJobRepositoryError("Only a new queued job may be submitted.")
+        columns = ", ".join(_JOB_COLUMNS)
+        placeholders = ", ".join("%s" for _ in _JOB_COLUMNS)
+        lane_lock_key = (
+            f"reconforge:durable-job-lane:{job.tenant_id}:{job.organization_id}:"
+            f"{job.workspace_id}:{job.entity_id}"
+        )
+        with self._transaction(
+            job.tenant_id,
+            organization_id=job.organization_id,
+            workspace_id=job.workspace_id,
+            entity_id=job.entity_id,
+        ):
+            self.connection.execute(
+                "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                (lane_lock_key,),
+            )
+            try:
+                existing_row = self.connection.execute(  # nosec B608
+                    "SELECT " + columns + " FROM reconforge.durable_jobs "  # nosec B608
+                    "WHERE tenant_id=%s AND idempotency_scope=%s AND idempotency_key=%s",
+                    (job.tenant_id, job.idempotency_scope, job.idempotency_key),
+                ).fetchone()
+                if existing_row is not None:
+                    existing = _decode_job(existing_row)
+                    if not _same_submission(existing, job):
+                        raise PostgresJobConflictError(
+                            "Idempotency key is already bound to a different job submission."
+                        )
+                    return existing, False
+
+                queued = int(
+                    self.connection.execute(
+                        """
+                        SELECT COUNT(*) FROM reconforge.durable_jobs
+                        WHERE tenant_id=%s AND workspace_id=%s AND entity_id=%s
+                          AND status IN ('queued', 'retrying')
+                        """,
+                        (job.tenant_id, job.workspace_id, job.entity_id),
+                    ).fetchone()[0]
+                )
+                if queued >= max_queued_jobs:
+                    raise DurableJobBackpressureError(
+                        "Durable-job execution lane queue capacity has been reached."
+                    )
+
+                inserted = self.connection.execute(
+                    # SQL identifiers come only from the immutable module-level _JOB_COLUMNS tuple.
+                    f"INSERT INTO reconforge.durable_jobs ({columns}) VALUES ({placeholders}) "  # nosec B608
+                    "RETURNING id",
+                    _job_values(job),
+                ).fetchone()
+                if inserted is None:
+                    raise PostgresJobConflictError("Bounded durable-job insertion returned no identity.")
+                self.connection.execute(
+                    """
+                    INSERT INTO reconforge.durable_job_transitions
+                        (tenant_id, job_id, job_version, from_status, to_status,
+                         actor_id, occurred_at, reason_code)
+                    VALUES (%s, %s, 1, '', 'queued', %s, %s, 'CREATED')
+                    """,
+                    (job.tenant_id, job.id, actor_id, job.created_at),
+                )
+            except DurableJobBackpressureError:
+                raise
+            except PostgresJobConflictError:
+                raise
+            except Exception as exc:
+                raise PostgresJobConflictError("Durable job identity or idempotency scope conflicts.") from exc
+        return job, True
+
     def get(self, *, tenant_id: str, job_id: str) -> DurableJob | None:
         columns = ", ".join(_JOB_COLUMNS)
         with self._transaction(tenant_id):
@@ -222,13 +401,91 @@ class PostgresDurableJobRepository:
             if row is None:
                 return None
             job = _decode_job(row)
-            set_local_tenant_scope(self.connection, job.tenant_id, workspace_id=job.workspace_id)
+            set_local_tenant_scope(
+                self.connection,
+                job.tenant_id,
+                organization_id=job.organization_id or None,
+                workspace_id=job.workspace_id,
+            )
             self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (job.entity_id,))
             scoped = self.connection.execute(
                 "SELECT " + columns + " FROM reconforge.durable_jobs WHERE tenant_id = %s AND id = %s",  # nosec B608
                 (tenant_id, job_id),
             ).fetchone()
             return None if scoped is None else _decode_job(scoped)
+
+    def queue_snapshot(
+        self,
+        *,
+        tenant_id: str,
+        workspace_id: str | None = None,
+        organization_id: str | None = None,
+        entity_id: str | None = None,
+    ) -> DurableJobQueueSnapshot:
+        """Read a tenant/lane projection under the same RLS scope as jobs."""
+
+        conditions = ["jobs.tenant_id = %s"]
+        parameters: list[object] = [tenant_id]
+        for column, value in (
+            ("workspace_id", workspace_id),
+            ("organization_id", organization_id),
+            ("entity_id", entity_id),
+        ):
+            if value is not None:
+                if not isinstance(value, str) or not value.strip():
+                    raise PostgresJobRepositoryError(f"queue snapshot {column} scope is invalid")
+                conditions.append(f"jobs.{column} = %s")
+                parameters.append(value)
+        where = " AND ".join(conditions)
+        with self._transaction(
+            tenant_id,
+            workspace_id=workspace_id or "",
+            organization_id=organization_id or "",
+            entity_id=entity_id or "",
+        ):
+            row = self.connection.execute(
+                f"""
+                SELECT
+                    COUNT(*) FILTER (WHERE jobs.status = 'queued') AS queued_count,
+                    COUNT(*) FILTER (WHERE jobs.status = 'running') AS running_count,
+                    COUNT(*) FILTER (WHERE jobs.status = 'paused') AS paused_count,
+                    COUNT(*) FILTER (WHERE jobs.status = 'retrying') AS retrying_count,
+                    COUNT(*) FILTER (WHERE jobs.status = 'failed') AS failed_count,
+                    COUNT(*) FILTER (WHERE jobs.status = 'completed') AS completed_count,
+                    COUNT(*) FILTER (WHERE jobs.status = 'cancelled') AS cancelled_count,
+                    MIN(jobs.created_at) FILTER (WHERE jobs.status IN ('queued', 'retrying')) AS oldest_queued_at,
+                    MIN(jobs.started_at) FILTER (WHERE jobs.status = 'running') AS oldest_running_at
+                FROM reconforge.durable_jobs AS jobs
+                WHERE {where}
+                """,  # nosec B608 - predicates use fixed identifiers only
+                parameters,
+            ).fetchone()
+            lease_row = self.connection.execute(
+                f"""
+                SELECT COUNT(*) AS leased_count
+                FROM reconforge.durable_job_leases AS leases
+                JOIN reconforge.durable_jobs AS jobs
+                  ON jobs.tenant_id = leases.tenant_id AND jobs.id = leases.job_id
+                WHERE {where}
+                """,  # nosec B608 - predicates use fixed identifiers only
+                parameters,
+            ).fetchone()
+        return DurableJobQueueSnapshot(
+            tenant_id=tenant_id,
+            workspace_id=workspace_id or "",
+            organization_id=organization_id or "",
+            entity_id=entity_id or "",
+            queued_count=int(_value(row, "queued_count", 0) or 0),
+            running_count=int(_value(row, "running_count", 1) or 0),
+            paused_count=int(_value(row, "paused_count", 2) or 0),
+            retrying_count=int(_value(row, "retrying_count", 3) or 0),
+            failed_count=int(_value(row, "failed_count", 4) or 0),
+            completed_count=int(_value(row, "completed_count", 5) or 0),
+            cancelled_count=int(_value(row, "cancelled_count", 6) or 0),
+            leased_count=int(_value(lease_row, "leased_count", 0) or 0),
+            oldest_queued_at=str(_value(row, "oldest_queued_at", 7) or ""),
+            oldest_running_at=str(_value(row, "oldest_running_at", 8) or ""),
+        )
 
     def persist_transition(self, previous: DurableJob, changed: DurableJob, event: JobTransition) -> DurableJob:
         if changed.id != previous.id or changed.tenant_id != previous.tenant_id:
@@ -323,10 +580,23 @@ class PostgresDurableJobRepository:
         )
 
     def claim_next(
-        self, *, tenant_id: str, worker_id: str, occurred_at: str, lease_expires_at: str
+        self,
+        *,
+        tenant_id: str,
+        workspace_id: str | None = None,
+        organization_id: str | None = None,
+        entity_id: str | None = None,
+        worker_id: str,
+        occurred_at: str,
+        lease_expires_at: str,
     ) -> tuple[DurableJob, JobLease] | None:
         columns = ", ".join(f"jobs.{column}" for column in _JOB_COLUMNS)
-        with self._transaction(tenant_id):
+        with self._transaction(
+            tenant_id,
+            organization_id=organization_id or "",
+            workspace_id=workspace_id or "",
+            entity_id=entity_id or "",
+        ):
             row = self.connection.execute(
                 f"""
                 SELECT {columns}, COALESCE((
@@ -336,7 +606,11 @@ class PostgresDurableJobRepository:
                 FROM reconforge.durable_jobs jobs
                 LEFT JOIN reconforge.durable_job_leases leases
                   ON leases.tenant_id = jobs.tenant_id AND leases.job_id = jobs.id
-                WHERE jobs.tenant_id = %s AND (
+                WHERE jobs.tenant_id = %s
+                  AND (%s::text IS NULL OR jobs.organization_id = %s::text)
+                  AND (%s::text IS NULL OR jobs.workspace_id = %s::text)
+                  AND (%s::text IS NULL OR jobs.entity_id = %s::text)
+                  AND (
                     jobs.status = 'queued'
                     OR (jobs.status = 'retrying' AND (leases.job_id IS NULL OR leases.expires_at <= %s))
                     OR (jobs.status = 'running' AND (leases.job_id IS NULL OR leases.expires_at <= %s))
@@ -345,13 +619,46 @@ class PostgresDurableJobRepository:
                          jobs.created_at, jobs.id
                 FOR UPDATE OF jobs SKIP LOCKED LIMIT 1
                 """,  # nosec B608
-                (tenant_id, occurred_at, occurred_at),
+                (
+                    tenant_id,
+                    organization_id,
+                    organization_id,
+                    workspace_id,
+                    workspace_id,
+                    entity_id,
+                    entity_id,
+                    occurred_at,
+                    occurred_at,
+                ),
             ).fetchone()
             if row is None:
                 return None
             previous = _decode_job(row)
-            set_local_tenant_scope(self.connection, previous.tenant_id, workspace_id=previous.workspace_id)
+            set_local_tenant_scope(
+                self.connection,
+                previous.tenant_id,
+                organization_id=previous.organization_id or None,
+                workspace_id=previous.workspace_id,
+            )
             self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (previous.entity_id,))
+            # Re-read the lease after locking the job row.  Under concurrent
+            # PostgreSQL plans a LEFT JOIN can expose a stale/missing lease
+            # snapshot; never turn that into a takeover while an active lease
+            # is still present.  The worker will retry the claim and only a
+            # genuinely expired lease can be reclaimed.
+            active_lease = self.connection.execute(
+                """
+                SELECT owner_id, generation, expires_at
+                FROM reconforge.durable_job_leases
+                WHERE tenant_id=%s AND job_id=%s
+                FOR UPDATE
+                """,
+                (previous.tenant_id, previous.id),
+            ).fetchone()
+            if previous.status in {JobStatus.RUNNING, JobStatus.RETRYING} and active_lease is not None:
+                active_expires_at = str(_value(active_lease, "expires_at", 2))
+                if active_expires_at > occurred_at:
+                    return None
             if previous.status in {JobStatus.QUEUED, JobStatus.RETRYING}:
                 changed, event = previous.transition(
                     JobStatus.RUNNING, actor_id=worker_id, occurred_at=occurred_at, reason_code="CLAIMED"
@@ -408,13 +715,18 @@ class PostgresDurableJobRepository:
             raise PostgresJobConflictError("Durable-job lease is expired or was not extended.")
         with self._transaction(lease.tenant_id):
             scope_row = self.connection.execute(
-                "SELECT workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
+                "SELECT organization_id, workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
                 (lease.tenant_id, lease.job_id),
             ).fetchone()
             if scope_row is None:
                 raise PostgresJobConflictError("Durable-job lease target no longer exists.")
-            set_local_tenant_scope(self.connection, lease.tenant_id, workspace_id=str(scope_row[0]))
-            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[1]),))
+            set_local_tenant_scope(
+                self.connection,
+                lease.tenant_id,
+                organization_id=_optional_scope_text(scope_row[0]),
+                workspace_id=str(scope_row[1]),
+            )
+            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[2]),))
             cursor = self.connection.execute(
                 """
                 UPDATE reconforge.durable_job_leases SET renewed_at=%s, expires_at=%s
@@ -447,6 +759,22 @@ class PostgresDurableJobRepository:
         if owned is None or previous.id != lease.job_id or previous.tenant_id != lease.tenant_id:
             raise PostgresJobConflictError("Durable-job lease ownership changed or expired.")
 
+    def _lock_job(self, job: DurableJob) -> None:
+        """Acquire the aggregate row before its lease row.
+
+        Claiming already follows the job-then-lease order.  Completion used to
+        take the inverse lease-then-job order, which allowed PostgreSQL to
+        deadlock a worker reclaiming an expired job with its current owner
+        finishing a partition.  Every transition now follows one lock order.
+        """
+
+        row = self.connection.execute(
+            "SELECT 1 FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s FOR UPDATE",
+            (job.tenant_id, job.id),
+        ).fetchone()
+        if row is None:
+            raise PostgresJobConflictError("Durable-job target no longer exists.")
+
     def _release(self, lease: JobLease, *, occurred_at: str) -> None:
         cursor = self.connection.execute(
             "DELETE FROM reconforge.durable_job_leases "
@@ -469,9 +797,11 @@ class PostgresDurableJobRepository:
         self._validate_transition(previous, changed, event)
         with self._transaction(
             previous.tenant_id,
+            organization_id=previous.organization_id,
             workspace_id=previous.workspace_id,
             entity_id=previous.entity_id,
         ):
+            self._lock_job(previous)
             self._require_owned(previous, lease, event.occurred_at)
             self._persist_transition_rows(previous, changed, event)
             if release_lease:
@@ -495,9 +825,11 @@ class PostgresDurableJobRepository:
             raise PostgresJobRepositoryError("Partition effect time does not match transition evidence.")
         with self._transaction(
             previous.tenant_id,
+            organization_id=previous.organization_id,
             workspace_id=previous.workspace_id,
             entity_id=previous.entity_id,
         ):
+            self._lock_job(previous)
             self._require_owned(previous, lease, event.occurred_at)
             row = self.connection.execute(
                 "SELECT COALESCE(MAX(ordinal), 0) + 1 FROM reconforge.durable_job_partition_effects "
@@ -537,13 +869,18 @@ class PostgresDurableJobRepository:
     def list_partition_effects(self, *, tenant_id: str, job_id: str) -> list[JobPartitionEffect]:
         with self._transaction(tenant_id):
             scope_row = self.connection.execute(
-                "SELECT workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
+                "SELECT organization_id, workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
                 (tenant_id, job_id),
             ).fetchone()
             if scope_row is None:
                 return []
-            set_local_tenant_scope(self.connection, tenant_id, workspace_id=str(scope_row[0]))
-            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[1]),))
+            set_local_tenant_scope(
+                self.connection,
+                tenant_id,
+                organization_id=_optional_scope_text(scope_row[0]),
+                workspace_id=str(scope_row[1]),
+            )
+            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[2]),))
             rows = self.connection.execute(
                 """
                 SELECT job_id, partition_key, ordinal, completed_units, input_digest,
@@ -570,13 +907,18 @@ class PostgresDurableJobRepository:
     def list_transitions(self, *, tenant_id: str, job_id: str) -> list[dict[str, Any]]:
         with self._transaction(tenant_id):
             scope_row = self.connection.execute(
-                "SELECT workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
+                "SELECT organization_id, workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
                 (tenant_id, job_id),
             ).fetchone()
             if scope_row is None:
                 return []
-            set_local_tenant_scope(self.connection, tenant_id, workspace_id=str(scope_row[0]))
-            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[1]),))
+            set_local_tenant_scope(
+                self.connection,
+                tenant_id,
+                organization_id=_optional_scope_text(scope_row[0]),
+                workspace_id=str(scope_row[1]),
+            )
+            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[2]),))
             cursor = self.connection.execute(
                 """
                 SELECT job_version, from_status, to_status, actor_id, occurred_at, reason_code
@@ -591,13 +933,18 @@ class PostgresDurableJobRepository:
     def list_lease_events(self, *, tenant_id: str, job_id: str) -> list[dict[str, Any]]:
         with self._transaction(tenant_id):
             scope_row = self.connection.execute(
-                "SELECT workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
+                "SELECT organization_id, workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
                 (tenant_id, job_id),
             ).fetchone()
             if scope_row is None:
                 return []
-            set_local_tenant_scope(self.connection, tenant_id, workspace_id=str(scope_row[0]))
-            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[1]),))
+            set_local_tenant_scope(
+                self.connection,
+                tenant_id,
+                organization_id=_optional_scope_text(scope_row[0]),
+                workspace_id=str(scope_row[1]),
+            )
+            self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[2]),))
             cursor = self.connection.execute(
                 """
                 SELECT event_sequence, generation, action, owner_id, occurred_at, expires_at
@@ -618,7 +965,9 @@ CREATE TABLE IF NOT EXISTS reconforge.durable_jobs (
     status TEXT NOT NULL CHECK (status IN ('queued','running','paused','retrying','failed','completed','cancelled')),
     idempotency_scope TEXT NOT NULL, idempotency_key TEXT NOT NULL,
     tenant_id TEXT NOT NULL REFERENCES reconforge.tenants(id) ON DELETE CASCADE,
-    workspace_id TEXT NOT NULL, entity_id TEXT NOT NULL DEFAULT '',
+    workspace_id TEXT NOT NULL,
+    organization_id TEXT DEFAULT NULLIF(current_setting('app.organization_id', true), ''),
+    entity_id TEXT NOT NULL DEFAULT '',
     input_digest TEXT NOT NULL CHECK (input_digest ~ '^[0-9a-f]{64}$'),
     config_digest TEXT NOT NULL CHECK (config_digest ~ '^[0-9a-f]{64}$'),
     worker_version TEXT NOT NULL,
@@ -634,6 +983,8 @@ CREATE TABLE IF NOT EXISTS reconforge.durable_jobs (
     PRIMARY KEY (tenant_id, id),
     UNIQUE (tenant_id, idempotency_scope, idempotency_key)
 );
+CREATE INDEX IF NOT EXISTS durable_jobs_org_scope_status_idx
+    ON reconforge.durable_jobs(tenant_id, organization_id, workspace_id, status, created_at, id);
 CREATE TABLE IF NOT EXISTS reconforge.durable_job_transitions (
     tenant_id TEXT NOT NULL, job_id TEXT NOT NULL, job_version BIGINT NOT NULL,
     from_status TEXT NOT NULL, to_status TEXT NOT NULL, actor_id TEXT NOT NULL,
@@ -669,6 +1020,18 @@ CREATE TABLE IF NOT EXISTS reconforge.durable_job_partition_effects (
     FOREIGN KEY (tenant_id, job_id, job_version)
       REFERENCES reconforge.durable_job_transitions(tenant_id, job_id, job_version) DEFERRABLE INITIALLY DEFERRED
 );
+CREATE TABLE IF NOT EXISTS reconforge.durable_job_scheduler_cursors (
+    tenant_id TEXT NOT NULL REFERENCES reconforge.tenants(id) ON DELETE CASCADE,
+    scheduler_key TEXT NOT NULL,
+    lane_digest TEXT NOT NULL CHECK (lane_digest ~ '^[0-9a-f]{64}$'),
+    lane_count INTEGER NOT NULL CHECK (lane_count > 0),
+    next_index INTEGER NOT NULL CHECK (next_index >= 0 AND next_index < lane_count),
+    version BIGINT NOT NULL CHECK (version > 0),
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (tenant_id, scheduler_key)
+);
+CREATE INDEX IF NOT EXISTS durable_job_scheduler_cursors_updated_idx
+    ON reconforge.durable_job_scheduler_cursors(tenant_id, updated_at, scheduler_key);
 CREATE OR REPLACE FUNCTION reconforge.reject_durable_job_evidence_mutation()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN RAISE EXCEPTION 'Durable-job evidence is append-only'; END;
@@ -692,10 +1055,12 @@ ALTER TABLE reconforge.durable_job_lease_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reconforge.durable_job_lease_events FORCE ROW LEVEL SECURITY;
 ALTER TABLE reconforge.durable_job_partition_effects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reconforge.durable_job_partition_effects FORCE ROW LEVEL SECURITY;
+ALTER TABLE reconforge.durable_job_scheduler_cursors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reconforge.durable_job_scheduler_cursors FORCE ROW LEVEL SECURITY;
 DO $reconforge$
 DECLARE table_name TEXT;
 BEGIN
-  FOREACH table_name IN ARRAY ARRAY['durable_jobs','durable_job_transitions','durable_job_leases','durable_job_lease_events','durable_job_partition_effects'] LOOP
+  FOREACH table_name IN ARRAY ARRAY['durable_jobs','durable_job_transitions','durable_job_leases','durable_job_lease_events','durable_job_partition_effects','durable_job_scheduler_cursors'] LOOP
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='reconforge' AND tablename=table_name AND policyname='tenant_scope') THEN
       EXECUTE format('CREATE POLICY tenant_scope ON reconforge.%I USING (tenant_id = current_setting(''app.tenant_id'', true)) WITH CHECK (tenant_id = current_setting(''app.tenant_id'', true))', table_name);
     END IF;

@@ -2,19 +2,22 @@ import { AlertTriangle, Building2, CircleDot, Search, ShieldAlert, UserRoundX } 
 import { useEffect, useMemo, useState } from "react";
 
 import { loadExceptionQueue } from "../data";
+import type { Locale } from "../types";
 import type { MessageKey } from "../i18n";
 import type { ExceptionQueueContract } from "../types";
 import { ErrorView, LoadingView } from "./StateViews";
+import { formatCount } from "../locale-format";
 
 interface ExceptionQueueProps {
   translate: (key: MessageKey) => string;
+  locale: Locale;
 }
 
 function unique(values: string[]): string[] {
   return [...new Set(values)].sort((left, right) => left.localeCompare(right));
 }
 
-export function ExceptionQueue({ translate }: ExceptionQueueProps) {
+export function ExceptionQueue({ translate, locale }: ExceptionQueueProps) {
   const [data, setData] = useState<ExceptionQueueContract | null>(null);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
@@ -75,11 +78,11 @@ export function ExceptionQueue({ translate }: ExceptionQueueProps) {
       </header>
 
       <section className="workbench-stats" aria-label={translate("exceptionQueue")}>
-        <article><span className="stat-icon"><CircleDot size={18} /></span><strong>{data.summary.total}</strong><small>{translate("totalRecords")}</small></article>
-        <article><span className="stat-icon stat-icon--critical"><AlertTriangle size={18} /></span><strong>{data.summary.high_risk}</strong><small>{translate("highRiskExceptions")}</small></article>
-        <article><span className="stat-icon stat-icon--warning"><CircleDot size={18} /></span><strong>{data.summary.open}</strong><small>{translate("openItems")}</small></article>
-        <article><span className="stat-icon"><UserRoundX size={18} /></span><strong>{data.summary.unassigned}</strong><small>{translate("unassigned")}</small></article>
-        <article><span className="stat-icon"><Building2 size={18} /></span><strong>{data.summary.entity_count}</strong><small>{translate("entities")}</small></article>
+        <article><span className="stat-icon"><CircleDot size={18} /></span><strong>{formatCount(data.summary.total, locale)}</strong><small>{translate("totalRecords")}</small></article>
+        <article><span className="stat-icon stat-icon--critical"><AlertTriangle size={18} /></span><strong>{formatCount(data.summary.high_risk, locale)}</strong><small>{translate("highRiskExceptions")}</small></article>
+        <article><span className="stat-icon stat-icon--warning"><CircleDot size={18} /></span><strong>{formatCount(data.summary.open, locale)}</strong><small>{translate("openItems")}</small></article>
+        <article><span className="stat-icon"><UserRoundX size={18} /></span><strong>{formatCount(data.summary.unassigned, locale)}</strong><small>{translate("unassigned")}</small></article>
+        <article><span className="stat-icon"><Building2 size={18} /></span><strong>{formatCount(data.summary.entity_count, locale)}</strong><small>{translate("entities")}</small></article>
       </section>
 
       <section className="panel workbench-panel">
@@ -100,7 +103,7 @@ export function ExceptionQueue({ translate }: ExceptionQueueProps) {
             <option value="">{translate("allSources")}</option>
             {sources.map((value) => <option value={value} key={value}>{value}</option>)}
           </select>
-          <span className="result-count" aria-live="polite"><strong>{filtered.length}</strong> {translate("results")}</span>
+          <span className="result-count" aria-live="polite"><strong>{formatCount(filtered.length, locale)}</strong> {translate("results")}</span>
         </div>
 
         {filtered.length ? (

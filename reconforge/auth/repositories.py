@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
+from datetime import datetime
 
+from reconforge.auth.delegations import DelegationGrant, DelegationValidationError
 from reconforge.auth.models import LocalPermission, LocalRole, LocalUser
 from reconforge.auth.passwords import PasswordHash
 from reconforge.db.connection import DatabaseError
@@ -12,6 +15,92 @@ from reconforge.domain.models import new_domain_id, utc_now_text
 
 class AuthRepositoryError(ValueError):
     """Raised for safe, user-facing auth repository errors."""
+
+
+class DelegationRepository:
+    """SQLite repository for approved temporary delegations."""
+
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        ensure_auth_schema(connection)
+        self.connection = connection
+
+    def create(self, grant: DelegationGrant) -> DelegationGrant:
+        try:
+            self.connection.execute(
+                """
+                INSERT INTO policy_delegations
+                (id, tenant_id, workspace_id, delegator_id, delegatee_id, permissions_json,
+                 starts_at, expires_at, created_by, approved_by, status, revoked_at, revoked_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (grant.id, grant.tenant_id, grant.workspace_id, grant.delegator_id, grant.delegatee_id,
+                 grant.permissions_json(), grant.starts_at.isoformat(), grant.expires_at.isoformat(),
+                 grant.created_by, grant.approved_by, grant.status,
+                 grant.revoked_at.isoformat() if grant.revoked_at else None, grant.revoked_by),
+            )
+            self.connection.commit()
+        except sqlite3.IntegrityError as exc:
+            raise AuthRepositoryError("Delegation already exists or violates tenant policy.") from exc
+        except sqlite3.DatabaseError as exc:
+            raise AuthRepositoryError("Unable to create delegation.") from exc
+        return grant
+
+    def get_effective(self, *, delegation_id: str, tenant_id: str, workspace_id: str, evaluation_time: datetime) -> DelegationGrant | None:
+        if evaluation_time.tzinfo is None or evaluation_time.utcoffset() is None:
+            raise AuthRepositoryError("Delegation evaluation time must be timezone-aware.")
+        try:
+            row = self.connection.execute(
+                """SELECT * FROM policy_delegations
+                   WHERE id=? AND tenant_id=? AND workspace_id=? AND status='active'
+                     AND starts_at <= ? AND expires_at > ?""",
+                (delegation_id, tenant_id, workspace_id, evaluation_time.isoformat(), evaluation_time.isoformat()),
+            ).fetchone()
+        except sqlite3.DatabaseError as exc:
+            raise AuthRepositoryError("Unable to read delegation.") from exc
+        return self._row_to_grant(row) if row is not None else None
+
+    def revoke(self, *, delegation_id: str, tenant_id: str, workspace_id: str, actor_id: str, revoked_at: datetime) -> DelegationGrant:
+        if revoked_at.tzinfo is None or revoked_at.utcoffset() is None:
+            raise AuthRepositoryError("Delegation revocation time must be timezone-aware.")
+        try:
+            row = self.connection.execute(
+                "SELECT * FROM policy_delegations WHERE id=? AND tenant_id=? AND workspace_id=?",
+                (delegation_id, tenant_id, workspace_id),
+            ).fetchone()
+            if row is None:
+                raise AuthRepositoryError("Delegation not found.")
+            if str(row["delegator_id"]).casefold() == actor_id.casefold():
+                raise AuthRepositoryError("Delegation revocation requires an independent actor.")
+            self.connection.execute(
+                "UPDATE policy_delegations SET status='revoked', revoked_at=?, revoked_by=? WHERE id=? AND tenant_id=? AND workspace_id=?",
+                (revoked_at.isoformat(), actor_id, delegation_id, tenant_id, workspace_id),
+            )
+            self.connection.commit()
+        except AuthRepositoryError:
+            raise
+        except sqlite3.IntegrityError as exc:
+            raise AuthRepositoryError("Delegation revocation rejected.") from exc
+        except sqlite3.DatabaseError as exc:
+            raise AuthRepositoryError("Unable to revoke delegation.") from exc
+        updated = self.connection.execute("SELECT * FROM policy_delegations WHERE id=?", (delegation_id,)).fetchone()
+        if updated is None:
+            raise AuthRepositoryError("Delegation not found.")
+        return self._row_to_grant(updated)
+
+    @staticmethod
+    def _row_to_grant(row: sqlite3.Row) -> DelegationGrant:
+        try:
+            return DelegationGrant(
+                id=str(row["id"]), tenant_id=str(row["tenant_id"]), workspace_id=str(row["workspace_id"]),
+                delegator_id=str(row["delegator_id"]), delegatee_id=str(row["delegatee_id"]),
+                permissions=frozenset(json.loads(str(row["permissions_json"]))),
+                starts_at=datetime.fromisoformat(str(row["starts_at"])), expires_at=datetime.fromisoformat(str(row["expires_at"])),
+                created_by=str(row["created_by"]), approved_by=str(row["approved_by"]), status=str(row["status"]),
+                revoked_at=datetime.fromisoformat(str(row["revoked_at"])) if row["revoked_at"] else None,
+                revoked_by=str(row["revoked_by"]) if row["revoked_by"] else None,
+            )
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError, DelegationValidationError) as exc:
+            raise AuthRepositoryError("Stored delegation is invalid.") from exc
 
 
 def ensure_auth_schema(connection: sqlite3.Connection) -> None:
@@ -86,6 +175,15 @@ class UserRepository:
     def get_by_username(self, username: str) -> LocalUser | None:
         try:
             row = self.connection.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+        except sqlite3.DatabaseError as exc:
+            raise AuthRepositoryError("Unable to read local user.") from exc
+        return self._row_to_user(row) if row is not None else None
+
+    def get_by_id(self, user_id: str) -> LocalUser | None:
+        """Return one local user by immutable identity id."""
+
+        try:
+            row = self.connection.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
         except sqlite3.DatabaseError as exc:
             raise AuthRepositoryError("Unable to read local user.") from exc
         return self._row_to_user(row) if row is not None else None

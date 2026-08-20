@@ -123,6 +123,7 @@ def test_backup_restore_preserves_version_seven_master_data(tmp_path: Path) -> N
             entity_code="EG01",
         )
         service.upsert_period(name="2026-07", start_date="2026-07-01", end_date="2026-07-31")
+        service.bind_currency_registry(workspace="default")
     finally:
         connection.close()
 
@@ -143,6 +144,11 @@ def test_backup_restore_preserves_version_seven_master_data(tmp_path: Path) -> N
         }
         assert {row["organization_code"] for row in snapshot["organizations"]} == {"SYN", "SYN2"}
         assert snapshot["branches"][0]["branch_code"] == "CAI"
+        assert snapshot["currency_registry"]["binding"]["status"] == "current"
+        context = MasterDataService(connection).currency_registry_context(workspace="default")
+        assert context is not None
+        assert context.registry_manifest.digest == snapshot["currency_registry"]["registry"]["digest"]
+        assert connection.execute("SELECT COUNT(*) FROM currency_registry_snapshots").fetchone()[0] == 1
     finally:
         connection.close()
 
@@ -213,6 +219,115 @@ def test_version_six_backup_restores_then_upgrades_to_latest(
         assert (period["fiscal_year"], period["period_number"]) == (2026, 1)
     finally:
         connection.close()
+
+
+def test_version_thirty_two_backup_adds_durable_job_organization_scope(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A pre-organization-scope durable-job backup remains restorable."""
+
+    full_migrations = migration_module.MIGRATIONS
+    monkeypatch.setattr(migration_module, "MIGRATIONS", full_migrations[:32])
+    monkeypatch.setattr(backup_module, "MIGRATIONS", full_migrations[:32])
+    source_db = tmp_path / "version-thirty-two.db"
+    migration_module.run_migrations(source_db)
+    connection = connect(source_db, require_exists=True)
+    try:
+        connection.execute(
+            """
+            INSERT INTO durable_jobs (
+                id, schema_version, version, status, idempotency_scope, idempotency_key,
+                tenant_id, workspace_id, entity_id, input_digest, config_digest,
+                worker_version, completed_units, total_units, checkpoint_digest,
+                retry_count, retry_ceiling, safe_error_code, created_at, updated_at,
+                started_at, completed_at, output_manifest_schema_version,
+                output_manifest_digest, output_manifest_reference
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "JOB-v32",
+                1,
+                1,
+                "queued",
+                "workspace",
+                "legacy-key",
+                "TENANT-v32",
+                "WS-v32",
+                "",
+                "a" * 64,
+                "b" * 64,
+                "worker-v32",
+                0,
+                10,
+                "",
+                0,
+                3,
+                "",
+                "2026-01-01T00:00:00Z",
+                "2026-01-01T00:00:00Z",
+                "",
+                "",
+                None,
+                "",
+                "",
+            ),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    backup = backup_module.create_backup(source_db, tmp_path / "version-thirty-two-backup")
+    assert backup.schema_version == 32
+    payload = json.loads(backup.backup_path.read_text(encoding="utf-8"))
+    durable_rows = payload["tables"]["durable_jobs"]
+    assert durable_rows == [
+        {
+            "id": "JOB-v32",
+            "schema_version": 1,
+            "version": 1,
+            "status": "queued",
+            "idempotency_scope": "workspace",
+            "idempotency_key": "legacy-key",
+            "tenant_id": "TENANT-v32",
+            "workspace_id": "WS-v32",
+            "entity_id": "",
+            "input_digest": "a" * 64,
+            "config_digest": "b" * 64,
+            "worker_version": "worker-v32",
+            "completed_units": 0,
+            "total_units": 10,
+            "checkpoint_digest": "",
+            "retry_count": 0,
+            "retry_ceiling": 3,
+            "safe_error_code": "",
+            "created_at": "2026-01-01T00:00:00Z",
+            "updated_at": "2026-01-01T00:00:00Z",
+            "started_at": "",
+            "completed_at": "",
+            "output_manifest_schema_version": None,
+            "output_manifest_digest": "",
+            "output_manifest_reference": "",
+        }
+    ]
+
+    monkeypatch.setattr(migration_module, "MIGRATIONS", full_migrations)
+    monkeypatch.setattr(backup_module, "MIGRATIONS", full_migrations)
+    restored_db = tmp_path / "version-thirty-two-restored.db"
+    backup_module.restore_backup(restored_db, backup.backup_path)
+
+    restored = connect(restored_db, require_exists=True)
+    try:
+        row = restored.execute(
+            "SELECT organization_id, tenant_id, workspace_id FROM durable_jobs WHERE id = ?",
+            ("JOB-v32",),
+        ).fetchone()
+        assert row is not None
+        assert row["organization_id"] == ""
+        assert row["tenant_id"] == "TENANT-v32"
+        assert row["workspace_id"] == "WS-v32"
+    finally:
+        restored.close()
 
 
 def test_restore_fills_optional_missing_restore_columns_from_defaults(tmp_path: Path) -> None:

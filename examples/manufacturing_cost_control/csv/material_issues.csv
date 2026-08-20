@@ -1,0 +1,4 @@
+issue_id,order_id,item_id,quantity,unit_cost,standard_unit_cost
+ISSUE-001,MFG-001,RAW-A,100,2.00,2.00
+ISSUE-002,MFG-002,RAW-B,55,3.20,3.00
+ISSUE-UNKNOWN-001,MFG-UNKNOWN,RAW-X,1,1.00,1.00

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02">
+  <BkToCstmrStmt>
+    <GrpHdr><MsgId>MSG-BANK-CONTROL-001</MsgId></GrpHdr>
+    <Stmt>
+      <Id>STMT-BANK-CONTROL-001</Id>
+      <Acct><Id><IBAN>DE89370400440532013000</IBAN></Id></Acct>
+      <Ntry>
+        <NtryRef>BANK-CREDIT-001</NtryRef>
+        <Amt Ccy="EUR">100.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>
+        <BookgDt><Dt>2026-08-04</Dt></BookgDt><ValDt><Dt>2026-08-04</Dt></ValDt>
+        <AcctSvcrRef>REF-CREDIT-001</AcctSvcrRef>
+        <NtryDtls><TxDtls><Refs><EndToEndId>E2E-CREDIT-001</EndToEndId><TxId>TX-CREDIT-001</TxId></Refs><RmtInf><Ustrd>Invoice 100</Ustrd></RmtInf></TxDtls></NtryDtls>
+      </Ntry>
+      <Ntry>
+        <NtryRef>BANK-DEBIT-001</NtryRef>
+        <Amt Ccy="EUR">20.00</Amt><CdtDbtInd>DBIT</CdtDbtInd>
+        <BookgDt><Dt>2026-08-05</Dt></BookgDt><ValDt><Dt>2026-08-05</Dt></ValDt>
+        <AcctSvcrRef>REF-DEBIT-001</AcctSvcrRef>
+        <NtryDtls><TxDtls><Refs><EndToEndId>E2E-DEBIT-001</EndToEndId><TxId>TX-DEBIT-001</TxId></Refs><RmtInf><Ustrd>Service fee</Ustrd></RmtInf></TxDtls></NtryDtls>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>

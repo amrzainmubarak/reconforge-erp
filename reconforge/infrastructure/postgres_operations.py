@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import ast
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from reconforge.application.operations import MigrationStatus
 from reconforge.infrastructure.postgres import ConnectionFactory, validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 
-POSTGRES_MIGRATION_REVISIONS = (
+POSTGRES_MIGRATION_REVISIONS: tuple[str, ...] = (
     "0001_postgres_tenant_boundary",
     "0002_postgres_master_data",
     "0003_postgres_ledger",
@@ -64,7 +67,44 @@ POSTGRES_MIGRATION_REVISIONS = (
     "0051_access_policy_lifecycle",
     "0052_security_governance",
     "0053_audit_administration_acl",
+    "0054_pg_consol_ownership",
+    "0055_pg_consol_close",
+    "0056_pg_policy_delegations",
+    "0057_pg_consol_journal_lines",
+    "0058_pg_policy_permission_scopes",
+    "0059_pg_policy_amt_bounds",
+    "0060_pg_consolidation_ppa",
+    "0061_pg_writeback_intents",
+    "0062_pg_outbox_consumer",
+    "0063_pg_ic_elimination",
+    "0064_pg_close_ic_links",
+    "0065_pg_deferred_tax",
+    "0066_pg_impairment",
+    "0067_pg_close_impairment_links",
+    "0068_pg_close_deferred_tax_links",
+    "0069_pg_close_ppa_links",
+    "0070_pg_ownership_change",
+    "0071_pg_close_ownchg_links",
+    "0072_pg_recon_entity_scope",
+    "0073_pg_outbox_scope",
+    "0074_pg_outbox_consumer_scope",
+    "0075_pg_job_organization_scope",
+    "0076_pg_consolidation_ppa_scope",
+    "0077_pg_imp_tax_scope",
+    "0078_pg_close_scope",
+    "0079_pg_job_cursor",
+    "0080_pg_retail_settlement",
+    "0081_pg_prof_invoice",
+    "0082_pg_cert_evidence",
+    "0083_pg_manufacturing",
+    "0084_pg_bank_statement",
+    "0085_pg_reversal_definer",
+    "0086_pg_close_reopened",
+    "0087_pg_currency_binding",
+    "0088_pg_currency_snapshot",
 )
+
+_MIGRATION_TOKEN_PATTERN = re.compile(r"^[0-9]{4}_[A-Za-z0-9_]+$")
 
 
 class PostgresOperationsError(RuntimeError):
@@ -151,16 +191,63 @@ class PostgresMigrationStatusProvider:
             connection.close()
         if row is None:
             raise PostgresOperationsError("PostgreSQL migration state is empty.")
-        current = str(row[0])
+        current = _normalize_migration_revision(row[0], field="alembic_version")
+        revisions = POSTGRES_MIGRATION_REVISIONS
+        if current not in revisions:
+            discovered = _discover_postgres_migration_revisions()
+            if discovered is not None and current in discovered:
+                revisions = discovered
+            else:
+                raise PostgresOperationsError("PostgreSQL migration revision is unsupported.")
         try:
-            current_index = POSTGRES_MIGRATION_REVISIONS.index(current)
-        except ValueError as exc:
+            current_index = revisions.index(current)
+        except ValueError as exc:  # pragma: no cover - defensive fallback
             raise PostgresOperationsError("PostgreSQL migration revision is unsupported.") from exc
         return MigrationStatus(
             current_version=current,
-            latest_version=POSTGRES_MIGRATION_REVISIONS[-1],
-            pending_versions=POSTGRES_MIGRATION_REVISIONS[current_index + 1 :],
+            latest_version=revisions[-1],
+            pending_versions=tuple(revisions[current_index + 1 :]),
         )
+
+
+def _normalize_migration_revision(value: object, *, field: str) -> str:
+    try:
+        if isinstance(value, (bytes, bytearray, memoryview)):
+            normalized = bytes(value).decode("utf-8").strip()
+        else:
+            normalized = str(value).strip()
+    except (UnicodeDecodeError, TypeError, ValueError) as exc:
+        raise PostgresOperationsError(f"PostgreSQL migration {field} is unsupported.") from exc
+    if not normalized:
+        raise PostgresOperationsError(f"PostgreSQL migration {field} is unsupported.")
+    if not _MIGRATION_TOKEN_PATTERN.fullmatch(normalized):
+        raise PostgresOperationsError(f"PostgreSQL migration {field} is unsupported.")
+    return normalized
+
+
+def _discover_postgres_migration_revisions() -> tuple[str, ...] | None:
+    versions_dir = Path(__file__).resolve().parents[2] / "alembic" / "versions"
+    if not versions_dir.is_dir():
+        return None
+    revisions: list[str] = []
+    for path in sorted(versions_dir.glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        assignments = {
+            node.targets[0].id: ast.literal_eval(node.value)
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+            and node.targets[0].id in {"revision"}
+        }
+        revision = assignments.get("revision")
+        try:
+            revision = _normalize_migration_revision(revision, field=f"revision in {path.name}")
+        except PostgresOperationsError:
+            return None
+        if revision is not None:
+            revisions.append(revision)
+    return tuple(revisions)
 
 
 POSTGRES_OPERATIONS_SCHEMA_SQL = """

@@ -11,6 +11,14 @@ from uuid import uuid4
 import pytest
 
 from reconforge.application.outbox import OutboxApplicationService, OutboxError, OutboxRepositoryProtocol
+from reconforge.auth.policy import PolicyEvaluationContext
+from reconforge.benchmark.postgres_outbox_scale import (
+    default_profile as postgres_outbox_scale_profile,
+)
+from reconforge.benchmark.postgres_outbox_scale import (
+    run_postgres_outbox_scale_profile,
+    verify_postgres_outbox_scale_result,
+)
 from reconforge.infrastructure.postgres import (
     PostgresConnectionFactory,
     PostgresSettings,
@@ -29,7 +37,7 @@ from reconforge.infrastructure.postgres_outbox import (
     tenant_bound_postgres_outbox_repository,
 )
 from reconforge.workers.outbox import OutboxWorkerSettings
-from reconforge.workers.postgres_outbox import PostgresOutboxWorker
+from reconforge.workers.postgres_outbox import PostgresOutboxWorker, PostgresOutboxWorkerError
 
 
 class _Cursor:
@@ -96,6 +104,9 @@ class _FakeConnection:
                         None,
                         None,
                         "2026-07-23T00:00:00Z",
+                        "workspace-a",
+                        "org-a",
+                        "entity-a",
                     )
                 ]
             )
@@ -122,6 +133,9 @@ class _FakeConnection:
                         None,
                         self.dead_lettered_at,
                         "2026-07-23T00:00:00Z",
+                        "workspace-a",
+                        "org-a",
+                        "entity-a",
                     )
                 ]
             )
@@ -143,6 +157,10 @@ class _FakeFactory:
 
 def test_postgres_outbox_claim_and_transitions_are_tenant_scoped() -> None:
     assert "claimed_by TEXT" in POSTGRES_LEDGER_SCHEMA_SQL
+    assert "workspace_id TEXT DEFAULT NULLIF(current_setting('app.workspace_id'" in POSTGRES_LEDGER_SCHEMA_SQL
+    assert "organization_id TEXT DEFAULT NULLIF(current_setting('app.organization_id'" in POSTGRES_LEDGER_SCHEMA_SQL
+    assert "legal_entity_id TEXT DEFAULT NULLIF(current_setting('app.legal_entity_id'" in POSTGRES_LEDGER_SCHEMA_SQL
+    assert "idx_outbox_events_scope_pending" in POSTGRES_LEDGER_SCHEMA_SQL
     connection = _FakeConnection()
     repository = PostgresOutboxRepository(connection)
 
@@ -226,6 +244,186 @@ def test_postgres_outbox_worker_records_publisher_failure() -> None:
     assert result.published == 0
     assert result.failed == 1
     assert result.dead_lettered == 1
+
+
+def test_postgres_outbox_worker_policy_denies_before_connection_access() -> None:
+    class _NeverConnect:
+        def connect(self) -> Any:
+            raise AssertionError("policy denial must precede connection access")
+
+    worker = PostgresOutboxWorker(
+        _NeverConnect(),
+        tenant_supplier=lambda: ["tenant_a"],
+        publisher=lambda _event: None,
+        settings=OutboxWorkerSettings(
+            worker_id="outbox-policy-worker",
+            policy_context_supplier=lambda tenant: PolicyEvaluationContext(
+                user_id="outbox-policy-worker",
+                username="outbox-policy-worker",
+                user_permissions=set(),
+                principal_type="service_account",
+                tenant_id=tenant,
+                authorized_tenant_ids=frozenset({tenant}),
+            ),
+        ),
+    )
+    with pytest.raises(PostgresOutboxWorkerError, match="permission_missing"):
+        worker.process_once()
+
+
+def test_postgres_outbox_worker_policy_allows_scoped_service_identity() -> None:
+    connection = _FakeConnection()
+    worker = PostgresOutboxWorker(
+        _FakeFactory(connection),
+        tenant_supplier=lambda: ["tenant_a"],
+        publisher=lambda _event: None,
+        settings=OutboxWorkerSettings(
+            worker_id="outbox-policy-worker",
+            policy_context_supplier=lambda tenant: PolicyEvaluationContext(
+                user_id="outbox-policy-worker",
+                username="outbox-policy-worker",
+                user_permissions={"outbox.publish"},
+                principal_type="service_account",
+                tenant_id=tenant,
+                authorized_tenant_ids=frozenset({tenant}),
+            ),
+        ),
+    )
+    result = worker.process_once()
+    assert result.published == 1
+
+
+def test_postgres_outbox_worker_rechecks_policy_before_publisher_side_effect() -> None:
+    connection = _FakeConnection()
+    policy_calls = 0
+    published: list[str] = []
+
+    def policy_context(tenant: str) -> PolicyEvaluationContext:
+        nonlocal policy_calls
+        policy_calls += 1
+        permissions = {"outbox.publish"} if policy_calls == 1 else set()
+        return PolicyEvaluationContext(
+            user_id="outbox-revocation-worker",
+            username="outbox-revocation-worker",
+            user_permissions=permissions,
+            principal_type="service_account",
+            tenant_id=tenant,
+            authorized_tenant_ids=frozenset({tenant}),
+        )
+
+    worker = PostgresOutboxWorker(
+        _FakeFactory(connection),
+        tenant_supplier=lambda: ["tenant_a"],
+        publisher=lambda event: published.append(event.id),
+        settings=OutboxWorkerSettings(
+            worker_id="outbox-revocation-worker",
+            policy_context_supplier=policy_context,
+            poll_interval_seconds=0,
+        ),
+    )
+
+    with pytest.raises(PostgresOutboxWorkerError, match="permission_missing"):
+        worker.process_once()
+
+    assert policy_calls == 2
+    assert published == []
+    assert connection.commits == 1  # claim committed; no publish acknowledgment was written
+    assert not any("SET status = 'Published'" in sql for sql, _ in connection.executed)
+
+
+def test_postgres_outbox_worker_processes_exact_hierarchy_lane() -> None:
+    connection = _FakeConnection()
+
+    def policy_context(
+        tenant: str,
+        workspace: str | None,
+        organization: str | None,
+        entity: str | None,
+    ) -> PolicyEvaluationContext:
+        return PolicyEvaluationContext(
+            user_id="outbox-scoped-worker",
+            username="outbox-scoped-worker",
+            user_permissions={"outbox.publish"},
+            principal_type="service_account",
+            tenant_id=tenant,
+            organization_id=organization,
+            workspace_id=workspace,
+            entity_id=entity,
+            authorized_tenant_ids=frozenset({tenant}),
+            authorized_organization_ids=frozenset({organization}) if organization else frozenset(),
+            authorized_workspace_ids=frozenset({workspace}) if workspace else frozenset(),
+            authorized_entity_ids=frozenset({entity}) if entity else frozenset(),
+        )
+
+    worker = PostgresOutboxWorker(
+        _FakeFactory(connection),
+        tenant_supplier=lambda: ["tenant-without-scope-must-not-be-used"],
+        publisher=lambda _event: None,
+        settings=OutboxWorkerSettings(
+            worker_id="outbox-scoped-worker",
+            poll_interval_seconds=0,
+            policy_context_hierarchy_supplier=policy_context,
+            scope_supplier=lambda: (("tenant_a", "workspace-a", "org-a", "entity-a"),),
+        ),
+    )
+
+    result = worker.process_once()
+
+    assert result.published == 1
+    assert any(
+        "set_config('app.organization_id'" in sql and params == ("org-a",)
+        for sql, params in connection.executed
+    )
+    assert any(
+        "set_config('app.legal_entity_id'" in sql and params == ("entity-a",)
+        for sql, params in connection.executed
+    )
+    claim_params = next(params for sql, params in connection.executed if "FOR UPDATE SKIP LOCKED" in sql)
+    assert claim_params[:4] == ("tenant_a", "workspace-a", "org-a", "entity-a")
+
+
+def test_postgres_outbox_worker_requires_hierarchy_policy_for_organization_lane() -> None:
+    worker = PostgresOutboxWorker(
+        _FakeFactory(_FakeConnection()),
+        tenant_supplier=lambda: [],
+        publisher=lambda _event: None,
+        settings=OutboxWorkerSettings(
+            worker_id="outbox-organization-policy",
+            policy_context_scope_supplier=lambda tenant, workspace, entity: PolicyEvaluationContext(
+                user_id="outbox-organization-policy",
+                username="outbox-organization-policy",
+                user_permissions={"outbox.publish"},
+                principal_type="service_account",
+                tenant_id=tenant,
+                workspace_id=workspace,
+                entity_id=entity,
+                authorized_tenant_ids=frozenset({tenant}),
+                authorized_workspace_ids=frozenset({workspace}) if workspace else frozenset(),
+                authorized_entity_ids=frozenset({entity}) if entity else frozenset(),
+            ),
+            scope_supplier=lambda: (("tenant_a", None, "org-a", None),),
+        ),
+    )
+    with pytest.raises(PostgresOutboxWorkerError, match="hierarchy-aware"):
+        worker.process_once()
+
+
+def test_postgres_outbox_worker_rejects_entity_lane_without_organization_before_connection() -> None:
+    class _NeverConnect:
+        def connect(self) -> Any:
+            raise AssertionError("invalid hierarchy must be rejected before connection access")
+
+    worker = PostgresOutboxWorker(
+        _NeverConnect(),
+        tenant_supplier=lambda: [],
+        publisher=lambda _event: None,
+        settings=OutboxWorkerSettings(
+            worker_id="outbox-invalid-scope",
+            scope_supplier=lambda: (("tenant_a", "workspace-a", None, "entity-a"),),
+        ),
+    )
+    with pytest.raises(PostgresOutboxWorkerError, match="requires organization"):
+        worker.process_once()
 
 
 def test_tenant_bound_postgres_adapter_satisfies_application_contract() -> None:
@@ -359,5 +557,48 @@ def test_live_postgres_outbox_application_claim_retry_dead_replay_publish_and_rl
             with admin.transaction():
                 admin.execute("DELETE FROM reconforge.tenants WHERE id IN (%s,%s)", (tenant_a, tenant_b))
         except psycopg.Error:
+            pass
+        admin.close()
+
+
+@pytest.mark.skipif(
+    not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires a live PostgreSQL service"
+)
+def test_live_postgres_outbox_bounded_multi_worker_delivery_profile() -> None:
+    """Drain one synthetic 64-event queue with independent PostgreSQL workers."""
+
+    pytest.importorskip("psycopg")
+    dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
+    admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
+    app_user = os.environ.get("RECONFORGE_TEST_POSTGRES_APP_USER", "")
+    if not app_user:
+        pytest.skip("requires a non-privileged application role")
+    factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))
+    admin_factory = PostgresConnectionFactory(PostgresSettings(dsn=admin_dsn, require_tls=False))
+    tenant_id = "outbox_scale_" + uuid4().hex[:8]
+    admin = admin_factory.connect()
+    try:
+        with admin.transaction():
+            install_postgres_rls_schema(admin)
+            admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
+            admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
+            admin.execute(POSTGRES_OUTBOX_APPLICATION_SCHEMA_SQL)
+            admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            admin.execute(f"GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO {app_user}")
+            admin.execute("INSERT INTO reconforge.tenants(id,name) VALUES(%s,%s)", (tenant_id, tenant_id))
+        result = run_postgres_outbox_scale_profile(
+            factory,
+            tenant_id,
+            id_prefix="PGOUTBOX-" + uuid4().hex[:8],
+        )
+        verify_postgres_outbox_scale_result(result)
+        assert result.published_events == postgres_outbox_scale_profile().events
+        assert result.duplicate_publish_attempts == 0
+        assert result.pending_events == result.claimed_events == result.dead_events == 0
+    finally:
+        try:
+            with admin.transaction():
+                admin.execute("DELETE FROM reconforge.tenants WHERE id=%s", (tenant_id,))
+        except Exception:
             pass
         admin.close()

@@ -77,6 +77,7 @@ def _load_reconciliation(input_dir: Path) -> dict[str, Any]:
         datasets[DatasetName.OLD_PARTS_RETURNS],
         datasets[DatasetName.INVOICES],
         config,
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
     )
     wip = generate_wip_aging(datasets[DatasetName.WORK_ORDERS], config)
     exceptions = pd.concat([stock.all_exceptions, workorders.all_exceptions], ignore_index=True, sort=False)

@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "synthetic_data_only": true,
+  "synthetic_data_marker": "SYNTHETIC_MANUFACTURING_COST_UI_ONLY",
+  "generated_at": "2026-08-08T00:00:00Z",
+  "source": {
+    "kind": "reconforge-enterprise-demo",
+    "local_first": true,
+    "external_calls": false
+  },
+  "algorithm_version": "manufacturing-cost-control-v1",
+  "decision_digest": "85d204acf7cebbcbc8577f76dc44c595dd2e624550a6da4f6ac5723b3c729a5e",
+  "artifact_digest": "2d21f9d057a9038e4428975e6d851f08be29268e8c7a6620d93dbcbca7015bb6",
+  "tolerance": "0.01",
+  "currency": "EUR",
+  "unit": "PCS",
+  "max_scrap_quantity": "5",
+  "summary": {
+    "total": 3,
+    "reconciled": 1,
+    "exceptions": 1,
+    "unmatched": 1
+  },
+  "decisions": [
+    {
+      "order_id": "MFG-001",
+      "product_id": "PRODUCT-A",
+      "status": "reconciled",
+      "planned_quantity": "100",
+      "issued_quantity": "100",
+      "completed_quantity": "100",
+      "scrap_quantity": "0",
+      "material_cost_variance": "0.00",
+      "completion_cost_variance": "0.00",
+      "reason_codes": ["MANUFACTURING_ORDER_RECONCILED"]
+    },
+    {
+      "order_id": "MFG-002",
+      "product_id": "PRODUCT-B",
+      "status": "exception",
+      "planned_quantity": "50",
+      "issued_quantity": "55",
+      "completed_quantity": "45",
+      "scrap_quantity": "7",
+      "material_cost_variance": "26.00",
+      "completion_cost_variance": "-16.00",
+      "reason_codes": [
+        "MATERIAL_COST_VARIANCE",
+        "COMPLETION_COST_RECONCILIATION_VARIANCE",
+        "SCRAP_EXCEEDS_CONTROL_LIMIT"
+      ]
+    },
+    {
+      "order_id": "MFG-UNKNOWN",
+      "product_id": "UNKNOWN-PRODUCT",
+      "status": "unmatched",
+      "planned_quantity": "0",
+      "issued_quantity": "0",
+      "completed_quantity": "0",
+      "scrap_quantity": "0",
+      "material_cost_variance": "0.00",
+      "completion_cost_variance": "0.00",
+      "reason_codes": ["SOURCE_RECORD_REFERENCES_UNKNOWN_PRODUCTION_ORDER"]
+    }
+  ],
+  "notices": []
+}

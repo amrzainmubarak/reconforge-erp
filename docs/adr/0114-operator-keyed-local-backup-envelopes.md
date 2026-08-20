@@ -12,7 +12,7 @@ detects accidental change but does not authenticate ciphertext or hide content.
 
 ## Decision
 
-Add an optional `backup` dependency profile pinned to cryptography 49.0.0 and
+Add an optional `backup` dependency profile pinned to cryptography 50.0.0 and
 wrap the existing versioned backup pair in one AES-256-GCM envelope. The
 operator supplies an exact 32-byte key through a local key file; keys are never
 accepted as CLI values, stored in the envelope, or logged. The envelope binds

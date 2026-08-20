@@ -8,7 +8,14 @@ from dataclasses import dataclass
 from typing import Any
 
 from reconforge.application.outbox import OutboxError, OutboxEvent, OutboxRepositoryProtocol
-from reconforge.infrastructure.postgres import PostgresConfigurationError, normalize_scope_id, validate_tenant_id
+from reconforge.infrastructure.postgres import (
+    PostgresConfigurationError,
+    normalize_scope_id,
+    validate_legal_entity_id,
+    validate_organization_id,
+    validate_tenant_id,
+    validate_workspace_id,
+)
 from reconforge.io.persisted import (
     PersistedJsonError,
     decode_postgres_outbox_payload,
@@ -22,7 +29,7 @@ _LIST_OUTBOX_EVENT_QUERIES: dict[str, str] = {
     "all": (
         "SELECT tenant_id, event_id, event_type, aggregate_type, aggregate_id, payload, "
         "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, "
-        "dead_lettered_at, created_at "
+        "dead_lettered_at, created_at, workspace_id, organization_id, legal_entity_id "
         "FROM reconforge.outbox_events "
         "WHERE tenant_id = %s "
         "ORDER BY created_at, event_id "
@@ -31,7 +38,7 @@ _LIST_OUTBOX_EVENT_QUERIES: dict[str, str] = {
     "pending": (
         "SELECT tenant_id, event_id, event_type, aggregate_type, aggregate_id, payload, "
         "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, "
-        "dead_lettered_at, created_at "
+        "dead_lettered_at, created_at, workspace_id, organization_id, legal_entity_id "
         "FROM reconforge.outbox_events "
         "WHERE tenant_id = %s AND status IN ('Pending', 'Claimed') "
         "ORDER BY created_at, event_id "
@@ -40,7 +47,7 @@ _LIST_OUTBOX_EVENT_QUERIES: dict[str, str] = {
     "claimed": (
         "SELECT tenant_id, event_id, event_type, aggregate_type, aggregate_id, payload, "
         "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, "
-        "dead_lettered_at, created_at "
+        "dead_lettered_at, created_at, workspace_id, organization_id, legal_entity_id "
         "FROM reconforge.outbox_events "
         "WHERE tenant_id = %s AND status = 'Claimed' "
         "ORDER BY created_at, event_id "
@@ -49,7 +56,7 @@ _LIST_OUTBOX_EVENT_QUERIES: dict[str, str] = {
     "published": (
         "SELECT tenant_id, event_id, event_type, aggregate_type, aggregate_id, payload, "
         "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, "
-        "dead_lettered_at, created_at "
+        "dead_lettered_at, created_at, workspace_id, organization_id, legal_entity_id "
         "FROM reconforge.outbox_events "
         "WHERE tenant_id = %s AND status = 'Published' "
         "ORDER BY created_at, event_id "
@@ -58,7 +65,7 @@ _LIST_OUTBOX_EVENT_QUERIES: dict[str, str] = {
     "dead": (
         "SELECT tenant_id, event_id, event_type, aggregate_type, aggregate_id, payload, "
         "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, "
-        "dead_lettered_at, created_at "
+        "dead_lettered_at, created_at, workspace_id, organization_id, legal_entity_id "
         "FROM reconforge.outbox_events "
         "WHERE tenant_id = %s AND status = 'Dead' "
         "ORDER BY created_at, event_id "
@@ -136,6 +143,17 @@ def _row_value(row: Any, key: str, index: int) -> Any:
     return row[index]
 
 
+def _optional_row_value(row: Any, key: str, index: int) -> Any:
+    """Read additive scope columns while accepting pre-scope tuple rows."""
+
+    if isinstance(row, Mapping):
+        return row.get(key)
+    try:
+        return row[index]
+    except IndexError:
+        return None
+
+
 def _metadata(value: object) -> tuple[dict[str, Any], str]:
     try:
         decoded = decode_postgres_outbox_payload(value)
@@ -165,6 +183,9 @@ class PostgresOutboxEvent:
     last_error: str | None
     dead_lettered_at: str | None
     created_at: str
+    workspace_id: str | None
+    organization_id: str | None
+    legal_entity_id: str | None
 
 
 @dataclass(frozen=True)
@@ -192,11 +213,19 @@ class PostgresOutboxRepository:
             last_error=str(_row_value(row, "last_error", 12)) if _row_value(row, "last_error", 12) else None,
             dead_lettered_at=self._optional_timestamp(_row_value(row, "dead_lettered_at", 13)),
             created_at=str(_row_value(row, "created_at", 14)),
+            workspace_id=self._optional_scope(_optional_row_value(row, "workspace_id", 15)),
+            organization_id=self._optional_scope(_optional_row_value(row, "organization_id", 16)),
+            legal_entity_id=self._optional_scope(_optional_row_value(row, "legal_entity_id", 17)),
         )
 
     @staticmethod
     def _optional_timestamp(value: object) -> str | None:
         return str(value) if value is not None else None
+
+    @staticmethod
+    def _optional_scope(value: object) -> str | None:
+        normalized = str(value or "").strip()
+        return normalized or None
 
     @staticmethod
     def _validate_limit(limit: int, *, maximum: int = 1_000) -> int:
@@ -225,6 +254,9 @@ class PostgresOutboxRepository:
         limit: int = 50,
         max_attempts: int = 5,
         lease_seconds: int = 300,
+        workspace_id: str | None = None,
+        organization_id: str | None = None,
+        legal_entity_id: str | None = None,
     ) -> list[PostgresOutboxEvent]:
         """Atomically claim ready or expired events using PostgreSQL row locks."""
 
@@ -233,12 +265,33 @@ class PostgresOutboxRepository:
         selected_limit = self._validate_limit(limit)
         attempts = self._validate_attempts(max_attempts)
         lease = self._validate_seconds(lease_seconds, "lease_seconds")
-        cursor = self.connection.execute(
+        try:
+            workspace = validate_workspace_id(self._optional_scope(workspace_id))
+            organization = validate_organization_id(self._optional_scope(organization_id))
+            legal_entity = validate_legal_entity_id(self._optional_scope(legal_entity_id))
+        except PostgresConfigurationError as exc:
+            raise PostgresOutboxValidationError(str(exc)) from exc
+        if legal_entity is not None and organization is None:
+            raise PostgresOutboxValidationError("legal_entity_id requires organization_id.")
+        scope_values: list[str] = []
+        scope_predicates: list[str] = []
+        for column, value in (
+            ("workspace_id", workspace),
+            ("organization_id", organization),
+            ("legal_entity_id", legal_entity),
+        ):
+            if value is not None:
+                scope_predicates.append(f"AND {column} = %s")
+                scope_values.append(value)
+        scope_sql = "\n                  ".join(scope_predicates)
+        query = (  # nosec B608 - scope predicates are fixed internal column names.
             """
             WITH candidates AS (
                 SELECT tenant_id, event_id
                 FROM reconforge.outbox_events
-                WHERE tenant_id = %s
+                WHERE tenant_id = %s"""
+            + scope_sql  # nosec B608 - scope predicates are fixed internal column names.
+            + """
                   AND attempt_count < %s
                   AND available_at <= now()
                   AND (status = 'Pending' OR (status = 'Claimed' AND claimed_at <= now()))
@@ -258,15 +311,21 @@ class PostgresOutboxRepository:
                           events.aggregate_type, events.aggregate_id, events.payload,
                           events.status, events.attempt_count, events.available_at,
                           events.claimed_at, events.claimed_by, events.published_at,
-                          events.last_error, events.dead_lettered_at, events.created_at
+                          events.last_error, events.dead_lettered_at, events.created_at,
+                          events.workspace_id, events.organization_id, events.legal_entity_id
             )
             SELECT tenant_id, event_id, event_type, aggregate_type, aggregate_id,
                    payload, status, attempt_count, available_at, claimed_at, claimed_by,
-                   published_at, last_error, dead_lettered_at, created_at
+                   published_at, last_error, dead_lettered_at, created_at,
+                   workspace_id, organization_id, legal_entity_id
             FROM claimed
             ORDER BY available_at, created_at, event_id
-            """,
-            (tenant, attempts, selected_limit, lease, worker),
+            """
+        )
+        # nosec B608 - scope predicates are fixed internal column names and values are parameters.
+        cursor = self.connection.execute(
+            query,
+            (tenant, *scope_values, attempts, selected_limit, lease, worker),
         )
         return [self._event(row) for row in cursor.fetchall()]
 

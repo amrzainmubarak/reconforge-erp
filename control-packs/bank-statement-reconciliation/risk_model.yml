@@ -1,0 +1,8 @@
+model_id: bank-statement-reconciliation-risk-v1
+classification:
+  critical: 90
+  high: 75
+  medium: 45
+  low: 0
+notes:
+  - Scores triage review work and do not establish bank authenticity, fraud, or statutory completeness.

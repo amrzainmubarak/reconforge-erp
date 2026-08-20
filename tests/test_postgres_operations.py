@@ -23,6 +23,8 @@ from reconforge.infrastructure.postgres_domain import (
 from reconforge.infrastructure.postgres_operations import (
     POSTGRES_MIGRATION_REVISIONS,
     POSTGRES_OPERATIONS_SCHEMA_SQL,
+    PostgresMigrationStatusProvider,
+    PostgresOperationsError,
     PostgresOperationsRepository,
     install_postgres_operations_schema,
 )
@@ -34,8 +36,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_postgres_operations_schema_and_revision_registry_are_explicit() -> None:
     assert POSTGRES_OPERATIONS_SCHEMA_SQL.count("FORCE ROW LEVEL SECURITY") == 2
     assert "FOREIGN KEY (tenant_id, workspace_id)" in POSTGRES_OPERATIONS_SCHEMA_SQL
-    assert POSTGRES_MIGRATION_REVISIONS[-1] == "0053_audit_administration_acl"
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 53
+    assert POSTGRES_MIGRATION_REVISIONS[-1] == "0088_pg_currency_snapshot"
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 88
 
 
 def test_postgres_operations_revision_registry_matches_the_linear_alembic_chain() -> None:
@@ -54,6 +56,97 @@ def test_postgres_operations_revision_registry_matches_the_linear_alembic_chain(
         previous = str(assignments["revision"])
         discovered.append(previous)
     assert tuple(discovered) == POSTGRES_MIGRATION_REVISIONS
+
+
+class _MigrationCursor:
+    def __init__(self, revision: object) -> None:
+        self.revision = revision
+
+    def fetchone(self) -> tuple[object]:
+        return (self.revision,)
+
+
+class _MigrationConnection:
+    def __init__(self, revision: object) -> None:
+        self.revision = revision
+        self.closed = False
+
+    def execute(self, statement: str) -> _MigrationCursor:
+        assert statement == "SELECT version_num FROM alembic_version"
+        return _MigrationCursor(self.revision)
+
+    def close(self) -> None:
+        self.closed = True
+
+
+class _MigrationConnectionFactory:
+    def __init__(self, revision: object) -> None:
+        self.connection = _MigrationConnection(revision)
+        self.connect_calls = 0
+
+    def connect(self) -> _MigrationConnection:
+        self.connect_calls += 1
+        return self.connection
+
+
+def test_postgres_migration_status_provider_accepts_current_head_and_closes_connection() -> None:
+    factory = _MigrationConnectionFactory(POSTGRES_MIGRATION_REVISIONS[-1])
+
+    status = PostgresMigrationStatusProvider(factory)("migration-test")
+
+    assert status.current_version == status.latest_version == POSTGRES_MIGRATION_REVISIONS[-1]
+    assert status.pending_versions == ()
+    assert factory.connect_calls == 1
+    assert factory.connection.closed is True
+
+
+def test_postgres_migration_status_provider_accepts_revision_with_bytes_and_padding() -> None:
+    factory = _MigrationConnectionFactory(b"\n" + POSTGRES_MIGRATION_REVISIONS[10].encode("utf-8") + b" \t")
+
+    status = PostgresMigrationStatusProvider(factory)("migration-test")
+
+    assert status.current_version == POSTGRES_MIGRATION_REVISIONS[10]
+    assert status.latest_version == POSTGRES_MIGRATION_REVISIONS[-1]
+    assert status.pending_versions == POSTGRES_MIGRATION_REVISIONS[11:]
+    assert factory.connect_calls == 1
+    assert factory.connection.closed is True
+
+
+def test_postgres_migration_status_provider_accepts_revision_known_in_discovered_chain(monkeypatch: pytest.MonkeyPatch) -> None:
+    legacy_revision = POSTGRES_MIGRATION_REVISIONS[0]
+    migrated_revision = "0099_postgres_new_feature"
+    factory = _MigrationConnectionFactory(migrated_revision)
+
+    monkeypatch.setattr(
+        "reconforge.infrastructure.postgres_operations._discover_postgres_migration_revisions",
+        lambda: (legacy_revision, migrated_revision),
+    )
+    status = PostgresMigrationStatusProvider(factory)("migration-test")
+
+    assert status.current_version == migrated_revision
+    assert status.latest_version == migrated_revision
+    assert status.pending_versions == ()
+    assert factory.connect_calls == 1
+    assert factory.connection.closed is True
+
+
+def test_postgres_migration_status_provider_rejects_unknown_revision_and_closes_connection() -> None:
+    factory = _MigrationConnectionFactory("future_revision_not_in_registry")
+
+    with pytest.raises(PostgresOperationsError, match="unsupported"):
+        PostgresMigrationStatusProvider(factory)("migration-test")
+
+    assert factory.connect_calls == 1
+    assert factory.connection.closed is True
+
+
+def test_postgres_migration_status_provider_rejects_blank_locator_before_connect() -> None:
+    factory = _MigrationConnectionFactory(POSTGRES_MIGRATION_REVISIONS[-1])
+
+    with pytest.raises(PostgresOperationsError, match="locator label must not be blank"):
+        PostgresMigrationStatusProvider(factory)("  ")
+
+    assert factory.connect_calls == 0
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")

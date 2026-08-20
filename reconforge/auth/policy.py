@@ -6,6 +6,8 @@ import hashlib
 import json
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING, Literal
 
 from reconforge.auth.rbac import check_sod_conflict
@@ -33,6 +35,11 @@ HUMAN_ONLY_PERMISSIONS = frozenset(
         "security.emergency.review",
         "security.center.read",
         "security.policy.manage",
+        "connectors.writeback.propose",
+        "connectors.writeback.approve",
+        "connectors.writeback.reconcile",
+        "connectors.writeback.dispatch",
+        "connectors.writeback.compensate",
         "users.manage",
     }
 )
@@ -51,6 +58,8 @@ PRIVILEGED_STEP_UP_PERMISSIONS = frozenset(
         "security.emergency.review",
         "security.center.read",
         "security.policy.manage",
+        "connectors.writeback.dispatch",
+        "connectors.writeback.compensate",
         "users.manage",
     }
 )
@@ -75,18 +84,53 @@ class PolicyEvaluationContext:
     required_step_up_method: str | None = None
     step_up_method: str | None = None
     tenant_id: str | None = None
+    organization_id: str | None = None
     workspace_id: str | None = None
     entity_id: str | None = None
     period_id: str | None = None
+    region_id: str | None = None
+    data_classification: str | None = None
+    amount: Decimal | None = None
+    minimum_amount: Decimal | None = None
+    maximum_amount: Decimal | None = None
     authorized_tenant_ids: frozenset[str] = field(default_factory=frozenset)
+    authorized_organization_ids: frozenset[str] = field(default_factory=frozenset)
     authorized_workspace_ids: frozenset[str] = field(default_factory=frozenset)
     authorized_entity_ids: frozenset[str] = field(default_factory=frozenset)
     authorized_period_ids: frozenset[str] = field(default_factory=frozenset)
+    authorized_region_ids: frozenset[str] = field(default_factory=frozenset)
+    authorized_data_classifications: frozenset[str] = field(default_factory=frozenset)
+    requested_field_names: frozenset[str] = field(default_factory=frozenset)
+    authorized_field_names: frozenset[str] = field(default_factory=frozenset)
+    delegation_id: str | None = None
+    delegation_expires_at: datetime | None = None
+    evaluation_time: datetime | None = None
     object_type: str | None = None
     object_id: str | None = None
     object_owner_id: str | None = None
     action: str | None = None
     prior_actions: list[tuple[str, str, str, str]] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        for field_name in ("amount", "minimum_amount", "maximum_amount"):
+            value = getattr(self, field_name)
+            if value is not None and (not isinstance(value, Decimal) or not value.is_finite()):
+                raise ValueError(f"{field_name} must be a finite Decimal when supplied.")
+        if (
+            self.minimum_amount is not None
+            and self.maximum_amount is not None
+            and self.minimum_amount > self.maximum_amount
+        ):
+            raise ValueError("minimum_amount cannot exceed maximum_amount.")
+        for field_name in ("delegation_expires_at", "evaluation_time"):
+            value = getattr(self, field_name)
+            if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+                raise ValueError(f"{field_name} must be timezone-aware when supplied.")
+        if self.delegation_expires_at is not None and not self.delegation_id:
+            raise ValueError("delegation_id is required when delegation_expires_at is supplied.")
+        for field_name, values in (("requested_field_names", self.requested_field_names), ("authorized_field_names", self.authorized_field_names)):
+            if any(not isinstance(value, str) or not value.strip() for value in values):
+                raise ValueError(f"{field_name} must contain non-empty field names.")
 
 
 @dataclass(frozen=True)
@@ -153,6 +197,23 @@ class CentralPolicyEngine:
         if not ctx.user_id:
             return PolicyDecision(False, "Deny: missing authenticated user identity.", "identity_missing")
 
+        # Temporary delegated authority is explicit, replayable, and fail-closed.
+        # The caller must provide the evaluation instant; wall-clock reads are not
+        # hidden inside the policy engine.
+        if ctx.delegation_expires_at is not None:
+            if ctx.evaluation_time is None:
+                return PolicyDecision(
+                    False,
+                    "Deny: delegated authority requires an explicit evaluation time.",
+                    "delegation_evaluation_time_missing",
+                )
+            if ctx.evaluation_time >= ctx.delegation_expires_at:
+                return PolicyDecision(
+                    False,
+                    "Deny: delegated authority has expired.",
+                    "delegation_expired",
+                )
+
         # 2. A caller must name the permission contract. Identity alone never grants access.
         if not required_permission:
             return PolicyDecision(False, "Deny: no required permission was specified.", "permission_contract_missing")
@@ -188,9 +249,12 @@ class CentralPolicyEngine:
         # 3. Enforce every supplied resource scope. Empty grants deny scoped access.
         scope_checks = (
             ("tenant", ctx.tenant_id, ctx.authorized_tenant_ids),
+            ("organization", ctx.organization_id, ctx.authorized_organization_ids),
             ("workspace", ctx.workspace_id, ctx.authorized_workspace_ids),
             ("entity", ctx.entity_id, ctx.authorized_entity_ids),
             ("period", ctx.period_id, ctx.authorized_period_ids),
+            ("region", ctx.region_id, ctx.authorized_region_ids),
+            ("data_classification", ctx.data_classification, ctx.authorized_data_classifications),
         )
         for scope_name, resource_id, authorized_ids in scope_checks:
             if resource_id is not None and resource_id not in authorized_ids:
@@ -199,6 +263,21 @@ class CentralPolicyEngine:
                     reason=f"Deny: {scope_name} scope is not authorized.",
                     reason_code=f"{scope_name}_scope_denied",
                 )
+
+        if ctx.amount is not None:
+            if ctx.minimum_amount is not None and ctx.amount < ctx.minimum_amount:
+                return PolicyDecision(False, "Deny: amount is below the authorized policy floor.", "amount_below_floor")
+            if ctx.maximum_amount is not None and ctx.amount > ctx.maximum_amount:
+                return PolicyDecision(
+                    False, "Deny: amount exceeds the authorized policy ceiling.", "amount_above_ceiling"
+                )
+
+        if ctx.requested_field_names and not ctx.requested_field_names.issubset(ctx.authorized_field_names):
+            return PolicyDecision(
+                False,
+                "Deny: one or more requested fields are not authorized.",
+                "field_scope_denied",
+            )
 
         # 4. Check Segregation of Duties (SoD) if object & action are specified
         if enforce_sod and ctx.object_type and ctx.object_id and ctx.action:
@@ -264,14 +343,28 @@ def evaluate_principal_access(
     action: str | None = None,
     prior_actions: list[tuple[str, str, str, str]] | None = None,
     tenant_id: str | None = None,
+    organization_id: str | None = None,
     workspace_id: str | None = None,
     entity_id: str | None = None,
     period_id: str | None = None,
+    region_id: str | None = None,
+    data_classification: str | None = None,
+    amount: Decimal | None = None,
+    minimum_amount: Decimal | None = None,
+    maximum_amount: Decimal | None = None,
     authorized_tenant_ids: frozenset[str] = frozenset(),
+    authorized_organization_ids: frozenset[str] = frozenset(),
     authorized_workspace_ids: frozenset[str] = frozenset(),
     authorized_entity_ids: frozenset[str] = frozenset(),
     authorized_period_ids: frozenset[str] = frozenset(),
+    authorized_region_ids: frozenset[str] = frozenset(),
+    authorized_data_classifications: frozenset[str] = frozenset(),
+    requested_field_names: frozenset[str] = frozenset(),
+    authorized_field_names: frozenset[str] = frozenset(),
     object_owner_id: str | None = None,
+    delegation_id: str | None = None,
+    delegation_expires_at: datetime | None = None,
+    evaluation_time: datetime | None = None,
 ) -> PolicyDecision:
     """Helper for evaluating ServerPrincipal authorization."""
 
@@ -283,13 +376,27 @@ def evaluate_principal_access(
         step_up_active=principal.step_up_active,
         step_up_enforced=True,
         tenant_id=tenant_id,
+        organization_id=organization_id,
         workspace_id=workspace_id,
         entity_id=entity_id,
         period_id=period_id,
+        region_id=region_id,
+        data_classification=data_classification,
+        amount=amount,
+        minimum_amount=minimum_amount,
+        maximum_amount=maximum_amount,
         authorized_tenant_ids=authorized_tenant_ids,
+        authorized_organization_ids=authorized_organization_ids,
         authorized_workspace_ids=authorized_workspace_ids,
         authorized_entity_ids=authorized_entity_ids,
         authorized_period_ids=authorized_period_ids,
+        authorized_region_ids=authorized_region_ids,
+        authorized_data_classifications=authorized_data_classifications,
+        requested_field_names=requested_field_names,
+        authorized_field_names=authorized_field_names,
+        delegation_id=delegation_id,
+        delegation_expires_at=delegation_expires_at,
+        evaluation_time=evaluation_time,
         object_type=object_type,
         object_id=object_id,
         object_owner_id=object_owner_id,

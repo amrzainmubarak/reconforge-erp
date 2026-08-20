@@ -1,0 +1,44 @@
+rules:
+  - rule_id: BSR-001
+    rule_name: Bank line has no ledger record
+    severity: high
+    entity_type: bank_line
+    source_file: bank_lines.csv
+    condition:
+      operator: cross_file_missing
+      source_key: normalized_reference
+      target_file: ledger.csv
+      target_key: normalized_reference
+    message: A bank statement line has no matching ledger reference.
+    business_impact: Cash activity may be omitted from the local ledger or delayed in the source system.
+    recommended_action: Trace the bank reference and retain the source line evidence.
+    risk_impact: 82
+    evidence_fields: [line_id, booking_date, amount, normalized_reference]
+  - rule_id: BSR-002
+    rule_name: Duplicate ledger identity
+    severity: critical
+    entity_type: ledger_record
+    source_file: ledger.csv
+    condition:
+      operator: duplicate
+      field: record_id
+    message: A ledger record identity appears more than once.
+    business_impact: Duplicate ledger rows can overstate or understate cash activity.
+    recommended_action: Quarantine duplicates and review the source export lineage.
+    risk_impact: 95
+    evidence_fields: [record_id, booking_date, amount, normalized_reference]
+  - rule_id: BSR-003
+    rule_name: Bank and ledger amount variance
+    severity: high
+    entity_type: ledger_record
+    source_file: ledger.csv
+    condition:
+      operator: variance_above
+      field: ledger_amount
+      other_field: bank_amount
+      threshold: 0.01
+    message: Ledger amount differs from the bank amount beyond tolerance.
+    business_impact: Timing, fees, reversals, or data-quality differences need explicit review.
+    recommended_action: Confirm amount sign, value date, fee treatment, and source references.
+    risk_impact: 86
+    evidence_fields: [record_id, bank_amount, ledger_amount, normalized_reference]

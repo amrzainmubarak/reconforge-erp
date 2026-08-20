@@ -1,9 +1,14 @@
-import type { AdminAccessPermission, AdminAccessRole, AdminAccessRoleChange, AdminAuditEvent, AdminAuditPage, AdminAuditVerification, AdminIdentitySession, AdminIdentityUser, AdminIdentityUserStatusChange, AdminIntegration, AdminRetentionPolicy, AdminSecuritySnapshot, AdminSessionRevocation, AdminUserRoleAssignment, BrowserAdminSession, EvidenceBinderContract, ExceptionQueueContract, InventoryControlContract, LiveStudioContract, LiveStudioMetric, StudioOverview } from "./types";
+import type { AdminAccessPermission, AdminAccessRole, AdminAccessRoleChange, AdminAuditEvent, AdminAuditPage, AdminAuditVerification, AdminIdentitySession, AdminIdentityUser, AdminIdentityUserStatusChange, AdminIntegration, AdminRetentionPolicy, AdminSecuritySnapshot, AdminSessionRevocation, AdminUserRoleAssignment, BankStatementStatus, BankStatementStudioContract, BrowserAdminSession, EvidenceBinderContract, ExceptionQueueContract, IndividualCashflowStatus, IndividualCashflowStudioContract, InventoryControlContract, LiveStudioContract, LiveStudioMetric, ManufacturingCostStatus, ManufacturingCostStudioContract, ProfessionalInvoicePaymentStatus, ProfessionalInvoicePaymentStudioContract, RetailSettlementStudioContract, StudioOverview } from "./types";
 
 const OVERVIEW_URL = `${import.meta.env.BASE_URL}demo/studio-overview.json`;
 const EXCEPTIONS_URL = `${import.meta.env.BASE_URL}demo/studio-exceptions.json`;
 const EVIDENCE_URL = `${import.meta.env.BASE_URL}demo/studio-evidence.json`;
 const INVENTORY_URL = `${import.meta.env.BASE_URL}demo/studio-inventory.json`;
+const RETAIL_SETTLEMENT_URL = `${import.meta.env.BASE_URL}demo/studio-retail-settlement.json`;
+const BANK_STATEMENT_URL = `${import.meta.env.BASE_URL}demo/studio-bank-statement.json`;
+const MANUFACTURING_COST_URL = `${import.meta.env.BASE_URL}demo/studio-manufacturing-cost.json`;
+const PROFESSIONAL_INVOICE_PAYMENT_URL = `${import.meta.env.BASE_URL}demo/studio-professional-invoice-payment.json`;
+const INDIVIDUAL_CASHFLOW_URL = `${import.meta.env.BASE_URL}demo/studio-individual-cashflow.json`;
 const metricFormats = new Set(["percent", "count", "days"]);
 const metricTones = new Set(["positive", "critical", "warning", "neutral"]);
 const riskRatings = new Set(["critical", "high", "medium", "low"]);
@@ -16,6 +21,14 @@ const financeEntryStatuses = new Set(["", "Draft", "Validated", "Voided"]);
 const showcaseStatuses = new Set(["strong", "watch", "attention"]);
 const controlDomains = new Set(["close", "evidence", "matching", "controls"]);
 const exactQuantity = /^-?(?:0|[1-9]\d*)(?:\.\d{1,6})?$/;
+const exactMoney = /^-?(?:0|[1-9]\d*)(?:\.\d{1,6})?$/;
+const currencyCode = /^[A-Z]{3}$/;
+const digest = /^[a-f0-9]{64}$/;
+const retailStatuses = new Set(["matched", "exception", "unmatched_pos", "unmatched_settlement", "ambiguous"]);
+const bankStatuses = new Set<BankStatementStatus>(["matched", "exception", "unmatched_bank", "unmatched_ledger", "ambiguous"]);
+const manufacturingStatuses = new Set<ManufacturingCostStatus>(["reconciled", "exception", "unmatched"]);
+const professionalStatuses = new Set<ProfessionalInvoicePaymentStatus>(["matched", "exception", "unmatched_invoice", "unmatched_payment", "ambiguous"]);
+const individualCashflowStatuses = new Set<IndividualCashflowStatus>(["within_budget", "over_budget", "unbudgeted", "no_activity"]);
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -348,6 +361,267 @@ function isInventoryControl(value: unknown): value is InventoryControlContract {
   );
 }
 
+function isRetailSettlementDecision(value: unknown, expectedCurrency: string): boolean {
+  if (!isObject(value)) return false;
+  if (!hasTextFields(value, ["batch_id", "store_id", "expected_card_net", "currency", "reason_code"])) return false;
+  if (!retailStatuses.has(String(value.status)) || !exactMoney.test(String(value.expected_card_net))) return false;
+  if (!Array.isArray(value.settlement_ids) || value.settlement_ids.length > 100 || !value.settlement_ids.every(isText)) return false;
+  if (value.settlement_net !== null && (!isText(value.settlement_net) || !exactMoney.test(value.settlement_net))) return false;
+  if (value.net_variance !== null && (!isText(value.net_variance) || !exactMoney.test(value.net_variance))) return false;
+  return value.currency === expectedCurrency && String(value.batch_id).length <= 120 && String(value.store_id).length <= 120;
+}
+
+function retailSettlementSummaryIsConsistent(value: Record<string, unknown>): boolean {
+  const summary = value.summary as Record<string, unknown>;
+  const decisions = value.decisions as Array<Record<string, unknown>>;
+  const statuses = decisions.map((decision) => String(decision.status));
+  const unmatched = statuses.filter((status) => status === "unmatched_pos" || status === "unmatched_settlement").length;
+  return (
+    summary.total === decisions.length &&
+    summary.matched === statuses.filter((status) => status === "matched").length &&
+    summary.exceptions === statuses.filter((status) => status === "exception").length &&
+    summary.unmatched === unmatched &&
+    summary.ambiguous === statuses.filter((status) => status === "ambiguous").length &&
+    new Set(decisions.map((decision) => String(decision.batch_id))).size === decisions.length
+  );
+}
+
+function isRetailSettlementStudio(value: unknown): value is RetailSettlementStudioContract {
+  if (!isObject(value)) return false;
+  return (
+    value.schema_version === 1 &&
+    value.synthetic_data_only === true &&
+    value.synthetic_data_marker === "SYNTHETIC_RETAIL_SETTLEMENT_UI_ONLY" &&
+    isText(value.generated_at) &&
+    isContractSource(value.source) &&
+    isText(value.algorithm_version) &&
+    digest.test(String(value.decision_digest)) &&
+    digest.test(String(value.artifact_digest)) &&
+    exactMoney.test(String(value.tolerance)) &&
+    !String(value.tolerance).startsWith("-") &&
+    isText(value.currency) &&
+    currencyCode.test(value.currency) &&
+    hasCountFields(value.summary, ["total", "matched", "exceptions", "unmatched", "ambiguous"]) &&
+    Array.isArray(value.decisions) &&
+    value.decisions.length > 0 &&
+    value.decisions.length <= 10_000 &&
+    value.decisions.every((decision) => isRetailSettlementDecision(decision, value.currency as string)) &&
+    Array.isArray(value.notices) &&
+    value.notices.every(isText) &&
+    retailSettlementSummaryIsConsistent(value)
+  );
+}
+
+function isBankStatementDecision(value: unknown, expectedCurrency: string): boolean {
+  if (!isObject(value)) return false;
+  if (!hasTextFields(value, ["bank_line_id", "account_id", "reason_code"])) return false;
+  if (typeof value.status !== "string" || !bankStatuses.has(value.status as BankStatementStatus)) return false;
+  if (!Array.isArray(value.ledger_record_ids) || value.ledger_record_ids.length > 100 || !value.ledger_record_ids.every(isText)) return false;
+  if (value.amount_variance !== null && (!isText(value.amount_variance) || !exactMoney.test(value.amount_variance))) return false;
+  if (value.days_variance !== null && (!isCount(value.days_variance) || value.days_variance > 366)) return false;
+  return String(value.account_id).length <= 160 && String(value.bank_line_id).length <= 160 && expectedCurrency.length === 3;
+}
+
+function bankStatementSummaryIsConsistent(value: Record<string, unknown>): boolean {
+  const summary = value.summary as Record<string, unknown>;
+  const decisions = value.decisions as Array<Record<string, unknown>>;
+  const statuses = decisions.map((decision) => String(decision.status));
+  const unmatched = statuses.filter((status) => status === "unmatched_bank" || status === "unmatched_ledger").length;
+  return (
+    summary.total === decisions.length &&
+    summary.matched === statuses.filter((status) => status === "matched").length &&
+    summary.exceptions === statuses.filter((status) => status === "exception").length &&
+    summary.unmatched === unmatched &&
+    summary.ambiguous === statuses.filter((status) => status === "ambiguous").length &&
+    new Set(decisions.map((decision) => String(decision.bank_line_id))).size === decisions.length
+  );
+}
+
+function isBankStatementStudio(value: unknown): value is BankStatementStudioContract {
+  if (!isObject(value)) return false;
+  return (
+    value.schema_version === 1 &&
+    value.synthetic_data_only === true &&
+    value.synthetic_data_marker === "SYNTHETIC_BANK_STATEMENT_UI_ONLY" &&
+    isText(value.generated_at) &&
+    isContractSource(value.source) &&
+    isText(value.algorithm_version) &&
+    digest.test(String(value.decision_digest)) &&
+    digest.test(String(value.artifact_digest)) &&
+    exactMoney.test(String(value.tolerance)) &&
+    !String(value.tolerance).startsWith("-") &&
+    isText(value.currency) &&
+    currencyCode.test(value.currency) &&
+    isCount(value.date_window_days) &&
+    value.date_window_days <= 366 &&
+    hasCountFields(value.summary, ["total", "matched", "exceptions", "unmatched", "ambiguous"]) &&
+    Array.isArray(value.decisions) &&
+    value.decisions.length > 0 &&
+    value.decisions.length <= 10_000 &&
+    value.decisions.every((decision) => isBankStatementDecision(decision, value.currency as string)) &&
+    Array.isArray(value.notices) &&
+    value.notices.every(isText) &&
+    bankStatementSummaryIsConsistent(value)
+  );
+}
+
+function isManufacturingCostDecision(value: unknown, expectedUnit: string, expectedCurrency: string): boolean {
+  if (!isObject(value)) return false;
+  if (!hasTextFields(value, ["order_id", "product_id"])) return false;
+  if (typeof value.status !== "string" || !manufacturingStatuses.has(value.status as ManufacturingCostStatus)) return false;
+  const quantities = ["planned_quantity", "issued_quantity", "completed_quantity", "scrap_quantity"];
+  if (!quantities.every((field) => isText(value[field]) && exactQuantity.test(value[field] as string) && !String(value[field]).startsWith("-"))) return false;
+  if (!isText(value.material_cost_variance) || !exactMoney.test(value.material_cost_variance) || !isText(value.completion_cost_variance) || !exactMoney.test(value.completion_cost_variance)) return false;
+  if (!Array.isArray(value.reason_codes) || value.reason_codes.length < 1 || value.reason_codes.length > 20 || !value.reason_codes.every(isText)) return false;
+  return String(value.order_id).length <= 160 && String(value.product_id).length <= 160 && expectedUnit.length <= 16 && expectedCurrency.length === 3;
+}
+
+function manufacturingSummaryIsConsistent(value: Record<string, unknown>): boolean {
+  const summary = value.summary as Record<string, unknown>;
+  const decisions = value.decisions as Array<Record<string, unknown>>;
+  const statuses = decisions.map((decision) => String(decision.status));
+  return (
+    summary.total === decisions.length &&
+    summary.reconciled === statuses.filter((status) => status === "reconciled").length &&
+    summary.exceptions === statuses.filter((status) => status === "exception").length &&
+    summary.unmatched === statuses.filter((status) => status === "unmatched").length &&
+    new Set(decisions.map((decision) => String(decision.order_id))).size === decisions.length
+  );
+}
+
+function isManufacturingCostStudio(value: unknown): value is ManufacturingCostStudioContract {
+  if (!isObject(value)) return false;
+  return (
+    value.schema_version === 1 &&
+    value.synthetic_data_only === true &&
+    value.synthetic_data_marker === "SYNTHETIC_MANUFACTURING_COST_UI_ONLY" &&
+    isText(value.generated_at) &&
+    isContractSource(value.source) &&
+    isText(value.algorithm_version) &&
+    digest.test(String(value.decision_digest)) &&
+    digest.test(String(value.artifact_digest)) &&
+    exactMoney.test(String(value.tolerance)) &&
+    !String(value.tolerance).startsWith("-") &&
+    isText(value.currency) &&
+    currencyCode.test(value.currency) &&
+    isText(value.unit) &&
+    isText(value.max_scrap_quantity) &&
+    exactQuantity.test(value.max_scrap_quantity) &&
+    !String(value.max_scrap_quantity).startsWith("-") &&
+    hasCountFields(value.summary, ["total", "reconciled", "exceptions", "unmatched"]) &&
+    Array.isArray(value.decisions) &&
+    value.decisions.length > 0 &&
+    value.decisions.length <= 10_000 &&
+    value.decisions.every((decision) => isManufacturingCostDecision(decision, value.unit as string, value.currency as string)) &&
+    Array.isArray(value.notices) &&
+    value.notices.every(isText) &&
+    manufacturingSummaryIsConsistent(value)
+  );
+}
+
+function isProfessionalInvoicePaymentDecision(value: unknown, expectedCurrency: string): boolean {
+  if (!isObject(value)) return false;
+  if (!hasTextFields(value, ["invoice_id", "client_id", "reason_code"])) return false;
+  if (typeof value.status !== "string" || !professionalStatuses.has(value.status as ProfessionalInvoicePaymentStatus)) return false;
+  if (!Array.isArray(value.payment_ids) || value.payment_ids.length > 100 || !value.payment_ids.every(isText)) return false;
+  if (value.amount_variance !== null && (!isText(value.amount_variance) || !exactMoney.test(value.amount_variance))) return false;
+  if (value.days_from_due_date !== null && (typeof value.days_from_due_date !== "number" || !Number.isInteger(value.days_from_due_date) || value.days_from_due_date < -366 || value.days_from_due_date > 366)) return false;
+  return String(value.invoice_id).length <= 160 && String(value.client_id).length <= 160 && expectedCurrency.length === 3;
+}
+
+function professionalSummaryIsConsistent(value: Record<string, unknown>): boolean {
+  const summary = value.summary as Record<string, unknown>;
+  const decisions = value.decisions as Array<Record<string, unknown>>;
+  const statuses = decisions.map((decision) => String(decision.status));
+  return (
+    summary.total === decisions.length &&
+    summary.matched === statuses.filter((status) => status === "matched").length &&
+    summary.exceptions === statuses.filter((status) => status === "exception").length &&
+    summary.ambiguous === statuses.filter((status) => status === "ambiguous").length &&
+    summary.unmatched_invoice === statuses.filter((status) => status === "unmatched_invoice").length &&
+    summary.unmatched_payment === statuses.filter((status) => status === "unmatched_payment").length &&
+    new Set(decisions.map((decision) => String(decision.invoice_id))).size === decisions.length
+  );
+}
+
+function isProfessionalInvoicePaymentStudio(value: unknown): value is ProfessionalInvoicePaymentStudioContract {
+  if (!isObject(value)) return false;
+  return (
+    value.schema_version === 1 &&
+    value.synthetic_data_only === true &&
+    value.synthetic_data_marker === "SYNTHETIC_PROFESSIONAL_INVOICE_PAYMENT_UI_ONLY" &&
+    isText(value.generated_at) &&
+    isContractSource(value.source) &&
+    isText(value.algorithm_version) &&
+    digest.test(String(value.decision_digest)) &&
+    digest.test(String(value.artifact_digest)) &&
+    exactMoney.test(String(value.tolerance)) &&
+    !String(value.tolerance).startsWith("-") &&
+    isText(value.currency) &&
+    currencyCode.test(value.currency) &&
+    isCount(value.payment_window_days) &&
+    value.payment_window_days <= 366 &&
+    hasCountFields(value.summary, ["total", "matched", "exceptions", "ambiguous", "unmatched_invoice", "unmatched_payment"]) &&
+    Array.isArray(value.decisions) &&
+    value.decisions.length > 0 &&
+    value.decisions.length <= 10_000 &&
+    value.decisions.every((decision) => isProfessionalInvoicePaymentDecision(decision, value.currency as string)) &&
+    Array.isArray(value.notices) &&
+    value.notices.every(isText) &&
+    professionalSummaryIsConsistent(value)
+  );
+}
+
+function isIndividualCashflowDecision(value: unknown, expectedCurrency: string): boolean {
+  if (!isObject(value)) return false;
+  if (!hasTextFields(value, ["period", "category", "reason_code"])) return false;
+  if (typeof value.period !== "string" || !/^\d{4}-\d{2}$/.test(value.period)) return false;
+  if (value.flow_type !== "income" && value.flow_type !== "expense") return false;
+  if (typeof value.status !== "string" || !individualCashflowStatuses.has(value.status as IndividualCashflowStatus)) return false;
+  if (!isText(value.actual) || !exactMoney.test(value.actual) || !isText(value.reason_code)) return false;
+  if (value.budget !== null && (!isText(value.budget) || !exactMoney.test(value.budget))) return false;
+  if (value.variance !== null && (!isText(value.variance) || !exactMoney.test(value.variance))) return false;
+  return Array.isArray(value.transaction_ids) && value.transaction_ids.length <= 10_000 && value.transaction_ids.every(isText) && expectedCurrency.length === 3;
+}
+
+function individualCashflowSummaryIsConsistent(value: Record<string, unknown>): boolean {
+  const summary = value.summary as Record<string, unknown>;
+  const decisions = value.decisions as Array<Record<string, unknown>>;
+  const statuses = decisions.map((decision) => String(decision.status));
+  return (
+    summary.total === decisions.length &&
+    summary.within_budget === statuses.filter((status) => status === "within_budget").length &&
+    summary.over_budget === statuses.filter((status) => status === "over_budget").length &&
+    summary.unbudgeted === statuses.filter((status) => status === "unbudgeted").length &&
+    summary.no_activity === statuses.filter((status) => status === "no_activity").length &&
+    new Set(decisions.map((decision) => `${decision.period}:${decision.flow_type}:${decision.category}`)).size === decisions.length
+  );
+}
+
+function isIndividualCashflowStudio(value: unknown): value is IndividualCashflowStudioContract {
+  if (!isObject(value)) return false;
+  return (
+    value.schema_version === 1 &&
+    value.synthetic_data_only === true &&
+    value.synthetic_data_marker === "SYNTHETIC_INDIVIDUAL_CASHFLOW_UI_ONLY" &&
+    isText(value.generated_at) &&
+    isContractSource(value.source) &&
+    isText(value.algorithm_version) &&
+    digest.test(String(value.decision_digest)) &&
+    digest.test(String(value.artifact_digest)) &&
+    isText(value.currency) &&
+    currencyCode.test(value.currency) &&
+    hasCountFields(value.summary, ["total", "within_budget", "over_budget", "unbudgeted", "no_activity"]) &&
+    Array.isArray(value.decisions) &&
+    value.decisions.length > 0 &&
+    value.decisions.length <= 10_000 &&
+    value.decisions.every((decision) => isIndividualCashflowDecision(decision, value.currency as string)) &&
+    Array.isArray(value.notices) &&
+    value.notices.every(isText) &&
+    individualCashflowSummaryIsConsistent(value)
+  );
+}
+
 function isExecutiveBrief(value: unknown): boolean {
   return (
     isObject(value) &&
@@ -467,6 +741,26 @@ export async function loadEvidenceBinder(signal?: AbortSignal): Promise<Evidence
 
 export async function loadInventoryControl(signal?: AbortSignal): Promise<InventoryControlContract> {
   return loadContract(INVENTORY_URL, isInventoryControl, "inventory control", signal);
+}
+
+export async function loadRetailSettlementStudio(signal?: AbortSignal): Promise<RetailSettlementStudioContract> {
+  return loadContract(RETAIL_SETTLEMENT_URL, isRetailSettlementStudio, "retail settlement", signal);
+}
+
+export async function loadBankStatementStudio(signal?: AbortSignal): Promise<BankStatementStudioContract> {
+  return loadContract(BANK_STATEMENT_URL, isBankStatementStudio, "bank statement", signal);
+}
+
+export async function loadManufacturingCostStudio(signal?: AbortSignal): Promise<ManufacturingCostStudioContract> {
+  return loadContract(MANUFACTURING_COST_URL, isManufacturingCostStudio, "manufacturing cost", signal);
+}
+
+export async function loadProfessionalInvoicePaymentStudio(signal?: AbortSignal): Promise<ProfessionalInvoicePaymentStudioContract> {
+  return loadContract(PROFESSIONAL_INVOICE_PAYMENT_URL, isProfessionalInvoicePaymentStudio, "professional invoice/payment", signal);
+}
+
+export async function loadIndividualCashflowStudio(signal?: AbortSignal): Promise<IndividualCashflowStudioContract> {
+  return loadContract(INDIVIDUAL_CASHFLOW_URL, isIndividualCashflowStudio, "individual cashflow", signal);
 }
 
 async function loadContract<T>(

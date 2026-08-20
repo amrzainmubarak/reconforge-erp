@@ -1,0 +1,30 @@
+{
+  "records": [
+    {
+      "settlement_id": "SET-100",
+      "batch_id": "POS-100",
+      "store_id": "STORE-01",
+      "settlement_date": "2026-08-05",
+      "currency": "USD",
+      "card_gross": "100.00",
+      "refunds": "5.00",
+      "fees": "2.00",
+      "chargebacks": "0.00",
+      "net_settlement": "93.00",
+      "provider_reference": "provider-100"
+    },
+    {
+      "settlement_id": "SET-101",
+      "batch_id": "POS-101",
+      "store_id": "STORE-01",
+      "settlement_date": "2026-08-05",
+      "currency": "USD",
+      "card_gross": "50.00",
+      "refunds": "0.00",
+      "fees": "1.00",
+      "chargebacks": "0.00",
+      "net_settlement": "48.50",
+      "provider_reference": "provider-101"
+    }
+  ]
+}

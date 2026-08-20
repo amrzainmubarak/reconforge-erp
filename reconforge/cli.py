@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import shutil
 import sqlite3
 import tempfile
 from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Annotated, cast
 
@@ -21,9 +24,13 @@ from reconforge import __version__
 from reconforge.ai.summaries import explain_exception_file
 from reconforge.anonymizer.engine import anonymize_directory
 from reconforge.api import create_api_app
+from reconforge.application.consolidation_close import ConsolidationCloseApplicationService
+from reconforge.application.intercompany_elimination import IntercompanyEliminationApplicationService
+from reconforge.application.jobs import DurableJobApplicationService
 from reconforge.audit import AuditLedgerError, list_audit_events, verify_audit_events
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService, RoleRepository
 from reconforge.auth.federation_config import FederationConfigurationError, load_federation_runtime
+from reconforge.auth.policy_analysis import PolicyAnalysisRequest, PolicyGrant, PolicyScope, analyze_policy_conflicts
 from reconforge.auth.scim import SCIMError
 from reconforge.auth.webauthn_config import WebAuthnConfigurationError, load_webauthn_runtime
 from reconforge.benchmark.reconciliation_execution import (
@@ -31,9 +38,14 @@ from reconforge.benchmark.reconciliation_execution import (
     run_reconciliation_execution_streaming_benchmark,
 )
 from reconforge.benchmark.runner import run_benchmark
+from reconforge.cli_bank_statement_control import bank_statement_app
+from reconforge.cli_individual_cashflow_control import individual_cashflow_app
 from reconforge.cli_inventory_planning import inventory_planning_app
 from reconforge.cli_inventory_valuation import inventory_valuation_app
 from reconforge.cli_inventory_valuation_reversal import inventory_valuation_reversal_app
+from reconforge.cli_manufacturing_cost_control import manufacturing_cost_control_app
+from reconforge.cli_professional_invoice_payment_control import professional_invoice_payment_app
+from reconforge.cli_retail_settlement import retail_settlement_app
 from reconforge.close import (
     ALLOWED_CLOSE_STATUSES,
     close_summary_frame,
@@ -44,6 +56,13 @@ from reconforge.close import (
     write_close_checklist,
 )
 from reconforge.config import load_config, write_default_config
+from reconforge.connectors.camt053 import Camt053Error, parse_camt053_file
+from reconforge.connectors.package import (
+    ConnectorPackageError,
+    TrustedPublisherKey,
+    TrustedPublisherRegistry,
+    load_verified_package_for_admission,
+)
 from reconforge.control_matrix import export_control_matrix
 from reconforge.dashboard.app import create_app
 from reconforge.db import (
@@ -72,6 +91,32 @@ from reconforge.db.importers import (
     import_control_tests,
     import_review_state,
 )
+from reconforge.deployment import DeploymentProfileError, deployment_profile, list_deployment_profiles
+from reconforge.domain.consolidation import ConsolidationError
+from reconforge.domain.consolidation_acquisition import (
+    AcquisitionFairValueBridgeRequest,
+    prepare_acquisition_fair_value_bridge,
+)
+from reconforge.domain.consolidation_deferred_tax import (
+    AcquisitionDeferredTaxBridgeRequest,
+    AcquisitionDeferredTaxItem,
+    prepare_acquisition_deferred_tax_bridge,
+)
+from reconforge.domain.consolidation_impairment import (
+    ConsolidationImpairmentBridgeRequest,
+    ConsolidationImpairmentUnit,
+    prepare_consolidation_impairment_bridge,
+)
+from reconforge.domain.consolidation_ownership_changes import (
+    OwnershipChangeAdjustmentRequest,
+    prepare_ownership_change_adjustment,
+)
+from reconforge.domain.consolidation_ppa import (
+    AcquisitionPpaItem,
+    AcquisitionPurchasePriceAllocationRequest,
+    prepare_acquisition_purchase_price_allocation,
+)
+from reconforge.domain.intercompany_elimination import IntercompanyEliminationInputLine
 from reconforge.enterprise_demo import EnterpriseDemoError, generate_enterprise_demo
 from reconforge.evidence.binder import generate_evidence_binder
 from reconforge.generator.synthetic import generate_synthetic_dataset
@@ -93,6 +138,8 @@ from reconforge.infrastructure.postgres_service_accounts import (
     PostgresServiceAccountRepository,
     ServiceAccountError,
 )
+from reconforge.infrastructure.sqlite_consolidation_close import SQLiteConsolidationCloseRepository
+from reconforge.infrastructure.sqlite_jobs import SQLiteDurableJobRepository, SQLiteJobRepositoryError
 from reconforge.io.excel import audit_metadata, write_excel_workbook
 from reconforge.io.generated import GeneratedArtifactError
 from reconforge.io.readers import read_required_datasets
@@ -159,7 +206,7 @@ from reconforge.rules.recon_as_code import ReconciliationAsCodeSpec
 from reconforge.schemas import DatasetName
 from reconforge.studio.app import create_studio_app
 from reconforge.studio.demo_bridge import StudioDemoBridgeError, build_studio_demo_bundle
-from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY
+from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY, Money, parse_exact_amount
 from reconforge.validators import issues_to_frame, validate_input_directory
 from reconforge.variance import analyze_variance
 from reconforge.workflow import WorkflowRepositoryError, WorkflowService, WorkflowServiceError
@@ -178,6 +225,7 @@ review_app = typer.Typer(help="Review exceptions with local JSON state.")
 demo_app = typer.Typer(help="Run first-time-user demo workflows.")
 compare_app = typer.Typer(help="Compare generated exception outputs across periods.")
 close_app = typer.Typer(help="Manage local close checklist workflow state.")
+consolidation_app = typer.Typer(help="Inspect replay-verified consolidation close runs.")
 accounts_app = typer.Typer(help="Manage DB-backed account reconciliations.")
 approvals_app = typer.Typer(help="Manage local approval and certification metadata.")
 certifications_app = typer.Typer(help="Manage local certification workflow metadata.")
@@ -195,16 +243,23 @@ db_app = typer.Typer(help="Manage the local SQLite database foundation.")
 audit_app = typer.Typer(help="Inspect local append-only audit events.")
 users_app = typer.Typer(help="Manage local users for DB-backed workflows.")
 roles_app = typer.Typer(help="Inspect local RBAC roles and permissions.")
+policy_app = typer.Typer(help="Analyze versioned enterprise policy snapshots without mutating access.")
 workflow_app = typer.Typer(help="Manage local workflow state machine foundations.")
 api_app = typer.Typer(help="Serve the local REST API foundation.")
 scim_app = typer.Typer(help="Manage PostgreSQL-backed SCIM client credentials.")
 service_accounts_app = typer.Typer(help="Manage least-privilege PostgreSQL service accounts.")
 modules_app = typer.Typer(help="Inspect deterministic local module capability metadata.")
+connectors_app = typer.Typer(help="Verify data-only signed connector packages.")
 master_data_app = typer.Typer(help="Manage governed local organization and fiscal master data.")
 finance_core_app = typer.Typer(help="Manage local chart-of-accounts and balanced ledger-control foundations.")
 inventory_app = typer.Typer(help="Manage local inventory masters, movements, balances, and controls.")
 receivables_app = typer.Typer(help="Manage bounded local Accounts Receivable, credit controls, receipts, and aging.")
 outbox_app = typer.Typer(help="Inspect and replay local transactional outbox events.")
+retail_app = typer.Typer(help="Run bounded retail operations controls.")
+bank_app = typer.Typer(help="Run bounded banking and professional cash controls.")
+manufacturing_app = typer.Typer(help="Run bounded manufacturing production controls.")
+professional_app = typer.Typer(help="Run bounded professional services controls.")
+individual_app = typer.Typer(help="Run bounded individual and freelancer controls.")
 app.add_typer(reconcile_app, name="reconcile")
 app.add_typer(report_app, name="report")
 app.add_typer(rules_app, name="rules")
@@ -216,6 +271,7 @@ app.add_typer(review_app, name="review")
 app.add_typer(demo_app, name="demo")
 app.add_typer(compare_app, name="compare")
 app.add_typer(close_app, name="close")
+app.add_typer(consolidation_app, name="consolidation")
 app.add_typer(accounts_app, name="accounts")
 app.add_typer(approvals_app, name="approvals")
 app.add_typer(certifications_app, name="certifications")
@@ -233,19 +289,31 @@ app.add_typer(db_app, name="db")
 app.add_typer(audit_app, name="audit")
 app.add_typer(users_app, name="users")
 app.add_typer(roles_app, name="roles")
+app.add_typer(policy_app, name="policy")
 app.add_typer(workflow_app, name="workflow")
 app.add_typer(api_app, name="api")
 app.add_typer(scim_app, name="scim")
 app.add_typer(service_accounts_app, name="service-accounts")
 app.add_typer(modules_app, name="modules")
+app.add_typer(connectors_app, name="connectors")
 app.add_typer(master_data_app, name="master-data")
 app.add_typer(finance_core_app, name="finance-core")
 app.add_typer(inventory_app, name="inventory")
 app.add_typer(receivables_app, name="receivables")
 app.add_typer(outbox_app, name="outbox")
+app.add_typer(retail_app, name="retail")
+app.add_typer(bank_app, name="bank")
+app.add_typer(manufacturing_app, name="manufacturing")
+app.add_typer(professional_app, name="professional")
+app.add_typer(individual_app, name="individual")
 inventory_app.add_typer(inventory_planning_app, name="planning")
 inventory_app.add_typer(inventory_valuation_app, name="valuation")
 inventory_valuation_app.add_typer(inventory_valuation_reversal_app, name="reversal")
+retail_app.add_typer(retail_settlement_app, name="settlement")
+bank_app.add_typer(bank_statement_app, name="statement")
+manufacturing_app.add_typer(manufacturing_cost_control_app, name="cost-control")
+professional_app.add_typer(professional_invoice_payment_app, name="invoice-payment")
+individual_app.add_typer(individual_cashflow_app, name="cashflow")
 
 
 def _version_callback(value: bool) -> None:
@@ -428,7 +496,9 @@ def _print_record_detail(title: str, record: dict[str, object]) -> None:
 
 
 def _safe_cli_error(exc: Exception) -> None:
-    console.print(f"[red]{exc}[/red]")
+    # Keep machine-assertable error phrases contiguous even on narrow TTYs.
+    # Rich otherwise folds long error messages at the terminal width.
+    console.print(f"[red]{exc}[/red]", soft_wrap=True)
     raise typer.Exit(code=1) from exc
 
 
@@ -517,6 +587,133 @@ def modules_validate() -> None:
     console.print(f"[green]Module registry is valid.[/green] {len(list_modules())} runtime modules, schema v1.")
 
 
+@connectors_app.command("verify-package")
+def connectors_verify_package_command(
+    package_path: Annotated[Path, typer.Argument(help="Signed connector package JSON path.")],
+    publisher_id: Annotated[str, typer.Option("--publisher-id", help="Trusted publisher identifier.")],
+    key_id: Annotated[str, typer.Option("--key-id", help="Trusted Ed25519 key identifier.")],
+    public_key: Annotated[str, typer.Option("--public-key", help="Base64-encoded raw Ed25519 public key.")],
+) -> None:
+    """Authenticate and admit one data-only signed read-only package."""
+
+    try:
+        decoded_key = base64.b64decode(public_key, validate=True)
+        if len(decoded_key) != 32:
+            raise ValueError("Ed25519 public keys must contain exactly 32 bytes")
+        registry = TrustedPublisherRegistry(
+            version=1,
+            keys=(TrustedPublisherKey(publisher_id, key_id, decoded_key),),
+        )
+        admitted = load_verified_package_for_admission(package_path, trusted_registry=registry)
+    except (binascii.Error, ConnectorPackageError, OSError, ValueError) as exc:
+        _safe_cli_error(exc)
+    typer.echo(json.dumps(admitted.to_dict(), ensure_ascii=True, indent=2, sort_keys=True))
+
+
+@connectors_app.command("parse-camt053")
+def connectors_parse_camt053_command(
+    input_path: Annotated[Path, typer.Argument(help="Local ISO 20022 CAMT.053 XML statement path.")],
+    output_path: Annotated[Path | None, typer.Option("--output", help="Optional exact JSON output path.")] = None,
+) -> None:
+    """Parse one bounded CAMT.053 statement without network or provider I/O."""
+
+    try:
+        statement = parse_camt053_file(str(input_path))
+        rendered = json.dumps(statement.to_dict(), ensure_ascii=True, indent=2, sort_keys=True)
+        if output_path is None:
+            typer.echo(rendered)
+        else:
+            target = ensure_output_dir(output_path.parent) / output_path.name
+            target.write_text(rendered + "\n", encoding="utf-8", newline="\n")
+            typer.echo(f"CAMT.053 statement written: {target}")
+    except (Camt053Error, OSError) as exc:
+        _safe_cli_error(PlatformError(f"CAMT.053 input is invalid: {exc}"))
+
+
+@policy_app.command("analyze-conflicts")
+def policy_analyze_conflicts_command(
+    input_path: Annotated[Path, typer.Option("--input", help="JSON policy analysis request.")],
+    output_path: Annotated[Path | None, typer.Option("--output", help="Optional exact JSON output path.")] = None,
+) -> None:
+    """Analyze a policy snapshot for deterministic SoD and scope conflicts."""
+
+    try:
+        document = read_json_record_document(input_path, envelope_keys=("request",), allow_single_object=True)
+        if len(document.records) != 1:
+            raise PlatformError("Policy analysis input must contain exactly one JSON request object.")
+        raw = document.records[0]
+        expected = {
+            "policy_id",
+            "policy_version",
+            "grants",
+            "require_scoped_privileged",
+            "prepared_by",
+            "prepared_at",
+            "approved_by",
+            "approved_at",
+        }
+        if set(raw) != expected:
+            raise PlatformError("Policy analysis input fields are not exactly the declared contract.")
+        raw_grants = raw["grants"]
+        if not isinstance(raw_grants, list):
+            raise PlatformError("Policy analysis grants must be a JSON array.")
+        grant_fields = {"grant_id", "principal_id", "principal_type", "role_id", "scope", "permissions", "status"}
+        scope_fields = {"tenant_id", "workspace_id", "entity_ids", "period_ids", "region_ids", "data_classifications"}
+        amount_scope_fields = {"minimum_amount", "maximum_amount"}
+        grants: list[PolicyGrant] = []
+        for index, raw_grant in enumerate(raw_grants):
+            if not isinstance(raw_grant, dict) or set(raw_grant) != grant_fields:
+                raise PlatformError(f"Policy analysis grant {index} fields are not exactly declared.")
+            raw_scope = raw_grant["scope"]
+            if not isinstance(raw_scope, dict) or not set(raw_scope).issubset(scope_fields | amount_scope_fields) or not scope_fields.issubset(raw_scope):
+                raise PlatformError(f"Policy analysis grant {index} scope fields are not exactly declared.")
+            permissions = raw_grant["permissions"]
+            if not isinstance(permissions, list) or not all(isinstance(value, str) for value in permissions):
+                raise PlatformError(f"Policy analysis grant {index} permissions must be string values.")
+            scope_values = dict(raw_scope)
+            for field in ("entity_ids", "period_ids", "region_ids", "data_classifications"):
+                values = raw_scope[field]
+                if not isinstance(values, list) or not all(isinstance(value, str) for value in values):
+                    raise PlatformError(f"Policy analysis grant {index} {field} must be a string array.")
+                scope_values[field] = frozenset(values)
+            for field in amount_scope_fields:
+                raw_value = raw_scope.get(field)
+                if raw_value is None:
+                    scope_values[field] = None
+                elif not isinstance(raw_value, str):
+                    raise PlatformError(f"Policy analysis grant {index} {field} must be an exact Decimal string.")
+                else:
+                    try:
+                        scope_values[field] = Decimal(raw_value)
+                    except InvalidOperation as exc:
+                        raise PlatformError(
+                            f"Policy analysis grant {index} {field} must be an exact Decimal string."
+                        ) from exc
+            grants.append(
+                PolicyGrant(
+                    grant_id=raw_grant["grant_id"],
+                    principal_id=raw_grant["principal_id"],
+                    principal_type=raw_grant["principal_type"],
+                    role_id=raw_grant["role_id"],
+                    scope=PolicyScope(**scope_values),
+                    permissions=frozenset(permissions),
+                    status=raw_grant["status"],
+                )
+            )
+        values = dict(raw)
+        values["grants"] = tuple(grants)
+        result = analyze_policy_conflicts(PolicyAnalysisRequest(**values))
+        rendered = json.dumps(result.to_dict(), sort_keys=True, indent=2)
+        if output_path is None:
+            console.print(rendered)
+        else:
+            target = ensure_output_dir(output_path.parent) / output_path.name
+            target.write_text(rendered + "\n", encoding="utf-8", newline="\n")
+            console.print(f"[green]Policy analysis written:[/green] {target}")
+    except (OSError, PlatformError, TypeError, ValueError) as exc:
+        _safe_cli_error(PlatformError(f"Policy analysis input is invalid: {exc}"))
+
+
 @master_data_app.command("summary")
 def master_data_summary_command(
     workspace: Annotated[str, typer.Option(help="Local workspace name.")] = "default",
@@ -574,6 +771,44 @@ def master_data_snapshot_command(
     except (DatabaseError, PlatformError) as exc:
         _safe_cli_error(exc)
     typer.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
+@master_data_app.command("currency-registry-check")
+def master_data_currency_registry_check_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name to bind into the evidence scope.")] = "default",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Check master-data currency precision against the installed policy registry."""
+
+    try:
+        service, connection = _master_data_service(db_path)
+        try:
+            result = service.currency_registry_reconciliation(workspace=workspace, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@master_data_app.command("currency-registry-bind")
+def master_data_currency_registry_bind_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace to bind to the installed registry snapshot.")] = "default",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Persist an explicit currency-registry snapshot binding for one workspace."""
+
+    try:
+        service, connection = _master_data_service(db_path)
+        try:
+            result = service.bind_currency_registry(workspace=workspace, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 
 @master_data_app.command("currency-upsert")
@@ -3918,6 +4153,493 @@ def close_db_report_command(
     _print_records("Close Tasks", tasks, max_rows=100)
 
 
+@consolidation_app.command("runs")
+def consolidation_runs_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    workspace: Annotated[str, typer.Option("--workspace", help="Workspace scope.")] = "default",
+    status: Annotated[str, typer.Option("--status", help="Optional lifecycle status filter.")] = "",
+    limit: Annotated[int, typer.Option("--limit", min=1, max=500, help="Maximum rows to return.")] = 100,
+    offset: Annotated[int, typer.Option("--offset", min=0, help="Rows to skip.")] = 0,
+    actor: Annotated[str, typer.Option("--actor", help="Actor label for audit attribution.")] = "local-cli",
+) -> None:
+    """List replay-verified consolidation close runs in one workspace."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            service = ConsolidationCloseApplicationService(SQLiteConsolidationCloseRepository(connection))
+            runs = service.list_runs(
+                workspace=workspace,
+                status=status,
+                limit=limit,
+                offset=offset,
+                actor_label=actor,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    if not runs:
+        console.print("[yellow]No consolidation close runs found.[/yellow]")
+    else:
+        for run in runs:
+            _print_record_detail("Consolidation Close Run", run)
+
+
+@consolidation_app.command("run")
+def consolidation_run_command(
+    run_id: Annotated[str, typer.Option("--run-id", help="Consolidation close run id.")],
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    actor: Annotated[str, typer.Option("--actor", help="Actor label for audit attribution.")] = "local-cli",
+) -> None:
+    """Show one run with replay-verified evidence and management statement sections."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            service = ConsolidationCloseApplicationService(SQLiteConsolidationCloseRepository(connection))
+            run = service.get_run(run_id, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Consolidation Close Run", run)
+
+
+@consolidation_app.command("summary")
+def consolidation_summary_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    workspace: Annotated[str, typer.Option("--workspace", help="Workspace scope.")] = "default",
+    actor: Annotated[str, typer.Option("--actor", help="Actor label for audit attribution.")] = "local-cli",
+) -> None:
+    """Show bounded close lifecycle counts for one workspace."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            service = ConsolidationCloseApplicationService(SQLiteConsolidationCloseRepository(connection))
+            summary = service.summary(workspace=workspace, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail("Consolidation Close Summary", summary.to_dict())
+
+
+@consolidation_app.command("acquisition-bridge")
+def consolidation_acquisition_bridge_command(
+    input_path: Annotated[Path, typer.Option("--input", help="JSON acquisition bridge request.")],
+    output_path: Annotated[Path | None, typer.Option("--output", help="Optional exact JSON output path.")] = None,
+) -> None:
+    """Prepare a deterministic, non-posting acquisition fair-value bridge."""
+
+    try:
+        document = read_json_record_document(input_path, envelope_keys=("request",), allow_single_object=True)
+        if len(document.records) != 1:
+            raise PlatformError("Acquisition bridge input must contain exactly one JSON request object.")
+        raw = document.records[0]
+        expected = {
+            "acquisition_id",
+            "subsidiary_entity_code",
+            "period_id",
+            "acquisition_date",
+            "reporting_currency",
+            "consideration",
+            "nci_fair_value",
+            "identifiable_net_assets_fair_value",
+            "allow_bargain_purchase",
+            "consideration_account_code",
+            "nci_account_code",
+            "identifiable_net_assets_account_code",
+            "goodwill_account_code",
+            "bargain_purchase_account_code",
+            "policy_id",
+            "policy_version",
+            "source_reference",
+            "source_digest",
+            "prepared_by",
+            "prepared_at",
+            "approved_by",
+            "approved_at",
+        }
+        if set(raw) != expected:
+            raise PlatformError("Acquisition bridge input fields are not exactly the declared contract.")
+
+        def parse_money(field: str) -> Money:
+            value = raw[field]
+            if not isinstance(value, dict) or not isinstance(value.get("amount"), str) or not isinstance(value.get("currency"), str):
+                raise PlatformError(f"Acquisition bridge {field} must be a canonical money object.")
+            return Money.from_exact(value["amount"], value["currency"], strict_precision=True)
+
+        values = dict(raw)
+        for field in ("consideration", "nci_fair_value", "identifiable_net_assets_fair_value"):
+            values[field] = parse_money(field)
+        result = prepare_acquisition_fair_value_bridge(AcquisitionFairValueBridgeRequest(**values))
+        rendered = json.dumps(result.to_dict(), sort_keys=True, indent=2)
+        if output_path is None:
+            console.print(rendered)
+        else:
+            target = ensure_output_dir(output_path.parent) / output_path.name
+            target.write_text(rendered + "\n", encoding="utf-8", newline="\n")
+            console.print(f"[green]Acquisition bridge written:[/green] {target}")
+    except (ConsolidationError, OSError, TypeError, ValueError) as exc:
+        _safe_cli_error(PlatformError(f"Acquisition bridge input is invalid: {exc}"))
+
+
+@consolidation_app.command("acquisition-ppa")
+def consolidation_acquisition_ppa_command(
+    input_path: Annotated[Path, typer.Option("--input", help="JSON acquisition PPA request.")],
+    output_path: Annotated[Path | None, typer.Option("--output", help="Optional exact JSON output path.")] = None,
+) -> None:
+    """Prepare a deterministic, non-posting acquisition purchase-price allocation."""
+
+    try:
+        document = read_json_record_document(input_path, envelope_keys=("request",), allow_single_object=True)
+        if len(document.records) != 1:
+            raise PlatformError("Acquisition PPA input must contain exactly one JSON request object.")
+        raw = document.records[0]
+        expected = {
+            "acquisition_id",
+            "subsidiary_entity_code",
+            "period_id",
+            "acquisition_date",
+            "reporting_currency",
+            "consideration",
+            "nci_fair_value",
+            "items",
+            "allow_bargain_purchase",
+            "consideration_account_code",
+            "nci_account_code",
+            "identifiable_net_assets_account_code",
+            "goodwill_account_code",
+            "bargain_purchase_account_code",
+            "policy_id",
+            "policy_version",
+            "source_reference",
+            "source_digest",
+            "prepared_by",
+            "prepared_at",
+            "approved_by",
+            "approved_at",
+        }
+        if set(raw) != expected:
+            raise PlatformError("Acquisition PPA input fields are not exactly the declared contract.")
+
+        def parse_money(value: object, field: str) -> Money:
+            if not isinstance(value, dict) or not isinstance(value.get("amount"), str) or not isinstance(value.get("currency"), str):
+                raise PlatformError(f"Acquisition PPA {field} must be a canonical money object.")
+            return Money.from_exact(value["amount"], value["currency"], strict_precision=True)
+
+        raw_items = raw["items"]
+        if not isinstance(raw_items, list):
+            raise PlatformError("Acquisition PPA items must be a JSON array.")
+        item_fields = {
+            "item_id",
+            "item_kind",
+            "class_code",
+            "account_code",
+            "book_value",
+            "fair_value",
+            "valuation_reference",
+            "source_reference",
+        }
+        items: list[AcquisitionPpaItem] = []
+        for index, raw_item in enumerate(raw_items):
+            if not isinstance(raw_item, dict) or set(raw_item) != item_fields:
+                raise PlatformError(f"Acquisition PPA item {index} fields are not exactly the declared contract.")
+            item_values = dict(raw_item)
+            item_values["book_value"] = parse_money(raw_item["book_value"], f"item {index} book_value")
+            item_values["fair_value"] = parse_money(raw_item["fair_value"], f"item {index} fair_value")
+            items.append(AcquisitionPpaItem(**item_values))
+
+        values = dict(raw)
+        values["consideration"] = parse_money(raw["consideration"], "consideration")
+        values["nci_fair_value"] = parse_money(raw["nci_fair_value"], "nci_fair_value")
+        values["items"] = tuple(items)
+        result = prepare_acquisition_purchase_price_allocation(AcquisitionPurchasePriceAllocationRequest(**values))
+        rendered = json.dumps(result.to_dict(), sort_keys=True, indent=2)
+        if output_path is None:
+            console.print(rendered)
+        else:
+            target = ensure_output_dir(output_path.parent) / output_path.name
+            target.write_text(rendered + "\n", encoding="utf-8", newline="\n")
+            console.print(f"[green]Acquisition PPA written:[/green] {target}")
+    except (ConsolidationError, OSError, TypeError, ValueError) as exc:
+        _safe_cli_error(PlatformError(f"Acquisition PPA input is invalid: {exc}"))
+
+
+@consolidation_app.command("acquisition-deferred-tax")
+def consolidation_acquisition_deferred_tax_command(
+    input_path: Annotated[Path, typer.Option("--input", help="JSON acquisition deferred-tax request.")],
+    output_path: Annotated[Path | None, typer.Option("--output", help="Optional exact JSON output path.")] = None,
+) -> None:
+    """Prepare a deterministic, non-posting acquisition deferred-tax bridge."""
+
+    try:
+        document = read_json_record_document(input_path, envelope_keys=("request",), allow_single_object=True)
+        if len(document.records) != 1:
+            raise PlatformError("Acquisition deferred-tax input must contain exactly one JSON request object.")
+        raw = document.records[0]
+        expected = {
+            "acquisition_id",
+            "subsidiary_entity_code",
+            "period_id",
+            "acquisition_date",
+            "reporting_currency",
+            "items",
+            "deferred_tax_asset_account_code",
+            "deferred_tax_liability_account_code",
+            "policy_id",
+            "policy_version",
+            "source_reference",
+            "source_digest",
+            "prepared_by",
+            "prepared_at",
+            "approved_by",
+            "approved_at",
+        }
+        if set(raw) != expected:
+            raise PlatformError("Acquisition deferred-tax input fields are not exactly the declared contract.")
+
+        def parse_money(value: object, field: str) -> Money:
+            if not isinstance(value, dict) or not isinstance(value.get("amount"), str) or not isinstance(value.get("currency"), str):
+                raise PlatformError(f"Acquisition deferred-tax {field} must be a canonical money object.")
+            return Money.from_exact(value["amount"], value["currency"], strict_precision=True)
+
+        raw_items = raw["items"]
+        if not isinstance(raw_items, list):
+            raise PlatformError("Acquisition deferred-tax items must be a JSON array.")
+        item_fields = {
+            "item_id",
+            "item_kind",
+            "account_code",
+            "fair_value",
+            "tax_basis",
+            "tax_rate",
+            "source_reference",
+            "tax_basis_reference",
+        }
+        items: list[AcquisitionDeferredTaxItem] = []
+        for index, raw_item in enumerate(raw_items):
+            if not isinstance(raw_item, dict) or set(raw_item) != item_fields:
+                raise PlatformError(f"Acquisition deferred-tax item {index} fields are not exactly the declared contract.")
+            item_values = dict(raw_item)
+            item_values["fair_value"] = parse_money(raw_item["fair_value"], f"item {index} fair_value")
+            item_values["tax_basis"] = parse_money(raw_item["tax_basis"], f"item {index} tax_basis")
+            try:
+                item_values["tax_rate"] = parse_exact_amount(raw_item["tax_rate"])
+            except (TypeError, ValueError) as exc:
+                raise PlatformError(f"Acquisition deferred-tax item {index} tax_rate must be exact decimal text.") from exc
+            items.append(AcquisitionDeferredTaxItem(**item_values))
+
+        values = dict(raw)
+        values["items"] = tuple(items)
+        result = prepare_acquisition_deferred_tax_bridge(AcquisitionDeferredTaxBridgeRequest(**values))
+        rendered = json.dumps(result.to_dict(), sort_keys=True, indent=2)
+        if output_path is None:
+            console.print(rendered)
+        else:
+            target = ensure_output_dir(output_path.parent) / output_path.name
+            target.write_text(rendered + "\n", encoding="utf-8", newline="\n")
+            console.print(f"[green]Acquisition deferred-tax bridge written:[/green] {target}")
+    except (ConsolidationError, OSError, TypeError, ValueError) as exc:
+        _safe_cli_error(PlatformError(f"Acquisition deferred-tax input is invalid: {exc}"))
+
+
+@consolidation_app.command("impairment-bridge")
+def consolidation_impairment_bridge_command(
+    input_path: Annotated[Path, typer.Option("--input", help="JSON consolidation impairment request.")],
+    output_path: Annotated[Path | None, typer.Option("--output", help="Optional exact JSON output path.")] = None,
+) -> None:
+    """Prepare a deterministic, non-posting consolidation impairment bridge."""
+
+    try:
+        document = read_json_record_document(input_path, envelope_keys=("request",), allow_single_object=True)
+        if len(document.records) != 1:
+            raise PlatformError("Consolidation impairment input must contain exactly one JSON request object.")
+        raw = document.records[0]
+        expected = {
+            "impairment_test_id",
+            "entity_code",
+            "period_id",
+            "reporting_currency",
+            "units",
+            "policy_id",
+            "policy_version",
+            "source_reference",
+            "source_digest",
+            "prepared_by",
+            "prepared_at",
+            "approved_by",
+            "approved_at",
+        }
+        if set(raw) != expected:
+            raise PlatformError("Consolidation impairment input fields are not exactly the declared contract.")
+
+        def parse_money(value: object, field: str) -> Money:
+            if not isinstance(value, dict) or not isinstance(value.get("amount"), str) or not isinstance(value.get("currency"), str):
+                raise PlatformError(f"Consolidation impairment {field} must be a canonical money object.")
+            return Money.from_exact(value["amount"], value["currency"], strict_precision=True)
+
+        raw_units = raw["units"]
+        if not isinstance(raw_units, list):
+            raise PlatformError("Consolidation impairment units must be a JSON array.")
+        unit_fields = {
+            "unit_id",
+            "unit_kind",
+            "account_code",
+            "carrying_amount",
+            "recoverable_amount",
+            "source_reference",
+            "source_digest",
+        }
+        units: list[ConsolidationImpairmentUnit] = []
+        for index, raw_unit in enumerate(raw_units):
+            if not isinstance(raw_unit, dict) or set(raw_unit) != unit_fields:
+                raise PlatformError(f"Consolidation impairment unit {index} fields are not exactly the declared contract.")
+            values = dict(raw_unit)
+            values["carrying_amount"] = parse_money(raw_unit["carrying_amount"], f"unit {index} carrying_amount")
+            values["recoverable_amount"] = parse_money(raw_unit["recoverable_amount"], f"unit {index} recoverable_amount")
+            units.append(ConsolidationImpairmentUnit(**values))
+
+        values = dict(raw)
+        values["units"] = tuple(units)
+        result = prepare_consolidation_impairment_bridge(ConsolidationImpairmentBridgeRequest(**values))
+        rendered = json.dumps(result.to_dict(), sort_keys=True, indent=2)
+        if output_path is None:
+            console.print(rendered)
+        else:
+            target = ensure_output_dir(output_path.parent) / output_path.name
+            target.write_text(rendered + "\n", encoding="utf-8", newline="\n")
+            console.print(f"[green]Consolidation impairment bridge written:[/green] {target}")
+    except (ConsolidationError, OSError, TypeError, ValueError) as exc:
+        _safe_cli_error(PlatformError(f"Consolidation impairment input is invalid: {exc}"))
+
+
+@consolidation_app.command("ownership-change")
+def consolidation_ownership_change_command(
+    input_path: Annotated[Path, typer.Option("--input", help="JSON ownership-change adjustment request.")],
+    output_path: Annotated[Path | None, typer.Option("--output", help="Optional exact JSON output path.")] = None,
+) -> None:
+    """Prepare a deterministic, balanced, non-posting ownership-change proposal."""
+
+    try:
+        document = read_json_record_document(input_path, envelope_keys=("request",), allow_single_object=True)
+        if len(document.records) != 1:
+            raise PlatformError("Ownership-change input must contain exactly one JSON request object.")
+        raw = document.records[0]
+        expected = {
+            "change_id",
+            "subsidiary_entity_code",
+            "period_id",
+            "effective_date",
+            "reporting_currency",
+            "prior_group_ownership_percentage",
+            "new_group_ownership_percentage",
+            "net_assets",
+            "consideration_effect",
+            "nci_account_code",
+            "consideration_account_code",
+            "parent_equity_account_code",
+            "policy_id",
+            "policy_version",
+            "source_reference",
+            "source_digest",
+            "prepared_by",
+            "prepared_at",
+            "approved_by",
+            "approved_at",
+        }
+        if set(raw) != expected:
+            raise PlatformError("Ownership-change input fields are not exactly the declared contract.")
+
+        def parse_money(value: object, field: str) -> Money:
+            if (
+                not isinstance(value, dict)
+                or not isinstance(value.get("amount"), str)
+                or not isinstance(value.get("currency"), str)
+            ):
+                raise PlatformError(f"Ownership-change {field} must be a canonical money object.")
+            return Money.from_exact(value["amount"], value["currency"], strict_precision=True)
+
+        values = dict(raw)
+        for field in ("prior_group_ownership_percentage", "new_group_ownership_percentage"):
+            try:
+                values[field] = parse_exact_amount(raw[field])
+            except (TypeError, ValueError) as exc:
+                raise PlatformError(f"Ownership-change {field} must be exact decimal text.") from exc
+        values["net_assets"] = parse_money(raw["net_assets"], "net_assets")
+        values["consideration_effect"] = parse_money(raw["consideration_effect"], "consideration_effect")
+        result = prepare_ownership_change_adjustment(OwnershipChangeAdjustmentRequest(**values))
+        rendered = json.dumps(result.to_dict(), sort_keys=True, indent=2)
+        if output_path is None:
+            console.print(rendered)
+        else:
+            target = ensure_output_dir(output_path.parent) / output_path.name
+            target.write_text(rendered + "\n", encoding="utf-8", newline="\n")
+            console.print(f"[green]Ownership-change proposal written:[/green] {target}")
+    except (ConsolidationError, OSError, TypeError, ValueError) as exc:
+        _safe_cli_error(PlatformError(f"Ownership-change input is invalid: {exc}"))
+
+
+@consolidation_app.command("intercompany-eliminations")
+def consolidation_intercompany_eliminations_command(
+    input_path: Annotated[Path, typer.Option("--input", help="JSON intercompany elimination request.")],
+    output_path: Annotated[Path | None, typer.Option("--output", help="Optional exact JSON output path.")] = None,
+) -> None:
+    """Prepare exact, non-posting intercompany elimination proposals."""
+
+    try:
+        document = read_json_record_document(input_path, envelope_keys=("request",), allow_single_object=True)
+        if len(document.records) != 1:
+            raise PlatformError("Intercompany elimination input must contain exactly one JSON request object.")
+        raw = document.records[0]
+        expected = {"schema_version", "reporting_currency", "version", "prepared_by", "prepared_at", "lines"}
+        if set(raw) != expected or raw["schema_version"] != 1:
+            raise PlatformError("Intercompany elimination input fields are not exactly the declared contract.")
+        raw_lines = raw["lines"]
+        if not isinstance(raw_lines, list):
+            raise PlatformError("Intercompany elimination lines must be a JSON array.")
+        line_fields = {
+            "transaction_id",
+            "period_name",
+            "entity_code",
+            "counterparty_code",
+            "reference",
+            "group_account_code",
+            "account_type",
+            "amount",
+            "source_reference",
+            "source_digest",
+        }
+        lines: list[IntercompanyEliminationInputLine] = []
+        for index, raw_line in enumerate(raw_lines):
+            if not isinstance(raw_line, dict) or set(raw_line) != line_fields:
+                raise PlatformError(f"Intercompany elimination line {index} fields are not exact.")
+            amount = raw_line["amount"]
+            if not isinstance(amount, dict):
+                raise PlatformError(f"Intercompany elimination line {index} amount must be canonical Money.")
+            values = dict(raw_line)
+            values["amount"] = Money.from_canonical_dict(cast(dict[str, object], amount))
+            lines.append(IntercompanyEliminationInputLine(**values))
+        result = IntercompanyEliminationApplicationService.prepare(
+            tuple(lines),
+            reporting_currency=cast(str, raw["reporting_currency"]),
+            prepared_by=cast(str, raw["prepared_by"]),
+            prepared_at=cast(str, raw["prepared_at"]),
+            version=cast(str, raw["version"]),
+        )
+        rendered = json.dumps(result.to_dict(), sort_keys=True, indent=2)
+        if output_path is None:
+            console.print(rendered)
+        else:
+            target = ensure_output_dir(output_path.parent) / output_path.name
+            target.write_text(rendered + "\n", encoding="utf-8", newline="\n")
+            console.print(f"[green]Intercompany eliminations written:[/green] {target}")
+    except (ConsolidationError, OSError, TypeError, ValueError) as exc:
+        _safe_cli_error(PlatformError(f"Intercompany elimination input is invalid: {exc}"))
+
+
 @approvals_app.command("submit")
 def approvals_submit_command(
     object_type: Annotated[str, typer.Option("--object-type", help="Target object type.")],
@@ -5017,6 +5739,34 @@ def ops_jobs_command(
     _print_records("Local Jobs", jobs, max_rows=100)
 
 
+@ops_app.command("durable-job-queue")
+def ops_durable_job_queue_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    tenant_id: Annotated[str, typer.Option("--tenant", help="Tenant scope for the queue projection.")] = "",
+    workspace_id: Annotated[str, typer.Option("--workspace", help="Optional workspace lane scope.")] = "",
+    organization_id: Annotated[str, typer.Option("--organization", help="Optional organization lane scope.")] = "",
+    entity_id: Annotated[str, typer.Option("--entity", help="Optional entity lane scope.")] = "",
+) -> None:
+    """Show sanitized durable-job queue health without job identifiers or payloads."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            snapshot = DurableJobApplicationService(SQLiteDurableJobRepository(connection)).queue_snapshot(
+                tenant_id=tenant_id,
+                workspace_id=workspace_id or None,
+                organization_id=organization_id or None,
+                entity_id=entity_id or None,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError, SQLiteJobRepositoryError) as exc:
+        _safe_cli_error(exc)
+    record = asdict(snapshot)
+    record.update({"queue_depth": snapshot.queue_depth, "total_count": snapshot.total_count})
+    _print_record_detail("Durable Job Queue Health", record)
+
+
 @ops_app.command("errors")
 def ops_errors_command(
     db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
@@ -5100,6 +5850,29 @@ def deployment_docker_verify_command() -> None:
     if any(row["status"] == "WARN" for row in rows):
         console.print(
             "[yellow]Docker verification is local file/tooling inspection only; no runtime guarantee is claimed.[/yellow]"
+        )
+
+
+@deployment_app.command("profiles")
+def deployment_profiles_command(
+    edition: Annotated[
+        str | None,
+        typer.Option("--edition", help="Show one edition; omit to list all editions."),
+    ] = None,
+) -> None:
+    """Show truthful deployment-mode defaults and claim boundaries."""
+
+    try:
+        profiles = (deployment_profile(edition),) if edition is not None else list_deployment_profiles()
+    except DeploymentProfileError as exc:
+        _safe_cli_error(exc)
+    for profile in profiles:
+        _print_record_detail(
+            "Deployment Profile",
+            {
+                **profile.to_dict(),
+                "digest": profile.digest,
+            },
         )
 
 
@@ -5268,17 +6041,24 @@ def reconcile_workorders_command(
         datasets[DatasetName.OLD_PARTS_RETURNS],
         datasets[DatasetName.INVOICES],
         config,
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
     )
     output_dir = ensure_output_dir(output_path)
     frames = workorder_result_frames(result)
     write_report_frames(frames, output_dir, "workorders")
+    workbook_metadata = audit_metadata(config.company_name, "Work Order Reconciliation", config.output_currency)
+    workbook_metadata["financial_input_policy"] = result.financial_input_policy
     workbook_path = write_excel_workbook(
         frames,
         output_dir / "workorder_reconciliation.xlsx",
-        metadata=audit_metadata(config.company_name, "Work Order Reconciliation", config.output_currency),
+        metadata=workbook_metadata,
     )
     write_json(
-        {"summary": frame_to_records(result.summary), "all_exceptions": frame_to_records(result.all_exceptions)},
+        {
+            "financial_input_policy": result.financial_input_policy,
+            "summary": frame_to_records(result.summary),
+            "all_exceptions": frame_to_records(result.all_exceptions),
+        },
         output_dir,
         "workorder_reconciliation",
     )
@@ -5354,6 +6134,7 @@ def management_pack_command(
         datasets[DatasetName.OLD_PARTS_RETURNS],
         datasets[DatasetName.INVOICES],
         config,
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
     )
     wip = generate_wip_aging(datasets[DatasetName.WORK_ORDERS], config)
     artifacts = generate_management_pack(
@@ -6299,6 +7080,7 @@ def demo_run_command(
         datasets[DatasetName.OLD_PARTS_RETURNS],
         datasets[DatasetName.INVOICES],
         config,
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
     )
     wip = generate_wip_aging(datasets[DatasetName.WORK_ORDERS], config)
 

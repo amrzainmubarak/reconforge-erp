@@ -7,9 +7,9 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import require_permission
+from reconforge.api.dependencies import enforce_server_tenant_permission, require_permission
 from reconforge.api.errors import APIError
-from reconforge.api.server_identity import execute_postgres_identity, server_identity_enabled
+from reconforge.api.server_identity import execute_postgres_identity, request_tenant_id, server_identity_enabled
 from reconforge.auth.models import LocalUser
 from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
 from reconforge.platform.common import platform_id
@@ -46,6 +46,7 @@ def list_scope_grants(
     current_user: ManageScope,
 ) -> dict[str, object]:
     _require_server(request)
+    enforce_server_tenant_permission(request, permission="roles.manage", tenant_id=request_tenant_id(request))
     try:
         grants = execute_postgres_identity(
             request,
@@ -65,6 +66,7 @@ def create_scope_grant(
     current_user: ManageScope,
 ) -> dict[str, object]:
     _require_server(request)
+    enforce_server_tenant_permission(request, permission="roles.manage", tenant_id=request_tenant_id(request))
     grant_id = platform_id(
         "SCOPE", payload.principal_type, payload.principal_id, payload.scope_type, payload.scope_id
     ).lower()
@@ -94,6 +96,7 @@ def revoke_scope_grant(
     current_user: ManageScope,
 ) -> dict[str, object]:
     _require_server(request)
+    enforce_server_tenant_permission(request, permission="roles.manage", tenant_id=request_tenant_id(request))
     try:
         execute_postgres_identity(
             request,

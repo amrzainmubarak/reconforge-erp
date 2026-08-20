@@ -22,7 +22,11 @@ from starlette.staticfiles import StaticFiles
 from starlette.types import Scope
 
 from reconforge import __version__
-from reconforge.api.authorization import authorization_inventory_digest, build_route_authorization_inventory
+from reconforge.api.authorization import (
+    authorization_inventory_digest,
+    build_route_authorization_inventory,
+    validate_authorization_surface,
+)
 from reconforge.api.browser_session import BROWSER_SESSION_COOKIE
 from reconforge.api.errors import (
     APIError,
@@ -37,25 +41,40 @@ from reconforge.api.routes import (
     audit,
     audit_administration,
     auth,
+    bank_statement,
     close,
+    connectors,
+    consolidation_close,
+    consolidation_deferred_tax,
+    consolidation_impairment,
+    consolidation_intercompany,
+    consolidation_ownership,
+    consolidation_ownership_change,
+    consolidation_ppa,
     emergency_access,
     evidence,
     exceptions,
     finance_core,
     health,
     identity_administration,
+    individual_cashflow,
     inventory_core,
     inventory_planning,
     inventory_valuation,
     inventory_valuation_reversal,
+    manufacturing_cost_control,
     master_data,
     metrics,
+    operations,
     payables,
+    professional_invoice_payment,
     receivables,
     reconciliation,
+    retail_settlement,
     roles,
     scim,
     scope_grants,
+    scoped_exports,
     security_center,
     security_governance,
     users,
@@ -70,11 +89,20 @@ from reconforge.api.server_identity import (
 )
 from reconforge.application.pagination import CursorCodec
 from reconforge.auth.federation import FederationProvider, FederationVerifier
+from reconforge.auth.policy_cache import PolicyDecisionCache
 from reconforge.auth.webauthn_config import WebAuthnRuntime
 from reconforge.db import resolve_db_path
 from reconforge.db.tenancy import TenantDatabaseRouter
-from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings
-from reconforge.infrastructure.redis import RedisConnectionFactory, RedisSettings, TenantRedisStore
+from reconforge.infrastructure.postgres import (
+    PostgresPooledConnectionFactory,
+    PostgresSettings,
+)
+from reconforge.infrastructure.redis import (
+    RedisConnectionFactory,
+    RedisPolicyCacheVersionStore,
+    RedisSettings,
+    TenantRedisStore,
+)
 from reconforge.observability import ObservabilityRuntime, safe_attributes, telemetry_request_context
 from reconforge.platform.common import ServerPrincipal, server_principal_context, trusted_local_mode
 from reconforge.reliability_sources import HttpReliabilityWindow
@@ -120,6 +148,8 @@ def create_api_app(
     redis_require_tls: bool = True,
     postgres_dsn: str | None = None,
     postgres_require_tls: bool = True,
+    postgres_pool_size: int = 8,
+    postgres_pool_acquire_timeout_seconds: float = 30.0,
     cursor_signing_key: bytes | None = None,
     observability: ObservabilityRuntime | None = None,
     reliability_window: HttpReliabilityWindow | None = None,
@@ -130,6 +160,7 @@ def create_api_app(
     web_root: Path | str | None = None,
     allowed_hosts: tuple[str, ...] = (),
     secure_transport: bool = False,
+    policy_cache_enabled: bool = False,
 ) -> FastAPI:
     """Create the API with local mode or an explicit server identity profile."""
 
@@ -152,18 +183,35 @@ def create_api_app(
     )
     app.state.db_path = resolved_db_path
     app.state.tenant_db_router = TenantDatabaseRouter.from_root(tenant_db_root) if tenant_db_root is not None else None
-    app.state.postgres_identity_factory = (
-        PostgresConnectionFactory(PostgresSettings(dsn=postgres_dsn, require_tls=postgres_require_tls))
-        if postgres_dsn is not None
-        else None
-    )
+    app.state.postgres_identity_factory = None
+    if postgres_dsn is not None:
+        app.state.postgres_identity_factory = PostgresPooledConnectionFactory(
+            PostgresSettings(dsn=postgres_dsn, require_tls=postgres_require_tls),
+            max_size=postgres_pool_size,
+            acquire_timeout_seconds=postgres_pool_acquire_timeout_seconds,
+        )
+        app.router.add_event_handler("shutdown", app.state.postgres_identity_factory.close)
     # The bounded PostgreSQL ledger uses the same secured connection factory
     # as server identity, but remains an explicit API capability boundary.
     app.state.postgres_ledger_factory = app.state.postgres_identity_factory
+    app.state.postgres_finance_core_factory = app.state.postgres_identity_factory
     app.state.postgres_master_data_factory = app.state.postgres_identity_factory
     app.state.postgres_close_factory = app.state.postgres_identity_factory
+    app.state.postgres_consolidation_close_factory = app.state.postgres_identity_factory
+    app.state.postgres_consolidation_ownership_factory = app.state.postgres_identity_factory
+    app.state.postgres_consolidation_ownership_change_factory = app.state.postgres_identity_factory
+    app.state.postgres_ppa_factory = app.state.postgres_identity_factory
+    app.state.postgres_deferred_tax_factory = app.state.postgres_identity_factory
+    app.state.postgres_consolidation_impairment_factory = app.state.postgres_identity_factory
+    app.state.postgres_consolidation_intercompany_factory = app.state.postgres_identity_factory
     app.state.postgres_evidence_factory = app.state.postgres_identity_factory
+    app.state.postgres_scoped_exports_factory = app.state.postgres_identity_factory
     app.state.postgres_reconciliation_factory = app.state.postgres_identity_factory
+    app.state.postgres_bank_statement_factory = app.state.postgres_identity_factory
+    app.state.postgres_writeback_factory = app.state.postgres_identity_factory
+    app.state.postgres_retail_settlement_factory = app.state.postgres_identity_factory
+    app.state.postgres_professional_invoice_payment_factory = app.state.postgres_identity_factory
+    app.state.postgres_manufacturing_cost_control_factory = app.state.postgres_identity_factory
     app.state.federation_providers = dict(federation_providers or {})
     app.state.federation_verifiers = dict(federation_verifiers or {})
     app.state.federation_air_gap_mode = federation_air_gap_mode
@@ -171,9 +219,11 @@ def create_api_app(
     app.state.cursor_codec = CursorCodec(cursor_signing_key) if cursor_signing_key is not None else None
     app.state.observability = observability or ObservabilityRuntime.disabled()
     app.state.reliability_window = reliability_window
+    redis_factory: RedisConnectionFactory | None = None
     if redis_url is not None:
         redis_factory = RedisConnectionFactory(RedisSettings(url=redis_url, require_tls=redis_require_tls))
         app.state.redis_store = TenantRedisStore(redis_factory)
+        app.router.add_event_handler("shutdown", redis_factory.close)
     else:
         app.state.redis_store = None
     app.state.login_failures = defaultdict(deque)
@@ -181,6 +231,19 @@ def create_api_app(
     app.state.web_root = resolved_web_root
     app.state.secure_transport = secure_transport
     app.state.allowed_hosts = normalized_hosts
+    # Explicit opt-in only: the middleware below invalidates after every
+    # mutation, so callers do not inherit an invisible freshness dependency.
+    # When Redis is configured, a shared generation makes that invalidation
+    # visible to other API processes without storing policy decisions there.
+    policy_version_store = (
+        RedisPolicyCacheVersionStore(redis_factory)
+        if policy_cache_enabled and redis_factory is not None
+        else None
+    )
+    app.state.policy_cache_version_store = policy_version_store
+    app.state.policy_decision_cache = (
+        PolicyDecisionCache(version_store=policy_version_store) if policy_cache_enabled else None
+    )
     if normalized_hosts:
         # Register before decorator middleware so request IDs and the response
         # policy still wrap a Host rejection.
@@ -201,6 +264,9 @@ def create_api_app(
                 if span is not None:
                     span.set_attribute("error.type", type(exc).__name__)
                 raise
+            cache = getattr(request.app.state, "policy_decision_cache", None)
+            if cache is not None and method not in {"GET", "HEAD", "OPTIONS", "TRACE"}:
+                cache.invalidate()
             route = request.scope.get("route")
             local_template = str(getattr(route, "path", ""))
             candidate = local_template if local_template.startswith("/scim/v2") else "/api/v1" + local_template
@@ -302,10 +368,25 @@ def create_api_app(
         app.mount("/", SPAStaticFiles(directory=resolved_web_root, html=True), name="studio-web")
     app.include_router(accounts.router, prefix="/api/v1")
     app.include_router(close.router, prefix="/api/v1")
+    app.include_router(consolidation_close.router, prefix="/api/v1")
+    app.include_router(consolidation_ownership.router, prefix="/api/v1")
+    app.include_router(consolidation_ownership_change.router, prefix="/api/v1")
+    app.include_router(consolidation_ppa.router, prefix="/api/v1")
+    app.include_router(consolidation_deferred_tax.router, prefix="/api/v1")
+    app.include_router(consolidation_impairment.router, prefix="/api/v1")
+    app.include_router(consolidation_intercompany.router, prefix="/api/v1")
+    app.include_router(connectors.router, prefix="/api/v1")
     app.include_router(evidence.router, prefix="/api/v1")
+    app.include_router(scoped_exports.router, prefix="/api/v1")
     app.include_router(reconciliation.router, prefix="/api/v1")
+    app.include_router(bank_statement.router, prefix="/api/v1")
+    app.include_router(retail_settlement.router, prefix="/api/v1")
+    app.include_router(professional_invoice_payment.router, prefix="/api/v1")
+    app.include_router(manufacturing_cost_control.router, prefix="/api/v1")
+    app.include_router(individual_cashflow.router, prefix="/api/v1")
     app.include_router(exceptions.router, prefix="/api/v1")
     app.include_router(metrics.router, prefix="/api/v1")
+    app.include_router(operations.router, prefix="/api/v1")
     app.include_router(payables.router, prefix="/api/v1")
     app.include_router(receivables.router, prefix="/api/v1")
     app.include_router(master_data.router, prefix="/api/v1")
@@ -331,10 +412,25 @@ def create_api_app(
         workflow.router,
         accounts.router,
         close.router,
+        consolidation_close.router,
+        consolidation_ownership.router,
+        consolidation_ownership_change.router,
         evidence.router,
+        scoped_exports.router,
+        consolidation_ppa.router,
+        consolidation_deferred_tax.router,
+        consolidation_impairment.router,
+        consolidation_intercompany.router,
+        connectors.router,
         reconciliation.router,
+        bank_statement.router,
+        retail_settlement.router,
+        professional_invoice_payment.router,
+        manufacturing_cost_control.router,
+        individual_cashflow.router,
         exceptions.router,
         metrics.router,
+        operations.router,
         payables.router,
         receivables.router,
         master_data.router,
@@ -377,5 +473,6 @@ def create_api_app(
         (scim.router,), prefix="", public_routes=frozenset(), identity_routes=frozenset()
     )
     app.state.authorization_contracts = tuple(sorted((*core_contracts, *scim_contracts)))
+    validate_authorization_surface(app.state.authorization_contracts)
     app.state.authorization_contract_digest = authorization_inventory_digest(app.state.authorization_contracts)
     return app

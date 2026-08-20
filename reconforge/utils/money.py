@@ -436,6 +436,10 @@ class CurrencyPolicyMismatchError(CurrencyMismatchError):
     """Raised when equal currency codes use different precision or rounding policies."""
 
 
+class CurrencyRegistryContextMismatchError(CurrencyMismatchError):
+    """Raised when canonical money lineage does not belong to its operation context."""
+
+
 class UnknownCurrencyError(InvalidAmountError):
     """Raised when a currency code has no explicit registered financial policy."""
 
@@ -860,6 +864,12 @@ class CurrencyRegistry:
             return manifest
 
     @classmethod
+    def context(cls) -> CurrencyRegistryContext:
+        """Capture one immutable registry snapshot for a bounded operation."""
+
+        return CurrencyRegistryContext.from_installed()
+
+    @classmethod
     def snapshot(cls) -> dict[str, object]:
         """Return the complete canonical snapshot plus its verification digest."""
 
@@ -879,6 +889,109 @@ class CurrencyRegistry:
             return payload
 
 
+@dataclass(frozen=True)
+class CurrencyRegistryContext:
+    """Immutable per-operation view of one validated currency registry snapshot.
+
+    The process-wide :class:`CurrencyRegistry` may be explicitly replaced by
+    another snapshot while an operation is running. This context keeps the
+    exact currency policies and registry provenance captured at operation start
+    so every resolution in that operation remains deterministic.
+    """
+
+    registry_manifest: CurrencyRegistryManifest
+    _specs: tuple[CurrencySpec, ...] = field(repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        manifest = self.registry_manifest
+        if not isinstance(manifest, CurrencyRegistryManifest):
+            raise InvalidAmountError("currency registry context manifest is invalid")
+        specs = tuple(self._specs)
+        if not specs or len(specs) != manifest.currency_count:
+            raise InvalidAmountError("currency registry context is incomplete")
+        if any(not isinstance(spec, CurrencySpec) for spec in specs):
+            raise InvalidAmountError("currency registry context contains an invalid policy")
+        codes = [spec.code for spec in specs]
+        if codes != sorted(codes) or len(set(codes)) != len(codes):
+            raise InvalidAmountError("currency registry context ordering is invalid")
+        payload = CurrencyRegistry._state_payload(
+            {spec.code: spec for spec in specs},
+            registry_version=manifest.registry_version,
+            source=manifest.source,
+            source_url=manifest.source_url,
+            published_at=manifest.published_at,
+        )
+        digest = _sha256_payload(payload)
+        if not _SHA256_PATTERN.fullmatch(manifest.digest) or not hmac.compare_digest(digest, manifest.digest):
+            raise InvalidAmountError("currency registry context digest is invalid")
+        object.__setattr__(self, "_specs", specs)
+
+    @classmethod
+    def from_installed(cls) -> CurrencyRegistryContext:
+        """Capture the currently installed registry atomically."""
+
+        CurrencyRegistry._ensure_defaults()
+        with CurrencyRegistry._lock:
+            manifest = CurrencyRegistry._manifest
+            if manifest is None:
+                raise InvalidAmountError("currency registry is unavailable")
+            specs = tuple(CurrencyRegistry._registry[code] for code in sorted(CurrencyRegistry._registry))
+            return cls(registry_manifest=manifest, _specs=specs)
+
+    @classmethod
+    def from_snapshot(cls, payload: Mapping[str, object]) -> CurrencyRegistryContext:
+        """Build a context from a validated snapshot without installing it."""
+
+        registry, manifest = CurrencyRegistry._build_state(payload)
+        return cls(registry_manifest=manifest, _specs=tuple(registry[code] for code in sorted(registry)))
+
+    def resolve(self, code: str) -> ResolvedCurrencyPolicy:
+        clean = str(code).strip().upper()
+        if not clean:
+            raise InvalidAmountError("currency code cannot be empty")
+        if not _CURRENCY_CODE_PATTERN.fullmatch(clean):
+            raise InvalidAmountError("currency code must contain exactly three ASCII letters")
+        for spec in self._specs:
+            if spec.code == clean:
+                return ResolvedCurrencyPolicy(
+                    spec=spec,
+                    registry_version=self.registry_manifest.registry_version,
+                    registry_digest=self.registry_manifest.digest,
+                )
+        raise UnknownCurrencyError(f"currency code is not registered: {clean}")
+
+    def get(self, code: str) -> CurrencySpec:
+        return self.resolve(code).spec
+
+    def get_precision(self, code: str) -> int:
+        return self.get(code).minor_units
+
+    def contains(self, code: str) -> bool:
+        try:
+            self.get(code)
+        except InvalidAmountError:
+            return False
+        return True
+
+    def snapshot(self) -> dict[str, object]:
+        payload = CurrencyRegistry._state_payload(
+            {spec.code: spec for spec in self._specs},
+            registry_version=self.registry_manifest.registry_version,
+            source=self.registry_manifest.source,
+            source_url=self.registry_manifest.source_url,
+            published_at=self.registry_manifest.published_at,
+        )
+        payload["digest"] = self.registry_manifest.digest
+        return payload
+
+
+def _resolve_currency_policy(
+    code: str,
+    registry_context: CurrencyRegistryContext | None = None,
+) -> ResolvedCurrencyPolicy:
+    return (registry_context or CurrencyRegistry).resolve(code)
+
+
 class Money:
     """Canonical representation of an amount bound to an explicit currency."""
 
@@ -889,8 +1002,9 @@ class Money:
         *,
         strict_precision: bool = False,
         input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
+        registry_context: CurrencyRegistryContext | None = None,
     ) -> None:
-        resolution = CurrencyRegistry.resolve(currency)
+        resolution = _resolve_currency_policy(currency, registry_context)
         self._set_amount(
             amount,
             resolution=resolution,
@@ -907,6 +1021,7 @@ class Money:
         currency: str = "USD",
         *,
         strict_precision: bool = False,
+        registry_context: CurrencyRegistryContext | None = None,
     ) -> Money:
         """Construct Money under the current strict financial-input policy."""
 
@@ -915,6 +1030,7 @@ class Money:
             currency,
             strict_precision=strict_precision,
             input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+            registry_context=registry_context,
         )
 
     def _set_amount(
@@ -1014,10 +1130,16 @@ class Money:
         return int(self._amount * factor)
 
     @classmethod
-    def from_minor_units(cls, minor_units: int, currency: str) -> Money:
+    def from_minor_units(
+        cls,
+        minor_units: int,
+        currency: str,
+        *,
+        registry_context: CurrencyRegistryContext | None = None,
+    ) -> Money:
         if not isinstance(minor_units, int):
             raise InvalidAmountError("minor_units must be an integer")
-        resolution = CurrencyRegistry.resolve(currency)
+        resolution = _resolve_currency_policy(currency, registry_context)
         factor = Decimal(10) ** resolution.spec.minor_units
         amount = Decimal(minor_units) / factor
         return cls._from_resolved(amount, resolution, strict_precision=True)
@@ -1045,13 +1167,23 @@ class Money:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Money:
+    def from_dict(
+        cls,
+        data: dict[str, Any],
+        *,
+        registry_context: CurrencyRegistryContext | None = None,
+    ) -> Money:
         if not isinstance(data, dict) or "amount" not in data or "currency" not in data:
             raise InvalidAmountError("dictionary must contain 'amount' and 'currency'")
-        return cls(data["amount"], currency=str(data["currency"]))
+        return cls(data["amount"], currency=str(data["currency"]), registry_context=registry_context)
 
     @classmethod
-    def from_canonical_dict(cls, data: Mapping[str, object]) -> Money:
+    def from_canonical_dict(
+        cls,
+        data: Mapping[str, object],
+        *,
+        registry_context: CurrencyRegistryContext | None = None,
+    ) -> Money:
         """Restore a canonical value only when its embedded financial policy is valid."""
 
         required = {
@@ -1066,7 +1198,7 @@ class Money:
         }
         if not isinstance(data, Mapping) or set(data) != required or data.get("schema_version") != 1:
             raise InvalidAmountError("canonical money dictionary does not match schema_version 1")
-        current = CurrencyRegistry.resolve(str(data["currency"]))
+        current = _resolve_currency_policy(str(data["currency"]), registry_context)
         minor_units = data["minor_units"]
         rounding_policy = str(data["rounding_policy"])
         policy_digest = str(data["currency_policy_digest"])
@@ -1083,6 +1215,13 @@ class Money:
             raise CurrencyPolicyMismatchError("canonical money currency policy does not match the installed policy")
         if not _SHA256_PATTERN.fullmatch(registry_digest) or not _REGISTRY_VERSION_PATTERN.fullmatch(registry_version):
             raise InvalidAmountError("canonical money registry provenance is invalid")
+        if registry_context is not None and (
+            registry_digest != registry_context.registry_manifest.digest
+            or registry_version != registry_context.registry_manifest.registry_version
+        ):
+            raise CurrencyRegistryContextMismatchError(
+                "canonical money registry provenance does not match the operation context"
+            )
         historical_resolution = ResolvedCurrencyPolicy(
             spec=current.spec,
             registry_version=registry_version,
@@ -1196,15 +1335,21 @@ class MinorMoney:
 
     minor_units: int
     currency: str
+    registry_context: CurrencyRegistryContext | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+        kw_only=True,
+    )
 
     def __post_init__(self) -> None:
         if isinstance(self.minor_units, bool) or not isinstance(self.minor_units, int):
             raise InvalidAmountError("minor_units must be an integer")
-        resolution = CurrencyRegistry.resolve(self.currency)
+        resolution = _resolve_currency_policy(self.currency, self.registry_context)
         object.__setattr__(self, "currency", resolution.spec.code)
 
     def to_money(self) -> Money:
-        return Money.from_minor_units(self.minor_units, self.currency)
+        return Money.from_minor_units(self.minor_units, self.currency, registry_context=self.registry_context)
 
 
 @dataclass(frozen=True)
@@ -1234,12 +1379,18 @@ class ExchangeRate:
     rate: Decimal
     source: str = "MANUAL"
     effective_at: str = ""
+    registry_context: CurrencyRegistryContext | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+        kw_only=True,
+    )
     _base_policy: ResolvedCurrencyPolicy = field(init=False, repr=False, compare=False)
     _quote_policy: ResolvedCurrencyPolicy = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
-        base_policy = CurrencyRegistry.resolve(self.base_currency)
-        quote_policy = CurrencyRegistry.resolve(self.quote_currency)
+        base_policy = _resolve_currency_policy(self.base_currency, self.registry_context)
+        quote_policy = _resolve_currency_policy(self.quote_currency, self.registry_context)
         parsed_rate = parse_amount(self.rate)
         if parsed_rate <= Decimal("0"):
             raise InvalidAmountError("exchange rate must be greater than zero")

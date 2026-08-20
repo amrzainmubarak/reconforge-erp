@@ -164,6 +164,33 @@ def request_tenant_id(request: Request) -> str:
         raise APIError(status_code=400, code="invalid_tenant", message=str(exc)) from exc
 
 
+def request_optional_hierarchy(request: Request) -> tuple[str | None, str | None]:
+    """Return optional organization/entity headers for tenant-scoped routes.
+
+    Tenant-scoped compatibility routes do not require a workspace header, but
+    they must still carry a coherent organization/legal-entity pair when one is
+    supplied. Central policy evaluation remains responsible for authorization
+    against the principal's granted hierarchy.
+    """
+
+    raw_organization = request.headers.get("x-reconforge-organization", "").strip()
+    raw_entity = request.headers.get("x-reconforge-legal-entity", "").strip()
+    try:
+        organization_id = (
+            normalize_scope_id(raw_organization, field_name="organization_id") if raw_organization else None
+        )
+        legal_entity_id = normalize_scope_id(raw_entity, field_name="legal_entity_id") if raw_entity else None
+    except PostgresConfigurationError as exc:
+        raise APIError(status_code=400, code="invalid_execution_scope", message=str(exc)) from exc
+    if legal_entity_id is not None and organization_id is None:
+        raise APIError(
+            status_code=400,
+            code="organization_scope_required",
+            message="Legal-entity scope requires an organization scope.",
+        )
+    return organization_id, legal_entity_id
+
+
 def request_execution_scope(request: Request) -> RequestExecutionScope:
     """Resolve caller-selected hierarchy only from an authenticated grant snapshot."""
 
@@ -180,12 +207,7 @@ def request_execution_scope(request: Request) -> RequestExecutionScope:
         )
     try:
         workspace_id = normalize_scope_id(raw_workspace, field_name="workspace_id")
-        raw_organization = request.headers.get("x-reconforge-organization", "").strip()
-        organization_id = (
-            normalize_scope_id(raw_organization, field_name="organization_id") if raw_organization else None
-        )
-        raw_entity = request.headers.get("x-reconforge-legal-entity", "").strip()
-        legal_entity_id = normalize_scope_id(raw_entity, field_name="legal_entity_id") if raw_entity else None
+        organization_id, legal_entity_id = request_optional_hierarchy(request)
     except PostgresConfigurationError as exc:
         raise APIError(status_code=400, code="invalid_execution_scope", message=str(exc)) from exc
     if workspace_id not in principal.authorized_workspace_ids:

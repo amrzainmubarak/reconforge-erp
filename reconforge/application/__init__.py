@@ -1,5 +1,9 @@
 """Backend-neutral ReconForge application use cases."""
 
+from reconforge.application.consolidation_ppa import (
+    AcquisitionPpaApplicationService,
+    AcquisitionPpaRepositoryProtocol,
+)
 from reconforge.application.grouped_matching import (
     GroupedMatchingApplicationService,
     GroupedMatchRequest,
@@ -10,6 +14,8 @@ from reconforge.application.jobs import (
     DurableJobRepositoryProtocol,
     DurableJobWorkerRepositoryProtocol,
     DurableJobWorkerService,
+    GovernedDurableJobApplicationService,
+    JobAuthorizationError,
     JobSubmission,
     LeasedJob,
 )
@@ -18,14 +24,26 @@ from reconforge.application.operations import (
     OperationsApplicationService,
     OperationsRepositoryProtocol,
 )
+from reconforge.application.policy_analysis import (
+    PolicyAnalysisApplicationService,
+    PolicyAnalysisRepository,
+)
 from reconforge.application.workspace_periods import (
     WorkspacePeriodApplicationService,
     WorkspacePeriodSetup,
     WorkspacePeriodValidationError,
 )
+from reconforge.application.writeback import (
+    WritebackIntentApplicationService,
+    WritebackIntentRepositoryProtocol,
+)
 
 __all__ = [
     "DurableJobApplicationService",
+    "AcquisitionPpaApplicationService",
+    "AcquisitionPpaRepositoryProtocol",
+    "GovernedDurableJobApplicationService",
+    "JobAuthorizationError",
     "DurableJobNotFoundError",
     "DurableJobRepositoryProtocol",
     "DurableJobWorkerRepositoryProtocol",
@@ -37,7 +55,11 @@ __all__ = [
     "MigrationStatus",
     "OperationsApplicationService",
     "OperationsRepositoryProtocol",
+    "PolicyAnalysisApplicationService",
+    "PolicyAnalysisRepository",
     "WorkspacePeriodApplicationService",
     "WorkspacePeriodSetup",
     "WorkspacePeriodValidationError",
+    "WritebackIntentApplicationService",
+    "WritebackIntentRepositoryProtocol",
 ]

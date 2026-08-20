@@ -10,11 +10,15 @@ CREATE POLICY tenant_scope ON reconforge.durable_jobs
  USING (tenant_id=current_setting('app.tenant_id',true)
    AND (NULLIF(current_setting('app.workspace_id',true),'') IS NULL
         OR workspace_id=current_setting('app.workspace_id',true))
+   AND (NULLIF(current_setting('app.organization_id',true),'') IS NULL
+        OR organization_id=current_setting('app.organization_id',true))
    AND (NULLIF(current_setting('app.entity_id',true),'') IS NULL
         OR entity_id=current_setting('app.entity_id',true)))
  WITH CHECK (tenant_id=current_setting('app.tenant_id',true)
    AND (NULLIF(current_setting('app.workspace_id',true),'') IS NULL
         OR workspace_id=current_setting('app.workspace_id',true))
+   AND (NULLIF(current_setting('app.organization_id',true),'') IS NULL
+        OR organization_id=current_setting('app.organization_id',true))
    AND (NULLIF(current_setting('app.entity_id',true),'') IS NULL
         OR entity_id=current_setting('app.entity_id',true)));
 

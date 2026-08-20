@@ -24,11 +24,24 @@ from reconforge.io.persisted import (
     encode_audit_metadata,
     encode_postgres_outbox_payload,
 )
+from reconforge.utils.money import CurrencyRegistry, CurrencyRegistryContext, InvalidAmountError
 from reconforge.utils.time import utc_now_text
 
 _CODE_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9_-]{0,63}$")
 _CURRENCY_PATTERN = re.compile(r"^[A-Z]{3}$")
 _MAX_NAME_LENGTH = 255
+_MAX_CURRENCY_REGISTRY_SNAPSHOT_BYTES = 1_000_000
+
+
+def _reject_duplicate_json_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON key")
+        result[key] = value
+    return result
+
+
 _PERIOD_STATUSES = ("Open", "Soft Closed", "Closed")
 _PERIOD_TRANSITIONS = {
     "Open": {"Soft Closed"},
@@ -212,6 +225,35 @@ def _outbox_json_text(value: Mapping[str, object]) -> str:
         return encode_postgres_outbox_payload(value).text
     except PersistedJsonError as exc:
         raise PostgresMasterDataValidationError("outbox payload must be JSON-serializable.") from exc
+
+
+def _currency_registry_context(
+    payload: object,
+    *,
+    registry_version: object,
+    registry_digest: object,
+) -> CurrencyRegistryContext:
+    """Validate one persisted registry snapshot against its binding metadata."""
+
+    if isinstance(payload, str):
+        try:
+            if len(payload.encode("utf-8")) > _MAX_CURRENCY_REGISTRY_SNAPSHOT_BYTES:
+                raise ValueError("snapshot exceeds size limit")
+            payload = json.loads(payload, object_pairs_hook=_reject_duplicate_json_keys)
+        except (json.JSONDecodeError, ValueError, UnicodeError) as exc:
+            raise PostgresMasterDataError("Bound currency registry snapshot is invalid.") from exc
+    if not isinstance(payload, Mapping):
+        raise PostgresMasterDataError("Bound currency registry snapshot is invalid.")
+    try:
+        context = CurrencyRegistryContext.from_snapshot(payload)
+    except (InvalidAmountError, TypeError, ValueError) as exc:
+        raise PostgresMasterDataError("Bound currency registry snapshot is invalid.") from exc
+    if (
+        context.registry_manifest.registry_version != str(registry_version)
+        or context.registry_manifest.digest != str(registry_digest)
+    ):
+        raise PostgresMasterDataError("Bound currency registry snapshot does not match its binding.")
+    return context
 
 
 @dataclass(frozen=True)
@@ -422,6 +464,121 @@ class PostgresMasterDataRepository:
             cursor.fetchall(),
             ("tenant_id", "code", "name", "minor_units", "active", "created_at", "updated_at"),
         )
+
+    def currency_registry_binding(
+        self, *, tenant_id: str, workspace: str = "default"
+    ) -> dict[str, object] | None:
+        """Read one tenant/workspace registry snapshot binding."""
+
+        tenant = _tenant_id(tenant_id)
+        workspace_name = _required_text(workspace, "workspace")
+        row = self.connection.execute(
+            """SELECT registry_version, registry_digest, bound_at, bound_by
+               FROM reconforge.currency_registry_bindings b
+               JOIN reconforge.domain_workspaces w ON w.tenant_id=b.tenant_id AND w.id=b.workspace_id
+               WHERE b.tenant_id=%s AND w.name=%s""",
+            (tenant, workspace_name),
+        ).fetchone()
+        if row is None:
+            return None
+        columns = ("registry_version", "registry_digest", "bound_at", "bound_by")
+        return _record(row, columns)
+
+    def currency_registry_context(
+        self, *, tenant_id: str, workspace: str = "default"
+    ) -> CurrencyRegistryContext | None:
+        """Load the immutable registry snapshot bound to one tenant/workspace."""
+
+        tenant = _tenant_id(tenant_id)
+        workspace_name = _required_text(workspace, "workspace")
+        row = self.connection.execute(
+            """SELECT b.registry_version, b.registry_digest, s.snapshot_json
+               FROM reconforge.currency_registry_bindings b
+               JOIN reconforge.domain_workspaces w
+                 ON w.tenant_id=b.tenant_id AND w.id=b.workspace_id
+               LEFT JOIN reconforge.currency_registry_snapshots s
+                 ON s.tenant_id=b.tenant_id AND s.registry_digest=b.registry_digest
+               WHERE b.tenant_id=%s AND w.name=%s""",
+            (tenant, workspace_name),
+        ).fetchone()
+        if row is None:
+            return None
+        values = _record(row, ("registry_version", "registry_digest", "snapshot_json"))
+        if values["snapshot_json"] is None:
+            raise PostgresMasterDataError("Bound currency registry snapshot is unavailable.")
+        return _currency_registry_context(
+            values["snapshot_json"],
+            registry_version=values["registry_version"],
+            registry_digest=values["registry_digest"],
+        )
+
+    def bind_currency_registry(
+        self,
+        *,
+        tenant_id: str,
+        workspace: str = "default",
+        actor_id: str | None = None,
+        request_id: str = "",
+        metadata: Mapping[str, object] | None = None,
+    ) -> dict[str, object]:
+        """Persist an explicit tenant/workspace binding to the installed registry."""
+
+        tenant = _tenant_id(tenant_id)
+        workspace_name = _required_text(workspace, "workspace")
+        workspace_row = self.connection.execute(
+            "SELECT id FROM reconforge.domain_workspaces WHERE tenant_id=%s AND name=%s",
+            (tenant, workspace_name),
+        ).fetchone()
+        if workspace_row is None:
+            raise PostgresMasterDataError("Workspace reference was not found.")
+        workspace_id = str(workspace_row[0] if not isinstance(workspace_row, Mapping) else workspace_row["id"])
+        manifest = CurrencyRegistry.manifest()
+        snapshot_json = json.dumps(
+            CurrencyRegistry.snapshot(), ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        )
+        before = self.currency_registry_binding(tenant_id=tenant, workspace=workspace_name)
+        before_state_hash = "" if before is None else _hash_payload(before)
+        self.connection.execute(
+            """INSERT INTO reconforge.currency_registry_snapshots
+               (tenant_id,registry_digest,registry_version,snapshot_json,captured_at,captured_by)
+               VALUES (%s,%s,%s,%s::jsonb,now(),%s)
+               ON CONFLICT (tenant_id,registry_digest) DO NOTHING""",
+            (tenant, manifest.digest, manifest.registry_version, snapshot_json, _required_text(actor_id or "system", "actor_id")),
+        )
+        cursor = self.connection.execute(
+            """INSERT INTO reconforge.currency_registry_bindings
+               (tenant_id,workspace_id,registry_version,registry_digest,bound_at,bound_by)
+               VALUES (%s,%s,%s,%s,now(),%s)
+               ON CONFLICT (tenant_id,workspace_id) DO UPDATE SET
+                 registry_version=EXCLUDED.registry_version,
+                 registry_digest=EXCLUDED.registry_digest,
+                 bound_at=EXCLUDED.bound_at,
+                 bound_by=EXCLUDED.bound_by
+               RETURNING registry_version,registry_digest,bound_at,bound_by""",
+            (tenant, workspace_id, manifest.registry_version, manifest.digest, _required_text(actor_id or "system", "actor_id")),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            raise PostgresMasterDataError("Currency registry binding was not persisted.")
+        columns = ("registry_version", "registry_digest", "bound_at", "bound_by")
+        record = _record(row, columns)
+        self._append_evidence(
+            tenant_id=tenant,
+            actor_id=actor_id,
+            request_id=request_id,
+            action="currency_registry_bound",
+            resource_type="currency_registry_binding",
+            resource_id=workspace_id,
+            before_state_hash=before_state_hash,
+            after_state=record,
+            metadata={
+                **dict(metadata or {}),
+                "workspace_id": workspace_id,
+                "registry_version": manifest.registry_version,
+                "registry_digest": manifest.digest,
+            },
+        )
+        return record
 
     def upsert_organization(
         self,

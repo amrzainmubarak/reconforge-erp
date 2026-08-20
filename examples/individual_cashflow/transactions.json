@@ -1,0 +1,44 @@
+{
+  "records": [
+    {
+      "transaction_id": "tx-001",
+      "transaction_date": "2026-07-01",
+      "flow_type": "income",
+      "category": "client-work",
+      "amount": "1800.00",
+      "currency": "USD",
+      "reference": "invoice-001",
+      "source_reference": "freelancer-ledger:tx-001"
+    },
+    {
+      "transaction_id": "tx-002",
+      "transaction_date": "2026-07-02",
+      "flow_type": "expense",
+      "category": "software",
+      "amount": "49.00",
+      "currency": "USD",
+      "reference": "saas-001",
+      "source_reference": "freelancer-ledger:tx-002"
+    },
+    {
+      "transaction_id": "tx-003",
+      "transaction_date": "2026-07-03",
+      "flow_type": "expense",
+      "category": "software",
+      "amount": "51.00",
+      "currency": "USD",
+      "reference": "saas-002",
+      "source_reference": "freelancer-ledger:tx-003"
+    },
+    {
+      "transaction_id": "tx-004",
+      "transaction_date": "2026-07-04",
+      "flow_type": "expense",
+      "category": "travel",
+      "amount": "120.00",
+      "currency": "USD",
+      "reference": "trip-001",
+      "source_reference": "freelancer-ledger:tx-004"
+    }
+  ]
+}

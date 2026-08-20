@@ -159,6 +159,41 @@ status operations use the tenant-scoped PostgreSQL fiscal-period table and
 remain metadata-only: they do not lock source-ERP postings. They never fall
 back to tenant-local SQLite.
 
+The PostgreSQL server profile also exposes the bounded acquisition PPA evidence
+boundary:
+
+- `POST /api/v1/consolidation-ppa`
+- `GET /api/v1/consolidation-ppa/{artifact_id}`
+
+Both routes require `X-ReconForge-Tenant` and a server-authenticated bearer
+session. Preparation requires `finance_core.manage`; reads require either
+`finance_core.read` or `finance_core.manage`. The request uses strict canonical
+`Money` objects, binds `prepared_by` to the authenticated principal, and
+requires an independent approver. The PostgreSQL repository recomputes the
+artifact and digest, records audit evidence, and returns `posted: false`.
+There is no SQLite fallback, statutory journal posting, tax/deferred-tax or
+impairment treatment, live valuation provider, ERP/bank write-back, or approval
+of legal-book accounting in this API. The POST/GET path is exercised by the
+authenticated PostgreSQL server-identity runtime test in CI; this is a
+synthetic single-node, one-process boundary, not hosted availability,
+statutory accounting, production readiness, or a provider/write-back
+guarantee.
+
+The same profile exposes a bounded, read-only control-plane export:
+
+- `GET /api/v1/exports/scoped`
+
+The request requires `X-ReconForge-Tenant`, `X-ReconForge-Workspace`, a bearer
+session, and (when selecting them) authorized organization and legal-entity
+headers. It requires `reports.read`; the permission is re-evaluated against the
+selected tenant/workspace/entity before the RLS-backed PostgreSQL snapshot is
+read.
+The response is the canonical export artifact plus its SHA-256 digest and byte
+size. It never falls back to SQLite and does not publish to object storage or
+call an external provider. This is a bounded server API composition, not proof
+of distributed export workers, object-store durability, UI adoption, HA/DR, or
+production readiness.
+
 ## Endpoints
 
 Unauthenticated:
@@ -559,6 +594,20 @@ The authoritative server routes are:
 - `PATCH /api/v1/admin/access/roles/{role_id}`
 - `PUT /api/v1/admin/access/roles/{role_id}/permissions`
 - `PUT /api/v1/admin/access/users/{user_id}/roles`
+- `POST /api/v1/admin/access/policy-analysis`
+
+The policy-analysis route is read-only. It requires the human-governed
+`security.policy.manage` permission and an independent `approved_by` plus
+prior `approved_at` timestamp. It analyzes the active PostgreSQL RBAC and
+enabled service-account snapshot under tenant RLS; it does not mutate policy,
+invalidate distributed caches, or call an external identity provider.
+When migration `0058_pg_policy_permission_scopes` is present, the snapshot also
+projects active workspace/entity/period/region/data-classification bounds from
+immutable role-permission scope rows. With migration `0059_pg_policy_amt_bounds`,
+finite exact optional minimum/maximum amount bounds are projected and included
+in the replay digest. They have no implicit currency and remain analysis-only;
+the scopes are not claimed as universal enforcement for every API, job, export,
+or UI surface.
 
 Every route requires a human `roles.manage` principal and current privileged
 assurance. Role list cursors are signed and bound to the tenant, retirement

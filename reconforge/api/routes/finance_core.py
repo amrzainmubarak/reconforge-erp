@@ -9,11 +9,24 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import get_local_db, require_any_permission, require_permission
+from reconforge.api.dependencies import (
+    enforce_server_scoped_permission,
+    enforce_server_scoped_permissions,
+    enforce_server_tenant_permission,
+    get_local_db,
+    require_any_permission,
+    require_permission,
+)
 from reconforge.api.errors import APIError
+from reconforge.api.server_finance_core import (
+    execute_postgres_finance_core,
+    server_finance_core_enabled,
+)
+from reconforge.api.server_identity import request_execution_scope
 from reconforge.api.server_ledger import execute_postgres_ledger, server_ledger_enabled
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
+from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
 from reconforge.infrastructure.postgres_ledger import (
     LedgerLine,
     PostgresLedgerRepository,
@@ -173,6 +186,45 @@ def _server_workspace(workspace: str) -> None:
         )
 
 
+def _enforce_server_legacy_finance_permission(request: Request, *, permission: str) -> None:
+    """Bind the tenant-scoped legacy ledger boundary to central policy."""
+
+    scope = request_execution_scope(request)
+    enforce_server_tenant_permission(request, permission=permission, tenant_id=scope.tenant_id)
+
+
+def _server_finance_workspace(request: Request, workspace: str, *, permission: str) -> str:
+    """Validate the requested workspace against the authenticated hierarchy."""
+
+    scope = request_execution_scope(request)
+    requested = workspace.strip()
+    if requested and requested.casefold() not in {"default", scope.workspace_id.casefold()}:
+        raise APIError(
+            status_code=403,
+            code="workspace_scope_denied",
+            message="The requested workspace is outside the authenticated server scope.",
+        )
+    if permission == "finance_core.read":
+        # FinanceRead is an any-of contract (read/manage/validate). Keep the
+        # server-side scope re-check identical to the route dependency so a
+        # deliberately delegated validation-only grant is not narrowed to
+        # read-only by the second check.
+        enforce_server_scoped_permissions(
+            request,
+            permissions=frozenset({"finance_core.read", "finance_core.manage", "finance_core.validate"}),
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
+    else:
+        enforce_server_scoped_permission(
+            request,
+            permission=permission,
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
+    return scope.workspace_id
+
+
 def _server_id(prefix: str, *parts: object) -> str:
     digest = hashlib.sha256("|".join(str(part).strip().casefold() for part in parts).encode("utf-8")).hexdigest()
     return f"{prefix}-{digest[:48]}"
@@ -257,8 +309,16 @@ def summary(
     connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
 ) -> dict[str, object]:
+    if server_finance_core_enabled(request):
+        scoped_workspace = _server_finance_workspace(request, workspace, permission="finance_core.read")
+        result = execute_postgres_finance_core(
+            request,
+            lambda repository: repository.summary(workspace=scoped_workspace, actor_label=current_user.id),
+        )
+        return {"summary": result.to_dict()}
     if server_ledger_enabled(request):
         _server_workspace(workspace)
+        _enforce_server_legacy_finance_permission(request, permission="finance_core.read")
         server_result = execute_postgres_ledger(
             request, lambda repository, tenant: repository.summary(tenant_id=tenant)
         )
@@ -288,6 +348,13 @@ def snapshot(
     connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
 ) -> dict[str, object]:
+    if server_finance_core_enabled(request):
+        scoped_workspace = _server_finance_workspace(request, workspace, permission="finance_core.read")
+        result = execute_postgres_finance_core(
+            request,
+            lambda repository: repository.snapshot(workspace=scoped_workspace, actor_label=current_user.id),
+        )
+        return {**result, "source": {"kind": "postgres-finance-core"}}
     if server_ledger_enabled(request):
         raise _server_unsupported("the full Finance Core snapshot")
     try:
@@ -307,6 +374,18 @@ def list_charts(
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_finance_core_enabled(request):
+        scoped_workspace = _server_finance_workspace(request, workspace, permission="finance_core.read")
+        records = execute_postgres_finance_core(
+            request,
+            lambda repository: repository.list_charts(
+                workspace=scoped_workspace,
+                limit=limit,
+                offset=offset,
+                actor_label=current_user.id,
+            ),
+        )
+        return _list_response("charts", records, limit=limit, offset=offset)
     if server_ledger_enabled(request):
         raise _server_unsupported("charts of accounts")
     try:
@@ -325,6 +404,14 @@ def upsert_chart(
     current_user: FinanceManage,
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_finance_core_enabled(request):
+        scoped_workspace = _server_finance_workspace(request, payload.workspace, permission="finance_core.manage")
+        values = payload.model_dump()
+        values["workspace"] = scoped_workspace
+        values["actor_label"] = current_user.id
+        return {
+            "chart": execute_postgres_finance_core(request, lambda repository: repository.upsert_chart(**values))
+        }
     if server_ledger_enabled(request):
         raise _server_unsupported("charts of accounts")
     try:
@@ -348,8 +435,41 @@ def list_accounts(
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_finance_core_enabled(request):
+        scoped_workspace = _server_finance_workspace(request, workspace, permission="finance_core.read")
+
+        def finance_operation(repository: PostgresFinanceCoreRepository) -> list[dict[str, object]]:
+            # Finance accounts are scoped by chart.  When an organization is
+            # supplied, resolve the permitted chart set before pagination so
+            # records from another organization cannot cross the boundary.
+            chart_codes: set[str] | None = None
+            if organization:
+                charts = repository.list_charts(workspace=scoped_workspace, limit=500, offset=0)
+                chart_codes = {
+                    str(chart["chart_code"])
+                    for chart in charts
+                    if str(chart.get("organization_code") or "").casefold() == organization.casefold()
+                }
+                if not chart_codes:
+                    return []
+            records = repository.list_accounts(
+                workspace=scoped_workspace,
+                chart_code=chart.upper() if chart and (chart_codes is None or chart.upper() in chart_codes) else "",
+                active_only=active_only,
+                limit=500,
+                offset=0,
+                actor_label=current_user.id,
+            )
+            if chart_codes is not None:
+                records = [record for record in records if str(record.get("chart_code")) in chart_codes]
+            return records
+
+        records = execute_postgres_finance_core(request, finance_operation)
+        page = records[offset : offset + limit]
+        return _list_response("accounts", page, limit=limit, offset=offset)
     if server_ledger_enabled(request):
         _server_workspace(workspace)
+        _enforce_server_legacy_finance_permission(request, permission="finance_core.read")
         if chart:
             raise _server_unsupported("chart filtering")
 
@@ -386,8 +506,39 @@ def upsert_account(
     current_user: FinanceManage,
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_finance_core_enabled(request):
+        scoped_workspace = _server_finance_workspace(request, payload.workspace, permission="finance_core.manage")
+        values = payload.model_dump()
+        values["workspace"] = scoped_workspace
+        values["actor_label"] = current_user.id
+        # The adapter binds accounts to a chart.  Validate the optional
+        # organization selector against that chart before persisting.
+        def finance_operation(repository: PostgresFinanceCoreRepository) -> dict[str, object]:
+            charts = repository.list_charts(workspace=scoped_workspace, limit=500, offset=0)
+            selected = next(
+                (chart for chart in charts if str(chart["chart_code"]).casefold() == payload.chart_code.casefold()),
+                None,
+            )
+            if selected is None:
+                raise PlatformError("Accounts require an existing chart of accounts.")
+            if payload.organization_code and str(selected.get("organization_code") or "").casefold() not in {
+                "",
+                payload.organization_code.casefold(),
+            }:
+                raise PlatformError("Account organization must match its chart of accounts.")
+            values.pop("organization_code", None)
+            return repository.upsert_account(**values)
+
+        return {"account": execute_postgres_finance_core(request, finance_operation)}
     if server_ledger_enabled(request):
         _server_workspace(payload.workspace)
+        scope = request_execution_scope(request)
+        enforce_server_scoped_permission(
+            request,
+            permission="finance_core.manage",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
         if not payload.organization_code.strip():
             raise APIError(
                 status_code=400,
@@ -441,6 +592,18 @@ def list_dimensions(
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_finance_core_enabled(request):
+        scoped_workspace = _server_finance_workspace(request, workspace, permission="finance_core.read")
+        records = execute_postgres_finance_core(
+            request,
+            lambda repository: repository.list_dimensions(
+                workspace=scoped_workspace,
+                limit=limit,
+                offset=offset,
+                actor_label=current_user.id,
+            ),
+        )
+        return _list_response("dimensions", records, limit=limit, offset=offset)
     if server_ledger_enabled(request):
         raise _server_unsupported("accounting dimensions")
     try:
@@ -459,6 +622,16 @@ def upsert_dimension(
     current_user: FinanceManage,
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_finance_core_enabled(request):
+        scoped_workspace = _server_finance_workspace(request, payload.workspace, permission="finance_core.manage")
+        values = payload.model_dump()
+        values["workspace"] = scoped_workspace
+        values["actor_label"] = current_user.id
+        return {
+            "dimension": execute_postgres_finance_core(
+                request, lambda repository: repository.upsert_dimension(**values)
+            )
+        }
     if server_ledger_enabled(request):
         raise _server_unsupported("accounting dimensions")
     try:
@@ -480,6 +653,19 @@ def list_dimension_values(
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_finance_core_enabled(request):
+        scoped_workspace = _server_finance_workspace(request, workspace, permission="finance_core.read")
+        records = execute_postgres_finance_core(
+            request,
+            lambda repository: repository.list_dimension_values(
+                workspace=scoped_workspace,
+                dimension_code=dimension,
+                limit=limit,
+                offset=offset,
+                actor_label=current_user.id,
+            ),
+        )
+        return _list_response("dimension_values", records, limit=limit, offset=offset)
     if server_ledger_enabled(request):
         raise _server_unsupported("accounting dimension values")
     try:
@@ -502,6 +688,16 @@ def upsert_dimension_value(
     current_user: FinanceManage,
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_finance_core_enabled(request):
+        scoped_workspace = _server_finance_workspace(request, payload.workspace, permission="finance_core.manage")
+        values = payload.model_dump()
+        values["workspace"] = scoped_workspace
+        values["actor_label"] = current_user.id
+        return {
+            "dimension_value": execute_postgres_finance_core(
+                request, lambda repository: repository.upsert_dimension_value(**values)
+            )
+        }
     if server_ledger_enabled(request):
         raise _server_unsupported("accounting dimension values")
     try:
@@ -523,6 +719,19 @@ def list_journals(
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_finance_core_enabled(request):
+        scoped_workspace = _server_finance_workspace(request, workspace, permission="finance_core.read")
+        records = execute_postgres_finance_core(
+            request,
+            lambda repository: repository.list_journals(
+                workspace=scoped_workspace,
+                organization_code=organization,
+                limit=limit,
+                offset=offset,
+                actor_label=current_user.id,
+            ),
+        )
+        return _list_response("journals", records, limit=limit, offset=offset)
     if server_ledger_enabled(request):
         raise _server_unsupported("finance journals")
     try:
@@ -545,6 +754,16 @@ def upsert_journal(
     current_user: FinanceManage,
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_finance_core_enabled(request):
+        scoped_workspace = _server_finance_workspace(request, payload.workspace, permission="finance_core.manage")
+        values = payload.model_dump()
+        values["workspace"] = scoped_workspace
+        values["actor_label"] = current_user.id
+        return {
+            "journal": execute_postgres_finance_core(
+                request, lambda repository: repository.upsert_journal(**values)
+            )
+        }
     if server_ledger_enabled(request):
         raise _server_unsupported("finance journals")
     try:
@@ -566,8 +785,21 @@ def trial_balance(
     connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
 ) -> dict[str, object]:
+    if server_finance_core_enabled(request) and entity.strip():
+        scoped_workspace = _server_finance_workspace(request, workspace, permission="finance_core.read")
+        return execute_postgres_finance_core(
+            request,
+            lambda repository: repository.trial_balance(
+                period_id=period_id,
+                organization_code=organization,
+                entity_code=entity,
+                workspace=scoped_workspace,
+                actor_label=current_user.id,
+            ),
+        )
     if server_ledger_enabled(request):
         _server_workspace(workspace)
+        _enforce_server_legacy_finance_permission(request, permission="finance_core.read")
         if entity.strip():
             raise _server_unsupported("legal-entity-scoped trial balance")
 
@@ -611,8 +843,25 @@ def list_entries(
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_finance_core_enabled(request) and (entity.strip() or period_id.strip() or status.strip()):
+        scoped_workspace = _server_finance_workspace(request, workspace, permission="finance_core.read")
+        records = execute_postgres_finance_core(
+            request,
+            lambda repository: repository.list_entries(
+                workspace=scoped_workspace,
+                organization_code=organization,
+                entity_code=entity,
+                period_id=period_id,
+                status=status,
+                limit=limit,
+                offset=offset,
+                actor_label=current_user.id,
+            ),
+        )
+        return _list_response("entries", records, limit=limit, offset=offset)
     if server_ledger_enabled(request):
         _server_workspace(workspace)
+        _enforce_server_legacy_finance_permission(request, permission="finance_core.read")
         if entity or period_id:
             raise _server_unsupported("entity- and fiscal-period-scoped entry filtering")
 
@@ -654,7 +903,26 @@ def create_entry(
     current_user: FinanceManage,
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_finance_core_enabled(request) and payload.entity_code.strip() and payload.period_id.strip() and payload.journal_code.strip():
+        scoped_workspace = _server_finance_workspace(request, payload.workspace, permission="finance_core.manage")
+        values = payload.model_dump()
+        values["workspace"] = scoped_workspace
+        values.pop("currency_code", None)
+        values["lines"] = [line.model_dump() for line in payload.lines]
+        values["actor_label"] = current_user.id
+        return {
+            "entry": execute_postgres_finance_core(
+                request, lambda repository: repository.create_entry(**values)
+            )
+        }
     if server_ledger_enabled(request):
+        scope = request_execution_scope(request)
+        enforce_server_scoped_permission(
+            request,
+            permission="finance_core.manage",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
         record = execute_postgres_ledger(
             request,
             lambda repository, tenant: _server_entry(
@@ -684,7 +952,16 @@ def get_entry(
     current_user: FinanceRead,
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_finance_core_enabled(request) and entry_id.startswith("GLE-"):
+        _server_finance_workspace(request, "default", permission="finance_core.read")
+        return {
+            "entry": execute_postgres_finance_core(
+                request,
+                lambda repository: repository.get_entry(entry_id, actor_label=current_user.id),
+            )
+        }
     if server_ledger_enabled(request):
+        _enforce_server_legacy_finance_permission(request, permission="finance_core.read")
         record = execute_postgres_ledger(
             request, lambda repository, tenant: repository.get_entry(tenant_id=tenant, entry_id=entry_id)
         )
@@ -706,6 +983,16 @@ def validate_entry(
     current_user: FinanceValidate,
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_finance_core_enabled(request) and entry_id.startswith("GLE-"):
+        _server_finance_workspace(request, "default", permission="finance_core.validate")
+        return {
+            "entry": execute_postgres_finance_core(
+                request,
+                lambda repository: repository.validate_entry(
+                    entry_id, reason=payload.reason, actor_label=current_user.id
+                ),
+            )
+        }
     if server_ledger_enabled(request):
         raise _server_unsupported("draft validation; server entries are posted atomically")
     try:
@@ -725,6 +1012,16 @@ def void_entry(
     current_user: FinanceValidate,
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_finance_core_enabled(request) and entry_id.startswith("GLE-"):
+        _server_finance_workspace(request, "default", permission="finance_core.validate")
+        return {
+            "entry": execute_postgres_finance_core(
+                request,
+                lambda repository: repository.void_entry(
+                    entry_id, reason=payload.reason, actor_label=current_user.id
+                ),
+            )
+        }
     if server_ledger_enabled(request):
         raise _server_unsupported("voiding; server entries are immutable and require reversal support")
     try:

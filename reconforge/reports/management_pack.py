@@ -22,7 +22,15 @@ from reconforge.reports.html import write_html_dashboard
 from reconforge.reports.markdown import write_markdown_summary
 from reconforge.reports.wip_aging import aging_summary
 from reconforge.review.state import CERTIFICATION_COLUMNS, load_review_state, merge_review_state_with_exceptions
-from reconforge.utils.money import CurrencyRegistry, InvalidAmountError, ResolvedCurrencyPolicy, parse_amount
+from reconforge.schemas import ValidationIssue
+from reconforge.utils.money import (
+    STRICT_FINANCIAL_INPUT_POLICY,
+    CurrencyRegistry,
+    InvalidAmountError,
+    ResolvedCurrencyPolicy,
+    parse_amount,
+    validate_financial_input_policy,
+)
 from reconforge.validators import issues_to_frame, validate_input_directory
 
 
@@ -37,11 +45,27 @@ class ManagementPackArtifacts:
     csv_json_paths: list[Path]
 
 
+def _validate_result_financial_input_policies(
+    stock_result: StockGLReconciliationResult,
+    workorder_result: WorkorderReconciliationResult,
+) -> str:
+    """Require one explicit financial-input policy across a combined report."""
+
+    try:
+        stock_policy = validate_financial_input_policy(stock_result.financial_input_policy)
+        workorder_policy = validate_financial_input_policy(workorder_result.financial_input_policy)
+    except InvalidAmountError as exc:
+        raise ValueError("Management pack results contain an unsupported financial-input policy.") from exc
+    if stock_policy != workorder_policy:
+        raise ValueError("Management pack results must use one financial-input policy.")
+    return stock_policy
+
+
 def _to_decimal(value: object) -> Decimal:
     """Parse a strict, non-quantized decimal value for report math."""
 
     try:
-        return parse_amount(value)
+        return parse_amount(value, input_policy=STRICT_FINANCIAL_INPUT_POLICY)
     except (InvalidAmountError, TypeError, ValueError) as exc:
         raise ValueError("Invalid amount value provided for report calculation.") from exc
 
@@ -184,13 +208,92 @@ def _executive_summary(
     )
 
 
+def _is_missing_optional_financial_value(value: object) -> bool:
+    """Classify missing optional values without exposing their raw contents."""
+
+    if value is None or value is pd.NA:
+        return True
+    try:
+        missing = pd.isna(value)
+    except (TypeError, ValueError):
+        missing = False
+    if isinstance(missing, bool) and missing:
+        return True
+    return str(value).strip().casefold() in {"", "nan", "nat", "none", "null", "n/a", "<na>"}
+
+
+def _parse_optional_decimal(value: object) -> tuple[Decimal | None, str]:
+    """Parse an optional strict amount and retain a safe quality status."""
+
+    try:
+        return parse_amount(value, input_policy=STRICT_FINANCIAL_INPUT_POLICY), "valid"
+    except (InvalidAmountError, TypeError, ValueError):
+        return None, "missing" if _is_missing_optional_financial_value(value) else "invalid"
+
+
 def _to_optional_decimal(value: object) -> Decimal | None:
     """Parse a strict numeric value, returning None when the value is malformed."""
 
-    try:
-        return parse_amount(value)
-    except (InvalidAmountError, TypeError, ValueError):
-        return None
+    return _parse_optional_decimal(value)[0]
+
+
+def _management_pack_financial_input_issues(
+    frames: list[tuple[str, pd.DataFrame]],
+) -> list[ValidationIssue]:
+    """Expose malformed optional report amounts as explicit quality issues.
+
+    Report aggregation intentionally keeps a usable amount when one of several
+    candidate fields is valid. If an entire candidate group is present but has
+    no valid value, the report must retain an explicit, non-sensitive issue
+    instead of silently treating it as zero or silently dropping it.
+    """
+
+    amount_fields = (
+        "amount_impact",
+        "total_cost",
+        "amount",
+        "total_price",
+        "actual_cost",
+        "estimated_cost",
+        "invoice_amount",
+    )
+    issue_specs = (
+        ("risk_score", ("risk_score",)),
+        ("amount_impact", amount_fields),
+    )
+    issues: list[ValidationIssue] = []
+    for frame_name, frame in frames:
+        if frame.empty:
+            continue
+        for index, row in frame.iterrows():
+            try:
+                row_number: int | None = int(index) + 2
+            except (TypeError, ValueError):
+                row_number = None
+            for issue_name, candidates in issue_specs:
+                present = [field for field in candidates if field in frame.columns]
+                if not present:
+                    continue
+                statuses = [_parse_optional_decimal(row[field])[1] for field in present]
+                if "valid" in statuses:
+                    continue
+                status = "missing" if all(item == "missing" for item in statuses) else "invalid"
+                issues.append(
+                    ValidationIssue(
+                        dataset="management_pack",
+                        severity="error",
+                        check="financial_input_policy",
+                        message=(
+                            f"Management-pack {issue_name} values are missing."
+                            if status == "missing"
+                            else f"Management-pack {issue_name} values are invalid under {STRICT_FINANCIAL_INPUT_POLICY}."
+                        ),
+                        row=row_number,
+                        column="|".join(present),
+                        reference=frame_name,
+                    ),
+                )
+    return issues
 
 
 def _risk_score_series(frame: pd.DataFrame) -> pd.Series:
@@ -327,7 +430,7 @@ def _close_completion_rate(output_dir: Path) -> Decimal | str:
         row = summary[summary["metric"].eq("completion_rate_pct")]
         if not row.empty:
             try:
-                return parse_amount(row.iloc[0]["value"])
+                return parse_amount(row.iloc[0]["value"], input_policy=STRICT_FINANCIAL_INPUT_POLICY)
             except (TypeError, ValueError, InvalidAmountError):
                 return "not_available"
     return "not_available"
@@ -619,6 +722,7 @@ def generate_management_pack(
 ) -> ManagementPackArtifacts:
     """Generate the full Excel, JSON, CSV, Markdown, and HTML management pack."""
 
+    _validate_result_financial_input_policies(stock_result, workorder_result)
     currency_policy = CurrencyRegistry.resolve(config.output_currency)
     combined_exceptions = pd.concat(
         [stock_result.all_exceptions, workorder_result.all_exceptions],
@@ -655,7 +759,18 @@ def generate_management_pack(
     top_control_themes = _attach_amount_policy(_top_control_themes(combined_exceptions), currency_policy)
     risk_matrix = _attach_amount_policy(_risk_matrix(combined_exceptions), currency_policy)
     high_risk = _high_risk_exceptions(combined_exceptions) if not combined_exceptions.empty else pd.DataFrame()
-    data_quality_warnings = issues_to_frame(validate_input_directory(input_path))
+    data_quality_warnings = pd.concat(
+        [
+            issues_to_frame(validate_input_directory(input_path)),
+            issues_to_frame(
+                _management_pack_financial_input_issues(
+                    [("exceptions", combined_exceptions), ("wip_aging", wip_aging)],
+                ),
+            ),
+        ],
+        ignore_index=True,
+        sort=False,
+    )
 
     sheets = {
         "Executive Summary": executive_summary,
@@ -716,6 +831,7 @@ def generate_management_pack(
         "stock_gl_summary": frame_to_records(stock_result.summary),
         "workorder_summary": frame_to_records(workorder_result.summary),
         "wip_aging": frame_to_records(wip_aging),
+        "data_quality_warnings": frame_to_records(data_quality_warnings),
         "top_exceptions": frame_to_records(combined_exceptions.sort_values("risk_score", ascending=False).head(25))
         if not combined_exceptions.empty and "risk_score" in combined_exceptions.columns
         else [],

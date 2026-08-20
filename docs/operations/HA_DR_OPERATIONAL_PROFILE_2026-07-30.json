@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "profile_id": "postgres-single-host-sync-standby-v1",
+  "status": "partial",
+  "source_report": "docs/execution/HA_DR_REPEATED_DOCKER_DRILL_2026-07-30.json",
+  "targets": {
+    "rpo_transactions": 0,
+    "failover_rto_seconds": 60.0,
+    "failback_rto_seconds": 60.0
+  },
+  "observed": {
+    "run_count": 3,
+    "zero_loss_runs": 3,
+    "failover_rto_max_seconds": 11.117,
+    "failback_rto_max_seconds": 0.958,
+    "failure_domains": 1
+  },
+  "verification": {
+    "independent_failure_domains": false,
+    "quorum_or_witness": false,
+    "automatic_failover": false,
+    "backup_restore_integrity": true,
+    "repeated_integrity": true,
+    "rpo_rto_observed": true,
+    "production_slo": false
+  },
+  "runbook": [
+    "Start two labelled PostgreSQL nodes with synchronous remote_apply.",
+    "Write and acknowledge the sentinel sequence before the controlled partition.",
+    "Fence the inspected writer identity before promoting the standby.",
+    "Verify acknowledged sequence continuity and measured failover RTO.",
+    "Re-seed the former primary, rejoin it read-only, fence the current writer, and measure failback.",
+    "Remove every labelled container, volume, network, and temporary artifact."
+  ],
+  "limitations": [
+    "single_host_not_host_loss",
+    "no_cross_zone_or_cross_region",
+    "manual_controller_not_automatic_failover",
+    "no_quorum_or_witness",
+    "synthetic_data_and_key_only",
+    "three_runs_not_production_slo",
+    "no_enterprise_ready_claim"
+  ]
+}

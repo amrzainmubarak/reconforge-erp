@@ -6,10 +6,17 @@ from collections.abc import Callable, Iterable
 from threading import Event
 from typing import Any
 
-from reconforge.infrastructure.postgres import PostgresTenantBoundary
+from reconforge.infrastructure.postgres import (
+    PostgresTenantBoundary,
+    validate_legal_entity_id,
+    validate_organization_id,
+    validate_tenant_id,
+    validate_workspace_id,
+)
 from reconforge.infrastructure.postgres_outbox import PostgresOutboxEvent, PostgresOutboxRepository
 from reconforge.platform.outbox import OutboxProcessResult
 from reconforge.workers.outbox import OutboxWorkerSettings, WorkerRunSummary
+from reconforge.workers.policy import require_service_worker_policy
 
 
 class PostgresOutboxWorkerError(RuntimeError):
@@ -32,17 +39,97 @@ class PostgresOutboxWorker:
         self.publisher = publisher
         self.settings = settings
 
+    def _authorize_scope(
+        self,
+        tenant_id: str,
+        *,
+        workspace_id: str | None = None,
+        organization_id: str | None = None,
+        legal_entity_id: str | None = None,
+    ) -> None:
+        require_service_worker_policy(
+            tenant_id=tenant_id,
+            worker_id=self.settings.worker_id,
+            actor_id=self.settings.audit_actor_id,
+            policy_context_supplier=self.settings.policy_context_supplier,
+            policy_context_scope_supplier=self.settings.policy_context_scope_supplier,
+            policy_context_hierarchy_supplier=self.settings.policy_context_hierarchy_supplier,
+            workspace_id=workspace_id,
+            organization_id=organization_id,
+            entity_id=legal_entity_id,
+            policy_permission=self.settings.policy_permission,
+            surface="postgres-outbox.worker.claim",
+            error_factory=PostgresOutboxWorkerError,
+        )
+
+    def _authorize_tenant(self, tenant_id: str) -> None:
+        """Backward-compatible tenant-lane policy entry point."""
+
+        self._authorize_scope(tenant_id)
+
     def _publish(self, event: PostgresOutboxEvent) -> None:
         if callable(self.publisher):
             self.publisher(event)
         else:
             self.publisher.publish(event)
 
-    def _tenant_ids(self) -> list[str]:
+    def _tenant_ids(self) -> tuple[str, ...]:
         try:
-            return sorted(str(tenant_id).strip() for tenant_id in self.tenant_supplier())
+            tenant_ids = tuple(sorted({validate_tenant_id(value) for value in self.tenant_supplier()}))
         except Exception as exc:
             raise PostgresOutboxWorkerError("Unable to enumerate PostgreSQL outbox tenants.") from exc
+        if len(tenant_ids) > self.settings.max_tenants:
+            raise PostgresOutboxWorkerError("Outbox tenant enumeration exceeds its configured bound.")
+        return tenant_ids
+
+    def _lanes(self) -> tuple[tuple[str, str | None, str | None, str | None], ...]:
+        """Return deterministic tenant hierarchy lanes for one polling cycle."""
+
+        if self.settings.scope_supplier is None:
+            return tuple((tenant_id, None, None, None) for tenant_id in self._tenant_ids())
+        try:
+            lanes: set[tuple[str, str | None, str | None, str | None]] = set()
+            for raw_lane in self.settings.scope_supplier():
+                if not isinstance(raw_lane, tuple) or len(raw_lane) != 4:
+                    raise PostgresOutboxWorkerError(
+                        "Outbox scope supplier must return (tenant, workspace, organization, legal_entity) tuples."
+                    )
+                tenant_id = validate_tenant_id(raw_lane[0])
+                workspace_id = validate_workspace_id(str(raw_lane[1]).strip() if raw_lane[1] is not None else None)
+                organization_id = validate_organization_id(
+                    str(raw_lane[2]).strip() if raw_lane[2] is not None else None
+                )
+                legal_entity_id = validate_legal_entity_id(
+                    str(raw_lane[3]).strip() if raw_lane[3] is not None else None
+                )
+                if legal_entity_id is not None and organization_id is None:
+                    raise PostgresOutboxWorkerError("Outbox legal-entity scope requires organization scope.")
+                lanes.add((tenant_id, workspace_id, organization_id, legal_entity_id))
+            if len({tenant for tenant, _, _, _ in lanes}) > self.settings.max_tenants:
+                raise PostgresOutboxWorkerError("Outbox tenant enumeration exceeds its configured bound.")
+            return tuple(sorted(lanes, key=lambda lane: tuple(value or "" for value in lane)))
+        except PostgresOutboxWorkerError:
+            raise
+        except Exception as exc:
+            raise PostgresOutboxWorkerError("Unable to enumerate PostgreSQL outbox scope lanes.") from exc
+
+    @staticmethod
+    def _assert_event_scope(
+        event: PostgresOutboxEvent,
+        *,
+        workspace_id: str | None,
+        organization_id: str | None,
+        legal_entity_id: str | None,
+    ) -> None:
+        """Fail closed if a scoped lane receives an event outside that lane."""
+
+        expected = (workspace_id, organization_id, legal_entity_id)
+        actual = (event.workspace_id, event.organization_id, event.legal_entity_id)
+        if any(
+            expected_value is not None and expected_value != actual_value
+            for expected_value, actual_value in zip(expected, actual, strict=True)
+        ):
+            raise PostgresOutboxWorkerError("PostgreSQL outbox event scope does not match its worker lane.")
 
     def process_once(self) -> OutboxProcessResult:
         """Claim and deliver one bounded batch per configured tenant."""
@@ -51,23 +138,61 @@ class PostgresOutboxWorker:
         published_count = 0
         failed_count = 0
         dead_lettered_count = 0
-        for tenant_id in self._tenant_ids():
+        for tenant_id, workspace_id, organization_id, legal_entity_id in self._lanes():
             try:
-                with PostgresTenantBoundary(self.connection_factory).transaction(tenant_id) as connection:
+                self._authorize_scope(
+                    tenant_id,
+                    workspace_id=workspace_id,
+                    organization_id=organization_id,
+                    legal_entity_id=legal_entity_id,
+                )
+                with PostgresTenantBoundary(self.connection_factory).transaction(
+                    tenant_id,
+                    organization_id=organization_id,
+                    workspace_id=workspace_id,
+                    legal_entity_id=legal_entity_id,
+                ) as connection:
                     events = PostgresOutboxRepository(connection).claim_pending(
                         tenant_id=tenant_id,
                         worker_id=self.settings.worker_id,
                         limit=self.settings.batch_size,
                         max_attempts=self.settings.max_attempts,
                         lease_seconds=self.settings.lease_seconds,
+                        workspace_id=workspace_id,
+                        organization_id=organization_id,
+                        legal_entity_id=legal_entity_id,
                     )
                 claimed_count += len(events)
                 for event in events:
+                    # Re-evaluate the central service-account decision at the
+                    # last safe point before the publisher side effect.  A
+                    # lane-level decision protects the claim transaction,
+                    # but a revocation can arrive while a batch is being
+                    # delivered.  Failing before publish leaves the leased
+                    # row unacknowledged so normal lease recovery can retry it
+                    # after an explicitly authorized worker resumes.
+                    self._authorize_scope(
+                        tenant_id,
+                        workspace_id=workspace_id,
+                        organization_id=organization_id,
+                        legal_entity_id=legal_entity_id,
+                    )
+                    self._assert_event_scope(
+                        event,
+                        workspace_id=workspace_id,
+                        organization_id=organization_id,
+                        legal_entity_id=legal_entity_id,
+                    )
                     try:
                         self._publish(event)
                     except Exception as exc:  # noqa: BLE001 - publisher failures become retry state.
                         failed_count += 1
-                        with PostgresTenantBoundary(self.connection_factory).transaction(tenant_id) as connection:
+                        with PostgresTenantBoundary(self.connection_factory).transaction(
+                            tenant_id,
+                            organization_id=organization_id,
+                            workspace_id=workspace_id,
+                            legal_entity_id=legal_entity_id,
+                        ) as connection:
                             dead_lettered = PostgresOutboxRepository(connection).mark_failed(
                                 tenant_id=tenant_id,
                                 event_id=event.id,
@@ -78,7 +203,12 @@ class PostgresOutboxWorker:
                             )
                         dead_lettered_count += int(dead_lettered)
                     else:
-                        with PostgresTenantBoundary(self.connection_factory).transaction(tenant_id) as connection:
+                        with PostgresTenantBoundary(self.connection_factory).transaction(
+                            tenant_id,
+                            organization_id=organization_id,
+                            workspace_id=workspace_id,
+                            legal_entity_id=legal_entity_id,
+                        ) as connection:
                             PostgresOutboxRepository(connection).mark_published(
                                 tenant_id=tenant_id,
                                 event_id=event.id,

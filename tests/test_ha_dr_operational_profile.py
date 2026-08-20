@@ -1,0 +1,67 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import jsonschema
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_ha_dr_operational_profile_is_closed_and_consistent_with_repeated_report() -> None:
+    profile = json.loads(
+        (ROOT / "docs/operations/HA_DR_OPERATIONAL_PROFILE_2026-07-30.json").read_text(encoding="utf-8")
+    )
+    schema = json.loads(
+        (ROOT / "docs/schemas/ha_dr_operational_profile.schema.json").read_text(encoding="utf-8")
+    )
+    jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker()).validate(profile)
+    report = json.loads((ROOT / profile["source_report"]).read_text(encoding="utf-8"))
+    summary = report["summary"]
+    assert profile["status"] == "partial"
+    assert profile["observed"]["run_count"] == summary["run_count"]
+    assert profile["observed"]["zero_loss_runs"] == summary["zero_acknowledged_transaction_loss_runs"]
+    assert profile["observed"]["failover_rto_max_seconds"] == summary["failover_rto_max_seconds"]
+    assert profile["observed"]["failback_rto_max_seconds"] == summary["failback_rto_max_seconds"]
+    assert profile["observed"]["failure_domains"] == report["infrastructure"]["failure_domains_per_run"]
+    assert profile["targets"]["rpo_transactions"] == 0
+    assert profile["observed"]["failover_rto_max_seconds"] <= profile["targets"]["failover_rto_seconds"]
+    assert profile["observed"]["failback_rto_max_seconds"] <= profile["targets"]["failback_rto_seconds"]
+    assert set(profile["limitations"]) == set(report["limitations"])
+    assert profile["verification"] == {
+        "independent_failure_domains": False,
+        "quorum_or_witness": False,
+        "automatic_failover": False,
+        "backup_restore_integrity": True,
+        "repeated_integrity": True,
+        "rpo_rto_observed": True,
+        "production_slo": False,
+    }
+
+
+def test_verified_profile_cannot_bypass_independent_ha_dr_gates() -> None:
+    profile = json.loads(
+        (ROOT / "docs/operations/HA_DR_OPERATIONAL_PROFILE_2026-07-30.json").read_text(encoding="utf-8")
+    )
+    schema = json.loads(
+        (ROOT / "docs/schemas/ha_dr_operational_profile.schema.json").read_text(encoding="utf-8")
+    )
+    profile["status"] = "verified"
+    errors = list(jsonschema.Draft202012Validator(schema).iter_errors(profile))
+    assert errors
+    assert any(error.json_path.endswith("verification.independent_failure_domains") for error in errors)
+
+
+def test_verified_profile_requires_multiple_observed_failure_domains() -> None:
+    profile = json.loads(
+        (ROOT / "docs/operations/HA_DR_OPERATIONAL_PROFILE_2026-07-30.json").read_text(encoding="utf-8")
+    )
+    schema = json.loads(
+        (ROOT / "docs/schemas/ha_dr_operational_profile.schema.json").read_text(encoding="utf-8")
+    )
+    profile["status"] = "verified"
+    profile["observed"]["failure_domains"] = 1
+    profile["verification"] = {key: True for key in profile["verification"]}
+    errors = list(jsonschema.Draft202012Validator(schema).iter_errors(profile))
+    assert errors
+    assert any(error.json_path.endswith("observed.failure_domains") for error in errors)

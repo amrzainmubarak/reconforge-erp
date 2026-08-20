@@ -9,9 +9,15 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict
 
-from reconforge.api.dependencies import get_local_db, require_any_permission, require_permission
+from reconforge.api.dependencies import (
+    enforce_server_scoped_permission,
+    get_local_db,
+    require_any_permission,
+    require_permission,
+)
 from reconforge.api.errors import APIError
 from reconforge.api.server_close import execute_postgres_close, server_close_enabled
+from reconforge.api.server_identity import request_execution_scope
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.infrastructure.postgres_close import POSTGRES_DEFAULT_CLOSE_TASKS, PostgresCloseRepository
@@ -96,6 +102,13 @@ def period_init(
 
     if server_close_enabled(request):
         _server_workspace(payload.workspace)
+        scope = request_execution_scope(request)
+        enforce_server_scoped_permission(
+            request,
+            permission="close.manage",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
         if not payload.fiscal_period_id.strip() or not payload.organization_code.strip():
             raise APIError(
                 status_code=400,
@@ -197,6 +210,13 @@ def task_status(
     """Update a close task status in the configured persistence boundary."""
 
     if server_close_enabled(request):
+        scope = request_execution_scope(request)
+        enforce_server_scoped_permission(
+            request,
+            permission="close.manage",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
         task = execute_postgres_close(
             request,
             lambda repository, tenant: repository.set_task_status(
@@ -264,6 +284,13 @@ def lock_period(
     """Lock a close period in the configured close-control boundary."""
 
     if server_close_enabled(request):
+        scope = request_execution_scope(request)
+        enforce_server_scoped_permission(
+            request,
+            permission="close.manage",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
         period = execute_postgres_close(
             request,
             lambda repository, tenant: repository.set_period_status(
@@ -298,6 +325,13 @@ def reopen_period(
     """Reopen a close period in the configured close-control boundary."""
 
     if server_close_enabled(request):
+        scope = request_execution_scope(request)
+        enforce_server_scoped_permission(
+            request,
+            permission="close.manage",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+        )
         period = execute_postgres_close(
             request,
             lambda repository, tenant: repository.set_period_status(

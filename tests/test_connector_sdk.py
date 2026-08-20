@@ -1,13 +1,60 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
-from reconforge.connectors.conformance import verify_read_only_connector
+from reconforge.connectors import (
+    BANK_STATEMENT_CAMT053_MANIFEST,
+    DATABASE_REFERENCE_MANIFEST,
+    ERP_NEXT_MANIFEST,
+    ERP_NEXT_PAYMENT_ENTRY_MANIFEST,
+    ERP_REFERENCE_MANIFEST,
+    OBJECT_REFERENCE_MANIFEST,
+    PAYMENT_STATEMENT_MANIFEST,
+    REFERENCE_REST_MANIFEST,
+    SFTP_REFERENCE_MANIFEST,
+    WORLD_BANK_PUBLIC_MANIFEST,
+)
+from reconforge.connectors.bank_statement_camt053 import bank_statement_camt053_registration
+from reconforge.connectors.conformance import (
+    verify_manifest_portfolio,
+    verify_network_connector,
+    verify_network_retry_failure_injection,
+    verify_read_only_connector,
+)
+from reconforge.connectors.erpnext_payment_reference import erpnext_payment_entry_registration
+from reconforge.connectors.erpnext_reference import erpnext_registration
 from reconforge.connectors.manifest import ConnectorCapability
+from reconforge.connectors.network import NetworkConnectorExecutor, NetworkConnectorRegistration, NetworkResponse
 from reconforge.plugins.registry import get_connector, list_connectors
+
+
+@dataclass
+class _PortfolioSecrets:
+    def resolve(self, reference: str) -> bytes:
+        assert reference == "vault://synthetic/connector"
+        return b"synthetic-connector-secret"
+
+
+@dataclass
+class _PortfolioTransport:
+    calls: int = 0
+
+    def get(
+        self,
+        endpoint: str,
+        *,
+        headers: dict[str, str],
+        timeout_seconds: int,
+        maximum_response_bytes: int,
+    ) -> NetworkResponse:
+        del endpoint, headers, timeout_seconds, maximum_response_bytes
+        self.calls += 1
+        return NetworkResponse(status=200, body=b"{}")
 
 
 def test_builtin_registry_is_static_allowlist_with_truthful_kinds() -> None:
@@ -40,6 +87,86 @@ def test_manifest_digest_is_deterministic_and_sensitive() -> None:
     assert manifest.digest == manifest.digest
     changed = manifest.model_copy(update={"version": "1.0.1"})
     assert changed.digest != manifest.digest
+
+
+def test_reference_manifest_portfolio_is_read_only_and_governed() -> None:
+    assert verify_manifest_portfolio(
+        (
+            REFERENCE_REST_MANIFEST,
+            SFTP_REFERENCE_MANIFEST,
+            OBJECT_REFERENCE_MANIFEST,
+            DATABASE_REFERENCE_MANIFEST,
+            PAYMENT_STATEMENT_MANIFEST,
+            ERP_REFERENCE_MANIFEST,
+            WORLD_BANK_PUBLIC_MANIFEST,
+            BANK_STATEMENT_CAMT053_MANIFEST,
+            ERP_NEXT_MANIFEST,
+            ERP_NEXT_PAYMENT_ENTRY_MANIFEST,
+        )
+    ) == (
+        "bank-statement-camt053-readonly",
+        "erpnext-gl-entry-readonly",
+        "erpnext-payment-entry-readonly",
+        "reference-database-readonly",
+        "reference-erp-readonly",
+        "reference-object-storage-readonly",
+        "reference-payment-statement-readonly",
+        "reference-rest-readonly",
+        "reference-sftp-readonly",
+        "world-bank-public-readonly",
+    )
+
+
+@pytest.mark.parametrize(
+    ("registration_factory", "cursor"),
+    [
+        (bank_statement_camt053_registration, None),
+        (erpnext_registration, "7"),
+        (erpnext_payment_entry_registration, "7"),
+    ],
+)
+def test_provider_network_manifest_portfolio_replays_through_common_conformance(
+    registration_factory: Callable[..., NetworkConnectorRegistration], cursor: str | None
+) -> None:
+    transport = _PortfolioTransport()
+    registration = registration_factory(credential_reference="vault://synthetic/connector")
+    result = verify_network_connector(
+        registration,
+        NetworkConnectorExecutor(transport, secret_resolver=_PortfolioSecrets()),
+        idempotency_key="portfolio-replay-1",
+        cursor=cursor,
+    )
+
+    assert result.connector_id in {
+        "bank-statement-camt053-readonly",
+        "erpnext-gl-entry-readonly",
+        "erpnext-payment-entry-readonly",
+    }
+    assert result.checks == (
+        "manifest_valid",
+        "read_only",
+        "exact_https_egress",
+        "secret_reference",
+        "rate_limit_declared",
+        "bounded_retry_declared",
+        "cursor_contract",
+        "idempotent_replay",
+        "synthetic_sandbox",
+    )
+    assert transport.calls == 2
+
+    retry_result = verify_network_retry_failure_injection(
+        registration,
+        lambda retry_transport: NetworkConnectorExecutor(retry_transport, secret_resolver=_PortfolioSecrets()),
+        transient_statuses=(503, 429),
+    )
+    assert retry_result.checks == (
+        "manifest_valid",
+        "synthetic_failure_injection",
+        "bounded_transient_retry",
+        "successful_recovery",
+        "response_body_isolated",
+    )
 
 
 def test_manifest_v1_rejects_write_capability() -> None:

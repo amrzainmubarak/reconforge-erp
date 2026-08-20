@@ -16,7 +16,8 @@
     "surfaces",
     "direct_tabular_parser_allowlist",
     "direct_json_parser_allowlist",
-    "direct_yaml_parser_allowlist"
+    "direct_yaml_parser_allowlist",
+    "direct_xml_parser_allowlist"
   ],
   "properties": {
     "schema_version": {"const": 1},
@@ -28,10 +29,13 @@
     "structured_document_policy": {"$ref": "#/$defs/structured_document_policy"},
     "persisted_json_policies": {
       "type": "array",
-      "prefixItems": [{"$ref": "#/$defs/financial_idempotency_json_policy"}],
+      "prefixItems": [
+        {"$ref": "#/$defs/financial_idempotency_json_policy"},
+        {"$ref": "#/$defs/sqlite_retail_settlement_json_policy"}
+      ],
       "items": false,
       "minItems": 1,
-      "maxItems": 1
+      "maxItems": 2
     },
     "surfaces": {
       "type": "array",
@@ -52,6 +56,11 @@
       "type": "array",
       "minItems": 1,
       "items": {"$ref": "#/$defs/yaml_parser_allowlist_entry"}
+    },
+    "direct_xml_parser_allowlist": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/xml_parser_allowlist_entry"}
     }
   },
   "$defs": {
@@ -165,6 +174,40 @@
         "canonical_producer_text": {"const": true}
       }
     },
+    "sqlite_retail_settlement_json_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "implementation",
+        "schema_id",
+        "schema_path",
+        "max_utf8_bytes",
+        "max_nodes",
+        "max_depth",
+        "max_collection_items",
+        "max_scalar_characters",
+        "unique_keys",
+        "object_root",
+        "integer_number_tokens_only",
+        "canonical_producer_text"
+      ],
+      "properties": {
+        "id": {"const": "sqlite-retail-settlement-json-v1"},
+        "implementation": {"const": "reconforge/io/persisted.py"},
+        "schema_id": {"const": "retail-settlement-report-object-v1"},
+        "schema_path": {"const": "docs/schemas/retail_settlement_report.schema.json"},
+        "max_utf8_bytes": {"type": "integer", "minimum": 1},
+        "max_nodes": {"type": "integer", "minimum": 1},
+        "max_depth": {"type": "integer", "minimum": 1},
+        "max_collection_items": {"type": "integer", "minimum": 1},
+        "max_scalar_characters": {"type": "integer", "minimum": 1},
+        "unique_keys": {"const": true},
+        "object_root": {"const": true},
+        "integer_number_tokens_only": {"const": true},
+        "canonical_producer_text": {"const": true}
+      }
+    },
     "surface": {
       "type": "object",
       "additionalProperties": false,
@@ -193,7 +236,7 @@
           "uniqueItems": true,
           "items": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$"}
         },
-        "trust": {"enum": ["untrusted-local", "generated-local", "internal-persisted"]},
+        "trust": {"enum": ["untrusted-local", "untrusted-network", "generated-local", "internal-persisted"]},
         "entrypoints": {
           "type": "array",
           "minItems": 1,
@@ -204,13 +247,13 @@
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": {"enum": ["csv", "xls", "xlsx", "json", "yaml", "sqlite", "text"]}
+          "items": {"enum": ["csv", "xls", "xlsx", "json", "yaml", "xml", "sqlite", "text"]}
         },
         "parser_families": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": {"enum": ["csv-stdlib", "duckdb", "json-stdlib", "openpyxl", "pandas", "pyyaml", "sqlite"]}
+          "items": {"enum": ["csv-stdlib", "defusedxml", "duckdb", "json-stdlib", "openpyxl", "pandas", "pyyaml", "sqlite"]}
         },
         "policy_coverage": {"enum": ["complete", "partial", "none", "not-applicable"]},
         "status": {"enum": ["bounded", "partial", "planned", "excluded"]},
@@ -270,6 +313,18 @@
       "properties": {
         "path": {"$ref": "#/$defs/repository_path"},
         "parser": {"enum": ["json.load", "json.loads"]},
+        "call_count": {"type": "integer", "minimum": 1, "maximum": 20},
+        "surface_id": {"type": "string", "pattern": "^FI-[0-9]{3}$"},
+        "rationale": {"type": "string", "minLength": 20, "maxLength": 300}
+      }
+    },
+    "xml_parser_allowlist_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "parser", "call_count", "surface_id", "rationale"],
+      "properties": {
+        "path": {"$ref": "#/$defs/repository_path"},
+        "parser": {"enum": ["defusedxml.ElementTree.fromstring"]},
         "call_count": {"type": "integer", "minimum": 1, "maximum": 20},
         "surface_id": {"type": "string", "pattern": "^FI-[0-9]{3}$"},
         "rationale": {"type": "string", "minLength": 20, "maxLength": 300}

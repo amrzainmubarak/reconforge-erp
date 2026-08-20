@@ -18,6 +18,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / ".github" / "scripts" / "build_release_manifest.py"
 NORMALIZE_SCRIPT = ROOT / ".github" / "scripts" / "normalize_sdist.py"
+FREEZE_SCRIPT = ROOT / ".github" / "scripts" / "check_publish_freeze.py"
 SCHEMA = json.loads((ROOT / "docs" / "schemas" / "release_manifest.schema.json").read_text(encoding="utf-8"))
 WORKFLOW = ROOT / ".github" / "workflows" / "release.yml"
 VERSION = "0.7.0"
@@ -343,6 +344,57 @@ def test_release_workflow_fails_closed_on_source_attestation_and_runner_identity
     assert "provenance: false" in raw
     assert "sbom: false" in raw
     assert "candidate-${{ github.sha }}" in raw
+
+
+def test_release_workflow_enforces_the_active_publication_freeze() -> None:
+    raw = WORKFLOW.read_text(encoding="utf-8")
+    assert "check_publish_freeze.py" in raw
+    assert "--decision-id D-485" in raw
+
+
+def _run_freeze_check(decisions: Path, decision_id: str = "D-485") -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [
+            sys.executable,
+            str(FREEZE_SCRIPT),
+            "--decisions",
+            str(decisions),
+            "--decision-id",
+            decision_id,
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
+def test_publication_freeze_guard_is_fail_closed_until_explicitly_closed(tmp_path: Path) -> None:
+    decisions = tmp_path / "DECISIONS.md"
+    decisions.write_text("### D-485: defer publication\n- **Decision**: hold\n", encoding="utf-8")
+    active = _run_freeze_check(decisions)
+    assert active.returncode == 1
+    assert "Publication freeze is active" in active.stdout
+
+    decisions.write_text(
+        "### D-485: defer publication\n- **Status**: closed\n- **Decision**: hold\n",
+        encoding="utf-8",
+    )
+    closed = _run_freeze_check(decisions)
+    assert closed.returncode == 0
+    assert "explicitly closed" in closed.stdout
+
+
+def test_publication_freeze_guard_ignores_missing_decision(tmp_path: Path) -> None:
+    result = _run_freeze_check(tmp_path / "missing.md")
+    assert result.returncode == 1
+    assert "Publication freeze is active" in result.stdout
+
+
+def test_publication_freeze_guard_is_fail_closed_without_decisions_file(tmp_path: Path) -> None:
+    result = _run_freeze_check(tmp_path / "does-not-exist.md")
+    assert result.returncode == 1
+    assert "Publication freeze is active" in result.stdout
 
 
 def test_release_build_tools_are_exact_and_hash_locked() -> None:

@@ -10,7 +10,7 @@ from decimal import Decimal
 from itertools import combinations
 from typing import Literal
 
-GroupedMatchMode = Literal["one-to-many", "many-to-one", "many-to-many"]
+GroupedMatchMode = Literal["one-to-many", "many-to-one", "many-to-many", "partial-settlement", "portfolio"]
 GroupedNettingMode = Literal["gross", "net"]
 GroupedMatchStatus = Literal["matched", "unmatched", "ambiguous"]
 GroupedMatchCandidateSet = tuple[tuple[str, ...], tuple[str, ...]]
@@ -49,9 +49,10 @@ class GroupedMatchPolicy:
     max_right_cardinality: int = 4
     max_search_evaluations: int = 25_000
     netting_mode: GroupedNettingMode = "gross"
+    portfolio_allow_partial_settlement: bool = False
 
     def __post_init__(self) -> None:
-        if self.mode not in {"one-to-many", "many-to-one", "many-to-many"}:
+        if self.mode not in {"one-to-many", "many-to-one", "many-to-many", "partial-settlement", "portfolio"}:
             raise GroupedMatchingError("Grouped-match mode is not supported.")
         if not isinstance(self.amount_tolerance, Decimal) or not self.amount_tolerance.is_finite():
             raise GroupedMatchingError("Grouped-match tolerance must be a finite Decimal.")
@@ -70,6 +71,10 @@ class GroupedMatchPolicy:
             raise GroupedMatchingError("Many-to-many matching requires cardinality of at least two on each side.")
         if self.netting_mode not in {"gross", "net"}:
             raise GroupedMatchingError("Grouped-match netting mode is not supported.")
+        if not isinstance(self.portfolio_allow_partial_settlement, bool):
+            raise GroupedMatchingError("Portfolio partial-settlement flag must be boolean.")
+        if self.mode != "portfolio" and self.portfolio_allow_partial_settlement:
+            raise GroupedMatchingError("Portfolio partial-settlement is valid only in portfolio mode.")
 
 
 @dataclass(frozen=True)
@@ -95,6 +100,22 @@ class GroupedMatchDecision:
     tie_break: str
     ambiguous_candidate_sets: tuple[GroupedMatchCandidateSet, ...]
     decision_digest: str
+    settled_amount: Decimal = Decimal("0")
+    left_residual: Decimal = Decimal("0")
+    right_residual: Decimal = Decimal("0")
+
+
+@dataclass(frozen=True)
+class GroupedMatchPortfolioResult:
+    """Multiple non-overlapping grouped decisions with bounded replay evidence."""
+
+    status: GroupedMatchStatus
+    decisions: tuple[GroupedMatchDecision, ...]
+    candidate_count: int
+    search_evaluations: int
+    unmatched_left_record_ids: tuple[str, ...]
+    unmatched_right_record_ids: tuple[str, ...]
+    portfolio_digest: str
 
 
 @dataclass(frozen=True)
@@ -109,10 +130,16 @@ class _CandidateGroup:
     right_net_total: Decimal
     difference: Decimal
     date_span: int
+    settled_amount: Decimal
+    left_residual: Decimal
+    right_residual: Decimal
+    partial: bool
 
     @property
-    def business_cost(self) -> tuple[Decimal, int, int]:
-        return (self.difference, len(self.left) + len(self.right), self.date_span)
+    def business_cost(self) -> tuple[Decimal, Decimal, Decimal, int]:
+        if self.partial:
+            return (Decimal("0"), -self.settled_amount, self.difference, self.date_span)
+        return (Decimal("-1"), self.difference, Decimal(len(self.left) + len(self.right)), self.date_span)
 
     @property
     def stable_key(self) -> tuple[tuple[str, ...], tuple[str, ...]]:
@@ -127,6 +154,10 @@ def _cardinalities(policy: GroupedMatchPolicy) -> tuple[range, range]:
         return range(1, 2), range(2, policy.max_right_cardinality + 1)
     if policy.mode == "many-to-one":
         return range(2, policy.max_left_cardinality + 1), range(1, 2)
+    if policy.mode == "partial-settlement":
+        return range(1, policy.max_left_cardinality + 1), range(1, policy.max_right_cardinality + 1)
+    if policy.mode == "portfolio":
+        return range(1, policy.max_left_cardinality + 1), range(1, policy.max_right_cardinality + 1)
     return (
         range(2, policy.max_left_cardinality + 1),
         range(2, policy.max_right_cardinality + 1),
@@ -198,7 +229,15 @@ def find_grouped_match(
                     left_total, left_fee_total, left_net_total = _aggregate_totals(left_group, policy.netting_mode)
                     right_total, right_fee_total, right_net_total = _aggregate_totals(right_group, policy.netting_mode)
                     difference = abs(left_net_total - right_net_total)
-                    if difference <= policy.amount_tolerance:
+                    exact = difference <= policy.amount_tolerance
+                    partial = (
+                        policy.mode == "partial-settlement"
+                        and not exact
+                        and left_net_total > 0
+                        and right_net_total > 0
+                    )
+                    if exact or partial:
+                        settled_amount = min(left_net_total, right_net_total)
                         candidates.append(
                             _CandidateGroup(
                                 left=left_group,
@@ -211,6 +250,10 @@ def find_grouped_match(
                                 right_net_total=right_net_total,
                                 difference=difference,
                                 date_span=date_span,
+                                settled_amount=settled_amount,
+                                left_residual=left_net_total - settled_amount,
+                                right_residual=right_net_total - settled_amount,
+                                partial=partial,
                             )
                         )
     if not candidates:
@@ -247,18 +290,297 @@ def find_grouped_match(
             ambiguous_candidates=tied_candidates,
         )
     equivalent_count = sum(candidate.business_cost == selected.business_cost for candidate in candidates)
+    reason_code = "PARTIAL_SETTLEMENT_PROPOSAL" if selected.partial else "GROUP_SUM_CONSTRAINT_SATISFIED"
+    explanation = (
+        "Selected a bounded partial settlement proposal; residual balances remain visible for later settlement."
+        if selected.partial
+        else "Selected the lowest-cost bounded group; "
+        f"stable record identities broke a tie across {equivalent_count} equivalent candidate(s)."
+    )
     return _decision(
         status="matched",
         policy=policy,
         candidate=selected,
         candidate_count=len(candidates),
         evaluations=evaluations,
-        reason_code="GROUP_SUM_CONSTRAINT_SATISFIED",
-        explanation=(
-            "Selected the lowest-cost bounded group; "
-            f"stable record identities broke a tie across {equivalent_count} equivalent candidate(s)."
-        ),
+        reason_code=reason_code,
+        explanation=explanation,
         ambiguous_candidates=(),
+    )
+
+
+def _portfolio_candidates(
+    left: tuple[GroupedRecord, ...],
+    right: tuple[GroupedRecord, ...],
+    policy: GroupedMatchPolicy,
+) -> tuple[list[_CandidateGroup], int, bool]:
+    """Enumerate exact and explicitly-enabled partial groups under the portfolio budget."""
+
+    candidates: list[_CandidateGroup] = []
+    evaluations = 0
+    for left_size in range(1, policy.max_left_cardinality + 1):
+        for left_group in combinations(left, left_size):
+            left_currencies = {record.currency for record in left_group}
+            left_partitions = {record.partition_key for record in left_group}
+            if len(left_currencies) != 1 or len(left_partitions) != 1:
+                continue
+            for right_size in range(1, policy.max_right_cardinality + 1):
+                for right_group in combinations(right, right_size):
+                    evaluations += 1
+                    if evaluations > policy.max_search_evaluations:
+                        return candidates, evaluations, True
+                    all_records = left_group + right_group
+                    if {record.currency for record in all_records} != left_currencies:
+                        continue
+                    if {record.partition_key for record in all_records} != left_partitions:
+                        continue
+                    dates = [record.business_date for record in all_records]
+                    date_span = (max(dates) - min(dates)).days
+                    if date_span > policy.date_window_days:
+                        continue
+                    left_total, left_fee_total, left_net_total = _aggregate_totals(left_group, policy.netting_mode)
+                    right_total, right_fee_total, right_net_total = _aggregate_totals(right_group, policy.netting_mode)
+                    difference = abs(left_net_total - right_net_total)
+                    exact = difference <= policy.amount_tolerance
+                    partial = (
+                        policy.portfolio_allow_partial_settlement
+                        and not exact
+                        and left_net_total > 0
+                        and right_net_total > 0
+                    )
+                    if not exact and not partial:
+                        continue
+                    candidates.append(
+                        _CandidateGroup(
+                            left=left_group,
+                            right=right_group,
+                            left_total=left_total,
+                            right_total=right_total,
+                            left_fee_total=left_fee_total,
+                            right_fee_total=right_fee_total,
+                            left_net_total=left_net_total,
+                            right_net_total=right_net_total,
+                            difference=difference,
+                            date_span=date_span,
+                            settled_amount=min(left_net_total, right_net_total),
+                            left_residual=(left_net_total - min(left_net_total, right_net_total)) if partial else Decimal("0"),
+                            right_residual=(right_net_total - min(left_net_total, right_net_total)) if partial else Decimal("0"),
+                            partial=partial,
+                        )
+                    )
+    return candidates, evaluations, False
+
+
+def _portfolio_digest(
+    *,
+    status: GroupedMatchStatus,
+    decisions: tuple[GroupedMatchDecision, ...],
+    unmatched_left: tuple[str, ...],
+    unmatched_right: tuple[str, ...],
+    candidate_count: int,
+    search_evaluations: int,
+) -> str:
+    return _digest(
+        {
+            "candidate_count": candidate_count,
+            "decisions": [decision.decision_digest for decision in decisions],
+            "search_evaluations": search_evaluations,
+            "status": status,
+            "unmatched_left_record_ids": unmatched_left,
+            "unmatched_right_record_ids": unmatched_right,
+        }
+    )
+
+
+def find_grouped_match_portfolio(
+    left_records: tuple[GroupedRecord, ...],
+    right_records: tuple[GroupedRecord, ...],
+    policy: GroupedMatchPolicy,
+) -> GroupedMatchPortfolioResult:
+    """Select several disjoint exact groups by maximum covered-record objective.
+
+    The search is bounded by ``max_search_evaluations`` and leaves the whole
+    partition unresolved when generation or selection exceeds that ceiling.
+    """
+
+    if policy.mode != "portfolio":
+        raise GroupedMatchingError("Grouped portfolio matching requires portfolio mode.")
+    left = _canonical_records(left_records)
+    right = _canonical_records(right_records)
+    decisions: tuple[GroupedMatchDecision, ...]
+    candidates, evaluations, over_budget = _portfolio_candidates(left, right, policy)
+    if over_budget:
+        decision = _decision(
+            status="ambiguous",
+            policy=policy,
+            candidate=None,
+            candidate_count=len(candidates),
+            evaluations=evaluations,
+            reason_code="GROUP_PORTFOLIO_SEARCH_BUDGET_EXCEEDED",
+            explanation="Portfolio candidate generation exceeded its deterministic budget; no group was selected.",
+            ambiguous_candidates=(),
+        )
+        decisions = (decision,)
+        return GroupedMatchPortfolioResult(
+            status="ambiguous",
+            decisions=decisions,
+            candidate_count=len(candidates),
+            search_evaluations=evaluations,
+            unmatched_left_record_ids=tuple(record.record_id for record in left),
+            unmatched_right_record_ids=tuple(record.record_id for record in right),
+            portfolio_digest=_portfolio_digest(
+                status="ambiguous",
+                decisions=decisions,
+                unmatched_left=tuple(record.record_id for record in left),
+                unmatched_right=tuple(record.record_id for record in right),
+                candidate_count=len(candidates),
+                search_evaluations=evaluations,
+            ),
+        )
+    if not candidates:
+        decision = _decision(
+            status="unmatched",
+            policy=policy,
+            candidate=None,
+            candidate_count=0,
+            evaluations=evaluations,
+            reason_code="NO_PORTFOLIO_GROUP_SATISFIED_CONSTRAINTS",
+            explanation="No bounded non-overlapping portfolio group satisfied the partition, date, and sum constraints.",
+            ambiguous_candidates=(),
+        )
+        decisions = (decision,)
+        return GroupedMatchPortfolioResult(
+            status="unmatched",
+            decisions=decisions,
+            candidate_count=0,
+            search_evaluations=evaluations,
+            unmatched_left_record_ids=tuple(record.record_id for record in left),
+            unmatched_right_record_ids=tuple(record.record_id for record in right),
+            portfolio_digest=_portfolio_digest(
+                status="unmatched",
+                decisions=decisions,
+                unmatched_left=tuple(record.record_id for record in left),
+                unmatched_right=tuple(record.record_id for record in right),
+                candidate_count=0,
+                search_evaluations=evaluations,
+            ),
+        )
+
+    ordered = tuple(sorted(candidates, key=lambda candidate: candidate.stable_key))
+    best: list[_CandidateGroup] = []
+    best_score: tuple[int, Decimal, Decimal] | None = None
+    equal_optima = 0
+    nodes = 0
+    def visit(position: int, used_left: frozenset[str], used_right: frozenset[str], selected: list[_CandidateGroup]) -> None:
+        nonlocal best, best_score, equal_optima, nodes
+        nodes += 1
+        if nodes > policy.max_search_evaluations:
+            raise GroupedMatchingError("portfolio selection search exceeded its deterministic budget")
+        covered = sum(len(candidate.left) + len(candidate.right) for candidate in selected)
+        cost = sum((candidate.difference for candidate in selected), Decimal("0"))
+        settled = sum((candidate.settled_amount for candidate in selected), Decimal("0"))
+        score = (covered, -cost, settled)
+        if best_score is None or score > best_score:
+            best_score = score
+            best = list(selected)
+            equal_optima = 0
+        elif score == best_score and tuple(candidate.stable_key for candidate in selected) != tuple(
+            candidate.stable_key for candidate in best
+        ):
+            equal_optima += 1
+        for index in range(position, len(ordered)):
+            candidate = ordered[index]
+            if used_left.intersection(candidate.stable_key[0]) or used_right.intersection(candidate.stable_key[1]):
+                continue
+            visit(
+                index + 1,
+                used_left.union(candidate.stable_key[0]),
+                used_right.union(candidate.stable_key[1]),
+                [*selected, candidate],
+            )
+
+    try:
+        visit(0, frozenset(), frozenset(), [])
+    except GroupedMatchingError as exc:
+        decision = _decision(
+            status="ambiguous",
+            policy=policy,
+            candidate=None,
+            candidate_count=len(candidates),
+            evaluations=evaluations + nodes,
+            reason_code="GROUP_PORTFOLIO_SEARCH_BUDGET_EXCEEDED",
+            explanation=str(exc),
+            ambiguous_candidates=(),
+        )
+        decisions = (decision,)
+        return GroupedMatchPortfolioResult(
+            status="ambiguous",
+            decisions=decisions,
+            candidate_count=len(candidates),
+            search_evaluations=evaluations + nodes,
+            unmatched_left_record_ids=tuple(record.record_id for record in left),
+            unmatched_right_record_ids=tuple(record.record_id for record in right),
+            portfolio_digest=_portfolio_digest(
+                status="ambiguous",
+                decisions=decisions,
+                unmatched_left=tuple(record.record_id for record in left),
+                unmatched_right=tuple(record.record_id for record in right),
+                candidate_count=len(candidates),
+                search_evaluations=evaluations + nodes,
+            ),
+        )
+
+    used_left = {record.record_id for candidate in best for record in candidate.left}
+    used_right = {record.record_id for candidate in best for record in candidate.right}
+    unmatched_left = tuple(record.record_id for record in left if record.record_id not in used_left)
+    unmatched_right = tuple(record.record_id for record in right if record.record_id not in used_right)
+    if equal_optima:
+        decision = _decision(
+            status="ambiguous",
+            policy=policy,
+            candidate=None,
+            candidate_count=len(candidates),
+            evaluations=evaluations + nodes,
+            reason_code="GROUP_PORTFOLIO_AMBIGUOUS",
+            explanation="Several maximum-cover non-overlapping portfolios have equal cost; selection remains unresolved.",
+            ambiguous_candidates=tuple(candidate.stable_key for candidate in ordered),
+        )
+        decisions = (decision,)
+        status: GroupedMatchStatus = "ambiguous"
+    else:
+        decisions = tuple(
+            _decision(
+                status="matched",
+                policy=policy,
+                candidate=candidate,
+                candidate_count=len(candidates),
+                evaluations=evaluations + nodes,
+                reason_code=("GROUP_PORTFOLIO_PARTIAL_SETTLEMENT" if candidate.partial else "GROUP_PORTFOLIO_MATCH"),
+                explanation=(
+                    "Selected a bounded partial-settlement portfolio; residual balances remain visible."
+                    if candidate.partial
+                    else "Selected a maximum-cover set of non-overlapping bounded groups."
+                ),
+                ambiguous_candidates=(),
+            )
+            for candidate in sorted(best, key=lambda item: item.stable_key)
+        )
+        status = "matched" if decisions else "unmatched"
+    return GroupedMatchPortfolioResult(
+        status=status,
+        decisions=decisions,
+        candidate_count=len(candidates),
+        search_evaluations=evaluations + nodes,
+        unmatched_left_record_ids=unmatched_left,
+        unmatched_right_record_ids=unmatched_right,
+        portfolio_digest=_portfolio_digest(
+            status=status,
+            decisions=decisions,
+            unmatched_left=unmatched_left,
+            unmatched_right=unmatched_right,
+            candidate_count=len(candidates),
+            search_evaluations=evaluations + nodes,
+        ),
     )
 
 
@@ -283,6 +605,14 @@ def _decision(
     left_net_total = candidate.left_net_total if candidate else Decimal("0")
     right_net_total = candidate.right_net_total if candidate else Decimal("0")
     difference = candidate.difference if candidate else Decimal("0")
+    settled_amount = candidate.settled_amount if candidate else Decimal("0")
+    left_residual = candidate.left_residual if candidate else Decimal("0")
+    right_residual = candidate.right_residual if candidate else Decimal("0")
+    tie_break = (
+        "exact-first-settled-amount-difference-date-span-stable-record-identities-v1"
+        if candidate is not None and candidate.partial
+        else "difference-cardinality-date-span-stable-record-identities-v1"
+    )
     payload = {
         "amount_difference": format(difference, "f"),
         "candidate_count": candidate_count,
@@ -299,6 +629,7 @@ def _decision(
             "max_right_cardinality": policy.max_right_cardinality,
             "max_search_evaluations": policy.max_search_evaluations,
             "netting_mode": policy.netting_mode,
+            "portfolio_allow_partial_settlement": policy.portfolio_allow_partial_settlement,
         },
         "netting_mode": policy.netting_mode,
         "reason_code": reason_code,
@@ -306,9 +637,12 @@ def _decision(
         "right_total": format(right_total, "f"),
         "right_fee_total": format(right_fee_total, "f"),
         "right_net_total": format(right_net_total, "f"),
+        "settled_amount": format(settled_amount, "f"),
+        "left_residual": format(left_residual, "f"),
+        "right_residual": format(right_residual, "f"),
         "search_evaluations": evaluations,
         "status": status,
-        "tie_break": "difference-cardinality-date-span-stable-record-identities-v1",
+        "tie_break": tie_break,
         "ambiguous_candidate_sets": ambiguous_candidates,
     }
     digest = _digest(payload)
@@ -331,7 +665,10 @@ def _decision(
         reason_code=reason_code,
         netting_mode=policy.netting_mode,
         explanation=explanation,
-        tie_break="difference-cardinality-date-span-stable-record-identities-v1",
+        tie_break=tie_break,
         ambiguous_candidate_sets=ambiguous_candidates,
         decision_digest=digest,
+        settled_amount=settled_amount,
+        left_residual=left_residual,
+        right_residual=right_residual,
     )

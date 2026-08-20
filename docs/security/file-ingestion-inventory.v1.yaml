@@ -1,6 +1,6 @@
 schema_version: 1
 inventory_id: reconforge-file-ingestion
-reviewed_on: "2026-08-01"
+reviewed_on: "2026-08-11"
 owner: platform-security
 claim_boundary: >-
   This inventory proves repository-visible parser coverage and bounded controls only. It does not prove
@@ -34,6 +34,19 @@ persisted_json_policies:
     implementation: reconforge/io/persisted.py
     schema_id: financial-idempotency-response-object-v1
     schema_path: docs/schemas/financial_idempotency_response.schema.json
+    max_utf8_bytes: 4194304
+    max_nodes: 100000
+    max_depth: 32
+    max_collection_items: 25000
+    max_scalar_characters: 262144
+    unique_keys: true
+    object_root: true
+    integer_number_tokens_only: true
+    canonical_producer_text: true
+  - id: sqlite-retail-settlement-json-v1
+    implementation: reconforge/io/persisted.py
+    schema_id: retail-settlement-report-object-v1
+    schema_path: docs/schemas/retail_settlement_report.schema.json
     max_utf8_bytes: 4194304
     max_nodes: 100000
     max_depth: 32
@@ -320,7 +333,7 @@ surfaces:
       - "All reconciliation JSONB profiles allow 100000 nodes, depth 32, 25000 items/collection, unique keys, and finite object values. Attributes allow 100000 and the other profiles 262144 characters/scalar. Canonical bytes preserve JSONB fingerprints; corrupt rows fail before matcher use or public return instead of becoming sentinel values."
       - "SQLite matching rules use sqlite-matching-rule-json-v1: 4194304 UTF-8 bytes, 100000 nodes, depth 32, 25000 items/collection, 262144 characters/scalar, unique keys, finite object values, and historical spaced sorted ASCII text. New producers reject binary floats; historical finite floats remain readable."
       - "Tenant-scoped Redis sessions use redis-session-json-v1: 16384 UTF-8 bytes, 16 nodes, depth 2, four fields, and 256 characters/scalar. The closed schema requires string IDs, a lowercase SHA-256 token digest, and explicit UTC expiry; producer rejection precedes client access and corrupt reads do not mutate Redis."
-      - "The public SQLite export has an exact five-field registry: audit metadata and both matching rules reuse their established profiles; legacy summaries use sqlite-legacy-import-summary-json-v1; matching lineage uses sqlite-matching-lineage-json-v1. All use finite unique-key object JSON and explicit 4194304-byte/100000-node/depth-32/25000-item/262144-character ceilings."
+      - "The public SQLite export has a closed registry of JSON fields: audit metadata and both matching rules reuse their established profiles; legacy summaries use sqlite-legacy-import-summary-json-v1; matching lineage uses sqlite-matching-lineage-json-v1; currency-registry snapshots use currency-registry-snapshot-json-v1 with a bounded 1000000-byte/integer-token object profile. All reject malformed values before destination creation and preserve their declared output shapes."
       - "Legacy-summary and matching-lineage producers use their respective contracts. Export preflights every registered row before creating the destination or writing any file, rejects non-text/corrupt values without sentinels, preserves metadata/summary/rule object outputs, and retains lineage_json as its historical string field."
       - Stored values and source artifacts are not authenticated; actor/disclosure authorization, malware quarantine, full business-semantic schemas, and supported-throughput evidence remain outside this structural boundary.
     next_action: Add authenticated producer/source provenance and centralized actor/disclosure authorization, then exercise bounded persisted-state profiles at declared throughput and live-service boundaries.
@@ -504,13 +517,302 @@ surfaces:
     policy_coverage: complete
     status: bounded
     controls: [SEC-C-001, SEC-C-002, SEC-C-004, SEC-C-005]
-    test_evidence: [tests/test_public_financial_evidence.py, tests/test_public_financial_evidence_workflow.py]
+    test_evidence: [tests/test_public_financial_evidence.py, tests/test_public_financial_evidence_workflow.py, tests/test_connector_world_bank_public.py]
     residual_risk_ids: [R-003, R-018]
     limitations:
       - Exact HTTPS hosts, response ceilings, media types, raw hashes, schemas, encodings, and Decimal rules bound the downloaded public snapshots but do not cryptographically authenticate the publisher or prevent an upstream correction from failing the run.
       - The report excludes raw supplier and invoice identifiers, but local disposable downloads remain operator-controlled files and must not be committed or treated as customer or audit evidence.
       - A successful maintainer or automated run is not an external pilot, independent security review, production deployment, certification, or compliance assessment.
     next_action: Obtain three accepted independent operator attestations and a separately scoped human security review without weakening the parser or claim boundaries.
+  - id: FI-024
+    name: Local policy delegation permission records
+    module_ids: [platform.core]
+    trust: generated-local
+    entrypoints:
+      - reconforge/auth/repositories.py::DelegationRepository._row_to_grant
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_delegation_repository.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The JSON value is an internal canonical permission array, not an upload or executable document.
+      - SQLite tenant/workspace scope and immutable triggers are local evidence only; PostgreSQL/RLS and federation remain open.
+    next_action: Add equivalent provider-backed policy administration only after a reviewed PostgreSQL/RLS contract exists.
+  - id: FI-025
+    name: PostgreSQL policy delegation permission records
+    module_ids: [platform.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/postgres_delegations.py::_row_to_grant
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_postgres_delegations.py, tests/test_postgres_delegations_runtime.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The JSON value is an internal canonical permission array returned by PostgreSQL JSONB, not an upload or executable document.
+      - The live runtime gate is synthetic and single-node; federation, route coverage, and cache invalidation remain open.
+    next_action: Promote the PostgreSQL delegation boundary only after the unskipped CI runtime test passes and record the migration evidence.
+  - id: FI-026
+    name: SQLite write-back intent contracts
+    module_ids: [platform.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/sqlite_writeback.py::SQLiteWritebackIntentRepository.get
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_sqlite_writeback.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The JSON value is an internal digest-bound write-back intent contract, not provider payload or executable content.
+      - Append-only SQLite and explicit tenant/workspace filtering are local evidence; live provider acknowledgement and external write-back remain open.
+    next_action: Add provider-specific adapters only behind approved credentials, signed registration, and failure-injection evidence.
+  - id: FI-027
+    name: PostgreSQL consolidation-close worksheet records
+    module_ids: [finance.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/postgres_consolidation_close.py::PostgresConsolidationCloseRepository._verified_run
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_postgres_consolidation_close.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The JSONB value is an internal replay-verified worksheet, not an upload or executable document.
+      - The runtime gate is synthetic and single-node; statutory consolidation, restore, HA/DR, and source-system write-back remain open.
+    next_action: Preserve replay verification and add independent restore/HA evidence before widening the PostgreSQL claim.
+  - id: FI-028
+    name: Acquisition fair-value bridge CLI request
+    module_ids: [finance.core]
+    trust: untrusted-local
+    entrypoints:
+      - reconforge/cli.py::consolidation_acquisition_bridge_command
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002]
+    test_evidence: [tests/test_consolidation_acquisition.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - The command uses the bounded business-record JSON reader with strict UTF-8, a 64 MiB file ceiling, stable pre/post fingerprints, duplicate/non-finite rejection, and one-object/field-count limits before exact top-level contract validation.
+      - Canonical Money values are reconstructed under the local currency registry; the resulting bridge is non-posting and does not authenticate source origin, authorize an actor, or prove statutory acquisition accounting.
+    next_action: Add centralized source classification and operator authorization before accepting acquisition requests from hosted upload or external connector surfaces.
+  - id: FI-029
+    name: Acquisition purchase-price allocation CLI request
+    module_ids: [finance.core]
+    trust: untrusted-local
+    entrypoints:
+      - reconforge/cli.py::consolidation_acquisition_ppa_command
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002]
+    test_evidence: [tests/test_consolidation_ppa.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - The command uses the bounded business-record JSON reader with strict UTF-8, a 64 MiB file ceiling, stable pre/post fingerprints, duplicate/non-finite rejection, and one-object/field-count limits before exact item contract validation.
+      - Canonical Money values and valuation items are reconstructed under the local currency registry; the result is non-posting and does not authenticate valuation source, authorize an actor, or prove statutory treatment.
+    next_action: Add centralized source classification and operator authorization before accepting PPA requests from hosted upload or external connector surfaces.
+  - id: FI-030
+    name: Enterprise policy conflict analysis CLI request
+    module_ids: [platform.core]
+    trust: untrusted-local
+    entrypoints:
+      - reconforge/cli.py::policy_analyze_conflicts_command
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002]
+    test_evidence: [tests/test_policy_analysis.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - The command uses the bounded business-record JSON reader with strict UTF-8, a 64 MiB file ceiling, stable pre/post fingerprints, duplicate/non-finite rejection, and exact nested grant/scope field validation.
+      - Analysis is read-only and does not mutate roles, permissions, sessions, policies, or routes; it does not prove provider federation, PostgreSQL RLS, or complete surface adoption.
+    next_action: Bind policy-analysis requests to centralized operator authorization and provider-backed policy administration only after route/job/export/UI coverage is complete.
+  - id: FI-031
+    name: PostgreSQL acquisition PPA evidence records
+    module_ids: [finance.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/postgres_consolidation_ppa.py::PostgresConsolidationPpaRepository._decode_row
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_postgres_consolidation_ppa.py, tests/test_postgres_consolidation_ppa_runtime.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The JSONB values are internal canonical request/result evidence, not uploads or executable content; replay verification rejects malformed or tampered rows.
+      - The live runtime gate is synthetic and single-node; statutory acquisition accounting, restore, HA/DR, provider integration, and source write-back remain open.
+    next_action: Preserve the append-only replay boundary and promote the parity inventory only after the unskipped CI runtime gate passes.
+  - id: FI-032
+    name: PostgreSQL write-back intent evidence records
+    module_ids: [platform.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/postgres_writeback.py::_decode_intent
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_postgres_writeback.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The JSONB value is an internal canonical digest-bound write-back intent, not provider payload, credentials, or executable content; typed validation and digest comparison fail closed before a lifecycle state is returned.
+      - The live runtime gate is synthetic and single-node; provider interoperability, network dispatch, compensation delivery, throughput, HA/DR, and production write-back remain open.
+    next_action: Keep provider-specific dispatch behind approved credentials, signed registration, idempotency, and failure-injection evidence; do not treat intent persistence as external write-back.
+  - id: FI-033
+    name: PostgreSQL intercompany elimination evidence records
+    module_ids: [finance.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/postgres_intercompany_elimination.py::PostgresIntercompanyEliminationRepository._decode_row
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_postgres_intercompany_elimination.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The JSONB values are internal canonical source/result evidence, not uploads or executable content; strict source decoding and result replay reject malformed or tampered rows.
+      - The hosted PostgreSQL runtime gate is pending; statutory consolidation, posting, provider integration, write-back, HA/DR, and production evidence remain open.
+    next_action: Add the unskipped PostgreSQL migration/RLS/replay runtime gate before promoting the parity inventory beyond contract_only.
+  - id: FI-034
+    name: PostgreSQL acquisition deferred-tax evidence records
+    module_ids: [finance.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/postgres_consolidation_deferred_tax.py::PostgresConsolidationDeferredTaxRepository._decode_row
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_postgres_consolidation_deferred_tax.py, tests/test_postgres_consolidation_deferred_tax_runtime.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The JSONB values are internal canonical request/result evidence, not uploads or executable content; request/result digest checks, deterministic replay, and posted=false enforcement fail closed before a row is returned.
+      - The runtime gate is synthetic and single-node; tax-law recognition, statutory posting, live rates, provider integration, write-back, restore, HA/DR, and production evidence remain open.
+    next_action: Keep deferred-tax persistence as non-posting evidence until a separately reviewed statutory close policy and independent assurance exist.
+  - id: FI-035
+    name: PostgreSQL consolidation impairment evidence records
+    module_ids: [finance.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/postgres_consolidation_impairment.py::PostgresConsolidationImpairmentRepository._decode_row
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_postgres_consolidation_impairment.py, tests/test_postgres_consolidation_impairment_runtime.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The JSONB values are internal canonical request/result evidence, not uploads or executable content; request/result digest checks, deterministic replay, and posted=false enforcement fail closed before a row is returned.
+      - The runtime gate is capability-gated and currently skipped without a disposable PostgreSQL DSN; valuation methodology, statutory recognition, journal posting, provider integration, write-back, restore, HA/DR, and production evidence remain open.
+    next_action: Keep impairment persistence as non-posting evidence until a separately reviewed valuation/statutory policy and unskipped runtime gate exist.
+  - id: FI-036
+    name: PostgreSQL consolidation ownership-change evidence records
+    module_ids: [finance.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/postgres_consolidation_ownership_change.py::PostgresConsolidationOwnershipChangeRepository._decode_row
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_postgres_consolidation_ownership_change.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The JSONB values are internal canonical request/result evidence, not uploads or executable content; request/result digest checks, deterministic replay, and posted=false enforcement fail closed before a row is returned.
+      - The runtime gate is capability-gated and currently skipped without a disposable PostgreSQL DSN; ownership accounting policy, statutory recognition, journal posting, provider integration, write-back, restore, HA/DR, and production evidence remain open.
+    next_action: Keep ownership-change persistence as non-posting evidence until a separately reviewed statutory policy and unskipped runtime gate exist.
+  - id: FI-037
+    name: ERPNext GL Entry network response
+    module_ids: [connectors.boundary]
+    trust: untrusted-network
+    entrypoints:
+      - reconforge/connectors/erpnext_reference.py::ErpNextConnector.read_gl_entries
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_connector_erpnext_reference.py, tests/test_connector_network.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The response is untrusted provider data; the governed HTTPS executor, bounded response size, exact endpoint path, closed Pydantic schema, Decimal checks, company guard, retry ceiling, and canonical digest fail closed before a page is returned.
+      - This is synthetic transport evidence only. It does not authenticate an ERPNext tenant, establish provider SLA, authorize posting, or enable write-back.
+    next_action: Add a separately reviewed live ERPNext sandbox and provider-version conformance run before promoting beyond bounded connector evidence.
+  - id: FI-038
+    name: CAMT.053 bank statement network response
+    module_ids: [connectors.boundary]
+    trust: untrusted-network
+    entrypoints:
+      - reconforge/connectors/bank_statement_camt053.py::BankStatementCamt053Connector.read_statement
+    formats: [xml]
+    parser_families: [defusedxml]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_connector_bank_statement_camt053.py, tests/test_connector_camt053.py, tests/test_connector_network.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The response is untrusted provider data; exact HTTPS egress, runtime secret isolation, 8 MiB response and parser limits, defusedxml entity-expansion refusal, closed CAMT shape, account guard, retry ceiling, and response/source digests fail closed before a statement is returned.
+      - This is synthetic transport evidence only. It does not authenticate a bank source, establish provider dialect completeness or SLA, prove certificate lifecycle, authorize payment or posting, or enable ERP write-back.
+    next_action: Add a separately reviewed bank sandbox with provider-version CAMT conformance fixtures and certificate or credential lifecycle evidence before promoting beyond bounded connector evidence.
+  - id: FI-039
+    name: ERPNext Payment Entry network response
+    module_ids: [connectors.boundary]
+    trust: untrusted-network
+    entrypoints:
+      - reconforge/connectors/erpnext_payment_reference.py::ErpNextPaymentEntryConnector.read_payment_entries
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_connector_erpnext_payment_reference.py, tests/test_connector_network.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - The response is untrusted provider data; the governed HTTPS executor, exact Payment Entry resource path, bounded response and cursor limits, closed Pydantic schema, Decimal checks, company guard, retry ceiling, and canonical digest fail closed before a page is returned.
+      - This is synthetic transport evidence only. It does not authenticate an ERPNext tenant, establish provider-version compatibility, authorize payment or accounting posting, settle a bank item, or enable write-back.
+    next_action: Add a separately reviewed live ERPNext sandbox with provider-version Payment Entry conformance fixtures before promoting beyond bounded connector evidence.
+  - id: FI-040
+    name: Checked-in benchmark evidence artifacts
+    module_ids: [reconciliation.core, platform.core]
+    trust: generated-local
+    entrypoints:
+      - reconforge/benchmark/evidence_index.py::verify_benchmark_index
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-006]
+    test_evidence: [tests/test_benchmark_evidence_index.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - The verifier reads only repository-selected JSON reports and requires exact paths, regular files, SHA-256 hashes, profile IDs, and declared digest fields before returning an index result.
+      - Hashes and report digests provide artifact integrity and replay references; they do not authenticate benchmark origin, hardware, workload truth, provider data, or production capacity.
+    next_action: Add signed release provenance and independently rerun selected profiles on supported hosted engine matrices before promoting performance claims.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader
@@ -553,6 +855,86 @@ direct_tabular_parser_allowlist:
     surface_id: FI-023
     rationale: Parses only size- and hash-verified public responses after strict decoding, then requires an exact unique header set and complete rows before financial normalization.
 direct_json_parser_allowlist:
+  - path: reconforge/infrastructure/postgres_master_data.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-013
+    rationale: Parses only a database-returned JSONB currency-registry snapshot before CurrencyRegistryContext revalidates schema, embedded digest, version, and every policy; malformed or mismatched persisted state fails closed.
+  - path: reconforge/infrastructure/sqlite_master_data.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-013
+    rationale: Parses only a database-returned bounded currency-registry snapshot before CurrencyRegistryContext revalidates schema, embedded digest, version, and every policy; malformed or mismatched persisted state fails closed.
+  - path: reconforge/connectors/world_bank_public.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-023
+    rationale: Parses only the bounded HTTP response from the exact World Bank public reference endpoint; Decimal token hooks, closed Pydantic fields, finite-number validation, response-size limits, and canonical digest verification reject source drift before a page is returned.
+  - path: reconforge/connectors/erpnext_reference.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-037
+    rationale: Parses only the bounded ERPNext GL Entry response after the governed HTTPS executor, exact resource-path allowlist, token-reference isolation, retry/response ceilings, closed debit/credit schema, company scope, and canonical digest checks are applied.
+  - path: reconforge/connectors/erpnext_payment_reference.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-039
+    rationale: Parses only the bounded ERPNext Payment Entry response after the governed HTTPS executor, exact resource-path allowlist, token-reference isolation, retry/response ceilings, closed paid/received Decimal schema, company scope, and canonical digest checks are applied.
+  - path: reconforge/benchmark/evidence_index.py
+    parser: json.loads
+    call_count: 2
+    surface_id: FI-040
+    rationale: Parses only repository-selected benchmark JSON before exact path, regular-file, SHA-256, profile, digest-field, and non-production claim-boundary verification; it does not accept operator uploads or network data.
+  - path: reconforge/auth/repositories.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-024
+    rationale: Parses only the canonical permission array stored by the typed local delegation repository; the grant is schema-validated before persistence and invalid stored data fails closed.
+  - path: reconforge/infrastructure/postgres_delegations.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-025
+    rationale: Parses only the canonical permission array returned by PostgreSQL JSONB; the typed grant validator rejects malformed or unsafe stored authority before it can influence policy evaluation.
+  - path: reconforge/infrastructure/sqlite_writeback.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-026
+    rationale: Parses only the append-only canonical write-back intent contract after tenant/workspace selection; Pydantic validation and digest comparison fail closed before a persisted status can be returned.
+  - path: reconforge/infrastructure/postgres_consolidation_close.py
+    parser: json.loads
+    call_count: 2
+    surface_id: FI-027
+    rationale: Parses only bounded JSONB worksheet and close/intercompany-link arrays before exact replay, canonical digest, and journal/link digest verification; malformed or conflicting persisted evidence fails closed.
+  - path: reconforge/infrastructure/postgres_consolidation_ppa.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-031
+    rationale: Parses only the canonical PostgreSQL JSONB PPA result before closed replay verification, immutable posted=false enforcement, and tenant-scoped evidence return; malformed or tampered persisted data fails closed.
+  - path: reconforge/infrastructure/postgres_writeback.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-032
+    rationale: Parses only the canonical PostgreSQL JSONB write-back intent after tenant/workspace selection; Pydantic validation and digest comparison fail closed before a persisted lifecycle state is returned.
+  - path: reconforge/infrastructure/postgres_intercompany_elimination.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-033
+    rationale: Parses only canonical PostgreSQL JSONB intercompany source/result evidence before strict typed line decoding, replay verification, digest matching, and tenant/workspace-scoped return.
+  - path: reconforge/infrastructure/postgres_consolidation_deferred_tax.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-034
+    rationale: Parses only canonical PostgreSQL JSONB deferred-tax request/result evidence before request/result digest verification, deterministic arithmetic replay, posted=false enforcement, and tenant-scoped return.
+  - path: reconforge/infrastructure/postgres_consolidation_impairment.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-035
+    rationale: Parses only canonical PostgreSQL JSONB impairment request/result evidence before request/result digest verification, deterministic arithmetic replay, posted=false enforcement, and tenant-scoped return.
+  - path: reconforge/infrastructure/postgres_consolidation_ownership_change.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-036
+    rationale: Parses only canonical PostgreSQL JSONB ownership-change request/result evidence before request/result digest verification, deterministic replay, posted=false enforcement, and tenant-scoped return.
   - path: reconforge/upgrade/application_adapter.py
     parser: json.loads
     call_count: 1
@@ -614,3 +996,9 @@ direct_yaml_parser_allowlist:
     call_count: 1
     surface_id: FI-010
     rationale: The centralized compatibility branch retains safe construction after the bounded structured-document preflight.
+direct_xml_parser_allowlist:
+  - path: reconforge/connectors/camt053.py
+    parser: defusedxml.ElementTree.fromstring
+    call_count: 1
+    surface_id: FI-038
+    rationale: Parses only bounded CAMT.053 bytes after the governed network or local boundary; defusedxml rejects entity expansion and the closed parser enforces statement, identity, Decimal, date, text, and entry-count limits.

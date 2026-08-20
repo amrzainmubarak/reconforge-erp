@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import sqlite3
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
 from reconforge.db import connect, run_migrations
+from reconforge.db.migrations import MIGRATIONS
 from reconforge.domain.jobs import DurableJob, JobOutputManifest, JobStatus
 from reconforge.infrastructure.sqlite_jobs import (
     SQLiteDurableJobRepository,
@@ -40,7 +42,7 @@ def _job(*, job_id: str = "JOB-001", input_digest: str = DIGEST_A) -> DurableJob
 def repository(tmp_path: Path) -> tuple[SQLiteDurableJobRepository, sqlite3.Connection]:
     database_path = tmp_path / "jobs.db"
     result = run_migrations(database_path)
-    assert result.current_version == 24
+    assert result.current_version == MIGRATIONS[-1].version
     connection = connect(database_path)
     return SQLiteDurableJobRepository(connection), connection
 
@@ -73,6 +75,57 @@ def test_idempotency_key_rejects_changed_inputs(
     with pytest.raises(SQLiteJobConflictError, match="different job submission"):
         store.create_or_get(_job(job_id="JOB-OTHER", input_digest=DIGEST_C), actor_id="scheduler-1")
     assert connection.execute("SELECT COUNT(*) FROM durable_jobs").fetchone()[0] == 1
+    connection.close()
+
+
+def test_queue_snapshot_is_tenant_and_lane_scoped_without_payloads(
+    repository: tuple[SQLiteDurableJobRepository, sqlite3.Connection],
+) -> None:
+    store, connection = repository
+    first, _ = store.create_or_get(_job(), actor_id="scheduler-1")
+    second, _ = store.create_or_get(
+        replace(_job(job_id="JOB-002"), idempotency_key="request-002"),
+        actor_id="scheduler-1",
+    )
+    other_tenant, _ = store.create_or_get(
+        replace(
+            _job(job_id="JOB-003"),
+            tenant_id="TENANT-2",
+            idempotency_key="request-003",
+        ),
+        actor_id="scheduler-1",
+    )
+    assert first.status is JobStatus.QUEUED and second.status is JobStatus.QUEUED
+
+    snapshot = store.queue_snapshot(tenant_id="TENANT-1")
+    assert snapshot.queue_depth == 2
+    assert snapshot.queued_count == 2
+    assert snapshot.running_count == 0
+    assert snapshot.leased_count == 0
+    assert snapshot.oldest_queued_at == T0
+    assert snapshot.total_count == 2
+
+    claim = store.claim_next(
+        tenant_id="TENANT-1",
+        worker_id="worker-1",
+        occurred_at="2026-07-27T08:00:01Z",
+        lease_expires_at="2026-07-27T08:00:10Z",
+    )
+    assert claim is not None
+    running, _lease = claim
+    lane = store.queue_snapshot(
+        tenant_id="TENANT-1",
+        workspace_id="WORKSPACE-1",
+        entity_id="ENTITY-1",
+    )
+    assert lane.queue_depth == 1
+    assert lane.running_count == 1
+    assert lane.leased_count == 1
+    assert lane.oldest_running_at == "2026-07-27T08:00:01Z"
+    assert store.queue_snapshot(tenant_id="TENANT-2").queued_count == 1
+    assert store.queue_snapshot(tenant_id="TENANT-1", workspace_id="missing").total_count == 0
+    assert running.id not in repr(lane)
+    assert other_tenant.tenant_id == "TENANT-2"
     connection.close()
 
 
@@ -242,7 +295,8 @@ def test_version_20_upgrade_applies_durable_job_and_idempotency_migrations(tmp_p
     before = run_migrations(database_path, target_version=20)
     assert before.current_version == 20
     upgraded = run_migrations(database_path)
-    assert upgraded.applied_versions == [21, 22, 23, 24]
+    assert upgraded.applied_versions[:4] == [21, 22, 23, 24]
+    assert upgraded.current_version == MIGRATIONS[-1].version
     connection = connect(database_path, require_exists=True)
     tables = {
         str(row["name"])

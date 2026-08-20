@@ -1,0 +1,6 @@
+invoice_id,client_id,issue_date,due_date,amount,currency,reference,source_reference
+INV-001,ACME,2026-07-01,2026-07-31,1000.00,USD,INV/001,invoice-export-2026-07
+INV-002,ACME,2026-07-02,2026-07-31,250.00,USD,INV/002,invoice-export-2026-07
+INV-003,BETA,2026-07-05,2026-08-01,500.00,USD,INV/003,invoice-export-2026-07
+INV-004,BETA,2026-07-06,2026-08-01,75.00,USD,INV/004,invoice-export-2026-07
+INV-005,ACME,2026-07-08,2026-08-02,125.00,USD,INV/005,invoice-export-2026-07

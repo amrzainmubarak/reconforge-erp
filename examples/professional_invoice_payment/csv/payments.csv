@@ -1,0 +1,7 @@
+payment_id,client_id,payment_date,amount,currency,reference,source_reference
+PAY-001,ACME,2026-07-30,1000.00,USD,INV-001,payment-export-2026-07
+PAY-002,ACME,2026-08-01,260.00,USD,INV-002,payment-export-2026-07
+PAY-003,BETA,2026-08-02,500.00,USD,INV-003,payment-export-2026-07
+PAY-004,BETA,2026-08-03,75.00,USD,INV-004,payment-export-2026-07
+PAY-005,BETA,2026-08-03,75.00,USD,INV-004,payment-export-2026-07
+PAY-006,ACME,2026-08-04,50.00,USD,UNAPPLIED,payment-export-2026-07

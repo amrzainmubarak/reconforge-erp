@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
-from reconforge.api.server_identity import AuthenticatedServerRequest, request_tenant_id
+from reconforge.api.server_identity import AuthenticatedServerRequest, RequestExecutionScope, request_tenant_id
 from reconforge.auth.models import LocalUser
 from reconforge.db import connect, run_migrations
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings, PostgresTenantBoundary
@@ -430,6 +430,9 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
     import reconforge.api.routes.master_data as master_data_routes
 
     fake = _FakeServerIdentity()
+    scoped_permissions: list[dict[str, object]] = []
+    ledger_scoped_permissions: list[dict[str, object]] = []
+    master_scoped_permissions: list[dict[str, object]] = []
 
     def execute(_request: Any, operation: Any) -> Any:
         return operation(fake, request_tenant_id(_request))
@@ -455,21 +458,56 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
     monkeypatch.setattr(auth_routes, "execute_postgres_identity", execute)
     monkeypatch.setattr(audit_routes, "execute_postgres_ledger", execute)
     monkeypatch.setattr(close_routes, "execute_postgres_close", execute)
+    monkeypatch.setattr(close_routes, "request_execution_scope", lambda _request: RequestExecutionScope("tenant-a", "workspace-a"))
+    monkeypatch.setattr(
+        close_routes,
+        "enforce_server_scoped_permission",
+        lambda _request, **kwargs: scoped_permissions.append(kwargs),
+    )
+    monkeypatch.setattr(
+        finance_core_routes,
+        "request_execution_scope",
+        lambda _request: RequestExecutionScope("tenant-a", "workspace-a"),
+    )
+    monkeypatch.setattr(
+        finance_core_routes,
+        "enforce_server_scoped_permission",
+        lambda _request, **kwargs: ledger_scoped_permissions.append(kwargs),
+    )
+    monkeypatch.setattr(
+        finance_core_routes,
+        "enforce_server_tenant_permission",
+        lambda _request, **kwargs: ledger_scoped_permissions.append(
+            {**kwargs, "workspace_id": None}
+        ),
+    )
     monkeypatch.setattr(finance_core_routes, "execute_postgres_ledger", execute)
+    monkeypatch.setattr(
+        master_data_routes,
+        "request_execution_scope",
+        lambda _request: RequestExecutionScope("tenant-a", "workspace-a"),
+    )
+    monkeypatch.setattr(
+        master_data_routes,
+        "enforce_server_scoped_permission",
+        lambda _request, **kwargs: master_scoped_permissions.append(kwargs),
+    )
     monkeypatch.setattr(master_data_routes, "execute_postgres_master_data", execute)
 
     tenant_root = tmp_path / "tenants"
     tenant_root.mkdir()
     tenant_db = tenant_root / "tenant-a.db"
     run_migrations(tenant_db)
-    client = TestClient(
-        create_api_app(
-            tmp_path / "unused.db",
-            tenant_db_root=tenant_root,
-            postgres_dsn="postgresql://identity.test/postgres",
-            postgres_require_tls=False,
-        )
+    legacy_app = create_api_app(
+        tmp_path / "unused.db",
+        tenant_db_root=tenant_root,
+        postgres_dsn="postgresql://identity.test/postgres",
+        postgres_require_tls=False,
     )
+    # This fixture intentionally covers the pre-Finance-Core server ledger
+    # compatibility contract.  Dedicated tests exercise the new adapter.
+    legacy_app.state.postgres_finance_core_factory = None
+    client = TestClient(legacy_app)
     tenant_headers = {"X-ReconForge-Tenant": "tenant-a"}
 
     missing_tenant = client.post("/api/v1/auth/login", json={"username": "alice", "password": "Strong-password-123"})
@@ -654,6 +692,24 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
     assert len(close_tasks.json()["tasks"]) == 5
     assert close_readiness.status_code == 200
     assert close_task_status.status_code == 200
+    assert scoped_permissions == [
+        {"permission": "close.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        {"permission": "close.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+    ]
+    assert ledger_scoped_permissions.count(
+        {"permission": "finance_core.read", "tenant_id": "tenant-a", "workspace_id": None}
+    ) == 6
+    assert ledger_scoped_permissions.count(
+        {"permission": "finance_core.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"}
+    ) == 3
+    assert master_scoped_permissions == [
+        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+    ]
     assert cash.status_code == 200
     assert revenue.status_code == 200
     assert accounts.status_code == 200
@@ -695,7 +751,34 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
     psycopg = pytest.importorskip("psycopg")
     from reconforge.api.routes.master_data import _server_id
     from reconforge.infrastructure.postgres import install_postgres_rls_schema
+    from reconforge.infrastructure.postgres_approvals import POSTGRES_APPROVALS_SCHEMA_SQL
     from reconforge.infrastructure.postgres_close import POSTGRES_CLOSE_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_consolidation_close import (
+        POSTGRES_CONSOLIDATION_CLOSE_SCHEMA_SQL,
+        POSTGRES_CONSOLIDATION_DEFERRED_TAX_LINK_SCHEMA_SQL,
+        POSTGRES_CONSOLIDATION_IMPAIRMENT_LINK_SCHEMA_SQL,
+        POSTGRES_CONSOLIDATION_INTERCOMPANY_LINK_SCHEMA_SQL,
+        POSTGRES_CONSOLIDATION_OWNERSHIP_CHANGE_LINK_SCHEMA_SQL,
+        POSTGRES_CONSOLIDATION_PPA_LINK_SCHEMA_SQL,
+    )
+    from reconforge.infrastructure.postgres_consolidation_deferred_tax import (
+        POSTGRES_CONSOLIDATION_DEFERRED_TAX_SCHEMA_SQL,
+    )
+    from reconforge.infrastructure.postgres_consolidation_impairment import (
+        POSTGRES_CONSOLIDATION_IMPAIRMENT_SCHEMA_SQL,
+    )
+    from reconforge.infrastructure.postgres_consolidation_ownership import (
+        POSTGRES_CONSOLIDATION_OWNERSHIP_SCHEMA_SQL,
+    )
+    from reconforge.infrastructure.postgres_consolidation_ownership_change import (
+        POSTGRES_CONSOLIDATION_OWNERSHIP_CHANGE_SCHEMA_SQL,
+    )
+    from reconforge.infrastructure.postgres_consolidation_ppa import POSTGRES_CONSOLIDATION_PPA_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_domain import POSTGRES_DOMAIN_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_emergency_access import POSTGRES_EMERGENCY_ACCESS_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_intercompany_elimination import (
+        POSTGRES_INTERCOMPANY_ELIMINATION_SCHEMA_SQL,
+    )
     from reconforge.infrastructure.postgres_ledger import (
         POSTGRES_LEDGER_SCHEMA_SQL,
         PostgresLedgerRepository,
@@ -705,7 +788,13 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
         POSTGRES_MASTER_DATA_SCHEMA_SQL,
         PostgresMasterDataRepository,
     )
+    from reconforge.infrastructure.postgres_master_data_application import (
+        POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL,
+    )
     from reconforge.infrastructure.postgres_privileged_sessions import POSTGRES_PRIVILEGED_SESSION_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_scope_authority import POSTGRES_SCOPE_AUTHORITY_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_service_accounts import POSTGRES_SERVICE_ACCOUNT_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_writeback import POSTGRES_WRITEBACK_SCHEMA_SQL
 
     dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
     admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
@@ -726,11 +815,30 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
     try:
         with admin.transaction():
             install_postgres_rls_schema(admin)
+            admin.execute(POSTGRES_DOMAIN_SCHEMA_SQL)
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
             admin.execute(POSTGRES_FISCAL_PERIOD_SCHEMA_SQL)
+            admin.execute(POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL)
             admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
             admin.execute(POSTGRES_CLOSE_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_CLOSE_SCHEMA_SQL)
             admin.execute(POSTGRES_IDENTITY_SCHEMA_SQL)
+            admin.execute(POSTGRES_APPROVALS_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_IMPAIRMENT_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_DEFERRED_TAX_SCHEMA_SQL)
+            admin.execute(POSTGRES_EMERGENCY_ACCESS_SCHEMA_SQL)
+            admin.execute(POSTGRES_SERVICE_ACCOUNT_SCHEMA_SQL)
+            admin.execute(POSTGRES_SCOPE_AUTHORITY_SCHEMA_SQL)
+            admin.execute(POSTGRES_INTERCOMPANY_ELIMINATION_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_INTERCOMPANY_LINK_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_IMPAIRMENT_LINK_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_DEFERRED_TAX_LINK_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_OWNERSHIP_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_PPA_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_PPA_LINK_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_OWNERSHIP_CHANGE_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_OWNERSHIP_CHANGE_LINK_SCHEMA_SQL)
+            admin.execute(POSTGRES_WRITEBACK_SCHEMA_SQL)
             admin.execute(POSTGRES_PRIVILEGED_SESSION_SCHEMA_SQL)
             admin.execute(
                 f"GRANT USAGE ON SCHEMA reconforge TO {app_user}" if app_user else "SELECT 1"
@@ -747,8 +855,23 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                     f"reconforge.legal_entities, reconforge.branches, reconforge.fiscal_periods, "
                     f"reconforge.ledger_accounts, "
                     f"reconforge.ledger_entries, reconforge.ledger_lines, reconforge.audit_events, "
+                    f"reconforge.domain_audit_ledger_state, reconforge.domain_audit_events, "
                     f"reconforge.outbox_events, reconforge.close_periods, reconforge.close_tasks, "
-                    f"reconforge.close_task_dependencies TO {app_user}"
+                    f"reconforge.close_task_dependencies, reconforge.certification_records, "
+                    f"reconforge.approval_requests, "
+                    f"reconforge.consolidation_close_periods, reconforge.consolidation_close_runs, "
+                    f"reconforge.consolidation_close_effects, reconforge.consolidation_close_period_events, "
+                    f"reconforge.consolidation_close_run_lines, reconforge.consolidation_close_effect_lines, "
+                    f"reconforge.consolidation_close_intercompany_links, reconforge.consolidation_close_impairment_links, "
+                    f"reconforge.consolidation_close_deferred_tax_links, "
+                    f"reconforge.consolidation_close_ppa_links, "
+                    f"reconforge.consolidation_ownership_change_artifacts, "
+                    f"reconforge.consolidation_close_ownership_change_links, "
+                    f"reconforge.consolidation_impairment_artifacts, "
+                    f"reconforge.consolidation_deferred_tax_artifacts, "
+                    f"reconforge.intercompany_elimination_artifacts, "
+                    f"reconforge.consolidation_ppa_artifacts, reconforge.consolidation_ownership_interests, "
+                    f"reconforge.connector_writeback_intents TO {app_user}"
                 )
                 admin.execute(
                     f"GRANT SELECT, INSERT, UPDATE ON reconforge.principal_scope_grants TO {app_user}"
@@ -802,12 +925,18 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             repository.create_permission(tenant_id=tenant_a, permission_name="db.read")
             repository.create_permission(tenant_id=tenant_a, permission_name="finance_core.read")
             repository.create_permission(tenant_id=tenant_a, permission_name="finance_core.manage")
+            repository.create_permission(tenant_id=tenant_a, permission_name="finance_core.validate")
             repository.create_permission(tenant_id=tenant_a, permission_name="master_data.read")
             repository.create_permission(tenant_id=tenant_a, permission_name="master_data.manage")
             repository.create_permission(tenant_id=tenant_a, permission_name="audit.read")
             repository.create_permission(tenant_id=tenant_a, permission_name="audit.verify")
             repository.create_permission(tenant_id=tenant_a, permission_name="close.read")
             repository.create_permission(tenant_id=tenant_a, permission_name="close.manage")
+            repository.create_permission(tenant_id=tenant_a, permission_name="connectors.writeback.propose")
+            repository.create_permission(tenant_id=tenant_a, permission_name="connectors.writeback.approve")
+            repository.create_permission(tenant_id=tenant_a, permission_name="connectors.writeback.dispatch")
+            repository.create_permission(tenant_id=tenant_a, permission_name="connectors.writeback.reconcile")
+            repository.create_permission(tenant_id=tenant_a, permission_name="connectors.writeback.compensate")
             repository.create_permission(tenant_id=tenant_a, permission_name="roles.manage")
             repository.grant_permission(tenant_id=tenant_a, role_name="admin", permission_name="db.read")
             repository.grant_permission(
@@ -819,6 +948,11 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                 tenant_id=tenant_a,
                 role_name="admin",
                 permission_name="finance_core.manage",
+            )
+            repository.grant_permission(
+                tenant_id=tenant_a,
+                role_name="admin",
+                permission_name="finance_core.validate",
             )
             repository.grant_permission(
                 tenant_id=tenant_a,
@@ -850,6 +984,18 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                 role_name="admin",
                 permission_name="close.manage",
             )
+            for permission_name in (
+                "connectors.writeback.propose",
+                "connectors.writeback.approve",
+                "connectors.writeback.dispatch",
+                "connectors.writeback.reconcile",
+                "connectors.writeback.compensate",
+            ):
+                repository.grant_permission(
+                    tenant_id=tenant_a,
+                    role_name="admin",
+                    permission_name=permission_name,
+                )
             repository.grant_permission(
                 tenant_id=tenant_a,
                 role_name="admin",
@@ -859,6 +1005,20 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                 tenant_id=tenant_a,
                 user_id="api-user-a",
                 username="Alice",
+                password="Strong-password-123",
+                role_name="admin",
+            )
+            repository.create_user(
+                tenant_id=tenant_a,
+                user_id="api-user-reviewer",
+                username="Reviewer",
+                password="Strong-password-123",
+                role_name="admin",
+            )
+            repository.create_user(
+                tenant_id=tenant_a,
+                user_id="api-user-poster",
+                username="Poster",
                 password="Strong-password-123",
                 role_name="admin",
             )
@@ -881,14 +1041,45 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                 scope_id=organization_id,
                 actor_id="api-user-a",
             )
-        client = TestClient(
-            create_api_app(
-                tmp_path / "unused.db",
-                tenant_db_root=root,
-                postgres_dsn=dsn,
-                postgres_require_tls=False,
-            )
+            for user_id, suffix in (("api-user-reviewer", "reviewer"), ("api-user-poster", "poster")):
+                scope_authority.grant(
+                    tenant_id=tenant_a,
+                    grant_id=f"scope-user-workspace-a-{suffix}",
+                    principal_type="user",
+                    principal_id=user_id,
+                    scope_type="workspace",
+                    scope_id="workspace-a",
+                    actor_id="api-user-a",
+                )
+                scope_authority.grant(
+                    tenant_id=tenant_a,
+                    grant_id=f"scope-user-org-a-{suffix}",
+                    principal_type="user",
+                    principal_id=user_id,
+                    scope_type="organization",
+                    scope_id=organization_id,
+                    actor_id="api-user-a",
+                )
+        from dataclasses import dataclass
+
+        from reconforge.connectors.writeback_network import (
+            WritebackNetworkExecutor,
+            WritebackNetworkRegistration,
+            WritebackNetworkResponse,
         )
+        from tests.test_connector_writeback import _intent as writeback_intent
+
+        app = create_api_app(
+            tmp_path / "unused.db",
+            tenant_db_root=root,
+            postgres_dsn=dsn,
+            postgres_require_tls=False,
+        )
+        # This legacy identity test intentionally exercises the PostgreSQL
+        # ledger compatibility boundary. The activated Finance Core adapter
+        # has its own live route contract and is disabled for this fixture.
+        app.state.postgres_finance_core_factory = None
+        client = TestClient(app)
         headers = {"X-ReconForge-Tenant": tenant_a}
         login = client.post(
             "/api/v1/auth/login",
@@ -933,6 +1124,297 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
         assert finance_before_step_up.json()["error"]["code"] == "step_up_required"
         assert step_up.status_code == 200
         assert step_up.json()["method"] == "password_reauthentication"
+        from tests.test_consolidation_ppa import _request as ppa_request
+
+        ppa_payload = ppa_request().to_dict()
+        ppa_payload.pop("prepared_by", None)
+        ppa_payload["approved_by"] = "api-user-reviewer"
+        ppa_created = client.post(
+            "/api/v1/consolidation-ppa",
+            headers=authenticated_headers,
+            json=ppa_payload,
+        )
+        assert ppa_created.status_code == 200, ppa_created.text
+        assert ppa_created.json()["artifact"]["posted"] is False
+        ppa_id = ppa_created.json()["artifact"]["id"]
+        ppa_loaded = client.get(
+            f"/api/v1/consolidation-ppa/{ppa_id}",
+            headers=authenticated_headers,
+        )
+        assert ppa_loaded.status_code == 200, ppa_loaded.text
+        assert ppa_loaded.json()["artifact"]["id"] == ppa_id
+        ownership_payload = {
+            "group_code": "GLOBAL-GROUP",
+            "workspace": "default",
+            "interest_id": "OWN-API-2026",
+            "parent_entity_code": "PARENT",
+            "subsidiary_entity_code": "SUB",
+            "direct_ownership_percentage": "0.80",
+            "effective_from": "2026-01-01",
+            "effective_to": "",
+            "version": "1.0.0",
+            "source_digest": "b" * 64,
+            "approved_by": "api-user-reviewer",
+            "approved_at": "2026-01-01T00:00:00Z",
+        }
+        ownership_created = client.post(
+            "/api/v1/consolidation-ownership/interests",
+            headers=authenticated_headers,
+            json=ownership_payload,
+        )
+        assert ownership_created.status_code == 200, ownership_created.text
+        assert ownership_created.json()["source"]["kind"] == "postgresql-consolidation-ownership"
+        ownership_resolved = client.get(
+            "/api/v1/consolidation-ownership/effective",
+            headers=authenticated_headers,
+            params={"group_code": "GLOBAL-GROUP", "reporting_date": "2026-08-01"},
+        )
+        assert ownership_resolved.status_code == 200, ownership_resolved.text
+        assert ownership_resolved.json()["interests"][0]["interest_id"] == "OWN-API-2026"
+        sibling_ownership = client.get(
+            "/api/v1/consolidation-ownership/effective",
+            headers={**authenticated_headers, "X-ReconForge-Workspace": "workspace-b"},
+            params={"group_code": "GLOBAL-GROUP", "reporting_date": "2026-08-01"},
+        )
+        assert sibling_ownership.status_code == 403
+        assert sibling_ownership.json()["error"]["code"] == "workspace_scope_denied"
+        close_period_payload = {
+            "group_code": "GLOBAL-GROUP",
+            "period_id": "2026-08",
+            "reporting_currency": "USD",
+            "period_start_date": "2026-08-01",
+            "period_end_date": "2026-08-31",
+            "reporting_date": "2026-08-31",
+        }
+        close_period_created = client.post(
+            "/api/v1/consolidation-close/periods",
+            headers=authenticated_headers,
+            json=close_period_payload,
+        )
+        assert close_period_created.status_code == 200, close_period_created.text
+        assert close_period_created.json()["source"]["kind"] == "postgresql-consolidation-close"
+        assert close_period_created.json()["period"]["workspace_id"] == "workspace-a"
+        close_periods = client.get(
+            "/api/v1/consolidation-close/periods",
+            headers=authenticated_headers,
+        )
+        assert close_periods.status_code == 200, close_periods.text
+        assert close_periods.json()["source"]["kind"] == "postgresql-consolidation-close"
+        assert [item["period_name"] for item in close_periods.json()["periods"]] == ["2026-08"]
+        from dataclasses import replace
+
+        from reconforge.domain.consolidation_lifecycle import prepare_consolidation_worksheet
+        from tests.test_sqlite_consolidation_close import _worksheet
+
+        worksheet = prepare_consolidation_worksheet(replace(_worksheet().request, prepared_by="api-user-a"))
+        prepared_run = client.post(
+            "/api/v1/consolidation-close/runs",
+            headers=authenticated_headers,
+            json={"run_number": "RUN-API-001", "worksheet": worksheet.to_dict()},
+        )
+        assert prepared_run.status_code == 200, prepared_run.text
+        assert prepared_run.json()["run"]["status"] == "Prepared"
+        run_id = prepared_run.json()["run"]["id"]
+        reviewer_login = client.post(
+            "/api/v1/auth/login",
+            headers={"X-ReconForge-Tenant": tenant_a},
+            json={"username": "reviewer", "password": "Strong-password-123"},
+        )
+        assert reviewer_login.status_code == 200, reviewer_login.text
+        reviewer_headers = {**headers, "Authorization": f"Bearer {reviewer_login.json()['access_token']}"}
+        reviewer_step_up = client.post(
+            "/api/v1/auth/step-up",
+            headers=reviewer_headers,
+            json={"password": "Strong-password-123"},
+        )
+        assert reviewer_step_up.status_code == 200, reviewer_step_up.text
+        poster_login = client.post(
+            "/api/v1/auth/login",
+            headers={"X-ReconForge-Tenant": tenant_a},
+            json={"username": "poster", "password": "Strong-password-123"},
+        )
+        assert poster_login.status_code == 200, poster_login.text
+        poster_headers = {**headers, "Authorization": f"Bearer {poster_login.json()['access_token']}"}
+        poster_step_up = client.post(
+            "/api/v1/auth/step-up",
+            headers=poster_headers,
+            json={"password": "Strong-password-123"},
+        )
+        assert poster_step_up.status_code == 200, poster_step_up.text
+
+        connector_id = "reference-rest-writeback"
+        payload_bytes = b'{"amount":"10.00","currency":"USD","reference":"live-payment-1"}'
+        compensation_payload_bytes = b'{"amount":"-10.00","currency":"USD","reference":"live-payment-1-reversal"}'
+        import hashlib
+        import json
+
+        writeback_payload = writeback_intent(
+            intent_id=f"intent-live-{token}",
+            tenant_id=tenant_a,
+            workspace_id="workspace-a",
+            connector_id=connector_id,
+            operation="payment.create",
+            payload_digest=hashlib.sha256(payload_bytes).hexdigest(),
+            requested_by="api-user-a",
+        ).model_dump(mode="json")
+
+        @dataclass
+        class Transport:
+            calls: int = 0
+
+            def post(
+                self,
+                endpoint: str,
+                *,
+                headers: dict[str, str],
+                body: bytes,
+                timeout_seconds: int,
+                maximum_response_bytes: int,
+            ) -> WritebackNetworkResponse:
+                del endpoint, body, timeout_seconds, maximum_response_bytes
+                self.calls += 1
+                idempotency_key = headers["Idempotency-Key"]
+                provider = {
+                    "accepted": True,
+                    "idempotency_key": idempotency_key,
+                    "provider_reference": "live-provider-compensation-1"
+                    if idempotency_key.endswith(":compensation")
+                    else "live-provider-1",
+                }
+                response_digest = hashlib.sha256(
+                    json.dumps(provider, sort_keys=True, separators=(",", ":")).encode("ascii")
+                ).hexdigest()
+                return WritebackNetworkResponse(
+                    status=200,
+                    body=json.dumps({**provider, "response_digest": response_digest}).encode("ascii"),
+                )
+
+        class Payloads:
+            def resolve(self, intent: object) -> bytes:
+                del intent
+                return payload_bytes
+
+        class CompensationPayloads:
+            def resolve(self, intent: object) -> bytes:
+                del intent
+                return compensation_payload_bytes
+
+        class Secrets:
+            def resolve(self, reference: str) -> bytes:
+                assert reference == f"vault://{tenant_a}/writeback-token"
+                return b"synthetic-live-writeback-token"
+
+        transport = Transport()
+        app.state.writeback_network_executor = WritebackNetworkExecutor(
+            transport,
+            payload_resolver=Payloads(),
+            secret_resolver=Secrets(),
+        )
+        app.state.writeback_network_registrations = {
+            connector_id: WritebackNetworkRegistration.model_validate(
+                {
+                    "registration_schema": "writeback-network-registration-v1",
+                    "connector_id": connector_id,
+                    "version": "1.0.0",
+                    "endpoint": "https://api.example.test/v1/writeback",
+                    "egress_destinations": ("https://api.example.test/v1/writeback",),
+                        "credential_reference": f"vault://{tenant_a}/writeback-token",
+                    "allowed_operations": frozenset({"payment.create"}),
+                    "allowed_compensation_operations": frozenset({"payment.create"}),
+                    "feature_enabled": True,
+                    "synthetic_sandbox": True,
+                }
+            )
+        }
+        proposed_writeback = client.post(
+            "/api/v1/connectors/writeback/intents",
+            headers=authenticated_headers,
+            json=writeback_payload,
+        )
+        assert proposed_writeback.status_code == 200, proposed_writeback.text
+        approved_writeback = client.post(
+            f"/api/v1/connectors/writeback/intents/{writeback_payload['intent_id']}/approve",
+            headers=reviewer_headers,
+            json={
+                "assurance": "mfa",
+                "reason": "Live synthetic provider review.",
+                "tenant_id": tenant_a,
+                "workspace_id": "workspace-a",
+            },
+        )
+        assert approved_writeback.status_code == 200, approved_writeback.text
+        dispatched_writeback = client.post(
+            f"/api/v1/connectors/writeback/intents/{writeback_payload['intent_id']}/dispatch",
+            headers=reviewer_headers,
+            json={"tenant_id": tenant_a, "workspace_id": "workspace-a", "expected_version": 2},
+        )
+        assert dispatched_writeback.status_code == 200, dispatched_writeback.text
+        assert dispatched_writeback.json()["intent"]["status"] == "acknowledged"
+        assert dispatched_writeback.json()["network_dispatch"] == "acknowledged"
+        assert transport.calls == 1
+        compensation_writeback = client.post(
+            f"/api/v1/connectors/writeback/intents/{writeback_payload['intent_id']}/compensate",
+            headers=reviewer_headers,
+            json={
+                "tenant_id": tenant_a,
+                "workspace_id": "workspace-a",
+                "reason": "Live synthetic provider reversal request.",
+                "expected_version": 4,
+            },
+        )
+        assert compensation_writeback.status_code == 200, compensation_writeback.text
+        assert compensation_writeback.json()["intent"]["status"] == "compensation_requested"
+        assert compensation_writeback.json()["version"] == 5
+        app.state.writeback_compensation_payload_resolver = CompensationPayloads()
+        compensated_writeback = client.post(
+            f"/api/v1/connectors/writeback/intents/{writeback_payload['intent_id']}/compensate/dispatch",
+            headers=reviewer_headers,
+            json={
+                "tenant_id": tenant_a,
+                "workspace_id": "workspace-a",
+                "expected_version": 5,
+                "payload_digest": hashlib.sha256(compensation_payload_bytes).hexdigest(),
+            },
+        )
+        assert compensated_writeback.status_code == 200, compensated_writeback.text
+        assert compensated_writeback.json()["intent"]["status"] == "compensated"
+        assert compensated_writeback.json()["version"] == 6
+        assert compensated_writeback.json()["network_dispatch"] == "compensated"
+        assert transport.calls == 2
+        approved_run = client.post(
+            f"/api/v1/consolidation-close/runs/{run_id}/approve",
+            headers=reviewer_headers,
+            json={"expected_version": 1, "reason": "Independent live worksheet review."},
+        )
+        assert approved_run.status_code == 200, approved_run.text
+        assert approved_run.json()["run"]["status"] == "Approved"
+        posted_run = client.post(
+            f"/api/v1/consolidation-close/runs/{run_id}/post",
+            headers=poster_headers,
+            json={"expected_version": 2, "reason": "Live synthetic control journal posting."},
+        )
+        assert posted_run.status_code == 200, posted_run.text
+        assert posted_run.json()["run"]["status"] == "Posted"
+        locked_period = client.post(
+            f"/api/v1/consolidation-close/periods/{close_period_created.json()['period']['id']}/lock",
+            headers=reviewer_headers,
+            json={"expected_version": 1, "reason": "Live synthetic period lock."},
+        )
+        assert locked_period.status_code == 200, locked_period.text
+        assert locked_period.json()["period"]["status"] == "Locked"
+        reopened_period = client.post(
+            f"/api/v1/consolidation-close/periods/{close_period_created.json()['period']['id']}/reopen",
+            headers=authenticated_headers,
+            json={"expected_version": 2, "reason": "Live synthetic independent reopen."},
+        )
+        assert reopened_period.status_code == 200, reopened_period.text
+        assert reopened_period.json()["period"]["status"] == "Open"
+        close_sibling = client.get(
+            "/api/v1/consolidation-close/periods",
+            headers={**authenticated_headers, "X-ReconForge-Workspace": "workspace-b"},
+        )
+        assert close_sibling.status_code == 403
+        assert close_sibling.json()["error"]["code"] == "workspace_scope_denied"
         missing_scope = client.get(
             "/api/v1/finance-core/summary",
             headers={"X-ReconForge-Tenant": tenant_a, "Authorization": f"Bearer {token}"},
@@ -1105,7 +1587,19 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                     "ALTER TABLE reconforge.principal_scope_grants "
                     "DISABLE TRIGGER principal_scope_grants_guard"
                 )
+                admin.execute(
+                    "ALTER TABLE reconforge.consolidation_ppa_artifacts "
+                    "DISABLE TRIGGER consolidation_ppa_artifact_guard"
+                )
+                admin.execute(
+                    "DELETE FROM reconforge.consolidation_ppa_artifacts WHERE tenant_id IN (%s, %s)",
+                    (tenant_a, tenant_b),
+                )
                 admin.execute("DELETE FROM reconforge.tenants WHERE id IN (%s, %s)", (tenant_a, tenant_b))
+                admin.execute(
+                    "ALTER TABLE reconforge.consolidation_ppa_artifacts "
+                    "ENABLE TRIGGER consolidation_ppa_artifact_guard"
+                )
                 admin.execute(
                     "ALTER TABLE reconforge.principal_scope_grants "
                     "ENABLE TRIGGER principal_scope_grants_guard"

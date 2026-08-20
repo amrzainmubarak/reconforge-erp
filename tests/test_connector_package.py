@@ -5,19 +5,32 @@ import json
 from pathlib import Path
 
 import pytest
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from typer.testing import CliRunner
 
+from reconforge.cli import app
 from reconforge.connectors.package import (
     ConnectorPackageError,
     PublisherKeyStatus,
     SignedConnectorEnvelope,
     TrustedPublisherKey,
     TrustedPublisherRegistry,
+    admit_verified_package,
     load_verified_package,
+    load_verified_package_for_admission,
     signature_payload,
 )
 from reconforge.plugins.registry import get_connector
+
+serialization_module = pytest.importorskip(
+    "cryptography.hazmat.primitives.serialization", reason="connector cryptography extra is optional"
+)
+ed25519_module = pytest.importorskip(
+    "cryptography.hazmat.primitives.asymmetric.ed25519", reason="connector cryptography extra is optional"
+)
+serialization = serialization_module
+Ed25519PrivateKey = ed25519_module.Ed25519PrivateKey
+
+runner = CliRunner()
 
 
 def _write_signed_package(path: Path) -> tuple[TrustedPublisherKey, dict[str, object]]:
@@ -46,6 +59,64 @@ def test_data_only_package_verifies_against_exact_publisher_key(tmp_path: Path) 
     envelope = load_verified_package(path, trusted_keys=(trust,))
     assert envelope.manifest.connector_id == "generic_csv"
     assert envelope.algorithm == "Ed25519"
+
+
+def test_signed_package_admission_binds_trust_snapshot_and_conformance(tmp_path: Path) -> None:
+    path = tmp_path / "connector.json"
+    trust, _ = _write_signed_package(path)
+    admitted = load_verified_package_for_admission(path, trusted_keys=(trust,))
+    assert admitted.envelope.manifest.connector_id == "generic_csv"
+    assert admitted.checks == ("signature_verified", "publisher_trusted", "manifest_conformant", "data_only")
+    assert admitted.manifest_digest == admitted.envelope.manifest.digest
+    assert len(admitted.admission_digest) == 64
+    assert admitted.to_dict()["trust_registry_digest"] == TrustedPublisherRegistry(version=1, keys=(trust,)).digest
+
+
+def test_signed_package_admission_rejects_manifest_without_synthetic_conformance(tmp_path: Path) -> None:
+    del tmp_path
+    private_key = Ed25519PrivateKey.generate()
+    public_key = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    manifest = get_connector("generic_csv").manifest.model_copy(update={"synthetic_sandbox": False})
+    unsigned = {
+        "package_schema": "signed-connector-package-v1",
+        "publisher_id": "example.publisher",
+        "key_id": "test-key-1",
+        "algorithm": "Ed25519",
+        "manifest": manifest.model_dump(mode="json"),
+        "signature": base64.b64encode(bytes(64)).decode("ascii"),
+    }
+    envelope = SignedConnectorEnvelope.model_validate(unsigned)
+    unsigned["signature"] = base64.b64encode(private_key.sign(signature_payload(envelope))).decode("ascii")
+    envelope = SignedConnectorEnvelope.model_validate(unsigned)
+    trust = TrustedPublisherKey("example.publisher", "test-key-1", public_key)
+    with pytest.raises(ConnectorPackageError, match="conformance_failed"):
+        admit_verified_package(envelope, trust_registry=TrustedPublisherRegistry(version=1, keys=(trust,)))
+
+
+def test_connector_cli_verifies_package_without_loading_code(tmp_path: Path) -> None:
+    path = tmp_path / "connector.json"
+    trust, _ = _write_signed_package(path)
+    result = runner.invoke(
+        app,
+        [
+            "connectors",
+            "verify-package",
+            str(path),
+            "--publisher-id",
+            trust.publisher_id,
+            "--key-id",
+            trust.key_id,
+            "--public-key",
+            base64.b64encode(trust.public_key).decode("ascii"),
+        ],
+    )
+    assert result.exit_code == 0
+    assert '"connector_id"' not in result.output
+    assert '"admission_digest"' in result.output
+    assert '"manifest_digest"' in result.output
 
 
 @pytest.mark.parametrize("mutation", ["manifest", "publisher", "signature", "unknown_field"])

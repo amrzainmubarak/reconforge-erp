@@ -10,6 +10,7 @@ from reconforge.application.grouped_matching import (
     GroupedMatchRequest,
 )
 from reconforge.application.matching_strategies import (
+    GroupedMatchBudget,
     MatchingStrategyContractError,
     MatchingStrategyManifest,
     MatchingStrategyRequest,
@@ -25,7 +26,7 @@ GROUPED_SUBSET_SUM_MANIFEST = MatchingStrategyManifest(
     version="1.0.0",
     maturity="experimental",
     algorithm="bounded-partitioned-subset-sum-enumeration-v1",
-    supported_modes=("many-to-many", "many-to-one", "one-to-many"),
+    supported_modes=("many-to-many", "many-to-one", "one-to-many", "partial-settlement", "portfolio"),
     deterministic_tie_break="difference-cardinality-date-span-stable-record-identities-v1",
     explanation_schema="grouped-matching-explanation-v2",
     limits=StrategyLimits(
@@ -64,19 +65,21 @@ class GroupedSubsetSumStrategy:
         max_left_group, max_right_group, max_group_evaluations = group_limits
         if max_left_group is None or max_right_group is None or max_group_evaluations is None:
             raise MatchingStrategyContractError("Grouped strategy manifest limits are incomplete.")
+        budget = request.grouped_budget or GroupedMatchBudget()
+        budget.validate_against(limits, mode=request.mode)
         try:
-            decision = self._service.execute(
-                GroupedMatchRequest(
+            grouped_request = GroupedMatchRequest(
                     left_records=request.left_records,
                     right_records=request.right_records,
                     policy=GroupedMatchPolicy(
                         mode=request.mode,  # type: ignore[arg-type]
                         amount_tolerance=tolerance,
                         date_window_days=request.date_window_days,
-                        max_left_cardinality=max_left_group,
-                        max_right_cardinality=max_right_group,
-                        max_search_evaluations=max_group_evaluations,
+                        max_left_cardinality=budget.max_left_cardinality or max_left_group,
+                        max_right_cardinality=budget.max_right_cardinality or max_right_group,
+                        max_search_evaluations=budget.max_search_evaluations or max_group_evaluations,
                         netting_mode=request.netting_mode,
+                        portfolio_allow_partial_settlement=request.allow_partial_settlement,
                     ),
                     left_id_field=request.left_id_field,
                     right_id_field=request.right_id_field,
@@ -89,19 +92,22 @@ class GroupedSubsetSumStrategy:
                     target_currency=request.target_currency,
                     fx_rates=request.fx_rates,
                 )
-            )
+            if request.mode == "portfolio":
+                portfolio = self._service.execute_portfolio(grouped_request)
+                decisions = portfolio.decisions
+            else:
+                decisions = (self._service.execute(grouped_request),)
         except GroupedMatchingError as exc:
             raise MatchingStrategyContractError(str(exc)) from exc
-        payload = asdict(decision)
-        results = (payload,)
-        exceptions = (
-            ({"reason_code": decision.reason_code, "decision_digest": decision.decision_digest},)
+        results = tuple(asdict(decision) for decision in decisions)
+        exceptions = tuple(
+            {"reason_code": decision.reason_code, "decision_digest": decision.decision_digest}
+            for decision in decisions
             if decision.status == "ambiguous"
-            else ()
         )
         manifest_digest = self.manifest.digest
         input_digest = request_digest(request, manifest_digest)
-        return MatchingStrategyResult(
+        result = MatchingStrategyResult(
             manifest_digest=manifest_digest,
             input_digest=input_digest,
             decision_digest=result_digest(
@@ -114,6 +120,8 @@ class GroupedSubsetSumStrategy:
             exceptions=exceptions,
             explanation_schema=self.manifest.explanation_schema,
         )
+        result.verify_against(request, manifest_digest=manifest_digest)
+        return result
 
     def _validate_request(self, request: MatchingStrategyRequest) -> Decimal:
         limits = self.manifest.limits
@@ -143,6 +151,10 @@ class GroupedSubsetSumStrategy:
             raise MatchingStrategyContractError("Grouped strategy amount tolerance is invalid.")
         if request.netting_mode not in {"gross", "net"}:
             raise MatchingStrategyContractError("Grouped strategy netting mode is invalid.")
+        if not isinstance(request.allow_partial_settlement, bool):
+            raise MatchingStrategyContractError("Grouped strategy partial-settlement flag must be boolean.")
+        if request.allow_partial_settlement and request.mode != "portfolio":
+            raise MatchingStrategyContractError("Grouped strategy partial-settlement flag requires portfolio mode.")
         if request.netting_mode != "gross" and (
             request.left_fee_field.strip() == "" or request.right_fee_field.strip() == ""
         ):

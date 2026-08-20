@@ -121,7 +121,7 @@ def main() -> int:
             migrations = PsycopgAlembicMigrationRunner(
                 source_dsn=source_dsn,
                 compatibility_dsn=compatibility_dsn,
-                python_executable=Path(sys.executable).resolve(strict=True),
+                python_executable=Path(sys.executable),
                 alembic_ini=(ROOT / "alembic.ini").resolve(strict=True),
             )
             migrations.upgrade("source", "0052_security_governance")

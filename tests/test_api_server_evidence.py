@@ -8,7 +8,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
-from reconforge.api.server_identity import request_tenant_id
+from reconforge.api.server_identity import RequestExecutionScope, request_tenant_id
 from reconforge.auth.models import LocalUser
 from reconforge.db import run_migrations
 from reconforge.infrastructure.postgres_evidence import PostgresEvidenceVerification
@@ -99,6 +99,7 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
     user = LocalUser(id="user-a", username="alice", display_name="Alice")
     permissions = frozenset({"evidence.read", "evidence.manage", "evidence.verify"})
     repository = _FakeEvidenceRepository()
+    scoped_permissions: list[dict[str, object]] = []
 
     def authenticate(request: Any, token: str) -> tuple[LocalUser, frozenset[str]] | None:
         assert request_tenant_id(request) == "tenant-a"
@@ -110,6 +111,21 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
 
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
+    monkeypatch.setattr(
+        evidence_routes,
+        "request_execution_scope",
+        lambda _request: RequestExecutionScope("tenant-a", "workspace-a", "org-a", "entity-a"),
+    )
+    monkeypatch.setattr(
+        evidence_routes,
+        "enforce_server_scoped_permission",
+        lambda _request, **kwargs: scoped_permissions.append(kwargs),
+    )
+    monkeypatch.setattr(
+        evidence_routes,
+        "enforce_server_scoped_permissions",
+        lambda _request, **kwargs: scoped_permissions.append(kwargs),
+    )
     monkeypatch.setattr(evidence_routes, "execute_postgres_evidence", execute)
 
     tenant_root = tmp_path / "tenants"
@@ -170,3 +186,18 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
     assert verified.status_code == 200
     assert verified.json()["verification"]["ok"] is True
     assert coverage.status_code == 200
+    expected_hierarchy = {
+        "tenant_id": "tenant-a",
+        "workspace_id": "workspace-a",
+        "organization_id": "org-a",
+        "entity_id": "entity-a",
+    }
+    assert scoped_permissions == [
+        {"permission": "evidence.manage", **expected_hierarchy},
+        {"permissions": frozenset({"evidence.read", "evidence.manage"}), **expected_hierarchy},
+        {"permissions": frozenset({"evidence.read", "evidence.manage"}), **expected_hierarchy},
+        {"permission": "evidence.manage", **expected_hierarchy},
+        {"permission": "evidence.manage", **expected_hierarchy},
+        {"permission": "evidence.verify", **expected_hierarchy},
+        {"permissions": frozenset({"evidence.read", "evidence.manage"}), **expected_hierarchy},
+    ]

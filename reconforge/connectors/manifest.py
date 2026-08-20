@@ -23,6 +23,7 @@ class ConnectorKind(StrEnum):
     LOCAL_FILE = "local_file"
     EXPORT_PROFILE = "export_profile"
     NETWORK_SOURCE = "network_source"
+    DATABASE_SOURCE = "database_source"
 
 
 class ConnectorCapability(StrEnum):
@@ -103,8 +104,8 @@ class ConnectorManifest(BaseModel):
             raise ValueError("network_required must exactly match declared egress destinations")
         if not self.network_required and self.authentication is not AuthenticationMethod.NONE:
             raise ValueError("local connectors cannot request authentication")
-        if self.network_required and self.authentication is AuthenticationMethod.NONE:
-            raise ValueError("network connectors must declare an authentication method")
+        if self.kind is ConnectorKind.DATABASE_SOURCE and self.authentication is AuthenticationMethod.NONE:
+            raise ValueError("database connectors must declare secret-reference authentication")
         if self.network_required and self.rate_limit_per_minute is None:
             raise ValueError("network connectors must declare a rate limit")
         if not self.network_required and self.rate_limit_per_minute is not None:
@@ -114,16 +115,20 @@ class ConnectorManifest(BaseModel):
         if tuple(sorted(set(self.egress_destinations))) != self.egress_destinations:
             raise ValueError("egress destinations must be unique and canonically sorted")
         for destination in self.egress_destinations:
+            if any(ord(character) < 33 or ord(character) > 126 for character in destination):
+                raise ValueError("egress destinations must be exact HTTPS URLs or exact SFTP URLs without credentials or fragment")
             parsed = urlsplit(destination)
+            allowed_schemes = {"https", "sftp"}
+            if self.kind is ConnectorKind.DATABASE_SOURCE:
+                allowed_schemes = {"postgresql", "postgres"}
             if (
-                parsed.scheme != "https"
+                parsed.scheme not in allowed_schemes
                 or not parsed.hostname
                 or parsed.username is not None
                 or parsed.password is not None
                 or parsed.fragment
-                or parsed.query
             ):
-                raise ValueError("egress destinations must be exact HTTPS URLs without credentials, query, or fragment")
+                raise ValueError("egress destinations must be exact HTTPS URLs or exact SFTP URLs without credentials or fragment")
             try:
                 port = parsed.port
             except ValueError as exc:

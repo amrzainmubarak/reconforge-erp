@@ -20,7 +20,11 @@ worst-case enumeration is bounded by:
 `sum(C(n, i), i in allowed-left) * sum(C(m, j), j in allowed-right)`
 
 The published runtime ceilings are four records on either side and 25,000
-evaluated group pairs. Crossing the evaluation ceiling produces
+evaluated group pairs. A caller may request a lower reviewed budget for a
+single run (`max_left_cardinality`, `max_right_cardinality`, or
+`max_search_evaluations`), but never a value above the manifest ceiling or
+below the selected mode's cardinality floor. The selected override is part of
+the canonical request digest. Crossing the effective evaluation ceiling produces
 `GROUP_SEARCH_BUDGET_EXCEEDED`, selects no group, and records the partial
 candidate count. This is a deterministic search budget, not a performance
 claim.

@@ -1,0 +1,2 @@
+scrap_id,order_id,quantity,reason
+SCRAP-001,MFG-002,7,setup loss

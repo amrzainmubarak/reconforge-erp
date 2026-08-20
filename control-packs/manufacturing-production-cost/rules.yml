@@ -1,0 +1,44 @@
+rules:
+  - rule_id: MFG-001
+    rule_name: Material issue references a known production order
+    severity: high
+    entity_type: material_issue
+    source_file: material_issues.csv
+    condition:
+      operator: cross_file_missing
+      source_key: order_id
+      target_file: orders.csv
+      target_key: order_id
+    message: A material issue does not reference a known production order.
+    business_impact: Material consumption may be posted to an invalid or unintended cost object.
+    recommended_action: Trace the issue to an approved production order before downstream posting.
+    risk_impact: 84
+    evidence_fields: [issue_id, order_id, item_id, quantity, unit_cost]
+  - rule_id: MFG-002
+    rule_name: Duplicate completion identity
+    severity: critical
+    entity_type: completion
+    source_file: completions.csv
+    condition:
+      operator: duplicate
+      field: completion_id
+    message: A production completion identifier appears more than once.
+    business_impact: Duplicate completions can overstate finished goods and understate WIP.
+    recommended_action: Quarantine the duplicate and review the source export lineage.
+    risk_impact: 94
+    evidence_fields: [completion_id, order_id, quantity, actual_cost]
+  - rule_id: MFG-003
+    rule_name: Material unit cost variance
+    severity: high
+    entity_type: material_issue
+    source_file: material_issues.csv
+    condition:
+      operator: variance_above
+      field: unit_cost
+      other_field: standard_unit_cost
+      threshold: 0.01
+    message: Material issue unit cost differs from the production standard beyond tolerance.
+    business_impact: Actual production cost may be misstated or require variance review.
+    recommended_action: Confirm lot cost, valuation policy, and approved production variance treatment.
+    risk_impact: 86
+    evidence_fields: [issue_id, order_id, unit_cost, standard_unit_cost]

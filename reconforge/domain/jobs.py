@@ -17,6 +17,14 @@ class JobInvariantError(ValueError):
     """Raised when a job would enter an invalid or unsafe state."""
 
 
+class DurableJobBackpressureError(RuntimeError):
+    """Raised when a new job would exceed its bounded execution-lane queue."""
+
+
+class DurableJobSchedulerCursorConflictError(RuntimeError):
+    """Raised when a scheduler key is reused with a different lane contract."""
+
+
 class JobStatus(StrEnum):
     QUEUED = "queued"
     RUNNING = "running"
@@ -25,6 +33,78 @@ class JobStatus(StrEnum):
     FAILED = "failed"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
+
+
+@dataclass(frozen=True)
+class DurableJobQueueSnapshot:
+    """Safe, tenant-scoped queue health projection.
+
+    The projection intentionally contains counts and bounded timestamps only;
+    it never exposes job IDs, idempotency keys, digests, or financial payloads.
+    Empty scope fields mean that the snapshot covers the whole tenant.
+    """
+
+    tenant_id: str
+    workspace_id: str = ""
+    organization_id: str = ""
+    entity_id: str = ""
+    queued_count: int = 0
+    running_count: int = 0
+    paused_count: int = 0
+    retrying_count: int = 0
+    failed_count: int = 0
+    completed_count: int = 0
+    cancelled_count: int = 0
+    leased_count: int = 0
+    oldest_queued_at: str = ""
+    oldest_running_at: str = ""
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "tenant_id", _identifier(self.tenant_id, "tenant_id"))
+        for field in ("workspace_id", "organization_id", "entity_id"):
+            object.__setattr__(self, field, _identifier(getattr(self, field), field, optional=True))
+        count_fields = (
+            "queued_count",
+            "running_count",
+            "paused_count",
+            "retrying_count",
+            "failed_count",
+            "completed_count",
+            "cancelled_count",
+            "leased_count",
+        )
+        for field in count_fields:
+            value = getattr(self, field)
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise JobInvariantError(f"{field} must be a non-negative integer.")
+        if self.leased_count > self.running_count:
+            raise JobInvariantError("leased jobs cannot exceed running jobs.")
+        for field in ("oldest_queued_at", "oldest_running_at"):
+            value = getattr(self, field)
+            if value:
+                object.__setattr__(self, field, _utc_timestamp(value, field))
+
+    @property
+    def queue_depth(self) -> int:
+        """Jobs waiting for execution, including retryable work."""
+
+        return self.queued_count + self.retrying_count
+
+    @property
+    def total_count(self) -> int:
+        """Total jobs represented by this snapshot."""
+
+        return sum(
+            (
+                self.queued_count,
+                self.running_count,
+                self.paused_count,
+                self.retrying_count,
+                self.failed_count,
+                self.completed_count,
+                self.cancelled_count,
+            )
+        )
 
 
 ALLOWED_TRANSITIONS: dict[JobStatus, frozenset[JobStatus]] = {
@@ -193,12 +273,14 @@ class DurableJob:
     completed_at: str
     output_manifest: JobOutputManifest | None
     schema_version: int = JOB_SCHEMA_VERSION
+    organization_id: str = ""
 
     def __post_init__(self) -> None:
         if self.schema_version != JOB_SCHEMA_VERSION:
             raise JobInvariantError("Unsupported durable-job schema version.")
         for field in ("id", "idempotency_scope", "idempotency_key", "tenant_id", "workspace_id", "worker_version"):
             object.__setattr__(self, field, _identifier(getattr(self, field), field))
+        object.__setattr__(self, "organization_id", _identifier(self.organization_id, "organization_id", optional=True))
         object.__setattr__(self, "entity_id", _identifier(self.entity_id, "entity_id", optional=True))
         object.__setattr__(self, "input_digest", _digest(self.input_digest, "input_digest"))
         object.__setattr__(self, "config_digest", _digest(self.config_digest, "config_digest"))
@@ -258,6 +340,7 @@ class DurableJob:
         idempotency_key: str,
         tenant_id: str,
         workspace_id: str,
+        organization_id: str = "",
         entity_id: str = "",
         input_digest: str,
         config_digest: str,
@@ -274,6 +357,7 @@ class DurableJob:
             idempotency_key=idempotency_key,
             tenant_id=tenant_id,
             workspace_id=workspace_id,
+            organization_id=organization_id,
             entity_id=entity_id,
             input_digest=input_digest,
             config_digest=config_digest,

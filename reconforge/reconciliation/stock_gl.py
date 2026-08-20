@@ -63,6 +63,15 @@ class StockGLReconciliationResult:
     record_identity_policy: str = RECORD_IDENTITY_POLICY
     matching_ambiguity_policy: str = "stable-tie-break-v1"
 
+    def __post_init__(self) -> None:
+        """Reject unsupported policy metadata before a result can escape."""
+
+        object.__setattr__(
+            self,
+            "financial_input_policy",
+            validate_financial_input_policy(self.financial_input_policy),
+        )
+
 
 _EXCEPTION_REASONS = {
     "stock_without_gl": "No eligible GL entry was assigned to the stock movement.",
@@ -180,6 +189,31 @@ def _expose_record_lineage(frame: pd.DataFrame) -> pd.DataFrame:
         RECORD_IDENTITY_POLICY_COLUMN: "record_identity_policy",
     }
     return exposed.rename(columns=renames)
+
+
+def _stable_output_order(frame: pd.DataFrame, *columns: str) -> pd.DataFrame:
+    """Return a result frame in a deterministic order independent of input rows.
+
+    Source positions remain attached as audit metadata, but they are not an
+    ordering key: reordering an input file must not reorder the canonical
+    result artifact.  Stringifying only the selected identity columns also
+    avoids pandas attempting to compare heterogeneous financial values.
+    """
+
+    if frame.empty:
+        return frame.reset_index(drop=True)
+    available = [column for column in columns if column in frame.columns]
+    if not available:
+        return frame.reset_index(drop=True)
+    ordered = frame.copy()
+    ordered["_reconforge_output_sort_key"] = (
+        ordered[available].astype("string").fillna("").agg("\x1f".join, axis=1)
+    )
+    return (
+        ordered.sort_values("_reconforge_output_sort_key", kind="mergesort")
+        .drop(columns=["_reconforge_output_sort_key"])
+        .reset_index(drop=True)
+    )
 
 
 def _canonical_exception_value(
@@ -658,6 +692,7 @@ def reconcile_stock_gl(
                 "risk_level",
             ],
         )
+    matched = _stable_output_order(matched, "match_id", "stock_record_instance_id", "gl_record_instance_id")
 
     value_differences = _risk_columns(
         matched[matched["match_level"].eq("Value Difference")].copy(),
@@ -750,6 +785,13 @@ def reconcile_stock_gl(
         stock_without = regular_stock_without
         gl_without = regular_gl_without
 
+    stock_without = _stable_output_order(stock_without, "record_instance_id", "move_id")
+    gl_without = _stable_output_order(gl_without, "record_instance_id", "entry_id")
+    value_differences = _stable_output_order(value_differences, "exception_id", "match_id")
+    date_differences = _stable_output_order(date_differences, "exception_id", "match_id")
+    reference_mismatches = _stable_output_order(reference_mismatches, "exception_id", "match_id")
+    data_quality = _stable_output_order(data_quality, "exception_id", "record_instance_id", "field")
+
     exception_frames = [
         stock_without,
         gl_without,
@@ -779,6 +821,7 @@ def reconcile_stock_gl(
             ],
         )
     )
+    all_exceptions = _stable_output_order(all_exceptions, "exception_id", "exception_type", "evidence_reference")
 
     result_frames = {
         "matched_transactions": matched,

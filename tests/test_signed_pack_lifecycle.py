@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 
 import pytest
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from reconforge.connectors.package import TrustedPublisherKey, TrustedPublisherRegistry
 from reconforge.packs.lifecycle import (
@@ -16,6 +15,10 @@ from reconforge.packs.lifecycle import (
     signature_payload,
 )
 
+cryptography_ed25519 = pytest.importorskip(
+    "cryptography.hazmat.primitives.asymmetric.ed25519", reason="connector crypto extra is optional"
+)
+Ed25519PrivateKey = cryptography_ed25519.Ed25519PrivateKey
 
 def _manifest(pack_id: str = "synthetic-close", version: str = "1.0.0", dependencies: list[dict[str, str]] | None = None) -> dict[str, object]:
     rule = {

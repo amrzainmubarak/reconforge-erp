@@ -1,9 +1,20 @@
 schema_version: 1
-updated_at: "2026-08-01"
+updated_at: "2026-08-11"
 claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
   availability; the current_live_gate below records the separate unskipped run.
+current_source_migration_head: "0088_pg_currency_snapshot"
+currency_registry_binding_contract:
+  id: E-711
+  executed_at: "2026-08-11"
+  database: "SQLite local plus PostgreSQL adapter/schema contract"
+  focused_tests: 2
+  focused_result: passed
+  migration_head: "0088_pg_currency_snapshot"
+  migration_path: "alembic_upgrade_head_contract"
+  covered_boundaries: [MasterDataService, PostgresMasterDataRepository, PostgresMasterDataApplicationRepository]
+  limitations: [no_configured_live_postgresql_runtime, synthetic_data, no_live_fx, no_statutory_posting, no_production_claim]
 current_live_gate:
   id: E-163
   executed_at: "2026-07-28"
@@ -15,7 +26,7 @@ current_live_gate:
   application_and_migration_result: passed
   native_encrypted_backup_restore_tests: 1
   native_encrypted_backup_restore_result: passed
-  covered_live_boundaries: 25
+  covered_live_boundaries: 22
   skipped_live_boundaries: 0
   limitations: [single_node, synthetic_data, no_ha, no_host_loss, no_rpo_rto_claim]
 current_slice_gate:
@@ -30,16 +41,232 @@ current_slice_gate:
   migration_paths: ["0001 -> 0052", "0052 -> 0051 -> 0052", "0052 -> 0011 -> 0052", "nonempty 0052 downgrade refusal"]
   covered_live_boundaries: [SecurityGovernanceApplicationService]
   limitations: [single_node, synthetic_data, metadata_retention_only, no_administration_ui, no_external_assurance]
+ownership_runtime_gate:
+  id: E-280
+  executed_at: "2026-08-02"
+  database: "PostgreSQL 16 Alpine CI service"
+  database_image_digest: "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+  application_role: reconforge_app_non_superuser
+  focused_tests: 1
+  focused_result: passed
+  skipped_focused_tests: 0
+  covered_live_boundaries: [ConsolidationOwnershipApplicationService]
+  limitations: [single_node, synthetic_data, no_restore_drill, no_ha, no_rpo_rto_claim]
+close_runtime_gate:
+  id: E-289
+  executed_at: "2026-08-02"
+  database: "PostgreSQL 16 Alpine CI service"
+  database_image_digest: "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+  application_role: reconforge_app_non_superuser
+  focused_tests: 1
+  focused_result: passed
+  skipped_focused_tests: 0
+  covered_live_boundaries: [CloseManagementApplicationService]
+  limitations: [single_node, synthetic_data, no_restore_drill, no_ha, no_rpo_rto_claim]
+consolidation_close_runtime_gate:
+  id: E-291
+  executed_at: "2026-08-02"
+  database: "PostgreSQL 16 Alpine CI service"
+  database_image_digest: "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+  application_role: reconforge_app_non_superuser
+  focused_tests: 1
+  focused_result: passed
+  skipped_focused_tests: 0
+  covered_live_boundaries: [ConsolidationCloseApplicationService]
+  ci_run: "30762214054"
+  limitations: [single_node, synthetic_data, no_restore_drill, no_ha, no_rpo_rto_claim, control_journal_only_no_erp_writeback]
+durable_job_runtime_gate:
+  id: E-294
+  executed_at: "2026-08-02"
+  database: "PostgreSQL 16 Alpine CI service"
+  database_image_digest: "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+  application_role: reconforge_app_non_superuser
+  focused_tests: 1
+  focused_result: passed
+  skipped_focused_tests: 0
+  covered_live_boundaries: [DurableJobApplicationService, DurableJobWorkerService]
+  ci_run: "30764427298"
+  limitations: [single_node, synthetic_data, no_queue_ha, no_failover, no_soak, no_rpo_rto_claim]
+intercompany_runtime_gate:
+  id: E-295
+  executed_at: "2026-08-02"
+  database: "PostgreSQL 16 Alpine CI service"
+  database_image_digest: "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+  application_role: reconforge_app_non_superuser
+  focused_tests: 1
+  focused_result: passed
+  skipped_focused_tests: 0
+  covered_live_boundaries: [IntercompanyApplicationService]
+  ci_run: "30765662833"
+  limitations: [single_node, synthetic_transactions, no_statutory_consolidation, no_erp_writeback, no_ha, no_rpo_rto_claim]
+ppa_runtime_gate:
+  id: E-332
+  executed_at: "2026-08-03"
+  database: "PostgreSQL 16 Alpine CI service"
+  application_role: reconforge_app
+  focused_tests: 1
+  focused_result: passed
+  skipped_focused_tests: 0
+  covered_live_boundaries: [AcquisitionPpaApplicationService]
+  ci_run: "30811914832"
+  api_runtime_test: tests/test_api_server_identity.py
+  api_runtime_result: passed
+  api_ci_run: "30815726556"
+  limitations: [single_node, synthetic_data, non_posting_evidence_only, no_statutory_accounting, no_restore_drill, no_ha, no_rpo_rto_claim, no_erp_writeback]
+deferred_tax_runtime_gate:
+  id: E-654
+  executed_at: "2026-08-10"
+  database: "PostgreSQL 16 Alpine disposable runtime"
+  database_image_digest: "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+  application_role: reconforge_app_non_superuser_non_bypassrls
+  focused_tests: 1
+  focused_result: passed
+  covered_live_boundaries: [AcquisitionDeferredTaxApplicationService, authenticated_deferred_tax_api]
+  migration_head: "0085_pg_reversal_definer"
+  migration_path: "alembic_upgrade_head"
+  limitations: [single_node, synthetic_data, tenant_scoped_not_workspace_scoped, non_posting_evidence_only, no_statutory_tax_accounting, no_downgrade_or_rollback_drill, no_restore_drill, no_ha, no_rpo_rto_claim, no_erp_writeback]
+impairment_runtime_gate:
+  id: E-654
+  executed_at: "2026-08-10"
+  database: "PostgreSQL 16 Alpine disposable runtime"
+  database_image_digest: "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+  application_role: reconforge_app_non_superuser_non_bypassrls
+  focused_tests: 1
+  focused_result: passed
+  covered_live_boundaries: [ConsolidationImpairmentApplicationService, authenticated_impairment_api]
+  migration_head: "0085_pg_reversal_definer"
+  migration_path: "alembic_upgrade_head"
+  limitations: [single_node, synthetic_data, tenant_scoped_not_workspace_scoped, non_posting_evidence_only, no_valuation_methodology, no_statutory_accounting, no_downgrade_or_rollback_drill, no_restore_drill, no_ha, no_rpo_rto_claim, no_erp_writeback]
+consolidation_close_api_runtime_gate:
+  id: E-655
+  executed_at: "2026-08-10"
+  database: "PostgreSQL 16 Alpine disposable runtime"
+  database_image_digest: "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+  application_role: reconforge_app_non_superuser_non_bypassrls
+  focused_tests: 1
+  focused_result: passed
+  covered_live_boundaries: [ConsolidationCloseApplicationService, authenticated_consolidation_close_api]
+  migration_head: "0086_pg_close_reopened"
+  migration_path: "alembic_upgrade_head"
+  api_runtime_test: tests/test_api_server_consolidation_close.py
+  api_runtime_result: passed
+  limitations: [single_node, synthetic_data, control_journal_only, no_statutory_consolidation, no_legal_book_posting, no_downgrade_or_rollback_drill, no_restore_drill, no_ha, no_rpo_rto_claim, no_erp_writeback]
+close_impairment_link_runtime_gate:
+  id: E-513
+  executed_at: "2026-08-06"
+  database: "PostgreSQL disposable runtime when configured"
+  application_role: reconforge_app
+  focused_tests: 1
+  focused_result: declared_skip_without_RECONFORGE_TEST_POSTGRES_DSN
+  covered_live_boundaries: [ConsolidationCloseApplicationService]
+  migration_head: "0067_pg_close_impairment_links"
+  limitations: [no_current_live_runtime, single_node_when_available, synthetic_data, non_posting_evidence_only, no_valuation_methodology, no_statutory_accounting, no_restore_drill, no_ha, no_rpo_rto_claim, no_erp_writeback]
+close_deferred_tax_link_runtime_gate:
+  id: E-515
+  executed_at: "2026-08-06"
+  database: "PostgreSQL disposable runtime when configured"
+  application_role: reconforge_app
+  focused_tests: 1
+  focused_result: declared_skip_without_RECONFORGE_TEST_POSTGRES_DSN
+  covered_live_boundaries: [ConsolidationCloseApplicationService]
+  migration_head: "0068_pg_close_deferred_tax_links"
+  limitations: [no_current_live_runtime, single_node_when_available, synthetic_data, non_posting_evidence_only, no_statutory_tax_accounting, no_restore_drill, no_ha, no_rpo_rto_claim, no_erp_writeback]
+close_ppa_link_runtime_gate:
+  id: E-517
+  executed_at: "2026-08-06"
+  database: "PostgreSQL disposable runtime when configured"
+  application_role: reconforge_app
+  focused_tests: 1
+  focused_result: declared_skip_without_RECONFORGE_TEST_POSTGRES_DSN
+  covered_live_boundaries: [ConsolidationCloseApplicationService, AcquisitionPpaApplicationService]
+  migration_head: "0069_pg_close_ppa_links"
+  limitations: [no_current_live_runtime, single_node_when_available, synthetic_data, non_posting_evidence_only, no_purchase_accounting_policy, no_statutory_accounting, no_restore_drill, no_ha, no_rpo_rto_claim, no_erp_writeback]
+ownership_change_runtime_gate:
+  id: E-652
+  executed_at: "2026-08-10"
+  database: "PostgreSQL 16 Alpine disposable runtime"
+  database_image_digest: "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+  application_role: reconforge_app_non_superuser_non_bypassrls
+  focused_tests: 1
+  focused_result: passed
+  covered_live_boundaries: [OwnershipChangeApplicationService, authenticated_ownership_change_api]
+  migration_head: "schema_sql_direct_no_alembic_upgrade"
+  limitations: [single_node, synthetic_data, tenant_scoped_not_workspace_scoped, direct_schema_only, non_posting_evidence_only, no_statutory_accounting, no_restore_drill, no_ha, no_rpo_rto_claim, no_erp_writeback]
+close_ownership_change_link_runtime_gate:
+  id: E-520
+  executed_at: "2026-08-06"
+  database: "PostgreSQL disposable runtime when configured"
+  application_role: reconforge_app
+  focused_tests: 1
+  focused_result: declared_skip_without_RECONFORGE_TEST_POSTGRES_DSN
+  covered_live_boundaries: [ConsolidationCloseApplicationService, OwnershipChangeApplicationService]
+  migration_head: "0071_pg_close_ownchg_links"
+  limitations: [no_current_live_runtime, single_node_when_available, synthetic_data, non_posting_evidence_only, no_statutory_accounting, no_restore_drill, no_ha, no_rpo_rto_claim, no_erp_writeback]
+close_hierarchy_scope_gate:
+  id: E-570
+  executed_at: "2026-08-07"
+  database: "PostgreSQL disposable runtime when configured"
+  application_role: reconforge_app
+  focused_tests: 39
+  focused_result: static_contracts_passed_live_runtime_declared_skip
+  covered_live_boundaries: [ConsolidationCloseApplicationService]
+  migration_head: "0078_pg_close_scope"
+  limitations: [no_current_live_hierarchy_runtime, single_node_when_available, synthetic_data, non_posting_control_journal_only, no_statutory_accounting, no_restore_drill, no_ha, no_rpo_rto_claim, no_erp_writeback]
+delegation_runtime_gate:
+  id: E-302
+  executed_at: "2026-08-03"
+  database: "PostgreSQL 16 Alpine CI service"
+  database_image_digest: "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+  application_role: reconforge_app_non_superuser
+  focused_tests: 1
+  focused_result: passed
+  covered_live_boundaries: [PostgresDelegationRepository]
+  ci_run: "30771736208"
+  limitations: [single_node, synthetic_data, no_federation, no_route_coverage, no_cache_invalidation_claim]
+policy_analysis_runtime_gate:
+  id: E-331
+  executed_at: "2026-08-03"
+  database: "PostgreSQL 16 Alpine CI service"
+  database_image_digest: "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+  application_role: reconforge_app_non_superuser
+  focused_tests: 1
+  focused_result: passed
+  covered_live_boundaries: [PolicyAnalysisApplicationService]
+  ci_run: "30808822315"
+  limitations: [single_node, synthetic_data, currency_agnostic_amount_bounds, no_provider_federation, no_distributed_cache_invalidation, no_route_coverage]
+goal_boundary_gate:
+  id: E-651
+  executed_at: "2026-08-10"
+  database: "PostgreSQL 16 Alpine disposable runtime"
+  database_image_digest: "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+  application_role: reconforge_app_non_superuser_non_bypassrls
+  focused_tests: 330
+  focused_result: passed
+  migration_head: "0085_pg_reversal_definer"
+  trigger_regression: "passed_after_upgrade"
+  native_backup_restore_smoke: passed
+  redis_live_report: "verified:3aeec3811c6606e55c679bc36a7af4adb08f73b0570111e483413dbce1590ed1"
+  limitations: [single_node, synthetic_data, no_replication, no_ha, no_rpo_rto_claim, no_host_loss, no_live_provider_or_writeback]
 allowed_statuses: [live_verified_current, live_test_available, contract_only, absent, not_applicable]
 boundaries:
+  - {file: consolidation_close.py, service: ConsolidationCloseApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_close.PostgresConsolidationCloseRepository, test: tests/test_postgres_consolidation_close.py, api_test: tests/test_api_server_consolidation_close.py, api_result: passed, current_migration_head: "0086_pg_close_reopened", risk: single_node_synthetic_control_journal_and_evidence_lifecycle_only_no_statutory_consolidation_or_legal_book_posting_no_erp_writeback_or_restore_ha_evidence}
+  - {file: consolidation_ownership.py, service: ConsolidationOwnershipApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_ownership.PostgresConsolidationOwnershipRepository, test: tests/test_postgres_consolidation_ownership.py, risk: single_node_runtime_only_no_restore_or_ha_evidence}
+  - {file: consolidation_ppa.py, service: AcquisitionPpaApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_ppa.PostgresConsolidationPpaRepository, test: tests/test_postgres_consolidation_ppa_runtime.py, risk: single_node_synthetic_non_posting_only_no_statutory_or_writeback}
+  - {file: consolidation_ownership_change.py, service: OwnershipChangeApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_ownership_change.PostgresConsolidationOwnershipChangeRepository, test: tests/test_postgres_consolidation_ownership_change.py, api_test: tests/test_api_consolidation_ownership_change.py, risk: single_node_synthetic_tenant_scoped_non_posting_only_no_statutory_or_writeback}
+  - {file: consolidation_deferred_tax.py, service: AcquisitionDeferredTaxApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_deferred_tax.PostgresConsolidationDeferredTaxRepository, test: tests/test_postgres_consolidation_deferred_tax_runtime.py, api_test: tests/test_api_consolidation_tax_impairment_live.py, api_result: passed, risk: single_node_direct_schema_tenant_scoped_non_posting_only_no_alembic_upgrade_no_statutory_or_writeback}
+  - {file: consolidation_impairment.py, service: ConsolidationImpairmentApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_impairment.PostgresConsolidationImpairmentRepository, test: tests/test_postgres_consolidation_impairment_runtime.py, api_test: tests/test_api_consolidation_tax_impairment_live.py, api_result: passed, risk: single_node_direct_schema_tenant_scoped_non_posting_only_no_alembic_upgrade_no_valuation_methodology_or_statutory_or_writeback}
   - {file: consolidation.py, service: ConsolidationApplicationService, status: not_applicable, reason: immutable_scoped_object_store_artifact_repository}
+  - {file: intercompany_elimination.py, service: IntercompanyEliminationApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_intercompany_elimination.PostgresIntercompanyEliminationRepository, test: tests/test_postgres_intercompany_elimination_runtime.py, risk: single_node_nonposting_proposal_only_no_statutory_posting_or_writeback}
   - {file: grouped_matching.py, service: GroupedMatchingApplicationService, status: not_applicable, reason: pure_strategy}
   - {file: backup_restore.py, service: BackupRestoreApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_backup.PostgresNativeBackupAdapter, test: tests/test_postgres_backup.py, risk: recovery_critical}
   - {file: idempotency.py, service: IdempotencyApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_idempotency.PostgresIdempotencyRepository, test: tests/test_postgres_idempotency.py}
   - {file: workspace_periods.py, service: WorkspacePeriodApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_domain.PostgresDomainUnitOfWork, test: tests/test_postgres_workspace_period_uow.py}
   - {file: operations.py, service: OperationsApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_operations.PostgresOperationsRepository, test: tests/test_postgres_operations.py}
-  - {file: jobs.py, service: DurableJobApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_jobs.PostgresDurableJobRepository, test: tests/test_postgres_durable_jobs.py}
-  - {file: jobs.py, service: DurableJobWorkerService, status: live_test_available, adapter: reconforge.infrastructure.postgres_jobs.PostgresDurableJobRepository, test: tests/test_postgres_durable_jobs.py}
+  - {file: jobs.py, service: DurableJobApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_jobs.PostgresDurableJobRepository, test: tests/test_postgres_durable_jobs.py, risk: single_node_no_queue_ha_or_soak}
+  - {file: jobs.py, service: GovernedDurableJobApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_jobs.PostgresDurableJobRepository, test: tests/test_postgres_durable_jobs.py, risk: policy_wrapper_is_opt_in_and_route_federation_cache_coverage_remains_open}
+  - {file: jobs.py, service: DurableJobWorkerService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_jobs.PostgresDurableJobRepository, test: tests/test_postgres_durable_jobs.py, risk: single_node_no_queue_ha_or_soak}
+  - {file: jobs.py, service: GovernedDurableJobWorkerService, status: not_applicable, reason: policy_facade_reuses_the_underlying_worker_adapter_and_has_no_backend_specific_persistence}
+  - {file: writeback.py, service: WritebackIntentApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_writeback.PostgresWritebackIntentRepository, test: tests/test_postgres_writeback.py, api_test: tests/test_api_connectors.py, api_result: contract_only, risk: intent_persistence_and_server_route_contract_only_no_live_provider_or_network_writeback}
   - {file: metrics.py, service: MetricsApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_metrics.PostgresMetricsRepository, test: tests/test_application_metrics.py}
   - {file: outbox.py, service: OutboxApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_outbox.TenantBoundPostgresOutboxRepository, test: tests/test_postgres_outbox.py, risk: delivery_critical}
   - {file: scheduler.py, service: SchedulerApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_scheduler.PostgresScheduleRepository, test: tests/test_postgres_scheduler.py, risk: delivery_critical}
@@ -47,14 +274,15 @@ boundaries:
   - {file: security_center.py, service: SecurityCenterApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_security_center.PostgresSecurityCenterRepository, test: tests/test_postgres_security_center.py, risk: disclosure_high}
   - {file: identity_administration.py, service: IdentityAdministrationApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_identity_administration.PostgresIdentityAdministrationRepository, test: tests/test_postgres_identity_administration.py, risk: identity_critical}
   - {file: access_administration.py, service: AccessAdministrationApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_access_administration.PostgresAccessAdministrationRepository, test: tests/test_postgres_access_administration.py, risk: identity_critical}
+  - {file: policy_analysis.py, service: PolicyAnalysisApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_policy_analysis.PostgresPolicyAnalysisRepository, test: tests/test_postgres_policy_analysis_runtime.py, risk: single_node_synthetic_currency_agnostic_amount_bounds_no_provider_federation}
   - {file: security_governance.py, service: SecurityGovernanceApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_security_governance.PostgresSecurityGovernanceRepository, test: tests/test_postgres_security_governance.py, risk: governance_high}
   - {file: audit_browsing.py, service: AuditBrowsingApplicationService, status: contract_only, adapter: reconforge.infrastructure.postgres_audit_browsing.PostgresAuditBrowsingRepository, test: tests/test_audit_browsing.py, risk: disclosure_high}
   - {file: controls.py, service: ControlTestingApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_controls.PostgresControlTestingRepository, test: tests/test_postgres_controls.py}
-  - {file: intercompany.py, service: IntercompanyApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_intercompany.PostgresIntercompanyRepository, test: tests/test_postgres_intercompany.py}
+  - {file: intercompany.py, service: IntercompanyApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_intercompany.PostgresIntercompanyRepository, test: tests/test_postgres_intercompany.py, risk: control_workflow_only_no_statutory_posting}
   - {file: journals.py, service: JournalControlApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_journals.PostgresJournalControlRepository, test: tests/test_postgres_journals.py}
   - {file: accounts.py, service: AccountReconciliationApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_accounts.PostgresAccountReconciliationRepository, test: tests/test_postgres_accounts.py, risk: financial_high}
   - {file: approvals.py, service: ApprovalApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_approvals.PostgresApprovalRepository, test: tests/test_postgres_approvals.py, risk: governance_high}
-  - {file: close.py, service: CloseManagementApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_close_application.PostgresCloseManagementRepository, test: tests/test_postgres_close_application.py, risk: financial_high}
+  - {file: close.py, service: CloseManagementApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_close_application.PostgresCloseManagementRepository, test: tests/test_postgres_close_application.py, risk: financial_high}
   - {file: evidence.py, service: EvidenceRegistryApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_evidence_application.PostgresEvidenceRegistryRepository, test: tests/test_postgres_evidence_application.py, risk: integrity_high}
   - {file: exceptions.py, service: ExceptionQueueApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_exceptions.PostgresExceptionQueueRepository, test: tests/test_postgres_exceptions.py, risk: workflow_high}
   - {file: finance_core.py, service: FinanceCoreApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_finance_core.PostgresFinanceCoreRepository, test: tests/test_postgres_finance_core.py, risk: financial_critical}
@@ -67,9 +295,9 @@ boundaries:
   - {file: inventory_valuation_reversal.py, service: InventoryValuationReversalApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_valuation_reversal.PostgresInventoryValuationReversalRepository, test: tests/test_postgres_inventory_valuation_reversal.py, risk: financial_critical}
   - {file: inventory_planning.py, service: InventoryPlanningApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_planning.PostgresInventoryPlanningRepository, test: tests/test_postgres_inventory_planning.py, risk: financial_high}
 summary:
-  total: 34
-  live_verified_current: 6
-  live_test_available: 25
-  contract_only: 1
+  total: 45
+  live_verified_current: 20
+  live_test_available: 21
   absent: 0
-  not_applicable: 2
+  contract_only: 1
+  not_applicable: 3

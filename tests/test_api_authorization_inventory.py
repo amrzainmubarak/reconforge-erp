@@ -6,11 +6,15 @@ import pytest
 from fastapi import APIRouter
 
 from reconforge.api import create_api_app
-from reconforge.api.authorization import build_route_authorization_inventory
+from reconforge.api.authorization import (
+    RouteAuthorizationContract,
+    build_route_authorization_inventory,
+    validate_authorization_surface,
+)
 from reconforge.api.dependencies import require_any_permission, require_permission
 
-EXPECTED_ROUTE_COUNT = 206
-EXPECTED_DIGEST = "fc4fe5e4a9ba708ef921e268a68850e8e68adc57d49283d8356b14790b9dd43c"
+EXPECTED_ROUTE_COUNT = 264
+EXPECTED_DIGEST = "bcd7b8edbca9152a88ebdab62ea88dd858b871057139cd995002e5efabd9a599"
 
 
 def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Path) -> None:
@@ -30,6 +34,7 @@ def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Pa
     ]
     assert all(contract.permissions for contract in contracts if contract.mode in {"all", "any"})
     assert len([contract for contract in contracts if contract.mode == "scim"]) == 15
+    validate_authorization_surface(contracts)
 
 
 def test_inventory_rejects_unclassified_and_stale_allowlisted_routes() -> None:
@@ -59,3 +64,26 @@ def test_permission_dependencies_freeze_and_validate_their_contract() -> None:
     for invalid in (set(), {""}, {"ADMIN"}, {"permission with spaces"}):
         with pytest.raises(ValueError, match="valid non-empty"):
             require_any_permission(invalid)
+
+
+def test_mutating_authorization_surface_fails_closed_outside_explicit_handshakes() -> None:
+    with pytest.raises(ValueError, match="publicly authorized"):
+        validate_authorization_surface(
+            (RouteAuthorizationContract("POST", "/api/v1/finance/post", "public"),)
+        )
+    with pytest.raises(ValueError, match="identity-only authorization"):
+        validate_authorization_surface(
+            (RouteAuthorizationContract("DELETE", "/api/v1/users/{id}", "identity"),)
+        )
+    with pytest.raises(ValueError, match="permission contract"):
+        validate_authorization_surface(
+            (RouteAuthorizationContract("PATCH", "/api/v1/finance/post", "all"),)
+        )
+    validate_authorization_surface(
+        (
+            RouteAuthorizationContract("POST", "/api/v1/auth/login", "public"),
+            RouteAuthorizationContract("POST", "/scim/v2/Users", "scim"),
+            RouteAuthorizationContract("POST", "/api/v1/finance/post", "all", ("finance.post",)),
+            RouteAuthorizationContract("POST", "/api/v1/workflow/objects/{object_type}/{object_id}/transition", "dynamic"),
+        )
+    )

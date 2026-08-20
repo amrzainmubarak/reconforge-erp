@@ -68,7 +68,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS inventory_valuation_reversal_remove_line_idx
 CREATE UNIQUE INDEX IF NOT EXISTS inventory_valuation_reversal_restore_consumption_idx
  ON reconforge.inventory_valuation_reversal_effects(tenant_id,reversal_id,original_consumption_id) WHERE effect_type='Restore';
 
-CREATE OR REPLACE FUNCTION reconforge.inventory_valuation_reversal_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION reconforge.inventory_valuation_reversal_guard()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, reconforge
+AS $$
 BEGIN
  IF TG_TABLE_NAME='inventory_valuation_reversals' THEN
   IF TG_OP='INSERT' AND (NEW.status<>'Draft' OR NEW.total_value_minor<>0 OR NEW.finance_entry_id IS NOT NULL) THEN RAISE EXCEPTION 'inventory valuation reversals must be created as empty Draft records'; END IF;
@@ -101,7 +106,12 @@ CREATE TRIGGER inventory_valuation_reversals_guard BEFORE INSERT OR UPDATE OR DE
 DROP TRIGGER IF EXISTS inventory_valuation_reversal_effects_guard ON reconforge.inventory_valuation_reversal_effects;
 CREATE TRIGGER inventory_valuation_reversal_effects_guard BEFORE INSERT OR UPDATE OR DELETE ON reconforge.inventory_valuation_reversal_effects FOR EACH ROW EXECUTE FUNCTION reconforge.inventory_valuation_reversal_guard();
 
-CREATE OR REPLACE FUNCTION reconforge.inventory_cost_layer_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION reconforge.inventory_cost_layer_guard()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, reconforge
+AS $$
 BEGIN
  IF TG_OP='DELETE' THEN RAISE EXCEPTION 'inventory cost layers cannot be deleted'; END IF;
  IF TG_OP='INSERT' THEN
@@ -113,7 +123,12 @@ BEGIN
  RETURN NEW;
 END $$;
 
-CREATE OR REPLACE FUNCTION reconforge.inventory_reversal_dependency_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION reconforge.inventory_reversal_dependency_guard()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, reconforge
+AS $$
 BEGIN
  IF TG_TABLE_NAME='inventory_movements' THEN
   IF OLD.status='Posted' AND NEW.status='Voided' AND EXISTS(SELECT 1 FROM reconforge.inventory_valuation_reversals r WHERE r.tenant_id=OLD.tenant_id AND r.reversal_movement_id=OLD.id AND r.status='Approved') THEN RAISE EXCEPTION 'approved valuation reversal movement cannot be voided'; END IF;

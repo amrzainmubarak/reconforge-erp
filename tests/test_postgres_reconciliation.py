@@ -5,12 +5,15 @@ from __future__ import annotations
 import json
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
+from threading import Event, Lock
 from typing import Any
 from uuid import uuid4
 
 import pytest
 
+from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.infrastructure.postgres import (
     PostgresConnectionFactory,
     PostgresSettings,
@@ -30,8 +33,10 @@ from reconforge.infrastructure.postgres_reconciliation import (
 from reconforge.infrastructure.postgres_reconciliation_checkpoints import (
     POSTGRES_RECONCILIATION_CHECKPOINT_SCHEMA_SQL,
 )
+from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY
 from reconforge.workers.postgres_reconciliation import (
     LocalDeterministicMatcherAdapter,
+    PostgresReconciliationPolicyDenied,
     PostgresReconciliationScheduler,
     PostgresReconciliationSchedulerError,
     PostgresReconciliationWorker,
@@ -407,6 +412,42 @@ def test_postgres_reconciliation_run_listing_is_stable_and_bounded() -> None:
         repository.list_runs(tenant_id="tenant_a", status="unknown")
 
 
+def test_postgres_repository_writer_binds_strict_financial_policy_by_default() -> None:
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+
+    run = _create_run(repository)
+
+    assert run["rule_json"]["financial_input_policy"] == STRICT_FINANCIAL_INPUT_POLICY
+    stored_rule = json.loads(str(connection.run["rule_json"]))
+    assert stored_rule["financial_input_policy"] == STRICT_FINANCIAL_INPUT_POLICY
+
+
+@pytest.mark.parametrize(
+    "policy",
+    ["legacy-financial-input-v1", "unknown-financial-input-v9"],
+)
+def test_postgres_repository_writer_rejects_non_strict_policy_before_mutation(policy: str) -> None:
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+
+    with pytest.raises(PostgresReconciliationValidationError, match="strict financial input policy"):
+        repository.create_run(
+            tenant_id="tenant_a",
+            run_id="run-invalid-policy",
+            name="Invalid policy",
+            left_source="bank.csv",
+            right_source="gl.csv",
+            algorithm_version="global-assignment-v1",
+            rule={"financial_input_policy": policy},
+            input_hash="invalid-policy",
+            actor_id="user-a",
+        )
+
+    assert connection.run is None
+    assert connection.executed == []
+
+
 class _ConnectionFactory:
     def __init__(self, connection: _ReconciliationConnection) -> None:
         self.connection = connection
@@ -467,6 +508,234 @@ def test_postgres_reconciliation_execution_worker_claims_persists_and_completes(
     assert connection.run["execution_attempt"] == 1
     assert len(connection.results) == 1
     adapter.close()
+
+
+def test_postgres_reconciliation_worker_policy_denies_before_connection_access() -> None:
+    class _NeverConnect:
+        def connect(self) -> Any:
+            raise AssertionError("policy denial must precede connection access")
+
+    worker = PostgresReconciliationWorker(
+        _NeverConnect(),
+        tenant_supplier=lambda: ["tenant_a"],
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="policy-worker",
+            policy_context_supplier=lambda tenant: PolicyEvaluationContext(
+                user_id="policy-worker",
+                username="policy-worker",
+                user_permissions=set(),
+                principal_type="service_account",
+                tenant_id=tenant,
+                authorized_tenant_ids=frozenset({tenant}),
+            ),
+        ),
+    )
+    with pytest.raises(PostgresReconciliationWorkerError, match="permission_missing"):
+        worker.process_once()
+
+
+def test_postgres_reconciliation_worker_policy_allows_scoped_service_identity() -> None:
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+    _create_run(repository)
+
+    worker = PostgresReconciliationWorker(
+        _ConnectionFactory(connection),
+        tenant_supplier=lambda: ["tenant_a"],
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="policy-worker",
+            policy_context_supplier=lambda tenant: PolicyEvaluationContext(
+                user_id="policy-worker",
+                username="policy-worker",
+                user_permissions={"match.run"},
+                principal_type="service_account",
+                tenant_id=tenant,
+                authorized_tenant_ids=frozenset({tenant}),
+            ),
+        ),
+    )
+    summary = worker.process_once()
+    assert summary.completed == 1
+    assert connection.run is not None and connection.run["execution_status"] == "Complete"
+
+
+def test_postgres_reconciliation_worker_rechecks_policy_before_claim() -> None:
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+    _create_run(repository)
+    policy_calls = 0
+
+    def policy_context(tenant: str) -> PolicyEvaluationContext:
+        nonlocal policy_calls
+        policy_calls += 1
+        return PolicyEvaluationContext(
+            user_id="recheck-worker",
+            username="recheck-worker",
+            user_permissions={"match.run"} if policy_calls == 1 else set(),
+            principal_type="service_account",
+            tenant_id=tenant,
+            authorized_tenant_ids=frozenset({tenant}),
+        )
+
+    worker = PostgresReconciliationWorker(
+        _ConnectionFactory(connection),
+        tenant_supplier=lambda: ["tenant_a"],
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="recheck-worker",
+            policy_context_supplier=policy_context,
+            poll_interval_seconds=0,
+        ),
+    )
+
+    with pytest.raises(PostgresReconciliationPolicyDenied, match="permission_missing"):
+        worker.process_run(tenant_id="tenant_a", run_id="run-a")
+
+    assert policy_calls == 2
+    assert connection.run is not None
+    assert connection.run["execution_status"] == "Queued"
+
+
+def test_postgres_reconciliation_worker_propagates_workspace_scope_to_policy_and_transactions() -> None:
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+    _create_run(repository)
+    assert connection.run is not None
+    connection.run["workspace_id"] = "workspace-a"
+    policy_scopes: list[tuple[str, str | None, str | None]] = []
+
+    def policy_context(tenant: str, workspace: str | None, entity: str | None) -> PolicyEvaluationContext:
+        policy_scopes.append((tenant, workspace, entity))
+        return PolicyEvaluationContext(
+            user_id="scoped-worker",
+            username="scoped-worker",
+            user_permissions={"match.run"},
+            principal_type="service_account",
+            tenant_id=tenant,
+            workspace_id=workspace,
+            entity_id=entity,
+            authorized_tenant_ids=frozenset({tenant}),
+            authorized_workspace_ids=frozenset({workspace}) if workspace else frozenset(),
+        )
+
+    worker = PostgresReconciliationWorker(
+        _ConnectionFactory(connection),
+        tenant_supplier=lambda: ["tenant_a"],
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="scoped-worker",
+            policy_context_scope_supplier=policy_context,
+            poll_interval_seconds=0,
+        ),
+    )
+
+    summary = worker.process_once()
+
+    assert summary.completed == 1
+    assert ("tenant_a", "workspace-a", None) in policy_scopes
+    workspace_settings = [
+        params
+        for sql, params in connection.executed
+        if "set_config('app.workspace_id'" in sql
+    ]
+    assert workspace_settings
+    assert any(params == ("workspace-a",) for params in workspace_settings)
+
+
+def test_postgres_reconciliation_worker_rejects_legacy_policy_for_scoped_run() -> None:
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+    _create_run(repository)
+    assert connection.run is not None
+    connection.run["workspace_id"] = "workspace-a"
+
+    worker = PostgresReconciliationWorker(
+        _ConnectionFactory(connection),
+        tenant_supplier=lambda: ["tenant_a"],
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="legacy-worker",
+            policy_context_supplier=lambda tenant: PolicyEvaluationContext(
+                user_id="legacy-worker",
+                username="legacy-worker",
+                user_permissions={"match.run"},
+                principal_type="service_account",
+                tenant_id=tenant,
+                authorized_tenant_ids=frozenset({tenant}),
+            ),
+        ),
+    )
+
+    with pytest.raises(PostgresReconciliationWorkerError, match="scope-aware worker policy supplier"):
+        worker.process_once()
+    assert connection.run["execution_status"] == "Queued"
+
+
+def test_postgres_reconciliation_worker_propagates_entity_scope_and_rejects_missing_workspace() -> None:
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+    _create_run(repository)
+    assert connection.run is not None
+    connection.run["workspace_id"] = "workspace-a"
+    connection.run["organization_id"] = "org-a"
+    connection.run["legal_entity_id"] = "entity-a"
+
+    def policy_context(tenant: str, workspace: str | None, entity: str | None) -> PolicyEvaluationContext:
+        return PolicyEvaluationContext(
+            user_id="entity-worker",
+            username="entity-worker",
+            user_permissions={"match.run"},
+            principal_type="service_account",
+            tenant_id=tenant,
+            workspace_id=workspace,
+            entity_id=entity,
+            authorized_tenant_ids=frozenset({tenant}),
+            authorized_workspace_ids=frozenset({workspace}) if workspace else frozenset(),
+            authorized_entity_ids=frozenset({entity}) if entity else frozenset(),
+        )
+
+    worker = PostgresReconciliationWorker(
+        _ConnectionFactory(connection),
+        tenant_supplier=lambda: ["tenant_a"],
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="entity-worker",
+            policy_context_scope_supplier=policy_context,
+            poll_interval_seconds=0,
+        ),
+    )
+
+    summary = worker.process_once()
+
+    assert summary.completed == 1
+    entity_settings = [
+        params
+        for sql, params in connection.executed
+        if "set_config('app.legal_entity_id'" in sql
+    ]
+    assert any(params == ("entity-a",) for params in entity_settings)
+    organization_settings = [
+        params
+        for sql, params in connection.executed
+        if "set_config('app.organization_id'" in sql
+    ]
+    assert any(params == ("org-a",) for params in organization_settings)
+    claim_calls = [
+        (sql, params)
+        for sql, params in connection.executed
+        if "set execution_status = 'running'" in sql.lower()
+    ]
+    assert claim_calls
+    claim_sql, claim_params = claim_calls[0]
+    assert "workspace_id = %s" in claim_sql
+    assert "organization_id = %s" in claim_sql
+    assert "legal_entity_id = %s" in claim_sql
+    assert claim_params is not None and claim_params[-3:] == ("workspace-a", "org-a", "entity-a")
+
+    with pytest.raises(PostgresReconciliationWorkerError, match="requires a workspace scope"):
+        worker.process_run(tenant_id="tenant_a", run_id="run-a", entity_id="entity-a")
 
 
 def test_local_matcher_partitioning_is_deterministic_and_reports_progress() -> None:
@@ -851,6 +1120,21 @@ def test_postgres_reconciliation_worker_resumes_after_unhandled_crash_and_lease_
 
 def test_postgres_reconciliation_scheduler_aggregates_worker_slots() -> None:
     created: list[str] = []
+    factory_calls: list[str] = []
+    closed: list[str] = []
+
+    class _Telemetry:
+        def __init__(self) -> None:
+            self.spans: list[tuple[str, dict[str, object]]] = []
+            self.jobs: list[dict[str, object]] = []
+
+        @contextmanager
+        def span(self, name: str, attributes: dict[str, object]) -> Any:
+            self.spans.append((name, attributes))
+            yield None
+
+        def record_job(self, attributes: dict[str, object]) -> None:
+            self.jobs.append(attributes)
 
     class _Worker:
         def __init__(self, worker_id: str) -> None:
@@ -860,12 +1144,126 @@ def test_postgres_reconciliation_scheduler_aggregates_worker_slots() -> None:
             created.append(self.worker_id)
             return ReconciliationWorkerRunSummary(cycles=1, discovered=2, completed=1, failed=0, cancelled=0, skipped=1)
 
-    scheduler = PostgresReconciliationScheduler(_Worker, worker_ids=["worker-b", "worker-a"], poll_interval_seconds=0)
+        def close(self) -> None:
+            closed.append(self.worker_id)
+
+    def factory(worker_id: str) -> _Worker:
+        factory_calls.append(worker_id)
+        return _Worker(worker_id)
+
+    telemetry = _Telemetry()
+    scheduler = PostgresReconciliationScheduler(
+        factory,
+        worker_ids=["worker-b", "worker-a"],
+        poll_interval_seconds=0,
+        observability=telemetry,
+    )
     summary = scheduler.process_once()
     assert created == ["worker-a", "worker-b"]
+    assert factory_calls == ["worker-a", "worker-b"]
     assert summary == ReconciliationWorkerRunSummary(cycles=2, discovered=4, completed=2, failed=0, cancelled=0, skipped=2)
+    second = scheduler.process_once()
+    assert created == ["worker-a", "worker-b", "worker-a", "worker-b"]
+    assert factory_calls == ["worker-a", "worker-b"]
+    assert second == summary
+    assert len(telemetry.spans) == 4
+    assert all(name == "reconforge.reconciliation.worker" for name, _attributes in telemetry.spans)
+    assert [item["job.status"] for item in telemetry.jobs] == ["completed"] * 4
+    assert all("tenant_id" not in item for item in telemetry.jobs)
+    scheduler.close()
+    scheduler.close()
+    assert closed == ["worker-a", "worker-b"]
+    with pytest.raises(PostgresReconciliationSchedulerError, match="scheduler is closed"):
+        scheduler.process_once()
     with pytest.raises(PostgresReconciliationSchedulerError, match="between 1 and 64"):
         PostgresReconciliationScheduler(_Worker, worker_ids=[])
+
+
+def test_postgres_reconciliation_worker_close_is_idempotent_and_delegates() -> None:
+    class _ClosableFactory:
+        def __init__(self) -> None:
+            self.closed = 0
+
+        def close(self) -> None:
+            self.closed += 1
+
+    factory = _ClosableFactory()
+    worker = PostgresReconciliationWorker(
+        factory,
+        tenant_supplier=lambda: [],
+        matcher=lambda _context: ReconciliationExecutionResult(results=(), exceptions=()),
+        settings=PostgresReconciliationWorkerSettings(worker_id="close-worker", poll_interval_seconds=0),
+    )
+    worker.close()
+    worker.close()
+    assert factory.closed == 1
+
+
+def test_postgres_reconciliation_scheduler_close_waits_for_active_cycle() -> None:
+    entered = Event()
+    release = Event()
+    close_started = Event()
+    state_lock = Lock()
+    state = {"active": False, "closed_during_cycle": False}
+
+    class _Worker:
+        def process_once(self) -> ReconciliationWorkerRunSummary:
+            with state_lock:
+                state["active"] = True
+            entered.set()
+            assert release.wait(timeout=2)
+            with state_lock:
+                state["active"] = False
+            return ReconciliationWorkerRunSummary(cycles=1, discovered=0, completed=0, failed=0, cancelled=0, skipped=0)
+
+        def close(self) -> None:
+            with state_lock:
+                state["closed_during_cycle"] = bool(state["active"])
+
+    scheduler = PostgresReconciliationScheduler(lambda _worker_id: _Worker(), worker_ids=["worker-a"])
+
+    def close_scheduler() -> None:
+        close_started.set()
+        scheduler.close()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        cycle = pool.submit(scheduler.process_once)
+        assert entered.wait(timeout=2)
+        closing = pool.submit(close_scheduler)
+        assert close_started.wait(timeout=2)
+        release.set()
+        cycle.result(timeout=2)
+        closing.result(timeout=2)
+
+    assert state["closed_during_cycle"] is False
+
+
+def test_postgres_reconciliation_scheduler_records_failure_telemetry() -> None:
+    jobs: list[dict[str, object]] = []
+
+    class _Telemetry:
+        @contextmanager
+        def span(self, _name: str, _attributes: dict[str, object]) -> Any:
+            yield None
+
+        def record_job(self, attributes: dict[str, object]) -> None:
+            jobs.append(attributes)
+
+    class _FailingWorker:
+        def process_once(self) -> ReconciliationWorkerRunSummary:
+            raise RuntimeError("synthetic worker fault")
+
+    scheduler = PostgresReconciliationScheduler(
+        lambda _worker_id: _FailingWorker(),
+        worker_ids=["worker-a"],
+        poll_interval_seconds=0,
+        observability=_Telemetry(),
+    )
+    with pytest.raises(PostgresReconciliationSchedulerError, match="cycle failed safely"):
+        scheduler.process_once()
+    assert [item["job.status"] for item in jobs] == ["failed"]
+    assert jobs[0]["reconforge.result"] == "error"
+    assert "worker_id" not in jobs[0]
 
 
 def test_postgres_reconciliation_execution_failure_is_retryable_and_busy_runs_are_skipped() -> None:
@@ -894,6 +1292,13 @@ def test_postgres_reconciliation_execution_failure_is_retryable_and_busy_runs_ar
     assert claimed["execution_status"] == "Running"
     with pytest.raises(PostgresReconciliationBusyError):
         repository.claim_run(tenant_id="tenant_a", run_id="run-a", worker_id="recon-worker-b")
+
+    # A stale active-page result can race with a completion.  The terminal
+    # status is contention, not a scheduler-fatal integrity violation.
+    assert connection.run is not None
+    connection.run.update({"status": "Complete", "execution_status": "Complete"})
+    with pytest.raises(PostgresReconciliationBusyError):
+        repository.claim_run(tenant_id="tenant_a", run_id="run-a", worker_id="recon-worker-c")
 
 
 def test_postgres_reconciliation_requires_complete_left_and_right_coverage() -> None:

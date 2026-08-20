@@ -59,6 +59,12 @@ class RulePackExecution:
     decision_digest: str
     generated_at: str
 
+    def __post_init__(self) -> None:
+        """Reject unsupported policy metadata on direct result construction."""
+
+        normalized = validate_financial_input_policy(self.financial_input_policy)
+        object.__setattr__(self, "financial_input_policy", normalized)
+
 
 @dataclass(frozen=True)
 class RuleResultsDocument:

@@ -18,6 +18,9 @@ import re
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from queue import Empty, Queue
+from threading import Condition
+from time import monotonic
 from types import ModuleType
 from typing import Any, Protocol
 
@@ -32,11 +35,26 @@ class PostgresUnavailableError(RuntimeError):
     """Raised when the optional PostgreSQL driver is not installed."""
 
 
+class PostgresConnectionPoolClosedError(RuntimeError):
+    """Raised when a connection is requested after a pool has closed."""
+
+
 class ConnectionFactory(Protocol):
     """Minimal connection-factory contract used by tenant-scoped services."""
 
     def connect(self) -> Any:
         """Return a connection supporting ``transaction``, ``execute``, and ``close``."""
+
+
+@dataclass(frozen=True)
+class PostgresConnectionPoolSnapshot:
+    """Bounded, non-sensitive pool lifecycle counters."""
+
+    max_size: int
+    total: int
+    idle: int
+    leased: int
+    closed: bool
 
 
 def normalize_scope_id(value: str, *, field_name: str = "tenant_id") -> str:
@@ -158,6 +176,189 @@ class PostgresConnectionFactory:
         if self.settings.require_tls:
             connect_kwargs["sslmode"] = "verify-full"
         return psycopg.connect(self.settings.dsn, **connect_kwargs)
+
+
+class PostgresConnectionPool:
+    """Bounded, rollback-on-release pool for short tenant-scoped transactions.
+
+    The pool deliberately wraps an existing ``ConnectionFactory`` instead of
+    importing a third-party pool implementation.  ``PostgresTenantBoundary``
+    still calls ``close`` after each transaction; the proxy returns the
+    connection to this pool, so high-partition workers do not churn thousands
+    of ephemeral TCP ports.  Transaction-local RLS settings are cleared by the
+    surrounding commit/rollback, and release performs a defensive rollback
+    before reuse.
+    """
+
+    def __init__(
+        self,
+        connection_factory: ConnectionFactory,
+        *,
+        max_size: int = 8,
+        acquire_timeout_seconds: float = 30.0,
+    ) -> None:
+        if max_size < 1:
+            raise ValueError("max_size must be positive")
+        if acquire_timeout_seconds <= 0:
+            raise ValueError("acquire_timeout_seconds must be positive")
+        self.connection_factory = connection_factory
+        self.max_size = max_size
+        self.acquire_timeout_seconds = acquire_timeout_seconds
+        self._idle: Queue[Any] = Queue(maxsize=max_size)
+        self._condition = Condition()
+        self._total = 0
+        self._closed = False
+
+    @property
+    def snapshot(self) -> PostgresConnectionPoolSnapshot:
+        """Return pool counters without exposing connection or tenant data."""
+
+        with self._condition:
+            idle = self._idle.qsize()
+            return PostgresConnectionPoolSnapshot(
+                max_size=self.max_size,
+                total=self._total,
+                idle=idle,
+                leased=self._total - idle,
+                closed=self._closed,
+            )
+
+    def connect(self) -> Any:
+        """Lease one pooled connection, waiting only up to the configured bound."""
+
+        deadline = monotonic() + self.acquire_timeout_seconds
+        with self._condition:
+            while True:
+                if self._closed:
+                    raise PostgresConnectionPoolClosedError("PostgreSQL connection pool is closed")
+                try:
+                    connection = self._idle.get_nowait()
+                except Empty:
+                    if self._total < self.max_size:
+                        self._total += 1
+                        break
+                    remaining = deadline - monotonic()
+                    if remaining <= 0:
+                        raise TimeoutError("timed out waiting for a PostgreSQL pooled connection") from None
+                    self._condition.wait(timeout=remaining)
+                    continue
+                return _PooledPostgresConnection(self, connection)
+        try:
+            connection = self.connection_factory.connect()
+        except Exception:
+            with self._condition:
+                self._total -= 1
+                self._condition.notify()
+            raise
+        return _PooledPostgresConnection(self, connection)
+
+    def _release(self, connection: Any) -> None:
+        reusable = True
+        try:
+            if bool(getattr(connection, "closed", False)):
+                reusable = False
+            else:
+                connection.rollback()
+        except Exception:
+            reusable = False
+        with self._condition:
+            if self._closed or not reusable:
+                self._total -= 1
+                try:
+                    connection.close()
+                finally:
+                    self._condition.notify()
+                return
+            self._idle.put_nowait(connection)
+            self._condition.notify()
+
+    def close(self) -> None:
+        """Close all idle connections; active leases close when returned."""
+
+        with self._condition:
+            if self._closed:
+                return
+            self._closed = True
+            while True:
+                try:
+                    connection = self._idle.get_nowait()
+                except Empty:
+                    break
+                self._total -= 1
+                connection.close()
+            self._condition.notify_all()
+
+
+class PostgresPooledConnectionFactory(PostgresConnectionFactory):
+    """PostgreSQL factory with bounded connection reuse for server profiles.
+
+    The class intentionally subclasses ``PostgresConnectionFactory`` so the
+    existing server capability checks remain source-compatible.  Each
+    request-scoped boundary still leases and closes a proxy; ``close`` returns
+    the underlying connection to the bounded pool rather than closing the TCP
+    socket.  Application shutdown must call :meth:`close` to release idle
+    connections.
+    """
+
+    def __init__(
+        self,
+        settings: PostgresSettings,
+        *,
+        max_size: int = 8,
+        acquire_timeout_seconds: float = 30.0,
+    ) -> None:
+        super().__init__(settings)
+        self._pool = PostgresConnectionPool(
+            PostgresConnectionFactory(settings),
+            max_size=max_size,
+            acquire_timeout_seconds=acquire_timeout_seconds,
+        )
+
+    def connect(self) -> Any:
+        """Lease one bounded pooled connection."""
+
+        return self._pool.connect()
+
+    def close(self) -> None:
+        """Close idle connections and prevent new leases."""
+
+        self._pool.close()
+
+    @property
+    def max_size(self) -> int:
+        """Return the configured maximum number of physical connections."""
+
+        return self._pool.max_size
+
+    @property
+    def acquire_timeout_seconds(self) -> float:
+        """Return the bounded lease wait timeout."""
+
+        return self._pool.acquire_timeout_seconds
+
+    @property
+    def pool_snapshot(self) -> PostgresConnectionPoolSnapshot:
+        """Return bounded pool lifecycle counters for health/diagnostic surfaces."""
+
+        return self._pool.snapshot
+
+
+class _PooledPostgresConnection:
+    """Minimal proxy whose close returns its underlying connection to a pool."""
+
+    def __init__(self, pool: PostgresConnectionPool, connection: Any) -> None:
+        self._pool = pool
+        self._connection = connection
+        self._released = False
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._connection, name)
+
+    def close(self) -> None:
+        if self._released:
+            return
+        self._released = True
+        self._pool._release(self._connection)
 
 
 class _HybridPostgresRow:

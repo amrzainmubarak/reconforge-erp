@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
@@ -20,6 +21,8 @@ from reconforge.infrastructure.postgres_master_data import (
 )
 from reconforge.io.persisted import encode_postgres_outbox_payload
 from reconforge.platform.common import PlatformError
+from reconforge.utils.currency_registry_governance import reconcile_currency_registry
+from reconforge.utils.money import CurrencyRegistry, CurrencyRegistryContext
 
 MAX_SNAPSHOT_RECORDS = 100_000
 _T = TypeVar("_T")
@@ -106,7 +109,14 @@ class PostgresMasterDataApplicationRepository:
             raise PlatformError(str(exc)) from exc
 
     def _event(
-        self, *, actor_label: str, object_type: str, object_id: str, action: str, metadata: dict[str, Any]
+        self,
+        *,
+        actor_label: str,
+        object_type: str,
+        object_id: str,
+        action: str,
+        metadata: dict[str, Any],
+        event_key: str | None = None,
     ) -> None:
         payload = encode_postgres_outbox_payload(metadata).text
         self.connection.execute(
@@ -115,7 +125,7 @@ class PostgresMasterDataApplicationRepository:
                VALUES (%s,%s,%s,%s,%s,CAST(%s AS jsonb)) ON CONFLICT (tenant_id,event_id) DO NOTHING""",
             (
                 self.tenant_id,
-                _stable_id("event", self.tenant_id, action, object_id),
+                _stable_id("event", self.tenant_id, action, object_id, event_key or ""),
                 action,
                 object_type,
                 object_id,
@@ -657,6 +667,10 @@ class PostgresMasterDataApplicationRepository:
             "source": {"kind": "postgres-master-data", "local_first": False, "external_calls": False},
             "workspace": workspace_name,
             "summary": summary.to_dict(),
+            "currency_registry": self.currency_registry_reconciliation(
+                workspace=workspace_name,
+                actor_label=actor_label,
+            ),
             "currencies": self.list_currencies(limit=MAX_SNAPSHOT_RECORDS, actor_label=actor_label),
             "organizations": self.list_organizations(
                 workspace=workspace_name, limit=MAX_SNAPSHOT_RECORDS, actor_label=actor_label
@@ -669,6 +683,118 @@ class PostgresMasterDataApplicationRepository:
             ),
             "periods": self.list_periods(workspace=workspace_name, limit=MAX_SNAPSHOT_RECORDS, actor_label=actor_label),
         }
+
+    def currency_registry_reconciliation(
+        self,
+        *,
+        workspace: str = "default",
+        actor_label: str = "local-cli",
+    ) -> dict[str, object]:
+        """Reconcile this tenant's persisted currencies with the installed policy registry."""
+
+        del actor_label
+        workspace_name = " ".join(str(workspace).strip().split())
+        if not workspace_name or len(workspace_name) > 160:
+            raise PlatformError("Workspace name is invalid.")
+        records = self.list_currencies(limit=MAX_SNAPSHOT_RECORDS, actor_label="local-cli")
+        installed_context = CurrencyRegistry.context()
+        operation_context = self.currency_registry_context(workspace=workspace_name, actor_label="local-cli")
+        return reconcile_currency_registry(
+            records,
+            scope=f"tenant:{self.tenant_id}:workspace:{workspace_name}",
+            binding=self.currency_registry_binding(workspace=workspace_name, actor_label="local-cli"),
+            registry_context=operation_context or installed_context,
+            installed_registry_context=installed_context,
+        ).to_dict()
+
+    def currency_registry_binding(
+        self,
+        *,
+        workspace: str = "default",
+        actor_label: str = "local-cli",
+    ) -> dict[str, object] | None:
+        """Read the tenant/workspace registry snapshot binding."""
+
+        del actor_label
+        workspace_id = self._workspace_id(workspace, required=False)
+        if workspace_id is None:
+            return None
+        with self._transaction():
+            row = self.connection.execute(
+                """SELECT registry_version, registry_digest, bound_at, bound_by
+                   FROM reconforge.currency_registry_bindings
+                   WHERE tenant_id=%s AND workspace_id=%s""",
+                (self.tenant_id, workspace_id),
+            ).fetchone()
+            if row is None:
+                return None
+            columns = ("registry_version", "registry_digest", "bound_at", "bound_by")
+            return dict(row) if isinstance(row, Mapping) else dict(zip(columns, row, strict=True))
+
+    def currency_registry_context(
+        self,
+        *,
+        workspace: str = "default",
+        actor_label: str = "local-cli",
+    ) -> CurrencyRegistryContext | None:
+        """Load the immutable registry snapshot bound to one workspace."""
+
+        del actor_label
+        with self._transaction():
+            return self._base.currency_registry_context(tenant_id=self.tenant_id, workspace=workspace)
+
+    def bind_currency_registry(
+        self,
+        *,
+        workspace: str = "default",
+        actor_label: str = "local-cli",
+    ) -> dict[str, object]:
+        """Bind one tenant/workspace to the currently installed registry snapshot."""
+
+        actor = self._actor(actor_label)
+        manifest = CurrencyRegistry.manifest()
+        snapshot_json = json.dumps(
+            CurrencyRegistry.snapshot(), ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        )
+        with self._transaction():
+            workspace_id = self._workspace_id(workspace)
+            if workspace_id is None:
+                raise PlatformError("Workspace reference was not found.")
+            self.connection.execute(
+                """INSERT INTO reconforge.currency_registry_snapshots
+                   (tenant_id,registry_digest,registry_version,snapshot_json,captured_at,captured_by)
+                   VALUES (%s,%s,%s,%s::jsonb,now(),%s)
+                   ON CONFLICT (tenant_id,registry_digest) DO NOTHING""",
+                (self.tenant_id, manifest.digest, manifest.registry_version, snapshot_json, actor),
+            )
+            row = self.connection.execute(
+                """INSERT INTO reconforge.currency_registry_bindings
+                   (tenant_id, workspace_id, registry_version, registry_digest, bound_at, bound_by)
+                   VALUES (%s,%s,%s,%s,now(),%s)
+                   ON CONFLICT (tenant_id, workspace_id) DO UPDATE SET
+                     registry_version=EXCLUDED.registry_version,
+                     registry_digest=EXCLUDED.registry_digest,
+                     bound_at=EXCLUDED.bound_at,
+                     bound_by=EXCLUDED.bound_by
+                   RETURNING registry_version,registry_digest,bound_at,bound_by""",
+                (self.tenant_id, workspace_id, manifest.registry_version, manifest.digest, actor),
+            ).fetchone()
+            self._event(
+                actor_label=actor,
+                object_type="currency_registry_binding",
+                object_id=workspace_id,
+                action="currency_registry_bound",
+                event_key=manifest.digest,
+                metadata={
+                    "workspace_id": workspace_id,
+                    "registry_version": manifest.registry_version,
+                    "registry_digest": manifest.digest,
+                },
+            )
+            if row is None:
+                raise PlatformError("Currency registry binding was not persisted.")
+            columns = ("registry_version", "registry_digest", "bound_at", "bound_by")
+            return dict(row) if isinstance(row, Mapping) else dict(zip(columns, row, strict=True))
 
 
 POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL = """
@@ -719,5 +845,64 @@ END $reconforge$;
 """
 
 
+POSTGRES_CURRENCY_REGISTRY_BINDING_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS reconforge.currency_registry_bindings (
+ tenant_id TEXT NOT NULL,
+ workspace_id TEXT NOT NULL,
+ registry_version TEXT NOT NULL CHECK (length(registry_version) BETWEEN 1 AND 128),
+ registry_digest TEXT NOT NULL CHECK (registry_digest ~ '^[0-9a-f]{64}$'),
+ bound_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+ bound_by TEXT NOT NULL CHECK (length(bound_by) BETWEEN 1 AND 160),
+ PRIMARY KEY (tenant_id, workspace_id),
+ FOREIGN KEY (tenant_id, workspace_id)
+   REFERENCES reconforge.domain_workspaces(tenant_id, id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_currency_registry_bindings_digest
+ ON reconforge.currency_registry_bindings(tenant_id, registry_version, registry_digest);
+ALTER TABLE reconforge.currency_registry_bindings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reconforge.currency_registry_bindings FORCE ROW LEVEL SECURITY;
+DO $reconforge$ BEGIN
+ IF NOT EXISTS (
+   SELECT 1 FROM pg_policies
+   WHERE schemaname='reconforge' AND tablename='currency_registry_bindings' AND policyname='tenant_scope'
+ ) THEN
+   CREATE POLICY tenant_scope ON reconforge.currency_registry_bindings
+    USING (tenant_id=current_setting('app.tenant_id',true))
+    WITH CHECK (tenant_id=current_setting('app.tenant_id',true));
+ END IF;
+END $reconforge$;
+"""
+
+
+POSTGRES_CURRENCY_REGISTRY_SNAPSHOT_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS reconforge.currency_registry_snapshots (
+ tenant_id TEXT NOT NULL,
+ registry_digest TEXT NOT NULL CHECK (registry_digest ~ '^[0-9a-f]{64}$'),
+ registry_version TEXT NOT NULL CHECK (length(registry_version) BETWEEN 1 AND 128),
+ snapshot_json JSONB NOT NULL CHECK (jsonb_typeof(snapshot_json) = 'object')
+     CHECK (octet_length(snapshot_json::text) BETWEEN 2 AND 1000000),
+ captured_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+ captured_by TEXT NOT NULL CHECK (length(captured_by) BETWEEN 1 AND 160),
+ PRIMARY KEY (tenant_id, registry_digest)
+);
+CREATE INDEX IF NOT EXISTS idx_currency_registry_snapshots_version
+ ON reconforge.currency_registry_snapshots(tenant_id, registry_version, captured_at, registry_digest);
+ALTER TABLE reconforge.currency_registry_snapshots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reconforge.currency_registry_snapshots FORCE ROW LEVEL SECURITY;
+DO $reconforge$ BEGIN
+ IF NOT EXISTS (
+   SELECT 1 FROM pg_policies
+   WHERE schemaname='reconforge' AND tablename='currency_registry_snapshots' AND policyname='tenant_scope'
+ ) THEN
+   CREATE POLICY tenant_scope ON reconforge.currency_registry_snapshots
+    USING (tenant_id=current_setting('app.tenant_id',true))
+    WITH CHECK (tenant_id=current_setting('app.tenant_id',true));
+ END IF;
+END $reconforge$;
+"""
+
+
 def install_postgres_master_data_application_schema(connection: Any) -> None:
     connection.execute(POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL)
+    connection.execute(POSTGRES_CURRENCY_REGISTRY_SNAPSHOT_SCHEMA_SQL)
+    connection.execute(POSTGRES_CURRENCY_REGISTRY_BINDING_SCHEMA_SQL)

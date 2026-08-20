@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from typing import Any
 
@@ -17,6 +18,13 @@ from reconforge.platform.common import (
     require_permission,
     rows_to_dicts,
 )
+
+
+def _evidence_digest(value: object) -> str:
+    digest = normalize_text(value, default="")
+    if digest and re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+        raise PlatformError("Certification evidence digest must be a lowercase SHA-256 hex digest.")
+    return digest
 
 
 class SQLiteApprovalRepository:
@@ -120,6 +128,7 @@ class SQLiteApprovalRepository:
         period_name: str = "",
         entity_code: str = "",
         note: str = "",
+        evidence_digest: str = "",
         actor_label: str = "local-cli",
     ) -> dict[str, Any]:
         """Prepare certification workflow metadata for review."""
@@ -134,6 +143,7 @@ class SQLiteApprovalRepository:
             prepared_by=actor_label,
             reviewed_by="",
             note=note,
+            evidence_digest=_evidence_digest(evidence_digest),
             actor_label=actor_label,
             action="certification_prepared",
         )
@@ -144,6 +154,7 @@ class SQLiteApprovalRepository:
         object_type: str,
         object_id: str,
         note: str = "",
+        evidence_digest: str | None = None,
         actor_label: str = "local-cli",
     ) -> dict[str, Any]:
         """Review certification workflow metadata."""
@@ -161,6 +172,11 @@ class SQLiteApprovalRepository:
             prepared_by=str(existing.get("prepared_by", "")),
             reviewed_by=actor_label,
             note=note or str(existing.get("note", "")),
+            evidence_digest=(
+                _evidence_digest(existing.get("evidence_digest", ""))
+                if evidence_digest is None
+                else _evidence_digest(evidence_digest)
+            ),
             actor_label=actor_label,
             action="certification_reviewed",
         )
@@ -245,6 +261,7 @@ class SQLiteApprovalRepository:
         prepared_by: str,
         reviewed_by: str,
         note: str,
+        evidence_digest: str,
         actor_label: str,
         action: str,
     ) -> dict[str, Any]:
@@ -253,15 +270,26 @@ class SQLiteApprovalRepository:
         if not target_type or not target_id:
             raise PlatformError("Certification object type and id are required.")
         certification_id = platform_id("CERT", target_type, target_id)
+        digest = _evidence_digest(evidence_digest)
         now = utc_now_text()
         try:
+            existing = self.connection.execute(
+                "SELECT evidence_digest FROM certification_records WHERE object_type = ? AND object_id = ?",
+                (target_type, target_id),
+            ).fetchone()
+            if existing is not None:
+                previous_digest = _evidence_digest(existing["evidence_digest"])
+                if previous_digest and digest and previous_digest != digest:
+                    raise PlatformError("Certification evidence digest is immutable.")
+                if previous_digest and not digest:
+                    digest = previous_digest
             self.connection.execute(
                 """
                 INSERT INTO certification_records (
                     id, object_type, object_id, period_name, entity_code, status,
-                    prepared_by, reviewed_by, note, created_at, updated_at
+                    prepared_by, reviewed_by, note, evidence_digest, created_at, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(object_type, object_id)
                 DO UPDATE SET
                     period_name = excluded.period_name,
@@ -270,6 +298,7 @@ class SQLiteApprovalRepository:
                     prepared_by = excluded.prepared_by,
                     reviewed_by = excluded.reviewed_by,
                     note = excluded.note,
+                    evidence_digest = excluded.evidence_digest,
                     updated_at = excluded.updated_at
                 """,
                 (
@@ -282,6 +311,7 @@ class SQLiteApprovalRepository:
                     prepared_by,
                     reviewed_by,
                     note,
+                    digest,
                     now,
                     now,
                 ),

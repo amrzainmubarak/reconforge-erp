@@ -230,9 +230,12 @@ class PostgresFinanceCoreRepository:
             raise PostgresFinanceCoreError("PostgreSQL Finance Core operation failed.") from exc
 
     def _workspace_id(self, workspace: str, *, required: bool = True) -> str | None:
+        workspace_value = _text(workspace, "Workspace name")
         row = self.connection.execute(
-            "SELECT id FROM reconforge.domain_workspaces WHERE tenant_id=%s AND name=%s",
-            (self.tenant_id, _text(workspace, "Workspace name")),
+            """SELECT id FROM reconforge.domain_workspaces
+               WHERE tenant_id=%s AND (id=%s OR name=%s)
+               ORDER BY CASE WHEN id=%s THEN 0 ELSE 1 END LIMIT 1""",
+            (self.tenant_id, workspace_value, workspace_value, workspace_value),
         ).fetchone()
         if row is None:
             if required:

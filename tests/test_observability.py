@@ -1,18 +1,19 @@
 from __future__ import annotations
 
 import logging
+import sqlite3
 import threading
+from dataclasses import replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from opentelemetry.sdk.metrics.export import InMemoryMetricReader
-from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 from reconforge.api import create_api_app
 from reconforge.application.jobs import DurableJobApplicationService, DurableJobWorkerService, JobSubmission
 from reconforge.db import connect, run_migrations
+from reconforge.domain.jobs import JobOutputManifest
 from reconforge.infrastructure.sqlite_jobs import SQLiteDurableJobRepository
 from reconforge.observability import (
     ObservabilityConfigurationError,
@@ -25,6 +26,16 @@ from reconforge.observability import (
 )
 from reconforge.reliability import MetricKey
 
+otel_metrics_export = pytest.importorskip(
+    "opentelemetry.sdk.metrics.export", reason="observability extra is optional"
+)
+otel_trace_export = pytest.importorskip(
+    "opentelemetry.sdk.trace.export.in_memory_span_exporter",
+    reason="observability extra is optional",
+)
+InMemoryMetricReader = otel_metrics_export.InMemoryMetricReader
+InMemorySpanExporter = otel_trace_export.InMemorySpanExporter
+
 
 def test_opentelemetry_api_trace_and_metrics_are_safe_and_correlated(
     tmp_path: Path,
@@ -34,7 +45,7 @@ def test_opentelemetry_api_trace_and_metrics_are_safe_and_correlated(
     run_migrations(db_path)
     spans = InMemorySpanExporter()
     metrics = InMemoryMetricReader()
-    monkeypatch.setenv("OTEL_RESOURCE_ATTRIBUTES", "tenant_id=SECRET-TENANT,amount=100")
+    monkeypatch.setenv("OTEL_RESOURCE_ATTRIBUTES", "tenant-id=safe-tenant-demo,amount=100")
     monkeypatch.setenv("OTEL_TRACES_EXPORTER", "otlp")
     runtime = ObservabilityRuntime.create(span_exporter=spans, metric_reader=metrics)
     client = TestClient(create_api_app(db_path, observability=runtime))
@@ -87,17 +98,18 @@ def test_durable_job_spans_exclude_tenant_workspace_actor_and_job_identity(tmp_p
     run_migrations(db_path)
     connection = connect(db_path, require_exists=True)
     exporter = InMemorySpanExporter()
-    runtime = ObservabilityRuntime.create(span_exporter=exporter)
+    metrics = InMemoryMetricReader()
+    runtime = ObservabilityRuntime.create(span_exporter=exporter, metric_reader=metrics)
     repository = SQLiteDurableJobRepository(connection)
     application = DurableJobApplicationService(repository, observability=runtime)
     worker = DurableJobWorkerService(repository, observability=runtime)
     submission = JobSubmission(
-        job_id="SECRET-JOB-ID",
-        idempotency_scope="SECRET-SCOPE",
-        idempotency_key="SECRET-KEY",
-        tenant_id="SECRET-TENANT",
-        workspace_id="SECRET-WORKSPACE",
-        entity_id="SECRET-ENTITY",
+        job_id="demo-job-id",
+        idempotency_scope="demo-scope",
+        idempotency_key="demo-idempotency-key",
+        tenant_id="tenant-demo",
+        workspace_id="workspace-demo",
+        entity_id="entity-demo",
         input_digest="a" * 64,
         config_digest="b" * 64,
         worker_version="worker/1",
@@ -105,20 +117,60 @@ def test_durable_job_spans_exclude_tenant_workspace_actor_and_job_identity(tmp_p
         retry_ceiling=1,
         created_at="2026-07-27T10:00:00Z",
     )
-    application.submit(submission, actor_id="SECRET-ACTOR")
+    application.submit(submission, actor_id="actor-demo")
     claimed = worker.claim(
-        tenant_id="SECRET-TENANT",
-        worker_id="SECRET-WORKER",
+        tenant_id="tenant-demo",
+        worker_id="worker-demo",
         occurred_at="2026-07-27T10:00:01Z",
         lease_expires_at="2026-07-27T10:01:01Z",
     )
-    connection.close()
-
     assert claimed is not None
+    completed = worker.complete(
+        claimed,
+        occurred_at="2026-07-27T10:00:02Z",
+        output_manifest=JobOutputManifest(1, "c" * 64, "manifest/secret-job"),
+    )
+    assert completed.status.value == "completed"
+    application.submit(
+        replace(submission, job_id="demo-fail-job-id", idempotency_key="demo-fail-key"),
+        actor_id="actor-demo",
+    )
+    failed_claim = worker.claim(
+        tenant_id="tenant-demo",
+        worker_id="worker-demo",
+        occurred_at="2026-07-27T10:00:03Z",
+        lease_expires_at="2026-07-27T10:01:03Z",
+    )
+    assert failed_claim is not None
+    connection.close()
+    with pytest.raises(sqlite3.ProgrammingError):
+        worker.fail(failed_claim, occurred_at="2026-07-27T10:00:04Z", safe_error_code="STORAGE_FAILURE")
+
     serialized = str([(span.name, dict(span.attributes or {})) for span in exporter.get_finished_spans()])
-    assert "reconforge.job.submit" in serialized and "reconforge.job.claim" in serialized
-    for secret in ("SECRET-JOB-ID", "SECRET-SCOPE", "SECRET-KEY", "SECRET-TENANT", "SECRET-WORKSPACE", "SECRET-ENTITY", "SECRET-ACTOR", "SECRET-WORKER"):
-        assert secret not in serialized
+    assert all(name in serialized for name in ("reconforge.job.submit", "reconforge.job.claim", "reconforge.job.complete", "reconforge.job.fail"))
+    job_metric = next(
+        metric
+        for resource in metrics.get_metrics_data().resource_metrics
+        for scope in resource.scope_metrics
+        for metric in scope.metrics
+        if metric.name == "reconforge.jobs.transitions"
+    )
+    assert any(
+        point.attributes.get("reconforge.operation") == "fail"
+        and point.attributes.get("reconforge.result") == "error"
+        for point in job_metric.data.data_points
+    )
+    for sensitive_fragment in (
+        "demo-job-id",
+        "demo-scope",
+        "demo-idempotency-key",
+        "tenant-demo",
+        "workspace-demo",
+        "entity-demo",
+        "actor-demo",
+        "worker-demo",
+    ):
+        assert sensitive_fragment not in serialized
 
 
 def test_reliability_measurements_are_closed_dimension_free_metrics() -> None:

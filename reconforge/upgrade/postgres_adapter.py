@@ -17,6 +17,7 @@ from reconforge.infrastructure.postgres_backup import PostgresBackupError, Postg
 from reconforge.upgrade.orchestrator import ApplyReceipt, PreflightEvidence, StepKind, UpgradeError, UpgradeStep
 
 _REVISION_RE = re.compile(r"^[0-9]{4}_[a-z0-9_]{1,100}$")
+_DIAGNOSTIC_LIMIT = 4000
 
 
 class PostgresMigrationRunner(Protocol):
@@ -40,7 +41,7 @@ class PsycopgAlembicMigrationRunner:
         self._dsns = {"source": source_dsn.strip(), "compatibility": compatibility_dsn.strip()}
         if any(not value.startswith(("postgres://", "postgresql://", "postgresql+")) for value in self._dsns.values()):
             raise UpgradeError("postgres_upgrade_dsn_invalid")
-        self._python = self._ordinary_file(python_executable, "python")
+        self._python = self._python_file(python_executable)
         self._alembic_ini = self._ordinary_file(alembic_ini, "alembic configuration")
         if timeout_seconds < 1 or timeout_seconds > 86_400:
             raise UpgradeError("postgres_upgrade_timeout_invalid")
@@ -68,10 +69,24 @@ class PsycopgAlembicMigrationRunner:
             raise UpgradeError("postgres_upgrade_command_invalid")
         environment = os.environ.copy()
         environment["RECONFORGE_POSTGRES_DSN"] = self._dsns[database]
+        migration_diagnostic = ""
         try:
             with tempfile.TemporaryFile() as output:
                 completed = subprocess.run(  # nosec B603
-                    (self._python, "-m", "alembic", "-c", self._alembic_ini, operation, revision),
+                    (
+                        self._python,
+                        "-c",
+                        (
+                            "from importlib.metadata import distribution; import sys; "
+                            "sys.path.insert(0, str(distribution('alembic').locate_file(''))); "
+                            "from alembic.config import main; "
+                            f"sys.path.insert(0, {str(Path(self._alembic_ini).parent)!r}); main()"
+                        ),
+                        "-c",
+                        self._alembic_ini,
+                        operation,
+                        revision,
+                    ),
                     stdin=subprocess.DEVNULL,
                     stdout=output,
                     stderr=output,
@@ -79,11 +94,27 @@ class PsycopgAlembicMigrationRunner:
                     shell=False,
                     check=False,
                     timeout=self._timeout,
+                    cwd=Path(self._alembic_ini).parent,
                 )
+                if completed.returncode != 0:
+                    output.seek(0)
+                    raw_diagnostic = output.read()
+                    migration_diagnostic = (
+                        raw_diagnostic.decode("utf-8", errors="replace")
+                        if isinstance(raw_diagnostic, bytes)
+                        else str(raw_diagnostic)
+                    )
         except (OSError, subprocess.SubprocessError) as exc:
             raise UpgradeError("postgres_upgrade_migration_process_failed") from exc
         if completed.returncode != 0:
-            raise UpgradeError("postgres_upgrade_migration_failed")
+            diagnostic = migration_diagnostic
+            for dsn in self._dsns.values():
+                diagnostic = diagnostic.replace(dsn, "[redacted-dsn]")
+            diagnostic = diagnostic.strip()
+            if len(diagnostic) > _DIAGNOSTIC_LIMIT:
+                diagnostic = diagnostic[-_DIAGNOSTIC_LIMIT:]
+            suffix = f": {diagnostic}" if diagnostic else ""
+            raise UpgradeError(f"postgres_upgrade_migration_failed{suffix}")
 
     @staticmethod
     def _ordinary_file(path: Path, label: str) -> str:
@@ -96,6 +127,20 @@ class PsycopgAlembicMigrationRunner:
         if not stat.S_ISREG(metadata.st_mode) or path.is_symlink():
             raise UpgradeError(f"postgres_upgrade_{label.replace(' ', '_')}_path_invalid")
         return str(path.resolve(strict=True))
+
+    @staticmethod
+    def _python_file(path: Path) -> str:
+        """Validate an interpreter while preserving a venv symlink's prefix semantics."""
+        if not path.is_absolute():
+            raise UpgradeError("postgres_upgrade_python_path_invalid")
+        try:
+            resolved = path.resolve(strict=True)
+            metadata = resolved.stat()
+        except OSError as exc:
+            raise UpgradeError("postgres_upgrade_python_path_invalid") from exc
+        if not stat.S_ISREG(metadata.st_mode):
+            raise UpgradeError("postgres_upgrade_python_path_invalid")
+        return str(path)
 
 
 def _revision_digest(revision: str) -> str:

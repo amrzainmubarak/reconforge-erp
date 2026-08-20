@@ -1,0 +1,6 @@
+{
+  "records": [
+    {"completion_id": "COMP-001", "order_id": "MFG-001", "completion_date": "2026-08-05", "quantity": "100", "unit": "PCS", "actual_cost": "200.00", "currency": "EUR", "source_reference": "completion-export-2026-08-05"},
+    {"completion_id": "COMP-002", "order_id": "MFG-002", "completion_date": "2026-08-05", "quantity": "45", "unit": "PCS", "actual_cost": "160.00", "currency": "EUR", "source_reference": "completion-export-2026-08-05"}
+  ]
+}

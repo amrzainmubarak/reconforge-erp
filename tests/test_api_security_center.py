@@ -21,6 +21,12 @@ def test_security_center_requires_human_permission_mfa_and_returns_only_closed_c
     import reconforge.api.routes.security_center as routes
 
     user = LocalUser(id="admin-a", username="admin", display_name="Admin")
+    policy_calls: list[tuple[frozenset[str], str, None]] = []
+
+    def enforce_policy(
+        _request: Any, *, permissions: frozenset[str], tenant_id: str, workspace_id: None
+    ) -> None:
+        policy_calls.append((permissions, tenant_id, workspace_id))
 
     def authenticate(request: Any, token: str) -> AuthenticatedServerRequest | None:
         assert request_tenant_id(request) == "tenant-a"
@@ -55,6 +61,7 @@ def test_security_center_requires_human_permission_mfa_and_returns_only_closed_c
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
     monkeypatch.setattr(routes, "execute_postgres_security_center", execute)
+    monkeypatch.setattr(routes, "enforce_server_scoped_permissions", enforce_policy)
     root = tmp_path / "tenants"
     root.mkdir()
     run_migrations(root / "tenant-a.db")
@@ -115,3 +122,4 @@ def test_security_center_requires_human_permission_mfa_and_returns_only_closed_c
         "event_sequence",
     ):
         assert forbidden not in serialized
+    assert policy_calls[-1] == (frozenset({"security.center.read"}), "tenant-a", None)

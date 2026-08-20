@@ -1,0 +1,19 @@
+schema_version: 1
+mapping_id: individual-cashflow-v1
+transactions:
+  transaction_id: transaction_id
+  transaction_date: transaction_date
+  flow_type: flow_type
+  category: category
+  amount: amount
+  currency: currency
+  reference: reference
+  source_reference: source_reference
+budgets:
+  budget_id: budget_id
+  period: period
+  flow_type: flow_type
+  category: category
+  limit: limit
+  currency: currency
+  source_reference: source_reference

@@ -6,7 +6,11 @@ import tempfile
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
 import uvicorn
+
+pytest.importorskip("cryptography", reason="TLS certificate test runtime requires cryptography extra")
+
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec

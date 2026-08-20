@@ -24,6 +24,8 @@ from reconforge.infrastructure.postgres_master_data import (
     POSTGRES_MASTER_DATA_SCHEMA_SQL,
 )
 from reconforge.infrastructure.postgres_master_data_application import (
+    POSTGRES_CURRENCY_REGISTRY_BINDING_SCHEMA_SQL,
+    POSTGRES_CURRENCY_REGISTRY_SNAPSHOT_SCHEMA_SQL,
     POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL,
     PostgresMasterDataApplicationRepository,
     install_postgres_master_data_application_schema,
@@ -56,6 +58,10 @@ def test_master_data_application_adapter_implements_complete_port() -> None:
         "list_periods",
         "summary",
         "snapshot",
+        "currency_registry_reconciliation",
+        "currency_registry_binding",
+        "currency_registry_context",
+        "bind_currency_registry",
     )
     for method_name in methods:
         adapter = inspect.signature(getattr(PostgresMasterDataApplicationRepository, method_name))
@@ -74,6 +80,12 @@ def test_master_data_application_schema_preserves_workspace_scope_and_forced_rls
     assert "master_data_workspace_periods" in POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL
     assert POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL.count("FORCE ROW LEVEL SECURITY") == 2
     assert POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL.count("CREATE POLICY tenant_scope") == 2
+    assert "currency_registry_bindings" in POSTGRES_CURRENCY_REGISTRY_BINDING_SCHEMA_SQL
+    assert POSTGRES_CURRENCY_REGISTRY_BINDING_SCHEMA_SQL.count("FORCE ROW LEVEL SECURITY") == 1
+    assert POSTGRES_CURRENCY_REGISTRY_BINDING_SCHEMA_SQL.count("CREATE POLICY tenant_scope") == 1
+    assert "currency_registry_snapshots" in POSTGRES_CURRENCY_REGISTRY_SNAPSHOT_SCHEMA_SQL
+    assert POSTGRES_CURRENCY_REGISTRY_SNAPSHOT_SCHEMA_SQL.count("FORCE ROW LEVEL SECURITY") == 1
+    assert POSTGRES_CURRENCY_REGISTRY_SNAPSHOT_SCHEMA_SQL.count("CREATE POLICY tenant_scope") == 1
 
 
 def test_master_data_application_migration_is_linear_and_rolls_back_scope_assets() -> None:
@@ -123,7 +135,7 @@ def test_live_postgres_master_data_application_workspace_and_tenant_isolation() 
             tables = (
                 "tenants,organizations,currencies,legal_entities,branches,fiscal_periods,domain_workspaces,"
                 "domain_audit_ledger_state,domain_audit_events,outbox_events,audit_events,"
-                "master_data_workspace_organizations,master_data_workspace_periods"
+                "master_data_workspace_organizations,master_data_workspace_periods,currency_registry_snapshots,currency_registry_bindings"
             )
             admin.execute(
                 f"GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{tables.replace(',', ',reconforge.')} TO {app_user}"
@@ -170,6 +182,9 @@ def test_live_postgres_master_data_application_workspace_and_tenant_isolation() 
                 workspace="Finance",
                 actor_label="admin",
             )
+            binding = repository.bind_currency_registry(workspace="Finance", actor_label="admin")
+            assert binding["registry_digest"]
+            assert repository.currency_registry_reconciliation(workspace="Finance")["binding"]["status"] == "current"
             operations_period = repository.upsert_period(
                 name="2026-07",
                 start_date="2026-07-01",

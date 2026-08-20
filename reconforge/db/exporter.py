@@ -25,6 +25,7 @@ from reconforge.io.persisted import (
     PersistedJsonError,
     PersistedJsonObjectDocument,
     decode_audit_metadata,
+    decode_currency_registry_snapshot,
     decode_sqlite_legacy_import_summary,
     decode_sqlite_matching_lineage,
     decode_sqlite_matching_rule,
@@ -52,6 +53,12 @@ _MARKER_BOUNDARY = "Local crash-recovery integrity marker; SHA-256 detects chang
 
 SELECT_QUERIES = {
     "workspaces": "SELECT * FROM workspaces ORDER BY created_at, id",
+    "currency_registry_snapshots": (
+        "SELECT * FROM currency_registry_snapshots ORDER BY registry_version, captured_at, registry_digest"
+    ),
+    "currency_registry_bindings": (
+        "SELECT * FROM currency_registry_bindings ORDER BY workspace_id"
+    ),
     "organizations": "SELECT * FROM organizations ORDER BY created_at, id",
     "currencies": "SELECT * FROM currencies ORDER BY code",
     "legal_entities": "SELECT * FROM legal_entities ORDER BY entity_code, id",
@@ -137,6 +144,9 @@ SELECT_QUERIES = {
     "durable_job_leases": "SELECT * FROM durable_job_leases ORDER BY tenant_id, expires_at, job_id",
     "durable_job_lease_events": "SELECT * FROM durable_job_lease_events ORDER BY job_id, event_sequence",
     "durable_job_partition_effects": "SELECT * FROM durable_job_partition_effects ORDER BY job_id, ordinal",
+    "durable_job_scheduler_cursors": (
+        "SELECT * FROM durable_job_scheduler_cursors ORDER BY tenant_id, scheduler_key"
+    ),
 }
 
 # Exact inventory of structured values reachable from the public DB export.
@@ -146,6 +156,7 @@ EXPORT_JSON_FIELDS: Mapping[
     tuple[Callable[[object], PersistedJsonObjectDocument], str | None],
 ] = MappingProxyType(
     {
+        ("currency_registry_snapshots", "snapshot_json"): (decode_currency_registry_snapshot, "snapshot"),
         ("audit_events", "metadata_json"): (decode_audit_metadata, "metadata"),
         ("legacy_import_records", "summary_json"): (
             decode_sqlite_legacy_import_summary,
@@ -578,6 +589,8 @@ def _schema_version(db_path: Path | str) -> int:
 def _domain_payload(connection: sqlite3.Connection) -> dict[str, Any]:
     return {
         "workspaces": _rows(connection, "workspaces"),
+        "currency_registry_snapshots": _json_rows(connection, "currency_registry_snapshots"),
+        "currency_registry_bindings": _rows(connection, "currency_registry_bindings"),
         "organizations": _rows(connection, "organizations"),
         "currencies": _rows(connection, "currencies"),
         "legal_entities": _rows(connection, "legal_entities"),
@@ -662,6 +675,7 @@ def _finance_payload(connection: sqlite3.Connection) -> dict[str, Any]:
         "durable_job_leases": _rows(connection, "durable_job_leases"),
         "durable_job_lease_events": _rows(connection, "durable_job_lease_events"),
         "durable_job_partition_effects": _rows(connection, "durable_job_partition_effects"),
+        "durable_job_scheduler_cursors": _rows(connection, "durable_job_scheduler_cursors"),
     }
 
 

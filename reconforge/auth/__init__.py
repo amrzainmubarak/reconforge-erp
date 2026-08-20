@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from reconforge.auth.delegations import DelegationGrant, DelegationValidationError
 from reconforge.auth.federation import (
     FederatedPrincipal,
     FederationError,
@@ -18,6 +19,18 @@ from reconforge.auth.policy import (
     PolicyEvaluationContext,
     evaluate_principal_access,
 )
+from reconforge.auth.policy_analysis import (
+    POLICY_ANALYSIS_ALGORITHM_VERSION,
+    POLICY_ANALYSIS_SCHEMA_VERSION,
+    PolicyAnalysisError,
+    PolicyAnalysisRequest,
+    PolicyAnalysisResult,
+    PolicyConflictFinding,
+    PolicyGrant,
+    PolicyScope,
+    analyze_policy_conflicts,
+    verify_policy_analysis_payload,
+)
 from reconforge.auth.rbac import (
     SoDCheckResult,
     check_object_action_permission,
@@ -33,6 +46,10 @@ __all__ = [
     "AuthRepositoryError",
     "AuthServiceError",
     "CentralPolicyEngine",
+    "POLICY_ANALYSIS_ALGORITHM_VERSION",
+    "POLICY_ANALYSIS_SCHEMA_VERSION",
+    "DelegationGrant",
+    "DelegationValidationError",
     "FederatedPrincipal",
     "FederationError",
     "FederationProvider",
@@ -44,7 +61,13 @@ __all__ = [
     "LocalUser",
     "PasswordHash",
     "PolicyDecision",
+    "PolicyAnalysisError",
+    "PolicyAnalysisRequest",
+    "PolicyAnalysisResult",
+    "PolicyConflictFinding",
     "PolicyEvaluationContext",
+    "PolicyGrant",
+    "PolicyScope",
     "RolePermission",
     "RoleRepository",
     "SoDAction",
@@ -53,10 +76,12 @@ __all__ = [
     "VerifiedFederationAssertion",
     "check_object_action_permission",
     "check_sod_conflict",
+    "analyze_policy_conflicts",
     "evaluate_principal_access",
     "has_permission",
     "hash_password",
     "required_permission_for_action",
     "same_actor",
     "verify_password",
+    "verify_policy_analysis_payload",
 ]

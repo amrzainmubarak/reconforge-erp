@@ -34,6 +34,18 @@ SQLITE_LEGACY_IMPORT_SUMMARY_JSON_PROFILE = "sqlite-legacy-import-summary-json-v
 SQLITE_LEGACY_IMPORT_SUMMARY_SCHEMA = "sqlite-legacy-import-summary-object-v1"
 SQLITE_MATCHING_LINEAGE_JSON_PROFILE = "sqlite-matching-lineage-json-v1"
 SQLITE_MATCHING_LINEAGE_SCHEMA = "sqlite-matching-lineage-object-v1"
+CURRENCY_REGISTRY_SNAPSHOT_JSON_PROFILE = "currency-registry-snapshot-json-v1"
+CURRENCY_REGISTRY_SNAPSHOT_SCHEMA = "currency-registry-snapshot-object-v1"
+SQLITE_RETAIL_SETTLEMENT_JSON_PROFILE = "sqlite-retail-settlement-json-v1"
+SQLITE_RETAIL_SETTLEMENT_SCHEMA = "retail-settlement-report-object-v1"
+SQLITE_PROFESSIONAL_INVOICE_PAYMENT_JSON_PROFILE = "sqlite-professional-invoice-payment-json-v1"
+SQLITE_PROFESSIONAL_INVOICE_PAYMENT_SCHEMA = "professional-invoice-payment-report-object-v1"
+SQLITE_MANUFACTURING_COST_CONTROL_JSON_PROFILE = "sqlite-manufacturing-cost-control-json-v1"
+SQLITE_MANUFACTURING_COST_CONTROL_SCHEMA = "manufacturing-cost-control-report-object-v1"
+SQLITE_BANK_STATEMENT_CONTROL_JSON_PROFILE = "sqlite-bank-statement-control-json-v1"
+SQLITE_BANK_STATEMENT_CONTROL_SCHEMA = "bank-statement-control-report-object-v1"
+CONSOLIDATION_WORKSHEET_JSON_PROFILE = "consolidation-worksheet-json-v1"
+CONSOLIDATION_WORKSHEET_SCHEMA = "consolidation-worksheet-v1"
 FINANCIAL_IDEMPOTENCY_JSON_POLICY = StructuredDocumentPolicy(
     max_file_bytes=4 * 1024 * 1024,
     max_nodes=100_000,
@@ -121,6 +133,22 @@ SQLITE_MATCHING_LINEAGE_JSON_POLICY = StructuredDocumentPolicy(
     max_depth=32,
     max_collection_items=25_000,
     max_scalar_characters=256 * 1024,
+    max_yaml_aliases=1,
+)
+CURRENCY_REGISTRY_SNAPSHOT_JSON_POLICY = StructuredDocumentPolicy(
+    max_file_bytes=1_000_000,
+    max_nodes=20_000,
+    max_depth=16,
+    max_collection_items=1_000,
+    max_scalar_characters=100_000,
+    max_yaml_aliases=1,
+)
+CONSOLIDATION_WORKSHEET_JSON_POLICY = StructuredDocumentPolicy(
+    max_file_bytes=32 * 1024 * 1024,
+    max_nodes=1_000_000,
+    max_depth=64,
+    max_collection_items=150_000,
+    max_scalar_characters=1024 * 1024,
     max_yaml_aliases=1,
 )
 _REDIS_SESSION_FIELDS = frozenset({"session_id", "user_id", "token_hash", "expires_at"})
@@ -373,6 +401,18 @@ def decode_sqlite_matching_lineage(value: object) -> PersistedJsonObjectDocument
     )
 
 
+def decode_currency_registry_snapshot(value: object) -> PersistedJsonObjectDocument:
+    """Decode one persisted currency registry snapshot under bounded JSON limits."""
+
+    return _document(
+        str(value),
+        policy=CURRENCY_REGISTRY_SNAPSHOT_JSON_POLICY,
+        profile_id=CURRENCY_REGISTRY_SNAPSHOT_JSON_PROFILE,
+        schema_id=CURRENCY_REGISTRY_SNAPSHOT_SCHEMA,
+        reject_fractional_numbers=True,
+    )
+
+
 def encode_sqlite_matching_lineage(
     payload: Mapping[str, Any],
 ) -> PersistedJsonObjectDocument:
@@ -424,6 +464,42 @@ def encode_financial_idempotency_response(payload: Mapping[str, Any]) -> Persist
     )
 
 
+def decode_consolidation_worksheet(value: object) -> PersistedJsonObjectDocument:
+    """Decode one persisted worksheet under the bounded v1 profile."""
+
+    return _document(
+        str(value),
+        policy=CONSOLIDATION_WORKSHEET_JSON_POLICY,
+        profile_id=CONSOLIDATION_WORKSHEET_JSON_PROFILE,
+        schema_id=CONSOLIDATION_WORKSHEET_SCHEMA,
+        reject_fractional_numbers=True,
+    )
+
+
+def encode_consolidation_worksheet(payload: Mapping[str, Any]) -> PersistedJsonObjectDocument:
+    """Canonicalize a replay-valid worksheet before database persistence."""
+
+    value = dict(payload)
+    _preflight_value(value, CONSOLIDATION_WORKSHEET_JSON_POLICY, reject_floats=True)
+    try:
+        text = json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        )
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise PersistedJsonError("persisted_json_encoding_invalid") from exc
+    return _document(
+        text,
+        policy=CONSOLIDATION_WORKSHEET_JSON_POLICY,
+        profile_id=CONSOLIDATION_WORKSHEET_JSON_PROFILE,
+        schema_id=CONSOLIDATION_WORKSHEET_SCHEMA,
+        reject_fractional_numbers=True,
+    )
+
+
 def decode_audit_metadata(value: object) -> PersistedJsonObjectDocument:
     """Decode stored audit metadata without inventing a replacement value."""
 
@@ -471,6 +547,138 @@ def decode_postgres_outbox_payload(value: object) -> PersistedJsonObjectDocument
         profile_id=POSTGRES_OUTBOX_JSON_PROFILE,
         schema_id=POSTGRES_OUTBOX_PAYLOAD_SCHEMA,
         reject_fractional_numbers=False,
+    )
+
+
+def decode_sqlite_retail_settlement(value: object) -> PersistedJsonObjectDocument:
+    """Decode one bounded persisted retail settlement report object."""
+
+    return _document(
+        str(value),
+        policy=POSTGRES_OUTBOX_JSON_POLICY,
+        profile_id=SQLITE_RETAIL_SETTLEMENT_JSON_PROFILE,
+        schema_id=SQLITE_RETAIL_SETTLEMENT_SCHEMA,
+        reject_fractional_numbers=True,
+    )
+
+
+def encode_sqlite_retail_settlement(payload: Mapping[str, Any]) -> PersistedJsonObjectDocument:
+    """Canonicalize a retail settlement report before SQLite persistence."""
+
+    try:
+        value = dict(payload)
+    except (TypeError, ValueError) as exc:
+        raise PersistedJsonError("persisted_json_object_required") from exc
+    _preflight_value(value, POSTGRES_OUTBOX_JSON_POLICY, reject_floats=True)
+    try:
+        text = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False)
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise PersistedJsonError("persisted_json_encoding_invalid") from exc
+    return _document(
+        text,
+        policy=POSTGRES_OUTBOX_JSON_POLICY,
+        profile_id=SQLITE_RETAIL_SETTLEMENT_JSON_PROFILE,
+        schema_id=SQLITE_RETAIL_SETTLEMENT_SCHEMA,
+        reject_fractional_numbers=True,
+    )
+
+
+def decode_sqlite_professional_invoice_payment(value: object) -> PersistedJsonObjectDocument:
+    """Decode one bounded persisted professional invoice/payment report."""
+
+    return _document(
+        str(value),
+        policy=POSTGRES_OUTBOX_JSON_POLICY,
+        profile_id=SQLITE_PROFESSIONAL_INVOICE_PAYMENT_JSON_PROFILE,
+        schema_id=SQLITE_PROFESSIONAL_INVOICE_PAYMENT_SCHEMA,
+        reject_fractional_numbers=True,
+    )
+
+
+def encode_sqlite_professional_invoice_payment(payload: Mapping[str, Any]) -> PersistedJsonObjectDocument:
+    """Canonicalize a professional invoice/payment report before SQLite persistence."""
+
+    try:
+        value = dict(payload)
+    except (TypeError, ValueError) as exc:
+        raise PersistedJsonError("persisted_json_object_required") from exc
+    _preflight_value(value, POSTGRES_OUTBOX_JSON_POLICY, reject_floats=True)
+    try:
+        text = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False)
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise PersistedJsonError("persisted_json_encoding_invalid") from exc
+    return _document(
+        text,
+        policy=POSTGRES_OUTBOX_JSON_POLICY,
+        profile_id=SQLITE_PROFESSIONAL_INVOICE_PAYMENT_JSON_PROFILE,
+        schema_id=SQLITE_PROFESSIONAL_INVOICE_PAYMENT_SCHEMA,
+        reject_fractional_numbers=True,
+    )
+
+
+def decode_sqlite_manufacturing_cost_control(value: object) -> PersistedJsonObjectDocument:
+    """Decode one bounded persisted manufacturing cost-control report."""
+
+    return _document(
+        str(value),
+        policy=POSTGRES_OUTBOX_JSON_POLICY,
+        profile_id=SQLITE_MANUFACTURING_COST_CONTROL_JSON_PROFILE,
+        schema_id=SQLITE_MANUFACTURING_COST_CONTROL_SCHEMA,
+        reject_fractional_numbers=True,
+    )
+
+
+def encode_sqlite_manufacturing_cost_control(payload: Mapping[str, Any]) -> PersistedJsonObjectDocument:
+    """Canonicalize a manufacturing cost-control report before persistence."""
+
+    try:
+        value = dict(payload)
+    except (TypeError, ValueError) as exc:
+        raise PersistedJsonError("persisted_json_object_required") from exc
+    _preflight_value(value, POSTGRES_OUTBOX_JSON_POLICY, reject_floats=True)
+    try:
+        text = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False)
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise PersistedJsonError("persisted_json_encoding_invalid") from exc
+    return _document(
+        text,
+        policy=POSTGRES_OUTBOX_JSON_POLICY,
+        profile_id=SQLITE_MANUFACTURING_COST_CONTROL_JSON_PROFILE,
+        schema_id=SQLITE_MANUFACTURING_COST_CONTROL_SCHEMA,
+        reject_fractional_numbers=True,
+    )
+
+
+def decode_sqlite_bank_statement_control(value: object) -> PersistedJsonObjectDocument:
+    """Decode one bounded persisted bank-statement control report."""
+
+    return _document(
+        str(value),
+        policy=POSTGRES_OUTBOX_JSON_POLICY,
+        profile_id=SQLITE_BANK_STATEMENT_CONTROL_JSON_PROFILE,
+        schema_id=SQLITE_BANK_STATEMENT_CONTROL_SCHEMA,
+        reject_fractional_numbers=True,
+    )
+
+
+def encode_sqlite_bank_statement_control(payload: Mapping[str, Any]) -> PersistedJsonObjectDocument:
+    """Canonicalize a bank-statement control report before SQLite persistence."""
+
+    try:
+        value = dict(payload)
+    except (TypeError, ValueError) as exc:
+        raise PersistedJsonError("persisted_json_object_required") from exc
+    _preflight_value(value, POSTGRES_OUTBOX_JSON_POLICY, reject_floats=True)
+    try:
+        text = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False)
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise PersistedJsonError("persisted_json_encoding_invalid") from exc
+    return _document(
+        text,
+        policy=POSTGRES_OUTBOX_JSON_POLICY,
+        profile_id=SQLITE_BANK_STATEMENT_CONTROL_JSON_PROFILE,
+        schema_id=SQLITE_BANK_STATEMENT_CONTROL_SCHEMA,
+        reject_fractional_numbers=True,
     )
 
 

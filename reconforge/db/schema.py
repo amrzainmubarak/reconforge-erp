@@ -3371,6 +3371,27 @@ BEGIN
 END;
 """
 
+DURABLE_JOB_ORGANIZATION_MIGRATION_SQL = """
+ALTER TABLE durable_jobs ADD COLUMN organization_id TEXT NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_durable_jobs_org_scope_status
+ON durable_jobs (tenant_id, organization_id, workspace_id, status, created_at, id);
+"""
+
+DURABLE_JOB_SCHEDULER_CURSOR_MIGRATION_SQL = """
+CREATE TABLE IF NOT EXISTS durable_job_scheduler_cursors (
+    tenant_id TEXT NOT NULL,
+    scheduler_key TEXT NOT NULL CHECK (length(scheduler_key) BETWEEN 1 AND 200),
+    lane_digest TEXT NOT NULL CHECK (length(lane_digest) = 64),
+    lane_count INTEGER NOT NULL CHECK (lane_count > 0),
+    next_index INTEGER NOT NULL CHECK (next_index >= 0 AND next_index < lane_count),
+    version INTEGER NOT NULL CHECK (version > 0),
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (tenant_id, scheduler_key)
+);
+CREATE INDEX IF NOT EXISTS idx_durable_job_scheduler_cursors_updated
+ON durable_job_scheduler_cursors (tenant_id, updated_at, scheduler_key);
+"""
+
 IDEMPOTENCY_RECORDS_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS idempotency_records (
     schema_version INTEGER NOT NULL CHECK (schema_version = 1),
@@ -3394,6 +3415,425 @@ CREATE TABLE IF NOT EXISTS idempotency_records (
 );
 CREATE INDEX IF NOT EXISTS idx_idempotency_expiry
 ON idempotency_records (expires_at, tenant_id);
+"""
+
+
+CONSOLIDATION_CLOSE_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS consolidation_close_periods (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+    group_code TEXT NOT NULL,
+    period_name TEXT NOT NULL,
+    reporting_currency TEXT NOT NULL REFERENCES currencies(code) ON DELETE RESTRICT,
+    period_start_date TEXT NOT NULL,
+    period_end_date TEXT NOT NULL,
+    reporting_date TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Open' CHECK (status IN ('Open','Locked','Reopened')),
+    row_version INTEGER NOT NULL DEFAULT 1 CHECK (row_version >= 1),
+    created_by TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    locked_by TEXT NOT NULL DEFAULT '',
+    locked_at TEXT NOT NULL DEFAULT '',
+    lock_reason TEXT NOT NULL DEFAULT '',
+    reopened_by TEXT NOT NULL DEFAULT '',
+    reopened_at TEXT NOT NULL DEFAULT '',
+    reopen_reason TEXT NOT NULL DEFAULT '',
+    UNIQUE (workspace_id, group_code, period_name),
+    CHECK (period_start_date <= reporting_date AND reporting_date <= period_end_date),
+    CHECK (
+      (status='Open' AND locked_by='' AND locked_at='' AND lock_reason=''
+                     AND reopened_by='' AND reopened_at='' AND reopen_reason='') OR
+      (status='Locked' AND locked_by<>'' AND locked_at<>'' AND lock_reason<>'') OR
+      (status='Reopened' AND locked_by<>'' AND locked_at<>'' AND lock_reason<>''
+                         AND reopened_by<>'' AND reopened_at<>'' AND reopen_reason<>'')
+    )
+);
+
+CREATE TABLE IF NOT EXISTS consolidation_runs (
+    id TEXT PRIMARY KEY,
+    period_id TEXT NOT NULL REFERENCES consolidation_close_periods(id) ON DELETE RESTRICT,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+    run_number TEXT NOT NULL,
+    worksheet_id TEXT NOT NULL,
+    worksheet_request_digest TEXT NOT NULL CHECK (length(worksheet_request_digest)=64),
+    worksheet_result_digest TEXT NOT NULL CHECK (length(worksheet_result_digest)=64),
+    translation_result_digest TEXT NOT NULL CHECK (length(translation_result_digest)=64),
+    worksheet_payload TEXT NOT NULL,
+    worksheet_payload_digest TEXT NOT NULL CHECK (length(worksheet_payload_digest)=64),
+    reporting_currency TEXT NOT NULL REFERENCES currencies(code) ON DELETE RESTRICT,
+    journal_line_count INTEGER NOT NULL CHECK (journal_line_count BETWEEN 2 AND 10000),
+    journal_digest TEXT NOT NULL CHECK (length(journal_digest)=64),
+    status TEXT NOT NULL DEFAULT 'Prepared'
+        CHECK (status IN ('Prepared','Approved','Posted','ReversalPrepared','Reversed')),
+    row_version INTEGER NOT NULL DEFAULT 1 CHECK (row_version >= 1),
+    prepared_by TEXT NOT NULL,
+    prepared_at TEXT NOT NULL,
+    approved_by TEXT NOT NULL DEFAULT '',
+    approved_at TEXT NOT NULL DEFAULT '',
+    approval_reason TEXT NOT NULL DEFAULT '',
+    posted_by TEXT NOT NULL DEFAULT '',
+    posted_at TEXT NOT NULL DEFAULT '',
+    posting_reason TEXT NOT NULL DEFAULT '',
+    reversal_requested_by TEXT NOT NULL DEFAULT '',
+    reversal_requested_at TEXT NOT NULL DEFAULT '',
+    reversal_request_reason TEXT NOT NULL DEFAULT '',
+    reversed_by TEXT NOT NULL DEFAULT '',
+    reversed_at TEXT NOT NULL DEFAULT '',
+    reversal_reason TEXT NOT NULL DEFAULT '',
+    UNIQUE (period_id, run_number),
+    UNIQUE (workspace_id, worksheet_result_digest),
+    CHECK (prepared_by<>'' AND prepared_at<>''),
+    CHECK (
+      (status='Prepared' AND approved_by='' AND approved_at='' AND approval_reason=''
+                         AND posted_by='' AND posted_at='' AND posting_reason=''
+                         AND reversal_requested_by='' AND reversal_requested_at=''
+                         AND reversal_request_reason='' AND reversed_by='' AND reversed_at=''
+                         AND reversal_reason='') OR
+      (status='Approved' AND approved_by<>'' AND approved_at<>'' AND approval_reason<>''
+                         AND posted_by='' AND posted_at='' AND posting_reason=''
+                         AND reversal_requested_by='' AND reversal_requested_at=''
+                         AND reversal_request_reason='' AND reversed_by='' AND reversed_at=''
+                         AND reversal_reason='') OR
+      (status='Posted' AND approved_by<>'' AND approved_at<>'' AND approval_reason<>''
+                       AND posted_by<>'' AND posted_at<>'' AND posting_reason<>''
+                       AND reversal_requested_by='' AND reversal_requested_at=''
+                       AND reversal_request_reason='' AND reversed_by='' AND reversed_at=''
+                       AND reversal_reason='') OR
+      (status='ReversalPrepared' AND approved_by<>'' AND approved_at<>'' AND approval_reason<>''
+                                 AND posted_by<>'' AND posted_at<>'' AND posting_reason<>''
+                                 AND reversal_requested_by<>'' AND reversal_requested_at<>''
+                                 AND reversal_request_reason<>'' AND reversed_by='' AND reversed_at=''
+                                 AND reversal_reason='') OR
+      (status='Reversed' AND approved_by<>'' AND approved_at<>'' AND approval_reason<>''
+                         AND posted_by<>'' AND posted_at<>'' AND posting_reason<>''
+                         AND reversal_requested_by<>'' AND reversal_requested_at<>''
+                         AND reversal_request_reason<>'' AND reversed_by<>'' AND reversed_at<>''
+                         AND reversal_reason<>'')
+    )
+);
+
+CREATE TABLE IF NOT EXISTS consolidation_period_events (
+    id TEXT PRIMARY KEY,
+    period_id TEXT NOT NULL REFERENCES consolidation_close_periods(id) ON DELETE RESTRICT,
+    event_sequence INTEGER NOT NULL CHECK (event_sequence >= 2),
+    from_status TEXT NOT NULL CHECK (from_status IN ('Open','Locked','Reopened')),
+    to_status TEXT NOT NULL CHECK (to_status IN ('Locked','Reopened')),
+    actor_label TEXT NOT NULL CHECK (actor_label <> ''),
+    occurred_at TEXT NOT NULL CHECK (occurred_at <> ''),
+    reason TEXT NOT NULL CHECK (reason <> ''),
+    UNIQUE (period_id, event_sequence),
+    CHECK ((from_status IN ('Open','Reopened') AND to_status='Locked') OR
+           (from_status='Locked' AND to_status='Reopened'))
+);
+
+CREATE TABLE IF NOT EXISTS consolidation_run_lines (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES consolidation_runs(id) ON DELETE RESTRICT,
+    ordinal INTEGER NOT NULL CHECK (ordinal >= 1),
+    elimination_id TEXT NOT NULL,
+    source_line_id TEXT NOT NULL,
+    entity_code TEXT NOT NULL,
+    group_account_code TEXT NOT NULL,
+    account_type TEXT NOT NULL CHECK (account_type IN ('Asset','Liability','Equity','Income','Expense')),
+    amount_decimal TEXT NOT NULL,
+    amount_minor INTEGER NOT NULL CHECK (amount_minor <> 0),
+    currency_code TEXT NOT NULL REFERENCES currencies(code) ON DELETE RESTRICT,
+    source_reference TEXT NOT NULL,
+    source_digest TEXT NOT NULL CHECK (length(source_digest)=64),
+    UNIQUE (run_id, ordinal),
+    UNIQUE (run_id, source_line_id)
+);
+
+CREATE TABLE IF NOT EXISTS consolidation_effects (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES consolidation_runs(id) ON DELETE RESTRICT,
+    effect_type TEXT NOT NULL CHECK (effect_type IN ('Posting','Reversal')),
+    source_effect_id TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'Building' CHECK (status IN ('Building','Committed')),
+    line_count INTEGER NOT NULL CHECK (line_count BETWEEN 2 AND 10000),
+    effect_digest TEXT NOT NULL CHECK (length(effect_digest)=64),
+    created_by TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (run_id, effect_type),
+    CHECK ((effect_type='Posting' AND source_effect_id='') OR
+           (effect_type='Reversal' AND source_effect_id<>''))
+);
+
+CREATE TABLE IF NOT EXISTS consolidation_effect_lines (
+    id TEXT PRIMARY KEY,
+    effect_id TEXT NOT NULL REFERENCES consolidation_effects(id) ON DELETE RESTRICT,
+    run_line_id TEXT NOT NULL REFERENCES consolidation_run_lines(id) ON DELETE RESTRICT,
+    ordinal INTEGER NOT NULL CHECK (ordinal >= 1),
+    amount_decimal TEXT NOT NULL,
+    amount_minor INTEGER NOT NULL CHECK (amount_minor <> 0),
+    currency_code TEXT NOT NULL REFERENCES currencies(code) ON DELETE RESTRICT,
+    UNIQUE (effect_id, ordinal),
+    UNIQUE (effect_id, run_line_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_consolidation_periods_scope
+ON consolidation_close_periods(workspace_id, group_code, period_name, status);
+CREATE INDEX IF NOT EXISTS idx_consolidation_runs_scope
+ON consolidation_runs(workspace_id, period_id, status, run_number);
+CREATE INDEX IF NOT EXISTS idx_consolidation_period_events_period
+ON consolidation_period_events(period_id, event_sequence);
+CREATE INDEX IF NOT EXISTS idx_consolidation_run_lines_run
+ON consolidation_run_lines(run_id, ordinal);
+CREATE INDEX IF NOT EXISTS idx_consolidation_effects_run
+ON consolidation_effects(run_id, effect_type, status);
+
+CREATE TRIGGER IF NOT EXISTS consolidation_periods_guard_update
+BEFORE UPDATE ON consolidation_close_periods
+BEGIN
+    SELECT CASE WHEN NEW.id<>OLD.id OR NEW.workspace_id<>OLD.workspace_id
+      OR NEW.group_code<>OLD.group_code OR NEW.period_name<>OLD.period_name
+      OR NEW.reporting_currency<>OLD.reporting_currency
+      OR NEW.period_start_date<>OLD.period_start_date OR NEW.period_end_date<>OLD.period_end_date
+      OR NEW.reporting_date<>OLD.reporting_date OR NEW.created_by<>OLD.created_by
+      OR NEW.created_at<>OLD.created_at
+      THEN RAISE(ABORT, 'consolidation period identity is immutable') END;
+    SELECT CASE WHEN NEW.row_version<>OLD.row_version+1
+      THEN RAISE(ABORT, 'consolidation period version must advance by one') END;
+    SELECT CASE WHEN NOT ((OLD.status IN ('Open','Reopened') AND NEW.status='Locked')
+                       OR (OLD.status='Locked' AND NEW.status='Reopened'))
+      THEN RAISE(ABORT, 'invalid consolidation period transition') END;
+    SELECT CASE WHEN NOT EXISTS (
+      SELECT 1 FROM consolidation_period_events events
+      WHERE events.period_id=OLD.id AND events.event_sequence=NEW.row_version
+        AND events.from_status=OLD.status AND events.to_status=NEW.status
+        AND events.actor_label=CASE WHEN NEW.status='Locked' THEN NEW.locked_by ELSE NEW.reopened_by END
+        AND events.occurred_at=CASE WHEN NEW.status='Locked' THEN NEW.locked_at ELSE NEW.reopened_at END
+        AND events.reason=CASE WHEN NEW.status='Locked' THEN NEW.lock_reason ELSE NEW.reopen_reason END
+    ) THEN RAISE(ABORT, 'consolidation period transition requires its immutable event') END;
+    SELECT CASE WHEN NEW.status='Locked' AND
+      (NEW.locked_by='' OR NEW.locked_at='' OR NEW.lock_reason=''
+       OR NEW.locked_at<CASE WHEN OLD.status='Reopened' THEN OLD.reopened_at ELSE OLD.created_at END)
+      THEN RAISE(ABORT, 'locking a consolidation period requires actor timestamp and reason') END;
+    SELECT CASE WHEN NEW.status='Locked' AND NOT EXISTS (
+      SELECT 1 FROM consolidation_runs
+      WHERE period_id=OLD.id AND prepared_at<=NEW.locked_at
+    ) THEN RAISE(ABORT, 'consolidation period requires at least one governed run before lock') END;
+    SELECT CASE WHEN NEW.status='Locked' AND EXISTS (
+      SELECT 1 FROM consolidation_runs
+      WHERE period_id=OLD.id AND prepared_at<=NEW.locked_at AND status NOT IN ('Posted','Reversed')
+    ) THEN RAISE(ABORT, 'consolidation period has unfinished runs') END;
+    SELECT CASE WHEN NEW.status='Reopened' AND
+      (NEW.reopened_by='' OR NEW.reopened_at='' OR NEW.reopen_reason=''
+       OR lower(trim(NEW.reopened_by))=lower(trim(OLD.locked_by))
+       OR NEW.reopened_at<OLD.locked_at
+       OR NEW.locked_by<>OLD.locked_by OR NEW.locked_at<>OLD.locked_at
+       OR NEW.lock_reason<>OLD.lock_reason)
+      THEN RAISE(ABORT, 'reopening a consolidation period requires an independent actor timestamp and reason') END;
+END;
+
+CREATE TRIGGER IF NOT EXISTS consolidation_periods_immutable_delete
+BEFORE DELETE ON consolidation_close_periods
+BEGIN
+    SELECT RAISE(ABORT, 'consolidation periods are immutable lifecycle records');
+END;
+
+CREATE TRIGGER IF NOT EXISTS consolidation_period_events_guard_insert
+BEFORE INSERT ON consolidation_period_events
+BEGIN
+    SELECT CASE WHEN NOT EXISTS (
+      SELECT 1 FROM consolidation_close_periods periods
+      WHERE periods.id=NEW.period_id AND periods.row_version=NEW.event_sequence-1
+        AND periods.status=NEW.from_status
+        AND ((NEW.from_status IN ('Open','Reopened') AND NEW.to_status='Locked'
+              AND NEW.occurred_at>=CASE WHEN NEW.from_status='Reopened'
+                                        THEN periods.reopened_at ELSE periods.created_at END)
+          OR (NEW.from_status='Locked' AND NEW.to_status='Reopened'
+              AND lower(trim(NEW.actor_label))<>lower(trim(periods.locked_by))
+              AND NEW.occurred_at>=periods.locked_at))
+    ) THEN RAISE(ABORT, 'consolidation period event does not match current governed state') END;
+END;
+
+CREATE TRIGGER IF NOT EXISTS consolidation_period_events_immutable_update
+BEFORE UPDATE ON consolidation_period_events
+BEGIN
+    SELECT RAISE(ABORT, 'consolidation period events are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS consolidation_period_events_immutable_delete
+BEFORE DELETE ON consolidation_period_events
+BEGIN
+    SELECT RAISE(ABORT, 'consolidation period events are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS consolidation_runs_guard_insert
+BEFORE INSERT ON consolidation_runs
+BEGIN
+    SELECT CASE WHEN NEW.status<>'Prepared' OR NEW.row_version<>1
+      THEN RAISE(ABORT, 'consolidation runs must begin at Prepared version one') END;
+    SELECT CASE WHEN NOT EXISTS (
+      SELECT 1 FROM consolidation_close_periods periods
+      WHERE periods.id=NEW.period_id AND periods.workspace_id=NEW.workspace_id
+        AND periods.reporting_currency=NEW.reporting_currency
+        AND periods.status IN ('Open','Reopened')
+    ) THEN RAISE(ABORT, 'consolidation run scope must match an open governed period') END;
+END;
+
+CREATE TRIGGER IF NOT EXISTS consolidation_runs_guard_update
+BEFORE UPDATE ON consolidation_runs
+BEGIN
+    SELECT CASE WHEN NEW.id<>OLD.id OR NEW.period_id<>OLD.period_id
+      OR NEW.workspace_id<>OLD.workspace_id OR NEW.run_number<>OLD.run_number
+      OR NEW.worksheet_id<>OLD.worksheet_id
+      OR NEW.worksheet_request_digest<>OLD.worksheet_request_digest
+      OR NEW.worksheet_result_digest<>OLD.worksheet_result_digest
+      OR NEW.translation_result_digest<>OLD.translation_result_digest
+      OR NEW.worksheet_payload<>OLD.worksheet_payload
+      OR NEW.worksheet_payload_digest<>OLD.worksheet_payload_digest
+      OR NEW.reporting_currency<>OLD.reporting_currency
+      OR NEW.journal_line_count<>OLD.journal_line_count OR NEW.journal_digest<>OLD.journal_digest
+      OR NEW.prepared_by<>OLD.prepared_by OR NEW.prepared_at<>OLD.prepared_at
+      THEN RAISE(ABORT, 'consolidation run source and preparation state are immutable') END;
+    SELECT CASE WHEN NEW.row_version<>OLD.row_version+1
+      THEN RAISE(ABORT, 'consolidation run version must advance by one') END;
+    SELECT CASE WHEN NOT ((OLD.status='Prepared' AND NEW.status='Approved')
+                       OR (OLD.status='Approved' AND NEW.status='Posted')
+                       OR (OLD.status='Posted' AND NEW.status='ReversalPrepared')
+                       OR (OLD.status='ReversalPrepared' AND NEW.status='Reversed'))
+      THEN RAISE(ABORT, 'invalid consolidation run transition') END;
+    SELECT CASE WHEN NEW.status='Approved' AND
+      (NEW.approved_by='' OR NEW.approved_at='' OR NEW.approval_reason=''
+       OR lower(trim(NEW.approved_by))=lower(trim(OLD.prepared_by))
+       OR NEW.approved_at<OLD.prepared_at)
+      THEN RAISE(ABORT, 'consolidation approval requires an independent actor timestamp and reason') END;
+    SELECT CASE WHEN NEW.status='Approved' AND
+      ((SELECT COUNT(*) FROM consolidation_run_lines WHERE run_id=OLD.id)<>OLD.journal_line_count
+       OR (SELECT COALESCE(SUM(amount_minor),0) FROM consolidation_run_lines WHERE run_id=OLD.id)<>0)
+      THEN RAISE(ABORT, 'consolidation approval requires the complete balanced journal') END;
+    SELECT CASE WHEN NEW.status='Posted' AND
+      (NEW.posted_by='' OR NEW.posted_at='' OR NEW.posting_reason=''
+       OR lower(trim(NEW.posted_by)) IN (lower(trim(OLD.prepared_by)),lower(trim(OLD.approved_by)))
+       OR NEW.posted_at<OLD.approved_at)
+      THEN RAISE(ABORT, 'consolidation posting requires an independent actor timestamp and reason') END;
+    SELECT CASE WHEN NEW.status='Posted' AND NOT EXISTS (
+      SELECT 1 FROM consolidation_effects
+      WHERE run_id=OLD.id AND effect_type='Posting' AND status='Committed'
+    ) THEN RAISE(ABORT, 'consolidation posting requires a committed balanced effect') END;
+    SELECT CASE WHEN NEW.status='ReversalPrepared' AND
+      (NEW.reversal_requested_by='' OR NEW.reversal_requested_at=''
+       OR NEW.reversal_request_reason='' OR NEW.reversal_requested_at<OLD.posted_at)
+      THEN RAISE(ABORT, 'consolidation reversal preparation requires actor timestamp and reason') END;
+    SELECT CASE WHEN NEW.status='Reversed' AND
+      (NEW.reversed_by='' OR NEW.reversed_at='' OR NEW.reversal_reason=''
+       OR lower(trim(NEW.reversed_by)) IN
+          (lower(trim(OLD.reversal_requested_by)),lower(trim(OLD.posted_by)))
+       OR NEW.reversed_at<OLD.reversal_requested_at)
+      THEN RAISE(ABORT, 'consolidation reversal requires an independent approver timestamp and reason') END;
+    SELECT CASE WHEN NEW.status='Reversed' AND NOT EXISTS (
+      SELECT 1 FROM consolidation_effects
+      WHERE run_id=OLD.id AND effect_type='Reversal' AND status='Committed'
+    ) THEN RAISE(ABORT, 'consolidation reversal requires a committed compensating effect') END;
+    SELECT CASE WHEN OLD.status IN ('Approved','Posted','ReversalPrepared') AND
+      (NEW.approved_by<>OLD.approved_by OR NEW.approved_at<>OLD.approved_at
+       OR NEW.approval_reason<>OLD.approval_reason)
+      THEN RAISE(ABORT, 'consolidation approval history is immutable') END;
+    SELECT CASE WHEN OLD.status IN ('Posted','ReversalPrepared') AND
+      (NEW.posted_by<>OLD.posted_by OR NEW.posted_at<>OLD.posted_at
+       OR NEW.posting_reason<>OLD.posting_reason)
+      THEN RAISE(ABORT, 'consolidation posting history is immutable') END;
+    SELECT CASE WHEN OLD.status='ReversalPrepared' AND
+      (NEW.reversal_requested_by<>OLD.reversal_requested_by
+       OR NEW.reversal_requested_at<>OLD.reversal_requested_at
+       OR NEW.reversal_request_reason<>OLD.reversal_request_reason)
+      THEN RAISE(ABORT, 'consolidation reversal-request history is immutable') END;
+END;
+
+CREATE TRIGGER IF NOT EXISTS consolidation_runs_immutable_delete
+BEFORE DELETE ON consolidation_runs
+BEGIN
+    SELECT RAISE(ABORT, 'consolidation runs cannot be deleted');
+END;
+
+CREATE TRIGGER IF NOT EXISTS consolidation_run_lines_guard_insert
+BEFORE INSERT ON consolidation_run_lines
+BEGIN
+    SELECT CASE WHEN NOT EXISTS (
+      SELECT 1 FROM consolidation_runs
+      WHERE id=NEW.run_id AND status='Prepared' AND reporting_currency=NEW.currency_code
+    ) THEN RAISE(ABORT, 'consolidation lines require a matching Prepared run') END;
+END;
+
+CREATE TRIGGER IF NOT EXISTS consolidation_run_lines_immutable_update
+BEFORE UPDATE ON consolidation_run_lines
+BEGIN
+    SELECT RAISE(ABORT, 'consolidation run lines are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS consolidation_run_lines_immutable_delete
+BEFORE DELETE ON consolidation_run_lines
+BEGIN
+    SELECT RAISE(ABORT, 'consolidation run lines are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS consolidation_effects_guard_insert
+BEFORE INSERT ON consolidation_effects
+BEGIN
+    SELECT CASE WHEN NEW.status<>'Building'
+      THEN RAISE(ABORT, 'consolidation effects must begin in Building state') END;
+    SELECT CASE WHEN NOT EXISTS (
+      SELECT 1 FROM consolidation_runs runs
+      WHERE runs.id=NEW.run_id
+        AND ((NEW.effect_type='Posting' AND runs.status='Approved' AND NEW.source_effect_id='')
+          OR (NEW.effect_type='Reversal' AND runs.status='ReversalPrepared'
+              AND EXISTS (
+                SELECT 1 FROM consolidation_effects source
+                WHERE source.id=NEW.source_effect_id AND source.run_id=NEW.run_id
+                  AND source.effect_type='Posting' AND source.status='Committed'
+              )))
+    ) THEN RAISE(ABORT, 'consolidation effect does not match the governed run state') END;
+END;
+
+CREATE TRIGGER IF NOT EXISTS consolidation_effects_guard_update
+BEFORE UPDATE ON consolidation_effects
+BEGIN
+    SELECT CASE WHEN OLD.status<>'Building' OR NEW.status<>'Committed'
+      OR NEW.id<>OLD.id OR NEW.run_id<>OLD.run_id OR NEW.effect_type<>OLD.effect_type
+      OR NEW.source_effect_id<>OLD.source_effect_id OR NEW.line_count<>OLD.line_count
+      OR NEW.effect_digest<>OLD.effect_digest OR NEW.created_by<>OLD.created_by
+      OR NEW.created_at<>OLD.created_at
+      THEN RAISE(ABORT, 'invalid consolidation effect transition') END;
+    SELECT CASE WHEN
+      (SELECT COUNT(*) FROM consolidation_effect_lines WHERE effect_id=OLD.id)<>OLD.line_count
+      OR (SELECT COALESCE(SUM(amount_minor),0) FROM consolidation_effect_lines WHERE effect_id=OLD.id)<>0
+      THEN RAISE(ABORT, 'consolidation effect must be complete and balanced') END;
+END;
+
+CREATE TRIGGER IF NOT EXISTS consolidation_effects_immutable_delete
+BEFORE DELETE ON consolidation_effects
+BEGIN
+    SELECT RAISE(ABORT, 'consolidation effects cannot be deleted');
+END;
+
+CREATE TRIGGER IF NOT EXISTS consolidation_effect_lines_guard_insert
+BEFORE INSERT ON consolidation_effect_lines
+BEGIN
+    SELECT CASE WHEN NOT EXISTS (
+      SELECT 1 FROM consolidation_effects effects
+      JOIN consolidation_runs runs ON runs.id=effects.run_id
+      JOIN consolidation_run_lines lines ON lines.id=NEW.run_line_id AND lines.run_id=runs.id
+      WHERE effects.id=NEW.effect_id AND effects.status='Building'
+        AND lines.currency_code=NEW.currency_code
+        AND lines.ordinal=NEW.ordinal
+        AND ((effects.effect_type='Posting' AND NEW.amount_minor=lines.amount_minor)
+          OR (effects.effect_type='Reversal' AND NEW.amount_minor=-lines.amount_minor))
+    ) THEN RAISE(ABORT, 'consolidation effect line does not reproduce its governed run line') END;
+END;
+
+CREATE TRIGGER IF NOT EXISTS consolidation_effect_lines_immutable_update
+BEFORE UPDATE ON consolidation_effect_lines
+BEGIN
+    SELECT RAISE(ABORT, 'consolidation effect lines are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS consolidation_effect_lines_immutable_delete
+BEFORE DELETE ON consolidation_effect_lines
+BEGIN
+    SELECT RAISE(ABORT, 'consolidation effect lines are immutable');
+END;
 """
 
 
@@ -3511,5 +3951,300 @@ ALTER TABLE evidence_registry ADD COLUMN byte_size INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE evidence_registry ADD COLUMN retention_until TEXT NOT NULL DEFAULT '';
 
 CREATE INDEX IF NOT EXISTS idx_evidence_registry_storage
-    ON evidence_registry(workspace_id, storage_backend, storage_tenant_id, storage_key);
+ON evidence_registry(workspace_id, storage_backend, storage_tenant_id, storage_key);
+"""
+
+
+CONSOLIDATION_OWNERSHIP_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS consolidation_ownership_interests (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+    group_code TEXT NOT NULL,
+    interest_id TEXT NOT NULL,
+    parent_entity_code TEXT NOT NULL,
+    subsidiary_entity_code TEXT NOT NULL,
+    direct_ownership_percentage TEXT NOT NULL,
+    effective_from TEXT NOT NULL,
+    effective_to TEXT NOT NULL DEFAULT '',
+    version TEXT NOT NULL,
+    source_digest TEXT NOT NULL CHECK (length(source_digest)=64),
+    prepared_by TEXT NOT NULL,
+    approved_by TEXT NOT NULL,
+    approved_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (workspace_id, group_code, interest_id),
+    CHECK (parent_entity_code <> subsidiary_entity_code),
+    CHECK (length(direct_ownership_percentage) BETWEEN 1 AND 80),
+    CHECK (effective_to='' OR effective_from <= effective_to),
+    CHECK (prepared_by <> approved_by)
+);
+CREATE INDEX IF NOT EXISTS idx_consolidation_ownership_scope
+ON consolidation_ownership_interests(workspace_id, group_code, subsidiary_entity_code, effective_from, effective_to);
+CREATE TRIGGER IF NOT EXISTS consolidation_ownership_immutable_update
+BEFORE UPDATE ON consolidation_ownership_interests
+BEGIN
+    SELECT RAISE(ABORT, 'consolidation ownership interests are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS consolidation_ownership_immutable_delete
+BEFORE DELETE ON consolidation_ownership_interests
+BEGIN
+    SELECT RAISE(ABORT, 'consolidation ownership interests cannot be deleted');
+END;
+"""
+
+POLICY_DELEGATIONS_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS policy_delegations (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    workspace_id TEXT NOT NULL,
+    delegator_id TEXT NOT NULL,
+    delegatee_id TEXT NOT NULL,
+    permissions_json TEXT NOT NULL,
+    starts_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    approved_by TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('active', 'revoked')),
+    revoked_at TEXT,
+    revoked_by TEXT,
+    CHECK (delegator_id <> delegatee_id),
+    CHECK (starts_at < expires_at),
+    CHECK (created_by <> '' AND approved_by <> ''),
+    CHECK (status='active' OR (revoked_at IS NOT NULL AND revoked_by IS NOT NULL)),
+    CHECK (status='revoked' OR (revoked_at IS NULL AND revoked_by IS NULL))
+);
+CREATE INDEX IF NOT EXISTS idx_policy_delegations_effective
+ON policy_delegations(tenant_id, workspace_id, delegatee_id, starts_at, expires_at, status);
+CREATE TRIGGER IF NOT EXISTS policy_delegations_guard_update
+BEFORE UPDATE ON policy_delegations
+BEGIN
+    SELECT CASE WHEN NEW.id<>OLD.id OR NEW.tenant_id<>OLD.tenant_id OR NEW.workspace_id<>OLD.workspace_id
+      OR NEW.delegator_id<>OLD.delegator_id OR NEW.delegatee_id<>OLD.delegatee_id
+      OR NEW.permissions_json<>OLD.permissions_json OR NEW.starts_at<>OLD.starts_at
+      OR NEW.expires_at<>OLD.expires_at OR NEW.created_by<>OLD.created_by
+      OR NEW.approved_by<>OLD.approved_by
+      THEN RAISE(ABORT, 'delegation grant is immutable') END;
+    SELECT CASE WHEN NOT (OLD.status='active' AND NEW.status='revoked'
+      AND NEW.revoked_at IS NOT NULL AND NEW.revoked_by IS NOT NULL
+      AND NEW.revoked_by<>OLD.delegator_id)
+      THEN RAISE(ABORT, 'delegation status transition is invalid') END;
+END;
+CREATE TRIGGER IF NOT EXISTS policy_delegations_immutable_delete
+BEFORE DELETE ON policy_delegations
+BEGIN
+    SELECT RAISE(ABORT, 'delegation grants cannot be deleted');
+END;
+"""
+
+WRITEBACK_INTENTS_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS connector_writeback_intents (
+    intent_id TEXT NOT NULL,
+    tenant_id TEXT NOT NULL,
+    workspace_id TEXT NOT NULL,
+    version INTEGER NOT NULL CHECK (version > 0),
+    status TEXT NOT NULL,
+    intent_digest TEXT NOT NULL,
+    intent_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (intent_id, version),
+    UNIQUE (tenant_id, workspace_id, intent_id, intent_digest)
+);
+CREATE INDEX IF NOT EXISTS idx_connector_writeback_intents_scope
+    ON connector_writeback_intents(tenant_id, workspace_id, intent_id, version DESC);
+CREATE TRIGGER IF NOT EXISTS connector_writeback_intents_no_update
+BEFORE UPDATE ON connector_writeback_intents
+BEGIN
+    SELECT RAISE(ABORT, 'write-back intents are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS connector_writeback_intents_no_delete
+BEFORE DELETE ON connector_writeback_intents
+BEGIN
+    SELECT RAISE(ABORT, 'write-back intents cannot be deleted');
+END;
+INSERT OR IGNORE INTO permissions (name, description)
+VALUES ('connectors.writeback.propose', 'Propose a digest-bound governed connector write-back intent.');
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles CROSS JOIN permissions
+WHERE roles.name IN ('admin', 'controller') AND permissions.name='connectors.writeback.propose';
+"""
+
+WRITEBACK_APPROVAL_PERMISSION_SQL = """
+INSERT OR IGNORE INTO permissions (name, description)
+VALUES ('connectors.writeback.approve', 'Approve a governed connector write-back intent as a distinct human checker.');
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles CROSS JOIN permissions
+WHERE roles.name IN ('admin', 'controller') AND permissions.name='connectors.writeback.approve';
+"""
+
+WRITEBACK_RECONCILIATION_PERMISSION_SQL = """
+INSERT OR IGNORE INTO permissions (name, description)
+VALUES ('connectors.writeback.reconcile', 'Reconcile a provider acknowledgement to a dispatched write-back intent.');
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles CROSS JOIN permissions
+WHERE roles.name IN ('admin', 'controller') AND permissions.name='connectors.writeback.reconcile';
+"""
+
+WRITEBACK_DISPATCH_PERMISSION_SQL = """
+INSERT OR IGNORE INTO permissions (name, description)
+VALUES ('connectors.writeback.dispatch', 'Dispatch an approved write-back intent through an explicitly registered provider boundary.');
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles CROSS JOIN permissions
+WHERE roles.name IN ('admin', 'controller') AND permissions.name='connectors.writeback.dispatch';
+"""
+
+WRITEBACK_COMPENSATION_PERMISSION_SQL = """
+INSERT OR IGNORE INTO permissions (name, description)
+VALUES ('connectors.writeback.compensate', 'Request a separately governed compensation for a dispatched write-back intent.');
+INSERT OR IGNORE INTO role_permissions (role_id, permission_name)
+SELECT roles.id, permissions.name
+FROM roles CROSS JOIN permissions
+WHERE roles.name IN ('admin', 'controller') AND permissions.name='connectors.writeback.compensate';
+"""
+
+RETAIL_SETTLEMENT_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS retail_settlement_runs (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+    decision_digest TEXT NOT NULL CHECK (length(decision_digest)=64),
+    artifact_digest TEXT NOT NULL CHECK (length(artifact_digest)=64),
+    algorithm_version TEXT NOT NULL,
+    status_counts_json TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    prepared_by TEXT NOT NULL,
+    prepared_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (workspace_id, decision_digest),
+    UNIQUE (workspace_id, artifact_digest)
+);
+CREATE INDEX IF NOT EXISTS idx_retail_settlement_runs_scope
+ON retail_settlement_runs(workspace_id, created_at, id);
+CREATE TRIGGER IF NOT EXISTS retail_settlement_runs_no_update
+BEFORE UPDATE ON retail_settlement_runs
+BEGIN
+    SELECT RAISE(ABORT, 'retail settlement runs are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS retail_settlement_runs_no_delete
+BEFORE DELETE ON retail_settlement_runs
+BEGIN
+    SELECT RAISE(ABORT, 'retail settlement runs cannot be deleted');
+END;
+"""
+
+PROFESSIONAL_INVOICE_PAYMENT_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS professional_invoice_payment_runs (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+    decision_digest TEXT NOT NULL CHECK (length(decision_digest)=64),
+    artifact_digest TEXT NOT NULL CHECK (length(artifact_digest)=64),
+    algorithm_version TEXT NOT NULL,
+    status_counts_json TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    prepared_by TEXT NOT NULL,
+    prepared_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (workspace_id, decision_digest),
+    UNIQUE (workspace_id, artifact_digest)
+);
+CREATE INDEX IF NOT EXISTS idx_professional_invoice_payment_runs_scope
+ON professional_invoice_payment_runs(workspace_id, created_at, id);
+CREATE TRIGGER IF NOT EXISTS professional_invoice_payment_runs_no_update
+BEFORE UPDATE ON professional_invoice_payment_runs
+BEGIN
+    SELECT RAISE(ABORT, 'professional invoice/payment runs are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS professional_invoice_payment_runs_no_delete
+BEFORE DELETE ON professional_invoice_payment_runs
+BEGIN
+    SELECT RAISE(ABORT, 'professional invoice/payment runs cannot be deleted');
+END;
+"""
+
+MANUFACTURING_COST_CONTROL_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS manufacturing_cost_control_runs (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+    decision_digest TEXT NOT NULL CHECK (length(decision_digest)=64),
+    artifact_digest TEXT NOT NULL CHECK (length(artifact_digest)=64),
+    algorithm_version TEXT NOT NULL,
+    status_counts_json TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    prepared_by TEXT NOT NULL,
+    prepared_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (workspace_id, decision_digest),
+    UNIQUE (workspace_id, artifact_digest)
+);
+CREATE INDEX IF NOT EXISTS idx_manufacturing_cost_control_runs_scope
+ON manufacturing_cost_control_runs(workspace_id, created_at, id);
+CREATE TRIGGER IF NOT EXISTS manufacturing_cost_control_runs_no_update
+BEFORE UPDATE ON manufacturing_cost_control_runs
+BEGIN
+    SELECT RAISE(ABORT, 'manufacturing cost-control runs are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS manufacturing_cost_control_runs_no_delete
+BEFORE DELETE ON manufacturing_cost_control_runs
+BEGIN
+    SELECT RAISE(ABORT, 'manufacturing cost-control runs cannot be deleted');
+END;
+"""
+
+BANK_STATEMENT_CONTROL_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS bank_statement_control_runs (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+    decision_digest TEXT NOT NULL CHECK (length(decision_digest)=64),
+    artifact_digest TEXT NOT NULL CHECK (length(artifact_digest)=64),
+    algorithm_version TEXT NOT NULL,
+    status_counts_json TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    prepared_by TEXT NOT NULL,
+    prepared_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (workspace_id, decision_digest),
+    UNIQUE (workspace_id, artifact_digest)
+);
+CREATE INDEX IF NOT EXISTS idx_bank_statement_control_runs_scope
+ON bank_statement_control_runs(workspace_id, created_at, id);
+CREATE TRIGGER IF NOT EXISTS bank_statement_control_runs_no_update
+BEFORE UPDATE ON bank_statement_control_runs
+BEGIN
+    SELECT RAISE(ABORT, 'bank statement control runs are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS bank_statement_control_runs_no_delete
+BEFORE DELETE ON bank_statement_control_runs
+BEGIN
+    SELECT RAISE(ABORT, 'bank statement control runs cannot be deleted');
+END;
+"""
+
+CERTIFICATION_EVIDENCE_MIGRATION_SQL = """
+ALTER TABLE certification_records ADD COLUMN evidence_digest TEXT NOT NULL DEFAULT '';
+"""
+
+CURRENCY_REGISTRY_BINDING_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS currency_registry_bindings (
+    workspace_id TEXT PRIMARY KEY REFERENCES workspaces(id) ON DELETE CASCADE,
+    registry_version TEXT NOT NULL CHECK (length(registry_version) BETWEEN 1 AND 128),
+    registry_digest TEXT NOT NULL CHECK (length(registry_digest) = 64),
+    bound_at TEXT NOT NULL,
+    bound_by TEXT NOT NULL CHECK (length(bound_by) BETWEEN 1 AND 160)
+);
+CREATE INDEX IF NOT EXISTS idx_currency_registry_bindings_digest
+ON currency_registry_bindings(registry_version, registry_digest);
+"""
+
+CURRENCY_REGISTRY_SNAPSHOT_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS currency_registry_snapshots (
+    registry_digest TEXT PRIMARY KEY CHECK (length(registry_digest) = 64),
+    registry_version TEXT NOT NULL CHECK (length(registry_version) BETWEEN 1 AND 128),
+    snapshot_json TEXT NOT NULL CHECK (length(snapshot_json) BETWEEN 2 AND 1000000),
+    captured_at TEXT NOT NULL,
+    captured_by TEXT NOT NULL CHECK (length(captured_by) BETWEEN 1 AND 160)
+);
+CREATE INDEX IF NOT EXISTS idx_currency_registry_snapshots_version
+ON currency_registry_snapshots(registry_version, captured_at, registry_digest);
 """

@@ -1,0 +1,44 @@
+rules:
+  - rule_id: RPS-001
+    rule_name: POS batch has no processor settlement
+    severity: high
+    entity_type: pos_batch
+    source_file: pos_batches.csv
+    condition:
+      operator: cross_file_missing
+      source_key: batch_id
+      target_file: settlements.csv
+      target_key: batch_id
+    message: A POS batch has no corresponding processor settlement.
+    business_impact: Card proceeds may be missing, delayed, or recorded under the wrong batch.
+    recommended_action: Trace the processor batch reference and retain the settlement evidence.
+    risk_impact: 82
+    evidence_fields: [batch_id, store_id, business_date, card_sales, source_reference]
+  - rule_id: RPS-002
+    rule_name: Duplicate processor settlement identity
+    severity: critical
+    entity_type: processor_settlement
+    source_file: settlements.csv
+    condition:
+      operator: duplicate
+      field: settlement_id
+    message: A processor settlement identifier appears more than once.
+    business_impact: Duplicate settlement rows can overstate cash and create an unsafe write-back candidate.
+    recommended_action: Quarantine the duplicate and obtain the provider export lineage before review.
+    risk_impact: 96
+    evidence_fields: [settlement_id, batch_id, provider_reference, net_settlement]
+  - rule_id: RPS-003
+    rule_name: Processor net differs from expected net
+    severity: high
+    entity_type: processor_settlement
+    source_file: settlements.csv
+    condition:
+      operator: variance_above
+      field: net_settlement
+      other_field: expected_net
+      threshold: 0.01
+    message: Processor net settlement differs from the expected POS net after fees and chargebacks.
+    business_impact: Fees, refunds, chargebacks, or timing differences need explicit review.
+    recommended_action: Reconcile the provider fee and chargeback detail; do not post automatically.
+    risk_impact: 88
+    evidence_fields: [settlement_id, batch_id, net_settlement, expected_net, fees, chargebacks]

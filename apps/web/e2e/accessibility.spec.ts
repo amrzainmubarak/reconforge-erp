@@ -1,6 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
+test.setTimeout(60_000);
+
 const liveMetric = {
   id: "metric-a11y", workspace_id: "workspace-a11y", metric_key: "match_rate", period_name: "2026-07",
   value: 88, value_text: "88.00", lineage: "approved matches", computed_at: new Date().toISOString(),
@@ -24,7 +26,7 @@ async function expectNoWcagViolations(page: Page) {
 
 test("critical English and Arabic Studio routes pass the automated WCAG regression gate", async ({ page }) => {
   await mockLiveContract(page);
-  const criticalRoutes = ["/", "/exceptions", "/evidence", "/inventory", "/mapping", "/rules", "/live", "/admin-audit"];
+  const criticalRoutes = ["/", "/exceptions", "/evidence", "/inventory", "/retail-settlement", "/bank-statement", "/manufacturing-cost", "/professional-invoice-payment", "/individual-cashflow", "/mapping", "/rules", "/live", "/admin-audit"];
   for (const path of criticalRoutes) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -112,6 +114,56 @@ test("evidence view exposes redaction state without leaking source filesystem pa
   expect(text).not.toMatch(/[A-Za-z]:\\/);
   expect(text).not.toMatch(/\/(?:home|Users|var|tmp)\//);
   expect(await page.locator('[data-source-path], [data-raw-record], [data-secret]').count()).toBe(0);
+});
+
+test("retail settlement view exposes replay evidence without write or provider claims", async ({ page }) => {
+  await page.goto("/retail-settlement");
+  await expect(page.getByRole("heading", { level: 1, name: "Retail settlement control center" })).toBeVisible();
+  await expect(page.getByText("POS_SETTLEMENT_VARIANCE_ABOVE_TOLERANCE")).toBeVisible();
+  await expect(page.locator("p.retail-boundary")).toHaveText("Synthetic, read-only evidence only; no processor call, payment action, accounting posting, or ERP write-back is available from this Studio route.");
+  await expect(page.locator("main button")).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Settlement status" })).toBeVisible();
+  await expect(page.locator("main")).not.toContainText("password");
+});
+
+test("bank reconciliation view exposes replay evidence without write or provider claims", async ({ page }) => {
+  await page.goto("/bank-statement");
+  await expect(page.getByRole("heading", { level: 1, name: "Bank reconciliation control center" })).toBeVisible();
+  await expect(page.getByText("BANK_LEDGER_RECONCILED")).toHaveCount(2);
+  await expect(page.locator("p.bank-boundary")).toHaveText("Synthetic, read-only evidence only; no bank call, payment initiation, accounting posting, or ERP write-back is available from this Studio route.");
+  await expect(page.locator("main button")).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Bank status" })).toBeVisible();
+  await expect(page.locator("main")).not.toContainText("password");
+});
+
+test("manufacturing cost view exposes replay evidence without ERP or posting claims", async ({ page }) => {
+  await page.goto("/manufacturing-cost");
+  await expect(page.getByRole("heading", { level: 1, name: "Manufacturing cost control center" })).toBeVisible();
+  await expect(page.getByText("MATERIAL_COST_VARIANCE")).toBeVisible();
+  await expect(page.locator("p.manufacturing-boundary")).toHaveText("Synthetic, read-only evidence only; no MRP/ERP call, inventory posting, accounting posting, or write-back is available from this Studio route.");
+  await expect(page.locator("main button")).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Manufacturing status" })).toBeVisible();
+  await expect(page.locator("main")).not.toContainText("password");
+});
+
+test("professional invoice/payment view exposes replay evidence without billing or posting claims", async ({ page }) => {
+  await page.goto("/professional-invoice-payment");
+  await expect(page.getByRole("heading", { level: 1, name: "Professional invoice and payment control center" })).toBeVisible();
+  await expect(page.getByText("MULTIPLE_PAYMENT_CANDIDATES")).toBeVisible();
+  await expect(page.locator("p.professional-boundary")).toHaveText("Synthetic, read-only evidence only; no billing/provider call, receivables allocation, accounting posting, or ERP write-back is available from this Studio route.");
+  await expect(page.locator("main button")).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Professional status" })).toBeVisible();
+  await expect(page.locator("main")).not.toContainText("password");
+});
+
+test("individual cashflow view exposes replay evidence without bank, tax, or posting claims", async ({ page }) => {
+  await page.goto("/individual-cashflow");
+  await expect(page.getByRole("heading", { level: 1, name: "Individual and freelancer cashflow control center" })).toBeVisible();
+  await expect(page.getByText("CASHFLOW_ACTIVITY_EXCEEDS_BUDGET")).toBeVisible();
+  await expect(page.locator("p.individual-boundary")).toHaveText("Synthetic, read-only evidence only; no bank call, tax or legal classification, accounting posting, or ERP write-back is available from this Studio route.");
+  await expect(page.locator("main button")).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Cashflow status" })).toBeVisible();
+  await expect(page.locator("main")).not.toContainText("password");
 });
 
 test("mobile English and Arabic landmarks remain usable without serious WCAG violations", async ({ page }) => {

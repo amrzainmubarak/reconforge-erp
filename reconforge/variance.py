@@ -60,6 +60,18 @@ class VarianceThresholdPolicy:
     threshold_policy_schema_version: int
     financial_input_policy: FinancialInputPolicy
 
+    def __post_init__(self) -> None:
+        """Reject unsupported policy metadata even for direct construction.
+
+        Readers and the public analysis functions validate this field before
+        constructing the policy.  The dataclass is also a public result value,
+        however, so its constructor must preserve the same fail-closed
+        boundary when called directly by an adapter or integration.
+        """
+
+        normalized = validate_financial_input_policy(self.financial_input_policy)
+        object.__setattr__(self, "financial_input_policy", normalized)
+
     def _digest_payload(self) -> dict[str, object]:
         payload: dict[str, object] = {
             "schema_version": self.threshold_policy_schema_version,

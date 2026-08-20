@@ -14,6 +14,9 @@ from reconforge.io.persisted import (
     FINANCIAL_IDEMPOTENCY_JSON_POLICY,
     FINANCIAL_IDEMPOTENCY_JSON_PROFILE,
     FINANCIAL_IDEMPOTENCY_RESPONSE_SCHEMA,
+    POSTGRES_OUTBOX_JSON_POLICY,
+    SQLITE_RETAIL_SETTLEMENT_JSON_PROFILE,
+    SQLITE_RETAIL_SETTLEMENT_SCHEMA,
 )
 from reconforge.io.structured import (
     CURRENT_STRUCTURED_DOCUMENT_POLICY,
@@ -87,6 +90,31 @@ def _production_yaml_parser_calls() -> Counter[tuple[str, str]]:
                 calls[(relative, f"yaml.{function.attr}")] += 1
             elif isinstance(function, ast.Name) and function.id in direct_aliases:
                 calls[(relative, f"yaml.{direct_aliases[function.id]}")] += 1
+    return calls
+
+
+def _production_xml_parser_calls() -> Counter[tuple[str, str]]:
+    calls: Counter[tuple[str, str]] = Counter()
+    for path in sorted((ROOT / "reconforge").rglob("*.py")):
+        relative = path.relative_to(ROOT).as_posix()
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=relative)
+        element_tree_aliases = {
+            alias.asname or alias.name
+            for node in tree.body
+            if isinstance(node, ast.ImportFrom)
+            and node.module == "defusedxml"
+            for alias in node.names
+            if alias.name == "ElementTree"
+        }
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id in element_tree_aliases
+                and node.func.attr == "fromstring"
+            ):
+                calls[(relative, "defusedxml.ElementTree.fromstring")] += 1
     return calls
 
 
@@ -210,7 +238,22 @@ def test_documented_financial_idempotency_policy_is_exactly_runtime() -> None:
             "object_root": True,
             "integer_number_tokens_only": True,
             "canonical_producer_text": True,
-        }
+        },
+        {
+            "id": SQLITE_RETAIL_SETTLEMENT_JSON_PROFILE,
+            "implementation": "reconforge/io/persisted.py",
+            "schema_id": SQLITE_RETAIL_SETTLEMENT_SCHEMA,
+            "schema_path": "docs/schemas/retail_settlement_report.schema.json",
+            "max_utf8_bytes": POSTGRES_OUTBOX_JSON_POLICY.max_file_bytes,
+            "max_nodes": POSTGRES_OUTBOX_JSON_POLICY.max_nodes,
+            "max_depth": POSTGRES_OUTBOX_JSON_POLICY.max_depth,
+            "max_collection_items": POSTGRES_OUTBOX_JSON_POLICY.max_collection_items,
+            "max_scalar_characters": POSTGRES_OUTBOX_JSON_POLICY.max_scalar_characters,
+            "unique_keys": True,
+            "object_root": True,
+            "integer_number_tokens_only": True,
+            "canonical_producer_text": True,
+        },
     ]
 
 
@@ -251,3 +294,16 @@ def test_direct_yaml_parser_inventory_is_an_exact_ast_allowlist() -> None:
         declared[key] = int(entry["call_count"])
 
     assert _production_yaml_parser_calls() == declared
+
+
+def test_direct_xml_parser_inventory_is_an_exact_ast_allowlist() -> None:
+    inventory = _inventory()
+    declared: Counter[tuple[str, str]] = Counter()
+    known_surfaces = {surface["id"] for surface in inventory["surfaces"]}
+    for entry in inventory["direct_xml_parser_allowlist"]:
+        key = (entry["path"], entry["parser"])
+        assert key not in declared
+        assert entry["surface_id"] in known_surfaces
+        declared[key] = int(entry["call_count"])
+
+    assert _production_xml_parser_calls() == declared

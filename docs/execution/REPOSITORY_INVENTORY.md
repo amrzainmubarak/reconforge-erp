@@ -40,6 +40,20 @@ state, journal/posting surface, network call, UI/API/CLI route, live rate, or
 ERP/bank write-back. NCI is a non-posting presentation allocation rather than
 acquisition accounting or a statutory statement.
 
+E-256 adds one backend-neutral consolidation-close application boundary, one
+local SQLite consolidation-close repository, migration 25 with six local
+control-journal lifecycle tables and trigger guards, one focused SQLite/restore
+test module, ADR 0212, one operator document, and backup/restore membership for
+the new lifecycle tables. It adds no PostgreSQL parity, hosted API, CLI command,
+UI route, live ERP/bank connector, live rate provider, legal-book posting,
+statutory statement, tag, release, deployment, or write-back surface.
+
+E-258 adds one local cancellation-under-load benchmark harness, one focused
+profile test module, ADR 0214, and MANIFEST.in membership. It adds no new
+persistence primitive, migration, repository method, API, CLI, UI, PostgreSQL
+adapter, provider call, scale publication, tag, release, deployment, or
+production mutation.
+
 E-054 adds one test module with 13 collected contracts, two supply-chain
 schemas, ADR 0069, the universal `uv.lock`, closed policy/exception registries,
 one repository-only validator, Gitleaks configuration, Dependabot definitions,
@@ -185,7 +199,7 @@ ADRs to 81; schemas remain 53 and workflows remain six.
 - `docs/schemas/`: 64 JSON schemas, including matching-strategy and backup/restore manifests, field-specific persisted JSON, database backup/import, file-ingestion, evidence/report compatibility, release/SBOM/supply-chain, golden-data, risk/maturity/engine, security/threat/ASVS/SSDF/SLSA, browser, and module contracts.
 - `tests/golden/`: schema-validated synthetic finance registry and five frozen registry/input files with layered SHA-256 evidence, including bounded dense ambiguity; these are correctness fixtures, not performance datasets.
 - `docs/risk-register.yaml`: normalized 18-risk governance source with schema/rating/evidence/review validation; the Markdown register remains its readable narrative view.
-- `docs/execution/MATURITY_POLICY.yaml`: evidence-linked ceilings for all nine modules and seven designated publishing surfaces; all current modules are Experimental.
+- `docs/execution/MATURITY_POLICY.yaml`: evidence-linked ceilings for all sixteen modules and seven designated publishing surfaces; all current modules are Experimental.
 - `docs/security/security-architecture.v2.yaml`: schema-v2 source of truth for bounded deployment-mode labels, data classes, trust boundaries, evidence-linked controls, owners, and normalized residual risks; it is not operating-effectiveness or compliance evidence.
 - `docs/security/threat-model-index.v1.yaml`: exact active-module threat coverage joined to the module registry, architecture controls, and normalized risks; it is not penetration-test or deployed mitigation evidence.
 - `docs/security/asvs-5.0.0-mapping.v1.yaml`: official-source-pinned scoped mapping for 55 selected OWASP ASVS 5.0.0 requirements across all 17 chapters, with 290 requirements explicitly unassessed; it establishes no ASVS level or compliance assurance.
@@ -194,7 +208,7 @@ ADRs to 81; schemas remain 53 and workflows remain six.
 - `.github/workflows/`: CI, CodeQL, Docker, security, release candidate with integrated exact-subject SBOMs, and OpenSSF Scorecard workflows; action references observed in the workflows are pinned by full commit SHA.
 - `Dockerfile`: digest-pinned Python 3.11 slim base plus checksum/version-pinned uv and a locked non-editable runtime-only sync; local daemon verification is blocked in this environment.
 - `docker-compose.yml`: local report/dashboard services; image tag is mutable.
-- `pyproject.toml` + `uv.lock`: lower-bounded consumer metadata plus a universal hash-bearing repository resolution for 118 non-root runtime/server/observability/backup/federation/build/tool packages, enforced with exact uv/cutoff policy; server includes boto3, observability pins OpenTelemetry API/SDK 1.44.0, backup pins cryptography 49.0.0, and federation pins joserfc 1.7.4 plus python3-saml 1.16.0.
+- `pyproject.toml` + `uv.lock`: lower-bounded consumer metadata plus a universal hash-bearing repository resolution for 128 non-root runtime/server/observability/backup/federation/MFA/build/tool packages, enforced with exact uv/cutoff policy; server includes boto3, observability pins OpenTelemetry API/SDK 1.44.0, backup/connectors pin cryptography 50.0.0, WebAuthn resolves with pyOpenSSL 26.4.0, and federation pins joserfc 1.7.4 plus python3-saml 1.16.0.
 - `apps/web/package-lock.json`: exact npm dependency versions for the web app; 155 non-root entries lack embedded `resolved`/`integrity` values and remain an explicit gap.
 
 ## Important inventory limitations

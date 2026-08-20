@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 
 from reconforge.cli import app
 from reconforge.reports.client_pack import (
+    ClientPackOptions,
     generate_client_pack,
     read_client_pack_manifest,
     verify_client_pack_manifest_payload,
@@ -39,6 +40,11 @@ def _write_source(
 
 def _manifest(path: Path) -> dict[str, object]:
     return json.loads((path / "files_manifest.json").read_text(encoding="utf-8"))
+
+
+def test_direct_client_pack_options_reject_unsupported_financial_policy() -> None:
+    with pytest.raises(ValueError, match="unsupported financial input policy"):
+        ClientPackOptions(financial_input_policy="unknown-v9")  # type: ignore[arg-type]
 
 
 def test_strict_json_redaction_preserves_bucket_boundary_legacy_collapses(

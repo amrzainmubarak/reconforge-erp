@@ -548,6 +548,8 @@ class PostgresScheduleRepository:
         worker_id: str,
         now: datetime,
         limit: int = 50,
+        workspace_id: str | None = None,
+        entity_id: str | None = None,
     ) -> ScheduleProcessResult:
         worker_id = _identifier(worker_id, "worker_id")
         if not 1 <= limit <= 1_000:
@@ -556,13 +558,31 @@ class PostgresScheduleRepository:
         columns = ", ".join(_SCHEDULE_COLUMNS)
         claimed = evaluated_count = total_due = dispatched = replayed = 0
         skipped = deferred = nonexistent = 0
-        with self._transaction(tenant_id):
-            rows = self.connection.execute(
-                "SELECT " + columns + " FROM reconforge.schedules "  # nosec B608
-                "WHERE tenant_id=%s AND enabled=TRUE AND cursor_at < %s "
-                "ORDER BY cursor_at,schedule_id,schedule_version FOR UPDATE SKIP LOCKED LIMIT %s",
-                (tenant_id, current, limit),
-            ).fetchall()
+        normalized_workspace = "" if workspace_id is None else _identifier(workspace_id, "workspace_id")
+        normalized_entity = "" if entity_id is None else _identifier(entity_id, "entity_id")
+        if normalized_entity and not normalized_workspace:
+            raise SchedulerError("entity_id requires workspace_id for scoped processing.")
+        with self._transaction(
+            tenant_id,
+            workspace_id=normalized_workspace,
+            entity_id=normalized_entity,
+        ):
+            query = (
+                "SELECT "  # nosec B608 - columns are the closed internal schedule projection.
+                + columns
+                + " FROM reconforge.schedules "  # nosec B608
+                + "WHERE tenant_id=%s AND enabled=TRUE AND cursor_at < %s"
+            )
+            parameters: list[object] = [tenant_id, current]
+            if normalized_workspace:
+                query += " AND workspace_id=%s"
+                parameters.append(normalized_workspace)
+            if normalized_entity:
+                query += " AND entity_id=%s"
+                parameters.append(normalized_entity)
+            query += " ORDER BY cursor_at,schedule_id,schedule_version FOR UPDATE SKIP LOCKED LIMIT %s"
+            parameters.append(limit)
+            rows = self.connection.execute(query, tuple(parameters)).fetchall()
             claimed = len(rows)
             jobs = PostgresDurableJobRepository(self.connection)
             for row in rows:

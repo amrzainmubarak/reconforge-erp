@@ -20,6 +20,40 @@ reconforge modules validate
 
 The experimental `inventory.core` entry currently declares migrations 9 through 12: the exact movement ledger, governed count/reorder controls, a bounded FIFO valuation/Finance Core Draft bridge, and exact whole-valuation correction through a separately Posted compensating movement. Reorder remains advisory; valuation and reversal approval never validate Finance Core entries; the registry does not advertise Purchasing, partial/chained reversal, AVCO, landed cost, or ERP writeback as implemented.
 
+The experimental `retail.settlement` entry is an implemented, non-posting
+artifact slice for exported POS batches and processor settlements. It exposes
+exact refunds/fees/chargebacks, unmatched and ambiguous outcomes, and a
+digest-bound report through the local CLI/library, authenticated API, and the
+read-only English/Arabic modern Studio projection. Local SQLite and the
+explicit PostgreSQL server profile persist replay-verified, workspace-scoped
+evidence; the server path refuses silent SQLite fallback. It is not a live
+processor connector, a payment/fraud product, an ERP write-back path, or a
+complete retail module.
+
+The experimental `bank.cash-reconciliation` entry is an implemented, non-posting
+artifact slice for a local CAMT.053 statement and ledger export. It exposes
+reference, exact amount, booking-date window, ambiguity, duplicate, unmatched,
+and digest verification outcomes through the local CLI/library and a read-only
+English/Arabic modern Studio projection. It is not a live bank connector,
+payment initiation path, ERP write-back path, or statutory posting engine.
+
+The experimental `manufacturing.cost-control` entry is an implemented,
+non-posting artifact slice for local production-order, material-issue,
+completion, and scrap exports. It exposes exact material/completion cost
+variances, planned-versus-completed quantities, scrap limits, unknown-order
+lineage, and digest-bound reports through the local CLI/library and a read-only
+English/Arabic modern Studio projection. It is not a statutory valuation engine,
+ERP connector, inventory/WIP/GL posting path, or complete manufacturing module.
+
+The experimental `professional.invoice-payment` entry is an implemented,
+non-posting artifact slice for local professional-service invoice and payment
+exports. It exposes exact client, amount, due-date, ambiguity, unmatched, and
+unapplied-cash decisions through the local CLI/library, an authenticated local
+API with immutable workspace-scoped SQLite persistence, and a read-only
+English/Arabic modern Studio projection. It is not a billing connector,
+receivables-allocation engine, revenue-recognition system, PostgreSQL server
+workflow, or ERP write-back path.
+
 ## Maturity and capability are separate
 
 | Field | Allowed values | Meaning |

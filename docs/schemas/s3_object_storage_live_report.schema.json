@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/s3-object-storage-live-report-v1.json",
+  "title": "ReconForge S3-compatible live object-storage report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "report_id",
+    "status",
+    "provider",
+    "image_digest",
+    "endpoint",
+    "bucket_profile",
+    "observed",
+    "elapsed_ms",
+    "limitations",
+    "report_digest"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "report_id": {"const": "s3-compatible-object-store-live-v1"},
+    "status": {"const": "verified"},
+    "provider": {"const": "minio"},
+    "image_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "endpoint": {"type": "string", "pattern": "^https?://[^/:]+:[0-9]{1,5}$"},
+    "bucket_profile": {"const": "synthetic-disposable-normal-and-object-lock-buckets"},
+    "observed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hierarchical_scope_isolation",
+        "immutable_conflict_refusal",
+        "checksum_tamper_refusal",
+        "object_lock_delete_refusal",
+        "cleanup"
+      ],
+      "properties": {
+        "hierarchical_scope_isolation": {"const": true},
+        "immutable_conflict_refusal": {"const": true},
+        "checksum_tamper_refusal": {"const": true},
+        "object_lock_delete_refusal": {"const": true},
+        "cleanup": {"const": true}
+      }
+    },
+    "elapsed_ms": {"type": "number", "minimum": 0},
+    "limitations": {
+      "type": "array",
+      "minItems": 3,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "report_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

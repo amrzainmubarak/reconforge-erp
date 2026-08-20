@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "profile_id": "grouped-matching/1m-record-true-many-to-many-v1",
+  "report_id": "grouped-matching-1m-current-2026-08-06",
+  "environment": {
+    "python": "3.14.6",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "processor": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+    "cpu_count": 16
+  },
+  "limitations": [
+    "One Windows host and one Python process; this is a partitioned algorithm observation, not a distributed capacity or SLO claim.",
+    "The workload uses exact USD true-many-to-many groups with four records per partition; FX, fee, partial-settlement, ambiguity density, and provider I/O are not represented in this tier.",
+    "The grouped strategy remains bounded by its published per-partition record and search-evaluation ceilings; PostgreSQL runtime parity, soak, and distributed 1M capacity remain unverified."
+  ],
+  "runs": [
+    {
+      "observed_runtime_seconds": 617.0014,
+      "observed_peak_memory_mb": 77.5685
+    }
+  ],
+  "invariants": {
+    "partitions": 250000,
+    "records": 1000000,
+    "matched_partitions": 250000,
+    "ambiguous_partitions": 0,
+    "unmatched_partitions": 0,
+    "strategy_evaluations": 250000,
+    "cross_engine_mismatches": 0,
+    "permutation_mismatches": 0,
+    "effect_digest_equal": true,
+    "manifest_digest_equal": true
+  },
+  "effect_digest": "05c76d8c2d30dcf8e85893ce777f5edc27324beb0465538fc76c2e6ea1c4124f",
+  "manifest_digest": "5da7ca5deeeddb1f8d4ee04c23b4d4f79a33b34c6cf2861bc1dbf50ccbc9f7be",
+  "report_digest": "7dba71b04b28e3b3e916e79c3ee72010287e201c4045aafcaf6d357568e86986"
+}

@@ -6,16 +6,30 @@ from pathlib import Path
 import pytest
 import yaml
 
-from reconforge.rules.engine import run_rule_pack, write_rule_results
+from reconforge.rules.engine import RulePackExecution, run_rule_pack, write_rule_results
 from reconforge.rules.loader import load_rule_pack
 from reconforge.rules.models import Condition, RuleDefinition
 from reconforge.rules.operators import evaluate_condition
+from reconforge.utils.money import InvalidAmountError
 
 
 def test_valid_rule_pack_loading() -> None:
     pack = load_rule_pack(Path("control-packs/audit-basic"))
     assert pack.metadata.pack_id == "audit-basic"
     assert len(pack.rules) >= 5
+
+
+def test_direct_rule_pack_execution_rejects_unsupported_financial_policy() -> None:
+    pack = load_rule_pack(Path("control-packs/audit-basic"))
+    with pytest.raises(InvalidAmountError, match="unsupported financial input policy"):
+        RulePackExecution(
+            pack=pack,
+            results=[],
+            input_files=(),
+            financial_input_policy="unknown-v9",  # type: ignore[arg-type]
+            decision_digest="0" * 64,
+            generated_at="2026-01-01T00:00:00Z",
+        )
 
 
 def test_invalid_rule_schema(tmp_path: Path) -> None:

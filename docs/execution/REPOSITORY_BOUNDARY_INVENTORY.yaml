@@ -31,6 +31,40 @@ application_services:
     service: ConsolidationApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.object_consolidation.ObjectStoreConsolidationResultRepository
+  - file: consolidation_close.py
+    service: ConsolidationCloseApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_consolidation_close.SQLiteConsolidationCloseRepository
+  - file: intercompany_elimination.py
+    service: IntercompanyEliminationApplicationService
+    status: backend_neutral
+    adapter: pure domain artifact; no persistence or posting adapter
+  - file: consolidation_ownership.py
+    service: ConsolidationOwnershipApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_consolidation_ownership.SQLiteConsolidationOwnershipRepository
+    postgres_adapter: reconforge.infrastructure.postgres_consolidation_ownership.PostgresConsolidationOwnershipRepository
+  - file: consolidation_ppa.py
+    service: AcquisitionPpaApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_consolidation_ppa.PostgresConsolidationPpaRepository
+  - file: consolidation_deferred_tax.py
+    service: AcquisitionDeferredTaxApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_consolidation_deferred_tax.PostgresConsolidationDeferredTaxRepository
+  - file: consolidation_impairment.py
+    service: ConsolidationImpairmentApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_consolidation_impairment.PostgresConsolidationImpairmentRepository
+  - file: consolidation_ownership_change.py
+    service: OwnershipChangeApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_consolidation_ownership_change.PostgresConsolidationOwnershipChangeRepository
+  - file: writeback.py
+    service: WritebackIntentApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_writeback.SQLiteWritebackIntentRepository
+    postgres_adapter: reconforge.infrastructure.postgres_writeback.PostgresWritebackIntentRepository
   - file: grouped_matching.py
     service: GroupedMatchingApplicationService
     status: backend_neutral
@@ -56,7 +90,15 @@ application_services:
     status: backend_neutral
     adapter: reconforge.infrastructure.sqlite_jobs.SQLiteDurableJobRepository
   - file: jobs.py
+    service: GovernedDurableJobApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_jobs.SQLiteDurableJobRepository
+  - file: jobs.py
     service: DurableJobWorkerService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_jobs.SQLiteDurableJobRepository
+  - file: jobs.py
+    service: GovernedDurableJobWorkerService
     status: backend_neutral
     adapter: reconforge.infrastructure.sqlite_jobs.SQLiteDurableJobRepository
   - file: metrics.py
@@ -87,6 +129,10 @@ application_services:
     service: AccessAdministrationApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.postgres_access_administration.PostgresAccessAdministrationRepository
+  - file: policy_analysis.py
+    service: PolicyAnalysisApplicationService
+    status: backend_neutral
+    adapter: reconforge.auth.policy_analysis.analyze_policy_conflicts
   - file: security_governance.py
     service: SecurityGovernanceApplicationService
     status: backend_neutral
@@ -168,4 +214,4 @@ summary:
   direct_sqlite: 0
   partial_repository: 0
   compatibility_adapter: 20
-  backend_neutral_application: 34
+  backend_neutral_application: 45

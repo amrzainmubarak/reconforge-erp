@@ -20,6 +20,7 @@ from reconforge.reports.management_pack import (
     _amount_impact_series,
     _executive_summary,
     _high_risk_exceptions,
+    _management_pack_financial_input_issues,
     _risk_matrix,
     _to_decimal,
     generate_management_pack,
@@ -27,7 +28,7 @@ from reconforge.reports.management_pack import (
 from reconforge.reports.markdown import write_markdown_summary
 from reconforge.reports.wip_aging import generate_wip_aging
 from reconforge.schemas import DatasetName
-from reconforge.utils.money import CurrencyRegistry
+from reconforge.utils.money import LEGACY_FINANCIAL_INPUT_POLICY, CurrencyRegistry
 
 
 def test_wip_aging_generates_90_plus_bucket(sample_datasets: dict[DatasetName, object], config: ReconForgeConfig) -> None:
@@ -117,11 +118,44 @@ def test_management_pack_smoke(tmp_path: Path, sample_datasets: dict[DatasetName
     assert "evidence_coverage_high_critical_pct" in metrics
     assert "unquantified_exception_count" in metrics
     assert "unquantified_wip_count" in metrics
+    assert "data_quality_warnings" in payload
     assert "certification_metadata" in payload
     assert payload["currency_policy"]["currency"] == "USD"
     assert payload["currency_policy"]["currency_minor_units"] == 2
     assert payload["currency_policy"]["aggregation_policy"] == "single-currency-only-no-implicit-fx"
     assert set(stock_result.matched_transactions["currency"]) == {"USD"}
+
+
+def test_management_pack_rejects_mixed_financial_input_policies(
+    tmp_path: Path,
+    sample_datasets: dict[DatasetName, object],
+    config: ReconForgeConfig,
+) -> None:
+    stock_result = reconcile_stock_gl(
+        sample_datasets[DatasetName.STOCK_MOVES],
+        sample_datasets[DatasetName.GL_ENTRIES],
+        config,
+        input_policy=LEGACY_FINANCIAL_INPUT_POLICY,
+    )
+    workorder_result = reconcile_workorders(
+        sample_datasets[DatasetName.STOCK_MOVES],
+        sample_datasets[DatasetName.WORK_ORDERS],
+        sample_datasets[DatasetName.PURCHASE_ORDERS],
+        sample_datasets[DatasetName.OLD_PARTS_RETURNS],
+        sample_datasets[DatasetName.INVOICES],
+        config,
+    )
+
+    with pytest.raises(ValueError, match="one financial-input policy"):
+        generate_management_pack(
+            Path("examples/sample_data"),
+            tmp_path / "mixed-policy-report",
+            config,
+            stock_result,
+            workorder_result,
+            pd.DataFrame(),
+        )
+    assert not (tmp_path / "mixed-policy-report").exists()
 
 
 def test_management_pack_executive_summary_preserves_decimal_precision() -> None:
@@ -271,6 +305,28 @@ def test_amount_impact_series_preserves_invalid_values_without_crashing() -> Non
     assert amounts.tolist()[2] == Decimal("5")
 
 
+def test_management_pack_surfaces_invalid_optional_financial_values_without_raw_data() -> None:
+    exceptions = pd.DataFrame(
+        [
+            {"risk_score": "not-a-score", "amount_impact": "not-an-amount"},
+            {"risk_score": "61", "amount_impact": "10.00", "actual_cost": "bad"},
+        ],
+    )
+
+    issues = _management_pack_financial_input_issues([("exceptions", exceptions)])
+
+    assert len(issues) == 2
+    assert {issue.column for issue in issues} == {"risk_score", "amount_impact|actual_cost"}
+    assert all(issue.check == "financial_input_policy" for issue in issues)
+    assert all("not-a-score" not in issue.message and "not-an-amount" not in issue.message for issue in issues)
+
+
+def test_management_pack_does_not_report_invalid_fallback_when_an_amount_is_valid() -> None:
+    exceptions = pd.DataFrame([{"amount_impact": "bad", "actual_cost": "10.00"}])
+
+    assert _management_pack_financial_input_issues([("exceptions", exceptions)]) == []
+
+
 def test_risk_matrix_ignores_invalid_amounts_when_summing() -> None:
     exceptions = pd.DataFrame(
         [
@@ -291,3 +347,8 @@ def test_to_decimal_rejects_invalid_amount_text() -> None:
 
     with pytest.raises(ValueError):
         _to_decimal(None)
+
+
+def test_management_pack_rejects_binary_float_financial_values() -> None:
+    with pytest.raises(ValueError, match="Invalid amount value"):
+        _to_decimal(0.1)

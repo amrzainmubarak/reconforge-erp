@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 
@@ -9,6 +10,7 @@ import jsonschema
 import pytest
 
 from reconforge.application.matching_strategies import (
+    GroupedMatchBudget,
     MatchingStrategyContractError,
     MatchingStrategyRegistry,
     MatchingStrategyRequest,
@@ -16,6 +18,10 @@ from reconforge.application.matching_strategies import (
     request_digest,
 )
 from reconforge.db import connect, run_migrations
+from reconforge.infrastructure.carry_forward_strategy import (
+    CARRY_FORWARD_FIFO_MANIFEST,
+    CarryForwardFifoStrategy,
+)
 from reconforge.infrastructure.grouped_matching_strategy import (
     GROUPED_SUBSET_SUM_MANIFEST,
     GroupedSubsetSumStrategy,
@@ -23,6 +29,10 @@ from reconforge.infrastructure.grouped_matching_strategy import (
 from reconforge.infrastructure.indexed_matching_strategy import (
     INDEXED_ONE_TO_ONE_MANIFEST,
     IndexedOneToOneStrategy,
+)
+from reconforge.infrastructure.reversal_matching_strategy import (
+    REVERSAL_PAIRING_MANIFEST,
+    ReversalPairingStrategy,
 )
 from reconforge.platform.matching import MatchingService
 
@@ -121,6 +131,114 @@ def test_strategy_rejects_limits_and_unsafe_numeric_payloads_before_matching(tmp
         connection.close()
 
 
+def test_carry_forward_strategy_is_published_bounded_and_permutation_invariant() -> None:
+    strategy = CarryForwardFifoStrategy()
+    request = MatchingStrategyRequest(
+        left_records=(
+            {"id": "O-2", "amount": "20", "date": "2026-01-02", "currency": "USD", "partition": "bank-1"},
+            {"id": "O-1", "amount": "100", "date": "2026-01-01", "currency": "USD", "partition": "bank-1"},
+        ),
+        right_records=({"id": "S-1", "amount": "120", "date": "2026-01-03", "currency": "USD", "partition": "bank-1"},),
+        mode="carry-forward",
+        date_window_days=30,
+    )
+    shuffled = MatchingStrategyRequest(
+        left_records=tuple(reversed(request.left_records)),
+        right_records=request.right_records,
+        mode=request.mode,
+        date_window_days=request.date_window_days,
+    )
+    first = strategy.execute(request)
+    second = strategy.execute(shuffled)
+    assert strategy.manifest == CARRY_FORWARD_FIFO_MANIFEST
+    assert first.input_digest == second.input_digest
+    assert first.results == second.results
+    assert first.results[0]["status"] == "allocated"
+
+
+def test_sequence_window_strategy_matches_contiguous_records_and_exposes_bounds() -> None:
+    strategy = CarryForwardFifoStrategy()
+    request = MatchingStrategyRequest(
+        left_records=(
+            {"id": "O-2", "amount": "60", "date": "2026-01-02", "currency": "USD", "partition": "bank-1"},
+            {"id": "O-1", "amount": "40", "date": "2026-01-01", "currency": "USD", "partition": "bank-1"},
+            {"id": "O-3", "amount": "20", "date": "2026-01-03", "currency": "USD", "partition": "bank-1"},
+        ),
+        right_records=(
+            {"id": "S-1", "amount": "100", "date": "2026-01-04", "currency": "USD", "partition": "bank-1"},
+        ),
+        mode="sequence-window",
+        date_window_days=10,
+    )
+    result = strategy.execute(request)
+    assert result.results[0]["status"] == "allocated"
+    assert [item["obligation_id"] for item in result.results[0]["allocations"]] == ["O-1", "O-2"]
+    assert strategy.manifest.limits.max_left_group_cardinality == 16
+
+
+def test_sequence_window_strategy_returns_ambiguity_instead_of_guessing() -> None:
+    strategy = CarryForwardFifoStrategy()
+    result = strategy.execute(
+        MatchingStrategyRequest(
+            left_records=tuple(
+                {"id": f"O-{index}", "amount": "50", "date": f"2026-01-0{index}", "currency": "USD", "partition": "bank-1"}
+                for index in range(1, 5)
+            ),
+            right_records=(
+                {"id": "S-1", "amount": "100", "date": "2026-01-05", "currency": "USD", "partition": "bank-1"},
+            ),
+            mode="sequence-window",
+            date_window_days=10,
+        )
+    )
+    assert result.results[0]["status"] == "ambiguous"
+    assert result.results[0]["reason_code"] == "SEQUENCE_WINDOW_AMBIGUOUS_EQUAL_COST"
+    assert result.exceptions[0]["reason_code"] == "SEQUENCE_WINDOW_AMBIGUOUS_EQUAL_COST"
+
+
+def test_carry_forward_strategy_is_published_in_architecture_document() -> None:
+    document = json.loads(Path("docs/architecture/matching-strategies.v1.json").read_text(encoding="utf-8"))
+    published = document["strategies"][2]
+    assert published["id"] == CARRY_FORWARD_FIFO_MANIFEST.id
+    assert published["version"] == CARRY_FORWARD_FIFO_MANIFEST.version
+    assert published["supported_modes"] == list(CARRY_FORWARD_FIFO_MANIFEST.supported_modes)
+    assert published["limits"] == CARRY_FORWARD_FIFO_MANIFEST.limits.as_dict
+
+
+def test_reversal_strategy_is_bounded_and_permutation_invariant() -> None:
+    strategy = ReversalPairingStrategy()
+    request = MatchingStrategyRequest(
+        left_records=(
+            {"id": "J-1", "amount": "100", "date": "2026-01-01", "currency": "USD", "partition": "ledger-1"},
+            {"id": "J-2", "amount": "50", "date": "2026-01-02", "currency": "USD", "partition": "ledger-1"},
+        ),
+        right_records=({"id": "R-1", "amount": "-100", "date": "2026-01-03", "currency": "USD", "partition": "ledger-1", "reversal_of": "J-1"},),
+        mode="reversal-pairing",
+        date_window_days=30,
+    )
+    shuffled = MatchingStrategyRequest(
+        left_records=tuple(reversed(request.left_records)),
+        right_records=request.right_records,
+        mode=request.mode,
+        date_window_days=request.date_window_days,
+    )
+    first = strategy.execute(request)
+    second = strategy.execute(shuffled)
+    assert strategy.manifest == REVERSAL_PAIRING_MANIFEST
+    assert first.input_digest == second.input_digest
+    assert first.results == second.results
+    assert first.results[0]["status"] == "matched"
+
+
+def test_reversal_strategy_is_published_in_architecture_document() -> None:
+    document = json.loads(Path("docs/architecture/matching-strategies.v1.json").read_text(encoding="utf-8"))
+    published = document["strategies"][3]
+    assert published["id"] == REVERSAL_PAIRING_MANIFEST.id
+    assert published["version"] == REVERSAL_PAIRING_MANIFEST.version
+    assert published["supported_modes"] == list(REVERSAL_PAIRING_MANIFEST.supported_modes)
+    assert published["limits"] == REVERSAL_PAIRING_MANIFEST.limits.as_dict
+
+
 def test_registry_rejects_duplicate_or_unknown_strategy_identity(tmp_path: Path) -> None:
     strategy, _service, connection = _strategy(tmp_path)
     try:
@@ -190,6 +308,43 @@ def test_grouped_strategy_is_registered_versioned_and_permutation_invariant() ->
     assert registry.get(strategy.manifest.id, strategy.manifest.version) is strategy
 
 
+def test_strategy_result_replay_verifier_rejects_manifest_input_and_output_tampering() -> None:
+    strategy = GroupedSubsetSumStrategy()
+    request = MatchingStrategyRequest(
+        left_records=(
+            {"id": "L1", "amount": "100", "currency": "USD", "date": "2026-01-01", "partition": "AR"},
+        ),
+        right_records=(
+            {"id": "R1", "amount": "40", "currency": "USD", "date": "2026-01-01", "partition": "AR"},
+            {"id": "R2", "amount": "60", "currency": "USD", "date": "2026-01-01", "partition": "AR"},
+        ),
+        mode="one-to-many",
+    )
+    result = strategy.execute(request)
+
+    result.verify_against(request, manifest_digest=strategy.manifest.digest)
+
+    with pytest.raises(MatchingStrategyContractError, match="manifest digest"):
+        result.verify_against(request, manifest_digest="0" * 64)
+
+    changed_request = replace(
+        request,
+        left_records=({**request.left_records[0], "amount": "101"},) + request.left_records[1:],
+    )
+    with pytest.raises(MatchingStrategyContractError, match="input digest"):
+        result.verify_against(changed_request, manifest_digest=strategy.manifest.digest)
+
+    tampered = replace(result, results=tuple({**result.results[0], "status": "unmatched"} for _ in (0,)))
+    with pytest.raises(MatchingStrategyContractError, match="decision digest"):
+        tampered.verify_against(request, manifest_digest=strategy.manifest.digest)
+
+
+def test_matching_result_replay_verifier_is_in_source_distribution_manifest() -> None:
+    manifest = Path("MANIFEST.in").read_text(encoding="utf-8")
+    assert "include docs/adr/0404-matching-result-replay-verification.md" in manifest
+    assert "include tests/test_matching_strategy_contract.py" in manifest
+
+
 def test_grouped_strategy_supports_fee_aware_netting_fields_and_request_digest_variants() -> None:
     strategy = GroupedSubsetSumStrategy()
     request = MatchingStrategyRequest(
@@ -211,6 +366,116 @@ def test_grouped_strategy_supports_fee_aware_netting_fields_and_request_digest_v
     assert result.results[0]["right_fee_total"] == Decimal("20.00")
     assert result.results[0]["left_net_total"] == Decimal("100.00")
     assert result.results[0]["right_net_total"] == Decimal("100.00")
+
+
+def test_grouped_strategy_supports_bounded_partial_settlement_with_residuals() -> None:
+    result = GroupedSubsetSumStrategy().execute(
+        MatchingStrategyRequest(
+            left_records=(
+                {"id": "L1", "amount": "100.00", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+            ),
+            right_records=(
+                {"id": "R1", "amount": "60.00", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+                {"id": "R2", "amount": "20.00", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+            ),
+            mode="partial-settlement",
+        )
+    )
+
+    assert result.results[0]["status"] == "matched"
+    assert result.results[0]["reason_code"] == "PARTIAL_SETTLEMENT_PROPOSAL"
+    assert result.results[0]["settled_amount"] == Decimal("80.00")
+    assert result.results[0]["left_residual"] == Decimal("20.00")
+    assert result.results[0]["right_residual"] == Decimal("0")
+
+
+def test_grouped_strategy_applies_reviewed_request_budget_and_binds_it_to_digest() -> None:
+    strategy = GroupedSubsetSumStrategy()
+    base = MatchingStrategyRequest(
+        left_records=(
+            {"id": "L1", "amount": "100", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+        ),
+        right_records=(
+            {"id": "R1", "amount": "40", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+            {"id": "R2", "amount": "30", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+            {"id": "R3", "amount": "30", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+        ),
+        mode="one-to-many",
+    )
+    bounded = replace(
+        base,
+        grouped_budget=GroupedMatchBudget(max_right_cardinality=2, max_search_evaluations=100),
+    )
+
+    result = strategy.execute(bounded)
+
+    assert result.results[0]["status"] == "unmatched"
+    assert result.input_digest != strategy.execute(base).input_digest
+
+
+def test_grouped_strategy_rejects_unreviewed_or_mode_incompatible_budget() -> None:
+    strategy = GroupedSubsetSumStrategy()
+    request = MatchingStrategyRequest(left_records=(), right_records=(), mode="one-to-many")
+    with pytest.raises(MatchingStrategyContractError, match="reviewed strategy ceiling"):
+        strategy.execute(replace(request, grouped_budget=GroupedMatchBudget(max_right_cardinality=5)))
+    with pytest.raises(MatchingStrategyContractError, match="cardinality floor"):
+        strategy.execute(replace(request, grouped_budget=GroupedMatchBudget(max_right_cardinality=1)))
+
+
+def test_non_grouped_strategy_does_not_ignore_grouped_budget(tmp_path: Path) -> None:
+    strategy, _service, connection = _strategy(tmp_path)
+    try:
+        with pytest.raises(MatchingStrategyContractError, match="does not support grouped match budgets"):
+            strategy.execute(
+                replace(
+                    _request(),
+                    grouped_budget=GroupedMatchBudget(max_search_evaluations=1),
+                )
+            )
+    finally:
+        connection.close()
+
+
+def test_grouped_strategy_supports_non_overlapping_portfolio_mode() -> None:
+    result = GroupedSubsetSumStrategy().execute(
+        MatchingStrategyRequest(
+            left_records=(
+                {"id": "L1", "amount": "100.00", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+                {"id": "L2", "amount": "50.00", "currency": "USD", "date": "2026-01-11", "partition": "AR"},
+            ),
+            right_records=(
+                {"id": "R1", "amount": "100.00", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+                {"id": "R2", "amount": "50.00", "currency": "USD", "date": "2026-01-11", "partition": "AR"},
+            ),
+            mode="portfolio",
+        )
+    )
+
+    assert len(result.results) == 2
+    assert result.exceptions == ()
+    assert {item["left_record_ids"] for item in result.results} == {("L1",), ("L2",)}
+
+
+def test_grouped_strategy_supports_explicit_partial_portfolio_mode() -> None:
+    result = GroupedSubsetSumStrategy().execute(
+        MatchingStrategyRequest(
+            left_records=(
+                {"id": "L1", "amount": "100", "currency": "USD", "date": "2026-01-01", "partition": "AR"},
+                {"id": "L2", "amount": "40", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+            ),
+            right_records=(
+                {"id": "R1", "amount": "75", "currency": "USD", "date": "2026-01-01", "partition": "AR"},
+                {"id": "R2", "amount": "40", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+            ),
+            mode="portfolio",
+            allow_partial_settlement=True,
+            date_window_days=2,
+        )
+    )
+    partial = next(item for item in result.results if item["left_record_ids"] == ("L1",))
+    assert partial["reason_code"] == "GROUP_PORTFOLIO_PARTIAL_SETTLEMENT"
+    assert partial["settled_amount"] == Decimal("75")
+    assert partial["left_residual"] == Decimal("25")
 
 
 def test_grouped_strategy_reports_ambiguity_for_equal_cost_candidates() -> None:

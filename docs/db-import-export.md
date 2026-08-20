@@ -66,7 +66,20 @@ This bridge does not implement the full DB-backed account reconciliation lifecyc
 
 The manifest records the backup checksum, created timestamp, schema version, and privacy warning. `reconforge db backup-verify` validates a backup without restoring it. `reconforge db restore --dry-run` validates restore inputs without writing the target DB. `reconforge db restore` validates the checksum before restoring, rejects unsupported schema versions, checks restored foreign-key relationships, and refuses to overwrite an existing DB unless `--force` is provided.
 
-Current backups include organization, legal-entity, branch, currency-reference, fiscal-period, chart/account, dimension, finance-journal, balanced ledger-control, and inventory master/movement/count/reorder/FIFO-valuation/reversal data. Migration history is regenerated from trusted local migration definitions rather than restored as backup content. A supported older backup is loaded into its source schema first and then upgraded through the current migration sequence. Validated/Voided finance, Posted/Voided movement, Counting/Submitted/Approved/Cancelled count, and Approved/Cancelled valuation/reversal states are rebuilt only after restored detail rows pass database transition triggers. Restore verifies every FIFO layer's remaining quantity/value against its immutable origin, consumptions, and approved `Restore`/`Remove` effects.
+Current backups include organization, legal-entity, branch, currency-reference,
+fiscal-period, chart/account, dimension, finance-journal, balanced
+ledger-control, inventory master/movement/count/reorder/FIFO-valuation/reversal
+data, and schema-25 consolidation close lifecycle data. Migration history is
+regenerated from trusted local migration definitions rather than restored as
+backup content. A supported older backup is loaded into its source schema first
+and then upgraded through the current migration sequence. Validated/Voided
+finance, Posted/Voided movement, Counting/Submitted/Approved/Cancelled count,
+Approved/Cancelled valuation/reversal, and consolidation approval/post/reversal/
+period states are rebuilt only after restored detail rows pass database
+transition triggers. Restore verifies every FIFO layer's remaining
+quantity/value against its immutable origin, consumptions, and approved
+`Restore`/`Remove` effects, and verifies consolidation worksheet/effect/period
+event replay before replacing the target database.
 
 When an older row omits an additive column, restore does not interpret that
 column's SQL default in Python. It omits the column from the parameterized

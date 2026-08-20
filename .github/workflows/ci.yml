@@ -35,6 +35,15 @@ jobs:
       - name: Install locked dependencies
         run: uv sync --locked --all-extras --no-editable --python "${{ matrix.python-version }}"
 
+      - name: Verify optional test dependency surface
+        run: >-
+          uv run --no-sync python -c
+          "import cbor2, cryptography, opentelemetry.sdk;
+          print('optional test dependencies: cbor2, cryptography, opentelemetry.sdk')"
+
+      - name: Verify checked-in benchmark evidence index
+        run: uv run --no-sync python .github/scripts/verify_benchmark_index.py --root .
+
       - name: Ruff
         run: uv run --no-sync ruff check .
 
@@ -49,6 +58,9 @@ jobs:
           uv run --no-sync reconforge doctor
           uv run --no-sync reconforge validate examples/sample_data
           uv run --no-sync reconforge rules validate --pack control-packs/audit-basic
+
+      - name: HA/DR quorum and fencing safety simulation
+        run: uv run --no-sync python .github/scripts/verify_ha_dr_quorum_simulation.py --output "${{ runner.temp }}/ha-dr-quorum-simulation.json"
 
       - name: Build package
         run: uv run --no-sync python -m build --no-isolation
@@ -172,7 +184,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       redis:
-        image: redis:7
+        image: redis:7.4-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2
         ports:
           - 6379:6379
         options: >-
@@ -198,8 +210,25 @@ jobs:
           enable-cache: true
           cache-dependency-glob: uv.lock
 
+      - name: Install PostgreSQL native client tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          # `pg_config` is shipped by libpq-dev; the explicitly matched client
+          # package supplies native binaries compatible with the PostgreSQL 16
+          # service used by this job. Newer clients can emit settings such as
+          # transaction_timeout that PostgreSQL 16 does not understand.
+          sudo apt-get install --no-install-recommends -y libpq-dev postgresql-client-16
+          # Debian's alternatives may leave a different PostgreSQL major first
+          # on PATH. Pin the client directory before the fail-closed validator
+          # resolves each executable, then persist the validated path for the
+          # following steps.
+          export PATH="/usr/lib/postgresql/16/bin:$PATH"
+          native_bindir="$(python .github/scripts/verify_postgres_native_tools.py --expected-major 16 --print-bindir)"
+          printf '%s\n' "$native_bindir" >> "$GITHUB_PATH"
+
       - name: Install locked server dependencies
-        run: uv sync --locked --extra dev --extra server --extra backup --no-editable --python 3.12
+        run: uv sync --locked --all-extras --no-editable --python 3.12
 
       - name: Create non-privileged PostgreSQL application role
         env:
@@ -224,8 +253,11 @@ jobs:
           RECONFORGE_TEST_POSTGRES_SOURCE_SERVICE: reconforge_ci_source
           RECONFORGE_TEST_POSTGRES_MAINTENANCE_SERVICE: reconforge_ci_admin
           RECONFORGE_TEST_REDIS_URL: redis://localhost:6379/0
+          RECONFORGE_REDIS_IMAGE_DIGEST: sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2
+          RECONFORGE_REDIS_LIVE_REPORT: ${{ runner.temp }}/reconforge-redis-live-report.json
           PGSERVICEFILE: ${{ runner.temp }}/reconforge-pgservice.conf
         run: |
+          set -euo pipefail
           printf '%s\n' \
             '[reconforge_ci_source]' \
             'host=localhost' \
@@ -241,4 +273,151 @@ jobs:
             'password=postgres' > "$PGSERVICEFILE"
           chmod 600 "$PGSERVICEFILE"
           mapfile -t parity_tests < <(uv run --no-sync python -c "import yaml; document = yaml.safe_load(open('docs/execution/POSTGRES_PARITY_INVENTORY.yaml', encoding='utf-8')); print(*dict.fromkeys(item['test'] for item in document['boundaries'] if item.get('test')), sep='\\n')")
-          uv run --no-sync pytest "${parity_tests[@]}" tests/test_alembic_postgres.py tests/test_postgres_foundation.py tests/test_postgres_master_data.py tests/test_postgres_ledger.py tests/test_postgres_identity.py tests/test_postgres_evidence.py tests/test_postgres_reconciliation.py tests/test_api_server_identity.py tests/test_redis_foundation.py -q
+          native_smoke_dump="${RUNNER_TEMP}/reconforge-native-backup-smoke.dump"
+          rm -f "$native_smoke_dump"
+          pg_dump --format=custom --no-owner --no-privileges --file "$native_smoke_dump" --dbname service=reconforge_ci_source
+          test -s "$native_smoke_dump"
+          pg_restore --list "$native_smoke_dump" >/dev/null
+          rm -f "$native_smoke_dump"
+          uv run --no-sync pytest tests/test_postgres_backup.py -k 'test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup' -q
+          uv run --no-sync pytest tests/test_application_metrics.py -k 'test_live_postgres_metrics_and_sqlite_parity' -q
+          uv run --no-sync pytest tests/test_scoped_exports.py -k 'test_live_scoped_export_excludes_sibling_workspace_and_entity' -q
+          uv run --no-sync pytest tests/test_api_server_scoped_exports.py -k 'test_live_server_scoped_export_http_is_service_scoped_and_tenant_isolated' -q
+          uv run --no-sync pytest "${parity_tests[@]}" tests/test_postgres_delegations_runtime.py tests/test_postgres_policy_analysis_runtime.py tests/test_alembic_postgres.py tests/test_postgres_foundation.py tests/test_postgres_master_data.py tests/test_postgres_ledger.py tests/test_postgres_identity.py tests/test_postgres_evidence.py tests/test_postgres_reconciliation.py tests/test_postgres_writeback.py tests/test_postgres_database_reference.py tests/test_api_server_identity.py tests/test_redis_foundation.py tests/test_postgres_durable_jobs.py -k 'test_live_postgres_durable_job_10k_multi_worker_scale_profile or test_live_postgres_durable_job_100k_multi_worker_scale_profile or test_live_postgres_durable_job_backpressure_profile or test_live_postgres_durable_job_soak_profile' -q
+          uv run --no-sync pytest tests/test_postgres_grouped_matching_scale.py -k 'test_live_postgres_grouped_matching_500_partition_scale_profile or test_live_postgres_grouped_matching_10k_partition_scale_profile' -q
+          uv run --no-sync pytest tests/test_postgres_grouped_matching_runtime.py -k 'test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_tenant_scoped' -q
+          uv run --no-sync pytest tests/test_postgres_durable_jobs.py -k 'test_live_postgres_job_application_contract_and_rls or test_live_postgres_round_robin_scheduler_is_lane_scoped_and_deterministic or test_live_postgres_persistent_scheduler_coordinates_spawned_processes or test_live_postgres_worker_crash_after_checkpoint_resumes_without_duplicate_effect or test_live_postgres_worker_database_fault_after_checkpoint_resumes_without_duplicate_effect' -q
+          uv run --no-sync pytest tests/test_api_operations.py -q
+          uv run --no-sync pytest tests/test_api_metrics.py -q
+          uv run --no-sync pytest tests/test_postgres_manufacturing_cost_control.py -q
+          uv run --no-sync pytest tests/test_api_server_manufacturing_cost_control.py -q
+          uv run --no-sync pytest tests/test_postgres_retail_settlement.py -q
+          uv run --no-sync pytest tests/test_api_server_retail_settlement.py -q
+          uv run --no-sync pytest tests/test_postgres_professional_invoice_payment.py -q
+          uv run --no-sync pytest tests/test_api_server_professional_invoice_payment.py -q
+          uv run --no-sync pytest tests/test_postgres_consolidation_close.py -k 'test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable' -q
+          uv run --no-sync pytest tests/test_postgres_federation.py -k 'test_live_postgres_federation_replay_link_session_and_rls' -q
+          uv run --no-sync pytest tests/test_api_server_consolidation_close.py -q
+          uv run --no-sync pytest tests/test_api_server_reconciliation_live.py -q
+          uv run --no-sync pytest tests/test_postgres_bank_statement.py -q
+          uv run --no-sync pytest tests/test_api_server_bank_statement.py -q
+          uv run --no-sync python .github/scripts/verify_redis_live.py --output "${RECONFORGE_REDIS_LIVE_REPORT}"
+
+      - name: Upload live Redis report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: reconforge-redis-live-report
+          path: ${{ runner.temp }}/reconforge-redis-live-report.json
+          if-no-files-found: ignore
+
+  postgres-ha-dr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install locked HA/DR dependencies
+        run: uv sync --locked --extra dev --extra server --extra backup --no-editable --python 3.12
+
+      - name: Run repeated PostgreSQL HA/DR drill
+        env:
+          RECONFORGE_HA_DR_REPORT: ${{ runner.temp }}/reconforge-postgres-ha-dr.json
+        run: uv run --no-sync python .github/scripts/verify_postgres_ha_dr_repeated.py --executed-at "$(date -u +%F)" --output "${RECONFORGE_HA_DR_REPORT}"
+
+      - name: Upload PostgreSQL HA/DR report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: reconforge-postgres-ha-dr-report
+          path: ${{ runner.temp }}/reconforge-postgres-ha-dr.json
+          if-no-files-found: ignore
+
+  object-storage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install locked server dependencies
+        run: uv sync --locked --extra dev --extra server --no-editable --python 3.12
+
+      - name: Start digest-pinned MinIO
+        env:
+          MINIO_IMAGE: minio/minio@sha256:13582eff79c6605a2d315bdd0e70164142ea7e98fc8411e9e10d089502a6d883
+          MINIO_ROOT_USER: reconforge_ci_access
+        run: |
+          set -euo pipefail
+          MINIO_ROOT_PASSWORD="$(printf '%s' 'reconforge-ci-object-store' | sha256sum | cut -c1-32)"
+          export MINIO_ROOT_PASSWORD
+          docker run --detach --name reconforge-ci-minio \
+            --publish 19000:9000 \
+            --publish 19001:9001 \
+            --env "MINIO_ROOT_USER=${MINIO_ROOT_USER}" \
+            --env "MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}" \
+            "${MINIO_IMAGE}" server /data --console-address ':9001'
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:19000/minio/health/ready >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo 'MinIO readiness timeout' >&2
+          docker logs reconforge-ci-minio >&2 || true
+          exit 1
+
+      - name: Run live object-storage contract and emit report
+        env:
+          AWS_ACCESS_KEY_ID: reconforge_ci_access
+          AWS_DEFAULT_REGION: us-east-1
+          RECONFORGE_TEST_S3_ENDPOINT: http://127.0.0.1:19000
+          RECONFORGE_TEST_S3_BUCKET: reconforge-ci-live
+          RECONFORGE_TEST_S3_LOCK_BUCKET: reconforge-ci-lock
+          RECONFORGE_S3_IMAGE_DIGEST: sha256:13582eff79c6605a2d315bdd0e70164142ea7e98fc8411e9e10d089502a6d883
+          RECONFORGE_S3_LIVE_REPORT: ${{ runner.temp }}/reconforge-s3-live-report.json
+        run: |
+          set -euo pipefail
+          export AWS_SECRET_ACCESS_KEY="$(printf '%s' 'reconforge-ci-object-store' | sha256sum | cut -c1-32)"
+          uv run --no-sync python -c "import boto3, os; client=boto3.client('s3', endpoint_url=os.environ['RECONFORGE_TEST_S3_ENDPOINT'], region_name='us-east-1'); client.create_bucket(Bucket=os.environ['RECONFORGE_TEST_S3_BUCKET']); client.create_bucket(Bucket=os.environ['RECONFORGE_TEST_S3_LOCK_BUCKET'], ObjectLockEnabledForBucket=True)"
+          uv run --no-sync python .github/scripts/verify_s3_object_storage_live.py --output "${RECONFORGE_S3_LIVE_REPORT}"
+          uv run --no-sync pytest -q tests/test_object_storage_foundation.py -k 'live_s3_'
+
+      - name: Upload live object-storage report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: reconforge-s3-live-report
+          path: ${{ runner.temp }}/reconforge-s3-live-report.json
+          if-no-files-found: ignore
+
+      - name: Stop MinIO
+        if: always()
+        run: docker rm --force reconforge-ci-minio || true

@@ -1,0 +1,6 @@
+pack_id: retail-pos-settlement
+name: Retail POS Settlement Controls
+version: 1.0.0
+description: Bounded controls for exported store batches and processor settlement files.
+owner: ReconForge ERP Maintainers
+tags: [retail, pos, settlement, payments, evidence]

@@ -9,11 +9,13 @@ explicitly injected; this module does not pretend to be a message broker.
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from threading import Event
 
+from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.platform.outbox import OutboxEvent, OutboxProcessResult, OutboxPublisher, OutboxService
+from reconforge.workers.policy import WorkerPolicyContextSupplier, WorkerPolicyHierarchyContextSupplier
 
 
 class OutboxWorkerError(RuntimeError):
@@ -30,6 +32,13 @@ class OutboxWorkerSettings:
     max_attempts: int = 5
     lease_seconds: int = 300
     retry_base_seconds: int = 5
+    actor_id: str = ""
+    policy_context_supplier: Callable[[str], PolicyEvaluationContext] | None = None
+    policy_context_scope_supplier: WorkerPolicyContextSupplier | None = None
+    policy_context_hierarchy_supplier: WorkerPolicyHierarchyContextSupplier | None = None
+    scope_supplier: Callable[[], Iterable[tuple[str, str | None, str | None, str | None]]] | None = None
+    max_tenants: int = 10_000
+    policy_permission: str = "outbox.publish"
 
     def __post_init__(self) -> None:
         if not self.worker_id.strip() or len(self.worker_id.strip()) > 160:
@@ -40,6 +49,16 @@ class OutboxWorkerSettings:
             raise OutboxWorkerError("batch_size must be between 1 and 1000.")
         if self.max_attempts < 1 or self.lease_seconds < 1 or self.retry_base_seconds < 0:
             raise OutboxWorkerError("Outbox retry and lease settings are invalid.")
+        if not 1 <= int(self.max_tenants) <= 100_000:
+            raise OutboxWorkerError("max_tenants must be between 1 and 100000.")
+        if not self.policy_permission.strip():
+            raise OutboxWorkerError("policy_permission must be non-empty when configured.")
+
+    @property
+    def audit_actor_id(self) -> str:
+        """Return the configured service actor, falling back to worker identity."""
+
+        return self.actor_id.strip() or self.worker_id.strip()
 
 
 @dataclass(frozen=True)

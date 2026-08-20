@@ -8,8 +8,9 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Header, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import require_any_permission
+from reconforge.api.dependencies import enforce_server_scoped_permissions, require_any_permission
 from reconforge.api.errors import APIError
+from reconforge.api.server_identity import request_execution_scope
 from reconforge.api.server_reconciliation import execute_postgres_reconciliation, server_reconciliation_enabled
 from reconforge.auth.models import LocalUser
 from reconforge.reconciliation.matching import RECORD_IDENTITY_POLICY
@@ -83,6 +84,30 @@ def _server_only(request: Request) -> None:
         )
 
 
+def _enforce_server_run_scope(request: Request) -> None:
+    scope = request_execution_scope(request)
+    enforce_server_scoped_permissions(
+        request,
+        permissions=frozenset({"reconciliation.manage", "match.run"}),
+        tenant_id=scope.tenant_id,
+        workspace_id=scope.workspace_id,
+        organization_id=scope.organization_id,
+        entity_id=scope.legal_entity_id,
+    )
+
+
+def _enforce_server_read_scope(request: Request) -> None:
+    scope = request_execution_scope(request)
+    enforce_server_scoped_permissions(
+        request,
+        permissions=frozenset({"reconciliation.read", "reconciliation.manage", "match.read", "match.run"}),
+        tenant_id=scope.tenant_id,
+        workspace_id=scope.workspace_id,
+        organization_id=scope.organization_id,
+        entity_id=scope.legal_entity_id,
+    )
+
+
 def _source() -> dict[str, object]:
     return {"kind": "postgresql-reconciliation-results", "server_mode": True}
 
@@ -97,6 +122,7 @@ def submit_run(
     """Create a queued run and register its canonical inputs atomically."""
 
     _server_only(request)
+    _enforce_server_run_scope(request)
     if len(payload.model_dump_json().encode("utf-8")) > MAX_SUBMISSION_BYTES:
         raise APIError(
             status_code=413,
@@ -194,6 +220,7 @@ def list_runs(
     """List tenant-scoped reconciliation run metadata."""
 
     _server_only(request)
+    _enforce_server_read_scope(request)
     runs = execute_postgres_reconciliation(
         request,
         lambda repository, tenant: repository.list_runs(
@@ -216,6 +243,7 @@ def get_run(
     """Return persisted run metadata; child collections have paginated endpoints."""
 
     _server_only(request)
+    _enforce_server_read_scope(request)
     run = execute_postgres_reconciliation(
         request,
         lambda repository, tenant: repository.get_run_metadata(tenant_id=tenant, run_id=run_id),
@@ -233,6 +261,7 @@ def cancel_run(
     """Request cooperative cancellation of a running reconciliation."""
 
     _server_only(request)
+    _enforce_server_run_scope(request)
     run = execute_postgres_reconciliation(
         request,
         lambda repository, tenant: repository.cancel_run(
@@ -256,6 +285,7 @@ def requeue_run(
     """Explicitly requeue a failed or cancelled reconciliation."""
 
     _server_only(request)
+    _enforce_server_run_scope(request)
     run = execute_postgres_reconciliation(
         request,
         lambda repository, tenant: repository.requeue_run(
@@ -278,6 +308,7 @@ def _list_children(
     offset: int,
 ) -> dict[str, object]:
     _server_only(request)
+    _enforce_server_read_scope(request)
     records = execute_postgres_reconciliation(
         request,
         lambda repository, tenant: operation(

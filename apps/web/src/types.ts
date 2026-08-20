@@ -273,7 +273,188 @@ export interface InventoryControlContract {
   notices: string[];
 }
 
-export type StudioPage = "dashboard" | "exceptions" | "evidence" | "inventory" | "mapping" | "rules" | "live" | "adminAudit";
+export type RetailSettlementStatus = "matched" | "exception" | "unmatched_pos" | "unmatched_settlement" | "ambiguous";
+
+export interface RetailSettlementDecision {
+  batch_id: string;
+  store_id: string;
+  status: RetailSettlementStatus;
+  settlement_ids: string[];
+  expected_card_net: string;
+  settlement_net: string | null;
+  net_variance: string | null;
+  currency: string;
+  reason_code: string;
+}
+
+export interface RetailSettlementStudioContract {
+  schema_version: 1;
+  synthetic_data_only: true;
+  synthetic_data_marker: "SYNTHETIC_RETAIL_SETTLEMENT_UI_ONLY";
+  generated_at: string;
+  source: ContractSource;
+  algorithm_version: string;
+  decision_digest: string;
+  artifact_digest: string;
+  tolerance: string;
+  currency: string;
+  summary: {
+    total: number;
+    matched: number;
+    exceptions: number;
+    unmatched: number;
+    ambiguous: number;
+  };
+  decisions: RetailSettlementDecision[];
+  notices: string[];
+}
+
+export type BankStatementStatus = "matched" | "exception" | "unmatched_bank" | "unmatched_ledger" | "ambiguous";
+
+export interface BankStatementDecision {
+  bank_line_id: string;
+  account_id: string;
+  status: BankStatementStatus;
+  ledger_record_ids: string[];
+  amount_variance: string | null;
+  days_variance: number | null;
+  reason_code: string;
+}
+
+export interface BankStatementStudioContract {
+  schema_version: 1;
+  synthetic_data_only: true;
+  synthetic_data_marker: "SYNTHETIC_BANK_STATEMENT_UI_ONLY";
+  generated_at: string;
+  source: ContractSource;
+  algorithm_version: string;
+  decision_digest: string;
+  artifact_digest: string;
+  tolerance: string;
+  currency: string;
+  date_window_days: number;
+  summary: {
+    total: number;
+    matched: number;
+    exceptions: number;
+    unmatched: number;
+    ambiguous: number;
+  };
+  decisions: BankStatementDecision[];
+  notices: string[];
+}
+
+export type ManufacturingCostStatus = "reconciled" | "exception" | "unmatched";
+
+export interface ManufacturingCostDecision {
+  order_id: string;
+  product_id: string;
+  status: ManufacturingCostStatus;
+  planned_quantity: string;
+  issued_quantity: string;
+  completed_quantity: string;
+  scrap_quantity: string;
+  material_cost_variance: string;
+  completion_cost_variance: string;
+  reason_codes: string[];
+}
+
+export interface ManufacturingCostStudioContract {
+  schema_version: 1;
+  synthetic_data_only: true;
+  synthetic_data_marker: "SYNTHETIC_MANUFACTURING_COST_UI_ONLY";
+  generated_at: string;
+  source: ContractSource;
+  algorithm_version: string;
+  decision_digest: string;
+  artifact_digest: string;
+  tolerance: string;
+  currency: string;
+  unit: string;
+  max_scrap_quantity: string;
+  summary: {
+    total: number;
+    reconciled: number;
+    exceptions: number;
+    unmatched: number;
+  };
+  decisions: ManufacturingCostDecision[];
+  notices: string[];
+}
+
+export type ProfessionalInvoicePaymentStatus = "matched" | "exception" | "unmatched_invoice" | "unmatched_payment" | "ambiguous";
+
+export interface ProfessionalInvoicePaymentDecision {
+  invoice_id: string;
+  client_id: string;
+  status: ProfessionalInvoicePaymentStatus;
+  payment_ids: string[];
+  amount_variance: string | null;
+  days_from_due_date: number | null;
+  reason_code: string;
+}
+
+export interface ProfessionalInvoicePaymentStudioContract {
+  schema_version: 1;
+  synthetic_data_only: true;
+  synthetic_data_marker: "SYNTHETIC_PROFESSIONAL_INVOICE_PAYMENT_UI_ONLY";
+  generated_at: string;
+  source: ContractSource;
+  algorithm_version: string;
+  decision_digest: string;
+  artifact_digest: string;
+  tolerance: string;
+  currency: string;
+  payment_window_days: number;
+  summary: {
+    total: number;
+    matched: number;
+    exceptions: number;
+    ambiguous: number;
+    unmatched_invoice: number;
+    unmatched_payment: number;
+  };
+  decisions: ProfessionalInvoicePaymentDecision[];
+  notices: string[];
+}
+
+export type IndividualCashflowStatus = "within_budget" | "over_budget" | "unbudgeted" | "no_activity";
+
+export interface IndividualCashflowDecision {
+  period: string;
+  flow_type: "income" | "expense";
+  category: string;
+  status: IndividualCashflowStatus;
+  actual: string;
+  budget: string | null;
+  variance: string | null;
+  transaction_ids: string[];
+  budget_id: string | null;
+  reason_code: string;
+}
+
+export interface IndividualCashflowStudioContract {
+  schema_version: 1;
+  synthetic_data_only: true;
+  synthetic_data_marker: "SYNTHETIC_INDIVIDUAL_CASHFLOW_UI_ONLY";
+  generated_at: string;
+  source: ContractSource;
+  algorithm_version: string;
+  decision_digest: string;
+  artifact_digest: string;
+  currency: string;
+  summary: {
+    total: number;
+    within_budget: number;
+    over_budget: number;
+    unbudgeted: number;
+    no_activity: number;
+  };
+  decisions: IndividualCashflowDecision[];
+  notices: string[];
+}
+
+export type StudioPage = "dashboard" | "exceptions" | "evidence" | "inventory" | "retailSettlement" | "bankStatement" | "manufacturingCost" | "professionalInvoicePayment" | "individualCashflow" | "mapping" | "rules" | "live" | "adminAudit";
 
 export interface StudioOverview {
   schema_version: 1;

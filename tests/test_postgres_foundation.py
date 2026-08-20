@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 
 import pytest
@@ -10,7 +11,11 @@ from reconforge.infrastructure.postgres import (
     POSTGRES_RLS_SCHEMA_SQL,
     PostgresConfigurationError,
     PostgresConnectionFactory,
+    PostgresConnectionPool,
+    PostgresConnectionPoolClosedError,
+    PostgresConnectionPoolSnapshot,
     PostgresExecutionScope,
+    PostgresPooledConnectionFactory,
     PostgresSettings,
     PostgresTenantBoundary,
     PostgresUnavailableError,
@@ -48,6 +53,9 @@ class _FakeConnection:
 
     def close(self) -> None:
         self.closed = True
+
+    def rollback(self) -> None:
+        self.events.append("rollback-release")
 
 
 def test_postgres_settings_reject_unsafe_configuration() -> None:
@@ -133,6 +141,89 @@ def test_tenant_boundary_rolls_back_and_closes_on_failure() -> None:
 
     assert connection.events == ["begin", "rollback"]
     assert connection.closed is True
+
+
+def test_postgres_connection_pool_reuses_and_closes_bounded_connections() -> None:
+    connections: list[_FakeConnection] = []
+
+    class _Factory:
+        def connect(self) -> _FakeConnection:
+            connection = _FakeConnection()
+            connections.append(connection)
+            return connection
+
+    pool = PostgresConnectionPool(_Factory(), max_size=1, acquire_timeout_seconds=0.1)
+    first = pool.connect()
+    first.close()
+    second = pool.connect()
+    second.close()
+
+    assert len(connections) == 1
+    assert connections[0].events == ["rollback-release", "rollback-release"]
+    pool.close()
+    assert connections[0].closed is True
+    assert pool.snapshot == PostgresConnectionPoolSnapshot(max_size=1, total=0, idle=0, leased=0, closed=True)
+
+
+def test_postgres_connection_pool_snapshot_and_repeated_multithreaded_lifecycle_are_bounded() -> None:
+    connections: list[_FakeConnection] = []
+
+    class _Factory:
+        def connect(self) -> _FakeConnection:
+            connection = _FakeConnection()
+            connections.append(connection)
+            return connection
+
+    pool = PostgresConnectionPool(_Factory(), max_size=4, acquire_timeout_seconds=2.0)
+
+    def lease_once(_: int) -> None:
+        connection = pool.connect()
+        connection.close()
+
+    with ThreadPoolExecutor(max_workers=16, thread_name_prefix="pool-lifecycle") as workers:
+        list(workers.map(lease_once, range(128)))
+
+    snapshot = pool.snapshot
+    assert snapshot.max_size == 4
+    assert 0 <= snapshot.total <= 4
+    assert snapshot.idle == snapshot.total
+    assert snapshot.leased == 0
+    assert len(connections) <= 4
+    pool.close()
+    assert pool.snapshot == PostgresConnectionPoolSnapshot(max_size=4, total=0, idle=0, leased=0, closed=True)
+    with pytest.raises(PostgresConnectionPoolClosedError):
+        pool.connect()
+
+
+def test_pooled_connection_factory_reuses_connections_and_preserves_factory_type(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connections: list[_FakeConnection] = []
+
+    def fake_connect(_dsn: str, **_kwargs: object) -> _FakeConnection:
+        connection = _FakeConnection()
+        connections.append(connection)
+        return connection
+
+    monkeypatch.setattr(
+        "reconforge.infrastructure.postgres._load_psycopg",
+        lambda: SimpleNamespace(connect=fake_connect),
+    )
+
+    factory = PostgresPooledConnectionFactory(
+        PostgresSettings(dsn="postgresql://db/reconforge"),
+        max_size=1,
+        acquire_timeout_seconds=0.1,
+    )
+    assert isinstance(factory, PostgresConnectionFactory)
+    first = factory.connect()
+    first.close()
+    second = factory.connect()
+    second.close()
+
+    assert len(connections) == 1
+    factory.close()
+    assert connections[0].closed is True
 
 
 def test_connection_factory_configures_tls_and_timeout(monkeypatch: pytest.MonkeyPatch) -> None:

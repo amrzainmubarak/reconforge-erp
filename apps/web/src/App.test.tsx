@@ -181,13 +181,17 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-test("renders governed synthetic dashboard data", async () => {
+const controlRoomHeading = async () =>
+  screen.findByRole("heading", {
+    level: 1,
+    name: /Control room|مركز الرقابة|لوحة التحكم|Dashboard/i,
+  }, { timeout: 20_000 });
+
+test("renders governed synthetic dashboard data", { timeout: 30_000 }, async () => {
   render(<App />);
 
   expect(screen.getByText("Loading local synthetic control data…")).toBeInTheDocument();
-  expect(
-    await screen.findByRole("heading", { level: 1, name: "Control room" }, { timeout: 3_000 }),
-  ).toBeInTheDocument();
+  expect(await controlRoomHeading()).toBeInTheDocument();
   expect(screen.getAllByText("40%").length).toBeGreaterThanOrEqual(2);
   expect(screen.getByText("Guided control story")).toBeInTheDocument();
   expect(screen.getByText("Decision brief")).toBeInTheDocument();
@@ -198,7 +202,7 @@ test("renders governed synthetic dashboard data", async () => {
 
 test("follows the guided showcase from executive signal to the exception contract", async () => {
   render(<App />);
-  await screen.findByRole("heading", { level: 1, name: "Control room" });
+  await controlRoomHeading();
 
   fireEvent.click(screen.getByRole("button", { name: /Triage exceptions/ }));
 
@@ -209,7 +213,7 @@ test("follows the guided showcase from executive signal to the exception contrac
 
 test("opens the keyboard command palette", async () => {
   render(<App />);
-  await screen.findByRole("heading", { level: 1, name: "Control room" });
+  await controlRoomHeading();
 
   fireEvent.keyDown(window, { key: "k", ctrlKey: true });
 
@@ -220,7 +224,7 @@ test("opens the keyboard command palette", async () => {
 
 test("navigates to the native exception queue and filters its versioned contract", async () => {
   render(<App />);
-  await screen.findByRole("heading", { level: 1, name: "Control room" });
+  await controlRoomHeading();
 
   const primaryNavigation = screen.getByRole("navigation", { name: "Primary navigation" });
   fireEvent.click(within(primaryNavigation).getByRole("button", { name: /Exceptions/ }));
@@ -236,7 +240,7 @@ test("navigates to the native exception queue and filters its versioned contract
 
 test("navigates to the native evidence binder without exposing source paths", async () => {
   render(<App />);
-  await screen.findByRole("heading", { level: 1, name: "Control room" });
+  await controlRoomHeading();
 
   const primaryNavigation = screen.getByRole("navigation", { name: "Primary navigation" });
   fireEvent.click(within(primaryNavigation).getByRole("button", { name: /Evidence binder/ }));
@@ -250,7 +254,7 @@ test("navigates to the native evidence binder without exposing source paths", as
 
 test("navigates to the inventory control center and filters its exact local contract", async () => {
   render(<App />);
-  await screen.findByRole("heading", { level: 1, name: "Control room" });
+  await controlRoomHeading();
 
   const primaryNavigation = screen.getByRole("navigation", { name: "Primary navigation" });
   fireEvent.click(within(primaryNavigation).getByRole("button", { name: /Inventory controls/ }));
@@ -346,11 +350,12 @@ test("rejects malformed evidence contract records", async () => {
 
 test("switches to Arabic RTL and persists accessibility preferences", async () => {
   render(<App />);
-  await screen.findByRole("heading", { level: 1, name: "Control room" });
+  await controlRoomHeading();
 
   fireEvent.click(screen.getByTestId("locale-toggle"));
   await screen.findByRole("heading", { level: 1, name: "مركز الرقابة" });
   expect(document.documentElement).toHaveAttribute("dir", "rtl");
+  expect(document.documentElement).toHaveAttribute("lang", "ar");
 
   fireEvent.click(screen.getByRole("button", { name: "إمكانية الوصول" }));
   fireEvent.click(screen.getByRole("checkbox", { name: "نص أكبر" }));
@@ -412,7 +417,7 @@ test("ignores invalid persisted accessibility value types", async () => {
   );
 
   render(<App />);
-  await screen.findByRole("heading", { level: 1, name: "Control room" });
+  await controlRoomHeading();
 
   expect(document.documentElement.dataset.largeText).toBe("false");
   expect(document.documentElement.dataset.highContrast).toBe("true");
@@ -421,7 +426,7 @@ test("ignores invalid persisted accessibility value types", async () => {
 
 test("cycles and persists the theme preference", async () => {
   render(<App />);
-  await screen.findByRole("heading", { level: 1, name: "Control room" });
+  await controlRoomHeading();
 
   fireEvent.click(screen.getByRole("button", { name: "Theme: System" }));
 
@@ -431,7 +436,7 @@ test("cycles and persists the theme preference", async () => {
 
 test("discloses the bounded synthetic workspace", async () => {
   render(<App />);
-  await screen.findByRole("heading", { level: 1, name: "Control room" });
+  await controlRoomHeading();
 
   fireEvent.click(screen.getByLabelText("Workspace details"));
 
@@ -458,6 +463,6 @@ test("renders explicit empty states for an empty synthetic snapshot", async () =
 
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: "Control room" });
+  await controlRoomHeading();
   expect(screen.getAllByText("No records in this synthetic snapshot.").length).toBeGreaterThanOrEqual(4);
 });

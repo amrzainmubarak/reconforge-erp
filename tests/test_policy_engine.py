@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
+from decimal import Decimal
 
 import pytest
 from hypothesis import HealthCheck, given, settings
@@ -272,6 +274,135 @@ def test_any_permission_contract_still_enforces_abac_scope() -> None:
     )
     assert not decision.allowed
     assert decision.reason_code == "tenant_scope_denied"
+
+
+def test_organization_scope_is_centralized_and_deny_by_default() -> None:
+    denied = CentralPolicyEngine().evaluate(
+        PolicyEvaluationContext(
+            user_id="U-org",
+            username="controller",
+            user_permissions={"outbox.publish"},
+            organization_id="org-b",
+            authorized_organization_ids=frozenset({"org-a"}),
+        ),
+        required_permission="outbox.publish",
+    )
+    assert not denied.allowed
+    assert denied.reason_code == "organization_scope_denied"
+
+    allowed = CentralPolicyEngine().evaluate(
+        PolicyEvaluationContext(
+            user_id="U-org",
+            username="controller",
+            user_permissions={"outbox.publish"},
+            organization_id="org-a",
+            authorized_organization_ids=frozenset({"org-a"}),
+        ),
+        required_permission="outbox.publish",
+    )
+    assert allowed.allowed
+
+
+@pytest.mark.parametrize(
+    ("amount", "minimum", "maximum", "expected_code"),
+    [
+        (Decimal("99.99"), Decimal("100.00"), Decimal("500.00"), "amount_below_floor"),
+        (Decimal("500.01"), Decimal("100.00"), Decimal("500.00"), "amount_above_ceiling"),
+        (Decimal("250.00"), Decimal("100.00"), Decimal("500.00"), "policy_allowed"),
+    ],
+)
+def test_amount_policy_is_exact_and_fail_closed(
+    amount: Decimal, minimum: Decimal, maximum: Decimal, expected_code: str
+) -> None:
+    decision = CentralPolicyEngine().evaluate(
+        PolicyEvaluationContext(
+            user_id="U-amount",
+            username="controller",
+            user_permissions={"finance_core.validate"},
+            step_up_active=True,
+            step_up_enforced=True,
+            amount=amount,
+            minimum_amount=minimum,
+            maximum_amount=maximum,
+        ),
+        required_permission="finance_core.validate",
+    )
+    assert decision.reason_code == expected_code
+    assert decision.allowed is (expected_code == "policy_allowed")
+
+
+def test_region_and_data_classification_scopes_are_deny_by_default() -> None:
+    context = PolicyEvaluationContext(
+        user_id="U-scope",
+        username="analyst",
+        user_permissions={"evidence.read"},
+        region_id="eu",
+        data_classification="restricted",
+        authorized_region_ids=frozenset({"eu"}),
+        authorized_data_classifications=frozenset({"public"}),
+    )
+    denied = CentralPolicyEngine().evaluate(context, required_permission="evidence.read")
+    assert not denied.allowed and denied.reason_code == "data_classification_scope_denied"
+    allowed = CentralPolicyEngine().evaluate(
+        PolicyEvaluationContext(**{**context.__dict__, "authorized_data_classifications": frozenset({"restricted"})}),
+        required_permission="evidence.read",
+    )
+    assert allowed.allowed
+
+
+def test_amount_policy_rejects_non_finite_or_inverted_bounds() -> None:
+    with pytest.raises(ValueError, match="finite Decimal"):
+        PolicyEvaluationContext(user_id="U", username="u", user_permissions=set(), amount=Decimal("NaN"))
+    with pytest.raises(ValueError, match="minimum_amount"):
+        PolicyEvaluationContext(
+            user_id="U",
+            username="u",
+            user_permissions=set(),
+            minimum_amount=Decimal("2"),
+            maximum_amount=Decimal("1"),
+        )
+
+
+def test_expiring_delegation_is_explicit_replayable_and_fail_closed() -> None:
+    expires_at = datetime(2026, 8, 2, 12, 0, tzinfo=UTC)
+    base = {
+        "user_id": "U-delegate",
+        "username": "delegate",
+        "user_permissions": {"close.manage"},
+        "delegation_id": "DEL-001",
+        "delegation_expires_at": expires_at,
+    }
+    engine = CentralPolicyEngine()
+
+    assert engine.evaluate(
+        PolicyEvaluationContext(**base, evaluation_time=datetime(2026, 8, 2, 11, 59, tzinfo=UTC)),
+        required_permission="close.manage",
+    ).allowed
+    expired = engine.evaluate(
+        PolicyEvaluationContext(**base, evaluation_time=expires_at),
+        required_permission="close.manage",
+    )
+    assert not expired.allowed and expired.reason_code == "delegation_expired"
+    missing_time = engine.evaluate(PolicyEvaluationContext(**base), required_permission="close.manage")
+    assert not missing_time.allowed and missing_time.reason_code == "delegation_evaluation_time_missing"
+
+
+def test_delegation_requires_timezone_aware_expiry_and_identifier() -> None:
+    with pytest.raises(ValueError, match="timezone-aware"):
+        PolicyEvaluationContext(
+            user_id="U",
+            username="u",
+            user_permissions={"close.manage"},
+            delegation_id="DEL-001",
+            delegation_expires_at=datetime(2026, 8, 2, 12, 0),
+        )
+    with pytest.raises(ValueError, match="delegation_id"):
+        PolicyEvaluationContext(
+            user_id="U",
+            username="u",
+            user_permissions={"close.manage"},
+            delegation_expires_at=datetime(2026, 8, 2, 12, 0, tzinfo=UTC),
+        )
 
 
 def test_policy_audit_record_is_versioned_and_redacts_actor_and_permissions(

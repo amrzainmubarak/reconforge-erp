@@ -9,8 +9,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import get_local_db, require_any_permission, require_permission
+from reconforge.api.dependencies import (
+    enforce_server_scoped_permission,
+    get_local_db,
+    require_any_permission,
+    require_permission,
+)
 from reconforge.api.errors import APIError
+from reconforge.api.server_identity import request_execution_scope
 from reconforge.api.server_master_data import execute_postgres_master_data, server_master_data_enabled
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
@@ -20,6 +26,11 @@ from reconforge.infrastructure.postgres_master_data import (
 )
 from reconforge.platform.common import PlatformError
 from reconforge.platform.master_data import DEFAULT_LIST_LIMIT, MasterDataService
+from reconforge.utils.currency_registry_governance import (
+    CurrencyRegistryGovernanceError,
+    reconcile_currency_registry,
+)
+from reconforge.utils.money import CurrencyRegistry
 from reconforge.utils.time import utc_now_text
 
 router = APIRouter(prefix="/master-data", tags=["master-data"])
@@ -131,6 +142,19 @@ def _server_workspace(workspace: str) -> None:
             code="server_workspace_unsupported",
             message="The PostgreSQL server master-data boundary is tenant-scoped and does not support workspaces yet.",
         )
+
+
+def _enforce_server_manage(request: Request, *, workspace: str = "default") -> None:
+    """Re-evaluate master-data mutation authority against the live request scope."""
+
+    _server_workspace(workspace)
+    scope = request_execution_scope(request)
+    enforce_server_scoped_permission(
+        request,
+        permission="master_data.manage",
+        tenant_id=scope.tenant_id,
+        workspace_id=scope.workspace_id,
+    )
 
 
 def _server_id(prefix: str, *parts: object) -> str:
@@ -292,6 +316,87 @@ def list_currencies(
     return _list_response("currencies", records, limit=limit, offset=offset)
 
 
+@router.get("/currencies/reconciliation")
+def currency_registry_reconciliation(
+    request: Request,
+    current_user: MasterDataRead,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+    workspace: str = "default",
+) -> dict[str, object]:
+    """Compare tenant/workspace currency references with the installed policy registry.
+
+    This is a read-only evidence operation.  It never changes the process
+    registry, performs currency conversion, or implies a live exchange-rate
+    source.
+    """
+
+    if server_master_data_enabled(request):
+        _server_workspace(workspace)
+
+        def operation(repository: PostgresMasterDataRepository, _tenant: str) -> dict[str, object]:
+            try:
+                records = repository.list_currencies(tenant_id=_tenant)
+                binding = repository.currency_registry_binding(tenant_id=_tenant, workspace=workspace)
+                installed_context = CurrencyRegistry.context()
+                operation_context = repository.currency_registry_context(tenant_id=_tenant, workspace=workspace)
+                return reconcile_currency_registry(
+                    records,
+                    scope=f"tenant:{_tenant}:workspace:{workspace}",
+                    binding=binding,
+                    registry_context=operation_context or installed_context,
+                    installed_registry_context=installed_context,
+                ).to_dict()
+            except CurrencyRegistryGovernanceError as exc:
+                raise PostgresMasterDataValidationError(str(exc)) from exc
+
+        return {"reconciliation": execute_postgres_master_data(request, operation)}
+    try:
+        result = MasterDataService(_local_connection(connection)).currency_registry_reconciliation(
+            workspace=workspace,
+            actor_label=current_user.username,
+        )
+    except (DatabaseError, PlatformError, CurrencyRegistryGovernanceError) as exc:
+        raise _api_error("currency_registry_reconciliation_failed", exc) from exc
+    return {"reconciliation": result}
+
+
+@router.post("/currencies/registry-binding")
+def bind_currency_registry(
+    request: Request,
+    current_user: MasterDataManage,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+    workspace: str = "default",
+) -> dict[str, object]:
+    """Bind one workspace to the installed currency registry snapshot.
+
+    Binding is explicit and auditable.  It never installs a registry or
+    changes the process-wide policy; later reconciliation reports drift if the
+    installed snapshot changes.
+    """
+
+    if server_master_data_enabled(request):
+        _enforce_server_manage(request)
+        record = execute_postgres_master_data(
+            request,
+            lambda repository, _tenant: repository.bind_currency_registry(
+                tenant_id=_tenant,
+                workspace=workspace,
+                actor_id=current_user.id,
+                request_id=str(getattr(request.state, "request_id", "")),
+                metadata={"source": "api"},
+            ),
+        )
+        return {"binding": record, "source": {"kind": "postgresql-master-data", "server_mode": True}}
+    try:
+        record = MasterDataService(_local_connection(connection)).bind_currency_registry(
+            workspace=workspace,
+            actor_label=current_user.username,
+        )
+    except (DatabaseError, PlatformError) as exc:
+        raise _api_error("currency_registry_binding_failed", exc) from exc
+    return {"binding": record}
+
+
 @router.post("/currencies")
 def upsert_currency(
     request: Request,
@@ -302,6 +407,7 @@ def upsert_currency(
     """Create or update one local currency reference."""
 
     if server_master_data_enabled(request):
+        _enforce_server_manage(request)
         record = execute_postgres_master_data(
             request,
             lambda repository, tenant: repository.upsert_currency(
@@ -372,7 +478,7 @@ def upsert_organization(
     """Create or update one local organization reference."""
 
     if server_master_data_enabled(request):
-        _server_workspace(payload.workspace)
+        _enforce_server_manage(request, workspace=payload.workspace)
 
         def operation(repository: PostgresMasterDataRepository, tenant: str) -> dict[str, object]:
             base_currency = payload.base_currency.strip().upper() or None
@@ -466,7 +572,7 @@ def upsert_legal_entity(
     """Create or update one local legal-entity reference."""
 
     if server_master_data_enabled(request):
-        _server_workspace(payload.workspace)
+        _enforce_server_manage(request, workspace=payload.workspace)
 
         def operation(repository: PostgresMasterDataRepository, tenant: str) -> dict[str, object]:
             organization = repository.organization_by_code(
@@ -566,7 +672,7 @@ def upsert_branch(
     """Create or update one local branch reference."""
 
     if server_master_data_enabled(request):
-        _server_workspace(payload.workspace)
+        _enforce_server_manage(request, workspace=payload.workspace)
 
         def operation(repository: PostgresMasterDataRepository, tenant: str) -> dict[str, object]:
             organization = repository.organization_by_code(
@@ -654,7 +760,7 @@ def upsert_period(
     """Create or update one non-overlapping local fiscal period."""
 
     if server_master_data_enabled(request):
-        _server_workspace(payload.workspace)
+        _enforce_server_manage(request, workspace=payload.workspace)
         record = execute_postgres_master_data(
             request,
             lambda repository, tenant: repository.upsert_period(
@@ -697,6 +803,7 @@ def set_period_status(
     """Transition fiscal-period metadata; this does not post or lock ERP transactions."""
 
     if server_master_data_enabled(request):
+        _enforce_server_manage(request)
         record = execute_postgres_master_data(
             request,
             lambda repository, tenant: repository.set_period_status(

@@ -71,6 +71,97 @@ def test_postgres_alembic_assets_are_declared_for_sdist_and_wheel() -> None:
     assert '"alembic/versions" = ["alembic/versions/*.py"]' in project
 
 
+def test_certification_evidence_binding_migration_is_versioned_and_reversible() -> None:
+    migration = (ROOT / "alembic/versions/0082_postgres_certification_evidence.py").read_text(encoding="utf-8")
+    schema = (ROOT / "reconforge/infrastructure/postgres_approvals.py").read_text(encoding="utf-8")
+    assert 'revision = "0082_pg_cert_evidence"' in migration
+    assert 'down_revision = "0081_pg_prof_invoice"' in migration
+    assert "POSTGRES_CERTIFICATION_EVIDENCE_MIGRATION_SQL" in migration
+    assert "ADD COLUMN IF NOT EXISTS evidence_digest" in schema
+    assert "NEW.evidence_digest" in schema
+    assert "refusing to discard certification evidence bindings" in migration
+
+
+def test_reconciliation_entity_scope_migration_is_versioned_and_reversible() -> None:
+    migration = (ROOT / "alembic/versions/0072_postgres_reconciliation_entity_scope.py").read_text(
+        encoding="utf-8"
+    )
+    schema = (ROOT / "reconforge/infrastructure/postgres_reconciliation_entity_scope.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'revision = "0072_pg_recon_entity_scope"' in migration
+    assert 'down_revision = "0071_pg_close_ownchg_links"' in migration
+    assert "POSTGRES_RECONCILIATION_ENTITY_SCOPE_SCHEMA_SQL" in migration
+    assert "legal_entity_id" in schema
+    assert "organization_id" in schema
+    assert "reconciliation_runs_tenant_legal_entity_fkey" in schema
+    assert "reconciliation_runs_tenant_organization_fkey" in schema
+    assert "DROP COLUMN IF EXISTS legal_entity_id" in migration
+    assert "DROP COLUMN IF EXISTS organization_id" in migration
+    assert "refusing to discard reconciliation hierarchy attribution" in migration
+    assert "current_setting('app.legal_entity_id'" in schema
+
+
+def test_outbox_scope_migration_is_versioned_and_reversible() -> None:
+    migration = (ROOT / "alembic/versions/0073_postgres_outbox_scope.py").read_text(encoding="utf-8")
+    schema = (ROOT / "reconforge/infrastructure/postgres_outbox_scope.py").read_text(encoding="utf-8")
+
+    assert 'revision = "0073_pg_outbox_scope"' in migration
+    assert 'down_revision = "0072_pg_recon_entity_scope"' in migration
+    assert "POSTGRES_OUTBOX_SCOPE_SCHEMA_SQL" in migration
+    assert "workspace_id" in schema
+    assert "organization_id" in schema
+    assert "legal_entity_id" in schema
+    assert "idx_outbox_events_scope_pending" in schema
+    assert "DROP COLUMN IF EXISTS {column}" in migration
+    assert 'for column in ("legal_entity_id", "organization_id", "workspace_id")' in migration
+    assert "refusing to discard outbox hierarchy attribution" in migration
+    assert "current_setting('app.legal_entity_id'" in schema
+
+
+def test_outbox_consumer_scope_migration_is_versioned_and_reversible() -> None:
+    migration = (ROOT / "alembic/versions/0074_postgres_outbox_consumer_scope.py").read_text(encoding="utf-8")
+    schema = (ROOT / "reconforge/infrastructure/postgres_outbox_consumer_scope.py").read_text(encoding="utf-8")
+
+    assert 'revision = "0074_pg_outbox_consumer_scope"' in migration
+    assert 'down_revision = "0073_pg_outbox_scope"' in migration
+    assert "POSTGRES_OUTBOX_CONSUMER_SCOPE_SCHEMA_SQL" in migration
+    assert "outbox_consumer_receipts_scope_event_idx" in schema
+    assert "workspace_id" in schema
+    assert "organization_id" in schema
+    assert "legal_entity_id" in schema
+    assert "refusing to discard scoped outbox-consumer receipts" in migration
+    assert "DROP COLUMN IF EXISTS {column}" in migration
+
+
+def test_durable_job_organization_scope_migration_is_versioned_and_reversible() -> None:
+    migration = (ROOT / "alembic/versions/0075_postgres_job_organization_scope.py").read_text(encoding="utf-8")
+    schema = (ROOT / "reconforge/infrastructure/postgres_job_organization_scope.py").read_text(encoding="utf-8")
+
+    assert 'revision = "0075_pg_job_organization_scope"' in migration
+    assert 'down_revision = "0074_pg_outbox_consumer_scope"' in migration
+    assert "POSTGRES_JOB_ORGANIZATION_SCOPE_SCHEMA_SQL" in migration
+    assert "ADD COLUMN IF NOT EXISTS organization_id" in schema
+    assert "app.organization_id" in schema
+    assert "durable_jobs_org_scope_status_idx" in schema
+    assert "DROP COLUMN IF EXISTS organization_id" in migration
+    assert "refusing to discard durable-job organization attribution" in migration
+
+
+def test_durable_job_scheduler_cursor_migration_is_tenant_scoped_and_guarded() -> None:
+    migration = (
+        ROOT / "alembic/versions/0079_postgres_durable_job_scheduler_cursor.py"
+    ).read_text(encoding="utf-8")
+
+    assert 'revision = "0079_pg_job_cursor"' in migration
+    assert 'down_revision = "0078_pg_close_scope"' in migration
+    assert "durable_job_scheduler_cursors" in migration
+    assert "ENABLE ROW LEVEL SECURITY" in migration
+    assert "FORCE ROW LEVEL SECURITY" in migration
+    assert "refuses non-empty scheduler cursor state" in migration
+
+
 def test_postgres_alembic_contract_has_no_repository_credentials() -> None:
     config = (ROOT / "alembic.ini").read_text(encoding="utf-8")
     env = (ROOT / "alembic" / "env.py").read_text(encoding="utf-8")
@@ -373,7 +464,10 @@ def test_alembic_upgrade_command_is_available_when_server_extra_is_installed(
     from alembic import command
     from reconforge.application.operations import MigrationStatus
     from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings
-    from reconforge.infrastructure.postgres_operations import PostgresMigrationStatusProvider
+    from reconforge.infrastructure.postgres_operations import (
+        POSTGRES_MIGRATION_REVISIONS,
+        PostgresMigrationStatusProvider,
+    )
 
     assert alembic is not None and isolated_postgres_migration_dsn
     config = Config(str(ROOT / "alembic.ini"))
@@ -512,9 +606,18 @@ def test_alembic_upgrade_command_is_available_when_server_extra_is_installed(
         assert connection.execute(
             "SELECT to_regclass('reconforge.evidence_retention_assignments')"
         ).fetchone()[0] == "reconforge.evidence_retention_assignments"
+        assert connection.execute("SELECT to_regclass('reconforge.policy_delegations')").fetchone()[0] == (
+            "reconforge.policy_delegations"
+        )
+        assert connection.execute("SELECT to_regclass('reconforge.connector_writeback_intents')").fetchone()[0] == (
+            "reconforge.connector_writeback_intents"
+        )
+        assert connection.execute("SELECT to_regclass('reconforge.outbox_consumer_receipts')").fetchone()[0] == (
+            "reconforge.outbox_consumer_receipts"
+        )
     provider = PostgresMigrationStatusProvider(
         PostgresConnectionFactory(PostgresSettings(dsn=os.environ["RECONFORGE_POSTGRES_DSN"], require_tls=False))
     )
     assert provider("migration-test") == MigrationStatus(
-        "0053_audit_administration_acl", "0053_audit_administration_acl", ()
+        POSTGRES_MIGRATION_REVISIONS[-1], POSTGRES_MIGRATION_REVISIONS[-1], ()
     )

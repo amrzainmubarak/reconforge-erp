@@ -2,6 +2,8 @@ import { CheckCircle2, Diff, FlaskConical, LockKeyhole, RotateCcw, ShieldAlert }
 import { useMemo, useState } from "react";
 
 import type { MessageKey } from "../i18n";
+import type { Locale } from "../types";
+import { formatCount } from "../locale-format";
 import { approveTestedRule, diffRuleSpecs, runRuleTests, type ApprovalResult, type RuleTestResult } from "../ruleStudio";
 
 const baseline = JSON.stringify({
@@ -15,7 +17,7 @@ const baseline = JSON.stringify({
   ],
 }, null, 2);
 
-export function RuleStudio({ translate }: { translate: (key: MessageKey) => string }) {
+export function RuleStudio({ translate, locale = "en" }: { translate: (key: MessageKey) => string; locale?: Locale }) {
   const [version, setVersion] = useState(1);
   const [draft, setDraft] = useState(baseline);
   const [testResult, setTestResult] = useState<RuleTestResult | null>(null);
@@ -55,8 +57,8 @@ export function RuleStudio({ translate }: { translate: (key: MessageKey) => stri
       </section>
 
       <aside className="rule-side">
-        <section className="panel" aria-labelledby="diff-title"><div className="rule-panel-heading"><h2 id="diff-title"><Diff size={17} aria-hidden="true" />{translate("ruleDiff")}</h2><strong>{changes.length}</strong></div>{changes.length ? <ul className="rule-change-list">{changes.slice(0, 20).map((path) => <li key={path}><code>{path}</code></li>)}</ul> : <p className="rule-empty">{translate("noRuleChanges")}</p>}</section>
-        <section className="panel" aria-labelledby="test-title"><div className="rule-panel-heading"><h2 id="test-title"><FlaskConical size={17} aria-hidden="true" />{translate("ruleTests")}</h2>{testResult ? <strong className={testResult.passed ? "rule-pass" : "rule-fail"}>{testResult.passedCount}/{testResult.total}</strong> : null}</div><button className="primary-button rule-action" type="button" disabled={testing || Boolean(approval)} onClick={() => { setTesting(true); setError(""); void runRuleTests(draft).then((result) => setTestResult(result)).catch((caught: unknown) => { setTestResult(null); setError(caught instanceof Error ? caught.message : translate("ruleTestError")); }).finally(() => setTesting(false)); }}><FlaskConical size={16} aria-hidden="true" />{testing ? translate("testing") : translate("runTests")}</button>{testResult?.failures.length ? <p className="mapping-error" role="alert">{testResult.failures.join(", ")}</p> : null}</section>
+        <section className="panel" aria-labelledby="diff-title"><div className="rule-panel-heading"><h2 id="diff-title"><Diff size={17} aria-hidden="true" />{translate("ruleDiff")}</h2><strong>{formatCount(changes.length, locale)}</strong></div>{changes.length ? <ul className="rule-change-list">{changes.slice(0, 20).map((path) => <li key={path}><code>{path}</code></li>)}</ul> : <p className="rule-empty">{translate("noRuleChanges")}</p>}</section>
+        <section className="panel" aria-labelledby="test-title"><div className="rule-panel-heading"><h2 id="test-title"><FlaskConical size={17} aria-hidden="true" />{translate("ruleTests")}</h2>{testResult ? <strong className={testResult.passed ? "rule-pass" : "rule-fail"}>{formatCount(testResult.passedCount, locale)}/{formatCount(testResult.total, locale)}</strong> : null}</div><button className="primary-button rule-action" type="button" disabled={testing || Boolean(approval)} onClick={() => { setTesting(true); setError(""); void runRuleTests(draft).then((result) => setTestResult(result)).catch((caught: unknown) => { setTestResult(null); setError(caught instanceof Error ? caught.message : translate("ruleTestError")); }).finally(() => setTesting(false)); }}><FlaskConical size={16} aria-hidden="true" />{testing ? translate("testing") : translate("runTests")}</button>{testResult?.failures.length ? <p className="mapping-error" role="alert">{testResult.failures.join(", ")}</p> : null}</section>
         <section className="panel" aria-labelledby="approval-title"><h2 id="approval-title">{translate("humanApproval")}</h2><label>{translate("reviewer")}<input value={reviewer} onChange={(event) => setReviewer(event.target.value)} disabled={Boolean(approval)} /></label><label>{translate("approvalReason")}<textarea value={reason} onChange={(event) => setReason(event.target.value)} disabled={Boolean(approval)} /></label><button className="primary-button rule-action" type="button" disabled={Boolean(approval)} onClick={() => { try { if (!testResult) throw new Error("The current rule draft must pass its tests before approval."); setApproval(approveTestedRule({ version, author: "preparer", reviewer, reason, currentDigest: testResult.digest, testResult })); setError(""); } catch (caught) { setError(caught instanceof Error ? caught.message : translate("ruleApprovalError")); } }}><CheckCircle2 size={16} aria-hidden="true" />{translate("approveDraft")}</button>{approval ? <p className="rule-approved" role="status"><CheckCircle2 size={16} aria-hidden="true" />{translate("approvedBy")} {approval.reviewer}</p> : null}</section>
       </aside>
     </div>

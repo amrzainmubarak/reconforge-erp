@@ -1,0 +1,3 @@
+completion_id,order_id,quantity,actual_cost
+COMP-001,MFG-001,100,200.00
+COMP-002,MFG-002,45,160.00

@@ -1,0 +1,54 @@
+{
+  "schema": "reconforge-airgap-install-recovery-upgrade-drill-report-v1",
+  "executed_at": "2026-08-05",
+  "application_version": "0.7.1",
+  "runtime": {
+    "container_image": "python:3.14.1-slim",
+    "container_image_digest": "sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e",
+    "network_mode": "none",
+    "root_filesystem": "read-only",
+    "bundle_mount": "read-only",
+    "writable_state": "bounded-tmpfs-only"
+  },
+  "installation": {
+    "application_version": "0.7.1",
+    "entry_count": 68,
+    "total_bytes": 100386256,
+    "bundle_manifest_sha256": "4be42566f0caba894140275186e9c679c6fbcc7c589c6c71cc8e33cafae94e99",
+    "offline_install": true,
+    "doctor_exit_zero": true,
+    "cleanup_complete": true
+  },
+  "identity_recovery": {
+    "local_users_restored": 2,
+    "admin_permission_restored": true,
+    "encrypted_backup": "AES-256-GCM",
+    "wrong_key_rejected_atomically": true,
+    "old_sessions_restored": 0,
+    "audit_chain_valid": true,
+    "source_schema_version": 32,
+    "restored_schema_version": 32,
+    "operator_key_fingerprint": "ca721942f2d56ca2"
+  },
+  "upgrade_rollback": {
+    "from_version": "0.7.0",
+    "target_version": "0.7.1",
+    "network_inputs": 0,
+    "cutover_verified": true,
+    "rollback_exact": true,
+    "source_wheel_sha256": "456fffffc78b42a3b256bf5f179306a4e97d0109612f74e824d081d8432b0cb2",
+    "target_wheel_sha256": "b9e7680e2c8899e40b43c3be1f62414cb99ec5a7f5fa8431269a4218d0ab3b6e",
+    "target_content_sha256": "f19dcaaeb556e77263ace4067759a590515c436bd5b3d82154645fe6b399b01b",
+    "rollback_sha256": "e5610c22544c0b8d76c4ed90ceb16cd275865128ceaa00dfcb3e4f723beb6b70"
+  },
+  "scope_status": "verified-no-network-install-identity-recovery-and-exact-rollback",
+  "limitations": [
+    "connected-bundle-assembly",
+    "single-linux-runtime-single-run",
+    "no-signature-trust",
+    "no-physical-airgap-custody",
+    "no-hardware-backed-key-custody",
+    "no-oci-offline-verification",
+    "no-production-readiness-claim"
+  ]
+}

@@ -1,0 +1,5 @@
+risk_model_id: professional-invoice-payment-risk-v1
+weights:
+  invoice_without_payment: 78
+  duplicate_payment_reference: 92
+  unapplied_payment: 64

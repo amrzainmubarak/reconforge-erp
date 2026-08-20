@@ -1,5 +1,14 @@
 # Quality Baseline
 
+## Current post-E-400 verification (2026-08-05)
+
+The current head has a full local post-IAM gate: `uv run pytest -q --tb=short`
+exits 0 in 318.9 seconds; Ruff, Mypy (447 source files), Bandit, pip-audit,
+`python -m build --no-isolation`, and `git diff --check` also pass. Existing
+warnings and declared optional-service skips remain visible. This current local
+gate does not replace hosted Python/web/container execution, external-provider
+contracts, independent HA/DR, or production-release evidence.
+
 Measured through 2026-07-27 on the dirty snapshot in `BASELINE.md` and `STATE.md`.
 
 | Gate | Initial baseline | Post-remediation result |
@@ -45,3 +54,144 @@ Measured through 2026-07-27 on the dirty snapshot in `BASELINE.md` and `STATE.md
 ## Release consequence
 
 The applicable local Python and web quality gates are now green, but the worktree must not be called release-ready. Same-machine artifact parity, deterministic clean-HEAD package/source SBOMs, and one supported local locked profile are bounded evidence only. Docker/OCI inventory and reproducibility, live server services, hosted Python 3.11/3.12 execution, clean-tree hosted artifacts, signatures/provenance, immutable publication, npm SRI completeness, and rollback drills remain outside this local proof.
+
+## E-658 current regression note (2026-08-10)
+
+After the spawned-process PostgreSQL scheduler gate, the full local
+`uv run --no-sync pytest -q --tb=short -ra` invocation reached 100% and exited
+0 with the repository's declared optional-service/platform skips and existing
+financial-input/Starlette warnings. Full-tree Ruff, Mypy (517 source files),
+Bandit, pip-audit, package build, and `git diff --check` also exited 0. The
+focused live PostgreSQL gate passed in three repetitions against the local
+PostgreSQL 16 service. This remains local evidence only; hosted execution,
+cross-host fairness, queue HA/DR, and release approval remain open.
+
+The follow-on E-659 crash/checkpoint gate also passed three local repetitions;
+its abrupt worker exit, generation-2 takeover, exact effect set, and lease
+event ordering are recorded separately and do not widen the quality baseline
+into distributed HA/DR or production recovery assurance.
+
+## E-660 write-back crash-window note (2026-08-10)
+
+The focused write-back network suite now includes a real spawned-process
+failure injection after synthetic provider acceptance and before acknowledgement
+persistence. Recovery observes the durable `DISPATCHED` state, performs one
+status lookup, and persists the bound acknowledgement without a second POST.
+Ruff passes for the changed test. This is one-host SQLite plus injected-provider
+evidence; vendor interoperability, distributed idempotency, HA/DR, and
+production write-back remain outside the local quality baseline.
+
+## E-661 Redis reconnect note (2026-08-10)
+
+The Redis foundation gate passes 13/13 against the disposable local
+`redis:7-alpine` service when `RECONFORGE_TEST_REDIS_URL` is set. It includes a
+real pool disconnect followed by successful read recovery and unit failure
+injection proving that only reads reconnect once; ambiguous mutations are not
+replayed. Sentinel/Cluster failover, cross-host durability, and production
+availability remain outside this local baseline.
+
+## E-662 MinIO retention note (2026-08-10)
+
+The real boto3-backed object-store drill passed all five invariants against the
+local digest-pinned MinIO image and retained a credential-free report whose
+canonical digest is recorded in `EVIDENCE.md`. The current-report contract now
+checks three dated reports. Replication, KMS, cross-site durability, object
+store HA/DR, and production availability remain outside this baseline.
+
+## E-663 CLI compatibility note (2026-08-10)
+
+The full local suite first exposed one narrow-TTY error-message folding failure
+in the ownership-change CLI. The shared safe error printer now uses
+`soft_wrap=True`; the focused regression and complete local pytest rerun exit 0.
+This changes only CLI presentation and preserves fail-closed validation, with
+hosted, provider, HA/DR, and production evidence still outside the baseline.
+
+## E-664 PostgreSQL session-fault note (2026-08-10)
+
+The live durable-job gate now covers an independent PostgreSQL backend
+termination after a committed checkpoint, not only abrupt worker exit. Three
+local PostgreSQL 16.14 repetitions prove generation-2 takeover, exact effect
+set, ordered lease events, and zero residue. Host/site independence, automatic
+failover, queue HA, RPO/RTO, and production scheduling remain outside this
+baseline.
+
+## E-665 canonical output-order note (2026-08-10)
+
+The stock/GL reconciliation path now canonicalizes result-frame ordering by
+stable identity while preserving source row/position as lineage metadata. The
+focused hardening/input-policy/property suites pass, including an explicit
+permutation regression for matched, unmatched, invalid, and aggregate
+exception outputs. This is local artifact determinism only; hosted parity,
+provider, posting, HA/DR, and production evidence remain outside the baseline.
+
+## E-666 PostgreSQL HA/DR refresh note (2026-08-10)
+
+The current-tree repeated PostgreSQL HA/DR verifier passed three fresh Docker
+17.10 primary/synchronous-standby cycles on Docker Engine 29.6.2. Every run
+had zero acknowledged transaction loss, final sequence 4, cleanup success,
+failover RTO 11.117–11.321 seconds, and failback RTO 0.931–1.082 seconds. The
+schema- and digest-bound report is retained in `docs/execution/` and packaged.
+This refresh remains one-host/manual-controller evidence; quorum/witness,
+automatic failover, host/site loss, production SLOs, and hosted E-461 backup
+evidence remain outside the baseline.
+
+## E-667 strict management-pack ingress note (2026-08-10)
+
+Management-pack amount, risk, WIP, and close-completion helpers now select the
+strict exact financial-input policy explicitly. The focused report and ingress
+tests reject binary-float financial values and preserve malformed optional
+values as unquantified. This narrows one compatibility omission only; other
+named legacy callers and hosted/production evidence remain outside the local
+quality baseline.
+
+## E-668 local operator and Studio web validation note (2026-08-10)
+
+The current tree passes doctor, sample-data validation, and a fresh demo run;
+the sample fixture retains ten intentional warnings and zero errors. Web
+typecheck, 13 Vitest files/70 tests, production build, and Playwright's 16
+passed accessibility/UI checks pass, with five declared live-browser/HTTPS
+skips. Demo output recovery remains fail-closed for ambiguous existing
+directories; hosted deployment and production evidence remain outside this
+baseline.
+
+## E-670 Python 3.12 dependency gate note (2026-08-10)
+
+The seven modules named by the historical CI import failures pass in an
+isolated Python 3.12 environment after the locked all-extra installation:
+48 passed, one declared live-PostgreSQL skip, and no collection errors. This
+confirms the local dependency contract; hosted CI and native PostgreSQL backup
+  evidence remain external.
+
+## E-672 local PostgreSQL failure triage note (2026-08-10)
+
+Local Docker PostgreSQL metrics and Alembic upgrade/downgrade tests pass 11/11.
+The native backup path remains explicitly skipped because Windows has no
+`pg_config`/`pg_dump`/`pg_restore` toolchain; hosted Linux E-461 is therefore
+still an open release gate.
+
+## E-673 local PostgreSQL server-boundary matrix note (2026-08-10)
+
+The disposable PostgreSQL 16 matrix reached Alembic head with a
+non-privileged RLS role and passed selected core, sector API, and durable-job
+backpressure/10K suites. The database was removed afterward. Native backup
+tooling and hosted/independent recovery evidence remain outside this baseline.
+
+## E-671 Python 3.12 full regression note (2026-08-10)
+
+The isolated locked all-extra Python 3.12 run reaches 100% and exits 0; the
+current collection contains 2,877 tests. Capability skips and existing
+framework/legacy-input warnings remain explicit. Hosted CI, native PostgreSQL
+backup, independent HA/DR, live providers, and release approval remain outside
+the local baseline.
+
+## E-674 PostgreSQL repeated soak note (2026-08-10)
+
+The bounded repeated PostgreSQL profile completes three isolated tenant-lane
+iterations with stable effect digests, zero duplicate effects, and zero active
+queue residue. This is one disposable host and synthetic workload evidence;
+distributed soak, queue HA, capacity, RPO/RTO, and production scheduling remain
+outside the quality baseline.
+
+The post-slice isolated Python 3.12 all-extra regression, Ruff, Mypy, Bandit,
+package build, and whitespace checks pass; the complete-history Gitleaks scan
+also remains clean.

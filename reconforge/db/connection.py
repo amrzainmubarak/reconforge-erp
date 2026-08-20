@@ -8,7 +8,10 @@ from pathlib import Path
 
 _ALLOWED_DB_SUFFIXES = {".db", ".sqlite", ".sqlite3"}
 _WINDOWS_DRIVE_PREFIX = re.compile(r"^[A-Za-z]:")
-SQLITE_BUSY_TIMEOUT_MS = 5_000
+# Durable partition workers may briefly contend on BEGIN IMMEDIATE.  A
+# bounded one-minute wait prevents transient lock storms from becoming lost
+# work while still surfacing a genuinely wedged local database.
+SQLITE_BUSY_TIMEOUT_MS = 60_000
 
 
 class DatabaseError(ValueError):
@@ -53,6 +56,7 @@ def connect(
     *,
     create_parent: bool = False,
     require_exists: bool = False,
+    busy_timeout_ms: int | None = None,
 ) -> sqlite3.Connection:
     """Open a SQLite connection with row dictionaries and foreign keys enabled."""
 
@@ -63,10 +67,13 @@ def connect(
         resolved.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        connection = sqlite3.connect(resolved, timeout=SQLITE_BUSY_TIMEOUT_MS / 1_000)
+        selected_busy_timeout = SQLITE_BUSY_TIMEOUT_MS if busy_timeout_ms is None else int(busy_timeout_ms)
+        if selected_busy_timeout <= 0:
+            raise DatabaseError("SQLite busy timeout must be positive.")
+        connection = sqlite3.connect(resolved, timeout=selected_busy_timeout / 1_000)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
-        connection.execute(f"PRAGMA busy_timeout = {SQLITE_BUSY_TIMEOUT_MS}")
+        connection.execute(f"PRAGMA busy_timeout = {selected_busy_timeout}")
         connection.execute("PRAGMA journal_mode = WAL")
         connection.execute("PRAGMA synchronous = NORMAL")
     except sqlite3.Error as exc:

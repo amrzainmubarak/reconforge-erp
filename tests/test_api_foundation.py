@@ -8,12 +8,33 @@ from typer.testing import CliRunner
 
 from reconforge import __version__
 from reconforge.api import create_api_app
+from reconforge.auth.policy import PolicyDecision, PolicyEvaluationContext
+from reconforge.auth.policy_cache import PolicyDecisionCache
 from reconforge.cli import app
 from reconforge.db import run_migrations
 from reconforge.db.migrations import MIGRATIONS
+from reconforge.infrastructure.postgres import PostgresPooledConnectionFactory
+from reconforge.infrastructure.redis import RedisPolicyCacheVersionStore
 from reconforge.platform.common import is_trusted_local_mode
 
 runner = CliRunner()
+
+
+def test_server_profile_uses_a_bounded_postgres_pool_by_default(tmp_path: Path) -> None:
+    api = create_api_app(
+        tmp_path / "server.db",
+        tenant_db_root=tmp_path / "tenants",
+        postgres_dsn="postgresql://identity.test/reconforge",
+        postgres_pool_size=2,
+        postgres_pool_acquire_timeout_seconds=0.25,
+    )
+
+    factory = api.state.postgres_identity_factory
+    assert isinstance(factory, PostgresPooledConnectionFactory)
+    assert factory.max_size == 2
+    assert factory.acquire_timeout_seconds == 0.25
+    assert any(getattr(handler, "__self__", None) is factory for handler in api.router.on_shutdown)
+    factory.close()
 
 
 def test_api_health_and_version_work_without_auth(tmp_path: Path) -> None:
@@ -68,6 +89,59 @@ def test_api_request_context_rejects_trusted_local_mode(tmp_path: Path) -> None:
     assert response.status_code == 200
     assert response.json() == {"trusted_local": False}
     assert is_trusted_local_mode() is True
+
+
+def test_policy_cache_is_explicit_and_mutations_invalidate_it(tmp_path: Path) -> None:
+    db_path = tmp_path / "policy-cache.db"
+    run_migrations(db_path)
+    default_api = create_api_app(db_path)
+    assert default_api.state.policy_decision_cache is None
+
+    api = create_api_app(db_path, policy_cache_enabled=True)
+    cache = api.state.policy_decision_cache
+    assert isinstance(cache, PolicyDecisionCache)
+    context = PolicyEvaluationContext(
+        user_id="operator",
+        username="operator",
+        user_permissions={"reports.read"},
+        tenant_id="tenant-a",
+        workspace_id="workspace-a",
+        authorized_tenant_ids=frozenset({"tenant-a"}),
+        authorized_workspace_ids=frozenset({"workspace-a"}),
+    )
+    cache.evaluate(context, required_permission="reports.read", evaluator=_AllowedEvaluator())
+    assert len(cache) == 1
+    response = TestClient(api).post("/api/v1/auth/login", json={})
+    assert response.status_code in {400, 401, 422}
+    assert len(cache) == 0
+
+
+def test_policy_cache_uses_shared_redis_generation_only_when_explicitly_configured(tmp_path: Path) -> None:
+    db_path = tmp_path / "policy-cache-redis.db"
+    run_migrations(db_path)
+    local_api = create_api_app(db_path, policy_cache_enabled=True)
+    assert local_api.state.policy_cache_version_store is None
+    server_api = create_api_app(
+        db_path,
+        policy_cache_enabled=True,
+        redis_url="redis://localhost:6379/0",
+        redis_require_tls=False,
+    )
+    assert isinstance(server_api.state.policy_cache_version_store, RedisPolicyCacheVersionStore)
+    assert isinstance(server_api.state.policy_decision_cache, PolicyDecisionCache)
+    redis_factory = server_api.state.redis_store.connection_factory
+    assert any(getattr(handler, "__self__", None) is redis_factory for handler in server_api.router.on_shutdown)
+    redis_factory.close()
+
+
+class _AllowedEvaluator:
+    def evaluate(self, context: PolicyEvaluationContext, **_: object) -> PolicyDecision:
+        del context
+        return PolicyDecision(True, "allowed", granted_permission="reports.read")
+
+    def evaluate_any(self, context: PolicyEvaluationContext, **_: object) -> PolicyDecision:
+        del context
+        return PolicyDecision(True, "allowed", granted_permission="reports.read")
 
 
 def test_api_serve_missing_db_fails_without_starting_server(tmp_path: Path) -> None:

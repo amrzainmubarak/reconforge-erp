@@ -7,7 +7,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from reconforge.domain.jobs import (
+    SHA256_PATTERN,
     DurableJob,
+    DurableJobBackpressureError,
+    DurableJobQueueSnapshot,
+    DurableJobSchedulerCursorConflictError,
     JobLease,
     JobOutputManifest,
     JobPartitionEffect,
@@ -33,6 +37,7 @@ _JOB_COLUMNS = (
     "idempotency_key",
     "tenant_id",
     "workspace_id",
+    "organization_id",
     "entity_id",
     "input_digest",
     "config_digest",
@@ -75,6 +80,7 @@ def _job_from_row(row: sqlite3.Row) -> DurableJob:
         idempotency_key=str(_row_value(row, "idempotency_key")),
         tenant_id=str(_row_value(row, "tenant_id")),
         workspace_id=str(_row_value(row, "workspace_id")),
+        organization_id=str(_row_value(row, "organization_id") or ""),
         entity_id=str(_row_value(row, "entity_id")),
         input_digest=str(_row_value(row, "input_digest")),
         config_digest=str(_row_value(row, "config_digest")),
@@ -111,6 +117,7 @@ def _job_values(job: DurableJob) -> tuple[object, ...]:
         job.idempotency_key,
         job.tenant_id,
         job.workspace_id,
+        job.organization_id,
         job.entity_id,
         job.input_digest,
         job.config_digest,
@@ -137,6 +144,7 @@ def _same_submission(left: DurableJob, right: DurableJob) -> bool:
         "idempotency_key",
         "tenant_id",
         "workspace_id",
+        "organization_id",
         "entity_id",
         "input_digest",
         "config_digest",
@@ -160,6 +168,7 @@ class SQLiteDurableJobRepository:
             "durable_job_leases",
             "durable_job_lease_events",
             "durable_job_partition_effects",
+            "durable_job_scheduler_cursors",
         }
         tables = {
             str(row["name"])
@@ -172,6 +181,76 @@ class SQLiteDurableJobRepository:
         if self.connection.in_transaction:
             raise SQLiteJobRepositoryError("Durable-job repository requires an unambiguous transaction boundary.")
         self.connection.execute("BEGIN IMMEDIATE")
+
+    def reserve_round_robin_lane(
+        self,
+        *,
+        tenant_id: str,
+        scheduler_key: str,
+        lane_digest: str,
+        lane_count: int,
+        occurred_at: str,
+    ) -> int:
+        """Atomically reserve the next lane for all scheduler processes sharing a key."""
+
+        if not tenant_id.strip() or not scheduler_key.strip():
+            raise SQLiteJobRepositoryError("scheduler cursor scope is incomplete")
+        if not isinstance(lane_count, int) or isinstance(lane_count, bool) or lane_count < 1:
+            raise ValueError("lane_count must be a positive integer")
+        if SHA256_PATTERN.fullmatch(lane_digest) is None:
+            raise ValueError("lane_digest must be a SHA-256 hex digest")
+        self._begin()
+        try:
+            row = self.connection.execute(
+                """
+                SELECT lane_digest, lane_count, next_index, version
+                FROM durable_job_scheduler_cursors
+                WHERE tenant_id = ? AND scheduler_key = ?
+                """,
+                (tenant_id, scheduler_key),
+            ).fetchone()
+            if row is None:
+                selected = 0
+                self.connection.execute(
+                    """
+                    INSERT INTO durable_job_scheduler_cursors
+                        (tenant_id, scheduler_key, lane_digest, lane_count, next_index, version, updated_at)
+                    VALUES (?, ?, ?, ?, ?, 1, ?)
+                    """,
+                    (tenant_id, scheduler_key, lane_digest, lane_count, (selected + 1) % lane_count, occurred_at),
+                )
+            else:
+                if str(row["lane_digest"]) != lane_digest or int(row["lane_count"]) != lane_count:
+                    raise DurableJobSchedulerCursorConflictError("scheduler key is bound to a different lane contract")
+                selected = int(row["next_index"])
+                version = int(row["version"])
+                self.connection.execute(
+                    """
+                    UPDATE durable_job_scheduler_cursors
+                    SET next_index = ?, version = ?, updated_at = ?
+                    WHERE tenant_id = ? AND scheduler_key = ? AND version = ?
+                    """,
+                    (
+                        (selected + 1) % lane_count,
+                        version + 1,
+                        occurred_at,
+                        tenant_id,
+                        scheduler_key,
+                        version,
+                    ),
+                )
+                if self.connection.execute("SELECT changes()").fetchone()[0] != 1:
+                    raise DurableJobSchedulerCursorConflictError(
+                        "scheduler cursor changed before reservation could commit"
+                    )
+            self.connection.commit()
+            return selected
+        except (DurableJobSchedulerCursorConflictError, SQLiteJobRepositoryError):
+            self.connection.rollback()
+            raise
+        except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
+            raise SQLiteJobRepositoryError("Unable to reserve durable-job scheduler lane.") from exc
 
     def create_or_get(self, job: DurableJob, *, actor_id: str) -> tuple[DurableJob, bool]:
         """Create a queued job or replay the exact scoped idempotent submission."""
@@ -226,12 +305,166 @@ class SQLiteDurableJobRepository:
             self.connection.rollback()
             raise SQLiteJobRepositoryError("Unable to submit durable job.") from exc
 
+    def create_or_get_bounded(
+        self,
+        job: DurableJob,
+        *,
+        actor_id: str,
+        max_queued_jobs: int,
+    ) -> tuple[DurableJob, bool]:
+        """Submit atomically while bounding queued work in one execution lane.
+
+        The lane is `(tenant_id, organization_id, workspace_id, entity_id)`. SQLite's
+        `BEGIN IMMEDIATE` serializes competing writers, so the count and
+        insert cannot pass the cap independently.
+        """
+
+        if isinstance(max_queued_jobs, bool) or not isinstance(max_queued_jobs, int) or max_queued_jobs < 1:
+            raise ValueError("max_queued_jobs must be a positive integer")
+        if job.status is not JobStatus.QUEUED or job.version != 1:
+            raise SQLiteJobRepositoryError("Only a new queued job may be submitted.")
+        creation_event = JobTransition(
+            job_id=job.id,
+            job_version=1,
+            from_status=JobStatus.QUEUED,
+            to_status=JobStatus.QUEUED,
+            actor_id=actor_id,
+            occurred_at=job.created_at,
+            reason_code="CREATED",
+        )
+        self._begin()
+        try:
+            existing_row = self.connection.execute(
+                "SELECT * FROM durable_jobs WHERE tenant_id = ? AND idempotency_scope = ? AND idempotency_key = ?",
+                (job.tenant_id, job.idempotency_scope, job.idempotency_key),
+            ).fetchone()
+            if existing_row is not None:
+                existing = _decode_job(existing_row)
+                if not _same_submission(existing, job):
+                    raise SQLiteJobConflictError("Idempotency key is already bound to a different job submission.")
+                self.connection.commit()
+                return existing, False
+
+            queued = int(
+                self.connection.execute(
+                    """
+                    SELECT COUNT(*) FROM durable_jobs
+                    WHERE tenant_id = ? AND organization_id = ? AND workspace_id = ? AND entity_id = ?
+                      AND status IN ('queued', 'retrying')
+                    """,
+                    (job.tenant_id, job.organization_id, job.workspace_id, job.entity_id),
+                ).fetchone()[0]
+            )
+            if queued >= max_queued_jobs:
+                raise DurableJobBackpressureError(
+                    "Durable-job execution lane queue capacity has been reached."
+                )
+
+            placeholders = ", ".join("?" for _ in _JOB_COLUMNS)
+            self.connection.execute(
+                # SQL identifiers come only from the immutable module-level _JOB_COLUMNS tuple.
+                f"INSERT INTO durable_jobs ({', '.join(_JOB_COLUMNS)}) VALUES ({placeholders})",  # nosec B608
+                _job_values(job),
+            )
+            self.connection.execute(
+                """
+                INSERT INTO durable_job_transitions
+                    (job_id, job_version, from_status, to_status, actor_id, occurred_at, reason_code)
+                VALUES (?, 1, '', 'queued', ?, ?, 'CREATED')
+                """,
+                (job.id, creation_event.actor_id, creation_event.occurred_at),
+            )
+            self.connection.commit()
+            return job, True
+        except DurableJobBackpressureError:
+            self.connection.rollback()
+            raise
+        except SQLiteJobConflictError:
+            self.connection.rollback()
+            raise
+        except sqlite3.IntegrityError as exc:
+            self.connection.rollback()
+            raise SQLiteJobConflictError("Durable job identity or idempotency scope conflicts.") from exc
+        except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
+            raise SQLiteJobRepositoryError("Unable to submit bounded durable job.") from exc
+
     def get(self, *, tenant_id: str, job_id: str) -> DurableJob | None:
         row = self.connection.execute(
             "SELECT * FROM durable_jobs WHERE tenant_id = ? AND id = ?",
             (tenant_id, job_id),
         ).fetchone()
         return None if row is None else _decode_job(row)
+
+    def queue_snapshot(
+        self,
+        *,
+        tenant_id: str,
+        workspace_id: str | None = None,
+        organization_id: str | None = None,
+        entity_id: str | None = None,
+    ) -> DurableJobQueueSnapshot:
+        """Read one tenant/lane health projection without payloads."""
+
+        if not isinstance(tenant_id, str) or not tenant_id.strip():
+            raise SQLiteJobRepositoryError("queue snapshot tenant scope is required")
+        conditions = ["jobs.tenant_id = ?"]
+        parameters: list[object] = [tenant_id]
+        for column, value in (
+            ("workspace_id", workspace_id),
+            ("organization_id", organization_id),
+            ("entity_id", entity_id),
+        ):
+            if value is not None:
+                if not isinstance(value, str) or not value.strip():
+                    raise SQLiteJobRepositoryError(f"queue snapshot {column} scope is invalid")
+                conditions.append(f"jobs.{column} = ?")
+                parameters.append(value)
+        where = " AND ".join(conditions)
+        row = self.connection.execute(
+            f"""
+            WITH scoped_jobs AS (
+                SELECT jobs.id, jobs.status, jobs.created_at, jobs.started_at
+                FROM durable_jobs AS jobs
+                WHERE {where}
+            ), status_counts AS (
+                SELECT
+                    COALESCE(SUM(CASE WHEN status = 'queued' THEN 1 ELSE 0 END), 0) AS queued_count,
+                    COALESCE(SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END), 0) AS running_count,
+                    COALESCE(SUM(CASE WHEN status = 'paused' THEN 1 ELSE 0 END), 0) AS paused_count,
+                    COALESCE(SUM(CASE WHEN status = 'retrying' THEN 1 ELSE 0 END), 0) AS retrying_count,
+                    COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0) AS failed_count,
+                    COALESCE(SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END), 0) AS completed_count,
+                    COALESCE(SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END), 0) AS cancelled_count,
+                    MIN(CASE WHEN status IN ('queued', 'retrying') THEN created_at ELSE NULL END) AS oldest_queued_at,
+                    MIN(CASE WHEN status = 'running' THEN started_at ELSE NULL END) AS oldest_running_at
+                FROM scoped_jobs
+            ), lease_counts AS (
+                SELECT COUNT(*) AS leased_count
+                FROM durable_job_leases AS leases
+                JOIN scoped_jobs ON scoped_jobs.id = leases.job_id
+            )
+            SELECT status_counts.*, lease_counts.leased_count
+            FROM status_counts CROSS JOIN lease_counts
+            """,  # nosec B608 - predicates use fixed identifiers only
+            parameters,
+        ).fetchone()
+        return DurableJobQueueSnapshot(
+            tenant_id=tenant_id,
+            workspace_id=workspace_id or "",
+            organization_id=organization_id or "",
+            entity_id=entity_id or "",
+            queued_count=int(row["queued_count"]),
+            running_count=int(row["running_count"]),
+            paused_count=int(row["paused_count"]),
+            retrying_count=int(row["retrying_count"]),
+            failed_count=int(row["failed_count"]),
+            completed_count=int(row["completed_count"]),
+            cancelled_count=int(row["cancelled_count"]),
+            leased_count=int(row["leased_count"]),
+            oldest_queued_at=str(row["oldest_queued_at"] or ""),
+            oldest_running_at=str(row["oldest_running_at"] or ""),
+        )
 
     def persist_transition(
         self,
@@ -348,6 +581,9 @@ class SQLiteDurableJobRepository:
         self,
         *,
         tenant_id: str,
+        workspace_id: str | None = None,
+        organization_id: str | None = None,
+        entity_id: str | None = None,
         worker_id: str,
         occurred_at: str,
         lease_expires_at: str,
@@ -368,6 +604,9 @@ class SQLiteDurableJobRepository:
                 FROM durable_jobs jobs
                 LEFT JOIN durable_job_leases leases ON leases.job_id = jobs.id
                 WHERE jobs.tenant_id = ?
+                  AND (? IS NULL OR jobs.workspace_id = ?)
+                  AND (? IS NULL OR jobs.organization_id = ?)
+                  AND (? IS NULL OR jobs.entity_id = ?)
                   AND (
                     jobs.status = 'queued'
                     OR (jobs.status = 'retrying' AND (leases.job_id IS NULL OR leases.expires_at <= ?))
@@ -379,7 +618,17 @@ class SQLiteDurableJobRepository:
                     jobs.id
                 LIMIT 1
                 """,
-                (tenant_id, occurred_at, occurred_at),
+                (
+                    tenant_id,
+                    workspace_id,
+                    workspace_id,
+                    organization_id,
+                    organization_id,
+                    entity_id,
+                    entity_id,
+                    occurred_at,
+                    occurred_at,
+                ),
             ).fetchone()
             if row is None:
                 self.connection.commit()

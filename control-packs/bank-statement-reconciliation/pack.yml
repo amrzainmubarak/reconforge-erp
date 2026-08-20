@@ -1,0 +1,6 @@
+pack_id: bank-statement-reconciliation
+name: Bank Statement Reconciliation Controls
+version: 1.0.0
+description: Bounded controls for local statement and ledger exports.
+owner: ReconForge ERP Maintainers
+tags: [banking, professional, statement, ledger, evidence]

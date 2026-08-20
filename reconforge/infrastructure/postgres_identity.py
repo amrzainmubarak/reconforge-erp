@@ -350,6 +350,24 @@ class PostgresIdentityRepository:
         row = cursor.fetchone()
         return _user_from_row(row).user if row is not None else None
 
+    def get_user_by_id(self, *, tenant_id: str, user_id: str) -> LocalUser | None:
+        """Return one active-identity projection by immutable user id."""
+
+        tenant = _tenant_id(tenant_id)
+        identifier = _scope_id(user_id, "user_id")
+        cursor = self.connection.execute(
+            """
+            SELECT id, username, display_name, email, password_hash, password_salt,
+                   password_iterations, password_algorithm, disabled, created_at,
+                   password_changed_at, updated_at, failed_login_count, locked_until, tenant_id
+            FROM reconforge.identity_users
+            WHERE tenant_id = %s AND id = %s
+            """,
+            (tenant, identifier),
+        )
+        row = cursor.fetchone()
+        return _user_from_row(row).user if row is not None else None
+
     def authenticate_user(self, *, tenant_id: str, username: str, password: str) -> LocalUser | None:
         tenant = _tenant_id(tenant_id)
         normalized_username = _username(username)

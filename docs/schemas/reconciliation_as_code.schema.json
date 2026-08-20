@@ -277,7 +277,13 @@
             "value_difference",
             "one_to_many",
             "many_to_one",
-            "many_to_many"
+            "many_to_many",
+            "partial_settlement",
+            "portfolio",
+            "duplicate_detection",
+            "carry_forward",
+            "sequence_window",
+            "reversal_pairing"
           ]
         },
         "strategy_id": {
@@ -288,6 +294,9 @@
           "enum": [
             "indexed-composite-one-to-one",
             "bounded-grouped-subset-sum",
+            "bounded-duplicate-detection",
+            "bounded-carry-forward-fifo",
+            "bounded-reversal-pairing",
             null
           ]
         },
@@ -299,7 +308,13 @@
             "one-to-one",
             "one-to-many",
             "many-to-one",
-            "many-to-many"
+            "many-to-many",
+            "partial-settlement",
+            "portfolio",
+            "duplicate-detection",
+            "carry-forward",
+            "sequence-window",
+            "reversal-pairing"
           ]
         },
         "amount_tolerance": {
@@ -532,6 +547,10 @@
           "minimum": 0
         },
         "ambiguous_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "duplicate_group_count": {
           "type": "integer",
           "minimum": 0
         },

@@ -3,10 +3,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from hashlib import sha256
 from typing import Protocol
 
+from reconforge.auth.policy import (
+    CentralPolicyEngine,
+    PolicyDecision,
+    PolicyEvaluationContext,
+    audit_policy_decision,
+)
 from reconforge.domain.jobs import (
     DurableJob,
+    DurableJobBackpressureError,
+    DurableJobQueueSnapshot,
+    DurableJobSchedulerCursorConflictError,
     JobLease,
     JobOutputManifest,
     JobPartitionEffect,
@@ -27,12 +37,33 @@ class DurableJobRepositoryProtocol(Protocol):
 
     def get(self, *, tenant_id: str, job_id: str) -> DurableJob | None: ...
 
+    def queue_snapshot(
+        self,
+        *,
+        tenant_id: str,
+        workspace_id: str | None = None,
+        organization_id: str | None = None,
+        entity_id: str | None = None,
+    ) -> DurableJobQueueSnapshot: ...
+
     def persist_transition(
         self,
         previous: DurableJob,
         changed: DurableJob,
         event: JobTransition,
     ) -> DurableJob: ...
+
+
+class BoundedDurableJobRepositoryProtocol(DurableJobRepositoryProtocol, Protocol):
+    """Storage contract for an atomic execution-lane queue cap."""
+
+    def create_or_get_bounded(
+        self,
+        job: DurableJob,
+        *,
+        actor_id: str,
+        max_queued_jobs: int,
+    ) -> tuple[DurableJob, bool]: ...
 
 
 class DurableJobWorkerRepositoryProtocol(DurableJobRepositoryProtocol, Protocol):
@@ -42,6 +73,9 @@ class DurableJobWorkerRepositoryProtocol(DurableJobRepositoryProtocol, Protocol)
         self,
         *,
         tenant_id: str,
+        workspace_id: str | None = None,
+        organization_id: str | None = None,
+        entity_id: str | None = None,
         worker_id: str,
         occurred_at: str,
         lease_expires_at: str,
@@ -79,6 +113,20 @@ class DurableJobWorkerRepositoryProtocol(DurableJobRepositoryProtocol, Protocol)
     def list_partition_effects(self, *, tenant_id: str, job_id: str) -> list[JobPartitionEffect]: ...
 
 
+class DurableJobSchedulerCursorRepositoryProtocol(Protocol):
+    """Atomic shared cursor used by schedulers that span worker processes."""
+
+    def reserve_round_robin_lane(
+        self,
+        *,
+        tenant_id: str,
+        scheduler_key: str,
+        lane_digest: str,
+        lane_count: int,
+        occurred_at: str,
+    ) -> int: ...
+
+
 @dataclass(frozen=True)
 class JobSubmission:
     """Validated source data for one initial queued job."""
@@ -95,6 +143,25 @@ class JobSubmission:
     total_units: int
     retry_ceiling: int
     created_at: str
+    organization_id: str = ""
+
+
+def _job_from_submission(submission: JobSubmission) -> DurableJob:
+    return DurableJob.queued(
+        job_id=submission.job_id,
+        idempotency_scope=submission.idempotency_scope,
+        idempotency_key=submission.idempotency_key,
+        tenant_id=submission.tenant_id,
+        workspace_id=submission.workspace_id,
+        organization_id=submission.organization_id,
+        entity_id=submission.entity_id,
+        input_digest=submission.input_digest,
+        config_digest=submission.config_digest,
+        worker_version=submission.worker_version,
+        total_units=submission.total_units,
+        retry_ceiling=submission.retry_ceiling,
+        created_at=submission.created_at,
+    )
 
 
 @dataclass(frozen=True)
@@ -103,6 +170,30 @@ class LeasedJob:
 
     job: DurableJob
     lease: JobLease
+
+
+@dataclass(frozen=True)
+class DurableJobLane:
+    """A fully-qualified execution lane used by deterministic schedulers."""
+
+    tenant_id: str
+    workspace_id: str
+    entity_id: str
+    organization_id: str = ""
+
+    def __post_init__(self) -> None:
+        if not all((self.tenant_id.strip(), self.workspace_id.strip(), self.entity_id.strip())):
+            raise ValueError("durable-job lane identifiers must be non-empty")
+        if not isinstance(self.organization_id, str):
+            raise ValueError("durable-job organization_id must be text")
+
+
+@dataclass(frozen=True)
+class ScheduledDurableJob:
+    """A lease together with the lane selected by a fair scheduler."""
+
+    lane: DurableJobLane
+    leased_job: LeasedJob
 
 
 class DurableJobApplicationService:
@@ -118,23 +209,73 @@ class DurableJobApplicationService:
         self._observability = observability or ObservabilityRuntime.disabled()
 
     def submit(self, submission: JobSubmission, *, actor_id: str) -> tuple[DurableJob, bool]:
-        job = DurableJob.queued(
-            job_id=submission.job_id,
-            idempotency_scope=submission.idempotency_scope,
-            idempotency_key=submission.idempotency_key,
-            tenant_id=submission.tenant_id,
-            workspace_id=submission.workspace_id,
-            entity_id=submission.entity_id,
-            input_digest=submission.input_digest,
-            config_digest=submission.config_digest,
-            worker_version=submission.worker_version,
-            total_units=submission.total_units,
-            retry_ceiling=submission.retry_ceiling,
-            created_at=submission.created_at,
-        )
+        job = _job_from_submission(submission)
         attributes: dict[str, object] = {"job.type": "durable", "reconforge.operation": "submit"}
         with self._observability.span("reconforge.job.submit", attributes) as span:
             persisted, created = self._repository.create_or_get(job, actor_id=actor_id)
+            result = "created" if created else "replayed"
+            if span is not None:
+                span.set_attribute("reconforge.result", result)
+            self._observability.record_job(
+                {**attributes, "job.status": persisted.status.value, "reconforge.result": result}
+            )
+            return persisted, created
+
+    def queue_snapshot(
+        self,
+        *,
+        tenant_id: str,
+        workspace_id: str | None = None,
+        organization_id: str | None = None,
+        entity_id: str | None = None,
+    ) -> DurableJobQueueSnapshot:
+        """Return a bounded operational projection without exposing job payloads."""
+
+        snapshot = self._repository.queue_snapshot(
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+            organization_id=organization_id,
+            entity_id=entity_id,
+        )
+        self._observability.record_job(
+            {
+                "job.type": "durable",
+                "reconforge.operation": "queue_snapshot",
+                "job.queue_depth": snapshot.queue_depth,
+                "job.running_depth": snapshot.running_count,
+                "job.total_count": snapshot.total_count,
+            }
+        )
+        return snapshot
+
+    def submit_bounded(
+        self,
+        submission: JobSubmission,
+        *,
+        actor_id: str,
+        max_queued_jobs: int,
+    ) -> tuple[DurableJob, bool]:
+        """Submit through a backend-atomic cap for one tenant/workspace/entity lane."""
+
+        if isinstance(max_queued_jobs, bool) or not isinstance(max_queued_jobs, int) or max_queued_jobs < 1:
+            raise ValueError("max_queued_jobs must be a positive integer")
+        create_or_get_bounded = getattr(self._repository, "create_or_get_bounded", None)
+        if create_or_get_bounded is None:
+            raise DurableJobBackpressureError(
+                "The configured durable-job backend does not support atomic queue bounds."
+            )
+        job = _job_from_submission(submission)
+        attributes: dict[str, object] = {
+            "job.type": "durable",
+            "reconforge.operation": "submit_bounded",
+            "job.queue_cap": max_queued_jobs,
+        }
+        with self._observability.span("reconforge.job.submit_bounded", attributes) as span:
+            persisted, created = create_or_get_bounded(
+                job,
+                actor_id=actor_id,
+                max_queued_jobs=max_queued_jobs,
+            )
             result = "created" if created else "replayed"
             if span is not None:
                 span.set_attribute("reconforge.result", result)
@@ -197,6 +338,122 @@ class DurableJobApplicationService:
         return job
 
 
+class JobAuthorizationError(PermissionError):
+    """Raised when a governed job mutation fails central policy evaluation."""
+
+
+class GovernedDurableJobApplicationService:
+    """Policy boundary for job mutations; the underlying lifecycle remains reusable."""
+
+    def __init__(
+        self,
+        service: DurableJobApplicationService,
+        *,
+        policy_engine: CentralPolicyEngine | None = None,
+    ) -> None:
+        self._service = service
+        self._policy = policy_engine or CentralPolicyEngine()
+
+    def submit(
+        self,
+        submission: JobSubmission,
+        *,
+        actor_id: str,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+    ) -> tuple[DurableJob, bool]:
+        self._authorize(
+            policy_context,
+            actor_id=actor_id,
+            required_permission=required_permission,
+            tenant_id=submission.tenant_id,
+            workspace_id=submission.workspace_id,
+            organization_id=submission.organization_id or None,
+            object_id=submission.job_id,
+            action="submit",
+        )
+        return self._service.submit(submission, actor_id=actor_id)
+
+    def submit_bounded(
+        self,
+        submission: JobSubmission,
+        *,
+        actor_id: str,
+        max_queued_jobs: int,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+    ) -> tuple[DurableJob, bool]:
+        self._authorize(
+            policy_context,
+            actor_id=actor_id,
+            required_permission=required_permission,
+            tenant_id=submission.tenant_id,
+            workspace_id=submission.workspace_id,
+            organization_id=submission.organization_id or None,
+            object_id=submission.job_id,
+            action="submit_bounded",
+        )
+        return self._service.submit_bounded(
+            submission,
+            actor_id=actor_id,
+            max_queued_jobs=max_queued_jobs,
+        )
+
+    def cancel(
+        self,
+        *,
+        tenant_id: str,
+        workspace_id: str,
+        organization_id: str | None = None,
+        job_id: str,
+        actor_id: str,
+        occurred_at: str,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+    ) -> DurableJob:
+        self._authorize(
+            policy_context,
+            actor_id=actor_id,
+            required_permission=required_permission,
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+            organization_id=organization_id,
+            object_id=job_id,
+            action="cancel",
+        )
+        return self._service.cancel(
+            tenant_id=tenant_id, job_id=job_id, actor_id=actor_id, occurred_at=occurred_at
+        )
+
+    def _authorize(
+        self,
+        context: PolicyEvaluationContext,
+        *,
+        actor_id: str,
+        required_permission: str,
+        tenant_id: str,
+        workspace_id: str,
+        organization_id: str | None,
+        object_id: str,
+        action: str,
+    ) -> PolicyDecision:
+        if actor_id != context.user_id:
+            raise JobAuthorizationError("job actor does not match policy identity")
+        decision = self._policy.evaluate(
+            context,
+            required_permission=required_permission,
+            enforce_sod=True,
+            enforce_ownership=True,
+        )
+        if not decision.allowed:
+            raise JobAuthorizationError(f"job policy denied: {decision.reason_code}")
+        if context.tenant_id != tenant_id or context.workspace_id != workspace_id:
+            raise JobAuthorizationError("job policy scope does not match mutation scope")
+        if context.organization_id != organization_id:
+            raise JobAuthorizationError("job policy organization does not match mutation scope")
+        return decision
+
+
 class DurableJobWorkerService:
     """Crash-safe worker lifecycle using expiring, generation-fenced leases."""
 
@@ -213,6 +470,9 @@ class DurableJobWorkerService:
         self,
         *,
         tenant_id: str,
+        workspace_id: str | None = None,
+        organization_id: str | None = None,
+        entity_id: str | None = None,
         worker_id: str,
         occurred_at: str,
         lease_expires_at: str,
@@ -221,6 +481,9 @@ class DurableJobWorkerService:
         with self._observability.span("reconforge.job.claim", attributes) as span:
             claimed = self._repository.claim_next(
                 tenant_id=tenant_id,
+                workspace_id=workspace_id,
+                organization_id=organization_id,
+                entity_id=entity_id,
                 worker_id=worker_id,
                 occurred_at=occurred_at,
                 lease_expires_at=lease_expires_at,
@@ -348,14 +611,28 @@ class DurableJobWorkerService:
             effect_reference=effect_reference,
             committed_at=occurred_at,
         )
-        return self._repository.persist_owned_effect_transition(
-            leased_job.job,
-            changed,
-            event,
-            effect,
-            lease=leased_job.lease,
-            release_lease=True,
-        )
+        attributes: dict[str, object] = {
+            "job.type": "durable",
+            "job.status": JobStatus.COMPLETED.value,
+            "reconforge.operation": "complete_partition",
+        }
+        with self._observability.span("reconforge.job.complete_partition", attributes) as span:
+            try:
+                persisted = self._repository.persist_owned_effect_transition(
+                    leased_job.job,
+                    changed,
+                    event,
+                    effect,
+                    lease=leased_job.lease,
+                    release_lease=True,
+                )
+            except Exception:
+                self._observability.record_job({**attributes, "reconforge.result": "error"})
+                raise
+            if span is not None:
+                span.set_attribute("reconforge.result", "persisted")
+            self._observability.record_job({**attributes, "reconforge.result": "persisted"})
+            return persisted
 
     def complete(
         self,
@@ -372,13 +649,28 @@ class DurableJobWorkerService:
             completed_units=leased_job.job.total_units,
             output_manifest=output_manifest,
         )
-        return self._repository.persist_owned_transition(
-            leased_job.job,
-            changed,
-            event,
-            lease=leased_job.lease,
-            release_lease=True,
-        )
+        attributes: dict[str, object] = {
+            "job.type": "durable",
+            "job.status": JobStatus.COMPLETED.value,
+            "reconforge.operation": "complete",
+        }
+        with self._observability.span("reconforge.job.complete", attributes) as span:
+            try:
+                persisted = self._repository.persist_owned_transition(
+                    leased_job.job,
+                    changed,
+                    event,
+                    lease=leased_job.lease,
+                    release_lease=True,
+                )
+            except Exception:
+                self._observability.record_job({**attributes, "reconforge.result": "error"})
+                raise
+            if span is not None:
+                span.set_attribute("reconforge.result", "persisted")
+            self._observability.record_job({**attributes, "reconforge.result": "persisted"})
+            return persisted
+
 
     def schedule_retry(self, leased_job: LeasedJob, *, occurred_at: str) -> DurableJob:
         return self._finish_with_status(
@@ -386,6 +678,7 @@ class DurableJobWorkerService:
             to_status=JobStatus.RETRYING,
             occurred_at=occurred_at,
             reason_code="TRANSIENT_FAILURE",
+            operation="schedule_retry",
         )
 
     def fail(
@@ -401,6 +694,7 @@ class DurableJobWorkerService:
             occurred_at=occurred_at,
             reason_code="TERMINAL_FAILURE",
             safe_error_code=safe_error_code,
+            operation="fail",
         )
 
     def pause(self, leased_job: LeasedJob, *, occurred_at: str) -> DurableJob:
@@ -409,6 +703,7 @@ class DurableJobWorkerService:
             to_status=JobStatus.PAUSED,
             occurred_at=occurred_at,
             reason_code="OPERATOR_PAUSE",
+            operation="pause",
         )
 
     def cancel(self, leased_job: LeasedJob, *, occurred_at: str) -> DurableJob:
@@ -417,6 +712,7 @@ class DurableJobWorkerService:
             to_status=JobStatus.CANCELLED,
             occurred_at=occurred_at,
             reason_code="CANCELLED",
+            operation="cancel",
         )
 
     def _finish_with_status(
@@ -427,6 +723,7 @@ class DurableJobWorkerService:
         occurred_at: str,
         reason_code: str,
         safe_error_code: str = "",
+        operation: str = "finish",
     ) -> DurableJob:
         changed, event = leased_job.job.transition(
             to_status,
@@ -435,10 +732,255 @@ class DurableJobWorkerService:
             reason_code=reason_code,
             safe_error_code=safe_error_code,
         )
-        return self._repository.persist_owned_transition(
-            leased_job.job,
-            changed,
-            event,
-            lease=leased_job.lease,
-            release_lease=True,
+        attributes: dict[str, object] = {
+            "job.type": "durable",
+            "job.status": to_status.value,
+            "reconforge.operation": operation,
+        }
+        with self._observability.span(f"reconforge.job.{operation}", attributes) as span:
+            try:
+                persisted = self._repository.persist_owned_transition(
+                    leased_job.job,
+                    changed,
+                    event,
+                    lease=leased_job.lease,
+                    release_lease=True,
+                )
+            except Exception:
+                self._observability.record_job({**attributes, "reconforge.result": "error"})
+                raise
+            if span is not None:
+                span.set_attribute("reconforge.result", "persisted")
+            self._observability.record_job({**attributes, "reconforge.result": "persisted"})
+            return persisted
+
+
+class GovernedDurableJobWorkerService:
+    """Policy-gated facade for server-profile durable-job workers.
+
+    The existing worker service remains a backend-neutral lease primitive.  This
+    facade is an explicit adoption boundary for deployments that run workers as
+    service identities: a claim is denied before the repository is touched when
+    the principal is not a service account, the requested scope does not match
+    the policy context, or the central permission is absent. Lease fencing still
+    protects subsequent writes; callers should re-evaluate policy at their
+    deployment's claim boundary when permissions are changed.
+    """
+
+    def __init__(
+        self,
+        worker: DurableJobWorkerService,
+        *,
+        policy_engine: CentralPolicyEngine | None = None,
+    ) -> None:
+        self._worker = worker
+        self._policy = policy_engine or CentralPolicyEngine()
+
+    def claim(
+        self,
+        *,
+        tenant_id: str,
+        workspace_id: str | None = None,
+        organization_id: str | None = None,
+        entity_id: str | None = None,
+        worker_id: str,
+        occurred_at: str,
+        lease_expires_at: str,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+        request_id: str = "",
+    ) -> LeasedJob | None:
+        """Authorize one scoped claim, then delegate to the lease primitive."""
+
+        self._authorize(
+            policy_context,
+            worker_id=worker_id,
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+            organization_id=organization_id,
+            entity_id=entity_id,
+            required_permission=required_permission,
+            request_id=request_id,
         )
+        return self._worker.claim(
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+            organization_id=organization_id,
+            entity_id=entity_id,
+            worker_id=worker_id,
+            occurred_at=occurred_at,
+            lease_expires_at=lease_expires_at,
+        )
+
+    def _authorize(
+        self,
+        context: PolicyEvaluationContext,
+        *,
+        worker_id: str,
+        tenant_id: str,
+        workspace_id: str | None,
+        organization_id: str | None,
+        entity_id: str | None,
+        required_permission: str,
+        request_id: str,
+    ) -> PolicyDecision:
+        if not required_permission.strip():
+            raise JobAuthorizationError("worker permission contract is missing")
+        if context.principal_type != "service_account":
+            raise JobAuthorizationError("durable workers require a service-account principal")
+        if context.user_id != worker_id:
+            raise JobAuthorizationError("worker actor does not match policy identity")
+        if context.tenant_id != tenant_id or context.workspace_id != workspace_id:
+            raise JobAuthorizationError("worker policy scope does not match claim scope")
+        if context.organization_id != organization_id:
+            raise JobAuthorizationError("worker policy organization does not match claim scope")
+        if context.entity_id is not None and context.entity_id != entity_id:
+            raise JobAuthorizationError("worker policy entity does not match claim scope")
+        decision = self._policy.evaluate(
+            context,
+            required_permission=required_permission.strip(),
+            enforce_sod=False,
+            enforce_ownership=False,
+        )
+        audit_policy_decision(
+            decision,
+            actor_id=context.user_id,
+            required_permissions=frozenset({required_permission.strip()}),
+            surface="durable-job.worker.claim",
+            request_id=request_id,
+            principal_type=context.principal_type,
+        )
+        if not decision.allowed:
+            raise JobAuthorizationError(f"worker policy denied: {decision.reason_code}")
+        return decision
+
+
+class RoundRobinDurableJobScheduler:
+    """Select exact execution lanes in deterministic round-robin order.
+
+    The cursor is intentionally process-scoped. This provides a reproducible
+    fairness primitive for one scheduler/worker loop while preserving tenant
+    and workspace isolation; it is not a distributed fairness guarantee.
+    """
+
+    def __init__(self, worker: DurableJobWorkerService, lanes: tuple[DurableJobLane, ...]) -> None:
+        if not lanes:
+            raise ValueError("at least one durable-job lane is required")
+        if len(set(lanes)) != len(lanes):
+            raise ValueError("durable-job lanes must be unique")
+        self._worker = worker
+        self._lanes = lanes
+        self._cursor = 0
+
+    @property
+    def lanes(self) -> tuple[DurableJobLane, ...]:
+        return self._lanes
+
+    def claim(
+        self,
+        *,
+        worker_id: str,
+        occurred_at: str,
+        lease_expires_at: str,
+    ) -> ScheduledDurableJob | None:
+        """Scan each lane once, starting after the previously selected lane."""
+
+        start = self._cursor
+        for offset in range(len(self._lanes)):
+            index = (start + offset) % len(self._lanes)
+            lane = self._lanes[index]
+            leased = self._worker.claim(
+                tenant_id=lane.tenant_id,
+                workspace_id=lane.workspace_id,
+                organization_id=lane.organization_id or None,
+                entity_id=lane.entity_id,
+                worker_id=worker_id,
+                occurred_at=occurred_at,
+                lease_expires_at=lease_expires_at,
+            )
+            if leased is not None:
+                self._cursor = (index + 1) % len(self._lanes)
+                return ScheduledDurableJob(lane=lane, leased_job=leased)
+        self._cursor = (start + 1) % len(self._lanes)
+        return None
+
+
+def _durable_job_lane_digest(lanes: tuple[DurableJobLane, ...]) -> str:
+    """Hash the ordered lane contract so cursor state cannot silently drift."""
+
+    canonical = "\x1f".join(
+        "\x1e".join((lane.tenant_id, lane.organization_id, lane.workspace_id, lane.entity_id))
+        for lane in lanes
+    )
+    return sha256(canonical.encode("utf-8")).hexdigest()
+
+
+class PersistentRoundRobinDurableJobScheduler:
+    """Coordinate lane rotation through a backend-atomic durable cursor.
+
+    Unlike :class:`RoundRobinDurableJobScheduler`, the cursor is advanced in
+    shared storage before each lane probe. Multiple scheduler processes using
+    the same ``scheduler_key`` therefore consume a single deterministic
+    sequence. The worker claim remains separately lease-fenced; this contract
+    proves coordination/fairness, not throughput, failover, or production SLOs.
+    """
+
+    def __init__(
+        self,
+        worker: DurableJobWorkerService,
+        cursor_repository: DurableJobSchedulerCursorRepositoryProtocol,
+        lanes: tuple[DurableJobLane, ...],
+        *,
+        scheduler_key: str,
+    ) -> None:
+        if not lanes:
+            raise ValueError("at least one durable-job lane is required")
+        if len(set(lanes)) != len(lanes):
+            raise ValueError("durable-job lanes must be unique")
+        if not scheduler_key.strip():
+            raise ValueError("durable-job scheduler_key must be non-empty")
+        tenant_ids = {lane.tenant_id for lane in lanes}
+        if len(tenant_ids) != 1:
+            raise ValueError("persistent scheduler lanes must belong to one tenant")
+        self._worker = worker
+        self._cursor_repository = cursor_repository
+        self._lanes = lanes
+        self._scheduler_key = scheduler_key
+        self._lane_digest = _durable_job_lane_digest(lanes)
+
+    @property
+    def lanes(self) -> tuple[DurableJobLane, ...]:
+        return self._lanes
+
+    def claim(
+        self,
+        *,
+        worker_id: str,
+        occurred_at: str,
+        lease_expires_at: str,
+    ) -> ScheduledDurableJob | None:
+        """Reserve each candidate lane at most once, then attempt a fenced claim."""
+
+        for _ in range(len(self._lanes)):
+            index = self._cursor_repository.reserve_round_robin_lane(
+                tenant_id=self._lanes[0].tenant_id,
+                scheduler_key=self._scheduler_key,
+                lane_digest=self._lane_digest,
+                lane_count=len(self._lanes),
+                occurred_at=occurred_at,
+            )
+            if not 0 <= index < len(self._lanes):
+                raise DurableJobSchedulerCursorConflictError("durable-job cursor returned an invalid lane index")
+            lane = self._lanes[index]
+            leased = self._worker.claim(
+                tenant_id=lane.tenant_id,
+                workspace_id=lane.workspace_id,
+                organization_id=lane.organization_id or None,
+                entity_id=lane.entity_id,
+                worker_id=worker_id,
+                occurred_at=occurred_at,
+                lease_expires_at=lease_expires_at,
+            )
+            if leased is not None:
+                return ScheduledDurableJob(lane=lane, leased_job=leased)
+        return None

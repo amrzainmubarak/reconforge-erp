@@ -1,4 +1,9 @@
-"""Closed, deterministic reliability policy for operator-owned measurements."""
+"""Reliability-plane decision contracts.
+
+This package preserves the pre-existing operator alert API while exposing the
+new deterministic HA/DR safety contracts.  Keeping both surfaces here is
+intentional: ``reconforge.reliability`` was already a public import path.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +12,16 @@ from dataclasses import dataclass
 from enum import StrEnum
 from types import MappingProxyType
 from typing import TypeVar
+
+from reconforge.reliability.ha_dr import (
+    HaDrCluster,
+    HaDrError,
+    HaDrNode,
+    HaDrNodeRole,
+    HaDrTopology,
+    build_quorum_simulation_report,
+    verify_quorum_simulation_report,
+)
 
 
 class AlertState(StrEnum):
@@ -105,3 +120,20 @@ def evaluate_alerts(
             AlertResult(policy.id, policy.metric, state, observed, policy.slo_id, policy.runbook)
         )
     return tuple(results)
+
+__all__ = [
+    "AlertPolicy",
+    "AlertResult",
+    "AlertState",
+    "DEFAULT_ALERT_POLICIES",
+    "HaDrCluster",
+    "HaDrError",
+    "HaDrNode",
+    "HaDrNodeRole",
+    "HaDrTopology",
+    "MetricKey",
+    "build_quorum_simulation_report",
+    "evaluate_alerts",
+    "validate_measurements",
+    "verify_quorum_simulation_report",
+]

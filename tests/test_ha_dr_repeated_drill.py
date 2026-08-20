@@ -1,9 +1,11 @@
+import hashlib
 import json
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from statistics import median
 
 import jsonschema
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -53,3 +55,62 @@ def test_repeated_ha_dr_report_preserves_every_run_and_single_host_boundary() ->
         ]
     )
     assert rebuilt == report
+    assert _script_module().build_report(
+        [
+            {
+                "rpo_transactions": run["failover_rpo_transactions"],
+                "rto_seconds": run["failover_rto_seconds"],
+                "failback_rpo_transactions": run["failback_rpo_transactions"],
+                "failback_rto_seconds": run["failback_rto_seconds"],
+                "sentinel_sequences": [1, 2, 3, run["final_sequence"]],
+                "cleanup_passed": run["cleanup_passed"],
+            }
+            for run in runs
+        ],
+        executed_at="2026-08-04",
+    )["executed_at"] == "2026-08-04"
+
+
+def test_current_postgres_ha_dr_artifact_is_schema_valid_and_packaged() -> None:
+    artifact = json.loads(
+        (ROOT / "docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-05.json").read_text(encoding="utf-8")
+    )
+    schema = json.loads(
+        (ROOT / "docs/schemas/ha_dr_repeated_drill_report.schema.json").read_text(encoding="utf-8")
+    )
+    jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker()).validate(artifact)
+    assert "include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-05.json" in (
+        ROOT / "MANIFEST.in"
+    ).read_text(encoding="utf-8")
+
+
+def test_latest_postgres_ha_dr_artifact_is_schema_valid_and_reproducible() -> None:
+    artifact_path = ROOT / "docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-11.json"
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    schema = json.loads(
+        (ROOT / "docs/schemas/ha_dr_repeated_drill_report.schema.json").read_text(encoding="utf-8")
+    )
+    jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker()).validate(artifact)
+    assert artifact["summary"]["all_runs_passed"] is True
+    assert artifact["summary"]["zero_acknowledged_transaction_loss_runs"] == 3
+    assert artifact["summary"]["failover_rto_max_seconds"] == 11.476
+    assert artifact["summary"]["failback_rto_max_seconds"] == 1.25
+    assert hashlib.sha256(artifact_path.read_bytes()).hexdigest() == (
+        "6e527ae12c9cb3e6123fac5136d31b6b2b3c0a4bebbf64267cd0c5e1f3ec749b"
+    )
+    assert "include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-10.json" in (
+        ROOT / "MANIFEST.in"
+    ).read_text(encoding="utf-8")
+    assert "include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-11.json" in (
+        ROOT / "MANIFEST.in"
+    ).read_text(encoding="utf-8")
+
+
+def test_ci_runs_the_repeated_postgres_ha_dr_drill_and_uploads_its_report() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+    job = workflow["jobs"]["postgres-ha-dr"]
+    run_steps = [step["run"] for step in job["steps"] if "run" in step]
+    assert any("verify_postgres_ha_dr_repeated.py" in run and "--executed-at" in run for run in run_steps)
+    artifact_steps = [step for step in job["steps"] if step.get("uses", "").startswith("actions/upload-artifact@")]
+    assert len(artifact_steps) == 1
+    assert artifact_steps[0]["with"]["name"] == "reconforge-postgres-ha-dr-report"

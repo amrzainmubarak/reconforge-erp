@@ -1,0 +1,23 @@
+{
+  "bucket_profile": "synthetic-disposable-normal-and-object-lock-buckets",
+  "elapsed_ms": 719.197,
+  "endpoint": "http://127.0.0.1:9000",
+  "image_digest": "sha256:064117214caceaa8d8a90ef7caa58f2b2aeb316b5156afe9ee8da5b4d83e12c8",
+  "limitations": [
+    "single-node disposable MinIO process on one CI host",
+    "no replication, KMS, cross-site durability, provider interoperability, or object-store HA claim",
+    "synthetic credentials, object names, and bytes only"
+  ],
+  "observed": {
+    "checksum_tamper_refusal": true,
+    "cleanup": true,
+    "hierarchical_scope_isolation": true,
+    "immutable_conflict_refusal": true,
+    "object_lock_delete_refusal": true
+  },
+  "provider": "minio",
+  "report_digest": "0097839afbb3225bbab9ad8effe30dac79c57cc8ed1b3c1d6d0ca512d170957d",
+  "report_id": "s3-compatible-object-store-live-v1",
+  "schema_version": "1.0.0",
+  "status": "verified"
+}

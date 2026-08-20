@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Literal, cast
 
 import pytest
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from jsonschema import Draft202012Validator
 
 import reconforge.upgrade.postgres_adapter as postgres_upgrade_module
@@ -51,6 +50,10 @@ from reconforge.upgrade.postgres_adapter import (
 )
 from reconforge.upgrade.sqlite_adapter import SQLiteUpgradeAdapter
 
+cryptography_ed25519 = pytest.importorskip(
+    "cryptography.hazmat.primitives.asymmetric.ed25519", reason="upgrade cryptography extra is optional"
+)
+Ed25519PrivateKey = cryptography_ed25519.Ed25519PrivateKey
 
 def _digest(value: str) -> str:
     return hashlib.sha256(value.encode("ascii")).hexdigest()
@@ -546,7 +549,12 @@ def test_postgres_receipt_detects_backup_tamper_and_native_runner_keeps_dsn_out_
     runner.upgrade("source", "0053_audit_administration_acl")
     argv, kwargs = calls[0]
     assert all("secret" not in item for item in argv)
-    assert argv[-2:] == ("upgrade", "0053_audit_administration_acl")
+    assert argv[0] == str(Path(sys.executable).resolve())
+    assert argv[1] == "-c"
+    assert "distribution('alembic').locate_file('')" in argv[2]
+    assert "from alembic.config import main" in argv[2]
+    assert str(Path("alembic.ini").resolve().parent).replace("\\", "\\\\") in argv[2]
+    assert argv[3:] == ("-c", str(Path("alembic.ini").resolve()), "upgrade", "0053_audit_administration_acl")
     assert kwargs["shell"] is False
     assert cast(dict[str, str], kwargs["env"])["RECONFORGE_POSTGRES_DSN"].endswith("/source")
 

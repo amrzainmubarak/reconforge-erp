@@ -1,0 +1,22 @@
+{
+  "elapsed_ms": 322.555,
+  "endpoint": "redis://127.0.0.1:6379",
+  "image_digest": "sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99",
+  "limitations": [
+    "single-node disposable Redis process on one CI host",
+    "no replication, sentinel, cluster failover, cross-site durability, or Redis HA claim",
+    "synthetic keys, token digests, and session metadata only"
+  ],
+  "observed": {
+    "cleanup": true,
+    "policy_cache_cross_process_invalidation": true,
+    "policy_generation_shared": true,
+    "session_raw_token_absent": true,
+    "tenant_key_isolation": true
+  },
+  "provider": "redis",
+  "report_digest": "b7f35cc2e9741cf06587f951a57048f3b5f454e51b558e1e52dc41284d48091e",
+  "report_id": "redis-live-session-policy-v1",
+  "schema_version": "1.0.0",
+  "status": "verified"
+}

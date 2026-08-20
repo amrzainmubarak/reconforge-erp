@@ -70,6 +70,12 @@ class ClientPackOptions:
     include_manifest_checksums: bool = False
     financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY
 
+    def __post_init__(self) -> None:
+        """Keep direct option construction on the supported policy boundary."""
+
+        normalized = validate_financial_input_policy(self.financial_input_policy)
+        object.__setattr__(self, "financial_input_policy", normalized)
+
     @property
     def redaction_requested(self) -> bool:
         return self.redact_names or self.redact_amounts

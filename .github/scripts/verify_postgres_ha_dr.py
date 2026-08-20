@@ -32,11 +32,15 @@ def _run(argv: Sequence[str], *, capture: bool = False, allow_failure: bool = Fa
     completed = subprocess.run(  # nosec B603
         tuple(argv), cwd=ROOT, shell=False, check=False, text=True,
         stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
-        stderr=subprocess.PIPE if capture else subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
         timeout=300,
     )
     if completed.returncode != 0 and not allow_failure:
-        raise RuntimeError("HA/DR drill command failed")
+        diagnostic = (completed.stderr or "").replace(PASSWORD, "[redacted]").strip()
+        if len(diagnostic) > 4000:
+            diagnostic = diagnostic[-4000:]
+        suffix = f": {diagnostic}" if diagnostic else ""
+        raise RuntimeError(f"HA/DR drill command failed{suffix}")
     return completed.stdout.strip() if capture else ""
 
 
@@ -54,16 +58,24 @@ def _run_code(argv: Sequence[str], *, timeout_seconds: int) -> int:
 
 def _wait_ready(container: str) -> None:
     for _ in range(120):
-        result = _run(
+        check = subprocess.run(  # nosec B603
             ("docker", "exec", container, "pg_isready", "-U", "postgres", "-d", "postgres"),
-            allow_failure=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=False, check=False,
         )
-        if result == "":
-            check = subprocess.run(  # nosec B603
-                ("docker", "exec", container, "pg_isready", "-U", "postgres", "-d", "postgres"),
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=False, check=False,
+        if check.returncode == 0:
+            # pg_isready can report accepting connections while PostgreSQL is
+            # still completing crash recovery and rejects SQL with
+            # ``database system is starting up``.  Require a real query before
+            # allowing migrations or replication setup to proceed.
+            probe = _run(
+                (
+                    "docker", "exec", "-e", f"PGPASSWORD={PASSWORD}", container,
+                    "psql", "-U", "postgres", "-d", "postgres", "-tAc", "SELECT 1",
+                ),
+                capture=True,
+                allow_failure=True,
             )
-            if check.returncode == 0:
+            if probe.strip() == "1":
                 return
         time.sleep(0.5)
     raise RuntimeError("PostgreSQL container did not become ready")
@@ -146,7 +158,7 @@ def main() -> int:
         migrations = PsycopgAlembicMigrationRunner(
             source_dsn=primary_dsn,
             compatibility_dsn=primary_dsn,
-            python_executable=Path(sys.executable).resolve(strict=True),
+            python_executable=Path(sys.executable),
             alembic_ini=(ROOT / "alembic.ini").resolve(strict=True),
         )
         migrations.upgrade("source", "0053_audit_administration_acl")

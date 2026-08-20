@@ -27,7 +27,7 @@ identity answer different questions even where package names overlap.
    compatibility, but commit universal `uv.lock` format v1/revision 3 as the
    application, server, build/developer, documentation, and DuckDB resolution.
 2. Require uv 0.11.32 exactly and an absolute `exclude-newer` cutoff of
-   `2026-07-26T00:00:00Z`. A reviewed dependency update moves the cutoff and
+   `2026-08-02T00:00:00Z`. A reviewed dependency update moves the cutoff and
    regenerates the lock; normal install, CI, and release paths use `--locked`.
 3. Pin uv's official Linux and Windows release archives by SHA-256. CI uses the
    full-commit-pinned official setup action plus the exact version. Docker uses
@@ -81,6 +81,19 @@ identity answer different questions even where package names overlap.
   deleting the string is insufficient.
 - No hosted workflow, Docker build, branch-protection rule, release gate, or
   exception approval process is claimed to have operated from local evidence.
+
+## Reviewed dependency refresh — 2026-08-03
+
+The hosted security gate reported `CVE-2026-69247` for the previously locked
+`cryptography==49.0.0` resolution on both supported Python versions. The
+reviewed remediation moves the absolute cutoff to `2026-08-02T00:00:00Z`,
+regenerates `uv.lock`, upgrades the optional backup/connectors pin to
+`cryptography==50.0.0`, and accepts the compatible `pyOpenSSL==26.4.0` transitively
+required by the pinned WebAuthn stack. No advisory exception or scanner
+weakening is added. Cryptographic signing, WebAuthn, and encrypted-backup
+compatibility tests are rerun before accepting the update; hosted security
+verification remains evidence for the committed revision, not a general safety
+or production-readiness claim.
 
 ## Rollback
 

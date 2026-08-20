@@ -13,11 +13,12 @@ egress, crash-recovery, and evidence contracts before any vendor connector claim
 ## Decision
 
 The first network runtime accepts only a strict `network-connector-registration-v1` data object over
-a signed/validated `connector-manifest-v1`. It supports read-only HTTPS GET with secret-reference
-authentication. The endpoint must exactly equal one manifest destination. HTTPS URLs cannot contain
-userinfo, query, or fragment. DNS is resolved once, every answer must be globally routable, the
-selected address is pinned to the socket, and TLS continues to validate the declared hostname.
-Redirects are returned as permanent failure and are never followed.
+a signed/validated `connector-manifest-v1`. It supports read-only HTTPS GET with either explicit
+public no-auth or secret-reference authentication. The endpoint must exactly equal one manifest
+destination. HTTPS URLs cannot contain userinfo or fragment; a fixed query is allowed only as part
+of that exact operator-declared destination. DNS is resolved once, every answer must be globally
+routable, the selected address is pinned to the socket, and TLS continues to validate the declared
+hostname. Redirects are returned as permanent failure and are never followed.
 
 The executor requires a bounded idempotency key, bounded opaque cursor, response ceiling, declared
 rate, and bounded exponential retry. It retries only transport and selected transient HTTP failures;
@@ -36,6 +37,8 @@ accepted after re-read; changed bytes fail before a job effect is committed.
 
 - Built-in local adapters and Community no-network defaults remain unchanged.
 - The runtime is vendor-neutral and has no bundled live provider registration or production secret.
+  Public no-auth registrations still require an exact operator-declared HTTPS egress destination and
+  rate limit.
 - Rate enforcement is per executor process; shared distributed quotas remain deployment work.
 - The signed package authenticates data only. External executable connector installation remains
   prohibited. Write-back requires a new manifest schema, feature flag, authorization, approval,

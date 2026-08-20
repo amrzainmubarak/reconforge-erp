@@ -96,6 +96,7 @@
     "stock_gl_summary": {"$ref": "#/$defs/records"},
     "workorder_summary": {"$ref": "#/$defs/records"},
     "wip_aging": {"$ref": "#/$defs/records"},
+    "data_quality_warnings": {"$ref": "#/$defs/records"},
     "top_exceptions": {"$ref": "#/$defs/records"}
   },
   "$defs": {

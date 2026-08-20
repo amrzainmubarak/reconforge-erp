@@ -18,7 +18,8 @@
     "lucide-react": "^1.25.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "recharts": "^3.10.0"
+    "recharts": "^3.10.0",
+    "symbol-tree": "^3.2.4"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",

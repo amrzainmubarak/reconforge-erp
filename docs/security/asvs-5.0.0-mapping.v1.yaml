@@ -57,9 +57,9 @@ summary:
   unassessed_requirement_count: 290
   status_counts:
     implemented: 4
-    partial: 33
+    partial: 34
     planned: 10
-    not_applicable: 8
+    not_applicable: 7
 
 chapters:
   - chapter_id: V1
@@ -90,14 +90,14 @@ chapters:
         next_action: Define and test one versioned spreadsheet-cell safety policy without corrupting financial source evidence.
       - requirement_id: v5.0.0-1.5.1
         level: 1
-        status: not_applicable
+        status: partial
         scope: Production XML parsing surfaces in the current registered modules.
         owner: platform-security
-        evidence: []
-        test_evidence: []
-        assessment: No production XML connector or XML parser is present in the assessed runtime modules.
-        gap_or_limitation: Planned XML or ISO 20022 parsing would immediately make this requirement applicable.
-        next_action: Reassess before merging any XML parser, connector, or document ingestion surface.
+        evidence: [reconforge/connectors/camt053.py, reconforge/connectors/bank_statement_camt053.py]
+        test_evidence: [tests/test_connector_camt053.py, tests/test_connector_bank_statement_camt053.py]
+        assessment: The bounded CAMT.053 parser uses defusedxml and rejects the tested entity-expansion and malformed-input cases before returning a statement.
+        gap_or_limitation: This is selected ISO 20022 evidence only; full XML attack coverage, bank dialect coverage, source authenticity, and deployment certificate policy remain unassessed.
+        next_action: Extend the XML threat model and provider conformance evidence before making a broader XML security claim.
 
   - chapter_id: V2
     chapter_name: Validation and Business Logic

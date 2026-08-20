@@ -1,0 +1,6 @@
+pack_id: individual-cashflow
+name: Individual and Freelancer Cashflow Controls
+version: 1.0.0
+description: Bounded controls for local income and expense exports against optional category budgets.
+owner: ReconForge ERP Maintainers
+tags: [individual, freelancer, cashflow, budgets, controls]

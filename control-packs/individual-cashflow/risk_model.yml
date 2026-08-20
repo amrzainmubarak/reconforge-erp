@@ -1,0 +1,11 @@
+schema_version: 1
+risk_model_id: individual-cashflow-v1
+dimensions:
+  - id: budget_exception
+    source_statuses: [over_budget, unbudgeted]
+    weight: 3
+  - id: no_activity
+    source_statuses: [no_activity]
+    weight: 1
+limitations:
+  - Risk is a deterministic review priority, not fraud detection, tax advice, or a legal conclusion.

@@ -46,6 +46,17 @@ class ConnectionFactory(Protocol):
         """Return a connection supporting ``transaction``, ``execute``, and ``close``."""
 
 
+@dataclass(frozen=True)
+class PostgresConnectionPoolSnapshot:
+    """Bounded, non-sensitive pool lifecycle counters."""
+
+    max_size: int
+    total: int
+    idle: int
+    leased: int
+    closed: bool
+
+
 def normalize_scope_id(value: str, *, field_name: str = "tenant_id") -> str:
     """Normalize and validate an identifier used in a PostgreSQL scope.
 
@@ -198,6 +209,20 @@ class PostgresConnectionPool:
         self._total = 0
         self._closed = False
 
+    @property
+    def snapshot(self) -> PostgresConnectionPoolSnapshot:
+        """Return pool counters without exposing connection or tenant data."""
+
+        with self._condition:
+            idle = self._idle.qsize()
+            return PostgresConnectionPoolSnapshot(
+                max_size=self.max_size,
+                total=self._total,
+                idle=idle,
+                leased=self._total - idle,
+                closed=self._closed,
+            )
+
     def connect(self) -> Any:
         """Lease one pooled connection, waiting only up to the configured bound."""
 
@@ -310,6 +335,12 @@ class PostgresPooledConnectionFactory(PostgresConnectionFactory):
         """Return the bounded lease wait timeout."""
 
         return self._pool.acquire_timeout_seconds
+
+    @property
+    def pool_snapshot(self) -> PostgresConnectionPoolSnapshot:
+        """Return bounded pool lifecycle counters for health/diagnostic surfaces."""
+
+        return self._pool.snapshot
 
 
 class _PooledPostgresConnection:

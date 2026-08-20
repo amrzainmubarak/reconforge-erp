@@ -10,6 +10,7 @@ from reconforge.application.matching_strategies import (
     MatchingStrategyRequest,
     MatchingStrategyResult,
     StrategyLimits,
+    reject_unsupported_grouped_budget,
     request_digest,
     result_digest,
 )
@@ -80,6 +81,7 @@ class IndexedOneToOneStrategy:
         return result
 
     def _validate_request(self, request: MatchingStrategyRequest) -> None:
+        reject_unsupported_grouped_budget(request, strategy_name="Indexed one-to-one strategy")
         limits = self.manifest.limits
         if request.mode != "one-to-one":
             raise MatchingStrategyContractError("Indexed one-to-one strategy does not support the requested mode.")

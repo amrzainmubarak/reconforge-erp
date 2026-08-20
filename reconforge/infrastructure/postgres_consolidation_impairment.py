@@ -180,11 +180,11 @@ class PostgresConsolidationImpairmentRepository:
 
     @classmethod
     def _decode_row(cls, row: Any) -> dict[str, Any]:
-        request_payload = _payload(_row_value(row, "request_payload", 9), "request payload")
-        request_digest = str(_row_value(row, "request_digest", 7))
+        request_payload = _payload(_row_value(row, "request_payload", 8), "request payload")
+        request_digest = str(_row_value(row, "request_digest", 6))
         if _json_digest(request_payload) != request_digest:
             raise PostgresConsolidationImpairmentError("Persisted impairment request digest mismatch.")
-        result_payload = _payload(_row_value(row, "result_payload", 10), "result payload")
+        result_payload = _payload(_row_value(row, "result_payload", 9), "result payload")
         try:
             verify_consolidation_impairment_bridge_payload(result_payload)
         except (ConsolidationError, TypeError, ValueError) as exc:
@@ -195,7 +195,7 @@ class PostgresConsolidationImpairmentRepository:
             raise PostgresConsolidationImpairmentError("Persisted impairment evidence is unexpectedly posted.")
         if result_payload.get("request_digest") != request_digest:
             raise PostgresConsolidationImpairmentError("Persisted impairment lineage is inconsistent.")
-        result_digest = str(_row_value(row, "result_digest", 8))
+        result_digest = str(_row_value(row, "result_digest", 7))
         if result_payload.get("result_digest") != result_digest:
             raise PostgresConsolidationImpairmentError("Persisted impairment result digest mismatch.")
         return {
@@ -209,12 +209,12 @@ class PostgresConsolidationImpairmentRepository:
             "result_digest": result_digest,
             "request_payload": request_payload,
             "result_payload": result_payload,
-            "prepared_by": str(_row_value(row, "prepared_by", 11)),
-            "approved_by": str(_row_value(row, "approved_by", 12)),
-            "approved_at": str(_row_value(row, "approved_at", 13)),
-            "created_at": str(_row_value(row, "created_at", 14)),
-            "organization_id": _row_value(row, "organization_id", 15),
-            "legal_entity_id": _row_value(row, "legal_entity_id", 16),
+            "prepared_by": str(_row_value(row, "prepared_by", 10)),
+            "approved_by": str(_row_value(row, "approved_by", 11)),
+            "approved_at": str(_row_value(row, "approved_at", 12)),
+            "created_at": str(_row_value(row, "created_at", 13)),
+            "organization_id": _row_value(row, "organization_id", 14),
+            "legal_entity_id": _row_value(row, "legal_entity_id", 15),
         }
 
     def persist(

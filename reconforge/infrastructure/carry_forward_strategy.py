@@ -13,6 +13,7 @@ from reconforge.application.matching_strategies import (
     MatchingStrategyRequest,
     MatchingStrategyResult,
     StrategyLimits,
+    reject_unsupported_grouped_budget,
     request_digest,
     result_digest,
 )
@@ -21,15 +22,16 @@ from reconforge.domain.carry_forward import (
     CarryForwardPolicy,
     CarryForwardRecord,
     allocate_carry_forward,
+    allocate_sequence_window,
 )
 
 CARRY_FORWARD_FIFO_MANIFEST = MatchingStrategyManifest(
     id="bounded-carry-forward-fifo",
     version="1.0.0",
     maturity="experimental",
-    algorithm="partitioned-fifo-sequence-window-allocation-v1",
+    algorithm="partitioned-fifo-and-contiguous-sequence-window-allocation-v2",
     supported_modes=("carry-forward", "sequence-window"),
-    deterministic_tie_break="business-date-stable-record-identities-fifo-v1",
+    deterministic_tie_break="difference-cardinality-start-index-stable-record-identities-v2",
     explanation_schema="carry-forward-explanation-v1",
     limits=StrategyLimits(
         max_left_records=250_000,
@@ -37,6 +39,7 @@ CARRY_FORWARD_FIFO_MANIFEST = MatchingStrategyManifest(
         max_candidates_per_record=10_000,
         max_total_candidate_evaluations=25_000,
         max_date_window_days=3660,
+        max_left_group_cardinality=16,
     ),
 )
 
@@ -47,6 +50,7 @@ class CarryForwardFifoStrategy:
         return CARRY_FORWARD_FIFO_MANIFEST
 
     def execute(self, request: MatchingStrategyRequest) -> MatchingStrategyResult:
+        reject_unsupported_grouped_budget(request, strategy_name="Carry-forward strategy")
         if request.mode not in self.manifest.supported_modes:
             raise MatchingStrategyContractError("Carry-forward strategy mode is not supported.")
         limits = self.manifest.limits
@@ -57,14 +61,19 @@ class CarryForwardFifoStrategy:
         try:
             obligations = tuple(self._record(item, request, request.left_id_field) for item in request.left_records)
             settlements = tuple(self._record(item, request, request.right_id_field) for item in request.right_records)
-            decision = allocate_carry_forward(
-                obligations,
-                settlements,
-                CarryForwardPolicy(
-                    date_window_days=request.date_window_days,
-                    max_search_evaluations=limits.max_total_candidate_evaluations,
-                ),
+            tolerance = Decimal(str(request.amount_tolerance))
+            if not tolerance.is_finite() or tolerance < 0:
+                raise MatchingStrategyContractError("Carry-forward amount tolerance is invalid.")
+            policy = CarryForwardPolicy(
+                date_window_days=request.date_window_days,
+                amount_tolerance=tolerance,
+                max_search_evaluations=limits.max_total_candidate_evaluations,
+                max_window_cardinality=limits.max_left_group_cardinality or 16,
             )
+            if request.mode == "sequence-window":
+                decision = allocate_sequence_window(obligations, settlements, policy)
+            else:
+                decision = allocate_carry_forward(obligations, settlements, policy)
         except (CarryForwardError, KeyError, TypeError, ValueError, InvalidOperation) as exc:
             raise MatchingStrategyContractError(str(exc)) from exc
         results = (asdict(decision),)

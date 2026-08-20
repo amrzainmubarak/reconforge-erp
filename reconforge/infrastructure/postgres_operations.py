@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -94,7 +95,16 @@ POSTGRES_MIGRATION_REVISIONS: tuple[str, ...] = (
     "0079_pg_job_cursor",
     "0080_pg_retail_settlement",
     "0081_pg_prof_invoice",
+    "0082_pg_cert_evidence",
+    "0083_pg_manufacturing",
+    "0084_pg_bank_statement",
+    "0085_pg_reversal_definer",
+    "0086_pg_close_reopened",
+    "0087_pg_currency_binding",
+    "0088_pg_currency_snapshot",
 )
+
+_MIGRATION_TOKEN_PATTERN = re.compile(r"^[0-9]{4}_[A-Za-z0-9_]+$")
 
 
 class PostgresOperationsError(RuntimeError):
@@ -181,7 +191,7 @@ class PostgresMigrationStatusProvider:
             connection.close()
         if row is None:
             raise PostgresOperationsError("PostgreSQL migration state is empty.")
-        current = str(row[0])
+        current = _normalize_migration_revision(row[0], field="alembic_version")
         revisions = POSTGRES_MIGRATION_REVISIONS
         if current not in revisions:
             discovered = _discover_postgres_migration_revisions()
@@ -200,6 +210,21 @@ class PostgresMigrationStatusProvider:
         )
 
 
+def _normalize_migration_revision(value: object, *, field: str) -> str:
+    try:
+        if isinstance(value, (bytes, bytearray, memoryview)):
+            normalized = bytes(value).decode("utf-8").strip()
+        else:
+            normalized = str(value).strip()
+    except (UnicodeDecodeError, TypeError, ValueError) as exc:
+        raise PostgresOperationsError(f"PostgreSQL migration {field} is unsupported.") from exc
+    if not normalized:
+        raise PostgresOperationsError(f"PostgreSQL migration {field} is unsupported.")
+    if not _MIGRATION_TOKEN_PATTERN.fullmatch(normalized):
+        raise PostgresOperationsError(f"PostgreSQL migration {field} is unsupported.")
+    return normalized
+
+
 def _discover_postgres_migration_revisions() -> tuple[str, ...] | None:
     versions_dir = Path(__file__).resolve().parents[2] / "alembic" / "versions"
     if not versions_dir.is_dir():
@@ -216,10 +241,12 @@ def _discover_postgres_migration_revisions() -> tuple[str, ...] | None:
             and node.targets[0].id in {"revision"}
         }
         revision = assignments.get("revision")
-        if isinstance(revision, str):
-            revisions.append(revision)
-        else:
+        try:
+            revision = _normalize_migration_revision(revision, field=f"revision in {path.name}")
+        except PostgresOperationsError:
             return None
+        if revision is not None:
+            revisions.append(revision)
     return tuple(revisions)
 
 

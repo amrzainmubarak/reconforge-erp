@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
@@ -133,13 +133,16 @@ class PostgresScopedExportPublisher:
         self.repository = repository
         self.object_store = object_store
 
-    def publish(
-        self,
+    @staticmethod
+    def _authorize(
         scope: ScopedExportScope,
         *,
         policy_context: PolicyEvaluationContext,
-        request_id: str = "",
-    ) -> PublishedScopedExport:
+        request_id: str,
+        surface: str,
+    ) -> None:
+        """Authorize one snapshot/publication phase against the exact hierarchy."""
+
         if policy_context.tenant_id != scope.tenant_id:
             raise ScopedExportError("Export policy context does not match the requested tenant.")
         if policy_context.workspace_id != scope.workspace_id:
@@ -156,12 +159,27 @@ class PostgresScopedExportPublisher:
             decision,
             actor_id=policy_context.user_id,
             required_permissions=frozenset({_EXPORT_PERMISSION}),
-            surface="postgres.scoped_export.publish",
+            surface=surface,
             request_id=request_id,
             principal_type=policy_context.principal_type,
         )
         if not decision.allowed:
             raise ScopedExportError("Scoped export authorization was denied.")
+
+    def publish(
+        self,
+        scope: ScopedExportScope,
+        *,
+        policy_context: PolicyEvaluationContext,
+        policy_context_supplier: Callable[[], PolicyEvaluationContext] | None = None,
+        request_id: str = "",
+    ) -> PublishedScopedExport:
+        self._authorize(
+            scope,
+            policy_context=policy_context,
+            request_id=request_id,
+            surface="postgres.scoped_export.publish",
+        )
 
         try:
             snapshot = self.repository.snapshot(scope)
@@ -172,6 +190,17 @@ class PostgresScopedExportPublisher:
         content = snapshot.to_bytes()
         if len(content) > _MAX_EXPORT_BYTES:
             raise ScopedExportError("Scoped export exceeds its byte limit.")
+        if policy_context_supplier is not None:
+            try:
+                current_policy_context = policy_context_supplier()
+            except Exception as exc:
+                raise ScopedExportError("Scoped export authorization recheck failed.") from exc
+            self._authorize(
+                scope,
+                policy_context=current_policy_context,
+                request_id=request_id,
+                surface="postgres.scoped_export.publish.recheck",
+            )
         object_name = f"exports/control-plane/{snapshot.digest}.json"
         storage_scope = EvidenceStorageScope(
             tenant_id=scope.tenant_id,

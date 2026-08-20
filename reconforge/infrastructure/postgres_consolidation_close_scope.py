@@ -7,9 +7,10 @@ from typing import Any
 POSTGRES_CONSOLIDATION_CLOSE_SCOPE_SCHEMA_SQL = r"""
 DO $reconforge$
 DECLARE
-    table_name TEXT;
+    close_table_name TEXT;
+    has_tenant_column BOOLEAN;
 BEGIN
-    FOREACH table_name IN ARRAY ARRAY[
+    FOREACH close_table_name IN ARRAY ARRAY[
         'consolidation_close_periods',
         'consolidation_close_runs',
         'consolidation_close_effects',
@@ -22,63 +23,89 @@ BEGIN
         'consolidation_close_ppa_links',
         'consolidation_close_ownership_change_links'
     ] LOOP
+        IF NOT EXISTS (
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = 'reconforge'
+              AND table_name = close_table_name
+        ) THEN
+            CONTINUE;
+        END IF;
+        SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'reconforge'
+              AND table_name = close_table_name
+              AND column_name = 'tenant_id'
+        ) INTO has_tenant_column;
+        IF NOT has_tenant_column THEN
+            RAISE EXCEPTION 'existing schema contract for % is missing tenant_id', close_table_name;
+        END IF;
         EXECUTE format(
             'ALTER TABLE reconforge.%I ADD COLUMN IF NOT EXISTS organization_id TEXT DEFAULT NULLIF(current_setting(''app.organization_id'', true), '''')',
-            table_name
+            close_table_name
         );
         EXECUTE format(
             'ALTER TABLE reconforge.%I ALTER COLUMN organization_id SET DEFAULT NULLIF(current_setting(''app.organization_id'', true), '''')',
-            table_name
+            close_table_name
         );
         EXECUTE format(
             'ALTER TABLE reconforge.%I ADD COLUMN IF NOT EXISTS legal_entity_id TEXT DEFAULT NULLIF(current_setting(''app.legal_entity_id'', true), '''')',
-            table_name
+            close_table_name
         );
         EXECUTE format(
             'ALTER TABLE reconforge.%I ALTER COLUMN legal_entity_id SET DEFAULT NULLIF(current_setting(''app.legal_entity_id'', true), '''')',
-            table_name
+            close_table_name
         );
         IF NOT EXISTS (
             SELECT 1
             FROM pg_constraint
-            WHERE conname = table_name || '_organization_scope_fkey'
-              AND conrelid = ('reconforge.' || table_name)::regclass
+            WHERE conname = close_table_name || '_organization_scope_fkey'
+              AND conrelid = ('reconforge.' || close_table_name)::regclass
         ) THEN
             EXECUTE format(
                 'ALTER TABLE reconforge.%I ADD CONSTRAINT %I FOREIGN KEY (tenant_id, organization_id) REFERENCES reconforge.organizations(tenant_id, id) ON DELETE RESTRICT',
-                table_name,
-                table_name || '_organization_scope_fkey'
+                close_table_name,
+                close_table_name || '_organization_scope_fkey'
             );
         END IF;
         IF NOT EXISTS (
             SELECT 1
             FROM pg_constraint
-            WHERE conname = table_name || '_legal_entity_scope_fkey'
-              AND conrelid = ('reconforge.' || table_name)::regclass
+            WHERE conname = close_table_name || '_legal_entity_scope_fkey'
+              AND conrelid = ('reconforge.' || close_table_name)::regclass
         ) THEN
             EXECUTE format(
                 'ALTER TABLE reconforge.%I ADD CONSTRAINT %I FOREIGN KEY (tenant_id, legal_entity_id) REFERENCES reconforge.legal_entities(tenant_id, id) ON DELETE RESTRICT',
-                table_name,
-                table_name || '_legal_entity_scope_fkey'
+                close_table_name,
+                close_table_name || '_legal_entity_scope_fkey'
             );
         END IF;
-        EXECUTE format(
-            'CREATE INDEX IF NOT EXISTS %I ON reconforge.%I(tenant_id, organization_id, legal_entity_id, created_at, id)',
-            table_name || '_hierarchy_idx',
-            table_name
-        );
-        EXECUTE format('DROP POLICY IF EXISTS tenant_isolation ON reconforge.%I', table_name);
-        EXECUTE format('DROP POLICY IF EXISTS tenant_scope ON reconforge.%I', table_name);
-        EXECUTE format('DROP POLICY IF EXISTS hierarchy_scope ON reconforge.%I', table_name);
-        IF table_name = ANY (ARRAY['consolidation_close_periods', 'consolidation_close_runs']) THEN
+        BEGIN
+            EXECUTE format(
+                'CREATE INDEX IF NOT EXISTS %I ON reconforge.%I(tenant_id, organization_id, legal_entity_id, created_at, id)',
+                close_table_name || '_hierarchy_idx',
+                close_table_name
+            );
+        EXCEPTION WHEN undefined_column THEN
+            EXECUTE format(
+                'CREATE INDEX IF NOT EXISTS %I ON reconforge.%I(tenant_id, organization_id, legal_entity_id, id)',
+                close_table_name || '_hierarchy_idx',
+                close_table_name
+            );
+        END;
+        EXECUTE format('DROP POLICY IF EXISTS tenant_isolation ON reconforge.%I', close_table_name);
+        EXECUTE format('DROP POLICY IF EXISTS tenant_scope ON reconforge.%I', close_table_name);
+        EXECUTE format('DROP POLICY IF EXISTS hierarchy_scope ON reconforge.%I', close_table_name);
+        IF close_table_name = ANY (ARRAY['consolidation_close_periods', 'consolidation_close_runs']) THEN
             EXECUTE format(
                 'CREATE POLICY hierarchy_scope ON reconforge.%I USING (tenant_id=current_setting(''app.tenant_id'',true) AND (NULLIF(current_setting(''app.workspace_id'',true),'''') IS NULL OR workspace_id=current_setting(''app.workspace_id'',true)) AND (NULLIF(current_setting(''app.organization_id'',true),'''') IS NULL OR organization_id=current_setting(''app.organization_id'',true)) AND (NULLIF(current_setting(''app.legal_entity_id'',true),'''') IS NULL OR legal_entity_id=current_setting(''app.legal_entity_id'',true))) WITH CHECK (tenant_id=current_setting(''app.tenant_id'',true) AND (NULLIF(current_setting(''app.workspace_id'',true),'''') IS NULL OR workspace_id=current_setting(''app.workspace_id'',true)) AND (NULLIF(current_setting(''app.organization_id'',true),'''') IS NULL OR organization_id=current_setting(''app.organization_id'',true)) AND (NULLIF(current_setting(''app.legal_entity_id'',true),'''') IS NULL OR legal_entity_id=current_setting(''app.legal_entity_id'',true)))',
-                table_name
+                close_table_name
             );
         ELSE
             EXECUTE format(
                 'CREATE POLICY hierarchy_scope ON reconforge.%I USING (tenant_id=current_setting(''app.tenant_id'',true) AND (NULLIF(current_setting(''app.organization_id'',true),'''') IS NULL OR organization_id=current_setting(''app.organization_id'',true)) AND (NULLIF(current_setting(''app.legal_entity_id'',true),'''') IS NULL OR legal_entity_id=current_setting(''app.legal_entity_id'',true))) WITH CHECK (tenant_id=current_setting(''app.tenant_id'',true) AND (NULLIF(current_setting(''app.organization_id'',true),'''') IS NULL OR organization_id=current_setting(''app.organization_id'',true)) AND (NULLIF(current_setting(''app.legal_entity_id'',true),'''') IS NULL OR legal_entity_id=current_setting(''app.legal_entity_id'',true)))',
-                table_name
+                close_table_name
             );
         END IF;
     END LOOP;

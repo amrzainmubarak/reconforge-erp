@@ -13,6 +13,7 @@ from reconforge.application.matching_strategies import (
     MatchingStrategyRequest,
     MatchingStrategyResult,
     StrategyLimits,
+    reject_unsupported_grouped_budget,
     request_digest,
     result_digest,
 )
@@ -47,6 +48,7 @@ class ReversalPairingStrategy:
         return REVERSAL_PAIRING_MANIFEST
 
     def execute(self, request: MatchingStrategyRequest) -> MatchingStrategyResult:
+        reject_unsupported_grouped_budget(request, strategy_name="Reversal strategy")
         if request.mode not in self.manifest.supported_modes:
             raise MatchingStrategyContractError("Reversal strategy mode is not supported.")
         limits = self.manifest.limits

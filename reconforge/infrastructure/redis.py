@@ -63,6 +63,27 @@ class RedisOperationError(RuntimeError):
 _RedisResult = TypeVar("_RedisResult")
 
 
+def _is_reconnectable_error(error: BaseException) -> bool:
+    """Recognize only dependency connection/timeout failures as retryable.
+
+    Redis mutations are intentionally not retried by this module because a
+    socket failure can occur after the server applied an increment/set. The
+    bounded reconnect path is reserved for reads and health checks whose
+    replay has no business side effect.
+    """
+
+    current: BaseException | None = error
+    while current is not None:
+        if isinstance(current, (ConnectionError, TimeoutError, OSError)):
+            return True
+        module = type(current).__module__
+        name = type(current).__name__
+        if module.startswith("redis") and name in {"ConnectionError", "TimeoutError"}:
+            return True
+        current = current.__cause__ or current.__context__
+    return False
+
+
 @dataclass(frozen=True)
 class RedisSettings:
     """Connection settings for the optional Redis server boundary."""
@@ -168,15 +189,23 @@ class TenantRedisStore:
             raise RedisConfigurationError("Token hash must be a lowercase SHA-256 digest.")
         return normalized
 
-    def _call(self, operation: Callable[[Any], _RedisResult]) -> _RedisResult:
-        """Translate dependency failures into a safe infrastructure error."""
+    def _call(self, operation: Callable[[Any], _RedisResult], *, retry_read: bool = False) -> _RedisResult:
+        """Translate failures and optionally reconnect once for safe reads."""
 
-        try:
-            return operation(self.connection_factory.client())
-        except (RedisConfigurationError, RedisDataError, RedisUnavailableError, RedisOperationError):
-            raise
-        except Exception as exc:
-            raise RedisOperationError("Redis operation failed.") from exc
+        attempts = 0
+        while True:
+            try:
+                return operation(self.connection_factory.client())
+            except (RedisConfigurationError, RedisDataError, RedisUnavailableError, RedisOperationError):
+                raise
+            except Exception as exc:
+                if retry_read and attempts == 0 and _is_reconnectable_error(exc):
+                    close = getattr(self.connection_factory, "close", None)
+                    if callable(close):
+                        close()
+                        attempts += 1
+                        continue
+                raise RedisOperationError("Redis operation failed.") from exc
 
     def put_session(self, tenant_id: str, record: RedisSessionRecord, *, ttl_seconds: int) -> None:
         """Store session metadata with an expiry and no raw credential material."""
@@ -205,7 +234,10 @@ class TenantRedisStore:
     def get_session(self, tenant_id: str, session_id: str) -> RedisSessionRecord | None:
         """Load one session, rejecting malformed persisted data."""
 
-        value = self._call(lambda client: client.get(self._hashed_key(tenant_id, "session", session_id)))
+        value = self._call(
+            lambda client: client.get(self._hashed_key(tenant_id, "session", session_id)),
+            retry_read=True,
+        )
         if value is None:
             return None
         try:
@@ -238,7 +270,10 @@ class TenantRedisStore:
         """Return whether a session has a live revocation marker."""
 
         return (
-            self._call(lambda client: client.get(self._hashed_key(tenant_id, "revoked-session", session_id)))
+            self._call(
+                lambda client: client.get(self._hashed_key(tenant_id, "revoked-session", session_id)),
+                retry_read=True,
+            )
             is not None
         )
 
@@ -253,12 +288,21 @@ class TenantRedisStore:
         """Return whether a token digest has a live revocation marker."""
 
         digest = self._validate_token_hash(token_hash)
-        return self._call(lambda client: client.get(self._key(tenant_id, "revoked-token", digest))) is not None
+        return (
+            self._call(
+                lambda client: client.get(self._key(tenant_id, "revoked-token", digest)),
+                retry_read=True,
+            )
+            is not None
+        )
 
     def rate_limit_count(self, tenant_id: str, bucket: str, subject: str) -> int:
         """Read a rate-limit counter without incrementing it."""
 
-        value = self._call(lambda client: client.get(self._hashed_key(tenant_id, f"rate-limit-{bucket}", subject)))
+        value = self._call(
+            lambda client: client.get(self._hashed_key(tenant_id, f"rate-limit-{bucket}", subject)),
+            retry_read=True,
+        )
         if value is None:
             return 0
         try:
@@ -302,7 +346,7 @@ class TenantRedisStore:
     def ping(self) -> bool:
         """Return the dependency health without exposing connection details."""
 
-        return bool(self._call(lambda client: client.ping()))
+        return bool(self._call(lambda client: client.ping(), retry_read=True))
 
 
 class RedisPolicyCacheVersionStore:
@@ -319,16 +363,24 @@ class RedisPolicyCacheVersionStore:
         self.connection_factory = connection_factory
         self._key = f"{connection_factory.settings.key_prefix}:policy-cache:generation"
 
-    def _call(self, operation: Callable[[Any], _RedisResult]) -> _RedisResult:
-        try:
-            return operation(self.connection_factory.client())
-        except (RedisConfigurationError, RedisDataError, RedisUnavailableError, RedisOperationError):
-            raise
-        except Exception as exc:
-            raise RedisOperationError("Redis policy-cache generation operation failed.") from exc
+    def _call(self, operation: Callable[[Any], _RedisResult], *, retry_read: bool = False) -> _RedisResult:
+        attempts = 0
+        while True:
+            try:
+                return operation(self.connection_factory.client())
+            except (RedisConfigurationError, RedisDataError, RedisUnavailableError, RedisOperationError):
+                raise
+            except Exception as exc:
+                if retry_read and attempts == 0 and _is_reconnectable_error(exc):
+                    close = getattr(self.connection_factory, "close", None)
+                    if callable(close):
+                        close()
+                        attempts += 1
+                        continue
+                raise RedisOperationError("Redis policy-cache generation operation failed.") from exc
 
     def current_version(self) -> str:
-        value = self._call(lambda client: client.get(self._key))
+        value = self._call(lambda client: client.get(self._key), retry_read=True)
         if value is None:
             return "0"
         try:

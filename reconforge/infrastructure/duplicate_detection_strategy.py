@@ -11,6 +11,7 @@ from reconforge.application.matching_strategies import (
     MatchingStrategyRequest,
     MatchingStrategyResult,
     StrategyLimits,
+    reject_unsupported_grouped_budget,
     request_digest,
     result_digest,
 )
@@ -107,6 +108,7 @@ class DuplicateDetectionStrategy:
         return result
 
     def _validate_request(self, request: MatchingStrategyRequest) -> None:
+        reject_unsupported_grouped_budget(request, strategy_name="Duplicate-detection strategy")
         if request.mode not in self.manifest.supported_modes:
             raise MatchingStrategyContractError("Duplicate-detection strategy mode is not supported.")
         if len(request.left_records) > self.manifest.limits.max_left_records or len(request.right_records) > self.manifest.limits.max_right_records:

@@ -10,6 +10,7 @@ from reconforge.application.grouped_matching import (
     GroupedMatchRequest,
 )
 from reconforge.application.matching_strategies import (
+    GroupedMatchBudget,
     MatchingStrategyContractError,
     MatchingStrategyManifest,
     MatchingStrategyRequest,
@@ -64,6 +65,8 @@ class GroupedSubsetSumStrategy:
         max_left_group, max_right_group, max_group_evaluations = group_limits
         if max_left_group is None or max_right_group is None or max_group_evaluations is None:
             raise MatchingStrategyContractError("Grouped strategy manifest limits are incomplete.")
+        budget = request.grouped_budget or GroupedMatchBudget()
+        budget.validate_against(limits, mode=request.mode)
         try:
             grouped_request = GroupedMatchRequest(
                     left_records=request.left_records,
@@ -72,9 +75,9 @@ class GroupedSubsetSumStrategy:
                         mode=request.mode,  # type: ignore[arg-type]
                         amount_tolerance=tolerance,
                         date_window_days=request.date_window_days,
-                        max_left_cardinality=max_left_group,
-                        max_right_cardinality=max_right_group,
-                        max_search_evaluations=max_group_evaluations,
+                        max_left_cardinality=budget.max_left_cardinality or max_left_group,
+                        max_right_cardinality=budget.max_right_cardinality or max_right_group,
+                        max_search_evaluations=budget.max_search_evaluations or max_group_evaluations,
                         netting_mode=request.netting_mode,
                         portfolio_allow_partial_settlement=request.allow_partial_settlement,
                     ),

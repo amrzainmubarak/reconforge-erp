@@ -219,6 +219,11 @@ jobs:
           # service used by this job. Newer clients can emit settings such as
           # transaction_timeout that PostgreSQL 16 does not understand.
           sudo apt-get install --no-install-recommends -y libpq-dev postgresql-client-16
+          # Debian's alternatives may leave a different PostgreSQL major first
+          # on PATH. Pin the client directory before the fail-closed validator
+          # resolves each executable, then persist the validated path for the
+          # following steps.
+          export PATH="/usr/lib/postgresql/16/bin:$PATH"
           native_bindir="$(python .github/scripts/verify_postgres_native_tools.py --expected-major 16 --print-bindir)"
           printf '%s\n' "$native_bindir" >> "$GITHUB_PATH"
 

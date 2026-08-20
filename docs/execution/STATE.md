@@ -17,9 +17,14 @@ Updated: 2026-08-20
 - Added a single infrastructure factory for all five reviewed matching
   strategy adapters and routed Reconciliation-as-Code simulation through its
   immutable registry. Focused strategy, RAC, Ruff, mypy, and diff checks pass.
-- These are local synthetic/runtime gates only; hosted CI, independent HA/DR,
-  external provider interoperability, release provenance/signatures, and
-  production capacity remain open.
+- Hosted PR #83 for commit `de9e347f` completed its required CI/security matrix:
+  Python 3.11/3.12, server boundaries, PostgreSQL HA/DR, Docker parity,
+  engine parity, object storage, CodeQL, dependency/security policy gates all
+  passed. The PR remains open and merge-blocked by repository policy/branch
+  freshness; no automatic merge was performed.
+- Local runtime evidence and hosted CI now both exist for this slice; independent
+  multi-site HA/DR, external provider interoperability, release
+  provenance/signatures, and production capacity remain open.
 
 ## E-813 — Clean full local regression after drift repairs (2026-08-17)
 

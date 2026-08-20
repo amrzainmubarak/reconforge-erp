@@ -36,6 +36,13 @@ This file records commands and observed results. It does not convert a dirty wor
   with **2,961** collected tests, zero failures, and only declared capability
   skips plus existing deprecation/legacy-financial-input warnings. This is
   local evidence and does not replace the hosted matrix.
+- Hosted validation: PR `#83` for head `de9e347f18db09df021ff322e4e30a782ab1f42b`
+  completed the CI, Security, Docker, and CodeQL workflows successfully. The
+  matrix passed Python 3.11/3.12, server-boundary live services, PostgreSQL
+  HA/DR, Docker parity, all four engine-parity cells, object storage, locked
+  dependency audits, secret/npm policy gates, Python security, and CodeQL.
+  The PR is intentionally left open because merge policy/branch freshness is
+  a repository-owner action; no automatic main-branch merge is claimed.
 
 ## E-813: Clean full local regression after drift repairs (2026-08-17)
 

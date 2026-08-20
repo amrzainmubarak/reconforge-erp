@@ -30,6 +30,7 @@ from reconforge.infrastructure.indexed_matching_strategy import (
     INDEXED_ONE_TO_ONE_MANIFEST,
     IndexedOneToOneStrategy,
 )
+from reconforge.infrastructure.matching_strategy_registry import build_matching_strategy_registry
 from reconforge.infrastructure.reversal_matching_strategy import (
     REVERSAL_PAIRING_MANIFEST,
     ReversalPairingStrategy,
@@ -247,6 +248,30 @@ def test_registry_rejects_duplicate_or_unknown_strategy_identity(tmp_path: Path)
         registry = MatchingStrategyRegistry((strategy,))
         with pytest.raises(MatchingStrategyContractError, match="not registered"):
             registry.get(strategy.manifest.id, "2.0.0")
+    finally:
+        connection.close()
+
+
+def test_complete_strategy_registry_covers_every_published_strategy_family(tmp_path: Path) -> None:
+    _strategy_instance, service, connection = _strategy(tmp_path)
+    try:
+        registry = build_matching_strategy_registry(service)
+        manifest_ids = {manifest.id for manifest in registry.manifests}
+        assert manifest_ids == {
+            "indexed-composite-one-to-one",
+            "bounded-grouped-subset-sum",
+            "bounded-duplicate-detection",
+            "bounded-carry-forward-fifo",
+            "bounded-reversal-pairing",
+        }
+        published = json.loads(
+            (Path(__file__).resolve().parents[1] / "docs/architecture/matching-strategies.v1.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert {str(item["id"]) for item in published["strategies"]} == manifest_ids
+        for manifest in registry.manifests:
+            assert registry.get(manifest.id, manifest.version).manifest == manifest
     finally:
         connection.close()
 

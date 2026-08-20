@@ -661,6 +661,7 @@ class ReconciliationAsCodeSpec(_ContractModel):
         strategy: MatchingStrategySpec,
     ) -> dict[str, object]:
         from reconforge.application.matching_strategies import MatchingStrategyRequest
+        from reconforge.infrastructure.matching_strategy_registry import build_matching_strategy_registry
 
         request = MatchingStrategyRequest(
             left_records=tuple(dict(record) for record in case.left_records),
@@ -673,37 +674,21 @@ class ReconciliationAsCodeSpec(_ContractModel):
             partition_field=strategy.partition_field,
             netting_mode=strategy.netting_mode,
         )
-        if strategy.effective_strategy_id == "bounded-grouped-subset-sum":
-            from reconforge.infrastructure.grouped_matching_strategy import GroupedSubsetSumStrategy
+        from tempfile import TemporaryDirectory
 
-            output = GroupedSubsetSumStrategy().execute(request)
-        elif strategy.effective_strategy_id == "bounded-duplicate-detection":
-            from reconforge.infrastructure.duplicate_detection_strategy import DuplicateDetectionStrategy
+        from reconforge.db import connect, run_migrations
+        from reconforge.platform.matching import MatchingService
 
-            output = DuplicateDetectionStrategy().execute(request)
-        elif strategy.effective_strategy_id == "bounded-carry-forward-fifo":
-            from reconforge.infrastructure.carry_forward_strategy import CarryForwardFifoStrategy
-
-            output = CarryForwardFifoStrategy().execute(request)
-        elif strategy.effective_strategy_id == "bounded-reversal-pairing":
-            from reconforge.infrastructure.reversal_matching_strategy import ReversalPairingStrategy
-
-            output = ReversalPairingStrategy().execute(request)
-        else:
-            from tempfile import TemporaryDirectory
-
-            from reconforge.db import connect, run_migrations
-            from reconforge.infrastructure.indexed_matching_strategy import IndexedOneToOneStrategy
-            from reconforge.platform.matching import MatchingService
-
-            with TemporaryDirectory(prefix="reconforge-rac-") as temp_dir:
-                db_path = Path(temp_dir) / "simulation.db"
-                run_migrations(db_path)
-                connection = connect(db_path, require_exists=True)
-                try:
-                    output = IndexedOneToOneStrategy(MatchingService(connection)).execute(request)
-                finally:
-                    connection.close()
+        with TemporaryDirectory(prefix="reconforge-rac-") as temp_dir:
+            db_path = Path(temp_dir) / "simulation.db"
+            run_migrations(db_path)
+            connection = connect(db_path, require_exists=True)
+            try:
+                registry = build_matching_strategy_registry(MatchingService(connection))
+                adapter = registry.get(strategy.effective_strategy_id, strategy.strategy_version)
+                output = adapter.execute(request)
+            finally:
+                connection.close()
 
         payloads = [dict(result) for result in output.results]
         duplicate_group_count = 0

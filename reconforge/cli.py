@@ -26,6 +26,7 @@ from reconforge.anonymizer.engine import anonymize_directory
 from reconforge.api import create_api_app
 from reconforge.application.consolidation_close import ConsolidationCloseApplicationService
 from reconforge.application.intercompany_elimination import IntercompanyEliminationApplicationService
+from reconforge.application.jobs import DurableJobApplicationService
 from reconforge.audit import AuditLedgerError, list_audit_events, verify_audit_events
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService, RoleRepository
 from reconforge.auth.federation_config import FederationConfigurationError, load_federation_runtime
@@ -38,6 +39,7 @@ from reconforge.benchmark.reconciliation_execution import (
 )
 from reconforge.benchmark.runner import run_benchmark
 from reconforge.cli_bank_statement_control import bank_statement_app
+from reconforge.cli_individual_cashflow_control import individual_cashflow_app
 from reconforge.cli_inventory_planning import inventory_planning_app
 from reconforge.cli_inventory_valuation import inventory_valuation_app
 from reconforge.cli_inventory_valuation_reversal import inventory_valuation_reversal_app
@@ -89,6 +91,7 @@ from reconforge.db.importers import (
     import_control_tests,
     import_review_state,
 )
+from reconforge.deployment import DeploymentProfileError, deployment_profile, list_deployment_profiles
 from reconforge.domain.consolidation import ConsolidationError
 from reconforge.domain.consolidation_acquisition import (
     AcquisitionFairValueBridgeRequest,
@@ -136,6 +139,7 @@ from reconforge.infrastructure.postgres_service_accounts import (
     ServiceAccountError,
 )
 from reconforge.infrastructure.sqlite_consolidation_close import SQLiteConsolidationCloseRepository
+from reconforge.infrastructure.sqlite_jobs import SQLiteDurableJobRepository, SQLiteJobRepositoryError
 from reconforge.io.excel import audit_metadata, write_excel_workbook
 from reconforge.io.generated import GeneratedArtifactError
 from reconforge.io.readers import read_required_datasets
@@ -255,6 +259,7 @@ retail_app = typer.Typer(help="Run bounded retail operations controls.")
 bank_app = typer.Typer(help="Run bounded banking and professional cash controls.")
 manufacturing_app = typer.Typer(help="Run bounded manufacturing production controls.")
 professional_app = typer.Typer(help="Run bounded professional services controls.")
+individual_app = typer.Typer(help="Run bounded individual and freelancer controls.")
 app.add_typer(reconcile_app, name="reconcile")
 app.add_typer(report_app, name="report")
 app.add_typer(rules_app, name="rules")
@@ -300,6 +305,7 @@ app.add_typer(retail_app, name="retail")
 app.add_typer(bank_app, name="bank")
 app.add_typer(manufacturing_app, name="manufacturing")
 app.add_typer(professional_app, name="professional")
+app.add_typer(individual_app, name="individual")
 inventory_app.add_typer(inventory_planning_app, name="planning")
 inventory_app.add_typer(inventory_valuation_app, name="valuation")
 inventory_valuation_app.add_typer(inventory_valuation_reversal_app, name="reversal")
@@ -307,6 +313,7 @@ retail_app.add_typer(retail_settlement_app, name="settlement")
 bank_app.add_typer(bank_statement_app, name="statement")
 manufacturing_app.add_typer(manufacturing_cost_control_app, name="cost-control")
 professional_app.add_typer(professional_invoice_payment_app, name="invoice-payment")
+individual_app.add_typer(individual_cashflow_app, name="cashflow")
 
 
 def _version_callback(value: bool) -> None:
@@ -489,7 +496,9 @@ def _print_record_detail(title: str, record: dict[str, object]) -> None:
 
 
 def _safe_cli_error(exc: Exception) -> None:
-    console.print(f"[red]{exc}[/red]")
+    # Keep machine-assertable error phrases contiguous even on narrow TTYs.
+    # Rich otherwise folds long error messages at the terminal width.
+    console.print(f"[red]{exc}[/red]", soft_wrap=True)
     raise typer.Exit(code=1) from exc
 
 
@@ -762,6 +771,44 @@ def master_data_snapshot_command(
     except (DatabaseError, PlatformError) as exc:
         _safe_cli_error(exc)
     typer.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
+@master_data_app.command("currency-registry-check")
+def master_data_currency_registry_check_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace name to bind into the evidence scope.")] = "default",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Check master-data currency precision against the installed policy registry."""
+
+    try:
+        service, connection = _master_data_service(db_path)
+        try:
+            result = service.currency_registry_reconciliation(workspace=workspace, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@master_data_app.command("currency-registry-bind")
+def master_data_currency_registry_bind_command(
+    workspace: Annotated[str, typer.Option(help="Local workspace to bind to the installed registry snapshot.")] = "default",
+    actor: Annotated[str, typer.Option(help="Actor username or local label.")] = "local-cli",
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+) -> None:
+    """Persist an explicit currency-registry snapshot binding for one workspace."""
+
+    try:
+        service, connection = _master_data_service(db_path)
+        try:
+            result = service.bind_currency_registry(workspace=workspace, actor_label=actor)
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError) as exc:
+        _safe_cli_error(exc)
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 
 @master_data_app.command("currency-upsert")
@@ -5692,6 +5739,34 @@ def ops_jobs_command(
     _print_records("Local Jobs", jobs, max_rows=100)
 
 
+@ops_app.command("durable-job-queue")
+def ops_durable_job_queue_command(
+    db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    tenant_id: Annotated[str, typer.Option("--tenant", help="Tenant scope for the queue projection.")] = "",
+    workspace_id: Annotated[str, typer.Option("--workspace", help="Optional workspace lane scope.")] = "",
+    organization_id: Annotated[str, typer.Option("--organization", help="Optional organization lane scope.")] = "",
+    entity_id: Annotated[str, typer.Option("--entity", help="Optional entity lane scope.")] = "",
+) -> None:
+    """Show sanitized durable-job queue health without job identifiers or payloads."""
+
+    try:
+        connection = _db_connection(db_path)
+        try:
+            snapshot = DurableJobApplicationService(SQLiteDurableJobRepository(connection)).queue_snapshot(
+                tenant_id=tenant_id,
+                workspace_id=workspace_id or None,
+                organization_id=organization_id or None,
+                entity_id=entity_id or None,
+            )
+        finally:
+            connection.close()
+    except (DatabaseError, PlatformError, SQLiteJobRepositoryError) as exc:
+        _safe_cli_error(exc)
+    record = asdict(snapshot)
+    record.update({"queue_depth": snapshot.queue_depth, "total_count": snapshot.total_count})
+    _print_record_detail("Durable Job Queue Health", record)
+
+
 @ops_app.command("errors")
 def ops_errors_command(
     db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
@@ -5775,6 +5850,29 @@ def deployment_docker_verify_command() -> None:
     if any(row["status"] == "WARN" for row in rows):
         console.print(
             "[yellow]Docker verification is local file/tooling inspection only; no runtime guarantee is claimed.[/yellow]"
+        )
+
+
+@deployment_app.command("profiles")
+def deployment_profiles_command(
+    edition: Annotated[
+        str | None,
+        typer.Option("--edition", help="Show one edition; omit to list all editions."),
+    ] = None,
+) -> None:
+    """Show truthful deployment-mode defaults and claim boundaries."""
+
+    try:
+        profiles = (deployment_profile(edition),) if edition is not None else list_deployment_profiles()
+    except DeploymentProfileError as exc:
+        _safe_cli_error(exc)
+    for profile in profiles:
+        _print_record_detail(
+            "Deployment Profile",
+            {
+                **profile.to_dict(),
+                "digest": profile.digest,
+            },
         )
 
 
@@ -5943,17 +6041,24 @@ def reconcile_workorders_command(
         datasets[DatasetName.OLD_PARTS_RETURNS],
         datasets[DatasetName.INVOICES],
         config,
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
     )
     output_dir = ensure_output_dir(output_path)
     frames = workorder_result_frames(result)
     write_report_frames(frames, output_dir, "workorders")
+    workbook_metadata = audit_metadata(config.company_name, "Work Order Reconciliation", config.output_currency)
+    workbook_metadata["financial_input_policy"] = result.financial_input_policy
     workbook_path = write_excel_workbook(
         frames,
         output_dir / "workorder_reconciliation.xlsx",
-        metadata=audit_metadata(config.company_name, "Work Order Reconciliation", config.output_currency),
+        metadata=workbook_metadata,
     )
     write_json(
-        {"summary": frame_to_records(result.summary), "all_exceptions": frame_to_records(result.all_exceptions)},
+        {
+            "financial_input_policy": result.financial_input_policy,
+            "summary": frame_to_records(result.summary),
+            "all_exceptions": frame_to_records(result.all_exceptions),
+        },
         output_dir,
         "workorder_reconciliation",
     )
@@ -6029,6 +6134,7 @@ def management_pack_command(
         datasets[DatasetName.OLD_PARTS_RETURNS],
         datasets[DatasetName.INVOICES],
         config,
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
     )
     wip = generate_wip_aging(datasets[DatasetName.WORK_ORDERS], config)
     artifacts = generate_management_pack(
@@ -6974,6 +7080,7 @@ def demo_run_command(
         datasets[DatasetName.OLD_PARTS_RETURNS],
         datasets[DatasetName.INVOICES],
         config,
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
     )
     wip = generate_wip_aging(datasets[DatasetName.WORK_ORDERS], config)
 

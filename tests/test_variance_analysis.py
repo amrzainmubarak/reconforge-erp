@@ -13,11 +13,29 @@ from reconforge.io.writers import exact_json_dumps
 from reconforge.utils.money import (
     LEGACY_FINANCIAL_INPUT_POLICY,
     STRICT_FINANCIAL_INPUT_POLICY,
+    InvalidAmountError,
     LegacyFinancialInputWarning,
 )
-from reconforge.variance import analyze_variance, load_summary_metrics, read_variance_thresholds, variance_frame
+from reconforge.variance import (
+    VarianceThresholdPolicy,
+    analyze_variance,
+    load_summary_metrics,
+    read_variance_thresholds,
+    variance_frame,
+)
 
 runner = CliRunner()
+
+
+def test_direct_variance_threshold_policy_rejects_unsupported_financial_policy() -> None:
+    with pytest.raises(InvalidAmountError, match="unsupported financial input policy"):
+        VarianceThresholdPolicy(
+            amount_threshold=Decimal("0"),
+            percent_threshold=Decimal("0"),
+            artifact_schema_version=3,
+            threshold_policy_schema_version=2,
+            financial_input_policy="unknown-v9",  # type: ignore[arg-type]
+        )
 
 
 def _write_management_summary(path: Path, exception_count: int, unmatched_stock: int | str | float | Decimal) -> None:

@@ -137,6 +137,8 @@ def test_postgres_close_hierarchy_scope_schema_is_additive_and_reversible() -> N
     assert "ADD COLUMN IF NOT EXISTS legal_entity_id" in schema
     assert "organization_scope_fkey" in schema
     assert "legal_entity_scope_fkey" in schema
+    assert "information_schema.columns" in schema
+    assert "existing schema contract" in schema
     assert "hierarchy_scope" in schema
     assert "UNIQUE NULLS NOT DISTINCT" in schema
     assert "consolidation_close_impairment_links_hierarchy_entity_unique" in schema
@@ -239,7 +241,9 @@ def test_postgres_close_ppa_link_migration_is_linear_and_refuses_data_loss() -> 
     spec.loader.exec_module(module)
     assert module.revision == "0069_pg_close_ppa_links"
     assert module.down_revision == "0068_pg_close_deferred_tax_links"
-    assert "refusing to discard close/PPA evidence links" in path.read_text(encoding="utf-8")
+    migration = path.read_text(encoding="utf-8")
+    assert "refusing to discard close/PPA evidence links" in migration
+    assert "DROP TRIGGER IF EXISTS consolidation_close_ppa_link_guard" in migration
 
 
 def test_postgres_close_ownership_change_link_schema_is_immutable_and_tenant_scoped() -> None:
@@ -272,6 +276,19 @@ def test_postgres_consolidation_close_migration_is_linear_and_reversible() -> No
     assert module.revision == "0055_pg_consol_close"
     assert module.down_revision == "0054_pg_consol_ownership"
     assert "DROP TABLE IF EXISTS reconforge.consolidation_close_runs" in path.read_text(encoding="utf-8")
+
+
+def test_postgres_consolidation_close_reopened_migration_is_linear_and_guarded() -> None:
+    path = ROOT / "alembic/versions/0086_postgres_consolidation_close_reopened.py"
+    spec = importlib.util.spec_from_file_location("migration_0086", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.revision == "0086_pg_close_reopened"
+    assert module.down_revision == "0085_pg_reversal_definer"
+    sql = path.read_text(encoding="utf-8")
+    assert "status IN ('Open','Locked','Reopened')" in sql
+    assert "refusing to downgrade consolidation-close periods while Reopened rows exist" in sql
 
 
 def test_postgres_consolidation_journal_lines_migration_is_linear_and_reversible() -> None:
@@ -522,16 +539,19 @@ def test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable() -
         posted = repository.post_run(
             first["id"], expected_version=approved["row_version"], reason="posted", actor_label="close-poster"
         )
+        posted_detail = repository.get_run(posted["id"], actor_label="close-reader")
         prepared_certification = repository.prepare_certification(
             posted["id"], note="Posted control-journal evidence prepared.", actor_label="close-certifier"
         )
         assert prepared_certification["status"] == "Prepared"
+        assert prepared_certification["evidence_digest"] == posted_detail["close_bundle"]["bundle_digest"]
         with pytest.raises(PlatformError, match="different"):
             repository.review_certification(posted["id"], note="Self review", actor_label="close-certifier")
         reviewed_certification = repository.review_certification(
             posted["id"], note="Independent certification review.", actor_label="close-cert-reviewer"
         )
         assert reviewed_certification["status"] == "Reviewed"
+        assert reviewed_certification["evidence_digest"] == posted_detail["close_bundle"]["bundle_digest"]
         assert repository.get_certification(posted["id"])["reviewed_by"] == "close-cert-reviewer"
         reversal = repository.request_reversal(
             first["id"],
@@ -560,7 +580,7 @@ def test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable() -
             reason="controlled reopen",
             actor_label="period-reopener",
         )
-        assert reopened["status"] == "Open"
+        assert reopened["status"] == "Reopened"
         assert repository.summary(workspace="close").reversed_runs == 1
         detail = repository.get_run(first["id"])
         assert detail["worksheet"]["worksheet_id"] == worksheet.worksheet_id
@@ -753,7 +773,7 @@ def test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable() -
             ).fetchall()
         assert [(str(item["action"]), str(item["actor"])) for item in events] == [
             ("Locked", "period-reviewer"),
-            ("Open", "period-reopener"),
+            ("Reopened", "period-reopener"),
         ]
         with pytest.raises(PlatformError, match="not found"):
             PostgresConsolidationCloseRepository(connection, tenant_b).get_period(period["id"])

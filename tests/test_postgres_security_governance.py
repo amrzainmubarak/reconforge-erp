@@ -532,7 +532,10 @@ def test_live_security_governance_is_atomic_runtime_enforced_and_tenant_isolated
         monkeypatch.setenv("RECONFORGE_POSTGRES_DSN", admin_dsn)
         with pytest.raises(
             Exception,
-            match="refusing to discard (?:governed retention policy|connector write-back intent evidence)",
+            match=(
+                "refusing to discard (?:governed retention policy|connector write-back intent evidence|"
+                "certification evidence bindings)"
+            ),
         ):
             command.downgrade(Config(str(Path("alembic.ini").resolve())), "0051_access_policy_lifecycle")
         with admin.transaction():

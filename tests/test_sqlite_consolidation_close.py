@@ -242,7 +242,7 @@ def test_replay_verified_run_exposes_explicit_translation_lineage_evidence(tmp_p
 
 def test_migration_25_is_additive_and_adapter_rejects_a_pre_migration_database(tmp_path: Path) -> None:
     assert next(migration for migration in MIGRATIONS if migration.version == 25).name == "consolidation_close_lifecycle"
-    assert MIGRATIONS[-1].version == 36
+    assert MIGRATIONS[-1].version >= 38
     old_path, old_connection = _database(tmp_path, version=24)
     try:
         with pytest.raises(PlatformError, match="schema is unavailable"):
@@ -251,7 +251,7 @@ def test_migration_25_is_additive_and_adapter_rejects_a_pre_migration_database(t
         old_connection.close()
 
     applied = run_migrations(old_path)
-    assert applied.applied_versions == [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36]
+    assert applied.applied_versions == list(range(25, MIGRATIONS[-1].version + 1))
     upgraded = connect(old_path, require_exists=True)
     try:
         SQLiteConsolidationCloseRepository(upgraded)
@@ -426,6 +426,7 @@ def test_posted_run_certification_is_replayable_and_maker_checker_bound(tmp_path
         )
         assert prepared["status"] == "Prepared"
         assert prepared["prepared_by"] == "certification-preparer"
+        assert prepared["evidence_digest"] == posted["close_bundle"]["bundle_digest"]
         with pytest.raises(PlatformError, match="preparer and reviewer"):
             repository.review_certification(
                 str(posted["id"]),
@@ -439,7 +440,14 @@ def test_posted_run_certification_is_replayable_and_maker_checker_bound(tmp_path
         )
         assert reviewed["status"] == "Reviewed"
         assert reviewed["reviewed_by"] == "certification-reviewer"
+        assert reviewed["evidence_digest"] == posted["close_bundle"]["bundle_digest"]
         assert repository.get_certification(str(posted["id"])) == reviewed
+        connection.execute(
+            "UPDATE certification_records SET evidence_digest=? WHERE object_type=? AND object_id=?",
+            ("0" * 64, "consolidation_close_run", str(posted["id"])),
+        )
+        with pytest.raises(PlatformError, match="evidence digest"):
+            repository.get_certification(str(posted["id"]))
     finally:
         connection.close()
 

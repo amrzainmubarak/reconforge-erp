@@ -10,6 +10,7 @@ import jsonschema
 import pytest
 
 from reconforge.application.matching_strategies import (
+    GroupedMatchBudget,
     MatchingStrategyContractError,
     MatchingStrategyRegistry,
     MatchingStrategyRequest,
@@ -153,6 +154,46 @@ def test_carry_forward_strategy_is_published_bounded_and_permutation_invariant()
     assert first.input_digest == second.input_digest
     assert first.results == second.results
     assert first.results[0]["status"] == "allocated"
+
+
+def test_sequence_window_strategy_matches_contiguous_records_and_exposes_bounds() -> None:
+    strategy = CarryForwardFifoStrategy()
+    request = MatchingStrategyRequest(
+        left_records=(
+            {"id": "O-2", "amount": "60", "date": "2026-01-02", "currency": "USD", "partition": "bank-1"},
+            {"id": "O-1", "amount": "40", "date": "2026-01-01", "currency": "USD", "partition": "bank-1"},
+            {"id": "O-3", "amount": "20", "date": "2026-01-03", "currency": "USD", "partition": "bank-1"},
+        ),
+        right_records=(
+            {"id": "S-1", "amount": "100", "date": "2026-01-04", "currency": "USD", "partition": "bank-1"},
+        ),
+        mode="sequence-window",
+        date_window_days=10,
+    )
+    result = strategy.execute(request)
+    assert result.results[0]["status"] == "allocated"
+    assert [item["obligation_id"] for item in result.results[0]["allocations"]] == ["O-1", "O-2"]
+    assert strategy.manifest.limits.max_left_group_cardinality == 16
+
+
+def test_sequence_window_strategy_returns_ambiguity_instead_of_guessing() -> None:
+    strategy = CarryForwardFifoStrategy()
+    result = strategy.execute(
+        MatchingStrategyRequest(
+            left_records=tuple(
+                {"id": f"O-{index}", "amount": "50", "date": f"2026-01-0{index}", "currency": "USD", "partition": "bank-1"}
+                for index in range(1, 5)
+            ),
+            right_records=(
+                {"id": "S-1", "amount": "100", "date": "2026-01-05", "currency": "USD", "partition": "bank-1"},
+            ),
+            mode="sequence-window",
+            date_window_days=10,
+        )
+    )
+    assert result.results[0]["status"] == "ambiguous"
+    assert result.results[0]["reason_code"] == "SEQUENCE_WINDOW_AMBIGUOUS_EQUAL_COST"
+    assert result.exceptions[0]["reason_code"] == "SEQUENCE_WINDOW_AMBIGUOUS_EQUAL_COST"
 
 
 def test_carry_forward_strategy_is_published_in_architecture_document() -> None:
@@ -346,6 +387,53 @@ def test_grouped_strategy_supports_bounded_partial_settlement_with_residuals() -
     assert result.results[0]["settled_amount"] == Decimal("80.00")
     assert result.results[0]["left_residual"] == Decimal("20.00")
     assert result.results[0]["right_residual"] == Decimal("0")
+
+
+def test_grouped_strategy_applies_reviewed_request_budget_and_binds_it_to_digest() -> None:
+    strategy = GroupedSubsetSumStrategy()
+    base = MatchingStrategyRequest(
+        left_records=(
+            {"id": "L1", "amount": "100", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+        ),
+        right_records=(
+            {"id": "R1", "amount": "40", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+            {"id": "R2", "amount": "30", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+            {"id": "R3", "amount": "30", "currency": "USD", "date": "2026-01-10", "partition": "AR"},
+        ),
+        mode="one-to-many",
+    )
+    bounded = replace(
+        base,
+        grouped_budget=GroupedMatchBudget(max_right_cardinality=2, max_search_evaluations=100),
+    )
+
+    result = strategy.execute(bounded)
+
+    assert result.results[0]["status"] == "unmatched"
+    assert result.input_digest != strategy.execute(base).input_digest
+
+
+def test_grouped_strategy_rejects_unreviewed_or_mode_incompatible_budget() -> None:
+    strategy = GroupedSubsetSumStrategy()
+    request = MatchingStrategyRequest(left_records=(), right_records=(), mode="one-to-many")
+    with pytest.raises(MatchingStrategyContractError, match="reviewed strategy ceiling"):
+        strategy.execute(replace(request, grouped_budget=GroupedMatchBudget(max_right_cardinality=5)))
+    with pytest.raises(MatchingStrategyContractError, match="cardinality floor"):
+        strategy.execute(replace(request, grouped_budget=GroupedMatchBudget(max_right_cardinality=1)))
+
+
+def test_non_grouped_strategy_does_not_ignore_grouped_budget(tmp_path: Path) -> None:
+    strategy, _service, connection = _strategy(tmp_path)
+    try:
+        with pytest.raises(MatchingStrategyContractError, match="does not support grouped match budgets"):
+            strategy.execute(
+                replace(
+                    _request(),
+                    grouped_budget=GroupedMatchBudget(max_search_evaluations=1),
+                )
+            )
+    finally:
+        connection.close()
 
 
 def test_grouped_strategy_supports_non_overlapping_portfolio_mode() -> None:

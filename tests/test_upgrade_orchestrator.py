@@ -55,7 +55,6 @@ cryptography_ed25519 = pytest.importorskip(
 )
 Ed25519PrivateKey = cryptography_ed25519.Ed25519PrivateKey
 
-
 def _digest(value: str) -> str:
     return hashlib.sha256(value.encode("ascii")).hexdigest()
 

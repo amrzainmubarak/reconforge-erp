@@ -5,6 +5,8 @@ from __future__ import annotations
 import hashlib
 import http.client
 import json
+import multiprocessing
+import os
 import socket
 import ssl
 import threading
@@ -36,6 +38,8 @@ from reconforge.connectors.writeback_network import (
     WritebackNetworkResponse,
     WritebackProviderResponse,
 )
+from reconforge.db import connect, run_migrations
+from reconforge.infrastructure.sqlite_writeback import SQLiteWritebackIntentRepository
 from tests.https_runtime import create_localhost_certificate
 from tests.test_connector_writeback import NOW, _intent
 
@@ -155,6 +159,64 @@ class _RecoveryTransport:
         return self.response
 
 
+def _crash_after_provider_acceptance_before_persistence(
+    database_path: str,
+    marker_path: str,
+    intent_document: dict[str, object],
+) -> None:
+    """Accept a provider mutation, then exit before the acknowledgement write.
+
+    The child is intentionally terminated with ``os._exit`` after the injected
+    provider has accepted the idempotency key.  This models the narrow crash
+    window between provider side effect and durable intent acknowledgement.
+    The parent must recover by status lookup rather than issuing a second POST.
+    """
+
+    connection = connect(Path(database_path))
+    try:
+        current = SQLiteWritebackIntentRepository(connection).get(
+            intent_id=str(intent_document["intent_id"]),
+            tenant_id=str(intent_document["tenant_id"]),
+            workspace_id=str(intent_document["workspace_id"]),
+        )
+        if current is None:
+            raise AssertionError("dispatched intent was not staged before crash simulation")
+
+        @dataclass
+        class AcceptingTransport:
+            calls: int = 0
+
+            def post(
+                self,
+                endpoint: str,
+                *,
+                headers: dict[str, str],
+                body: bytes,
+                timeout_seconds: int,
+                maximum_response_bytes: int,
+            ) -> WritebackNetworkResponse:
+                del endpoint, body, timeout_seconds, maximum_response_bytes
+                self.calls += 1
+                Path(marker_path).write_text(
+                    json.dumps(
+                        {"accepted": True, "idempotency_key": headers["Idempotency-Key"], "post_calls": self.calls},
+                        sort_keys=True,
+                    ),
+                    encoding="utf-8",
+                )
+                return WritebackNetworkResponse(200, _provider_body(headers["Idempotency-Key"], reference="accepted-before-crash"))
+
+        executor = WritebackNetworkExecutor(
+            AcceptingTransport(),
+            payload_resolver=_Payloads(),
+            secret_resolver=_Secrets(),
+        )
+        executor.dispatch(current["intent"], registration=_registration(), policy=POLICY)
+    finally:
+        # Deliberately bypass normal cleanup to model a worker/process crash.
+        os._exit(0)
+
+
 def test_writeback_registration_is_explicit_and_canonical() -> None:
     first = _registration()
     second = _registration()
@@ -240,6 +302,94 @@ def test_network_recovery_fails_closed_for_unknown_or_misbound_provider_status()
             policy=POLICY,
             transport=_RecoveryTransport(WritebackNetworkResponse(200, _provider_body("wrong-key"))),
         )
+
+
+def test_network_crash_after_provider_acceptance_before_persistence_recovers_without_second_post(tmp_path: Path) -> None:
+    """A worker crash after provider acceptance is recovered by idempotency lookup."""
+
+    database_path = tmp_path / "writeback-crash.db"
+    marker_path = tmp_path / "provider-accepted.json"
+    run_migrations(database_path)
+    connection = connect(database_path)
+    try:
+        repository = SQLiteWritebackIntentRepository(connection)
+        staged = repository.put(
+            _intent(
+                connector_id=CONNECTOR_ID,
+                payload_digest=hashlib.sha256(PAYLOAD).hexdigest(),
+            ),
+            expected_version=0,
+        )
+        approved = approve_writeback(
+            staged,
+            policy=POLICY,
+            actor_id="checker-1",
+            approved_at=NOW,
+            assurance="mfa",
+            reason="independent provider review",
+        )
+        repository.put(approved, expected_version=1)
+        dispatched = dispatch_writeback(approved, policy=POLICY)
+        repository.put(dispatched, expected_version=2)
+        staged_version = repository.get(
+            intent_id=dispatched.intent_id,
+            tenant_id=dispatched.tenant_id,
+            workspace_id=dispatched.workspace_id,
+        )
+        assert staged_version is not None
+        assert staged_version["version"] == 3
+    finally:
+        connection.close()
+
+    context = multiprocessing.get_context("spawn")
+    child = context.Process(
+        target=_crash_after_provider_acceptance_before_persistence,
+        args=(str(database_path), str(marker_path), dispatched.model_dump(mode="json")),
+    )
+    child.start()
+    child.join(timeout=20)
+    if child.is_alive():
+        child.terminate()
+        child.join(timeout=5)
+    assert child.exitcode == 0
+    marker = json.loads(marker_path.read_text(encoding="utf-8"))
+    assert marker == {"accepted": True, "idempotency_key": dispatched.idempotency_key, "post_calls": 1}
+
+    check = connect(database_path)
+    try:
+        repository = SQLiteWritebackIntentRepository(check)
+        uncertain = repository.get(
+            intent_id=dispatched.intent_id,
+            tenant_id=dispatched.tenant_id,
+            workspace_id=dispatched.workspace_id,
+        )
+        assert uncertain is not None
+        assert uncertain["version"] == 3
+        assert uncertain["intent"].status is WritebackStatus.DISPATCHED
+
+        recovery = _RecoveryTransport(
+            WritebackNetworkResponse(200, _provider_body(dispatched.idempotency_key, reference="recovered-after-crash"))
+        )
+        recovered = WritebackNetworkExecutor(
+            _Transport([]),
+            payload_resolver=_Payloads(),
+            secret_resolver=_Secrets(),
+        ).recover(
+            uncertain["intent"],
+            registration=_registration(
+                recovery_endpoint="https://api.example.test/v1/status",
+                egress_destinations=("https://api.example.test/v1/status", "https://api.example.test/v1/writeback"),
+            ),
+            policy=POLICY,
+            transport=recovery,
+        )
+        persisted = repository.put(recovered.intent, expected_version=3)
+        assert persisted.status is WritebackStatus.ACKNOWLEDGED
+        assert persisted.acknowledgement is not None
+        assert persisted.acknowledgement.provider_reference == "recovered-after-crash"
+        assert len(recovery.calls) == 1
+    finally:
+        check.close()
 
 
 def test_network_compensation_uses_separate_allowlist_key_and_payload_digest() -> None:

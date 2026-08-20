@@ -123,6 +123,7 @@ def test_backup_restore_preserves_version_seven_master_data(tmp_path: Path) -> N
             entity_code="EG01",
         )
         service.upsert_period(name="2026-07", start_date="2026-07-01", end_date="2026-07-31")
+        service.bind_currency_registry(workspace="default")
     finally:
         connection.close()
 
@@ -143,6 +144,11 @@ def test_backup_restore_preserves_version_seven_master_data(tmp_path: Path) -> N
         }
         assert {row["organization_code"] for row in snapshot["organizations"]} == {"SYN", "SYN2"}
         assert snapshot["branches"][0]["branch_code"] == "CAI"
+        assert snapshot["currency_registry"]["binding"]["status"] == "current"
+        context = MasterDataService(connection).currency_registry_context(workspace="default")
+        assert context is not None
+        assert context.registry_manifest.digest == snapshot["currency_registry"]["registry"]["digest"]
+        assert connection.execute("SELECT COUNT(*) FROM currency_registry_snapshots").fetchone()[0] == 1
     finally:
         connection.close()
 

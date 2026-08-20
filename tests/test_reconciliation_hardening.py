@@ -74,6 +74,92 @@ def test_duplicate_identical_rows_receive_stable_occurrence_identity() -> None:
     )
 
 
+def test_result_frames_use_canonical_order_under_row_permutation() -> None:
+    stock = pd.DataFrame(
+        [
+            {
+                "move_id": "MOVE-Z",
+                "date": "2026-07-25",
+                "source_document": "INV-Z",
+                "work_order": "WO-1",
+                "total_cost": Decimal("10.00"),
+                "currency": "USD",
+            },
+            {
+                "move_id": "MOVE-A",
+                "date": "2026-07-25",
+                "source_document": "INV-A",
+                "work_order": "WO-1",
+                "total_cost": Decimal("11.00"),
+                "currency": "USD",
+            },
+            {
+                "move_id": "MOVE-BAD",
+                "date": "2026-07-25",
+                "source_document": "INV-BAD",
+                "work_order": "WO-1",
+                "total_cost": "not-an-amount",
+                "currency": "USD",
+            },
+            {
+                "move_id": "MOVE-C",
+                "date": "2026-07-25",
+                "source_document": "INV-C",
+                "work_order": "WO-1",
+                "total_cost": Decimal("12.00"),
+                "currency": "USD",
+            },
+        ]
+    )
+    gl = pd.DataFrame(
+        [
+            {
+                "entry_id": "GL-Z",
+                "date": "2026-07-25",
+                "reference": "INV-Z",
+                "work_order": "WO-1",
+                "amount": Decimal("10.00"),
+                "currency": "USD",
+            },
+            {
+                "entry_id": "GL-B",
+                "date": "2026-07-25",
+                "reference": "INV-B",
+                "work_order": "WO-1",
+                "amount": Decimal("13.00"),
+                "currency": "USD",
+            },
+            {
+                "entry_id": "GL-A",
+                "date": "2026-07-25",
+                "reference": "INV-A",
+                "work_order": "WO-1",
+                "amount": Decimal("11.00"),
+                "currency": "USD",
+            },
+        ]
+    )
+
+    first = reconcile_stock_gl(stock, gl, ReconForgeConfig(), input_policy=STRICT_FINANCIAL_INPUT_POLICY)
+    permuted = reconcile_stock_gl(
+        stock.iloc[[3, 1, 0, 2]].reset_index(drop=True),
+        gl.iloc[[1, 2, 0]].reset_index(drop=True),
+        ReconForgeConfig(),
+        input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
+
+    for frame_name, key in (
+        ("matched_transactions", "match_id"),
+        ("stock_without_gl", "record_instance_id"),
+        ("gl_without_stock", "record_instance_id"),
+        ("data_quality_exceptions", "exception_id"),
+        ("all_exceptions", "exception_id"),
+    ):
+        first_values = list(getattr(first, frame_name)[key].astype(str))
+        permuted_values = list(getattr(permuted, frame_name)[key].astype(str))
+        assert first_values == permuted_values, frame_name
+
+
 def test_data_quality_identity_is_stable_while_source_row_tracks_location() -> None:
     invalid = {
         "move_id": "MOVE-BAD",

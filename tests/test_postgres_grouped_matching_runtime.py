@@ -63,6 +63,8 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
     fx_run_id = "grouped-live-fx-" + uuid4().hex[:16]
     portfolio_run_id = "grouped-live-portfolio-" + uuid4().hex[:16]
     carry_run_id = "sequential-live-carry-" + uuid4().hex[:16]
+    sequence_run_id = "sequential-live-sequence-" + uuid4().hex[:16]
+    ambiguous_sequence_run_id = "sequential-live-ambiguous-" + uuid4().hex[:16]
     reversal_run_id = "sequential-live-reversal-" + uuid4().hex[:16]
     admin = admin_factory.connect()
     try:
@@ -485,6 +487,82 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
             )
             repository.create_run(
                 tenant_id=tenant_a,
+                run_id=sequence_run_id,
+                name="Live sequence-window reconciliation",
+                left_source="ledger-sequence.csv",
+                right_source="bank-sequence.csv",
+                algorithm_version="bounded-carry-forward-fifo@1.0.0",
+                rule={"matching_mode": "sequence-window", "date_window_days": 3, "amount_tolerance": "0"},
+                input_hash="sequential-sequence-live-input",
+                actor_id="sequential-live-user",
+            )
+            for source_id, amount, day in (
+                ("Q1", "40.00", "2026-08-01"),
+                ("Q2", "60.00", "2026-08-02"),
+                ("Q3", "20.00", "2026-08-03"),
+            ):
+                repository.register_input(
+                    tenant_id=tenant_a,
+                    run_id=sequence_run_id,
+                    side="Left",
+                    source_id=source_id,
+                    record_hash=f"hash-{source_id}",
+                    amount=amount,
+                    currency_code="USD",
+                    attributes={"date": day, "currency": "USD"},
+                    allowed_uses=2,
+                )
+            repository.register_input(
+                tenant_id=tenant_a,
+                run_id=sequence_run_id,
+                side="Right",
+                source_id="QS1",
+                record_hash="hash-QS1",
+                amount="100.00",
+                currency_code="USD",
+                attributes={"date": "2026-08-04", "currency": "USD"},
+                allowed_uses=2,
+            )
+            repository.create_run(
+                tenant_id=tenant_a,
+                run_id=ambiguous_sequence_run_id,
+                name="Live ambiguous sequence-window reconciliation",
+                left_source="ledger-sequence-ambiguous.csv",
+                right_source="bank-sequence-ambiguous.csv",
+                algorithm_version="bounded-carry-forward-fifo@1.0.0",
+                rule={"matching_mode": "sequence-window", "date_window_days": 3, "amount_tolerance": "0"},
+                input_hash="sequential-sequence-ambiguous-live-input",
+                actor_id="sequential-live-user",
+            )
+            for source_id, day in (
+                ("QI1", "2026-08-01"),
+                ("QI2", "2026-08-02"),
+                ("QI3", "2026-08-03"),
+                ("QI4", "2026-08-04"),
+            ):
+                repository.register_input(
+                    tenant_id=tenant_a,
+                    run_id=ambiguous_sequence_run_id,
+                    side="Left",
+                    source_id=source_id,
+                    record_hash=f"hash-{source_id}",
+                    amount="50.00",
+                    currency_code="USD",
+                    attributes={"date": day, "currency": "USD"},
+                    allowed_uses=2,
+                )
+            repository.register_input(
+                tenant_id=tenant_a,
+                run_id=ambiguous_sequence_run_id,
+                side="Right",
+                source_id="QSA",
+                record_hash="hash-QSA",
+                amount="100.00",
+                currency_code="USD",
+                attributes={"date": "2026-08-05", "currency": "USD"},
+            )
+            repository.create_run(
+                tenant_id=tenant_a,
                 run_id=reversal_run_id,
                 name="Live reversal pairing reconciliation",
                 left_source="ledger-reversal.csv",
@@ -526,7 +604,7 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
             ),
         )
         sequential_summary = sequential_worker.process_once()
-        assert sequential_summary.completed == 2
+        assert sequential_summary.completed == 4
         assert sequential_summary.failed == 0
         with PostgresTenantBoundary(factory).transaction(tenant_a) as connection:
             repository = PostgresReconciliationRepository(connection)
@@ -541,6 +619,60 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
             carry_matched_row = next(row for row in carry_rows if row["status"] == "Matched")
             assert carry_matched_row["lineage_json"]["strategy_id"] == "bounded-carry-forward-fifo"
             assert carry_matched_row["lineage_json"]["allocation"]["obligation_residual"] == "40"
+            sequence_metadata = repository.get_run_metadata(tenant_id=tenant_a, run_id=sequence_run_id)
+            sequence_rows = repository.list_results(tenant_id=tenant_a, run_id=sequence_run_id)
+            assert sequence_metadata["execution_status"] == "Complete"
+            assert sequence_metadata["matched_count"] == 2
+            assert {(row["left_id"], row["right_id"], row["status"]) for row in sequence_rows} == {
+                ("Q1", "QS1", "Matched"),
+                ("Q2", "QS1", "Matched"),
+                ("Q3", "", "Unmatched"),
+            }
+            sequence_matched_rows = [row for row in sequence_rows if row["status"] == "Matched"]
+            assert all(row["match_type"] == "sequential:sequence-window" for row in sequence_matched_rows)
+            assert all(
+                row["lineage_json"]["allocation"]["reason_code"] == "SEQUENCE_WINDOW_CONTIGUOUS_ALLOCATION"
+                for row in sequence_matched_rows
+            )
+            ambiguous_sequence_metadata = repository.get_run_metadata(
+                tenant_id=tenant_a,
+                run_id=ambiguous_sequence_run_id,
+            )
+            ambiguous_sequence_rows = repository.list_results(
+                tenant_id=tenant_a,
+                run_id=ambiguous_sequence_run_id,
+            )
+            ambiguous_sequence_exceptions = repository.list_exceptions(
+                tenant_id=tenant_a,
+                run_id=ambiguous_sequence_run_id,
+            )
+            assert ambiguous_sequence_metadata["execution_status"] == "Complete"
+            assert ambiguous_sequence_metadata["matched_count"] == 0
+            assert ambiguous_sequence_metadata["exception_count"] == 5
+            assert len(ambiguous_sequence_rows) == 5
+            assert all(row["status"] == "Ambiguous" for row in ambiguous_sequence_rows)
+            assert {(row["left_id"], row["right_id"]) for row in ambiguous_sequence_rows} == {
+                ("QI1", ""),
+                ("QI2", ""),
+                ("QI3", ""),
+                ("QI4", ""),
+                ("", "QSA"),
+            }
+            assert len(ambiguous_sequence_exceptions) == 5
+            assert {item["reason_code"] for item in ambiguous_sequence_exceptions} == {
+                "SEQUENCE_WINDOW_AMBIGUOUS_EQUAL_COST"
+            }
+            assert {(item["source_side"], item["source_id"]) for item in ambiguous_sequence_exceptions} == {
+                ("Left", "QI1"),
+                ("Left", "QI2"),
+                ("Left", "QI3"),
+                ("Left", "QI4"),
+                ("Right", "QSA"),
+            }
+            ambiguous_sequence_result_digest = ambiguous_sequence_rows[0]["lineage_json"]["strategy_result_digest"]
+            assert {
+                item["evidence_json"]["strategy_result_digest"] for item in ambiguous_sequence_exceptions
+            } == {ambiguous_sequence_result_digest}
             reversal_metadata = repository.get_run_metadata(tenant_id=tenant_a, run_id=reversal_run_id)
             reversal_rows = repository.list_results(tenant_id=tenant_a, run_id=reversal_run_id)
             assert reversal_metadata["execution_status"] == "Complete"
@@ -550,6 +682,7 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
             assert reversal_rows[0]["lineage_json"]["strategy_id"] == "bounded-reversal-pairing"
             assert reversal_rows[0]["lineage_json"]["pair"]["match_basis"] == "explicit-reversal-link"
             carry_result_digest = carry_matched_row["lineage_json"]["strategy_result_digest"]
+            sequence_result_digest = sequence_matched_rows[0]["lineage_json"]["strategy_result_digest"]
             reversal_result_digest = reversal_rows[0]["lineage_json"]["strategy_result_digest"]
 
         carry_expected = CarryForwardFifoStrategy().execute(
@@ -559,6 +692,37 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
                 amount_tolerance="0",
                 date_window_days=3,
                 mode="carry-forward",
+            )
+        )
+        sequence_expected = CarryForwardFifoStrategy().execute(
+            MatchingStrategyRequest(
+                left_records=(
+                    {"id": "Q1", "amount": "40", "date": "2026-08-01", "currency": "USD", "partition": "default"},
+                    {"id": "Q2", "amount": "60", "date": "2026-08-02", "currency": "USD", "partition": "default"},
+                    {"id": "Q3", "amount": "20", "date": "2026-08-03", "currency": "USD", "partition": "default"},
+                ),
+                right_records=(
+                    {"id": "QS1", "amount": "100", "date": "2026-08-04", "currency": "USD", "partition": "default"},
+                ),
+                amount_tolerance="0",
+                date_window_days=3,
+                mode="sequence-window",
+            )
+        )
+        ambiguous_sequence_expected = CarryForwardFifoStrategy().execute(
+            MatchingStrategyRequest(
+                left_records=(
+                    {"id": "QI1", "amount": "50", "date": "2026-08-01", "currency": "USD", "partition": "default"},
+                    {"id": "QI2", "amount": "50", "date": "2026-08-02", "currency": "USD", "partition": "default"},
+                    {"id": "QI3", "amount": "50", "date": "2026-08-03", "currency": "USD", "partition": "default"},
+                    {"id": "QI4", "amount": "50", "date": "2026-08-04", "currency": "USD", "partition": "default"},
+                ),
+                right_records=(
+                    {"id": "QSA", "amount": "100", "date": "2026-08-05", "currency": "USD", "partition": "default"},
+                ),
+                amount_tolerance="0",
+                date_window_days=3,
+                mode="sequence-window",
             )
         )
         reversal_expected = ReversalPairingStrategy().execute(
@@ -571,6 +735,8 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
             )
         )
         assert carry_result_digest == carry_expected.decision_digest
+        assert sequence_result_digest == sequence_expected.decision_digest
+        assert ambiguous_sequence_result_digest == ambiguous_sequence_expected.decision_digest
         assert reversal_result_digest == reversal_expected.decision_digest
 
         with PostgresTenantBoundary(factory).transaction(tenant_b) as connection, pytest.raises(

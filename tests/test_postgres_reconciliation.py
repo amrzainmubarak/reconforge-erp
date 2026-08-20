@@ -33,8 +33,10 @@ from reconforge.infrastructure.postgres_reconciliation import (
 from reconforge.infrastructure.postgres_reconciliation_checkpoints import (
     POSTGRES_RECONCILIATION_CHECKPOINT_SCHEMA_SQL,
 )
+from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY
 from reconforge.workers.postgres_reconciliation import (
     LocalDeterministicMatcherAdapter,
+    PostgresReconciliationPolicyDenied,
     PostgresReconciliationScheduler,
     PostgresReconciliationSchedulerError,
     PostgresReconciliationWorker,
@@ -410,6 +412,42 @@ def test_postgres_reconciliation_run_listing_is_stable_and_bounded() -> None:
         repository.list_runs(tenant_id="tenant_a", status="unknown")
 
 
+def test_postgres_repository_writer_binds_strict_financial_policy_by_default() -> None:
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+
+    run = _create_run(repository)
+
+    assert run["rule_json"]["financial_input_policy"] == STRICT_FINANCIAL_INPUT_POLICY
+    stored_rule = json.loads(str(connection.run["rule_json"]))
+    assert stored_rule["financial_input_policy"] == STRICT_FINANCIAL_INPUT_POLICY
+
+
+@pytest.mark.parametrize(
+    "policy",
+    ["legacy-financial-input-v1", "unknown-financial-input-v9"],
+)
+def test_postgres_repository_writer_rejects_non_strict_policy_before_mutation(policy: str) -> None:
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+
+    with pytest.raises(PostgresReconciliationValidationError, match="strict financial input policy"):
+        repository.create_run(
+            tenant_id="tenant_a",
+            run_id="run-invalid-policy",
+            name="Invalid policy",
+            left_source="bank.csv",
+            right_source="gl.csv",
+            algorithm_version="global-assignment-v1",
+            rule={"financial_input_policy": policy},
+            input_hash="invalid-policy",
+            actor_id="user-a",
+        )
+
+    assert connection.run is None
+    assert connection.executed == []
+
+
 class _ConnectionFactory:
     def __init__(self, connection: _ReconciliationConnection) -> None:
         self.connection = connection
@@ -521,6 +559,43 @@ def test_postgres_reconciliation_worker_policy_allows_scoped_service_identity() 
     summary = worker.process_once()
     assert summary.completed == 1
     assert connection.run is not None and connection.run["execution_status"] == "Complete"
+
+
+def test_postgres_reconciliation_worker_rechecks_policy_before_claim() -> None:
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+    _create_run(repository)
+    policy_calls = 0
+
+    def policy_context(tenant: str) -> PolicyEvaluationContext:
+        nonlocal policy_calls
+        policy_calls += 1
+        return PolicyEvaluationContext(
+            user_id="recheck-worker",
+            username="recheck-worker",
+            user_permissions={"match.run"} if policy_calls == 1 else set(),
+            principal_type="service_account",
+            tenant_id=tenant,
+            authorized_tenant_ids=frozenset({tenant}),
+        )
+
+    worker = PostgresReconciliationWorker(
+        _ConnectionFactory(connection),
+        tenant_supplier=lambda: ["tenant_a"],
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="recheck-worker",
+            policy_context_supplier=policy_context,
+            poll_interval_seconds=0,
+        ),
+    )
+
+    with pytest.raises(PostgresReconciliationPolicyDenied, match="permission_missing"):
+        worker.process_run(tenant_id="tenant_a", run_id="run-a")
+
+    assert policy_calls == 2
+    assert connection.run is not None
+    assert connection.run["execution_status"] == "Queued"
 
 
 def test_postgres_reconciliation_worker_propagates_workspace_scope_to_policy_and_transactions() -> None:

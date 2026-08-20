@@ -71,6 +71,17 @@ def test_postgres_alembic_assets_are_declared_for_sdist_and_wheel() -> None:
     assert '"alembic/versions" = ["alembic/versions/*.py"]' in project
 
 
+def test_certification_evidence_binding_migration_is_versioned_and_reversible() -> None:
+    migration = (ROOT / "alembic/versions/0082_postgres_certification_evidence.py").read_text(encoding="utf-8")
+    schema = (ROOT / "reconforge/infrastructure/postgres_approvals.py").read_text(encoding="utf-8")
+    assert 'revision = "0082_pg_cert_evidence"' in migration
+    assert 'down_revision = "0081_pg_prof_invoice"' in migration
+    assert "POSTGRES_CERTIFICATION_EVIDENCE_MIGRATION_SQL" in migration
+    assert "ADD COLUMN IF NOT EXISTS evidence_digest" in schema
+    assert "NEW.evidence_digest" in schema
+    assert "refusing to discard certification evidence bindings" in migration
+
+
 def test_reconciliation_entity_scope_migration_is_versioned_and_reversible() -> None:
     migration = (ROOT / "alembic/versions/0072_postgres_reconciliation_entity_scope.py").read_text(
         encoding="utf-8"

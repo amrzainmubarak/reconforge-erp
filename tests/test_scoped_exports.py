@@ -235,6 +235,31 @@ def test_publisher_denies_before_snapshot_or_object_effect(tmp_path: Path) -> No
     assert repository.calls == []
 
 
+def test_publisher_rechecks_policy_before_object_effect(tmp_path: Path) -> None:
+    scope = _scope()
+    repository = _SnapshotRepository(_snapshot(scope))
+    store = LocalObjectStore(LocalObjectStorageSettings(root=tmp_path.resolve()))
+    publisher = PostgresScopedExportPublisher(repository, store)
+    allowed = _policy(scope)
+    revoked = _policy(scope, permissions=frozenset())
+    supplier_calls: list[int] = []
+
+    def current_policy() -> PolicyEvaluationContext:
+        supplier_calls.append(1)
+        return revoked
+
+    with pytest.raises(ScopedExportError, match="authorization"):
+        publisher.publish(
+            scope,
+            policy_context=allowed,
+            policy_context_supplier=current_policy,
+        )
+
+    assert supplier_calls == [1]
+    assert repository.calls == [scope]
+    assert list(tmp_path.rglob("*")) == []
+
+
 def test_snapshot_and_storage_failures_publish_no_artifact(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -293,6 +293,44 @@ def test_postgres_outbox_worker_policy_allows_scoped_service_identity() -> None:
     assert result.published == 1
 
 
+def test_postgres_outbox_worker_rechecks_policy_before_publisher_side_effect() -> None:
+    connection = _FakeConnection()
+    policy_calls = 0
+    published: list[str] = []
+
+    def policy_context(tenant: str) -> PolicyEvaluationContext:
+        nonlocal policy_calls
+        policy_calls += 1
+        permissions = {"outbox.publish"} if policy_calls == 1 else set()
+        return PolicyEvaluationContext(
+            user_id="outbox-revocation-worker",
+            username="outbox-revocation-worker",
+            user_permissions=permissions,
+            principal_type="service_account",
+            tenant_id=tenant,
+            authorized_tenant_ids=frozenset({tenant}),
+        )
+
+    worker = PostgresOutboxWorker(
+        _FakeFactory(connection),
+        tenant_supplier=lambda: ["tenant_a"],
+        publisher=lambda event: published.append(event.id),
+        settings=OutboxWorkerSettings(
+            worker_id="outbox-revocation-worker",
+            policy_context_supplier=policy_context,
+            poll_interval_seconds=0,
+        ),
+    )
+
+    with pytest.raises(PostgresOutboxWorkerError, match="permission_missing"):
+        worker.process_once()
+
+    assert policy_calls == 2
+    assert published == []
+    assert connection.commits == 1  # claim committed; no publish acknowledgment was written
+    assert not any("SET status = 'Published'" in sql for sql, _ in connection.executed)
+
+
 def test_postgres_outbox_worker_processes_exact_hierarchy_lane() -> None:
     connection = _FakeConnection()
 

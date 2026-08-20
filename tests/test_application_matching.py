@@ -6,6 +6,8 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, cast
 
+import pytest
+
 from reconforge.application.matching import (
     LEGACY_RECORD_IDENTITY_POLICY,
     DeterministicMatchOutput,
@@ -14,7 +16,7 @@ from reconforge.application.matching import (
     MatchRunResult,
     ReferenceNormalizationRules,
 )
-from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY, FinancialInputPolicy
+from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY, FinancialInputPolicy, InvalidAmountError
 
 
 class _RecordingMatchingRepository:
@@ -114,6 +116,17 @@ def test_matching_application_preserves_exact_tolerance_rules_and_identity_polic
     assert repository.arguments["reference_normalization_rules"] is rules
     assert repository.arguments["workspace"] == "regulated"
     assert repository.arguments["actor_label"] == "operator@example.test"
+
+
+def test_matching_result_types_reject_unsupported_financial_input_policy() -> None:
+    with pytest.raises(InvalidAmountError, match="unsupported financial input policy"):
+        MatchRunResult("job-1", 0, 0, "unsupported-v9", LEGACY_RECORD_IDENTITY_POLICY)  # type: ignore[arg-type]
+    with pytest.raises(InvalidAmountError, match="unsupported financial input policy"):
+        DeterministicMatchOutput(
+            results=(),
+            exceptions=(),
+            financial_input_policy="unsupported-v9",  # type: ignore[arg-type]
+        )
 
 
 def test_matching_application_preserves_record_objects_and_normalization_type() -> None:

@@ -38,6 +38,9 @@ def test_community_profile_rejects_network_and_writeback() -> None:
     assert validate_deployment_profile("community", facts) == (
         "network_must_remain_disabled",
         "writeback_must_remain_disabled",
+        "backup_restore_evidence_required",
+        "rollback_evidence_required",
+        "retention_privacy_evidence_required",
     )
 
 
@@ -52,7 +55,24 @@ def test_regulated_profile_requires_customer_keys_and_failure_domains() -> None:
     assert validate_deployment_profile("regulated", facts) == (
         "customer_managed_keys_required",
         "independent_failure_domains_required",
+        "backup_restore_evidence_required",
+        "rollback_evidence_required",
+        "retention_privacy_evidence_required",
     )
+
+
+def test_complete_community_runtime_facts_clear_readiness_findings() -> None:
+    facts = DeploymentRuntimeFacts(
+        storage_backend="sqlite",
+        identity_provider="local",
+        queue_backend="local",
+        object_store="local-files",
+        backup_restore_verified=True,
+        rollback_verified=True,
+        retention_privacy_verified=True,
+    )
+
+    assert validate_deployment_profile("community", facts) == ()
 
 
 def test_writeback_always_requires_human_approval() -> None:

@@ -2,6 +2,54 @@
 
 Updated: 2026-08-20
 
+## E-819 — Bounded server-boundary CI lifetime (2026-08-20)
+
+- The hosted `server-boundaries` job now has a 30-minute job-level timeout.
+  The live matrix historically completes below 20 minutes; the bound prevents
+  a hung PostgreSQL/pytest process from consuming a runner indefinitely while
+  retaining headroom for the declared test set.
+- This is CI containment, not a claim that a cancelled run passed. The
+  replacement run must complete all live tests and cleanup steps successfully.
+
+## E-818 — Fail-closed deployment evidence gates (2026-08-20)
+
+- Deployment profiles now require explicit runtime facts for backup/restore,
+  rollback, and retention/privacy evidence in every edition, in addition to
+  the existing storage, identity, queue, object-store, network, key, and
+  failure-domain checks.
+- The profile digest includes these requirements, and incomplete facts produce
+  deterministic findings. Focused deployment tests, Ruff, mypy, and diff
+  checks pass.
+- Boundary: this enforces evidence prerequisites; it does not manufacture or
+  verify a backup, restore, rollback, retention, or privacy drill. E-1006 and
+  E-1007 remain open until those runtime artifacts exist.
+
+## E-817 — Canonical identity enforcement for high-risk policy decisions (2026-08-20)
+
+- Central SoD comparisons now canonicalize actor, object type, object ID, and
+  action values with trim + casefold before evaluating conflicts. Ownership
+  checks use the same canonical actor identity and cover certification in
+  addition to approval/review.
+- Hypothesis properties prove that casing and surrounding whitespace cannot
+  bypass self-approval or a prior-prepare/review SoD conflict. Focused policy
+  tests, Ruff, and mypy pass.
+- Boundary: this closes a policy-evaluation normalization gap only. It does
+  not claim universal route coverage, external IdP interoperability, or
+  production authorization assurance; E-1005 remains in progress.
+
+## E-816 — Deterministic connector manifest portfolio identity (2026-08-20)
+
+- Added `build_manifest_portfolio_report` to the connector conformance layer.
+  It validates the shared read-only/sandbox/threat/egress contract, canonicalizes
+  manifest ordering, records each manifest SHA-256, and emits one portfolio
+  digest suitable for drift detection and release evidence.
+- The reference portfolio report is permutation-invariant and changes when a
+  manifest version changes. Connector SDK/package/write-back focused tests,
+  Ruff, and mypy pass.
+- This closes no live provider or accounting write-back claim; network
+  interoperability, customer secrets, signed package distribution, and
+  production deployment remain explicitly outside this local manifest gate.
+
 ## E-815 — Live PostgreSQL close, metrics, migration, and strategy-registry gate (2026-08-20)
 
 - A disposable PostgreSQL 16.14 service was upgraded with the complete Alembic

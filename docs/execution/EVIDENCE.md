@@ -2,6 +2,59 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-819: Bounded server-boundary CI lifetime (2026-08-20)
+
+- Hosted `server-boundaries` now declares `timeout-minutes: 30`, preserving
+  headroom above the historical sub-20-minute live matrix while preventing an
+  indefinitely hung pytest/database process.
+- The prior run was observed in `Run live server-boundary tests` for over
+  three hours with no conclusion; it is not counted as pass evidence. A fresh
+  replacement run is required and will be accepted only on explicit success.
+- Boundary: CI containment only; no application runtime or production SLO
+  claim is changed.
+
+## E-818: Fail-closed deployment evidence gates (2026-08-20)
+
+- `DeploymentProfile` now declares backup/restore, rollback, and
+  retention/privacy evidence requirements. `DeploymentRuntimeFacts` carries
+  explicit operator-observed booleans, and validation emits stable findings
+  when any required fact is absent. Requirements are included in the profile
+  digest.
+- `python -m pytest tests/test_deployment_profiles.py -q --tb=short`: **PASS**
+  (8 tests). Ruff, mypy, and `git diff --check`: **PASS**.
+- Boundary: this is a fail-closed prerequisite contract, not runtime drill
+  evidence. Actual encrypted backup/restore, rollback, retention, privacy,
+  and mode-specific deployment artifacts remain required by E-1006.
+
+## E-817: Canonical identity enforcement for high-risk policy decisions (2026-08-20)
+
+- `reconforge.auth.rbac.canonical_policy_value` is now the shared comparison
+  boundary for actor, object, and action values used by SoD checks. The central
+  policy ownership guard uses the same normalization and rejects certification
+  self-approval as well as approval/review.
+- `python -m pytest tests/test_policy_engine.py -q --tb=short`: **PASS**
+  (all focused tests, including two Hypothesis properties). Ruff and mypy on
+  the changed auth modules: **PASS**.
+- Boundary: normalization and central-engine evidence only. Route/action
+  inventory completeness, external identity providers, PostgreSQL RLS, and
+  production authorization assurance remain open under E-1005.
+
+## E-816: Deterministic connector manifest portfolio identity (2026-08-20)
+
+- Added `ManifestPortfolioReport` and `build_manifest_portfolio_report` to
+  `reconforge.connectors.conformance`. The report validates all shared
+  read-only reference-manifest constraints, records sorted `(connector_id,
+  manifest_digest)` entries, and derives a canonical SHA-256 portfolio digest.
+- The report is order-invariant and version-sensitive: reversing the ten
+  reference manifests preserves the report, while changing one version changes
+  the portfolio digest without any provider or network call.
+- `python -m pytest -q tests/test_connector_sdk.py tests/test_connector_package.py
+  tests/test_connector_writeback.py tests/test_connector_writeback_network.py`:
+  **PASS** (56 tests). Ruff, mypy, and `git diff --check`: **PASS**.
+- Boundary: manifest/SDK contract evidence only. It does not prove live ERP or
+  banking provider interoperability, accounting posting, customer secret
+  handling, HA/DR, production capacity, or release readiness.
+
 ## E-815: Live PostgreSQL close/metrics/migration gate and complete matching registry (2026-08-20)
 
 - PostgreSQL runtime: disposable local PostgreSQL **16.14** (`reconforge-scale-pg`)

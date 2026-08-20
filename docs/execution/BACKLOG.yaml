@@ -121,7 +121,7 @@ tasks:
     priority: P0
     area: connectors
     title: Govern write-back with replayable compensation and provider-neutral transport hardening
-    status: planned
+    status: in_progress
     depends_on:
       - E-1001
       - E-306
@@ -153,6 +153,10 @@ tasks:
       require explicit deny-by-default evaluation across RBAC+ABAC policy, explicit SoD
       checks for creator-vs-approver flows, and auditable policy decisions with stable identity
       canonicalization and namespace scopes.
+    completed_slices:
+      - E-817 centralizes trim+casefold identity/action comparisons for SoD and
+        ownership checks, with property tests proving formatting cannot bypass
+        approval/review/certification self-approval or prior-action conflicts.
   - id: E-1006
     priority: P1
     area: global-expansion
@@ -170,6 +174,13 @@ tasks:
       boundary, backup/restore drill evidence, evidence retention/privacy policy alignment,
       and documented runbooks that avoid external cloud dependency unless explicitly selected by
       mode.
+    completed_slices:
+      - E-818 adds fail-closed runtime prerequisites for backup/restore,
+        rollback, and retention/privacy evidence to every immutable edition
+        profile; actual drills and artifacts remain required for closure.
+      - E-819 bounds the hosted live server-boundary job so hung dependency
+        processes fail closed and release the runner; a fresh successful run
+        remains required as evidence.
   - id: E-1007
     priority: P1
     area: global-expansion

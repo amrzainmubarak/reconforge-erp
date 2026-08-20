@@ -19,6 +19,7 @@ from reconforge.auth.policy import (
     audit_policy_decision,
     evaluate_principal_access,
 )
+from reconforge.auth.rbac import check_sod_conflict
 from reconforge.platform.common import ServerPrincipal
 
 
@@ -259,6 +260,44 @@ def test_creator_can_never_approve_or_review_own_object(action: str) -> None:
 
     assert not decision.allowed
     assert "cannot approve or review" in decision.reason
+
+
+@given(
+    actor=st.text(alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd"), max_codepoint=127), min_size=1, max_size=8),
+    action=st.sampled_from(["approve", "review", "certify"]),
+)
+def test_creator_canonicalization_cannot_bypass_high_risk_self_approval(actor: str, action: str) -> None:
+    """Presentation casing/whitespace never changes the ownership decision."""
+
+    decision = CentralPolicyEngine().evaluate(
+        PolicyEvaluationContext(
+            user_id=f"  {actor.upper()}  ",
+            username="creator",
+            user_permissions={f"close.{action}"},
+            object_owner_id=f"{actor.casefold()}",
+            action=f"  {action.upper()}  ",
+        ),
+        required_permission=f"close.{action}",
+    )
+
+    assert not decision.allowed
+    assert decision.reason_code == "self_approval_denied"
+
+
+@given(
+    actor=st.text(alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd"), max_codepoint=127), min_size=1, max_size=8),
+)
+def test_sod_canonicalization_cannot_bypass_prior_prepare(actor: str) -> None:
+    result = check_sod_conflict(
+        user_id=f" {actor.upper()} ",
+        object_type=" Reconciliation ",
+        object_id=" REC-1 ",
+        action=" REVIEW ",
+        prior_actions=[(actor.casefold(), "reconciliation", "rec-1", "prepare")],
+    )
+
+    assert not result.allowed
+    assert "Separation of duties" in result.reason
 
 
 def test_any_permission_contract_still_enforces_abac_scope() -> None:

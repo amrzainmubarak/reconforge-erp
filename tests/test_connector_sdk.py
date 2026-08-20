@@ -21,6 +21,7 @@ from reconforge.connectors import (
 )
 from reconforge.connectors.bank_statement_camt053 import bank_statement_camt053_registration
 from reconforge.connectors.conformance import (
+    build_manifest_portfolio_report,
     verify_manifest_portfolio,
     verify_network_connector,
     verify_network_retry_failure_injection,
@@ -115,6 +116,30 @@ def test_reference_manifest_portfolio_is_read_only_and_governed() -> None:
         "reference-sftp-readonly",
         "world-bank-public-readonly",
     )
+
+
+def test_reference_manifest_portfolio_report_is_order_invariant_and_digest_bound() -> None:
+    manifests = (
+        REFERENCE_REST_MANIFEST,
+        SFTP_REFERENCE_MANIFEST,
+        OBJECT_REFERENCE_MANIFEST,
+        DATABASE_REFERENCE_MANIFEST,
+        PAYMENT_STATEMENT_MANIFEST,
+        ERP_REFERENCE_MANIFEST,
+        WORLD_BANK_PUBLIC_MANIFEST,
+        BANK_STATEMENT_CAMT053_MANIFEST,
+        ERP_NEXT_MANIFEST,
+        ERP_NEXT_PAYMENT_ENTRY_MANIFEST,
+    )
+    first = build_manifest_portfolio_report(manifests)
+    shuffled = build_manifest_portfolio_report(tuple(reversed(manifests)))
+    assert first == shuffled
+    assert len(first.portfolio_digest) == 64
+    changed = build_manifest_portfolio_report(
+        (*manifests[:-1], ERP_NEXT_PAYMENT_ENTRY_MANIFEST.model_copy(update={"version": "1.0.1"}))
+    )
+    assert changed.connector_ids == first.connector_ids
+    assert changed.portfolio_digest != first.portfolio_digest
 
 
 @pytest.mark.parametrize(

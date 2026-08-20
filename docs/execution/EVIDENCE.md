@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-816: Deterministic connector manifest portfolio identity (2026-08-20)
+
+- Added `ManifestPortfolioReport` and `build_manifest_portfolio_report` to
+  `reconforge.connectors.conformance`. The report validates all shared
+  read-only reference-manifest constraints, records sorted `(connector_id,
+  manifest_digest)` entries, and derives a canonical SHA-256 portfolio digest.
+- The report is order-invariant and version-sensitive: reversing the ten
+  reference manifests preserves the report, while changing one version changes
+  the portfolio digest without any provider or network call.
+- `python -m pytest -q tests/test_connector_sdk.py tests/test_connector_package.py
+  tests/test_connector_writeback.py tests/test_connector_writeback_network.py`:
+  **PASS** (56 tests). Ruff, mypy, and `git diff --check`: **PASS**.
+- Boundary: manifest/SDK contract evidence only. It does not prove live ERP or
+  banking provider interoperability, accounting posting, customer secret
+  handling, HA/DR, production capacity, or release readiness.
+
 ## E-815: Live PostgreSQL close/metrics/migration gate and complete matching registry (2026-08-20)
 
 - PostgreSQL runtime: disposable local PostgreSQL **16.14** (`reconforge-scale-pg`)

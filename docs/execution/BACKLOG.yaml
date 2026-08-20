@@ -121,7 +121,7 @@ tasks:
     priority: P0
     area: connectors
     title: Govern write-back with replayable compensation and provider-neutral transport hardening
-    status: planned
+    status: in_progress
     depends_on:
       - E-1001
       - E-306

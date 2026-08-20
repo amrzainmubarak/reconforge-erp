@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-915: Bind connector portfolio identity to canonical manifest digests
+
+- **Date**: 2026-08-20
+- **Context**: Connector conformance validated each manifest independently, but
+  a release or operator could not fingerprint the complete reference portfolio
+  or detect a silent ordering/version drift as one reviewable artifact.
+- **Decision**: Add a deterministic `ManifestPortfolioReport` and builder that
+  validates the existing read-only contract, sorts by connector ID, records each
+  manifest digest, and derives a SHA-256 portfolio digest. The builder performs
+  no provider or network I/O.
+- **Rationale**: A single digest makes connector allowlist review, replay, and
+  release evidence auditable without treating a manifest catalog as live
+  provider interoperability.
+- **Verification**: Connector SDK/package/write-back focused tests prove
+  permutation invariance, version sensitivity, package compatibility, retry,
+  acknowledgement, and compensation boundaries; Ruff and mypy pass.
+- **Compatibility**: Additive API/data structure only. Existing manifest IDs,
+  versions, connector transports, and write-back state machines are unchanged.
+- **Rollback**: Remove the report type/builder and its test; no migration or
+  persisted-data rollback is required.
+
 ### D-914: Route declarative matching simulation through one complete registry
 
 - **Date**: 2026-08-20

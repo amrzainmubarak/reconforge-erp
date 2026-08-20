@@ -2,6 +2,19 @@
 
 Updated: 2026-08-20
 
+## E-816 — Deterministic connector manifest portfolio identity (2026-08-20)
+
+- Added `build_manifest_portfolio_report` to the connector conformance layer.
+  It validates the shared read-only/sandbox/threat/egress contract, canonicalizes
+  manifest ordering, records each manifest SHA-256, and emits one portfolio
+  digest suitable for drift detection and release evidence.
+- The reference portfolio report is permutation-invariant and changes when a
+  manifest version changes. Connector SDK/package/write-back focused tests,
+  Ruff, and mypy pass.
+- This closes no live provider or accounting write-back claim; network
+  interoperability, customer secrets, signed package distribution, and
+  production deployment remain explicitly outside this local manifest gate.
+
 ## E-815 — Live PostgreSQL close, metrics, migration, and strategy-registry gate (2026-08-20)
 
 - A disposable PostgreSQL 16.14 service was upgraded with the complete Alembic

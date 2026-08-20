@@ -8,6 +8,7 @@ from reconforge.workers.outbox import (
 )
 from reconforge.workers.postgres_reconciliation import (
     LocalDeterministicMatcherAdapter,
+    PostgresReconciliationPolicyDenied,
     PostgresReconciliationScheduler,
     PostgresReconciliationSchedulerError,
     PostgresReconciliationWorker,
@@ -29,6 +30,7 @@ __all__ = [
     "WorkerRunSummary",
     "PostgresReconciliationWorker",
     "PostgresReconciliationWorkerError",
+    "PostgresReconciliationPolicyDenied",
     "PostgresReconciliationWorkerSettings",
     "PostgresReconciliationScheduler",
     "PostgresReconciliationSchedulerError",

@@ -309,8 +309,12 @@ def run_postgres_grouped_matching_scale_profile(
     started = time.perf_counter()
     cycles = 0
     with ThreadPoolExecutor(max_workers=declared.workers, thread_name_prefix="reconforge-pg-grouped") as pool:
+        workers = tuple(
+            worker_factory(worker_id)
+            for worker_id in worker_ids
+        )
         while cycles < 100:
-            futures = [pool.submit(worker_factory(worker_id).process_once) for worker_id in worker_ids]
+            futures = [pool.submit(worker.process_once) for worker in workers]
             for future in futures:
                 future.result()
             cycles += 1

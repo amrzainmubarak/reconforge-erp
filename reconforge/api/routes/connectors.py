@@ -312,6 +312,12 @@ def dispatch_writeback_intent(
             "network_dispatch": "already_acknowledged",
         }
 
+    _recheck_provider_permission(
+        request,
+        permission="connectors.writeback.dispatch",
+        tenant_id=tenant_id,
+        workspace_id=workspace_id,
+    )
     try:
         dispatch = request.app.state.writeback_network_executor.dispatch(
             marked["intent"],
@@ -405,6 +411,12 @@ def recover_writeback_intent(
             "digest": acknowledged.digest,
             "network_dispatch": "already_acknowledged",
         }
+    _recheck_provider_permission(
+        request,
+        permission="connectors.writeback.reconcile",
+        tenant_id=tenant_id,
+        workspace_id=workspace_id,
+    )
     executor = cast(WritebackNetworkExecutor, getattr(request.app.state, "writeback_network_executor", None))
     recovery_transport = getattr(request.app.state, "writeback_recovery_transport", None)
     if not isinstance(executor, WritebackNetworkExecutor) or not callable(getattr(recovery_transport, "recover", None)):
@@ -688,6 +700,12 @@ def dispatch_writeback_compensation(
         allowed_operations=registration.allowed_operations,
         feature_enabled=registration.feature_enabled,
     )
+    _recheck_provider_permission(
+        request,
+        permission="connectors.writeback.dispatch",
+        tenant_id=tenant_id,
+        workspace_id=workspace_id,
+    )
     try:
         dispatch = executor.dispatch_compensation(
             intent,
@@ -737,6 +755,23 @@ def _require_server_scope(request: Request, tenant_id: str, workspace_id: str) -
     if tenant_id != scope.tenant_id or workspace_id != scope.workspace_id:
         raise APIError(status_code=403, code="writeback_scope_mismatch", message="Intent scope does not match the authenticated request scope.")
     return scope.tenant_id, scope.workspace_id
+
+
+def _recheck_provider_permission(
+    request: Request,
+    *,
+    permission: str,
+    tenant_id: str,
+    workspace_id: str,
+) -> None:
+    """Fence provider-facing I/O against revocation after durable staging."""
+
+    enforce_server_scoped_permission(
+        request,
+        permission=permission,
+        tenant_id=tenant_id,
+        workspace_id=workspace_id,
+    )
 
 
 def _writeback_response(intent: WritebackIntent, version: int, *, server_mode: bool) -> dict[str, object]:

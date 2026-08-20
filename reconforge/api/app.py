@@ -41,6 +41,7 @@ from reconforge.api.routes import (
     audit,
     audit_administration,
     auth,
+    bank_statement,
     close,
     connectors,
     consolidation_close,
@@ -48,6 +49,7 @@ from reconforge.api.routes import (
     consolidation_impairment,
     consolidation_intercompany,
     consolidation_ownership,
+    consolidation_ownership_change,
     consolidation_ppa,
     emergency_access,
     evidence,
@@ -55,12 +57,15 @@ from reconforge.api.routes import (
     finance_core,
     health,
     identity_administration,
+    individual_cashflow,
     inventory_core,
     inventory_planning,
     inventory_valuation,
     inventory_valuation_reversal,
+    manufacturing_cost_control,
     master_data,
     metrics,
+    operations,
     payables,
     professional_invoice_payment,
     receivables,
@@ -194,6 +199,7 @@ def create_api_app(
     app.state.postgres_close_factory = app.state.postgres_identity_factory
     app.state.postgres_consolidation_close_factory = app.state.postgres_identity_factory
     app.state.postgres_consolidation_ownership_factory = app.state.postgres_identity_factory
+    app.state.postgres_consolidation_ownership_change_factory = app.state.postgres_identity_factory
     app.state.postgres_ppa_factory = app.state.postgres_identity_factory
     app.state.postgres_deferred_tax_factory = app.state.postgres_identity_factory
     app.state.postgres_consolidation_impairment_factory = app.state.postgres_identity_factory
@@ -201,9 +207,11 @@ def create_api_app(
     app.state.postgres_evidence_factory = app.state.postgres_identity_factory
     app.state.postgres_scoped_exports_factory = app.state.postgres_identity_factory
     app.state.postgres_reconciliation_factory = app.state.postgres_identity_factory
+    app.state.postgres_bank_statement_factory = app.state.postgres_identity_factory
     app.state.postgres_writeback_factory = app.state.postgres_identity_factory
     app.state.postgres_retail_settlement_factory = app.state.postgres_identity_factory
     app.state.postgres_professional_invoice_payment_factory = app.state.postgres_identity_factory
+    app.state.postgres_manufacturing_cost_control_factory = app.state.postgres_identity_factory
     app.state.federation_providers = dict(federation_providers or {})
     app.state.federation_verifiers = dict(federation_verifiers or {})
     app.state.federation_air_gap_mode = federation_air_gap_mode
@@ -362,6 +370,7 @@ def create_api_app(
     app.include_router(close.router, prefix="/api/v1")
     app.include_router(consolidation_close.router, prefix="/api/v1")
     app.include_router(consolidation_ownership.router, prefix="/api/v1")
+    app.include_router(consolidation_ownership_change.router, prefix="/api/v1")
     app.include_router(consolidation_ppa.router, prefix="/api/v1")
     app.include_router(consolidation_deferred_tax.router, prefix="/api/v1")
     app.include_router(consolidation_impairment.router, prefix="/api/v1")
@@ -370,10 +379,14 @@ def create_api_app(
     app.include_router(evidence.router, prefix="/api/v1")
     app.include_router(scoped_exports.router, prefix="/api/v1")
     app.include_router(reconciliation.router, prefix="/api/v1")
+    app.include_router(bank_statement.router, prefix="/api/v1")
     app.include_router(retail_settlement.router, prefix="/api/v1")
     app.include_router(professional_invoice_payment.router, prefix="/api/v1")
+    app.include_router(manufacturing_cost_control.router, prefix="/api/v1")
+    app.include_router(individual_cashflow.router, prefix="/api/v1")
     app.include_router(exceptions.router, prefix="/api/v1")
     app.include_router(metrics.router, prefix="/api/v1")
+    app.include_router(operations.router, prefix="/api/v1")
     app.include_router(payables.router, prefix="/api/v1")
     app.include_router(receivables.router, prefix="/api/v1")
     app.include_router(master_data.router, prefix="/api/v1")
@@ -401,6 +414,7 @@ def create_api_app(
         close.router,
         consolidation_close.router,
         consolidation_ownership.router,
+        consolidation_ownership_change.router,
         evidence.router,
         scoped_exports.router,
         consolidation_ppa.router,
@@ -409,10 +423,14 @@ def create_api_app(
         consolidation_intercompany.router,
         connectors.router,
         reconciliation.router,
+        bank_statement.router,
         retail_settlement.router,
         professional_invoice_payment.router,
+        manufacturing_cost_control.router,
+        individual_cashflow.router,
         exceptions.router,
         metrics.router,
+        operations.router,
         payables.router,
         receivables.router,
         master_data.router,

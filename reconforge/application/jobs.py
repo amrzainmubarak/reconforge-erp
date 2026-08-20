@@ -15,6 +15,7 @@ from reconforge.auth.policy import (
 from reconforge.domain.jobs import (
     DurableJob,
     DurableJobBackpressureError,
+    DurableJobQueueSnapshot,
     DurableJobSchedulerCursorConflictError,
     JobLease,
     JobOutputManifest,
@@ -35,6 +36,15 @@ class DurableJobRepositoryProtocol(Protocol):
     def create_or_get(self, job: DurableJob, *, actor_id: str) -> tuple[DurableJob, bool]: ...
 
     def get(self, *, tenant_id: str, job_id: str) -> DurableJob | None: ...
+
+    def queue_snapshot(
+        self,
+        *,
+        tenant_id: str,
+        workspace_id: str | None = None,
+        organization_id: str | None = None,
+        entity_id: str | None = None,
+    ) -> DurableJobQueueSnapshot: ...
 
     def persist_transition(
         self,
@@ -210,6 +220,33 @@ class DurableJobApplicationService:
                 {**attributes, "job.status": persisted.status.value, "reconforge.result": result}
             )
             return persisted, created
+
+    def queue_snapshot(
+        self,
+        *,
+        tenant_id: str,
+        workspace_id: str | None = None,
+        organization_id: str | None = None,
+        entity_id: str | None = None,
+    ) -> DurableJobQueueSnapshot:
+        """Return a bounded operational projection without exposing job payloads."""
+
+        snapshot = self._repository.queue_snapshot(
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+            organization_id=organization_id,
+            entity_id=entity_id,
+        )
+        self._observability.record_job(
+            {
+                "job.type": "durable",
+                "reconforge.operation": "queue_snapshot",
+                "job.queue_depth": snapshot.queue_depth,
+                "job.running_depth": snapshot.running_count,
+                "job.total_count": snapshot.total_count,
+            }
+        )
+        return snapshot
 
     def submit_bounded(
         self,

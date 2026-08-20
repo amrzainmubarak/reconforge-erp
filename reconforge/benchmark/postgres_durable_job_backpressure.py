@@ -15,7 +15,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, replace
 from typing import Any
 
-from reconforge.application.jobs import DurableJobApplicationService, DurableJobWorkerService
+from reconforge.application.jobs import DurableJobApplicationService, DurableJobWorkerService, JobSubmission
 from reconforge.benchmark.postgres_durable_job_scale import (
     PostgresDurableJobScaleProfile,
     _digest,
@@ -41,6 +41,9 @@ class PostgresDurableJobBackpressureProfile:
     partitions_per_job: int = 4
     tenants: int = 4
     max_queued_jobs: int = 4
+    max_submit_attempts: int = 1_000
+    retry_base_seconds: float = 0.002
+    retry_max_seconds: float = 0.25
 
     def __post_init__(self) -> None:
         if self.workers < 1 or self.jobs_per_tenant < 1 or self.partitions_per_job < 1:
@@ -49,6 +52,10 @@ class PostgresDurableJobBackpressureProfile:
             raise ValueError("workers must be an exact multiple of a positive tenant count")
         if self.max_queued_jobs < 1 or self.max_queued_jobs > self.jobs_per_tenant:
             raise ValueError("max_queued_jobs must be positive and fit the declared tenant workload")
+        if self.max_submit_attempts < 1:
+            raise ValueError("max_submit_attempts must be positive")
+        if self.retry_base_seconds < 0 or self.retry_max_seconds < self.retry_base_seconds:
+            raise ValueError("retry backoff bounds are invalid")
 
     @property
     def jobs(self) -> int:
@@ -109,6 +116,34 @@ LIMITATIONS = (
     "The observed queue depth and retry attempts are workload observations, not a capacity, throughput, or SLO claim.",
     "Queue HA, automatic failover, host loss, cross-host fairness, soak, RPO/RTO, and production deployment remain unverified.",
 )
+
+
+def _submit_with_bounded_backpressure_retry(
+    submit: Callable[[], object],
+    *,
+    max_attempts: int,
+    retry_base_seconds: float,
+    retry_max_seconds: float,
+    sleep: Callable[[float], None] = time.sleep,
+) -> int:
+    """Submit once or fail after a finite, bounded backpressure retry budget."""
+
+    if max_attempts < 1:
+        raise ValueError("max_attempts must be positive")
+    if retry_base_seconds < 0 or retry_max_seconds < retry_base_seconds:
+        raise ValueError("retry backoff bounds are invalid")
+    attempts = 0
+    while True:
+        attempts += 1
+        try:
+            submit()
+            return attempts
+        except DurableJobBackpressureError:
+            if attempts >= max_attempts:
+                raise
+            delay = min(retry_max_seconds, retry_base_seconds * (2 ** min(attempts - 1, 16)))
+            if delay > 0:
+                sleep(delay)
 
 
 def default_profile() -> PostgresDurableJobBackpressureProfile:
@@ -181,18 +216,21 @@ def run_postgres_durable_job_backpressure_profile(
                     workspace_id="backpressure-workspace",
                     entity_id="backpressure-entity",
                 )
-                while True:
-                    try:
-                        producer_service.submit_bounded(
-                            submission,
-                            actor_id="postgres-backpressure-producer",
-                            max_queued_jobs=declared.max_queued_jobs,
-                        )
-                        break
-                    except DurableJobBackpressureError:
-                        with lock:
-                            rejected_attempts[0] += 1
-                        time.sleep(0.002)
+                def submit_current(current: JobSubmission = submission) -> object:
+                    return producer_service.submit_bounded(
+                        current,
+                        actor_id="postgres-backpressure-producer",
+                        max_queued_jobs=declared.max_queued_jobs,
+                    )
+
+                attempts = _submit_with_bounded_backpressure_retry(
+                    submit_current,
+                    max_attempts=declared.max_submit_attempts,
+                    retry_base_seconds=declared.retry_base_seconds,
+                    retry_max_seconds=declared.retry_max_seconds,
+                )
+                with lock:
+                    rejected_attempts[0] += attempts - 1
                 with lock:
                     jobs_by_tenant[tenant].append(job_id)
                     submitted_jobs[0] += 1
@@ -387,6 +425,7 @@ __all__ = [
     "PostgresDurableJobBackpressureProfile",
     "PostgresDurableJobBackpressureResult",
     "default_profile",
+    "_submit_with_bounded_backpressure_retry",
     "run_postgres_durable_job_backpressure_profile",
     "verify_postgres_durable_job_backpressure_result",
 ]

@@ -42,8 +42,23 @@ def _stable_partition_key(values: Sequence[object]) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def _persisted_financial_input_policy(rule: Mapping[str, Any]) -> FinancialInputPolicy:
+    """Resolve a stored rule without hiding its historical compatibility path."""
+
+    if "financial_input_policy" not in rule:
+        # Rows written before current PostgreSQL writers bound strict-v2 are
+        # replayed under their historical policy. New create_run writes never
+        # reach this branch because they persist strict-v2 explicitly.
+        return LEGACY_FINANCIAL_INPUT_POLICY
+    return cast(FinancialInputPolicy, rule["financial_input_policy"])
+
+
 class PostgresReconciliationWorkerError(RuntimeError):
     """Raised when a reconciliation worker cannot safely finish a cycle."""
+
+
+class PostgresReconciliationPolicyDenied(PostgresReconciliationWorkerError):
+    """Raised when a last-point policy recheck denies a run before claiming it."""
 
 
 class ReconciliationCancellationRequested(PostgresReconciliationWorkerError):
@@ -269,10 +284,7 @@ class LocalDeterministicMatcherAdapter:
             allow_many_to_one=bool(rule.get("allow_many_to_one", False)),
             allow_one_to_many=bool(rule.get("allow_one_to_many", False)),
             allow_many_to_many=bool(rule.get("allow_many_to_many", False)),
-            financial_input_policy=cast(
-                FinancialInputPolicy,
-                rule.get("financial_input_policy", LEGACY_FINANCIAL_INPUT_POLICY),
-            ),
+            financial_input_policy=_persisted_financial_input_policy(rule),
             record_identity_policy=str(
                 rule.get("record_identity_policy", LEGACY_RECORD_IDENTITY_POLICY),
             ),
@@ -752,6 +764,7 @@ class PostgresReconciliationWorker:
         workspace_id: str | None = None,
         entity_id: str | None = None,
         request_id: str = "",
+        error_factory: Callable[[str], Exception] = PostgresReconciliationWorkerError,
     ) -> None:
         """Require a central service-account decision for one exact lane."""
 
@@ -765,7 +778,7 @@ class PostgresReconciliationWorker:
             entity_id=entity_id,
             policy_permission=self.settings.policy_permission,
             surface="postgres-reconciliation.worker.claim",
-            error_factory=PostgresReconciliationWorkerError,
+            error_factory=error_factory,
             request_id=request_id,
         )
 
@@ -1036,6 +1049,13 @@ class PostgresReconciliationWorker:
                 workspace_id=workspace_scope,
                 legal_entity_id=entity_scope,
             ) as connection:
+                self._authorize_scope(
+                    tenant_id,
+                    workspace_id=workspace_scope,
+                    entity_id=entity_scope,
+                    request_id=request_id,
+                    error_factory=PostgresReconciliationPolicyDenied,
+                )
                 repository = PostgresReconciliationRepository(connection)
                 claimed = repository.claim_run(
                     tenant_id=tenant_id,
@@ -1157,6 +1177,10 @@ class PostgresReconciliationWorker:
                 )
             return ReconciliationProcessResult(tenant_id, run_id, str(cancelled.get("execution_status", "Cancelled")))
         except PostgresReconciliationBusyError:
+            raise
+        except PostgresReconciliationPolicyDenied:
+            # A revocation before claim is a no-effect authorization denial,
+            # not a matcher failure that should mark the queued run Failed.
             raise
         except Exception as exc:  # noqa: BLE001 - failure is persisted and surfaced as a retryable run state.
             try:

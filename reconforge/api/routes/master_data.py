@@ -26,6 +26,11 @@ from reconforge.infrastructure.postgres_master_data import (
 )
 from reconforge.platform.common import PlatformError
 from reconforge.platform.master_data import DEFAULT_LIST_LIMIT, MasterDataService
+from reconforge.utils.currency_registry_governance import (
+    CurrencyRegistryGovernanceError,
+    reconcile_currency_registry,
+)
+from reconforge.utils.money import CurrencyRegistry
 from reconforge.utils.time import utc_now_text
 
 router = APIRouter(prefix="/master-data", tags=["master-data"])
@@ -309,6 +314,87 @@ def list_currencies(
     except (DatabaseError, PlatformError) as exc:
         raise _api_error("currencies_list_failed", exc) from exc
     return _list_response("currencies", records, limit=limit, offset=offset)
+
+
+@router.get("/currencies/reconciliation")
+def currency_registry_reconciliation(
+    request: Request,
+    current_user: MasterDataRead,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+    workspace: str = "default",
+) -> dict[str, object]:
+    """Compare tenant/workspace currency references with the installed policy registry.
+
+    This is a read-only evidence operation.  It never changes the process
+    registry, performs currency conversion, or implies a live exchange-rate
+    source.
+    """
+
+    if server_master_data_enabled(request):
+        _server_workspace(workspace)
+
+        def operation(repository: PostgresMasterDataRepository, _tenant: str) -> dict[str, object]:
+            try:
+                records = repository.list_currencies(tenant_id=_tenant)
+                binding = repository.currency_registry_binding(tenant_id=_tenant, workspace=workspace)
+                installed_context = CurrencyRegistry.context()
+                operation_context = repository.currency_registry_context(tenant_id=_tenant, workspace=workspace)
+                return reconcile_currency_registry(
+                    records,
+                    scope=f"tenant:{_tenant}:workspace:{workspace}",
+                    binding=binding,
+                    registry_context=operation_context or installed_context,
+                    installed_registry_context=installed_context,
+                ).to_dict()
+            except CurrencyRegistryGovernanceError as exc:
+                raise PostgresMasterDataValidationError(str(exc)) from exc
+
+        return {"reconciliation": execute_postgres_master_data(request, operation)}
+    try:
+        result = MasterDataService(_local_connection(connection)).currency_registry_reconciliation(
+            workspace=workspace,
+            actor_label=current_user.username,
+        )
+    except (DatabaseError, PlatformError, CurrencyRegistryGovernanceError) as exc:
+        raise _api_error("currency_registry_reconciliation_failed", exc) from exc
+    return {"reconciliation": result}
+
+
+@router.post("/currencies/registry-binding")
+def bind_currency_registry(
+    request: Request,
+    current_user: MasterDataManage,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+    workspace: str = "default",
+) -> dict[str, object]:
+    """Bind one workspace to the installed currency registry snapshot.
+
+    Binding is explicit and auditable.  It never installs a registry or
+    changes the process-wide policy; later reconciliation reports drift if the
+    installed snapshot changes.
+    """
+
+    if server_master_data_enabled(request):
+        _enforce_server_manage(request)
+        record = execute_postgres_master_data(
+            request,
+            lambda repository, _tenant: repository.bind_currency_registry(
+                tenant_id=_tenant,
+                workspace=workspace,
+                actor_id=current_user.id,
+                request_id=str(getattr(request.state, "request_id", "")),
+                metadata={"source": "api"},
+            ),
+        )
+        return {"binding": record, "source": {"kind": "postgresql-master-data", "server_mode": True}}
+    try:
+        record = MasterDataService(_local_connection(connection)).bind_currency_registry(
+            workspace=workspace,
+            actor_label=current_user.username,
+        )
+    except (DatabaseError, PlatformError) as exc:
+        raise _api_error("currency_registry_binding_failed", exc) from exc
+    return {"binding": record}
 
 
 @router.post("/currencies")

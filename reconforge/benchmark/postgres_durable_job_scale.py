@@ -18,7 +18,7 @@ import time
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from reconforge.application.jobs import (
@@ -28,7 +28,6 @@ from reconforge.application.jobs import (
     LeasedJob,
 )
 from reconforge.domain.jobs import JobOutputManifest, JobStatus
-from reconforge.infrastructure.postgres import set_local_tenant_scope
 from reconforge.infrastructure.postgres_jobs import PostgresDurableJobRepository
 
 POSTGRES_SCALE_SCHEMA_VERSION = 1
@@ -133,12 +132,50 @@ def hundred_k_profile() -> PostgresDurableJobScaleProfile:
     )
 
 
+def one_m_profile() -> PostgresDurableJobScaleProfile:
+    """Return the declared 1M-effect PostgreSQL scale profile."""
+
+    return PostgresDurableJobScaleProfile(
+        profile_id="postgres-durable-job-load/1m-effects-v1",
+        workers=16,
+        jobs_per_tenant=625,
+        partitions_per_job=400,
+        tenants=4,
+    )
+
+
+def ten_m_profile() -> PostgresDurableJobScaleProfile:
+    """Return the declared 10M-effect PostgreSQL scale profile declaration.
+
+    This is intentionally a declared synthetic boundary; it is not executed in
+    default CI because wall-clock and tenant-resource duration are outside the
+    baseline gate budget.
+    """
+
+    return PostgresDurableJobScaleProfile(
+        profile_id="postgres-durable-job-load/10m-effects-v1",
+        workers=16,
+        jobs_per_tenant=625,
+        partitions_per_job=4000,
+        tenants=4,
+    )
+
+
 def _utc_text() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def _digest(value: str) -> str:
     return hashlib.sha256(value.encode("ascii")).hexdigest()
+
+
+_SCALE_BENCHMARK_STARTED_AT = datetime(2026, 8, 3, 0, 2, 0, tzinfo=UTC)
+
+
+def _logical_timestamp(offset_seconds: int) -> str:
+    """Return a deterministic canonical UTC timestamp for deterministic profiling."""
+
+    return (_SCALE_BENCHMARK_STARTED_AT + timedelta(seconds=offset_seconds)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _submission(*, job_id: str, tenant_id: str, index: int, profile: PostgresDurableJobScaleProfile) -> JobSubmission:
@@ -165,7 +202,7 @@ def _drain(worker: DurableJobWorkerService, leased: LeasedJob, profile: Postgres
         job_id = leased.job.id
         output_digest = _digest(f"{job_id}:output:{ordinal}")
         input_digest = _digest(f"{job_id}:input:{ordinal}")
-        occurred_at = f"2026-08-03T00:01:{ordinal:02d}Z"
+        occurred_at = _logical_timestamp(ordinal)
         if ordinal < profile.partitions_per_job:
             leased = worker.commit_partition(
                 leased,
@@ -251,8 +288,10 @@ def run_postgres_durable_job_scale_profile(
     """Submit and concurrently drain one bounded PostgreSQL profile.
 
     The caller owns schema setup and tenant creation.  Each worker obtains a
-    fresh connection from ``connection_factory``; no shared connection is used
-    across threads.
+    leased connection from ``connection_factory``; no shared connection object
+    is used across threads. A ``connection_factory`` backed by
+    ``PostgresPooledConnectionFactory`` reuses backend connections safely via
+    rollback-on-release.
     """
 
     declared = profile or default_profile()
@@ -331,19 +370,9 @@ def run_postgres_durable_job_scale_profile(
                         duplicate_partition_effects += 1
                     seen.add(key)
                     effect_rows.append((job_id, effect.ordinal, effect.input_digest, effect.output_digest, effect.effect_reference))
-            with audit_connection.transaction():
-                set_local_tenant_scope(audit_connection, tenant, workspace_id="scale-workspace")
-                row = audit_connection.execute(
-                    """
-                    SELECT COUNT(*) FILTER (WHERE status IN ('queued','retrying')),
-                           COUNT(*) FILTER (WHERE status = 'running')
-                    FROM reconforge.durable_jobs
-                    WHERE tenant_id = %s
-                    """,
-                    (tenant,),
-                ).fetchone()
-                final_queue_depth += int(row[0])
-                final_running_depth += int(row[1])
+            snapshot = audit_repository.queue_snapshot(tenant_id=tenant)
+            final_queue_depth += snapshot.queue_depth
+            final_running_depth += snapshot.running_count
     finally:
         audit_connection.close()
 
@@ -425,6 +454,8 @@ __all__ = [
     "PostgresDurableJobScaleProfile",
     "PostgresDurableJobScaleResult",
     "default_profile",
+    "one_m_profile",
+    "ten_m_profile",
     "ten_k_profile",
     "hundred_k_profile",
     "run_postgres_durable_job_scale_profile",

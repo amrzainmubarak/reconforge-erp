@@ -544,20 +544,26 @@ _MODULES = (
         ),
         default_enabled=False,
         dependencies=("connectors.boundary", "platform.core"),
-        interfaces=("artifacts", "cli", "library", "modern-studio"),
+        interfaces=("api", "artifacts", "cli", "library", "modern-studio"),
         import_contracts=("camt053-statement.v1", "bank-ledger-export.v1"),
         export_contracts=("bank-statement-control-report.v1",),
         data_classification=("financial-sensitive", "payment-control-data", "source-export-metadata"),
         retention_note=(
-            "Statement exports, ledger exports, and reports remain in operator-selected local paths; the module "
-            "does not retain credentials or contact a bank."
+            "Statement exports, ledger exports, and reports remain in operator-selected local paths or an "
+            "authenticated workspace-scoped SQLite/PostgreSQL evidence store; the module does not retain "
+            "credentials or contact a bank."
         ),
         activation_note=(
-            "Run explicitly with a bounded local CAMT.053 file and JSON ledger export. The control is non-posting "
-            "and provider-neutral; live bank connectivity, payment initiation, and ERP write-back are separate gates."
+            "Run explicitly with a bounded local CAMT.053 file and JSON ledger export, then optionally persist the "
+            "replay-verified report through the authenticated local or server API. The control is non-posting and "
+            "provider-neutral; live bank connectivity, payment initiation, and ERP write-back are separate gates."
         ),
         test_evidence=(
             "tests/test_bank_statement_control.py",
+            "tests/test_sqlite_bank_statement.py",
+            "tests/test_api_bank_statement.py",
+            "tests/test_postgres_bank_statement.py",
+            "tests/test_api_server_bank_statement.py",
             "apps/web/src/components/BankStatementStudio.test.tsx",
             "apps/web/e2e/accessibility.spec.ts",
         ),
@@ -574,20 +580,25 @@ _MODULES = (
         ),
         default_enabled=False,
         dependencies=("inventory.core", "platform.core"),
-        interfaces=("artifacts", "cli", "library", "modern-studio"),
+        interfaces=("api", "artifacts", "cli", "library", "modern-studio"),
         import_contracts=("production-order-export.v1", "material-issue-export.v1", "completion-export.v1", "scrap-export.v1"),
         export_contracts=("manufacturing-cost-control-report.v1",),
         data_classification=("financial-sensitive", "inventory-control-data", "source-export-metadata"),
         retention_note=(
-            "Production exports and reports remain in operator-selected local paths; this module does not retain "
-            "ERP credentials or post inventory, WIP, or ledger entries."
+            "Source exports remain operator-selected inputs; replay-verified reports may be retained in the local "
+            "workspace evidence store. This module does not retain ERP credentials or post inventory, WIP, or "
+            "ledger entries."
         ),
         activation_note=(
-            "Run explicitly with bounded local JSON exports. The slice is non-posting and provider-neutral; standard "
-            "cost policy, statutory valuation, ERP connectivity, and write-back remain separate gates."
+            "Run explicitly with bounded local JSON exports or the authenticated local evidence API. The slice is "
+            "non-posting and provider-neutral; standard cost policy, statutory valuation, ERP connectivity, and "
+            "write-back remain separate gates. PostgreSQL server persistence is available only in the explicit "
+            "server profile and remains a non-posting evidence boundary."
         ),
         test_evidence=(
             "tests/test_manufacturing_cost_control.py",
+            "tests/test_sqlite_manufacturing_cost_control.py",
+            "tests/test_api_manufacturing_cost_control.py",
             "apps/web/src/components/ManufacturingCostStudio.test.tsx",
             "apps/web/e2e/accessibility.spec.ts",
         ),
@@ -625,6 +636,39 @@ _MODULES = (
             "tests/test_api_server_professional_invoice_payment.py",
             "tests/test_postgres_professional_invoice_payment.py",
             "apps/web/src/components/ProfessionalInvoicePaymentStudio.test.tsx",
+            "apps/web/e2e/accessibility.spec.ts",
+        ),
+    ),
+    ModuleDescriptor(
+        module_id="individual.cashflow",
+        name="Individual and freelancer cashflow control",
+        version="1.0.0",
+        maturity="experimental",
+        capability_status="implemented",
+        summary=(
+            "Deterministic local income and expense control against optional category budgets with visible "
+            "over-budget, within-budget, unbudgeted, and no-activity evidence."
+        ),
+        default_enabled=False,
+        dependencies=("platform.core",),
+        interfaces=("api", "artifacts", "cli", "library", "modern-studio"),
+        import_contracts=("individual-cash-transaction-export.v1", "individual-cash-budget-export.v1"),
+        export_contracts=("individual-cashflow-control-report.v1",),
+        data_classification=("financial-sensitive", "personal-finance-data", "source-export-metadata"),
+        retention_note=(
+            "Transaction and budget exports remain in operator-selected local paths; reports are self-digesting "
+            "artifacts and are not persisted by this stateless API slice."
+        ),
+        activation_note=(
+            "Run explicitly with bounded local JSON exports or the authenticated local API. The control is "
+            "non-posting and provider-neutral; bank connectivity, tax advice, legal-book posting, and write-back "
+            "remain separate gates."
+        ),
+        test_evidence=(
+            "tests/test_individual_cashflow_control.py",
+            "tests/test_individual_cashflow_cli.py",
+            "tests/test_api_individual_cashflow.py",
+            "apps/web/src/components/IndividualCashflowStudio.test.tsx",
             "apps/web/e2e/accessibility.spec.ts",
         ),
     ),

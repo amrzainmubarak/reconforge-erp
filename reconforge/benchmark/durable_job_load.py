@@ -332,14 +332,14 @@ def _effect_set_digest(connection: sqlite3.Connection, profile: DurableJobLoadPr
     return digest, len(rows), by_job
 
 
-def _final_depth(connection: sqlite3.Connection) -> tuple[int, int]:
-    queued = connection.execute(
-        "SELECT COUNT(*) FROM durable_jobs WHERE status IN ('queued','retrying')"
-    ).fetchone()[0]
-    running = connection.execute(
-        "SELECT COUNT(*) FROM durable_jobs WHERE status='running'"
-    ).fetchone()[0]
-    return int(queued), int(running)
+def _final_depth(repository: SQLiteDurableJobRepository, tenants: int) -> tuple[int, int]:
+    """Read drain state through the same sanitized operational projection."""
+
+    snapshots = [repository.queue_snapshot(tenant_id=_tenant_id(index)) for index in range(tenants)]
+    return (
+        sum(snapshot.queue_depth for snapshot in snapshots),
+        sum(snapshot.running_count for snapshot in snapshots),
+    )
 
 
 def _duplicate_count(connection: sqlite3.Connection) -> int:
@@ -459,7 +459,9 @@ def run_durable_job_load_profile(
 
     audit_connection = connect(database_path, require_exists=True)
     try:
-        final_queue, final_running = _final_depth(audit_connection)
+        final_queue, final_running = _final_depth(
+            SQLiteDurableJobRepository(audit_connection), declared.tenants
+        )
         duplicate = _duplicate_count(audit_connection)
         effect_digest, committed_effects, _by_job = _effect_set_digest(audit_connection, declared)
     finally:

@@ -7,8 +7,9 @@ from typing import TypeVar
 
 from fastapi import Request
 
-from reconforge.api.server_identity import server_identity_enabled
+from reconforge.api.server_identity import get_postgres_identity_factory, request_tenant_id, server_identity_enabled
 from reconforge.application.metrics import MetricsRepositoryProtocol
+from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_metrics import PostgresMetricsRepository
 
 T = TypeVar("T")
@@ -25,10 +26,10 @@ def execute_postgres_metrics(
 ) -> T:
     """Execute a metrics application service operation against the tenant's PostgreSQL database."""
 
-    tenant_id = request.headers.get("x-reconforge-tenant", "")
-    connection = getattr(request.app.state, "postgres_pool", None)
-    if not tenant_id or connection is None:
+    factory = get_postgres_identity_factory(request)
+    tenant_id = request_tenant_id(request)
+    if factory is None:
         raise RuntimeError("PostgreSQL metrics mode requires a tenant and connection pool.")
 
-    repository = PostgresMetricsRepository(connection, tenant_id)
-    return operation(repository, tenant_id)
+    with PostgresTenantBoundary(factory).transaction(tenant_id) as connection:
+        return operation(PostgresMetricsRepository(connection, tenant_id), tenant_id)

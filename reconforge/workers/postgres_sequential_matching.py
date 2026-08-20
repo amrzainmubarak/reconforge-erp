@@ -170,7 +170,11 @@ class PostgresSequentialMatchingAdapter:
                         "right_id": str(allocation.get("settlement_id", "")),
                         "match_type": f"sequential:{mode}",
                         "confidence": "1" if status == "Matched" else "0",
-                        "explanation": "Bounded FIFO carry-forward allocation with visible residuals.",
+                        "explanation": (
+                            "Bounded contiguous sequence-window allocation with visible residuals."
+                            if mode == "sequence-window"
+                            else "Bounded FIFO carry-forward allocation with visible residuals."
+                        ),
                         "amount_difference": "0",
                         "date_difference_days": None,
                         "status": status,
@@ -237,20 +241,38 @@ class PostgresSequentialMatchingAdapter:
             )
         exceptions: tuple[Mapping[str, object], ...] = ()
         if status == "Ambiguous":
-            exceptions = (
-                {
-                    "exception_type": "sequential_matching_ambiguity",
-                    "source_side": "Both",
-                    "source_id": "",
-                    "title": "Sequential matching requires review",
-                    "explanation": "The bounded sequential strategy did not select an unreviewed result.",
-                    "severity": "High",
-                    "risk_score": "1",
-                    "reason_code": str(decision.get("reason_code", "")),
-                    "owner_id": "",
-                    "evidence": lineage,
-                },
+            # The durable exception schema intentionally accepts one concrete
+            # source side per row.  A sequence-window ambiguity affects every
+            # still-unresolved obligation and settlement, so preserve the
+            # decision at that granularity instead of inventing a ``Both``
+            # side that the database cannot represent.
+            exception_rows: list[Mapping[str, object]] = []
+            ambiguous_left_ids = tuple(
+                sorted({str(row.get("left_id", "")) for row in rows if str(row.get("left_id", ""))})
             )
+            ambiguous_right_ids = tuple(
+                sorted({str(row.get("right_id", "")) for row in rows if str(row.get("right_id", ""))})
+            )
+            for side, source_ids in (
+                ("Left", ambiguous_left_ids),
+                ("Right", ambiguous_right_ids),
+            ):
+                for source_id in source_ids:
+                    exception_rows.append(
+                        {
+                            "exception_type": "sequential_matching_ambiguity",
+                            "source_side": side,
+                            "source_id": source_id,
+                            "title": "Sequential matching requires review",
+                            "explanation": "The bounded sequential strategy did not select an unreviewed result.",
+                            "severity": "High",
+                            "risk_score": "1",
+                            "reason_code": str(decision.get("reason_code", "")),
+                            "owner_id": "",
+                            "evidence": lineage,
+                        }
+                    )
+            exceptions = tuple(exception_rows)
         return tuple(rows), exceptions
 
     def iter_partition_results(

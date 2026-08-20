@@ -37,6 +37,7 @@ class ApprovalRepositoryProtocol(Protocol):
         period_name: str = "",
         entity_code: str = "",
         note: str = "",
+        evidence_digest: str = "",
         actor_label: str = "local-cli",
     ) -> dict[str, Any]: ...
 
@@ -46,6 +47,7 @@ class ApprovalRepositoryProtocol(Protocol):
         object_type: str,
         object_id: str,
         note: str = "",
+        evidence_digest: str | None = None,
         actor_label: str = "local-cli",
     ) -> dict[str, Any]: ...
 
@@ -104,6 +106,7 @@ class ApprovalApplicationService:
         period_name: str = "",
         entity_code: str = "",
         note: str = "",
+        evidence_digest: str = "",
         actor_label: str = "local-cli",
     ) -> dict[str, Any]:
         return self.repository.prepare_certification(
@@ -112,6 +115,7 @@ class ApprovalApplicationService:
             period_name=period_name,
             entity_code=entity_code,
             note=note,
+            evidence_digest=evidence_digest,
             actor_label=actor_label,
         )
 
@@ -121,12 +125,14 @@ class ApprovalApplicationService:
         object_type: str,
         object_id: str,
         note: str = "",
+        evidence_digest: str | None = None,
         actor_label: str = "local-cli",
     ) -> dict[str, Any]:
         return self.repository.review_certification(
             object_type=object_type,
             object_id=object_id,
             note=note,
+            evidence_digest=evidence_digest,
             actor_label=actor_label,
         )
 

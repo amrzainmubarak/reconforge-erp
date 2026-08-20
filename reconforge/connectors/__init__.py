@@ -50,6 +50,15 @@ from reconforge.connectors.erpnext_payment_reference import (
     ErpNextPaymentEntryRead,
     erpnext_payment_entry_registration,
 )
+from reconforge.connectors.erpnext_payment_writeback import (
+    ERP_NEXT_PAYMENT_ENTRY_WRITEBACK_ENDPOINT,
+    ERP_NEXT_PAYMENT_ENTRY_WRITEBACK_OPERATION,
+    ERP_NEXT_PAYMENT_ENTRY_WRITEBACK_PATH,
+    ErpNextPaymentEntryDraft,
+    ErpNextPaymentEntryPayload,
+    build_erpnext_payment_entry_payload,
+    erpnext_payment_entry_writeback_registration,
+)
 from reconforge.connectors.erpnext_reference import (
     ERP_NEXT_ENDPOINT,
     ERP_NEXT_GL_ENTRY_PATH,
@@ -284,6 +293,13 @@ __all__ = [
     "ErpNextPaymentEntryPage",
     "ErpNextPaymentEntryRead",
     "erpnext_payment_entry_registration",
+    "ERP_NEXT_PAYMENT_ENTRY_WRITEBACK_ENDPOINT",
+    "ERP_NEXT_PAYMENT_ENTRY_WRITEBACK_OPERATION",
+    "ERP_NEXT_PAYMENT_ENTRY_WRITEBACK_PATH",
+    "ErpNextPaymentEntryDraft",
+    "ErpNextPaymentEntryPayload",
+    "build_erpnext_payment_entry_payload",
+    "erpnext_payment_entry_writeback_registration",
     "ERP_NEXT_JOURNAL_ENTRY_ENDPOINT",
     "ERP_NEXT_JOURNAL_ENTRY_OPERATION",
     "ERP_NEXT_JOURNAL_ENTRY_PATH",

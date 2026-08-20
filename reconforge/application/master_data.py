@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any, Protocol
 
+from reconforge.utils.money import CurrencyRegistryContext
+
 DEFAULT_LIST_LIMIT = 500
 
 
@@ -118,6 +120,18 @@ class MasterDataRepository(Protocol):
     ) -> list[dict[str, Any]]: ...
     def summary(self, *, workspace: str = "default", actor_label: str = "local-cli") -> MasterDataSummary: ...
     def snapshot(self, *, workspace: str = "default", actor_label: str = "local-cli") -> dict[str, object]: ...
+    def currency_registry_reconciliation(
+        self, *, workspace: str = "default", actor_label: str = "local-cli"
+    ) -> dict[str, object]: ...
+    def currency_registry_binding(
+        self, *, workspace: str = "default", actor_label: str = "local-cli"
+    ) -> dict[str, object] | None: ...
+    def currency_registry_context(
+        self, *, workspace: str = "default", actor_label: str = "local-cli"
+    ) -> CurrencyRegistryContext | None: ...
+    def bind_currency_registry(
+        self, *, workspace: str = "default", actor_label: str = "local-cli"
+    ) -> dict[str, object]: ...
 
 
 class MasterDataApplicationService:

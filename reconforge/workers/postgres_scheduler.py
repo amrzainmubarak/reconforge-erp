@@ -159,6 +159,23 @@ class PostgresSchedulerWorker:
                 )
                 connection = self.connection_factory.connect()
                 try:
+                    # Re-evaluate immediately before dispatching due work. A
+                    # lane can be revoked after the pre-connection check while
+                    # the scheduler is waiting to enter its repository
+                    # transaction; no schedule mutation is allowed after that
+                    # revocation point.
+                    require_service_worker_policy(
+                        tenant_id=tenant_id,
+                        worker_id=self.settings.worker_id,
+                        actor_id=self.settings.audit_actor_id,
+                        policy_context_supplier=self.settings.policy_context_supplier,
+                        policy_context_scope_supplier=self.settings.policy_context_scope_supplier,
+                        workspace_id=workspace_id,
+                        entity_id=entity_id,
+                        policy_permission=self.settings.policy_permission,
+                        surface="postgres-scheduler.worker.dispatch",
+                        error_factory=PostgresSchedulerWorkerError,
+                    )
                     result = SchedulerApplicationService(PostgresScheduleRepository(connection)).process_due(
                         tenant_id=tenant_id,
                         worker_id=self.settings.worker_id,

@@ -164,6 +164,19 @@ class PostgresOutboxWorker:
                     )
                 claimed_count += len(events)
                 for event in events:
+                    # Re-evaluate the central service-account decision at the
+                    # last safe point before the publisher side effect.  A
+                    # lane-level decision protects the claim transaction,
+                    # but a revocation can arrive while a batch is being
+                    # delivered.  Failing before publish leaves the leased
+                    # row unacknowledged so normal lease recovery can retry it
+                    # after an explicitly authorized worker resumes.
+                    self._authorize_scope(
+                        tenant_id,
+                        workspace_id=workspace_id,
+                        organization_id=organization_id,
+                        legal_entity_id=legal_entity_id,
+                    )
                     self._assert_event_scope(
                         event,
                         workspace_id=workspace_id,

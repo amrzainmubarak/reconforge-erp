@@ -32,6 +32,18 @@ class BenchmarkEvidenceIndexError(ValueError):
     """Raised when checked-in benchmark evidence cannot be verified safely."""
 
 
+def _canonical_artifact_bytes(artifact: Path) -> bytes:
+    """Return the platform-independent bytes used for artifact provenance.
+
+    Tracked JSON artifacts are declared as LF text in ``.gitattributes``.  A
+    checkout on Windows can still expose CRLF bytes to a local verifier, so
+    provenance must hash the canonical LF representation rather than the
+    checkout's platform line endings.
+    """
+
+    return artifact.read_bytes().replace(b"\r\n", b"\n")
+
+
 def _safe_artifact(root: Path, relative: object) -> Path:
     if not isinstance(relative, str) or not relative or "\\" in relative:
         raise BenchmarkEvidenceIndexError("benchmark artifact path must be a non-empty POSIX relative path")
@@ -97,7 +109,7 @@ def verify_benchmark_index(index_path: Path | str, *, project_root: Path | str |
         expected_sha = entry["artifact_sha256"]
         if not isinstance(expected_sha, str) or not _SHA256.fullmatch(expected_sha):
             raise BenchmarkEvidenceIndexError("benchmark artifact_sha256 is invalid")
-        actual_sha = hashlib.sha256(artifact.read_bytes()).hexdigest()
+        actual_sha = hashlib.sha256(_canonical_artifact_bytes(artifact)).hexdigest()
         if actual_sha != expected_sha:
             raise BenchmarkEvidenceIndexError(f"benchmark artifact hash mismatch: {artifact_name}")
         try:

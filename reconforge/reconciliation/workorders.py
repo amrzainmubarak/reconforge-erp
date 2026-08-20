@@ -10,10 +10,13 @@ import pandas as pd
 from reconforge.config import ReconForgeConfig
 from reconforge.reconciliation.risk import assess_risk
 from reconforge.utils.money import (
+    STRICT_FINANCIAL_INPUT_POLICY,
     CurrencyRegistry,
+    FinancialInputPolicy,
     InvalidAmountError,
     parse_amount,
     parse_amount_for_currency_precision,
+    validate_financial_input_policy,
 )
 
 
@@ -29,6 +32,16 @@ class WorkorderReconciliationResult:
     cancelled_po_linked_to_movement: pd.DataFrame
     all_exceptions: pd.DataFrame
     summary: pd.DataFrame
+    financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY
+
+    def __post_init__(self) -> None:
+        """Reject unsupported policy metadata before a result can escape."""
+
+        object.__setattr__(
+            self,
+            "financial_input_policy",
+            validate_financial_input_policy(self.financial_input_policy),
+        )
 
 
 def _clean_status(value: object) -> str:
@@ -43,7 +56,12 @@ def _movement_types(config: ReconForgeConfig, group: str) -> set[str]:
 
 
 def _add_risk(
-    frame: pd.DataFrame, exception_type: str, config: ReconForgeConfig, amount_column: str | None = None
+    frame: pd.DataFrame,
+    exception_type: str,
+    config: ReconForgeConfig,
+    amount_column: str | None = None,
+    *,
+    financial_input_policy: FinancialInputPolicy,
 ) -> pd.DataFrame:
     enriched = frame.copy()
     scores: list[int] = []
@@ -56,7 +74,11 @@ def _add_risk(
             try:
                 currency_code = str(row.get("currency") or "USD").strip().upper() or "USD"
                 precision = CurrencyRegistry.get_precision(currency_code)
-                amount = parse_amount_for_currency_precision(row.get(amount_column), precision=precision)
+                amount = parse_amount_for_currency_precision(
+                    row.get(amount_column),
+                    precision=precision,
+                    input_policy=financial_input_policy,
+                )
                 status = "valid"
             except InvalidAmountError:
                 status = "missing_or_invalid"
@@ -76,9 +98,9 @@ def _valid_work_orders(work_orders: pd.DataFrame) -> set[str]:
     return set(work_orders["work_order"].astype(str).str.strip())
 
 
-def _to_decimal_or_none(value: object) -> Decimal | None:
+def _to_decimal_or_none(value: object, *, financial_input_policy: FinancialInputPolicy) -> Decimal | None:
     try:
-        return parse_amount(value)
+        return parse_amount(value, input_policy=financial_input_policy)
     except InvalidAmountError:
         return None
 
@@ -111,15 +133,25 @@ def find_closed_work_orders_with_pending_stock(
     return late
 
 
-def find_work_orders_with_cost_but_no_invoice(work_orders: pd.DataFrame, invoices: pd.DataFrame) -> pd.DataFrame:
+def find_work_orders_with_cost_but_no_invoice(
+    work_orders: pd.DataFrame,
+    invoices: pd.DataFrame,
+    *,
+    financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
+) -> pd.DataFrame:
     """Find work orders that carry cost but do not have a posted/paid invoice."""
 
+    input_policy = validate_financial_input_policy(financial_input_policy)
     posted_status = {"posted", "paid", "open"}
     invoice_status = invoices[["work_order", "status", "invoice_amount"]].copy()
     invoice_status["is_valid_invoice"] = invoice_status["status"].map(_clean_status).isin(posted_status)
     valid_invoiced = set(invoice_status[invoice_status["is_valid_invoice"]]["work_order"].astype(str))
     actual_cost = pd.Series(
-        [_to_decimal_or_none(value) for value in work_orders["actual_cost"]], index=work_orders.index
+        [
+            _to_decimal_or_none(value, financial_input_policy=input_policy)
+            for value in work_orders["actual_cost"]
+        ],
+        index=work_orders.index,
     )
     positive_cost = actual_cost.map(lambda value: value is not None and value > Decimal("0"))
     missing_or_invalid_cost = actual_cost.isna()
@@ -199,44 +231,58 @@ def reconcile_workorders(
     old_parts_returns: pd.DataFrame,
     invoices: pd.DataFrame,
     config: ReconForgeConfig,
+    *,
+    financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
 ) -> WorkorderReconciliationResult:
     """Run workshop and work-order control checks."""
+
+    input_policy = validate_financial_input_policy(financial_input_policy)
 
     missing_wo = _add_risk(
         find_parts_issued_without_work_order(stock_moves, work_orders, config),
         "parts_issued_without_work_order",
         config,
         "total_cost",
+        financial_input_policy=input_policy,
     )
     pending_stock = _add_risk(
         find_closed_work_orders_with_pending_stock(stock_moves, work_orders, config),
         "closed_work_order_with_pending_stock",
         config,
         "total_cost",
+        financial_input_policy=input_policy,
     )
     cost_no_invoice = _add_risk(
-        find_work_orders_with_cost_but_no_invoice(work_orders, invoices),
+        find_work_orders_with_cost_but_no_invoice(
+            work_orders,
+            invoices,
+            financial_input_policy=input_policy,
+        ),
         "work_order_cost_without_invoice",
         config,
         "actual_cost",
+        financial_input_policy=input_policy,
     )
     direct_fit = _add_risk(
         find_direct_purchase_fitting_risk(stock_moves, purchase_orders, config),
         "direct_purchase_fit",
         config,
         "total_cost",
+        financial_input_policy=input_policy,
     )
     old_part_missing = _add_risk(
         find_old_part_return_missing(stock_moves, old_parts_returns, config),
         "missing_old_part_return",
         config,
         "total_cost",
+        financial_input_policy=input_policy,
     )
     cancelled_po = _add_risk(
         find_cancelled_po_linked_to_movement(stock_moves, purchase_orders),
         "cancelled_po_linked_to_movement",
         config,
         "total_cost",
+        financial_input_policy=input_policy,
     )
 
     frames = {
@@ -257,6 +303,7 @@ def reconcile_workorders(
         cancelled_po_linked_to_movement=cancelled_po,
         all_exceptions=all_exceptions,
         summary=_summary(frames),
+        financial_input_policy=input_policy,
     )
 
 

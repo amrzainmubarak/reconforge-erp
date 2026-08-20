@@ -11,6 +11,7 @@ from typing import Any, Protocol
 from reconforge.utils.money import (
     STRICT_FINANCIAL_INPUT_POLICY,
     FinancialInputPolicy,
+    validate_financial_input_policy,
 )
 
 LEGACY_RECORD_IDENTITY_POLICY = "row-order-occurrence-legacy-v0"
@@ -41,6 +42,15 @@ class MatchRunResult:
     financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY
     record_identity_policy: str = LEGACY_RECORD_IDENTITY_POLICY
 
+    def __post_init__(self) -> None:
+        """Reject unsupported policy metadata before a run result escapes."""
+
+        object.__setattr__(
+            self,
+            "financial_input_policy",
+            validate_financial_input_policy(self.financial_input_policy),
+        )
+
 
 @dataclass(frozen=True)
 class DeterministicMatchOutput:
@@ -50,6 +60,15 @@ class DeterministicMatchOutput:
     exceptions: tuple[dict[str, Any], ...]
     financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY
     record_identity_policy: str = LEGACY_RECORD_IDENTITY_POLICY
+
+    def __post_init__(self) -> None:
+        """Reject unsupported policy metadata before output is consumed."""
+
+        object.__setattr__(
+            self,
+            "financial_input_policy",
+            validate_financial_input_policy(self.financial_input_policy),
+        )
 
 
 class CurrencyPrecisionResolver(Protocol):

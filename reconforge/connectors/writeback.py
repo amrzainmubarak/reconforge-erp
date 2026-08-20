@@ -16,6 +16,8 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from reconforge.auth.rbac import same_actor
+
 
 class WritebackError(ValueError):
     """Raised when a write-back lifecycle transition is unsafe or invalid."""
@@ -105,7 +107,7 @@ class WritebackIntent(BaseModel):
             WritebackStatus.COMPENSATED,
         } and self.approval is None:
             raise ValueError("human approval is required for this write-back state")
-        if self.approval is not None and self.approval.actor_id == self.requested_by:
+        if self.approval is not None and same_actor(self.approval.actor_id, self.requested_by):
             raise ValueError("requester cannot approve their own write-back")
         if self.status in {WritebackStatus.ACKNOWLEDGED, WritebackStatus.COMPENSATED} and self.acknowledgement is None:
             raise ValueError("acknowledgement is required for this write-back state")
@@ -170,7 +172,7 @@ def approve_writeback(
 
     if intent.status is not WritebackStatus.PROPOSED:
         raise WritebackError("writeback_approval_state_invalid")
-    if actor_id == intent.requested_by:
+    if same_actor(actor_id, intent.requested_by):
         raise WritebackError("writeback_self_approval_denied")
     approval = WritebackApproval(
         actor_id=actor_id,
@@ -266,7 +268,7 @@ def request_compensation(
     if actor_id is not None:
         if not actor_id.strip():
             raise WritebackError("writeback_compensation_actor_required")
-        if actor_id == intent.requested_by:
+        if same_actor(actor_id, intent.requested_by):
             raise WritebackError("writeback_compensation_self_request_denied")
     if requested_at is not None and actor_id is None:
         raise WritebackError("writeback_compensation_actor_required")

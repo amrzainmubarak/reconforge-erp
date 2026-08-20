@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from jsonschema import Draft202012Validator
 from typer.testing import CliRunner
 
 import reconforge.db.migrations as migration_module
@@ -74,6 +75,7 @@ def test_master_data_service_enforces_relationships_periods_and_audit(tmp_path: 
         soft_closed = service.set_period_status(str(period["id"]), status="Soft Closed")
         closed = service.set_period_status(str(period["id"]), status="Closed")
         reopened = service.set_period_status(str(period["id"]), status="Open", reason="Synthetic correction")
+        binding = service.bind_currency_registry(workspace="default", actor_label="local-cli")
         summary = service.summary()
         snapshot = service.snapshot()
 
@@ -100,6 +102,15 @@ def test_master_data_service_enforces_relationships_periods_and_audit(tmp_path: 
         assert len(service.list_branches()) == 1
         assert len(service.list_periods()) == 1
         assert snapshot["schema_version"] == 1
+        assert snapshot["currency_registry"]["status"] == "consistent"
+        assert snapshot["currency_registry"]["binding"]["status"] == "current"
+        assert binding["registry_digest"] == snapshot["currency_registry"]["registry"]["digest"]
+        schema = json.loads(
+            (Path(__file__).resolve().parents[1] / "docs/schemas/organization_master_data.schema.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        Draft202012Validator(schema).validate(snapshot)
         assert snapshot["source"] == {
             "kind": "local-sqlite-master-data",
             "local_first": True,
@@ -119,6 +130,7 @@ def test_master_data_service_enforces_relationships_periods_and_audit(tmp_path: 
             "branch_upserted",
             "fiscal_period_upserted",
             "fiscal_period_status_changed",
+            "currency_registry_bound",
         } <= actions
         assert verify_audit_events(connection).ok is True
     finally:
@@ -234,6 +246,14 @@ def test_master_data_api_is_authenticated_rbac_protected_and_strict(tmp_path: Pa
     invalid_page = client.get("/api/v1/master-data/organizations?limit=1001", headers=reviewer_headers)
     summary = client.get("/api/v1/master-data/summary", headers=reviewer_headers)
     snapshot = client.get("/api/v1/master-data/snapshot", headers=reviewer_headers)
+    currency_registry = client.get(
+        "/api/v1/master-data/currencies/reconciliation?workspace=default",
+        headers=reviewer_headers,
+    )
+    currency_registry_bind = client.post(
+        "/api/v1/master-data/currencies/registry-binding?workspace=default",
+        headers=controller_headers,
+    )
     denied = client.post(
         "/api/v1/master-data/organizations",
         headers=reviewer_headers,
@@ -268,6 +288,10 @@ def test_master_data_api_is_authenticated_rbac_protected_and_strict(tmp_path: Pa
     assert summary.json()["summary"]["legal_entities"] == 1
     assert snapshot.status_code == 200
     assert snapshot.json()["schema_version"] == 1
+    assert currency_registry.status_code == 200
+    assert currency_registry.json()["reconciliation"]["status"] == "consistent"
+    assert currency_registry_bind.status_code == 200
+    assert currency_registry_bind.json()["binding"]["registry_digest"]
     assert denied.status_code == 403
     assert unauthenticated.status_code == 401
     assert malformed.status_code == 422
@@ -336,6 +360,14 @@ def test_master_data_cli_workflow_and_safe_failure(tmp_path: Path) -> None:
     )
     summary = runner.invoke(app, ["master-data", "summary", "--db", str(path)])
     snapshot = runner.invoke(app, ["master-data", "snapshot", "--db", str(path)])
+    currency_registry = runner.invoke(
+        app,
+        ["master-data", "currency-registry-check", "--db", str(path)],
+    )
+    currency_registry_bind = runner.invoke(
+        app,
+        ["master-data", "currency-registry-bind", "--db", str(path)],
+    )
     paged = runner.invoke(app, ["master-data", "organizations", "--limit", "1", "--db", str(path)])
     rejected = runner.invoke(
         app,
@@ -346,6 +378,8 @@ def test_master_data_cli_workflow_and_safe_failure(tmp_path: Path) -> None:
     assert organization.exit_code == entity.exit_code == branch.exit_code == period.exit_code == 0
     assert summary.exit_code == 0
     assert snapshot.exit_code == 0
+    assert currency_registry.exit_code == 0
+    assert currency_registry_bind.exit_code == 0
     assert paged.exit_code == 0
     assert "Synthetic Group" in organization.output
     assert "EG01" in entity.output
@@ -353,6 +387,8 @@ def test_master_data_cli_workflow_and_safe_failure(tmp_path: Path) -> None:
     assert "2026-07" in period.output
     assert "organizations" in summary.output
     assert json.loads(snapshot.output)["summary"]["branches"] == 1
+    assert json.loads(currency_registry.output)["status"] == "consistent"
+    assert json.loads(currency_registry_bind.output)["registry_digest"]
     assert rejected.exit_code == 1
     assert "Organization code" in rejected.output
     assert "Traceback" not in rejected.output

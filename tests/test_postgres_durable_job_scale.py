@@ -11,7 +11,9 @@ from reconforge.benchmark.postgres_durable_job_scale import (
     PostgresDurableJobScaleProfile,
     default_profile,
     hundred_k_profile,
+    one_m_profile,
     ten_k_profile,
+    ten_m_profile,
 )
 
 
@@ -51,6 +53,30 @@ def test_postgres_scale_profile_declares_100k_effect_tier() -> None:
     assert profile.workers % profile.tenants == 0
 
 
+def test_postgres_scale_profile_declares_1m_effect_tier() -> None:
+    profile = one_m_profile()
+    assert profile.profile_id == "postgres-durable-job-load/1m-effects-v1"
+    assert profile.workers == 16
+    assert profile.jobs == 2_500
+    assert profile.jobs_per_tenant == 625
+    assert profile.partitions_per_job == 400
+    assert profile.tenants == 4
+    assert profile.declared_partition_effects == 1_000_000
+    assert profile.workers % profile.tenants == 0
+
+
+def test_postgres_scale_profile_declares_10m_effect_tier() -> None:
+    profile = ten_m_profile()
+    assert profile.profile_id == "postgres-durable-job-load/10m-effects-v1"
+    assert profile.workers == 16
+    assert profile.jobs == 2_500
+    assert profile.jobs_per_tenant == 625
+    assert profile.partitions_per_job == 4_000
+    assert profile.tenants == 4
+    assert profile.declared_partition_effects == 10_000_000
+    assert profile.workers % profile.tenants == 0
+
+
 def test_postgres_scale_profile_is_packaged_and_documented() -> None:
     root = Path(__file__).resolve().parents[1]
     manifest = (root / "MANIFEST.in").read_text(encoding="utf-8")
@@ -62,6 +88,8 @@ def test_postgres_scale_profile_is_packaged_and_documented() -> None:
     assert "include docs/execution/benchmarks/postgres-durable-job-10k-effects-v1.json" in manifest
     assert "include docs/execution/benchmarks/postgres-durable-job-100k-effects-v1.md" in manifest
     assert "include docs/execution/benchmarks/postgres-durable-job-100k-effects-v1.json" in manifest
+    assert "include docs/execution/benchmarks/postgres-durable-job-1m-effects-v1.md" in manifest
+    assert "include docs/execution/benchmarks/postgres-durable-job-1m-effects-v1.json" in manifest
     assert "include docs/schemas/postgres_durable_job_scale.schema.json" in manifest
     assert "include docs/adr/0306-postgres-durable-job-10k-scale.md" in manifest
     assert "include docs/adr/0307-postgres-durable-job-lock-order.md" in manifest
@@ -69,6 +97,7 @@ def test_postgres_scale_profile_is_packaged_and_documented() -> None:
     assert (root / "docs/adr/0307-postgres-durable-job-lock-order.md").is_file()
     assert (root / "docs/execution/benchmarks/postgres-durable-job-10k-effects-v1.json").is_file()
     assert (root / "docs/execution/benchmarks/postgres-durable-job-100k-effects-v1.json").is_file()
+    assert (root / "docs/execution/benchmarks/postgres-durable-job-1m-effects-v1.json").is_file()
 
 
 def test_published_10k_artifact_is_schema_valid() -> None:
@@ -85,6 +114,15 @@ def test_published_100k_artifact_is_schema_valid() -> None:
     schema = json.loads((root / "docs/schemas/postgres_durable_job_scale.schema.json").read_text(encoding="utf-8"))
     artifact = json.loads(
         (root / "docs/execution/benchmarks/postgres-durable-job-100k-effects-v1.json").read_text(encoding="utf-8")
+    )
+    jsonschema.Draft202012Validator(schema).validate(artifact)
+
+
+def test_published_1m_artifact_is_schema_valid() -> None:
+    root = Path(__file__).resolve().parents[1]
+    schema = json.loads((root / "docs/schemas/postgres_durable_job_scale.schema.json").read_text(encoding="utf-8"))
+    artifact = json.loads(
+        (root / "docs/execution/benchmarks/postgres-durable-job-1m-effects-v1.json").read_text(encoding="utf-8")
     )
     jsonschema.Draft202012Validator(schema).validate(artifact)
 
@@ -123,7 +161,7 @@ def test_server_boundaries_runs_the_live_100k_postgres_scale_gate() -> None:
     ],
 )
 def test_postgres_scale_profile_rejects_invalid_shape(kwargs: dict[str, int]) -> None:
-    values = {
+    values: dict[str, int | str] = {
         "profile_id": "invalid",
         "workers": 8,
         "jobs_per_tenant": 2,
@@ -133,4 +171,4 @@ def test_postgres_scale_profile_rejects_invalid_shape(kwargs: dict[str, int]) ->
     }
     values.update(kwargs)
     with pytest.raises(ValueError):
-        PostgresDurableJobScaleProfile(**values)
+        PostgresDurableJobScaleProfile(**values)  # type: ignore[arg-type]

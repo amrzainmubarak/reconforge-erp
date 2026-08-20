@@ -78,6 +78,35 @@ class _Factory:
         return self._client
 
 
+class _RedisConnectionFailure(Exception):
+    """Minimal redis-py-shaped connection failure without importing redis."""
+
+
+_RedisConnectionFailure.__module__ = "redis.exceptions"
+_RedisConnectionFailure.__name__ = "ConnectionError"
+
+
+class _FailingRedis:
+    def __getattr__(self, _name: str) -> object:
+        raise _RedisConnectionFailure("synthetic disconnect")
+
+
+class _ReconnectFactory:
+    def __init__(self, clients: list[object]) -> None:
+        self.settings = RedisSettings(url="rediss://redis.example", require_tls=True)
+        self._clients = clients
+        self._index = 0
+        self.close_calls = 0
+
+    def client(self) -> object:
+        client = self._clients[min(self._index, len(self._clients) - 1)]
+        self._index += 1
+        return client
+
+    def close(self) -> None:
+        self.close_calls += 1
+
+
 def test_redis_settings_require_tls_and_redact_url() -> None:
     with pytest.raises(RedisConfigurationError):
         RedisSettings(url="redis://localhost")
@@ -201,6 +230,40 @@ def test_policy_cache_generation_is_atomic_and_shared_between_instances() -> Non
     assert first.current_version() == "2"
 
 
+def test_redis_read_reconnect_is_single_bounded_attempt_and_mutations_are_not_replayed() -> None:
+    recovered_client = _FakeRedis()
+    factory = _ReconnectFactory([_FailingRedis(), recovered_client])
+    store = TenantRedisStore(factory)  # type: ignore[arg-type]
+
+    assert store.get_session("tenant-a", "missing") is None
+    assert factory.close_calls == 1
+    assert factory._index == 2
+
+    mutation_factory = _ReconnectFactory([_FailingRedis(), _FakeRedis()])
+    mutation_store = TenantRedisStore(mutation_factory)  # type: ignore[arg-type]
+    token_hash = hashlib.sha256(b"raw-token").hexdigest()
+    with pytest.raises(RuntimeError, match="Redis operation failed"):
+        mutation_store.revoke_token_hash("tenant-a", token_hash, ttl_seconds=60)
+    assert mutation_factory.close_calls == 0
+    assert mutation_factory._index == 1
+
+
+def test_policy_cache_read_reconnect_preserves_generation_without_replaying_bump() -> None:
+    recovered_client = _FakeRedis()
+    recovered_client.values["reconforge:policy-cache:generation"] = "7"
+    factory = _ReconnectFactory([_FailingRedis(), recovered_client])
+    store = RedisPolicyCacheVersionStore(factory)  # type: ignore[arg-type]
+
+    assert store.current_version() == "7"
+    assert factory.close_calls == 1
+
+    mutation_factory = _ReconnectFactory([_FailingRedis(), _FakeRedis()])
+    mutation_store = RedisPolicyCacheVersionStore(mutation_factory)  # type: ignore[arg-type]
+    with pytest.raises(RuntimeError, match="policy-cache generation operation failed"):
+        mutation_store.bump_version()
+    assert mutation_factory.close_calls == 0
+
+
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_REDIS_URL"), reason="requires a live Redis service")
 def test_live_redis_tenant_key_isolation() -> None:
     pytest.importorskip("redis")
@@ -245,3 +308,21 @@ def test_live_redis_policy_cache_generation_invalidates_other_process_cache() ->
         client.delete(key)
         first_factory.close()
         second_factory.close()
+
+
+@pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_REDIS_URL"), reason="requires a live Redis service")
+def test_live_redis_read_reconnects_after_connection_pool_disconnect() -> None:
+    pytest.importorskip("redis")
+    settings = RedisSettings(url=os.environ["RECONFORGE_TEST_REDIS_URL"], require_tls=False)
+    factory = RedisConnectionFactory(settings)
+    store = TenantRedisStore(factory)
+    token_hash = hashlib.sha256(b"live-reconnect-token").hexdigest()
+    session = RedisSessionRecord("SES-RECONNECT", "USR-RECONNECT", token_hash, "2030-01-01T00:00:00Z")
+    session_key = store._hashed_key("test_redis_reconnect", "session", session.session_id)
+    try:
+        store.put_session("test_redis_reconnect", session, ttl_seconds=60)
+        factory.client().connection_pool.disconnect()
+        assert store.get_session("test_redis_reconnect", session.session_id) == session
+    finally:
+        factory.client().delete(session_key)
+        factory.close()

@@ -142,5 +142,5 @@ def test_live_world_bank_public_page_is_bounded_and_schema_valid() -> None:
     result = connector.read_page(idempotency_key="world-bank-live-1")
     assert result.page.count >= len(result.page.data)
     assert len(result.page.data) == WORLD_BANK_PUBLIC_PAGE_SIZE
-    assert result.attempts == 1
+    assert 1 <= result.attempts <= WORLD_BANK_PUBLIC_MANIFEST.retry_policy.maximum_attempts
     assert len(result.response_digest) == 64

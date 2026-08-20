@@ -1,3 +1,4 @@
+import hashlib
 import json
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
@@ -84,18 +85,23 @@ def test_current_postgres_ha_dr_artifact_is_schema_valid_and_packaged() -> None:
 
 
 def test_latest_postgres_ha_dr_artifact_is_schema_valid_and_reproducible() -> None:
-    artifact = json.loads(
-        (ROOT / "docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-06.json").read_text(encoding="utf-8")
-    )
+    artifact_path = ROOT / "docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-11.json"
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
     schema = json.loads(
         (ROOT / "docs/schemas/ha_dr_repeated_drill_report.schema.json").read_text(encoding="utf-8")
     )
     jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker()).validate(artifact)
     assert artifact["summary"]["all_runs_passed"] is True
     assert artifact["summary"]["zero_acknowledged_transaction_loss_runs"] == 3
-    assert artifact["summary"]["failover_rto_max_seconds"] == 11.137
-    assert artifact["summary"]["failback_rto_max_seconds"] == 0.968
-    assert "include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-06.json" in (
+    assert artifact["summary"]["failover_rto_max_seconds"] == 11.476
+    assert artifact["summary"]["failback_rto_max_seconds"] == 1.25
+    assert hashlib.sha256(artifact_path.read_bytes()).hexdigest() == (
+        "6e527ae12c9cb3e6123fac5136d31b6b2b3c0a4bebbf64267cd0c5e1f3ec749b"
+    )
+    assert "include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-10.json" in (
+        ROOT / "MANIFEST.in"
+    ).read_text(encoding="utf-8")
+    assert "include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-11.json" in (
         ROOT / "MANIFEST.in"
     ).read_text(encoding="utf-8")
 

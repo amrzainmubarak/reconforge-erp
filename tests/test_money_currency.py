@@ -13,6 +13,8 @@ from reconforge.utils.money import (
     CurrencyMismatchError,
     CurrencyPolicyMismatchError,
     CurrencyRegistry,
+    CurrencyRegistryContext,
+    CurrencyRegistryContextMismatchError,
     CurrencySpec,
     ExchangeRate,
     InvalidAmountError,
@@ -150,6 +152,56 @@ def test_money_captures_policy_and_rejects_silent_policy_drift() -> None:
     assert original.currency_policy_digest != changed.currency_policy_digest
     with pytest.raises(CurrencyPolicyMismatchError, match="different financial policies"):
         _ = original + changed
+
+
+def test_currency_registry_context_freezes_one_operation_snapshot() -> None:
+    context = CurrencyRegistry.context()
+    original = Money("1.23", "USD", registry_context=context)
+
+    CurrencyRegistry.register(
+        CurrencySpec(code="USD", name="US Dollar context policy", minor_units=3),
+        registry_version="context-usd-policy-v2",
+        source="Synthetic context test",
+    )
+    current = Money("1.230", "USD", strict_precision=True)
+    frozen = Money("1.23", "USD", registry_context=context)
+
+    assert context.registry_manifest.registry_version != CurrencyRegistry.manifest().registry_version
+    assert original.currency_registry_digest == frozen.currency_registry_digest == context.registry_manifest.digest
+    assert original.minor_units == frozen.minor_units == 2
+    assert current.minor_units == 3
+    assert context.get_precision("USD") == 2
+
+    minor = MinorMoney(123, "USD", registry_context=context).to_money()
+    rate = ExchangeRate("USD", "EUR", Decimal("1"), registry_context=context)
+    CurrencyRegistry.register(
+        CurrencySpec(code="EUR", name="Euro context policy", minor_units=3),
+        registry_version="context-eur-policy-v2",
+        source="Synthetic context test",
+    )
+    converted = rate.convert(Money("1.23", "USD", registry_context=context))
+    assert minor.minor_units == 2
+    assert converted.currency == "EUR"
+    assert converted.minor_units == context.get_precision("EUR") == 2
+
+
+def test_currency_registry_context_validates_snapshot_and_canonical_lineage() -> None:
+    snapshot = CurrencyRegistry.snapshot()
+    context = CurrencyRegistryContext.from_snapshot(snapshot)
+    canonical = Money("4.20", "USD", registry_context=context).to_canonical_dict()
+
+    assert context.snapshot() == snapshot
+    assert Money.from_canonical_dict(canonical, registry_context=context).to_canonical_dict() == canonical
+
+    changed = dict(canonical)
+    changed["currency_registry_version"] = "other-context-v1"
+    with pytest.raises(CurrencyRegistryContextMismatchError, match="operation context"):
+        Money.from_canonical_dict(changed, registry_context=context)
+
+    tampered = dict(snapshot)
+    tampered["digest"] = "0" * 64
+    with pytest.raises(InvalidAmountError, match="digest verification failed"):
+        CurrencyRegistryContext.from_snapshot(tampered)
 
 
 def test_money_construction_and_invariants() -> None:

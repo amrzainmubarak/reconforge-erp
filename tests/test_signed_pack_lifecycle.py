@@ -20,7 +20,6 @@ cryptography_ed25519 = pytest.importorskip(
 )
 Ed25519PrivateKey = cryptography_ed25519.Ed25519PrivateKey
 
-
 def _manifest(pack_id: str = "synthetic-close", version: str = "1.0.0", dependencies: list[dict[str, str]] | None = None) -> dict[str, object]:
     rule = {
         "rule_id": "SC-001",

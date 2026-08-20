@@ -9,11 +9,48 @@ import pandas as pd
 from fastapi.routing import APIRoute
 from typer.testing import CliRunner
 
+from reconforge.application.jobs import DurableJobApplicationService, JobSubmission
 from reconforge.cli import app
 from reconforge.close import write_close_checklist
+from reconforge.db import connect, run_migrations
+from reconforge.infrastructure.sqlite_jobs import SQLiteDurableJobRepository
 from reconforge.studio.app import create_studio_app
 
 runner = CliRunner()
+
+
+def test_durable_job_queue_cli_is_scoped_and_sanitized(tmp_path: Path) -> None:
+    database_path = tmp_path / "queue.db"
+    run_migrations(database_path)
+    connection = connect(database_path, require_exists=True)
+    try:
+        DurableJobApplicationService(SQLiteDurableJobRepository(connection)).submit(
+            JobSubmission(
+                job_id="SECRET-JOB-ID",
+                idempotency_scope="cli",
+                idempotency_key="queue-1",
+                tenant_id="TENANT-CLI",
+                workspace_id="WORKSPACE-CLI",
+                entity_id="ENTITY-CLI",
+                input_digest="a" * 64,
+                config_digest="b" * 64,
+                worker_version="cli-worker-v1",
+                total_units=1,
+                retry_ceiling=1,
+                created_at="2026-08-09T10:00:00Z",
+            ),
+            actor_id="cli-test",
+        )
+    finally:
+        connection.close()
+
+    result = runner.invoke(
+        app,
+        ["ops", "durable-job-queue", "--db", str(database_path), "--tenant", "TENANT-CLI"],
+    )
+    assert result.exit_code == 0, result.stdout
+    assert "queue_depth" in result.stdout
+    assert "SECRET-JOB-ID" not in result.stdout
 
 
 def _write_recon_as_code_fixture(path: Path, *, tolerance: str = "0.00") -> Path:
@@ -190,6 +227,24 @@ def test_cli_anonymize(tmp_path: Path) -> None:
     )
     assert result.exit_code == 0
     assert (tmp_path / "anon" / "stock_moves.csv").exists()
+
+
+def test_cli_workorder_reconciliation_emits_financial_input_policy(tmp_path: Path) -> None:
+    output = tmp_path / "workorders"
+    result = runner.invoke(
+        app,
+        [
+            "reconcile",
+            "workorders",
+            "--input",
+            "examples/sample_data",
+            "--output",
+            str(output),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    payload = json.loads((output / "workorder_reconciliation.json").read_text(encoding="utf-8"))
+    assert payload["financial_input_policy"] == "strict-financial-input-v2"
 
 
 def test_cli_generate_synthetic(tmp_path: Path) -> None:

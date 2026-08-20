@@ -4,12 +4,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from string import ascii_letters, digits
 
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 from pydantic import ValidationError
 
 from reconforge.connectors.writeback import (
     WritebackAcknowledgement,
+    WritebackApproval,
     WritebackError,
     WritebackIntent,
     WritebackPolicy,
@@ -65,6 +69,46 @@ def test_self_approval_and_unsupported_operation_are_denied() -> None:
             approved_at=NOW,
             assurance="mfa",
             reason="not allowed",
+        )
+
+
+@given(
+    actor=st.text(
+        alphabet=ascii_letters + digits + "._@+-",
+        min_size=1,
+        max_size=20,
+    )
+)
+def test_self_approval_is_denied_with_canonicalized_actor(actor: str) -> None:
+    with pytest.raises(WritebackError, match="self_approval"):
+        approve_writeback(
+            _intent(requested_by=actor),
+            policy=POLICY,
+            actor_id=f"  {actor.swapcase()}  ",
+            approved_at=NOW,
+            assurance="mfa",
+            reason="normalized actor is rejected",
+        )
+
+
+@given(
+    actor=st.text(
+        alphabet=ascii_letters + digits + "._@+-",
+        min_size=1,
+        max_size=20,
+    )
+)
+def test_writeback_state_validation_rejects_canonicalized_approval_actor(actor: str) -> None:
+    with pytest.raises(ValueError, match="requester cannot approve"):
+        _intent(
+            requested_by=actor,
+            status=WritebackStatus.APPROVED,
+            approval=WritebackApproval(
+                actor_id=f"  {actor.swapcase()}  ",
+                approved_at=NOW,
+                assurance="mfa",
+                reason="normalized actor is rejected",
+            ),
         )
     unsupported = _intent(operation="journal.post")
     with pytest.raises(WritebackError, match="operation_not_allowed"):

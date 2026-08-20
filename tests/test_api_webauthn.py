@@ -11,7 +11,6 @@ from fastapi.testclient import TestClient
 from reconforge.api import create_api_app
 from reconforge.auth.webauthn_config import WebAuthnRuntime
 from reconforge.db import run_migrations
-from tests.webauthn_synthetic import authentication_response, registration_response
 
 pytest.importorskip("cbor2", reason="webauthn cbor2 extra is optional")
 pytest.importorskip("cryptography", reason="webauthn crypto extra is optional")
@@ -145,8 +144,8 @@ def test_live_http_webauthn_enrollment_mfa_step_up_replay_and_tenant_scope(
         assert options.json()["public_key"]["authenticatorSelection"]["userVerification"] == "required"
         credential_id = b"http-synthetic-webauthn-credential"
         from cryptography.hazmat.primitives.asymmetric import ec
-
         private_key = ec.generate_private_key(ec.SECP256R1())
+        from tests.webauthn_synthetic import authentication_response, registration_response
         registration_credential = registration_response(
             challenge=base64.urlsafe_b64decode(options.json()["public_key"]["challenge"] + "=="),
             rp_id=runtime.rp_id,

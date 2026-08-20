@@ -44,6 +44,12 @@ def _seed_export_rows(tmp_path: Path) -> Path:
     connection = connect(database, require_exists=True)
     try:
         workspace = WorkspaceRepository(connection).create(name="Export JSON Workspace")
+        connection.execute(
+            """INSERT INTO currency_registry_snapshots
+               (registry_digest, registry_version, snapshot_json, captured_at, captured_by)
+               VALUES (?, ?, ?, ?, ?)""",
+            ("a" * 64, "synthetic-export-v1", '{"schema_version":1}', "2026-07-27T00:00:00Z", "tester"),
+        )
         append_audit_event(
             connection,
             actor_label="tester",
@@ -189,6 +195,7 @@ def test_valid_export_preserves_each_existing_public_field_shape(tmp_path: Path)
     audit = json.loads((result.output_dir / "audit_events.json").read_text("utf-8"))
     legacy = json.loads((result.output_dir / "legacy_imports.json").read_text("utf-8"))
     finance = json.loads((result.output_dir / "finance_workflows.json").read_text("utf-8"))
+    domain = json.loads((result.output_dir / "domain.json").read_text("utf-8"))
 
     assert isinstance(audit["audit_events"][0]["metadata"], dict)
     assert "metadata_json" not in audit["audit_events"][0]
@@ -197,6 +204,8 @@ def test_valid_export_preserves_each_existing_public_field_shape(tmp_path: Path)
     assert finance["match_jobs"][0]["rule"] == {"amount_tolerance": "0.01"}
     assert finance["match_rules"][0]["rule"] == {"amount_tolerance": "0.01"}
     assert finance["match_results"][0]["lineage_json"] == '{"candidate_count":1,"label":"café"}'
+    assert domain["currency_registry_snapshots"][0]["snapshot"] == {"schema_version": 1}
+    assert "snapshot_json" not in domain["currency_registry_snapshots"][0]
 
 
 @pytest.mark.parametrize(

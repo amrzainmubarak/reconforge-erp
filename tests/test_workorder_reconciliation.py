@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from reconforge.config import ReconForgeConfig
-from reconforge.reconciliation.workorders import reconcile_workorders
+from reconforge.reconciliation.workorders import WorkorderReconciliationResult, reconcile_workorders
 from reconforge.schemas import DatasetName
+from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY, InvalidAmountError
 
 
 def _run(sample_datasets: dict[DatasetName, object], config: ReconForgeConfig):
@@ -20,7 +22,24 @@ def _run(sample_datasets: dict[DatasetName, object], config: ReconForgeConfig):
 
 def test_parts_issued_without_work_order_detected(sample_datasets: dict[DatasetName, object], config: ReconForgeConfig) -> None:
     result = _run(sample_datasets, config)
+    assert result.financial_input_policy == STRICT_FINANCIAL_INPUT_POLICY
     assert "STK-ISS-1008" in set(result.parts_issued_without_work_order["source_document"])
+
+
+def test_workorder_result_rejects_unsupported_financial_input_policy() -> None:
+    empty = pd.DataFrame()
+    with pytest.raises(InvalidAmountError, match="unsupported financial input policy"):
+        WorkorderReconciliationResult(
+            parts_issued_without_work_order=empty,
+            closed_work_orders_with_pending_stock=empty,
+            work_orders_with_cost_but_no_invoice=empty,
+            direct_purchase_fitting_risk=empty,
+            old_part_return_missing=empty,
+            cancelled_po_linked_to_movement=empty,
+            all_exceptions=empty,
+            summary=empty,
+            financial_input_policy="unsupported-v9",  # type: ignore[arg-type]
+        )
 
 
 def test_direct_purchase_fitting_risk_detected(sample_datasets: dict[DatasetName, object], config: ReconForgeConfig) -> None:

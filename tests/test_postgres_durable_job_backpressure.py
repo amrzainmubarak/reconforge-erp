@@ -10,8 +10,10 @@ import yaml
 from reconforge.benchmark.postgres_durable_job_backpressure import (
     POSTGRES_BACKPRESSURE_PROFILE_ID,
     PostgresDurableJobBackpressureProfile,
+    _submit_with_bounded_backpressure_retry,
     default_profile,
 )
+from reconforge.domain.jobs import DurableJobBackpressureError
 
 
 def test_postgres_backpressure_profile_is_bounded_and_lane_fair() -> None:
@@ -32,11 +34,54 @@ def test_postgres_backpressure_profile_is_bounded_and_lane_fair() -> None:
         {"tenants": 0},
         {"max_queued_jobs": 0},
         {"max_queued_jobs": 17},
+        {"max_submit_attempts": 0},
+        {"retry_base_seconds": 0.2, "retry_max_seconds": 0.1},
     ],
 )
 def test_postgres_backpressure_profile_rejects_invalid_shape(changes: dict[str, int]) -> None:
     with pytest.raises(ValueError):
         PostgresDurableJobBackpressureProfile(**changes)
+
+
+def test_postgres_backpressure_retry_is_bounded_and_uses_capped_exponential_delay() -> None:
+    failures = 2
+    sleeps: list[float] = []
+
+    def submit() -> None:
+        nonlocal failures
+        if failures:
+            failures -= 1
+            raise DurableJobBackpressureError("queue cap")
+
+    attempts = _submit_with_bounded_backpressure_retry(
+        submit,
+        max_attempts=4,
+        retry_base_seconds=0.01,
+        retry_max_seconds=0.015,
+        sleep=sleeps.append,
+    )
+
+    assert attempts == 3
+    assert sleeps == [0.01, 0.015]
+
+
+def test_postgres_backpressure_retry_refuses_unbounded_producer_loop() -> None:
+    attempts = 0
+
+    def submit() -> None:
+        nonlocal attempts
+        attempts += 1
+        raise DurableJobBackpressureError("queue cap")
+
+    with pytest.raises(DurableJobBackpressureError):
+        _submit_with_bounded_backpressure_retry(
+            submit,
+            max_attempts=3,
+            retry_base_seconds=0,
+            retry_max_seconds=0,
+            sleep=lambda _: pytest.fail("zero-delay retry should not sleep"),
+        )
+    assert attempts == 3
 
 
 def test_postgres_backpressure_profile_is_packaged_documented_and_selected_in_ci() -> None:

@@ -136,7 +136,12 @@ def _run_live_postgres_grouped_profile(
                 id_prefix=id_prefix + uuid4().hex[:8],
             )
         finally:
+            pool_snapshot_before_close = pool.snapshot
             pool.close()
+
+        assert not pool_snapshot_before_close.closed
+        assert pool_snapshot_before_close.leased == 0
+        assert 1 <= pool_snapshot_before_close.total <= pool_snapshot_before_close.max_size
 
         verify_postgres_grouped_matching_scale_result(result, profile=profile)
         return result

@@ -118,7 +118,54 @@ def test_server_boundaries_bootstraps_versioned_postgres_native_tools_before_liv
     dependency_index = names.index("Install locked server dependencies")
     assert native_index < dependency_index
     native_run = str(steps[native_index]["run"])
-    assert "sudo apt-get install --no-install-recommends -y postgresql-client" in native_run
-    assert "pg_config --bindir" in native_run
-    for tool in ("pg_dump", "pg_restore", "createdb", "dropdb", "psql"):
-        assert f'test -x "$(pg_config --bindir)/{tool}"' in native_run
+    assert "sudo apt-get install --no-install-recommends -y libpq-dev postgresql-client-16" in native_run
+    assert "set -euo pipefail" in native_run
+    assert "python .github/scripts/verify_postgres_native_tools.py --expected-major 16 --print-bindir" in native_run
+    assert 'printf \'%s\\n\' "$native_bindir" >> "$GITHUB_PATH"' in native_run
+
+
+def test_native_tool_verifier_is_packaged_and_executable_from_workflow() -> None:
+    script = ROOT / ".github" / "scripts" / "verify_postgres_native_tools.py"
+    assert script.is_file()
+    source = script.read_text(encoding="utf-8")
+    assert "shell=False" in source
+    assert "_REQUIRED_TOOLS" in source
+    assert "--expected-major" in source
+
+
+def test_server_boundaries_matrix_retains_the_repaired_postgres_failure_surfaces() -> None:
+    workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+    inventory = yaml.safe_load((ROOT / "docs" / "execution" / "POSTGRES_PARITY_INVENTORY.yaml").read_text(encoding="utf-8"))
+    tests = {str(boundary.get("test")) for boundary in inventory["boundaries"] if boundary.get("test")}
+    assert {"tests/test_postgres_backup.py", "tests/test_application_metrics.py"}.issubset(tests)
+
+    job = workflow["jobs"]["server-boundaries"]
+    live_step = next(step for step in job["steps"] if step.get("name") == "Run live server-boundary tests")
+    env = live_step["env"]
+    assert env["PGSERVICEFILE"] == "${{ runner.temp }}/reconforge-pgservice.conf"
+    assert env["RECONFORGE_TEST_POSTGRES_SOURCE_SERVICE"] == "reconforge_ci_source"
+    assert env["RECONFORGE_TEST_POSTGRES_MAINTENANCE_SERVICE"] == "reconforge_ci_admin"
+    run = str(live_step["run"])
+    assert "mapfile -t parity_tests" in run
+    assert 'pytest "${parity_tests[@]}"' in run
+    assert "tests/test_alembic_postgres.py" in run
+    assert "tests/test_postgres_grouped_matching_runtime.py" in run
+    assert "test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_tenant_scoped" in run
+    assert "test_live_postgres_persistent_scheduler_coordinates_spawned_processes" in run
+    assert "test_live_postgres_worker_crash_after_checkpoint_resumes_without_duplicate_effect" in run
+    assert "test_live_postgres_worker_database_fault_after_checkpoint_resumes_without_duplicate_effect" in run
+    assert "uv run --no-sync pytest tests/test_api_operations.py -q" in run
+    assert "uv run --no-sync pytest tests/test_api_metrics.py -q" in run
+    assert "uv run --no-sync pytest tests/test_postgres_backup.py -k 'test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup' -q" in run
+    assert "uv run --no-sync pytest tests/test_application_metrics.py -k 'test_live_postgres_metrics_and_sqlite_parity' -q" in run
+    assert "uv run --no-sync pytest tests/test_scoped_exports.py -k 'test_live_scoped_export_excludes_sibling_workspace_and_entity' -q" in run
+    assert "uv run --no-sync pytest tests/test_api_server_scoped_exports.py -k 'test_live_server_scoped_export_http_is_service_scoped_and_tenant_isolated' -q" in run
+    assert "uv run --no-sync pytest tests/test_postgres_manufacturing_cost_control.py -q" in run
+    assert "uv run --no-sync pytest tests/test_api_server_manufacturing_cost_control.py -q" in run
+    assert "uv run --no-sync pytest tests/test_postgres_consolidation_close.py -k 'test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable' -q" in run
+    assert "uv run --no-sync pytest tests/test_postgres_federation.py -k 'test_live_postgres_federation_replay_link_session_and_rls' -q" in run
+    assert "uv run --no-sync pytest tests/test_postgres_bank_statement.py -q" in run
+    assert "uv run --no-sync pytest tests/test_api_server_bank_statement.py -q" in run
+    assert "pg_dump --format=custom" in run
+    assert "pg_restore --list" in run
+    assert "test -s \"$native_smoke_dump\"" in run

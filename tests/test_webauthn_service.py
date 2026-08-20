@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -15,10 +16,12 @@ from reconforge.auth.webauthn import (
 from reconforge.auth.webauthn_config import WebAuthnRuntime
 from reconforge.infrastructure.postgres_webauthn import WebAuthnCredential
 
-cryptography_hashes = pytest.importorskip("cryptography.hazmat.primitives", reason="webauthn crypto extra is optional")
-hashes = cryptography_hashes.hashes
+hashes = pytest.importorskip("cryptography.hazmat.primitives.hashes", reason="webauthn crypto extra is optional")
 ec = pytest.importorskip("cryptography.hazmat.primitives.asymmetric.ec", reason="webauthn crypto extra is optional")
 cbor2 = pytest.importorskip("cbor2", reason="webauthn cbor2 extra is optional")
+
+if TYPE_CHECKING:
+    from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
 
 
 def _b64(value: bytes) -> str:
@@ -33,7 +36,12 @@ def _client_data(kind: str, challenge: bytes, origin: str) -> bytes:
 
 
 def _registration_response(
-    *, challenge: bytes, rp_id: str, origin: str, credential_id: bytes, private_key: ec.EllipticCurvePrivateKey
+    *,
+    challenge: bytes,
+    rp_id: str,
+    origin: str,
+    credential_id: bytes,
+    private_key: EllipticCurvePrivateKey,
 ) -> dict[str, object]:
     numbers = private_key.public_key().public_numbers()
     cose_key = cbor2.dumps(
@@ -74,7 +82,7 @@ def _authentication_response(
     rp_id: str,
     origin: str,
     credential_id: bytes,
-    private_key: ec.EllipticCurvePrivateKey,
+    private_key: EllipticCurvePrivateKey,
     sign_count: int,
 ) -> dict[str, object]:
     client_data = _client_data("webauthn.get", challenge, origin)

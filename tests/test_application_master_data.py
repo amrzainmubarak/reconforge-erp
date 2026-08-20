@@ -61,6 +61,10 @@ def test_repository_protocol_is_runtime_structurally_complete() -> None:
         "list_periods",
         "summary",
         "snapshot",
+        "currency_registry_reconciliation",
+        "currency_registry_binding",
+        "currency_registry_context",
+        "bind_currency_registry",
     }
 
     assert required <= set(MasterDataRepository.__dict__)

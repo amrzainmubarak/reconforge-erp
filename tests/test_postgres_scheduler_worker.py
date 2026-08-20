@@ -144,6 +144,55 @@ def test_scheduler_worker_policy_allows_scoped_service_identity(monkeypatch: pyt
     assert result[0].dispatched == 1
 
 
+def test_scheduler_worker_rechecks_policy_before_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    factory = _Factory()
+    policy_calls = 0
+    dispatched = 0
+
+    class Service:
+        def __init__(self, repository: object) -> None:
+            self.repository = repository
+
+        def process_due(
+            self, *, tenant_id: str, worker_id: str, now: datetime, limit: int
+        ) -> ScheduleProcessResult:
+            nonlocal dispatched
+            dispatched += 1
+            return ScheduleProcessResult(1, 1, 1, 1, 0, 0, 0, 0)
+
+    def policy_context(tenant: str) -> PolicyEvaluationContext:
+        nonlocal policy_calls
+        policy_calls += 1
+        permissions = {"schedule.run"} if policy_calls == 1 else set()
+        return PolicyEvaluationContext(
+            user_id="scheduler-revocation-worker",
+            username="scheduler-revocation-worker",
+            user_permissions=permissions,
+            principal_type="service_account",
+            tenant_id=tenant,
+            authorized_tenant_ids=frozenset({tenant}),
+        )
+
+    monkeypatch.setattr(worker_module, "SchedulerApplicationService", Service)
+    worker = PostgresSchedulerWorker(
+        factory,
+        tenant_supplier=lambda: ("tenant_a",),
+        settings=PostgresSchedulerWorkerSettings(
+            worker_id="scheduler-revocation-worker",
+            policy_context_supplier=policy_context,
+            poll_interval_seconds=0,
+        ),
+        clock=lambda: datetime(2026, 7, 29, 12, tzinfo=UTC),
+    )
+
+    with pytest.raises(PostgresSchedulerWorkerError, match="permission_missing"):
+        worker.process_once()
+
+    assert policy_calls == 2
+    assert dispatched == 0
+    assert len(factory.connections) == 1 and factory.connections[0].closed
+
+
 def test_scheduler_worker_scope_lane_requires_exact_policy_and_passes_scope(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

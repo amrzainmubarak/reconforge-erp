@@ -6,6 +6,7 @@ import pytest
 
 from reconforge.benchmark.durable_job_retry import (
     DurableJobRetryProfile,
+    _retry_delay,
     default_retry_profile,
     run_durable_job_retry_profile,
     verify_retry_manifest,
@@ -55,3 +56,57 @@ def test_retry_profile_is_packaged() -> None:
     manifest = Path("MANIFEST.in").read_text(encoding="utf-8")
     assert "include reconforge/benchmark/durable_job_retry.py" in manifest
     assert "include tests/test_durable_job_retry_profile.py" in manifest
+
+
+def test_retry_profile_rejects_invalid_backoff_window() -> None:
+    with pytest.raises(ValueError, match="retry_backoff_base_seconds"):
+        default_retry_profile(retry_backoff_base_seconds=-0.01)
+
+    with pytest.raises(ValueError, match="retry_backoff_max_seconds"):
+        default_retry_profile(retry_backoff_base_seconds=0.02, retry_backoff_max_seconds=0.01)
+
+
+def test_retry_delay_formula_is_bounded_and_monotonic_within_cap() -> None:
+    profile = default_retry_profile(
+        retry_backoff_base_seconds=0.01,
+        retry_backoff_max_seconds=0.07,
+        transient_failures_per_job=5,
+        retry_ceiling=5,
+    )
+
+    assert _retry_delay(profile, 0) == pytest.approx(0.01)
+    assert _retry_delay(profile, 1) == pytest.approx(0.02)
+    assert _retry_delay(profile, 2) == pytest.approx(0.04)
+    assert _retry_delay(profile, 3) == pytest.approx(0.07)
+    assert _retry_delay(profile, 10) == pytest.approx(0.07)
+
+
+def test_retry_profile_uses_bounded_exponential_backoff(tmp_path: Path) -> None:
+    sleeps: list[float] = []
+
+    def capture_sleep(value: float) -> None:
+        sleeps.append(value)
+
+    transient_failures_per_job = 2
+    jobs = 3
+    profile = default_retry_profile(
+        workers=2,
+        jobs=jobs,
+        partitions_per_job=3,
+        tenants=2,
+        transient_failures_per_job=transient_failures_per_job,
+        retry_ceiling=4,
+        retry_backoff_base_seconds=0.01,
+        retry_backoff_max_seconds=0.03,
+    )
+    result = run_durable_job_retry_profile(
+        tmp_path / "retry-backoff.db",
+        profile=profile,
+        sleep_fn=capture_sleep,
+    )
+
+    verify_retry_manifest(result, profile=profile)
+    assert sorted(sleeps) == list(result.retry_delay_samples)
+    for attempt in range(transient_failures_per_job):
+        expected = round(_retry_delay(profile, attempt), 12)
+        assert result.retry_delay_samples.count(expected) == jobs

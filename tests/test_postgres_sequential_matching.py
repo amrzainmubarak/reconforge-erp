@@ -48,6 +48,59 @@ def test_carry_forward_worker_projection_preserves_allocation_and_residual_linea
     assert result.exceptions == ()
 
 
+def test_sequence_window_worker_projection_preserves_contiguous_lineage() -> None:
+    result = PostgresSequentialMatchingAdapter()(
+        _context(
+            "sequence-window",
+            (
+                _input("O1", "40", "2026-08-01"),
+                _input("O2", "60", "2026-08-02"),
+            ),
+            (_input("S1", "100", "2026-08-03"),),
+        )
+    )
+    matched = [row for row in result.results if row["status"] == "Matched"]
+    assert [(row["left_id"], row["right_id"]) for row in matched] == [("O1", "S1"), ("O2", "S1")]
+    assert all(row["match_type"] == "sequential:sequence-window" for row in matched)
+    assert all(row["lineage"]["allocation"]["reason_code"] == "SEQUENCE_WINDOW_CONTIGUOUS_ALLOCATION" for row in matched)
+    assert result.exceptions == ()
+
+
+def test_sequence_window_worker_projects_ambiguity_to_concrete_source_sides() -> None:
+    result = PostgresSequentialMatchingAdapter()(
+        _context(
+            "sequence-window",
+            (
+                _input("QI1", "50", "2026-08-01"),
+                _input("QI2", "50", "2026-08-02"),
+                _input("QI3", "50", "2026-08-03"),
+                _input("QI4", "50", "2026-08-04"),
+            ),
+            (_input("QSA", "100", "2026-08-05"),),
+        )
+    )
+    assert len(result.results) == 5
+    assert all(row["status"] == "Ambiguous" for row in result.results)
+    assert {(row["left_id"], row["right_id"]) for row in result.results} == {
+        ("QI1", ""),
+        ("QI2", ""),
+        ("QI3", ""),
+        ("QI4", ""),
+        ("", "QSA"),
+    }
+    assert {(item["source_side"], item["source_id"]) for item in result.exceptions} == {
+        ("Left", "QI1"),
+        ("Left", "QI2"),
+        ("Left", "QI3"),
+        ("Left", "QI4"),
+        ("Right", "QSA"),
+    }
+    assert {item["reason_code"] for item in result.exceptions} == {"SEQUENCE_WINDOW_AMBIGUOUS_EQUAL_COST"}
+    assert {item["evidence"]["strategy_result_digest"] for item in result.exceptions} == {
+        result.results[0]["lineage"]["strategy_result_digest"]
+    }
+
+
 def test_reversal_worker_projection_preserves_explicit_link_and_digest() -> None:
     result = PostgresSequentialMatchingAdapter()(
         _context(

@@ -1,14 +1,35 @@
 from __future__ import annotations
 
+import pandas as pd
+import pytest
+
 from reconforge.config import ReconForgeConfig
-from reconforge.reconciliation.stock_gl import reconcile_stock_gl
+from reconforge.reconciliation.stock_gl import StockGLReconciliationResult, reconcile_stock_gl
 from reconforge.schemas import DatasetName
+from reconforge.utils.money import InvalidAmountError
 
 
 def test_exact_match_detected(sample_datasets: dict[DatasetName, object], config: ReconForgeConfig) -> None:
     result = reconcile_stock_gl(sample_datasets[DatasetName.STOCK_MOVES], sample_datasets[DatasetName.GL_ENTRIES], config)
     exact = result.matched_transactions[result.matched_transactions["match_level"].eq("Level 1 Exact")]
     assert "STK-ISS-1001" in set(exact["source_document"])
+
+
+def test_stock_gl_result_rejects_unsupported_financial_input_policy() -> None:
+    empty = pd.DataFrame()
+    with pytest.raises(InvalidAmountError, match="unsupported financial input policy"):
+        StockGLReconciliationResult(
+            matched_transactions=empty,
+            stock_without_gl=empty,
+            gl_without_stock=empty,
+            value_differences=empty,
+            date_differences=empty,
+            reference_mismatches=empty,
+            data_quality_exceptions=empty,
+            all_exceptions=empty,
+            summary=empty,
+            financial_input_policy="unsupported-v9",  # type: ignore[arg-type]
+        )
 
 
 def test_fuzzy_reference_match_detected(sample_datasets: dict[DatasetName, object], config: ReconForgeConfig) -> None:

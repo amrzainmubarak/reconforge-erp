@@ -36,8 +36,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_postgres_operations_schema_and_revision_registry_are_explicit() -> None:
     assert POSTGRES_OPERATIONS_SCHEMA_SQL.count("FORCE ROW LEVEL SECURITY") == 2
     assert "FOREIGN KEY (tenant_id, workspace_id)" in POSTGRES_OPERATIONS_SCHEMA_SQL
-    assert POSTGRES_MIGRATION_REVISIONS[-1] == "0081_pg_prof_invoice"
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 81
+    assert POSTGRES_MIGRATION_REVISIONS[-1] == "0088_pg_currency_snapshot"
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 88
 
 
 def test_postgres_operations_revision_registry_matches_the_linear_alembic_chain() -> None:
@@ -59,15 +59,15 @@ def test_postgres_operations_revision_registry_matches_the_linear_alembic_chain(
 
 
 class _MigrationCursor:
-    def __init__(self, revision: str) -> None:
+    def __init__(self, revision: object) -> None:
         self.revision = revision
 
-    def fetchone(self) -> tuple[str]:
+    def fetchone(self) -> tuple[object]:
         return (self.revision,)
 
 
 class _MigrationConnection:
-    def __init__(self, revision: str) -> None:
+    def __init__(self, revision: object) -> None:
         self.revision = revision
         self.closed = False
 
@@ -80,7 +80,7 @@ class _MigrationConnection:
 
 
 class _MigrationConnectionFactory:
-    def __init__(self, revision: str) -> None:
+    def __init__(self, revision: object) -> None:
         self.connection = _MigrationConnection(revision)
         self.connect_calls = 0
 
@@ -96,6 +96,18 @@ def test_postgres_migration_status_provider_accepts_current_head_and_closes_conn
 
     assert status.current_version == status.latest_version == POSTGRES_MIGRATION_REVISIONS[-1]
     assert status.pending_versions == ()
+    assert factory.connect_calls == 1
+    assert factory.connection.closed is True
+
+
+def test_postgres_migration_status_provider_accepts_revision_with_bytes_and_padding() -> None:
+    factory = _MigrationConnectionFactory(b"\n" + POSTGRES_MIGRATION_REVISIONS[10].encode("utf-8") + b" \t")
+
+    status = PostgresMigrationStatusProvider(factory)("migration-test")
+
+    assert status.current_version == POSTGRES_MIGRATION_REVISIONS[10]
+    assert status.latest_version == POSTGRES_MIGRATION_REVISIONS[-1]
+    assert status.pending_versions == POSTGRES_MIGRATION_REVISIONS[11:]
     assert factory.connect_calls == 1
     assert factory.connection.closed is True
 
@@ -121,7 +133,7 @@ def test_postgres_migration_status_provider_accepts_revision_known_in_discovered
 def test_postgres_migration_status_provider_rejects_unknown_revision_and_closes_connection() -> None:
     factory = _MigrationConnectionFactory("future_revision_not_in_registry")
 
-    with pytest.raises(PostgresOperationsError, match="revision is unsupported"):
+    with pytest.raises(PostgresOperationsError, match="unsupported"):
         PostgresMigrationStatusProvider(factory)("migration-test")
 
     assert factory.connect_calls == 1

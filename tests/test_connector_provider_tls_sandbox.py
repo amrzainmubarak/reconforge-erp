@@ -86,7 +86,10 @@ def _https_sandbox(
             return
 
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    server_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    server_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    server_context.check_hostname = False
+    server_context.verify_mode = ssl.CERT_NONE
+    server_context.minimum_version = ssl.TLSVersion.TLSv1_2
     server_context.load_cert_chain(certificate, key)
     server.socket = server_context.wrap_socket(server.socket, server_side=True)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -184,7 +187,10 @@ def _https_writeback_sandbox(
             return
 
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    server_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    server_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    server_context.check_hostname = False
+    server_context.verify_mode = ssl.CERT_NONE
+    server_context.minimum_version = ssl.TLSVersion.TLSv1_2
     server_context.load_cert_chain(certificate, key)
     server.socket = server_context.wrap_socket(server.socket, server_side=True)
     thread = threading.Thread(target=server.serve_forever, daemon=True)

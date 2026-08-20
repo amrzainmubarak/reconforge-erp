@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-818: Fail-closed deployment evidence gates (2026-08-20)
+
+- `DeploymentProfile` now declares backup/restore, rollback, and
+  retention/privacy evidence requirements. `DeploymentRuntimeFacts` carries
+  explicit operator-observed booleans, and validation emits stable findings
+  when any required fact is absent. Requirements are included in the profile
+  digest.
+- `python -m pytest tests/test_deployment_profiles.py -q --tb=short`: **PASS**
+  (8 tests). Ruff, mypy, and `git diff --check`: **PASS**.
+- Boundary: this is a fail-closed prerequisite contract, not runtime drill
+  evidence. Actual encrypted backup/restore, rollback, retention, privacy,
+  and mode-specific deployment artifacts remain required by E-1006.
+
 ## E-817: Canonical identity enforcement for high-risk policy decisions (2026-08-20)
 
 - `reconforge.auth.rbac.canonical_policy_value` is now the shared comparison

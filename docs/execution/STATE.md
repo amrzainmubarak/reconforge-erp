@@ -2,6 +2,19 @@
 
 Updated: 2026-08-20
 
+## E-818 — Fail-closed deployment evidence gates (2026-08-20)
+
+- Deployment profiles now require explicit runtime facts for backup/restore,
+  rollback, and retention/privacy evidence in every edition, in addition to
+  the existing storage, identity, queue, object-store, network, key, and
+  failure-domain checks.
+- The profile digest includes these requirements, and incomplete facts produce
+  deterministic findings. Focused deployment tests, Ruff, mypy, and diff
+  checks pass.
+- Boundary: this enforces evidence prerequisites; it does not manufacture or
+  verify a backup, restore, rollback, retention, or privacy drill. E-1006 and
+  E-1007 remain open until those runtime artifacts exist.
+
 ## E-817 — Canonical identity enforcement for high-risk policy decisions (2026-08-20)
 
 - Central SoD comparisons now canonicalize actor, object type, object ID, and

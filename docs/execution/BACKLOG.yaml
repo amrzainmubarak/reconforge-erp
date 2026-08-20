@@ -174,6 +174,10 @@ tasks:
       boundary, backup/restore drill evidence, evidence retention/privacy policy alignment,
       and documented runbooks that avoid external cloud dependency unless explicitly selected by
       mode.
+    completed_slices:
+      - E-818 adds fail-closed runtime prerequisites for backup/restore,
+        rollback, and retention/privacy evidence to every immutable edition
+        profile; actual drills and artifacts remain required for closure.
   - id: E-1007
     priority: P1
     area: global-expansion

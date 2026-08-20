@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-917: Require deployment evidence facts before enabling any edition
+
+- **Date**: 2026-08-20
+- **Context**: Edition validation checked infrastructure compatibility but a
+  runtime could otherwise pass without declaring backup/restore, rollback, or
+  retention/privacy evidence.
+- **Decision**: Add immutable profile requirements and explicit runtime facts
+  for those three evidence classes. Validation fails closed with stable finding
+  codes until each fact is true; requirements participate in the profile
+  digest.
+- **Rationale**: Deployment mode claims must be gated by recoverability and
+  data-governance evidence, not only by service names or configuration shape.
+- **Verification**: Focused tests prove incomplete community/regulated facts
+  fail with deterministic findings and a complete community fact set clears
+  the gate; Ruff, mypy, and diff checks pass.
+- **Compatibility**: New runtime fields default to false, preserving safe
+  behavior while making previously implicit readiness checks explicit. No
+  external service is contacted and no migration is required.
+- **Rollback**: Revert the fields, findings, and focused tests; no persisted
+  data rollback is needed.
+
 ### D-916: Canonicalize every identity value at the central SoD boundary
 
 - **Date**: 2026-08-20

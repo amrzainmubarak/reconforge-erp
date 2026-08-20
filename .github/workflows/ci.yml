@@ -171,6 +171,10 @@ jobs:
 
   server-boundaries:
     runs-on: ubuntu-latest
+    # The live matrix normally completes in under 20 minutes.  A bounded job
+    # lifetime prevents a hung database/pytest process from consuming a runner
+    # indefinitely while preserving enough headroom for the declared matrix.
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777

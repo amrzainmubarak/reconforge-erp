@@ -2,6 +2,15 @@
 
 Updated: 2026-08-20
 
+## E-819 — Bounded server-boundary CI lifetime (2026-08-20)
+
+- The hosted `server-boundaries` job now has a 30-minute job-level timeout.
+  The live matrix historically completes below 20 minutes; the bound prevents
+  a hung PostgreSQL/pytest process from consuming a runner indefinitely while
+  retaining headroom for the declared test set.
+- This is CI containment, not a claim that a cancelled run passed. The
+  replacement run must complete all live tests and cleanup steps successfully.
+
 ## E-818 — Fail-closed deployment evidence gates (2026-08-20)
 
 - Deployment profiles now require explicit runtime facts for backup/restore,

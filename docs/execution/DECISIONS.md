@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-918: Bound the hosted live server-boundary job lifetime
+
+- **Date**: 2026-08-20
+- **Context**: A hosted `server-boundaries` run remained in its live pytest
+  step for more than three hours without producing a result, despite prior
+  successful runs completing in roughly 16 minutes.
+- **Decision**: Add a 30-minute job-level timeout, above the observed normal
+  runtime but below an unbounded runner lease. A timeout is a failure, never a
+  success shortcut; replacement runs must pass all tests and cleanup.
+- **Rationale**: CI must fail closed and release runner resources when a live
+  dependency or test process hangs.
+- **Verification**: The replacement PR run will be checked for explicit
+  success of server-boundaries and all other required jobs.
+- **Compatibility**: CI-only change; no application, schema, or runtime
+  behavior changes.
+- **Rollback**: Remove the timeout field if a measured matrix proves it needs
+  more than 30 minutes, with a new documented runtime budget.
+
 ### D-917: Require deployment evidence facts before enabling any edition
 
 - **Date**: 2026-08-20

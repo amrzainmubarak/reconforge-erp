@@ -178,6 +178,9 @@ tasks:
       - E-818 adds fail-closed runtime prerequisites for backup/restore,
         rollback, and retention/privacy evidence to every immutable edition
         profile; actual drills and artifacts remain required for closure.
+      - E-819 bounds the hosted live server-boundary job so hung dependency
+        processes fail closed and release the runner; a fresh successful run
+        remains required as evidence.
   - id: E-1007
     priority: P1
     area: global-expansion

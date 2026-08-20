@@ -2,6 +2,17 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-819: Bounded server-boundary CI lifetime (2026-08-20)
+
+- Hosted `server-boundaries` now declares `timeout-minutes: 30`, preserving
+  headroom above the historical sub-20-minute live matrix while preventing an
+  indefinitely hung pytest/database process.
+- The prior run was observed in `Run live server-boundary tests` for over
+  three hours with no conclusion; it is not counted as pass evidence. A fresh
+  replacement run is required and will be accepted only on explicit success.
+- Boundary: CI containment only; no application runtime or production SLO
+  claim is changed.
+
 ## E-818: Fail-closed deployment evidence gates (2026-08-20)
 
 - `DeploymentProfile` now declares backup/restore, rollback, and

@@ -3,11 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 
 import { loadProfessionalInvoicePaymentStudio } from "../data";
 import type { MessageKey } from "../i18n";
-import type { ProfessionalInvoicePaymentStatus, ProfessionalInvoicePaymentStudioContract } from "../types";
+import type { ProfessionalInvoicePaymentStatus, ProfessionalInvoicePaymentStudioContract, Locale } from "../types";
+import { formatCount } from "../locale-format";
 import { ErrorView, LoadingView } from "./StateViews";
-
 interface ProfessionalInvoicePaymentStudioProps {
   translate: (key: MessageKey) => string;
+  locale?: Locale;
 }
 
 const statuses: ProfessionalInvoicePaymentStatus[] = ["matched", "exception", "unmatched_invoice", "unmatched_payment", "ambiguous"];
@@ -29,7 +30,7 @@ function varianceClass(value: string | null): string {
   return value.startsWith("-") ? "professional-variance professional-variance--negative" : "professional-variance professional-variance--positive";
 }
 
-export function ProfessionalInvoicePaymentStudio({ translate }: ProfessionalInvoicePaymentStudioProps) {
+export function ProfessionalInvoicePaymentStudio({ translate, locale = "en" }: ProfessionalInvoicePaymentStudioProps) {
   const [data, setData] = useState<ProfessionalInvoicePaymentStudioContract | null>(null);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
@@ -75,11 +76,11 @@ export function ProfessionalInvoicePaymentStudio({ translate }: ProfessionalInvo
       <p className="live-boundary professional-boundary"><FileCheck2 size={17} aria-hidden="true" />{translate("professionalInvoicePaymentBoundary")}</p>
 
       <section className="workbench-stats" aria-label={translate("professionalInvoicePaymentTitle")}>
-        <article><span className="stat-icon"><FileCheck2 size={18} /></span><strong>{data.summary.total}</strong><small>{translate("professionalTotalDecisions")}</small></article>
-        <article><span className="stat-icon stat-icon--positive"><CircleCheck size={18} /></span><strong>{data.summary.matched}</strong><small>{translate("professionalMatchedCount")}</small></article>
-        <article><span className="stat-icon stat-icon--critical"><AlertTriangle size={18} /></span><strong>{data.summary.exceptions}</strong><small>{translate("professionalExceptionCount")}</small></article>
-        <article><span className="stat-icon stat-icon--warning"><FileWarning size={18} /></span><strong>{data.summary.ambiguous}</strong><small>{translate("professionalAmbiguousCount")}</small></article>
-        <article><span className="stat-icon"><FileCheck2 size={18} /></span><strong>{data.payment_window_days}</strong><small>{translate("professionalPaymentWindow")}</small></article>
+        <article><span className="stat-icon"><FileCheck2 size={18} /></span><strong>{formatCount(data.summary.total, locale)}</strong><small>{translate("professionalTotalDecisions")}</small></article>
+        <article><span className="stat-icon stat-icon--positive"><CircleCheck size={18} /></span><strong>{formatCount(data.summary.matched, locale)}</strong><small>{translate("professionalMatchedCount")}</small></article>
+        <article><span className="stat-icon stat-icon--critical"><AlertTriangle size={18} /></span><strong>{formatCount(data.summary.exceptions, locale)}</strong><small>{translate("professionalExceptionCount")}</small></article>
+        <article><span className="stat-icon stat-icon--warning"><FileWarning size={18} /></span><strong>{formatCount(data.summary.ambiguous, locale)}</strong><small>{translate("professionalAmbiguousCount")}</small></article>
+        <article><span className="stat-icon"><FileCheck2 size={18} /></span><strong>{formatCount(data.payment_window_days, locale)}</strong><small>{translate("professionalPaymentWindow")}</small></article>
       </section>
 
       <section className="panel workbench-panel">
@@ -92,7 +93,7 @@ export function ProfessionalInvoicePaymentStudio({ translate }: ProfessionalInvo
             <option value="">{translate("professionalAllStatuses")}</option>
             {statuses.map((value) => <option value={value} key={value}>{statusLabel(translate, value)}</option>)}
           </select>
-          <span className="result-count" aria-live="polite"><strong>{filtered.length}</strong> {translate("results")}</span>
+          <span className="result-count" aria-live="polite"><strong>{formatCount(filtered.length, locale)}</strong> {translate("results")}</span>
         </div>
 
         {filtered.length ? (

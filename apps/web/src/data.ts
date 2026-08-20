@@ -1,4 +1,4 @@
-import type { AdminAccessPermission, AdminAccessRole, AdminAccessRoleChange, AdminAuditEvent, AdminAuditPage, AdminAuditVerification, AdminIdentitySession, AdminIdentityUser, AdminIdentityUserStatusChange, AdminIntegration, AdminRetentionPolicy, AdminSecuritySnapshot, AdminSessionRevocation, AdminUserRoleAssignment, BankStatementStatus, BankStatementStudioContract, BrowserAdminSession, EvidenceBinderContract, ExceptionQueueContract, InventoryControlContract, LiveStudioContract, LiveStudioMetric, ManufacturingCostStatus, ManufacturingCostStudioContract, ProfessionalInvoicePaymentStatus, ProfessionalInvoicePaymentStudioContract, RetailSettlementStudioContract, StudioOverview } from "./types";
+import type { AdminAccessPermission, AdminAccessRole, AdminAccessRoleChange, AdminAuditEvent, AdminAuditPage, AdminAuditVerification, AdminIdentitySession, AdminIdentityUser, AdminIdentityUserStatusChange, AdminIntegration, AdminRetentionPolicy, AdminSecuritySnapshot, AdminSessionRevocation, AdminUserRoleAssignment, BankStatementStatus, BankStatementStudioContract, BrowserAdminSession, EvidenceBinderContract, ExceptionQueueContract, IndividualCashflowStatus, IndividualCashflowStudioContract, InventoryControlContract, LiveStudioContract, LiveStudioMetric, ManufacturingCostStatus, ManufacturingCostStudioContract, ProfessionalInvoicePaymentStatus, ProfessionalInvoicePaymentStudioContract, RetailSettlementStudioContract, StudioOverview } from "./types";
 
 const OVERVIEW_URL = `${import.meta.env.BASE_URL}demo/studio-overview.json`;
 const EXCEPTIONS_URL = `${import.meta.env.BASE_URL}demo/studio-exceptions.json`;
@@ -8,6 +8,7 @@ const RETAIL_SETTLEMENT_URL = `${import.meta.env.BASE_URL}demo/studio-retail-set
 const BANK_STATEMENT_URL = `${import.meta.env.BASE_URL}demo/studio-bank-statement.json`;
 const MANUFACTURING_COST_URL = `${import.meta.env.BASE_URL}demo/studio-manufacturing-cost.json`;
 const PROFESSIONAL_INVOICE_PAYMENT_URL = `${import.meta.env.BASE_URL}demo/studio-professional-invoice-payment.json`;
+const INDIVIDUAL_CASHFLOW_URL = `${import.meta.env.BASE_URL}demo/studio-individual-cashflow.json`;
 const metricFormats = new Set(["percent", "count", "days"]);
 const metricTones = new Set(["positive", "critical", "warning", "neutral"]);
 const riskRatings = new Set(["critical", "high", "medium", "low"]);
@@ -27,6 +28,7 @@ const retailStatuses = new Set(["matched", "exception", "unmatched_pos", "unmatc
 const bankStatuses = new Set<BankStatementStatus>(["matched", "exception", "unmatched_bank", "unmatched_ledger", "ambiguous"]);
 const manufacturingStatuses = new Set<ManufacturingCostStatus>(["reconciled", "exception", "unmatched"]);
 const professionalStatuses = new Set<ProfessionalInvoicePaymentStatus>(["matched", "exception", "unmatched_invoice", "unmatched_payment", "ambiguous"]);
+const individualCashflowStatuses = new Set<IndividualCashflowStatus>(["within_budget", "over_budget", "unbudgeted", "no_activity"]);
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -570,6 +572,56 @@ function isProfessionalInvoicePaymentStudio(value: unknown): value is Profession
   );
 }
 
+function isIndividualCashflowDecision(value: unknown, expectedCurrency: string): boolean {
+  if (!isObject(value)) return false;
+  if (!hasTextFields(value, ["period", "category", "reason_code"])) return false;
+  if (typeof value.period !== "string" || !/^\d{4}-\d{2}$/.test(value.period)) return false;
+  if (value.flow_type !== "income" && value.flow_type !== "expense") return false;
+  if (typeof value.status !== "string" || !individualCashflowStatuses.has(value.status as IndividualCashflowStatus)) return false;
+  if (!isText(value.actual) || !exactMoney.test(value.actual) || !isText(value.reason_code)) return false;
+  if (value.budget !== null && (!isText(value.budget) || !exactMoney.test(value.budget))) return false;
+  if (value.variance !== null && (!isText(value.variance) || !exactMoney.test(value.variance))) return false;
+  return Array.isArray(value.transaction_ids) && value.transaction_ids.length <= 10_000 && value.transaction_ids.every(isText) && expectedCurrency.length === 3;
+}
+
+function individualCashflowSummaryIsConsistent(value: Record<string, unknown>): boolean {
+  const summary = value.summary as Record<string, unknown>;
+  const decisions = value.decisions as Array<Record<string, unknown>>;
+  const statuses = decisions.map((decision) => String(decision.status));
+  return (
+    summary.total === decisions.length &&
+    summary.within_budget === statuses.filter((status) => status === "within_budget").length &&
+    summary.over_budget === statuses.filter((status) => status === "over_budget").length &&
+    summary.unbudgeted === statuses.filter((status) => status === "unbudgeted").length &&
+    summary.no_activity === statuses.filter((status) => status === "no_activity").length &&
+    new Set(decisions.map((decision) => `${decision.period}:${decision.flow_type}:${decision.category}`)).size === decisions.length
+  );
+}
+
+function isIndividualCashflowStudio(value: unknown): value is IndividualCashflowStudioContract {
+  if (!isObject(value)) return false;
+  return (
+    value.schema_version === 1 &&
+    value.synthetic_data_only === true &&
+    value.synthetic_data_marker === "SYNTHETIC_INDIVIDUAL_CASHFLOW_UI_ONLY" &&
+    isText(value.generated_at) &&
+    isContractSource(value.source) &&
+    isText(value.algorithm_version) &&
+    digest.test(String(value.decision_digest)) &&
+    digest.test(String(value.artifact_digest)) &&
+    isText(value.currency) &&
+    currencyCode.test(value.currency) &&
+    hasCountFields(value.summary, ["total", "within_budget", "over_budget", "unbudgeted", "no_activity"]) &&
+    Array.isArray(value.decisions) &&
+    value.decisions.length > 0 &&
+    value.decisions.length <= 10_000 &&
+    value.decisions.every((decision) => isIndividualCashflowDecision(decision, value.currency as string)) &&
+    Array.isArray(value.notices) &&
+    value.notices.every(isText) &&
+    individualCashflowSummaryIsConsistent(value)
+  );
+}
+
 function isExecutiveBrief(value: unknown): boolean {
   return (
     isObject(value) &&
@@ -705,6 +757,10 @@ export async function loadManufacturingCostStudio(signal?: AbortSignal): Promise
 
 export async function loadProfessionalInvoicePaymentStudio(signal?: AbortSignal): Promise<ProfessionalInvoicePaymentStudioContract> {
   return loadContract(PROFESSIONAL_INVOICE_PAYMENT_URL, isProfessionalInvoicePaymentStudio, "professional invoice/payment", signal);
+}
+
+export async function loadIndividualCashflowStudio(signal?: AbortSignal): Promise<IndividualCashflowStudioContract> {
+  return loadContract(INDIVIDUAL_CASHFLOW_URL, isIndividualCashflowStudio, "individual cashflow", signal);
 }
 
 async function loadContract<T>(

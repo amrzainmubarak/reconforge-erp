@@ -3,11 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 
 import { loadManufacturingCostStudio } from "../data";
 import type { MessageKey } from "../i18n";
-import type { ManufacturingCostStatus, ManufacturingCostStudioContract } from "../types";
+import type { ManufacturingCostStatus, ManufacturingCostStudioContract, Locale } from "../types";
+import { formatCount } from "../locale-format";
 import { ErrorView, LoadingView } from "./StateViews";
-
 interface ManufacturingCostStudioProps {
   translate: (key: MessageKey) => string;
+  locale?: Locale;
 }
 
 const statuses: ManufacturingCostStatus[] = ["reconciled", "exception", "unmatched"];
@@ -27,7 +28,7 @@ function varianceClass(value: string): string {
   return value.startsWith("-") ? "manufacturing-variance manufacturing-variance--negative" : "manufacturing-variance manufacturing-variance--positive";
 }
 
-export function ManufacturingCostStudio({ translate }: ManufacturingCostStudioProps) {
+export function ManufacturingCostStudio({ translate, locale = "en" }: ManufacturingCostStudioProps) {
   const [data, setData] = useState<ManufacturingCostStudioContract | null>(null);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
@@ -73,11 +74,11 @@ export function ManufacturingCostStudio({ translate }: ManufacturingCostStudioPr
       <p className="live-boundary manufacturing-boundary"><Factory size={17} aria-hidden="true" />{translate("manufacturingCostBoundary")}</p>
 
       <section className="workbench-stats" aria-label={translate("manufacturingCostTitle")}>
-        <article><span className="stat-icon"><Factory size={18} /></span><strong>{data.summary.total}</strong><small>{translate("mfgTotalOrders")}</small></article>
-        <article><span className="stat-icon stat-icon--positive"><CircleCheck size={18} /></span><strong>{data.summary.reconciled}</strong><small>{translate("mfgReconciledCount")}</small></article>
-        <article><span className="stat-icon stat-icon--critical"><AlertTriangle size={18} /></span><strong>{data.summary.exceptions}</strong><small>{translate("mfgExceptionCount")}</small></article>
-        <article><span className="stat-icon stat-icon--warning"><FileWarning size={18} /></span><strong>{data.summary.unmatched}</strong><small>{translate("mfgUnmatchedCount")}</small></article>
-        <article><span className="stat-icon"><Factory size={18} /></span><strong>{data.max_scrap_quantity} {data.unit}</strong><small>{translate("mfgScrapLimit")}</small></article>
+        <article><span className="stat-icon"><Factory size={18} /></span><strong>{formatCount(data.summary.total, locale)}</strong><small>{translate("mfgTotalOrders")}</small></article>
+        <article><span className="stat-icon stat-icon--positive"><CircleCheck size={18} /></span><strong>{formatCount(data.summary.reconciled, locale)}</strong><small>{translate("mfgReconciledCount")}</small></article>
+        <article><span className="stat-icon stat-icon--critical"><AlertTriangle size={18} /></span><strong>{formatCount(data.summary.exceptions, locale)}</strong><small>{translate("mfgExceptionCount")}</small></article>
+        <article><span className="stat-icon stat-icon--warning"><FileWarning size={18} /></span><strong>{formatCount(data.summary.unmatched, locale)}</strong><small>{translate("mfgUnmatchedCount")}</small></article>
+        <article><span className="stat-icon"><Factory size={18} /></span><strong>{formatCount(Number(data.max_scrap_quantity), locale)} {data.unit}</strong><small>{translate("mfgScrapLimit")}</small></article>
       </section>
 
       <section className="panel workbench-panel">
@@ -90,7 +91,7 @@ export function ManufacturingCostStudio({ translate }: ManufacturingCostStudioPr
             <option value="">{translate("mfgAllStatuses")}</option>
             {statuses.map((value) => <option value={value} key={value}>{statusLabel(translate, value)}</option>)}
           </select>
-          <span className="result-count" aria-live="polite"><strong>{filtered.length}</strong> {translate("results")}</span>
+          <span className="result-count" aria-live="polite"><strong>{formatCount(filtered.length, locale)}</strong> {translate("results")}</span>
         </div>
 
         {filtered.length ? (

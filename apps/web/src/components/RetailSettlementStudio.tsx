@@ -3,11 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 
 import { loadRetailSettlementStudio } from "../data";
 import type { MessageKey } from "../i18n";
-import type { RetailSettlementStatus, RetailSettlementStudioContract } from "../types";
+import type { RetailSettlementStatus, RetailSettlementStudioContract, Locale } from "../types";
+import { formatCount } from "../locale-format";
 import { ErrorView, LoadingView } from "./StateViews";
-
 interface RetailSettlementStudioProps {
   translate: (key: MessageKey) => string;
+  locale?: Locale;
 }
 
 const statuses: RetailSettlementStatus[] = ["matched", "exception", "unmatched_pos", "unmatched_settlement", "ambiguous"];
@@ -29,7 +30,7 @@ function varianceClass(value: string | null): string {
   return value.startsWith("-") ? "retail-variance retail-variance--negative" : "retail-variance retail-variance--positive";
 }
 
-export function RetailSettlementStudio({ translate }: RetailSettlementStudioProps) {
+export function RetailSettlementStudio({ translate, locale = "en" }: RetailSettlementStudioProps) {
   const [data, setData] = useState<RetailSettlementStudioContract | null>(null);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
@@ -77,10 +78,10 @@ export function RetailSettlementStudio({ translate }: RetailSettlementStudioProp
       <p className="live-boundary retail-boundary"><CircleDollarSign size={17} aria-hidden="true" />{translate("retailSettlementBoundary")}</p>
 
       <section className="workbench-stats" aria-label={translate("retailSettlementTitle")}>
-        <article><span className="stat-icon"><Store size={18} /></span><strong>{data.summary.total}</strong><small>{translate("retailTotalRuns")}</small></article>
-        <article><span className="stat-icon stat-icon--positive"><CircleCheck size={18} /></span><strong>{data.summary.matched}</strong><small>{translate("retailMatchedCount")}</small></article>
-        <article><span className="stat-icon stat-icon--critical"><AlertTriangle size={18} /></span><strong>{data.summary.exceptions}</strong><small>{translate("retailExceptionCount")}</small></article>
-        <article><span className="stat-icon stat-icon--warning"><FileWarning size={18} /></span><strong>{data.summary.unmatched}</strong><small>{translate("retailUnmatchedCount")}</small></article>
+        <article><span className="stat-icon"><Store size={18} /></span><strong>{formatCount(data.summary.total, locale)}</strong><small>{translate("retailTotalRuns")}</small></article>
+        <article><span className="stat-icon stat-icon--positive"><CircleCheck size={18} /></span><strong>{formatCount(data.summary.matched, locale)}</strong><small>{translate("retailMatchedCount")}</small></article>
+        <article><span className="stat-icon stat-icon--critical"><AlertTriangle size={18} /></span><strong>{formatCount(data.summary.exceptions, locale)}</strong><small>{translate("retailExceptionCount")}</small></article>
+        <article><span className="stat-icon stat-icon--warning"><FileWarning size={18} /></span><strong>{formatCount(data.summary.unmatched, locale)}</strong><small>{translate("retailUnmatchedCount")}</small></article>
         <article><span className="stat-icon"><ShieldCheck size={18} /></span><strong>{data.currency} {data.tolerance}</strong><small>{translate("retailTolerance")}</small></article>
       </section>
 
@@ -94,7 +95,7 @@ export function RetailSettlementStudio({ translate }: RetailSettlementStudioProp
             <option value="">{translate("retailAllStatuses")}</option>
             {statuses.map((value) => <option value={value} key={value}>{statusLabel(translate, value)}</option>)}
           </select>
-          <span className="result-count" aria-live="polite"><strong>{filtered.length}</strong> {translate("results")}</span>
+          <span className="result-count" aria-live="polite"><strong>{formatCount(filtered.length, locale)}</strong> {translate("results")}</span>
         </div>
 
         {filtered.length ? (

@@ -3,11 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 
 import { loadBankStatementStudio } from "../data";
 import type { MessageKey } from "../i18n";
-import type { BankStatementStatus, BankStatementStudioContract } from "../types";
+import type { BankStatementStatus, BankStatementStudioContract, Locale } from "../types";
+import { formatCount } from "../locale-format";
 import { ErrorView, LoadingView } from "./StateViews";
-
 interface BankStatementStudioProps {
   translate: (key: MessageKey) => string;
+  locale?: Locale;
 }
 
 const statuses: BankStatementStatus[] = ["matched", "exception", "unmatched_bank", "unmatched_ledger", "ambiguous"];
@@ -29,7 +30,7 @@ function varianceClass(value: string | null): string {
   return value.startsWith("-") ? "bank-variance bank-variance--negative" : "bank-variance bank-variance--positive";
 }
 
-export function BankStatementStudio({ translate }: BankStatementStudioProps) {
+export function BankStatementStudio({ translate, locale = "en" }: BankStatementStudioProps) {
   const [data, setData] = useState<BankStatementStudioContract | null>(null);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
@@ -77,11 +78,11 @@ export function BankStatementStudio({ translate }: BankStatementStudioProps) {
       <p className="live-boundary bank-boundary"><Landmark size={17} aria-hidden="true" />{translate("bankStatementBoundary")}</p>
 
       <section className="workbench-stats" aria-label={translate("bankStatementTitle")}>
-        <article><span className="stat-icon"><Landmark size={18} /></span><strong>{data.summary.total}</strong><small>{translate("bankTotalLines")}</small></article>
-        <article><span className="stat-icon stat-icon--positive"><CircleCheck size={18} /></span><strong>{data.summary.matched}</strong><small>{translate("bankMatchedCount")}</small></article>
-        <article><span className="stat-icon stat-icon--critical"><AlertTriangle size={18} /></span><strong>{data.summary.exceptions}</strong><small>{translate("bankExceptionCount")}</small></article>
-        <article><span className="stat-icon stat-icon--warning"><FileWarning size={18} /></span><strong>{data.summary.unmatched}</strong><small>{translate("bankUnmatchedCount")}</small></article>
-        <article><span className="stat-icon"><CalendarDays size={18} /></span><strong>{data.date_window_days}</strong><small>{translate("bankDateWindow")}</small></article>
+        <article><span className="stat-icon"><Landmark size={18} /></span><strong>{formatCount(data.summary.total, locale)}</strong><small>{translate("bankTotalLines")}</small></article>
+        <article><span className="stat-icon stat-icon--positive"><CircleCheck size={18} /></span><strong>{formatCount(data.summary.matched, locale)}</strong><small>{translate("bankMatchedCount")}</small></article>
+        <article><span className="stat-icon stat-icon--critical"><AlertTriangle size={18} /></span><strong>{formatCount(data.summary.exceptions, locale)}</strong><small>{translate("bankExceptionCount")}</small></article>
+        <article><span className="stat-icon stat-icon--warning"><FileWarning size={18} /></span><strong>{formatCount(data.summary.unmatched, locale)}</strong><small>{translate("bankUnmatchedCount")}</small></article>
+        <article><span className="stat-icon"><CalendarDays size={18} /></span><strong>{formatCount(data.date_window_days, locale)}</strong><small>{translate("bankDateWindow")}</small></article>
       </section>
 
       <section className="panel workbench-panel">
@@ -94,7 +95,7 @@ export function BankStatementStudio({ translate }: BankStatementStudioProps) {
             <option value="">{translate("bankAllStatuses")}</option>
             {statuses.map((value) => <option value={value} key={value}>{statusLabel(translate, value)}</option>)}
           </select>
-          <span className="result-count" aria-live="polite"><strong>{filtered.length}</strong> {translate("results")}</span>
+          <span className="result-count" aria-live="polite"><strong>{formatCount(filtered.length, locale)}</strong> {translate("results")}</span>
         </div>
 
         {filtered.length ? (

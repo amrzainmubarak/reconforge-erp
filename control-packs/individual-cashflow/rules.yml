@@ -1,0 +1,46 @@
+schema_version: 1
+rules:
+  - rule_id: CASHFLOW_ACTIVITY_WITHIN_BUDGET
+    rule_name: Activity is within the category budget
+    severity: info
+    entity_type: cashflow_decision
+    source_file: cashflow.csv
+    condition: {operator: equals, field: status, value: within_budget}
+    message: Activity is within the configured category budget.
+    business_impact: The category remains within the configured local threshold.
+    recommended_action: Retain the source evidence and continue ordinary review.
+    risk_impact: 5
+    evidence_fields: [period, flow_type, category, actual, budget, variance]
+  - rule_id: CASHFLOW_ACTIVITY_EXCEEDS_BUDGET
+    rule_name: Activity exceeds the category budget
+    severity: high
+    entity_type: cashflow_decision
+    source_file: cashflow.csv
+    condition: {operator: equals, field: status, value: over_budget}
+    message: Activity exceeds the configured category budget.
+    business_impact: The category requires an explicit review of source evidence and context.
+    recommended_action: Review the category, exact transactions, and approved budget before any action.
+    risk_impact: 80
+    evidence_fields: [period, flow_type, category, actual, budget, variance, transaction_ids]
+  - rule_id: CASHFLOW_ACTIVITY_HAS_NO_BUDGET
+    rule_name: Activity has no budget line
+    severity: medium
+    entity_type: cashflow_decision
+    source_file: cashflow.csv
+    condition: {operator: equals, field: status, value: unbudgeted}
+    message: Activity has no corresponding category budget.
+    business_impact: Local cashflow activity may not have an explicit review threshold.
+    recommended_action: Confirm whether a budget is intentionally absent and preserve the decision evidence.
+    risk_impact: 60
+    evidence_fields: [period, flow_type, category, actual, transaction_ids]
+  - rule_id: CASHFLOW_BUDGET_HAS_NO_ACTIVITY
+    rule_name: Budget has no activity
+    severity: low
+    entity_type: cashflow_decision
+    source_file: cashflow.csv
+    condition: {operator: equals, field: status, value: no_activity}
+    message: A configured category budget has no matching activity.
+    business_impact: The source export may be incomplete or the budget may be intentionally unused.
+    recommended_action: Confirm source completeness before changing the budget or taking action.
+    risk_impact: 20
+    evidence_fields: [period, flow_type, category, budget, budget_id]

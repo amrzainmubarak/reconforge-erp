@@ -22,12 +22,14 @@ import {
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { CSSProperties } from "react";
 
+import { formatCount, formatMetricValue } from "../locale-format";
 import type { MessageKey } from "../i18n";
-import type { StudioMetric, StudioOverview, StudioPage } from "../types";
+import type { Locale, StudioMetric, StudioOverview, StudioPage } from "../types";
 
 interface DashboardProps {
   data: StudioOverview;
   translate: (key: MessageKey) => string;
+  locale: Locale;
   colorSafe: boolean;
   onNavigate: (page: StudioPage) => void;
 }
@@ -50,10 +52,8 @@ const featuredMetricKeys = [
   "match_rate",
 ];
 
-function formatMetric(metric: StudioMetric): string {
-  if (metric.format === "percent") return `${metric.value.toFixed(metric.value % 1 === 0 ? 0 : 1)}%`;
-  if (metric.format === "days") return `${metric.value.toFixed(1)}d`;
-  return metric.value.toLocaleString();
+function formatMetric(metric: StudioMetric, locale: Locale): string {
+  return formatMetricValue(metric.value, metric.format, locale);
 }
 
 function MetricIcon({ metricKey }: { metricKey: string }) {
@@ -63,7 +63,7 @@ function MetricIcon({ metricKey }: { metricKey: string }) {
   return <TrendingUp size={19} />;
 }
 
-function MetricCard({ metric, translate }: { metric: StudioMetric; translate: (key: MessageKey) => string }) {
+function MetricCard({ metric, locale, translate }: { metric: StudioMetric; locale: Locale; translate: (key: MessageKey) => string }) {
   return (
     <article className={`metric-card metric-card--${metric.tone}`}>
       <div className="metric-card-topline">
@@ -72,7 +72,7 @@ function MetricCard({ metric, translate }: { metric: StudioMetric; translate: (k
           <Info size={15} />
         </button>
       </div>
-      <strong className="metric-value">{formatMetric(metric)}</strong>
+      <strong className="metric-value">{formatMetric(metric, locale)}</strong>
       <span className="metric-label">{translate(metricLabelKeys[metric.key] ?? "executivePulse")}</span>
       <div className="metric-context">
         <span className="metric-context-mark" aria-hidden="true" />
@@ -104,14 +104,14 @@ function statusIcon(status: string) {
   return <CircleDashed size={17} />;
 }
 
-export function Dashboard({ data, translate, colorSafe, onNavigate }: DashboardProps) {
+export function Dashboard({ data, locale, translate, colorSafe, onNavigate }: DashboardProps) {
   const metricMap = new Map(data.metrics.map((metric) => [metric.key, metric]));
   const brief = data.executive_brief;
   const featuredMetrics = featuredMetricKeys.map((key) => metricMap.get(key)).filter((metric): metric is StudioMetric => Boolean(metric));
   const pulseMetrics = ["close_completion", "evidence_coverage", "control_effectiveness", "match_rate"]
     .map((key) => metricMap.get(key))
     .filter((metric): metric is StudioMetric => Boolean(metric))
-    .map((metric) => ({ name: translate(metricLabelKeys[metric.key]), value: metric.value }));
+    .map((metric) => ({ name: translate(metricLabelKeys[metric.key]), value: formatCount(metric.value, locale) }));
   const riskColors = colorSafe
     ? ["#6f5bd3", "#0072b2", "#e69f00", "#009e73"]
     : ["#c43d4b", "#e4663a", "#d49c21", "#15977e"];
@@ -128,9 +128,9 @@ export function Dashboard({ data, translate, colorSafe, onNavigate }: DashboardP
     value: string;
     icon: typeof Gauge;
   }> = [
-    { page: "dashboard", label: "tourExecutive", help: "tourExecutiveHelp", value: `${data.metrics.length}`, icon: Gauge },
-    { page: "exceptions", label: "tourExceptions", help: "tourExceptionsHelp", value: `${brief.open_exception_count}`, icon: ListChecks },
-    { page: "evidence", label: "tourEvidence", help: "tourEvidenceHelp", value: `${data.workspace.evidence_count}`, icon: ShieldCheck },
+    { page: "dashboard", label: "tourExecutive", help: "tourExecutiveHelp", value: formatCount(data.metrics.length, locale), icon: Gauge },
+    { page: "exceptions", label: "tourExceptions", help: "tourExceptionsHelp", value: formatCount(brief.open_exception_count, locale), icon: ListChecks },
+    { page: "evidence", label: "tourEvidence", help: "tourEvidenceHelp", value: formatCount(data.workspace.evidence_count, locale), icon: ShieldCheck },
     { page: "inventory", label: "tourInventory", help: "tourInventoryHelp", value: translate("exactControls"), icon: Boxes },
   ];
   const readinessStyle = { "--readiness": `${brief.readiness_score * 3.6}deg` } as CSSProperties;
@@ -144,12 +144,12 @@ export function Dashboard({ data, translate, colorSafe, onNavigate }: DashboardP
           <p>{translate("intro")}</p>
           <div className="hero-meta">
             <span><CalendarDays size={15} /> {translate("period")}: <strong>{data.workspace.current_period}</strong></span>
-            <span><Database size={15} /> {data.workspace.entity_count} entities</span>
+            <span><Database size={15} /> {formatCount(data.workspace.entity_count, locale)} entities</span>
           </div>
         </div>
         <div className="hero-readiness" aria-label={translate("closeReadiness")}>
           <div className="readiness-ring" style={readinessStyle}>
-            <div><strong>{brief.readiness_score.toFixed(0)}%</strong><span>{translate("ready")}</span></div>
+            <div><strong>{formatMetricValue(brief.readiness_score, "percent", locale)}</strong><span>{translate("ready")}</span></div>
           </div>
           <div className="readiness-copy">
             <span className={`showcase-status showcase-status--${brief.readiness_status}`}>{translate(brief.readiness_status)}</span>
@@ -181,7 +181,7 @@ export function Dashboard({ data, translate, colorSafe, onNavigate }: DashboardP
       </section>
 
       <section className="metrics-grid" aria-label={translate("executivePulse")}>
-        {featuredMetrics.length ? featuredMetrics.map((metric) => <MetricCard metric={metric} translate={translate} key={metric.key} />) : <p>{translate("empty")}</p>}
+        {featuredMetrics.length ? featuredMetrics.map((metric) => <MetricCard metric={metric} locale={locale} translate={translate} key={metric.key} />) : <p>{translate("empty")}</p>}
       </section>
 
       <section className="dashboard-grid dashboard-grid--briefing">
@@ -195,10 +195,10 @@ export function Dashboard({ data, translate, colorSafe, onNavigate }: DashboardP
             </div>
           </div>
           <div className="decision-signals">
-            <div><span>{translate("highRiskItems")}</span><strong>{brief.high_risk_count}</strong></div>
-            <div><span>{translate("openExceptions")}</span><strong>{brief.open_exception_count}</strong></div>
-            <div><span>{translate("blockedTasks")}</span><strong>{brief.blocked_task_count}</strong></div>
-            <div><span>{translate("completedTasks")}</span><strong>{brief.completed_task_count}/{data.workspace.close_task_count}</strong></div>
+            <div><span>{translate("highRiskItems")}</span><strong>{formatCount(brief.high_risk_count, locale)}</strong></div>
+            <div><span>{translate("openExceptions")}</span><strong>{formatCount(brief.open_exception_count, locale)}</strong></div>
+            <div><span>{translate("blockedTasks")}</span><strong>{formatCount(brief.blocked_task_count, locale)}</strong></div>
+            <div><span>{translate("completedTasks")}</span><strong>{formatCount(brief.completed_task_count, locale)}/{formatCount(data.workspace.close_task_count, locale)}</strong></div>
           </div>
         </article>
 
@@ -209,7 +209,7 @@ export function Dashboard({ data, translate, colorSafe, onNavigate }: DashboardP
               <div className="domain-row" title={domain.lineage} key={domain.domain}>
                 <div><strong>{translate(`domain${domain.domain[0].toUpperCase()}${domain.domain.slice(1)}` as MessageKey)}</strong><span className={`showcase-status showcase-status--${domain.status}`}>{translate(domain.status)}</span></div>
                 <div className="domain-progress"><i style={{ width: `${domain.score}%` }} /></div>
-                <strong>{domain.score.toFixed(domain.score % 1 === 0 ? 0 : 1)}%</strong>
+                <strong>{formatMetricValue(domain.score, "percent", locale)}</strong>
               </div>
             ))}
           </div> : <p className="empty-panel">{translate("empty")}</p>}
@@ -217,7 +217,7 @@ export function Dashboard({ data, translate, colorSafe, onNavigate }: DashboardP
       </section>
 
       <section className="panel entity-health-panel">
-        <SectionHeading title={translate("entityHealth")} help={translate("entityHealthHelp")} action={`${data.entity_health.length} ${translate("entities")}`} />
+        <SectionHeading title={translate("entityHealth")} help={translate("entityHealthHelp")} action={`${formatCount(data.entity_health.length, locale)} ${translate("entities")}`} />
         {data.entity_health.length ? (
           <div className="entity-health-grid">
             {data.entity_health.map((entity) => (
@@ -228,8 +228,8 @@ export function Dashboard({ data, translate, colorSafe, onNavigate }: DashboardP
                   <span className={`showcase-status showcase-status--${entity.status}`}>{translate(entity.status)}</span>
                 </div>
                 <div className="entity-health-metrics">
-                  <span><strong>{entity.open_exception_count}</strong>{translate("openExceptions")}</span>
-                  <span><strong>{entity.high_risk_count}</strong>{translate("highRiskItems")}</span>
+                  <span><strong>{formatCount(entity.open_exception_count, locale)}</strong>{translate("openExceptions")}</span>
+                  <span><strong>{formatCount(entity.high_risk_count, locale)}</strong>{translate("highRiskItems")}</span>
                 </div>
               </article>
             ))}
@@ -268,14 +268,14 @@ export function Dashboard({ data, translate, colorSafe, onNavigate }: DashboardP
                     <Tooltip contentStyle={{ background: "var(--surface-raised)", border: "1px solid var(--border)", borderRadius: 12 }} />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="risk-total"><strong>{totalExceptions}</strong><span>{translate("exceptions")}</span></div>
+            <div className="risk-total"><strong>{formatCount(totalExceptions, locale)}</strong><span>{translate("exceptions")}</span></div>
               </div>
               <div className="risk-legend">
                 {riskData.map((point) => (
                   <div className="risk-legend-row" key={point.name}>
                     <span className="legend-dot" style={{ background: point.color }} />
                     <span>{point.name}</span>
-                    <strong>{point.value}</strong>
+                    <strong>{formatCount(point.value, locale)}</strong>
                   </div>
                 ))}
               </div>
@@ -286,7 +286,7 @@ export function Dashboard({ data, translate, colorSafe, onNavigate }: DashboardP
 
       <section className="dashboard-grid dashboard-grid--work">
         <article className="panel close-panel">
-          <SectionHeading title={translate("closeProgress")} help={translate("closeProgressHelp")} action={`${data.workspace.close_task_count} tasks`} />
+          <SectionHeading title={translate("closeProgress")} help={translate("closeProgressHelp")} action={`${formatCount(data.workspace.close_task_count, locale)} tasks`} />
           {data.close_tasks.length ? (
             <ol className="task-list">
               {data.close_tasks.map((task, index) => (
@@ -307,7 +307,7 @@ export function Dashboard({ data, translate, colorSafe, onNavigate }: DashboardP
         </article>
 
         <article className="panel exception-panel">
-          <SectionHeading title={translate("priorityQueue")} help={translate("priorityQueueHelp")} action={`${data.exceptions.length} shown`} />
+          <SectionHeading title={translate("priorityQueue")} help={translate("priorityQueueHelp")} action={`${formatCount(data.exceptions.length, locale)} shown`} />
           {data.exceptions.length ? (
             <div className="table-scroll" tabIndex={0} aria-label={translate("priorityQueue")}>
               <table>

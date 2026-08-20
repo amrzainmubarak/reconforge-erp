@@ -28,7 +28,7 @@ def downgrade() -> None:
                 RAISE EXCEPTION 'refusing to discard close/PPA evidence links';
             END IF;
         END $$;
-        DROP TRIGGER IF EXISTS consolidation_close_ppa_links_immutable
+        DROP TRIGGER IF EXISTS consolidation_close_ppa_link_guard
             ON reconforge.consolidation_close_ppa_links;
         DROP FUNCTION IF EXISTS reconforge.guard_consolidation_close_ppa_link();
         DROP INDEX IF EXISTS reconforge.consolidation_close_ppa_links_run_idx;

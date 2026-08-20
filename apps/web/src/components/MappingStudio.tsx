@@ -2,6 +2,8 @@ import { AlertTriangle, CheckCircle2, FileInput, ShieldCheck } from "lucide-reac
 import { useMemo, useState } from "react";
 
 import type { MessageKey } from "../i18n";
+import type { Locale } from "../types";
+import { formatCount } from "../locale-format";
 import { canonicalFields, emptyMapping, parsePreview, validateMapping, type ColumnMapping, type PreviewTable } from "../mapping";
 
 const sample = `txn_id,amount_text,currency_code,posting_date,description
@@ -9,7 +11,7 @@ TX-001,1250.00,USD,2026-07-01,Invoice receipt
 TX-002,,USD,2026-07-02,Missing amount remains visible
 TX-003,not-a-number,EUR,2026-07-03,Malformed amount remains visible`;
 
-export function MappingStudio({ translate }: { translate: (key: MessageKey) => string }) {
+export function MappingStudio({ translate, locale = "en" }: { translate: (key: MessageKey) => string; locale?: Locale }) {
   const [table, setTable] = useState<PreviewTable>(() => parsePreview(sample));
   const [mapping, setMapping] = useState<ColumnMapping>(() => emptyMapping());
   const [loadError, setLoadError] = useState("");
@@ -50,7 +52,7 @@ export function MappingStudio({ translate }: { translate: (key: MessageKey) => s
       </section>
 
       <section className="panel" aria-labelledby="quality-title">
-        <div className="mapping-quality-heading"><div><h2 id="quality-title">{translate("dataQuality")}</h2><p>{translate("noImplicitZero")}</p></div><strong className={issues.length ? "mapping-issue-count" : "mapping-valid"}>{issues.length ? <AlertTriangle size={16} aria-hidden="true" /> : <CheckCircle2 size={16} aria-hidden="true" />}{issues.length} {translate("issues")}</strong></div>
+        <div className="mapping-quality-heading"><div><h2 id="quality-title">{translate("dataQuality")}</h2><p>{translate("noImplicitZero")}</p></div><strong className={issues.length ? "mapping-issue-count" : "mapping-valid"}>{issues.length ? <AlertTriangle size={16} aria-hidden="true" /> : <CheckCircle2 size={16} aria-hidden="true" />}{formatCount(issues.length, locale)} {translate("issues")}</strong></div>
         <div className="table-shell mapping-table"><table><caption className="sr-only">{translate("sourcePreview")}</caption><thead><tr><th scope="col">#</th>{table.headers.map((header) => <th scope="col" key={header}>{header}</th>)}</tr></thead><tbody>{table.rows.slice(0, 20).map((row, index) => <tr key={`${index}-${row[0] ?? ""}`}><th scope="row">{index + 1}</th>{row.map((value, column) => <td key={`${column}-${table.headers[column]}`} className={value === "" ? "mapping-cell-error" : ""}>{value === "" ? <span><AlertTriangle size={13} aria-hidden="true" />{translate("missingValue")}</span> : value}</td>)}</tr>)}</tbody></table></div>
         {issues.length ? <ul className="mapping-issues" aria-live="polite">{issues.slice(0, 12).map((issue, index) => <li key={`${issue.row}-${issue.field}-${issue.code}-${index}`}>{issue.row ? `Row ${issue.row}: ` : ""}{issue.field.replaceAll("_", " ")} — {issue.code.replaceAll("_", " ")}{issue.value ? ` (${issue.value})` : ""}</li>)}</ul> : null}
       </section>

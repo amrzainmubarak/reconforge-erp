@@ -8,7 +8,7 @@ const response = (status: number, body: unknown) => ({ ok: status >= 200 && stat
 
 test("renders loading then live exact metric and lineage", async () => {
   vi.stubGlobal("fetch", vi.fn(async () => response(200, { metrics: [metric] })));
-  render(<LiveStudio translate={(key) => translate("en", key)} />);
+  render(<LiveStudio locale="en" translate={(key) => translate("en", key)} />);
   expect(screen.getByText("Loading authorized metrics…")).toBeInTheDocument();
   expect(await screen.findByText("Match rate")).toBeInTheDocument();
   expect(screen.getByText("88.00")).toBeInTheDocument();
@@ -17,7 +17,7 @@ test("renders loading then live exact metric and lineage", async () => {
 
 test("renders an explicit empty authorized state", async () => {
   vi.stubGlobal("fetch", vi.fn(async () => response(200, { metrics: [] })));
-  render(<LiveStudio translate={(key) => translate("en", key)} />);
+  render(<LiveStudio locale="en" translate={(key) => translate("en", key)} />);
   expect(await screen.findByText("The authorized workspace returned no metrics.")).toBeInTheDocument();
 });
 
@@ -26,7 +26,7 @@ test("renders permission failure and retries only the guarded endpoint", async (
     .mockResolvedValueOnce(response(403, {}))
     .mockResolvedValueOnce(response(200, { metrics: [metric] }));
   vi.stubGlobal("fetch", fetcher);
-  render(<LiveStudio translate={(key) => translate("en", key)} />);
+  render(<LiveStudio locale="en" translate={(key) => translate("en", key)} />);
   expect(await screen.findByText("Live Studio metrics.read permission is required.")).toBeInTheDocument();
   expect(screen.queryByText("Synthetic local demo data only")).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Retry authorized request" }));

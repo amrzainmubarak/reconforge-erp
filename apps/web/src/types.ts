@@ -418,7 +418,43 @@ export interface ProfessionalInvoicePaymentStudioContract {
   notices: string[];
 }
 
-export type StudioPage = "dashboard" | "exceptions" | "evidence" | "inventory" | "retailSettlement" | "bankStatement" | "manufacturingCost" | "professionalInvoicePayment" | "mapping" | "rules" | "live" | "adminAudit";
+export type IndividualCashflowStatus = "within_budget" | "over_budget" | "unbudgeted" | "no_activity";
+
+export interface IndividualCashflowDecision {
+  period: string;
+  flow_type: "income" | "expense";
+  category: string;
+  status: IndividualCashflowStatus;
+  actual: string;
+  budget: string | null;
+  variance: string | null;
+  transaction_ids: string[];
+  budget_id: string | null;
+  reason_code: string;
+}
+
+export interface IndividualCashflowStudioContract {
+  schema_version: 1;
+  synthetic_data_only: true;
+  synthetic_data_marker: "SYNTHETIC_INDIVIDUAL_CASHFLOW_UI_ONLY";
+  generated_at: string;
+  source: ContractSource;
+  algorithm_version: string;
+  decision_digest: string;
+  artifact_digest: string;
+  currency: string;
+  summary: {
+    total: number;
+    within_budget: number;
+    over_budget: number;
+    unbudgeted: number;
+    no_activity: number;
+  };
+  decisions: IndividualCashflowDecision[];
+  notices: string[];
+}
+
+export type StudioPage = "dashboard" | "exceptions" | "evidence" | "inventory" | "retailSettlement" | "bankStatement" | "manufacturingCost" | "professionalInvoicePayment" | "individualCashflow" | "mapping" | "rules" | "live" | "adminAudit";
 
 export interface StudioOverview {
   schema_version: 1;

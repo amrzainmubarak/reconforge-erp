@@ -355,6 +355,7 @@ test("switches to Arabic RTL and persists accessibility preferences", async () =
   fireEvent.click(screen.getByTestId("locale-toggle"));
   await screen.findByRole("heading", { level: 1, name: "مركز الرقابة" });
   expect(document.documentElement).toHaveAttribute("dir", "rtl");
+  expect(document.documentElement).toHaveAttribute("lang", "ar");
 
   fireEvent.click(screen.getByRole("button", { name: "إمكانية الوصول" }));
   fireEvent.click(screen.getByRole("checkbox", { name: "نص أكبر" }));

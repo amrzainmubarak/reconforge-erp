@@ -26,7 +26,7 @@ async function expectNoWcagViolations(page: Page) {
 
 test("critical English and Arabic Studio routes pass the automated WCAG regression gate", async ({ page }) => {
   await mockLiveContract(page);
-  const criticalRoutes = ["/", "/exceptions", "/evidence", "/inventory", "/retail-settlement", "/bank-statement", "/manufacturing-cost", "/professional-invoice-payment", "/mapping", "/rules", "/live", "/admin-audit"];
+  const criticalRoutes = ["/", "/exceptions", "/evidence", "/inventory", "/retail-settlement", "/bank-statement", "/manufacturing-cost", "/professional-invoice-payment", "/individual-cashflow", "/mapping", "/rules", "/live", "/admin-audit"];
   for (const path of criticalRoutes) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -153,6 +153,16 @@ test("professional invoice/payment view exposes replay evidence without billing 
   await expect(page.locator("p.professional-boundary")).toHaveText("Synthetic, read-only evidence only; no billing/provider call, receivables allocation, accounting posting, or ERP write-back is available from this Studio route.");
   await expect(page.locator("main button")).toHaveCount(0);
   await expect(page.getByRole("combobox", { name: "Professional status" })).toBeVisible();
+  await expect(page.locator("main")).not.toContainText("password");
+});
+
+test("individual cashflow view exposes replay evidence without bank, tax, or posting claims", async ({ page }) => {
+  await page.goto("/individual-cashflow");
+  await expect(page.getByRole("heading", { level: 1, name: "Individual and freelancer cashflow control center" })).toBeVisible();
+  await expect(page.getByText("CASHFLOW_ACTIVITY_EXCEEDS_BUDGET")).toBeVisible();
+  await expect(page.locator("p.individual-boundary")).toHaveText("Synthetic, read-only evidence only; no bank call, tax or legal classification, accounting posting, or ERP write-back is available from this Studio route.");
+  await expect(page.locator("main button")).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Cashflow status" })).toBeVisible();
   await expect(page.locator("main")).not.toContainText("password");
 });
 

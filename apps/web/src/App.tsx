@@ -18,6 +18,7 @@ const RetailSettlementStudio = lazy(() => import("./components/RetailSettlementS
 const BankStatementStudio = lazy(() => import("./components/BankStatementStudio").then((module) => ({ default: module.BankStatementStudio })));
 const ManufacturingCostStudio = lazy(() => import("./components/ManufacturingCostStudio").then((module) => ({ default: module.ManufacturingCostStudio })));
 const ProfessionalInvoicePaymentStudio = lazy(() => import("./components/ProfessionalInvoicePaymentStudio").then((module) => ({ default: module.ProfessionalInvoicePaymentStudio })));
+const IndividualCashflowStudio = lazy(() => import("./components/IndividualCashflowStudio").then((module) => ({ default: module.IndividualCashflowStudio })));
 const MappingStudio = lazy(() => import("./components/MappingStudio").then((module) => ({ default: module.MappingStudio })));
 const RuleStudio = lazy(() => import("./components/RuleStudio").then((module) => ({ default: module.RuleStudio })));
 const LiveStudio = lazy(() => import("./components/LiveStudio").then((module) => ({ default: module.LiveStudio })));
@@ -32,6 +33,7 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/bank-statement")) return "bankStatement";
   if (normalized.endsWith("/manufacturing-cost")) return "manufacturingCost";
   if (normalized.endsWith("/professional-invoice-payment")) return "professionalInvoicePayment";
+  if (normalized.endsWith("/individual-cashflow")) return "individualCashflow";
   if (normalized.endsWith("/mapping")) return "mapping";
   if (normalized.endsWith("/rules")) return "rules";
   if (normalized.endsWith("/live")) return "live";
@@ -46,6 +48,7 @@ function pathForPage(page: StudioPage): string {
     bankStatement: "bank-statement",
     manufacturingCost: "manufacturing-cost",
     professionalInvoicePayment: "professional-invoice-payment",
+    individualCashflow: "individual-cashflow",
     adminAudit: "admin-audit",
   };
   return page === "dashboard" ? `${base}/` || "/" : `${base}/${routeNames[page] ?? page}`;
@@ -164,7 +167,7 @@ export default function App() {
             onTheme={preferences.setTheme}
           />
         ) : null}
-        {openPanel === "notifications" && data ? <NoticesPanel notices={data.notices} translate={t} /> : null}
+        {openPanel === "notifications" && data ? <NoticesPanel notices={data.notices} translate={t} locale={preferences.locale} /> : null}
         {openPanel === "quick" ? <QuickPanel translate={t} onNavigate={navigate} /> : null}
         {openPanel === "profile" ? <ProfilePanel translate={t} /> : null}
 
@@ -172,41 +175,44 @@ export default function App() {
         {activePage === "dashboard" && !error && !data ? <LoadingView translate={t} /> : null}
         {activePage === "dashboard" && data ? (
           <Suspense fallback={<LoadingView translate={t} />}>
-            <Dashboard data={data} translate={t} colorSafe={preferences.accessibility.colorSafe} onNavigate={navigate} />
+            <Dashboard data={data} locale={preferences.locale} translate={t} colorSafe={preferences.accessibility.colorSafe} onNavigate={navigate} />
           </Suspense>
         ) : null}
         {activePage === "exceptions" ? (
-          <Suspense fallback={<LoadingView translate={t} />}><ExceptionQueue translate={t} /></Suspense>
+          <Suspense fallback={<LoadingView translate={t} />}><ExceptionQueue locale={preferences.locale} translate={t} /></Suspense>
         ) : null}
         {activePage === "evidence" ? (
-          <Suspense fallback={<LoadingView translate={t} />}><EvidenceBinder translate={t} /></Suspense>
+          <Suspense fallback={<LoadingView translate={t} />}><EvidenceBinder locale={preferences.locale} translate={t} /></Suspense>
         ) : null}
         {activePage === "inventory" ? (
           <Suspense fallback={<LoadingView translate={t} />}><InventoryControl translate={t} /></Suspense>
         ) : null}
         {activePage === "retailSettlement" ? (
-          <Suspense fallback={<LoadingView translate={t} />}><RetailSettlementStudio translate={t} /></Suspense>
+          <Suspense fallback={<LoadingView translate={t} />}><RetailSettlementStudio locale={preferences.locale} translate={t} /></Suspense>
         ) : null}
         {activePage === "bankStatement" ? (
-          <Suspense fallback={<LoadingView translate={t} />}><BankStatementStudio translate={t} /></Suspense>
+          <Suspense fallback={<LoadingView translate={t} />}><BankStatementStudio locale={preferences.locale} translate={t} /></Suspense>
         ) : null}
         {activePage === "manufacturingCost" ? (
-          <Suspense fallback={<LoadingView translate={t} />}><ManufacturingCostStudio translate={t} /></Suspense>
+          <Suspense fallback={<LoadingView translate={t} />}><ManufacturingCostStudio locale={preferences.locale} translate={t} /></Suspense>
         ) : null}
         {activePage === "professionalInvoicePayment" ? (
-          <Suspense fallback={<LoadingView translate={t} />}><ProfessionalInvoicePaymentStudio translate={t} /></Suspense>
+          <Suspense fallback={<LoadingView translate={t} />}><ProfessionalInvoicePaymentStudio locale={preferences.locale} translate={t} /></Suspense>
+        ) : null}
+        {activePage === "individualCashflow" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><IndividualCashflowStudio locale={preferences.locale} translate={t} /></Suspense>
         ) : null}
         {activePage === "mapping" ? (
-          <Suspense fallback={<LoadingView translate={t} />}><MappingStudio translate={t} /></Suspense>
+          <Suspense fallback={<LoadingView translate={t} />}><MappingStudio locale={preferences.locale} translate={t} /></Suspense>
         ) : null}
         {activePage === "rules" ? (
-          <Suspense fallback={<LoadingView translate={t} />}><RuleStudio translate={t} /></Suspense>
+          <Suspense fallback={<LoadingView translate={t} />}><RuleStudio locale={preferences.locale} translate={t} /></Suspense>
         ) : null}
         {activePage === "live" ? (
-          <Suspense fallback={<LoadingView translate={t} />}><LiveStudio translate={t} /></Suspense>
+          <Suspense fallback={<LoadingView translate={t} />}><LiveStudio locale={preferences.locale} translate={t} /></Suspense>
         ) : null}
         {activePage === "adminAudit" ? (
-          <Suspense fallback={<LoadingView translate={t} />}><AdminAudit translate={t} /></Suspense>
+          <Suspense fallback={<LoadingView translate={t} />}><AdminAudit locale={preferences.locale} translate={t} /></Suspense>
         ) : null}
       </div>
 

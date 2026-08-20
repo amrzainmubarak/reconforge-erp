@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import os
+import secrets
 import time
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -85,7 +86,7 @@ def _run_contract() -> dict[str, object]:
     second_factory = RedisConnectionFactory(RedisSettings(url=url, require_tls=require_tls))
     first_store = TenantRedisStore(first_factory)
     second_store = TenantRedisStore(second_factory)
-    raw_token = "reconforge-live-redis-token"
+    raw_token = "redis-live-" + secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
     session_id = "redis-live-session"
     observed = {

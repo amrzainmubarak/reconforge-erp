@@ -1,0 +1,40 @@
+{
+  "records": [
+    {
+      "budget_id": "budget-2026-07-client-work",
+      "period": "2026-07",
+      "flow_type": "income",
+      "category": "client-work",
+      "limit": "2000.00",
+      "currency": "USD",
+      "source_reference": "personal-budget:2026-07"
+    },
+    {
+      "budget_id": "budget-2026-07-software",
+      "period": "2026-07",
+      "flow_type": "expense",
+      "category": "software",
+      "limit": "100.00",
+      "currency": "USD",
+      "source_reference": "personal-budget:2026-07"
+    },
+    {
+      "budget_id": "budget-2026-07-travel",
+      "period": "2026-07",
+      "flow_type": "expense",
+      "category": "travel",
+      "limit": "100.00",
+      "currency": "USD",
+      "source_reference": "personal-budget:2026-07"
+    },
+    {
+      "budget_id": "budget-2026-08-software",
+      "period": "2026-08",
+      "flow_type": "expense",
+      "category": "software",
+      "limit": "100.00",
+      "currency": "USD",
+      "source_reference": "personal-budget:2026-08"
+    }
+  ]
+}

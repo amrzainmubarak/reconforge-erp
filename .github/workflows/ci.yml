@@ -212,13 +212,15 @@ jobs:
 
       - name: Install PostgreSQL native client tools
         run: |
+          set -euo pipefail
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y postgresql-client
-          test -x "$(pg_config --bindir)/pg_dump"
-          test -x "$(pg_config --bindir)/pg_restore"
-          test -x "$(pg_config --bindir)/createdb"
-          test -x "$(pg_config --bindir)/dropdb"
-          test -x "$(pg_config --bindir)/psql"
+          # `pg_config` is shipped by libpq-dev; the explicitly matched client
+          # package supplies native binaries compatible with the PostgreSQL 16
+          # service used by this job. Newer clients can emit settings such as
+          # transaction_timeout that PostgreSQL 16 does not understand.
+          sudo apt-get install --no-install-recommends -y libpq-dev postgresql-client-16
+          native_bindir="$(python .github/scripts/verify_postgres_native_tools.py --expected-major 16 --print-bindir)"
+          printf '%s\n' "$native_bindir" >> "$GITHUB_PATH"
 
       - name: Install locked server dependencies
         run: uv sync --locked --all-extras --no-editable --python 3.12
@@ -250,6 +252,7 @@ jobs:
           RECONFORGE_REDIS_LIVE_REPORT: ${{ runner.temp }}/reconforge-redis-live-report.json
           PGSERVICEFILE: ${{ runner.temp }}/reconforge-pgservice.conf
         run: |
+          set -euo pipefail
           printf '%s\n' \
             '[reconforge_ci_source]' \
             'host=localhost' \
@@ -265,9 +268,34 @@ jobs:
             'password=postgres' > "$PGSERVICEFILE"
           chmod 600 "$PGSERVICEFILE"
           mapfile -t parity_tests < <(uv run --no-sync python -c "import yaml; document = yaml.safe_load(open('docs/execution/POSTGRES_PARITY_INVENTORY.yaml', encoding='utf-8')); print(*dict.fromkeys(item['test'] for item in document['boundaries'] if item.get('test')), sep='\\n')")
-             uv run --no-sync pytest "${parity_tests[@]}" tests/test_postgres_delegations_runtime.py tests/test_postgres_policy_analysis_runtime.py tests/test_alembic_postgres.py tests/test_postgres_foundation.py tests/test_postgres_master_data.py tests/test_postgres_ledger.py tests/test_postgres_identity.py tests/test_postgres_evidence.py tests/test_postgres_reconciliation.py tests/test_postgres_writeback.py tests/test_postgres_database_reference.py tests/test_api_server_identity.py tests/test_redis_foundation.py tests/test_postgres_durable_jobs.py -k 'test_live_postgres_durable_job_10k_multi_worker_scale_profile or test_live_postgres_durable_job_100k_multi_worker_scale_profile or test_live_postgres_durable_job_backpressure_profile' -q
-             uv run --no-sync pytest tests/test_postgres_grouped_matching_scale.py -k 'test_live_postgres_grouped_matching_500_partition_scale_profile or test_live_postgres_grouped_matching_10k_partition_scale_profile' -q
-             uv run --no-sync pytest tests/test_postgres_durable_jobs.py -k 'test_live_postgres_job_application_contract_and_rls or test_live_postgres_round_robin_scheduler_is_lane_scoped_and_deterministic' -q
+          native_smoke_dump="${RUNNER_TEMP}/reconforge-native-backup-smoke.dump"
+          rm -f "$native_smoke_dump"
+          pg_dump --format=custom --no-owner --no-privileges --file "$native_smoke_dump" --dbname service=reconforge_ci_source
+          test -s "$native_smoke_dump"
+          pg_restore --list "$native_smoke_dump" >/dev/null
+          rm -f "$native_smoke_dump"
+          uv run --no-sync pytest tests/test_postgres_backup.py -k 'test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup' -q
+          uv run --no-sync pytest tests/test_application_metrics.py -k 'test_live_postgres_metrics_and_sqlite_parity' -q
+          uv run --no-sync pytest tests/test_scoped_exports.py -k 'test_live_scoped_export_excludes_sibling_workspace_and_entity' -q
+          uv run --no-sync pytest tests/test_api_server_scoped_exports.py -k 'test_live_server_scoped_export_http_is_service_scoped_and_tenant_isolated' -q
+          uv run --no-sync pytest "${parity_tests[@]}" tests/test_postgres_delegations_runtime.py tests/test_postgres_policy_analysis_runtime.py tests/test_alembic_postgres.py tests/test_postgres_foundation.py tests/test_postgres_master_data.py tests/test_postgres_ledger.py tests/test_postgres_identity.py tests/test_postgres_evidence.py tests/test_postgres_reconciliation.py tests/test_postgres_writeback.py tests/test_postgres_database_reference.py tests/test_api_server_identity.py tests/test_redis_foundation.py tests/test_postgres_durable_jobs.py -k 'test_live_postgres_durable_job_10k_multi_worker_scale_profile or test_live_postgres_durable_job_100k_multi_worker_scale_profile or test_live_postgres_durable_job_backpressure_profile or test_live_postgres_durable_job_soak_profile' -q
+          uv run --no-sync pytest tests/test_postgres_grouped_matching_scale.py -k 'test_live_postgres_grouped_matching_500_partition_scale_profile or test_live_postgres_grouped_matching_10k_partition_scale_profile' -q
+          uv run --no-sync pytest tests/test_postgres_grouped_matching_runtime.py -k 'test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_tenant_scoped' -q
+          uv run --no-sync pytest tests/test_postgres_durable_jobs.py -k 'test_live_postgres_job_application_contract_and_rls or test_live_postgres_round_robin_scheduler_is_lane_scoped_and_deterministic or test_live_postgres_persistent_scheduler_coordinates_spawned_processes or test_live_postgres_worker_crash_after_checkpoint_resumes_without_duplicate_effect or test_live_postgres_worker_database_fault_after_checkpoint_resumes_without_duplicate_effect' -q
+          uv run --no-sync pytest tests/test_api_operations.py -q
+          uv run --no-sync pytest tests/test_api_metrics.py -q
+          uv run --no-sync pytest tests/test_postgres_manufacturing_cost_control.py -q
+          uv run --no-sync pytest tests/test_api_server_manufacturing_cost_control.py -q
+          uv run --no-sync pytest tests/test_postgres_retail_settlement.py -q
+          uv run --no-sync pytest tests/test_api_server_retail_settlement.py -q
+          uv run --no-sync pytest tests/test_postgres_professional_invoice_payment.py -q
+          uv run --no-sync pytest tests/test_api_server_professional_invoice_payment.py -q
+          uv run --no-sync pytest tests/test_postgres_consolidation_close.py -k 'test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable' -q
+          uv run --no-sync pytest tests/test_postgres_federation.py -k 'test_live_postgres_federation_replay_link_session_and_rls' -q
+          uv run --no-sync pytest tests/test_api_server_consolidation_close.py -q
+          uv run --no-sync pytest tests/test_api_server_reconciliation_live.py -q
+          uv run --no-sync pytest tests/test_postgres_bank_statement.py -q
+          uv run --no-sync pytest tests/test_api_server_bank_statement.py -q
           uv run --no-sync python .github/scripts/verify_redis_live.py --output "${RECONFORGE_REDIS_LIVE_REPORT}"
 
       - name: Upload live Redis report

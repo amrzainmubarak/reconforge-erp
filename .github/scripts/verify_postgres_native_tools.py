@@ -52,8 +52,10 @@ def _is_executable(path: Path) -> bool:
 
 
 def _tool_candidate_suffixes() -> tuple[str, ...]:
-    if os.name != "nt":
-        return ("",)
+    # Keep the Windows suffixes available on every host.  Besides making the
+    # resolver tolerant of cross-platform package layouts, this lets the
+    # validator exercise a Windows-style toolchain in Linux CI using synthetic
+    # fixtures without weakening the executable and version checks below.
     suffixes: list[str] = ["", *_KNOWN_WINDOWS_TOOL_SUFFIXES]
     # Canonicalize and de-duplicate deterministically.
     seen: set[str] = set()

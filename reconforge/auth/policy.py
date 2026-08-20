@@ -10,7 +10,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Literal
 
-from reconforge.auth.rbac import check_sod_conflict
+from reconforge.auth.rbac import canonical_policy_value, check_sod_conflict
 
 if TYPE_CHECKING:
     from reconforge.platform.common import ServerPrincipal
@@ -294,13 +294,13 @@ class CentralPolicyEngine:
         # 5. Self-approval/review is never an ordinary override path.
         if (
             enforce_ownership
-            and ctx.object_owner_id
-            and ctx.user_id == ctx.object_owner_id
-            and ctx.action in {"approve", "review"}
+            and canonical_policy_value(ctx.object_owner_id)
+            and canonical_policy_value(ctx.user_id) == canonical_policy_value(ctx.object_owner_id)
+            and canonical_policy_value(ctx.action) in {"approve", "review", "certify"}
         ):
             return PolicyDecision(
                 allowed=False,
-                reason="Deny: user cannot approve or review objects they created.",
+                reason="Deny: user cannot approve or review objects they created (certification is also prohibited).",
                 reason_code="self_approval_denied",
             )
 

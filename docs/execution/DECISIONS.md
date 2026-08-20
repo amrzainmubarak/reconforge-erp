@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-916: Canonicalize every identity value at the central SoD boundary
+
+- **Date**: 2026-08-20
+- **Context**: Central policy ownership and prior-action checks compared raw
+  strings, while other write-back paths already treated actor identifiers as
+  case-insensitive and whitespace-insensitive. That left a narrow bypass risk
+  for high-risk approval/review/certification decisions.
+- **Decision**: Normalize actor IDs, object types, object IDs, and action names
+  with one trim + casefold helper before ownership and SoD comparisons. Extend
+  the central ownership guard to certification while retaining deny-by-default
+  behavior.
+- **Rationale**: Authorization semantics must be invariant under presentation
+  formatting and must share one identity rule across policy surfaces.
+- **Verification**: Hypothesis properties cover casing/whitespace variants
+  for self-approval and prior-prepare conflicts; focused policy tests, Ruff,
+  and mypy pass.
+- **Compatibility**: Additive hardening of comparisons; no schema, route, or
+  permission names change. Existing correctly-canonical inputs are unchanged.
+- **Rollback**: Revert the helper usage and focused tests; no migration or
+  persisted-data rollback is required.
+
 ### D-915: Bind connector portfolio identity to canonical manifest digests
 
 - **Date**: 2026-08-20

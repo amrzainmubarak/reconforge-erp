@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-817: Canonical identity enforcement for high-risk policy decisions (2026-08-20)
+
+- `reconforge.auth.rbac.canonical_policy_value` is now the shared comparison
+  boundary for actor, object, and action values used by SoD checks. The central
+  policy ownership guard uses the same normalization and rejects certification
+  self-approval as well as approval/review.
+- `python -m pytest tests/test_policy_engine.py -q --tb=short`: **PASS**
+  (all focused tests, including two Hypothesis properties). Ruff and mypy on
+  the changed auth modules: **PASS**.
+- Boundary: normalization and central-engine evidence only. Route/action
+  inventory completeness, external identity providers, PostgreSQL RLS, and
+  production authorization assurance remain open under E-1005.
+
 ## E-816: Deterministic connector manifest portfolio identity (2026-08-20)
 
 - Added `ManifestPortfolioReport` and `build_manifest_portfolio_report` to

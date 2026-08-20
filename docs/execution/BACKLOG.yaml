@@ -153,6 +153,10 @@ tasks:
       require explicit deny-by-default evaluation across RBAC+ABAC policy, explicit SoD
       checks for creator-vs-approver flows, and auditable policy decisions with stable identity
       canonicalization and namespace scopes.
+    completed_slices:
+      - E-817 centralizes trim+casefold identity/action comparisons for SoD and
+        ownership checks, with property tests proving formatting cannot bypass
+        approval/review/certification self-approval or prior-action conflicts.
   - id: E-1006
     priority: P1
     area: global-expansion

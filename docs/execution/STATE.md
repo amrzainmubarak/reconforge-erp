@@ -2,6 +2,19 @@
 
 Updated: 2026-08-20
 
+## E-817 — Canonical identity enforcement for high-risk policy decisions (2026-08-20)
+
+- Central SoD comparisons now canonicalize actor, object type, object ID, and
+  action values with trim + casefold before evaluating conflicts. Ownership
+  checks use the same canonical actor identity and cover certification in
+  addition to approval/review.
+- Hypothesis properties prove that casing and surrounding whitespace cannot
+  bypass self-approval or a prior-prepare/review SoD conflict. Focused policy
+  tests, Ruff, and mypy pass.
+- Boundary: this closes a policy-evaluation normalization gap only. It does
+  not claim universal route coverage, external IdP interoperability, or
+  production authorization assurance; E-1005 remains in progress.
+
 ## E-816 — Deterministic connector manifest portfolio identity (2026-08-20)
 
 - Added `build_manifest_portfolio_report` to the connector conformance layer.

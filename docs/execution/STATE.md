@@ -1,6 +1,30 @@
 ﻿# Execution State
 
-Updated: 2026-08-17
+Updated: 2026-08-20
+
+## E-815 — Live PostgreSQL close, metrics, migration, and strategy-registry gate (2026-08-20)
+
+- A disposable PostgreSQL 16.14 service was upgraded with the complete Alembic
+  chain through `0088_pg_currency_snapshot` using a separate migration owner.
+- The live consolidation-close selector passed with a non-owner application
+  role, covering tenant isolation, replayed run identity, certification SoD,
+  immutable journal/effect rows, reversal, period lock/reopen, and linked
+  impairment/deferred-tax/PPA/ownership/intercompany evidence.
+- The live PostgreSQL metrics selector passed with SQLite parity, and the
+  Alembic upgrade/downgrade selector passed. The encrypted native-backup
+  selector remained an explicit skip because this local service does not expose
+  the required disposable maintenance service and native-tool service profile.
+- Added a single infrastructure factory for all five reviewed matching
+  strategy adapters and routed Reconciliation-as-Code simulation through its
+  immutable registry. Focused strategy, RAC, Ruff, mypy, and diff checks pass.
+- Hosted PR #83 for commit `de9e347f` completed its required CI/security matrix:
+  Python 3.11/3.12, server boundaries, PostgreSQL HA/DR, Docker parity,
+  engine parity, object storage, CodeQL, dependency/security policy gates all
+  passed. The PR remains open and merge-blocked by repository policy/branch
+  freshness; no automatic merge was performed.
+- Local runtime evidence and hosted CI now both exist for this slice; independent
+  multi-site HA/DR, external provider interoperability, release
+  provenance/signatures, and production capacity remain open.
 
 ## E-813 — Clean full local regression after drift repairs (2026-08-17)
 

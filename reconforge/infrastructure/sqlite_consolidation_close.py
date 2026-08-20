@@ -474,6 +474,7 @@ class SQLiteConsolidationCloseRepository:
             period_name=str(period["period_name"]),
             entity_code=str(period["group_code"]),
             note=note,
+            evidence_digest=str(run["close_bundle"]["bundle_digest"]),
             actor_label=actor,
         )
 
@@ -495,6 +496,7 @@ class SQLiteConsolidationCloseRepository:
             object_type="consolidation_close_run",
             object_id=str(run["id"]),
             note=note,
+            evidence_digest=str(run["close_bundle"]["bundle_digest"]),
             actor_label=actor,
         )
 
@@ -503,14 +505,18 @@ class SQLiteConsolidationCloseRepository:
 
         self._actor(actor_label, CONSOLIDATION_READ_PERMISSION)
         identifier = clean_text(run_id, "Consolidation run ID")
-        self._verified_run(identifier)
+        run = self._verified_run(identifier)
         row = self.connection.execute(
             "SELECT * FROM certification_records WHERE object_type=? AND object_id=?",
             ("consolidation_close_run", identifier),
         ).fetchone()
         if row is None:
             raise PlatformError("Consolidation certification metadata not found.")
-        return dict(row)
+        certification = dict(row)
+        expected_digest = str(run["close_bundle"]["bundle_digest"])
+        if not hmac.compare_digest(str(certification.get("evidence_digest", "")), expected_digest):
+            raise PlatformError("Consolidation certification evidence digest does not match the replayed close bundle.")
+        return certification
 
     def request_reversal(
         self,

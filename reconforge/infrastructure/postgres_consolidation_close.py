@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS reconforge.consolidation_close_periods (
  period_end_date DATE NOT NULL, reporting_date DATE NOT NULL, status TEXT NOT NULL DEFAULT 'Open',
  row_version INTEGER NOT NULL DEFAULT 1, created_by TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (tenant_id,id),
- UNIQUE (tenant_id,workspace_id,group_code,period_name), CHECK (status IN ('Open','Locked')),
+ UNIQUE (tenant_id,workspace_id,group_code,period_name), CHECK (status IN ('Open','Locked','Reopened')),
  CHECK (period_start_date<=reporting_date AND reporting_date<=period_end_date)
 );
 CREATE TABLE IF NOT EXISTS reconforge.consolidation_close_runs (
@@ -873,6 +873,7 @@ class PostgresConsolidationCloseRepository:
                 period_name=str(period["period_name"]),
                 entity_code=str(period["group_code"]),
                 note=note,
+                evidence_digest=str(verified["close_bundle"]["bundle_digest"]),
                 actor_label=actor,
             )
 
@@ -907,6 +908,7 @@ class PostgresConsolidationCloseRepository:
                 object_type="consolidation_close_run",
                 object_id=str(verified["id"]),
                 note=note,
+                evidence_digest=str(verified["close_bundle"]["bundle_digest"]),
                 actor_label=actor,
             )
 
@@ -922,8 +924,8 @@ class PostgresConsolidationCloseRepository:
             ).fetchone()
             if row is None:
                 raise PlatformError("Consolidation run not found.")
-            self._verified_run(dict(row))
-            return PostgresApprovalRepository(
+            verified = self._verified_run(dict(row))
+            certification = PostgresApprovalRepository(
                 self.connection,
                 self.tenant_id,
                 organization_id=self.organization_id,
@@ -932,22 +934,37 @@ class PostgresConsolidationCloseRepository:
             )._certification(
                 "consolidation_close_run", run_id
             )
+            if not hmac.compare_digest(
+                str(certification.get("evidence_digest", "")),
+                str(verified["close_bundle"]["bundle_digest"]),
+            ):
+                raise PlatformError(
+                    "Consolidation certification evidence digest does not match the replayed close bundle."
+                )
+            return certification
 
     def lock_period(
         self, period_id: str, *, expected_version: int, reason: str, actor_label: str = "local-cli"
     ) -> dict[str, Any]:
-        return self._period_transition(period_id, expected_version, "Open", "Locked", reason, actor_label)
+        return self._period_transition(period_id, expected_version, ("Open", "Reopened"), "Locked", reason, actor_label)
 
     def reopen_period(
         self, period_id: str, *, expected_version: int, reason: str, actor_label: str = "local-cli"
     ) -> dict[str, Any]:
-        return self._period_transition(period_id, expected_version, "Locked", "Open", reason, actor_label)
+        return self._period_transition(period_id, expected_version, "Locked", "Reopened", reason, actor_label)
 
     def _period_transition(
-        self, period_id: str, expected_version: int, old: str, new: str, reason: str, actor_label: str
+        self,
+        period_id: str,
+        expected_version: int,
+        old: str | tuple[str, ...],
+        new: str,
+        reason: str,
+        actor_label: str,
     ) -> dict[str, Any]:
         actor = self._actor(actor_label)
         reason_text = self._actor(reason)
+        old_statuses = (old,) if isinstance(old, str) else old
         with self.connection.transaction():
             self._scope()
             current = self.connection.execute(
@@ -956,18 +973,20 @@ class PostgresConsolidationCloseRepository:
             ).fetchone()
             if current is None:
                 raise PlatformError("Consolidation period not found.")
-            if str(current["status"]) != old or int(current["row_version"]) != expected_version:
+            if str(current["status"]) not in old_statuses or int(current["row_version"]) != expected_version:
                 raise PlatformError("Consolidation period changed concurrently or has an invalid state.")
-            if new == "Open":
+            if new == "Reopened":
                 locker = self.connection.execute(
                     "SELECT actor FROM reconforge.consolidation_close_period_events WHERE tenant_id=%s AND period_id=%s AND action='Locked' ORDER BY created_at DESC,id DESC LIMIT 1",
                     (self.tenant_id, period_id),
                 ).fetchone()
                 if locker is not None and str(locker["actor"]) == actor:
                     raise PlatformError("Period reopen requires an actor independent of the period locker.")
+            old_status_placeholders = ",".join("%s" for _ in old_statuses)
             updated = self.connection.execute(
-                "UPDATE reconforge.consolidation_close_periods SET status=%s,row_version=row_version+1,updated_at=now() WHERE tenant_id=%s AND id=%s AND status=%s AND row_version=%s",
-                (new, self.tenant_id, period_id, old, expected_version),
+                f"UPDATE reconforge.consolidation_close_periods SET status=%s,row_version=row_version+1,updated_at=now() "
+                f"WHERE tenant_id=%s AND id=%s AND status IN ({old_status_placeholders}) AND row_version=%s",  # nosec B608
+                (new, self.tenant_id, period_id, *old_statuses, expected_version),
             )
             if updated.rowcount != 1:
                 raise PlatformError("Consolidation period changed concurrently or has an invalid state.")
@@ -1014,7 +1033,12 @@ class PostgresConsolidationCloseRepository:
             ).fetchone()
             if row is None:
                 raise PlatformError("Consolidation run not found.")
-            return self._verified_run(dict(row))
+            record = self._verified_run(dict(row))
+            # The replay cache is an internal domain object and is not JSON
+            # serializable.  Keep it available to transition/evidence code,
+            # but never expose it through the HTTP read boundary.
+            record.pop("worksheet_object", None)
+            return record
 
     @staticmethod
     def _worksheet_elimination_payload(item: Any) -> dict[str, object]:
@@ -2011,7 +2035,12 @@ class PostgresConsolidationCloseRepository:
                 "SELECT * FROM reconforge.consolidation_close_runs WHERE tenant_id=%s AND workspace_id=%s AND (%s='' OR status=%s) ORDER BY run_number LIMIT %s OFFSET %s",
                 (self.tenant_id, workspace, status, status, limit, offset),
             ).fetchall()
-            return [self._verified_run(dict(r)) for r in rows]
+            verified_runs = []
+            for row in rows:
+                record = self._verified_run(dict(row))
+                record.pop("worksheet_object", None)
+                verified_runs.append(record)
+            return verified_runs
 
     def summary(self, *, workspace: str = "default", actor_label: str = "local-cli") -> Any:
         from reconforge.application.consolidation_close import ConsolidationCloseSummary

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import sqlite3
 from datetime import date
@@ -17,6 +18,8 @@ from reconforge.platform.common import (
     platform_id,
     require_permission,
 )
+from reconforge.utils.currency_registry_governance import reconcile_currency_registry
+from reconforge.utils.money import CurrencyRegistry, CurrencyRegistryContext, InvalidAmountError
 
 MASTER_DATA_READ_PERMISSION = "master_data.read"
 MASTER_DATA_MANAGE_PERMISSION = "master_data.manage"
@@ -30,6 +33,16 @@ _PERIOD_TRANSITIONS = {
 }
 _CODE_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9._-]{0,31}$")
 _CURRENCY_PATTERN = re.compile(r"^[A-Z]{3}$")
+_MAX_CURRENCY_REGISTRY_SNAPSHOT_BYTES = 1_000_000
+
+
+def _reject_duplicate_json_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON key")
+        result[key] = value
+    return result
 
 
 def _clean_code(value: str, label: str) -> str:
@@ -648,6 +661,10 @@ class SQLiteMasterDataRepository:
             },
             "workspace": workspace_name,
             "summary": summary.to_dict(),
+            "currency_registry": self.currency_registry_reconciliation(
+                workspace=workspace_name,
+                actor_label=actor_label,
+            ),
             "currencies": self.list_currencies(limit=MAX_SNAPSHOT_RECORDS, actor_label=actor_label),
             "organizations": self.list_organizations(
                 workspace=workspace_name, limit=MAX_SNAPSHOT_RECORDS, actor_label=actor_label
@@ -660,6 +677,155 @@ class SQLiteMasterDataRepository:
             ),
             "periods": self.list_periods(workspace=workspace_name, limit=MAX_SNAPSHOT_RECORDS, actor_label=actor_label),
         }
+
+    def currency_registry_reconciliation(
+        self,
+        *,
+        workspace: str = "default",
+        actor_label: str = "local-cli",
+    ) -> dict[str, object]:
+        """Return digest-bound policy reconciliation for local master currencies.
+
+        The SQLite currency table is database-global, while the selected
+        registry snapshot is persisted per workspace.  A workspace that has
+        not been explicitly bound remains ``unbound`` for backwards
+        compatibility; a drifted binding fails the evidence result closed.
+        """
+
+        require_permission(self.connection, actor_label=actor_label, permission=MASTER_DATA_READ_PERMISSION)
+        workspace_name = _workspace_name(workspace)
+        records = self.list_currencies(limit=MAX_SNAPSHOT_RECORDS, actor_label=actor_label)
+        installed_context = CurrencyRegistry.context()
+        operation_context = self.currency_registry_context(workspace=workspace_name, actor_label=actor_label)
+        return reconcile_currency_registry(
+            records,
+            scope=f"workspace:{workspace_name}",
+            binding=self.currency_registry_binding(workspace=workspace_name, actor_label=actor_label),
+            registry_context=operation_context or installed_context,
+            installed_registry_context=installed_context,
+        ).to_dict()
+
+    def currency_registry_binding(
+        self,
+        *,
+        workspace: str = "default",
+        actor_label: str = "local-cli",
+    ) -> dict[str, object] | None:
+        """Read the persisted registry snapshot binding for one workspace."""
+
+        require_permission(self.connection, actor_label=actor_label, permission=MASTER_DATA_READ_PERMISSION)
+        workspace_id = self._workspace_id(workspace)
+        if workspace_id is None:
+            return None
+        try:
+            row = self.connection.execute(
+                """SELECT registry_version, registry_digest, bound_at, bound_by
+                   FROM currency_registry_bindings WHERE workspace_id = ?""",
+                (workspace_id,),
+            ).fetchone()
+        except sqlite3.DatabaseError as exc:
+            raise PlatformError("Unable to read the currency registry binding.") from exc
+        return None if row is None else dict(row)
+
+    def currency_registry_context(
+        self,
+        *,
+        workspace: str = "default",
+        actor_label: str = "local-cli",
+    ) -> CurrencyRegistryContext | None:
+        """Load the immutable registry snapshot bound to one workspace."""
+
+        require_permission(self.connection, actor_label=actor_label, permission=MASTER_DATA_READ_PERMISSION)
+        workspace_id = self._workspace_id(workspace)
+        if workspace_id is None:
+            return None
+        try:
+            row = self.connection.execute(
+                """SELECT b.registry_version, b.registry_digest, s.snapshot_json
+                   FROM currency_registry_bindings b
+                   LEFT JOIN currency_registry_snapshots s
+                     ON s.registry_digest = b.registry_digest
+                   WHERE b.workspace_id = ?""",
+                (workspace_id,),
+            ).fetchone()
+        except sqlite3.DatabaseError as exc:
+            raise PlatformError("Unable to read the currency registry operation context.") from exc
+        if row is None:
+            return None
+        snapshot_json = row["snapshot_json"]
+        if not isinstance(snapshot_json, str):
+            raise PlatformError("Bound currency registry snapshot is unavailable.")
+        try:
+            if len(snapshot_json.encode("utf-8")) > _MAX_CURRENCY_REGISTRY_SNAPSHOT_BYTES:
+                raise ValueError("snapshot exceeds size limit")
+            payload = json.loads(snapshot_json, object_pairs_hook=_reject_duplicate_json_keys)
+            if not isinstance(payload, dict):
+                raise ValueError("snapshot root is not an object")
+            context = CurrencyRegistryContext.from_snapshot(payload)
+        except (InvalidAmountError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise PlatformError("Bound currency registry snapshot is invalid.") from exc
+        if (
+            context.registry_manifest.registry_version != str(row["registry_version"])
+            or context.registry_manifest.digest != str(row["registry_digest"])
+        ):
+            raise PlatformError("Bound currency registry snapshot does not match its binding.")
+        return context
+
+    def bind_currency_registry(
+        self,
+        *,
+        workspace: str = "default",
+        actor_label: str = "local-cli",
+    ) -> dict[str, object]:
+        """Bind one workspace to the currently installed registry snapshot."""
+
+        require_permission(self.connection, actor_label=actor_label, permission=MASTER_DATA_MANAGE_PERMISSION)
+        workspace_id = self._workspace_id(workspace)
+        if workspace_id is None:
+            raise PlatformError("Workspace reference was not found.")
+        manifest = CurrencyRegistry.manifest()
+        snapshot_json = json.dumps(
+            CurrencyRegistry.snapshot(), ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        )
+        now = utc_now_text()
+        try:
+            self.connection.execute(
+                """INSERT INTO currency_registry_snapshots
+                   (registry_digest, registry_version, snapshot_json, captured_at, captured_by)
+                   VALUES (?, ?, ?, ?, ?)
+                   ON CONFLICT(registry_digest) DO NOTHING""",
+                (manifest.digest, manifest.registry_version, snapshot_json, now, actor_label),
+            )
+            self.connection.execute(
+                """INSERT INTO currency_registry_bindings
+                   (workspace_id, registry_version, registry_digest, bound_at, bound_by)
+                   VALUES (?, ?, ?, ?, ?)
+                   ON CONFLICT(workspace_id) DO UPDATE SET
+                     registry_version = excluded.registry_version,
+                     registry_digest = excluded.registry_digest,
+                     bound_at = excluded.bound_at,
+                     bound_by = excluded.bound_by""",
+                (workspace_id, manifest.registry_version, manifest.digest, now, actor_label),
+            )
+        except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
+            raise PlatformError("Unable to bind the currency registry snapshot.") from exc
+        commit_audited(
+            self.connection,
+            actor_label=actor_label,
+            object_type="currency_registry_binding",
+            object_id=workspace_id,
+            action="currency_registry_bound",
+            metadata={
+                "workspace_id": workspace_id,
+                "registry_version": manifest.registry_version,
+                "registry_digest": manifest.digest,
+            },
+        )
+        binding = self.currency_registry_binding(workspace=workspace, actor_label=actor_label)
+        if binding is None:
+            raise PlatformError("Currency registry binding was not persisted.")
+        return binding
 
     def _workspace_id(self, workspace: str) -> str | None:
         name = _workspace_name(workspace)

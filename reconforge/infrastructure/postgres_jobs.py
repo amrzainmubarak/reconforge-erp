@@ -11,6 +11,7 @@ from reconforge.domain.jobs import (
     SHA256_PATTERN,
     DurableJob,
     DurableJobBackpressureError,
+    DurableJobQueueSnapshot,
     DurableJobSchedulerCursorConflictError,
     JobLease,
     JobOutputManifest,
@@ -150,6 +151,12 @@ def _same_submission(left: DurableJob, right: DurableJob) -> bool:
         "retry_ceiling",
     )
     return all(getattr(left, field) == getattr(right, field) for field in fields)
+
+
+def _optional_scope_text(value: object) -> str | None:
+    """Preserve SQL NULL scope values instead of turning them into ``"None"``."""
+
+    return None if value is None else str(value)
 
 
 @dataclass
@@ -407,6 +414,79 @@ class PostgresDurableJobRepository:
             ).fetchone()
             return None if scoped is None else _decode_job(scoped)
 
+    def queue_snapshot(
+        self,
+        *,
+        tenant_id: str,
+        workspace_id: str | None = None,
+        organization_id: str | None = None,
+        entity_id: str | None = None,
+    ) -> DurableJobQueueSnapshot:
+        """Read a tenant/lane projection under the same RLS scope as jobs."""
+
+        conditions = ["jobs.tenant_id = %s"]
+        parameters: list[object] = [tenant_id]
+        for column, value in (
+            ("workspace_id", workspace_id),
+            ("organization_id", organization_id),
+            ("entity_id", entity_id),
+        ):
+            if value is not None:
+                if not isinstance(value, str) or not value.strip():
+                    raise PostgresJobRepositoryError(f"queue snapshot {column} scope is invalid")
+                conditions.append(f"jobs.{column} = %s")
+                parameters.append(value)
+        where = " AND ".join(conditions)
+        with self._transaction(
+            tenant_id,
+            workspace_id=workspace_id or "",
+            organization_id=organization_id or "",
+            entity_id=entity_id or "",
+        ):
+            row = self.connection.execute(
+                f"""
+                SELECT
+                    COUNT(*) FILTER (WHERE jobs.status = 'queued') AS queued_count,
+                    COUNT(*) FILTER (WHERE jobs.status = 'running') AS running_count,
+                    COUNT(*) FILTER (WHERE jobs.status = 'paused') AS paused_count,
+                    COUNT(*) FILTER (WHERE jobs.status = 'retrying') AS retrying_count,
+                    COUNT(*) FILTER (WHERE jobs.status = 'failed') AS failed_count,
+                    COUNT(*) FILTER (WHERE jobs.status = 'completed') AS completed_count,
+                    COUNT(*) FILTER (WHERE jobs.status = 'cancelled') AS cancelled_count,
+                    MIN(jobs.created_at) FILTER (WHERE jobs.status IN ('queued', 'retrying')) AS oldest_queued_at,
+                    MIN(jobs.started_at) FILTER (WHERE jobs.status = 'running') AS oldest_running_at
+                FROM reconforge.durable_jobs AS jobs
+                WHERE {where}
+                """,  # nosec B608 - predicates use fixed identifiers only
+                parameters,
+            ).fetchone()
+            lease_row = self.connection.execute(
+                f"""
+                SELECT COUNT(*) AS leased_count
+                FROM reconforge.durable_job_leases AS leases
+                JOIN reconforge.durable_jobs AS jobs
+                  ON jobs.tenant_id = leases.tenant_id AND jobs.id = leases.job_id
+                WHERE {where}
+                """,  # nosec B608 - predicates use fixed identifiers only
+                parameters,
+            ).fetchone()
+        return DurableJobQueueSnapshot(
+            tenant_id=tenant_id,
+            workspace_id=workspace_id or "",
+            organization_id=organization_id or "",
+            entity_id=entity_id or "",
+            queued_count=int(_value(row, "queued_count", 0) or 0),
+            running_count=int(_value(row, "running_count", 1) or 0),
+            paused_count=int(_value(row, "paused_count", 2) or 0),
+            retrying_count=int(_value(row, "retrying_count", 3) or 0),
+            failed_count=int(_value(row, "failed_count", 4) or 0),
+            completed_count=int(_value(row, "completed_count", 5) or 0),
+            cancelled_count=int(_value(row, "cancelled_count", 6) or 0),
+            leased_count=int(_value(lease_row, "leased_count", 0) or 0),
+            oldest_queued_at=str(_value(row, "oldest_queued_at", 7) or ""),
+            oldest_running_at=str(_value(row, "oldest_running_at", 8) or ""),
+        )
+
     def persist_transition(self, previous: DurableJob, changed: DurableJob, event: JobTransition) -> DurableJob:
         if changed.id != previous.id or changed.tenant_id != previous.tenant_id:
             raise PostgresJobRepositoryError("A durable-job transition cannot change job or tenant identity.")
@@ -643,7 +723,7 @@ class PostgresDurableJobRepository:
             set_local_tenant_scope(
                 self.connection,
                 lease.tenant_id,
-                organization_id=str(scope_row[0]) or None,
+                organization_id=_optional_scope_text(scope_row[0]),
                 workspace_id=str(scope_row[1]),
             )
             self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[2]),))
@@ -797,7 +877,7 @@ class PostgresDurableJobRepository:
             set_local_tenant_scope(
                 self.connection,
                 tenant_id,
-                organization_id=str(scope_row[0]) or None,
+                organization_id=_optional_scope_text(scope_row[0]),
                 workspace_id=str(scope_row[1]),
             )
             self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[2]),))
@@ -835,7 +915,7 @@ class PostgresDurableJobRepository:
             set_local_tenant_scope(
                 self.connection,
                 tenant_id,
-                organization_id=str(scope_row[0]) or None,
+                organization_id=_optional_scope_text(scope_row[0]),
                 workspace_id=str(scope_row[1]),
             )
             self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[2]),))
@@ -861,7 +941,7 @@ class PostgresDurableJobRepository:
             set_local_tenant_scope(
                 self.connection,
                 tenant_id,
-                organization_id=str(scope_row[0]) or None,
+                organization_id=_optional_scope_text(scope_row[0]),
                 workspace_id=str(scope_row[1]),
             )
             self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[2]),))

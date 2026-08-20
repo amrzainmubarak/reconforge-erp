@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from typing import Any
@@ -18,6 +19,13 @@ from reconforge.infrastructure.postgres_domain import PostgresAuditEventReposito
 from reconforge.io.persisted import PersistedJsonError, encode_postgres_outbox_payload
 from reconforge.platform.common import PlatformError, normalize_key, normalize_text, platform_id
 
+
+def _evidence_digest(value: object) -> str:
+    digest = normalize_text(value, default="")
+    if digest and re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+        raise PlatformError("Certification evidence digest must be a lowercase SHA-256 hex digest.")
+    return digest
+
 POSTGRES_APPROVALS_SCHEMA_SQL = r"""
 CREATE TABLE IF NOT EXISTS reconforge.approval_requests (
  tenant_id TEXT NOT NULL,id TEXT NOT NULL,object_type TEXT NOT NULL,object_id TEXT NOT NULL,
@@ -33,7 +41,7 @@ CREATE TABLE IF NOT EXISTS reconforge.certification_records (
  tenant_id TEXT NOT NULL,id TEXT NOT NULL,object_type TEXT NOT NULL,object_id TEXT NOT NULL,
  period_name TEXT NOT NULL DEFAULT '',entity_code TEXT NOT NULL DEFAULT '',
  status TEXT NOT NULL CHECK(status IN('Prepared','Reviewed')),prepared_by TEXT NOT NULL,
- reviewed_by TEXT NOT NULL DEFAULT '',note TEXT NOT NULL DEFAULT '',created_by TEXT NOT NULL,
+ reviewed_by TEXT NOT NULL DEFAULT '',note TEXT NOT NULL DEFAULT '',evidence_digest TEXT NOT NULL DEFAULT '',created_by TEXT NOT NULL,
  prepared_at TIMESTAMPTZ NOT NULL DEFAULT now(),reviewed_at TIMESTAMPTZ,
  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
  row_version BIGINT NOT NULL DEFAULT 1 CHECK(row_version>0),PRIMARY KEY(tenant_id,id),
@@ -61,7 +69,7 @@ CREATE OR REPLACE FUNCTION reconforge.certification_record_guard() RETURNS trigg
 BEGIN
  IF TG_OP='INSERT' AND (NEW.status<>'Prepared' OR NEW.prepared_by='' OR NEW.reviewed_by<>'' OR NEW.reviewed_at IS NOT NULL) THEN RAISE EXCEPTION 'certification metadata must be prepared before review'; END IF;
  IF TG_OP='UPDATE' AND OLD.status='Reviewed' THEN RAISE EXCEPTION 'reviewed certification metadata is immutable'; END IF;
- IF TG_OP='UPDATE' AND (NEW.object_type,NEW.object_id,NEW.period_name,NEW.entity_code,NEW.prepared_by,NEW.prepared_at,NEW.created_by,NEW.created_at) IS DISTINCT FROM (OLD.object_type,OLD.object_id,OLD.period_name,OLD.entity_code,OLD.prepared_by,OLD.prepared_at,OLD.created_by,OLD.created_at) THEN RAISE EXCEPTION 'prepared certification scope and preparer evidence are immutable'; END IF;
+ IF TG_OP='UPDATE' AND (NEW.object_type,NEW.object_id,NEW.period_name,NEW.entity_code,NEW.prepared_by,NEW.evidence_digest,NEW.prepared_at,NEW.created_by,NEW.created_at) IS DISTINCT FROM (OLD.object_type,OLD.object_id,OLD.period_name,OLD.entity_code,OLD.prepared_by,OLD.evidence_digest,OLD.prepared_at,OLD.created_by,OLD.created_at) THEN RAISE EXCEPTION 'prepared certification scope and preparer evidence are immutable'; END IF;
  IF TG_OP='UPDATE' AND (NEW.status<>'Reviewed' OR NEW.reviewed_by='' OR NEW.reviewed_at IS NULL OR lower(trim(NEW.reviewed_by))=lower(trim(OLD.prepared_by))) THEN RAISE EXCEPTION 'certification review requires separation of duties'; END IF;
  IF TG_OP='DELETE' THEN RAISE EXCEPTION 'certification metadata history is immutable'; END IF;
  RETURN NEW;
@@ -78,6 +86,22 @@ DO $rls$ DECLARE table_name TEXT; BEGIN
   END IF;
  END LOOP;
 END $rls$;
+"""
+
+POSTGRES_CERTIFICATION_EVIDENCE_MIGRATION_SQL = r"""
+ALTER TABLE reconforge.certification_records
+    ADD COLUMN IF NOT EXISTS evidence_digest TEXT NOT NULL DEFAULT '';
+CREATE OR REPLACE FUNCTION reconforge.certification_record_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF TG_OP='INSERT' AND (NEW.status<>'Prepared' OR NEW.prepared_by='' OR NEW.reviewed_by<>'' OR NEW.reviewed_at IS NOT NULL) THEN RAISE EXCEPTION 'certification metadata must be prepared before review'; END IF;
+ IF TG_OP='UPDATE' AND OLD.status='Reviewed' THEN RAISE EXCEPTION 'reviewed certification metadata is immutable'; END IF;
+ IF TG_OP='UPDATE' AND (NEW.object_type,NEW.object_id,NEW.period_name,NEW.entity_code,NEW.prepared_by,NEW.evidence_digest,NEW.prepared_at,NEW.created_by,NEW.created_at) IS DISTINCT FROM (OLD.object_type,OLD.object_id,OLD.period_name,OLD.entity_code,OLD.prepared_by,OLD.evidence_digest,OLD.prepared_at,OLD.created_by,OLD.created_at) THEN RAISE EXCEPTION 'prepared certification scope and preparer evidence are immutable'; END IF;
+ IF TG_OP='UPDATE' AND (NEW.status<>'Reviewed' OR NEW.reviewed_by='' OR NEW.reviewed_at IS NULL OR lower(trim(NEW.reviewed_by))=lower(trim(OLD.prepared_by))) THEN RAISE EXCEPTION 'certification review requires separation of duties'; END IF;
+ IF TG_OP='DELETE' THEN RAISE EXCEPTION 'certification metadata history is immutable'; END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS certification_records_guard ON reconforge.certification_records;
+CREATE TRIGGER certification_records_guard BEFORE INSERT OR UPDATE OR DELETE ON reconforge.certification_records FOR EACH ROW EXECUTE FUNCTION reconforge.certification_record_guard();
 """
 
 
@@ -298,6 +322,7 @@ class PostgresApprovalRepository:
         period_name: str = "",
         entity_code: str = "",
         note: str = "",
+        evidence_digest: str = "",
         actor_label: str = "local-cli",
     ) -> dict[str, Any]:
         target_type = normalize_key(object_type, default="")
@@ -306,11 +331,12 @@ class PostgresApprovalRepository:
             raise PlatformError("Certification object type and id are required.")
         certification_id = platform_id("CERT", target_type, target_id)
         actor = normalize_text(actor_label, default="local-cli")
+        digest = _evidence_digest(evidence_digest)
         with self._transaction():
             row = self.connection.execute(
                 """INSERT INTO reconforge.certification_records(
-                tenant_id,id,object_type,object_id,period_name,entity_code,status,prepared_by,note,created_by)
-                VALUES(%s,%s,%s,%s,%s,%s,'Prepared',%s,%s,%s)
+                tenant_id,id,object_type,object_id,period_name,entity_code,status,prepared_by,note,evidence_digest,created_by)
+                VALUES(%s,%s,%s,%s,%s,%s,'Prepared',%s,%s,%s,%s)
                 ON CONFLICT(tenant_id,object_type,object_id) DO NOTHING RETURNING row_version""",
                 (
                     self.tenant_id,
@@ -321,6 +347,7 @@ class PostgresApprovalRepository:
                     normalize_key(entity_code, default=""),
                     actor,
                     normalize_text(note, default=""),
+                    digest,
                     actor,
                 ),
             ).fetchone()
@@ -342,6 +369,7 @@ class PostgresApprovalRepository:
         object_type: str,
         object_id: str,
         note: str = "",
+        evidence_digest: str | None = None,
         actor_label: str = "local-cli",
     ) -> dict[str, Any]:
         actor = normalize_text(actor_label, default="local-cli")
@@ -351,6 +379,10 @@ class PostgresApprovalRepository:
                 raise PlatformError("Only Prepared certification metadata can be reviewed.")
             if same_actor(current["prepared_by"], actor):
                 raise PlatformError("Separation of duties conflict: preparer and reviewer must be different.")
+            if evidence_digest is not None and _evidence_digest(evidence_digest) != _evidence_digest(
+                current.get("evidence_digest", "")
+            ):
+                raise PlatformError("Certification evidence digest is immutable.")
             row = self.connection.execute(
                 """UPDATE reconforge.certification_records SET status='Reviewed',reviewed_by=%s,
                 reviewed_at=now(),note=%s,updated_at=now(),row_version=row_version+1

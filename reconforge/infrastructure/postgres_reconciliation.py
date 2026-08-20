@@ -31,6 +31,11 @@ from reconforge.io.persisted import (
     encode_postgres_reconciliation_lineage,
     encode_postgres_reconciliation_rule,
 )
+from reconforge.utils.money import (
+    STRICT_FINANCIAL_INPUT_POLICY,
+    InvalidAmountError,
+    validate_financial_input_policy,
+)
 from reconforge.utils.time import utc_now_text
 
 _ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
@@ -698,7 +703,23 @@ class PostgresReconciliationRepository:
         left = self._text(left_source, "left_source", maximum=512)
         right = self._text(right_source, "right_source", maximum=512)
         algorithm = self._text(algorithm_version, "algorithm_version", maximum=64)
-        rules = self._json_text(rule, "rule")
+        # New repository callers must produce a strict, versioned financial
+        # rule even when they omit optional policy metadata. Rows written by
+        # older releases may still lack the field; the worker keeps that
+        # historical reader explicit and does not reinterpret those rows here.
+        rule_payload = dict(rule)
+        rule_payload.setdefault("financial_input_policy", STRICT_FINANCIAL_INPUT_POLICY)
+        try:
+            financial_input_policy = validate_financial_input_policy(rule_payload["financial_input_policy"])
+        except (InvalidAmountError, KeyError) as exc:
+            raise PostgresReconciliationValidationError(
+                "financial_input_policy must be the current strict financial input policy."
+            ) from exc
+        if financial_input_policy != STRICT_FINANCIAL_INPUT_POLICY:
+            raise PostgresReconciliationValidationError(
+                "New PostgreSQL reconciliation runs require the current strict financial input policy."
+            )
+        rules = self._json_text(rule_payload, "rule")
         source_hash = self._text(input_hash, "input_hash", maximum=128)
         idem = (
             None

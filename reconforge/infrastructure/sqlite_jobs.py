@@ -10,6 +10,7 @@ from reconforge.domain.jobs import (
     SHA256_PATTERN,
     DurableJob,
     DurableJobBackpressureError,
+    DurableJobQueueSnapshot,
     DurableJobSchedulerCursorConflictError,
     JobLease,
     JobOutputManifest,
@@ -394,6 +395,76 @@ class SQLiteDurableJobRepository:
             (tenant_id, job_id),
         ).fetchone()
         return None if row is None else _decode_job(row)
+
+    def queue_snapshot(
+        self,
+        *,
+        tenant_id: str,
+        workspace_id: str | None = None,
+        organization_id: str | None = None,
+        entity_id: str | None = None,
+    ) -> DurableJobQueueSnapshot:
+        """Read one tenant/lane health projection without payloads."""
+
+        if not isinstance(tenant_id, str) or not tenant_id.strip():
+            raise SQLiteJobRepositoryError("queue snapshot tenant scope is required")
+        conditions = ["jobs.tenant_id = ?"]
+        parameters: list[object] = [tenant_id]
+        for column, value in (
+            ("workspace_id", workspace_id),
+            ("organization_id", organization_id),
+            ("entity_id", entity_id),
+        ):
+            if value is not None:
+                if not isinstance(value, str) or not value.strip():
+                    raise SQLiteJobRepositoryError(f"queue snapshot {column} scope is invalid")
+                conditions.append(f"jobs.{column} = ?")
+                parameters.append(value)
+        where = " AND ".join(conditions)
+        row = self.connection.execute(
+            f"""
+            WITH scoped_jobs AS (
+                SELECT jobs.id, jobs.status, jobs.created_at, jobs.started_at
+                FROM durable_jobs AS jobs
+                WHERE {where}
+            ), status_counts AS (
+                SELECT
+                    COALESCE(SUM(CASE WHEN status = 'queued' THEN 1 ELSE 0 END), 0) AS queued_count,
+                    COALESCE(SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END), 0) AS running_count,
+                    COALESCE(SUM(CASE WHEN status = 'paused' THEN 1 ELSE 0 END), 0) AS paused_count,
+                    COALESCE(SUM(CASE WHEN status = 'retrying' THEN 1 ELSE 0 END), 0) AS retrying_count,
+                    COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0) AS failed_count,
+                    COALESCE(SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END), 0) AS completed_count,
+                    COALESCE(SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END), 0) AS cancelled_count,
+                    MIN(CASE WHEN status IN ('queued', 'retrying') THEN created_at ELSE NULL END) AS oldest_queued_at,
+                    MIN(CASE WHEN status = 'running' THEN started_at ELSE NULL END) AS oldest_running_at
+                FROM scoped_jobs
+            ), lease_counts AS (
+                SELECT COUNT(*) AS leased_count
+                FROM durable_job_leases AS leases
+                JOIN scoped_jobs ON scoped_jobs.id = leases.job_id
+            )
+            SELECT status_counts.*, lease_counts.leased_count
+            FROM status_counts CROSS JOIN lease_counts
+            """,  # nosec B608 - predicates use fixed identifiers only
+            parameters,
+        ).fetchone()
+        return DurableJobQueueSnapshot(
+            tenant_id=tenant_id,
+            workspace_id=workspace_id or "",
+            organization_id=organization_id or "",
+            entity_id=entity_id or "",
+            queued_count=int(row["queued_count"]),
+            running_count=int(row["running_count"]),
+            paused_count=int(row["paused_count"]),
+            retrying_count=int(row["retrying_count"]),
+            failed_count=int(row["failed_count"]),
+            completed_count=int(row["completed_count"]),
+            cancelled_count=int(row["cancelled_count"]),
+            leased_count=int(row["leased_count"]),
+            oldest_queued_at=str(row["oldest_queued_at"] or ""),
+            oldest_running_at=str(row["oldest_running_at"] or ""),
+        )
 
     def persist_transition(
         self,

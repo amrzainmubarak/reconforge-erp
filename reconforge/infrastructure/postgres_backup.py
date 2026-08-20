@@ -68,6 +68,31 @@ class NativeCommandRunner:
             raise PostgresBackupError("PostgreSQL native backup tool execution failed.") from exc
         return int(completed.returncode)
 
+    def run_to_file(self, argv: Sequence[str], output_path: Path, *, timeout_seconds: int) -> int:
+        """Run a native command with stdout redirected to one private dump file.
+
+        A few PostgreSQL client wrappers have been observed to accept a file
+        option yet emit the custom dump on stdout.  The normal ``run`` method
+        intentionally discards command output, so the backup adapter uses this
+        explicit, bounded fallback only after all supported file-option forms
+        fail to materialize a dump.
+        """
+
+        try:
+            with output_path.open("wb") as output, tempfile.TemporaryFile() as errors:
+                completed = subprocess.run(  # nosec B603
+                    tuple(argv),
+                    stdin=subprocess.DEVNULL,
+                    stdout=output,
+                    stderr=errors,
+                    shell=False,
+                    check=False,
+                    timeout=timeout_seconds,
+                )
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise PostgresBackupError("PostgreSQL native backup tool execution failed.") from exc
+        return int(completed.returncode)
+
 
 def _ordinary_absolute_tool(path: Path | str, name: str) -> str:
     candidate = Path(path)
@@ -343,41 +368,137 @@ class PostgresNativeBackupAdapter:
             raise PostgresBackupError("PostgreSQL backup target already exists.")
         target.parent.mkdir(parents=True, exist_ok=True)
         source_service = _service(self._settings.source_service, "Source PostgreSQL service")
+
+        dump_attempts = (
+            (
+                "--format=custom",
+                "--no-owner",
+                "--no-privileges",
+                "--file",
+                "{path}",
+                "--dbname",
+                f"service={source_service}",
+            ),
+            (
+                "--format=custom",
+                "--no-owner",
+                "--no-privileges",
+                "-f",
+                "{path}",
+                "--dbname",
+                f"service={source_service}",
+            ),
+            (
+                "--format=custom",
+                "--no-owner",
+                "--no-privileges",
+                "--file={path}",
+                "--dbname",
+                f"service={source_service}",
+            ),
+        )
+
         with tempfile.TemporaryDirectory(prefix="reconforge-postgres-backup-") as directory:
             dump_path = Path(directory) / "database.dump"
-            self._run(
-                (
-                    self._pg_dump,
-                    "--format=custom",
-                    "--no-owner",
-                    "--no-privileges",
-                    "--file",
-                    str(dump_path),
-                    "--dbname",
-                    f"service={source_service}",
-                ),
-                action="backup",
-            )
-            if not dump_path.is_file() or dump_path.stat().st_size == 0:
-                # A few client wrappers accept the equals form more reliably
-                # than the POSIX-style two-argument form.  Retry once only
-                # after a successful command produced no usable artifact;
-                # pg_dump is read-only, and the retry remains inside the
-                # disposable temporary directory.
+            last_error: BaseException | None = None
+            attempt_outcomes: list[str] = []
+            for attempt, command in enumerate(dump_attempts, start=1):
+                try:
+                    self._run(
+                        (
+                            self._pg_dump,
+                            *(
+                                item.format(path=dump_path)
+                                for item in command
+                            ),
+                        ),
+                        action=f"backup attempt {attempt}",
+                    )
+                except PostgresBackupError as exc:
+                    last_error = exc
+                    attempt_outcomes.append(f"attempt {attempt}: file-form invocation failed: {exc}")
+                    dump_path.unlink(missing_ok=True)
+                    continue
+                if dump_path.is_file() and dump_path.stat().st_size > 0:
+                    break
+                if dump_path.exists():
+                    attempt_outcomes.append(
+                        f"attempt {attempt}: file-form invocation succeeded but produced an empty dump"
+                    )
+                else:
+                    attempt_outcomes.append(
+                        f"attempt {attempt}: file-form invocation succeeded but produced no dump file"
+                    )
                 dump_path.unlink(missing_ok=True)
-                self._run(
+            else:
+                # Keep a final compatibility path for command wrappers that
+                # return success but stream custom-format output to stdout.
+                # This is deliberately opt-in to the native runner so test or
+                # injected transports cannot gain an unreviewed output path.
+                fallback_attempts = (
                     (
-                        self._pg_dump,
                         "--format=custom",
                         "--no-owner",
                         "--no-privileges",
-                        f"--file={dump_path}",
                         "--dbname",
                         f"service={source_service}",
                     ),
-                    action="backup retry",
+                    (
+                        "-Fc",
+                        "--no-owner",
+                        "--no-privileges",
+                        "--dbname",
+                        f"service={source_service}",
+                    ),
+                    (
+                        "-F",
+                        "c",
+                        "--no-owner",
+                        "--no-privileges",
+                        "--dbname",
+                        f"service={source_service}",
+                    ),
                 )
-            if not dump_path.is_file() or dump_path.stat().st_size == 0:
+                run_to_file = getattr(self._runner, "run_to_file", None)
+                if callable(run_to_file):
+                    for fallback_index, fallback_command in enumerate(fallback_attempts, start=4):
+                        result = -1
+                        try:
+                            result = run_to_file(
+                                (self._pg_dump, *fallback_command),
+                                dump_path,
+                                timeout_seconds=self._settings.timeout_seconds,
+                            )
+                        except PostgresBackupError as exc:
+                            last_error = exc
+                            attempt_outcomes.append(
+                                f"attempt {fallback_index}: stdout fallback invocation failed: {exc}"
+                            )
+                            continue
+                        if result == 0 and dump_path.is_file() and dump_path.stat().st_size > 0:
+                            return _encrypt_dump(dump_path, target, key)
+                        if result == 0:
+                            attempt_outcomes.append(
+                                f"attempt {fallback_index}: stdout fallback returned exit code 0 but produced no usable dump"
+                            )
+                        else:
+                            attempt_outcomes.append(
+                                f"attempt {fallback_index}: stdout fallback returned exit code {result}"
+                            )
+                        dump_path.unlink(missing_ok=True)
+                else:
+                    attempt_outcomes.append(
+                        "attempt 4-6: stdout fallback path was unavailable because the runner does not expose run_to_file"
+                    )
+                if last_error is not None:
+                    raise PostgresBackupError(
+                        "PostgreSQL backup command invocation failed with all supported argument forms."
+                    ) from last_error
+                if attempt_outcomes:
+                    raise PostgresBackupError(
+                        "PostgreSQL backup tool produced no usable dump after all attempts: "
+                        + "; ".join(attempt_outcomes)
+                    )
                 raise PostgresBackupError("PostgreSQL backup tool produced no usable dump after retry.")
             return _encrypt_dump(dump_path, target, key)
 

@@ -4162,3 +4162,89 @@ BEGIN
     SELECT RAISE(ABORT, 'professional invoice/payment runs cannot be deleted');
 END;
 """
+
+MANUFACTURING_COST_CONTROL_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS manufacturing_cost_control_runs (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+    decision_digest TEXT NOT NULL CHECK (length(decision_digest)=64),
+    artifact_digest TEXT NOT NULL CHECK (length(artifact_digest)=64),
+    algorithm_version TEXT NOT NULL,
+    status_counts_json TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    prepared_by TEXT NOT NULL,
+    prepared_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (workspace_id, decision_digest),
+    UNIQUE (workspace_id, artifact_digest)
+);
+CREATE INDEX IF NOT EXISTS idx_manufacturing_cost_control_runs_scope
+ON manufacturing_cost_control_runs(workspace_id, created_at, id);
+CREATE TRIGGER IF NOT EXISTS manufacturing_cost_control_runs_no_update
+BEFORE UPDATE ON manufacturing_cost_control_runs
+BEGIN
+    SELECT RAISE(ABORT, 'manufacturing cost-control runs are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS manufacturing_cost_control_runs_no_delete
+BEFORE DELETE ON manufacturing_cost_control_runs
+BEGIN
+    SELECT RAISE(ABORT, 'manufacturing cost-control runs cannot be deleted');
+END;
+"""
+
+BANK_STATEMENT_CONTROL_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS bank_statement_control_runs (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+    decision_digest TEXT NOT NULL CHECK (length(decision_digest)=64),
+    artifact_digest TEXT NOT NULL CHECK (length(artifact_digest)=64),
+    algorithm_version TEXT NOT NULL,
+    status_counts_json TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    prepared_by TEXT NOT NULL,
+    prepared_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE (workspace_id, decision_digest),
+    UNIQUE (workspace_id, artifact_digest)
+);
+CREATE INDEX IF NOT EXISTS idx_bank_statement_control_runs_scope
+ON bank_statement_control_runs(workspace_id, created_at, id);
+CREATE TRIGGER IF NOT EXISTS bank_statement_control_runs_no_update
+BEFORE UPDATE ON bank_statement_control_runs
+BEGIN
+    SELECT RAISE(ABORT, 'bank statement control runs are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS bank_statement_control_runs_no_delete
+BEFORE DELETE ON bank_statement_control_runs
+BEGIN
+    SELECT RAISE(ABORT, 'bank statement control runs cannot be deleted');
+END;
+"""
+
+CERTIFICATION_EVIDENCE_MIGRATION_SQL = """
+ALTER TABLE certification_records ADD COLUMN evidence_digest TEXT NOT NULL DEFAULT '';
+"""
+
+CURRENCY_REGISTRY_BINDING_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS currency_registry_bindings (
+    workspace_id TEXT PRIMARY KEY REFERENCES workspaces(id) ON DELETE CASCADE,
+    registry_version TEXT NOT NULL CHECK (length(registry_version) BETWEEN 1 AND 128),
+    registry_digest TEXT NOT NULL CHECK (length(registry_digest) = 64),
+    bound_at TEXT NOT NULL,
+    bound_by TEXT NOT NULL CHECK (length(bound_by) BETWEEN 1 AND 160)
+);
+CREATE INDEX IF NOT EXISTS idx_currency_registry_bindings_digest
+ON currency_registry_bindings(registry_version, registry_digest);
+"""
+
+CURRENCY_REGISTRY_SNAPSHOT_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS currency_registry_snapshots (
+    registry_digest TEXT PRIMARY KEY CHECK (length(registry_digest) = 64),
+    registry_version TEXT NOT NULL CHECK (length(registry_version) BETWEEN 1 AND 128),
+    snapshot_json TEXT NOT NULL CHECK (length(snapshot_json) BETWEEN 2 AND 1000000),
+    captured_at TEXT NOT NULL,
+    captured_by TEXT NOT NULL CHECK (length(captured_by) BETWEEN 1 AND 160)
+);
+CREATE INDEX IF NOT EXISTS idx_currency_registry_snapshots_version
+ON currency_registry_snapshots(registry_version, captured_at, registry_digest);
+"""

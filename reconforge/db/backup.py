@@ -55,6 +55,8 @@ _BACKUP_READ_CHUNK_BYTES = 1024 * 1024
 
 BACKUP_TABLES = [
     "workspaces",
+    "currency_registry_snapshots",
+    "currency_registry_bindings",
     "organizations",
     "currencies",
     "consolidation_ownership_interests",
@@ -66,6 +68,8 @@ BACKUP_TABLES = [
     "consolidation_effect_lines",
     "retail_settlement_runs",
     "professional_invoice_payment_runs",
+    "manufacturing_cost_control_runs",
+    "bank_statement_control_runs",
     "legal_entities",
     "branches",
     "periods",
@@ -179,6 +183,10 @@ EXCLUDED_BACKUP_TABLES = ["api_sessions"]
 
 BACKUP_SELECT_QUERIES = {
     "workspaces": "SELECT * FROM workspaces ORDER BY created_at, id",
+    "currency_registry_snapshots": (
+        "SELECT * FROM currency_registry_snapshots ORDER BY registry_version, captured_at, registry_digest"
+    ),
+    "currency_registry_bindings": "SELECT * FROM currency_registry_bindings ORDER BY workspace_id",
     "organizations": "SELECT * FROM organizations ORDER BY created_at, id",
     "currencies": "SELECT * FROM currencies ORDER BY code",
     "consolidation_ownership_interests": (
@@ -209,6 +217,12 @@ BACKUP_SELECT_QUERIES = {
     ),
     "professional_invoice_payment_runs": (
         "SELECT * FROM professional_invoice_payment_runs ORDER BY workspace_id, created_at, id"
+    ),
+    "manufacturing_cost_control_runs": (
+        "SELECT * FROM manufacturing_cost_control_runs ORDER BY workspace_id, created_at, id"
+    ),
+    "bank_statement_control_runs": (
+        "SELECT * FROM bank_statement_control_runs ORDER BY workspace_id, created_at, id"
     ),
     "legal_entities": "SELECT * FROM legal_entities ORDER BY entity_code, id",
     "branches": "SELECT * FROM branches ORDER BY organization_id, branch_code, id",
@@ -313,6 +327,8 @@ BACKUP_SELECT_QUERIES = {
 
 BACKUP_DELETE_QUERIES = {
     "workspaces": "DELETE FROM workspaces",
+    "currency_registry_snapshots": "DELETE FROM currency_registry_snapshots",
+    "currency_registry_bindings": "DELETE FROM currency_registry_bindings",
     "organizations": "DELETE FROM organizations",
     "currencies": "DELETE FROM currencies",
     "consolidation_ownership_interests": "DELETE FROM consolidation_ownership_interests",
@@ -324,6 +340,8 @@ BACKUP_DELETE_QUERIES = {
     "consolidation_effect_lines": "DELETE FROM consolidation_effect_lines",
     "retail_settlement_runs": "DELETE FROM retail_settlement_runs",
     "professional_invoice_payment_runs": "DELETE FROM professional_invoice_payment_runs",
+    "manufacturing_cost_control_runs": "DELETE FROM manufacturing_cost_control_runs",
+    "bank_statement_control_runs": "DELETE FROM bank_statement_control_runs",
     "legal_entities": "DELETE FROM legal_entities",
     "branches": "DELETE FROM branches",
     "periods": "DELETE FROM periods",
@@ -425,6 +443,12 @@ BACKUP_DELETE_QUERIES = {
 
 BACKUP_INSERT_COLUMNS = {
     "workspaces": ("id", "name", "local_first_note", "created_at"),
+    "currency_registry_snapshots": (
+        "registry_digest", "registry_version", "snapshot_json", "captured_at", "captured_by"
+    ),
+    "currency_registry_bindings": (
+        "workspace_id", "registry_version", "registry_digest", "bound_at", "bound_by"
+    ),
     "organizations": ("id", "workspace_id", "name", "created_at", "organization_code", "active", "updated_at"),
     "currencies": ("code", "name", "minor_units", "active", "created_at", "updated_at"),
     "consolidation_ownership_interests": (
@@ -542,6 +566,30 @@ BACKUP_INSERT_COLUMNS = {
         "created_at",
     ),
     "professional_invoice_payment_runs": (
+        "id",
+        "workspace_id",
+        "decision_digest",
+        "artifact_digest",
+        "algorithm_version",
+        "status_counts_json",
+        "payload_json",
+        "prepared_by",
+        "prepared_at",
+        "created_at",
+    ),
+    "manufacturing_cost_control_runs": (
+        "id",
+        "workspace_id",
+        "decision_digest",
+        "artifact_digest",
+        "algorithm_version",
+        "status_counts_json",
+        "payload_json",
+        "prepared_by",
+        "prepared_at",
+        "created_at",
+    ),
+    "bank_statement_control_runs": (
         "id",
         "workspace_id",
         "decision_digest",
@@ -1657,6 +1705,14 @@ BACKUP_INSERT_COLUMNS = {
 
 BACKUP_INSERT_QUERIES = {
     "workspaces": "INSERT INTO workspaces (id, name, local_first_note, created_at) VALUES (?, ?, ?, ?)",
+    "currency_registry_snapshots": (
+        "INSERT INTO currency_registry_snapshots "
+        "(registry_digest, registry_version, snapshot_json, captured_at, captured_by) VALUES (?, ?, ?, ?, ?)"
+    ),
+    "currency_registry_bindings": (
+        "INSERT INTO currency_registry_bindings "
+        "(workspace_id, registry_version, registry_digest, bound_at, bound_by) VALUES (?, ?, ?, ?, ?)"
+    ),
     "organizations": """
         INSERT INTO organizations (
             id, workspace_id, name, created_at, organization_code, active, updated_at
@@ -1725,6 +1781,18 @@ BACKUP_INSERT_QUERIES = {
     """,
     "professional_invoice_payment_runs": """
         INSERT INTO professional_invoice_payment_runs (
+            id, workspace_id, decision_digest, artifact_digest, algorithm_version,
+            status_counts_json, payload_json, prepared_by, prepared_at, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "manufacturing_cost_control_runs": """
+        INSERT INTO manufacturing_cost_control_runs (
+            id, workspace_id, decision_digest, artifact_digest, algorithm_version,
+            status_counts_json, payload_json, prepared_by, prepared_at, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "bank_statement_control_runs": """
+        INSERT INTO bank_statement_control_runs (
             id, workspace_id, decision_digest, artifact_digest, algorithm_version,
             status_counts_json, payload_json, prepared_by, prepared_at, created_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

@@ -12,8 +12,12 @@ from reconforge.db.schema import (
     ACCOUNT_RECONCILIATION_MONEY_MIGRATION_SQL,
     API_SESSIONS_SCHEMA_SQL,
     AUTH_RBAC_SCHEMA_SQL,
+    BANK_STATEMENT_CONTROL_SCHEMA_SQL,
+    CERTIFICATION_EVIDENCE_MIGRATION_SQL,
     CONSOLIDATION_CLOSE_SCHEMA_SQL,
     CONSOLIDATION_OWNERSHIP_SCHEMA_SQL,
+    CURRENCY_REGISTRY_BINDING_SCHEMA_SQL,
+    CURRENCY_REGISTRY_SNAPSHOT_SCHEMA_SQL,
     DB_BRIDGE_SCHEMA_SQL,
     DURABLE_JOB_EFFECTS_SCHEMA_SQL,
     DURABLE_JOB_LEASES_SCHEMA_SQL,
@@ -30,6 +34,7 @@ from reconforge.db.schema import (
     INVENTORY_VALUATION_REVERSAL_SCHEMA_SQL,
     INVENTORY_VALUATION_SCHEMA_SQL,
     JOURNALS_INTERCOMPANY_MONEY_MIGRATION_SQL,
+    MANUFACTURING_COST_CONTROL_SCHEMA_SQL,
     MASTER_DATA_SCHEMA_SQL,
     MATCHING_MONEY_MIGRATION_SQL,
     OUTBOX_DELIVERY_MIGRATION_SQL,
@@ -127,6 +132,11 @@ MIGRATIONS = [
     ),
     Migration(version=35, name="retail_settlement_persistence", sql=RETAIL_SETTLEMENT_SCHEMA_SQL),
     Migration(version=36, name="professional_invoice_payment_persistence", sql=PROFESSIONAL_INVOICE_PAYMENT_SCHEMA_SQL),
+    Migration(version=37, name="certification_evidence_binding", sql=CERTIFICATION_EVIDENCE_MIGRATION_SQL),
+    Migration(version=38, name="manufacturing_cost_control_persistence", sql=MANUFACTURING_COST_CONTROL_SCHEMA_SQL),
+    Migration(version=39, name="bank_statement_control_persistence", sql=BANK_STATEMENT_CONTROL_SCHEMA_SQL),
+    Migration(version=40, name="currency_registry_workspace_binding", sql=CURRENCY_REGISTRY_BINDING_SCHEMA_SQL),
+    Migration(version=41, name="currency_registry_snapshot_store", sql=CURRENCY_REGISTRY_SNAPSHOT_SCHEMA_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """

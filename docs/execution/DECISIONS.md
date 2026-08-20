@@ -5,6 +5,31 @@
 
 ## Decisions
 
+### D-914: Route declarative matching simulation through one complete registry
+
+- **Date**: 2026-08-20
+- **Context**: Reconciliation-as-Code selected matching adapters with a local
+  string-dispatch chain while the application already defined an immutable,
+  versioned strategy registry. That duplicated selection logic and allowed a
+  future strategy family to be published without being reachable by simulation.
+- **Decision**: Add an infrastructure-owned factory that registers all five
+  reviewed adapters (indexed one-to-one, bounded grouped subset-sum, duplicate
+  detection, carry-forward FIFO, and reversal pairing) and require the
+  Reconciliation-as-Code simulation path to resolve `strategy_id@version` from
+  that registry. The indexed adapter keeps its caller-owned transaction service.
+- **Rationale**: One reviewed selection boundary makes strategy/version identity,
+  manifest digests, and unsupported identities fail closed while preserving the
+  existing provider-neutral application contract.
+- **Verification**: The complete-registry test compares runtime IDs with the
+  checked-in matching manifest document; strategy/RAC focused tests, Ruff, mypy,
+  and diff checks pass.
+- **Compatibility**: Additive infrastructure wiring. Existing strategy IDs,
+  versions, request/result schemas, and deterministic digests are unchanged;
+  an unknown or unsupported version now fails through the existing registry
+  contract rather than an implicit fallback.
+- **Rollback**: Revert the factory and the Reconciliation-as-Code dispatch
+  replacement together; no migration or persisted data rollback is required.
+
 ### D-806: Expand durable-job benchmark index coverage with bounded synthetic profiles
 
 - **Date**: 2026-08-15

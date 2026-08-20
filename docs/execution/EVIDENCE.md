@@ -2,6 +2,41 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-815: Live PostgreSQL close/metrics/migration gate and complete matching registry (2026-08-20)
+
+- PostgreSQL runtime: disposable local PostgreSQL **16.14** (`reconforge-scale-pg`)
+  with Alembic upgraded through `0088_pg_currency_snapshot` using a separate
+  migration owner and a non-owner application role. No credential value is
+  recorded here.
+- `python -m pytest -q tests/test_postgres_consolidation_close.py -k
+  'test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable'`:
+  **PASS**; the live test exercised replay identity, tenant isolation,
+  certification maker-checker, append-only journal/effect rows, reversal,
+  period lock/reopen, and linked close evidence artifacts.
+- `python -m pytest -q tests/test_application_metrics.py -k
+  'test_live_postgres_metrics_and_sqlite_parity'`: **PASS**.
+- `python -m pytest -q tests/test_alembic_postgres.py -k
+  'alembic_upgrade_command_is_available_when_server_extra_is_installed'`:
+  **PASS**; upgrade/downgrade/re-upgrade checks completed.
+- `tests/test_postgres_backup.py -k
+  'live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup'`:
+  **SKIP**, correctly, because the required disposable source and maintenance
+  service profile was not configured. This is not counted as backup evidence.
+- Added `reconforge.infrastructure.matching_strategy_registry` and routed
+  Reconciliation-as-Code matching simulation through one immutable registry.
+  `python -m pytest -q tests/test_matching_strategy_contract.py
+  tests/test_reconciliation_as_code_duplicate_detection.py
+  tests/test_reconciliation_as_code_sequential.py`: **PASS**; Ruff, mypy, and
+  `git diff --check` also pass. The registry test proves all five published
+  strategy IDs resolve to their versioned runtime manifests.
+- Boundary: local synthetic/live-service evidence only. It does not prove
+  hosted CI, independent HA/DR, external provider/write-back interoperability,
+  production sizing, or release provenance/signatures.
+- Full local regression: `python -m pytest -q --tb=no -ra` reached **100%**
+  with **2,961** collected tests, zero failures, and only declared capability
+  skips plus existing deprecation/legacy-financial-input warnings. This is
+  local evidence and does not replace the hosted matrix.
+
 ## E-813: Clean full local regression after drift repairs (2026-08-17)
 
 - Command: `python -m pytest -q --tb=no -ra`.

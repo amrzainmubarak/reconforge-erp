@@ -115,6 +115,44 @@ def verify_manifest_portfolio(manifests: Iterable[ConnectorManifest]) -> tuple[s
     return tuple(sorted(identifiers))
 
 
+@dataclass(frozen=True)
+class ManifestPortfolioReport:
+    """Deterministic, reviewable identity for a connector manifest portfolio."""
+
+    connector_ids: tuple[str, ...]
+    manifest_digests: tuple[tuple[str, str], ...]
+    portfolio_digest: str
+
+    def __post_init__(self) -> None:
+        if not self.connector_ids or tuple(sorted(set(self.connector_ids))) != self.connector_ids:
+            raise ValueError("connector portfolio identifiers must be non-empty and canonically sorted")
+        if tuple(item[0] for item in self.manifest_digests) != self.connector_ids:
+            raise ValueError("connector portfolio digest entries must match connector identifiers")
+        if any(len(digest) != 64 or any(character not in "0123456789abcdef" for character in digest) for _, digest in self.manifest_digests):
+            raise ValueError("connector portfolio manifest digests must be SHA-256 values")
+        if len(self.portfolio_digest) != 64 or any(character not in "0123456789abcdef" for character in self.portfolio_digest):
+            raise ValueError("connector portfolio digest must be a SHA-256 value")
+
+
+def build_manifest_portfolio_report(manifests: Iterable[ConnectorManifest]) -> ManifestPortfolioReport:
+    """Validate and fingerprint a manifest portfolio without provider I/O."""
+
+    ordered = tuple(sorted(tuple(manifests), key=lambda manifest: manifest.connector_id))
+    verify_manifest_portfolio(ordered)
+    entries = tuple((manifest.connector_id, manifest.digest) for manifest in ordered)
+    payload = json.dumps(
+        {"manifests": [{"connector_id": connector_id, "manifest_digest": digest} for connector_id, digest in entries]},
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    return ManifestPortfolioReport(
+        connector_ids=tuple(connector_id for connector_id, _ in entries),
+        manifest_digests=entries,
+        portfolio_digest=hashlib.sha256(payload).hexdigest(),
+    )
+
+
 def verify_read_only_connector(connector: ReadOnlyConnector, sandbox: Path) -> ConformanceResult:
     """Exercise the common local read boundary using caller-owned synthetic data."""
 

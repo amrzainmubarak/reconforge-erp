@@ -2,6 +2,101 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-819: Bounded server-boundary CI lifetime (2026-08-20)
+
+- Hosted `server-boundaries` now declares `timeout-minutes: 30`, preserving
+  headroom above the historical sub-20-minute live matrix while preventing an
+  indefinitely hung pytest/database process.
+- The prior run was observed in `Run live server-boundary tests` for over
+  three hours with no conclusion; it is not counted as pass evidence. A fresh
+  replacement run is required and will be accepted only on explicit success.
+- Boundary: CI containment only; no application runtime or production SLO
+  claim is changed.
+
+## E-818: Fail-closed deployment evidence gates (2026-08-20)
+
+- `DeploymentProfile` now declares backup/restore, rollback, and
+  retention/privacy evidence requirements. `DeploymentRuntimeFacts` carries
+  explicit operator-observed booleans, and validation emits stable findings
+  when any required fact is absent. Requirements are included in the profile
+  digest.
+- `python -m pytest tests/test_deployment_profiles.py -q --tb=short`: **PASS**
+  (8 tests). Ruff, mypy, and `git diff --check`: **PASS**.
+- Boundary: this is a fail-closed prerequisite contract, not runtime drill
+  evidence. Actual encrypted backup/restore, rollback, retention, privacy,
+  and mode-specific deployment artifacts remain required by E-1006.
+
+## E-817: Canonical identity enforcement for high-risk policy decisions (2026-08-20)
+
+- `reconforge.auth.rbac.canonical_policy_value` is now the shared comparison
+  boundary for actor, object, and action values used by SoD checks. The central
+  policy ownership guard uses the same normalization and rejects certification
+  self-approval as well as approval/review.
+- `python -m pytest tests/test_policy_engine.py -q --tb=short`: **PASS**
+  (all focused tests, including two Hypothesis properties). Ruff and mypy on
+  the changed auth modules: **PASS**.
+- Boundary: normalization and central-engine evidence only. Route/action
+  inventory completeness, external identity providers, PostgreSQL RLS, and
+  production authorization assurance remain open under E-1005.
+
+## E-816: Deterministic connector manifest portfolio identity (2026-08-20)
+
+- Added `ManifestPortfolioReport` and `build_manifest_portfolio_report` to
+  `reconforge.connectors.conformance`. The report validates all shared
+  read-only reference-manifest constraints, records sorted `(connector_id,
+  manifest_digest)` entries, and derives a canonical SHA-256 portfolio digest.
+- The report is order-invariant and version-sensitive: reversing the ten
+  reference manifests preserves the report, while changing one version changes
+  the portfolio digest without any provider or network call.
+- `python -m pytest -q tests/test_connector_sdk.py tests/test_connector_package.py
+  tests/test_connector_writeback.py tests/test_connector_writeback_network.py`:
+  **PASS** (56 tests). Ruff, mypy, and `git diff --check`: **PASS**.
+- Boundary: manifest/SDK contract evidence only. It does not prove live ERP or
+  banking provider interoperability, accounting posting, customer secret
+  handling, HA/DR, production capacity, or release readiness.
+
+## E-815: Live PostgreSQL close/metrics/migration gate and complete matching registry (2026-08-20)
+
+- PostgreSQL runtime: disposable local PostgreSQL **16.14** (`reconforge-scale-pg`)
+  with Alembic upgraded through `0088_pg_currency_snapshot` using a separate
+  migration owner and a non-owner application role. No credential value is
+  recorded here.
+- `python -m pytest -q tests/test_postgres_consolidation_close.py -k
+  'test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable'`:
+  **PASS**; the live test exercised replay identity, tenant isolation,
+  certification maker-checker, append-only journal/effect rows, reversal,
+  period lock/reopen, and linked close evidence artifacts.
+- `python -m pytest -q tests/test_application_metrics.py -k
+  'test_live_postgres_metrics_and_sqlite_parity'`: **PASS**.
+- `python -m pytest -q tests/test_alembic_postgres.py -k
+  'alembic_upgrade_command_is_available_when_server_extra_is_installed'`:
+  **PASS**; upgrade/downgrade/re-upgrade checks completed.
+- `tests/test_postgres_backup.py -k
+  'live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup'`:
+  **SKIP**, correctly, because the required disposable source and maintenance
+  service profile was not configured. This is not counted as backup evidence.
+- Added `reconforge.infrastructure.matching_strategy_registry` and routed
+  Reconciliation-as-Code matching simulation through one immutable registry.
+  `python -m pytest -q tests/test_matching_strategy_contract.py
+  tests/test_reconciliation_as_code_duplicate_detection.py
+  tests/test_reconciliation_as_code_sequential.py`: **PASS**; Ruff, mypy, and
+  `git diff --check` also pass. The registry test proves all five published
+  strategy IDs resolve to their versioned runtime manifests.
+- Boundary: local synthetic/live-service evidence only. It does not prove
+  hosted CI, independent HA/DR, external provider/write-back interoperability,
+  production sizing, or release provenance/signatures.
+- Full local regression: `python -m pytest -q --tb=no -ra` reached **100%**
+  with **2,961** collected tests, zero failures, and only declared capability
+  skips plus existing deprecation/legacy-financial-input warnings. This is
+  local evidence and does not replace the hosted matrix.
+- Hosted validation: PR `#83` for head `de9e347f18db09df021ff322e4e30a782ab1f42b`
+  completed the CI, Security, Docker, and CodeQL workflows successfully. The
+  matrix passed Python 3.11/3.12, server-boundary live services, PostgreSQL
+  HA/DR, Docker parity, all four engine-parity cells, object storage, locked
+  dependency audits, secret/npm policy gates, Python security, and CodeQL.
+  The PR is intentionally left open because merge policy/branch freshness is
+  a repository-owner action; no automatic main-branch merge is claimed.
+
 ## E-813: Clean full local regression after drift repairs (2026-08-17)
 
 - Command: `python -m pytest -q --tb=no -ra`.

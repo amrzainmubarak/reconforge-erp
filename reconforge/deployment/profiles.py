@@ -37,6 +37,9 @@ class DeploymentProfile:
     requires_customer_managed_keys: bool
     requires_independent_failure_domains: bool
     claim_boundary: str
+    requires_backup_restore_evidence: bool = True
+    requires_rollback_evidence: bool = True
+    requires_retention_privacy_evidence: bool = True
 
     def __post_init__(self) -> None:
         if self.edition not in _EDITIONS:
@@ -54,6 +57,7 @@ class DeploymentProfile:
 
     def to_dict(self) -> dict[str, object]:
         return {
+            "backup_restore_evidence_required": self.requires_backup_restore_evidence,
             "claim_boundary": self.claim_boundary,
             "edition": self.edition,
             "identity_provider": self.identity_provider,
@@ -62,6 +66,8 @@ class DeploymentProfile:
             "queue_backend": self.queue_backend,
             "requires_customer_managed_keys": self.requires_customer_managed_keys,
             "requires_independent_failure_domains": self.requires_independent_failure_domains,
+            "retention_privacy_evidence_required": self.requires_retention_privacy_evidence,
+            "rollback_evidence_required": self.requires_rollback_evidence,
             "storage_backend": self.storage_backend,
             "supports_air_gap": self.supports_air_gap,
             "writeback_default": self.writeback_default,
@@ -87,6 +93,9 @@ class DeploymentRuntimeFacts:
     air_gap_enabled: bool = False
     customer_managed_keys_enabled: bool = False
     independent_failure_domains_verified: bool = False
+    backup_restore_verified: bool = False
+    rollback_verified: bool = False
+    retention_privacy_verified: bool = False
 
     def __post_init__(self) -> None:
         for name in ("storage_backend", "identity_provider", "queue_backend", "object_store"):
@@ -100,6 +109,9 @@ class DeploymentRuntimeFacts:
             "air_gap_enabled",
             "customer_managed_keys_enabled",
             "independent_failure_domains_verified",
+            "backup_restore_verified",
+            "rollback_verified",
+            "retention_privacy_verified",
         ):
             if not isinstance(getattr(self, name), bool):
                 raise DeploymentProfileError(f"runtime fact {name} must be boolean")
@@ -211,4 +223,10 @@ def validate_deployment_profile(edition: str, facts: DeploymentRuntimeFacts) -> 
         findings.append("customer_managed_keys_required")
     if profile.requires_independent_failure_domains and not facts.independent_failure_domains_verified:
         findings.append("independent_failure_domains_required")
+    if profile.requires_backup_restore_evidence and not facts.backup_restore_verified:
+        findings.append("backup_restore_evidence_required")
+    if profile.requires_rollback_evidence and not facts.rollback_verified:
+        findings.append("rollback_evidence_required")
+    if profile.requires_retention_privacy_evidence and not facts.retention_privacy_verified:
+        findings.append("retention_privacy_evidence_required")
     return tuple(findings)

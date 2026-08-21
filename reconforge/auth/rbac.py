@@ -40,6 +40,17 @@ def same_actor(left: object, right: object) -> bool:
     return bool(left_text and right_text and left_text == right_text)
 
 
+def canonical_policy_value(value: object) -> str:
+    """Normalize persisted policy identifiers and actions for comparisons.
+
+    Policy decisions must not depend on presentation casing or accidental
+    surrounding whitespace.  Empty values remain empty so missing identity
+    continues to fail closed.
+    """
+
+    return str(value or "").strip().casefold()
+
+
 def check_object_action_permission(user_permissions: set[str], object_type: str, action: str) -> bool:
     """Check the conventional object/action permission name."""
 
@@ -56,12 +67,19 @@ def check_sod_conflict(
 ) -> SoDCheckResult:
     """Prevent the same user from performing conflicting duties on the same object."""
 
-    normalized_action = action.strip().lower()
+    normalized_user_id = canonical_policy_value(user_id)
+    normalized_object_type = canonical_policy_value(object_type)
+    normalized_object_id = canonical_policy_value(object_id)
+    normalized_action = canonical_policy_value(action)
     conflicts = CONFLICTING_ACTIONS.get(normalized_action, set())
     for prior_user_id, prior_object_type, prior_object_id, prior_action in prior_actions:
-        if prior_user_id != user_id or prior_object_type != object_type or prior_object_id != object_id:
+        if (
+            canonical_policy_value(prior_user_id) != normalized_user_id
+            or canonical_policy_value(prior_object_type) != normalized_object_type
+            or canonical_policy_value(prior_object_id) != normalized_object_id
+        ):
             continue
-        normalized_prior = prior_action.strip().lower()
+        normalized_prior = canonical_policy_value(prior_action)
         if normalized_prior in conflicts:
             return SoDCheckResult(
                 allowed=False,

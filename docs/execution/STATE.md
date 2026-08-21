@@ -1,6 +1,78 @@
 ﻿# Execution State
 
-Updated: 2026-08-17
+Updated: 2026-08-20
+
+## E-819 — Bounded server-boundary CI lifetime (2026-08-20)
+
+- The hosted `server-boundaries` job now has a 30-minute job-level timeout.
+  The live matrix historically completes below 20 minutes; the bound prevents
+  a hung PostgreSQL/pytest process from consuming a runner indefinitely while
+  retaining headroom for the declared test set.
+- This is CI containment, not a claim that a cancelled run passed. The
+  replacement run must complete all live tests and cleanup steps successfully.
+
+## E-818 — Fail-closed deployment evidence gates (2026-08-20)
+
+- Deployment profiles now require explicit runtime facts for backup/restore,
+  rollback, and retention/privacy evidence in every edition, in addition to
+  the existing storage, identity, queue, object-store, network, key, and
+  failure-domain checks.
+- The profile digest includes these requirements, and incomplete facts produce
+  deterministic findings. Focused deployment tests, Ruff, mypy, and diff
+  checks pass.
+- Boundary: this enforces evidence prerequisites; it does not manufacture or
+  verify a backup, restore, rollback, retention, or privacy drill. E-1006 and
+  E-1007 remain open until those runtime artifacts exist.
+
+## E-817 — Canonical identity enforcement for high-risk policy decisions (2026-08-20)
+
+- Central SoD comparisons now canonicalize actor, object type, object ID, and
+  action values with trim + casefold before evaluating conflicts. Ownership
+  checks use the same canonical actor identity and cover certification in
+  addition to approval/review.
+- Hypothesis properties prove that casing and surrounding whitespace cannot
+  bypass self-approval or a prior-prepare/review SoD conflict. Focused policy
+  tests, Ruff, and mypy pass.
+- Boundary: this closes a policy-evaluation normalization gap only. It does
+  not claim universal route coverage, external IdP interoperability, or
+  production authorization assurance; E-1005 remains in progress.
+
+## E-816 — Deterministic connector manifest portfolio identity (2026-08-20)
+
+- Added `build_manifest_portfolio_report` to the connector conformance layer.
+  It validates the shared read-only/sandbox/threat/egress contract, canonicalizes
+  manifest ordering, records each manifest SHA-256, and emits one portfolio
+  digest suitable for drift detection and release evidence.
+- The reference portfolio report is permutation-invariant and changes when a
+  manifest version changes. Connector SDK/package/write-back focused tests,
+  Ruff, and mypy pass.
+- This closes no live provider or accounting write-back claim; network
+  interoperability, customer secrets, signed package distribution, and
+  production deployment remain explicitly outside this local manifest gate.
+
+## E-815 — Live PostgreSQL close, metrics, migration, and strategy-registry gate (2026-08-20)
+
+- A disposable PostgreSQL 16.14 service was upgraded with the complete Alembic
+  chain through `0088_pg_currency_snapshot` using a separate migration owner.
+- The live consolidation-close selector passed with a non-owner application
+  role, covering tenant isolation, replayed run identity, certification SoD,
+  immutable journal/effect rows, reversal, period lock/reopen, and linked
+  impairment/deferred-tax/PPA/ownership/intercompany evidence.
+- The live PostgreSQL metrics selector passed with SQLite parity, and the
+  Alembic upgrade/downgrade selector passed. The encrypted native-backup
+  selector remained an explicit skip because this local service does not expose
+  the required disposable maintenance service and native-tool service profile.
+- Added a single infrastructure factory for all five reviewed matching
+  strategy adapters and routed Reconciliation-as-Code simulation through its
+  immutable registry. Focused strategy, RAC, Ruff, mypy, and diff checks pass.
+- Hosted PR #83 for commit `de9e347f` completed its required CI/security matrix:
+  Python 3.11/3.12, server boundaries, PostgreSQL HA/DR, Docker parity,
+  engine parity, object storage, CodeQL, dependency/security policy gates all
+  passed. The PR remains open and merge-blocked by repository policy/branch
+  freshness; no automatic merge was performed.
+- Local runtime evidence and hosted CI now both exist for this slice; independent
+  multi-site HA/DR, external provider interoperability, release
+  provenance/signatures, and production capacity remain open.
 
 ## E-813 — Clean full local regression after drift repairs (2026-08-17)
 
@@ -3044,7 +3116,7 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 
 ## Snapshot boundary
 
-- Branch: `codex/consolidation-journal-lifecycle`, current E-332 code head `df5eb094df104483ac76f98222825a6677dc144a`; Draft PR #71 remains deliberately unmerged.
+- Branch: `consolidation-journal-lifecycle`, current published head `3a15229bc5246c83d68419028cc3f5d74d3a27a8`; PR #84 is merged.
 - Phase 1 base: `1c633eea53a2f11c9a90af57edfc80a36faeef82` (merged atomic application-boundary PR #62)
 - Phase 0 signed-candidate source remains `d47edd845e6aef3bae16e05698e07878086d690b`; its evidence is immutable historical baseline, not evidence for Phase 1 changes.
 - Publication scope: PR #54 merged the evidence-bounded Phase 0 implementation. Signed Release Candidate run `30243819239` is non-publishing: it retained review artifact `8644255664` and pushed only the digest-addressed candidate image required for verification; no GitHub Release, PyPI publication, compliance claim, or production migration occurred.
@@ -3072,8 +3144,8 @@ Phase 4 — Global Capability Expansion (active; Phase 1–3 owner/team scope re
 - Required Phase 1–3 completion may be claimed only as owner/team evidence-bounded completion; external-pilot and independent-review claims remain invalid.
 - **Publication action requires a fresh exact-candidate local pass, clean worktree, owner/team approval, push, and green required GitHub checks.**
 - PR #66 is merged into `main` at `5d401e70c3a0e3cf507c2c7cf635dfc99b01a9af`; no tag or release was created by this Phase 4 slice.
-- `codex/consolidation-translation-core` is pushed and Draft PR #67 targets `main`. It remains unmerged; no tag, release, deployment, production mutation, or repository-setting change occurred.
-- `codex/consolidation-close-lifecycle` was merged through PR #68; the current branch `codex/consolidation-journal-lifecycle` contains the remotely green grouped-matching benchmark head `0f202b4f2cfce72aafc2281daa24aa8497205c0c` with Draft PR #71 targeting `main`. No merge, tag, release, or deployment occurred.
+- Historical PR #67 and PR #68 branch names are retained only as immutable historical references in GitHub; no remote branch containing `codex` is used for current publication.
+- PR #84 merged the current branch head `3a15229bc5246c83d68419028cc3f5d74d3a27a8` into `main` after all required checks passed. No tag, release, deployment, production mutation, or repository-setting change occurred.
 
 ## Task status
 

@@ -5,6 +5,112 @@
 
 ## Decisions
 
+### D-918: Bound the hosted live server-boundary job lifetime
+
+- **Date**: 2026-08-20
+- **Context**: A hosted `server-boundaries` run remained in its live pytest
+  step for more than three hours without producing a result, despite prior
+  successful runs completing in roughly 16 minutes.
+- **Decision**: Add a 30-minute job-level timeout, above the observed normal
+  runtime but below an unbounded runner lease. A timeout is a failure, never a
+  success shortcut; replacement runs must pass all tests and cleanup.
+- **Rationale**: CI must fail closed and release runner resources when a live
+  dependency or test process hangs.
+- **Verification**: The replacement PR run will be checked for explicit
+  success of server-boundaries and all other required jobs.
+- **Compatibility**: CI-only change; no application, schema, or runtime
+  behavior changes.
+- **Rollback**: Remove the timeout field if a measured matrix proves it needs
+  more than 30 minutes, with a new documented runtime budget.
+
+### D-917: Require deployment evidence facts before enabling any edition
+
+- **Date**: 2026-08-20
+- **Context**: Edition validation checked infrastructure compatibility but a
+  runtime could otherwise pass without declaring backup/restore, rollback, or
+  retention/privacy evidence.
+- **Decision**: Add immutable profile requirements and explicit runtime facts
+  for those three evidence classes. Validation fails closed with stable finding
+  codes until each fact is true; requirements participate in the profile
+  digest.
+- **Rationale**: Deployment mode claims must be gated by recoverability and
+  data-governance evidence, not only by service names or configuration shape.
+- **Verification**: Focused tests prove incomplete community/regulated facts
+  fail with deterministic findings and a complete community fact set clears
+  the gate; Ruff, mypy, and diff checks pass.
+- **Compatibility**: New runtime fields default to false, preserving safe
+  behavior while making previously implicit readiness checks explicit. No
+  external service is contacted and no migration is required.
+- **Rollback**: Revert the fields, findings, and focused tests; no persisted
+  data rollback is needed.
+
+### D-916: Canonicalize every identity value at the central SoD boundary
+
+- **Date**: 2026-08-20
+- **Context**: Central policy ownership and prior-action checks compared raw
+  strings, while other write-back paths already treated actor identifiers as
+  case-insensitive and whitespace-insensitive. That left a narrow bypass risk
+  for high-risk approval/review/certification decisions.
+- **Decision**: Normalize actor IDs, object types, object IDs, and action names
+  with one trim + casefold helper before ownership and SoD comparisons. Extend
+  the central ownership guard to certification while retaining deny-by-default
+  behavior.
+- **Rationale**: Authorization semantics must be invariant under presentation
+  formatting and must share one identity rule across policy surfaces.
+- **Verification**: Hypothesis properties cover casing/whitespace variants
+  for self-approval and prior-prepare conflicts; focused policy tests, Ruff,
+  and mypy pass.
+- **Compatibility**: Additive hardening of comparisons; no schema, route, or
+  permission names change. Existing correctly-canonical inputs are unchanged.
+- **Rollback**: Revert the helper usage and focused tests; no migration or
+  persisted-data rollback is required.
+
+### D-915: Bind connector portfolio identity to canonical manifest digests
+
+- **Date**: 2026-08-20
+- **Context**: Connector conformance validated each manifest independently, but
+  a release or operator could not fingerprint the complete reference portfolio
+  or detect a silent ordering/version drift as one reviewable artifact.
+- **Decision**: Add a deterministic `ManifestPortfolioReport` and builder that
+  validates the existing read-only contract, sorts by connector ID, records each
+  manifest digest, and derives a SHA-256 portfolio digest. The builder performs
+  no provider or network I/O.
+- **Rationale**: A single digest makes connector allowlist review, replay, and
+  release evidence auditable without treating a manifest catalog as live
+  provider interoperability.
+- **Verification**: Connector SDK/package/write-back focused tests prove
+  permutation invariance, version sensitivity, package compatibility, retry,
+  acknowledgement, and compensation boundaries; Ruff and mypy pass.
+- **Compatibility**: Additive API/data structure only. Existing manifest IDs,
+  versions, connector transports, and write-back state machines are unchanged.
+- **Rollback**: Remove the report type/builder and its test; no migration or
+  persisted-data rollback is required.
+
+### D-914: Route declarative matching simulation through one complete registry
+
+- **Date**: 2026-08-20
+- **Context**: Reconciliation-as-Code selected matching adapters with a local
+  string-dispatch chain while the application already defined an immutable,
+  versioned strategy registry. That duplicated selection logic and allowed a
+  future strategy family to be published without being reachable by simulation.
+- **Decision**: Add an infrastructure-owned factory that registers all five
+  reviewed adapters (indexed one-to-one, bounded grouped subset-sum, duplicate
+  detection, carry-forward FIFO, and reversal pairing) and require the
+  Reconciliation-as-Code simulation path to resolve `strategy_id@version` from
+  that registry. The indexed adapter keeps its caller-owned transaction service.
+- **Rationale**: One reviewed selection boundary makes strategy/version identity,
+  manifest digests, and unsupported identities fail closed while preserving the
+  existing provider-neutral application contract.
+- **Verification**: The complete-registry test compares runtime IDs with the
+  checked-in matching manifest document; strategy/RAC focused tests, Ruff, mypy,
+  and diff checks pass.
+- **Compatibility**: Additive infrastructure wiring. Existing strategy IDs,
+  versions, request/result schemas, and deterministic digests are unchanged;
+  an unknown or unsupported version now fails through the existing registry
+  contract rather than an implicit fallback.
+- **Rollback**: Revert the factory and the Reconciliation-as-Code dispatch
+  replacement together; no migration or persisted data rollback is required.
+
 ### D-806: Expand durable-job benchmark index coverage with bounded synthetic profiles
 
 - **Date**: 2026-08-15

@@ -894,3 +894,10 @@ include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-08-22.j
 include docs/schemas/postgres_writeback_identity_migration_matrix.schema.json
 include tests/test_postgres_writeback_identity_migration_matrix.py
 include docs/adr/0541-prove-writeback-migration-supported-version-matrix.md
+include reconforge/connectors/writeback_receiver.py
+include .github/scripts/verify_writeback_receiver_idempotency.py
+include docs/execution/WRITEBACK_RECEIVER_IDEMPOTENCY_DRILL_2026-08-22.json
+include docs/schemas/writeback_receiver_idempotency_drill.schema.json
+include tests/test_connector_writeback_receiver.py
+include tests/test_writeback_receiver_idempotency_drill.py
+include docs/adr/0542-prove-bounded-writeback-receiver-idempotency.md

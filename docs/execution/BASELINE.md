@@ -107,6 +107,20 @@
   environment failure. This remains single-host, single-version, synthetic
   migration evidence.
 
+#### E-828 bounded receiver idempotency conformance (2026-08-22)
+
+- A digest-only reference receiver now proves one atomic synthetic effect and
+  immutable receipt for a receiver/idempotency-key identity. Exact sequential
+  and spawned-process replay returns one stable provider response; changed
+  payload binding fails closed.
+- A source-bound, closed-schema local drill passes eleven checks including
+  crash-after-commit replay, direct mutation refusal, independent backup
+  restore, canonical-history equality, and cleanup. Report SHA-256 is
+  `531f1c76f432eac04a3baab01341e08a70954c77161a81f4b24e5569835d21d3`.
+- This does not promote the project to live-vendor interoperability,
+  cross-host/distributed exactly-once delivery, accounting posting, or
+  production readiness.
+
 #### E-827 declared PostgreSQL migration matrix (2026-08-22)
 
 - The exact E-826 observation path now executes on digest-pinned PostgreSQL

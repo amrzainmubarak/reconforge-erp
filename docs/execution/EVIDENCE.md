@@ -2,6 +2,65 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-828: Bounded receiver-side write-back idempotency (2026-08-22)
+
+- Added `reconforge/connectors/writeback_receiver.py`: a closed request model
+  and SQLite reference receiver that stores identifiers/digests only. One
+  transaction inserts both the immutable receipt and synthetic effect under the
+  receiver/key primary key; exact replay reconstructs and validates the same
+  canonical `WritebackProviderResponse`, while changed operation or payload
+  digest raises `writeback_receiver_idempotency_conflict`.
+- Command:
+  `python .github/scripts/verify_writeback_receiver_idempotency.py --output docs/execution/WRITEBACK_RECEIVER_IDEMPOTENCY_DRILL_2026-08-22.json`.
+  Result: PASS in 2.188 seconds on Windows 11, Python 3.14.6, SQLite 3.50.4,
+  `spawn`; report digest
+  `531f1c76f432eac04a3baab01341e08a70954c77161a81f4b24e5569835d21d3`.
+- Sequential case: first disposition `applied`, second `replayed`, identical
+  response. Concurrent case: eight spawned processes yield exactly one apply
+  and seven replays with one response digest. Crash case: a child exits 0 after
+  commit; the parent retry is `replayed` and creates no second effect.
+- Same-key payload retargeting, receipt UPDATE, and effect DELETE are refused.
+  The final store has three receipts and three effects at canonical SHA-256
+  `1c42c656b8e09897710e05411c78a91c709c15b70309d2e68f1e4417f1ac32f8`.
+  An independent SQLite backup has the same counts/digest and replays without
+  an additional effect. All eleven checks and cleanup are true.
+- The first runner invocation failed during Windows Temp cleanup because SQLite
+  context managers ended transactions but did not close every handle. It wrote
+  no retained report. Explicit connection and multiprocessing-queue closure was
+  added; 7/7 unit tests and the retained drill then passed, and the exact failed
+  temp directory was verified and removed.
+- Focused receiver/report/network/SDK/package selector: 85 passed. Ruff and
+  Mypy pass for the changed receiver/runner/export surfaces. The report's closed
+  Draft 2020-12 schema, canonical digest, source binding, live base-commit
+  object, history/cardinality invariants, package manifest, secret/payload
+  absence, CI order/artifact, and four negative mutations pass.
+- Expanded receiver/report/write-back/Phase-4/policy selector: 121 passed. Full
+  regression: PASS, 3,058 collected, 2,943 passed, 115 declared capability
+  skips, 23 existing warnings, 396.97 seconds on ambient Python 3.14.6.
+- Full-tree Ruff: PASS. Mypy: PASS across 524 source files. Bandit over
+  `reconforge` and the new runner: PASS with reviewed fixed-SQL notices. Closed
+  supply-chain validation, `uv lock --check`, JSON/YAML parsing, and `git diff
+  --check`: PASS.
+- Ambient `python -m pip_audit`: FAIL on host-installed `pip 26.1.2` /
+  `PYSEC-2026-3721`; this is not relabeled. The isolated locked audit passes on
+  uv 0.11.32 / Python 3.12.13 with 128 locked packages, zero findings, and zero
+  exceptions.
+- `python -m build --no-isolation`: PASS. The 1,756-entry sdist contains the
+  receiver, runner, retained report, schema, ADR, and both tests; the 624-entry
+  wheel contains the receiver and public connector exports. No intended member
+  is missing.
+- Gitleaks 8.30.1 direct scans of the receiver, runner, report, schema, ADR, and
+  report test passed. Its first receiver-unit-test scan flagged the literal
+  synthetic idempotency fixture as `generic-api-key`; the key was constructed
+  from low-entropy fixed parts without suppression or allowlisting, the focused
+  tests passed, the direct scan returned zero leaks, and the sdist was rebuilt.
+- CI definition: `server-boundaries` runs the drill and uploads its report with
+  a digest-pinned action before broader live tests. D-485 prevents a push, so no
+  hosted run is claimed.
+- Boundary: one host and SQLite database coordination, synthetic digest-only
+  effects, no live vendor/status contract, cross-host consensus, database
+  failover, accounting posting, settlement, or production exactly-once claim.
+
 ## E-827: PostgreSQL write-back identity migration version matrix (2026-08-22)
 
 - Declared cells are exact repository-owned runtime profiles, not versions

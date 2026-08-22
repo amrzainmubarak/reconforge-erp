@@ -9,6 +9,23 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-828
+    priority: P0
+    area: connector-security
+    title: Prove bounded receiver-side write-back idempotency conformance
+    status: completed
+    depends_on: [E-827, E-660]
+    exit_evidence: >-
+      A provider-neutral digest-only receiver contract and SQLite reference
+      store atomically commit one immutable receipt and one synthetic effect per
+      receiver/idempotency-key identity without retaining payloads or secrets.
+      A closed source-bound drill proves exact sequential replay, refusal of
+      same-key payload retargeting, one apply plus seven replays across eight
+      spawned processes, replay after process exit immediately following
+      commit, database-level receipt/effect immutability, independent backup
+      restore, canonical-history equality, and cleanup. This is one-host SQLite
+      conformance evidence, not a live vendor, cross-host consensus, database
+      failover, accounting posting, or production exactly-once claim.
   - id: E-827
     priority: P0
     area: connector-security
@@ -268,6 +285,10 @@ tasks:
       - E-827 reuses that exact observation path across the declared
         digest-pinned PostgreSQL 16.14 and 17.10 profiles, requires canonical
         history parity, and adds a retained CI artifact contract.
+      - E-828 adds a digest-only receiver conformance contract with atomic
+        effect/receipt persistence, concurrent process convergence, conflict
+        refusal, crash replay, and independent restore evidence. Cross-host and
+        live-vendor receiver semantics remain open.
   - id: E-1005
     priority: P0
     area: identity-governance

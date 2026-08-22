@@ -1,0 +1,68 @@
+{
+  "cases": {
+    "concurrent": {
+      "applied": 1,
+      "processes": 8,
+      "replayed": 7,
+      "request_digest": "e815f161ee36738b38325e123daa4b936ea406ec788dc8ecc43a94b044ed9a87",
+      "response_digest": "74f66d787ae14af7b0b8d8d7d5395853725b77ab514846b20a4d5145c3a3d9e5"
+    },
+    "crash_after_commit": {
+      "child_exit_code": 0,
+      "request_digest": "7636bc94d6de7d7ddc006debbeae861e637dd1621c0dc45aa3a55555496fdeb3",
+      "response_digest": "27d140fc2ecc09b890e93ae1164aad19c690ad04d92d247a3d1b1632fceb9f40",
+      "retry_disposition": "replayed"
+    },
+    "sequential": {
+      "first_disposition": "applied",
+      "replay_disposition": "replayed",
+      "request_digest": "4434a00123d08c3f64f5a0190cbcfae691219f7fbd33931f414f7f7d88aa1671",
+      "response_digest": "230c724bfe5ce55882bc486ecc3ad99be61e1490d11550cdd65e0b7ae235e90d"
+    }
+  },
+  "checks": {
+    "crash_after_commit_replayed": true,
+    "effect_delete_refused": true,
+    "eight_processes_converged": true,
+    "exact_response_replay": true,
+    "independent_backup_restored": true,
+    "one_concurrent_effect": true,
+    "receipt_update_refused": true,
+    "restored_history_digest_equal": true,
+    "restored_replay_created_no_effect": true,
+    "same_key_payload_conflict_refused": true,
+    "sequential_apply_once": true
+  },
+  "cleanup_complete": true,
+  "duration_seconds": 2.188,
+  "executed_at": "2026-08-22T15:16:58+00:00",
+  "history": {
+    "canonical_sha256": "1c42c656b8e09897710e05411c78a91c709c15b70309d2e68f1e4417f1ac32f8",
+    "effects": 3,
+    "receipts": 3,
+    "restored_canonical_sha256": "1c42c656b8e09897710e05411c78a91c709c15b70309d2e68f1e4417f1ac32f8",
+    "restored_effects": 3,
+    "restored_receipts": 3
+  },
+  "limitations": [
+    "single_host_sqlite_reference_receiver",
+    "synthetic_digest_only_effects",
+    "no_live_vendor_or_provider_status_contract",
+    "no_cross_host_consensus_or_database_failover",
+    "no_accounting_posting_or_production_claim"
+  ],
+  "profile": "synthetic-sqlite-writeback-receiver-idempotency",
+  "report_digest": "531f1c76f432eac04a3baab01341e08a70954c77161a81f4b24e5569835d21d3",
+  "runtime": {
+    "multiprocessing_start_method": "spawn",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.14.6",
+    "sqlite": "3.50.4"
+  },
+  "schema_version": "writeback-receiver-idempotency-drill-v1",
+  "subject": {
+    "base_commit": "0374bf50aa143f3ef54a9905a7f7b33c5d59c3c1",
+    "receiver_source_sha256": "1adb70fb6a2f8156f747a962388b2028fb973dfaafefff69e784095c06eb3a56",
+    "runner_source_sha256": "07c82f584f4b9aa0af3080dc6df6d906ee47dd46165bef5ad94591f8fc37d4c7"
+  }
+}

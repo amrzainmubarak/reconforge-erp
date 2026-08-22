@@ -15,6 +15,14 @@ Measured through 2026-08-22 against the current local snapshot in `STATE.md`. Th
 
 ## Controls observed
 
+- E-828 introduces no listener, payload persistence, credential store, or
+  autonomous financial authority. Its receiver persists bounded identities and
+  SHA-256 digests only; atomic receipt/effect inserts, an exact receiver/key
+  primary key, validated replay response digests, and immutable-row triggers
+  fail closed on replay retargeting or direct mutation. Spawned contention,
+  crash replay, independent restore, negative schema cases, and verified temp
+  cleanup pass. This is not live-provider authentication, distributed
+  consensus, database failover, secret operations, or production assurance.
 - E-827 closes the current two-version migration evidence gap with exact
   PostgreSQL 16.14/17.10 image digests owned by the closed supply-chain policy.
   One input-validated observation function performs both runs; unpinned images,

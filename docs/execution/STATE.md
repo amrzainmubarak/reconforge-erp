@@ -2,6 +2,49 @@
 
 Updated: 2026-08-22
 
+## E-828 — Bounded receiver-side write-back idempotency (2026-08-22)
+
+- Added a frozen, closed, digest-only receiver request and a SQLite reference
+  store. `(receiver_id, idempotency_key)` is the effect identity; operation and
+  payload digest are immutable bindings. Receipt and synthetic effect commit in
+  one `BEGIN IMMEDIATE` transaction, and database triggers refuse direct update
+  or deletion. No payload bytes or credentials are persisted.
+- A retained runner proves sequential apply/replay, same-key payload-conflict
+  refusal, one apply plus seven exact replays from eight spawned processes, and
+  replay after a child exits immediately after commit but before returning its
+  response. Three receipts equal three effects; canonical history SHA-256 is
+  `1c42c656b8e09897710e05411c78a91c709c15b70309d2e68f1e4417f1ac32f8`.
+- An independent SQLite backup restores all three receipts/effects, retains the
+  exact canonical history digest, and replays the crash identity without a new
+  effect. All eleven closed checks and temporary-directory cleanup pass. The
+  2.188-second report digest is
+  `531f1c76f432eac04a3baab01341e08a70954c77161a81f4b24e5569835d21d3`
+  on Python 3.14.6 / SQLite 3.50.4 using `spawn`.
+- The first drill invocation exposed SQLite handles left open by context-manager
+  transaction exit on Windows; it failed during cleanup and produced no report.
+  Explicit connection/queue closure fixed the lifecycle, the exact failed-run
+  temp directory was removed, and the successful retained run cleaned itself.
+- Focused receiver/report/network/SDK/package tests pass, including a generated
+  property for canonical digest stability and payload separation. The closed
+  schema rejects false checks, cardinality drift, and undeclared evidence; CI is
+  defined to run and preserve the report before broader server-boundary tests.
+- The post-slice regression collected 3,058 tests: 2,943 passed and 115 were
+  declared capability skips, with 23 existing warnings in 396.97 seconds.
+  Ruff, Mypy across 524 source files, Bandit, the closed supply-chain policy,
+  lock validation, isolated Python 3.12 dependency audit, build, package-content
+  verification, JSON/YAML parsing, and whitespace checks pass. The 1,756-entry
+  sdist and 624-entry wheel both contain the intended receiver assets.
+- Ambient `python -m pip_audit` remains a failing host observation because
+  installed `pip 26.1.2` is reported under `PYSEC-2026-3721`; the isolated
+  Python 3.12.13 locked audit reports zero findings and no active exceptions.
+- Gitleaks direct scans found the receiver assets clean after one synthetic
+  idempotency-key literal was rewritten from fixed parts; no suppression or
+  allowlist was added, and the final package artifacts were rebuilt.
+- Boundary: this is same-host SQLite coordination with synthetic digest-only
+  effects. It does not prove a live vendor, actual ERP/bank semantics,
+  cross-host consensus, database failover, accounting posting, settlement
+  finality, production exactly-once effects, hosted execution, or publication.
+
 ## E-827 — PostgreSQL write-back migration version matrix (2026-08-22)
 
 - Refactored E-826 into one strict reusable observation function without

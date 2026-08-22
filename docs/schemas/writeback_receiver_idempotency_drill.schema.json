@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/writeback_receiver_idempotency_drill.schema.json",
+  "title": "ReconForge bounded write-back receiver idempotency drill",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "executed_at",
+    "duration_seconds",
+    "profile",
+    "subject",
+    "runtime",
+    "cases",
+    "history",
+    "checks",
+    "cleanup_complete",
+    "limitations",
+    "report_digest"
+  ],
+  "properties": {
+    "schema_version": {"const": "writeback-receiver-idempotency-drill-v1"},
+    "executed_at": {"type": "string", "format": "date-time"},
+    "duration_seconds": {"type": "number", "minimum": 0},
+    "profile": {"const": "synthetic-sqlite-writeback-receiver-idempotency"},
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base_commit", "receiver_source_sha256", "runner_source_sha256"],
+      "properties": {
+        "base_commit": {"$ref": "#/$defs/sha1"},
+        "receiver_source_sha256": {"$ref": "#/$defs/sha256"},
+        "runner_source_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "python", "sqlite", "multiprocessing_start_method"],
+      "properties": {
+        "platform": {"type": "string", "minLength": 1},
+        "python": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "sqlite": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "multiprocessing_start_method": {"enum": ["spawn", "forkserver", "fork"]}
+      }
+    },
+    "cases": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequential", "concurrent", "crash_after_commit"],
+      "properties": {
+        "sequential": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["first_disposition", "replay_disposition", "request_digest", "response_digest"],
+          "properties": {
+            "first_disposition": {"const": "applied"},
+            "replay_disposition": {"const": "replayed"},
+            "request_digest": {"$ref": "#/$defs/sha256"},
+            "response_digest": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "concurrent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["processes", "applied", "replayed", "request_digest", "response_digest"],
+          "properties": {
+            "processes": {"const": 8},
+            "applied": {"const": 1},
+            "replayed": {"const": 7},
+            "request_digest": {"$ref": "#/$defs/sha256"},
+            "response_digest": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "crash_after_commit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["child_exit_code", "retry_disposition", "request_digest", "response_digest"],
+          "properties": {
+            "child_exit_code": {"const": 0},
+            "retry_disposition": {"const": "replayed"},
+            "request_digest": {"$ref": "#/$defs/sha256"},
+            "response_digest": {"$ref": "#/$defs/sha256"}
+          }
+        }
+      }
+    },
+    "history": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receipts",
+        "effects",
+        "canonical_sha256",
+        "restored_receipts",
+        "restored_effects",
+        "restored_canonical_sha256"
+      ],
+      "properties": {
+        "receipts": {"const": 3},
+        "effects": {"const": 3},
+        "canonical_sha256": {"$ref": "#/$defs/sha256"},
+        "restored_receipts": {"const": 3},
+        "restored_effects": {"const": 3},
+        "restored_canonical_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sequential_apply_once",
+        "exact_response_replay",
+        "same_key_payload_conflict_refused",
+        "eight_processes_converged",
+        "one_concurrent_effect",
+        "crash_after_commit_replayed",
+        "receipt_update_refused",
+        "effect_delete_refused",
+        "independent_backup_restored",
+        "restored_history_digest_equal",
+        "restored_replay_created_no_effect"
+      ],
+      "properties": {
+        "sequential_apply_once": {"const": true},
+        "exact_response_replay": {"const": true},
+        "same_key_payload_conflict_refused": {"const": true},
+        "eight_processes_converged": {"const": true},
+        "one_concurrent_effect": {"const": true},
+        "crash_after_commit_replayed": {"const": true},
+        "receipt_update_refused": {"const": true},
+        "effect_delete_refused": {"const": true},
+        "independent_backup_restored": {"const": true},
+        "restored_history_digest_equal": {"const": true},
+        "restored_replay_created_no_effect": {"const": true}
+      }
+    },
+    "cleanup_complete": {"const": true},
+    "limitations": {
+      "const": [
+        "single_host_sqlite_reference_receiver",
+        "synthetic_digest_only_effects",
+        "no_live_vendor_or_provider_status_contract",
+        "no_cross_host_consensus_or_database_failover",
+        "no_accounting_posting_or_production_claim"
+      ]
+    },
+    "report_digest": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha1": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

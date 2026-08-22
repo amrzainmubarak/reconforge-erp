@@ -5,6 +5,31 @@
 
 ## Decisions
 
+### D-928: Require receiver-side effect evidence before idempotency claims
+
+- **Date**: 2026-08-22
+- **Context**: Sender retries preserve one key and E-660 recovers uncertain
+  acceptance without another POST, but neither proves that a receiving system
+  commits one effect or refuses reuse of the key for a different mutation.
+- **Decision**: Adopt ADR 0542. Define a digest-only receiver request and an
+  additive SQLite reference store that atomically commits an immutable receipt
+  and synthetic effect. Retain a closed runner/schema/report and a CI artifact
+  definition for sequential, eight-process, crash-after-commit, conflict,
+  immutability, restore, and cleanup checks.
+- **Rationale**: Client-side retry discipline cannot substitute for provider
+  idempotency. Adapter promotion needs an executable receiver contract with
+  stable evidence, while live-vendor and cross-host claims remain separate.
+- **Verification**: E-828 requires one apply/seven replays across eight spawned
+  processes, identical replay responses, no second effect after response loss,
+  fail-closed key retargeting, immutable database rows, identical independent
+  restore history, source/report digests, closed negative-schema tests, and
+  verified cleanup.
+- **Compatibility**: Sender APIs, lifecycle schemas, product database
+  migrations, connector manifests, retry behavior, and disabled-by-default
+  write-back policy remain unchanged.
+- **Rollback**: Remove only the additive reference receiver and its evidence
+  assets. Never reinterpret an idempotency conflict as a replay success.
+
 ### D-927: Use one observation path for the declared PostgreSQL migration matrix
 
 - **Date**: 2026-08-22

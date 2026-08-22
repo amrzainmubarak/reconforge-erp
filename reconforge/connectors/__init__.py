@@ -175,6 +175,14 @@ from reconforge.connectors.writeback_network import (
     WritebackNetworkResponse,
     WritebackProviderResponse,
 )
+from reconforge.connectors.writeback_receiver import (
+    SQLiteWritebackReceiverStore,
+    WritebackReceiverCounts,
+    WritebackReceiverDisposition,
+    WritebackReceiverError,
+    WritebackReceiverRequest,
+    WritebackReceiverResult,
+)
 
 __all__ = [
     "AuthenticationMethod",
@@ -209,6 +217,12 @@ __all__ = [
     "WritebackNetworkRegistration",
     "WritebackNetworkResponse",
     "WritebackProviderResponse",
+    "SQLiteWritebackReceiverStore",
+    "WritebackReceiverCounts",
+    "WritebackReceiverDisposition",
+    "WritebackReceiverError",
+    "WritebackReceiverRequest",
+    "WritebackReceiverResult",
     "WORLD_BANK_PUBLIC_MANIFEST",
     "WorldBankPublicConnector",
     "WorldBankPublicPage",

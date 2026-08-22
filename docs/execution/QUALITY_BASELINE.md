@@ -1,5 +1,23 @@
 # Quality Baseline
 
+## E-828 receiver-side idempotency conformance (2026-08-22)
+
+The additive receiver model is closed and digest-deterministic. Unit and
+property tests cover malformed identities, permutation-stable request digests,
+payload separation, exact sequential replay, key retargeting refusal, database
+immutability, six-process contention, and crash-after-commit replay. The closed
+runtime drill strengthens contention to eight spawned processes, validates an
+independent backup/restore, binds source and report digests, and verifies exact
+cleanup. The 85-test receiver/report/network/SDK/package selector, Ruff, and
+Mypy pass. The full regression collected 3,058 tests: 2,943 passed, 115 declared
+capability skips, and 23 existing warnings in 396.97 seconds. Ruff, Mypy across
+524 source files, Bandit, policy/lock/isolated-audit gates, JSON/YAML parsing,
+build, package membership, and whitespace checks pass. The 1,756-entry sdist
+and 624-entry wheel contain the receiver assets. Ambient pip-audit separately
+reports the host's pip vulnerability; the locked audit reports zero findings.
+This is same-host SQLite correctness evidence, not distributed or provider
+production quality.
+
 ## E-827 PostgreSQL migration matrix verification (2026-08-22)
 
 The same strict observation function passes on digest-pinned PostgreSQL 16.14

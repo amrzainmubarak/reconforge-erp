@@ -276,6 +276,20 @@ jobs:
           path: ${{ runner.temp }}/reconforge-writeback-receiver-idempotency.json
           if-no-files-found: ignore
 
+      - name: Run PostgreSQL write-back receiver idempotency matrix
+        env:
+          RECONFORGE_POSTGRES_RECEIVER_REPORT: ${{ runner.temp }}/reconforge-postgres-writeback-receiver-idempotency.json
+        run: |
+          uv run --no-sync python .github/scripts/verify_postgres_writeback_receiver_idempotency_matrix.py --output "${RECONFORGE_POSTGRES_RECEIVER_REPORT}"
+
+      - name: Upload PostgreSQL write-back receiver idempotency matrix
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: reconforge-postgres-writeback-receiver-idempotency-${{ github.sha }}
+          path: ${{ runner.temp }}/reconforge-postgres-writeback-receiver-idempotency.json
+          if-no-files-found: ignore
+
       - name: Run live server-boundary tests
         env:
           RECONFORGE_POSTGRES_DSN: postgresql://postgres:postgres@localhost:5432/postgres

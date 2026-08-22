@@ -107,6 +107,21 @@
   environment failure. This remains single-host, single-version, synthetic
   migration evidence.
 
+#### E-829 PostgreSQL receiver idempotency parity (2026-08-22)
+
+- An optional psycopg reference backend preserves the E-828 digest-only
+  contract and atomically stores one immutable receipt/effect under a
+  transaction-scoped canonical receiver/key lock.
+- One closed matrix passes sequential, retargeting-refusal, eight-process,
+  crash-after-commit, mutation/malformed-input refusal, native dump/independent
+  restore, non-privileged-role, and cleanup checks on exact PostgreSQL 16.14
+  and 17.10 images.
+- Both PostgreSQL histories equal the SQLite canonical SHA-256. Report SHA-256
+  is `3e53b99e9d33598d5f010d2b0ad405cbc167936840976564221f8b27bb4d33b1`.
+- This does not establish live-vendor interoperability, cross-host consensus or
+  failover, accounting posting, settlement, HA/DR, or production exactly-once
+  behavior.
+
 #### E-828 bounded receiver idempotency conformance (2026-08-22)
 
 - A digest-only reference receiver now proves one atomic synthetic effect and
@@ -116,7 +131,7 @@
 - A source-bound, closed-schema local drill passes eleven checks including
   crash-after-commit replay, direct mutation refusal, independent backup
   restore, canonical-history equality, and cleanup. Report SHA-256 is
-  `531f1c76f432eac04a3baab01341e08a70954c77161a81f4b24e5569835d21d3`.
+  `cfe14335be6d04387d9f2c1be2909a1d843ebefe744e421f288cf096479274fb`.
 - This does not promote the project to live-vendor interoperability,
   cross-host/distributed exactly-once delivery, accounting posting, or
   production readiness.

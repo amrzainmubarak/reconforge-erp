@@ -9,6 +9,23 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-829
+    priority: P0
+    area: connector-security
+    title: Prove PostgreSQL receiver idempotency parity with the SQLite contract
+    status: completed
+    depends_on: [E-828, E-827]
+    exit_evidence: >-
+      An additive psycopg-backed reference receiver uses a transaction-scoped
+      advisory lock and one transaction for the immutable receipt and synthetic
+      effect while preserving the digest-only E-828 contract. One closed runner
+      passes the same sequential, conflict, eight-process, crash-after-commit,
+      mutation-refusal, and restore cases on exact digest-pinned PostgreSQL
+      16.14 and 17.10 images under a non-privileged role. Native dumps restore
+      independently and both canonical histories equal the retained SQLite
+      history. This remains one-host, sequential, single-node, synthetic
+      conformance evidence; no live provider, cross-host consensus/failover,
+      posting, settlement, HA/DR, or production exactly-once claim follows.
   - id: E-828
     priority: P0
     area: connector-security

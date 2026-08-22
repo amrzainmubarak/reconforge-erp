@@ -1,5 +1,29 @@
 # Quality Baseline
 
+## E-829 PostgreSQL receiver idempotency parity (2026-08-22)
+
+The additive PostgreSQL backend shares the exact closed E-828 request,
+response, conflict, and canonical-history logic. Constructor tests close DSN
+and timeout boundaries; structural tests bind the unambiguous receiver/key lock
+identity, digest-only schema, composite keys, foreign key, immutable triggers,
+and lazy dependency failure. The live 16.14/17.10 matrix passes 17 checks per
+cell under non-privileged roles, including eight-process contention,
+crash-after-commit, direct mutation/malformed-input refusal, native backup,
+independent restore, and exact cleanup. Both PostgreSQL histories equal the
+SQLite canonical history. The retained report passes its closed schema,
+canonical/source/policy/image binding, package/workflow contracts, and negative
+mutations. The focused 33 tests pass. The final full regression collects 3,075
+tests: 2,960 pass, 115 declared capability skips remain visible, and 23 existing
+warnings remain visible in 716.62 seconds. Full-tree Ruff, Mypy across 525
+source files, Bandit, closed policy, lock, isolated Python 3.12 audit,
+JSON/YAML, build, package membership, and whitespace gates pass. The 1,763-entry
+sdist and 625-entry wheel contain all intended E-829 assets. Ambient pip-audit
+separately retains the host pip vulnerability rather than replacing the clean
+locked audit. Gitleaks 8.30.1 reports no findings across 662 commits / 25.18 MB
+or the clean 27.62 MB implementation archive. This is bounded single-host
+synthetic conformance, not provider, distributed, accounting, HA/DR, or
+production quality.
+
 ## E-828 receiver-side idempotency conformance (2026-08-22)
 
 The additive receiver model is closed and digest-deterministic. Unit and

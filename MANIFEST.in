@@ -901,3 +901,10 @@ include docs/schemas/writeback_receiver_idempotency_drill.schema.json
 include tests/test_connector_writeback_receiver.py
 include tests/test_writeback_receiver_idempotency_drill.py
 include docs/adr/0542-prove-bounded-writeback-receiver-idempotency.md
+include reconforge/connectors/writeback_receiver_postgres.py
+include .github/scripts/verify_postgres_writeback_receiver_idempotency_matrix.py
+include docs/execution/POSTGRES_WRITEBACK_RECEIVER_IDEMPOTENCY_MATRIX_2026-08-22.json
+include docs/schemas/postgres_writeback_receiver_idempotency_matrix.schema.json
+include tests/test_connector_writeback_receiver_postgres.py
+include tests/test_postgres_writeback_receiver_idempotency_matrix.py
+include docs/adr/0543-prove-postgres-writeback-receiver-idempotency-parity.md

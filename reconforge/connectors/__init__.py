@@ -182,7 +182,10 @@ from reconforge.connectors.writeback_receiver import (
     WritebackReceiverError,
     WritebackReceiverRequest,
     WritebackReceiverResult,
+    build_writeback_receiver_response,
+    replay_writeback_receiver_result,
 )
+from reconforge.connectors.writeback_receiver_postgres import PostgresWritebackReceiverStore
 
 __all__ = [
     "AuthenticationMethod",
@@ -223,6 +226,9 @@ __all__ = [
     "WritebackReceiverError",
     "WritebackReceiverRequest",
     "WritebackReceiverResult",
+    "build_writeback_receiver_response",
+    "replay_writeback_receiver_result",
+    "PostgresWritebackReceiverStore",
     "WORLD_BANK_PUBLIC_MANIFEST",
     "WorldBankPublicConnector",
     "WorldBankPublicPage",

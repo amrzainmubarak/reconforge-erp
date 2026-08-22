@@ -34,8 +34,8 @@
     "sequential_apply_once": true
   },
   "cleanup_complete": true,
-  "duration_seconds": 2.188,
-  "executed_at": "2026-08-22T15:16:58+00:00",
+  "duration_seconds": 2.473,
+  "executed_at": "2026-08-22T15:41:14+00:00",
   "history": {
     "canonical_sha256": "1c42c656b8e09897710e05411c78a91c709c15b70309d2e68f1e4417f1ac32f8",
     "effects": 3,
@@ -52,7 +52,7 @@
     "no_accounting_posting_or_production_claim"
   ],
   "profile": "synthetic-sqlite-writeback-receiver-idempotency",
-  "report_digest": "531f1c76f432eac04a3baab01341e08a70954c77161a81f4b24e5569835d21d3",
+  "report_digest": "cfe14335be6d04387d9f2c1be2909a1d843ebefe744e421f288cf096479274fb",
   "runtime": {
     "multiprocessing_start_method": "spawn",
     "platform": "Windows-11-10.0.26200-SP0",
@@ -61,8 +61,8 @@
   },
   "schema_version": "writeback-receiver-idempotency-drill-v1",
   "subject": {
-    "base_commit": "0374bf50aa143f3ef54a9905a7f7b33c5d59c3c1",
-    "receiver_source_sha256": "1adb70fb6a2f8156f747a962388b2028fb973dfaafefff69e784095c06eb3a56",
+    "base_commit": "7623c11886cafa3df844db9ed9ebcaa23accd2f6",
+    "receiver_source_sha256": "9dfcf1e6c4df485f2c6275dfb597a9d695ccfeef79616af2d0b62c38955b60b4",
     "runner_source_sha256": "07c82f584f4b9aa0af3080dc6df6d906ee47dd46165bef5ad94591f8fc37d4c7"
   }
 }

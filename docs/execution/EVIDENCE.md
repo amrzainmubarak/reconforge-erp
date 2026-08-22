@@ -2,6 +2,78 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-829: PostgreSQL receiver idempotency parity (2026-08-22)
+
+- Added `reconforge/connectors/writeback_receiver_postgres.py`: an additive,
+  digest-only psycopg backend for the unchanged E-828 receiver contract. It
+  takes a transaction-scoped advisory lock over the canonical receiver/key
+  identity, atomically inserts one immutable receipt and synthetic effect, and
+  reconstructs exact replays through the shared validated response helper.
+- Command:
+  `python .github/scripts/verify_postgres_writeback_receiver_idempotency_matrix.py --output docs/execution/POSTGRES_WRITEBACK_RECEIVER_IDEMPOTENCY_MATRIX_2026-08-22.json`.
+  Result: PASS on the first invocation in 14.142 seconds, Docker Engine 29.7.2,
+  Python 3.14.6; report digest
+  `3e53b99e9d33598d5f010d2b0ad405cbc167936840976564221f8b27bb4d33b1`.
+- Exact runtime cells:
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  reported PostgreSQL 16.14, and
+  `postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193`
+  reported PostgreSQL 17.10.
+- In each cell, sequential replay returned the exact response; a changed
+  payload under the same key was refused; eight spawned processes converged to
+  one apply and seven replays; and a retry after child exit immediately after
+  commit was replayed. Three receipts equal three synthetic effects.
+- The runtime role reported superuser, create-database, create-role,
+  replication, and BYPASSRLS all false. Receipt UPDATE, effect DELETE, and a
+  malformed direct digest insert were refused. Each native custom dump was
+  listed and restored into an independent database with equal counts/history
+  and no additional effect on replay. Exact container cleanup passed.
+- Both PostgreSQL cells and the refreshed E-828 SQLite report produced
+  canonical history SHA-256
+  `1c42c656b8e09897710e05411c78a91c709c15b70309d2e68f1e4417f1ac32f8`.
+  Version-specific native dump hashes are retained separately and are not
+  treated as cross-version canonical bytes.
+- Focused receiver/backend/report tests: 33 passed. Ruff passes for all changed
+  implementation, runner, export, and test surfaces. Mypy initially found two
+  test-only indexing errors from an over-broad JSON type; the annotation was
+  corrected without changing runtime behavior. Bandit reports no findings;
+  its notices cover reviewed immutable table constants, shell-free fixed
+  command vectors, and the randomized path inside a disposable container.
+- Final full regression: PASS, 3,075 collected, 2,960 passed, 115 declared
+  capability skips, 23 existing warnings, 716.62 seconds on ambient Python
+  3.14.6. Full-tree Ruff passes; Mypy passes across 525 source files; Bandit
+  over `reconforge` and the new runner has zero findings.
+- Closed supply-chain policy validation reports 128 Python packages, 211 npm
+  packages, zero active exceptions, and zero npm integrity gaps. `uv lock
+  --check`, changed JSON/YAML parsing, and `git diff --check` pass. The isolated
+  locked audit passes on uv 0.11.32 / Python 3.12.13 with no known findings.
+- Ambient `python -m pip_audit` remains FAIL because the host has `pip 26.1.2`
+  affected by `PYSEC-2026-3721` (fixed in 26.2); the unpublished local package
+  is also not a PyPI audit subject. This host result is not relabeled as a
+  project-controlled dependency success.
+- `python -m build --no-isolation`: PASS. The 1,763-entry sdist contains the
+  PostgreSQL receiver, runner, retained matrix, schema, ADR, and both tests; the
+  625-entry wheel contains both receiver implementations and public exports.
+  Exact required-member checks pass.
+- Gitleaks 8.30.1 scans the complete local history after the implementation
+  commit and repeats after the evidence-only amend: each pass covers 662
+  commits / 25.18 MB with zero findings. The corresponding clean `git archive`
+  scans each cover 27.62 MB with zero findings. The first archive setup command
+  used an unsupported PowerShell parameter and therefore performed no scan;
+  the already-created tar/empty directory were validated, the archive was then
+  extracted and scanned, and every exact temporary target was removed through
+  a dry-run-verified path-specific `git clean`.
+- A closed Draft 2020-12 schema fixes both ordered versions, exact image
+  digests, non-privileged role flags, 17 true checks per cell, three cases,
+  history cardinality, SQLite parity, sources, policy, limitations, and report
+  digest. Negative tests reject false checks, version/cardinality drift, and
+  undeclared fields. CI is defined to retain the matrix before broader server
+  boundaries; D-485 prevents push or hosted-run claims.
+- Boundary: one Docker Desktop host, two sequential single-node PostgreSQL
+  versions, synthetic digest-only effects, no live provider/status contract,
+  cross-host consensus/failover, accounting posting, settlement, HA/DR,
+  production exactly-once assurance, push, PR, tag, release, or deployment.
+
 ## E-828: Bounded receiver-side write-back idempotency (2026-08-22)
 
 - Added `reconforge/connectors/writeback_receiver.py`: a closed request model
@@ -12,9 +84,10 @@ This file records commands and observed results. It does not convert a dirty wor
   digest raises `writeback_receiver_idempotency_conflict`.
 - Command:
   `python .github/scripts/verify_writeback_receiver_idempotency.py --output docs/execution/WRITEBACK_RECEIVER_IDEMPOTENCY_DRILL_2026-08-22.json`.
-  Result: PASS in 2.188 seconds on Windows 11, Python 3.14.6, SQLite 3.50.4,
+  Refreshed result after extracting the shared response helpers: PASS in 2.473
+  seconds on Windows 11, Python 3.14.6, SQLite 3.50.4,
   `spawn`; report digest
-  `531f1c76f432eac04a3baab01341e08a70954c77161a81f4b24e5569835d21d3`.
+  `cfe14335be6d04387d9f2c1be2909a1d843ebefe744e421f288cf096479274fb`.
 - Sequential case: first disposition `applied`, second `replayed`, identical
   response. Concurrent case: eight spawned processes yield exactly one apply
   and seven replays with one response digest. Crash case: a child exits 0 after

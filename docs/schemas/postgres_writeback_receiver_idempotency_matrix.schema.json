@@ -1,0 +1,278 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/postgres_writeback_receiver_idempotency_matrix.schema.json",
+  "title": "PostgreSQL write-back receiver idempotency matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "executed_at",
+    "duration_seconds",
+    "profile",
+    "subject",
+    "runs",
+    "parity",
+    "limitations",
+    "report_digest"
+  ],
+  "properties": {
+    "schema_version": {"const": "postgres-writeback-receiver-idempotency-matrix-v1"},
+    "executed_at": {"type": "string", "format": "date-time"},
+    "duration_seconds": {"type": "number", "exclusiveMinimum": 0},
+    "profile": {"const": "postgres-writeback-receiver-idempotency-matrix"},
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "base_commit",
+        "receiver_source_sha256",
+        "postgres_receiver_source_sha256",
+        "matrix_runner_source_sha256",
+        "sqlite_report_sha256",
+        "supply_chain_policy_sha256"
+      ],
+      "properties": {
+        "base_commit": {"$ref": "#/$defs/git_commit"},
+        "receiver_source_sha256": {"$ref": "#/$defs/sha256"},
+        "postgres_receiver_source_sha256": {"$ref": "#/$defs/sha256"},
+        "matrix_runner_source_sha256": {"$ref": "#/$defs/sha256"},
+        "sqlite_report_sha256": {"$ref": "#/$defs/sha256"},
+        "supply_chain_policy_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "runs": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "prefixItems": [
+        {"$ref": "#/$defs/postgres16_observation"},
+        {"$ref": "#/$defs/postgres17_observation"}
+      ],
+      "items": false
+    },
+    "parity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "backends",
+        "canonical_history_sha256",
+        "all_checks_passed",
+        "all_cleanup_complete"
+      ],
+      "properties": {
+        "backends": {"const": ["sqlite", "postgresql-16.14", "postgresql-17.10"]},
+        "canonical_history_sha256": {"$ref": "#/$defs/sha256"},
+        "all_checks_passed": {"const": true},
+        "all_cleanup_complete": {"const": true}
+      }
+    },
+    "limitations": {
+      "const": [
+        "single_docker_desktop_host",
+        "two_sequential_single_node_postgresql_versions",
+        "synthetic_digest_only_effects",
+        "no_live_vendor_or_provider_status_contract",
+        "no_cross_host_consensus_or_database_failover",
+        "no_accounting_posting_or_production_claim"
+      ]
+    },
+    "report_digest": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "git_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "role_flags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["superuser", "create_database", "create_role", "replication", "bypass_rls"],
+      "properties": {
+        "superuser": {"const": false},
+        "create_database": {"const": false},
+        "create_role": {"const": false},
+        "replication": {"const": false},
+        "bypass_rls": {"const": false}
+      }
+    },
+    "runtime_common": {
+      "type": "object",
+      "required": [
+        "docker_server",
+        "image",
+        "postgresql",
+        "python",
+        "multiprocessing_start_method",
+        "application_role"
+      ]
+    },
+    "sequential_case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["first_disposition", "replay_disposition", "request_digest", "response_digest"],
+      "properties": {
+        "first_disposition": {"const": "applied"},
+        "replay_disposition": {"const": "replayed"},
+        "request_digest": {"$ref": "#/$defs/sha256"},
+        "response_digest": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "concurrent_case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["processes", "applied", "replayed", "request_digest", "response_digest"],
+      "properties": {
+        "processes": {"const": 8},
+        "applied": {"const": 1},
+        "replayed": {"const": 7},
+        "request_digest": {"$ref": "#/$defs/sha256"},
+        "response_digest": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "crash_case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["child_exit_code", "retry_disposition", "request_digest", "response_digest"],
+      "properties": {
+        "child_exit_code": {"const": 0},
+        "retry_disposition": {"const": "replayed"},
+        "request_digest": {"$ref": "#/$defs/sha256"},
+        "response_digest": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "cases": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequential", "concurrent", "crash_after_commit"],
+      "properties": {
+        "sequential": {"$ref": "#/$defs/sequential_case"},
+        "concurrent": {"$ref": "#/$defs/concurrent_case"},
+        "crash_after_commit": {"$ref": "#/$defs/crash_case"}
+      }
+    },
+    "history": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receipts",
+        "effects",
+        "canonical_sha256",
+        "native_dump_sha256",
+        "restored_receipts",
+        "restored_effects",
+        "restored_canonical_sha256"
+      ],
+      "properties": {
+        "receipts": {"const": 3},
+        "effects": {"const": 3},
+        "canonical_sha256": {"$ref": "#/$defs/sha256"},
+        "native_dump_sha256": {"$ref": "#/$defs/sha256"},
+        "restored_receipts": {"const": 3},
+        "restored_effects": {"const": 3},
+        "restored_canonical_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sequential_apply_once",
+        "exact_response_replay",
+        "same_key_payload_conflict_refused",
+        "eight_processes_converged",
+        "one_concurrent_effect",
+        "crash_after_commit_replayed",
+        "receipt_mutation_refused",
+        "effect_mutation_refused",
+        "malformed_direct_insert_refused",
+        "non_privileged_role",
+        "three_receipts_equal_three_effects",
+        "native_dump_listed",
+        "independent_restore_equal",
+        "restored_history_digest_equal",
+        "restored_replay_created_no_effect",
+        "restored_replay_exact",
+        "cleanup_complete"
+      ],
+      "properties": {
+        "sequential_apply_once": {"const": true},
+        "exact_response_replay": {"const": true},
+        "same_key_payload_conflict_refused": {"const": true},
+        "eight_processes_converged": {"const": true},
+        "one_concurrent_effect": {"const": true},
+        "crash_after_commit_replayed": {"const": true},
+        "receipt_mutation_refused": {"const": true},
+        "effect_mutation_refused": {"const": true},
+        "malformed_direct_insert_refused": {"const": true},
+        "non_privileged_role": {"const": true},
+        "three_receipts_equal_three_effects": {"const": true},
+        "native_dump_listed": {"const": true},
+        "independent_restore_equal": {"const": true},
+        "restored_history_digest_equal": {"const": true},
+        "restored_replay_created_no_effect": {"const": true},
+        "restored_replay_exact": {"const": true},
+        "cleanup_complete": {"const": true}
+      }
+    },
+    "observation_common": {
+      "type": "object",
+      "required": ["runtime", "cases", "history", "checks"]
+    },
+    "postgres16_observation": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        {"$ref": "#/$defs/observation_common"},
+        {
+          "properties": {
+            "runtime": {
+              "unevaluatedProperties": false,
+              "allOf": [
+                {"$ref": "#/$defs/runtime_common"},
+                {
+                  "properties": {
+                    "docker_server": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+                    "image": {"const": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"},
+                    "postgresql": {"const": "16.14"},
+                    "python": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+                    "multiprocessing_start_method": {"enum": ["spawn", "forkserver", "fork"]},
+                    "application_role": {"$ref": "#/$defs/role_flags"}
+                  }
+                }
+              ]
+            },
+            "cases": {"$ref": "#/$defs/cases"},
+            "history": {"$ref": "#/$defs/history"},
+            "checks": {"$ref": "#/$defs/checks"}
+          }
+        }
+      ]
+    },
+    "postgres17_observation": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        {"$ref": "#/$defs/observation_common"},
+        {
+          "properties": {
+            "runtime": {
+              "unevaluatedProperties": false,
+              "allOf": [
+                {"$ref": "#/$defs/runtime_common"},
+                {
+                  "properties": {
+                    "docker_server": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+                    "image": {"const": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"},
+                    "postgresql": {"const": "17.10"},
+                    "python": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+                    "multiprocessing_start_method": {"enum": ["spawn", "forkserver", "fork"]},
+                    "application_role": {"$ref": "#/$defs/role_flags"}
+                  }
+                }
+              ]
+            },
+            "cases": {"$ref": "#/$defs/cases"},
+            "history": {"$ref": "#/$defs/history"},
+            "checks": {"$ref": "#/$defs/checks"}
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,165 @@
+{
+  "duration_seconds": 14.142,
+  "executed_at": "2026-08-22T15:45:22+00:00",
+  "limitations": [
+    "single_docker_desktop_host",
+    "two_sequential_single_node_postgresql_versions",
+    "synthetic_digest_only_effects",
+    "no_live_vendor_or_provider_status_contract",
+    "no_cross_host_consensus_or_database_failover",
+    "no_accounting_posting_or_production_claim"
+  ],
+  "parity": {
+    "all_checks_passed": true,
+    "all_cleanup_complete": true,
+    "backends": [
+      "sqlite",
+      "postgresql-16.14",
+      "postgresql-17.10"
+    ],
+    "canonical_history_sha256": "1c42c656b8e09897710e05411c78a91c709c15b70309d2e68f1e4417f1ac32f8"
+  },
+  "profile": "postgres-writeback-receiver-idempotency-matrix",
+  "report_digest": "3e53b99e9d33598d5f010d2b0ad405cbc167936840976564221f8b27bb4d33b1",
+  "runs": [
+    {
+      "cases": {
+        "concurrent": {
+          "applied": 1,
+          "processes": 8,
+          "replayed": 7,
+          "request_digest": "e815f161ee36738b38325e123daa4b936ea406ec788dc8ecc43a94b044ed9a87",
+          "response_digest": "74f66d787ae14af7b0b8d8d7d5395853725b77ab514846b20a4d5145c3a3d9e5"
+        },
+        "crash_after_commit": {
+          "child_exit_code": 0,
+          "request_digest": "7636bc94d6de7d7ddc006debbeae861e637dd1621c0dc45aa3a55555496fdeb3",
+          "response_digest": "27d140fc2ecc09b890e93ae1164aad19c690ad04d92d247a3d1b1632fceb9f40",
+          "retry_disposition": "replayed"
+        },
+        "sequential": {
+          "first_disposition": "applied",
+          "replay_disposition": "replayed",
+          "request_digest": "4434a00123d08c3f64f5a0190cbcfae691219f7fbd33931f414f7f7d88aa1671",
+          "response_digest": "230c724bfe5ce55882bc486ecc3ad99be61e1490d11550cdd65e0b7ae235e90d"
+        }
+      },
+      "checks": {
+        "cleanup_complete": true,
+        "crash_after_commit_replayed": true,
+        "effect_mutation_refused": true,
+        "eight_processes_converged": true,
+        "exact_response_replay": true,
+        "independent_restore_equal": true,
+        "malformed_direct_insert_refused": true,
+        "native_dump_listed": true,
+        "non_privileged_role": true,
+        "one_concurrent_effect": true,
+        "receipt_mutation_refused": true,
+        "restored_history_digest_equal": true,
+        "restored_replay_created_no_effect": true,
+        "restored_replay_exact": true,
+        "same_key_payload_conflict_refused": true,
+        "sequential_apply_once": true,
+        "three_receipts_equal_three_effects": true
+      },
+      "history": {
+        "canonical_sha256": "1c42c656b8e09897710e05411c78a91c709c15b70309d2e68f1e4417f1ac32f8",
+        "effects": 3,
+        "native_dump_sha256": "c5cd76fb52bf682d4df3c6e1ec13138a85fb97d471046344fe53a91ee1631d20",
+        "receipts": 3,
+        "restored_canonical_sha256": "1c42c656b8e09897710e05411c78a91c709c15b70309d2e68f1e4417f1ac32f8",
+        "restored_effects": 3,
+        "restored_receipts": 3
+      },
+      "runtime": {
+        "application_role": {
+          "bypass_rls": false,
+          "create_database": false,
+          "create_role": false,
+          "replication": false,
+          "superuser": false
+        },
+        "docker_server": "29.7.2",
+        "image": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+        "multiprocessing_start_method": "spawn",
+        "postgresql": "16.14",
+        "python": "3.14.6"
+      }
+    },
+    {
+      "cases": {
+        "concurrent": {
+          "applied": 1,
+          "processes": 8,
+          "replayed": 7,
+          "request_digest": "e815f161ee36738b38325e123daa4b936ea406ec788dc8ecc43a94b044ed9a87",
+          "response_digest": "74f66d787ae14af7b0b8d8d7d5395853725b77ab514846b20a4d5145c3a3d9e5"
+        },
+        "crash_after_commit": {
+          "child_exit_code": 0,
+          "request_digest": "7636bc94d6de7d7ddc006debbeae861e637dd1621c0dc45aa3a55555496fdeb3",
+          "response_digest": "27d140fc2ecc09b890e93ae1164aad19c690ad04d92d247a3d1b1632fceb9f40",
+          "retry_disposition": "replayed"
+        },
+        "sequential": {
+          "first_disposition": "applied",
+          "replay_disposition": "replayed",
+          "request_digest": "4434a00123d08c3f64f5a0190cbcfae691219f7fbd33931f414f7f7d88aa1671",
+          "response_digest": "230c724bfe5ce55882bc486ecc3ad99be61e1490d11550cdd65e0b7ae235e90d"
+        }
+      },
+      "checks": {
+        "cleanup_complete": true,
+        "crash_after_commit_replayed": true,
+        "effect_mutation_refused": true,
+        "eight_processes_converged": true,
+        "exact_response_replay": true,
+        "independent_restore_equal": true,
+        "malformed_direct_insert_refused": true,
+        "native_dump_listed": true,
+        "non_privileged_role": true,
+        "one_concurrent_effect": true,
+        "receipt_mutation_refused": true,
+        "restored_history_digest_equal": true,
+        "restored_replay_created_no_effect": true,
+        "restored_replay_exact": true,
+        "same_key_payload_conflict_refused": true,
+        "sequential_apply_once": true,
+        "three_receipts_equal_three_effects": true
+      },
+      "history": {
+        "canonical_sha256": "1c42c656b8e09897710e05411c78a91c709c15b70309d2e68f1e4417f1ac32f8",
+        "effects": 3,
+        "native_dump_sha256": "0eeac3fbb77567e7c5fa028acf921c5ecda50f063560ef8b68e4df248b54d920",
+        "receipts": 3,
+        "restored_canonical_sha256": "1c42c656b8e09897710e05411c78a91c709c15b70309d2e68f1e4417f1ac32f8",
+        "restored_effects": 3,
+        "restored_receipts": 3
+      },
+      "runtime": {
+        "application_role": {
+          "bypass_rls": false,
+          "create_database": false,
+          "create_role": false,
+          "replication": false,
+          "superuser": false
+        },
+        "docker_server": "29.7.2",
+        "image": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193",
+        "multiprocessing_start_method": "spawn",
+        "postgresql": "17.10",
+        "python": "3.14.6"
+      }
+    }
+  ],
+  "schema_version": "postgres-writeback-receiver-idempotency-matrix-v1",
+  "subject": {
+    "base_commit": "7623c11886cafa3df844db9ed9ebcaa23accd2f6",
+    "matrix_runner_source_sha256": "ccf8ba0b86f604fc387f0b4045a292bd85cd2a1c501c9b64966b303e5e07d02a",
+    "postgres_receiver_source_sha256": "8e28ff1c284259684f2397aa766066fa5ae1f6ec8a7cc286e722d6423f3fa43f",
+    "receiver_source_sha256": "9dfcf1e6c4df485f2c6275dfb597a9d695ccfeef79616af2d0b62c38955b60b4",
+    "sqlite_report_sha256": "cfe14335be6d04387d9f2c1be2909a1d843ebefe744e421f288cf096479274fb",
+    "supply_chain_policy_sha256": "15675362650f9b2691251da77dd01538d72b3a7249c7a60c7591b7bbe0a48cae"
+  }
+}

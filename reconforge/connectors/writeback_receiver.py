@@ -183,7 +183,7 @@ class SQLiteWritebackReceiverStore:
                 return result
 
             provider_reference = "rf-receiver-" + request.request_digest[:24]
-            response = _provider_response(request.idempotency_key, provider_reference)
+            response = build_writeback_receiver_response(request.idempotency_key, provider_reference)
             committed_at = datetime.now(UTC).replace(microsecond=0).isoformat()
             connection.execute(
                 """
@@ -287,17 +287,23 @@ class SQLiteWritebackReceiverStore:
             raise WritebackReceiverError("writeback_receiver_idempotency_conflict")
         if _PROVIDER_REFERENCE_PATTERN.fullmatch(provider_reference) is None:
             raise WritebackReceiverError("writeback_receiver_history_invalid")
-        response = _provider_response(request.idempotency_key, provider_reference)
-        if response.response_digest != response_digest:
-            raise WritebackReceiverError("writeback_receiver_history_invalid")
-        return WritebackReceiverResult(
-            disposition=WritebackReceiverDisposition.REPLAYED,
-            request_digest=request.request_digest,
-            response=response,
+        return replay_writeback_receiver_result(
+            request,
+            operation=operation,
+            payload_digest=payload_digest,
+            request_digest=request_digest,
+            provider_reference=provider_reference,
+            response_digest=response_digest,
         )
 
 
-def _provider_response(idempotency_key: str, provider_reference: str) -> WritebackProviderResponse:
+def build_writeback_receiver_response(
+    idempotency_key: str, provider_reference: str
+) -> WritebackProviderResponse:
+    """Build the canonical provider response shared by receiver backends."""
+
+    if _PROVIDER_REFERENCE_PATTERN.fullmatch(provider_reference) is None:
+        raise WritebackReceiverError("writeback_receiver_history_invalid")
     fields = {
         "accepted": True,
         "idempotency_key": idempotency_key,
@@ -306,4 +312,31 @@ def _provider_response(idempotency_key: str, provider_reference: str) -> Writeba
     encoded = json.dumps(fields, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("ascii")
     return WritebackProviderResponse.model_validate(
         {**fields, "response_digest": hashlib.sha256(encoded).hexdigest()}
+    )
+
+
+def replay_writeback_receiver_result(
+    request: WritebackReceiverRequest,
+    *,
+    operation: str,
+    payload_digest: str,
+    request_digest: str,
+    provider_reference: str,
+    response_digest: str,
+) -> WritebackReceiverResult:
+    """Validate immutable history and rebuild one exact replay response."""
+
+    if (
+        operation != request.operation
+        or payload_digest != request.payload_digest
+        or request_digest != request.request_digest
+    ):
+        raise WritebackReceiverError("writeback_receiver_idempotency_conflict")
+    response = build_writeback_receiver_response(request.idempotency_key, provider_reference)
+    if response.response_digest != response_digest:
+        raise WritebackReceiverError("writeback_receiver_history_invalid")
+    return WritebackReceiverResult(
+        disposition=WritebackReceiverDisposition.REPLAYED,
+        request_digest=request.request_digest,
+        response=response,
     )

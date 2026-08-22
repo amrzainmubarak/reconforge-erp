@@ -15,6 +15,18 @@ Measured through 2026-08-22 against the current local snapshot in `STATE.md`. Th
 
 ## Controls observed
 
+- E-829 adds an optional PostgreSQL receiver reference with no listener,
+  payload-body storage, credential persistence, numeric financial amount, or
+  autonomous authority. Data values are parameterized; connection/statement
+  timeouts are bounded; transaction-scoped receiver/key locking and one
+  receipt/effect transaction prevent same-database duplicate effects; database
+  triggers refuse UPDATE/DELETE. Runtime-generated credentials are confined to
+  disposable containers, and the application role has no superuser,
+  create-database, create-role, replication, or BYPASSRLS flag. PostgreSQL
+  16.14/17.10 contention, crash replay, malformed-input refusal, native restore,
+  parity, and cleanup pass. This is not external authentication, malicious DBA
+  resistance, cross-host consensus/failover, live-provider security, HA/DR, or
+  production assurance.
 - E-828 introduces no listener, payload persistence, credential store, or
   autonomous financial authority. Its receiver persists bounded identities and
   SHA-256 digests only; atomic receipt/effect inserts, an exact receiver/key

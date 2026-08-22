@@ -2,6 +2,52 @@
 
 Updated: 2026-08-22
 
+## E-829 — PostgreSQL receiver idempotency parity (2026-08-22)
+
+- Added an optional `PostgresWritebackReceiverStore` without changing the
+  E-828 request/response contract. psycopg is loaded only when a PostgreSQL
+  operation is requested; importing Community/local connector surfaces remains
+  network-free and does not require a database connection.
+- A transaction-scoped advisory lock over the canonical receiver/key digest
+  serializes contenders. The immutable receipt and synthetic effect commit in
+  one transaction under the same composite identity. Bounded connection and
+  statement timeouts, parameterized data values, digest checks, foreign keys,
+  and UPDATE/DELETE refusal triggers fail closed.
+- The retained matrix ran on exact digest-pinned PostgreSQL 16.14 and 17.10
+  images. Each cell produced one sequential apply/replay, refused retargeting,
+  converged eight spawned processes to one apply/seven replays, replayed after
+  child exit following commit, and retained three receipts for three effects.
+- Each cell used a role with superuser/create-database/create-role/replication/
+  BYPASSRLS all false, refused direct receipt/effect mutation and malformed
+  digest input, listed a native custom dump, restored into an independent
+  database, preserved canonical history, and created no effect on restored
+  replay. Exact disposable-container cleanup passed.
+- PostgreSQL 16.14, PostgreSQL 17.10, and SQLite all produced canonical history
+  SHA-256 `1c42c656b8e09897710e05411c78a91c709c15b70309d2e68f1e4417f1ac32f8`.
+  The 14.142-second matrix report digest is
+  `3e53b99e9d33598d5f010d2b0ad405cbc167936840976564221f8b27bb4d33b1`
+  on Docker Engine 29.7.2 and Python 3.14.6.
+- The report is closed by Draft 2020-12 schema, canonical digest, exact runtime
+  image identities, source and supply-chain-policy digests, and negative
+  mutations. CI is defined to run and retain it before the broader live server
+  boundaries; no hosted run is claimed because D-485 prevents publication.
+- The final local regression collected 3,075 tests: 2,960 passed, 115 declared
+  capability skips, and 23 existing warnings in 716.62 seconds. Full-tree Ruff,
+  Mypy across 525 source files, Bandit, supply-chain policy, `uv lock --check`,
+  isolated Python 3.12 locked audit, JSON/YAML parsing, package build/membership,
+  and whitespace gates pass. The sdist has 1,763 entries and the wheel 625;
+  both contain their intended E-829 assets.
+- Ambient `python -m pip_audit` remains a failing host observation because its
+  installed `pip 26.1.2` is affected by `PYSEC-2026-3721`; the project-controlled
+  Python 3.12.13 locked audit reports zero findings and zero exceptions.
+- Gitleaks 8.30.1 scans the 662-commit / 25.18 MB complete history and a clean
+  27.62 MB archive of the implementation commit with no findings. The exact
+  temporary archive/directory were removed after the scan.
+- Boundary: this is two sequential single-node PostgreSQL versions on one
+  Docker Desktop host with synthetic digest-only effects. It does not prove a
+  live vendor, cross-host consensus or database failover, settlement finality,
+  accounting posting, HA/DR, production exactly-once effects, or publication.
+
 ## E-828 — Bounded receiver-side write-back idempotency (2026-08-22)
 
 - Added a frozen, closed, digest-only receiver request and a SQLite reference
@@ -17,8 +63,8 @@ Updated: 2026-08-22
 - An independent SQLite backup restores all three receipts/effects, retains the
   exact canonical history digest, and replays the crash identity without a new
   effect. All eleven closed checks and temporary-directory cleanup pass. The
-  2.188-second report digest is
-  `531f1c76f432eac04a3baab01341e08a70954c77161a81f4b24e5569835d21d3`
+  2.473-second refreshed report digest is
+  `cfe14335be6d04387d9f2c1be2909a1d843ebefe744e421f288cf096479274fb`
   on Python 3.14.6 / SQLite 3.50.4 using `spawn`.
 - The first drill invocation exposed SQLite handles left open by context-manager
   transaction exit on Windows; it failed during cleanup and produced no report.

@@ -5,6 +5,29 @@
 
 ## Decisions
 
+### D-929: Require server-backed receiver parity before distributed wording
+
+- **Date**: 2026-08-22
+- **Context**: E-828 proves one digest-only synthetic effect on a same-host
+  SQLite reference store, but does not exercise server-backed contention,
+  native backup/restore, or the declared PostgreSQL versions.
+- **Decision**: Adopt ADR 0543. Add an optional psycopg receiver using a
+  transaction-scoped canonical receiver/key lock and one atomic receipt/effect
+  transaction. Run one closed matrix on the exact PostgreSQL 16.14/17.10 image
+  digests and compare both histories with the retained SQLite report.
+- **Rationale**: The backend-neutral contract must survive real database
+  concurrency and restore before it can guide provider adapters, while live
+  vendor, cross-host, settlement, and production claims remain separate.
+- **Verification**: E-829 requires one apply/seven replays across eight spawned
+  processes, conflict and mutation refusal, crash replay, non-privileged role
+  flags, native dump listing, independent restore, exact cleanup, all 17 checks
+  true per version, and one canonical SQLite/PostgreSQL history digest.
+- **Compatibility**: The SQLite receiver, sender lifecycle, connector
+  manifests, product migrations, disabled write-back policy, and Community
+  import behavior remain unchanged; psycopg loads only on backend use.
+- **Rollback**: Remove only additive PostgreSQL receiver/matrix assets and
+  workflow definition. Preserve evidence and never treat conflict as replay.
+
 ### D-928: Require receiver-side effect evidence before idempotency claims
 
 - **Date**: 2026-08-22

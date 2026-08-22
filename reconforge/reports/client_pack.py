@@ -211,9 +211,9 @@ def _ensure_expected_publication_siblings(
     marker_path: Path | None,
 ) -> None:
     expected = {
-        staging_dir,
-        *(() if rollback_dir is None else (rollback_dir,)),
-        *(() if marker_path is None else (marker_path,)),
+        staging_dir.absolute(),
+        *(() if rollback_dir is None else (rollback_dir.absolute(),)),
+        *(() if marker_path is None else (marker_path.absolute(),)),
     }
     found = {
         *_publication_siblings(output_dir, "staging"),

@@ -47,6 +47,21 @@
 - `docker run --rm reconforge:baseline reconforge doctor` : Passed (Exit 0).
   - Health snapshot: Package/config/output/validation all OK with 10 warnings, 0 errors.
 
+#### E-822 hardened runtime refresh (2026-08-22)
+
+- Host: Docker Desktop 4.87.0, Linux engine 29.7.2/API 1.55 on Windows.
+- Baseline context/image/user: 53.82 MB; 149,556,826 bytes; UID/GID 0.
+- Final context/image/user: 216.25 KB; 58,773,988 bytes; fixed UID/GID 10001.
+  The accepted Python 3.11 Alpine runtime excludes uv, global pip/build
+  packages, source, project build manifests, and repository documentation.
+- Doctor, sample validation, audit-basic rules, and the complete demo pass with
+  `--network none --read-only` and bounded UID/GID-owned tmpfs mounts for
+  `/tmp` and `/app/output`.
+- This refresh is current local runtime evidence only. It does not supersede
+  hosted/reproducibility/scanning/signature/provenance requirements.
+- Docker Scout 1.24.0 exact-image scan: exit 0 after indexing 82 packages;
+  zero findings at all severities. The result is time-bounded.
+
 ### Disposable PostgreSQL boundary checks
 - `uv run --no-sync pytest -q -ra tests/test_application_metrics.py::test_live_postgres_metrics_and_sqlite_parity tests/test_alembic_postgres.py::test_alembic_upgrade_command_is_available_when_server_extra_is_installed` : **Passed (2/2)**.
   - Historical E-706 environment: Docker `postgres:16-alpine` 16.14, isolated database, Alembic head `0086_pg_close_reopened`, and a non-privileged `reconforge_app` role. The current source migration head is `0088_pg_currency_snapshot`; no live rerun of the new `0087`/`0088` migrations is implied here.

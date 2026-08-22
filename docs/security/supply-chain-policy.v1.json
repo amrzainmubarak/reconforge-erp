@@ -11,7 +11,7 @@
     "manager": "uv",
     "manager_version": "0.11.32",
     "manager_commit": "3010295ae7ff572de459987ad70db315a62ecd61",
-    "linux_x86_64_archive_sha256": "aab924fd522efd06f1c5f3b93a243864fc453132c94b2dc49f1371b528a4b967",
+    "linux_x86_64_archive_sha256": "1fd052f196108d87e61fc3d98fe06b4ec758c9a1eb1466a6fd1a436fe45885f2",
     "windows_x86_64_archive_sha256": "acfde570451cfdb8689fa159a138ee805ba4e241c466432750302c86254b0984",
     "exclude_newer": "2026-08-02T00:00:00Z",
     "supported_python": [
@@ -39,7 +39,7 @@
   },
   "container_resolution": {
     "dockerfile": "Dockerfile",
-    "base_image": "python:3.11-slim@sha256:a3ab0b966bc4e91546a033e22093cb840908979487a9fc0e6e38295747e49ac0",
+    "base_image": "python:3.11-alpine@sha256:6857d2dae63e052057f2db389a7061188ac9a92a3fa8d402bde68f36df6fada1",
     "dependency_command": "uv sync --locked --no-dev --no-editable --python 3.11 --link-mode copy"
   },
   "secret_scanning": {

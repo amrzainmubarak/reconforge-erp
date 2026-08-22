@@ -5,6 +5,41 @@
 
 ## Decisions
 
+### D-922: Compare client-pack publication siblings using canonical path identities
+
+- **Date**: 2026-08-22
+- **Context**: The hardened container demo exposed that a relative output path
+  produced a relative staging identity but sibling enumeration produced an
+  absolute identity, causing a clean publication to fail as ambiguous.
+- **Decision**: Adopt ADR 0536: normalize expected sibling identities to
+  lexical absolute paths only for comparison, preserving every marker, digest,
+  rename, bound, link check, unknown-sibling refusal, and caller-facing path.
+- **Rationale**: Recovery safety depends on filesystem identity, not the
+  caller's relative or absolute spelling of the same directory.
+- **Verification**: E-822; direct relative-path regression, the complete
+  publication/recovery suites, and the container demo pass.
+- **Compatibility**: Relative documented CLI paths are repaired; absolute
+  paths and artifact contracts are unchanged.
+- **Rollback**: Require an equivalent relative/absolute identity proof and
+  unknown-sibling refusal before replacing this normalization.
+
+### D-921: Separate trusted container build inputs from non-root runtime state
+
+- **Date**: 2026-08-22
+- **Context**: The prior image sent a 53.82 MB unrestricted context, retained
+  build tooling, and executed as root despite being a local-first CLI image.
+- **Decision**: Adopt ADR 0535: use a closed deny-by-default build context, two
+  digest-pinned stages, a runtime-only locked environment, fixed UID/GID
+  `10001:10001`, and one declared writable output boundary.
+- **Rationale**: Least privilege and build-context confidentiality must be
+  executable defaults rather than operator assumptions.
+- **Verification**: E-822 records the measured context/image deltas and the
+  no-network/read-only-root CLI and demo gates.
+- **Compatibility**: CLI/assets remain; host bind mounts must grant the chosen
+  runtime identity write access or use an explicit operator mapping.
+- **Rollback**: Never restore root or broad-context defaults; replace them only
+  with an equally bounded, tested runtime contract.
+
 ### D-920: Preserve foreign developer state and bootstrap beside it
 
 - **Date**: 2026-08-22

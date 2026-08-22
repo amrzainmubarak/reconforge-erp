@@ -45,6 +45,7 @@ def _copy_policy_project(tmp_path: Path) -> Path:
         ".github/scripts/run_locked_python_audit.py",
         ".github/workflows/release.yml",
         ".github/workflows/security.yml",
+        ".dockerignore",
         ".gitleaksignore",
         ".gitleaks.toml",
         "Dockerfile",
@@ -125,11 +126,54 @@ def _mutate_docker_base(root: Path) -> None:
     path.write_text(re.sub(r"@sha256:[0-9a-f]{64}", "", path.read_text(encoding="utf-8"), count=1), encoding="utf-8")
 
 
+def _mutate_docker_context(root: Path) -> None:
+    path = root / ".dockerignore"
+    path.write_text(path.read_text(encoding="utf-8").replace("*\n", "", 1), encoding="utf-8")
+
+
 def test_docker_uv_version_check_accepts_only_the_pinned_version_with_optional_build_metadata() -> None:
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
 
     assert "uv --version | grep -Eq '^uv 0\\.11\\.32( |$)'" in dockerfile
     assert 'test "$(uv --version)" = "uv 0.11.32"' not in dockerfile
+
+
+def test_docker_runtime_is_multistage_and_non_root() -> None:
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+
+    assert " AS builder" in dockerfile
+    assert " AS runtime" in dockerfile
+    assert "COPY --from=builder /app/.venv /app/.venv" in dockerfile
+    assert "/app/docs" not in dockerfile
+    assert "USER 10001:10001" in dockerfile
+    assert "chown 10001:10001 /app/output" in dockerfile
+    assert dockerfile.index("USER 10001:10001") < dockerfile.index('CMD ["reconforge", "doctor"]')
+
+
+def test_docker_context_is_deny_by_default() -> None:
+    rules = [
+        line.strip()
+        for line in (ROOT / ".dockerignore").read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+
+    assert rules[0] == "*"
+    assert {
+        "!.dockerignore",
+        "!Dockerfile",
+        "!LICENSE",
+        "!README.md",
+        "!alembic.ini",
+        "!pyproject.toml",
+        "!setup.py",
+        "!uv.lock",
+        "!alembic/**",
+        "!config/**",
+        "!control-packs/**",
+        "!examples/**",
+        "!reconforge/**",
+    } <= set(rules)
+    assert not any(rule.startswith("!.git") or "venv" in rule or "output" in rule for rule in rules)
 
 
 def _mutate_dependabot(root: Path) -> None:
@@ -184,6 +228,7 @@ def _mutate_release_unlocked_audit_environment(root: Path) -> None:
         _mutate_pyproject,
         _mutate_uv_source,
         _mutate_docker_base,
+        _mutate_docker_context,
         _mutate_dependabot,
         _mutate_gitleaks,
         _mutate_gitleaks_ignore,

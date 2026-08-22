@@ -2,6 +2,72 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-822: Bounded non-root container runtime and relative publication repair (2026-08-22)
+
+- Environment: Windows host, Docker Desktop 4.87.0 (236836), Linux engine
+  29.7.2/API 1.55 and BuildKit desktop-linux. The rejected baseline used pinned
+  Python slim digest `a3ab0b966bc4e91546a033e22093cb840908979487a9fc0e6e38295747e49ac0`;
+  the accepted runtime uses official Python 3.11 Alpine index digest
+  `6857d2dae63e052057f2db389a7061188ac9a92a3fa8d402bde68f36df6fada1`
+  (amd64 manifest `cc19a3e1085aba7d26690cf0725d9a3e083cbea0feec34ba8133d40a8ac1d399`,
+  Python 3.11.16/Alpine 3.24, official-image revision `fe89472b`).
+- Baseline `docker build --progress=plain -t reconforge:pre-e822 .` **PASS**:
+  build context 53.82 MB; image
+  `sha256:dd0a669b507a24573163a4d07136c6cd975486b1d22ec84db5d6debb8bfaa99b`,
+  149,556,826 bytes; `id` proved `uid=0(root) gid=0(root)`.
+- Intermediate two-stage Debian `reconforge:e822` build **PASS** functionally,
+  but `docker scout cves --only-severity critical,high --exit-code` correctly
+  exited 1: 173 packages, two Critical/eight High findings across Debian Perl,
+  OpenSSL, and global wheel/jaraco build packages. It is rejected evidence.
+- Final `docker build --progress=plain -t reconforge-erp .` **PASS**: the
+  workflow-named local rebuild used a deny-by-default 216.25 KB context; image
+  runtime manifest `sha256:23316ae8f0da9e68eb5f4cf00f0ca556da1a259f564df047a3ddb3c342501c03`,
+  config `sha256:a39843a5a48d3c071aa8988f0254456753d93bb6735e1648b4734eeb48c3ac1f`,
+  and 58,773,988 bytes. `id` proves `uid=10001(reconforge)` and absence checks prove
+  no uv, global pip launcher, project manifests, `/app/reconforge` source, or
+  `/app/docs`. Excluding documentation avoids an evidence/self-subject digest
+  cycle while keeping version-matched docs in source and release surfaces.
+- A second fully cached build retained the exact runtime manifest/config/size
+  but changed the local image-index digest because BuildKit regenerated its
+  attached provenance manifest. This is explicit evidence that OCI index-byte
+  reproducibility remains open; no reproducibility claim is inferred.
+- With `--network none --read-only`, a 16 MiB UID/GID-bound `/tmp` tmpfs and a
+  64 MiB UID/GID-bound `/app/output` tmpfs: Doctor **PASS**; sample validation
+  **PASS** with zero errors/ten expected data-quality warnings; audit-basic
+  control-pack validation **PASS** with eight rules.
+- The first 256 MiB-output demo attempt failed at client-pack publication with
+  `Client pack publication recovery state is ambiguous`. Root cause: relative
+  expected staging path versus absolute enumerated sibling identity. After ADR
+  0536 normalization, the same exact hardened command **PASS**, writing the
+  management pack, reports, dashboards, review artifacts, evidence binder,
+  client pack, reconciliation workbooks, and rule results.
+- Docker Scout 1.24.0 final exact-image scan **PASS** (exit 0): 82 indexed
+  packages and zero Critical, High, Medium, or Low findings. Scout warned that
+  Windows held its temporary archive during cleanup; indexing and gate exit
+  remained successful. The scan is time-bounded and is not signature,
+  provenance, reachability, license, or future-advisory proof.
+- The successful scan targeted an image index carrying the same exact runtime
+  manifest `23316ae8...` recorded above. A later scan of the regenerated local
+  attestation index indexed the same 82 packages but its CVE query was
+  **unavailable** after Docker Scout API connectivity timed out; it is neither
+  pass nor product failure and does not replace the successful content-subject
+  result.
+- `pytest -q tests/test_client_pack_copy_publication.py
+  tests/test_client_pack_publication_recovery.py
+  tests/test_supply_chain_policy.py`: **PASS** (51/51). Focused Ruff **PASS**;
+  focused mypy **PASS**. The expanded execution/release selector passes 84/84.
+- Final full local regression **PASS** in one run after collecting 2,985 tests;
+  every executed test passed and the declared PostgreSQL/Redis/S3/network,
+  object-lock, symlink/privilege, and other capability gates remained explicit
+  skips. Full-tree Ruff **PASS**; mypy **PASS** for 523 source files; Bandit
+  **PASS** with the existing reviewed warning/suppression inventory; policy
+  validation, exact uv 0.11.32 `uv lock --check`, package sdist/wheel build,
+  and `git diff --check` **PASS**.
+- Boundary: local synthetic/no-network execution only. Image reproducibility,
+  CVE/license completeness, hosted enforcement, signature/provenance,
+  production volume ownership, service hardening, and deployment assurance are
+  not established. Publication remains frozen by D-485.
+
 ## E-821: Platform-specific developer environment bootstrap (2026-08-22)
 
 - Initial `manage_developer_environment.py doctor` exited 1 with overall
@@ -6981,7 +7047,7 @@ Official source and immutable-tool research:
 
 | Source/input | Verified or selected result |
 | --- | --- |
-| `https://github.com/astral-sh/uv/releases/tag/0.11.32` | Latest stable observed 2026-07-26; commit `3010295ae7ff572de459987ad70db315a62ecd61`, Windows x86_64 archive SHA-256 `acfde570451cfdb8689fa159a138ee805ba4e241c466432750302c86254b0984`, Linux x86_64 archive SHA-256 `aab924fd522efd06f1c5f3b93a243864fc453132c94b2dc49f1371b528a4b967` |
+| `https://github.com/astral-sh/uv/releases/tag/0.11.32` | Latest stable observed 2026-07-26; commit `3010295ae7ff572de459987ad70db315a62ecd61`, Windows x86_64 archive SHA-256 `acfde570451cfdb8689fa159a138ee805ba4e241c466432750302c86254b0984`, Linux musl x86_64 archive SHA-256 `1fd052f196108d87e61fc3d98fe06b4ec758c9a1eb1466a6fd1a436fe45885f2` (the former glibc archive hash remains historical in earlier revisions) |
 | `https://github.com/astral-sh/setup-uv/releases/tag/v9.0.0` | Full action commit `c771a70e6277c0a99b617c7a806ffedaca235ff9` |
 | `https://github.com/gitleaks/gitleaks/releases/tag/v8.30.1` | Commit `83d9cd684c87d95d656c1458ef04895a7f1cbd8e`; Windows x64 archive SHA-256 `d29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e`, Linux x64 archive SHA-256 `551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb` |
 | `https://github.com/actions/setup-node` | Full selected v7 action commit `820762786026740c76f36085b0efc47a31fe5020` |

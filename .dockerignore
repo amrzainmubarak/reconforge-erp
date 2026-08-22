@@ -1,0 +1,22 @@
+# Deny the build context by default. Only files copied by Dockerfile are sent
+# to the builder, which keeps local environments, outputs, and repository
+# history outside the BuildKit trust boundary.
+*
+!.dockerignore
+!Dockerfile
+!LICENSE
+!README.md
+!alembic.ini
+!pyproject.toml
+!setup.py
+!uv.lock
+!alembic/
+!alembic/**
+!config/
+!config/**
+!control-packs/
+!control-packs/**
+!examples/
+!examples/**
+!reconforge/
+!reconforge/**

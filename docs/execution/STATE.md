@@ -2,6 +2,33 @@
 
 Updated: 2026-08-22
 
+## E-822 — Bounded non-root container runtime (2026-08-22)
+
+- Replaced the single-stage root image with two stages pinned to the same
+  reviewed Python digest. The runtime carries the locked non-editable virtual
+  environment and declared assets, omits uv/build manifests/source, and runs as
+  `10001:10001` with `/app/output` as its sole image-owned writable location.
+- Added a closed deny-by-default `.dockerignore` contract. The measured build
+  context fell from 53.82 MB to 216.25 KB on the final tree; migration
+  to the current official Python 3.11 Alpine digest plus removal of global
+  build packages and runtime documentation reduced image size from 149,556,826
+  to 58,773,988 bytes.
+- A clean Docker Desktop run passed Doctor, sample validation, control-pack
+  validation, and the complete demo with networking disabled, a read-only root,
+  and bounded `/tmp`/`/app/output` tmpfs mounts. The demo gate found and fixed a
+  relative-vs-absolute client-pack publication identity defect; focused
+  publication/recovery/supply-chain tests pass.
+- Docker Scout 1.24.0 rejected the intermediate Debian runtime with two
+  Critical and eight High findings, then passed the final Alpine runtime after
+  indexing 82 packages with zero findings at all severities.
+- The full local suite collected 2,985 tests and completed with every executed
+  test passing; Ruff, mypy, Bandit, lock/policy validation, package build, and
+  whitespace checks pass.
+- Boundary: one local Windows/Docker Desktop Linux-engine profile only. No
+  hosted rerun, OCI reproducibility, future CVE/license completeness, signature,
+  provenance, independent hardening, HA/DR, or production-readiness claim is
+  made. D-485 remains active.
+
 ## E-821 — Non-destructive developer environment recovery (2026-08-22)
 
 - Added a cross-platform developer environment manager with machine-readable

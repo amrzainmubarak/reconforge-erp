@@ -65,7 +65,7 @@ Measured through 2026-07-27 on the dirty snapshot in `BASELINE.md` and `STATE.md
 
 ## Release consequence
 
-The applicable local Python and web quality gates are now green, but the worktree must not be called release-ready. Same-machine artifact parity, deterministic clean-HEAD package/source SBOMs, and one supported local locked profile are bounded evidence only. Docker/OCI inventory and reproducibility, live server services, hosted Python 3.11/3.12 execution, clean-tree hosted artifacts, signatures/provenance, immutable publication, npm SRI completeness, and rollback drills remain outside this local proof.
+The applicable local Python and web quality gates are now green, but the worktree must not be called release-ready. Same-machine artifact parity, deterministic clean-HEAD package/source SBOMs, one supported local locked profile, and E-822's bounded non-root/no-network/read-only-root Docker CLI plus time-bounded exact-image vulnerability scan are local evidence only. Recurring/signed image vulnerability and license inventory, Docker/OCI reproducibility, live server services, hosted Python 3.11/3.12 execution, clean-tree hosted artifacts, signatures/provenance, immutable publication, and broader rollback drills remain outside this local proof.
 
 ## E-658 current regression note (2026-08-10)
 

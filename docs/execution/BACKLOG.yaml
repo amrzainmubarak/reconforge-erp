@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-822
+    priority: P0
+    area: container-security
+    title: Harden and verify the bounded local container runtime
+    status: completed
+    depends_on: [E-820]
+    exit_evidence: >-
+      A deny-by-default build context, two digest-pinned stages, runtime-only
+      dependency copy, and fixed non-root UID/GID are enforced by the closed
+      supply-chain validator. On the disclosed Docker Desktop host, Doctor,
+      validation, control-pack validation, and the complete demo pass without
+      networking on a read-only root with bounded writable tmpfs mounts. The
+      same gate exposed and regression-fixed relative client-pack publication.
+      This is local runtime evidence, not OCI reproducibility, image-vulnerability
+      assurance, or production deployment readiness.
   - id: E-821
     priority: P1
     area: developer-experience

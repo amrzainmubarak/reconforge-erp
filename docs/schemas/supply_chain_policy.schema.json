@@ -81,7 +81,7 @@
       "required": ["dockerfile", "base_image", "dependency_command"],
       "properties": {
         "dockerfile": {"const": "Dockerfile"},
-        "base_image": {"type": "string", "pattern": "^python:3\\.11-slim@sha256:[0-9a-f]{64}$"},
+        "base_image": {"type": "string", "pattern": "^python:3\\.11-alpine@sha256:[0-9a-f]{64}$"},
         "dependency_command": {"const": "uv sync --locked --no-dev --no-editable --python 3.11 --link-mode copy"}
       }
     },

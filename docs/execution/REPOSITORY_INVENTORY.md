@@ -206,10 +206,17 @@ ADRs to 81; schemas remain 53 and workflows remain six.
 - `docs/security/nist-ssdf-1.1-mapping.v1.yaml`: official-final-source-pinned mapping for all 42 NIST SSDF 1.1 tasks with architecture owners, bounded evidence, gaps, actions, and review cadence; it establishes no SSDF conformance or operating-process assurance.
 - `docs/security/slsa-provenance-plan.v1.yaml`: Approved-SLSA-1.2-pinned plan for five artifact identities, seven trust boundaries, attestation/verification/failure/rollback contracts, and 12 gates; both tracks remain UNEVALUATED.
 - `.github/workflows/`: CI, CodeQL, Docker, security, release candidate with integrated exact-subject SBOMs, and OpenSSF Scorecard workflows; action references observed in the workflows are pinned by full commit SHA.
-- `Dockerfile`: digest-pinned Python 3.11 slim base plus checksum/version-pinned uv and a locked non-editable runtime-only sync; local daemon verification is blocked in this environment.
+- `Dockerfile` + `.dockerignore`: two stages use the reviewed official-digest-
+  pinned Python 3.11 Alpine base; checksum/version-pinned uv musl creates the locked
+  non-editable environment only in the builder. The runtime omits build
+  tooling/source/manifests/documentation, runs as fixed UID/GID 10001, and the policy
+  validator closes the deny-by-default build-context allowlist. E-822 verifies
+  the bounded image locally without widening the deployment-readiness claim.
 - `docker-compose.yml`: local report/dashboard services; image tag is mutable.
 - `pyproject.toml` + `uv.lock`: lower-bounded consumer metadata plus a universal hash-bearing repository resolution for 128 non-root runtime/server/observability/backup/federation/MFA/build/tool packages, enforced with exact uv/cutoff policy; server includes boto3, observability pins OpenTelemetry API/SDK 1.44.0, backup/connectors pin cryptography 50.0.0, WebAuthn resolves with pyOpenSSL 26.4.0, and federation pins joserfc 1.7.4 plus python3-saml 1.16.0.
-- `apps/web/package-lock.json`: exact npm dependency versions for the web app; 155 non-root entries lack embedded `resolved`/`integrity` values and remain an explicit gap.
+- `apps/web/package-lock.json`: exact npm dependency versions for the web app;
+  all 211 non-root registry entries carry HTTPS resolution and SRI. Package
+  provenance, safety, reachability, and license suitability remain separate.
 
 ## Important inventory limitations
 

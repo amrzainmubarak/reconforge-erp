@@ -284,6 +284,23 @@ def test_successful_publication_replaces_stale_output_and_rebases_paths(
     assert _temporary_pack_paths(tmp_path) == []
 
 
+def test_successful_publication_accepts_relative_output_paths(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    source_root = Path("source")
+    _write_evidence(source_root, "private.bin", b"current")
+    output = Path("published")
+
+    artifacts = generate_client_pack(source_root, output)
+
+    assert artifacts.output_dir == output
+    assert artifacts.manifest_path == output / "files_manifest.json"
+    assert artifacts.manifest_path.is_file()
+    assert _temporary_pack_paths(Path.cwd(), output_name=output.name) == []
+
+
 def test_publish_failure_restores_previous_output(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

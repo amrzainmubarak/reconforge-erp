@@ -11,12 +11,14 @@ Measured through 2026-08-22 against the current local snapshot in `STATE.md`. Th
 | `npm.cmd --prefix apps/web audit --package-lock-only --audit-level=high` | Exit 0; 0 vulnerabilities reported | Covers the exact-version npm lock; all 211 current non-root entries have HTTPS registry resolution and embedded SRI |
 | Gitleaks 8.30.1 full history | Exit 0; 602 commits and about 22.49 MB scanned after two exact historical fingerprints were recorded for synthetic test fixtures | Checksum-verified binary and default rules; exact fingerprints are limited to known non-secret test literals; detection is not proof that no secret existed or that external credentials are safe |
 | Gitleaks 8.30.1 checked tree | Exit 0 across a clean 25.12 MB `git archive` checkout; the workspace scan is not evidence because generated environments caused a 6.30 GB/120-second timeout | Only generated/tool-owned paths are excluded; output is 100% redacted and every suppression is an exact commit/path/rule/line or path/rule/line fingerprint |
-| Docker | Not run | Daemon unavailable; image contents and runtime user/permissions were not verified locally |
+| Hardened Docker CLI profile | E-822 local exit 0: two official-digest-pinned Python 3.11 Alpine stages, closed 216.25 KB context, 58,773,988-byte runtime image, UID/GID 10001, no uv/global pip/source/build manifests/docs; Doctor, validation, rules, and demo pass without networking on a read-only root; Docker Scout 1.24.0 indexes 82 packages with zero findings at all severities | One Windows/Docker Desktop Linux-engine profile with synthetic inputs and a time-bounded scanner database; no hosted OCI reproducibility, future-CVE/license completeness, signature/provenance, production volume ownership, or deployed hardening assurance |
 
 ## Controls observed
 
 - GitHub Actions are referenced by full commit SHA in the six inspected workflows.
-- The Docker base image is pinned by SHA-256 digest.
+- Both Docker stages use the same policy-reviewed SHA-256-pinned base. A closed
+  deny-by-default `.dockerignore` allowlist is validator-enforced, build tooling
+  remains outside the runtime image, and the default identity is non-root.
 - Universal `uv.lock` closes runtime, server, backup, observability, dev, docs, and DuckDB resolution; uv 0.11.32, its official archive hashes, and an absolute upload cutoff are policy-pinned. Normal CI, server CI, Docker, security, and candidate definitions use `--locked`.
 - The closed supply-chain policy and exception registry require exact finding identity, repository issue, bounded owner/controls, two non-owner approvers, and at most 30 active days; there are no active exceptions. Scanner errors and report/exit disagreement fail closed.
 - Weekly Dependabot definitions cover pip, npm, Docker, and GitHub Actions. Bot output still requires lock diff review, audits, tests, and human review.
@@ -50,10 +52,19 @@ Measured through 2026-08-22 against the current local snapshot in `STATE.md`. Th
 ## Gaps and residual risk
 
 - The new dependency/secret workflow and pre-registry release gates have not executed on a hosted runner; local definitions and tests are not branch-protection or operating-effectiveness evidence.
-- The npm lock fixes versions but 155 entries lack embedded SRI. The policy counts and discloses the gap rather than treating it as full artifact integrity.
+- The current npm lock fixes versions and all 211 non-root registry records
+  carry HTTPS resolution and SRI. This closes the former recorded integrity
+  metadata gap but does not prove package provenance, safety, reachability, or
+  license suitability.
 - File ingestion remains partial: FI-005/FI-006/FI-007 generated evidence/review/report/Studio CSV/JSON, FI-008/FI-009/FI-014/FI-015/FI-016 paths, and AP/AR/audit/PostgreSQL-outbox/PostgreSQL-reconciliation/SQLite-matching/public-export/Redis-session FI-013 contracts are bounded; exact AST allowlists close current direct tabular/JSON/YAML parser calls. Legacy XLS has only OLE-signature/file-size checks; client-pack and database-export replacement now have bounded explicit recovery but retain observer/pre-marker/host-loss limits. Legacy DB/review-state semantics remain permissive. Authorship, actor authorization, task correctness, disclosure approval, and provenance are not authenticated; malware scanning, quarantine, HTTP upload, and future connector controls remain absent under R-018.
 - PostgreSQL and Redis service images use mutable major tags in CI; local live-service tests were skipped.
-- Checksum-verified local secret scans now pass, and bounded backup encryption plus an application restore-permission boundary have local evidence. No current runtime evidence exists for DAST, broad fuzzing, container/IaC scanning, signature/provenance verification, identity-provisioned restore operation, KMS/key rotation, HA/host-loss DR, air-gap installation, or penetration testing. Static release contracts are not cryptographic execution.
+- Checksum-verified local secret scans and the bounded E-822 container smoke
+  profile now pass, and bounded backup encryption plus an application
+  restore-permission boundary have local evidence. No current runtime evidence
+  exists for DAST, broad fuzzing, container/IaC vulnerability scanning,
+  signature/provenance verification, identity-provisioned restore operation,
+  KMS/key rotation, HA/host-loss DR, air-gap installation, or penetration
+  testing. Static release contracts are not cryptographic execution.
 - Signed provenance pipeline execution, protected archives, trusted-builder/source-control assessment, independent verification, revocation drill, training, environment/endpoint assurance, vulnerability response/root-cause operation, and the SP 800-218A AI community profile remain open; the SSDF/SLSA registries expose rather than satisfy these outcomes.
 - Deterministic local package/source SBOM files and synthetic image-normalizer fixtures are not proof of a hosted image scan, signed attestation, complete inventory, vulnerability/license assurance, or published release SBOM.
 - The worktree is too broad for a focused security review and includes authentication, tenant, DB, evidence, and worker changes together.

@@ -39,6 +39,26 @@ _ALLOWED_GITLEAKS_PATHS = {
     "'''(^|[\\\\/])\\.ruff_cache[\\\\/]'''",
     "'''(^|[\\\\/])(build|dist|output)[\\\\/]'''",
 }
+_DOCKER_CONTEXT_ALLOWLIST = {
+    "!.dockerignore",
+    "!Dockerfile",
+    "!LICENSE",
+    "!README.md",
+    "!alembic.ini",
+    "!pyproject.toml",
+    "!setup.py",
+    "!uv.lock",
+    "!alembic/",
+    "!alembic/**",
+    "!config/",
+    "!config/**",
+    "!control-packs/",
+    "!control-packs/**",
+    "!examples/",
+    "!examples/**",
+    "!reconforge/",
+    "!reconforge/**",
+}
 
 
 def _require_keys(value: object, expected: set[str], label: str) -> dict[str, Any]:
@@ -512,8 +532,9 @@ def _validate_dockerfile(root: Path, policy: dict[str, Any]) -> None:
     docker_policy = policy["container_resolution"]
     python_policy = policy["python_resolution"]
     text = _required_path(root, docker_policy["dockerfile"]).read_text(encoding="utf-8")
-    if text.count(f'FROM {docker_policy["base_image"]}') != 1:
-        raise SupplyChainPolicyError("Docker base image must match the reviewed digest")
+    stage_lines = [line for line in text.splitlines() if line.startswith("FROM ")]
+    if len(stage_lines) != 2 or any(line.split()[1] != docker_policy["base_image"] for line in stage_lines):
+        raise SupplyChainPolicyError("both Docker stages must use the reviewed base-image digest")
     required = (
         f"ADD --checksum=sha256:{python_policy['linux_x86_64_archive_sha256']} ",
         f"/astral-sh/uv/releases/download/{python_policy['manager_version']}/",
@@ -526,6 +547,13 @@ def _validate_dockerfile(root: Path, policy: dict[str, Any]) -> None:
             image = line.split()[1]
             if re.search(r"@sha256:[0-9a-f]{64}$", image) is None:
                 raise SupplyChainPolicyError("every Docker stage must use a digest-pinned image")
+    context_rules = [
+        line.strip()
+        for line in _required_path(root, ".dockerignore").read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    if not context_rules or context_rules[0] != "*" or set(context_rules[1:]) != _DOCKER_CONTEXT_ALLOWLIST:
+        raise SupplyChainPolicyError("Docker build context must match the closed deny-by-default allowlist")
 
 
 def _validate_workflows(root: Path, policy: dict[str, Any]) -> None:

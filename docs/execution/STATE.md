@@ -2,6 +2,35 @@
 
 Updated: 2026-08-22
 
+## E-825 — Immutable write-back proposal identity (2026-08-22)
+
+- Reproduced an internal-boundary defect where an allowed status transition
+  could change the connector, operation, payload digest, idempotency key,
+  requester, request time, or captured feature decision. Append-only rows did
+  not by themselves prove that approval referred to the original mutation.
+- Added a deterministic proposal digest and one shared transition validator.
+  SQLite and PostgreSQL repositories now reject proposal drift before INSERT;
+  full version digests still change as approval, acknowledgement, and
+  compensation evidence is added.
+- SQLite migration 42 and PostgreSQL Alembic 0089 audit existing history and
+  install direct-INSERT guards for JSON/column identity, proposed first state,
+  exact predecessor presence, immutable proposal fields, and allowed status
+  adjacency. PostgreSQL continues to reject UPDATE and DELETE.
+- SQLite uses a connection-local temporary audit table; a regression proves a
+  same-named main-database table and its contents are not removed or changed.
+- The authenticated connector API now returns the stable `proposal_digest` as
+  an additive evidence field. Valid callers and historical migration behavior
+  remain compatible; drifted history is deliberately refused for investigation.
+- A digest-pinned PostgreSQL 17.10 Alpine container exercised both write-back
+  histories through the enhanced trigger under a `NOBYPASSRLS` non-superuser
+  role. A separate isolated database completed head upgrade, two deep
+  downgrades, and three returns to current head 0089 before cleanup.
+- The full local regression collects 3,027 tests and passes all executable
+  tests: 2,912 passed and 115 declared capability skips. Ruff, Mypy across 523
+  source files, Bandit, the closed supply-chain policy, lock check, sdist/wheel
+  build, YAML contracts, and whitespace checks pass. No live provider call,
+  posting, push, PR, tag, release, or deployment occurred; D-485 remains active.
+
 ## E-824 — Governed fixed VEX and retained OpenSSL block (2026-08-22)
 
 - Independently traced the three Python CPE matches to the signed CPython

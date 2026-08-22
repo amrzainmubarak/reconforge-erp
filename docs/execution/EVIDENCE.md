@@ -2,6 +2,51 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-825: Immutable write-back proposal identity (2026-08-22)
+
+- Adversarial reproduction established that the former repositories validated
+  status adjacency but did not compare the persisted proposal identity with a
+  caller-supplied next version. A direct/internal caller could therefore
+  retarget an approved version without modifying the previous row.
+- `WritebackIntent.proposal_digest` canonically hashes the schema/scope,
+  connector/operation, payload digest, idempotency key, requester/request time,
+  and captured feature flag. Authorized lifecycle transitions keep that digest
+  stable while retaining distinct full evidence digests.
+- SQLite migration 42 and PostgreSQL Alembic 0089 audit existing histories and
+  install INSERT guards. Tests cover every proposal field, non-adjacent state,
+  repository bypass attempts, direct SQLite INSERT drift/state jumps, refusal
+  of a pre-existing drifted SQLite history, temporary audit-state isolation,
+  PostgreSQL SQL shape, migration lineage, and additive API correlation.
+- Focused connector, SQLite, PostgreSQL contract, Alembic, operations-registry,
+  and API selectors pass with only declared live-service skips. Full local
+  regression: **PASS**, 3,027 collected, 2,912 passed, 115 declared capability
+  skips, and 23 existing framework/legacy-input warnings. Ruff: **PASS**.
+  Mypy: **PASS** across 523 source files. Bandit: **PASS** after documenting
+  the fixed-constant migration SQL suppression. Closed supply-chain policy and
+  `uv lock --check`: **PASS**. Sdist/wheel build: **PASS**, including Alembic
+  0089. YAML contracts and `git diff --check`: **PASS**, with only the
+  preserved unrelated line-ending warning.
+- Disposable PostgreSQL runtime: Docker Engine 29.7.2 ran PostgreSQL 17.10
+  Alpine at reviewed digest
+  `sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193`.
+  The two live write-back tests passed under a `NOSUPERUSER`, `NOINHERIT`,
+  `NOBYPASSRLS` application role, including repository proposal drift and
+  administrator direct-INSERT trigger refusal. The isolated Alembic contract
+  upgraded to head, downgraded to 0051 and back to head, downgraded to 0011
+  and returned to head, then verified migration status at 0089. Four selected
+  tests passed; the container and isolated databases were removed afterward.
+- Boundary: this is one disposable local PostgreSQL host with synthetic data.
+  No provider, financial posting, production data, publication, HA/DR, or
+  deployment is claimed.
+- Post-commit Gitleaks 8.30.1 evidence: the checksum-verified Windows binary
+  scanned all 658 commits (24.93 MB) and reported no leaks. A `git archive`
+  checkout scanned 27.38 MB from its own root and also reported no leaks. One
+  deliberately discarded absolute-target invocation surfaced the existing
+  synthetic reliability fixture because its exact relative fingerprint could
+  not match an absolute extracted path; rerunning with CI-equivalent relative
+  paths applied the governed fingerprint and passed. The generated workspace
+  tree was not used as evidence.
+
 ## E-824: Governed fixed VEX and retained OpenSSL release block (2026-08-22)
 
 - Primary CPython evidence:

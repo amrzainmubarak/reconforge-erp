@@ -75,6 +75,19 @@
   The gate exits 1 and blocks registry authentication. No supported current
   Alpine candidate offered upstream-fixed OpenSSL 3.5.8 at review time.
 
+#### E-825 write-back lifecycle identity refresh (2026-08-22)
+
+- The SQLite schema head advances from 41 to 42 and the PostgreSQL source
+  Alembic head advances from `0088_pg_currency_snapshot` to
+  `0089_pg_writeback_identity`.
+- Focused local SQLite execution proves proposal-drift/state-jump refusal and
+  fail-closed upgrade behavior. A digest-pinned PostgreSQL 17.10 Alpine runtime
+  passes both write-back histories under a non-superuser/NOBYPASSRLS role and
+  an isolated three-upgrade/two-deep-downgrade Alembic drill through head 0089.
+- The API exposes an additive stable proposal digest. This is bounded intent
+  governance only, not provider connectivity, accounting posting, autonomous
+  approval, or production write-back assurance.
+
 ### Disposable PostgreSQL boundary checks
 - `uv run --no-sync pytest -q -ra tests/test_application_metrics.py::test_live_postgres_metrics_and_sqlite_parity tests/test_alembic_postgres.py::test_alembic_upgrade_command_is_available_when_server_extra_is_installed` : **Passed (2/2)**.
   - Historical E-706 environment: Docker `postgres:16-alpine` 16.14, isolated database, Alembic head `0086_pg_close_reopened`, and a non-privileged `reconforge_app` role. The current source migration head is `0088_pg_currency_snapshot`; no live rerun of the new `0087`/`0088` migrations is implied here.

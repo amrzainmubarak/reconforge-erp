@@ -6,7 +6,7 @@ Measured through 2026-08-22 against the current local snapshot in `STATE.md`. Th
 
 | Gate | Result | Scope boundary |
 | --- | --- | --- |
-| `python -m bandit -q -r reconforge` | E-131 local exit 0, no findings | Notices cover eight reviewed `# nosec B608` sites: one allowlisted backup identifier site and seven durable-job sites whose SQL identifiers derive only from immutable module-level `_JOB_COLUMNS`; every data value remains parameterized. Suppressions remain manual-review points. |
+| `python -m bandit -q -r reconforge` | Current local exit 0, no findings | Notices cover the reviewed fixed-SQL `# nosec B608` sites: the new write-back migration concatenates only two module constants, while earlier backup/durable-job sites use allowlisted identifiers or immutable module-level columns and parameterize every data value. Suppressions remain manual-review points. |
 | Hash-exported locked Python audit | The reviewed 128-package graph now resolves `pip 26.2`; the preceding `26.1.2` lock was rejected locally on 2026-08-22 for `PYSEC-2026-3721`. Isolated Python 3.11/3.12 runners exported all extras with hashes and pip-audit 2.10.1 reported zero known findings with no active exception. Older hosted Security/CI evidence remains historical and does not cover this workflow revision. | Advisory results are time-bounded; a fresh hosted Python 3.11/3.12 matrix is required, and reachability, provenance, malware, and license suitability are not proven; the SAML dependency warning remains monitored. |
 | `npm.cmd --prefix apps/web audit --package-lock-only --audit-level=high` | Exit 0; 0 vulnerabilities reported | Covers the exact-version npm lock; all 211 current non-root entries have HTTPS registry resolution and embedded SRI |
 | Gitleaks 8.30.1 full history | Exit 0; 602 commits and about 22.49 MB scanned after two exact historical fingerprints were recorded for synthetic test fixtures | Checksum-verified binary and default rules; exact fingerprints are limited to known non-secret test literals; detection is not proof that no secret existed or that external credentials are safe |
@@ -15,6 +15,13 @@ Measured through 2026-08-22 against the current local snapshot in `STATE.md`. Th
 
 ## Controls observed
 
+- E-825 binds every governed write-back version to the original proposal at
+  repository and database INSERT boundaries. SQLite migration 42 and
+  PostgreSQL Alembic 0089 refuse invalid predecessor/state histories and
+  mutation-identity drift; API evidence exposes a stable proposal digest. The
+  trigger and RLS path pass against digest-pinned PostgreSQL 17.10 under a
+  non-superuser/NOBYPASSRLS role. Provider authentication, distributed receiver
+  idempotency, hosted repetition, and production operating effectiveness remain open.
 - GitHub Actions are referenced by full commit SHA in the six inspected workflows.
 - Both Docker stages use the same policy-reviewed SHA-256-pinned base. A closed
   deny-by-default `.dockerignore` allowlist is validator-enforced, build tooling

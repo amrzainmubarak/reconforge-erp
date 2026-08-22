@@ -4,7 +4,7 @@ claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
   availability; the current_live_gate below records the separate unskipped run.
-current_source_migration_head: "0088_pg_currency_snapshot"
+current_source_migration_head: "0089_pg_writeback_identity"
 currency_registry_binding_contract:
   id: E-711
   executed_at: "2026-08-11"
@@ -15,6 +15,15 @@ currency_registry_binding_contract:
   migration_path: "alembic_upgrade_head_contract"
   covered_boundaries: [MasterDataService, PostgresMasterDataRepository, PostgresMasterDataApplicationRepository]
   limitations: [no_configured_live_postgresql_runtime, synthetic_data, no_live_fx, no_statutory_posting, no_production_claim]
+writeback_proposal_identity_contract:
+  id: E-825
+  executed_at: "2026-08-22"
+  database: "SQLite runtime plus disposable PostgreSQL 17.10 Alpine"
+  focused_result: passed
+  migration_head: "0089_pg_writeback_identity"
+  migration_path: "alembic_upgrade_head_contract"
+  covered_boundaries: [WritebackIntent, SQLiteWritebackIntentRepository, PostgresWritebackIntentRepository]
+  limitations: [single_node, synthetic_data, no_live_provider, no_accounting_posting, no_ha, no_production_claim]
 current_live_gate:
   id: E-163
   executed_at: "2026-07-28"

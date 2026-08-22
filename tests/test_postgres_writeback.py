@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from uuid import uuid4
 
@@ -24,6 +25,8 @@ from reconforge.infrastructure.postgres import (
     install_postgres_rls_schema,
 )
 from reconforge.infrastructure.postgres_writeback import (
+    POSTGRES_WRITEBACK_PROPOSAL_IDENTITY_AUDIT_SQL,
+    POSTGRES_WRITEBACK_PROPOSAL_IDENTITY_SQL,
     POSTGRES_WRITEBACK_SCHEMA_SQL,
     PostgresWritebackIntentRepository,
     PostgresWritebackPersistenceError,
@@ -38,6 +41,12 @@ def test_postgres_writeback_schema_is_rls_append_only_and_secret_free() -> None:
     assert "connector write-back intents cannot be deleted" in POSTGRES_WRITEBACK_SCHEMA_SQL
     assert "tenant_id = current_setting('app.tenant_id', true)" in POSTGRES_WRITEBACK_SCHEMA_SQL
     assert "secret" not in POSTGRES_WRITEBACK_SCHEMA_SQL.casefold()
+    assert "BEFORE INSERT OR UPDATE OR DELETE" in POSTGRES_WRITEBACK_PROPOSAL_IDENTITY_SQL
+    assert "connector write-back predecessor is missing" in POSTGRES_WRITEBACK_PROPOSAL_IDENTITY_SQL
+    assert "proposal identity is immutable" in POSTGRES_WRITEBACK_PROPOSAL_IDENTITY_SQL
+    assert "requested_at" in POSTGRES_WRITEBACK_PROPOSAL_IDENTITY_SQL
+    assert "existing connector write-back history violates" in POSTGRES_WRITEBACK_PROPOSAL_IDENTITY_AUDIT_SQL
+    assert "previous.version IS NULL" in POSTGRES_WRITEBACK_PROPOSAL_IDENTITY_AUDIT_SQL
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
@@ -58,6 +67,7 @@ def test_live_postgres_writeback_history_is_scoped_idempotent_and_append_only() 
         with admin.transaction():
             install_postgres_rls_schema(admin)
             admin.execute(POSTGRES_WRITEBACK_SCHEMA_SQL)
+            admin.execute(POSTGRES_WRITEBACK_PROPOSAL_IDENTITY_SQL)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
             admin.execute(
                 "GRANT SELECT, INSERT ON reconforge.connector_writeback_intents TO "
@@ -86,6 +96,45 @@ def test_live_postgres_writeback_history_is_scoped_idempotent_and_append_only() 
             assurance="mfa",
             reason="independent synthetic review",
         )
+        with pytest.raises(PostgresWritebackPersistenceError, match="writeback_proposal_identity_immutable"):
+            service.put(approved.model_copy(update={"operation": "payment.update"}), expected_version=1)
+        missing_operation = approved.model_dump(mode="json", exclude_none=False)
+        missing_operation.pop("operation")
+        with pytest.raises(psycopg.Error, match="fields are missing or invalid"), admin.transaction():
+            admin.execute(
+                """
+                INSERT INTO reconforge.connector_writeback_intents(
+                    tenant_id,intent_id,workspace_id,version,status,intent_digest,intent_json
+                ) VALUES(%s,%s,%s,%s,%s,%s,%s::jsonb)
+                """,
+                (
+                    approved.tenant_id,
+                    approved.intent_id,
+                    approved.workspace_id,
+                    2,
+                    approved.status.value,
+                    approved.digest,
+                    json.dumps(missing_operation),
+                ),
+            )
+        drifted = approved.model_copy(update={"payload_digest": "f" * 64})
+        with pytest.raises(psycopg.Error, match="proposal identity is immutable"), admin.transaction():
+            admin.execute(
+                """
+                INSERT INTO reconforge.connector_writeback_intents(
+                    tenant_id,intent_id,workspace_id,version,status,intent_digest,intent_json
+                ) VALUES(%s,%s,%s,%s,%s,%s,%s::jsonb)
+                """,
+                (
+                    drifted.tenant_id,
+                    drifted.intent_id,
+                    drifted.workspace_id,
+                    2,
+                    drifted.status.value,
+                    drifted.digest,
+                    json.dumps(drifted.model_dump(mode="json", exclude_none=False)),
+                ),
+            )
         assert service.put(approved, expected_version=1) == approved
         dispatched = dispatch_writeback(approved, policy=POLICY)
         assert service.put(dispatched, expected_version=2) == dispatched
@@ -135,6 +184,7 @@ def test_live_postgres_erpnext_payment_writeback_history_is_scoped_and_replayabl
         with admin.transaction():
             install_postgres_rls_schema(admin)
             admin.execute(POSTGRES_WRITEBACK_SCHEMA_SQL)
+            admin.execute(POSTGRES_WRITEBACK_PROPOSAL_IDENTITY_SQL)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
             admin.execute(
                 "GRANT SELECT, INSERT ON reconforge.connector_writeback_intents TO "

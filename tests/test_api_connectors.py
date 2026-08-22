@@ -61,6 +61,7 @@ def test_writeback_intent_api_is_authenticated_actor_bound_and_idempotent(tmp_pa
     assert first.json()["version"] == second.json()["version"] == 1
     assert first.json()["network_dispatch"] == "disabled"
     assert first.json()["digest"] == second.json()["digest"]
+    proposal_digest = first.json()["proposal_digest"]
 
     controller_login = client.post(
         "/api/v1/auth/login", json={"username": "controller", "password": "Secret-123"}
@@ -76,6 +77,7 @@ def test_writeback_intent_api_is_authenticated_actor_bound_and_idempotent(tmp_pa
     assert approval.json()["version"] == 2
     assert approval.json()["intent"]["status"] == "approved"
     assert approval.json()["network_dispatch"] == "disabled"
+    assert approval.json()["proposal_digest"] == proposal_digest
     repeated = client.post(
         f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/approve",
         json={"assurance": "mfa", "reason": "repeat", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},

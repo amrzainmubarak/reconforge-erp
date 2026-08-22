@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-825
+    priority: P0
+    area: connector-security
+    title: Bind every write-back lifecycle version to one immutable proposal identity
+    status: completed
+    depends_on: [E-1004, E-1005]
+    exit_evidence: >-
+      One canonical proposal digest binds scope, connector, operation, payload
+      digest, idempotency key, requester, request time, and feature decision.
+      Shared repository validation plus SQLite migration 42 and PostgreSQL
+      Alembic 0089 reject retargeted or non-adjacent versions, including direct
+      INSERTs, and fail closed when upgrading drifted history. Additive API
+      evidence exposes the stable proposal digest. A digest-pinned PostgreSQL
+      17.10 non-superuser drill verifies the trigger and repeated head
+      upgrade/downgrade path. Live provider behavior, production operation, and
+      autonomous approval remain excluded.
   - id: E-824
     priority: P0
     area: container-security
@@ -210,6 +226,10 @@ tasks:
       append-only, policy-gated, actor-separated, and digest-replayable; network transport is
       bounded, secrets are resolved at execution time only, and provider outcomes are recorded
       with immutable idempotency and compensation/reconciliation checkpoints.
+    completed_slices:
+      - E-825 binds every SQLite/PostgreSQL lifecycle version to the immutable
+        original proposal at application and INSERT boundaries, with fail-closed
+        migration audits and an additive API proposal digest.
   - id: E-1005
     priority: P0
     area: identity-governance
@@ -231,6 +251,9 @@ tasks:
       - E-817 centralizes trim+casefold identity/action comparisons for SoD and
         ownership checks, with property tests proving formatting cannot bypass
         approval/review/certification self-approval or prior-action conflicts.
+      - E-825 preserves the canonical requester and captured feature decision
+        across maker-checker write-back versions and rejects retargeting before
+        any later provider-facing effect.
   - id: E-1006
     priority: P1
     area: global-expansion

@@ -157,6 +157,7 @@ def propose_writeback_intent(
         "intent": current["intent"].model_dump(mode="json"),
         "version": current["version"],
         "digest": current["intent"].digest,
+        "proposal_digest": current["intent"].proposal_digest,
         "network_dispatch": "disabled",
     }
 
@@ -236,6 +237,7 @@ def approve_writeback_intent(
         "intent": stored.model_dump(mode="json"),
         "version": int(current["version"]) + 1,
         "digest": stored.digest,
+        "proposal_digest": stored.proposal_digest,
         "network_dispatch": "disabled",
     }
 
@@ -309,6 +311,7 @@ def dispatch_writeback_intent(
             "intent": acknowledged.model_dump(mode="json"),
             "version": marked["version"],
             "digest": acknowledged.digest,
+            "proposal_digest": acknowledged.proposal_digest,
             "network_dispatch": "already_acknowledged",
         }
 
@@ -348,6 +351,7 @@ def dispatch_writeback_intent(
         "intent": intent.model_dump(mode="json"),
         "version": persisted["version"],
         "digest": intent.digest,
+        "proposal_digest": intent.proposal_digest,
         "network_dispatch": "acknowledged",
         "request_digest": dispatch.request_digest,
         "response_digest": dispatch.response_digest,
@@ -409,6 +413,7 @@ def recover_writeback_intent(
             "intent": acknowledged.model_dump(mode="json"),
             "version": marked["version"],
             "digest": acknowledged.digest,
+            "proposal_digest": acknowledged.proposal_digest,
             "network_dispatch": "already_acknowledged",
         }
     _recheck_provider_permission(
@@ -460,6 +465,7 @@ def recover_writeback_intent(
         "intent": intent.model_dump(mode="json"),
         "version": persisted["version"],
         "digest": intent.digest,
+        "proposal_digest": intent.proposal_digest,
         "network_dispatch": "recovered",
         "request_digest": recovery.request_digest,
         "response_digest": recovery.response_digest,
@@ -535,6 +541,7 @@ def acknowledge_writeback_intent(
         "intent": stored.model_dump(mode="json"),
         "version": int(current["version"]) + 1,
         "digest": stored.digest,
+        "proposal_digest": stored.proposal_digest,
         "network_dispatch": "disabled",
     }
 
@@ -679,6 +686,7 @@ def dispatch_writeback_compensation(
             "intent": intent.model_dump(mode="json"),
             "version": int(cast(int, marked["version"])),
             "digest": intent.digest,
+            "proposal_digest": intent.proposal_digest,
             "network_dispatch": "already_compensated",
         }
     if not isinstance(registration, WritebackNetworkRegistration) or not isinstance(executor, WritebackNetworkExecutor):
@@ -741,6 +749,7 @@ def dispatch_writeback_compensation(
         "intent": persisted_intent.model_dump(mode="json"),
         "version": int(cast(int, persisted["version"])),
         "digest": persisted_intent.digest,
+        "proposal_digest": persisted_intent.proposal_digest,
         "network_dispatch": "already_compensated" if bool(persisted["already_compensated"]) else "compensated",
         "request_digest": dispatch.request_digest,
         "response_digest": dispatch.response_digest,
@@ -779,6 +788,7 @@ def _writeback_response(intent: WritebackIntent, version: int, *, server_mode: b
         "intent": intent.model_dump(mode="json"),
         "version": version,
         "digest": intent.digest,
+        "proposal_digest": intent.proposal_digest,
         "network_dispatch": "disabled",
         "source": {"kind": "postgresql-writeback-intent" if server_mode else "sqlite-writeback-intent", "server_mode": server_mode},
     }

@@ -5,6 +5,28 @@
 
 ## Decisions
 
+### D-925: Bind write-back evidence to the immutable original proposal
+
+- **Date**: 2026-08-22
+- **Context**: Append-only intent versions and valid status adjacency did not
+  prevent a direct caller from changing the provider mutation identity in the
+  next row.
+- **Decision**: Adopt ADR 0539. Canonically hash the proposal identity, require
+  that identity across every repository transition, and audit/install direct
+  INSERT lifecycle guards through SQLite migration 42 and PostgreSQL Alembic
+  0089. Return the proposal digest additively through the API.
+- **Rationale**: Approval is meaningful only when it remains bound to the same
+  scope, connector, operation, payload digest, idempotency domain, requester,
+  request time, and captured policy decision.
+- **Verification**: E-825 covers every immutable field, valid digest stability,
+  invalid state jumps, repository bypass, direct SQL bypass, upgrade refusal,
+  API correlation, and both migration registries.
+- **Compatibility**: Valid histories and callers remain valid; historical
+  migration definitions remain stable. Invalid pre-existing histories fail
+  closed for evidence-preserving investigation.
+- **Rollback**: PostgreSQL downgrade restores the previous UPDATE/DELETE-only
+  trigger. Never delete or rewrite history to bypass a migration audit.
+
 ### D-924: Accept only source-proven fixed VEX and preserve the OpenSSL block
 
 - **Date**: 2026-08-22

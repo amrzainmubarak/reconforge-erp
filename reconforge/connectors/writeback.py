@@ -48,6 +48,34 @@ class WritebackStatus(StrEnum):
     FAILED = "failed"
 
 
+WRITEBACK_PROPOSAL_IDENTITY_FIELDS: tuple[str, ...] = (
+    "schema_version",
+    "intent_id",
+    "tenant_id",
+    "workspace_id",
+    "connector_id",
+    "operation",
+    "payload_digest",
+    "idempotency_key",
+    "requested_by",
+    "requested_at",
+    "feature_enabled",
+)
+
+_WRITEBACK_TRANSITIONS: dict[WritebackStatus, frozenset[WritebackStatus]] = {
+    WritebackStatus.PROPOSED: frozenset({WritebackStatus.APPROVED, WritebackStatus.REJECTED}),
+    WritebackStatus.APPROVED: frozenset({WritebackStatus.DISPATCHED, WritebackStatus.REJECTED}),
+    WritebackStatus.DISPATCHED: frozenset(
+        {WritebackStatus.ACKNOWLEDGED, WritebackStatus.COMPENSATION_REQUESTED, WritebackStatus.FAILED}
+    ),
+    WritebackStatus.ACKNOWLEDGED: frozenset({WritebackStatus.COMPENSATION_REQUESTED}),
+    WritebackStatus.COMPENSATION_REQUESTED: frozenset({WritebackStatus.COMPENSATED, WritebackStatus.FAILED}),
+    WritebackStatus.COMPENSATED: frozenset(),
+    WritebackStatus.REJECTED: frozenset(),
+    WritebackStatus.FAILED: frozenset(),
+}
+
+
 class WritebackApproval(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -122,6 +150,13 @@ class WritebackIntent(BaseModel):
         return _digest_document(self.model_dump(mode="json", exclude_none=False))
 
     @property
+    def proposal_digest(self) -> str:
+        """Digest the immutable provider-mutation identity across all versions."""
+
+        document = self.model_dump(mode="json", include=set(WRITEBACK_PROPOSAL_IDENTITY_FIELDS))
+        return _digest_document(document)
+
+    @property
     def legacy_digest(self) -> str:
         """Digest used before compensation actor metadata was additive."""
 
@@ -137,6 +172,22 @@ class WritebackIntent(BaseModel):
 def _digest_document(document: object) -> str:
     encoded = json.dumps(document, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("ascii")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def validate_writeback_transition(previous: WritebackIntent, current: WritebackIntent) -> None:
+    """Validate one append-only lifecycle step against its immutable proposal.
+
+    A state transition may add approval, acknowledgement, or compensation
+    evidence. It must never retarget the provider mutation, payload, scope,
+    idempotency domain, requester, timestamp, or feature-policy decision.
+    """
+
+    if not isinstance(previous, WritebackIntent) or not isinstance(current, WritebackIntent):
+        raise WritebackError("writeback_transition_intent_invalid")
+    if previous.proposal_digest != current.proposal_digest:
+        raise WritebackError("writeback_proposal_identity_immutable")
+    if current.status not in _WRITEBACK_TRANSITIONS[previous.status]:
+        raise WritebackError("writeback_transition_invalid")
 
 
 @dataclass(frozen=True)

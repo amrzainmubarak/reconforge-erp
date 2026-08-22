@@ -4036,6 +4036,93 @@ BEGIN
 END;
 """
 
+WRITEBACK_PROPOSAL_IDENTITY_GUARD_SQL = """
+DROP TRIGGER IF EXISTS connector_writeback_intents_validate_insert;
+CREATE TRIGGER connector_writeback_intents_validate_insert
+BEFORE INSERT ON connector_writeback_intents
+BEGIN
+    SELECT CASE
+        WHEN json_valid(NEW.intent_json) <> 1
+        THEN RAISE(ABORT, 'write-back intent JSON is invalid')
+    END;
+    SELECT CASE
+        WHEN json_type(NEW.intent_json, '$.schema_version') IS NOT 'text'
+          OR json_type(NEW.intent_json, '$.intent_id') IS NOT 'text'
+          OR json_type(NEW.intent_json, '$.tenant_id') IS NOT 'text'
+          OR json_type(NEW.intent_json, '$.workspace_id') IS NOT 'text'
+          OR json_type(NEW.intent_json, '$.connector_id') IS NOT 'text'
+          OR json_type(NEW.intent_json, '$.operation') IS NOT 'text'
+          OR json_type(NEW.intent_json, '$.payload_digest') IS NOT 'text'
+          OR json_type(NEW.intent_json, '$.idempotency_key') IS NOT 'text'
+          OR json_type(NEW.intent_json, '$.requested_by') IS NOT 'text'
+          OR json_type(NEW.intent_json, '$.requested_at') IS NOT 'text'
+          OR (
+              json_type(NEW.intent_json, '$.feature_enabled') IS NOT 'true'
+              AND json_type(NEW.intent_json, '$.feature_enabled') IS NOT 'false'
+          )
+        THEN RAISE(ABORT, 'write-back proposal identity fields are missing or invalid')
+    END;
+    SELECT CASE
+        WHEN json_extract(NEW.intent_json, '$.intent_id') IS NOT NEW.intent_id
+          OR json_extract(NEW.intent_json, '$.tenant_id') IS NOT NEW.tenant_id
+          OR json_extract(NEW.intent_json, '$.workspace_id') IS NOT NEW.workspace_id
+          OR json_extract(NEW.intent_json, '$.status') IS NOT NEW.status
+        THEN RAISE(ABORT, 'write-back intent columns do not match JSON identity')
+    END;
+    SELECT CASE
+        WHEN NEW.version = 1 AND NEW.status <> 'proposed'
+        THEN RAISE(ABORT, 'write-back intent must start as proposed')
+    END;
+    SELECT CASE
+        WHEN NEW.version > 1 AND NOT EXISTS (
+            SELECT 1 FROM connector_writeback_intents AS previous
+            WHERE previous.intent_id = NEW.intent_id
+              AND previous.tenant_id = NEW.tenant_id
+              AND previous.workspace_id = NEW.workspace_id
+              AND previous.version = NEW.version - 1
+        )
+        THEN RAISE(ABORT, 'write-back intent predecessor is missing')
+    END;
+    SELECT CASE
+        WHEN NEW.version > 1 AND EXISTS (
+            SELECT 1 FROM connector_writeback_intents AS previous
+            WHERE previous.intent_id = NEW.intent_id
+              AND previous.tenant_id = NEW.tenant_id
+              AND previous.workspace_id = NEW.workspace_id
+              AND previous.version = NEW.version - 1
+              AND (
+                  json_extract(previous.intent_json, '$.schema_version') IS NOT json_extract(NEW.intent_json, '$.schema_version')
+                  OR json_extract(previous.intent_json, '$.connector_id') IS NOT json_extract(NEW.intent_json, '$.connector_id')
+                  OR json_extract(previous.intent_json, '$.operation') IS NOT json_extract(NEW.intent_json, '$.operation')
+                  OR json_extract(previous.intent_json, '$.payload_digest') IS NOT json_extract(NEW.intent_json, '$.payload_digest')
+                  OR json_extract(previous.intent_json, '$.idempotency_key') IS NOT json_extract(NEW.intent_json, '$.idempotency_key')
+                  OR json_extract(previous.intent_json, '$.requested_by') IS NOT json_extract(NEW.intent_json, '$.requested_by')
+                  OR json_extract(previous.intent_json, '$.requested_at') IS NOT json_extract(NEW.intent_json, '$.requested_at')
+                  OR json_extract(previous.intent_json, '$.feature_enabled') IS NOT json_extract(NEW.intent_json, '$.feature_enabled')
+              )
+        )
+        THEN RAISE(ABORT, 'write-back proposal identity is immutable')
+    END;
+    SELECT CASE
+        WHEN NEW.version > 1 AND NOT EXISTS (
+            SELECT 1 FROM connector_writeback_intents AS previous
+            WHERE previous.intent_id = NEW.intent_id
+              AND previous.tenant_id = NEW.tenant_id
+              AND previous.workspace_id = NEW.workspace_id
+              AND previous.version = NEW.version - 1
+              AND (
+                  (previous.status = 'proposed' AND NEW.status IN ('approved', 'rejected'))
+                  OR (previous.status = 'approved' AND NEW.status IN ('dispatched', 'rejected'))
+                  OR (previous.status = 'dispatched' AND NEW.status IN ('acknowledged', 'compensation_requested', 'failed'))
+                  OR (previous.status = 'acknowledged' AND NEW.status = 'compensation_requested')
+                  OR (previous.status = 'compensation_requested' AND NEW.status IN ('compensated', 'failed'))
+              )
+        )
+        THEN RAISE(ABORT, 'write-back intent transition is invalid')
+    END;
+END;
+"""
+
 WRITEBACK_INTENTS_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS connector_writeback_intents (
     intent_id TEXT NOT NULL,
@@ -4068,6 +4155,73 @@ SELECT roles.id, permissions.name
 FROM roles CROSS JOIN permissions
 WHERE roles.name IN ('admin', 'controller') AND permissions.name='connectors.writeback.propose';
 """
+
+# The statement and appended trigger are fixed module constants; no identifier
+# or value can be supplied by a caller.
+WRITEBACK_PROPOSAL_IDENTITY_MIGRATION_SQL = """
+DROP TABLE IF EXISTS temp.reconforge_writeback_identity_migration_check;
+CREATE TEMP TABLE reconforge_writeback_identity_migration_check (
+    violation INTEGER NOT NULL CHECK (violation = 0)
+);
+INSERT INTO reconforge_writeback_identity_migration_check(violation)
+SELECT CASE WHEN EXISTS (
+    SELECT 1 FROM connector_writeback_intents WHERE json_valid(intent_json) <> 1
+) THEN 1 ELSE 0 END;
+INSERT INTO reconforge_writeback_identity_migration_check(violation)
+SELECT CASE WHEN EXISTS (
+    SELECT 1
+    FROM connector_writeback_intents AS current
+    LEFT JOIN connector_writeback_intents AS previous
+      ON previous.intent_id = current.intent_id
+     AND previous.tenant_id = current.tenant_id
+     AND previous.workspace_id = current.workspace_id
+     AND previous.version = current.version - 1
+    WHERE json_type(current.intent_json, '$.schema_version') IS NOT 'text'
+       OR json_type(current.intent_json, '$.intent_id') IS NOT 'text'
+       OR json_type(current.intent_json, '$.tenant_id') IS NOT 'text'
+       OR json_type(current.intent_json, '$.workspace_id') IS NOT 'text'
+       OR json_type(current.intent_json, '$.connector_id') IS NOT 'text'
+       OR json_type(current.intent_json, '$.operation') IS NOT 'text'
+       OR json_type(current.intent_json, '$.payload_digest') IS NOT 'text'
+       OR json_type(current.intent_json, '$.idempotency_key') IS NOT 'text'
+       OR json_type(current.intent_json, '$.requested_by') IS NOT 'text'
+       OR json_type(current.intent_json, '$.requested_at') IS NOT 'text'
+       OR (
+           json_type(current.intent_json, '$.feature_enabled') IS NOT 'true'
+           AND json_type(current.intent_json, '$.feature_enabled') IS NOT 'false'
+       )
+       OR json_extract(current.intent_json, '$.intent_id') IS NOT current.intent_id
+       OR json_extract(current.intent_json, '$.tenant_id') IS NOT current.tenant_id
+       OR json_extract(current.intent_json, '$.workspace_id') IS NOT current.workspace_id
+       OR json_extract(current.intent_json, '$.status') IS NOT current.status
+       OR (current.version = 1 AND current.status <> 'proposed')
+       OR (current.version > 1 AND previous.version IS NULL)
+       OR (
+          current.version > 1
+          AND (
+              json_extract(previous.intent_json, '$.schema_version') IS NOT json_extract(current.intent_json, '$.schema_version')
+              OR json_extract(previous.intent_json, '$.connector_id') IS NOT json_extract(current.intent_json, '$.connector_id')
+              OR json_extract(previous.intent_json, '$.operation') IS NOT json_extract(current.intent_json, '$.operation')
+              OR json_extract(previous.intent_json, '$.payload_digest') IS NOT json_extract(current.intent_json, '$.payload_digest')
+              OR json_extract(previous.intent_json, '$.idempotency_key') IS NOT json_extract(current.intent_json, '$.idempotency_key')
+              OR json_extract(previous.intent_json, '$.requested_by') IS NOT json_extract(current.intent_json, '$.requested_by')
+              OR json_extract(previous.intent_json, '$.requested_at') IS NOT json_extract(current.intent_json, '$.requested_at')
+              OR json_extract(previous.intent_json, '$.feature_enabled') IS NOT json_extract(current.intent_json, '$.feature_enabled')
+          )
+       )
+       OR (
+          current.version > 1
+          AND NOT (
+              (previous.status = 'proposed' AND current.status IN ('approved', 'rejected'))
+              OR (previous.status = 'approved' AND current.status IN ('dispatched', 'rejected'))
+              OR (previous.status = 'dispatched' AND current.status IN ('acknowledged', 'compensation_requested', 'failed'))
+              OR (previous.status = 'acknowledged' AND current.status = 'compensation_requested')
+              OR (previous.status = 'compensation_requested' AND current.status IN ('compensated', 'failed'))
+          )
+       )
+) THEN 1 ELSE 0 END;
+DROP TABLE temp.reconforge_writeback_identity_migration_check;
+""" + WRITEBACK_PROPOSAL_IDENTITY_GUARD_SQL  # nosec B608
 
 WRITEBACK_APPROVAL_PERMISSION_SQL = """
 INSERT OR IGNORE INTO permissions (name, description)

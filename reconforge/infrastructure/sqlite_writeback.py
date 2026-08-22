@@ -6,26 +6,17 @@ import json
 import sqlite3
 from typing import Any
 
-from reconforge.connectors.writeback import WritebackIntent, WritebackStatus
+from reconforge.connectors.writeback import (
+    WritebackError,
+    WritebackIntent,
+    WritebackStatus,
+    validate_writeback_transition,
+)
 from reconforge.platform.common import ensure_platform_schema
 
 
 class WritebackPersistenceError(ValueError):
     """Safe persistence failure without payload or secret disclosure."""
-
-
-_TRANSITIONS: dict[WritebackStatus, frozenset[WritebackStatus]] = {
-    WritebackStatus.PROPOSED: frozenset({WritebackStatus.APPROVED, WritebackStatus.REJECTED}),
-    WritebackStatus.APPROVED: frozenset({WritebackStatus.DISPATCHED, WritebackStatus.REJECTED}),
-    WritebackStatus.DISPATCHED: frozenset(
-        {WritebackStatus.ACKNOWLEDGED, WritebackStatus.COMPENSATION_REQUESTED, WritebackStatus.FAILED}
-    ),
-    WritebackStatus.ACKNOWLEDGED: frozenset({WritebackStatus.COMPENSATION_REQUESTED}),
-    WritebackStatus.COMPENSATION_REQUESTED: frozenset({WritebackStatus.COMPENSATED, WritebackStatus.FAILED}),
-    WritebackStatus.COMPENSATED: frozenset(),
-    WritebackStatus.REJECTED: frozenset(),
-    WritebackStatus.FAILED: frozenset(),
-}
 
 
 class SQLiteWritebackIntentRepository:
@@ -61,8 +52,10 @@ class SQLiteWritebackIntentRepository:
                 return current["intent"]
             if expected_version is None or current["version"] != expected_version:
                 raise WritebackPersistenceError("write-back intent version conflict")
-            if intent.status not in _TRANSITIONS[current["intent"].status]:
-                raise WritebackPersistenceError("write-back intent transition is invalid")
+            try:
+                validate_writeback_transition(current["intent"], intent)
+            except WritebackError as exc:
+                raise WritebackPersistenceError(str(exc)) from exc
             version = int(current["version"]) + 1
         else:
             if expected_version not in {None, 0} or intent.status is not WritebackStatus.PROPOSED:

@@ -1,5 +1,19 @@
 # Quality Baseline
 
+## E-825 write-back proposal identity verification (2026-08-22)
+
+Focused domain, SQLite runtime, PostgreSQL contract, Alembic-chain, operations,
+and authenticated API tests pass, including adversarial proposal-field drift,
+direct INSERT state jumps, and fail-closed SQLite upgrade. A digest-pinned
+PostgreSQL 17.10 runtime passes both live write-back histories under a
+non-superuser/NOBYPASSRLS role, and a separate isolated database passes three
+head upgrades around two deep downgrades. Ruff, Mypy, and whitespace gates
+pass. A temporary-table regression proves the SQLite audit does not collide
+with same-named main-database data. The full post-slice regression collects
+3,027 tests and passes 2,912 with 115 declared capability skips; Bandit, the
+closed supply-chain policy, lock check, and package build pass. Provider
+behavior is not promoted by this local contract evidence.
+
 ## Current developer bootstrap verification (2026-08-22)
 
 E-821 adds a read-only developer Doctor and a non-destructive, locked,

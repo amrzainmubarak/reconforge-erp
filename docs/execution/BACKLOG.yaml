@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-833
+    priority: P0
+    area: connector-reliability
+    title: Classify provider status outcomes without lifecycle mutation
+    status: completed
+    depends_on: [E-832]
+    exit_evidence: >-
+      The recovery boundary exposes an additive provider-outcome taxonomy of
+      accepted, rejected, pending, not_found, and unknown. A non-mutating
+      observation carries the original idempotency key, HTTP status, raw-body
+      digest, provider reference/digest when present, and its own deterministic
+      observation digest. Only accepted observations can become an immutable
+      acknowledgement; all other outcomes remain outside the lifecycle and
+      require a later governed reconciliation decision. This is synthetic local
+      transport evidence, not live provider semantics or production assurance.
   - id: E-832
     priority: P0
     area: connector-reliability
@@ -368,6 +383,9 @@ tasks:
       - E-832 rejects an explicit negative provider outcome before it can become
         `acknowledged` or `compensated`; original dispatch, idempotency-status
         recovery, and compensation remain state-preserving on `accepted=false`.
+      - E-833 adds explicit accepted/rejected/pending/not_found/unknown recovery
+        observations with raw-response and observation digests; only accepted
+        status can advance the intent, and all other outcomes remain non-mutating.
   - id: E-1005
     priority: P0
     area: identity-governance

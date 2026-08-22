@@ -2,6 +2,20 @@
 
 Updated: 2026-08-22
 
+## E-833 — Classify provider status outcomes without lifecycle mutation (2026-08-22)
+
+- Added the explicit recovery outcome taxonomy: `accepted`, `rejected`,
+  `pending`, `not_found`, and `unknown`.
+- Added `observe_recovery()`, a non-mutating boundary returning the original
+  idempotency key, HTTP status, raw response-body SHA-256, provider reference
+  and provider response digest when available, and a deterministic observation
+  digest.
+- `recover()` can advance the intent only for `accepted`; all other outcomes
+  remain outside the lifecycle and require a later governed reconciliation.
+  Legacy boolean-only provider responses remain digest-compatible.
+- Focused connector transport/domain tests pass 55/55. Boundary: synthetic
+  provider-neutral evidence only, not live status semantics or production.
+
 ## E-832 — Reject negative provider outcomes before acknowledgement (2026-08-22)
 
 - Corrected a transport correctness gap: an explicit provider response with

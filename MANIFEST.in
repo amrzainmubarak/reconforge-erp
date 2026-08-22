@@ -919,3 +919,4 @@ include docs/schemas/postgres_writeback_recovery_compensation_matrix.schema.json
 include tests/test_postgres_writeback_recovery_compensation_matrix.py
 include docs/adr/0545-prove-writeback-recovery-compensation-parity.md
 include docs/adr/0546-reject-negative-provider-outcomes.md
+include docs/adr/0547-classify-provider-status-outcomes.md

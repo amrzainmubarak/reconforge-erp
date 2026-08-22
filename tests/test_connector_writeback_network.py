@@ -36,7 +36,9 @@ from reconforge.connectors.writeback_network import (
     WritebackNetworkExecutor,
     WritebackNetworkRegistration,
     WritebackNetworkResponse,
+    WritebackProviderOutcome,
     WritebackProviderResponse,
+    WritebackRecoveryObservation,
 )
 from reconforge.db import connect, run_migrations
 from reconforge.infrastructure.sqlite_writeback import SQLiteWritebackIntentRepository
@@ -93,12 +95,20 @@ def _compensation_requested_intent() -> WritebackIntent:
     return request_compensation(_dispatched_intent(), reason="provider accepted the original mutation but downstream state diverged")
 
 
-def _provider_body(intent_idempotency_key: str, *, reference: str = "provider-1", accepted: bool = True) -> bytes:
+def _provider_body(
+    intent_idempotency_key: str,
+    *,
+    reference: str = "provider-1",
+    accepted: bool = True,
+    outcome: WritebackProviderOutcome | None = None,
+) -> bytes:
     payload = {
         "accepted": accepted,
         "idempotency_key": intent_idempotency_key,
         "provider_reference": reference,
     }
+    if outcome is not None:
+        payload["outcome"] = outcome.value
     digest = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("ascii")).hexdigest()
     return json.dumps({**payload, "response_digest": digest}, sort_keys=True, separators=(",", ":")).encode("ascii")
 
@@ -295,6 +305,94 @@ def test_network_recovery_fails_closed_for_unknown_or_misbound_provider_status()
             policy=POLICY,
             transport=_RecoveryTransport(WritebackNetworkResponse(404, b"{}")),
         )
+
+
+@pytest.mark.parametrize(
+    ("status", "body_kind", "expected"),
+    [
+        (200, "accepted", WritebackProviderOutcome.ACCEPTED),
+        (200, "rejected", WritebackProviderOutcome.REJECTED),
+        (200, "explicit_pending", WritebackProviderOutcome.PENDING),
+        (202, "pending", WritebackProviderOutcome.PENDING),
+        (404, "not_found", WritebackProviderOutcome.NOT_FOUND),
+        (503, "unavailable", WritebackProviderOutcome.UNKNOWN),
+        (200, "malformed", WritebackProviderOutcome.UNKNOWN),
+    ],
+)
+def test_network_recovery_observation_classifies_provider_outcomes_without_state_advance(
+    status: int,
+    body_kind: str,
+    expected: WritebackProviderOutcome,
+) -> None:
+    intent = _dispatched_intent()
+    body = {
+        "accepted": _provider_body(intent.idempotency_key),
+        "rejected": _provider_body(intent.idempotency_key, accepted=False),
+        "explicit_pending": _provider_body(
+            intent.idempotency_key,
+            accepted=False,
+            outcome=WritebackProviderOutcome.PENDING,
+        ),
+        "pending": b'{"state":"processing"}',
+        "not_found": b"{}",
+        "unavailable": b"upstream unavailable",
+        "malformed": b"not-json",
+    }[body_kind]
+    observation = WritebackNetworkExecutor(
+        _Transport([]),
+        payload_resolver=_Payloads(),
+        secret_resolver=_Secrets(),
+    ).observe_recovery(
+        intent,
+        registration=_registration(
+            recovery_endpoint="https://api.example.test/v1/status",
+            egress_destinations=("https://api.example.test/v1/status", "https://api.example.test/v1/writeback"),
+        ),
+        policy=POLICY,
+        transport=_RecoveryTransport(WritebackNetworkResponse(status, body)),
+    )
+
+    assert isinstance(observation, WritebackRecoveryObservation)
+    assert observation.outcome is expected
+    assert observation.idempotency_key == intent.idempotency_key
+    assert len(observation.body_digest) == 64
+    assert len(observation.digest) == 64
+    assert intent.status is WritebackStatus.DISPATCHED
+    assert intent.acknowledgement is None
+
+
+def test_network_provider_outcome_is_digest_bound_and_must_agree_with_accepted_flag() -> None:
+    intent = _dispatched_intent()
+    valid = WritebackProviderResponse.model_validate_json(
+        _provider_body(intent.idempotency_key, accepted=False, outcome=WritebackProviderOutcome.REJECTED)
+    )
+    assert valid.normalized_outcome is WritebackProviderOutcome.REJECTED
+    with pytest.raises(ValidationError, match="contradicts accepted flag"):
+        WritebackProviderResponse.model_validate_json(
+            _provider_body(intent.idempotency_key, accepted=True, outcome=WritebackProviderOutcome.PENDING)
+        )
+
+
+def test_network_recovery_pending_outcome_requires_a_later_status_observation() -> None:
+    intent = _dispatched_intent()
+    executor = WritebackNetworkExecutor(
+        _Transport([]),
+        payload_resolver=_Payloads(),
+        secret_resolver=_Secrets(),
+    )
+
+    with pytest.raises(WritebackNetworkError, match="recovery_pending"):
+        executor.recover(
+            intent,
+            registration=_registration(
+                recovery_endpoint="https://api.example.test/v1/status",
+                egress_destinations=("https://api.example.test/v1/status", "https://api.example.test/v1/writeback"),
+            ),
+            policy=POLICY,
+            transport=_RecoveryTransport(WritebackNetworkResponse(202, b'{"state":"processing"}')),
+        )
+
+    assert intent.status is WritebackStatus.DISPATCHED
     with pytest.raises(WritebackNetworkError, match="recovery_acknowledgement_mismatch"):
         executor.recover(
             intent,

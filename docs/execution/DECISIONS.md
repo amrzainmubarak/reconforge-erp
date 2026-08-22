@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-933: Separate provider status observation from lifecycle transition
+
+- **Date**: 2026-08-22
+- **Context**: E-832 prevented negative responses from becoming acknowledgements,
+  but `pending`, `not_found`, and unusable/unknown status responses still needed
+  distinct, replayable meanings.
+- **Decision**: Adopt ADR 0547. Classify recovery responses as accepted,
+  rejected, pending, not_found, or unknown. Return a frozen observation with
+  raw-body and observation digests; only accepted can advance the intent.
+- **Rationale**: Status lookup is evidence collection, not a second mutation.
+  Distinct outcomes preserve operator choices and prevent guessed effects or
+  guessed failure states.
+- **Verification**: E-833 covers all five outcomes, legacy boolean responses,
+  key binding, response/observation digests, pending refusal, and no-state-
+  advance behavior; the focused selector passes 55/55.
+- **Compatibility**: The taxonomy is optional for legacy provider envelopes and
+  does not alter API/persistence schemas or historical intent digests.
+- **Rollback**: Remove the observation/classifier additions only with an
+  approved replacement that preserves no-advance semantics for every
+  non-accepted outcome.
+
 ### D-932: Never advance write-back state on a negative provider outcome
 
 - **Date**: 2026-08-22

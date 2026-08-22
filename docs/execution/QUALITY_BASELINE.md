@@ -1,5 +1,15 @@
 # Quality Baseline
 
+## E-833 provider status taxonomy (2026-08-22)
+
+Recovery status evidence is now explicit and non-mutating. The classifier
+distinguishes accepted, rejected, pending, not-found, and unknown responses;
+only accepted can create an acknowledgement. Frozen observations bind the
+original key and raw/response/observation digests. The focused connector
+transport/domain selector passes 55/55, including legacy response compatibility,
+pending refusal, key mismatch, retries, TLS, and sandbox paths. This is bounded
+synthetic quality, not live-provider or production quality.
+
 ## E-832 negative provider outcome guard (2026-08-22)
 
 The original dispatch and idempotency-status recovery paths now refuse a

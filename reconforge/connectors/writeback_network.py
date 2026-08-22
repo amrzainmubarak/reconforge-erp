@@ -18,6 +18,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Literal, Protocol
 from urllib.parse import urlsplit
 
@@ -51,6 +52,16 @@ _OPERATION_RE = re.compile(_OPERATION_PATTERN)
 
 class WritebackNetworkError(WritebackError):
     """Safe write-back transport failure without provider or secret disclosure."""
+
+
+class WritebackProviderOutcome(StrEnum):
+    """Provider status meanings used by the recovery boundary."""
+
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    PENDING = "pending"
+    NOT_FOUND = "not_found"
+    UNKNOWN = "unknown"
 
 
 class WritebackNetworkRegistration(BaseModel):
@@ -158,11 +169,14 @@ class WritebackProviderResponse(BaseModel):
     provider_reference: str = Field(min_length=1, max_length=512)
     idempotency_key: str = Field(min_length=1, max_length=200)
     accepted: bool
+    # Optional and additive: older providers only return ``accepted``.  When
+    # present, the taxonomy is digest-bound and must agree with that boolean.
+    outcome: WritebackProviderOutcome | None = None
     response_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
 
     @property
     def canonical_without_digest(self) -> bytes:
-        payload = self.model_dump(mode="json", exclude={"response_digest"})
+        payload = self.model_dump(mode="json", exclude={"response_digest"}, exclude_none=True)
         return json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("ascii")
 
     @model_validator(mode="after")
@@ -170,7 +184,38 @@ class WritebackProviderResponse(BaseModel):
         expected = hashlib.sha256(self.canonical_without_digest).hexdigest()
         if self.response_digest != expected:
             raise ValueError("provider response digest mismatch")
+        if self.outcome is not None:
+            expected_accepted = self.outcome is WritebackProviderOutcome.ACCEPTED
+            if self.accepted is not expected_accepted:
+                raise ValueError("provider outcome contradicts accepted flag")
         return self
+
+    @property
+    def normalized_outcome(self) -> WritebackProviderOutcome:
+        """Return a backward-compatible explicit outcome for this response."""
+
+        return self.outcome or (
+            WritebackProviderOutcome.ACCEPTED if self.accepted else WritebackProviderOutcome.REJECTED
+        )
+
+
+class WritebackRecoveryObservation(BaseModel):
+    """Digest-bound, non-mutating observation of a provider status lookup."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    outcome: WritebackProviderOutcome
+    idempotency_key: str = Field(min_length=1, max_length=200)
+    http_status: int = Field(ge=100, le=599)
+    body_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
+    provider_reference: str | None = Field(default=None, min_length=1, max_length=512)
+    provider_response_digest: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+
+    @property
+    def digest(self) -> str:
+        payload = self.model_dump(mode="json", exclude_none=False)
+        encoded = json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("ascii")
+        return hashlib.sha256(encoded).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -456,6 +501,57 @@ class WritebackNetworkExecutor:
         explicitly unresolved and require operator handling.
         """
 
+        observation = self.observe_recovery(
+            intent,
+            registration=registration,
+            policy=policy,
+            transport=transport,
+        )
+        if observation.outcome is not WritebackProviderOutcome.ACCEPTED:
+            error_code = {
+                WritebackProviderOutcome.REJECTED: "writeback_recovery_not_accepted",
+                WritebackProviderOutcome.PENDING: "writeback_recovery_pending",
+                WritebackProviderOutcome.NOT_FOUND: "writeback_recovery_not_found",
+                WritebackProviderOutcome.UNKNOWN: "writeback_recovery_unknown",
+            }[observation.outcome]
+            raise WritebackNetworkError(error_code)
+        if observation.provider_reference is None or observation.provider_response_digest is None:
+            raise WritebackNetworkError("writeback_recovery_response_schema_invalid")
+        acknowledged = intent.model_copy(
+            update={
+                "status": WritebackStatus.ACKNOWLEDGED,
+                "acknowledgement": WritebackAcknowledgement(
+                    provider_reference=observation.provider_reference,
+                    acknowledged_at=datetime.now(UTC),
+                    response_digest=observation.provider_response_digest,
+                    idempotency_key=observation.idempotency_key,
+                    accepted=True,
+                ),
+            }
+        )
+        return WritebackNetworkDispatch(
+            intent=acknowledged,
+            request_digest=_canonical_request_digest(intent, registration),
+            response_digest=observation.provider_response_digest,
+            attempts=1,
+        )
+
+    def observe_recovery(
+        self,
+        intent: WritebackIntent,
+        *,
+        registration: WritebackNetworkRegistration,
+        policy: WritebackPolicy,
+        transport: WritebackRecoveryTransport,
+    ) -> WritebackRecoveryObservation:
+        """Read provider status without advancing or mutating the intent.
+
+        The returned observation is deterministic and digest-bound to the raw
+        response body. Callers may persist it in a separately governed evidence
+        store; only an ``accepted`` observation may be passed through
+        :meth:`recover` to create a lifecycle acknowledgement.
+        """
+
         policy.authorize(intent)
         if not registration.feature_enabled or not intent.feature_enabled:
             raise WritebackNetworkError("writeback_network_feature_disabled")
@@ -486,25 +582,7 @@ class WritebackNetworkExecutor:
             raise
         except Exception as exc:
             raise WritebackNetworkError("writeback_recovery_transport_failed") from exc
-        provider = self._validate_recovery_response(response, intent.idempotency_key, registration)
-        acknowledged = intent.model_copy(
-            update={
-                "status": WritebackStatus.ACKNOWLEDGED,
-                "acknowledgement": WritebackAcknowledgement(
-                    provider_reference=provider.provider_reference,
-                    acknowledged_at=datetime.now(UTC),
-                    response_digest=provider.response_digest,
-                    idempotency_key=provider.idempotency_key,
-                    accepted=provider.accepted,
-                ),
-            }
-        )
-        return WritebackNetworkDispatch(
-            intent=acknowledged,
-            request_digest=_canonical_request_digest(intent, registration),
-            response_digest=provider.response_digest,
-            attempts=1,
-        )
+        return self._classify_recovery_response(response, intent.idempotency_key, registration)
 
     def dispatch_compensation(
         self,
@@ -636,28 +714,68 @@ class WritebackNetworkExecutor:
         raise WritebackNetworkError(f"{error_prefix}_retry_exhausted")
 
     @staticmethod
-    def _validate_recovery_response(
+    def _classify_recovery_response(
         response: WritebackNetworkResponse,
         idempotency_key: str,
         registration: WritebackNetworkRegistration,
-    ) -> WritebackProviderResponse:
+    ) -> WritebackRecoveryObservation:
         if len(response.body) > registration.maximum_response_bytes:
             raise WritebackNetworkError("writeback_recovery_response_too_large")
+        body_digest = hashlib.sha256(response.body).hexdigest()
         if response.status == 404:
-            raise WritebackNetworkError("writeback_recovery_not_found")
+            return WritebackRecoveryObservation(
+                outcome=WritebackProviderOutcome.NOT_FOUND,
+                idempotency_key=idempotency_key,
+                http_status=response.status,
+                body_digest=body_digest,
+            )
+        if response.status in {202, 408, 425, 429}:
+            return WritebackRecoveryObservation(
+                outcome=WritebackProviderOutcome.PENDING,
+                idempotency_key=idempotency_key,
+                http_status=response.status,
+                body_digest=body_digest,
+            )
+        if response.status in {400, 409, 422}:
+            return WritebackRecoveryObservation(
+                outcome=WritebackProviderOutcome.REJECTED,
+                idempotency_key=idempotency_key,
+                http_status=response.status,
+                body_digest=body_digest,
+            )
         if response.status < 200 or response.status >= 300:
-            raise WritebackNetworkError("writeback_recovery_http_failure")
+            return WritebackRecoveryObservation(
+                outcome=WritebackProviderOutcome.UNKNOWN,
+                idempotency_key=idempotency_key,
+                http_status=response.status,
+                body_digest=body_digest,
+            )
         if response.content_type.split(";", 1)[0].strip().lower() != "application/json":
-            raise WritebackNetworkError("writeback_recovery_response_content_type_invalid")
+            return WritebackRecoveryObservation(
+                outcome=WritebackProviderOutcome.UNKNOWN,
+                idempotency_key=idempotency_key,
+                http_status=response.status,
+                body_digest=body_digest,
+            )
         try:
             provider = WritebackProviderResponse.model_validate_json(response.body)
-        except (TypeError, ValueError) as exc:
-            raise WritebackNetworkError("writeback_recovery_response_schema_invalid") from exc
+        except (TypeError, ValueError):
+            return WritebackRecoveryObservation(
+                outcome=WritebackProviderOutcome.UNKNOWN,
+                idempotency_key=idempotency_key,
+                http_status=response.status,
+                body_digest=body_digest,
+            )
         if provider.idempotency_key != idempotency_key:
             raise WritebackNetworkError("writeback_recovery_acknowledgement_mismatch")
-        if not provider.accepted:
-            raise WritebackNetworkError("writeback_recovery_not_accepted")
-        return provider
+        return WritebackRecoveryObservation(
+            outcome=provider.normalized_outcome,
+            idempotency_key=provider.idempotency_key,
+            http_status=response.status,
+            body_digest=body_digest,
+            provider_reference=provider.provider_reference,
+            provider_response_digest=provider.response_digest,
+        )
 
     def _apply_rate_limit(self, registration: WritebackNetworkRegistration) -> None:
         now = self.clock()
@@ -681,6 +799,8 @@ __all__ = [
     "WritebackNetworkExecutor",
     "WritebackNetworkRegistration",
     "WritebackNetworkResponse",
+    "WritebackProviderOutcome",
+    "WritebackRecoveryObservation",
     "WritebackRecoveryTransport",
     "WritebackNetworkTransport",
     "WritebackPayloadResolver",

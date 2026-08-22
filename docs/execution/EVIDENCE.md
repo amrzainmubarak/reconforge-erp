@@ -2,6 +2,25 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-833: Classify provider status outcomes without lifecycle mutation (2026-08-22)
+
+- Added `WritebackProviderOutcome` with `accepted`, `rejected`, `pending`,
+  `not_found`, and `unknown`, plus the frozen `WritebackRecoveryObservation`
+  contract. The observation binds the original key, HTTP status, raw response
+  digest, provider response digest/reference when available, and its own
+  canonical digest.
+- `observe_recovery()` performs no lifecycle mutation. `recover()` consumes the
+  same classifier and advances only for `accepted`; pending, not-found,
+  rejected, and unknown outcomes remain state-preserving.
+- Focused command:
+  `python -m pytest tests/test_connector_writeback_network.py tests/test_connector_writeback.py -q`.
+  Result: 55 passed, including all five taxonomy values, legacy boolean-only
+  response compatibility, key binding, digest checks, pending refusal, retry,
+  TLS, secret boundaries, and local HTTPS sandbox behavior.
+- Boundary: injected/synthetic transport responses only. No live provider
+  contract, accounting, settlement, network credential, or production recovery
+  claim follows.
+
 ## E-832: Reject negative provider outcomes before acknowledgement (2026-08-22)
 
 - The shared `WritebackNetworkExecutor` now rejects `accepted=false` before

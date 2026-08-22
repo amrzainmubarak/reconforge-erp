@@ -2,6 +2,18 @@
 
 Measured through 2026-08-22 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
 
+## E-833 provider outcome observation controls (2026-08-22)
+
+- Status lookup is separated from mutation; observations are frozen and
+  digest-bound to the original idempotency key and raw response body.
+- `pending`, `not_found`, and `unknown` cannot become acknowledgement or failed
+  lifecycle states through the recovery executor.
+- Legacy boolean responses remain accepted only through deterministic
+  normalization; explicit outcomes are checked against the boolean and included
+  in the response digest.
+- Focused transport/domain tests pass 55/55 with synthetic responses and no
+  credentials or external network calls.
+
 ## E-832 negative provider outcome controls (2026-08-22)
 
 - A valid JSON envelope is not trusted as an effect: `accepted=false` is

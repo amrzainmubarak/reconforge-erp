@@ -5,6 +5,33 @@
 
 ## Decisions
 
+### D-923: Block registry authentication on exact local container evidence
+
+- **Date**: 2026-08-22
+- **Context**: The candidate workflow pushed its image before generating the
+  image SBOM and had no enforceable container CVE, scanner-database,
+  suppressed-match, subject-binding, or license-inventory policy. The current
+  local image now produces five High findings under the reviewed scanners.
+- **Decision**: Adopt ADR 0537. Build and scan the local Linux AMD64 image with
+  pinned Syft/Grype before registry authentication, validate the native
+  subject-bound report under a closed policy, preserve blocked evidence, and
+  verify that any later pushed manifest references the scanned configuration.
+  Repeat the gate weekly/manually and execute disposable drill images by
+  reviewed digest.
+- **Rationale**: Security evidence must prevent the first external publication
+  write, not merely describe an already-pushed candidate. Native Syft JSON
+  retains distro/image semantics needed by the scanner, while the portable
+  CycloneDX output remains the release SBOM.
+- **Verification**: E-823 records dedicated positive/negative/schema/workflow
+  tests and the exact local blocked evidence. Five High findings remain open as
+  E-824; no VEX or synthetic exception was created.
+- **Compatibility**: No CLI, API, database, persisted financial data, matching,
+  posting, audit, or tenant contract changes. Future SBOM manifests name Syft
+  1.51.0; retained 1.49.0 candidate evidence remains historical.
+- **Rollback**: Replace only with a control that proves equivalent
+  pre-authentication scanning, subject/database/scanner integrity, severity and
+  exception enforcement, retained failure evidence, and post-push binding.
+
 ### D-922: Compare client-pack publication siblings using canonical path identities
 
 - **Date**: 2026-08-22

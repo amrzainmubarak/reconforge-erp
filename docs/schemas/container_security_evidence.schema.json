@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/container_security_evidence.schema.json",
+  "title": "ReconForge container security evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "policy_id",
+    "evaluated_at",
+    "status",
+    "active_exception_count",
+    "image",
+    "tools",
+    "database",
+    "license_inventory",
+    "vulnerabilities",
+    "blockers"
+  ],
+  "properties": {
+    "$schema": {"const": "../schemas/container_security_evidence.schema.json"},
+    "schema_version": {"const": 1},
+    "policy_id": {"const": "reconforge-supply-chain"},
+    "evaluated_at": {"type": "string", "format": "date-time"},
+    "status": {"enum": ["passed", "blocked"]},
+    "active_exception_count": {"type": "integer", "minimum": 0},
+    "image": {"$ref": "#/$defs/image"},
+    "tools": {"$ref": "#/$defs/tools"},
+    "database": {"$ref": "#/$defs/database"},
+    "license_inventory": {"$ref": "#/$defs/licenses"},
+    "vulnerabilities": {"$ref": "#/$defs/vulnerabilities"},
+    "blockers": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 10}
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "passed"}}},
+      "then": {"properties": {"blockers": {"maxItems": 0}}},
+      "else": {"properties": {"blockers": {"minItems": 1}}}
+    }
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "prefixedSha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_name", "source_version", "config_digest", "local_manifest_digest", "platform", "distro"],
+      "properties": {
+        "source_name": {"const": "ghcr.io/amrzainmubarak/reconforge-erp"},
+        "source_version": {"type": "string"},
+        "config_digest": {"$ref": "#/$defs/prefixedSha256"},
+        "local_manifest_digest": {"$ref": "#/$defs/prefixedSha256"},
+        "platform": {"const": "linux/amd64"},
+        "distro": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "version"],
+          "properties": {
+            "id": {"type": "string", "minLength": 1},
+            "version": {"type": "string"}
+          }
+        }
+      }
+    },
+    "tools": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["syft", "grype"],
+      "properties": {
+        "syft": {"type": "string", "pattern": "^syft@[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "grype": {"type": "string", "pattern": "^grype@[0-9]+\\.[0-9]+\\.[0-9]+$"}
+      }
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "built_at", "age_seconds_at_scan"],
+      "properties": {
+        "schema_version": {"type": "string", "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "built_at": {"type": "string", "format": "date-time"},
+        "age_seconds_at_scan": {"type": "integer", "minimum": 0}
+      }
+    },
+    "licenses": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total_packages", "licensed_packages", "coverage_basis_points", "minimum_coverage_basis_points", "missing_license_packages", "legal_compatibility_assessed"],
+      "properties": {
+        "total_packages": {"type": "integer", "minimum": 1},
+        "licensed_packages": {"type": "integer", "minimum": 0},
+        "coverage_basis_points": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "minimum_coverage_basis_points": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "missing_license_packages": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 3}},
+        "legal_compatibility_assessed": {"const": false}
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "severity", "package", "version", "namespace", "fix_state", "match_types", "exception_id"],
+      "properties": {
+        "id": {"type": "string", "minLength": 3},
+        "severity": {"enum": ["Critical", "High"]},
+        "package": {"type": "string", "minLength": 1},
+        "version": {"type": "string"},
+        "namespace": {"type": "string"},
+        "fix_state": {"type": "string"},
+        "match_types": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "exception_id": {"type": ["string", "null"], "pattern": "^SC-EXC-[0-9]{4}$"}
+      }
+    },
+    "vulnerabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["counts", "critical_or_high_findings", "grype_report_sha256", "syft_inventory_sha256"],
+      "properties": {
+        "counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["critical", "high", "medium", "low", "negligible", "unknown"],
+          "properties": {
+            "critical": {"type": "integer", "minimum": 0},
+            "high": {"type": "integer", "minimum": 0},
+            "medium": {"type": "integer", "minimum": 0},
+            "low": {"type": "integer", "minimum": 0},
+            "negligible": {"type": "integer", "minimum": 0},
+            "unknown": {"type": "integer", "minimum": 0}
+          }
+        },
+        "critical_or_high_findings": {"type": "array", "items": {"$ref": "#/$defs/finding"}},
+        "grype_report_sha256": {"$ref": "#/$defs/sha256"},
+        "syft_inventory_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

@@ -2,6 +2,38 @@
 
 Updated: 2026-08-22
 
+## E-823 — Fail-closed exact-image container security gate (2026-08-22)
+
+- Added a closed supply-chain policy for Syft 1.51.0 and Grype 0.117.0,
+  checksum/commit/platform identity, Syft native schema/configuration, Grype
+  database schema and 120-hour age ceiling, exact image configuration/manifest
+  binding, suppressed-match refusal, Critical/High/Unknown handling, and 90%
+  package-license inventory coverage. Critical findings cannot be excepted;
+  High findings require an exact active container exception.
+- The release workflow now builds and scans without registry credentials,
+  enforces the gate before GHCR login, preserves blocked evidence, pushes only
+  after a pass, and verifies the registry manifest bytes/configuration against
+  the scanned subject. The security workflow repeats this on weekly/manual
+  runs while remaining skipped on ordinary push and pull-request events.
+- The exact local Alpine 3.24.1 image records 68 packages, 64 with usable
+  license metadata (94.11%), and Grype database v6.1.9. It is correctly
+  **blocked** by five unexcepted High findings: CVE-2026-14456 on libcrypto3
+  and libssl3, plus CVE-2026-3644, CVE-2026-4224, and CVE-2026-7210 on Python
+  3.11.16. No VEX or exception was inferred.
+- Disposable PostgreSQL 17.10 Alpine and Python 3.14.1 slim drill runtimes now
+  execute by reviewed digest while retaining their historical tag labels in
+  existing report schemas.
+- The 66-test focused release/supply-chain/drill selector and 14 execution
+  contract tests pass. The full local suite collects 3,002 tests and every
+  executable test passes; Ruff, mypy across 523 source files, Bandit, closed
+  policy validation, locked audit in local isolated mode, package build, and
+  whitespace checks pass.
+- Boundary: this is local scanner evidence and a hosted workflow definition.
+  The gate intentionally prevents release; no hosted run, legal license
+  assessment, reachability decision, independent advisory validation, registry
+  publication, or production-readiness assurance exists. E-824 is the next P0
+  remediation task and D-485 remains active.
+
 ## E-822 — Bounded non-root container runtime (2026-08-22)
 
 - Replaced the single-stage root image with two stages pinned to the same

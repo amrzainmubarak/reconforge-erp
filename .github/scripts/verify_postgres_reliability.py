@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 IMAGE = "postgres:17.10-alpine"
+IMAGE_REFERENCE = f"{IMAGE}@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
 
 
 def _run(
@@ -34,7 +35,7 @@ def run_drill() -> dict[str, Any]:
     try:
         _run([
             "docker", "run", "--rm", "-d", "--name", name,
-            "-e", f"POSTGRES_PASSWORD={postgres_password}", "-p", "127.0.0.1::5432", IMAGE,
+            "-e", f"POSTGRES_PASSWORD={postgres_password}", "-p", "127.0.0.1::5432", IMAGE_REFERENCE,
         ])
         for _ in range(120):
             probe = _run(
@@ -79,7 +80,7 @@ def run_drill() -> dict[str, Any]:
             "docker", "exec", name, "psql", "-h", "127.0.0.1", "-U", "postgres", "-d", "postgres",
             "-At", "-c", "SELECT version_num FROM alembic_version",
         ]).stdout.strip()
-        image_digest = _run(["docker", "image", "inspect", IMAGE, "--format", "{{index .RepoDigests 0}}"]).stdout.strip()
+        image_digest = _run(["docker", "image", "inspect", IMAGE_REFERENCE, "--format", "{{index .RepoDigests 0}}"]).stdout.strip()
         docker_version = _run(["docker", "version", "--format", "{{.Server.Version}}"]).stdout.strip()
     finally:
         removed = _run(["docker", "rm", "-f", name], check=False)

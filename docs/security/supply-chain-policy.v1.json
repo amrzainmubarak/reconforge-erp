@@ -40,7 +40,36 @@
   "container_resolution": {
     "dockerfile": "Dockerfile",
     "base_image": "python:3.11-alpine@sha256:6857d2dae63e052057f2db389a7061188ac9a92a3fa8d402bde68f36df6fada1",
-    "dependency_command": "uv sync --locked --no-dev --no-editable --python 3.11 --link-mode copy"
+    "dependency_command": "uv sync --locked --no-dev --no-editable --python 3.11 --link-mode copy",
+    "service_images": {
+      "airgap_python": "python:3.14.1-slim@sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e",
+      "postgres_drills": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
+    }
+  },
+  "container_audits": {
+    "sbom": {
+      "tool": "syft",
+      "version": "1.51.0",
+      "commit": "2293641e3bd628a01bb37639318d62c0ebe89b39",
+      "linux_x86_64_archive_sha256": "2a2e837a2c8d59ec9af5472ee22d3b04ee463c4e44476ecf993fd1e5ab6ebc7f",
+      "windows_x86_64_archive_sha256": "fc5ffaeffb993576ece9c791da5a688fb2c8969a1479bbfe58583672c64da336",
+      "native_schema_version": "16.1.10",
+      "scan_scope": "squashed",
+      "license_content_coverage": 75,
+      "minimum_license_coverage_percent": 90
+    },
+    "vulnerability": {
+      "tool": "grype",
+      "version": "0.117.0",
+      "commit": "b5fa92bbcbef655497e3be840a2f718380e2cdd3",
+      "linux_x86_64_archive_sha256": "38525dab1e06f162ebaa02f94d82d1f807076b011a44180cf2777edf1a7b9c26",
+      "windows_x86_64_archive_sha256": "7728ee9c06792e62444bd651274e4dd1e30eec02eee1266bb6c9c9d237d0f0cb",
+      "supported_db_schema": 6,
+      "max_database_age_hours": 120,
+      "scan_input_format": "syft-json",
+      "fail_severities": ["Critical", "High"],
+      "unknown_severity_policy": "fail"
+    }
   },
   "secret_scanning": {
     "config": ".gitleaks.toml",
@@ -94,12 +123,16 @@
       "python-audit",
       "javascript-audit",
       "git-secret-scan",
-      "tree-secret-scan"
+      "tree-secret-scan",
+      "container-sbom",
+      "container-vulnerability-audit",
+      "container-license-inventory"
     ]
   },
   "limitations": [
-    "A lock or clean vulnerability scan does not establish package safety, provenance, reachability, or license suitability.",
+    "A lock or clean vulnerability scan does not establish package safety, provenance, reachability, or legal license suitability.",
     "The npm lock records registry resolution and SRI for all 211 non-root entries; registry availability, package provenance, and package safety remain separate trust concerns.",
+    "Container license coverage is inventory evidence only; compatibility and distribution rights require independent legal review.",
     "Local scans do not prove that hosted branch protection or release gates executed."
   ]
 }

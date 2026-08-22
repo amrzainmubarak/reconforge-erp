@@ -30,8 +30,8 @@ definition or successful build does not change that result.
 | `source-archive` | Exact filename/version, SHA-256 subject, immutable source revision, matching package/npm metadata | Deterministic clean-HEAD local archive/SBOM plus candidate definition; no hosted attestation result |
 | `python-wheel` | Exact filename/version, SHA-256 subject, source revision, build definition | Candidate workflow definition; no hosted attestation result |
 | `python-sdist` | Exact filename/version, SHA-256 subject, same source revision as wheel | Candidate workflow definition; no hosted attestation result |
-| `container-image` | Registry repository plus manifest digest; Dockerfile/base/source/builder binding | Candidate workflow definition; no registry/attestation result |
-| `cyclonedx-sbom` | One exact file/digest per source/wheel/sdist/image subject, covered digest, generator/dependency/release binding | Deterministic local source/package outputs and candidate generation/attestation/verification definition; image scan remains fixture-only locally |
+| `container-image` | Registry repository plus manifest digest; Dockerfile/base/source/builder binding | Exact local configuration-bound image scan exists and currently blocks on five High findings; no registry/attestation result |
+| `cyclonedx-sbom` | One exact file/digest per source/wheel/sdist/image subject, covered digest, generator/dependency/release binding | Deterministic local source/package outputs plus an exact local Syft image inventory; no hosted image predicate or attestation result |
 
 All release subjects must be path-free and digest-addressed. Mutable tags are
 discovery aids, never sole identity. Package, image, SBOM, source revision, and
@@ -109,10 +109,11 @@ replacement digests.
 | `PROV-G12` | Artifact-specific claim/evidence review and expiry | Planned |
 
 Eight gates are partial: the repository now defines clean signed-tag checks,
-hash-locked release tools, commit-epoch package normalization, exact artifact
+hash-locked release and container-scanner tools, commit-epoch package normalization, exact artifact
 manifests, GitHub keyless provenance, strict bundle verification, and
-fail-before-candidate-upload behavior, plus one exact-subject CycloneDX 1.7
-generation/attestation set. Two local Python 3.14.6 builds reproduced
+fail-before-registry-authentication container policy, fail-before-candidate-upload behavior,
+and one exact-subject CycloneDX 1.7 generation/attestation set. The exact local
+image scan is currently blocked by five High findings. Two local Python 3.14.6 builds reproduced
 identical source, wheel, and normalized-sdist bytes; this does not cover the OCI
 image, supported-version runners, another platform, or a clean tag. No
 hosted run, signed output, retained verification, builder assessment, coupled

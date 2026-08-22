@@ -12,7 +12,7 @@ that hosted controls ran or that dependencies are safe.
 | --- | --- | --- | --- |
 | Python runtime/server/tools | `pyproject.toml` + universal `uv.lock` | `uv sync --locked`; supported Python 3.11/3.12 | Lock applies to the application and repository workflows, not downstream library consumers |
 | Web client | `apps/web/package.json` + npm v3 lock | `npm ci` | All 211 non-root records have HTTPS registry resolution and embedded SRI; the known integrity gap is zero |
-| Container | digest-pinned Python base + checksum-pinned uv archive + `uv.lock` | non-editable runtime-only sync | Docker is unavailable in the current local environment; no image build result exists |
+| Container | digest-pinned Python base and drill images + checksum-pinned uv/Syft/Grype archives + `uv.lock` | non-editable runtime-only sync; Syft native inventory is scanned by Grype before registry authentication | The 2026-08-22 local image is blocked by five High findings; no VEX or exception has been inferred |
 | Release build tools | `.github/release-build-requirements.txt` | pip `--require-hashes` | Separate from application resolution under ADR 0067 |
 
 The absolute uv cutoff makes an unchanged lock regeneration independent of
@@ -37,6 +37,18 @@ JSON report plus scanner exit code to the policy validator. Exit codes other
 than the scanner's clean/finding values fail as operational errors. The
 validator also rejects disagreement between the report and exit code. CI uses
 the same runner in `current` mode only after a locked dev-profile sync.
+
+Container publication additionally requires checksum/commit/platform-verified
+Syft 1.51.0 and Grype 0.117.0. The workflow builds one Linux AMD64 image without
+registry credentials, binds Syft and Grype reports to its configuration and
+manifest digests, requires a valid Grype v6 database no more than 120 hours old,
+and requires at least 90% package-license inventory coverage. It rejects
+Critical, unexcepted High, Unknown-severity, suppressed, stale, mismatched, or
+operationally failed scans. Critical findings cannot be excepted. An exact active
+exception may temporarily govern a High finding only through the closed registry.
+The evidence file is retained even when policy blocks publication. License
+coverage is an inventory completeness measure, not legal compatibility or
+distribution advice.
 
 With the checksum-verified Gitleaks 8.30.1 binary:
 
@@ -75,7 +87,9 @@ rule, regex, or stopword exclusions remain forbidden.
 7. Merge only after normal code review. Dependabot output does not bypass these
    steps.
 
-Weekly automation covers pip, npm, Docker, and GitHub Actions. A newly known
+Weekly automation covers pip, npm, Docker, GitHub Actions, and an exact local
+image scan. The container job runs on the weekly schedule and explicit dispatch;
+the release workflow always runs the same gate before GHCR login. A newly known
 vulnerability or confirmed secret triggers immediate review rather than waiting
 for the next weekly window.
 
@@ -91,7 +105,7 @@ entry to the exception registry containing:
 - creation/expiry dates no more than 30 days apart.
 
 An expired or revoked entry remains history but never exempts a gate. Critical
-npm findings cannot be excepted for release. Secret scan findings are not
+npm or container findings cannot be excepted for release. Secret scan findings are not
 silenced by this registry: remove a demonstrable false-positive pattern through
 a narrowly reviewed code/config change, or rotate/revoke and handle a confirmed
 secret. Never add the secret value to an allowlist or log it in an issue.

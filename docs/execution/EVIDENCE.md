@@ -2,6 +2,69 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-823: Exact-image pre-publication container security gate (2026-08-22)
+
+- Official release metadata and checksum files identified Syft 1.51.0 at
+  commit `2293641e3bd628a01bb37639318d62c0ebe89b39` and Grype 0.117.0 at
+  commit `b5fa92bbcbef655497e3be840a2f718380e2cdd3`. The downloaded Windows
+  AMD64 archives matched SHA-256
+  `fc5ffaeffb993576ece9c791da5a688fb2c8969a1479bbfe58583672c64da336`
+  and `7728ee9c06792e62444bd651274e4dd1e30eec02eee1266bb6c9d237d0f0cb`;
+  both binaries reported the expected application/version/commit/platform.
+  The release policy separately pins the official Linux AMD64 archive hashes
+  used by hosted workflows.
+- Grype database update **PASS** after downloading the current database:
+  schema v6.1.9, built `2026-08-22T06:14:16Z`, and valid at scan time.
+  Syft native JSON retained Alpine 3.24.1, Linux AMD64, exact image config
+  `sha256:a39843a5a48d3c071aa8988f0254456753d93bb6735e1648b4734eeb48c3ac1f`,
+  local manifest
+  `sha256:b89e9912efa6d274d850ecfbe701b9d44b7b8f041e2c8ed68c939f673cd3bea5`,
+  and 68 package artifacts.
+- `validate_container_security.py` exited **1 (policy blocked)**, not operational
+  error 2. It recorded five High, twelve Medium, two Low, one Negligible, zero
+  Critical, and zero Unknown findings. The five release blockers are
+  CVE-2026-14456 for libcrypto3 3.5.7-r0 and libssl3 3.5.7-r0, plus
+  CVE-2026-3644, CVE-2026-4224, and CVE-2026-7210 for Python 3.11.16.
+  No ignored match, VEX, or active exception was accepted or fabricated.
+- Package-license inventory found usable metadata for 64/68 packages: 9,411
+  basis points against the 9,000 policy minimum. Missing metadata is explicit
+  for `.python-rundeps`, markdown-it-py, mdurl, and Python. This proves only
+  inventory coverage and is not a legal compatibility or distribution-rights
+  conclusion.
+- `docs/execution/CONTAINER_SECURITY_LOCAL_2026-08-22.json` validates against
+  its closed schema. Rerunning the gate from the retained raw scanner inputs
+  produced the same evidence SHA-256
+  `cbcffc70bf9351558669b1640f1dc483da6c1101c6704cdc8bfc4351e3c0c479`
+  byte for byte while retaining the expected blocked exit.
+- Focused selector across container evidence, supply-chain policy, release
+  SBOM/release workflows, repeated HA/DR, air-gap, and PostgreSQL reliability
+  contracts: **PASS**, 66 tests collected with one declared Windows symlink
+  capability skip. Phase 1-4 execution contracts: **PASS**, 14/14.
+- Full local regression `python -m pytest -q --tb=short -ra`: **PASS**, 3,002
+  tests collected and all executable tests passed; live PostgreSQL, Redis,
+  S3/object-lock, public-network, and Windows link/privilege capabilities
+  remained explicit skips. Ruff **PASS**; mypy **PASS** for 523 source files;
+  Bandit **PASS** with the existing reviewed warnings; policy validation and
+  `uv lock --check` **PASS**; wheel/sdist build **PASS**; workflow YAML parse
+  and `git diff --check` **PASS**.
+- One deliberately incorrect local invocation of the hosted `current` audit
+  mode failed operationally because uv encountered the preserved foreign
+  `.venv/lib64` path on Windows. The documented local `isolated` mode then
+  **PASS** with Python 3.12.13, the exact locked 128-package audit boundary,
+  zero active exceptions, and no Python findings. The failed invocation is an
+  environment/mode mismatch, not a converted success.
+- The release workflow now runs the exact gate before `docker/login-action`,
+  preserves blocked evidence, and after a pass verifies that registry manifest
+  bytes match their digest and reference the scanned image configuration. The
+  weekly/manual security job repeats the local gate. These hosted definitions
+  have not run on this unpushed branch.
+- Boundary: the current image is not releaseable under policy. The evidence is
+  local and time-bounded, scanner findings may require upstream/remediation or
+  independent reachability/VEX review, license compatibility is unassessed,
+  and no registry push, hosted attestation, compliance, certification, or
+  production-readiness claim is made. D-485 remains active; E-824 owns
+  remediation.
+
 ## E-822: Bounded non-root container runtime and relative publication repair (2026-08-22)
 
 - Environment: Windows host, Docker Desktop 4.87.0 (236836), Linux engine

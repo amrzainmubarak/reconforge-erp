@@ -2,13 +2,42 @@
 updated_at: "2026-08-22"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
-  evidence_base_commit: "5d401e70c3a0e3cf507c2c7cf635dfc99b01a9af"
+  evidence_base_commit: "ef50b8710e2cf647a10fc2f9252a66bb4548f415"
   policy_change_commit: "the commit containing this file"
   published: false
 status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-824
+    priority: P0
+    area: container-security
+    title: Remediate or independently disposition current exact-image High findings
+    status: planned
+    depends_on: [E-823]
+    exit_evidence: >-
+      Release remains blocked until the exact rebuilt image passes the closed
+      container gate, or every High finding is independently reviewed and an
+      exact time-bounded exception/VEX path is approved under policy. Critical
+      findings remain non-exceptable. Current blockers are CVE-2026-14456 on
+      libcrypto3/libssl3 and CVE-2026-3644, CVE-2026-4224, and CVE-2026-7210
+      on Python 3.11.16. No exception is currently active.
+  - id: E-823
+    priority: P0
+    area: supply-chain
+    title: Gate container publication on exact SBOM, CVE, and license evidence
+    status: completed
+    depends_on: [E-822]
+    exit_evidence: >-
+      Closed policy and schemas pin Syft 1.51.0, Grype 0.117.0, scanner archive
+      hashes/commits/platform, native subject identity, database age/schema,
+      ignored-match refusal, Critical/High/Unknown behavior, exact exceptions,
+      and 90 percent license-inventory coverage. Release scans before GHCR
+      authentication and verifies the pushed configuration binding; weekly or
+      manual security runs repeat the local-image gate. Checked local evidence
+      is correctly blocked by five High findings while recording 68 packages
+      and 94.11 percent license inventory. No publication or readiness claim is
+      made, and remediation remains E-824.
   - id: E-822
     priority: P0
     area: container-security

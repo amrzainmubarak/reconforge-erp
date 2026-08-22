@@ -22,6 +22,7 @@ from reconforge.upgrade.postgres_adapter import PsycopgAlembicMigrationRunner
 
 ROOT = Path(__file__).resolve().parents[2]
 IMAGE = "postgres:17.10-alpine"
+IMAGE_REFERENCE = f"{IMAGE}@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
 # Disposable localhost-only credential shared with the fixed Docker tool runner.
 PASSWORD = "reconforge-synthetic-upgrade-only"  # nosec B105
 KEY = bytes(range(32))
@@ -145,7 +146,7 @@ def main() -> int:
             (
                 "docker", "run", "--detach", "--name", primary, "--label", f"reconforge.drill={drill_id}",
                 "--network", control_network, "--publish", "127.0.0.1::5432", "--env", f"POSTGRES_PASSWORD={PASSWORD}",
-                "--volume", f"{primary_volume}:/var/lib/postgresql/data", IMAGE,
+                "--volume", f"{primary_volume}:/var/lib/postgresql/data", IMAGE_REFERENCE,
                 "-c", "wal_level=replica", "-c", "max_wal_senders=10", "-c", "max_replication_slots=10",
                 "-c", "hot_standby=on",
             )
@@ -168,7 +169,7 @@ def main() -> int:
         _run(
             (
                 "docker", "run", "--rm", "--network", replication_network, "--env", f"PGPASSWORD={PASSWORD}",
-                "--volume", f"{standby_volume}:/var/lib/postgresql/data", "--entrypoint", "sh", IMAGE,
+                "--volume", f"{standby_volume}:/var/lib/postgresql/data", "--entrypoint", "sh", IMAGE_REFERENCE,
                 "-c", "rm -rf /var/lib/postgresql/data/* && pg_basebackup -h primary-repl -U replicator -D /var/lib/postgresql/data -Fp -Xs -R -C -S reconforge_dr_slot",
             )
         )
@@ -176,7 +177,7 @@ def main() -> int:
             (
                 "docker", "run", "--detach", "--name", standby, "--label", f"reconforge.drill={drill_id}",
                 "--network", control_network, "--publish", "127.0.0.1::5432", "--env", f"POSTGRES_PASSWORD={PASSWORD}",
-                "--volume", f"{standby_volume}:/var/lib/postgresql/data", IMAGE,
+                "--volume", f"{standby_volume}:/var/lib/postgresql/data", IMAGE_REFERENCE,
             )
         )
         created.append(("container", standby))
@@ -304,7 +305,7 @@ def main() -> int:
         _run(
             (
                 "docker", "run", "--rm", "--network", replication_network, "--env", f"PGPASSWORD={PASSWORD}",
-                "--volume", f"{primary_volume}:/var/lib/postgresql/data", "--entrypoint", "sh", IMAGE,
+                "--volume", f"{primary_volume}:/var/lib/postgresql/data", "--entrypoint", "sh", IMAGE_REFERENCE,
                 "-c", "rm -rf /var/lib/postgresql/data/* && pg_basebackup -h standby-repl -U replicator -D /var/lib/postgresql/data -Fp -Xs -R -C -S reconforge_failback_slot",
             )
         )
@@ -312,7 +313,7 @@ def main() -> int:
             (
                 "docker", "run", "--detach", "--name", rejoined, "--label", f"reconforge.drill={drill_id}",
                 "--network", control_network, "--publish", "127.0.0.1::5432", "--env", f"POSTGRES_PASSWORD={PASSWORD}",
-                "--volume", f"{primary_volume}:/var/lib/postgresql/data", IMAGE,
+                "--volume", f"{primary_volume}:/var/lib/postgresql/data", IMAGE_REFERENCE,
             )
         )
         created.append(("container", rejoined))

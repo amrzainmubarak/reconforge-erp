@@ -25,6 +25,7 @@ from reconforge.upgrade.postgres_adapter import (
 
 ROOT = Path(__file__).resolve().parents[2]
 IMAGE = "postgres:17.10-alpine"
+IMAGE_REFERENCE = f"{IMAGE}@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
 PASSWORD = "reconforge-synthetic-upgrade-only"
 
 
@@ -108,7 +109,7 @@ def main() -> int:
     container_id = ""
     try:
         container_id = _command(
-            ("docker", "run", "--detach", "--rm", "--name", container, "-e", f"POSTGRES_PASSWORD={PASSWORD}", "-p", "127.0.0.1::5432", IMAGE),
+            ("docker", "run", "--detach", "--rm", "--name", container, "-e", f"POSTGRES_PASSWORD={PASSWORD}", "-p", "127.0.0.1::5432", IMAGE_REFERENCE),
             capture=True,
         )
         port_line = _command(("docker", "port", container, "5432/tcp"), capture=True)

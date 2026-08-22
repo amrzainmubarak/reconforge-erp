@@ -37,8 +37,8 @@
         "cyclonedx_spec_version": { "const": "1.7" },
         "predicate_type": { "const": "https://cyclonedx.org/bom" },
         "python_generator": { "const": "reconforge-release-sbom-builder@1.0.0" },
-        "image_generator": { "const": "syft@1.49.0" },
-        "image_generator_commit": { "const": "29fd7d0dec81cf03e0a1194a1985c7c893bb2396" }
+        "image_generator": { "const": "syft@1.51.0" },
+        "image_generator_commit": { "const": "2293641e3bd628a01bb37639318d62c0ebe89b39" }
       }
     },
     "sboms": {

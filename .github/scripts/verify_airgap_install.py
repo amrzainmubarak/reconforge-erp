@@ -23,6 +23,7 @@ from verify_application_upgrade import build_tagged_wheel  # noqa: E402
 from reconforge.sovereign.offline_bundle import verify_offline_bundle  # noqa: E402
 
 IMAGE = "python:3.14.1-slim"
+IMAGE_REFERENCE = f"{IMAGE}@sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e"
 APP_VERSION = "0.7.1"
 IDENTITY_RECOVERY_PROBE = ROOT / ".github" / "scripts" / "verify_airgap_identity_recovery.py"
 UPGRADE_ROLLBACK_PROBE = ROOT / ".github" / "scripts" / "verify_airgap_upgrade_rollback.py"
@@ -132,7 +133,7 @@ def main() -> int:
         _run(
             (
                 "docker", "run", "--rm", "--mount", f"type=bind,source={workspace.resolve()},target=/work",
-                IMAGE, "python", "-m", "pip", "download", "--require-hashes", "--only-binary=:all:",
+                IMAGE_REFERENCE, "python", "-m", "pip", "download", "--require-hashes", "--only-binary=:all:",
                 "--dest", "/work/bundle/wheelhouse", "-r", "/work/exported-requirements.txt",
             )
         )
@@ -213,7 +214,7 @@ def main() -> int:
                     ]
                 )
             commands.append("/opt/venv/bin/reconforge doctor")
-            docker_argv.extend((IMAGE, "sh", "-ec", " && ".join(commands)))
+            docker_argv.extend((IMAGE_REFERENCE, "sh", "-ec", " && ".join(commands)))
             _run(tuple(docker_argv))
             network_mode = _run(("docker", "inspect", "--format", "{{.HostConfig.NetworkMode}}", container_name), capture=True)
             exit_code = _run(("docker", "inspect", "--format", "{{.State.ExitCode}}", container_name), capture=True)

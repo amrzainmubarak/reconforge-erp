@@ -121,6 +121,10 @@ flowchart LR
 ### Operational risks
 
 - The checked-in `.venv` references a Python installation that is unavailable in the current environment. Validation should use a clean environment rather than treating this as an application defect.
+- Current remediation (2026-08-22): the repository developer Doctor reports a
+  foreign legacy environment without modifying it, and the explicit bootstrap
+  creates a separate platform-specific `.venv-*` from the universal lock. See
+  ADR 0534 and E-821; the original observation remains historical context.
 - The current working tree already contains deletions of requirement input/lock files. Those changes predate this slice and must not be overwritten or implicitly attributed to it.
 
 ## Safe extension strategy

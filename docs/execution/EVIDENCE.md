@@ -2,6 +2,37 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-821: Platform-specific developer environment bootstrap (2026-08-22)
+
+- Initial `manage_developer_environment.py doctor` exited 1 with overall
+  `needs-bootstrap`, target `DEVENV-ENV-MISSING`, and preserved legacy
+  `DEVENV-ENV-FOREIGN`. The legacy `.venv/pyvenv.cfg` identified a Linux Python
+  home and had no Windows `Scripts/python.exe`; the tool made no mutation.
+- `manage_developer_environment.py bootstrap --python-version 3.12`: **PASS**.
+  Exact uv 0.11.32 validated the current 128-package lock, synchronized all
+  extras non-editably into ignored `.venv-windows`, and ran ReconForge Doctor
+  successfully. The final report returned `bootstrapped` and `DEVENV-READY`.
+- A second bootstrap and a separate Doctor both exited zero, proving the local
+  path is idempotent and reports Python 3.12 without touching legacy `.venv`.
+- `python -m pytest -q tests/test_developer_environment.py`: **PASS** (8/8).
+  The tests cover platform naming, direct-child confinement, out-of-project and
+  nested refusal, missing/foreign stable findings, byte preservation,
+  activation commands, exact locked/all-extras/non-editable sync construction,
+  pre-sync refusal of failed targets, exact uv policy, and unsupported Python
+  refusal.
+- `.venv-windows/Scripts/python.exe -m pytest -q --tb=short -ra`: **PASS**,
+  100% after collecting 2,981 tests. Every executed test passed; declared
+  PostgreSQL/Redis/S3/network/object-lock/platform capability skips and the
+  existing Starlette/SAML/legacy-financial-input warnings remained visible.
+- Full-tree Ruff **PASS**; mypy **PASS** for 523 source files; Bandit **PASS**
+  with existing reviewed suppression-comment warnings; supply-chain policy
+  validation **PASS**; `git diff --check` **PASS**. The immediately preceding
+  E-820 web/typecheck/unit/build/npm/E2E gates apply to the same ancestor and
+  this slice changes no web or application source.
+- Boundary: one current Windows host and public/configured package resolution.
+  No hosted, macOS/Linux, private-index, proxy, air-gap, clean-host, or installer
+  assurance follows. The pre-existing `.venv` remains owner-managed.
+
 ## E-820: Locked Python advisory remediation and unified audit runner (2026-08-22)
 
 - Baseline hash-exported audit rejected locked `pip 26.1.2` with

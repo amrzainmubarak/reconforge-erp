@@ -10,29 +10,35 @@ For AI coding agents, also read [AGENTS.md](AGENTS.md).
 
 Use Python 3.11 or 3.12 and the exact `uv` version declared in
 `pyproject.toml`. Install `uv` through the checksum-verified procedure in the
-[supply-chain policy](docs/security/supply-chain-policy.md), then synchronize
-the reviewed universal lock:
+[supply-chain policy](docs/security/supply-chain-policy.md), then diagnose and
+bootstrap a platform-specific environment without replacing an existing
+`.venv`:
 
 ```bash
-uv sync --locked --all-extras --no-editable --python 3.12
-uv run --no-sync pre-commit install
+python .github/scripts/manage_developer_environment.py doctor --project-root . --python-version 3.12
+python .github/scripts/manage_developer_environment.py bootstrap --project-root . --python-version 3.12
 ```
 
-If the installed `reconforge` command appears stale after a CLI or version change:
+The command prints the exact activation command for `.venv-windows`,
+`.venv-macos`, or `.venv-linux`. Activate it, then install the Git hook once:
 
 ```bash
-uv sync --locked --all-extras --no-editable --python 3.12 --refresh-package reconforge-erp
-uv run --no-sync python -m reconforge.cli doctor
+python -m pre_commit install
 ```
+
+Bootstrap is idempotent for a valid selected environment. It refuses malformed,
+foreign, linked, nested, or out-of-project targets and never deletes or repairs
+the traditional `.venv`; review that directory manually if Doctor reports
+`DEVENV-ENV-FOREIGN`.
 
 ## Quality Commands
 
 Run these before opening a pull request:
 
 ```bash
-uv run --no-sync ruff check .
-uv run --no-sync mypy reconforge
-uv run --no-sync pytest
+python -m ruff check .
+python -m mypy reconforge
+python -m pytest
 ```
 
 For report, mapping, rule-pack, or CLI changes, also run relevant smoke commands:
@@ -47,7 +53,7 @@ reconforge report client-pack --input output --output output/client_pack --summa
 ## Security Commands
 
 ```bash
-uv run --no-sync bandit -q -r reconforge
+python -m bandit -q -r reconforge
 python .github/scripts/run_locked_python_audit.py --project-root .
 npm --prefix apps/web audit --package-lock-only --audit-level=high
 ```

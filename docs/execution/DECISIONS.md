@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-920: Preserve foreign developer state and bootstrap beside it
+
+- **Date**: 2026-08-22
+- **Context**: The ignored `.venv` in this Windows checkout was created for
+  Linux and had no Windows interpreter. Normal project-environment discovery
+  therefore failed before locked commands could run.
+- **Decision**: Adopt ADR 0534: diagnose existing state read-only and create a
+  platform-specific direct `.venv-*` sibling under a locked explicit bootstrap.
+  Never delete, move, traverse, or repair a failed legacy environment
+  automatically.
+- **Rationale**: Reproducibility must not depend on destructive cleanup of
+  user-owned state, and cross-platform worktrees need unambiguous interpreter
+  identity.
+- **Verification**: E-821 records foreign-state detection, successful and
+  repeated Python 3.12 Windows bootstrap, product Doctor, focused tests, and
+  static gates.
+- **Compatibility**: Developer tooling only; existing `.venv`, product APIs,
+  schemas, migrations, and data remain unchanged.
+- **Rollback**: Remove the additive tool/docs/targets; leave local ignored
+  environments for their owners to remove explicitly.
+
 ### D-919: Converge every Python advisory gate on the universal lock
 
 - **Date**: 2026-08-22

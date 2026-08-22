@@ -1,5 +1,17 @@
 # Quality Baseline
 
+## Current developer bootstrap verification (2026-08-22)
+
+E-821 adds a read-only developer Doctor and a non-destructive, locked,
+platform-specific bootstrap. On the current Windows host it detected and
+preserved a foreign Linux `.venv`, created an ignored Python 3.12
+`.venv-windows`, ran product Doctor, passed a repeated idempotent bootstrap, and
+then reported `DEVENV-READY`. Its interpreter collected 2,981 tests and carried
+the full suite to 100% with every executed test passing and capability skips
+remaining explicit. This is local developer-environment evidence only; it does
+not replace clean-host, hosted, macOS/Linux, proxy/private-index, air-gap,
+installer, or production deployment verification.
+
 ## Current post-E-400 verification (2026-08-05)
 
 The current head has a full local post-IAM gate: `uv run pytest -q --tb=short`

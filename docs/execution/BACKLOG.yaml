@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-821
+    priority: P1
+    area: developer-experience
+    title: Add non-destructive platform-specific developer environment bootstrap and doctor
+    status: completed
+    depends_on: [E-820]
+    exit_evidence: >-
+      A read-only Doctor detects missing, foreign, malformed, linked, mismatched,
+      and ready environments with stable codes. Bootstrap restricts targets to
+      direct `.venv-*` project children, synchronizes the universal lock with a
+      supported Python, runs product Doctor, preserves legacy `.venv`, and is
+      idempotent on the local Windows profile. Focused tests and static gates pass.
   - id: E-820
     priority: P0
     area: supply-chain

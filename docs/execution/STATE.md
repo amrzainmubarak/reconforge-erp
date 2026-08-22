@@ -2,6 +2,22 @@
 
 Updated: 2026-08-22
 
+## E-821 — Non-destructive developer environment recovery (2026-08-22)
+
+- Added a cross-platform developer environment manager with machine-readable
+  `doctor` and explicit `bootstrap` operations. It binds exact uv, supported
+  Python, current lock, all extras, non-editable installation, and product
+  Doctor without using a shell or trusting the ambient environment.
+- The local Doctor identified the existing Linux-origin `.venv` on Windows as
+  `DEVENV-ENV-FOREIGN` and left it byte-for-byte in place. Bootstrap created the
+  ignored `.venv-windows` with locked Python 3.12; subsequent Doctor returned
+  `DEVENV-READY`, a repeated bootstrap succeeded, and that interpreter carried
+  the full 2,981-test collection to 100% with every executed test passing.
+- Boundary: local Windows developer bootstrap only. This does not establish a
+  clean-host, hosted, macOS/Linux, private-index, proxy, or air-gap install, and
+  does not change any application runtime or financial behavior. D-485 remains
+  active.
+
 ## E-820 — Locked Python advisory remediation and audit-path convergence (2026-08-22)
 
 - The universal lock now resolves `pip 26.2`, the first fixed release for

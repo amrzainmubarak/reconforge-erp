@@ -1,5 +1,24 @@
 # Quality Baseline
 
+## E-826 migration failure/recovery verification (2026-08-22)
+
+The retained PostgreSQL 17.10 Docker drill passes all ten closed checks: native
+pre-drift dump listing, drifted-history upgrade refusal, unchanged revision,
+history and trigger after refusal, independent restore, successful 0089 upgrade,
+unchanged valid history, enhanced direct-INSERT refusal, and exact-container
+cleanup. Its Draft 2020-12 schema, canonical report digest, runner/migration
+source binding, runtime identity tests, Ruff, and Bandit pass. Three earlier
+runner attempts exposed missing synthetic `created_at`, tenant, and migration
+path fixtures, failed without replacing the retained artifact, and cleaned their
+disposable containers; they are retained as development findings rather than
+converted into successful evidence. The final full suite collects 3,032 tests:
+2,917 pass, 115 declared capability skips remain visible, and 23 existing
+warnings remain visible. The focused E-825/E-826 selector passes 88 tests with
+four declared live-service skips; the report/policy/parity selector passes
+44/44. Ruff, Mypy across 523 files, Bandit, the closed supply-chain policy,
+lock check, isolated locked audit, build, package-content checks, changed
+JSON/YAML validation, and whitespace checks pass.
+
 ## E-825 write-back proposal identity verification (2026-08-22)
 
 Focused domain, SQLite runtime, PostgreSQL contract, Alembic-chain, operations,

@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-826
+    priority: P0
+    area: connector-security
+    title: Prove PostgreSQL write-back identity migration refusal and independent restore
+    status: completed
+    depends_on: [E-825]
+    exit_evidence: >-
+      A digest-pinned PostgreSQL 17.10 Docker drill creates valid history at
+      0088, captures and lists a native pre-drift backup, introduces proposal
+      drift permitted by the legacy trigger, and proves 0089 refuses the
+      upgrade without changing the revision, history digest, or trigger. The
+      backup restores into an independent database, preserves its history
+      digest, upgrades to 0089, and rejects a drifted direct INSERT. A closed
+      schema and canonical report digest bind every check and limitation;
+      container cleanup is verified. This is single-node synthetic migration
+      evidence, not provider, posting, HA/DR, or production assurance.
   - id: E-825
     priority: P0
     area: connector-security
@@ -230,6 +246,9 @@ tasks:
       - E-825 binds every SQLite/PostgreSQL lifecycle version to the immutable
         original proposal at application and INSERT boundaries, with fail-closed
         migration audits and an additive API proposal digest.
+      - E-826 proves on digest-pinned PostgreSQL 17.10 that drifted history is
+        refused without mutation and that a native pre-drift backup restores
+        independently, upgrades to 0089, and activates the stronger guard.
   - id: E-1005
     priority: P0
     area: identity-governance

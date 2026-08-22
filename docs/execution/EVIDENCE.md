@@ -2,6 +2,95 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-826: PostgreSQL write-back identity migration refusal and restore (2026-08-22)
+
+- Runner:
+  `.github/scripts/verify_postgres_writeback_identity_migration.py`.
+  Runtime: Docker Engine 29.7.2 and exact image
+  `postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193`.
+- Command:
+  `python .github/scripts/verify_postgres_writeback_identity_migration.py --output docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-08-22.json`.
+  Result: PASS. Source revision 0088 refused the drifted upgrade; restored
+  database reached 0089; report SHA-256
+  `9e8b8b4c1b73c423e417f3f0b6dfa63ce5cc8a478731bf87c4d5b38460d08204`.
+- Valid two-version history SHA-256:
+  `3e93c8f28b17d113d7b6173b473511218bc45dc826bdd218b8e999c525517795`.
+  Drifted three-version history SHA-256:
+  `65b94e526ef8facc6de3da4f331916a2100c06f5ebb86d40d14dbf387edc0c47`.
+  Native pre-drift dump SHA-256:
+  `121bdd10cb55b0ba46fd318032d5b7d42fb36eaf8f047b9f9f53c9e5b776c1d3`.
+- Observed refusal invariants: Alembic stayed at 0088, the drifted history digest
+  stayed unchanged, and `connector_writeback_intent_guard` retained its
+  legacy definition. No UPDATE, DELETE, or normalization was used.
+- Observed restore invariants: `pg_restore --list` succeeded; an independent
+  database restored at 0088 with the valid-history digest, upgraded to 0089,
+  retained that digest, installed the INSERT/UPDATE/DELETE trigger, and rejected
+  a direct payload-drift INSERT.
+- Cleanup: the runner compared the exact container ID before stop and verified
+  `docker inspect` could no longer resolve it before setting
+  `cleanup_complete=true`. A post-run filtered Docker listing returned no
+  matching containers.
+- Subject binding: migration commit
+  `c7e357335c71a15889375be01bd3e6bf8d70041c`, canonical migration-source
+  SHA-256 `92e42b27e1ef043ce9be9a44130efadc61daa6953b85aa516e5f7e7e03a6a4b0`,
+  and canonical runner-source SHA-256
+  `7194e1c92f4d330a699964a162aa649e30f2242fa5b33c3bd03d82125fdc1bd9`.
+- Development findings: three earlier invocations failed on missing synthetic
+  `created_at`, tenant, and migration-path fixtures. All failed closed, removed
+  their `--rm` containers, and did not replace the retained report. The fixture
+  omissions were fixed before the final successful run; none is counted as
+  evidence.
+- `python -m pytest -q tests/test_postgres_writeback_identity_migration_drill.py`:
+  PASS, 5/5. The tests validate the Draft 2020-12 closed schema, UTC execution
+  time, canonical report digest, distinct valid/invalid history digests,
+  runner/migration source binding, image/revision binding, and rejection of
+  false checks, version drift, and undeclared evidence.
+- `python -m ruff check .github/scripts/verify_postgres_writeback_identity_migration.py tests/test_postgres_writeback_identity_migration_drill.py`:
+  PASS.
+- `python -m bandit -q .github/scripts/verify_postgres_writeback_identity_migration.py`:
+  PASS with one informational notice for the reviewed isolated `/tmp` path
+  suppression; no failed findings.
+- Focused boundary:
+  `python -m pytest -ra tests/test_connector_writeback.py tests/test_application_writeback.py tests/test_sqlite_writeback.py tests/test_postgres_writeback.py tests/test_alembic_postgres.py tests/test_api_connectors.py tests/test_postgres_operations.py tests/test_postgres_writeback_identity_migration_drill.py tests/test_supply_chain_policy.py`:
+  PASS, 88 passed, four declared live-PostgreSQL skips, one existing warning.
+- Report/policy/parity selector: PASS, 44/44. An earlier exploratory selector
+  named nonexistent `tests/test_execution_state.py` and
+  `tests/test_execution_backlog.py`; pytest ran zero tests and returned exit 1.
+  It was corrected to real execution-contract files and is not counted as
+  passing evidence.
+- Full regression: PASS, 3,032 collected, 2,917 passed, 115 declared capability
+  skips, 23 existing warnings, 405.78 seconds on ambient Python 3.14.6.
+- Full-tree Ruff: PASS. Mypy: PASS across 523 source files. Bandit over
+  `reconforge`: PASS with the existing reviewed notice inventory. Closed
+  supply-chain policy: PASS with 128 Python and 211 npm packages, zero active
+  exceptions, and zero npm integrity gaps. `uv lock --check`: PASS.
+- `python -m pip_audit`: FAIL on the ambient interpreter because its globally
+  installed pip is 26.1.2 and is reported under PYSEC-2026-3721; this command is
+  retained as environment evidence and not relabeled. The required unified
+  command,
+  `python .github/scripts/run_locked_python_audit.py --project-root . --python-version 3.12 --execution-mode isolated`,
+  passes with uv 0.11.32, Python 3.12.13, 128 locked Python packages, zero
+  findings, and no active exceptions. One earlier supply-chain validation call
+  used unsupported `--root`; it returned usage error and was not evidence. The
+  corrected `--project-root .` command passes.
+- `python -m build --no-isolation`: PASS; sdist and wheel built. The 1,744-entry
+  sdist contains the runner, report, schema, ADR, and test. The 623-entry wheel
+  contains Alembic 0089. Changed JSON/YAML parsing and `git diff --check` pass,
+  preserving only the unrelated user-owned line-ending warning.
+- Gitleaks 8.30.1 first scanned the pre-amend commit and correctly flagged the
+  literal synthetic `idempotency_key` fixture under `generic-api-key`. No
+  suppression, fingerprint, or allowlist was added. The fixture now uses a
+  constructed synthetic constant; its direct no-git scan passes, and the live
+  report was regenerated so its runner-source binding remains exact. The final
+  full-history scan passes across 659 commits / 24.98 MB with zero leaks. A
+  clean `git archive` extraction passes a no-git scan across 27.43 MB with zero
+  leaks; its exact verified temporary directory was removed afterward.
+- Boundary: one Windows Docker Desktop host, one PostgreSQL version, one
+  disposable node, synthetic credentials/data, and no live provider, accounting
+  posting, supported-version matrix, cross-host HA/DR, production secret store,
+  or production recovery claim. D-485 forbids publication; no push, PR, tag,
+  release, or deployment occurred.
+
 ## E-825: Immutable write-back proposal identity (2026-08-22)
 
 - Adversarial reproduction established that the former repositories validated

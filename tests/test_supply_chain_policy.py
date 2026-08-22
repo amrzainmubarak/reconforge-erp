@@ -46,6 +46,7 @@ def _copy_policy_project(tmp_path: Path) -> Path:
         ".github/scripts/validate_container_security.py",
         ".github/scripts/verify_airgap_install.py",
         ".github/scripts/verify_postgres_ha_dr.py",
+        ".github/scripts/verify_postgres_writeback_identity_migration.py",
         ".github/scripts/verify_postgres_reliability.py",
         ".github/scripts/verify_postgres_upgrade.py",
         ".github/workflows/release.yml",
@@ -206,6 +207,7 @@ def test_disposable_drill_images_execute_by_reviewed_digest() -> None:
     python_digest = "b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e"
     postgres_scripts = (
         "verify_postgres_ha_dr.py",
+        "verify_postgres_writeback_identity_migration.py",
         "verify_postgres_upgrade.py",
         "verify_postgres_reliability.py",
     )

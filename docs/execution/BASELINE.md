@@ -88,6 +88,25 @@
   governance only, not provider connectivity, accounting posting, autonomous
   approval, or production write-back assurance.
 
+#### E-826 drifted-history refusal and independent restore (2026-08-22)
+
+- A retained Docker runner uses the same digest-pinned PostgreSQL 17.10 Alpine
+  image and container-native `pg_dump`/`pg_restore` across isolated source and
+  restored databases.
+- A drifted three-version history at 0088 is refused by the 0089 audit while its
+  revision, canonical history SHA-256, and legacy trigger remain unchanged.
+- The listed pre-drift native dump restores independently with the same valid
+  history digest, upgrades to 0089 without history mutation, and rejects a
+  proposal-drift direct INSERT through the enhanced trigger.
+- The report is closed by Draft 2020-12 JSON Schema and a canonical report
+  digest and binds the runner/migration source SHA-256 values; exact-container
+  cleanup is required before the report is written. The full regression passes
+  2,917 tests with 115 declared capability skips. The isolated locked Python
+  3.12 audit reports zero findings; ambient `python -m pip_audit` instead reports
+  the host's non-project `pip 26.1.2` / `PYSEC-2026-3721` and is retained as an
+  environment failure. This remains single-host, single-version, synthetic
+  migration evidence.
+
 ### Disposable PostgreSQL boundary checks
 - `uv run --no-sync pytest -q -ra tests/test_application_metrics.py::test_live_postgres_metrics_and_sqlite_parity tests/test_alembic_postgres.py::test_alembic_upgrade_command_is_available_when_server_extra_is_installed` : **Passed (2/2)**.
   - Historical E-706 environment: Docker `postgres:16-alpine` 16.14, isolated database, Alembic head `0086_pg_close_reopened`, and a non-privileged `reconforge_app` role. The current source migration head is `0088_pg_currency_snapshot`; no live rerun of the new `0087`/`0088` migrations is implied here.

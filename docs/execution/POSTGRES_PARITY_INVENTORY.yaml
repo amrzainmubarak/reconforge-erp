@@ -1,5 +1,5 @@
 schema_version: 1
-updated_at: "2026-08-11"
+updated_at: "2026-08-22"
 claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
@@ -9,7 +9,7 @@ currency_registry_binding_contract:
   id: E-711
   executed_at: "2026-08-11"
   database: "SQLite local plus PostgreSQL adapter/schema contract"
-  focused_tests: 2
+  focused_tests: 5
   focused_result: passed
   migration_head: "0088_pg_currency_snapshot"
   migration_path: "alembic_upgrade_head_contract"
@@ -24,6 +24,18 @@ writeback_proposal_identity_contract:
   migration_path: "alembic_upgrade_head_contract"
   covered_boundaries: [WritebackIntent, SQLiteWritebackIntentRepository, PostgresWritebackIntentRepository]
   limitations: [single_node, synthetic_data, no_live_provider, no_accounting_posting, no_ha, no_production_claim]
+writeback_identity_migration_recovery_drill:
+  id: E-826
+  executed_at: "2026-08-22"
+  database: "Digest-pinned PostgreSQL 17.10 Alpine; isolated source and restored databases"
+  focused_tests: 2
+  focused_result: passed
+  migration_head: "0089_pg_writeback_identity"
+  migration_path: "0088 drifted audit refusal plus independent native pre-drift restore and 0089 upgrade"
+  retained_report: "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-08-22.json"
+  report_digest: "9e8b8b4c1b73c423e417f3f0b6dfa63ce5cc8a478731bf87c4d5b38460d08204"
+  covered_boundaries: [AlembicHistoryAudit, NativePgDumpRestore, ConnectorWritebackIntentGuard]
+  limitations: [single_node, one_postgresql_version, synthetic_data_and_credentials, no_live_provider, no_accounting_posting, no_cross_host_ha_dr, no_production_claim]
 current_live_gate:
   id: E-163
   executed_at: "2026-07-28"

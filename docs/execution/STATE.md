@@ -2,6 +2,48 @@
 
 Updated: 2026-08-22
 
+## E-826 — PostgreSQL write-back identity migration refusal and restore (2026-08-22)
+
+- Added a reproducible Docker runner pinned to PostgreSQL 17.10 by image digest.
+  It creates two isolated databases and uses container-native `pg_dump` and
+  `pg_restore`; credentials and business records are generated synthetic data.
+- At source revision 0088, the runner captured a valid proposed/approved
+  history and native pre-drift backup, then inserted a payload-digest-drifted
+  dispatched version permitted by the legacy UPDATE/DELETE-only trigger.
+- Upgrade to 0089 raised the expected audit refusal. The Alembic revision
+  remained 0088, the three-version history retained SHA-256
+  `65b94e526ef8facc6de3da4f331916a2100c06f5ebb86d40d14dbf387edc0c47`,
+  and the trigger definition remained unchanged.
+- The pre-drift dump SHA-256 is
+  `121bdd10cb55b0ba46fd318032d5b7d42fb36eaf8f047b9f9f53c9e5b776c1d3`.
+  It restored into an independent database with the expected two-version
+  history digest, upgraded to 0089, preserved that history, and rejected a
+  drifted direct INSERT through the enhanced trigger.
+- The closed retained report passes its Draft 2020-12 schema and canonical
+  report-digest and source-binding tests. Cleanup of the exact temporary
+  container is part of the report contract and passed. Three earlier development
+  invocations failed safely on missing synthetic `created_at`, tenant, and
+  migration-path fixtures; all cleaned their containers and none was treated as
+  evidence.
+- The post-slice full regression collects 3,032 tests: 2,917 pass and 115 are
+  declared capability skips, with 23 existing warnings. The focused E-825/E-826
+  boundary passes 88 tests with four declared live-service skips; the combined
+  report/policy/parity contract passes 44/44. Ruff, Mypy across 523 source files,
+  Bandit, closed supply-chain policy, lock check, isolated Python 3.12 locked
+  dependency audit, build, package-content verification, JSON/YAML parsing, and
+  whitespace checks pass.
+- Ambient `python -m pip_audit` is not a passing product gate on this host: it
+  correctly reports host-installed `pip 26.1.2` / `PYSEC-2026-3721`. The unified
+  isolated audit resolves the locked project environment with fixed pip and
+  reports zero findings. The ambient failure remains disclosed.
+- Gitleaks 8.30.1 initially flagged the literal synthetic idempotency fixture as
+  a generic API key. The fixture was rewritten without suppression or allowlist,
+  the live report was regenerated and source-rebound, and the amended 659-commit
+  history plus a clean 27.43 MB `git archive` scan report zero leaks.
+- This is one Docker Desktop host, one PostgreSQL version, synthetic data, and
+  single-node restore evidence. No live provider, accounting posting, cross-host
+  HA/DR, production recovery, push, PR, tag, release, or deployment occurred.
+
 ## E-825 — Immutable write-back proposal identity (2026-08-22)
 
 - Reproduced an internal-boundary defect where an allowed status transition

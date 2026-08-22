@@ -5,6 +5,26 @@
 
 ## Decisions
 
+### D-926: Retain failed-audit state and prove recovery from an independent backup
+
+- **Date**: 2026-08-22
+- **Context**: E-825 defined fail-closed PostgreSQL history auditing, but valid
+  lifecycle tests did not prove that a drifted database remains unmodified after
+  refusal or that a known-valid native backup can upgrade independently.
+- **Decision**: Adopt ADR 0540. Use an exact digest-pinned disposable PostgreSQL
+  runner to bind the source revision, history and trigger before/after refusal;
+  restore a pre-drift native dump into a second database and verify 0089 there.
+- **Rationale**: A refused audit is financial-integrity evidence, not disposable
+  deployment noise. The invalid database must be preserved for investigation,
+  and recovery evidence must not depend on rewriting append-only history.
+- **Verification**: E-826 retains a schema-closed, canonically digest-bound report
+  covering dump listing, refusal, no-mutation checks, independent restore,
+  successful upgrade, enhanced INSERT guard, and exact-container cleanup.
+- **Compatibility**: No product or migration behavior changes; this adds only a
+  reproducible verification runner, report, schema, tests, and documentation.
+- **Rollback**: Preserve the refused database and backup. Do not delete or edit
+  lifecycle rows to make the migration pass.
+
 ### D-925: Bind write-back evidence to the immutable original proposal
 
 - **Date**: 2026-08-22

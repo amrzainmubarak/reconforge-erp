@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/postgres_writeback_identity_migration_drill.schema.json",
+  "title": "PostgreSQL write-back identity migration drill evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "executed_at",
+    "profile",
+    "subject",
+    "runtime",
+    "history",
+    "checks",
+    "limitations",
+    "report_digest"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "postgres-writeback-identity-migration-drill-v1"
+    },
+    "executed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "profile": {
+      "const": "disposable-postgresql-writeback-identity-migration"
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["migration_commit", "migration_source_sha256", "runner_source_sha256"],
+      "properties": {
+        "migration_commit": {
+          "$ref": "#/$defs/git_commit"
+        },
+        "migration_source_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "runner_source_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "docker_server",
+        "image",
+        "postgresql",
+        "source_revision",
+        "target_revision"
+      ],
+      "properties": {
+        "docker_server": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "image": {
+          "const": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
+        },
+        "postgresql": {
+          "const": "17.10"
+        },
+        "source_revision": {
+          "const": "0088_pg_currency_snapshot"
+        },
+        "target_revision": {
+          "const": "0089_pg_writeback_identity"
+        }
+      }
+    },
+    "history": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "valid_versions",
+        "invalid_versions",
+        "valid_history_sha256",
+        "invalid_history_sha256",
+        "pre_drift_dump_sha256"
+      ],
+      "properties": {
+        "valid_versions": {
+          "const": 2
+        },
+        "invalid_versions": {
+          "const": 3
+        },
+        "valid_history_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "invalid_history_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "pre_drift_dump_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pre_drift_dump_list_verified",
+        "drifted_upgrade_refused",
+        "failed_upgrade_revision_preserved",
+        "failed_upgrade_history_preserved",
+        "failed_upgrade_trigger_preserved",
+        "pre_drift_restore_verified",
+        "restored_upgrade_to_head",
+        "successful_upgrade_history_preserved",
+        "enhanced_insert_guard_refused_drift",
+        "cleanup_complete"
+      ],
+      "properties": {
+        "pre_drift_dump_list_verified": {"const": true},
+        "drifted_upgrade_refused": {"const": true},
+        "failed_upgrade_revision_preserved": {"const": true},
+        "failed_upgrade_history_preserved": {"const": true},
+        "failed_upgrade_trigger_preserved": {"const": true},
+        "pre_drift_restore_verified": {"const": true},
+        "restored_upgrade_to_head": {"const": true},
+        "successful_upgrade_history_preserved": {"const": true},
+        "enhanced_insert_guard_refused_drift": {"const": true},
+        "cleanup_complete": {"const": true}
+      }
+    },
+    "limitations": {
+      "const": [
+        "single_disposable_postgresql_node",
+        "synthetic_data_and_credentials_only",
+        "one_postgresql_version",
+        "no_live_provider_or_accounting_posting",
+        "no_cross_host_ha_dr_or_production_claim"
+      ]
+    },
+    "report_digest": {
+      "$ref": "#/$defs/sha256"
+    }
+  },
+  "$defs": {
+    "git_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

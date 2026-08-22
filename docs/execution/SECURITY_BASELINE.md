@@ -15,6 +15,16 @@ Measured through 2026-08-22 against the current local snapshot in `STATE.md`. Th
 
 ## Controls observed
 
+- E-826 exercises the adversarial migration path on digest-pinned PostgreSQL
+  17.10. A drifted payload identity is refused without advancing Alembic,
+  mutating history, or replacing the trigger. A SHA-256-bound native pre-drift
+  dump restores and upgrades independently before the new trigger refuses
+  drifted direct INSERT. The runner uses runtime-generated synthetic credentials,
+  shell-free argument vectors, no retained payloads/secrets, and verified exact
+  container cleanup. The isolated locked Python 3.12 audit passes with zero
+  findings; the ambient host audit separately and correctly reports its
+  installed vulnerable pip, so it is not used as product evidence. This is not
+  live-provider, cross-host recovery, HA/DR, or production security assurance.
 - E-825 binds every governed write-back version to the original proposal at
   repository and database INSERT boundaries. SQLite migration 42 and
   PostgreSQL Alembic 0089 refuse invalid predecessor/state histories and

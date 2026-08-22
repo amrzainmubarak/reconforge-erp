@@ -640,6 +640,7 @@ def _validate_dockerfile(root: Path, policy: dict[str, Any]) -> None:
     expected = {
         ".github/scripts/verify_airgap_install.py": service_images["airgap_python"],
         ".github/scripts/verify_postgres_ha_dr.py": service_images["postgres_drills"],
+        ".github/scripts/verify_postgres_writeback_identity_migration.py": service_images["postgres_drills"],
         ".github/scripts/verify_postgres_reliability.py": service_images["postgres_drills"],
         ".github/scripts/verify_postgres_upgrade.py": service_images["postgres_drills"],
     }

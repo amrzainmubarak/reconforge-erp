@@ -884,3 +884,8 @@ include docs/adr/0532-deployment-profile-contract.md
 include reconforge/deployment/__init__.py
 include reconforge/deployment/profiles.py
 include tests/test_deployment_profiles.py
+include .github/scripts/verify_postgres_writeback_identity_migration.py
+include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-08-22.json
+include docs/schemas/postgres_writeback_identity_migration_drill.schema.json
+include tests/test_postgres_writeback_identity_migration_drill.py
+include docs/adr/0540-prove-writeback-migration-refusal-and-independent-restore.md

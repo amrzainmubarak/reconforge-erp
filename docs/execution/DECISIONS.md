@@ -5,6 +5,33 @@
 
 ## Decisions
 
+### D-930: Treat a disconnected synchronous COMMIT as uncertain until replay
+
+- **Date**: 2026-08-22
+- **Context**: E-829 proves single-node receiver durability, but a client can
+  lose its connection while PostgreSQL waits for synchronous replication. A
+  local statement timeout does not prove rollback and must not cause a new key.
+- **Decision**: Adopt ADR 0544. Run the same receiver contract on exact
+  PostgreSQL 16.14/17.10 two-node remote-apply topologies. Observe `SyncRep`
+  directly, fence/remove the primary before promotion, replay the acknowledged
+  identity, pause writes through re-seed, then resolve the uncertain identity
+  only after synchronous redundancy returns. Rediscover dynamic endpoints on
+  restart and compare both histories with SQLite.
+- **Rationale**: Idempotency must resolve uncertainty through immutable business
+  identity, not transport outcomes. Fencing and restored redundancy must be
+  explicit before another synthetic mutation is accepted.
+- **Verification**: E-830 requires 23 checks in each version: acknowledged
+  remote apply/replay with no effect, observed SyncRep uncertainty, exact
+  fencing/promotion, controller write pause, former-primary re-seed,
+  synchronous rejoin, one uncertain apply, restart replay, non-privileged role,
+  parity, cleanup, RPO 0, and local RTO at or below 60 seconds.
+- **Compatibility**: Product schemas, migrations, receiver behavior, sender
+  lifecycle, Community mode, connector manifests, APIs, and write-back policy
+  remain unchanged. The topology and CI artifact definition are additive.
+- **Rollback**: Remove E-830 verification assets only. Preserve uncertain and
+  failed-run evidence; never convert a lost response into permission to allocate
+  a different idempotency key.
+
 ### D-929: Require server-backed receiver parity before distributed wording
 
 - **Date**: 2026-08-22

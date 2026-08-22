@@ -1,5 +1,31 @@
 # Quality Baseline
 
+## E-830 synchronous receiver failover verification (2026-08-22)
+
+One closed runner executes the same receiver fault sequence on exact
+PostgreSQL 16.14/17.10 two-node topologies. Direct `SyncRep` observation,
+fencing-before-promotion, response-loss replay, controller-paused re-seed,
+synchronous rejoin, uncertain identity resolution, promoted-primary restart,
+endpoint rediscovery, and SQLite parity pass. Every cell has 23 true checks,
+two receipts/effects, non-privileged role flags, RPO 0 for its acknowledged
+synthetic effect, and local RTO below 60 seconds. The schema and six negative
+mutations refuse false, expanded, or drifted evidence. Five failed development
+attempts produced no retained report and exposed verifier flaws that are now
+bounded and regression-tested through the final full rerun. The focused
+report/supply-policy selector passes 37 tests; Ruff, Mypy, Bandit, JSON/YAML,
+closed policy, and whitespace gates pass. An initial full regression exposed
+and rejected an invalid E-228 standalone backlog dependency; the corrected
+15-test selector passed, followed by a fresh full run of 2,970 passed, 115
+declared capability skips, and 23 existing warnings across 3,085 tests in
+531.47 seconds. Full Ruff, 525-file Mypy, Bandit, supply policy, lock, isolated
+Python 3.12 audit, JSON/YAML, build, package membership, and whitespace gates
+pass. The 1,768-entry sdist contains all five E-830 evidence assets; the
+runtime-only wheel remains 625 entries. Ambient pip-audit separately retains
+the host pip vulnerability. Gitleaks 8.30.1 reports no findings across 663
+commits / 25.28 MB or a clean 27.71 MB implementation archive; the exact
+temporary artifacts were removed. This is bounded single-host topology
+quality, not automatic or production HA quality.
+
 ## E-829 PostgreSQL receiver idempotency parity (2026-08-22)
 
 The additive PostgreSQL backend shares the exact closed E-828 request,

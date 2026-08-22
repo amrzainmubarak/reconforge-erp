@@ -2,6 +2,103 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-830: Receiver replay across synchronous PostgreSQL failover (2026-08-22)
+
+- Added
+  `.github/scripts/verify_postgres_writeback_receiver_failover_matrix.py` and
+  ADR 0544. The runner creates two exact, volume-backed PostgreSQL nodes per
+  version on separate control/replication networks, initializes the E-829
+  receiver before base backup, enables physical streaming plus synchronous
+  remote-apply, and retains fixed progress stages to stderr.
+- Command:
+  `python .github/scripts/verify_postgres_writeback_receiver_failover_matrix.py --output docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-08-22.json`.
+  Final retained result: PASS in 64.067 seconds on Docker Engine 29.7.2 / Python
+  3.14.6; report digest
+  `5ae22491c01eb93daf38dd7fe6788c4daa7a0d648fb7dfa53ca7edf11d5e07d1`.
+- Runtime cells are exact policy-owned images: PostgreSQL 16.14 via
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  and PostgreSQL 17.10 via
+  `postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193`.
+- In each cell, the acknowledged request returns only inside a child process
+  and its response is not delivered to the caller. The standby already holds
+  one receipt/effect. After replication partition, the second request is not
+  classified from a client timeout: PostgreSQL itself must expose that backend
+  in IPC/`SyncRep` wait on COMMIT before the client is terminated.
+- Fencing verifies exact primary identity/state and removal before promotion.
+  The acknowledged identity replays exactly without a new effect. Writes pause
+  while the former-primary volume is re-seeded. After streaming returns to
+  synchronous remote-apply, the uncertain identity applies once and both nodes
+  expose two receipts/two effects with the same history.
+- Restart of each promoted primary re-discovers its dynamic Docker endpoint;
+  both requests replay with no count or history change. PostgreSQL 16/17,
+  rejoined standbys, restarted primaries, and SQLite all produce canonical
+  history SHA-256
+  `5f5f48a2cf4071f93e064b127f2ecfa67fb5cbf29463a357aa93cfba52419f14`.
+- Local measured acknowledged-effect RPO is zero transactions in this
+  synchronous topology. Fencing-to-exact-replay RTO is 6.168 seconds on 16.14
+  and 6.199 seconds on 17.10 under a 60-second drill ceiling. These are
+  environment-bound measurements, not production SLOs.
+- Development findings retained rather than rewritten as successful evidence:
+  1. The first attempt proved `statement_timeout` does not bound a COMMIT
+     waiting in `SyncRep`; it was operator-interrupted, its exact labelled
+     resources were inspected and removed, and no report was written.
+  2. A host-port readiness race failed before mutation and auto-cleaned.
+  3. A promoted node missing its replication-network alias failed re-seed and
+     auto-cleaned.
+  4. Restart exposed an unbounded DSN probe; that attempt was interrupted and
+     its labelled resources were inspected and removed.
+  5. Bounded probes then correctly failed against the stale pre-restart port;
+     an independent current-port probe identified Docker Desktop endpoint
+     reassignment, and the topology auto-cleaned.
+  Endpoint rediscovery and two-second connect probes with 60-second deadlines
+  close those verifier defects. A first complete report then passed; a
+  low-value backend-PID fingerprint was removed and the final retained matrix
+  reran successfully from scratch. No failed or superseded run was relabeled.
+- The closed Draft 2020-12 schema, report digest/time/source binding, exact
+  images, role flags, response/partition/restart semantics, 23 true checks,
+  RPO/RTO bounds, history parity, package/CI contracts, secret absence, and six
+  negative mutations pass. The supply-chain validator now closes image
+  identity across the migration, receiver-idempotency, and receiver-failover
+  matrices. Focused report/policy selector: 37 passed. Ruff and Mypy pass;
+  Bandit reports no findings with fixed-shell-boundary comment notices only.
+- The first full `python -m pytest` run was not accepted as a pass: it exposed
+  one execution-contract failure because `depends_on: [E-829, E-228]` referred
+  to E-228, which is preserved as a completed slice under P3-ENT-010 rather
+  than a standalone current-backlog task. E-830 now depends only on the closed
+  direct predecessor E-829. The focused execution/failover regression then
+  passed 15/15. A fresh full run passed: 2,970 passed, 115 declared capability
+  skips, and 23 existing warnings across 3,085 collected tests in 531.47
+  seconds. No retry or `--last-failed` result was substituted for this full
+  rerun.
+- Final non-runtime gates: `python -m ruff check .` passed; Mypy passed across
+  525 source files; Bandit exited zero with no finding (comment-parser and
+  reviewed `nosec` notices remain visible); the closed supply-chain policy is
+  valid for 128 Python packages and 211 npm packages with zero active
+  exceptions or npm integrity gaps; and `uv lock --check` resolved 129 packages
+  on CPython 3.12.13.
+- The isolated locked command
+  `python .github/scripts/run_locked_python_audit.py --project-root . --python-version 3.12 --execution-mode isolated`
+  passed with zero known vulnerabilities and zero exceptions. Separate ambient
+  `python -m pip_audit` exited 1 because host-installed `pip 26.1.2` has
+  `PYSEC-2026-3721` and names 26.2 as the fix; this host observation is retained
+  and is not substituted for the clean locked result.
+- `python -m build --no-isolation` produced
+  `reconforge_erp-0.7.1.tar.gz` and
+  `reconforge_erp-0.7.1-py3-none-any.whl`. The 1,768-entry sdist contains exactly
+  the E-830 runner, ADR, retained report, closed schema, and report tests. The
+  625-entry wheel remains runtime-only and correctly adds no evidence-only
+  payload because E-830 changes no product runtime module.
+- Gitleaks 8.30.1 scanned all 663 commits / approximately 25.28 MB and a clean
+  `git archive` checkout / approximately 27.71 MB with `--redact=100`, the
+  repository configuration, and no findings. The archive directory and tar
+  were both resolved inside the workspace, previewed by exact target with
+  `git clean -nd`, removed by those exact targets, and verified absent. The
+  amended evidence commit is rescanned before final handoff.
+- Boundary: one Docker Desktop host, one real failure domain per two-node cell,
+  manual controller, synthetic digests/credentials, no quorum/witness,
+  automatic failover, cross-host/zone/region loss, live provider, accounting,
+  settlement, production RPO/RTO, push, PR, tag, release, or deployment.
+
 ## E-829: PostgreSQL receiver idempotency parity (2026-08-22)
 
 - Added `reconforge/connectors/writeback_receiver_postgres.py`: an additive,

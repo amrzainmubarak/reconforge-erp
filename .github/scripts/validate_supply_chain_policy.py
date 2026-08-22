@@ -655,21 +655,25 @@ def _validate_dockerfile(root: Path, policy: dict[str, Any]) -> None:
         ):
             raise SupplyChainPolicyError(f"digest-pinned service image drifted in {relative}")
 
-    matrix_script = _required_path(
-        root, ".github/scripts/verify_postgres_writeback_identity_migration_matrix.py"
-    ).read_text(encoding="utf-8")
-    for prefix, image in (
-        ("POSTGRES_16", service_images["postgres_16_ci"]),
-        ("POSTGRES_17", service_images["postgres_drills"]),
-    ):
-        tag, digest = image.rsplit("@", 1)
-        if (
-            f'{prefix}_IMAGE = "{tag}"' not in matrix_script
-            or f'{prefix}_IMAGE_REFERENCE = (' not in matrix_script
-            or f'f"{{{prefix}_IMAGE}}@{digest}"' not in matrix_script
-            or matrix_script.count(f"{prefix}_IMAGE_REFERENCE") < 2
+    matrix_paths = (
+        ".github/scripts/verify_postgres_writeback_identity_migration_matrix.py",
+        ".github/scripts/verify_postgres_writeback_receiver_idempotency_matrix.py",
+        ".github/scripts/verify_postgres_writeback_receiver_failover_matrix.py",
+    )
+    for relative in matrix_paths:
+        matrix_script = _required_path(root, relative).read_text(encoding="utf-8")
+        for prefix, image in (
+            ("POSTGRES_16", service_images["postgres_16_ci"]),
+            ("POSTGRES_17", service_images["postgres_drills"]),
         ):
-            raise SupplyChainPolicyError("PostgreSQL migration matrix image drifted")
+            tag, digest = image.rsplit("@", 1)
+            if (
+                f'{prefix}_IMAGE = "{tag}"' not in matrix_script
+                or f'{prefix}_IMAGE_REFERENCE = (' not in matrix_script
+                or f'f"{{{prefix}_IMAGE}}@{digest}"' not in matrix_script
+                or matrix_script.count(f"{prefix}_IMAGE_REFERENCE") < 2
+            ):
+                raise SupplyChainPolicyError(f"PostgreSQL matrix image drifted in {relative}")
 
 
 def _validate_workflows(root: Path, policy: dict[str, Any]) -> None:

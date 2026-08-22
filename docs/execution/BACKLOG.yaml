@@ -9,6 +9,25 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-830
+    priority: P0
+    area: connector-reliability
+    title: Prove receiver replay across bounded synchronous PostgreSQL failover
+    status: completed
+    depends_on: [E-829]
+    exit_evidence: >-
+      Exact digest-pinned PostgreSQL 16.14 and 17.10 cells each create a
+      two-node physical-streaming topology with synchronous remote-apply. An
+      acknowledged receipt/effect is visible on standby before failure; a
+      second client is terminated only after PostgreSQL reports its COMMIT in
+      SyncRep wait. The exact primary is stopped and removed before promotion.
+      The acknowledged identity replays with no effect, mutations pause during
+      re-seed, synchronous redundancy is restored, and the uncertain identity
+      applies once. Rejoined and restarted histories equal SQLite with RPO 0
+      for the acknowledged synthetic effect and local RTO 6.168/6.199 seconds.
+      This is one Docker Desktop host and one failure domain with manual
+      control, not cross-host HA, automatic failover, provider, accounting,
+      settlement, production RPO/RTO, or exactly-once assurance.
   - id: E-829
     priority: P0
     area: connector-security

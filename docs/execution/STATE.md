@@ -2,6 +2,70 @@
 
 Updated: 2026-08-22
 
+## E-830 — Receiver replay across synchronous PostgreSQL failover (2026-08-22)
+
+- Added a closed, additive failover verifier for the unchanged digest-only
+  receiver contract. Each exact PostgreSQL 16.14 and 17.10 cell creates two
+  volume-backed nodes, separate control/replication networks, physical
+  streaming, and `synchronous_commit=remote_apply` under a non-privileged
+  application role.
+- The acknowledged request commits in a child process without delivering its
+  response to the caller. Before failure, the read-only standby exposes exactly
+  one receipt/effect. A second request begins after replication partition; the
+  runner observes its backend waiting on `SyncRep` during COMMIT and terminates
+  the client, retaining an uncertain—not failed or successful—outcome.
+- The exact primary container is stopped, identity-checked, removed, and proved
+  absent before standby promotion. The acknowledged request then replays with
+  its exact response and no new effect. New mutations are controller-paused
+  until the former primary volume is re-seeded and synchronous remote-apply is
+  restored; only then does the uncertain identity apply once.
+- Both nodes converge to two receipts/two effects and one canonical history.
+  Restarting the promoted primary requires endpoint rediscovery on this Docker
+  Desktop host; both identities replay afterward without count/history change.
+- PostgreSQL 16.14, PostgreSQL 17.10, their rejoined standbys, both restarted
+  primaries, and a same-input SQLite reference produce canonical SHA-256
+  `5f5f48a2cf4071f93e064b127f2ecfa67fb5cbf29463a357aa93cfba52419f14`.
+  Acknowledged-effect RPO is zero transactions inside this topology. Local
+  fencing-to-exact-replay RTO is 6.168 seconds on 16.14 and 6.199 seconds on
+  17.10, below the declared 60-second drill ceiling.
+- The 64.067-second retained report digest is
+  `5ae22491c01eb93daf38dd7fe6788c4daa7a0d648fb7dfa53ca7edf11d5e07d1`.
+  Its closed schema fixes 23 true checks per cell, exact images, one failure
+  domain, recovery semantics, source/policy digests, SQLite parity, and limits.
+- Five development attempts exposed invalid timeout semantics, host-port
+  readiness, a missing promoted-node replication alias, and dynamic endpoint
+  reassignment. No failed attempt wrote a report. Every normal failure cleaned
+  itself; the two operator-interrupted hangs were label-inspected and removed
+  exactly before rerun. Progress checkpoints now make each topology transition
+  visible without emitting secrets.
+- Focused report and supply-chain-policy tests pass 37/37; Ruff, Mypy, Bandit,
+  closed policy validation, JSON/YAML parsing, and whitespace gates pass. The
+  first full regression correctly failed because E-830 named historical slice
+  `E-228` as a standalone dependency even though it is recorded only inside
+  the current P3-ENT-010 task. Removing that invalid dependency left the closed
+  direct E-829 chain; the 15-test focused regression then passed. A fresh full
+  run collected 3,085 tests: 2,970 passed, 115 declared capability skips and
+  23 existing warnings in 531.47 seconds. Full-tree Ruff, Mypy across 525
+  source files, Bandit, supply-chain policy, `uv lock --check`, the isolated
+  Python 3.12 locked audit, package build/membership, JSON/YAML parsing, and
+  whitespace gates pass. The sdist has 1,768 entries and contains all five
+  E-830 evidence assets; the runtime-only wheel remains at 625 entries and has
+  no new runtime payload.
+- Ambient `python -m pip_audit` remains a failing host observation because its
+  installed `pip 26.1.2` is affected by `PYSEC-2026-3721` (fixed in 26.2). The
+  project-controlled Python 3.12.13 locked audit reports zero findings and zero
+  exceptions across the 128-package policy graph.
+- Gitleaks 8.30.1 scans the 663-commit / 25.28 MB complete history and a clean
+  27.71 MB archive of the implementation commit with no findings. The exact
+  temporary archive and directory were previewed with `git clean -nd`, removed
+  with explicit targets, and verified absent. The final amended commit is
+  rescanned before handoff.
+- Boundary: two nodes still share one Docker Desktop host and one real failure
+  domain. Fencing, promotion, endpoint discovery, and rejoin are manual runner
+  controls. No quorum/witness, automatic failover, cross-host/zone/region loss,
+  production key custody, live provider, posting, settlement, hosted execution,
+  production RPO/RTO, publication, or exactly-once claim follows.
+
 ## E-829 — PostgreSQL receiver idempotency parity (2026-08-22)
 
 - Added an optional `PostgresWritebackReceiverStore` without changing the

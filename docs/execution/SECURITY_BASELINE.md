@@ -15,6 +15,26 @@ Measured through 2026-08-22 against the current local snapshot in `STATE.md`. Th
 
 ## Controls observed
 
+- E-830's final local security gate adds the verifier to the full Bandit scan
+  and exact PostgreSQL image constants to the closed supply-chain validator;
+  both pass. The isolated CPython 3.12.13 audit reports zero findings and zero
+  exceptions across 128 policy-owned packages. Ambient pip-audit separately
+  reports host `pip 26.1.2` / `PYSEC-2026-3721` (fixed in 26.2) and is retained
+  as a host-environment failure, not misreported as project success. Gitleaks
+  8.30.1 reports no findings across all 663 commits and a clean implementation
+  archive; the exact temporary files were verified and removed.
+- E-830 runs exact digest-pinned PostgreSQL 16.14/17.10 images with generated
+  disposable credentials, a runtime role whose superuser/create-database/
+  create-role/replication/BYPASSRLS flags are false, parameterized receiver
+  data, fixed progress labels, and exact resource labels. A partitioned COMMIT
+  is classified uncertain only after direct `SyncRep` observation. Exact-ID
+  fencing and container removal precede promotion, preventing the tested
+  split-brain path. Writes remain controller-paused until a re-seeded standby is
+  synchronous; restart endpoints are rediscovered rather than trusted stale.
+  Normal failures clean automatically, and interrupted runs were removed only
+  after label verification. This is not hostile-controller/DBA resistance,
+  quorum fencing, external secret management, cross-host isolation, automated
+  HA, provider security, or production assurance.
 - E-829 adds an optional PostgreSQL receiver reference with no listener,
   payload-body storage, credential persistence, numeric financial amount, or
   autonomous authority. Data values are parameterized; connection/statement

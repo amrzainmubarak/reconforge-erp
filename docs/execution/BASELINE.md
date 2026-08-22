@@ -8,6 +8,22 @@
 > machine/session. "Passed/blocked" entries are environment-scoped and should not
 > be interpreted as cross-platform production evidence.
 
+## E-830 local refresh (2026-08-22)
+
+- Full regression: 2,970 passed, 115 declared capability skips, 23 warnings;
+  3,085 collected tests in 531.47 seconds. An earlier run failed the backlog
+  dependency contract and was corrected before this clean full rerun.
+- Ruff, Mypy across 525 files, Bandit, closed supply policy, `uv lock --check`,
+  isolated Python 3.12 locked audit, JSON/YAML parsing, package build and
+  membership, and whitespace checks pass.
+- The sdist has 1,768 entries and contains all E-830 evidence assets. The
+  runtime-only wheel has 625 entries and no E-830 runtime change.
+- Ambient pip-audit reports host `pip 26.1.2` / `PYSEC-2026-3721`; the isolated
+  project lock reports zero known findings. Gitleaks 8.30.1 reports no findings
+  across all 663 commits or the clean implementation archive, and its exact
+  temporary artifacts were removed. No push, PR, tag, release, or deployment
+  occurred.
+
 ## Latest refresh (2026-08-11)
 
 - Date: 2026-08-11
@@ -106,6 +122,23 @@
   the host's non-project `pip 26.1.2` / `PYSEC-2026-3721` and is retained as an
   environment failure. This remains single-host, single-version, synthetic
   migration evidence.
+
+#### E-830 receiver replay across synchronous PostgreSQL failover (2026-08-22)
+
+- Exact PostgreSQL 16.14/17.10 two-node remote-apply cells prove an acknowledged
+  effect survives manual fenced promotion and replays without another effect.
+  A partitioned COMMIT is observed waiting in `SyncRep`, retained as uncertain,
+  and applies once only after former-primary re-seed restores synchronous
+  redundancy.
+- Rejoined standbys and restarted promoted primaries retain two receipts/two
+  effects and match the same-input SQLite canonical SHA-256
+  `5f5f48a2cf4071f93e064b127f2ecfa67fb5cbf29463a357aa93cfba52419f14`.
+- Local RTO is 6.168/6.199 seconds under a 60-second drill ceiling; acknowledged
+  synthetic-effect RPO is zero in this named topology. Report SHA-256 is
+  `5ae22491c01eb93daf38dd7fe6788c4daa7a0d648fb7dfa53ca7edf11d5e07d1`.
+- Both nodes share one host/failure domain and use a manual controller; this is
+  not cross-host HA, production RPO/RTO, provider, posting, settlement, or
+  exactly-once production evidence.
 
 #### E-829 PostgreSQL receiver idempotency parity (2026-08-22)
 

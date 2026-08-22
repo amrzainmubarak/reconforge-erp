@@ -50,6 +50,7 @@ def _copy_policy_project(tmp_path: Path) -> Path:
         ".github/scripts/verify_postgres_writeback_identity_migration_matrix.py",
         ".github/scripts/verify_postgres_writeback_receiver_idempotency_matrix.py",
         ".github/scripts/verify_postgres_writeback_receiver_failover_matrix.py",
+        ".github/scripts/verify_postgres_writeback_recovery_compensation_matrix.py",
         ".github/scripts/verify_postgres_reliability.py",
         ".github/scripts/verify_postgres_upgrade.py",
         ".github/workflows/release.yml",
@@ -240,6 +241,7 @@ def test_disposable_drill_images_execute_by_reviewed_digest() -> None:
     for receiver_matrix_name in (
         "verify_postgres_writeback_receiver_idempotency_matrix.py",
         "verify_postgres_writeback_receiver_failover_matrix.py",
+        "verify_postgres_writeback_recovery_compensation_matrix.py",
     ):
         receiver_matrix = (ROOT / ".github" / "scripts" / receiver_matrix_name).read_text(
             encoding="utf-8"

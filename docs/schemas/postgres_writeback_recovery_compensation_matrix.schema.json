@@ -1,0 +1,313 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/postgres_writeback_recovery_compensation_matrix.schema.json",
+  "title": "PostgreSQL write-back recovery and compensation matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "executed_at",
+    "duration_seconds",
+    "profile",
+    "subject",
+    "sqlite_reference",
+    "runs",
+    "parity",
+    "limitations",
+    "report_digest"
+  ],
+  "properties": {
+    "schema_version": {"const": "postgres-writeback-recovery-compensation-matrix-v1"},
+    "executed_at": {"type": "string", "format": "date-time"},
+    "duration_seconds": {"type": "number", "exclusiveMinimum": 0},
+    "profile": {"const": "provider-neutral-writeback-recovery-compensation-parity"},
+    "subject": {"$ref": "#/$defs/subject"},
+    "sqlite_reference": {"$ref": "#/$defs/sqlite_result"},
+    "runs": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "prefixItems": [
+        {"$ref": "#/$defs/postgres16_result"},
+        {"$ref": "#/$defs/postgres17_result"}
+      ],
+      "items": false
+    },
+    "parity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["history_sha256", "postgresql_versions", "all_checks_passed", "all_cleanup_complete"],
+      "properties": {
+        "history_sha256": {"$ref": "#/$defs/sha256"},
+        "postgresql_versions": {"const": ["16.14", "17.10"]},
+        "all_checks_passed": {"const": true},
+        "all_cleanup_complete": {"const": true}
+      }
+    },
+    "limitations": {
+      "const": [
+        "synthetic_provider_acceptance_marker_only",
+        "no_live_provider_or_status_api",
+        "no_accounting_posting_or_settlement",
+        "single_disposable_postgresql_node_per_version",
+        "single_docker_desktop_host",
+        "no_cross_host_quorum_or_automatic_failover",
+        "no_production_exactly_once_or_rpo_rto_claim"
+      ]
+    },
+    "report_digest": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "git_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "base_commit",
+        "writeback_source_sha256",
+        "postgres_persistence_source_sha256",
+        "sqlite_persistence_source_sha256",
+        "migration_source_sha256",
+        "supply_chain_policy_sha256",
+        "matrix_runner_source_sha256"
+      ],
+      "properties": {
+        "base_commit": {"$ref": "#/$defs/git_commit"},
+        "writeback_source_sha256": {"$ref": "#/$defs/sha256"},
+        "postgres_persistence_source_sha256": {"$ref": "#/$defs/sha256"},
+        "sqlite_persistence_source_sha256": {"$ref": "#/$defs/sha256"},
+        "migration_source_sha256": {"$ref": "#/$defs/sha256"},
+        "supply_chain_policy_sha256": {"$ref": "#/$defs/sha256"},
+        "matrix_runner_source_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "role_flags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["superuser", "create_database", "create_role", "replication", "bypass_rls"],
+      "properties": {
+        "superuser": {"const": false},
+        "create_database": {"const": false},
+        "create_role": {"const": false},
+        "replication": {"const": false},
+        "bypass_rls": {"const": false}
+      }
+    },
+    "history_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "status", "intent_digest", "intent_json"],
+      "properties": {
+        "version": {"type": "integer", "minimum": 1, "maximum": 6},
+        "status": {"enum": ["proposed", "approved", "dispatched", "acknowledged", "compensation_requested", "compensated"]},
+        "intent_digest": {"$ref": "#/$defs/sha256"},
+        "intent_json": {"$ref": "#/$defs/intent_json"}
+      }
+    },
+    "intent_json": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "acknowledgement",
+        "approval",
+        "compensation_reason",
+        "compensation_requested_at",
+        "compensation_requested_by",
+        "connector_id",
+        "feature_enabled",
+        "idempotency_key",
+        "intent_id",
+        "operation",
+        "payload_digest",
+        "requested_at",
+        "requested_by",
+        "schema_version",
+        "status",
+        "tenant_id",
+        "workspace_id"
+      ],
+      "properties": {
+        "acknowledgement": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "accepted": {"const": true},
+            "acknowledged_at": {"type": "string", "format": "date-time"},
+            "idempotency_key": {"enum": ["e831-original-key", "e831-original-key:compensation"]},
+            "provider_reference": {"type": "string", "minLength": 1},
+            "response_digest": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "approval": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "actor_id": {"const": "e831-checker"},
+            "approved_at": {"type": "string", "format": "date-time"},
+            "assurance": {"const": "mfa"},
+            "reason": {"type": "string", "minLength": 1}
+          }
+        },
+        "compensation_reason": {"type": ["string", "null"]},
+        "compensation_requested_at": {"type": ["string", "null"], "format": "date-time"},
+        "compensation_requested_by": {"type": ["string", "null"]},
+        "connector_id": {"const": "reference-rest-writeback"},
+        "feature_enabled": {"const": true},
+        "idempotency_key": {"const": "e831-original-key"},
+        "intent_id": {"const": "e831-writeback-intent"},
+        "operation": {"const": "payment.create"},
+        "payload_digest": {"const": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+        "requested_at": {"const": "2026-08-22T12:00:00Z"},
+        "requested_by": {"const": "e831-maker"},
+        "schema_version": {"const": "connector-writeback-intent-v1"},
+        "status": {"enum": ["proposed", "approved", "dispatched", "acknowledged", "compensation_requested", "compensated"]},
+        "tenant_id": {"const": "e831-tenant"},
+        "workspace_id": {"const": "e831-workspace"}
+      }
+    },
+    "statuses": {
+      "const": ["proposed", "approved", "dispatched", "acknowledged", "compensation_requested", "compensated"]
+    },
+    "sqlite_checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proposal_approval_dispatch_versions",
+        "provider_acceptance_before_ack_persistence",
+        "original_recovery_preserved_version_three",
+        "original_acknowledgement_persisted_once",
+        "original_acknowledgement_replay_idempotent",
+        "compensation_request_actor_separated",
+        "compensation_acceptance_before_completion_persistence",
+        "compensation_key_is_distinct",
+        "compensation_completion_persisted_once",
+        "compensation_completion_replay_idempotent",
+        "canonical_status_history",
+        "tenant_scope_isolated",
+        "cleanup_complete"
+      ],
+      "properties": {
+        "proposal_approval_dispatch_versions": {"const": true},
+        "provider_acceptance_before_ack_persistence": {"const": true},
+        "original_recovery_preserved_version_three": {"const": true},
+        "original_acknowledgement_persisted_once": {"const": true},
+        "original_acknowledgement_replay_idempotent": {"const": true},
+        "compensation_request_actor_separated": {"const": true},
+        "compensation_acceptance_before_completion_persistence": {"const": true},
+        "compensation_key_is_distinct": {"const": true},
+        "compensation_completion_persisted_once": {"const": true},
+        "compensation_completion_replay_idempotent": {"const": true},
+        "canonical_status_history": {"const": true},
+        "tenant_scope_isolated": {"const": true},
+        "cleanup_complete": {"const": true}
+      }
+    },
+    "postgres_checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proposal_approval_dispatch_versions",
+        "provider_acceptance_before_ack_persistence",
+        "original_recovery_preserved_version_three",
+        "original_acknowledgement_persisted_once",
+        "original_acknowledgement_replay_idempotent",
+        "compensation_request_actor_separated",
+        "compensation_acceptance_before_completion_persistence",
+        "compensation_key_is_distinct",
+        "compensation_completion_persisted_once",
+        "compensation_completion_replay_idempotent",
+        "canonical_status_history",
+        "direct_update_refused",
+        "direct_delete_refused",
+        "non_privileged_role",
+        "tenant_scope_isolated",
+        "cleanup_complete"
+      ],
+      "properties": {
+        "proposal_approval_dispatch_versions": {"const": true},
+        "provider_acceptance_before_ack_persistence": {"const": true},
+        "original_recovery_preserved_version_three": {"const": true},
+        "original_acknowledgement_persisted_once": {"const": true},
+        "original_acknowledgement_replay_idempotent": {"const": true},
+        "compensation_request_actor_separated": {"const": true},
+        "compensation_acceptance_before_completion_persistence": {"const": true},
+        "compensation_key_is_distinct": {"const": true},
+        "compensation_completion_persisted_once": {"const": true},
+        "compensation_completion_replay_idempotent": {"const": true},
+        "canonical_status_history": {"const": true},
+        "direct_update_refused": {"const": true},
+        "direct_delete_refused": {"const": true},
+        "non_privileged_role": {"const": true},
+        "tenant_scope_isolated": {"const": true},
+        "cleanup_complete": {"const": true}
+      }
+    },
+    "base_result": {
+      "type": "object",
+      "required": ["checks", "history", "history_sha256", "statuses"],
+      "properties": {
+        "history": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"$ref": "#/$defs/history_entry"}},
+        "history_sha256": {"$ref": "#/$defs/sha256"},
+        "statuses": {"$ref": "#/$defs/statuses"}
+      }
+    },
+    "sqlite_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checks", "history", "history_sha256", "statuses"],
+      "properties": {
+        "checks": {"$ref": "#/$defs/sqlite_checks"},
+        "history": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"$ref": "#/$defs/history_entry"}},
+        "history_sha256": {"$ref": "#/$defs/sha256"},
+        "statuses": {"$ref": "#/$defs/statuses"}
+      }
+    },
+    "runtime16": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image", "postgresql", "docker_server"],
+      "properties": {
+        "image": {"const": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"},
+        "postgresql": {"const": "16.14"},
+        "docker_server": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"}
+      }
+    },
+    "runtime17": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image", "postgresql", "docker_server"],
+      "properties": {
+        "image": {"const": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"},
+        "postgresql": {"const": "17.10"},
+        "docker_server": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"}
+      }
+    },
+    "postgres16_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checks", "history", "history_sha256", "statuses", "runtime", "role_flags"],
+      "properties": {
+        "checks": {"$ref": "#/$defs/postgres_checks"},
+        "history": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"$ref": "#/$defs/history_entry"}},
+        "history_sha256": {"$ref": "#/$defs/sha256"},
+        "statuses": {"$ref": "#/$defs/statuses"},
+        "runtime": {"$ref": "#/$defs/runtime16"},
+        "role_flags": {"$ref": "#/$defs/role_flags"}
+      }
+    },
+    "postgres17_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checks", "history", "history_sha256", "statuses", "runtime", "role_flags"],
+      "properties": {
+        "checks": {"$ref": "#/$defs/postgres_checks"},
+        "history": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"$ref": "#/$defs/history_entry"}},
+        "history_sha256": {"$ref": "#/$defs/sha256"},
+        "statuses": {"$ref": "#/$defs/statuses"},
+        "runtime": {"$ref": "#/$defs/runtime17"},
+        "role_flags": {"$ref": "#/$defs/role_flags"}
+      }
+    }
+  }
+}

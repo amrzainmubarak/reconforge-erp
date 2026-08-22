@@ -1,5 +1,17 @@
 # Quality Baseline
 
+## E-831 write-back recovery and compensation parity (2026-08-22)
+
+The closed runner proves the six-version append-only lifecycle on a SQLite
+reference and exact PostgreSQL 16.14/17.10 cells. Two spawned acceptance-before-
+persistence crash windows recover through the original and distinct compensation
+idempotency keys exactly once. Sixteen checks per PostgreSQL cell and thirteen
+SQLite checks pass, including direct mutation refusal, tenant isolation,
+non-privileged role flags, history parity, schema/source binding, cleanup, and
+six negative evidence mutations. The focused report/supply-policy selector
+passes 37/37. This is bounded synthetic single-host quality, not live-provider,
+accounting, settlement, distributed HA, or production quality.
+
 ## E-830 synchronous receiver failover verification (2026-08-22)
 
 One closed runner executes the same receiver fault sequence on exact

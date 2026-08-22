@@ -9,6 +9,26 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-831
+    priority: P0
+    area: connector-reliability
+    title: Prove PostgreSQL write-back crash recovery and compensation parity
+    status: completed
+    depends_on: [E-830]
+    exit_evidence: >-
+      A closed provider-neutral matrix stages the append-only proposal,
+      approval, dispatch, acknowledgement, compensation-request, and
+      compensation-complete lifecycle on a same-input SQLite reference and
+      exact PostgreSQL 16.14/17.10 cells. A spawned process records synthetic
+      provider acceptance and exits before acknowledgement persistence; recovery
+      persists the original key exactly once. A second crash window after
+      synthetic compensation acceptance recovers through the distinct
+      `<original-key>:compensation` key exactly once. The six-version history
+      digest matches SQLite, direct UPDATE/DELETE is refused, tenant scope is
+      isolated, and the application role has no elevated flags. This is
+      provider-neutral synthetic evidence on one Docker host, not live provider,
+      accounting, settlement, cross-host HA, exactly-once, or production RPO/RTO
+      evidence.
   - id: E-830
     priority: P0
     area: connector-reliability
@@ -325,6 +345,11 @@ tasks:
         effect/receipt persistence, concurrent process convergence, conflict
         refusal, crash replay, and independent restore evidence. Cross-host and
         live-vendor receiver semantics remain open.
+      - E-831 adds server-backed recovery and compensation parity over the same
+        lifecycle. PostgreSQL 16.14/17.10 and SQLite retain identical six-version
+        histories; two spawned acceptance-before-persistence crash windows,
+        original-key recovery, distinct compensation-key recovery, direct
+        mutation refusal, tenant isolation, and non-privileged role flags pass.
   - id: E-1005
     priority: P0
     area: identity-governance

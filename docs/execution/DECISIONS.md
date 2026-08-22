@@ -5,6 +5,31 @@
 
 ## Decisions
 
+### D-931: Recover accepted write-back and compensation operations by immutable keys
+
+- **Date**: 2026-08-22
+- **Context**: E-660 covered a SQLite crash window and E-825–E-830 established
+  immutable proposal identity and server-backed receiver/failover boundaries.
+  A process can still die after a provider accepts an operation but before the
+  local acknowledgement or compensation completion is durable.
+- **Decision**: Adopt ADR 0545. Persist the append-only lifecycle and recover
+  the original operation with its original idempotency key; recover a governed
+  compensation with the distinct `<original-key>:compensation` key. Refuse
+  direct mutation and preserve tenant/role boundaries.
+- **Rationale**: Transport/process failure must not create a new financial
+  identity or silently conflate a reversal with the original operation.
+  Distinct keys and immutable history make replay auditable and deterministic.
+- **Verification**: E-831 passes the six statuses, two spawned crash windows,
+  SQLite/PostgreSQL 16.14/17.10 history parity, 16 checks per PostgreSQL cell,
+  13 SQLite checks, role flags, isolation, negative schema mutations, and
+  cleanup.
+- **Compatibility**: Additive verifier, report, schema, ADR, CI artifact, and
+  manifest entries only; no runtime API, migration, or connector contract is
+  changed.
+- **Rollback**: Remove E-831 evidence/CI assets while preserving existing
+  E-660/E-825–E-830 contracts and the rule that uncertain outcomes replay by
+  immutable identity.
+
 ### D-930: Treat a disconnected synchronous COMMIT as uncertain until replay
 
 - **Date**: 2026-08-22

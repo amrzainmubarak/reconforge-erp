@@ -8,6 +8,18 @@
 > machine/session. "Passed/blocked" entries are environment-scoped and should not
 > be interpreted as cross-platform production evidence.
 
+## E-831 local refresh (2026-08-22)
+
+- The provider-neutral PostgreSQL write-back recovery/compensation matrix
+  passed in 20.803 seconds on exact 16.14/17.10 images; SQLite parity history
+  is `d59b3648c99690c016c73a3ca9012ca6e7d806429dccc0cbd109081656c5db9d`.
+- The retained report digest is
+  `bdf1d82d0667f244160c43068cdab5c7516096d31fba17848e2ec1c33a3cdbb2`;
+  focused report/supply-policy tests pass 37/37.
+- Evidence assets are additive and packaged in the sdist; no runtime module,
+  public API, migration, or product behavior changed. No push, PR, tag,
+  release, or deployment occurred.
+
 ## E-830 local refresh (2026-08-22)
 
 - Full regression: 2,970 passed, 115 declared capability skips, 23 warnings;

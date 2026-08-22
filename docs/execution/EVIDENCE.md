@@ -2,6 +2,35 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-831: PostgreSQL write-back recovery and compensation parity (2026-08-22)
+
+- Command:
+  `python .github/scripts/verify_postgres_writeback_recovery_compensation_matrix.py --output docs/execution/POSTGRES_WRITEBACK_RECOVERY_COMPENSATION_MATRIX_2026-08-22.json`.
+  The retained report passed in 20.803 seconds on Docker Engine 29.7.2 /
+  Python 3.14.6; report digest
+  `bdf1d82d0667f244160c43068cdab5c7516096d31fba17848e2ec1c33a3cdbb2`.
+- Exact policy-owned images were PostgreSQL 16.14
+  (`postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`)
+  and PostgreSQL 17.10
+  (`postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193`).
+  Each disposable application role has superuser, create-database,
+  create-role, replication, and BYPASSRLS all false.
+- The same synthetic intent advances through six append-only versions. A
+  child process records provider acceptance and exits before acknowledgement
+  persistence; recovery persists the original key once and a replay is
+  idempotent. A second child exits after compensation acceptance and recovery
+  persists the distinct `<original-key>:compensation` key once.
+- Direct UPDATE and DELETE are refused, a sibling tenant cannot observe the
+  intent, and every labelled resource cleans up. SQLite and both PostgreSQL
+  cells produce canonical history SHA-256
+  `d59b3648c99690c016c73a3ca9012ca6e7d806429dccc0cbd109081656c5db9d`.
+  The schema, source/report/base binding, package/CI order, and six negative
+  evidence mutations are covered by the focused 37-test selector.
+- This is provider-neutral synthetic evidence on one host. It does not prove
+  live provider conformance, status reconciliation, accounting or settlement,
+  cross-host HA/quorum, automatic failover, distributed exactly-once delivery,
+  production recovery objectives, or production authorization assurance.
+
 ## E-830: Receiver replay across synchronous PostgreSQL failover (2026-08-22)
 
 - Added

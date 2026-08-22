@@ -304,6 +304,20 @@ jobs:
           path: ${{ runner.temp }}/reconforge-writeback-receiver-failover.json
           if-no-files-found: ignore
 
+      - name: Run PostgreSQL write-back recovery compensation matrix
+        env:
+          RECONFORGE_WRITEBACK_RECOVERY_COMPENSATION_REPORT: ${{ runner.temp }}/reconforge-writeback-recovery-compensation.json
+        run: |
+          uv run --no-sync python .github/scripts/verify_postgres_writeback_recovery_compensation_matrix.py --output "${RECONFORGE_WRITEBACK_RECOVERY_COMPENSATION_REPORT}"
+
+      - name: Upload PostgreSQL write-back recovery compensation matrix
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: reconforge-writeback-recovery-compensation-${{ github.sha }}
+          path: ${{ runner.temp }}/reconforge-writeback-recovery-compensation.json
+          if-no-files-found: ignore
+
       - name: Run live server-boundary tests
         env:
           RECONFORGE_POSTGRES_DSN: postgresql://postgres:postgres@localhost:5432/postgres

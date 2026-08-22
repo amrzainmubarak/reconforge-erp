@@ -2,6 +2,28 @@
 
 Updated: 2026-08-22
 
+## E-831 — PostgreSQL write-back recovery and compensation parity (2026-08-22)
+
+- Added a closed, provider-neutral verifier for the append-only write-back
+  lifecycle: `proposed`, `approved`, `dispatched`, `acknowledged`,
+  `compensation_requested`, and `compensated`.
+- A spawned process records synthetic provider acceptance and exits before
+  acknowledgement persistence; recovery reuses the original idempotency key
+  exactly once. A second crash window after synthetic compensation acceptance
+  recovers through the distinct `<original-key>:compensation` key exactly once.
+- SQLite and exact PostgreSQL 16.14/17.10 cells produce the same six-version
+  canonical history SHA-256
+  `d59b3648c99690c016c73a3ca9012ca6e7d806429dccc0cbd109081656c5db9d`.
+  All 16 PostgreSQL checks per version, all 13 SQLite checks, role flags,
+  tenant isolation, direct UPDATE/DELETE refusal, and cleanup pass.
+- The retained report took 20.803 seconds and has digest
+  `bdf1d82d0667f244160c43068cdab5c7516096d31fba17848e2ec1c33a3cdbb2`.
+  Focused report and supply-policy tests pass 37/37.
+- Boundary: synthetic provider acceptance markers only, one disposable node
+  per version on one Docker Desktop host, no live provider/status API,
+  accounting posting, settlement, cross-host quorum, automatic failover,
+  production exactly-once, or production RPO/RTO claim.
+
 ## E-830 — Receiver replay across synchronous PostgreSQL failover (2026-08-22)
 
 - Added a closed, additive failover verifier for the unchanged digest-only

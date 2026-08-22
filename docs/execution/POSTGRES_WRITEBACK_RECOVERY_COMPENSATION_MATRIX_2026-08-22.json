@@ -1,0 +1,711 @@
+{
+  "duration_seconds": 20.803,
+  "executed_at": "2026-08-22T17:50:03+00:00",
+  "limitations": [
+    "synthetic_provider_acceptance_marker_only",
+    "no_live_provider_or_status_api",
+    "no_accounting_posting_or_settlement",
+    "single_disposable_postgresql_node_per_version",
+    "single_docker_desktop_host",
+    "no_cross_host_quorum_or_automatic_failover",
+    "no_production_exactly_once_or_rpo_rto_claim"
+  ],
+  "parity": {
+    "all_checks_passed": true,
+    "all_cleanup_complete": true,
+    "history_sha256": "d59b3648c99690c016c73a3ca9012ca6e7d806429dccc0cbd109081656c5db9d",
+    "postgresql_versions": [
+      "16.14",
+      "17.10"
+    ]
+  },
+  "profile": "provider-neutral-writeback-recovery-compensation-parity",
+  "report_digest": "bdf1d82d0667f244160c43068cdab5c7516096d31fba17848e2ec1c33a3cdbb2",
+  "runs": [
+    {
+      "checks": {
+        "canonical_status_history": true,
+        "cleanup_complete": true,
+        "compensation_acceptance_before_completion_persistence": true,
+        "compensation_completion_persisted_once": true,
+        "compensation_completion_replay_idempotent": true,
+        "compensation_key_is_distinct": true,
+        "compensation_request_actor_separated": true,
+        "direct_delete_refused": true,
+        "direct_update_refused": true,
+        "non_privileged_role": true,
+        "original_acknowledgement_persisted_once": true,
+        "original_acknowledgement_replay_idempotent": true,
+        "original_recovery_preserved_version_three": true,
+        "proposal_approval_dispatch_versions": true,
+        "provider_acceptance_before_ack_persistence": true,
+        "tenant_scope_isolated": true
+      },
+      "history": [
+        {
+          "intent_digest": "1692aaddc7dec57aed8fab0c9736e58e3c32c0fc9622eb20fe772a610ad9254b",
+          "intent_json": {
+            "acknowledgement": null,
+            "approval": null,
+            "compensation_reason": null,
+            "compensation_requested_at": null,
+            "compensation_requested_by": null,
+            "connector_id": "reference-rest-writeback",
+            "feature_enabled": true,
+            "idempotency_key": "e831-original-key",
+            "intent_id": "e831-writeback-intent",
+            "operation": "payment.create",
+            "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "requested_at": "2026-08-22T12:00:00Z",
+            "requested_by": "e831-maker",
+            "schema_version": "connector-writeback-intent-v1",
+            "status": "proposed",
+            "tenant_id": "e831-tenant",
+            "workspace_id": "e831-workspace"
+          },
+          "status": "proposed",
+          "version": 1
+        },
+        {
+          "intent_digest": "048ce59092ca7a9a201029221b118f10160050d902098bdee7958b94bdb77c34",
+          "intent_json": {
+            "acknowledgement": null,
+            "approval": {
+              "actor_id": "e831-checker",
+              "approved_at": "2026-08-22T12:00:00Z",
+              "assurance": "mfa",
+              "reason": "independent synthetic write-back review"
+            },
+            "compensation_reason": null,
+            "compensation_requested_at": null,
+            "compensation_requested_by": null,
+            "connector_id": "reference-rest-writeback",
+            "feature_enabled": true,
+            "idempotency_key": "e831-original-key",
+            "intent_id": "e831-writeback-intent",
+            "operation": "payment.create",
+            "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "requested_at": "2026-08-22T12:00:00Z",
+            "requested_by": "e831-maker",
+            "schema_version": "connector-writeback-intent-v1",
+            "status": "approved",
+            "tenant_id": "e831-tenant",
+            "workspace_id": "e831-workspace"
+          },
+          "status": "approved",
+          "version": 2
+        },
+        {
+          "intent_digest": "c81cde7987c8ceb821fd7938fc0292ffad8867a809c1294ddef9b4ba4b53c829",
+          "intent_json": {
+            "acknowledgement": null,
+            "approval": {
+              "actor_id": "e831-checker",
+              "approved_at": "2026-08-22T12:00:00Z",
+              "assurance": "mfa",
+              "reason": "independent synthetic write-back review"
+            },
+            "compensation_reason": null,
+            "compensation_requested_at": null,
+            "compensation_requested_by": null,
+            "connector_id": "reference-rest-writeback",
+            "feature_enabled": true,
+            "idempotency_key": "e831-original-key",
+            "intent_id": "e831-writeback-intent",
+            "operation": "payment.create",
+            "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "requested_at": "2026-08-22T12:00:00Z",
+            "requested_by": "e831-maker",
+            "schema_version": "connector-writeback-intent-v1",
+            "status": "dispatched",
+            "tenant_id": "e831-tenant",
+            "workspace_id": "e831-workspace"
+          },
+          "status": "dispatched",
+          "version": 3
+        },
+        {
+          "intent_digest": "2046c6d3e174cf771bef30e37fdf9ff3785e9d074484cae7cccb71294ce1d33f",
+          "intent_json": {
+            "acknowledgement": {
+              "accepted": true,
+              "acknowledged_at": "2026-08-22T12:00:00Z",
+              "idempotency_key": "e831-original-key",
+              "provider_reference": "synthetic-e831-accepted",
+              "response_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            },
+            "approval": {
+              "actor_id": "e831-checker",
+              "approved_at": "2026-08-22T12:00:00Z",
+              "assurance": "mfa",
+              "reason": "independent synthetic write-back review"
+            },
+            "compensation_reason": null,
+            "compensation_requested_at": null,
+            "compensation_requested_by": null,
+            "connector_id": "reference-rest-writeback",
+            "feature_enabled": true,
+            "idempotency_key": "e831-original-key",
+            "intent_id": "e831-writeback-intent",
+            "operation": "payment.create",
+            "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "requested_at": "2026-08-22T12:00:00Z",
+            "requested_by": "e831-maker",
+            "schema_version": "connector-writeback-intent-v1",
+            "status": "acknowledged",
+            "tenant_id": "e831-tenant",
+            "workspace_id": "e831-workspace"
+          },
+          "status": "acknowledged",
+          "version": 4
+        },
+        {
+          "intent_digest": "81c31ce58625ed638979d99e754072cf751a0291135e26c494c66951b9356b8f",
+          "intent_json": {
+            "acknowledgement": {
+              "accepted": true,
+              "acknowledged_at": "2026-08-22T12:00:00Z",
+              "idempotency_key": "e831-original-key",
+              "provider_reference": "synthetic-e831-accepted",
+              "response_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            },
+            "approval": {
+              "actor_id": "e831-checker",
+              "approved_at": "2026-08-22T12:00:00Z",
+              "assurance": "mfa",
+              "reason": "independent synthetic write-back review"
+            },
+            "compensation_reason": "synthetic provider acceptance requires a governed reversal",
+            "compensation_requested_at": "2026-08-22T12:00:00Z",
+            "compensation_requested_by": "e831-controller",
+            "connector_id": "reference-rest-writeback",
+            "feature_enabled": true,
+            "idempotency_key": "e831-original-key",
+            "intent_id": "e831-writeback-intent",
+            "operation": "payment.create",
+            "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "requested_at": "2026-08-22T12:00:00Z",
+            "requested_by": "e831-maker",
+            "schema_version": "connector-writeback-intent-v1",
+            "status": "compensation_requested",
+            "tenant_id": "e831-tenant",
+            "workspace_id": "e831-workspace"
+          },
+          "status": "compensation_requested",
+          "version": 5
+        },
+        {
+          "intent_digest": "b7fb15d1830e2167e43280eebbd61584a304400bb69ad23c96ef871bac408522",
+          "intent_json": {
+            "acknowledgement": {
+              "accepted": true,
+              "acknowledged_at": "2026-08-22T12:00:00Z",
+              "idempotency_key": "e831-original-key:compensation",
+              "provider_reference": "synthetic-e831-compensation",
+              "response_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+            },
+            "approval": {
+              "actor_id": "e831-checker",
+              "approved_at": "2026-08-22T12:00:00Z",
+              "assurance": "mfa",
+              "reason": "independent synthetic write-back review"
+            },
+            "compensation_reason": "synthetic provider acceptance requires a governed reversal",
+            "compensation_requested_at": "2026-08-22T12:00:00Z",
+            "compensation_requested_by": "e831-controller",
+            "connector_id": "reference-rest-writeback",
+            "feature_enabled": true,
+            "idempotency_key": "e831-original-key",
+            "intent_id": "e831-writeback-intent",
+            "operation": "payment.create",
+            "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "requested_at": "2026-08-22T12:00:00Z",
+            "requested_by": "e831-maker",
+            "schema_version": "connector-writeback-intent-v1",
+            "status": "compensated",
+            "tenant_id": "e831-tenant",
+            "workspace_id": "e831-workspace"
+          },
+          "status": "compensated",
+          "version": 6
+        }
+      ],
+      "history_sha256": "d59b3648c99690c016c73a3ca9012ca6e7d806429dccc0cbd109081656c5db9d",
+      "role_flags": {
+        "bypass_rls": false,
+        "create_database": false,
+        "create_role": false,
+        "replication": false,
+        "superuser": false
+      },
+      "runtime": {
+        "docker_server": "29.7.2",
+        "image": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+        "postgresql": "16.14"
+      },
+      "statuses": [
+        "proposed",
+        "approved",
+        "dispatched",
+        "acknowledged",
+        "compensation_requested",
+        "compensated"
+      ]
+    },
+    {
+      "checks": {
+        "canonical_status_history": true,
+        "cleanup_complete": true,
+        "compensation_acceptance_before_completion_persistence": true,
+        "compensation_completion_persisted_once": true,
+        "compensation_completion_replay_idempotent": true,
+        "compensation_key_is_distinct": true,
+        "compensation_request_actor_separated": true,
+        "direct_delete_refused": true,
+        "direct_update_refused": true,
+        "non_privileged_role": true,
+        "original_acknowledgement_persisted_once": true,
+        "original_acknowledgement_replay_idempotent": true,
+        "original_recovery_preserved_version_three": true,
+        "proposal_approval_dispatch_versions": true,
+        "provider_acceptance_before_ack_persistence": true,
+        "tenant_scope_isolated": true
+      },
+      "history": [
+        {
+          "intent_digest": "1692aaddc7dec57aed8fab0c9736e58e3c32c0fc9622eb20fe772a610ad9254b",
+          "intent_json": {
+            "acknowledgement": null,
+            "approval": null,
+            "compensation_reason": null,
+            "compensation_requested_at": null,
+            "compensation_requested_by": null,
+            "connector_id": "reference-rest-writeback",
+            "feature_enabled": true,
+            "idempotency_key": "e831-original-key",
+            "intent_id": "e831-writeback-intent",
+            "operation": "payment.create",
+            "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "requested_at": "2026-08-22T12:00:00Z",
+            "requested_by": "e831-maker",
+            "schema_version": "connector-writeback-intent-v1",
+            "status": "proposed",
+            "tenant_id": "e831-tenant",
+            "workspace_id": "e831-workspace"
+          },
+          "status": "proposed",
+          "version": 1
+        },
+        {
+          "intent_digest": "048ce59092ca7a9a201029221b118f10160050d902098bdee7958b94bdb77c34",
+          "intent_json": {
+            "acknowledgement": null,
+            "approval": {
+              "actor_id": "e831-checker",
+              "approved_at": "2026-08-22T12:00:00Z",
+              "assurance": "mfa",
+              "reason": "independent synthetic write-back review"
+            },
+            "compensation_reason": null,
+            "compensation_requested_at": null,
+            "compensation_requested_by": null,
+            "connector_id": "reference-rest-writeback",
+            "feature_enabled": true,
+            "idempotency_key": "e831-original-key",
+            "intent_id": "e831-writeback-intent",
+            "operation": "payment.create",
+            "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "requested_at": "2026-08-22T12:00:00Z",
+            "requested_by": "e831-maker",
+            "schema_version": "connector-writeback-intent-v1",
+            "status": "approved",
+            "tenant_id": "e831-tenant",
+            "workspace_id": "e831-workspace"
+          },
+          "status": "approved",
+          "version": 2
+        },
+        {
+          "intent_digest": "c81cde7987c8ceb821fd7938fc0292ffad8867a809c1294ddef9b4ba4b53c829",
+          "intent_json": {
+            "acknowledgement": null,
+            "approval": {
+              "actor_id": "e831-checker",
+              "approved_at": "2026-08-22T12:00:00Z",
+              "assurance": "mfa",
+              "reason": "independent synthetic write-back review"
+            },
+            "compensation_reason": null,
+            "compensation_requested_at": null,
+            "compensation_requested_by": null,
+            "connector_id": "reference-rest-writeback",
+            "feature_enabled": true,
+            "idempotency_key": "e831-original-key",
+            "intent_id": "e831-writeback-intent",
+            "operation": "payment.create",
+            "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "requested_at": "2026-08-22T12:00:00Z",
+            "requested_by": "e831-maker",
+            "schema_version": "connector-writeback-intent-v1",
+            "status": "dispatched",
+            "tenant_id": "e831-tenant",
+            "workspace_id": "e831-workspace"
+          },
+          "status": "dispatched",
+          "version": 3
+        },
+        {
+          "intent_digest": "2046c6d3e174cf771bef30e37fdf9ff3785e9d074484cae7cccb71294ce1d33f",
+          "intent_json": {
+            "acknowledgement": {
+              "accepted": true,
+              "acknowledged_at": "2026-08-22T12:00:00Z",
+              "idempotency_key": "e831-original-key",
+              "provider_reference": "synthetic-e831-accepted",
+              "response_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            },
+            "approval": {
+              "actor_id": "e831-checker",
+              "approved_at": "2026-08-22T12:00:00Z",
+              "assurance": "mfa",
+              "reason": "independent synthetic write-back review"
+            },
+            "compensation_reason": null,
+            "compensation_requested_at": null,
+            "compensation_requested_by": null,
+            "connector_id": "reference-rest-writeback",
+            "feature_enabled": true,
+            "idempotency_key": "e831-original-key",
+            "intent_id": "e831-writeback-intent",
+            "operation": "payment.create",
+            "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "requested_at": "2026-08-22T12:00:00Z",
+            "requested_by": "e831-maker",
+            "schema_version": "connector-writeback-intent-v1",
+            "status": "acknowledged",
+            "tenant_id": "e831-tenant",
+            "workspace_id": "e831-workspace"
+          },
+          "status": "acknowledged",
+          "version": 4
+        },
+        {
+          "intent_digest": "81c31ce58625ed638979d99e754072cf751a0291135e26c494c66951b9356b8f",
+          "intent_json": {
+            "acknowledgement": {
+              "accepted": true,
+              "acknowledged_at": "2026-08-22T12:00:00Z",
+              "idempotency_key": "e831-original-key",
+              "provider_reference": "synthetic-e831-accepted",
+              "response_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            },
+            "approval": {
+              "actor_id": "e831-checker",
+              "approved_at": "2026-08-22T12:00:00Z",
+              "assurance": "mfa",
+              "reason": "independent synthetic write-back review"
+            },
+            "compensation_reason": "synthetic provider acceptance requires a governed reversal",
+            "compensation_requested_at": "2026-08-22T12:00:00Z",
+            "compensation_requested_by": "e831-controller",
+            "connector_id": "reference-rest-writeback",
+            "feature_enabled": true,
+            "idempotency_key": "e831-original-key",
+            "intent_id": "e831-writeback-intent",
+            "operation": "payment.create",
+            "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "requested_at": "2026-08-22T12:00:00Z",
+            "requested_by": "e831-maker",
+            "schema_version": "connector-writeback-intent-v1",
+            "status": "compensation_requested",
+            "tenant_id": "e831-tenant",
+            "workspace_id": "e831-workspace"
+          },
+          "status": "compensation_requested",
+          "version": 5
+        },
+        {
+          "intent_digest": "b7fb15d1830e2167e43280eebbd61584a304400bb69ad23c96ef871bac408522",
+          "intent_json": {
+            "acknowledgement": {
+              "accepted": true,
+              "acknowledged_at": "2026-08-22T12:00:00Z",
+              "idempotency_key": "e831-original-key:compensation",
+              "provider_reference": "synthetic-e831-compensation",
+              "response_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+            },
+            "approval": {
+              "actor_id": "e831-checker",
+              "approved_at": "2026-08-22T12:00:00Z",
+              "assurance": "mfa",
+              "reason": "independent synthetic write-back review"
+            },
+            "compensation_reason": "synthetic provider acceptance requires a governed reversal",
+            "compensation_requested_at": "2026-08-22T12:00:00Z",
+            "compensation_requested_by": "e831-controller",
+            "connector_id": "reference-rest-writeback",
+            "feature_enabled": true,
+            "idempotency_key": "e831-original-key",
+            "intent_id": "e831-writeback-intent",
+            "operation": "payment.create",
+            "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "requested_at": "2026-08-22T12:00:00Z",
+            "requested_by": "e831-maker",
+            "schema_version": "connector-writeback-intent-v1",
+            "status": "compensated",
+            "tenant_id": "e831-tenant",
+            "workspace_id": "e831-workspace"
+          },
+          "status": "compensated",
+          "version": 6
+        }
+      ],
+      "history_sha256": "d59b3648c99690c016c73a3ca9012ca6e7d806429dccc0cbd109081656c5db9d",
+      "role_flags": {
+        "bypass_rls": false,
+        "create_database": false,
+        "create_role": false,
+        "replication": false,
+        "superuser": false
+      },
+      "runtime": {
+        "docker_server": "29.7.2",
+        "image": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193",
+        "postgresql": "17.10"
+      },
+      "statuses": [
+        "proposed",
+        "approved",
+        "dispatched",
+        "acknowledged",
+        "compensation_requested",
+        "compensated"
+      ]
+    }
+  ],
+  "schema_version": "postgres-writeback-recovery-compensation-matrix-v1",
+  "sqlite_reference": {
+    "checks": {
+      "canonical_status_history": true,
+      "cleanup_complete": true,
+      "compensation_acceptance_before_completion_persistence": true,
+      "compensation_completion_persisted_once": true,
+      "compensation_completion_replay_idempotent": true,
+      "compensation_key_is_distinct": true,
+      "compensation_request_actor_separated": true,
+      "original_acknowledgement_persisted_once": true,
+      "original_acknowledgement_replay_idempotent": true,
+      "original_recovery_preserved_version_three": true,
+      "proposal_approval_dispatch_versions": true,
+      "provider_acceptance_before_ack_persistence": true,
+      "tenant_scope_isolated": true
+    },
+    "history": [
+      {
+        "intent_digest": "1692aaddc7dec57aed8fab0c9736e58e3c32c0fc9622eb20fe772a610ad9254b",
+        "intent_json": {
+          "acknowledgement": null,
+          "approval": null,
+          "compensation_reason": null,
+          "compensation_requested_at": null,
+          "compensation_requested_by": null,
+          "connector_id": "reference-rest-writeback",
+          "feature_enabled": true,
+          "idempotency_key": "e831-original-key",
+          "intent_id": "e831-writeback-intent",
+          "operation": "payment.create",
+          "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "requested_at": "2026-08-22T12:00:00Z",
+          "requested_by": "e831-maker",
+          "schema_version": "connector-writeback-intent-v1",
+          "status": "proposed",
+          "tenant_id": "e831-tenant",
+          "workspace_id": "e831-workspace"
+        },
+        "status": "proposed",
+        "version": 1
+      },
+      {
+        "intent_digest": "048ce59092ca7a9a201029221b118f10160050d902098bdee7958b94bdb77c34",
+        "intent_json": {
+          "acknowledgement": null,
+          "approval": {
+            "actor_id": "e831-checker",
+            "approved_at": "2026-08-22T12:00:00Z",
+            "assurance": "mfa",
+            "reason": "independent synthetic write-back review"
+          },
+          "compensation_reason": null,
+          "compensation_requested_at": null,
+          "compensation_requested_by": null,
+          "connector_id": "reference-rest-writeback",
+          "feature_enabled": true,
+          "idempotency_key": "e831-original-key",
+          "intent_id": "e831-writeback-intent",
+          "operation": "payment.create",
+          "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "requested_at": "2026-08-22T12:00:00Z",
+          "requested_by": "e831-maker",
+          "schema_version": "connector-writeback-intent-v1",
+          "status": "approved",
+          "tenant_id": "e831-tenant",
+          "workspace_id": "e831-workspace"
+        },
+        "status": "approved",
+        "version": 2
+      },
+      {
+        "intent_digest": "c81cde7987c8ceb821fd7938fc0292ffad8867a809c1294ddef9b4ba4b53c829",
+        "intent_json": {
+          "acknowledgement": null,
+          "approval": {
+            "actor_id": "e831-checker",
+            "approved_at": "2026-08-22T12:00:00Z",
+            "assurance": "mfa",
+            "reason": "independent synthetic write-back review"
+          },
+          "compensation_reason": null,
+          "compensation_requested_at": null,
+          "compensation_requested_by": null,
+          "connector_id": "reference-rest-writeback",
+          "feature_enabled": true,
+          "idempotency_key": "e831-original-key",
+          "intent_id": "e831-writeback-intent",
+          "operation": "payment.create",
+          "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "requested_at": "2026-08-22T12:00:00Z",
+          "requested_by": "e831-maker",
+          "schema_version": "connector-writeback-intent-v1",
+          "status": "dispatched",
+          "tenant_id": "e831-tenant",
+          "workspace_id": "e831-workspace"
+        },
+        "status": "dispatched",
+        "version": 3
+      },
+      {
+        "intent_digest": "2046c6d3e174cf771bef30e37fdf9ff3785e9d074484cae7cccb71294ce1d33f",
+        "intent_json": {
+          "acknowledgement": {
+            "accepted": true,
+            "acknowledged_at": "2026-08-22T12:00:00Z",
+            "idempotency_key": "e831-original-key",
+            "provider_reference": "synthetic-e831-accepted",
+            "response_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          },
+          "approval": {
+            "actor_id": "e831-checker",
+            "approved_at": "2026-08-22T12:00:00Z",
+            "assurance": "mfa",
+            "reason": "independent synthetic write-back review"
+          },
+          "compensation_reason": null,
+          "compensation_requested_at": null,
+          "compensation_requested_by": null,
+          "connector_id": "reference-rest-writeback",
+          "feature_enabled": true,
+          "idempotency_key": "e831-original-key",
+          "intent_id": "e831-writeback-intent",
+          "operation": "payment.create",
+          "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "requested_at": "2026-08-22T12:00:00Z",
+          "requested_by": "e831-maker",
+          "schema_version": "connector-writeback-intent-v1",
+          "status": "acknowledged",
+          "tenant_id": "e831-tenant",
+          "workspace_id": "e831-workspace"
+        },
+        "status": "acknowledged",
+        "version": 4
+      },
+      {
+        "intent_digest": "81c31ce58625ed638979d99e754072cf751a0291135e26c494c66951b9356b8f",
+        "intent_json": {
+          "acknowledgement": {
+            "accepted": true,
+            "acknowledged_at": "2026-08-22T12:00:00Z",
+            "idempotency_key": "e831-original-key",
+            "provider_reference": "synthetic-e831-accepted",
+            "response_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          },
+          "approval": {
+            "actor_id": "e831-checker",
+            "approved_at": "2026-08-22T12:00:00Z",
+            "assurance": "mfa",
+            "reason": "independent synthetic write-back review"
+          },
+          "compensation_reason": "synthetic provider acceptance requires a governed reversal",
+          "compensation_requested_at": "2026-08-22T12:00:00Z",
+          "compensation_requested_by": "e831-controller",
+          "connector_id": "reference-rest-writeback",
+          "feature_enabled": true,
+          "idempotency_key": "e831-original-key",
+          "intent_id": "e831-writeback-intent",
+          "operation": "payment.create",
+          "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "requested_at": "2026-08-22T12:00:00Z",
+          "requested_by": "e831-maker",
+          "schema_version": "connector-writeback-intent-v1",
+          "status": "compensation_requested",
+          "tenant_id": "e831-tenant",
+          "workspace_id": "e831-workspace"
+        },
+        "status": "compensation_requested",
+        "version": 5
+      },
+      {
+        "intent_digest": "b7fb15d1830e2167e43280eebbd61584a304400bb69ad23c96ef871bac408522",
+        "intent_json": {
+          "acknowledgement": {
+            "accepted": true,
+            "acknowledged_at": "2026-08-22T12:00:00Z",
+            "idempotency_key": "e831-original-key:compensation",
+            "provider_reference": "synthetic-e831-compensation",
+            "response_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          },
+          "approval": {
+            "actor_id": "e831-checker",
+            "approved_at": "2026-08-22T12:00:00Z",
+            "assurance": "mfa",
+            "reason": "independent synthetic write-back review"
+          },
+          "compensation_reason": "synthetic provider acceptance requires a governed reversal",
+          "compensation_requested_at": "2026-08-22T12:00:00Z",
+          "compensation_requested_by": "e831-controller",
+          "connector_id": "reference-rest-writeback",
+          "feature_enabled": true,
+          "idempotency_key": "e831-original-key",
+          "intent_id": "e831-writeback-intent",
+          "operation": "payment.create",
+          "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "requested_at": "2026-08-22T12:00:00Z",
+          "requested_by": "e831-maker",
+          "schema_version": "connector-writeback-intent-v1",
+          "status": "compensated",
+          "tenant_id": "e831-tenant",
+          "workspace_id": "e831-workspace"
+        },
+        "status": "compensated",
+        "version": 6
+      }
+    ],
+    "history_sha256": "d59b3648c99690c016c73a3ca9012ca6e7d806429dccc0cbd109081656c5db9d",
+    "statuses": [
+      "proposed",
+      "approved",
+      "dispatched",
+      "acknowledged",
+      "compensation_requested",
+      "compensated"
+    ]
+  },
+  "subject": {
+    "base_commit": "3c4742eaffe84d53ceaeb101ecd60ed0de16b393",
+    "matrix_runner_source_sha256": "1663c086cf2ab9997b2359e2c934c3fce92c4d482bf9141ab79f33de90011c57",
+    "migration_source_sha256": "92e42b27e1ef043ce9be9a44130efadc61daa6953b85aa516e5f7e7e03a6a4b0",
+    "postgres_persistence_source_sha256": "8128fd99b2d075ee4c4e9ab20dd1aa196fcecef3ab871845b4ba14a28809fda9",
+    "sqlite_persistence_source_sha256": "68e972c1755ec70e987ec508c7e6f2325a6d9e3e1c799ff4a9ded6bcbce55046",
+    "supply_chain_policy_sha256": "15675362650f9b2691251da77dd01538d72b3a7249c7a60c7591b7bbe0a48cae",
+    "writeback_source_sha256": "81da111e8b32adec2c7d90e3bf45d7acc8161f60e7f483ac501f711323cef01c"
+  }
+}

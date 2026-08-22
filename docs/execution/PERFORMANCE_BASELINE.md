@@ -1,5 +1,13 @@
 # Performance Baseline
 
+## E-831 write-back recovery matrix timing (2026-08-22)
+
+The exact two-version matrix, including migrations, two spawned crash/recovery
+windows per cell, history parity, and cleanup, took 20.803 seconds on one
+Docker Desktop host. This is a local regression observation for synthetic
+payloads and provider-acceptance markers, not a capacity result, provider
+latency, production SLO, RPO/RTO, or cross-host benchmark.
+
 ## E-830 bounded receiver recovery timing (2026-08-22)
 
 The exact two-node synchronous receiver topology measured fencing start through

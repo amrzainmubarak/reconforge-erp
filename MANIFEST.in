@@ -913,3 +913,8 @@ include docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-08-22.js
 include docs/schemas/postgres_writeback_receiver_failover_matrix.schema.json
 include tests/test_postgres_writeback_receiver_failover_matrix.py
 include docs/adr/0544-prove-receiver-replay-across-synchronous-postgres-failover.md
+include .github/scripts/verify_postgres_writeback_recovery_compensation_matrix.py
+include docs/execution/POSTGRES_WRITEBACK_RECOVERY_COMPENSATION_MATRIX_2026-08-22.json
+include docs/schemas/postgres_writeback_recovery_compensation_matrix.schema.json
+include tests/test_postgres_writeback_recovery_compensation_matrix.py
+include docs/adr/0545-prove-writeback-recovery-compensation-parity.md

@@ -659,6 +659,7 @@ def _validate_dockerfile(root: Path, policy: dict[str, Any]) -> None:
         ".github/scripts/verify_postgres_writeback_identity_migration_matrix.py",
         ".github/scripts/verify_postgres_writeback_receiver_idempotency_matrix.py",
         ".github/scripts/verify_postgres_writeback_receiver_failover_matrix.py",
+        ".github/scripts/verify_postgres_writeback_recovery_compensation_matrix.py",
     )
     for relative in matrix_paths:
         matrix_script = _required_path(root, relative).read_text(encoding="utf-8")

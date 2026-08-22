@@ -2,6 +2,21 @@
 
 Measured through 2026-08-22 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
 
+## E-831 write-back recovery controls (2026-08-22)
+
+- The runner uses generated disposable credentials, exact digest-pinned images,
+  parameterized values, labelled cleanup, and a non-privileged application
+  role with all elevated flags false.
+- Append-only lifecycle triggers refuse direct UPDATE/DELETE; recovery is
+  keyed by the original immutable identity, while compensation uses a distinct
+  idempotency key and separated actor.
+- Tenant scope is checked explicitly, the closed schema rejects six mutated
+  evidence shapes, and the supply-chain validator consumes the runner, image
+  constants, report, and CI artifact step.
+- No live provider credentials, customer data, network egress, accounting
+  posting, or settlement path is exercised. These controls are not a hostile
+  DBA review, provider security assessment, or production assurance.
+
 ## Measured gates
 
 | Gate | Result | Scope boundary |

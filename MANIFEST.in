@@ -889,3 +889,8 @@ include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-08-22.js
 include docs/schemas/postgres_writeback_identity_migration_drill.schema.json
 include tests/test_postgres_writeback_identity_migration_drill.py
 include docs/adr/0540-prove-writeback-migration-refusal-and-independent-restore.md
+include .github/scripts/verify_postgres_writeback_identity_migration_matrix.py
+include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-08-22.json
+include docs/schemas/postgres_writeback_identity_migration_matrix.schema.json
+include tests/test_postgres_writeback_identity_migration_matrix.py
+include docs/adr/0541-prove-writeback-migration-supported-version-matrix.md

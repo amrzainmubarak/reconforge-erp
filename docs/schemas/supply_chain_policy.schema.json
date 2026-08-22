@@ -88,9 +88,10 @@
         "service_images": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["airgap_python", "postgres_drills"],
+          "required": ["airgap_python", "postgres_16_ci", "postgres_drills"],
           "properties": {
             "airgap_python": {"const": "python:3.14.1-slim@sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e"},
+            "postgres_16_ci": {"const": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"},
             "postgres_drills": {"const": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"}
           }
         }

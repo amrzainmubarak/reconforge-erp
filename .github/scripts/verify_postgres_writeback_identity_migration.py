@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import secrets
 import subprocess  # nosec B404
 import tempfile
@@ -252,10 +253,21 @@ def _write_report(output: Path, report: dict[str, Any]) -> None:
     output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def run_drill(output: Path) -> dict[str, Any]:
-    container = "reconforge-writeback-migration-" + os.urandom(6).hex()
+def run_observation(
+    *,
+    image_reference: str,
+    expected_postgresql: str,
+    container_prefix: str,
+) -> dict[str, Any]:
+    if re.fullmatch(r"postgres:[a-z0-9.-]+@sha256:[0-9a-f]{64}", image_reference) is None:
+        raise DrillError("PostgreSQL runtime image must be digest-pinned")
+    if re.fullmatch(r"[0-9]+\.[0-9]+", expected_postgresql) is None:
+        raise DrillError("expected PostgreSQL version is invalid")
+    if re.fullmatch(r"[a-z0-9-]{8,48}", container_prefix) is None:
+        raise DrillError("disposable container prefix is invalid")
+    container = container_prefix + "-" + os.urandom(6).hex()
     container_id = ""
-    report: dict[str, Any] | None = None
+    observation: dict[str, Any] | None = None
     cleanup_complete = False
     try:
         container_id = _run(
@@ -270,7 +282,7 @@ def run_drill(output: Path) -> dict[str, Any]:
                 f"POSTGRES_PASSWORD={PASSWORD}",
                 "-p",
                 "127.0.0.1::5432",
-                IMAGE_REFERENCE,
+                image_reference,
             ),
             capture=True,
         )
@@ -356,18 +368,12 @@ def run_drill(output: Path) -> dict[str, Any]:
         with connect(maintenance_dsn) as connection:
             row = connection.execute("SHOW server_version").fetchone()
             postgres_version = "" if row is None else str(row[0])
-        report = {
-            "schema_version": "postgres-writeback-identity-migration-drill-v1",
-            "executed_at": datetime.now(UTC).replace(microsecond=0).isoformat(),
-            "profile": "disposable-postgresql-writeback-identity-migration",
-            "subject": {
-                "migration_commit": _migration_commit(),
-                "migration_source_sha256": _source_digest(MIGRATION_PATH),
-                "runner_source_sha256": _source_digest(Path(__file__)),
-            },
+        if postgres_version != expected_postgresql:
+            raise DrillError("PostgreSQL runtime version does not match its declared profile")
+        observation = {
             "runtime": {
                 "docker_server": _run(("docker", "version", "--format", "{{.Server.Version}}"), capture=True),
-                "image": IMAGE_REFERENCE,
+                "image": image_reference,
                 "postgresql": postgres_version,
                 "source_revision": SOURCE_REVISION,
                 "target_revision": TARGET_REVISION,
@@ -391,13 +397,6 @@ def run_drill(output: Path) -> dict[str, Any]:
                 "enhanced_insert_guard_refused_drift": True,
                 "cleanup_complete": False,
             },
-            "limitations": [
-                "single_disposable_postgresql_node",
-                "synthetic_data_and_credentials_only",
-                "one_postgresql_version",
-                "no_live_provider_or_accounting_posting",
-                "no_cross_host_ha_dr_or_production_claim",
-            ],
         }
     finally:
         if container_id:
@@ -415,11 +414,38 @@ def run_drill(output: Path) -> dict[str, Any]:
                 timeout=30,
             )
             cleanup_complete = check.returncode != 0
-    if report is None:
+    if observation is None:
         raise DrillError("write-back identity migration drill did not produce evidence")
     if not cleanup_complete:
         raise DrillError("disposable PostgreSQL cleanup was not verified")
-    report["checks"]["cleanup_complete"] = True
+    observation["checks"]["cleanup_complete"] = True
+    return observation
+
+
+def run_drill(output: Path) -> dict[str, Any]:
+    observation = run_observation(
+        image_reference=IMAGE_REFERENCE,
+        expected_postgresql="17.10",
+        container_prefix="reconforge-writeback-migration",
+    )
+    report = {
+        "schema_version": "postgres-writeback-identity-migration-drill-v1",
+        "executed_at": datetime.now(UTC).replace(microsecond=0).isoformat(),
+        "profile": "disposable-postgresql-writeback-identity-migration",
+        "subject": {
+            "migration_commit": _migration_commit(),
+            "migration_source_sha256": _source_digest(MIGRATION_PATH),
+            "runner_source_sha256": _source_digest(Path(__file__)),
+        },
+        **observation,
+        "limitations": [
+            "single_disposable_postgresql_node",
+            "synthetic_data_and_credentials_only",
+            "one_postgresql_version",
+            "no_live_provider_or_accounting_posting",
+            "no_cross_host_ha_dr_or_production_claim",
+        ],
+    }
     _write_report(output, report)
     return report
 

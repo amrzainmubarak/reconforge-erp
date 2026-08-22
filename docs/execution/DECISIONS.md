@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-927: Use one observation path for the declared PostgreSQL migration matrix
+
+- **Date**: 2026-08-22
+- **Context**: E-826 proved the write-back identity migration on PostgreSQL
+  17.10, while the live CI profile separately declares a pinned PostgreSQL 16
+  image. Duplicating the drill would permit version-specific test drift.
+- **Decision**: Adopt ADR 0541. Preserve the E-826 CLI/report while extracting
+  one strict observation function and run it against the exact PostgreSQL 16.14
+  CI and 17.10 drill images. Retain a closed, source-bound parity report and add
+  its command/artifact to the server-boundaries workflow.
+- **Rationale**: A supported-version claim requires the same adversarial inputs,
+  audit refusal, native restore, trigger checks, and cleanup on every declared
+  cell, not different tests that merely share a name.
+- **Verification**: E-827 requires two ordered runtime cells, identical
+  canonical valid/invalid histories, all ten checks true in each cell, exact
+  source/policy digests, strict schema refusal, and CI artifact preservation.
+- **Compatibility**: Product code and migration behavior are unchanged. The
+  original E-826 command still defaults to PostgreSQL 17.10 and its v1 schema.
+- **Rollback**: Revert the matrix/refactor assets together and remove any
+  two-version wording. Never rewrite lifecycle history as rollback.
+
 ### D-926: Retain failed-audit state and prove recovery from an independent backup
 
 - **Date**: 2026-08-22

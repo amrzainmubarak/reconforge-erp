@@ -1,5 +1,21 @@
 # Quality Baseline
 
+## E-827 PostgreSQL migration matrix verification (2026-08-22)
+
+The same strict observation function passes on digest-pinned PostgreSQL 16.14
+and 17.10 in 24.178 seconds. Each cell passes all ten checks and cleanup; their
+canonical valid and invalid histories are identical. The retained matrix passes
+its closed Draft 2020-12 schema, canonical report digest, source/policy binding,
+cross-cell parity, negative-schema cases, package manifest, and CI workflow
+contracts. The final regression collected 3,042 tests: 2,927 passed and 115
+declared capability skips, with 23 existing warnings in 410.54 seconds. Ruff,
+Mypy across 523 source files, Bandit, JSON/YAML parsing, the closed policy
+validator, `uv lock --check`, isolated Python 3.12 locked dependency audit,
+build, package membership, and whitespace checks pass. The 1,749-entry sdist
+contains the new matrix materials; the 623-entry wheel retains Alembic 0089.
+Ambient `python -m pip_audit` separately reports host-installed `pip 26.1.2`
+under `PYSEC-2026-3721`; the isolated locked audit reports zero findings.
+
 ## E-826 migration failure/recovery verification (2026-08-22)
 
 The retained PostgreSQL 17.10 Docker drill passes all ten closed checks: native

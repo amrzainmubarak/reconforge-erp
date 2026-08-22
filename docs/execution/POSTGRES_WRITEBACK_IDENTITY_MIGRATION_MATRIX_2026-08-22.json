@@ -1,0 +1,92 @@
+{
+  "duration_seconds": 24.178,
+  "executed_at": "2026-08-22T14:51:24+00:00",
+  "limitations": [
+    "single_docker_desktop_host",
+    "two_postgresql_versions_only",
+    "sequential_single_node_runs",
+    "synthetic_data_and_credentials_only",
+    "no_live_provider_or_accounting_posting",
+    "no_cross_host_ha_dr_or_production_claim"
+  ],
+  "parity": {
+    "all_checks_passed": true,
+    "all_cleanup_complete": true,
+    "invalid_history_sha256": "7384d0a6b70c466e099461bb28b24a979f90cd0c78ea8ae97e5cdf1d77e950a4",
+    "postgresql_versions": [
+      "16.14",
+      "17.10"
+    ],
+    "source_revision": "0088_pg_currency_snapshot",
+    "target_revision": "0089_pg_writeback_identity",
+    "valid_history_sha256": "ec931f9cf25e1b9f8c1b39cc83e6c38e2bc3384b669516505a46d4aaabb30886"
+  },
+  "profile": "disposable-postgresql-writeback-identity-migration-matrix",
+  "report_digest": "6c9e41dd55ef0ff9292a52aacd15030766660db85c5ddda78391aeeb4ecb73f3",
+  "runs": [
+    {
+      "checks": {
+        "cleanup_complete": true,
+        "drifted_upgrade_refused": true,
+        "enhanced_insert_guard_refused_drift": true,
+        "failed_upgrade_history_preserved": true,
+        "failed_upgrade_revision_preserved": true,
+        "failed_upgrade_trigger_preserved": true,
+        "pre_drift_dump_list_verified": true,
+        "pre_drift_restore_verified": true,
+        "restored_upgrade_to_head": true,
+        "successful_upgrade_history_preserved": true
+      },
+      "history": {
+        "invalid_history_sha256": "7384d0a6b70c466e099461bb28b24a979f90cd0c78ea8ae97e5cdf1d77e950a4",
+        "invalid_versions": 3,
+        "pre_drift_dump_sha256": "807fc898c78dd001a8266a11bfb4bef9f416a86e63214999c0436d01ac43842b",
+        "valid_history_sha256": "ec931f9cf25e1b9f8c1b39cc83e6c38e2bc3384b669516505a46d4aaabb30886",
+        "valid_versions": 2
+      },
+      "runtime": {
+        "docker_server": "29.7.2",
+        "image": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+        "postgresql": "16.14",
+        "source_revision": "0088_pg_currency_snapshot",
+        "target_revision": "0089_pg_writeback_identity"
+      }
+    },
+    {
+      "checks": {
+        "cleanup_complete": true,
+        "drifted_upgrade_refused": true,
+        "enhanced_insert_guard_refused_drift": true,
+        "failed_upgrade_history_preserved": true,
+        "failed_upgrade_revision_preserved": true,
+        "failed_upgrade_trigger_preserved": true,
+        "pre_drift_dump_list_verified": true,
+        "pre_drift_restore_verified": true,
+        "restored_upgrade_to_head": true,
+        "successful_upgrade_history_preserved": true
+      },
+      "history": {
+        "invalid_history_sha256": "7384d0a6b70c466e099461bb28b24a979f90cd0c78ea8ae97e5cdf1d77e950a4",
+        "invalid_versions": 3,
+        "pre_drift_dump_sha256": "f15c66e38441a7af8d6e4d4da4a4ccdb1b8779130b5d0a0b2493541cd11f0f50",
+        "valid_history_sha256": "ec931f9cf25e1b9f8c1b39cc83e6c38e2bc3384b669516505a46d4aaabb30886",
+        "valid_versions": 2
+      },
+      "runtime": {
+        "docker_server": "29.7.2",
+        "image": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193",
+        "postgresql": "17.10",
+        "source_revision": "0088_pg_currency_snapshot",
+        "target_revision": "0089_pg_writeback_identity"
+      }
+    }
+  ],
+  "schema_version": "postgres-writeback-identity-migration-matrix-v1",
+  "subject": {
+    "matrix_runner_source_sha256": "6f1006edc1a8843f0a1c587f0726a097a9978f49c308e97db48b1308dfcedb03",
+    "migration_commit": "c7e357335c71a15889375be01bd3e6bf8d70041c",
+    "migration_source_sha256": "92e42b27e1ef043ce9be9a44130efadc61daa6953b85aa516e5f7e7e03a6a4b0",
+    "observation_runner_source_sha256": "e96d2fcda82f1b393024cc30c7b57f216346fb48d0510d623c43618c65a67b24",
+    "supply_chain_policy_sha256": "15675362650f9b2691251da77dd01538d72b3a7249c7a60c7591b7bbe0a48cae"
+  }
+}

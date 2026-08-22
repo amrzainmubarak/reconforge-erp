@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-827
+    priority: P0
+    area: connector-security
+    title: Prove the write-back identity migration across the declared PostgreSQL version matrix
+    status: completed
+    depends_on: [E-826]
+    exit_evidence: >-
+      One shared fail-closed observation runner executes the complete drifted
+      audit-refusal and independent native-restore path sequentially on the
+      digest-pinned PostgreSQL 16.14 CI image and PostgreSQL 17.10 drill image.
+      Both cells retain identical canonical valid and invalid histories, pass
+      all ten checks, and verify cleanup. A closed matrix report binds migration,
+      runner, and supply-chain-policy sources. CI is configured to run and
+      preserve the matrix before the broader live server boundary. This remains
+      two-version, one-host, synthetic, sequential evidence; no provider,
+      posting, rolling upgrade, HA/DR, or production assurance follows.
   - id: E-826
     priority: P0
     area: connector-security
@@ -249,6 +265,9 @@ tasks:
       - E-826 proves on digest-pinned PostgreSQL 17.10 that drifted history is
         refused without mutation and that a native pre-drift backup restores
         independently, upgrades to 0089, and activates the stronger guard.
+      - E-827 reuses that exact observation path across the declared
+        digest-pinned PostgreSQL 16.14 and 17.10 profiles, requires canonical
+        history parity, and adds a retained CI artifact contract.
   - id: E-1005
     priority: P0
     area: identity-governance

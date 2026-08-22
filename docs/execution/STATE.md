@@ -2,6 +2,48 @@
 
 Updated: 2026-08-22
 
+## E-827 — PostgreSQL write-back migration version matrix (2026-08-22)
+
+- Refactored E-826 into one strict reusable observation function without
+  changing its CLI, default PostgreSQL 17.10 image, report schema, or product
+  behavior. Invalid image references, expected versions, and container prefixes
+  fail before Docker I/O.
+- The same observation path ran sequentially against the exact CI PostgreSQL
+  16.14 digest and the existing PostgreSQL 17.10 digest. Each cell upgraded to
+  0088, captured/listed a native pre-drift dump, created proposal drift, proved
+  0089 refusal without revision/history/trigger mutation, restored independently,
+  upgraded to 0089, rejected drift through the enhanced INSERT guard, and
+  verified exact container cleanup.
+- Both cells produced canonical valid-history SHA-256
+  `ec931f9cf25e1b9f8c1b39cc83e6c38e2bc3384b669516505a46d4aaabb30886`
+  and invalid-history SHA-256
+  `7384d0a6b70c466e099461bb28b24a979f90cd0c78ea8ae97e5cdf1d77e950a4`.
+  The 24.178-second retained matrix report digest is
+  `6c9e41dd55ef0ff9292a52aacd15030766660db85c5ddda78391aeeb4ecb73f3`.
+- The closed supply-chain policy now explicitly owns the PostgreSQL 16 CI
+  digest as well as the PostgreSQL 17 drill digest. The CI server-boundaries job
+  runs and uploads the matrix before the broader live suite; this is a checked
+  workflow definition, not a hosted-run claim under D-485.
+- The post-slice regression collected 3,042 tests: 2,927 passed and 115 were
+  declared capability skips, with 23 existing warnings in 410.54 seconds.
+  Ruff, Mypy across 523 source files, Bandit, the closed supply-chain policy,
+  lock validation, isolated Python 3.12 dependency audit, build, package-content
+  verification, JSON/YAML parsing, and whitespace checks pass. The 1,749-entry
+  sdist contains both runners, both reports, the matrix schema, ADR, and tests;
+  the 623-entry wheel contains Alembic 0089.
+- Ambient `python -m pip_audit` remains a failing host-environment observation:
+  host-installed `pip 26.1.2` is reported under `PYSEC-2026-3721`. The isolated
+  locked audit uses Python 3.12.13 and reports zero findings; the ambient failure
+  is not relabeled as a passing product gate.
+- Gitleaks 8.30.1 direct scans of both migration runners and the changed policy
+  found zero leaks. Its first post-implementation history scan covered 660
+  commits / 25.03 MB with zero leaks; a clean `git archive` extraction scanned
+  27.47 MB with zero leaks, and its exact temporary path was removed afterward.
+- Boundary: one Docker Desktop Linux/AMD64 engine, two sequential single-node
+  versions, synthetic records and credentials. No live provider, posting,
+  rolling upgrade, replication, cross-host HA/DR, production recovery, push,
+  PR, tag, release, or deployment occurred.
+
 ## E-826 — PostgreSQL write-back identity migration refusal and restore (2026-08-22)
 
 - Added a reproducible Docker runner pinned to PostgreSQL 17.10 by image digest.
@@ -12,10 +54,10 @@ Updated: 2026-08-22
   dispatched version permitted by the legacy UPDATE/DELETE-only trigger.
 - Upgrade to 0089 raised the expected audit refusal. The Alembic revision
   remained 0088, the three-version history retained SHA-256
-  `65b94e526ef8facc6de3da4f331916a2100c06f5ebb86d40d14dbf387edc0c47`,
+  `7384d0a6b70c466e099461bb28b24a979f90cd0c78ea8ae97e5cdf1d77e950a4`,
   and the trigger definition remained unchanged.
 - The pre-drift dump SHA-256 is
-  `121bdd10cb55b0ba46fd318032d5b7d42fb36eaf8f047b9f9f53c9e5b776c1d3`.
+  `157792de539a8b9fe06eb4530aa6096797c54d43fa7af4b1b0f06996d2ecffaf`.
   It restored into an independent database with the expected two-version
   history digest, upgraded to 0089, preserved that history, and rejected a
   drifted direct INSERT through the enhanced trigger.

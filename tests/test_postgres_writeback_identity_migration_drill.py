@@ -61,6 +61,35 @@ def test_drill_runner_and_retained_report_bind_the_same_runtime_contract() -> No
 
 
 @pytest.mark.parametrize(
+    ("overrides", "message"),
+    (
+        ({"image_reference": "postgres:16-alpine", "expected_postgresql": "16.14"}, "digest-pinned"),
+        ({"image_reference": "postgres:16-alpine@sha256:" + "a" * 64, "expected_postgresql": "16"}, "version"),
+        (
+            {
+                "image_reference": "postgres:16-alpine@sha256:" + "a" * 64,
+                "expected_postgresql": "16.14",
+                "container_prefix": "../escape",
+            },
+            "prefix",
+        ),
+    ),
+)
+def test_observation_runtime_profile_fails_before_docker_for_unbounded_inputs(
+    overrides: dict[str, str], message: str
+) -> None:
+    runner = _load_runner()
+    arguments = {
+        "image_reference": "postgres:16-alpine@sha256:" + "a" * 64,
+        "expected_postgresql": "16.14",
+        "container_prefix": "reconforge-writeback-test",
+        **overrides,
+    }
+    with pytest.raises(runner.DrillError, match=message):
+        runner.run_observation(**arguments)
+
+
+@pytest.mark.parametrize(
     ("mutation", "expected_path"),
     (
         (lambda report: report["checks"].update(cleanup_complete=False), "checks.cleanup_complete"),

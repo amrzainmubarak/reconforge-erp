@@ -248,6 +248,20 @@ jobs:
         run: |
           uv run --no-sync alembic -c alembic.ini upgrade head
 
+      - name: Run PostgreSQL write-back migration version matrix
+        env:
+          RECONFORGE_WRITEBACK_MATRIX_REPORT: ${{ runner.temp }}/reconforge-writeback-migration-matrix.json
+        run: |
+          uv run --no-sync python .github/scripts/verify_postgres_writeback_identity_migration_matrix.py --output "${RECONFORGE_WRITEBACK_MATRIX_REPORT}"
+
+      - name: Upload PostgreSQL write-back migration matrix
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: reconforge-writeback-migration-matrix-${{ github.sha }}
+          path: ${{ runner.temp }}/reconforge-writeback-migration-matrix.json
+          if-no-files-found: ignore
+
       - name: Run live server-boundary tests
         env:
           RECONFORGE_POSTGRES_DSN: postgresql://postgres:postgres@localhost:5432/postgres

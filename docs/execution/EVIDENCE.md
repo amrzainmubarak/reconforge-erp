@@ -2,6 +2,77 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-827: PostgreSQL write-back identity migration version matrix (2026-08-22)
+
+- Declared cells are exact repository-owned runtime profiles, not versions
+  inferred during execution:
+  - PostgreSQL 16.14 via
+    `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`;
+  - PostgreSQL 17.10 via
+    `postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193`.
+- Command:
+  `python .github/scripts/verify_postgres_writeback_identity_migration_matrix.py --output docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-08-22.json`.
+  Result: PASS on the first matrix invocation, 24.178 seconds, Docker Engine
+  29.7.2, report digest
+  `6c9e41dd55ef0ff9292a52aacd15030766660db85c5ddda78391aeeb4ecb73f3`.
+- Each cell executed all 89 migrations to 0088, inserted the same valid
+  proposed/approved history, captured and listed a custom native dump, inserted
+  a drifted dispatched version permitted by the legacy trigger, and proved 0089
+  refusal with unchanged revision, history digest, and trigger. Each pre-drift
+  restore independently reached 0089 without history mutation and rejected the
+  drifted INSERT through the enhanced trigger.
+- Both cells produced valid-history SHA-256
+  `ec931f9cf25e1b9f8c1b39cc83e6c38e2bc3384b669516505a46d4aaabb30886`
+  and invalid-history SHA-256
+  `7384d0a6b70c466e099461bb28b24a979f90cd0c78ea8ae97e5cdf1d77e950a4`.
+  The version-specific native dump digests remain separate because physical
+  dump bytes are not a cross-version canonical artifact.
+- The report binds migration commit/source, shared observation runner, matrix
+  runner, and the closed supply-chain policy. Its schema fixes both ordered
+  images/versions, every check, parity fields, exact limitations, and rejects
+  false cleanup, version drift, false parity, or undeclared fields.
+- CI definition: `server-boundaries` runs the matrix after the source-service
+  Alembic upgrade and before the broader live tests, then uploads the report
+  with pinned `actions/upload-artifact` even on failure. D-485 prevents a push,
+  so this is checked workflow evidence, not an identified hosted run.
+- The pre-refactor E-826 artifact test correctly failed only on its old runner
+  source digest. A fresh PostgreSQL 17.10 E-826 run regenerated the retained
+  report at digest
+  `b143c756a27b914ae92a32c3a1595529bd87fc4d64784afee1710a817a44674e`;
+  the full E-826 schema/source/runtime contract then passed.
+- One focused supply-chain regression initially failed because its old static
+  assertion expected `IMAGE_REFERENCE` to appear directly in `docker run`.
+  The policy validator itself passed. The test was corrected to require the
+  default digest to flow into the strict shared `image_reference` argument and
+  to verify both matrix constants; no policy weakening or retry concealment was
+  used.
+- Focused matrix/drill/supply-chain run: 38 passed. Matrix/policy/Phase-4
+  workflow selector: 43 passed. The final documentation selector passed 51/51.
+- Full regression: PASS, 3,042 collected, 2,927 passed, 115 declared capability
+  skips, 23 existing warnings, 410.54 seconds on ambient Python 3.14.6.
+  Full-tree Ruff, Mypy across 523 source files, Bandit over `reconforge` and all
+  changed policy/migration runners, closed supply-chain validation, `uv lock
+  --check`, changed JSON/YAML parsing, and `git diff --check`: PASS.
+- Ambient `python -m pip_audit`: FAIL because host-installed `pip 26.1.2` is
+  reported under `PYSEC-2026-3721`; this remains environment evidence and is
+  not relabeled. The isolated locked audit passed on uv 0.11.32 and Python
+  3.12.13 with 128 locked Python packages, zero findings, and no exceptions.
+- `python -m build --no-isolation`: PASS; built the 0.7.1 sdist and wheel. The
+  1,749-entry sdist contains both migration runners, both retained reports, the
+  closed matrix schema, ADR 0541, and the matrix test. The 623-entry wheel
+  contains Alembic 0089. The only whitespace warning is the preserved unrelated
+  user-owned line-ending change in `P3_ENT_013_EXIT_AUDIT.yaml`.
+- Gitleaks 8.30.1 direct no-git scans of the shared observation runner, matrix
+  runner, and changed supply-chain policy each passed with zero leaks. Its first
+  post-implementation full-history scan covered 660 commits / 25.03 MB with zero
+  leaks. A clean `git archive` extraction scanned 27.47 MB with zero leaks; an
+  initial dynamic cleanup command was rejected before execution, the fixed
+  in-workspace target was then verified exactly and removed successfully.
+- Boundary: one Windows Docker Desktop host, Linux/AMD64, two sequential
+  single-node versions, synthetic credentials/data. No hosted run, live
+  provider, accounting posting, rolling upgrade, replication, cross-host HA/DR,
+  production recovery, or production assurance.
+
 ## E-826: PostgreSQL write-back identity migration refusal and restore (2026-08-22)
 
 - Runner:
@@ -12,13 +83,13 @@ This file records commands and observed results. It does not convert a dirty wor
   `python .github/scripts/verify_postgres_writeback_identity_migration.py --output docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-08-22.json`.
   Result: PASS. Source revision 0088 refused the drifted upgrade; restored
   database reached 0089; report SHA-256
-  `9e8b8b4c1b73c423e417f3f0b6dfa63ce5cc8a478731bf87c4d5b38460d08204`.
+  `b143c756a27b914ae92a32c3a1595529bd87fc4d64784afee1710a817a44674e`.
 - Valid two-version history SHA-256:
-  `3e93c8f28b17d113d7b6173b473511218bc45dc826bdd218b8e999c525517795`.
+  `ec931f9cf25e1b9f8c1b39cc83e6c38e2bc3384b669516505a46d4aaabb30886`.
   Drifted three-version history SHA-256:
-  `65b94e526ef8facc6de3da4f331916a2100c06f5ebb86d40d14dbf387edc0c47`.
+  `7384d0a6b70c466e099461bb28b24a979f90cd0c78ea8ae97e5cdf1d77e950a4`.
   Native pre-drift dump SHA-256:
-  `121bdd10cb55b0ba46fd318032d5b7d42fb36eaf8f047b9f9f53c9e5b776c1d3`.
+  `157792de539a8b9fe06eb4530aa6096797c54d43fa7af4b1b0f06996d2ecffaf`.
 - Observed refusal invariants: Alembic stayed at 0088, the drifted history digest
   stayed unchanged, and `connector_writeback_intent_guard` retained its
   legacy definition. No UPDATE, DELETE, or normalization was used.
@@ -34,7 +105,7 @@ This file records commands and observed results. It does not convert a dirty wor
   `c7e357335c71a15889375be01bd3e6bf8d70041c`, canonical migration-source
   SHA-256 `92e42b27e1ef043ce9be9a44130efadc61daa6953b85aa516e5f7e7e03a6a4b0`,
   and canonical runner-source SHA-256
-  `7194e1c92f4d330a699964a162aa649e30f2242fa5b33c3bd03d82125fdc1bd9`.
+  `e96d2fcda82f1b393024cc30c7b57f216346fb48d0510d623c43618c65a67b24`.
 - Development findings: three earlier invocations failed on missing synthetic
   `created_at`, tenant, and migration-path fixtures. All failed closed, removed
   their `--rm` containers, and did not replace the retained report. The fixture

@@ -107,6 +107,19 @@
   environment failure. This remains single-host, single-version, synthetic
   migration evidence.
 
+#### E-827 declared PostgreSQL migration matrix (2026-08-22)
+
+- The exact E-826 observation path now executes on digest-pinned PostgreSQL
+  16.14 and 17.10 images governed by the closed supply-chain policy.
+- Both cells pass the ten refusal/restore/guard/cleanup checks and produce the
+  same canonical two-version valid history and three-version drifted history.
+- The closed, canonically digested matrix report binds migration 0089, both
+  runner sources, the supply-chain policy, runtime identities, native dump
+  digests, checks, parity, and limitations. CI is configured to execute and
+  retain the report before the broader server-boundary matrix.
+- This is two-version local parity on one host, not rolling-upgrade,
+  replication, HA/DR, provider, posting, or production evidence.
+
 ### Disposable PostgreSQL boundary checks
 - `uv run --no-sync pytest -q -ra tests/test_application_metrics.py::test_live_postgres_metrics_and_sqlite_parity tests/test_alembic_postgres.py::test_alembic_upgrade_command_is_available_when_server_extra_is_installed` : **Passed (2/2)**.
   - Historical E-706 environment: Docker `postgres:16-alpine` 16.14, isolated database, Alembic head `0086_pg_close_reopened`, and a non-privileged `reconforge_app` role. The current source migration head is `0088_pg_currency_snapshot`; no live rerun of the new `0087`/`0088` migrations is implied here.

@@ -15,6 +15,14 @@ Measured through 2026-08-22 against the current local snapshot in `STATE.md`. Th
 
 ## Controls observed
 
+- E-827 closes the current two-version migration evidence gap with exact
+  PostgreSQL 16.14/17.10 image digests owned by the closed supply-chain policy.
+  One input-validated observation function performs both runs; unpinned images,
+  malformed versions, unsafe container prefixes, version mismatches, history
+  divergence, false checks, extra evidence fields, or incomplete cleanup fail
+  closed. The report binds both runners, migration 0089, and policy sources.
+  This remains same-host synthetic evidence, not image vulnerability assurance,
+  provider security, rolling upgrade, HA/DR, or production assurance.
 - E-826 exercises the adversarial migration path on digest-pinned PostgreSQL
   17.10. A drifted payload identity is refused without advancing Alembic,
   mutating history, or replacing the trigger. A SHA-256-bound native pre-drift

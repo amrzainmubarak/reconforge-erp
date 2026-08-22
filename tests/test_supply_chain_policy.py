@@ -47,6 +47,7 @@ def _copy_policy_project(tmp_path: Path) -> Path:
         ".github/scripts/verify_airgap_install.py",
         ".github/scripts/verify_postgres_ha_dr.py",
         ".github/scripts/verify_postgres_writeback_identity_migration.py",
+        ".github/scripts/verify_postgres_writeback_identity_migration_matrix.py",
         ".github/scripts/verify_postgres_reliability.py",
         ".github/scripts/verify_postgres_upgrade.py",
         ".github/workflows/release.yml",
@@ -115,6 +116,7 @@ def test_repository_policy_closes_resolution_and_exception_inputs() -> None:
     assert policy["container_audits"]["sbom"]["version"] == "1.51.0"
     assert policy["container_audits"]["vulnerability"]["version"] == "0.117.0"
     assert policy["container_audits"]["vulnerability"]["vex_allowed_statuses"] == ["fixed"]
+    assert policy["container_resolution"]["service_images"]["postgres_16_ci"].startswith("postgres:16-alpine@sha256:")
     assert active == []
     assert python_packages == 128
     assert npm_packages == 211
@@ -207,7 +209,6 @@ def test_disposable_drill_images_execute_by_reviewed_digest() -> None:
     python_digest = "b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e"
     postgres_scripts = (
         "verify_postgres_ha_dr.py",
-        "verify_postgres_writeback_identity_migration.py",
         "verify_postgres_upgrade.py",
         "verify_postgres_reliability.py",
     )
@@ -215,6 +216,24 @@ def test_disposable_drill_images_execute_by_reviewed_digest() -> None:
         text = (ROOT / ".github" / "scripts" / name).read_text(encoding="utf-8")
         assert f'IMAGE_REFERENCE = f"{{IMAGE}}@sha256:{postgres_digest}"' in text
         assert re.search(r"docker.{0,500}IMAGE_REFERENCE", text, re.DOTALL)
+
+    observation_runner = (
+        ROOT / ".github" / "scripts" / "verify_postgres_writeback_identity_migration.py"
+    ).read_text(encoding="utf-8")
+    assert f'IMAGE_REFERENCE = f"{{IMAGE}}@sha256:{postgres_digest}"' in observation_runner
+    assert "image_reference=IMAGE_REFERENCE" in observation_runner
+    assert re.search(r'"docker".{0,500}image_reference', observation_runner, re.DOTALL)
+
+    matrix = (ROOT / ".github" / "scripts" / "verify_postgres_writeback_identity_migration_matrix.py").read_text(
+        encoding="utf-8"
+    )
+    assert "POSTGRES_16_IMAGE_REFERENCE" in matrix
+    assert (
+        "{POSTGRES_16_IMAGE}@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+        in matrix
+    )
+    assert "POSTGRES_17_IMAGE_REFERENCE" in matrix
+    assert f"POSTGRES_17_IMAGE}}@sha256:{postgres_digest}" in matrix
 
     airgap = (ROOT / ".github" / "scripts" / "verify_airgap_install.py").read_text(
         encoding="utf-8"

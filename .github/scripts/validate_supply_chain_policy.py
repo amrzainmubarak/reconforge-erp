@@ -155,10 +155,11 @@ def _validate_policy_document(policy: dict[str, Any]) -> None:
     if container["dockerfile"] != "Dockerfile" or "@sha256:" not in container["base_image"]:
         raise SupplyChainPolicyError("container resolution policy drifted")
     service_images = _require_keys(
-        container["service_images"], {"airgap_python", "postgres_drills"}, "service images"
+        container["service_images"], {"airgap_python", "postgres_16_ci", "postgres_drills"}, "service images"
     )
     if service_images != {
         "airgap_python": "python:3.14.1-slim@sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e",
+        "postgres_16_ci": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
         "postgres_drills": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193",
     }:
         raise SupplyChainPolicyError("service-image resolution policy drifted")
@@ -653,6 +654,22 @@ def _validate_dockerfile(root: Path, policy: dict[str, Any]) -> None:
             or script.count("IMAGE_REFERENCE") < 2
         ):
             raise SupplyChainPolicyError(f"digest-pinned service image drifted in {relative}")
+
+    matrix_script = _required_path(
+        root, ".github/scripts/verify_postgres_writeback_identity_migration_matrix.py"
+    ).read_text(encoding="utf-8")
+    for prefix, image in (
+        ("POSTGRES_16", service_images["postgres_16_ci"]),
+        ("POSTGRES_17", service_images["postgres_drills"]),
+    ):
+        tag, digest = image.rsplit("@", 1)
+        if (
+            f'{prefix}_IMAGE = "{tag}"' not in matrix_script
+            or f'{prefix}_IMAGE_REFERENCE = (' not in matrix_script
+            or f'f"{{{prefix}_IMAGE}}@{digest}"' not in matrix_script
+            or matrix_script.count(f"{prefix}_IMAGE_REFERENCE") < 2
+        ):
+            raise SupplyChainPolicyError("PostgreSQL migration matrix image drifted")
 
 
 def _validate_workflows(root: Path, policy: dict[str, Any]) -> None:

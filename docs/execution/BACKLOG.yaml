@@ -1,5 +1,5 @@
 ﻿schema_version: 2
-updated_at: "2026-08-20"
+updated_at: "2026-08-22"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
   evidence_base_commit: "5d401e70c3a0e3cf507c2c7cf635dfc99b01a9af"
@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-820
+    priority: P0
+    area: supply-chain
+    title: Remediate PYSEC-2026-3721 and unify the fail-closed locked Python audit
+    status: completed
+    depends_on: []
+    exit_evidence: >-
+      `uv.lock` resolves the first fixed pip release inside the existing cutoff;
+      local, CI, release, and Makefile paths use one hash-exported audit runner;
+      focused policy/runner tests, the actual isolated audit, static analysis,
+      full regression, package build, and diff checks pass. Hosted Python 3.11
+      and 3.12 execution remains a separate external gate under D-485.
   - id: E-806
     priority: P1
     area: durable-jobs

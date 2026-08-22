@@ -99,22 +99,11 @@ jobs:
         run: uv sync --locked --extra dev --no-editable --python 3.11
 
       - name: Audit the hash-locked Python and server resolution
-        shell: bash
-        run: |
-          set -euo pipefail
-          requirements="${RUNNER_TEMP}/reconforge-all-extras.txt"
-          report="${RUNNER_TEMP}/pip-audit.json"
-          uv export --locked --all-extras --no-emit-project \
-            --format requirements.txt --quiet --output-file "$requirements"
-          set +e
-          uv run --no-sync pip-audit --require-hashes --disable-pip \
-            --requirement "$requirements" --format json --output "$report"
-          audit_exit=$?
-          set -e
-          python .github/scripts/validate_supply_chain_policy.py \
-            --project-root . \
-            --pip-audit-report "$report" \
-            --pip-audit-exit-code "$audit_exit"
+        run: >-
+          python .github/scripts/run_locked_python_audit.py
+          --project-root .
+          --python-version "3.11"
+          --execution-mode current
 
       - name: Install checksum-verified Gitleaks
         shell: bash

@@ -8,18 +8,21 @@ For AI coding agents, also read [AGENTS.md](AGENTS.md).
 
 ## Development Setup
 
+Use Python 3.11 or 3.12 and the exact `uv` version declared in
+`pyproject.toml`. Install `uv` through the checksum-verified procedure in the
+[supply-chain policy](docs/security/supply-chain-policy.md), then synchronize
+the reviewed universal lock:
+
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -e ".[dev]"
-pre-commit install
+uv sync --locked --all-extras --no-editable --python 3.12
+uv run --no-sync pre-commit install
 ```
 
 If the installed `reconforge` command appears stale after a CLI or version change:
 
 ```bash
-python -m pip install -e ".[dev]" --force-reinstall
-python -m reconforge.cli doctor
+uv sync --locked --all-extras --no-editable --python 3.12 --refresh-package reconforge-erp
+uv run --no-sync python -m reconforge.cli doctor
 ```
 
 ## Quality Commands
@@ -27,9 +30,9 @@ python -m reconforge.cli doctor
 Run these before opening a pull request:
 
 ```bash
-python -m ruff check .
-python -m mypy reconforge
-python -m pytest
+uv run --no-sync ruff check .
+uv run --no-sync mypy reconforge
+uv run --no-sync pytest
 ```
 
 For report, mapping, rule-pack, or CLI changes, also run relevant smoke commands:
@@ -44,21 +47,22 @@ reconforge report client-pack --input output --output output/client_pack --summa
 ## Security Commands
 
 ```bash
-python -m bandit -q -r reconforge
-uv lock --check
-python .github/scripts/validate_supply_chain_policy.py --project-root .
+uv run --no-sync bandit -q -r reconforge
+python .github/scripts/run_locked_python_audit.py --project-root .
 npm --prefix apps/web audit --package-lock-only --audit-level=high
 ```
 
-Use the exact uv version and locked audit/secret commands in
-`docs/security/supply-chain-policy.md`. Do not replace them with an ambient
-environment audit, floating scanner, or broad finding baseline.
+The Python audit runner verifies the exact `uv` version, the closed policy, and
+`uv.lock`; exports every optional profile with hashes; and uses a temporary
+isolated Python 3.12 environment by default. It does not trust or repair the
+project `.venv`. Do not replace it with an ambient environment audit, floating
+scanner, or broad finding baseline.
 
 Security-sensitive changes include path handling, generated HTML, href values, YAML parsing, Studio routes, report output, evidence binder output, client packs, redaction, dependency workflows, and any code that handles user-controlled files.
 
 ## Coding Standards
 
-- Use Python 3.11+ with type hints.
+- Use supported Python 3.11 or 3.12 with type hints.
 - Keep reconciliation logic deterministic and explainable.
 - Prefer schema-driven validation over hidden assumptions.
 - Keep core functionality local-first.

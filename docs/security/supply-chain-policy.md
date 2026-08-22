@@ -25,20 +25,18 @@ gate: `--locked`/`uv lock --check` must detect manifest drift.
 Run locally with an official checksum-verified uv 0.11.32 binary:
 
 ```bash
-uv lock --check
-uv sync --locked --all-extras --no-editable --python 3.11
-uv export --locked --all-extras --no-emit-project \
-  --format requirements.txt --output-file all-extras.txt
-uv run --no-sync pip-audit --require-hashes --disable-pip \
-  --requirement all-extras.txt
+python .github/scripts/run_locked_python_audit.py \
+  --project-root . --python-version 3.12 --execution-mode isolated
 npm --prefix apps/web audit --package-lock-only --audit-level=high
-python .github/scripts/validate_supply_chain_policy.py --project-root .
 ```
 
-CI captures JSON scanner output and gives the scanner exit code to the policy
-validator. Exit codes other than the scanner's clean/finding values fail as
-operational errors. The validator also rejects disagreement between the report
-and exit code.
+The runner verifies the policy-required uv version and supported Python matrix,
+checks `uv.lock`, exports the all-extras resolution with hashes, runs the locked
+dev-profile `pip-audit` from a temporary environment and cache, and gives the
+JSON report plus scanner exit code to the policy validator. Exit codes other
+than the scanner's clean/finding values fail as operational errors. The
+validator also rejects disagreement between the report and exit code. CI uses
+the same runner in `current` mode only after a locked dev-profile sync.
 
 With the checksum-verified Gitleaks 8.30.1 binary:
 

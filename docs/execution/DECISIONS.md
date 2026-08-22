@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-919: Converge every Python advisory gate on the universal lock
+
+- **Date**: 2026-08-22
+- **Context**: The current advisory service rejected locked `pip 26.1.2` for
+  `PYSEC-2026-3721`; hosted workflows audited a hash-exported lock while the
+  Makefile still audited whichever environment happened to be active.
+- **Decision**: Move only locked pip to fixed `26.2` within the unchanged
+  cutoff and route local, CI, and release audits through one fail-closed runner
+  defined by ADR 0533. Local mode is isolated from a project `.venv`; hosted
+  mode reuses the locked environment prepared by the workflow.
+- **Rationale**: The same manifest, lock, scanner policy, and exception decision
+  must produce the same audit boundary independently of workstation state.
+- **Verification**: E-820 records focused tests, both supported audit cells,
+  the full locked Python 3.12 regression, static/security gates, supported
+  package build, CLI smoke checks, and web unit/build/audit/E2E gates.
+- **Compatibility**: Dev/security tooling only; no product runtime API, schema,
+  migration, money calculation, or stored data changes.
+- **Rollback**: Revert the unit only to another currently clean locked graph;
+  never restore the affected lock or an ambient audit. D-485 still forbids
+  publication.
+
 ### D-918: Bound the hosted live server-boundary job lifetime
 
 - **Date**: 2026-08-20

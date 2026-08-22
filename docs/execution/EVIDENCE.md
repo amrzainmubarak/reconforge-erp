@@ -2,6 +2,46 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-820: Locked Python advisory remediation and unified audit runner (2026-08-22)
+
+- Baseline hash-exported audit rejected locked `pip 26.1.2` with
+  `PYSEC-2026-3721` and identified `26.2` as fixed. Pinned uv 0.11.32 refreshed
+  that package only; `uv lock --check` resolves 129 total project/package
+  records and the closed validator inventories 128 non-root packages.
+- `python -m pytest tests/test_locked_python_audit.py
+  tests/test_supply_chain_policy.py -q`: **PASS** (23 tests after the temporary
+  cache, hostile runner-drift, and unlocked-workflow checks were added).
+- `python -m ruff check .github/scripts/run_locked_python_audit.py
+  .github/scripts/validate_supply_chain_policy.py
+  tests/test_locked_python_audit.py tests/test_supply_chain_policy.py`:
+  **PASS**.
+- `python .github/scripts/run_locked_python_audit.py --project-root .
+  --python-version {3.11,3.12} --execution-mode isolated`: **PASS** for both
+  supported matrix cells with uv 0.11.32, pip-audit 2.10.1 from the locked dev
+  graph, 128 audited packages, zero active exceptions, zero known findings,
+  and a temporary isolated cache/report.
+- `uv run --isolated --locked --all-extras --no-editable --python 3.12 pytest
+  -q --tb=short -ra`: **PASS**, 100% after collecting 2,972 tests. Every
+  executed test passed; capability-gated PostgreSQL/Redis/S3, public-network,
+  object-lock, HTTPS-session, and Windows-symlink cases remained explicit
+  skips. Existing Starlette/SAML and legacy-financial-input warnings remained
+  visible. An additional ambient Python 3.14 run also exited zero but is not the
+  supported-version release evidence.
+- Full static/security gates: Ruff **PASS**; mypy **PASS** for 523 source files;
+  Bandit **PASS** with existing reviewed suppression-comment warnings; policy
+  validator **PASS**; `uv lock --check` **PASS**; `git diff --check` **PASS**.
+- `uv run --isolated --locked --extra dev --no-editable --python 3.12 python
+  -m build --no-isolation`: **PASS**; built the 0.7.1 sdist and wheel.
+- CLI smoke checks: `doctor` **PASS**; sample validation **PASS** with zero
+  errors and ten intentional data-quality warnings.
+- Web gates: `npm ci` and lock audit **PASS** with zero vulnerabilities;
+  typecheck **PASS**; Vitest **PASS** (75/75); production build **PASS**;
+  Playwright **PASS** (16 passed, five capability-gated skips).
+- Boundary: this is current local Windows/Python 3.12 audit evidence. It does
+  not establish hosted Python 3.11/3.12 enforcement, provenance, malware
+  absence, vulnerability reachability, license suitability, independent
+  assurance, or permission to publish. D-485 remains active.
+
 ## E-819: Bounded server-boundary CI lifetime (2026-08-20)
 
 - Hosted `server-boundaries` now declares `timeout-minutes: 30`, preserving

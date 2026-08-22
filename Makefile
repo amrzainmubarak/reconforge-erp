@@ -28,8 +28,8 @@ format:
 	ruff format .
 
 security:
-	bandit -q -r reconforge
-	pip-audit
+	python -m bandit -q -r reconforge
+	python .github/scripts/run_locked_python_audit.py --project-root .
 
 demo:
 	reconforge doctor

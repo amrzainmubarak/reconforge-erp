@@ -1,6 +1,26 @@
 ﻿# Execution State
 
-Updated: 2026-08-20
+Updated: 2026-08-22
+
+## E-820 — Locked Python advisory remediation and audit-path convergence (2026-08-22)
+
+- The universal lock now resolves `pip 26.2`, the first fixed release for
+  `PYSEC-2026-3721` available inside the existing 2026-08-02 upload cutoff.
+- One cross-platform runner now enforces exact uv identity, supported Python,
+  policy/lock validation, an all-extras hash export, locked pip-audit execution,
+  and report/exit-code enforcement. Local execution uses a temporary isolated
+  environment and cache; CI/release use their already-synchronized lock.
+- Focused runner/policy tests and real isolated Python 3.11/3.12 audits pass
+  with 128 packages, zero active exceptions, and zero known findings. The full
+  locked Python 3.12 regression reached 100% after collecting 2,972 tests; all
+  executed tests passed and unavailable live-service capabilities remained
+  explicit skips. Supported-version package build, CLI doctor/validation,
+  static/security gates, 75 web unit tests, web build, npm audit, and 16 browser
+  E2E tests also pass. E-820 is complete locally.
+- Boundary: no application runtime, financial logic, schema, or persisted data
+  changed. Hosted Python 3.11/3.12 reruns, provenance, malware/reachability
+  analysis, independent assurance, and publication remain outside this local
+  result. D-485 remains active.
 
 ## E-819 — Bounded server-boundary CI lifetime (2026-08-20)
 

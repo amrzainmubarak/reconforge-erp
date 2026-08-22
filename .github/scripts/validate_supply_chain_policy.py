@@ -531,6 +531,9 @@ def _validate_dockerfile(root: Path, policy: dict[str, Any]) -> None:
 def _validate_workflows(root: Path, policy: dict[str, Any]) -> None:
     release = _required_path(root, policy["release_gate"]["workflow"]).read_text(encoding="utf-8")
     security = _required_path(root, ".github/workflows/security.yml").read_text(encoding="utf-8")
+    audit_runner = _required_path(root, ".github/scripts/run_locked_python_audit.py").read_text(
+        encoding="utf-8"
+    )
     python_policy = policy["python_resolution"]
     secret_policy = policy["secret_scanning"]
     shared_fragments = (
@@ -539,11 +542,11 @@ def _validate_workflows(root: Path, policy: dict[str, Any]) -> None:
         f'GITLEAKS_VERSION: "{secret_policy["version"]}"',
         f"GITLEAKS_LINUX_X64_SHA256: {secret_policy['linux_x86_64_archive_sha256']}",
         "uv lock --check",
-        "pip-audit --require-hashes --disable-pip",
+        "uv sync --locked --extra dev --no-editable --python",
+        ".github/scripts/run_locked_python_audit.py",
         "gitleaks.toml --log-opts=\"--all\"",
         "gitleaks.toml",
         "npm --prefix apps/web audit --package-lock-only --audit-level=high",
-        "--pip-audit-exit-code",
         "--npm-audit-exit-code",
     )
     for workflow_name, text in (("release", release), ("security", security)):
@@ -552,6 +555,18 @@ def _validate_workflows(root: Path, policy: dict[str, Any]) -> None:
         for fragment in shared_fragments:
             if fragment not in text:
                 raise SupplyChainPolicyError(f"{workflow_name} workflow is missing policy gate: {fragment}")
+
+    for fragment in (
+        '"--all-extras"',
+        '"--no-emit-project"',
+        '"--require-hashes"',
+        '"--disable-pip"',
+        '"--pip-audit-exit-code"',
+        '"--isolated"',
+        '"--no-sync"',
+    ):
+        if fragment not in audit_runner:
+            raise SupplyChainPolicyError(f"locked Python audit runner is missing policy gate: {fragment}")
 
     external_write = release.find("docker/login-action@")
     if external_write < 0:

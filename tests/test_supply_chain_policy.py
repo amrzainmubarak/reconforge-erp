@@ -42,6 +42,7 @@ def _json(path: Path) -> dict[str, Any]:
 def _copy_policy_project(tmp_path: Path) -> Path:
     relative_paths = (
         ".github/dependabot.yml",
+        ".github/scripts/run_locked_python_audit.py",
         ".github/workflows/release.yml",
         ".github/workflows/security.yml",
         ".gitleaksignore",
@@ -161,6 +162,22 @@ def _mutate_release_fail_open(root: Path) -> None:
     path.write_text(path.read_text(encoding="utf-8") + "\ncontinue-on-error: true\n", encoding="utf-8")
 
 
+def _mutate_locked_audit_runner(root: Path) -> None:
+    path = root / ".github" / "scripts" / "run_locked_python_audit.py"
+    path.write_text(path.read_text(encoding="utf-8").replace('"--require-hashes",', ""), encoding="utf-8")
+
+
+def _mutate_release_unlocked_audit_environment(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            "uv sync --locked --extra dev --no-editable --python",
+            "uv sync --extra dev --no-editable --python",
+        ),
+        encoding="utf-8",
+    )
+
+
 @pytest.mark.parametrize(
     "mutator",
     [
@@ -172,6 +189,8 @@ def _mutate_release_fail_open(root: Path) -> None:
         _mutate_gitleaks_ignore,
         _mutate_npm_root,
         _mutate_release_fail_open,
+        _mutate_locked_audit_runner,
+        _mutate_release_unlocked_audit_environment,
     ],
 )
 def test_policy_validator_rejects_resolution_or_gate_drift(
@@ -287,6 +306,7 @@ def test_security_and_release_workflows_pin_tools_and_fail_before_registry_write
     policy = _json(POLICY_PATH)
     release = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
     security = (ROOT / ".github" / "workflows" / "security.yml").read_text(encoding="utf-8")
+    audit_runner = SCRIPT_PATH.with_name("run_locked_python_audit.py").read_text(encoding="utf-8")
 
     for workflow in (release, security):
         assert "continue-on-error" not in workflow
@@ -294,8 +314,12 @@ def test_security_and_release_workflows_pin_tools_and_fail_before_registry_write
         assert f'version: "{policy["python_resolution"]["manager_version"]}"' in workflow
         assert policy["secret_scanning"]["linux_x86_64_archive_sha256"] in workflow
         assert "--redact=100" in workflow
-        assert "--pip-audit-exit-code" in workflow
+        assert ".github/scripts/run_locked_python_audit.py" in workflow
         assert "--npm-audit-exit-code" in workflow
+
+    assert '"--require-hashes"' in audit_runner
+    assert '"--disable-pip"' in audit_runner
+    assert '"--pip-audit-exit-code"' in audit_runner
 
     assert "required-security-context:" in security
     assert "name: python-security" in security

@@ -16,6 +16,7 @@ import os
 import re
 import sys
 from datetime import UTC, date, datetime
+from itertools import chain
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,7 @@ from validate_supply_chain_policy import SupplyChainPolicyError, validate_projec
 IMAGE_REPOSITORY = "ghcr.io/amrzainmubarak/reconforge-erp"
 SHA256 = re.compile(r"^sha256:[0-9a-f]{64}$")
 DB_SCHEMA = re.compile(r"^v[0-9]+\.[0-9]+\.[0-9]+$")
+CVE = re.compile(r"^CVE-[0-9]{4}-[0-9]{4,}$")
 MAX_INPUT_BYTES = 256 * 1024 * 1024
 SEVERITIES = ("Critical", "High", "Medium", "Low", "Negligible", "Unknown")
 
@@ -242,12 +244,114 @@ def _validate_syft(
     )
 
 
+def _validate_vex(
+    document: dict[str, Any],
+    *,
+    policy: dict[str, Any],
+    artifact_purls: set[str],
+    document_sha256: str,
+    as_of: date,
+) -> tuple[dict[tuple[str, str], dict[str, str]], dict[str, Any]]:
+    audit_policy = policy["container_audits"]["vulnerability"]
+    if document_sha256 != audit_policy["vex_document_sha256"]:
+        raise ContainerSecurityError("OpenVEX document hash does not match the reviewed policy")
+    required_root = {
+        "@context",
+        "@id",
+        "author",
+        "last_updated",
+        "role",
+        "statements",
+        "timestamp",
+        "version",
+    }
+    if set(document) != required_root:
+        raise ContainerSecurityError("OpenVEX root must match the closed reviewed contract")
+    document_id = document.get("@id")
+    author = document.get("author")
+    if (
+        document.get("@context") != audit_policy["vex_context"]
+        or not isinstance(document_id, str)
+        or not document_id.startswith("https://reconforge.local/security/vex/")
+        or not isinstance(author, str)
+        or len(author) < 10
+        or document.get("role") != "Document Creator"
+        or document.get("version") != 1
+    ):
+        raise ContainerSecurityError("OpenVEX identity or version is outside policy")
+    created_at = _timestamp(document.get("timestamp"), label="OpenVEX timestamp")
+    updated_at = _timestamp(document.get("last_updated"), label="OpenVEX last_updated")
+    if updated_at < created_at or updated_at.date() > as_of:
+        raise ContainerSecurityError("OpenVEX review timestamps are inconsistent or in the future")
+    review_age_days = (as_of - updated_at.date()).days
+    if review_age_days > audit_policy["vex_max_review_age_days"]:
+        raise ContainerSecurityError("OpenVEX review is older than the closed policy permits")
+    statements = document.get("statements")
+    if not isinstance(statements, list) or not statements:
+        raise ContainerSecurityError("OpenVEX must contain at least one reviewed statement")
+    decisions: dict[tuple[str, str], dict[str, str]] = {}
+    for index, statement in enumerate(statements):
+        if not isinstance(statement, dict) or set(statement) != {
+            "impact_statement",
+            "products",
+            "status",
+            "vulnerability",
+        }:
+            raise ContainerSecurityError(f"OpenVEX statement {index} has unreviewed fields")
+        vulnerability = statement.get("vulnerability")
+        products = statement.get("products")
+        status = statement.get("status")
+        impact = statement.get("impact_statement")
+        if (
+            not isinstance(vulnerability, dict)
+            or set(vulnerability) != {"name"}
+            or not isinstance(vulnerability.get("name"), str)
+            or CVE.fullmatch(vulnerability["name"]) is None
+            or not isinstance(status, str)
+            or status not in audit_policy["vex_allowed_statuses"]
+            or not isinstance(impact, str)
+            or len(impact) < 80
+            or not isinstance(products, list)
+            or not products
+        ):
+            raise ContainerSecurityError(f"OpenVEX statement {index} is incomplete")
+        for product in products:
+            if not isinstance(product, dict) or set(product) != {"@id"}:
+                raise ContainerSecurityError(f"OpenVEX statement {index} product is not exact")
+            purl = product.get("@id")
+            if not isinstance(purl, str) or purl not in artifact_purls:
+                raise ContainerSecurityError(
+                    f"OpenVEX statement {index} product is absent from the exact image inventory"
+                )
+            key = (vulnerability["name"], purl)
+            if key in decisions:
+                raise ContainerSecurityError("OpenVEX contains a duplicate vulnerability/product decision")
+            decisions[key] = {
+                "document_id": document_id,
+                "status": status,
+            }
+    return (
+        decisions,
+        {
+            "applied_fixed_findings": 0,
+            "author": author,
+            "document_id": document_id,
+            "document_sha256": document_sha256,
+            "last_updated": _canonical_timestamp(updated_at),
+            "review_age_days": review_age_days,
+            "reviewed_fixed_statements": len(decisions),
+        },
+    )
+
+
 def _validate_grype(
     document: dict[str, Any],
     *,
     policy: dict[str, Any],
     active: list[dict[str, Any]],
     expected_image: dict[str, Any],
+    vex_decisions: dict[tuple[str, str], dict[str, str]],
+    vex_summary: dict[str, Any],
     scanner_exit_code: int,
 ) -> tuple[dict[str, Any], list[dict[str, Any]], list[str], datetime]:
     audit_policy = policy["container_audits"]["vulnerability"]
@@ -265,6 +369,7 @@ def _validate_grype(
         or configuration.get("exclude") != []
         or configuration.get("externalSources", {}).get("enable") is not False
         or configuration.get("search", {}).get("scope") != "squashed"
+        or configuration.get("vex-documents") != [audit_policy["vex_document"]]
     ):
         raise ContainerSecurityError("Grype scan configuration drifted from the closed policy")
     source = document.get("source")
@@ -295,15 +400,20 @@ def _validate_grype(
     if age_seconds < 0 or age_seconds > audit_policy["max_database_age_hours"] * 3600:
         raise ContainerSecurityError("Grype database age is outside the closed policy bound")
     ignored = document.get("ignoredMatches")
-    if ignored not in (None, []):
-        raise ContainerSecurityError("Grype report contains suppressed matches without a governed VEX path")
+    if ignored is None:
+        ignored = []
+    if not isinstance(ignored, list):
+        raise ContainerSecurityError("Grype ignored matches must be an array")
     matches = document.get("matches")
     if not isinstance(matches, list):
         raise ContainerSecurityError("Grype matches must be an array")
     counts = {severity: 0 for severity in SEVERITIES}
     high_records: list[dict[str, Any]] = []
     blockers: list[str] = []
-    for match in matches:
+    for match, suppressed in chain(
+        ((item, False) for item in matches),
+        ((item, True) for item in ignored),
+    ):
         if not isinstance(match, dict):
             raise ContainerSecurityError("Grype match is malformed")
         vulnerability = match.get("vulnerability")
@@ -315,6 +425,7 @@ def _validate_grype(
         identifier = vulnerability.get("id")
         package = artifact.get("name")
         version = artifact.get("version")
+        purl = artifact.get("purl")
         if (
             severity not in SEVERITIES
             or not isinstance(identifier, str)
@@ -322,20 +433,48 @@ def _validate_grype(
             or not isinstance(package, str)
             or not package
             or not isinstance(version, str)
+            or not isinstance(purl, str)
+            or not purl.startswith("pkg:")
         ):
             raise ContainerSecurityError("Grype finding identity is incomplete")
         counts[severity] += 1
+        if suppressed and severity not in audit_policy["fail_severities"]:
+            raise ContainerSecurityError("OpenVEX may suppress only configured release-blocking severities")
         if severity == "Unknown" and audit_policy["unknown_severity_policy"] == "fail":
             blockers.append(f"unknown-severity finding {identifier} for {package}@{version}")
         if severity not in audit_policy["fail_severities"]:
             continue
-        aliases = vulnerability.get("relatedVulnerabilities", [])
+        aliases = match.get("relatedVulnerabilities", [])
         identifiers = {identifier}
         if isinstance(aliases, list):
             identifiers.update(
                 str(item.get("id")) for item in aliases if isinstance(item, dict) and item.get("id")
             )
         exception_id = _matching_exception(active, subject=package, identifiers=identifiers)
+        vex_decision = next(
+            (
+                vex_decisions[(identifier_value, purl)]
+                for identifier_value in sorted(identifiers)
+                if (identifier_value, purl) in vex_decisions
+            ),
+            None,
+        )
+        vex_document_id: str | None = None
+        vex_status: str | None = None
+        if suppressed:
+            rules = match.get("appliedIgnoreRules")
+            if (
+                severity != "High"
+                or vex_decision is None
+                or rules != [{"namespace": "vex", "vex-status": vex_decision["status"]}]
+            ):
+                raise ContainerSecurityError("Grype suppressed a finding outside the governed VEX path")
+            exception_id = None
+            vex_document_id = vex_decision["document_id"]
+            vex_status = vex_decision["status"]
+            vex_summary["applied_fixed_findings"] += 1
+        elif vex_decision is not None:
+            raise ContainerSecurityError("Grype failed to apply a reviewed OpenVEX decision")
         match_types = sorted(
             {
                 str(item.get("type"))
@@ -352,8 +491,12 @@ def _validate_grype(
             "package": package,
             "severity": severity,
             "version": version,
+            "vex_document_id": vex_document_id,
+            "vex_status": vex_status,
         }
         high_records.append(record)
+        if suppressed:
+            continue
         if severity == "Critical":
             blockers.append(f"critical finding {identifier} for {package}@{version} cannot be excepted")
         elif exception_id is None:
@@ -388,15 +531,38 @@ def build_evidence(
     image, licenses, license_blockers = _validate_syft(
         syft_document, policy=policy, image_config_digest=image_config_digest
     )
+    vex_policy = policy["container_audits"]["vulnerability"]
+    vex_path = (project_root.resolve(strict=True) / vex_policy["vex_document"]).resolve(strict=True)
+    expected_vex_path = project_root.resolve(strict=True) / vex_policy["vex_document"]
+    if vex_path != expected_vex_path:
+        raise ContainerSecurityError("OpenVEX path escapes or aliases the reviewed project file")
+    vex_document = _load_json(vex_path, label="OpenVEX document")
+    artifact_purls = {
+        str(item["purl"])
+        for item in syft_document["artifacts"]
+        if isinstance(item, dict) and isinstance(item.get("purl"), str)
+    }
+    vex_decisions, vex_summary = _validate_vex(
+        vex_document,
+        policy=policy,
+        artifact_purls=artifact_purls,
+        document_sha256=_sha256(vex_path),
+        as_of=as_of,
+    )
     database, findings, vulnerability_blockers, scanned_at = _validate_grype(
         grype_document,
         policy=policy,
         active=active,
         expected_image=image,
+        vex_decisions=vex_decisions,
+        vex_summary=vex_summary,
         scanner_exit_code=scanner_exit_code,
     )
     counts = {severity.lower(): 0 for severity in SEVERITIES}
-    for match in grype_document["matches"]:
+    for match in [
+        *grype_document["matches"],
+        *(grype_document.get("ignoredMatches") or []),
+    ]:
         counts[str(match["vulnerability"]["severity"]).lower()] += 1
     blockers = sorted({*license_blockers, *vulnerability_blockers})
     evidence = {
@@ -411,12 +577,13 @@ def build_evidence(
         "image": image,
         "license_inventory": licenses,
         "policy_id": policy["policy_id"],
-        "schema_version": 1,
+        "schema_version": 2,
         "status": "blocked" if blockers else "passed",
         "tools": {
             "grype": f"grype@{policy['container_audits']['vulnerability']['version']}",
             "syft": f"syft@{policy['container_audits']['sbom']['version']}",
         },
+        "vex": vex_summary,
         "vulnerabilities": {
             "counts": counts,
             "critical_or_high_findings": findings,

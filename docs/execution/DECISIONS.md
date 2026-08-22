@@ -5,6 +5,30 @@
 
 ## Decisions
 
+### D-924: Accept only source-proven fixed VEX and preserve the OpenSSL block
+
+- **Date**: 2026-08-22
+- **Context**: Grype's NVD CPE matches reported three Python High findings that
+  are already repaired in the exact signed CPython 3.11.16 source tag, plus
+  two OpenSSL matches for a version still inside the upstream affected range.
+- **Decision**: Adopt ADR 0538. Allow only hash-bound OpenVEX `fixed` decisions
+  under a 30-day review ceiling, validate every product PURL and ignored Grype
+  match independently, keep governed findings in total counts, and retain the
+  two OpenSSL matches as blockers. Do not self-approve reachability-based
+  `not_affected`, severity override, or exception status.
+- **Rationale**: Correcting demonstrably stale CPE version metadata is not the
+  same as accepting risk in affected code. Exact fixed evidence can be
+  automated; a runtime reachability disposition requires independent security
+  judgment or an upstream-fixed component.
+- **Verification**: E-824 records the CPython tag/backport ancestry, four base
+  candidate scans, Alpine package-policy checks, governed VEX negative tests,
+  and exact blocked evidence with three fixed dispositions and two blockers.
+- **Compatibility**: Runtime bytes and application interfaces are unchanged;
+  current container-security evidence advances to closed schema v2.
+- **Rollback**: Removing a fixed statement must restore its finding as a
+  blocker. Broad ignore rules, severity reduction, and unreviewed VEX are not
+  rollback mechanisms.
+
 ### D-923: Block registry authentication on exact local container evidence
 
 - **Date**: 2026-08-22

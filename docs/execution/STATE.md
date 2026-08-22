@@ -2,6 +2,37 @@
 
 Updated: 2026-08-22
 
+## E-824 — Governed fixed VEX and retained OpenSSL block (2026-08-22)
+
+- Independently traced the three Python CPE matches to the signed CPython
+  3.11.16 source tag. CVE-2026-3644 and CVE-2026-4224 are named in the
+  official 3.11.16 security record; the CVE-2026-7210 3.11 backport and
+  bundled Expat 2.8.3 precede the tag. A hash-bound OpenVEX 0.2 document now
+  records only these exact `fixed` decisions.
+- The closed gate validates the VEX document, 30-day review ceiling, exact
+  image product PURLs, Grype ignored-match rules, and per-finding evidence.
+  Fixed matches remain visible in the five-High total and are never conflated
+  with exceptions. Critical suppression, unreviewed status, stale review,
+  product drift, or an unapplied decision fails closed.
+- Supported official Alpine candidates remain on OpenSSL 3.5.7. The current
+  3.11 and 3.12 bases retain five High matches before fixed disposition; 3.13
+  remains outside the declared matrix and still has both OpenSSL matches. A
+  Debian 3.11 slim candidate was rejected after its untrimmed base reported
+  ten Critical and 38 High matches under the same scanner database.
+- OpenSSL's upstream record places 3.5.7 in the affected range and repairs it
+  in 3.5.8. Alpine 3.23/3.24 currently offer only 3.5.7-r0. No reachability
+  VEX, severity override, or exception was self-approved. The exact image is
+  still **blocked** by CVE-2026-14456 on libcrypto3 and libssl3.
+- The container-gate file passes 16 executable tests with one declared Windows
+  symlink capability skip. The combined E-824 policy/gate selector passes 43
+  tests plus that skip on isolated Python 3.11 and 3.12 environments. The full
+  local suite collects 3,009 tests and passes 2,894 with 115 declared capability
+  skips; Ruff, mypy across 525 files, Bandit, policy/lock validation, JSON/YAML
+  parsing, package build, and deterministic evidence regeneration all pass.
+- Boundary: E-824 has made all safe current progress but remains externally
+  blocked on an upstream-fixed supported base or independent security approval.
+  D-485 still forbids push, PR, tag, release, or deployment.
+
 ## E-823 — Fail-closed exact-image container security gate (2026-08-22)
 
 - Added a closed supply-chain policy for Syft 1.51.0 and Grype 0.117.0,

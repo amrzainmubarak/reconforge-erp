@@ -60,7 +60,20 @@
 - This refresh is current local runtime evidence only. It does not supersede
   hosted/reproducibility/scanning/signature/provenance requirements.
 - Docker Scout 1.24.0 exact-image scan: exit 0 after indexing 82 packages;
-  zero findings at all severities. The result is time-bounded.
+  zero findings at all severities. The result is time-bounded and is not the
+  current release gate because the later pinned Grype database disagrees.
+
+#### E-823/E-824 exact-image security result (2026-08-22)
+
+- Syft 1.51.0 inventories 68 package artifacts with 94.11% usable license
+  metadata. Grype 0.117.0 database v6.1.9 reports five High matches.
+- Exact CPython source/tag evidence establishes CVE-2026-3644,
+  CVE-2026-4224, and CVE-2026-7210 as fixed in Python 3.11.16. The closed
+  fixed-only OpenVEX path records those decisions while retaining them in the
+  total count.
+- CVE-2026-14456 remains unexcepted for libcrypto3 and libssl3 3.5.7-r0.
+  The gate exits 1 and blocks registry authentication. No supported current
+  Alpine candidate offered upstream-fixed OpenSSL 3.5.8 at review time.
 
 ### Disposable PostgreSQL boundary checks
 - `uv run --no-sync pytest -q -ra tests/test_application_metrics.py::test_live_postgres_metrics_and_sqlite_parity tests/test_alembic_postgres.py::test_alembic_upgrade_command_is_available_when_server_extra_is_installed` : **Passed (2/2)**.

@@ -214,6 +214,7 @@ jobs:
             --output "syft-json=${RUNNER_TEMP}/image.syft.json"
           "$GRYPE_PATH" db update
           "$GRYPE_PATH" "sbom:${RUNNER_TEMP}/image.syft.json" \
+            --vex docs/security/container-runtime.openvex.json \
             --output json \
             --file "${RUNNER_TEMP}/image.grype.json"
           printf 'IMAGE_CONFIG_DIGEST=%s\n' "$image_config_digest" >> "$GITHUB_ENV"

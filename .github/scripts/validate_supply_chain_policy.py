@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import base64
 import binascii
+import hashlib
 import json
 import re
 import sys
@@ -192,6 +193,11 @@ def _validate_policy_document(policy: dict[str, Any]) -> None:
             "tool",
             "unknown_severity_policy",
             "version",
+            "vex_allowed_statuses",
+            "vex_context",
+            "vex_document",
+            "vex_document_sha256",
+            "vex_max_review_age_days",
             "windows_x86_64_archive_sha256",
         },
         "container vulnerability audit",
@@ -207,6 +213,11 @@ def _validate_policy_document(policy: dict[str, Any]) -> None:
         or vulnerability["unknown_severity_policy"] != "fail"
         or vulnerability["supported_db_schema"] != 6
         or not 1 <= vulnerability["max_database_age_hours"] <= 168
+        or vulnerability["vex_document"] != "docs/security/container-runtime.openvex.json"
+        or vulnerability["vex_context"] != "https://openvex.dev/ns/v0.2.0"
+        or vulnerability["vex_allowed_statuses"] != ["fixed"]
+        or not 1 <= vulnerability["vex_max_review_age_days"] <= 30
+        or re.fullmatch(r"[0-9a-f]{64}", vulnerability["vex_document_sha256"]) is None
     ):
         raise SupplyChainPolicyError("container scanner policy drifted")
     for label, scanner in (("Syft", sbom), ("Grype", vulnerability)):
@@ -675,6 +686,7 @@ def _validate_workflows(root: Path, policy: dict[str, Any]) -> None:
         f"GRYPE_COMMIT: {vulnerability_policy['commit']}",
         f"GRYPE_LINUX_AMD64_SHA256: {vulnerability_policy['linux_x86_64_archive_sha256']}",
         '"sbom:${RUNNER_TEMP}/image.syft.json"',
+        "--vex docs/security/container-runtime.openvex.json",
         ".github/scripts/validate_container_security.py",
         "--image-config-digest",
     )
@@ -734,6 +746,10 @@ def validate_project(root: Path, as_of: date) -> tuple[dict[str, Any], list[dict
     root = root.resolve(strict=True)
     policy = _load_json(_required_path(root, "docs/security/supply-chain-policy.v1.json"))
     _validate_policy_document(policy)
+    vex_policy = policy["container_audits"]["vulnerability"]
+    vex_path = _required_path(root, vex_policy["vex_document"])
+    if hashlib.sha256(vex_path.read_bytes()).hexdigest() != vex_policy["vex_document_sha256"]:
+        raise SupplyChainPolicyError("reviewed OpenVEX document hash drifted")
     python_policy = policy["python_resolution"]
     pyproject = tomllib.loads(_required_path(root, python_policy["manifest"]).read_text(encoding="utf-8"))
     uv_config = pyproject.get("tool", {}).get("uv")

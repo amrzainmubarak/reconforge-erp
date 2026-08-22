@@ -2,7 +2,7 @@
 updated_at: "2026-08-22"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
-  evidence_base_commit: "ef50b8710e2cf647a10fc2f9252a66bb4548f415"
+  evidence_base_commit: "a91147adc58bffff5a6e62a0fdeb884bbe92d7ea"
   policy_change_commit: "the commit containing this file"
   published: false
 status_values: [planned, in_progress, blocked, deferred, completed]
@@ -13,15 +13,19 @@ tasks:
     priority: P0
     area: container-security
     title: Remediate or independently disposition current exact-image High findings
-    status: planned
+    status: blocked
     depends_on: [E-823]
     exit_evidence: >-
-      Release remains blocked until the exact rebuilt image passes the closed
-      container gate, or every High finding is independently reviewed and an
-      exact time-bounded exception/VEX path is approved under policy. Critical
-      findings remain non-exceptable. Current blockers are CVE-2026-14456 on
-      libcrypto3/libssl3 and CVE-2026-3644, CVE-2026-4224, and CVE-2026-7210
-      on Python 3.11.16. No exception is currently active.
+      The signed CPython 3.11.16 tag and official security records independently
+      establish CVE-2026-3644, CVE-2026-4224, and CVE-2026-7210 as fixed. A
+      hash-bound, 30-day-reviewed OpenVEX document records only those exact
+      fixed product decisions, and the gate verifies all ignored matches while
+      retaining them in the five-High total. CVE-2026-14456 remains a real
+      blocker on libcrypto3/libssl3 3.5.7-r0; current supported Alpine images
+      do not offer upstream-fixed OpenSSL 3.5.8. No not-affected disposition,
+      severity override, or exception was approved. Resume when a supported
+      fixed base is available or independent security reviewers approve a
+      policy-governed disposition; Critical findings remain non-exceptable.
   - id: E-823
     priority: P0
     area: supply-chain
@@ -31,13 +35,15 @@ tasks:
     exit_evidence: >-
       Closed policy and schemas pin Syft 1.51.0, Grype 0.117.0, scanner archive
       hashes/commits/platform, native subject identity, database age/schema,
-      ignored-match refusal, Critical/High/Unknown behavior, exact exceptions,
-      and 90 percent license-inventory coverage. Release scans before GHCR
+      ungoverned ignored-match refusal, fixed-only VEX validation,
+      Critical/High/Unknown behavior, exact exceptions, and 90 percent
+      license-inventory coverage. Release scans before GHCR
       authentication and verifies the pushed configuration binding; weekly or
       manual security runs repeat the local-image gate. Checked local evidence
-      is correctly blocked by five High findings while recording 68 packages
-      and 94.11 percent license inventory. No publication or readiness claim is
-      made, and remediation remains E-824.
+      records five High matches, three source-proven fixed Python dispositions,
+      and two OpenSSL blockers while inventorying 68 packages and 94.11 percent
+      license metadata. No publication or readiness claim is made, and final
+      remediation remains blocked under E-824.
   - id: E-822
     priority: P0
     area: container-security

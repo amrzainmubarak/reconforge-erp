@@ -2,6 +2,71 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-824: Governed fixed VEX and retained OpenSSL release block (2026-08-22)
+
+- Primary CPython evidence:
+  - official Python 3.11.16 release metadata dates the signed security release
+    to 2026-08-12 and names gh-145599/CVE-2026-3644 and
+    gh-145986/CVE-2026-4224 as repaired;
+  - GitHub's CPython comparison shows the signed `v3.11.16` tag is three
+    commits after the merged CVE-2026-7210 3.11 backport
+    `cbaecf9f16da611a646d507c1cbca265c588fc56`, with bundled Expat 2.8.3
+    before the final version commit; and
+  - the exact image reports Python 3.11.16 and Expat 2.8.3. The other 3.11
+    backport commits are `dae4b1a21f8df4570e30986affd61bbe4ade4cef`
+    and `642865ddf4b232da1f3b1f7abcfa3254c4bfe785`.
+- Primary OpenSSL evidence: the upstream CVE-2026-14456 advisory limits the
+  defect to the QUIC server incoming-channel queue, rates it Low upstream, and
+  identifies 3.5.0 through 3.5.7 as affected and 3.5.8 as fixed. The exact
+  image reports OpenSSL 3.5.7. Grype/NVD currently rates both package matches
+  High; policy continues to enforce the scanner severity rather than selecting
+  the more favorable rating.
+- Official image and package comparison:
+
+  | Candidate | Resolved identity | Exact components | Grype Critical / High |
+  | --- | --- | --- | ---: |
+  | Python 3.11 Alpine index `6857d2da...fada1` | 3.11.16 Alpine 3.24 | Expat 2.8.3, OpenSSL 3.5.7 | 0 / 7 in the untrimmed official base; the ReconForge runtime removes the two global build-package findings and retains five |
+  | Python 3.12 Alpine index `d09d15e6...7dc31` | 3.12.14 Alpine 3.24 | Expat 2.8.3, OpenSSL 3.5.7 | 0 / 5 |
+  | Python 3.13 Alpine index `540c7d91...a934d` | 3.13.15 Alpine 3.24 | Expat 2.8.2, OpenSSL 3.5.7 | 0 / 2 |
+  | Python 3.11 slim-bookworm index `2e32f7d3...29f91` | 3.11.16 Debian 12 | OpenSSL 3.0.20 | 10 / 38 in the untrimmed official base |
+
+  Syft 1.51.0 generated native inventories and Grype 0.117.0 used the same
+  local v6.1.9 database. Alpine 3.23 and 3.24 `apk policy` both reported
+  3.5.7-r0 as installed and latest for libcrypto3/libssl3. Candidate evidence
+  is time-bounded; 3.13 is also outside the declared tested application matrix.
+- `docs/security/container-runtime.openvex.json` is OpenVEX 0.2, SHA-256
+  `3263ae100c4b89aff8737a11ab708fadd4105c8d3aed7ba9514bbcc0df352d95`,
+  and contains exactly three `fixed` decisions for
+  `pkg:generic/python@3.11.16`. Policy permits no other VEX status and requires
+  review within 30 days.
+- Grype moved exactly the three reviewed Python matches to `ignoredMatches`,
+  each with one `namespace=vex, vex-status=fixed` rule. The repository gate
+  independently matched the CVE/product pairs to the exact Syft inventory.
+  The five-High total remains unchanged; every fixed record has explicit VEX
+  identity while the two OpenSSL records have no VEX or exception.
+- The checked v2 evidence remains **blocked**, exit 1, on exactly
+  CVE-2026-14456 for libcrypto3 and libssl3 3.5.7-r0. It records three applied
+  fixed findings, 68 packages, 94.11% license inventory, database v6.1.9, and
+  SHA-256 `3cae53bf8728fa71d6a6d6d61e09a9916f09c40d61e689b7055031e76a1fec96`.
+- Container-gate file: **PASS**, 16 executable tests and one declared Windows
+  symlink capability skip. The combined gate/policy selector collects 44 tests
+  and passes 43 plus the same skip under isolated Python 3.11.15 and 3.12.13
+  runtimes. Full local regression: **PASS**, 2,894 passed, 115 declared skips,
+  23 warnings, 3,009 collected, in 432.89 seconds on ambient Python 3.14.
+- Full-tree Ruff: **PASS**. Mypy: **PASS** across 525 source files. Bandit:
+  **PASS** with the existing reviewed warning/suppression inventory. Closed
+  supply-chain policy, `uv lock --check`, changed JSON/schema and all workflow
+  YAML parsing, sdist/wheel build, and `git diff --check`: **PASS**.
+- Re-running the validator from the exact Syft/Grype documents returns exit 1
+  for the two policy blockers and regenerates the checked 4,085-byte evidence
+  byte-for-byte at SHA-256
+  `3cae53bf8728fa71d6a6d6d61e09a9916f09c40d61e689b7055031e76a1fec96`;
+  this is a policy block, not scanner or evidence-generation failure.
+- Boundary: no `not_affected` assertion, exception, base-image mutation,
+  registry login, push, PR, tag, release, or deployment occurred. Resume only
+  after a supported base contains fixed OpenSSL or independent security review
+  approves a policy change. D-485 remains active.
+
 ## E-823: Exact-image pre-publication container security gate (2026-08-22)
 
 - Official release metadata and checksum files identified Syft 1.51.0 at

@@ -50,11 +50,13 @@ the matching npm lock, and the image SBOM describes Syft-observed installed
 components. All four declare `unknown` completeness.
 
 The container gate rejects all Critical findings, High findings without an exact
-active exception, Unknown severities, non-empty ignored-match output, stale or
-invalid databases, subject drift, and package-license coverage below 90%. This
-coverage does not establish license compatibility. The locally built 2026-08-22
-image is currently blocked by five High findings; no release readiness follows
-from the workflow definition.
+active exception or reviewed fixed disposition, Unknown severities, ungoverned
+ignored matches, stale or invalid databases, subject drift, and package-license
+coverage below 90%. Fixed VEX is hash-bound, product-exact, 30-day reviewed,
+and remains in total counts; no other VEX status is allowed. This coverage does
+not establish license compatibility. The locally built 2026-08-22 image records
+three source-proven fixed CPython matches and remains blocked by two OpenSSL
+High matches; no release readiness follows from the workflow definition.
 
 GitHub keyless attestations use SLSA provenance v1 or the CycloneDX predicate
 type `https://cyclonedx.org/bom`, as applicable. The same job then verifies

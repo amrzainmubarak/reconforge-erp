@@ -58,6 +58,7 @@ def _copy_policy_project(tmp_path: Path) -> Path:
         "apps/web/package.json",
         "docs/security/supply-chain-exceptions.v1.json",
         "docs/security/supply-chain-policy.v1.json",
+        "docs/security/container-runtime.openvex.json",
         "pyproject.toml",
         "uv.lock",
     )
@@ -112,6 +113,7 @@ def test_repository_policy_closes_resolution_and_exception_inputs() -> None:
     assert policy["secret_scanning"]["version"] == "8.30.1"
     assert policy["container_audits"]["sbom"]["version"] == "1.51.0"
     assert policy["container_audits"]["vulnerability"]["version"] == "0.117.0"
+    assert policy["container_audits"]["vulnerability"]["vex_allowed_statuses"] == ["fixed"]
     assert active == []
     assert python_packages == 128
     assert npm_packages == 211
@@ -147,6 +149,11 @@ def _mutate_service_image(root: Path) -> None:
         ),
         encoding="utf-8",
     )
+
+
+def _mutate_vex(root: Path) -> None:
+    path = root / "docs" / "security" / "container-runtime.openvex.json"
+    path.write_text(path.read_text(encoding="utf-8").replace("fixed", "not_affected", 1), encoding="utf-8")
 
 
 def test_docker_uv_version_check_accepts_only_the_pinned_version_with_optional_build_metadata() -> None:
@@ -302,6 +309,7 @@ def _mutate_release_post_push_binding(root: Path) -> None:
         _mutate_docker_base,
         _mutate_docker_context,
         _mutate_service_image,
+        _mutate_vex,
         _mutate_dependabot,
         _mutate_gitleaks,
         _mutate_gitleaks_ignore,

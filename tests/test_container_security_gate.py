@@ -45,12 +45,16 @@ def _json(path: Path) -> dict[str, Any]:
 
 
 def _artifact(index: int, *, licensed: bool = True) -> dict[str, Any]:
+    name = "python" if index == 0 else f"package-{index}"
+    version = "3.11.16" if index == 0 else "1.0.0"
+    package_type = "binary" if index == 0 else "python"
+    purl = "pkg:generic/python@3.11.16" if index == 0 else f"pkg:pypi/{name}@{version}"
     return {
         "id": f"artifact-{index}",
-        "name": f"package-{index}",
-        "version": "1.0.0",
-        "type": "python",
-        "purl": f"pkg:pypi/package-{index}@1.0.0",
+        "name": name,
+        "version": version,
+        "type": package_type,
+        "purl": purl,
         "licenses": ([{"value": "MIT", "spdxExpression": "MIT"}] if licensed else []),
     }
 
@@ -90,7 +94,11 @@ def _finding(*, severity: str = "High", identifier: str = "CVE-2026-0001") -> di
             "namespace": "nvd:cpe",
             "fix": {"state": "unknown"},
         },
-        "artifact": {"name": "package-0", "version": "1.0.0"},
+        "artifact": {
+            "name": "python",
+            "version": "3.11.16",
+            "purl": "pkg:generic/python@3.11.16",
+        },
         "matchDetails": [{"type": "cpe-match"}],
     }
 
@@ -98,7 +106,7 @@ def _finding(*, severity: str = "High", identifier: str = "CVE-2026-0001") -> di
 def _grype(*, matches: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     return {
         "matches": [] if matches is None else matches,
-        "ignoredMatches": None,
+        "ignoredMatches": [],
         "source": {
             "type": "image",
             "target": {
@@ -117,6 +125,7 @@ def _grype(*, matches: list[dict[str, Any]] | None = None) -> dict[str, Any]:
                 "exclude": [],
                 "externalSources": {"enable": False},
                 "search": {"scope": "squashed"},
+                "vex-documents": ["docs/security/container-runtime.openvex.json"],
             },
             "db": {
                 "status": {
@@ -191,7 +200,7 @@ def test_checked_local_blocked_evidence_matches_closed_schema() -> None:
     assert not errors, "\n".join(error.message for error in errors)
     assert evidence["status"] == "blocked"
     assert evidence["vulnerabilities"]["counts"]["high"] == 5
-    assert len(evidence["blockers"]) == 5
+    assert len(evidence["blockers"]) == 2
 
 
 def test_high_is_blocked_but_an_exact_active_container_exception_is_recorded(
@@ -208,7 +217,7 @@ def test_high_is_blocked_but_an_exact_active_container_exception_is_recorded(
         "id": "SC-EXC-0001",
         "ecosystem": "container",
         "kind": "vulnerability",
-        "subject": "package-0",
+        "subject": "python",
         "identifiers": ["CVE-2026-0001"],
     }
     excepted, excepted_blocked = _evaluate(
@@ -227,7 +236,7 @@ def test_critical_cannot_be_excepted(tmp_path: Path, monkeypatch: pytest.MonkeyP
         "id": "SC-EXC-0001",
         "ecosystem": "container",
         "kind": "vulnerability",
-        "subject": "package-0",
+        "subject": "python",
         "identifiers": ["CVE-2026-0001"],
     }
     evidence, blocked = _evaluate(
@@ -247,7 +256,7 @@ def test_critical_cannot_be_excepted(tmp_path: Path, monkeypatch: pytest.MonkeyP
         (lambda syft, grype: grype["source"]["target"].update(manifestDigest="sha256:" + "c" * 64), "not bound"),
         (lambda syft, grype: grype["descriptor"].update(version="0.116.0"), "pinned tool"),
         (lambda syft, grype: grype["descriptor"]["db"]["status"].update(built="2026-08-15T00:00:00Z"), "age"),
-        (lambda syft, grype: grype.update(ignoredMatches=[_finding()]), "suppressed"),
+        (lambda syft, grype: grype.update(ignoredMatches=[_finding()]), "governed VEX"),
     ],
 )
 def test_gate_rejects_unbound_stale_or_suppressed_evidence(
@@ -278,6 +287,88 @@ def test_license_coverage_unknown_severity_and_operational_failure_fail_closed(
 
     with pytest.raises(ContainerSecurityError, match="operationally"):
         _evaluate(tmp_path, monkeypatch, scanner_exit_code=2)
+
+
+def test_exact_reviewed_fixed_vex_is_recorded_without_weakening_other_findings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fixed = _finding(identifier="CVE-2026-3644")
+    fixed["appliedIgnoreRules"] = [{"namespace": "vex", "vex-status": "fixed"}]
+    remaining = _finding(identifier="CVE-2026-9999")
+    report = _grype(matches=[remaining])
+    report["ignoredMatches"] = [fixed]
+
+    evidence, blocked = _evaluate(tmp_path, monkeypatch, grype=report)
+
+    assert blocked is True
+    assert evidence["vulnerabilities"]["counts"]["high"] == 2
+    assert evidence["vex"]["reviewed_fixed_statements"] == 3
+    assert evidence["vex"]["applied_fixed_findings"] == 1
+    findings = evidence["vulnerabilities"]["critical_or_high_findings"]
+    assert [item["id"] for item in findings] == ["CVE-2026-3644", "CVE-2026-9999"]
+    assert findings[0]["vex_status"] == "fixed"
+    assert findings[1]["vex_status"] is None
+    assert evidence["blockers"] == [
+        "unexcepted high finding CVE-2026-9999 for python@3.11.16"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        (
+            lambda vex: vex.update(
+                timestamp="2026-07-01T00:00:00Z",
+                last_updated="2026-07-01T00:00:00Z",
+            ),
+            "older than",
+        ),
+        (
+            lambda vex: vex["statements"][0].update(status="not_affected"),
+            "incomplete",
+        ),
+        (
+            lambda vex: vex["statements"][0]["products"][0].update(
+                {"@id": "pkg:generic/python@3.11.15"}
+            ),
+            "absent from",
+        ),
+        (
+            lambda vex: vex["statements"][0].update(unreviewed=True),
+            "unreviewed fields",
+        ),
+    ],
+)
+def test_vex_staleness_status_product_and_shape_fail_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    mutation: Any,
+    message: str,
+) -> None:
+    original_load = MODULE._load_json
+
+    def load_with_mutated_vex(path: Path, *, label: str) -> dict[str, Any]:
+        document = original_load(path, label=label)
+        if label == "OpenVEX document":
+            document = deepcopy(document)
+            mutation(document)
+        return document
+
+    monkeypatch.setattr(MODULE, "_load_json", load_with_mutated_vex)
+    with pytest.raises(ContainerSecurityError, match=message):
+        _evaluate(tmp_path, monkeypatch)
+
+
+def test_vex_cannot_suppress_critical_or_unconfigured_medium(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for severity in ("Critical", "Medium"):
+        finding = _finding(severity=severity, identifier="CVE-2026-3644")
+        finding["appliedIgnoreRules"] = [{"namespace": "vex", "vex-status": "fixed"}]
+        report = _grype()
+        report["ignoredMatches"] = [finding]
+        with pytest.raises(ContainerSecurityError, match="suppress"):
+            _evaluate(tmp_path, monkeypatch, grype=report)
 
 
 def test_loader_rejects_duplicate_json_keys_and_links(tmp_path: Path) -> None:

@@ -68,7 +68,12 @@
       "max_database_age_hours": 120,
       "scan_input_format": "syft-json",
       "fail_severities": ["Critical", "High"],
-      "unknown_severity_policy": "fail"
+      "unknown_severity_policy": "fail",
+      "vex_document": "docs/security/container-runtime.openvex.json",
+      "vex_document_sha256": "3263ae100c4b89aff8737a11ab708fadd4105c8d3aed7ba9514bbcc0df352d95",
+      "vex_context": "https://openvex.dev/ns/v0.2.0",
+      "vex_allowed_statuses": ["fixed"],
+      "vex_max_review_age_days": 30
     }
   },
   "secret_scanning": {

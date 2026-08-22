@@ -250,6 +250,7 @@ jobs:
             --output "cyclonedx-json=${RUNNER_TEMP}/image-syft.raw.cdx.json"
           "$GRYPE_PATH" db update
           "$GRYPE_PATH" "sbom:${RUNNER_TEMP}/image.syft.json" \
+            --vex docs/security/container-runtime.openvex.json \
             --output json \
             --file "${RUNNER_TEMP}/image.grype.json"
 

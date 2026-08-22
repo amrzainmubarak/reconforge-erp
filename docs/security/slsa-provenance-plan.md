@@ -30,7 +30,7 @@ definition or successful build does not change that result.
 | `source-archive` | Exact filename/version, SHA-256 subject, immutable source revision, matching package/npm metadata | Deterministic clean-HEAD local archive/SBOM plus candidate definition; no hosted attestation result |
 | `python-wheel` | Exact filename/version, SHA-256 subject, source revision, build definition | Candidate workflow definition; no hosted attestation result |
 | `python-sdist` | Exact filename/version, SHA-256 subject, same source revision as wheel | Candidate workflow definition; no hosted attestation result |
-| `container-image` | Registry repository plus manifest digest; Dockerfile/base/source/builder binding | Exact local configuration-bound image scan exists and currently blocks on five High findings; no registry/attestation result |
+| `container-image` | Registry repository plus manifest digest; Dockerfile/base/source/builder binding | Exact local configuration-bound image scan records three source-proven fixed CPython High matches and blocks on two OpenSSL High matches; no registry/attestation result |
 | `cyclonedx-sbom` | One exact file/digest per source/wheel/sdist/image subject, covered digest, generator/dependency/release binding | Deterministic local source/package outputs plus an exact local Syft image inventory; no hosted image predicate or attestation result |
 
 All release subjects must be path-free and digest-addressed. Mutable tags are
@@ -113,7 +113,8 @@ hash-locked release and container-scanner tools, commit-epoch package normalizat
 manifests, GitHub keyless provenance, strict bundle verification, and
 fail-before-registry-authentication container policy, fail-before-candidate-upload behavior,
 and one exact-subject CycloneDX 1.7 generation/attestation set. The exact local
-image scan is currently blocked by five High findings. Two local Python 3.14.6 builds reproduced
+image scan records three source-proven fixed CPython matches and remains blocked
+by two OpenSSL High matches. Two local Python 3.14.6 builds reproduced
 identical source, wheel, and normalized-sdist bytes; this does not cover the OCI
 image, supported-version runners, another platform, or a clean tag. No
 hosted run, signed output, retained verification, builder assessment, coupled

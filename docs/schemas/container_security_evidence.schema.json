@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://reconforge.local/schemas/container_security_evidence.schema.json",
-  "title": "ReconForge container security evidence v1",
+  "title": "ReconForge container security evidence v2",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,12 +15,13 @@
     "tools",
     "database",
     "license_inventory",
+    "vex",
     "vulnerabilities",
     "blockers"
   ],
   "properties": {
     "$schema": {"const": "../schemas/container_security_evidence.schema.json"},
-    "schema_version": {"const": 1},
+    "schema_version": {"const": 2},
     "policy_id": {"const": "reconforge-supply-chain"},
     "evaluated_at": {"type": "string", "format": "date-time"},
     "status": {"enum": ["passed", "blocked"]},
@@ -29,6 +30,7 @@
     "tools": {"$ref": "#/$defs/tools"},
     "database": {"$ref": "#/$defs/database"},
     "license_inventory": {"$ref": "#/$defs/licenses"},
+    "vex": {"$ref": "#/$defs/vex"},
     "vulnerabilities": {"$ref": "#/$defs/vulnerabilities"},
     "blockers": {
       "type": "array",
@@ -99,10 +101,24 @@
         "legal_compatibility_assessed": {"const": false}
       }
     },
+    "vex": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["document_id", "document_sha256", "author", "last_updated", "review_age_days", "reviewed_fixed_statements", "applied_fixed_findings"],
+      "properties": {
+        "document_id": {"type": "string", "pattern": "^https://reconforge\\.local/security/vex/[A-Za-z0-9._/-]+$"},
+        "document_sha256": {"$ref": "#/$defs/sha256"},
+        "author": {"type": "string", "minLength": 10},
+        "last_updated": {"type": "string", "format": "date-time"},
+        "review_age_days": {"type": "integer", "minimum": 0, "maximum": 30},
+        "reviewed_fixed_statements": {"type": "integer", "minimum": 1},
+        "applied_fixed_findings": {"type": "integer", "minimum": 0}
+      }
+    },
     "finding": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "severity", "package", "version", "namespace", "fix_state", "match_types", "exception_id"],
+      "required": ["id", "severity", "package", "version", "namespace", "fix_state", "match_types", "exception_id", "vex_document_id", "vex_status"],
       "properties": {
         "id": {"type": "string", "minLength": 3},
         "severity": {"enum": ["Critical", "High"]},
@@ -111,8 +127,22 @@
         "namespace": {"type": "string"},
         "fix_state": {"type": "string"},
         "match_types": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
-        "exception_id": {"type": ["string", "null"], "pattern": "^SC-EXC-[0-9]{4}$"}
-      }
+        "exception_id": {"type": ["string", "null"], "pattern": "^SC-EXC-[0-9]{4}$"},
+        "vex_document_id": {"type": ["string", "null"], "pattern": "^https://reconforge\\.local/security/vex/[A-Za-z0-9._/-]+$"},
+        "vex_status": {"enum": ["fixed", null]}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"vex_status": {"const": "fixed"}}},
+          "then": {
+            "properties": {
+              "exception_id": {"const": null},
+              "vex_document_id": {"type": "string"}
+            }
+          },
+          "else": {"properties": {"vex_document_id": {"const": null}}}
+        }
+      ]
     },
     "vulnerabilities": {
       "type": "object",

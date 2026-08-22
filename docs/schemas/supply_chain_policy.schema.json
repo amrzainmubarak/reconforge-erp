@@ -120,7 +120,7 @@
         "vulnerability": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["tool", "version", "commit", "linux_x86_64_archive_sha256", "windows_x86_64_archive_sha256", "supported_db_schema", "max_database_age_hours", "scan_input_format", "fail_severities", "unknown_severity_policy"],
+          "required": ["tool", "version", "commit", "linux_x86_64_archive_sha256", "windows_x86_64_archive_sha256", "supported_db_schema", "max_database_age_hours", "scan_input_format", "fail_severities", "unknown_severity_policy", "vex_document", "vex_document_sha256", "vex_context", "vex_allowed_statuses", "vex_max_review_age_days"],
           "properties": {
             "tool": {"const": "grype"},
             "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
@@ -131,7 +131,12 @@
             "max_database_age_hours": {"type": "integer", "minimum": 1, "maximum": 168},
             "scan_input_format": {"const": "syft-json"},
             "fail_severities": {"type": "array", "const": ["Critical", "High"]},
-            "unknown_severity_policy": {"const": "fail"}
+            "unknown_severity_policy": {"const": "fail"},
+            "vex_document": {"const": "docs/security/container-runtime.openvex.json"},
+            "vex_document_sha256": {"$ref": "#/$defs/sha256"},
+            "vex_context": {"const": "https://openvex.dev/ns/v0.2.0"},
+            "vex_allowed_statuses": {"type": "array", "const": ["fixed"]},
+            "vex_max_review_age_days": {"type": "integer", "minimum": 1, "maximum": 30}
           }
         }
       }

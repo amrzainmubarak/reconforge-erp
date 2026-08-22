@@ -2,6 +2,20 @@
 
 Updated: 2026-08-22
 
+## E-832 — Reject negative provider outcomes before acknowledgement (2026-08-22)
+
+- Corrected a transport correctness gap: an explicit provider response with
+  `accepted=false` can no longer become `ACKNOWLEDGED` through original
+  dispatch or idempotency-status recovery.
+- The shared parser now raises safe, non-sensitive errors before returning a
+  lifecycle transition. The original intent remains `DISPATCHED` and the
+  recovery path remains state-preserving; the existing compensation guard
+  remains `COMPENSATION_REQUESTED` on a negative result.
+- Positive responses, idempotency binding, migrations, APIs, and Community mode
+  are unchanged. Focused connector transport/domain tests pass 46/46.
+- Boundary: injected/synthetic provider responses only; no live provider,
+  accounting posting, settlement, distributed delivery, or production claim.
+
 ## E-831 — PostgreSQL write-back recovery and compensation parity (2026-08-22)
 
 - Added a closed, provider-neutral verifier for the append-only write-back

@@ -562,6 +562,49 @@ def test_network_dispatch_retries_transient_http_and_transport_failures_with_sam
     assert 1.0 in waits and 2.0 in waits
 
 
+def test_network_dispatch_rejects_negative_provider_outcome_without_acknowledging() -> None:
+    intent = _dispatched_intent()
+    transport = _Transport([WritebackNetworkResponse(200, _provider_body(intent.idempotency_key, accepted=False))])
+
+    with pytest.raises(WritebackNetworkError, match="not_accepted"):
+        WritebackNetworkExecutor(
+            transport,
+            payload_resolver=_Payloads(),
+            secret_resolver=_Secrets(),
+        ).dispatch(intent, registration=_registration(), policy=POLICY)
+
+    assert intent.status is WritebackStatus.DISPATCHED
+    assert intent.acknowledgement is None
+
+
+def test_network_recovery_rejects_negative_provider_outcome_without_acknowledging() -> None:
+    intent = _dispatched_intent()
+    recovery = _RecoveryTransport(
+        WritebackNetworkResponse(200, _provider_body(intent.idempotency_key, accepted=False))
+    )
+
+    with pytest.raises(WritebackNetworkError, match="recovery_not_accepted"):
+        WritebackNetworkExecutor(
+            _Transport([]),
+            payload_resolver=_Payloads(),
+            secret_resolver=_Secrets(),
+        ).recover(
+            intent,
+            registration=_registration(
+                recovery_endpoint="https://api.example.test/v1/status",
+                egress_destinations=(
+                    "https://api.example.test/v1/status",
+                    "https://api.example.test/v1/writeback",
+                ),
+            ),
+            policy=POLICY,
+            transport=recovery,
+        )
+
+    assert intent.status is WritebackStatus.DISPATCHED
+    assert intent.acknowledgement is None
+
+
 def test_formal_writeback_failure_injection_conformance_is_bounded_and_idempotent() -> None:
     intent = _dispatched_intent()
     waits: list[float] = []

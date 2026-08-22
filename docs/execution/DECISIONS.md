@@ -5,6 +5,29 @@
 
 ## Decisions
 
+### D-932: Never advance write-back state on a negative provider outcome
+
+- **Date**: 2026-08-22
+- **Context**: The transport envelope carries `accepted`, but the original
+  dispatch and status-recovery paths previously treated a valid `accepted=false`
+  response as an acknowledgement. Compensation already rejected it.
+- **Decision**: Adopt ADR 0546. Shared POST and status-recovery validation must
+  raise a safe, non-sensitive error for `accepted=false`; the intent remains in
+  its previous immutable state and no acknowledgement is returned.
+- **Rationale**: A well-formed response is not proof of a provider effect.
+  Positive acknowledgement must be explicit, idempotency-bound, and accepted.
+  Fail-closed state preservation is safer than guessing whether a rejected
+  provider operation can be retried.
+- **Verification**: E-832 adds original-dispatch and recovery regression tests;
+  the existing compensation rejection test remains green. The focused
+  connector transport/domain selector passes 46/46.
+- **Compatibility**: Positive responses, existing lifecycle schemas, APIs,
+  migrations, and Community mode remain unchanged. Only negative outcomes now
+  refuse the state transition consistently across all three paths.
+- **Rollback**: Remove E-832's two guards and ADR/manifest evidence only after
+  an approved replacement explicitly preserves the same no-false-acknowledgement
+  invariant.
+
 ### D-931: Recover accepted write-back and compensation operations by immutable keys
 
 - **Date**: 2026-08-22

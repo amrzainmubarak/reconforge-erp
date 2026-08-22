@@ -1,5 +1,15 @@
 # Quality Baseline
 
+## E-832 negative provider outcome guard (2026-08-22)
+
+The original dispatch and idempotency-status recovery paths now refuse a
+well-formed provider response with `accepted=false` before any lifecycle state
+can advance. The intent remains `DISPATCHED` and has no acknowledgement; the
+compensation rejection guard remains unchanged. The focused connector
+transport/domain selector passes 46/46, including TLS, retry, digest, secret,
+idempotency, recovery, and compensation contracts. This is local synthetic
+transport quality, not provider or production quality.
+
 ## E-831 write-back recovery and compensation parity (2026-08-22)
 
 The closed runner proves the six-version append-only lifecycle on a SQLite

@@ -626,6 +626,12 @@ class WritebackNetworkExecutor:
                 raise WritebackNetworkError(f"{error_prefix}_response_schema_invalid") from exc
             if provider.idempotency_key != idempotency_key:
                 raise WritebackNetworkError(f"{error_prefix}_acknowledgement_mismatch")
+            if not provider.accepted:
+                # A negative provider outcome is not an acknowledgement.  Do
+                # not let a rejected mutation cross the lifecycle boundary into
+                # ACKNOWLEDGED or COMPENSATED; the caller retains the prior
+                # immutable state for governed reconciliation.
+                raise WritebackNetworkError(f"{error_prefix}_not_accepted")
             return provider, attempts
         raise WritebackNetworkError(f"{error_prefix}_retry_exhausted")
 
@@ -649,6 +655,8 @@ class WritebackNetworkExecutor:
             raise WritebackNetworkError("writeback_recovery_response_schema_invalid") from exc
         if provider.idempotency_key != idempotency_key:
             raise WritebackNetworkError("writeback_recovery_acknowledgement_mismatch")
+        if not provider.accepted:
+            raise WritebackNetworkError("writeback_recovery_not_accepted")
         return provider
 
     def _apply_rate_limit(self, registration: WritebackNetworkRegistration) -> None:

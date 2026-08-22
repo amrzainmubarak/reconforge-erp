@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-832
+    priority: P0
+    area: connector-reliability
+    title: Reject negative provider outcomes before acknowledgement
+    status: completed
+    depends_on: [E-831]
+    exit_evidence: >-
+      The provider-neutral network executor treats an explicit `accepted=false`
+      response as a safe failure rather than an acknowledgement for both the
+      original mutation and idempotency-status recovery. The immutable intent
+      remains in its prior state, the compensation path retains its existing
+      rejection guard, and focused transport/domain tests cover response schema,
+      idempotency binding, and no-state-advance behavior. This is local synthetic
+      transport evidence, not a provider contract, posting, settlement, or
+      production assurance.
   - id: E-831
     priority: P0
     area: connector-reliability
@@ -350,6 +365,9 @@ tasks:
         histories; two spawned acceptance-before-persistence crash windows,
         original-key recovery, distinct compensation-key recovery, direct
         mutation refusal, tenant isolation, and non-privileged role flags pass.
+      - E-832 rejects an explicit negative provider outcome before it can become
+        `acknowledged` or `compensated`; original dispatch, idempotency-status
+        recovery, and compensation remain state-preserving on `accepted=false`.
   - id: E-1005
     priority: P0
     area: identity-governance

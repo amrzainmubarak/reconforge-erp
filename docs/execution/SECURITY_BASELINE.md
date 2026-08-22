@@ -2,6 +2,16 @@
 
 Measured through 2026-08-22 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
 
+## E-832 negative provider outcome controls (2026-08-22)
+
+- A valid JSON envelope is not trusted as an effect: `accepted=false` is
+  rejected before acknowledgement in original dispatch and status recovery.
+- Error messages are fixed safe codes and never include provider body, payload,
+  credential, or customer data.
+- Existing compensation rejection and idempotency-key binding remain enforced;
+  focused transport/domain tests pass 46/46.
+
+
 ## E-831 write-back recovery controls (2026-08-22)
 
 - The runner uses generated disposable credentials, exact digest-pinned images,

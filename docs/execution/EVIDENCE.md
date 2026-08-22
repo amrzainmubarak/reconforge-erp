@@ -2,6 +2,24 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-832: Reject negative provider outcomes before acknowledgement (2026-08-22)
+
+- The shared `WritebackNetworkExecutor` now rejects `accepted=false` before
+  returning a dispatch or recovery transition. The original intent remains
+  `DISPATCHED` with no acknowledgement; compensation keeps its existing
+  `writeback_compensation_not_accepted` guard.
+- Focused command:
+  `python -m pytest tests/test_connector_writeback_network.py tests/test_connector_writeback.py -q`.
+  Result: 46 passed, including original dispatch, idempotency-status recovery,
+  compensation rejection, schema validation, key binding, retry, secret
+  boundary, TLS pinning, and local HTTPS sandbox coverage.
+- No network or credential was used by the new regression cases. The test
+  responses are injected synthetic envelopes, and error messages contain no
+  response body, credential, payload, or customer data.
+- Boundary: this proves local fail-closed state handling only. Provider-specific
+  status semantics, accounting, settlement, distributed delivery, and
+  production recovery objectives remain unverified.
+
 ## E-831: PostgreSQL write-back recovery and compensation parity (2026-08-22)
 
 - Command:

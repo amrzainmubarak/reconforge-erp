@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-906 — Finite CodeQL job timeout (2026-08-23)
+
+- CodeQL `analyze` now has a 30-minute timeout, and the workflow contract test
+  enforces it. Focused workflow/HA-DR tests pass (9 tests), with Ruff and diff
+  checks.
+- A timeout remains a failed security gate; no vulnerability-absence claim is
+  inferred.
+
 ## E-905 — Fail-closed manifest text declarations (2026-08-23)
 
 - Non-text or blank tie-break/explanation-schema values now raise the public

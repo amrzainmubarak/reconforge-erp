@@ -2,6 +2,13 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-906: Finite CodeQL job timeout (2026-08-23)
+
+- `.github/workflows/codeql.yml` sets `analyze.timeout-minutes: 30`, enforced
+  by the workflow contract test.
+- Focused workflow/HA-DR command: 9 passed; Ruff and `git diff --check` passed.
+- This bounds runner liveness only; it does not prove vulnerability absence.
+
 ## E-905: Fail-closed manifest text declarations (2026-08-23)
 
 - Manifest construction rejects non-text/blank tie-break and explanation-schema

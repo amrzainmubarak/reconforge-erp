@@ -9,6 +9,16 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-906
+    priority: P0
+    area: security_supply_chain
+    title: Bound CodeQL analysis job
+    status: completed
+    depends_on: [E-903]
+    exit_evidence: >-
+      CodeQL analyze has a 30-minute timeout enforced by workflow tests. Nine
+      focused tests, Ruff, and diff checks pass; timeout remains a failed
+      security gate.
   - id: E-905
     priority: P0
     area: reconciliation

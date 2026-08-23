@@ -5,6 +5,11 @@
 
 ## Decisions
 
+### D-964: Bound CodeQL analysis liveness
+
+E-906 limits CodeQL runner consumption while preserving timeout-as-failure
+semantics. It does not weaken the security gate or infer scan completeness.
+
 ### D-963: Normalize malformed manifest text failures
 
 E-905 makes malformed tie-break and explanation declarations fail through the

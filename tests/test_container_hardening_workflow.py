@@ -74,3 +74,10 @@ def test_long_running_ci_jobs_have_finite_timeouts() -> None:
     assert isinstance(jobs, dict)
     assert jobs["test"]["timeout-minutes"] == 45
     assert jobs["postgres-ha-dr"]["timeout-minutes"] == 30
+
+
+def test_codeql_analysis_has_a_finite_timeout() -> None:
+    workflow = _workflow(".github/workflows/codeql.yml")
+    jobs = workflow["jobs"]
+    assert isinstance(jobs, dict)
+    assert jobs["analyze"]["timeout-minutes"] == 30

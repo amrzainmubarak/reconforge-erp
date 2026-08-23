@@ -2,6 +2,16 @@
 
 Updated: 2026-08-23
 
+## E-877 — Web client required CI gate (2026-08-23)
+
+- `.github/workflows/ci.yml` now includes a dedicated `web` job using pinned
+  checkout/setup-node actions and Node 22 with npm lockfile caching.
+- The job enforces typecheck, Vitest, production build, Playwright Chromium
+  installation, and standard browser/accessibility E2E on normal push/PR CI.
+- Explicit live API-session and HTTPS production-bundle scenarios remain
+  opt-in, so CI does not invent credentials, provider access, or production
+  deployment evidence.
+
 ## E-876 — Current provider-neutral transport conformance (2026-08-23)
 
 - `tests/test_connector_provider_tls_sandbox.py`,

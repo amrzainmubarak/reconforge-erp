@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-877
+    priority: P0
+    area: quality
+    title: Make web client verification a required pull-request CI gate
+    status: completed
+    depends_on: [E-876]
+    exit_evidence: >-
+      The CI workflow now has a pinned Node 22 web job that installs from the
+      npm lockfile, runs typecheck, Vitest, production build, Chromium install,
+      and standard browser/accessibility E2E. Live API-session and HTTPS
+      scenarios remain explicit opt-ins; local execution of the same commands
+      passed before publication.
   - id: E-876
     priority: P1
     area: connectors

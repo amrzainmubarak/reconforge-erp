@@ -65,6 +65,42 @@ jobs:
       - name: Build package
         run: uv run --no-sync python -m build --no-isolation
 
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install locked web dependencies
+        run: npm --prefix apps/web ci
+
+      - name: Typecheck web client
+        run: npm --prefix apps/web run typecheck
+
+      - name: Run web component tests
+        run: npm --prefix apps/web run test:run
+
+      - name: Build web client
+        run: npm --prefix apps/web run build
+
+      - name: Install Chromium for Playwright
+        run: npx --prefix apps/web playwright install --with-deps chromium
+
+      - name: Run standard browser and accessibility E2E
+        env:
+          RECONFORGE_WEB_PORT: "4173"
+        run: npm --prefix apps/web run e2e
+
   engine-parity:
     runs-on: ubuntu-latest
     strategy:

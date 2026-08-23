@@ -1,0 +1,57 @@
+{
+  "schema": "reconforge-ha-dr-drill-report-v1",
+  "drill_id": "DR-20260823-CURRENT",
+  "executed_at": "2026-08-23",
+  "topology": "docker-single-host-primary-synchronous-standby-v1",
+  "infrastructure": {
+    "docker_server": "Docker Engine 29.7.2",
+    "container_os": "linux/amd64",
+    "postgres_image": "postgres:17.10-alpine",
+    "node_count": 2,
+    "failure_domains": 1
+  },
+  "failure": "replication-network-partition-then-primary-container-stop-and-removal",
+  "replication": "physical-streaming-synchronous-remote-apply",
+  "backup_restore": {
+    "format": "reconforge-postgres-backup-v1",
+    "encrypted": true,
+    "isolated_restore": true,
+    "restored_rows": 1,
+    "digest_matches": true
+  },
+  "fencing": {
+    "method": "exact-id-stop-remove-before-promotion",
+    "verified_absent_before_promotion": true,
+    "old_primary_id_sha256": "0cb6947306618334204cde21d177fb6bc41ed742844df76482b2e4f64558e2a9",
+    "failback_verified_absent_before_promotion": true,
+    "failback_old_primary_id_sha256": "71d34bc9bb080a1c8984231ff852ae5853539d34ef5c6bdf891ecf8545fbae35"
+  },
+  "measurement": {
+    "rpo_transactions": 0,
+    "rpo_ceiling_transactions": 0,
+    "rto_seconds": 11.093,
+    "rto_ceiling_seconds": 60.0,
+    "failback_rpo_transactions": 0,
+    "failback_rto_seconds": 1.041
+  },
+  "integrity": {
+    "pre_failure_sequence": 1,
+    "post_failover_sequence": 2,
+    "standby_pre_failure_match": true,
+    "partition_write_not_acknowledged": true,
+    "post_failover_write": true,
+    "former_primary_rejoined_read_only": true,
+    "pre_failback_sequence": 3,
+    "post_failback_sequence": 4,
+    "post_failback_write": true
+  },
+  "scope_status": "verified-development-single-failure-domain",
+  "limitations": [
+    "single_host_not_host_loss",
+    "no_cross_zone_or_cross_region",
+    "synthetic_data_and_key_only",
+    "manual_controller_not_automatic_failover",
+    "no_production_rpo_rto_slo",
+    "no_enterprise_ready_claim"
+  ]
+}

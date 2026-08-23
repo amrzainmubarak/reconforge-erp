@@ -18335,3 +18335,18 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   - python .github/scripts/verify_postgres_native_tools.py --expected-major 16
     - fails locally (pg_config not available on PATH).
    - Boundaries: this slice remains local and synthetic where noted; no GitHub release/push/tag/merge was performed.
+
+- E-866 current bounded PostgreSQL HA/DR drill (2026-08-23; ADR 0575):
+  - `python .github/scripts/verify_postgres_ha_dr.py` completed one clean
+    disposable Docker run on Docker Engine 29.7.2 using
+    `postgres:17.10-alpine` and the synchronous physical-standby topology.
+  - The closed artifact is
+    `docs/execution/POSTGRES_HA_DR_CURRENT_DRILL_2026-08-23.json`; schema
+    validation and the current artifact contract pass.
+  - The run verified encrypted isolated restore, exact-ID stop/remove fencing,
+    zero acknowledged sentinel loss, final sequence `[1, 2, 3, 4]`, failover
+    RTO `11.093` seconds, and failback RTO `1.041` seconds. Docker resources
+    were cleaned by the controller.
+  - Boundary: one synthetic single-host failure domain and a manual controller;
+    host/zone loss, quorum/witness behavior, automatic failover, cross-host
+    networking, production RPO/RTO SLOs, and enterprise readiness remain open.

@@ -2,6 +2,17 @@
 
 Updated: 2026-08-23
 
+## E-866 — Refresh current bounded PostgreSQL HA/DR drill evidence (2026-08-23)
+
+- `.github/scripts/verify_postgres_ha_dr.py` completed one clean disposable
+  Docker run using PostgreSQL 17.10-alpine on Docker Engine 29.7.2.
+- The report records encrypted isolated restore, exact-ID fencing, synchronous
+  remote-apply, zero acknowledged sentinel loss, failover RTO 11.093 seconds,
+  and failback RTO 1.041 seconds with final sequences `[1, 2, 3, 4]`.
+- This remains one synthetic single-host failure domain with a manual
+  controller; host/zone loss, automatic failover, production SLOs, and
+  enterprise readiness remain unverified.
+
 ## E-865 — Refresh live PostgreSQL security governance/policy evidence (2026-08-23)
 
 - `tests/test_postgres_security_governance.py` and

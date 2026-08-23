@@ -35,3 +35,16 @@ def test_recorded_primary_identity_is_hashed_not_a_reusable_container_identifier
     }
     assert all(len(value) == 64 for value in recorded)
     assert hashlib.sha256(b"").hexdigest() not in recorded
+
+
+def test_current_postgres_ha_dr_drill_artifact_is_schema_valid_and_bounded() -> None:
+    artifact = json.loads(
+        (ROOT / "docs/execution/POSTGRES_HA_DR_CURRENT_DRILL_2026-08-23.json").read_text(encoding="utf-8")
+    )
+    schema = json.loads((ROOT / "docs/schemas/ha_dr_drill_report.schema.json").read_text(encoding="utf-8"))
+    Draft202012Validator(schema).validate(artifact)
+    assert artifact["measurement"]["rpo_transactions"] == 0
+    assert artifact["measurement"]["rto_seconds"] <= artifact["measurement"]["rto_ceiling_seconds"]
+    assert artifact["integrity"]["post_failback_sequence"] == 4
+    assert "single_host_not_host_loss" in artifact["limitations"]
+    assert "no_enterprise_ready_claim" in artifact["limitations"]

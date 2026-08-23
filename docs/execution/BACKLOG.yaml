@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-866
+    priority: P0
+    area: reliability
+    title: Refresh current bounded PostgreSQL HA/DR drill evidence
+    status: completed
+    depends_on: [E-865]
+    exit_evidence: >-
+      A disposable Docker PostgreSQL 17.10 synchronous primary/standby drill
+      completed on 2026-08-23 with encrypted isolated restore, exact-ID fencing,
+      zero acknowledged sentinel loss, failover RTO 11.093 seconds, and
+      failback RTO 1.041 seconds. Evidence is single-host synthetic runtime
+      only and explicitly excludes production RPO/RTO, host loss, and
+      enterprise-readiness claims.
   - id: E-865
     priority: P0
     area: identity-governance

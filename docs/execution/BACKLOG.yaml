@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-865
+    priority: P0
+    area: identity-governance
+    title: Refresh live PostgreSQL security governance and policy analysis evidence
+    status: completed
+    depends_on: [E-864]
+    exit_evidence: >-
+      Current PostgreSQL runtime tests pass under the non-privileged role for
+      atomic security-governance retention/resource boundaries, tenant isolation,
+      and policy-analysis maker-checker scope enforcement. This is bounded
+      runtime control evidence and makes no compliance or certification claim.
   - id: E-864
     priority: P0
     area: connectors

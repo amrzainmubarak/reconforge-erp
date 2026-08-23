@@ -960,3 +960,4 @@ include docs/adr/0570-current-postgres-grouped-matching-runtime-replay.md
 include docs/adr/0571-current-postgres-grouped-scale-replay.md
 include docs/adr/0572-current-postgres-writeback-history-runtime.md
 include docs/adr/0573-current-postgres-receiver-idempotency-runtime.md
+include docs/adr/0574-current-postgres-security-governance-runtime.md

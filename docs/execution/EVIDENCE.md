@@ -2,6 +2,15 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-865: Current PostgreSQL security governance/policy runtime (2026-08-23)
+
+- With PostgreSQL 16.14 and `reconforge_app` (`rolsuper=false`,
+  `rolbypassrls=false`), the governance and policy-analysis runtime files pass
+  5/5 with no skips.
+- Evidence covers tenant isolation, atomic security-governance retention/resource
+  controls, and maker-checker policy scope. It does not assert compliance,
+  certification, external IdP behavior, HA/DR, or production assurance.
+
 ## E-864: Current PostgreSQL receiver idempotency runtime (2026-08-23)
 
 - With the local PostgreSQL DSN and `reconforge_app` role,

@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-865 — Refresh live PostgreSQL security governance/policy evidence (2026-08-23)
+
+- `tests/test_postgres_security_governance.py` and
+  `tests/test_postgres_policy_analysis_runtime.py` pass 5/5 with the current
+  PostgreSQL service and `reconforge_app` (`rolsuper=false`, `rolbypassrls=false`).
+- Runtime evidence covers tenant isolation, atomic retention/resource controls,
+  and policy maker-checker scope. It is not a compliance/certification claim.
+
 ## E-864 — Add live PostgreSQL receiver idempotency gate (2026-08-23)
 
 - Added a live-gated receiver test for atomic receipt/effect persistence,

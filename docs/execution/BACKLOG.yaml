@@ -2969,10 +2969,9 @@ tasks:
     priority: P0
     area: release_operations
     title: Hosted PostgreSQL native-tool bootstrap for backup gate
-    status: in_progress
+    status: completed
     depends_on: [E-454]
-    exit_evidence: The server-boundaries workflow installs the PostgreSQL 16 client package matching its pinned PostgreSQL 16 service before live tests, checks the `pg_config` and `pg_dump` major versions fail-closed, runs a real service-backed custom-format `pg_dump` plus `pg_restore --list` smoke probe, and asserts that the versioned `pg_config` bindir contains `pg_dump`, `pg_restore`, `createdb`, `dropdb`, and `psql`. Local unit coverage in `E-600` verifies that `PostgresNativeBackupAdapter.create_backup` retries fallback `--file` argument forms (`--file`, `-f`, `--file=`) before failing closed. A reproducible local Linux/WSL proof path has now passed
-      `test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup` with a disposable PostgreSQL 16 service using a local wrapper shimming path. A fresh hosted run must still pass the encrypted backup/isolated restore gate for release evidence.
+    exit_evidence: The server-boundaries workflow installs the PostgreSQL 16 client package matching its pinned PostgreSQL 16 service before live tests, checks the `pg_config` and `pg_dump` major versions fail-closed, runs a real service-backed custom-format `pg_dump` plus `pg_restore --list` smoke probe, and asserts that the versioned `pg_config` bindir contains `pg_dump`, `pg_restore`, `createdb`, `dropdb`, and `psql`. Local unit coverage in `E-600` verifies that `PostgresNativeBackupAdapter.create_backup` retries fallback `--file` argument forms (`--file`, `-f`, `--file=`) before failing closed. Hosted CI `32645427870` passed the encrypted backup/isolated restore gate in `server-boundaries`. Evidence remains limited to the pinned disposable PostgreSQL 16 service and synthetic CI data; it is not a production RPO/RTO claim.
 
   - id: E-462
     priority: P0

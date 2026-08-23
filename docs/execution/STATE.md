@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-461 — Hosted PostgreSQL native-tool bootstrap (2026-08-23)
+
+- Hosted CI `32645427870` completed `server-boundaries` successfully after
+  installing the PostgreSQL 16 client, validating the native tool directory,
+  running the service-backed custom-format dump/list smoke, and executing the
+  encrypted backup/isolated-restore live gate. This closes the previously
+  pending hosted evidence boundary; production backup/restore claims remain
+  explicitly out of scope.
+
 ## E-893 — Restore drill follows current Alembic head (2026-08-23)
 
 - Hosted CI run `32644742254` passed Python 3.11/3.12, engine parity,

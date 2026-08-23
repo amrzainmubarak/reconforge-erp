@@ -2,6 +2,15 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-461: Hosted PostgreSQL native-tool bootstrap (2026-08-23)
+
+- CI `32645427870` passed the complete `server-boundaries` job, including the
+  PostgreSQL 16 native-client bootstrap, fail-closed tool/version checks,
+  custom-format `pg_dump`/`pg_restore --list` smoke, and the encrypted
+  isolated-restore live test.
+- The evidence is limited to the pinned disposable PostgreSQL service and
+  synthetic CI data; it is not a production backup/restore or RPO/RTO claim.
+
 ## E-893: Restore drill follows current Alembic head (2026-08-23)
 
 - Hosted CI run `32644742254` passed both Python jobs, all four engine-parity

@@ -2,6 +2,18 @@
 
 Updated: 2026-08-23
 
+## E-869 — Refresh current PostgreSQL identity and scope governance runtime (2026-08-23)
+
+- Eleven focused tests passed against PostgreSQL 16.14 using the
+  `reconforge_app` application role.
+- Coverage includes tenant-isolated identity administration, session
+  invalidation, step-up requirements, last-administrator protection,
+  append-only privileged assertions, deterministic scope grants/revocation,
+  and policy-scope analysis.
+- This is bounded synthetic single-host IAM evidence; external IdP/SSO,
+  universal MFA, distributed revocation, production PAM, and independent IAM
+  assurance remain open.
+
 ## E-868 — Refresh current PostgreSQL write-back receiver failover matrix (2026-08-23)
 
 - The current matrix passed on digest-pinned PostgreSQL 16.14 and 17.10;

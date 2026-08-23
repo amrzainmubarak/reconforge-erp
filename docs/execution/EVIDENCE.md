@@ -18376,3 +18376,18 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   - Boundary: one Docker host, two nodes per version, manual controller,
     synthetic digest-only effects and credentials. No provider, accounting,
     cross-host HA, or production exactly-once claim follows.
+
+- E-869 current PostgreSQL identity and scope governance runtime (2026-08-23; ADR 0578):
+  - Command: focused `tests/test_postgres_identity_administration.py`,
+    `tests/test_postgres_scope_authority.py`,
+    `tests/test_postgres_privileged_sessions.py`,
+    `tests/test_postgres_policy_scopes.py`, and
+    `tests/test_postgres_policy_analysis_runtime.py` with the declared
+    PostgreSQL DSN and `reconforge_app` application role.
+  - Result: 11 tests passed. The runtime covered sibling-tenant denial,
+    lifecycle/session invalidation, step-up-required mutations, last-admin
+    protection, append-only privileged assertions, deterministic scope grants
+    and revocation, and policy-scope analysis.
+  - Boundary: synthetic single-host PostgreSQL only; no external IdP/SSO,
+    universal MFA, distributed revocation, production PAM, or independent IAM
+    assurance.

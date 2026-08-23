@@ -966,3 +966,4 @@ include docs/adr/0575-current-postgres-ha-dr-drill.md
 include docs/adr/0576-current-postgres-consolidation-close-runtime.md
 include docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-08-23.json
 include docs/adr/0577-current-postgres-receiver-failover-matrix.md
+include docs/adr/0578-current-postgres-identity-governance-runtime.md

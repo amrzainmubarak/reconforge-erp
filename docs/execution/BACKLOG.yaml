@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-869
+    priority: P0
+    area: identity-governance
+    title: Refresh current PostgreSQL identity and scope governance runtime
+    status: completed
+    depends_on: [E-868]
+    exit_evidence: >-
+      Eleven focused tests pass against PostgreSQL 16.14 under
+      reconforge_app, covering tenant-isolated identity administration,
+      session invalidation and last-administrator guards, append-only
+      password step-up, deterministic scope grants/revocation, and policy
+      scope analysis. This is bounded synthetic IAM evidence, not production
+      IAM or external-IdP assurance.
   - id: E-868
     priority: P0
     area: connectors

@@ -2,6 +2,14 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-900: Semantic versions for matching manifests (2026-08-23)
+
+- `MatchingStrategyManifest` rejects malformed versions and leading-zero
+  components before registry admission/digesting.
+- Focused matching command: 41 passed; Ruff and `git diff --check` passed.
+- This is syntax/identity evidence only; release compatibility and migration
+  policy remain separate gates.
+
 ## E-899: Fee/FX one-to-one permutation replay (2026-08-23)
 
 - Reversing the caller-supplied FX-rate tuple produces identical input and

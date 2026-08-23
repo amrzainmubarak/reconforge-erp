@@ -5,6 +5,12 @@
 
 ## Decisions
 
+### D-960: Require semantic version syntax in matching manifests
+
+E-900 ensures strategy identity/version fields remain machine-comparable and
+usable by migration/replay boundaries. It does not infer compatibility from
+syntax alone.
+
 ### D-959: Bind fee/FX replay to rate-order invariance
 
 E-899 requires canonical replay to ignore equivalent caller rate ordering while

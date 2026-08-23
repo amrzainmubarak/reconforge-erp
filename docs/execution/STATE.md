@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-900 — Semantic versions for matching manifests (2026-08-23)
+
+- Matching strategy manifests now reject versions outside strict
+  `MAJOR.MINOR.PATCH` syntax, including `v1` and leading-zero components.
+- Focused matching contract/budget/ambiguity tests pass (41 tests), with Ruff
+  and diff checks. This protects identity/migration syntax but does not prove
+  semantic compatibility.
+
 ## E-899 — Fee/FX one-to-one permutation replay (2026-08-23)
 
 - Added a replay contract that reverses caller FX-rate order and requires equal

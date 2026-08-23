@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal
@@ -117,6 +118,8 @@ class MatchingStrategyManifest:
     def __post_init__(self) -> None:
         if not all(isinstance(value, str) and value.strip() for value in (self.id, self.version, self.algorithm)):
             raise MatchingStrategyContractError("Strategy manifest is incomplete.")
+        if re.fullmatch(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", self.version) is None:
+            raise MatchingStrategyContractError("Strategy version must use semantic versioning.")
         if self.maturity not in {"experimental", "beta", "stable"}:
             raise MatchingStrategyContractError("Strategy maturity is not supported.")
         if not self.deterministic_tie_break.strip() or not self.explanation_schema.strip():

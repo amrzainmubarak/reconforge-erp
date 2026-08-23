@@ -9,6 +9,16 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-900
+    priority: P0
+    area: reconciliation
+    title: Require semantic versions in matching manifests
+    status: completed
+    depends_on: [E-899]
+    exit_evidence: >-
+      MatchingStrategyManifest rejects malformed and leading-zero versions
+      before registry admission/digesting. Focused 41-test run, Ruff, and diff
+      checks pass; semantic compatibility remains a separate gate.
   - id: E-899
     priority: P0
     area: reconciliation

@@ -101,6 +101,8 @@ def test_strategy_manifest_requires_reviewable_declarations() -> None:
         _manifest(explanation_schema="")
     with pytest.raises(MatchingStrategyContractError, match="maturity"):
         _manifest(maturity="draft")
+    with pytest.raises(MatchingStrategyContractError, match="semantic versioning"):
+        _manifest(version="v1")
     with pytest.raises(MatchingStrategyContractError, match="non-empty text"):
         _manifest(supported_modes=("",))
 

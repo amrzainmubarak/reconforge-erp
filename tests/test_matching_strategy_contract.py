@@ -16,6 +16,7 @@ from reconforge.application.matching_strategies import (
     MatchingStrategyRequest,
     MatchingStrategyResult,
     canonical_payload,
+    replay_result_envelope,
     request_digest,
 )
 from reconforge.db import connect, run_migrations
@@ -136,6 +137,7 @@ def test_strategy_result_json_envelope_round_trip_is_closed_and_replay_verified(
         strategy_version=strategy.manifest.version,
     )
     assert restored.to_payload() == payload
+    assert replay_result_envelope(result, request, manifest=strategy.manifest) == restored
 
     with pytest.raises(MatchingStrategyContractError, match="not closed"):
         MatchingStrategyResult.from_payload({**payload, "unexpected": True})

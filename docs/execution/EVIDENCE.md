@@ -2,6 +2,13 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-856: Worker-boundary replay verification (2026-08-23)
+
+- Grouped and sequential PostgreSQL adapters now round-trip strategy output
+  through JSON and verify the closed envelope before projecting result rows.
+- Matching strategy and PostgreSQL worker contract suites passed with Ruff and
+  Mypy. This is local synthetic boundary evidence, not hosted runtime proof.
+
 ## E-855: Closed matching result JSON envelope (2026-08-23)
 
 - `MatchingStrategyResult` now emits and reconstructs a deterministic JSON-safe

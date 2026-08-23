@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-856
+    priority: P0
+    area: matching
+    title: Enforce replay envelope at PostgreSQL worker boundaries
+    status: completed
+    depends_on: [E-855]
+    exit_evidence: >-
+      Grouped and sequential PostgreSQL worker adapters round-trip every direct
+      strategy result through the closed JSON envelope and verify strategy
+      identity/version plus all digests before projection. Contract suites pass;
+      this proves a local worker boundary, not hosted cross-engine readiness.
   - id: E-855
     priority: P0
     area: matching

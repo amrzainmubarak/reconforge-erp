@@ -2,6 +2,13 @@
 
 Updated: 2026-08-23
 
+## E-856 — Enforce replay envelope at PostgreSQL worker boundaries (2026-08-23)
+
+- Grouped and sequential PostgreSQL adapters now JSON round-trip and verify
+  every strategy result before backend-specific projection.
+- Worker contract suites and static checks pass. This is bounded local worker
+  evidence; hosted multi-engine and production runtime evidence remain open.
+
 ## E-855 — Add closed JSON replay envelope for strategy results (2026-08-23)
 
 - Strategy results now have a backend-neutral JSON-safe envelope with strict

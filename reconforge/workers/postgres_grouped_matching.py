@@ -12,7 +12,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from decimal import Decimal
 from typing import Any, cast
 
-from reconforge.application.matching_strategies import MatchingStrategyRequest
+from reconforge.application.matching_strategies import MatchingStrategyRequest, replay_result_envelope
 from reconforge.infrastructure.grouped_matching_strategy import GroupedSubsetSumStrategy
 from reconforge.workers.postgres_reconciliation import (
     ReconciliationExecutionContext,
@@ -281,7 +281,11 @@ class PostgresGroupedMatchingAdapter:
                 continue
             request = _request(context, partition.partition_key, partition.left_inputs, partition.right_inputs)
             try:
-                output = self._strategy.execute(request)
+                output = replay_result_envelope(
+                    self._strategy.execute(request),
+                    request,
+                    manifest=self._strategy.manifest,
+                )
             except Exception as exc:
                 raise PostgresGroupedMatchingAdapterError("Grouped PostgreSQL matching failed closed.") from exc
             projected_results: list[Mapping[str, object]] = []

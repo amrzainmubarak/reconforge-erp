@@ -389,3 +389,29 @@ def result_digest(*, manifest_digest: str, input_digest: str, results: object, e
             "results": results,
         }
     )
+
+
+def replay_result_envelope(
+    result: MatchingStrategyResult,
+    request: MatchingStrategyRequest,
+    *,
+    manifest: MatchingStrategyManifest,
+) -> MatchingStrategyResult:
+    """Round-trip a result through JSON and fail closed on any drift.
+
+    This is the shared process-boundary check used by worker adapters before
+    projecting strategy output into backend-specific result rows.
+    """
+
+    encoded = json.dumps(result.to_payload(), ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+    payload = json.loads(encoded)
+    if not isinstance(payload, Mapping):
+        raise MatchingStrategyContractError("Strategy result replay envelope must decode to an object.")
+    replayed = MatchingStrategyResult.from_payload(payload)
+    replayed.verify_payload(
+        request,
+        manifest_digest=manifest.digest,
+        strategy_id=manifest.id,
+        strategy_version=manifest.version,
+    )
+    return replayed

@@ -1022,6 +1022,11 @@ direct_json_parser_allowlist:
     surface_id: FI-042
     call_count: 4
     rationale: Parses only operator-selected worker-permission, runtime-evidence, non-secret managed-key, or composite regulated-admission manifests before strict closed-field, type, grant/profile-finding, custody, ordering, and digest verification; all commands perform no external probe or mutation.
+  - path: reconforge/application/matching_strategies.py
+    parser: json.loads
+    surface_id: FI-042
+    call_count: 1
+    rationale: Parses only the in-process strategy-result envelope emitted by the canonical serializer; the decoded object is immediately checked for closed fields, JSON collection types, digest shape, strategy identity/version, and replay digests before worker projection.
 direct_yaml_parser_allowlist:
   - path: reconforge/io/structured.py
     parser: yaml.parse

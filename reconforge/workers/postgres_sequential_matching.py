@@ -6,7 +6,11 @@ from collections.abc import Iterable, Mapping, Sequence
 from decimal import Decimal
 from typing import Any, cast
 
-from reconforge.application.matching_strategies import MatchingStrategyRequest, MatchingStrategyResult
+from reconforge.application.matching_strategies import (
+    MatchingStrategyRequest,
+    MatchingStrategyResult,
+    replay_result_envelope,
+)
 from reconforge.infrastructure.carry_forward_strategy import CarryForwardFifoStrategy
 from reconforge.infrastructure.reversal_matching_strategy import ReversalPairingStrategy
 from reconforge.workers.postgres_reconciliation import (
@@ -301,7 +305,7 @@ class PostgresSequentialMatchingAdapter:
             request = _request(context, partition.partition_key, partition.left_inputs, partition.right_inputs)
             strategy = self._strategies[request.mode]
             try:
-                output = strategy.execute(request)
+                output = replay_result_envelope(strategy.execute(request), request, manifest=strategy.manifest)
                 projected_results, projected_exceptions = self._project(
                     request=request,
                     output=output,

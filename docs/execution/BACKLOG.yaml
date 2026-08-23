@@ -21,7 +21,6 @@ tasks:
       air-gap verification, Docker/API/web smoke, and a tested rollback. The
       current 3.11 base remains unchanged until those gates pass.
   - id: E-883
-  - id: E-883
     priority: P1
     area: security
     title: Refresh local Docker Scout vulnerability scan evidence

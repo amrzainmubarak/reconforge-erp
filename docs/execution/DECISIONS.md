@@ -5,6 +5,12 @@
 
 ## Decisions
 
+### D-965: Cancel redundant same-ref quality runs
+
+E-907 prevents stale CI, CodeQL, Security, and Docker runs from accumulating
+after a newer commit on the same ref. Cancellation remains distinct from test
+success or failure.
+
 ### D-964: Bound CodeQL analysis liveness
 
 E-906 limits CodeQL runner consumption while preserving timeout-as-failure

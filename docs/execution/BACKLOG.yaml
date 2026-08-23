@@ -9,6 +9,16 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-907
+    priority: P0
+    area: release_operations
+    title: Cancel stale same-ref quality runs
+    status: completed
+    depends_on: [E-906]
+    exit_evidence: >-
+      CI, CodeQL, Security, and Docker use per-ref concurrency groups with
+      cancel-in-progress enabled. Ten focused workflow/HA-DR tests, Ruff, and
+      diff checks pass; cancellation is not evidence for a superseded run.
   - id: E-906
     priority: P0
     area: security_supply_chain

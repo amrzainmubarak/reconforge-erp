@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-907 — Cancel stale same-ref quality runs (2026-08-23)
+
+- CI, CodeQL, Security, and Docker now cancel older same-ref runs when a newer
+  commit starts. Workflow contracts enforce the concurrency groups and
+  `cancel-in-progress: true`.
+- Focused workflow/HA-DR tests: 10 passed, with Ruff and diff checks. A
+  cancellation is not treated as evidence for the superseded run.
+
 ## E-906 — Finite CodeQL job timeout (2026-08-23)
 
 - CodeQL `analyze` now has a 30-minute timeout, and the workflow contract test

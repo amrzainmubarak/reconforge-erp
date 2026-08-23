@@ -2,6 +2,14 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-907: Cancel stale same-ref quality runs (2026-08-23)
+
+- CI, CodeQL, Security, and Docker workflow contracts now require per-ref
+  concurrency groups and `cancel-in-progress: true`.
+- Focused workflow/HA-DR command: 10 passed; Ruff and `git diff --check` passed.
+- This reduces redundant runner consumption; cancellation is not a pass/fail
+  result for the superseded run.
+
 ## E-906: Finite CodeQL job timeout (2026-08-23)
 
 - `.github/workflows/codeql.yml` sets `analyze.timeout-minutes: 30`, enforced

@@ -81,3 +81,12 @@ def test_codeql_analysis_has_a_finite_timeout() -> None:
     jobs = workflow["jobs"]
     assert isinstance(jobs, dict)
     assert jobs["analyze"]["timeout-minutes"] == 30
+
+
+def test_quality_workflows_cancel_stale_same_ref_runs() -> None:
+    for path in ("ci.yml", "codeql.yml", "security.yml", "docker.yml"):
+        workflow = _workflow(f".github/workflows/{path}")
+        concurrency = workflow["concurrency"]
+        assert isinstance(concurrency, dict)
+        assert concurrency["cancel-in-progress"] is True
+        assert "github.ref" in concurrency["group"]

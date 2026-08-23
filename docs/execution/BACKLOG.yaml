@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-876
+    priority: P1
+    area: connectors
+    title: Refresh provider-neutral transport and network conformance evidence
+    status: completed
+    depends_on: [E-875]
+    exit_evidence: >-
+      Provider TLS sandbox, write-back network, and connector network suites
+      pass 70 tests locally, covering certificate pinning, retry/backoff,
+      idempotency, acknowledgement binding, public-egress rejection, and
+      synthetic failure injection. No external provider or production egress
+      claim is made.
   - id: E-875
     priority: P1
     area: scale

@@ -2,6 +2,17 @@
 
 Updated: 2026-08-23
 
+## E-876 — Current provider-neutral transport conformance (2026-08-23)
+
+- `tests/test_connector_provider_tls_sandbox.py`,
+  `tests/test_connector_writeback_network.py`, and
+  `tests/test_connector_network.py` passed 70 tests locally.
+- Coverage includes certificate/pin validation, bounded retry/backoff,
+  idempotency and acknowledgement binding, public-address egress refusal, and
+  deterministic synthetic failure injection. This remains provider-neutral
+  loopback evidence and does not prove live ERP/bank interoperability,
+  credentials/vault behavior, or production egress.
+
 ## E-875 — Current PostgreSQL durable-job backpressure and soak (2026-08-23)
 
 - The live local PostgreSQL run used `reconforge_app` and passed both targeted

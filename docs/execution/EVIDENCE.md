@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-876: Current provider-neutral transport conformance (2026-08-23)
+
+- `python -m pytest -q -rs tests/test_connector_provider_tls_sandbox.py
+  tests/test_connector_writeback_network.py tests/test_connector_network.py`
+  passed 70 tests with no skips.
+- The suites cover certificate and pin validation, transient retry/backoff,
+  stable idempotency propagation, acknowledgement binding, public-address
+  egress refusal, and deterministic synthetic failure injection.
+- This is loopback/provider-neutral evidence only. It does not prove live ERP
+  or bank schemas, external authentication/vaults, provider SLA behavior,
+  production egress, or production write-back.
+
 ## E-875: Current PostgreSQL durable-job backpressure and repeated soak (2026-08-23)
 
 - With the local PostgreSQL DSN and the non-privileged `reconforge_app` role,

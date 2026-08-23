@@ -2,6 +2,17 @@
 
 Updated: 2026-08-23
 
+## E-891 — Hosted synthetic Gitleaks finding closed (2026-08-23)
+
+- Hosted security run `32642926377` reported eight `generic-api-key` findings
+  for one deterministic synthetic value in historical/current writeback
+  evidence.
+- The current tree now uses `synthetic-recovery-idempotency`; only the eight
+  exact historical fingerprints are in `.gitleaksignore`.
+- Local Gitleaks 8.30.1 history and tree scans pass with zero findings, and
+  supply-chain policy validation plus its focused tests pass. No live secret
+  was identified or rotated.
+
 ## E-890 — Offline boundary for hardened image smoke (2026-08-23)
 
 - The local command

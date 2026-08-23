@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-891: Hosted synthetic Gitleaks finding closed (2026-08-23)
+
+- Hosted run `32642926377` failed the full-history scan with eight findings,
+  all for the same deterministic synthetic writeback idempotency value.
+- The current value was changed to `synthetic-recovery-idempotency`; the eight
+  immutable historical fingerprints are recorded exactly in `.gitleaksignore`.
+- Local Gitleaks 8.30.1 history scan: zero findings. Local clean-tree scan
+  with the bounded generated-directory exclusions: zero findings. Supply-chain
+  policy validation and `tests/test_supply_chain_policy.py` pass.
+- This was a false positive, not a credential exposure; no secret rotation is
+  claimed.
+
 ## E-890: Offline boundary for hardened image smoke (2026-08-23)
 
 - The local Docker command with `--network=none`, `--read-only`,

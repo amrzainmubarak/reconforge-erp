@@ -103,7 +103,7 @@ def _intent() -> WritebackIntent:
         connector_id=CONNECTOR_ID,
         operation=OPERATION,
         payload_digest="a" * 64,
-        idempotency_key="e834-idempotency-key",
+        idempotency_key="synthetic-recovery-idempotency",
         requested_by="e834-maker",
         requested_at=NOW,
         feature_enabled=True,
@@ -114,7 +114,7 @@ def _observation(outcome: WritebackProviderOutcome, *, hour: int) -> WritebackRe
     accepted = outcome is WritebackProviderOutcome.ACCEPTED
     return WritebackRecoveryObservation(
         outcome=outcome,
-        idempotency_key="e834-idempotency-key",
+        idempotency_key="synthetic-recovery-idempotency",
         http_status=200 if accepted else 202,
         body_digest=("b" if accepted else "c") * 64,
         provider_reference="synthetic-e834-accepted" if accepted else None,

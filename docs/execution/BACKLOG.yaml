@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-891
+    priority: P0
+    area: security_supply_chain
+    title: Close hosted synthetic writeback-key finding
+    status: completed
+    depends_on: [E-890]
+    exit_evidence: >-
+      Hosted run 32642926377 identified eight generic-api-key findings for a
+      deterministic synthetic writeback idempotency value. The current tree
+      now uses a neutral token, eight exact immutable historical fingerprints
+      are recorded, and local Gitleaks 8.30.1 history/tree scans plus policy
+      validation pass with zero findings. No live credential was identified.
+  - id: E-890
   - id: E-890
     priority: P1
     area: security

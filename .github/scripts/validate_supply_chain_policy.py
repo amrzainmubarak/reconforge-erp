@@ -30,6 +30,7 @@ _GITLEAKS_FINGERPRINT = re.compile(
 _ALLOWED_GITLEAKS_PATHS = {
     "'''(^|[\\\\/])\\.git[\\\\/]'''",
     "'''(^|[\\\\/])\\.venv[\\\\/]'''",
+    "'''(^|[\\\\/])\\.venv-windows[\\\\/]'''",
     "'''(^|[\\\\/])\\.codex-test-tmp[\\\\/]'''",
     "'''(^|[\\\\/])\\.tmp[\\\\/]'''",
     "'''(^|[\\\\/])node_modules[\\\\/]'''",

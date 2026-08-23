@@ -25,7 +25,7 @@
           "observation": {
             "body_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
             "http_status": 202,
-            "idempotency_key": "e834-idempotency-key",
+            "idempotency_key": "synthetic-recovery-idempotency",
             "outcome": "pending",
             "provider_reference": null,
             "provider_response_digest": null
@@ -46,7 +46,7 @@
           "observation": {
             "body_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
             "http_status": 200,
-            "idempotency_key": "e834-idempotency-key",
+            "idempotency_key": "synthetic-recovery-idempotency",
             "outcome": "accepted",
             "provider_reference": "synthetic-e834-accepted",
             "provider_response_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
@@ -82,7 +82,7 @@
           "observation": {
             "body_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
             "http_status": 202,
-            "idempotency_key": "e834-idempotency-key",
+            "idempotency_key": "synthetic-recovery-idempotency",
             "outcome": "pending",
             "provider_reference": null,
             "provider_response_digest": null
@@ -103,7 +103,7 @@
           "observation": {
             "body_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
             "http_status": 200,
-            "idempotency_key": "e834-idempotency-key",
+            "idempotency_key": "synthetic-recovery-idempotency",
             "outcome": "accepted",
             "provider_reference": "synthetic-e834-accepted",
             "provider_response_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
@@ -146,7 +146,7 @@
           "observation": {
             "body_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
             "http_status": 202,
-            "idempotency_key": "e834-idempotency-key",
+            "idempotency_key": "synthetic-recovery-idempotency",
             "outcome": "pending",
             "provider_reference": null,
             "provider_response_digest": null
@@ -167,7 +167,7 @@
           "observation": {
             "body_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
             "http_status": 200,
-            "idempotency_key": "e834-idempotency-key",
+            "idempotency_key": "synthetic-recovery-idempotency",
             "outcome": "accepted",
             "provider_reference": "synthetic-e834-accepted",
             "provider_response_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"

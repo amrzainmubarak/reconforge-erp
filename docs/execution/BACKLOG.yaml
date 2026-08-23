@@ -9,6 +9,16 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-899
+    priority: P0
+    area: reconciliation
+    title: Add permutation replay for fee and FX one-to-one matching
+    status: completed
+    depends_on: [E-898]
+    exit_evidence: >-
+      Reversed FX-rate input order produces identical fee/FX one-to-one input
+      and decision digests, results, and explanations. Focused 60-test run,
+      Ruff, and diff checks pass; evidence is local synthetic only.
   - id: E-898
     priority: P0
     area: reconciliation

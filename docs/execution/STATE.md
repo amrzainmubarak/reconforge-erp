@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-899 — Fee/FX one-to-one permutation replay (2026-08-23)
+
+- Added a replay contract that reverses caller FX-rate order and requires equal
+  input/decision digests, results, and explanations for the bounded one-to-one
+  fee/FX matcher.
+- The focused matching/grouped run passes (60 tests), with Ruff and diff
+  checks. This is local synthetic permutation evidence only.
+
 ## E-898 — Bounded one-to-one fee and FX matching (2026-08-23)
 
 - The grouped matcher now supports `one-to-one` with cardinality fixed at one

@@ -260,6 +260,27 @@ def test_grouped_strategy_supports_bounded_one_to_one_fee_and_fx_cases() -> None
     assert fx_result.results[0]["currency"] == "USD"
 
 
+def test_grouped_one_to_one_fee_fx_replay_is_permutation_invariant() -> None:
+    strategy = GroupedSubsetSumStrategy()
+    rates = (
+        {"base_currency": "EUR", "quote_currency": "USD", "rate": "1.1", "source": "SYNTHETIC", "rate_type": "spot"},
+        {"base_currency": "GBP", "quote_currency": "USD", "rate": "1.25", "source": "SYNTHETIC", "rate_type": "spot"},
+    )
+    request = MatchingStrategyRequest(
+        left_records=({"id": "L1", "amount": "100", "currency": "EUR", "date": "2026-01-01", "partition": "P1"},),
+        right_records=({"id": "R1", "amount": "110", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+        mode="one-to-one",
+        target_currency="USD",
+        fx_rates=rates,
+    )
+    permuted = replace(request, fx_rates=tuple(reversed(rates)))
+    first = strategy.execute(request)
+    second = strategy.execute(permuted)
+    assert first.input_digest == second.input_digest
+    assert first.decision_digest == second.decision_digest
+    assert first.results == second.results
+
+
 def test_all_registered_strategy_families_pass_deterministic_reexecution(tmp_path: Path) -> None:
     indexed, service, connection = _strategy(tmp_path)
     try:

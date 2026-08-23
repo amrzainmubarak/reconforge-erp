@@ -5,6 +5,12 @@
 
 ## Decisions
 
+### D-959: Bind fee/FX replay to rate-order invariance
+
+E-899 requires canonical replay to ignore equivalent caller rate ordering while
+retaining rate definitions in the digest. This protects deterministic business
+effects without claiming external rate authenticity.
+
 ### D-958: Reuse bounded grouped invariants for fee/FX one-to-one matching
 
 E-898 adds one-to-one cardinality to the grouped matcher so explicit Decimal

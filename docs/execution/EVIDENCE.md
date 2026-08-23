@@ -2,6 +2,14 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-899: Fee/FX one-to-one permutation replay (2026-08-23)
+
+- Reversing the caller-supplied FX-rate tuple produces identical input and
+  decision digests, results, and explanations for the bounded one-to-one case.
+- Focused matching/grouped command: 60 passed; Ruff and `git diff --check`
+  passed. The evidence is local synthetic and does not establish source
+  authenticity, cross-engine parity, market valuation, or production scale.
+
 ## E-898: Bounded one-to-one fee and FX matching (2026-08-23)
 
 - `GroupedMatchMode` and the grouped strategy manifest now include

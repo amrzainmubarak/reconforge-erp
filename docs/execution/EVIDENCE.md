@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-842: Bind reconciliation run submission to amount-bounded ABAC (2026-08-23)
+
+- Reconciliation canonical input amounts are parsed as exact Decimal values;
+  complete inputs pass their gross absolute sum before the PostgreSQL adapter
+  call. Missing amounts remain `None`, preserving fail-closed bounded policy
+  behavior.
+- Focused command: `python -m pytest tests/test_api_server_reconciliation.py
+  -q` -> 3 passed. Ruff, Mypy, and `git diff --check` pass.
+- A full post-slice regression also completed with exit code 0: 3,119
+  tests collected; skips and deprecation/legacy compatibility warnings remain
+  explicitly disclosed.
+- Boundary: synthetic authenticated adapter contract only; universal route/job
+  adoption and production IAM evidence remain future work.
+
 ## E-841: Bind ownership-change preparation to amount-bounded ABAC (2026-08-23)
 
 - Typed ownership-change inputs are converted before policy; gross exposure is

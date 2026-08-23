@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-842
+    priority: P0
+    area: identity-governance
+    title: Bind reconciliation run submission to amount-bounded ABAC
+    status: completed
+    depends_on: [E-841]
+    exit_evidence: >-
+      Reconciliation submission computes gross absolute exact Decimal exposure
+      from canonical inputs before server authorization; missing amounts remain
+      None so bounded policies fail closed. Focused API tests pass 3/3, Ruff and
+      Mypy pass. Universal route/job adoption and production IAM remain open.
   - id: E-841
     priority: P0
     area: identity-governance

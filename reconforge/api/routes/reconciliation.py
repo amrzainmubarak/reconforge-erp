@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from decimal import Decimal
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Header, Query, Request
@@ -84,16 +85,46 @@ def _server_only(request: Request) -> None:
         )
 
 
-def _enforce_server_run_scope(request: Request) -> None:
+def _policy_amount(inputs: list[CanonicalInputRequest]) -> Decimal | None:
+    """Return gross exact exposure when every supplied input has an amount."""
+
+    if not inputs or any(item.amount is None for item in inputs):
+        return None
+    gross = Decimal("0")
+    for item in inputs:
+        try:
+            gross += abs(parse_exact_amount(item.amount))
+        except InvalidAmountError as exc:
+            raise APIError(
+                status_code=400,
+                code="reconciliation_input_amount_invalid",
+                message="input amounts must be finite exact decimal values.",
+            ) from exc
+    return gross
+
+
+def _enforce_server_run_scope(request: Request, *, amount: Decimal | None = None) -> None:
     scope = request_execution_scope(request)
-    enforce_server_scoped_permissions(
-        request,
-        permissions=frozenset({"reconciliation.manage", "match.run"}),
-        tenant_id=scope.tenant_id,
-        workspace_id=scope.workspace_id,
-        organization_id=scope.organization_id,
-        entity_id=scope.legal_entity_id,
-    )
+    permissions = frozenset({"reconciliation.manage", "match.run"})
+    if amount is None:
+        enforce_server_scoped_permissions(
+            request,
+            permissions=permissions,
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+            organization_id=scope.organization_id,
+            entity_id=scope.legal_entity_id,
+        )
+    else:
+        enforce_server_scoped_permissions(
+            request,
+            permissions=permissions,
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+            organization_id=scope.organization_id,
+            entity_id=scope.legal_entity_id,
+            amount=amount,
+        )
 
 
 def _enforce_server_read_scope(request: Request) -> None:
@@ -122,7 +153,8 @@ def submit_run(
     """Create a queued run and register its canonical inputs atomically."""
 
     _server_only(request)
-    _enforce_server_run_scope(request)
+    policy_amount = _policy_amount(payload.inputs)
+    _enforce_server_run_scope(request, amount=policy_amount)
     if len(payload.model_dump_json().encode("utf-8")) > MAX_SUBMISSION_BYTES:
         raise APIError(
             status_code=413,

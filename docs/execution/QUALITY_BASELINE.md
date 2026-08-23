@@ -1,5 +1,13 @@
 # Quality Baseline
 
+## E-842 reconciliation submission amount ABAC (2026-08-23)
+
+Reconciliation run submission now passes the gross absolute exact Decimal sum
+of complete canonical input amounts before server authorization. Missing input
+amounts remain `None` for bounded-policy fail-closed behavior. Focused API tests
+pass 3/3; Ruff, Mypy, and whitespace checks pass. A full pre-slice regression
+completed with exit code 0 over 3,119 collected tests.
+
 ## E-841 ownership-change route amount ABAC (2026-08-23)
 
 Ownership-change preparation supplies exact gross exposure before persistence:

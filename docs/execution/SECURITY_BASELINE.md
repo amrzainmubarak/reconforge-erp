@@ -2,6 +2,15 @@
 
 Measured through 2026-08-22 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
 
+## E-842 reconciliation submission amount ABAC control (2026-08-23)
+
+- Canonical reconciliation inputs contribute exact gross exposure to server
+  authorization before run persistence; missing values stay missing and cannot
+  be coerced to zero.
+- Focused API tests pass 3/3; full post-slice regression completed with exit
+  code 0 over 3,119 collected tests. Live database and production IAM remain
+  outside the evidence.
+
 ## E-841 ownership-change route amount ABAC control (2026-08-23)
 
 - Ownership-change preparation authorizes exact gross exposure before

@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-842 — Bind reconciliation run submission to amount-bounded ABAC (2026-08-23)
+
+- Canonical input amounts are parsed exactly and their gross absolute sum is
+  passed to server policy before run persistence; incomplete coverage remains
+  `None` for fail-closed bounded policies.
+- Focused API tests pass 3/3; the post-slice full regression completed with exit
+  code 0 over 3,119 collected tests. Universal route/job adoption and
+  production IAM remain unproven.
+
 ## E-841 — Bind ownership-change preparation to amount-bounded ABAC (2026-08-23)
 
 - Typed ownership-change inputs are converted before policy; exact gross

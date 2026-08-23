@@ -5,6 +5,19 @@
 
 ## Decisions
 
+### D-942: Pass canonical reconciliation exposure into server policy
+
+- **Date**: 2026-08-23
+- **Context**: Reconciliation run submission authorized the server scope without
+  the amounts already present in canonical input records.
+- **Decision**: Adopt ADR 0556. Sum absolute exact Decimal amounts for complete
+  input coverage and pass that gross exposure to policy. If any input amount is
+  absent, pass `None` so bounded policies fail closed; never infer zero.
+- **Rationale**: The run's candidate universe is the financial exposure. This
+  preserves exactness while supporting date/reference-only records under
+  unbounded policy rules.
+- **Reversibility**: Source-only optional amount binding; no migration.
+
 ### D-941: Pass ownership-change gross exposure into server policy
 
 - **Date**: 2026-08-23

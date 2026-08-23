@@ -1,5 +1,5 @@
 ﻿schema_version: 2
-updated_at: "2026-08-22"
+updated_at: "2026-08-23"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
   evidence_base_commit: "a91147adc58bffff5a6e62a0fdeb884bbe92d7ea"
@@ -22,7 +22,6 @@ tasks:
       PyPI and is explicitly not counted as audited; hosted/provenance,
       reachability, malware, license, and penetration assurance remain open.
   - id: E-872
-  - id: E-872
     priority: P0
     area: supply-chain
     title: Refresh release manifest and SBOM pipeline contract evidence
@@ -35,7 +34,6 @@ tasks:
       forbidden-path rejection, and workflow gate ordering. This is builder
       contract evidence only, not signed hosted provenance.
   - id: E-871
-  - id: E-871
     priority: P0
     area: sovereign-deployment
     title: Refresh current air-gapped identity recovery and upgrade rollback
@@ -46,7 +44,6 @@ tasks:
       restored two local users with zero old sessions, rejected a wrong key,
       preserved a valid audit chain, and verified exact 0.7.0 to 0.7.1 cutover
       plus rollback with zero network inputs. This is one Linux synthetic run.
-  - id: E-870
   - id: E-870
     priority: P0
     area: sovereign-deployment
@@ -59,7 +56,6 @@ tasks:
       a digest-pinned Linux container using network none and a read-only root;
       reconforge doctor exits zero and cleanup completes. The current bundle
       has 68 entries and 100627876 bytes. This is base-install evidence only.
-  - id: E-869
   - id: E-869
     priority: P0
     area: identity-governance

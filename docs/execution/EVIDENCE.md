@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## Current full local regression gate (2026-08-23)
+
+- `python -m pytest -q` completed with exit code 0 after the execution-contract
+  fix. The first run caught four failures caused by duplicate short entries for
+  `E-870` through `E-872` in `docs/execution/BACKLOG.yaml`; the corrected
+  backlog passed `tests/test_phase4_execution_contract.py` and
+  `tests/test_phase_1_3_execution_contract.py` (14 tests), then the complete
+  repository suite completed successfully.
+- Declared capability skips and existing FastAPI/SAML/legacy-financial-input
+  warnings remain visible. This is local regression evidence only; no hosted
+  Python matrix, provider, production, or release claim is made.
+
 ## E-865: Current PostgreSQL security governance/policy runtime (2026-08-23)
 
 - With PostgreSQL 16.14 and `reconforge_app` (`rolsuper=false`,

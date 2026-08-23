@@ -2,6 +2,16 @@
 
 Updated: 2026-08-23
 
+## Current full local regression gate (2026-08-23)
+
+- `python -m pytest -q` completed with exit code 0 after the backlog contract
+  rerun; the initial run exposed duplicate short YAML task entries, which were
+  removed and verified by the phase/backlog contract suite before rerunning the
+  full repository suite.
+- Existing declared capability skips and framework/legacy-financial-input
+  warnings remain visible. This is one local Windows/Python 3.14 run, not a
+  hosted compatibility matrix or release approval.
+
 ## E-873 — Refresh static security and dependency gate evidence (2026-08-23)
 
 - Bandit completed without failed findings after documenting the intentional

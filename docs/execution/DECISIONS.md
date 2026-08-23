@@ -5,6 +5,12 @@
 
 ## Decisions
 
+### D-950: Make the readiness matrix consumable without widening its claim
+
+E-850 exposes a read-only CLI over the centralized safe-YAML ingress. It
+validates path containment and computes a digest but cannot promote partial or
+open evidence into a readiness claim.
+
 ### D-949: Keep deployment-mode readiness explicitly partial/open
 
 E-849 consolidates existing audits into a closed matrix but forbids a generic

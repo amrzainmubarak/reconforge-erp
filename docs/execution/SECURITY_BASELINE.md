@@ -1,5 +1,11 @@
 # Security Baseline
 
+## E-850 readiness CLI (2026-08-23)
+
+- Matrix ingestion uses the centralized bounded safe-YAML parser rather than a
+  raw loader and rejects traversal/contract expansion.
+- The command performs no network, secret, database, IAM, or mutation action.
+
 ## E-849 deployment readiness matrix (2026-08-23)
 
 - Every mode has the same eight named gates and path-bound evidence references.

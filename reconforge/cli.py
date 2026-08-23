@@ -93,10 +93,12 @@ from reconforge.db.importers import (
 )
 from reconforge.deployment import (
     DeploymentProfileError,
+    DeploymentReadinessError,
     DeploymentRuntimeEvidenceError,
     WorkerPermissionManifestError,
     deployment_profile,
     list_deployment_profiles,
+    load_deployment_readiness_matrix,
     verify_deployment_runtime_evidence,
     verify_worker_permission_manifest,
 )
@@ -5925,6 +5927,39 @@ def deployment_verify_runtime_evidence_command(
             "external_calls": False,
         },
     )
+
+
+@deployment_app.command("readiness")
+def deployment_readiness_command(
+    edition: Annotated[
+        str | None,
+        typer.Option("--edition", help="Show one edition; omit to show all matrix entries."),
+    ] = None,
+    matrix_path: Annotated[
+        Path,
+        typer.Option("--matrix", help="Path to the closed deployment readiness matrix."),
+    ] = Path("docs/execution/DEPLOYMENT_READINESS_MATRIX.v1.yaml"),
+) -> None:
+    """Verify and display mode-specific readiness evidence without external calls."""
+
+    try:
+        matrix = load_deployment_readiness_matrix(matrix_path)
+        selected = matrix.select(edition)
+    except (DeploymentReadinessError, OSError, UnicodeError) as exc:
+        _safe_cli_error(exc)
+    for selected_edition in selected:
+        _print_record_detail(
+            "Deployment Readiness Evidence",
+            {
+                "edition": selected_edition["id"],
+                "readiness_status": selected_edition["readiness_status"],
+                "profile_command": selected_edition["profile_command"],
+                "gates": selected_edition["gates"],
+                "matrix_id": matrix.matrix_id,
+                "matrix_digest": matrix.digest,
+                "external_calls": False,
+            },
+        )
 
 
 @deployment_app.command("release-check")

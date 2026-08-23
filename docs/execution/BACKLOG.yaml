@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-850
+    priority: P0
+    area: deployment-governance
+    title: Expose deployment readiness evidence through the CLI
+    status: completed
+    depends_on: [E-849]
+    exit_evidence: >-
+      `deployment readiness` consumes the centralized bounded YAML ingress,
+      validates the closed matrix and repository-contained evidence paths,
+      computes a deterministic digest, supports edition selection, and fails
+      closed on unknown editions or missing/expanded inputs. Focused
+      readiness/runtime/profile/worker/inventory tests pass 36/36; Ruff and
+      Mypy pass. It reports evidence only and never claims readiness.
   - id: E-849
     priority: P0
     area: deployment-governance

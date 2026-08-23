@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-850 — Expose deployment readiness evidence through the CLI (2026-08-23)
+
+- Added `reconforge deployment readiness [--edition]`, backed by bounded safe
+  YAML ingress, closed matrix validation, repository-contained evidence-path
+  checks, and a canonical matrix digest. It performs no external calls or
+  mutation.
+- Focused readiness/runtime/profile/worker/inventory tests pass 36/36; Ruff and
+  Mypy pass. The CLI reports partial/open evidence and cannot promote it.
+
 ## E-849 — Consolidate mode-specific deployment readiness evidence (2026-08-23)
 
 - Added a schema-validated matrix covering Community, Team, Enterprise, and

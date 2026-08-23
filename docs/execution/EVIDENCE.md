@@ -2,6 +2,15 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-850: Deployment readiness evidence CLI (2026-08-23)
+
+- `deployment readiness` validates the closed matrix through bounded safe-YAML
+  ingress, checks evidence path containment, and displays a canonical digest.
+- Focused readiness/runtime/profile/worker/inventory suite: 36 passed; Ruff and
+  Mypy pass.
+- Unknown editions, missing matrices, and evidence-path escapes fail closed;
+  no external calls or mutation occur.
+
 ## E-849: Mode-specific deployment readiness matrix (2026-08-23)
 
 - The matrix covers all four editions and eight gates with repository-bound

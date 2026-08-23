@@ -1,5 +1,11 @@
 # Quality Baseline
 
+## E-850 readiness CLI (2026-08-23)
+
+Focused readiness/runtime/profile/worker/inventory tests pass 36/36; Ruff,
+Mypy, and whitespace checks pass. Safe-YAML and path-containment checks are
+exercised through the reader and CLI.
+
 ## E-849 deployment readiness matrix (2026-08-23)
 
 Schema/path matrix tests pass 2/2; Ruff, Mypy, and whitespace checks pass.

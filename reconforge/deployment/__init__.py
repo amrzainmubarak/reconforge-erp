@@ -9,6 +9,11 @@ from reconforge.deployment.profiles import (
     list_deployment_profiles,
     validate_deployment_profile,
 )
+from reconforge.deployment.readiness import (
+    DeploymentReadinessError,
+    DeploymentReadinessMatrix,
+    load_deployment_readiness_matrix,
+)
 from reconforge.deployment.runtime_evidence import (
     DeploymentRuntimeEvidence,
     DeploymentRuntimeEvidenceError,
@@ -34,4 +39,7 @@ __all__ = [
     "DeploymentRuntimeEvidence",
     "DeploymentRuntimeEvidenceError",
     "verify_deployment_runtime_evidence",
+    "DeploymentReadinessError",
+    "DeploymentReadinessMatrix",
+    "load_deployment_readiness_matrix",
 ]

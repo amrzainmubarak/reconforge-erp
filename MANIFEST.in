@@ -944,3 +944,5 @@ include docs/adr/0563-mode-specific-deployment-readiness-matrix.md
 include docs/execution/DEPLOYMENT_READINESS_MATRIX.v1.yaml
 include docs/schemas/deployment_readiness_matrix.v1.schema.json
 include tests/test_deployment_readiness_matrix.py
+include reconforge/deployment/readiness.py
+include docs/adr/0564-offline-deployment-readiness-matrix-cli.md

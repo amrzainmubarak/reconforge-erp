@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-858
+    priority: P1
+    area: matching
+    title: Expose offline matching result envelope validation CLI
+    status: completed
+    depends_on: [E-857]
+    exit_evidence: >-
+      `reconforge match validate-result-envelope` reads one operator-selected
+      local JSON envelope, performs strict schema/identity/digest-shape parsing
+      without network or execution, and explicitly states that a replay request
+      is required for input/result verification. CLI and inventory contracts pass.
   - id: E-857
     priority: P0
     area: matching

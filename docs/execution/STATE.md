@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-858 — Expose offline matching envelope validation CLI (2026-08-23)
+
+- Added `reconforge match validate-result-envelope` for local, no-network
+  validation of one closed matching result envelope.
+- Output includes strategy/digest metadata and explicitly marks that a request
+  is required for full replay verification; it never claims replay from the
+  envelope alone.
+
 ## E-857 — Publish versioned matching result envelope schema (2026-08-23)
 
 - Added `matching_strategy_result_envelope.v1.schema.json` with closed top-level

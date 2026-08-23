@@ -27,6 +27,7 @@ from reconforge.api import create_api_app
 from reconforge.application.consolidation_close import ConsolidationCloseApplicationService
 from reconforge.application.intercompany_elimination import IntercompanyEliminationApplicationService
 from reconforge.application.jobs import DurableJobApplicationService
+from reconforge.application.matching_strategies import MatchingStrategyContractError, MatchingStrategyResult
 from reconforge.audit import AuditLedgerError, list_audit_events, verify_audit_events
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService, RoleRepository
 from reconforge.auth.federation_config import FederationConfigurationError, load_federation_runtime
@@ -5522,6 +5523,37 @@ def match_job_status_command(
     except (DatabaseError, PlatformError) as exc:
         _safe_cli_error(exc)
     _print_records("Match Job", [job])
+
+
+@match_app.command("validate-result-envelope")
+def match_validate_result_envelope_command(
+    envelope_path: Annotated[Path, typer.Argument(help="Closed JSON matching strategy result envelope.")],
+) -> None:
+    """Validate a matching result envelope without executing or contacting a backend."""
+
+    try:
+        payload = json.loads(envelope_path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise MatchingStrategyContractError("Matching result envelope must be a JSON object.")
+        result = MatchingStrategyResult.from_payload(payload)
+    except (OSError, UnicodeError, json.JSONDecodeError, MatchingStrategyContractError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail(
+        "Matching Result Envelope",
+        {
+            "schema_version": 1,
+            "strategy_id": result.strategy_id,
+            "strategy_version": result.strategy_version,
+            "manifest_digest": result.manifest_digest,
+            "input_digest": result.input_digest,
+            "decision_digest": result.decision_digest,
+            "explanation_schema": result.explanation_schema,
+            "result_count": len(result.results),
+            "exception_count": len(result.exceptions),
+            "external_calls": False,
+            "replay_request_required": True,
+        },
+    )
 
 
 @match_app.command("results")

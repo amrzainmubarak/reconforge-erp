@@ -2,6 +2,13 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-858: Offline matching result envelope validation CLI (2026-08-23)
+
+- `reconforge match validate-result-envelope` validates one local envelope and
+  reports strategy/version/digest metadata without execution or network calls.
+- The command explicitly marks `replay_request_required`; full input/result
+  replay remains a separate boundary requiring the original request.
+
 ## E-857: Versioned matching result envelope schema (2026-08-23)
 
 - `docs/schemas/matching_strategy_result_envelope.v1.schema.json` is closed at

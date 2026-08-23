@@ -8,6 +8,7 @@ from pathlib import Path
 
 import jsonschema
 import pytest
+from typer.testing import CliRunner
 
 from reconforge.application.matching_strategies import (
     GroupedMatchBudget,
@@ -19,6 +20,7 @@ from reconforge.application.matching_strategies import (
     replay_result_envelope,
     request_digest,
 )
+from reconforge.cli import app
 from reconforge.db import connect, run_migrations
 from reconforge.infrastructure.carry_forward_strategy import (
     CARRY_FORWARD_FIFO_MANIFEST,
@@ -159,6 +161,21 @@ def test_strategy_result_json_envelope_round_trip_is_closed_and_replay_verified(
             strategy_id="tampered-strategy",
             strategy_version=strategy.manifest.version,
         )
+
+
+def test_cli_validates_result_envelope_without_external_calls(tmp_path: Path) -> None:
+    strategy = GroupedSubsetSumStrategy()
+    request = MatchingStrategyRequest(
+        left_records=({"id": "L1", "amount": "10", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+        right_records=({"id": "R1", "amount": "10", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+        mode="many-to-many",
+    )
+    envelope_path = tmp_path / "result.json"
+    envelope_path.write_text(json.dumps(strategy.execute(request).to_payload()), encoding="utf-8")
+    result = CliRunner().invoke(app, ["match", "validate-result-envelope", str(envelope_path)])
+    assert result.exit_code == 0, result.stdout
+    assert "external_calls" in result.stdout
+    assert "replay_request_required" in result.stdout
 
 
 def test_strategy_rejects_limits_and_unsafe_numeric_payloads_before_matching(tmp_path: Path) -> None:

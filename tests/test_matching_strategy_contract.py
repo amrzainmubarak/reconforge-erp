@@ -14,6 +14,7 @@ from reconforge.application.matching_strategies import (
     MatchingStrategyContractError,
     MatchingStrategyRegistry,
     MatchingStrategyRequest,
+    MatchingStrategyResult,
     canonical_payload,
     request_digest,
 )
@@ -116,6 +117,35 @@ def test_strategy_digests_and_decisions_are_record_permutation_invariant(tmp_pat
     assert first.input_digest == shuffled.input_digest
     assert first.decision_digest == shuffled.decision_digest
     assert first.results == shuffled.results
+
+
+def test_strategy_result_json_envelope_round_trip_is_closed_and_replay_verified(tmp_path: Path) -> None:
+    strategy, _service, connection = _strategy(tmp_path)
+    request = _request()
+    try:
+        result = strategy.execute(request)
+    finally:
+        connection.close()
+
+    payload = json.loads(json.dumps(result.to_payload(), sort_keys=True))
+    restored = MatchingStrategyResult.from_payload(payload)
+    restored.verify_payload(
+        request,
+        manifest_digest=strategy.manifest.digest,
+        strategy_id=strategy.manifest.id,
+        strategy_version=strategy.manifest.version,
+    )
+    assert restored.to_payload() == payload
+
+    with pytest.raises(MatchingStrategyContractError, match="not closed"):
+        MatchingStrategyResult.from_payload({**payload, "unexpected": True})
+    with pytest.raises(MatchingStrategyContractError, match="identity"):
+        restored.verify_payload(
+            request,
+            manifest_digest=strategy.manifest.digest,
+            strategy_id="tampered-strategy",
+            strategy_version=strategy.manifest.version,
+        )
 
 
 def test_strategy_rejects_limits_and_unsafe_numeric_payloads_before_matching(tmp_path: Path) -> None:

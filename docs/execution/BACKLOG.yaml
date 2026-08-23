@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-855
+    priority: P0
+    area: matching
+    title: Add closed JSON replay envelope for strategy results
+    status: completed
+    depends_on: [E-854]
+    exit_evidence: >-
+      MatchingStrategyResult exposes a JSON-safe closed envelope and strict
+      reconstruction/replay verification. Extra fields, non-object collections,
+      strategy identity drift, version drift, and digest tampering fail closed;
+      the contract suite passes with no backend-specific serialization.
   - id: E-854
     priority: P0
     area: matching

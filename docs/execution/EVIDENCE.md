@@ -2,6 +2,15 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-855: Closed matching result JSON envelope (2026-08-23)
+
+- `MatchingStrategyResult` now emits and reconstructs a deterministic JSON-safe
+  envelope with exact fields for strategy identity/version and all digests.
+- Extra fields, malformed collections, and identity drift are rejected; the
+  matching strategy contract suite plus Ruff/Mypy pass.
+- Evidence is an in-process transport contract only; hosted cross-engine
+  replay remains unproven.
+
 ## E-854: Matching strategy identity/version binding (2026-08-23)
 
 - Every reviewed strategy adapter emits strategy ID/version plus manifest,

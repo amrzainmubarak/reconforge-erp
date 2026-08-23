@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-855 — Add closed JSON replay envelope for strategy results (2026-08-23)
+
+- Strategy results now have a backend-neutral JSON-safe envelope with strict
+  field closure and reconstruction. Replay verification covers strategy
+  identity/version and all existing digests after transport serialization.
+- The matching strategy contract suite and static checks pass. This is a
+  transport/replay contract, not hosted cross-engine runtime evidence.
+
 ## E-854 — Bind strategy identity/version to matching results (2026-08-23)
 
 - Matching strategy results now carry explicit strategy ID and version in

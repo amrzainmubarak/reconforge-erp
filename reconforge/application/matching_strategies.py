@@ -175,6 +175,62 @@ class MatchingStrategyResult:
         if not self.strategy_id.strip() or not self.strategy_version.strip():
             raise MatchingStrategyContractError("Strategy result must identify its strategy and version.")
 
+    def to_payload(self) -> dict[str, object]:
+        """Return the closed, JSON-safe transport envelope for one result.
+
+        The envelope is deliberately independent of a persistence backend so a
+        worker can persist and replay the exact strategy evidence without
+        relying on Python tuple/Decimal representations.
+        """
+
+        return {
+            "decision_digest": self.decision_digest,
+            "exceptions": canonical_payload(self.exceptions),
+            "explanation_schema": self.explanation_schema,
+            "input_digest": self.input_digest,
+            "manifest_digest": self.manifest_digest,
+            "results": canonical_payload(self.results),
+            "strategy_id": self.strategy_id,
+            "strategy_version": self.strategy_version,
+        }
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, object]) -> MatchingStrategyResult:
+        """Rebuild one result from a strict JSON-safe transport envelope."""
+
+        expected = {
+            "decision_digest",
+            "exceptions",
+            "explanation_schema",
+            "input_digest",
+            "manifest_digest",
+            "results",
+            "strategy_id",
+            "strategy_version",
+        }
+        if set(payload) != expected:
+            raise MatchingStrategyContractError("Strategy result envelope fields are not closed.")
+        text_fields = ("strategy_id", "strategy_version", "manifest_digest", "input_digest", "decision_digest", "explanation_schema")
+        text_values = {field: payload[field] for field in text_fields}
+        if any(not isinstance(value, str) or not value.strip() for value in text_values.values()):
+            raise MatchingStrategyContractError("Strategy result envelope text fields are invalid.")
+        results = payload["results"]
+        exceptions = payload["exceptions"]
+        if not isinstance(results, list) or not isinstance(exceptions, list):
+            raise MatchingStrategyContractError("Strategy result envelope collections must be JSON arrays.")
+        if any(not isinstance(item, Mapping) for item in (*results, *exceptions)):
+            raise MatchingStrategyContractError("Strategy result envelope collections must contain objects.")
+        return cls(
+            strategy_id=str(text_values["strategy_id"]),
+            strategy_version=str(text_values["strategy_version"]),
+            manifest_digest=str(text_values["manifest_digest"]),
+            input_digest=str(text_values["input_digest"]),
+            decision_digest=str(text_values["decision_digest"]),
+            results=tuple(dict(item) for item in results),
+            exceptions=tuple(dict(item) for item in exceptions),
+            explanation_schema=str(text_values["explanation_schema"]),
+        )
+
     def verify_against(
         self,
         request: MatchingStrategyRequest,
@@ -208,6 +264,23 @@ class MatchingStrategyResult:
         )
         if self.decision_digest != expected_result:
             raise MatchingStrategyContractError("Strategy result decision digest does not match its output.")
+
+    def verify_payload(
+        self,
+        request: MatchingStrategyRequest,
+        *,
+        manifest_digest: str,
+        strategy_id: str,
+        strategy_version: str,
+    ) -> None:
+        """Verify this result after a JSON transport round trip."""
+
+        self.verify_against(
+            request,
+            manifest_digest=manifest_digest,
+            strategy_id=strategy_id,
+            strategy_version=strategy_version,
+        )
 
 
 class MatchingStrategy(Protocol):

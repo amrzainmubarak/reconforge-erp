@@ -520,6 +520,8 @@ include docs/adr/0586-release-rechecks-web-artifact.md
 include docs/adr/0587-ci-operational-gates-wait-for-web.md
 include docs/adr/0588-current-docker-runtime-smoke.md
 include docs/adr/0589-hardened-docker-runtime-smoke.md
+include docs/adr/0590-docker-scout-local-image-scan.md
+include docs/execution/security/docker-scout-current-2026-08-23.md
 include reconforge/benchmark/postgres_outbox_scale.py
 include tests/test_postgres_outbox_scale.py
 include reconforge/benchmark/postgres_grouped_matching_scale.py

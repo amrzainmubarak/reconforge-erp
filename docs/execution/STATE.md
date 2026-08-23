@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-883 — Current Docker Scout local image scan (2026-08-23)
+
+- Docker Scout `v1.24.0` scanned `local://reconforge:current` at digest prefix
+  `e86d4871981c`, indexed 82 packages, reported `0C 0H 0M 0L`, and exited 0.
+- The report uses an explicit local image reference and is recorded at
+  `docs/execution/security/docker-scout-current-2026-08-23.md`.
+- This is one local package scan, not hosted scanner parity, registry
+  provenance/signing, malware/license assurance, or production security.
+
 ## E-882 — Hardened Docker runtime smoke (2026-08-23)
 
 - `docker image inspect` reports configured user `10001:10001` and working

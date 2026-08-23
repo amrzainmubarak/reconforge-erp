@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-883: Current Docker Scout local image scan (2026-08-23)
+
+- Docker Scout `v1.24.0` scanned the explicit `local://reconforge:current`
+  image (digest prefix `e86d4871981c`) and indexed 82 packages.
+- The scan reported `0C 0H 0M 0L` and returned exit code 0. The raw report was
+  written to `output/docker-scout-current-high-critical.txt` during the run;
+  the reproducible command and bounded result are retained in
+  `docs/execution/security/docker-scout-current-2026-08-23.md`.
+- The local reference prevents accidental registry fallback. This does not
+  prove hosted scanner parity, signed provenance, malware/license analysis,
+  source reachability, runtime behavior, or production security.
+
 ## E-882: Hardened Docker runtime smoke (2026-08-23)
 
 - `docker image inspect reconforge:current` reports `User=10001:10001`,

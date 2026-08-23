@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-883
+    priority: P1
+    area: security
+    title: Refresh local Docker Scout vulnerability scan evidence
+    status: completed
+    depends_on: [E-882]
+    exit_evidence: >-
+      Docker Scout v1.24.0 scans the explicit local reconforge:current image,
+      indexes 82 packages, reports zero critical/high/medium/low vulnerabilities,
+      and exits zero. The result remains local scanner evidence and does not
+      claim hosted provenance, registry signing, malware, license, or production
+      security assurance.
   - id: E-882
     priority: P1
     area: security

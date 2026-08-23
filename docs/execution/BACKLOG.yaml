@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-860
+    priority: P0
+    area: matching
+    title: Replay-test every registered matching strategy family
+    status: completed
+    depends_on: [E-859]
+    exit_evidence: >-
+      A deterministic replay matrix exercises indexed one-to-one, grouped
+      many-to-many, duplicate detection, carry-forward, and reversal pairing
+      through their public adapters; every family reproduces the canonical
+      envelope exactly under the local SQLite/ pure-strategy boundary.
   - id: E-859
     priority: P0
     area: matching

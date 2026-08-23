@@ -28,6 +28,7 @@ from reconforge.infrastructure.carry_forward_strategy import (
     CARRY_FORWARD_FIFO_MANIFEST,
     CarryForwardFifoStrategy,
 )
+from reconforge.infrastructure.duplicate_detection_strategy import DuplicateDetectionStrategy
 from reconforge.infrastructure.grouped_matching_strategy import (
     GROUPED_SUBSET_SUM_MANIFEST,
     GroupedSubsetSumStrategy,
@@ -197,6 +198,57 @@ def test_cli_validates_result_envelope_without_external_calls(tmp_path: Path) ->
     assert result.exit_code == 0, result.stdout
     assert "external_calls" in result.stdout
     assert "replay_request_required" in result.stdout
+
+
+def test_all_registered_strategy_families_pass_deterministic_reexecution(tmp_path: Path) -> None:
+    indexed, service, connection = _strategy(tmp_path)
+    try:
+        cases = (
+            (
+                indexed,
+                _request(),
+            ),
+            (
+                GroupedSubsetSumStrategy(),
+                MatchingStrategyRequest(
+                    left_records=({"id": "L1", "amount": "10", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+                    right_records=({"id": "R1", "amount": "10", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+                    mode="many-to-many",
+                ),
+            ),
+            (
+                DuplicateDetectionStrategy(),
+                MatchingStrategyRequest(
+                    left_records=({"id": "L1", "amount": "10", "date": "2026-01-01", "reference": "R1", "currency": "USD", "partition": "P1"},),
+                    right_records=({"id": "R1", "amount": "10", "date": "2026-01-01", "reference": "R1", "currency": "USD", "partition": "P1"},),
+                    mode="duplicate-detection",
+                ),
+            ),
+            (
+                CarryForwardFifoStrategy(),
+                MatchingStrategyRequest(
+                    left_records=({"id": "O1", "amount": "10", "date": "2026-01-01", "currency": "USD", "partition": "P1"},),
+                    right_records=({"id": "S1", "amount": "10", "date": "2026-01-02", "currency": "USD", "partition": "P1"},),
+                    mode="carry-forward",
+                    date_window_days=5,
+                ),
+            ),
+            (
+                ReversalPairingStrategy(),
+                MatchingStrategyRequest(
+                    left_records=({"id": "J1", "amount": "10", "date": "2026-01-01", "currency": "USD", "partition": "P1"},),
+                    right_records=({"id": "R1", "amount": "-10", "date": "2026-01-02", "currency": "USD", "partition": "P1", "reversal_of": "J1"},),
+                    mode="reversal-pairing",
+                    date_window_days=5,
+                ),
+            ),
+        )
+        for strategy, request in cases:
+            result = strategy.execute(request)
+            replayed = replay_strategy_result(strategy, request, result)
+            assert replayed.to_payload() == result.to_payload()
+    finally:
+        connection.close()
 
 
 def test_strategy_rejects_limits_and_unsafe_numeric_payloads_before_matching(tmp_path: Path) -> None:

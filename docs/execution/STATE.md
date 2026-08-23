@@ -2,6 +2,13 @@
 
 Updated: 2026-08-23
 
+## E-860 — Replay-test every registered matching strategy family (2026-08-23)
+
+- The contract suite now re-executes all five registered families: indexed,
+  grouped, duplicate detection, carry-forward, and reversal pairing.
+- Each family reproduces the exact canonical envelope; indexed runs through a
+  migrated SQLite service. This remains local strategy evidence.
+
 ## E-859 — Add deterministic strategy re-execution replay verifier (2026-08-23)
 
 - `replay_strategy_result` now re-executes a strategy against the original

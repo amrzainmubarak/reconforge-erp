@@ -2,6 +2,13 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-860: Registry-wide matching strategy replay matrix (2026-08-23)
+
+- The public contract suite re-executes all five registered strategy families:
+  indexed, grouped, duplicate detection, carry-forward, and reversal pairing.
+- Every family reproduced its canonical envelope; evidence is local and
+  synthetic, not hosted cross-engine runtime proof.
+
 ## E-859: Deterministic strategy re-execution replay (2026-08-23)
 
 - `replay_strategy_result` reruns the strategy for the original request and

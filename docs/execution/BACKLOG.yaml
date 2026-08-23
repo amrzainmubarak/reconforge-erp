@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-878
+    priority: P0
+    area: release_operations
+    title: Recheck web artifact in signed-tag release workflow
+    status: completed
+    depends_on: [E-877]
+    exit_evidence: >-
+      The signed-tag release workflow now installs locked web dependencies and
+      runs web typecheck, Vitest, production build, Chromium installation, and
+      standard Playwright E2E before Python/package/image publication. Live API
+      and HTTPS scenarios remain explicitly opt-in.
   - id: E-877
     priority: P0
     area: quality

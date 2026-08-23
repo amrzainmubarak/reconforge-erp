@@ -2,6 +2,17 @@
 
 Updated: 2026-08-23
 
+## E-878 — Release workflow web artifact recheck (2026-08-23)
+
+- `.github/workflows/release.yml` now rechecks the exact signed tag's web
+  artifact after npm audit and before Python/package/image publication.
+- The release job runs locked npm install, TypeScript typecheck, Vitest,
+  production build, Chromium installation, and standard Playwright E2E using
+  the pinned Node 22 toolchain.
+- Live API-session and HTTPS production-bundle scenarios remain opt-in; this
+  gate improves release integrity without inventing external credentials or
+  provider evidence.
+
 ## E-877 — Web client required CI gate (2026-08-23)
 
 - `.github/workflows/ci.yml` now includes a dedicated `web` job using pinned

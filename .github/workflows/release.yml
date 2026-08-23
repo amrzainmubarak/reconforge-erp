@@ -149,6 +149,26 @@ jobs:
             --npm-audit-report "$report" \
             --npm-audit-exit-code "$audit_exit"
 
+      - name: Install locked web dependencies for release verification
+        run: npm --prefix apps/web ci
+
+      - name: Typecheck web release source
+        run: npm --prefix apps/web run typecheck
+
+      - name: Run web release component tests
+        run: npm --prefix apps/web run test:run
+
+      - name: Build web release bundle
+        run: npm --prefix apps/web run build
+
+      - name: Install Chromium for release E2E verification
+        run: npx --prefix apps/web playwright install --with-deps chromium
+
+      - name: Run standard web release E2E verification
+        env:
+          RECONFORGE_WEB_PORT: "4173"
+        run: npm --prefix apps/web run e2e
+
       - name: Install hash-locked release build tools
         run: >-
           python -m pip install --disable-pip-version-check --only-binary=:all:

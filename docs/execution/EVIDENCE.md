@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-878: Release workflow web artifact recheck (2026-08-23)
+
+- The signed-tag release workflow now performs locked npm installation,
+  typecheck, Vitest, production Vite build, Chromium installation, and
+  standard Playwright E2E after npm audit and before release artifact/image
+  publication.
+- The local E-874 run supplies current command evidence: 75 Vitest tests,
+  successful typecheck/build, and 16 Playwright passes with five explicit
+  live-service skips. Hosted signed-tag execution remains required to promote
+  this from workflow contract evidence to hosted release evidence.
+- Live API-session/HTTPS tests remain opt-in and no external credentials or
+  providers are contacted by the standard release gate.
+
 ## E-877: Web client required CI gate (2026-08-23)
 
 - Added a dedicated `web` job to `.github/workflows/ci.yml` with pinned

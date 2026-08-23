@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-839
+    priority: P0
+    area: identity-governance
+    title: Bind deferred-tax preparation to amount-bounded ABAC
+    status: completed
+    depends_on: [E-838]
+    exit_evidence: >-
+      Typed deferred-tax items are converted before policy and their gross
+      absolute fair-value Decimal exposure is passed to server authorization
+      before persistence. Focused route/domain/dependency tests pass 15/15 with
+      exact 270.00 synthetic exposure. Universal route and production IAM
+      evidence remain open.
   - id: E-838
     priority: P0
     area: identity-governance

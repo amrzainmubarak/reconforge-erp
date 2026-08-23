@@ -1,5 +1,11 @@
 # Quality Baseline
 
+## E-839 deferred-tax route amount ABAC (2026-08-23)
+
+Deferred-tax preparation now supplies gross absolute fair-value exposure as an
+exact Decimal to server policy before persistence, without double-counting tax
+basis. Focused route/domain tests pass 15/15; this is not universal adoption.
+
 ## E-838 intercompany route amount ABAC (2026-08-23)
 
 Intercompany preparation now supplies gross absolute typed Money exposure as an

@@ -2,6 +2,13 @@
 
 Measured through 2026-08-22 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
 
+## E-839 deferred-tax route amount ABAC control (2026-08-23)
+
+- Deferred-tax preparation authorizes gross absolute typed fair-value exposure
+  as exact Decimal before persistence and does not double-count tax basis.
+- Focused route/domain tests pass 15/15. Other financial routes and production
+  IAM effectiveness remain outside the evidence.
+
 ## E-838 intercompany route amount ABAC control (2026-08-23)
 
 - Intercompany preparation authorizes gross absolute typed Money exposure as

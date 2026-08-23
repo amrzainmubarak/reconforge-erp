@@ -2,6 +2,17 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-839: Bind deferred-tax preparation to amount-bounded ABAC (2026-08-23)
+
+- Deferred-tax canonical items are converted to typed Money before policy; the
+  gross absolute fair-value Decimal sum is authorized before PostgreSQL
+  persistence. Tax basis is not added a second time.
+- Focused command: `python -m pytest tests/test_api_consolidation_deferred_tax.py
+  tests/test_consolidation_deferred_tax.py tests/test_api_dependencies.py -q`
+  -> 15 passed. Ruff and Mypy pass.
+- Boundary: one synthetic non-posting route; universal route and production IAM
+  evidence remain future work.
+
 ## E-838: Bind intercompany preparation to amount-bounded ABAC (2026-08-23)
 
 - Intercompany canonical Money lines are converted before policy, then their

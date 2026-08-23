@@ -135,7 +135,12 @@ def _server_only(request: Request) -> None:
         )
 
 
-def _enforce_server_policy(request: Request, *, permissions: frozenset[str]) -> None:
+def _enforce_server_policy(
+    request: Request,
+    *,
+    permissions: frozenset[str],
+    amount: Decimal | None = None,
+) -> None:
     """Re-evaluate tenant policy before accessing tenant-scoped evidence."""
 
     from reconforge.api.server_identity import request_tenant_id
@@ -145,6 +150,7 @@ def _enforce_server_policy(request: Request, *, permissions: frozenset[str]) -> 
         permissions=permissions,
         tenant_id=request_tenant_id(request),
         workspace_id=None,
+        amount=amount,
     )
 
 
@@ -157,8 +163,13 @@ def prepare_deferred_tax(
     """Persist one authenticated, maker-checker, non-posting deferred-tax artifact."""
 
     _server_only(request)
-    _enforce_server_policy(request, permissions=frozenset({"finance_core.manage"}))
     domain_request = payload.to_domain(prepared_by=current_user.id)
+    gross_fair_value = sum((abs(item.fair_value.amount) for item in domain_request.items), Decimal("0"))
+    _enforce_server_policy(
+        request,
+        permissions=frozenset({"finance_core.manage"}),
+        amount=gross_fair_value,
+    )
     artifact = execute_postgres_deferred_tax(
         request,
         lambda repository, _tenant: AcquisitionDeferredTaxApplicationService(repository).prepare_and_persist(

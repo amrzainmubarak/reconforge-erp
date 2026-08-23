@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-839 — Bind deferred-tax preparation to amount-bounded ABAC (2026-08-23)
+
+- Typed deferred-tax items are converted before policy; gross absolute
+  fair-value Decimal exposure is passed to server authorization before
+  persistence, without double-counting tax basis.
+- Focused route/domain/dependency tests pass 15/15; universal route adoption
+  and production IAM effectiveness remain unproven.
+
 ## E-838 — Bind intercompany preparation to amount-bounded ABAC (2026-08-23)
 
 - Canonical intercompany lines are converted to typed Money, gross absolute

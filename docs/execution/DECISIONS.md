@@ -5,6 +5,18 @@
 
 ## Decisions
 
+### D-939: Pass deferred-tax fair-value exposure into server policy
+
+- **Date**: 2026-08-23
+- **Context**: Deferred-tax preparation evaluated server policy before typed
+  item conversion and did not provide a bounded amount.
+- **Decision**: Adopt ADR 0553. Convert items first and authorize the gross
+  absolute fair-value Decimal sum; do not double-count tax basis.
+- **Rationale**: Fair value is the single source exposure; tax basis is the
+  comparison input for the same item. Typed conversion preserves currency and
+  precision invariants.
+- **Reversibility**: Source-only optional amount binding; no migration.
+
 ### D-938: Pass gross intercompany exposure into server policy
 
 - **Date**: 2026-08-23

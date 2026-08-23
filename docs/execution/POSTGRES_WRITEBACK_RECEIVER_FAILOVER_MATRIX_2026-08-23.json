@@ -1,0 +1,218 @@
+{
+  "duration_seconds": 62.421,
+  "executed_at": "2026-08-23T12:24:17+00:00",
+  "limitations": [
+    "single_docker_desktop_host_and_one_failure_domain",
+    "two_nodes_per_postgresql_version",
+    "manual_fencing_promotion_and_rejoin_controller",
+    "no_quorum_witness_or_automatic_failover",
+    "synthetic_digest_only_effects_and_credentials",
+    "no_cross_host_zone_region_or_network_consensus",
+    "no_live_provider_accounting_settlement_or_production_claim"
+  ],
+  "parity": {
+    "all_checks_passed": true,
+    "all_cleanup_complete": true,
+    "backends": [
+      "sqlite",
+      "postgresql-16.14-failover",
+      "postgresql-17.10-failover"
+    ],
+    "canonical_history_sha256": "5f5f48a2cf4071f93e064b127f2ecfa67fb5cbf29463a357aa93cfba52419f14"
+  },
+  "profile": "single-host-synchronous-receiver-failover-matrix",
+  "report_digest": "4f7bef4671db45ffe7978e1249ea45eeeb8b82ca99066c43de95db03fce82963",
+  "runs": [
+    {
+      "cases": {
+        "acknowledged_response_loss": {
+          "child_exit_code": 0,
+          "request_digest": "768811b273ad3e6772f3d20a7f7a897167e22c1c4a1bc724005603f9b37dbf25",
+          "response_digest": "6f0a78ab62fee7529fc56bf255f50240d1919afb36f809ec67539120c3281c06",
+          "retry_disposition": "replayed"
+        },
+        "partition_uncertainty": {
+          "client_exit_code": -15,
+          "primary_outcome": "client_terminated_while_commit_waited_sync_rep",
+          "request_digest": "966f3ca0745777987112030f4a09fbd49c016d843a2b7e76e0283a4d2aeaa0c8",
+          "response_digest": "5f74bf9478a4b9aa7926c68a117d60175ded5a42deb8e7a12ea6f5c7dccbafab",
+          "retry_disposition": "applied",
+          "sync_rep_wait_observed": true
+        },
+        "promoted_primary_restart": {
+          "acknowledged_retry_disposition": "replayed",
+          "effects_after": 2,
+          "effects_before": 2,
+          "endpoint_rediscovered": true,
+          "host_port_changed": true,
+          "partition_retry_disposition": "replayed",
+          "receipts_after": 2,
+          "receipts_before": 2
+        }
+      },
+      "checks": {
+        "acknowledged_commit_returned_in_child": true,
+        "acknowledged_effect_replayed_after_failover": true,
+        "acknowledged_effect_visible_on_standby": true,
+        "cleanup_complete": true,
+        "failover_replay_created_no_effect": true,
+        "former_primary_reseeded_read_only": true,
+        "non_privileged_application_role": true,
+        "partitioned_commit_became_uncertain": true,
+        "partitioned_request_applied_once_after_rejoin": true,
+        "post_rejoin_history_equal": true,
+        "primary_absent_before_promotion": true,
+        "primary_identity_fenced": true,
+        "promoted_primary_restart_completed": true,
+        "remote_apply_synchronous_after_rejoin": true,
+        "remote_apply_synchronous_before_failure": true,
+        "response_not_delivered_to_caller": true,
+        "restart_endpoint_rediscovered": true,
+        "restart_history_equal": true,
+        "restart_replays_created_no_effect": true,
+        "rto_within_local_ceiling": true,
+        "standby_promoted_writable": true,
+        "sync_rep_commit_wait_observed": true,
+        "writes_paused_until_redundancy_restored": true
+      },
+      "history": {
+        "acknowledged_effects_before_failover": 1,
+        "acknowledged_receipts_before_failover": 1,
+        "after_restart_sha256": "5f5f48a2cf4071f93e064b127f2ecfa67fb5cbf29463a357aa93cfba52419f14",
+        "before_failover_sha256": "cd13f10b492a0500e06046915ae34ec379cbbe24bc8b067b4f5874480933b0e6",
+        "final_effects": 2,
+        "final_receipts": 2,
+        "final_sha256": "5f5f48a2cf4071f93e064b127f2ecfa67fb5cbf29463a357aa93cfba52419f14",
+        "rejoined_effects": 2,
+        "rejoined_receipts": 2,
+        "rejoined_sha256": "5f5f48a2cf4071f93e064b127f2ecfa67fb5cbf29463a357aa93cfba52419f14"
+      },
+      "recovery": {
+        "acknowledged_effect_rpo": 0,
+        "failover_rto_seconds": 6.213,
+        "fencing": "verified-stopped-and-removed-before-promotion",
+        "replication_mode": "physical-streaming-synchronous-remote-apply",
+        "rto_ceiling_seconds": 60.0,
+        "writes_during_rejoin": "controller-paused"
+      },
+      "runtime": {
+        "application_role": {
+          "bypass_rls": false,
+          "create_database": false,
+          "create_role": false,
+          "replication": false,
+          "superuser": false
+        },
+        "docker_server": "29.7.2",
+        "failure_domains": 1,
+        "image": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+        "multiprocessing_start_method": "spawn",
+        "node_count": 2,
+        "postgresql": "16.14",
+        "python": "3.14.6"
+      }
+    },
+    {
+      "cases": {
+        "acknowledged_response_loss": {
+          "child_exit_code": 0,
+          "request_digest": "768811b273ad3e6772f3d20a7f7a897167e22c1c4a1bc724005603f9b37dbf25",
+          "response_digest": "6f0a78ab62fee7529fc56bf255f50240d1919afb36f809ec67539120c3281c06",
+          "retry_disposition": "replayed"
+        },
+        "partition_uncertainty": {
+          "client_exit_code": -15,
+          "primary_outcome": "client_terminated_while_commit_waited_sync_rep",
+          "request_digest": "966f3ca0745777987112030f4a09fbd49c016d843a2b7e76e0283a4d2aeaa0c8",
+          "response_digest": "5f74bf9478a4b9aa7926c68a117d60175ded5a42deb8e7a12ea6f5c7dccbafab",
+          "retry_disposition": "applied",
+          "sync_rep_wait_observed": true
+        },
+        "promoted_primary_restart": {
+          "acknowledged_retry_disposition": "replayed",
+          "effects_after": 2,
+          "effects_before": 2,
+          "endpoint_rediscovered": true,
+          "host_port_changed": true,
+          "partition_retry_disposition": "replayed",
+          "receipts_after": 2,
+          "receipts_before": 2
+        }
+      },
+      "checks": {
+        "acknowledged_commit_returned_in_child": true,
+        "acknowledged_effect_replayed_after_failover": true,
+        "acknowledged_effect_visible_on_standby": true,
+        "cleanup_complete": true,
+        "failover_replay_created_no_effect": true,
+        "former_primary_reseeded_read_only": true,
+        "non_privileged_application_role": true,
+        "partitioned_commit_became_uncertain": true,
+        "partitioned_request_applied_once_after_rejoin": true,
+        "post_rejoin_history_equal": true,
+        "primary_absent_before_promotion": true,
+        "primary_identity_fenced": true,
+        "promoted_primary_restart_completed": true,
+        "remote_apply_synchronous_after_rejoin": true,
+        "remote_apply_synchronous_before_failure": true,
+        "response_not_delivered_to_caller": true,
+        "restart_endpoint_rediscovered": true,
+        "restart_history_equal": true,
+        "restart_replays_created_no_effect": true,
+        "rto_within_local_ceiling": true,
+        "standby_promoted_writable": true,
+        "sync_rep_commit_wait_observed": true,
+        "writes_paused_until_redundancy_restored": true
+      },
+      "history": {
+        "acknowledged_effects_before_failover": 1,
+        "acknowledged_receipts_before_failover": 1,
+        "after_restart_sha256": "5f5f48a2cf4071f93e064b127f2ecfa67fb5cbf29463a357aa93cfba52419f14",
+        "before_failover_sha256": "cd13f10b492a0500e06046915ae34ec379cbbe24bc8b067b4f5874480933b0e6",
+        "final_effects": 2,
+        "final_receipts": 2,
+        "final_sha256": "5f5f48a2cf4071f93e064b127f2ecfa67fb5cbf29463a357aa93cfba52419f14",
+        "rejoined_effects": 2,
+        "rejoined_receipts": 2,
+        "rejoined_sha256": "5f5f48a2cf4071f93e064b127f2ecfa67fb5cbf29463a357aa93cfba52419f14"
+      },
+      "recovery": {
+        "acknowledged_effect_rpo": 0,
+        "failover_rto_seconds": 6.303,
+        "fencing": "verified-stopped-and-removed-before-promotion",
+        "replication_mode": "physical-streaming-synchronous-remote-apply",
+        "rto_ceiling_seconds": 60.0,
+        "writes_during_rejoin": "controller-paused"
+      },
+      "runtime": {
+        "application_role": {
+          "bypass_rls": false,
+          "create_database": false,
+          "create_role": false,
+          "replication": false,
+          "superuser": false
+        },
+        "docker_server": "29.7.2",
+        "failure_domains": 1,
+        "image": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193",
+        "multiprocessing_start_method": "spawn",
+        "node_count": 2,
+        "postgresql": "17.10",
+        "python": "3.14.6"
+      }
+    }
+  ],
+  "schema_version": "postgres-writeback-receiver-failover-matrix-v1",
+  "sqlite_reference": {
+    "canonical_history_sha256": "5f5f48a2cf4071f93e064b127f2ecfa67fb5cbf29463a357aa93cfba52419f14",
+    "effects": 2,
+    "receipts": 2
+  },
+  "subject": {
+    "base_commit": "2ee3fdbe2542d4582cc95bdbde21be99fd7422cc",
+    "matrix_runner_source_sha256": "39937d4dc02ef458784352f3b50c739f3ce55b09687b41066b4cc57879dcb0a8",
+    "postgres_receiver_source_sha256": "8e28ff1c284259684f2397aa766066fa5ae1f6ec8a7cc286e722d6423f3fa43f",
+    "receiver_source_sha256": "9dfcf1e6c4df485f2c6275dfb597a9d695ccfeef79616af2d0b62c38955b60b4",
+    "supply_chain_policy_sha256": "15675362650f9b2691251da77dd01538d72b3a7249c7a60c7591b7bbe0a48cae"
+  }
+}

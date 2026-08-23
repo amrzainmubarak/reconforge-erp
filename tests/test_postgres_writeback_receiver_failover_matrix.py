@@ -15,6 +15,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "docs/schemas/postgres_writeback_receiver_failover_matrix.schema.json"
 REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-08-22.json"
+CURRENT_REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-08-23.json"
 RUNNER_PATH = ROOT / ".github/scripts/verify_postgres_writeback_receiver_failover_matrix.py"
 RECEIVER_PATH = ROOT / "reconforge/connectors/writeback_receiver.py"
 POSTGRES_RECEIVER_PATH = ROOT / "reconforge/connectors/writeback_receiver_postgres.py"
@@ -28,6 +29,21 @@ def _source_digest(path: Path) -> str:
 
 def _report() -> dict[str, Any]:
     return json.loads(REPORT_PATH.read_text(encoding="utf-8"))
+
+
+def test_current_receiver_failover_matrix_is_schema_valid_and_replay_parity_bound() -> None:
+    report = json.loads(CURRENT_REPORT_PATH.read_text(encoding="utf-8"))
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker()).validate(report)
+    payload = dict(report)
+    supplied = str(payload.pop("report_digest"))
+    canonical = json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("ascii")
+    assert supplied == hashlib.sha256(canonical).hexdigest()
+    assert report["parity"]["all_checks_passed"] is True
+    assert report["parity"]["all_cleanup_complete"] is True
+    assert report["parity"]["canonical_history_sha256"] == report["sqlite_reference"]["canonical_history_sha256"]
+    assert [run["runtime"]["postgresql"] for run in report["runs"]] == ["16.14", "17.10"]
+    assert all(run["recovery"]["acknowledged_effect_rpo"] == 0 for run in report["runs"])
 
 
 def test_retained_receiver_failover_matrix_is_closed_digest_and_source_bound() -> None:

@@ -2,6 +2,18 @@
 
 Updated: 2026-08-23
 
+## E-868 — Refresh current PostgreSQL write-back receiver failover matrix (2026-08-23)
+
+- The current matrix passed on digest-pinned PostgreSQL 16.14 and 17.10;
+  every cell passed all 23 declared checks and cleanup.
+- It observed acknowledged response-loss replay without a duplicate effect,
+  synchronous partition uncertainty, one application after rejoin, exact
+  fencing before promotion, endpoint rediscovery after restart, and equal
+  SQLite/PostgreSQL canonical history with acknowledged-effect RPO `0`.
+- This remains a two-node-per-version, single-host synthetic matrix with
+  manual control; provider semantics, cross-host HA, and production
+  exactly-once behavior remain open.
+
 ## E-867 — Refresh current PostgreSQL consolidation-close runtime evidence (2026-08-23)
 
 - The focused close/consolidation/server suite passed 32 tests against the

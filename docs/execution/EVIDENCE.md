@@ -18362,3 +18362,17 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   - Boundary: synthetic data and one local host only. Statutory accounting,
     external posting, hosted parity, HA/DR, production approval, and
     independent assurance remain unverified.
+
+- E-868 current PostgreSQL write-back receiver failover matrix (2026-08-23; ADR 0577):
+  - Command: `python .github/scripts/verify_postgres_writeback_receiver_failover_matrix.py --output docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-08-23.json`.
+  - Both digest-pinned PostgreSQL cells passed all 23 declared checks. The
+    matrix verified acknowledged response-loss replay without a duplicate
+    effect, synchronous partition uncertainty, one application after rejoin,
+    exact fencing before promotion, endpoint rediscovery after restart, and
+    complete labelled-resource cleanup.
+  - Acknowledged-effect RPO was `0` in both cells; final/rejoined/restarted
+    histories matched the SQLite canonical digest
+    `5f5f48a2cf4071f93e064b127f2ecfa67fb5cbf29463a357aa93cfba52419f14`.
+  - Boundary: one Docker host, two nodes per version, manual controller,
+    synthetic digest-only effects and credentials. No provider, accounting,
+    cross-host HA, or production exactly-once claim follows.

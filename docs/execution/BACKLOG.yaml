@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-868
+    priority: P0
+    area: connectors
+    title: Refresh current PostgreSQL write-back receiver failover matrix
+    status: completed
+    depends_on: [E-867]
+    exit_evidence: >-
+      The current failover matrix passes on digest-pinned PostgreSQL 16.14 and
+      17.10 with 23/23 checks per cell, zero acknowledged-effect RPO, replay
+      without duplicate effects after response loss and promotion, uncertain
+      commit applied once after rejoin, endpoint rediscovery after restart,
+      equal SQLite/PostgreSQL canonical history, and complete cleanup. This is
+      a single-host synthetic matrix and not production exactly-once evidence.
   - id: E-867
     priority: P0
     area: finance-close

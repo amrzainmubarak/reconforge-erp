@@ -20,7 +20,7 @@
     ]
   },
   "profile": "provider-neutral-writeback-recovery-compensation-parity",
-  "report_digest": "ac1800b33456badeccc13a8f30308c1b1cc0852dd5dd24c27cae461c1a0aff80",
+  "report_digest": "21f7fad80c52bd24f2377361a0496eb5e61b7d6b3e61fcb9a0ae887a955b873e",
   "runs": [
     {
       "checks": {
@@ -700,7 +700,7 @@
     ]
   },
   "subject": {
-    "base_commit": "3c4742eaffe84d53ceaeb101ecd60ed0de16b393",
+    "base_commit": "ba8ed4c414d0e91bb8db02707e2339dea8d1f3c3",
     "matrix_runner_source_sha256": "1663c086cf2ab9997b2359e2c934c3fce92c4d482bf9141ab79f33de90011c57",
     "migration_source_sha256": "92e42b27e1ef043ce9be9a44130efadc61daa6953b85aa516e5f7e7e03a6a4b0",
     "postgres_persistence_source_sha256": "d5fd26473a7ada5a89d6aef6ec68a68fe9d8e9eddb115167012284fba10f98d4",

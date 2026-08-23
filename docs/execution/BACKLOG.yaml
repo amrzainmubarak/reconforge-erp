@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-859
+    priority: P0
+    area: matching
+    title: Add deterministic strategy re-execution replay verifier
+    status: completed
+    depends_on: [E-858]
+    exit_evidence: >-
+      A strategy replay helper re-executes the original request, round-trips
+      both supplied and recomputed results through the closed envelope, and
+      rejects any canonical evidence drift. Contract tests cover successful
+      replay and tampered output; no provider or network call is involved.
   - id: E-858
     priority: P1
     area: matching

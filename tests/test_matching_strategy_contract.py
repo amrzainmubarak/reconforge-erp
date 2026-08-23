@@ -18,7 +18,9 @@ from reconforge.application.matching_strategies import (
     MatchingStrategyResult,
     canonical_payload,
     replay_result_envelope,
+    replay_strategy_result,
     request_digest,
+    result_digest,
 )
 from reconforge.cli import app
 from reconforge.db import connect, run_migrations
@@ -147,6 +149,7 @@ def test_strategy_result_json_envelope_round_trip_is_closed_and_replay_verified(
     )
     assert restored.to_payload() == payload
     assert replay_result_envelope(result, request, manifest=strategy.manifest) == restored
+    assert replay_strategy_result(strategy, request, result) == restored
 
     with pytest.raises(MatchingStrategyContractError, match="not closed"):
         MatchingStrategyResult.from_payload({**payload, "unexpected": True})
@@ -161,6 +164,24 @@ def test_strategy_result_json_envelope_round_trip_is_closed_and_replay_verified(
             strategy_id="tampered-strategy",
             strategy_version=strategy.manifest.version,
         )
+    changed_results = tuple({**item, "status": "tampered"} for item in result.results)
+    changed = MatchingStrategyResult(
+        strategy_id=result.strategy_id,
+        strategy_version=result.strategy_version,
+        manifest_digest=result.manifest_digest,
+        input_digest=result.input_digest,
+        decision_digest=result_digest(
+            manifest_digest=result.manifest_digest,
+            input_digest=result.input_digest,
+            results=changed_results,
+            exceptions=result.exceptions,
+        ),
+        results=changed_results,
+        exceptions=result.exceptions,
+        explanation_schema=result.explanation_schema,
+    )
+    with pytest.raises(MatchingStrategyContractError, match="differs"):
+        replay_strategy_result(strategy, request, changed)
 
 
 def test_cli_validates_result_envelope_without_external_calls(tmp_path: Path) -> None:

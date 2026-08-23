@@ -2,6 +2,13 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-859: Deterministic strategy re-execution replay (2026-08-23)
+
+- `replay_strategy_result` reruns the strategy for the original request and
+  compares canonical envelopes after strict identity and digest checks.
+- Contract tests pass for equal replay and tampered output refusal; no external
+  calls are made.
+
 ## E-858: Offline matching result envelope validation CLI (2026-08-23)
 
 - `reconforge match validate-result-envelope` validates one local envelope and

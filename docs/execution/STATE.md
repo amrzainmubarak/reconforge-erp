@@ -2,6 +2,13 @@
 
 Updated: 2026-08-23
 
+## E-859 — Add deterministic strategy re-execution replay verifier (2026-08-23)
+
+- `replay_strategy_result` now re-executes a strategy against the original
+  request and compares canonical envelopes, after identity/digest validation.
+- Successful replay and tampered-output rejection are covered by the matching
+  contract suite. This is deterministic local evidence, not hosted parity.
+
 ## E-858 — Expose offline matching envelope validation CLI (2026-08-23)
 
 - Added `reconforge match validate-result-envelope` for local, no-network

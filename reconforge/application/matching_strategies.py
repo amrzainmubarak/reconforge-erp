@@ -419,3 +419,18 @@ def replay_result_envelope(
         strategy_version=manifest.version,
     )
     return replayed
+
+
+def replay_strategy_result(
+    strategy: MatchingStrategy,
+    request: MatchingStrategyRequest,
+    result: MatchingStrategyResult,
+) -> MatchingStrategyResult:
+    """Re-execute a strategy and require byte-equivalent canonical evidence."""
+
+    replayed = replay_result_envelope(result, request, manifest=strategy.manifest)
+    expected = strategy.execute(request)
+    expected = replay_result_envelope(expected, request, manifest=strategy.manifest)
+    if expected.to_payload() != replayed.to_payload():
+        raise MatchingStrategyContractError("Strategy replay result differs from the supplied evidence envelope.")
+    return replayed

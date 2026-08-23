@@ -1,5 +1,10 @@
 # Quality Baseline
 
+## E-851 profile digest binding (2026-08-23)
+
+Runtime/readiness tests pass 12/12; Ruff, Mypy, and whitespace checks pass.
+Profile drift and mismatched digest cases are covered.
+
 ## E-850 readiness CLI (2026-08-23)
 
 Focused readiness/runtime/profile/worker/inventory tests pass 36/36; Ruff,

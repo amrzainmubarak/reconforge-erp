@@ -1,5 +1,12 @@
 # Security Baseline
 
+## E-851 profile digest binding (2026-08-23)
+
+- Runtime evidence is rejected unless its profile digest matches the selected
+  immutable edition profile.
+- This prevents retargeting local facts across profile contracts but does not
+  authenticate external systems.
+
 ## E-850 readiness CLI (2026-08-23)
 
 - Matrix ingestion uses the centralized bounded safe-YAML parser rather than a

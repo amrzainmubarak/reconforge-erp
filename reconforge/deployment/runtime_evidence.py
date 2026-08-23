@@ -18,6 +18,7 @@ from reconforge.deployment.profiles import (
     DeploymentEdition,
     DeploymentProfileError,
     DeploymentRuntimeFacts,
+    deployment_profile,
     validate_deployment_profile,
 )
 
@@ -42,7 +43,7 @@ _FACT_FIELDS = (
     "rollback_verified",
     "retention_privacy_verified",
 )
-_REQUIRED_FIELDS = frozenset(("edition", *_FACT_FIELDS))
+_REQUIRED_FIELDS = frozenset(("edition", "profile_digest", *_FACT_FIELDS))
 
 
 @dataclass(frozen=True)
@@ -50,10 +51,11 @@ class DeploymentRuntimeEvidence:
     """Verified edition and runtime facts with a canonical evidence digest."""
 
     edition: DeploymentEdition
+    profile_digest: str
     facts: DeploymentRuntimeFacts
 
     def to_dict(self) -> dict[str, object]:
-        return {"edition": self.edition, **self.facts.__dict__}
+        return {"edition": self.edition, "profile_digest": self.profile_digest, **self.facts.__dict__}
 
     @property
     def digest(self) -> str:
@@ -75,6 +77,9 @@ def verify_deployment_runtime_evidence(payload: Mapping[str, object]) -> Deploym
     edition = payload["edition"]
     if not isinstance(edition, str):
         raise DeploymentRuntimeEvidenceError("edition must be a string")
+    profile_digest = payload["profile_digest"]
+    if not isinstance(profile_digest, str) or len(profile_digest) != 64:
+        raise DeploymentRuntimeEvidenceError("profile_digest must be a SHA-256 digest")
     values: dict[str, object] = {field: payload[field] for field in _FACT_FIELDS}
     for field in _FACT_FIELDS:
         value = values[field]
@@ -86,7 +91,12 @@ def verify_deployment_runtime_evidence(payload: Mapping[str, object]) -> Deploym
     try:
         facts = DeploymentRuntimeFacts(**cast(Any, values))
         # Validate edition while keeping the original profile error text useful.
-        evidence = DeploymentRuntimeEvidence(edition=cast(DeploymentEdition, edition), facts=facts)
+        expected_digest = deployment_profile(edition).digest
+        if profile_digest != expected_digest:
+            raise DeploymentRuntimeEvidenceError("profile_digest does not match the selected edition")
+        evidence = DeploymentRuntimeEvidence(
+            edition=cast(DeploymentEdition, edition), profile_digest=profile_digest, facts=facts
+        )
         _ = evidence.findings
     except (DeploymentProfileError, TypeError, ValueError) as exc:
         raise DeploymentRuntimeEvidenceError(str(exc)) from exc

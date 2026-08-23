@@ -2,6 +2,13 @@
 
 Updated: 2026-08-23
 
+## E-851 — Bind runtime evidence to the immutable profile digest (2026-08-23)
+
+- Runtime evidence now requires the exact selected edition profile digest and
+  rejects profile drift or mismatched evidence before returning findings.
+- Focused runtime/readiness tests pass 12/12, Ruff and Mypy pass. This binds
+  local evidence identity only; external runtime enforcement remains open.
+
 ## E-850 — Expose deployment readiness evidence through the CLI (2026-08-23)
 
 - Added `reconforge deployment readiness [--edition]`, backed by bounded safe

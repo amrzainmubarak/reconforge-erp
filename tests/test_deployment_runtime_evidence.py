@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 from reconforge.cli import app
 from reconforge.deployment import (
     DeploymentRuntimeEvidenceError,
+    deployment_profile,
     verify_deployment_runtime_evidence,
 )
 
@@ -16,6 +17,7 @@ from reconforge.deployment import (
 def _payload() -> dict[str, object]:
     return {
         "edition": "team",
+        "profile_digest": deployment_profile("team").digest,
         "storage_backend": "postgresql",
         "identity_provider": "local-or-oidc",
         "queue_backend": "redis",
@@ -46,6 +48,7 @@ def test_runtime_evidence_is_closed_digest_bound_and_reports_findings() -> None:
         ("unknown", True, "closed contract"),
         ("backup_restore_verified", "yes", "must be boolean"),
         ("edition", "global", "unsupported"),
+        ("profile_digest", "0" * 64, "profile_digest does not match"),
     ],
 )
 def test_runtime_evidence_fails_closed(field: str, value: object, message: str) -> None:

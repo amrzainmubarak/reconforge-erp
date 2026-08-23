@@ -946,3 +946,4 @@ include docs/schemas/deployment_readiness_matrix.v1.schema.json
 include tests/test_deployment_readiness_matrix.py
 include reconforge/deployment/readiness.py
 include docs/adr/0564-offline-deployment-readiness-matrix-cli.md
+include docs/adr/0565-bind-runtime-evidence-to-profile-digest.md

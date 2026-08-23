@@ -2,6 +2,13 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-851: Profile-digest-bound runtime evidence (2026-08-23)
+
+- Runtime manifests now carry the selected profile digest and fail closed on
+  profile drift or mismatch.
+- Focused runtime/readiness suite: 12 passed; Ruff and Mypy pass.
+- This is evidence identity and replay protection only, not runtime enforcement.
+
 ## E-850: Deployment readiness evidence CLI (2026-08-23)
 
 - `deployment readiness` validates the closed matrix through bounded safe-YAML

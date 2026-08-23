@@ -5,6 +5,12 @@
 
 ## Decisions
 
+### D-951: Bind runtime evidence to the selected profile digest
+
+E-851 prevents stale or retargeted runtime facts from being treated as evidence
+for a different immutable deployment profile. The check is local and does not
+expand the production claim boundary.
+
 ### D-950: Make the readiness matrix consumable without widening its claim
 
 E-850 exposes a read-only CLI over the centralized safe-YAML ingress. It

@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-851
+    priority: P0
+    area: deployment-governance
+    title: Bind runtime evidence to the immutable profile digest
+    status: completed
+    depends_on: [E-850]
+    exit_evidence: >-
+      Runtime evidence manifests require a SHA-256 profile_digest matching the
+      selected immutable deployment profile; missing, malformed, or drifted
+      digests fail closed before findings are returned. Focused runtime/readiness
+      tests pass 12/12, Ruff and Mypy pass. This proves local evidence identity,
+      not external runtime enforcement.
   - id: E-850
     priority: P0
     area: deployment-governance

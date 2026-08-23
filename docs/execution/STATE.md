@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-863 — Refresh live PostgreSQL write-back append-only evidence (2026-08-23)
+
+- `tests/test_postgres_writeback.py` passed 3/3 with the local PostgreSQL
+  16.14 service and `reconforge_app` non-privileged role.
+- Scoped idempotent history, append-only/tamper boundaries, and ERPNext payment
+  history replay passed. Provider dispatch, secrets, cross-host recovery, and
+  production write-back remain outside the evidence.
+
 ## E-862 — Refresh live PostgreSQL grouped 500/10K scale evidence (2026-08-23)
 
 - With the same PostgreSQL 16.14 digest and `reconforge_app` non-superuser

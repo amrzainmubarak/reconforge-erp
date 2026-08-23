@@ -958,3 +958,4 @@ include docs/adr/0569-closed-matching-result-json-envelope.md
 include docs/schemas/matching_strategy_result_envelope.v1.schema.json
 include docs/adr/0570-current-postgres-grouped-matching-runtime-replay.md
 include docs/adr/0571-current-postgres-grouped-scale-replay.md
+include docs/adr/0572-current-postgres-writeback-history-runtime.md

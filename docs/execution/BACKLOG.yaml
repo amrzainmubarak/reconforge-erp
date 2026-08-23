@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-863
+    priority: P0
+    area: connectors
+    title: Refresh live PostgreSQL write-back append-only evidence
+    status: completed
+    depends_on: [E-862]
+    exit_evidence: >-
+      The current PostgreSQL 16.14 service passes the write-back schema and both
+      live history tests under `reconforge_app`: scoped idempotent append-only
+      history and ERPNext payment history replay. Secrets/provider dispatch are
+      not exercised and no production write-back claim is made.
   - id: E-862
     priority: P0
     area: matching

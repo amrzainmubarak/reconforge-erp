@@ -2,6 +2,15 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-863: Current PostgreSQL write-back append-only runtime (2026-08-23)
+
+- With the digest-pinned PostgreSQL 16.14 local service and
+  `reconforge_app` (`rolsuper=false`, `rolbypassrls=false`),
+  `python -m pytest tests/test_postgres_writeback.py -q -rs` passed 3/3.
+- The run proves scoped idempotent history, append-only/tamper boundaries, and
+  ERPNext payment history replay. It does not dispatch to a provider or resolve
+  secrets and is not production write-back evidence.
+
 ## E-862: Current PostgreSQL grouped 500/10K scale profiles (2026-08-23)
 
 - Under the same local PostgreSQL 16.14 image digest and

@@ -11,8 +11,10 @@ This file records commands and observed results. It does not convert a dirty wor
   `0090_pg_writeback_observations`.
 - The runner, JSON Schemas, and retained drill/matrix reports now agree on
   `0090_pg_writeback_observations`; focused local migration tests pass.
-- Hosted rerun evidence is pending; no full-green claim is made from this
-  intermediate run.
+- Hosted rerun `32645427870` passed all jobs, including `server-boundaries`
+  after the runner began targeting `0090_pg_writeback_observations`.
+  Security `32645427850`, Docker `32645427846`, and CodeQL `32645427858` also
+  passed for the same code head.
 
 ## E-892: Full history for retained evidence CI contracts (2026-08-23)
 

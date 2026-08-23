@@ -9,8 +9,10 @@ Updated: 2026-08-23
   stale retained migration expectation: the restored database correctly
   reached `0090_pg_writeback_observations` while the drill expected `0089`.
 - The drill now declares and verifies the current head, and its retained
-  reports/schemas are digest-rebound. This is a contract repair; a new hosted
-  run is required before claiming the full CI gate is green.
+  reports/schemas are digest-rebound. Hosted rerun `32645427870` is green,
+  including Python 3.11/3.12, all engine-parity cells, Docker parity,
+  PostgreSQL HA/DR, and server-boundaries. This closes the stale-head
+  contract without expanding production/provider claims.
 
 ## E-892 — Full history for retained evidence CI contracts (2026-08-23)
 

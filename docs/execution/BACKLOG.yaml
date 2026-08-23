@@ -13,7 +13,7 @@ tasks:
     priority: P0
     area: database_migrations
     title: Bind restore drill to current Alembic head
-    status: in_progress
+    status: completed
     depends_on: [E-892]
     exit_evidence: >-
       The identity migration restore runner, schemas, and retained reports

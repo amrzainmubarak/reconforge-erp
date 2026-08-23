@@ -1,0 +1,204 @@
+{
+  "duration_seconds": 12.292,
+  "executed_at": "2026-08-22T18:48:45+00:00",
+  "limitations": [
+    "single Docker host and one failure domain",
+    "synthetic provider-status observations only",
+    "no live vendor, accounting posting, settlement, or production credential evidence"
+  ],
+  "records_digest": "768c363a6c196da78fe7c6ca40281f1d4ca051c194c8585f648b69c25574aa65",
+  "results": [
+    {
+      "checks": {
+        "direct_delete_refused": true,
+        "direct_update_refused": true,
+        "idempotent_insert": true,
+        "nonaccepted_preserves_intent": true,
+        "tenant_scope_isolated": true
+      },
+      "engine": "sqlite",
+      "records": [
+        {
+          "connector_id": "reference-rest-writeback",
+          "evidence_node_id": "connector-writeback-recovery-observation:a245eea5b117838e3ef45f6fdc1933621f42698264e7bec1049dd27abef12e0c",
+          "intent_id": "e834-intent",
+          "observation": {
+            "body_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "http_status": 202,
+            "idempotency_key": "e834-idempotency-key",
+            "outcome": "pending",
+            "provider_reference": null,
+            "provider_response_digest": null
+          },
+          "observation_digest": "0d97b6016eaf236871caeb20b8b1de4d6cef99fdee70bb5f830201c10ba8ee98",
+          "observation_id": "a245eea5b117838e3ef45f6fdc1933621f42698264e7bec1049dd27abef12e0c",
+          "observed_at": "2026-08-22T12:00:00Z",
+          "observed_by": "e834-system",
+          "proposal_digest": "a8a0e6680e7de8f1577b808dae81dfadea24512fb841efee131902df32733c65",
+          "schema_version": "connector-writeback-recovery-observation-v1",
+          "tenant_id": "e834-tenant",
+          "workspace_id": "e834-workspace"
+        },
+        {
+          "connector_id": "reference-rest-writeback",
+          "evidence_node_id": "connector-writeback-recovery-observation:3a7581847667a18613b3710965da94e3f4e836c313da90fc10ff07f5ec5fabd8",
+          "intent_id": "e834-intent",
+          "observation": {
+            "body_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "http_status": 200,
+            "idempotency_key": "e834-idempotency-key",
+            "outcome": "accepted",
+            "provider_reference": "synthetic-e834-accepted",
+            "provider_response_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          },
+          "observation_digest": "52565e5cfddd5ed9b40f40b7250d0bf1d926846a29063b894696ce075ad65ebd",
+          "observation_id": "3a7581847667a18613b3710965da94e3f4e836c313da90fc10ff07f5ec5fabd8",
+          "observed_at": "2026-08-22T13:00:00Z",
+          "observed_by": "e834-system",
+          "proposal_digest": "a8a0e6680e7de8f1577b808dae81dfadea24512fb841efee131902df32733c65",
+          "schema_version": "connector-writeback-recovery-observation-v1",
+          "tenant_id": "e834-tenant",
+          "workspace_id": "e834-workspace"
+        }
+      ],
+      "records_digest": "768c363a6c196da78fe7c6ca40281f1d4ca051c194c8585f648b69c25574aa65"
+    },
+    {
+      "checks": {
+        "direct_delete_refused": true,
+        "direct_update_refused": true,
+        "idempotent_insert": true,
+        "nonaccepted_preserves_intent": true,
+        "tenant_scope_isolated": true
+      },
+      "engine": "postgresql",
+      "image": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+      "postgresql": "16.14",
+      "records": [
+        {
+          "connector_id": "reference-rest-writeback",
+          "evidence_node_id": "connector-writeback-recovery-observation:a245eea5b117838e3ef45f6fdc1933621f42698264e7bec1049dd27abef12e0c",
+          "intent_id": "e834-intent",
+          "observation": {
+            "body_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "http_status": 202,
+            "idempotency_key": "e834-idempotency-key",
+            "outcome": "pending",
+            "provider_reference": null,
+            "provider_response_digest": null
+          },
+          "observation_digest": "0d97b6016eaf236871caeb20b8b1de4d6cef99fdee70bb5f830201c10ba8ee98",
+          "observation_id": "a245eea5b117838e3ef45f6fdc1933621f42698264e7bec1049dd27abef12e0c",
+          "observed_at": "2026-08-22T12:00:00Z",
+          "observed_by": "e834-system",
+          "proposal_digest": "a8a0e6680e7de8f1577b808dae81dfadea24512fb841efee131902df32733c65",
+          "schema_version": "connector-writeback-recovery-observation-v1",
+          "tenant_id": "e834-tenant",
+          "workspace_id": "e834-workspace"
+        },
+        {
+          "connector_id": "reference-rest-writeback",
+          "evidence_node_id": "connector-writeback-recovery-observation:3a7581847667a18613b3710965da94e3f4e836c313da90fc10ff07f5ec5fabd8",
+          "intent_id": "e834-intent",
+          "observation": {
+            "body_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "http_status": 200,
+            "idempotency_key": "e834-idempotency-key",
+            "outcome": "accepted",
+            "provider_reference": "synthetic-e834-accepted",
+            "provider_response_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          },
+          "observation_digest": "52565e5cfddd5ed9b40f40b7250d0bf1d926846a29063b894696ce075ad65ebd",
+          "observation_id": "3a7581847667a18613b3710965da94e3f4e836c313da90fc10ff07f5ec5fabd8",
+          "observed_at": "2026-08-22T13:00:00Z",
+          "observed_by": "e834-system",
+          "proposal_digest": "a8a0e6680e7de8f1577b808dae81dfadea24512fb841efee131902df32733c65",
+          "schema_version": "connector-writeback-recovery-observation-v1",
+          "tenant_id": "e834-tenant",
+          "workspace_id": "e834-workspace"
+        }
+      ],
+      "records_digest": "768c363a6c196da78fe7c6ca40281f1d4ca051c194c8585f648b69c25574aa65",
+      "role_flags": {
+        "bypass_rls": false,
+        "create_database": false,
+        "create_role": false,
+        "replication": false,
+        "superuser": false
+      }
+    },
+    {
+      "checks": {
+        "direct_delete_refused": true,
+        "direct_update_refused": true,
+        "idempotent_insert": true,
+        "nonaccepted_preserves_intent": true,
+        "tenant_scope_isolated": true
+      },
+      "engine": "postgresql",
+      "image": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193",
+      "postgresql": "17.10",
+      "records": [
+        {
+          "connector_id": "reference-rest-writeback",
+          "evidence_node_id": "connector-writeback-recovery-observation:a245eea5b117838e3ef45f6fdc1933621f42698264e7bec1049dd27abef12e0c",
+          "intent_id": "e834-intent",
+          "observation": {
+            "body_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "http_status": 202,
+            "idempotency_key": "e834-idempotency-key",
+            "outcome": "pending",
+            "provider_reference": null,
+            "provider_response_digest": null
+          },
+          "observation_digest": "0d97b6016eaf236871caeb20b8b1de4d6cef99fdee70bb5f830201c10ba8ee98",
+          "observation_id": "a245eea5b117838e3ef45f6fdc1933621f42698264e7bec1049dd27abef12e0c",
+          "observed_at": "2026-08-22T12:00:00Z",
+          "observed_by": "e834-system",
+          "proposal_digest": "a8a0e6680e7de8f1577b808dae81dfadea24512fb841efee131902df32733c65",
+          "schema_version": "connector-writeback-recovery-observation-v1",
+          "tenant_id": "e834-tenant",
+          "workspace_id": "e834-workspace"
+        },
+        {
+          "connector_id": "reference-rest-writeback",
+          "evidence_node_id": "connector-writeback-recovery-observation:3a7581847667a18613b3710965da94e3f4e836c313da90fc10ff07f5ec5fabd8",
+          "intent_id": "e834-intent",
+          "observation": {
+            "body_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "http_status": 200,
+            "idempotency_key": "e834-idempotency-key",
+            "outcome": "accepted",
+            "provider_reference": "synthetic-e834-accepted",
+            "provider_response_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          },
+          "observation_digest": "52565e5cfddd5ed9b40f40b7250d0bf1d926846a29063b894696ce075ad65ebd",
+          "observation_id": "3a7581847667a18613b3710965da94e3f4e836c313da90fc10ff07f5ec5fabd8",
+          "observed_at": "2026-08-22T13:00:00Z",
+          "observed_by": "e834-system",
+          "proposal_digest": "a8a0e6680e7de8f1577b808dae81dfadea24512fb841efee131902df32733c65",
+          "schema_version": "connector-writeback-recovery-observation-v1",
+          "tenant_id": "e834-tenant",
+          "workspace_id": "e834-workspace"
+        }
+      ],
+      "records_digest": "768c363a6c196da78fe7c6ca40281f1d4ca051c194c8585f648b69c25574aa65",
+      "role_flags": {
+        "bypass_rls": false,
+        "create_database": false,
+        "create_role": false,
+        "replication": false,
+        "superuser": false
+      }
+    }
+  ],
+  "schema_version": "postgres-writeback-observation-matrix-v1",
+  "subject": {
+    "base_commit": "c88b8c03666e1f61ac34a58ebe7591e07b878561",
+    "postgres_revision": "0090_pg_writeback_observations",
+    "postgres_source_sha256": "d5fd26473a7ada5a89d6aef6ec68a68fe9d8e9eddb115167012284fba10f98d4",
+    "sqlite_migration_version": 43,
+    "sqlite_source_sha256": "867c198d170e8efda78ccd672a1f7fbd2228ca39cc44ea63415b99eb0ac3bd46",
+    "writeback_network_source_sha256": "edad692c9a1f88a9534201d3a1a21eb95fbcd5e2538a64bf61a0764cd124685c"
+  }
+}

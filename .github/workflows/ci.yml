@@ -190,7 +190,7 @@ jobs:
 
   docker-parity:
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, web]
     steps:
       - name: Check out repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -207,6 +207,7 @@ jobs:
 
   server-boundaries:
     runs-on: ubuntu-latest
+    needs: [test, web]
     # The live matrix normally completes in under 20 minutes.  A bounded job
     # lifetime prevents a hung database/pytest process from consuming a runner
     # indefinitely while preserving enough headroom for the declared matrix.

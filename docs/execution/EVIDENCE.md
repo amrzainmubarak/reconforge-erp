@@ -2,6 +2,14 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-879: CI operational gates depend on web quality (2026-08-23)
+
+- `.github/workflows/ci.yml` now requires both `test` and `web` for
+  `docker-parity` and `server-boundaries`.
+- YAML parsing and the workflow/phase contract suite pass locally. This is
+  status propagation evidence; hosted runner execution remains required for a
+  real CI result.
+
 ## E-878: Release workflow web artifact recheck (2026-08-23)
 
 - The signed-tag release workflow now performs locked npm installation,

@@ -517,6 +517,7 @@ include docs/adr/0510-postgres-durable-job-repeated-soak.md
 include docs/adr/0584-current-postgres-durable-job-soak-backpressure.md
 include docs/adr/0585-web-client-is-a-required-ci-quality-gate.md
 include docs/adr/0586-release-rechecks-web-artifact.md
+include docs/adr/0587-ci-operational-gates-wait-for-web.md
 include reconforge/benchmark/postgres_outbox_scale.py
 include tests/test_postgres_outbox_scale.py
 include reconforge/benchmark/postgres_grouped_matching_scale.py

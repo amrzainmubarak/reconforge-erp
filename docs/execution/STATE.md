@@ -2,6 +2,13 @@
 
 Updated: 2026-08-23
 
+## E-879 — CI operational gates depend on web quality (2026-08-23)
+
+- `docker-parity` and `server-boundaries` now declare `needs: [test, web]`.
+- This makes a failed browser quality gate propagate to the primary Docker and
+  live server operational cells while preserving independent parallel assurance
+  boundaries for engine parity, object storage, and HA/DR.
+
 ## E-878 — Release workflow web artifact recheck (2026-08-23)
 
 - `.github/workflows/release.yml` now rechecks the exact signed tag's web

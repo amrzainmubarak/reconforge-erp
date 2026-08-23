@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-879
+    priority: P0
+    area: quality
+    title: Propagate web gate failure to operational CI cells
+    status: completed
+    depends_on: [E-878]
+    exit_evidence: >-
+      Docker parity and live server-boundaries jobs now require both Python
+      test and web jobs, preventing downstream operational success from masking
+      a failed browser quality gate. Independent engine/object-storage/HA cells
+      remain parallel assurance boundaries.
   - id: E-878
     priority: P0
     area: release_operations

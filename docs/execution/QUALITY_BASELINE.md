@@ -1,5 +1,12 @@
 # Quality Baseline
 
+## E-845 hosted worker permission separation gate (2026-08-23)
+
+Hosted deployment profiles now require an explicit runtime fact proving worker
+discovery/execution permission separation. Community remains local-compatible.
+Focused profile tests pass 9/9; Ruff, Mypy, and whitespace checks pass.
+Full `python -m pytest -q` on the resulting tree exits 0 over 3,119 tests.
+
 ## E-844 reconciliation discovery/execution permission split (2026-08-23)
 
 Workers can now use a dedicated least-privilege discovery permission while

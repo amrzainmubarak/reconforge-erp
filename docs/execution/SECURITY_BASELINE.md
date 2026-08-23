@@ -2,6 +2,14 @@
 
 Measured through 2026-08-22 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
 
+## E-845 hosted worker permission separation gate (2026-08-23)
+
+- Team, Enterprise, and Regulated profile validation fails closed when worker
+  discovery/execution separation evidence is absent.
+- Focused tests pass 9/9. This gate does not prove service-account provisioning,
+  hosted rollout, or production IAM effectiveness. Full `python -m pytest -q`
+  exits 0 over the 3,119-test collection.
+
 ## E-844 reconciliation discovery/execution permission split (2026-08-23)
 
 - Queue discovery can be bound to a separate permission so discovery does not

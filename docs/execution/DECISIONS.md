@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-945: Require worker discovery separation in hosted deployment profiles
+
+- **Date**: 2026-08-23
+- **Context**: E-844 introduced an optional discovery permission, but the
+  deployment profile contract did not require operators to prove it for hosted
+  editions.
+- **Decision**: Adopt ADR 0559. Team, Enterprise, and Regulated profiles fail
+  closed unless runtime facts include verified worker discovery/execution
+  permission separation. Community remains exempt as a local-first mode.
+- **Rationale**: A capability that is not represented in deployment gates can be
+  silently omitted during rollout. This makes the intended least-privilege
+  topology auditable without claiming that provisioning has occurred.
+- **Reversibility**: Additive profile fact and finding; no schema or runtime
+  permission mutation.
+
 ### D-944: Separate reconciliation discovery from execution permission
 
 - **Date**: 2026-08-23

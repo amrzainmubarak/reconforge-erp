@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-845: Gate hosted deployment profiles on worker discovery separation (2026-08-23)
+
+- Deployment profiles now expose and validate
+  `worker_discovery_execution_separation_required`; Team, Enterprise, and
+  Regulated reject missing runtime evidence while Community remains exempt.
+- Focused command: `python -m pytest tests/test_deployment_profiles.py -ra` ->
+  9 passed. Ruff, Mypy, and `git diff --check` pass.
+- Full `python -m pytest -q` on the resulting tree completed with exit code 0
+  over the 3,119-test collection; skips and warnings remain disclosed.
+- Boundary: this is a descriptive fail-closed deployment gate; it does not
+  provision service-account permissions or establish production IAM evidence.
+
 ## E-844: Separate reconciliation discovery and execution permissions (2026-08-23)
 
 - `PostgresReconciliationWorkerSettings.discovery_policy_permission` optionally

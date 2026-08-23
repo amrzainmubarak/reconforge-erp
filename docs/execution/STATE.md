@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-845 — Gate hosted deployment profiles on worker discovery separation (2026-08-23)
+
+- Hosted profile validation now requires explicit runtime evidence for separate
+  worker discovery and execution permissions; Community remains local-first.
+- Focused deployment-profile tests pass 9/9. Provisioning and production IAM
+  rollout remain unproven. Full `python -m pytest -q` exits 0 over the
+  3,119-test collection.
+
 ## E-844 — Separate reconciliation discovery and execution permissions (2026-08-23)
 
 - Optional `discovery_policy_permission` enables least-privilege queue

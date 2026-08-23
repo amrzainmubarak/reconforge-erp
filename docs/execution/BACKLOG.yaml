@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-845
+    priority: P0
+    area: deployment-governance
+    title: Gate hosted deployment profiles on worker discovery separation
+    status: completed
+    depends_on: [E-844]
+    exit_evidence: >-
+      Team, Enterprise, and Regulated deployment profiles now require an
+      explicit runtime fact proving reconciliation discovery/execution
+      permission separation; Community remains local-compatible. Deployment
+      profile tests pass 9/9, Ruff and Mypy pass. This is a descriptive gate,
+      not proof of production IAM rollout.
   - id: E-844
     priority: P0
     area: identity-governance

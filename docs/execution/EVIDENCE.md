@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-861: Current PostgreSQL grouped matching runtime replay (2026-08-23)
+
+- Command (with a disposable local PostgreSQL service):
+  `RECONFORGE_TEST_POSTGRES_DSN=postgresql://reconforge_app:***@127.0.0.1:5432/postgres`
+  plus the admin DSN and `RECONFORGE_TEST_POSTGRES_APP_USER=reconforge_app`,
+  then `python -m pytest tests/test_postgres_grouped_matching_runtime.py tests/test_postgres_matching_application.py -q -rs`.
+- Result: 8 passed, 0 skipped. PostgreSQL 16.14 image digest was
+  `sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`;
+  the application role reported `rolsuper=false`, `rolbypassrls=false`.
+- Scope: synthetic tenant/data on one local Docker host; no HA, cross-host
+  recovery, hosted CI, provider I/O, or production readiness claim.
+
 ## E-860: Registry-wide matching strategy replay matrix (2026-08-23)
 
 - The public contract suite re-executes all five registered strategy families:

@@ -2,6 +2,16 @@
 
 Updated: 2026-08-23
 
+## E-861 — Refresh live PostgreSQL grouped matching replay evidence (2026-08-23)
+
+- Runtime command passed with PostgreSQL 16.14 image digest
+  `sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`:
+  `tests/test_postgres_grouped_matching_runtime.py` and
+  `tests/test_postgres_matching_application.py` (8 passed).
+- The application role was `reconforge_app` with `rolsuper=false` and
+  `rolbypassrls=false`; grouped persistence, tenant scope, and process-crash
+  resume passed. This is one disposable host and synthetic data only.
+
 ## E-860 — Replay-test every registered matching strategy family (2026-08-23)
 
 - The contract suite now re-executes all five registered families: indexed,

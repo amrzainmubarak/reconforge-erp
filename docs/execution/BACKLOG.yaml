@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-861
+    priority: P0
+    area: matching
+    title: Refresh live PostgreSQL grouped matching replay evidence
+    status: completed
+    depends_on: [E-860]
+    exit_evidence: >-
+      On the local digest-pinned PostgreSQL 16.14 container
+      `sha256:57c72fd2...07777`, the grouped worker runtime and process-crash
+      resume tests pass under `reconforge_app` with `rolsuper=false` and
+      `rolbypassrls=false`; the full grouped runtime/application file passes.
+      Evidence is synthetic, single-host, and not a production/HA claim.
   - id: E-860
     priority: P0
     area: matching

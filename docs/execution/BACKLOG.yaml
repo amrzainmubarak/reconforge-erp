@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-846
+    priority: P0
+    area: deployment-governance
+    title: Add offline digest-bound worker permission manifest verifier
+    status: completed
+    depends_on: [E-845]
+    exit_evidence: >-
+      A strict network-free manifest verifier validates worker/principal IDs,
+      distinct non-human discovery/execution permissions, granted permission
+      membership, scope, closed fields, and canonical SHA-256 digest. Focused
+      manifest/profile tests pass 15/15, Ruff and Mypy pass. It produces
+      evidence input only; it does not provision or mutate IAM.
   - id: E-845
     priority: P0
     area: deployment-governance

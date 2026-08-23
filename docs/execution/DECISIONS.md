@@ -5,6 +5,19 @@
 
 ## Decisions
 
+### D-946: Verify worker permission manifests offline and digest-bound
+
+- **Date**: 2026-08-23
+- **Context**: E-845 required a runtime fact for hosted worker permission
+  separation, but a manually entered boolean was not strong evidence.
+- **Decision**: Adopt ADR 0560. Accept only a closed JSON-shaped manifest and
+  verify worker/principal IDs, scope, distinct non-human discovery/execution
+  permissions, complete sorted grants, and a canonical SHA-256 digest.
+- **Rationale**: Operators can bind the verified digest to deployment evidence
+  without granting the application network access or allowing it to mutate IAM.
+- **Reversibility**: Additive pure verifier; no schema, network, or permission
+  mutation.
+
 ### D-945: Require worker discovery separation in hosted deployment profiles
 
 - **Date**: 2026-08-23

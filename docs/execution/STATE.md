@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-846 — Add offline digest-bound worker permission manifest verifier (2026-08-23)
+
+- A pure verifier validates the hosted worker permission manifest and emits a
+  deterministic digest suitable for runtime evidence binding; it never mutates
+  IAM or uses network access.
+- Focused manifest/profile tests pass 15/15. Provisioning and hosted IAM remain
+  unproven. Full `python -m pytest -q` exits 0 over the 3,119-test collection.
+
 ## E-845 — Gate hosted deployment profiles on worker discovery separation (2026-08-23)
 
 - Hosted profile validation now requires explicit runtime evidence for separate

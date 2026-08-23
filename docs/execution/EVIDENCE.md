@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-846: Add offline digest-bound worker permission manifest verifier (2026-08-23)
+
+- `verify_worker_permission_manifest` accepts only the closed manifest fields,
+  rejects equal or human-governed permissions, requires both grants, validates
+  scope/identity syntax, and exposes a canonical SHA-256 digest.
+- Focused command: `python -m pytest tests/test_worker_permission_manifest.py
+  tests/test_deployment_profiles.py -q` -> 15 passed. Ruff, Mypy, and
+  `git diff --check` pass.
+- Full `python -m pytest -q` on the resulting tree completed with exit code 0
+  over the 3,119-test collection; skips and warnings remain disclosed.
+- Boundary: pure local verification only; the manifest is evidence input and
+  never provisions service accounts or contacts an identity provider.
+
 ## E-845: Gate hosted deployment profiles on worker discovery separation (2026-08-23)
 
 - Deployment profiles now expose and validate

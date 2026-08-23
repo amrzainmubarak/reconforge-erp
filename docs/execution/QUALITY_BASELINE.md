@@ -1,5 +1,13 @@
 # Quality Baseline
 
+## E-846 worker permission manifest verifier (2026-08-23)
+
+The new strict offline manifest verifier produces deterministic permission
+evidence and rejects malformed, incomplete, equal, or human-governed grants.
+Focused manifest/profile tests pass 15/15; Ruff, Mypy, and whitespace checks
+pass. Full `python -m pytest -q` on the resulting tree exits 0 over 3,119
+tests.
+
 ## E-845 hosted worker permission separation gate (2026-08-23)
 
 Hosted deployment profiles now require an explicit runtime fact proving worker

@@ -2,6 +2,13 @@
 
 Measured through 2026-08-22 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
 
+## E-846 worker permission manifest verifier (2026-08-23)
+
+- The manifest contract is closed, network-free, digest-bound, and rejects
+  human-only or non-distinct discovery/execution grants.
+- Focused tests pass 15/15. No IAM mutation or production identity evidence is
+  inferred. Full `python -m pytest -q` exits 0 over the 3,119-test collection.
+
 ## E-845 hosted worker permission separation gate (2026-08-23)
 
 - Team, Enterprise, and Regulated profile validation fails closed when worker

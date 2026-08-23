@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-882
+    priority: P1
+    area: security
+    title: Verify hardened local Docker runtime smoke boundary
+    status: completed
+    depends_on: [E-881]
+    exit_evidence: >-
+      The current image metadata and runtime prove user 10001:10001, /app
+      working directory, and successful doctor execution under read-only root,
+      all Linux capabilities dropped, and no-new-privileges. This is a local
+      hardening smoke, not image scanning or production container assurance.
   - id: E-881
     priority: P1
     area: deployment

@@ -2,6 +2,17 @@
 
 Updated: 2026-08-23
 
+## E-882 — Hardened Docker runtime smoke (2026-08-23)
+
+- `docker image inspect` reports configured user `10001:10001` and working
+  directory `/app`; `docker run ... id` confirms the non-root `reconforge`
+  identity.
+- `reconforge doctor` succeeds under
+  `--read-only --cap-drop=ALL --security-opt=no-new-privileges`.
+- This is a local runtime-hardening boundary only. Image vulnerability
+  scanning, signing/provenance, seccomp profile review, multi-arch parity, and
+  production orchestration remain open.
+
 ## E-881 — Current Docker image parity and runtime smoke (2026-08-23)
 
 - `docker build -t reconforge:current .` completed successfully; the local

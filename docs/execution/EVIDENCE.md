@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-882: Hardened Docker runtime smoke (2026-08-23)
+
+- `docker image inspect reconforge:current` reports `User=10001:10001`,
+  `WorkingDir=/app`, and the expected `reconforge doctor` command. A plain
+  `docker run ... id` confirms `uid=10001(reconforge)`.
+- The hardened command
+  `docker run --rm --read-only --cap-drop=ALL
+  --security-opt=no-new-privileges reconforge:current reconforge doctor`
+  returned exit code 0 and retained the expected visible sample warnings.
+- This proves only a local non-root/read-only/capability-drop smoke. It does
+  not prove image CVE scanning, signature/provenance, seccomp policy review,
+  multi-arch behavior, or production orchestration.
+
 ## E-881: Current Docker image parity and runtime smoke (2026-08-23)
 
 - `docker build -t reconforge:current .` passed using the pinned Dockerfile

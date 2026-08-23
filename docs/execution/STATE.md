@@ -2,6 +2,13 @@
 
 Updated: 2026-08-23
 
+## E-902 — Runtime strategy ID slug parity (2026-08-23)
+
+- Runtime manifest construction now enforces the published lowercase slug
+  pattern for strategy IDs, matching the JSON Schema contract.
+- Focused matching contract/budget/ambiguity tests pass (42 tests), with Ruff
+  and diff checks. This closes identity-format drift only.
+
 ## E-901 — Package build after manifest contract hardening (2026-08-23)
 
 - `python -m build --no-isolation` completed successfully after E-900 and

@@ -103,6 +103,8 @@ def test_strategy_manifest_requires_reviewable_declarations() -> None:
         _manifest(maturity="draft")
     with pytest.raises(MatchingStrategyContractError, match="semantic versioning"):
         _manifest(version="v1")
+    with pytest.raises(MatchingStrategyContractError, match="published slug"):
+        _manifest(id="Bad Strategy")
     with pytest.raises(MatchingStrategyContractError, match="non-empty text"):
         _manifest(supported_modes=("",))
 

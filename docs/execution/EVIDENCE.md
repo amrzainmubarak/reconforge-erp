@@ -2,6 +2,13 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-902: Runtime strategy ID slug parity (2026-08-23)
+
+- `MatchingStrategyManifest` now applies the same lowercase bounded slug
+  pattern as `matching_strategy_manifest.schema.json`.
+- Focused matching command: 42 passed; Ruff and `git diff --check` passed.
+- This proves format parity only, not ownership or semantic compatibility.
+
 ## E-901: Package build after manifest contract hardening (2026-08-23)
 
 - `python -m build --no-isolation`: passed; sdist and wheel were built for the

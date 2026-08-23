@@ -9,6 +9,16 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-902
+    priority: P0
+    area: reconciliation
+    title: Enforce runtime strategy ID slug parity
+    status: completed
+    depends_on: [E-900]
+    exit_evidence: >-
+      Runtime manifest IDs enforce the published lowercase bounded slug
+      pattern. Focused 42-test run, Ruff, and diff checks pass; no ownership or
+      compatibility claim is made.
   - id: E-901
     priority: P1
     area: release_operations

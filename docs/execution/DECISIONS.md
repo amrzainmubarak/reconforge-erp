@@ -5,6 +5,12 @@
 
 ## Decisions
 
+### D-961: Keep runtime strategy IDs schema-valid
+
+E-902 prevents registry admission from accepting IDs that the published JSON
+Schema rejects. Identity format is kept separate from ownership and release
+compatibility.
+
 ### D-960: Require semantic version syntax in matching manifests
 
 E-900 ensures strategy identity/version fields remain machine-comparable and

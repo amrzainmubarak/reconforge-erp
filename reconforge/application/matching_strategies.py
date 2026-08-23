@@ -118,6 +118,8 @@ class MatchingStrategyManifest:
     def __post_init__(self) -> None:
         if not all(isinstance(value, str) and value.strip() for value in (self.id, self.version, self.algorithm)):
             raise MatchingStrategyContractError("Strategy manifest is incomplete.")
+        if re.fullmatch(r"[a-z0-9][a-z0-9-]{2,79}", self.id) is None:
+            raise MatchingStrategyContractError("Strategy id must use the published slug format.")
         if re.fullmatch(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", self.version) is None:
             raise MatchingStrategyContractError("Strategy version must use semantic versioning.")
         if self.maturity not in {"experimental", "beta", "stable"}:

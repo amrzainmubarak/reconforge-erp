@@ -2,6 +2,16 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-841: Bind ownership-change preparation to amount-bounded ABAC (2026-08-23)
+
+- Typed ownership-change inputs are converted before policy; gross exposure is
+  the absolute ownership-delta effect plus absolute consideration effect
+  (`Decimal("220.00")` in the synthetic fixture), passed before persistence.
+- Focused route/domain/dependency tests: 19 passed, 1 skipped (live PostgreSQL
+  unavailable). Ruff, Mypy, and `git diff --check` pass.
+- Boundary: one synthetic non-posting route; universal route and production IAM
+  evidence remain future work.
+
 ## E-840: Bind PPA preparation to amount-bounded ABAC (2026-08-23)
 
 - PPA canonical inputs are converted to typed Money before policy; gross

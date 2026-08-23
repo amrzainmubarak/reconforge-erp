@@ -5,6 +5,17 @@
 
 ## Decisions
 
+### D-941: Pass ownership-change gross exposure into server policy
+
+- **Date**: 2026-08-23
+- **Context**: Ownership-change preparation evaluated server policy before
+  typed conversion and supplied no amount.
+- **Decision**: Adopt ADR 0555. Authorize absolute ownership-delta effect plus
+  absolute consideration effect; do not double-count derived parent equity.
+- **Rationale**: These values represent transaction exposure and preserve exact
+  Decimal fail-closed policy evaluation.
+- **Reversibility**: Source-only optional amount binding; no migration.
+
 ### D-940: Pass gross acquisition exposure into PPA server policy
 
 - **Date**: 2026-08-23

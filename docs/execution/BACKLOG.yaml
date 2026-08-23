@@ -9,6 +9,16 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-841
+    priority: P0
+    area: identity-governance
+    title: Bind ownership-change preparation to amount-bounded ABAC
+    status: completed
+    depends_on: [E-840]
+    exit_evidence: >-
+      Typed ownership-change inputs pass exact gross exposure into server
+      authorization before PostgreSQL persistence; focused tests pass 19/19
+      with Decimal 220.00. Universal route and production IAM remain open.
   - id: E-840
     priority: P0
     area: identity-governance

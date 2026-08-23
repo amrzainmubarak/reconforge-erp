@@ -1,5 +1,12 @@
 # Quality Baseline
 
+## E-841 ownership-change route amount ABAC (2026-08-23)
+
+Ownership-change preparation supplies exact gross exposure before persistence:
+absolute ownership-delta effect plus consideration effect. Focused tests pass
+19/19 with one live-PostgreSQL skip; Ruff, Mypy, and whitespace checks pass.
+This is not universal adoption.
+
 ## E-840 PPA route amount ABAC (2026-08-23)
 
 PPA preparation now supplies consideration plus NCI fair value as exact gross

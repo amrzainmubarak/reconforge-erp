@@ -2,6 +2,15 @@
 
 Measured through 2026-08-22 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
 
+## E-841 ownership-change route amount ABAC control (2026-08-23)
+
+- Ownership-change preparation authorizes exact gross exposure before
+  persistence, including ownership delta and consideration without double
+  counting derived effects.
+- Focused route/domain/dependency tests pass 19/19 with one declared live
+  PostgreSQL skip. Other financial routes and production IAM remain outside
+  the evidence.
+
 ## E-840 PPA route amount ABAC control (2026-08-23)
 
 - PPA preparation authorizes gross consideration plus NCI exposure as exact

@@ -140,7 +140,12 @@ def _server_only(request: Request) -> None:
         )
 
 
-def _enforce_server_policy(request: Request, *, permissions: frozenset[str]) -> None:
+def _enforce_server_policy(
+    request: Request,
+    *,
+    permissions: frozenset[str],
+    amount: Decimal | None = None,
+) -> None:
     """Re-evaluate tenant policy before accessing tenant-scoped evidence."""
 
     from reconforge.api.server_identity import request_tenant_id
@@ -150,6 +155,7 @@ def _enforce_server_policy(request: Request, *, permissions: frozenset[str]) -> 
         permissions=permissions,
         tenant_id=request_tenant_id(request),
         workspace_id=None,
+        amount=amount,
     )
 
 
@@ -162,8 +168,16 @@ def prepare_ownership_change(
     """Persist one authenticated, maker-checker, non-posting ownership-change artifact."""
 
     _server_only(request)
-    _enforce_server_policy(request, permissions=frozenset({"finance_core.manage"}))
     domain_request = payload.to_domain(prepared_by=current_user.id)
+    ownership_delta_effect = domain_request.net_assets.amount * (
+        domain_request.prior_group_ownership_percentage - domain_request.new_group_ownership_percentage
+    )
+    gross_exposure = abs(ownership_delta_effect) + abs(domain_request.consideration_effect.amount)
+    _enforce_server_policy(
+        request,
+        permissions=frozenset({"finance_core.manage"}),
+        amount=gross_exposure,
+    )
     artifact = execute_postgres_ownership_change(
         request,
         lambda repository, _tenant: OwnershipChangeApplicationService(repository).prepare_and_persist(

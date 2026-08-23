@@ -932,3 +932,4 @@ include docs/adr/0551-bind-finance-entry-route-to-amount-abac.md
 include docs/adr/0552-bind-intercompany-route-to-amount-abac.md
 include docs/adr/0553-bind-deferred-tax-route-to-amount-abac.md
 include docs/adr/0554-bind-ppa-route-to-amount-abac.md
+include docs/adr/0555-bind-ownership-change-route-to-amount-abac.md

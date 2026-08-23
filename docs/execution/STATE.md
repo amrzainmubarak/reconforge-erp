@@ -2,6 +2,13 @@
 
 Updated: 2026-08-23
 
+## E-841 — Bind ownership-change preparation to amount-bounded ABAC (2026-08-23)
+
+- Typed ownership-change inputs are converted before policy; exact gross
+  exposure combines ownership delta and consideration before persistence.
+- Focused route/domain/dependency tests pass 19/19 with one declared live
+  PostgreSQL skip; universal route adoption and production IAM remain unproven.
+
 ## E-840 — Bind PPA preparation to amount-bounded ABAC (2026-08-23)
 
 - Typed PPA consideration and NCI values are converted before policy; their

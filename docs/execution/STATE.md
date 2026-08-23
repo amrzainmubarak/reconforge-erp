@@ -2,6 +2,19 @@
 
 Updated: 2026-08-23
 
+## E-872 — Refresh release manifest and SBOM pipeline contract evidence (2026-08-23)
+
+- `tests/test_release_sbom_pipeline.py`,
+  `tests/test_signed_release_pipeline.py`, and
+  `tests/test_slsa_provenance_plan.py` passed 28 tests.
+- The contract suite covers exact release identity, subject SHA-256 binding,
+  deterministic CycloneDX 1.7 output, source/package/image cross-binding,
+  tamper and forbidden-path rejection, and release workflow gate ordering.
+- This is local repository-controlled builder evidence only. No hosted signed
+  provenance, registry signature, SLSA level, or independent verification is
+  claimed; the optional cyclonedx-py utility was unavailable due to a missing
+  `chardet` dependency.
+
 ## E-871 — Refresh current air-gapped recovery and upgrade rollback (2026-08-23)
 
 - The full `verify_airgap_install.py` run completed in the digest-pinned

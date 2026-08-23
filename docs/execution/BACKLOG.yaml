@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-872
+    priority: P0
+    area: supply-chain
+    title: Refresh release manifest and SBOM pipeline contract evidence
+    status: completed
+    depends_on: [E-871]
+    exit_evidence: >-
+      The local release SBOM, signed-release, and SLSA-plan contract suites pass
+      28 tests, covering exact release identity, subject digests, deterministic
+      CycloneDX 1.7 normalization, source/package/image binding, tamper and
+      forbidden-path rejection, and workflow gate ordering. This is builder
+      contract evidence only, not signed hosted provenance.
+  - id: E-871
   - id: E-871
     priority: P0
     area: sovereign-deployment

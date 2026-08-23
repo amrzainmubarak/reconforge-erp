@@ -973,3 +973,4 @@ include docs/adr/0579-current-offline-install-drill.md
 include docs/execution/AIRGAP_INSTALL_RECOVERY_UPGRADE_CURRENT_2026-08-23.json
 include docs/schemas/airgap_install_recovery_upgrade_current.schema.json
 include docs/adr/0580-current-airgap-recovery-upgrade.md
+include docs/adr/0581-release-sbom-pipeline-runtime.md

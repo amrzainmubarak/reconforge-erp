@@ -18417,3 +18417,16 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   - Boundary: one Linux runtime and one synthetic recovery run; signature
     trust, hardware/physical air-gap custody, OCI verification, multi-node
     recovery, and production readiness remain open.
+
+- E-872 release manifest and SBOM pipeline contract runtime (2026-08-23; ADR 0581):
+  - Commands: `python -m pytest tests/test_release_sbom_pipeline.py
+    tests/test_signed_release_pipeline.py tests/test_slsa_provenance_plan.py
+    -q -rs`.
+  - Result: 28 tests passed. The suite exercises exact release identity,
+    artifact subject SHA-256 binding, deterministic CycloneDX 1.7 output,
+    source/package/image cross-binding, tamper and forbidden-path rejection,
+    and release workflow gate ordering.
+  - Boundary: repository-controlled local builders and contracts only. No
+    hosted signed provenance, registry signature, SLSA level, independent
+    verification, or publication evidence follows. `cyclonedx-py` was not
+    counted because its host installation lacks `chardet`.

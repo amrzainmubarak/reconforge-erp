@@ -5,6 +5,11 @@
 
 ## Decisions
 
+### D-963: Normalize malformed manifest text failures
+
+E-905 makes malformed tie-break and explanation declarations fail through the
+public contract error, preventing incidental exceptions or coercion.
+
 ### D-962: Bound hosted CI jobs that can stall
 
 E-903 makes the Python test matrix and PostgreSQL HA/DR job finite while

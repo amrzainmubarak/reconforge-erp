@@ -99,6 +99,8 @@ def test_strategy_manifest_requires_reviewable_declarations() -> None:
         _manifest(deterministic_tie_break=" ")
     with pytest.raises(MatchingStrategyContractError, match="tie-break and explanation"):
         _manifest(explanation_schema="")
+    with pytest.raises(MatchingStrategyContractError, match="tie-break and explanation"):
+        _manifest(explanation_schema=None)
     with pytest.raises(MatchingStrategyContractError, match="maturity"):
         _manifest(maturity="draft")
     with pytest.raises(MatchingStrategyContractError, match="semantic versioning"):

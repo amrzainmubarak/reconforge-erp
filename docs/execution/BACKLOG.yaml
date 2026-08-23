@@ -9,6 +9,15 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-905
+    priority: P0
+    area: reconciliation
+    title: Fail closed on non-text manifest declarations
+    status: completed
+    depends_on: [E-902]
+    exit_evidence: >-
+      Non-text or blank tie-break/explanation-schema values fail with the
+      public contract error. Focused 43-test run, Ruff, and diff checks pass.
   - id: E-904
     priority: P1
     area: quality

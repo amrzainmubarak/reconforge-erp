@@ -124,7 +124,10 @@ class MatchingStrategyManifest:
             raise MatchingStrategyContractError("Strategy version must use semantic versioning.")
         if self.maturity not in {"experimental", "beta", "stable"}:
             raise MatchingStrategyContractError("Strategy maturity is not supported.")
-        if not self.deterministic_tie_break.strip() or not self.explanation_schema.strip():
+        if not all(
+            isinstance(value, str) and value.strip()
+            for value in (self.deterministic_tie_break, self.explanation_schema)
+        ):
             raise MatchingStrategyContractError(
                 "Strategy manifest must declare a deterministic tie-break and explanation schema."
             )

@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-905 — Fail-closed manifest text declarations (2026-08-23)
+
+- Non-text or blank tie-break/explanation-schema values now raise the public
+  matching contract error before registry admission, rather than an incidental
+  attribute error.
+- Focused matching contract/budget/ambiguity tests pass (43 tests), with Ruff
+  and diff checks.
+
 ## E-904 — Full local regression after CI timeout hardening (2026-08-23)
 
 - `python -m pytest -q --tb=short -ra` completed with exit code 0 on the

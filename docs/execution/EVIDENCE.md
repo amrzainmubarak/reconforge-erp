@@ -2,6 +2,13 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-905: Fail-closed manifest text declarations (2026-08-23)
+
+- Manifest construction rejects non-text/blank tie-break and explanation-schema
+  values with `MatchingStrategyContractError`.
+- Focused matching command: 43 passed; Ruff and `git diff --check` passed.
+- This is input-contract evidence only, not semantic correctness evidence.
+
 ## E-904: Full local regression after CI timeout hardening (2026-08-23)
 
 - Command: `python -m pytest -q --tb=short -ra`

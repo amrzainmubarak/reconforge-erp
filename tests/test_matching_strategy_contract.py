@@ -101,6 +101,8 @@ def test_strategy_manifest_requires_reviewable_declarations() -> None:
         _manifest(explanation_schema="")
     with pytest.raises(MatchingStrategyContractError, match="maturity"):
         _manifest(maturity="draft")
+    with pytest.raises(MatchingStrategyContractError, match="non-empty text"):
+        _manifest(supported_modes=("",))
 
 
 def test_indexed_strategy_manifest_is_versioned_bounded_and_registry_addressable(tmp_path: Path) -> None:
@@ -460,6 +462,8 @@ def test_registry_mode_coverage_is_explicit_and_deterministic(tmp_path: Path) ->
         assert report.mode_strategies == tuple(sorted(report.mode_strategies))
         assert report.mode_strategies[0][0] == "amount-tolerance"
         assert registry.coverage_report(tuple(reversed(report.required_modes))) == report
+        with pytest.raises(MatchingStrategyContractError, match="tuple of text"):
+            registry.coverage_report(("one-to-one", 1))  # type: ignore[arg-type]
     finally:
         connection.close()
 

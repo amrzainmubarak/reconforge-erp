@@ -2,6 +2,13 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-896: Fail-closed matching mode inputs (2026-08-23)
+
+- `MatchingStrategyManifest` rejects blank/non-text supported modes and
+  `coverage_report` rejects non-tuple or non-text required modes.
+- Focused matching suites: 39 passed; Ruff and `git diff --check` passed.
+- No strategy-family, financial-correctness, or production claim is made.
+
 ## E-895: Deterministic matching mode coverage report (2026-08-23)
 
 - `MatchingStrategyRegistry.coverage_report()` reports required/registered/

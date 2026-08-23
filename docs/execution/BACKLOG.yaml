@@ -9,6 +9,16 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-896
+    priority: P0
+    area: reconciliation
+    title: Fail closed on malformed matching mode metadata
+    status: completed
+    depends_on: [E-895]
+    exit_evidence: >-
+      Matching manifests and registry coverage reports reject blank or
+      non-text mode metadata. Focused matching tests, Ruff, and diff checks
+      pass; no capability expansion is inferred.
   - id: E-895
     priority: P0
     area: reconciliation

@@ -115,7 +115,7 @@ class MatchingStrategyManifest:
     limits: StrategyLimits
 
     def __post_init__(self) -> None:
-        if not self.id or not self.version or not self.algorithm or not self.supported_modes:
+        if not all(isinstance(value, str) and value.strip() for value in (self.id, self.version, self.algorithm)):
             raise MatchingStrategyContractError("Strategy manifest is incomplete.")
         if self.maturity not in {"experimental", "beta", "stable"}:
             raise MatchingStrategyContractError("Strategy maturity is not supported.")
@@ -123,6 +123,8 @@ class MatchingStrategyManifest:
             raise MatchingStrategyContractError(
                 "Strategy manifest must declare a deterministic tie-break and explanation schema."
             )
+        if not self.supported_modes or not all(isinstance(mode, str) and mode.strip() for mode in self.supported_modes):
+            raise MatchingStrategyContractError("Strategy modes must be non-empty text values.")
         if tuple(sorted(set(self.supported_modes))) != self.supported_modes:
             raise MatchingStrategyContractError("Strategy modes must be unique and canonically sorted.")
 
@@ -343,6 +345,8 @@ class MatchingStrategyRegistry:
     def coverage_report(self, required_modes: tuple[str, ...]) -> MatchingStrategyCoverage:
         """Report mode coverage without treating mode coverage as family proof."""
 
+        if not isinstance(required_modes, tuple) or not all(isinstance(mode, str) for mode in required_modes):
+            raise MatchingStrategyContractError("Required matching modes must be a tuple of text values.")
         required = tuple(sorted(set(mode.strip() for mode in required_modes if mode.strip())))
         supported: dict[str, list[str]] = {}
         for manifest in self.manifests:

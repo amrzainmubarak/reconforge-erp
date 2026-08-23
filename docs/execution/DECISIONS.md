@@ -5,6 +5,12 @@
 
 ## Decisions
 
+### D-956: Reject malformed matching mode metadata
+
+E-896 keeps mode declarations and coverage inputs typed and non-empty at their
+public boundaries. It prevents silent coercion without widening capability
+claims.
+
 ### D-955: Make matching mode coverage machine-readable
 
 E-895 adds a deterministic registry report for required and missing modes, while

@@ -2,6 +2,13 @@
 
 Updated: 2026-08-23
 
+## E-896 — Fail-closed matching mode inputs (2026-08-23)
+
+- Manifest supported modes and registry coverage requirements now reject blank
+  or non-text values instead of coercing malformed metadata.
+- The 39-test focused matching run, Ruff, and diff checks pass. This is input
+  contract hardening, not new strategy-family coverage.
+
 ## E-895 — Deterministic matching mode coverage report (2026-08-23)
 
 - `MatchingStrategyRegistry.coverage_report()` now emits sorted required,

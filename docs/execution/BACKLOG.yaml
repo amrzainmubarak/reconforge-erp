@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-890
+    priority: P1
+    area: security
+    title: Add offline boundary to hardened container smoke
+    status: completed
+    depends_on: [E-889]
+    exit_evidence: >-
+      The required CI and release-candidate image smoke runs with
+      network=none in addition to read-only root, dropped capabilities, and
+      no-new-privileges. The current image passes the full local command with
+      zero network access; workflow contract tests require the flag.
+  - id: E-889
   - id: E-889
     priority: P1
     area: release_operations

@@ -289,7 +289,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker run --rm --read-only --cap-drop=ALL \
+          docker run --rm --network=none --read-only --cap-drop=ALL \
             --security-opt=no-new-privileges \
             "$LOCAL_IMAGE" reconforge doctor
 

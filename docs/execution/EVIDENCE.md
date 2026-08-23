@@ -2,6 +2,16 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-890: Offline boundary for hardened image smoke (2026-08-23)
+
+- The local Docker command with `--network=none`, `--read-only`,
+  `--cap-drop=ALL`, and `--security-opt=no-new-privileges` passed
+  `reconforge doctor` with exit code 0, zero errors, and ten visible synthetic
+  warnings.
+- Both CI and release workflows now require `--network=none`; the focused
+  workflow contract test covers the flag. This is not production network
+  segmentation evidence.
+
 ## E-889: Workflow contract protects hardened image gates (2026-08-23)
 
 - `python -m pytest -q tests/test_container_hardening_workflow.py` passed 2/2.

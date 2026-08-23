@@ -6,6 +6,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 HARDENING_FLAGS = [
+    "--network=none",
     "--read-only",
     "--cap-drop=ALL",
     "--security-opt=no-new-privileges",

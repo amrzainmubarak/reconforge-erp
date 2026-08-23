@@ -2,6 +2,16 @@
 
 Updated: 2026-08-23
 
+## E-890 — Offline boundary for hardened image smoke (2026-08-23)
+
+- The local command
+  `docker run --rm --network=none --read-only --cap-drop=ALL
+  --security-opt=no-new-privileges reconforge:current reconforge doctor`
+  passed with zero errors and the declared ten synthetic warnings.
+- CI and release candidate workflows now require the same `network=none`
+  boundary. This catches hidden network dependencies in the smoke but does
+  not prove production network segmentation.
+
 ## E-889 — Workflow contract protects hardened image gates (2026-08-23)
 
 - `tests/test_container_hardening_workflow.py` parses both CI and release

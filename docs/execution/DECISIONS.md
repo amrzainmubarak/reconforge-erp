@@ -5,6 +5,18 @@
 
 ## Decisions
 
+### D-938: Pass gross intercompany exposure into server policy
+
+- **Date**: 2026-08-23
+- **Context**: Intercompany preparation evaluated server scope before converting
+  its explicit Money lines and supplied no amount to bounded ABAC.
+- **Decision**: Adopt ADR 0552. Convert lines first, compute gross absolute
+  Decimal exposure, and authorize that value before persistence.
+- **Rationale**: Reciprocal lines may net to zero for elimination, but policy
+  must constrain the gross source exposure; typed conversion preserves currency
+  and precision invariants.
+- **Reversibility**: Source-only and optional helper parameter; no migration.
+
 ### D-937: Pass gross Finance Core entry amount into server policy
 
 - **Date**: 2026-08-23

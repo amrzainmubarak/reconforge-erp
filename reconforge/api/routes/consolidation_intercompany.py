@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Request
@@ -93,7 +94,12 @@ def _server_only(request: Request) -> None:
         )
 
 
-def _scope_for_payload(request: Request, workspace: str) -> RequestExecutionScope:
+def _scope_for_payload(
+    request: Request,
+    workspace: str,
+    *,
+    amount: Decimal | None = None,
+) -> RequestExecutionScope:
     scope = request_execution_scope(request)
     if workspace.strip() != scope.workspace_id:
         raise APIError(status_code=403, code="workspace_scope_denied", message="Workspace scope is not authorized.")
@@ -104,6 +110,7 @@ def _scope_for_payload(request: Request, workspace: str) -> RequestExecutionScop
         workspace_id=scope.workspace_id,
         organization_id=scope.organization_id,
         entity_id=scope.legal_entity_id,
+        amount=amount,
     )
     return scope
 
@@ -117,8 +124,9 @@ def prepare_intercompany(
     """Compute and persist one replay-verified, non-posting artifact."""
 
     _server_only(request)
-    scope = _scope_for_payload(request, payload.workspace)
     lines = tuple(line.to_domain() for line in payload.lines)
+    gross_amount = sum((abs(line.amount.amount) for line in lines), Decimal("0"))
+    scope = _scope_for_payload(request, payload.workspace, amount=gross_amount)
     artifact = execute_postgres_consolidation_intercompany(
         request,
         lambda repository, _tenant: IntercompanyEliminationApplicationService(repository).prepare_and_persist(

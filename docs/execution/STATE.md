@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-838 — Bind intercompany preparation to amount-bounded ABAC (2026-08-23)
+
+- Canonical intercompany lines are converted to typed Money, gross absolute
+  Decimal exposure is computed, and server policy is re-evaluated before
+  PostgreSQL proposal persistence.
+- Focused route/domain/dependency tests pass 15/15; universal route adoption
+  and production IAM effectiveness remain unproven.
+
 ## E-837 — Bind Finance Core entry creation to amount-bounded ABAC (2026-08-23)
 
 - Both PostgreSQL Finance Core entry branches parse debit/credit values as

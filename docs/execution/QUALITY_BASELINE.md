@@ -1,5 +1,11 @@
 # Quality Baseline
 
+## E-838 intercompany route amount ABAC (2026-08-23)
+
+Intercompany preparation now supplies gross absolute typed Money exposure as an
+exact Decimal to server policy before persistence. Focused route/domain tests
+pass 15/15; this is not universal route adoption.
+
 ## E-837 Finance Core route amount ABAC (2026-08-23)
 
 The two PostgreSQL Finance Core entry branches now pass an exact gross debit

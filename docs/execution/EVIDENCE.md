@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-838: Bind intercompany preparation to amount-bounded ABAC (2026-08-23)
+
+- Intercompany canonical Money lines are converted before policy, then their
+  gross absolute Decimal exposure is passed to server scope authorization before
+  PostgreSQL proposal persistence.
+- Reciprocal positive/negative lines are not allowed to cancel authorization
+  magnitude; malformed/cross-currency domain input still fails closed.
+- Focused command: `python -m pytest tests/test_api_consolidation_intercompany.py
+  tests/test_intercompany_elimination.py tests/test_api_dependencies.py -q`
+  -> 15 passed. Ruff and Mypy pass.
+- Boundary: one synthetic non-posting route; universal financial-route and
+  production IAM evidence remain future work.
+
 ## E-837: Bind Finance Core entry creation to amount-bounded ABAC (2026-08-23)
 
 - Both PostgreSQL Finance Core entry branches now parse every debit and credit

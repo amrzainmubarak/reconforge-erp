@@ -929,3 +929,4 @@ include docs/adr/0548-durable-writeback-recovery-observations.md
 include docs/adr/0549-fail-closed-bounded-amount-policy.md
 include docs/adr/0550-bind-impairment-route-to-amount-abac.md
 include docs/adr/0551-bind-finance-entry-route-to-amount-abac.md
+include docs/adr/0552-bind-intercompany-route-to-amount-abac.md

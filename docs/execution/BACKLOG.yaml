@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-838
+    priority: P0
+    area: identity-governance
+    title: Bind intercompany elimination preparation to amount-bounded ABAC
+    status: completed
+    depends_on: [E-837]
+    exit_evidence: >-
+      Typed intercompany Money lines are converted before policy; their gross
+      absolute Decimal amount is passed to server scope evaluation before
+      persistence. Focused route/domain/dependency tests pass 15/15 with exact
+      200.00 synthetic exposure. Universal route and production IAM evidence
+      remain open.
   - id: E-837
     priority: P0
     area: identity-governance

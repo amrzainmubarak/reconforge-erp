@@ -2,6 +2,14 @@
 
 Measured through 2026-08-22 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
 
+## E-838 intercompany route amount ABAC control (2026-08-23)
+
+- Intercompany preparation authorizes gross absolute typed Money exposure as
+  exact Decimal before proposal persistence; reciprocal netting cannot bypass a
+  materiality bound.
+- Focused route/domain tests pass 15/15. Other financial routes and production
+  IAM effectiveness remain outside the evidence.
+
 ## E-837 Finance Core route amount ABAC control (2026-08-23)
 
 - PostgreSQL Finance Core entry creation parses every debit and credit as exact

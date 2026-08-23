@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-880: Package membership after release-governance additions (2026-08-23)
+
+- `python -m build --no-isolation` succeeded after the latest workflow/ADR and
+  benchmark additions.
+- `reconforge_erp.egg-info/SOURCES.txt` includes
+  `docs/adr/0585-web-client-is-a-required-ci-quality-gate.md`,
+  `docs/adr/0586-release-rechecks-web-artifact.md`,
+  `docs/adr/0587-ci-operational-gates-wait-for-web.md`, and the current
+  PostgreSQL durable-job benchmark JSON/Markdown artifacts.
+- `tests/test_benchmark_evidence_index.py`, release SBOM/signed-release/SLSA,
+  and maturity-policy tests pass (38 tests). This proves local package
+  membership and contract consistency only; hosted provenance remains open.
+
 ## E-879: CI operational gates depend on web quality (2026-08-23)
 
 - `.github/workflows/ci.yml` now requires both `test` and `web` for

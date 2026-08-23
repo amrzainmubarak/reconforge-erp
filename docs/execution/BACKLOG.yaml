@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-880
+    priority: P1
+    area: release_operations
+    title: Refresh package membership after CI and evidence governance additions
+    status: completed
+    depends_on: [E-879]
+    exit_evidence: >-
+      python -m build --no-isolation succeeds and SOURCES.txt contains ADRs
+      0585-0587 plus the current PostgreSQL durable-job benchmark artifacts;
+      benchmark index, release SBOM, signed-release, SLSA, and maturity tests
+      pass.
   - id: E-879
     priority: P0
     area: quality

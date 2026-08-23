@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-880 — Package membership after release-governance additions (2026-08-23)
+
+- `python -m build --no-isolation` completed successfully after the latest CI,
+  release, and evidence additions.
+- `reconforge_erp.egg-info/SOURCES.txt` contains ADRs 0585, 0586, and 0587 plus
+  the dated PostgreSQL durable-job benchmark JSON/Markdown artifacts.
+- Benchmark index, release SBOM, signed-release, SLSA, and maturity policy
+  tests pass; this is package/local evidence, not hosted provenance.
+
 ## E-879 — CI operational gates depend on web quality (2026-08-23)
 
 - `docker-parity` and `server-boundaries` now declare `needs: [test, web]`.

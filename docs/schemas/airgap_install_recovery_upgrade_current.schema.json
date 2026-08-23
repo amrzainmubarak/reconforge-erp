@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/airgap_install_recovery_upgrade_current.schema.json",
+  "title": "ReconForge current offline install, recovery, and rollback drill",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "executed_at", "application_version", "runtime", "installation", "identity_recovery", "upgrade_rollback", "scope_status", "limitations"],
+  "properties": {
+    "schema": {"const": "reconforge-airgap-install-recovery-upgrade-current-v1"},
+    "executed_at": {"type": "string", "format": "date"},
+    "application_version": {"const": "0.7.1"},
+    "runtime": {"type": "object", "additionalProperties": false, "required": ["container_image", "container_image_digest", "network_mode", "root_filesystem", "bundle_mount", "writable_state"], "properties": {"container_image": {"const": "python:3.14.1-slim"}, "container_image_digest": {"pattern": "^sha256:[a-f0-9]{64}$"}, "network_mode": {"const": "none"}, "root_filesystem": {"const": "read-only"}, "bundle_mount": {"const": "read-only"}, "writable_state": {"const": "bounded-tmpfs-only"}}},
+    "installation": {"type": "object", "additionalProperties": false, "required": ["entry_count", "total_bytes", "bundle_manifest_sha256", "offline_install", "doctor_exit_zero", "cleanup_complete"], "properties": {"entry_count": {"type": "integer", "minimum": 1}, "total_bytes": {"type": "integer", "minimum": 1}, "bundle_manifest_sha256": {"pattern": "^[a-f0-9]{64}$"}, "offline_install": {"const": true}, "doctor_exit_zero": {"const": true}, "cleanup_complete": {"const": true}}},
+    "identity_recovery": {"type": "object", "additionalProperties": false, "required": ["local_users_restored", "old_sessions_restored", "audit_chain_valid", "backup_ciphertext_sha256", "wrong_key_rejected", "runtime_schema_version", "restored_schema_version", "credential_material_in_audit", "operator_key_fingerprint"], "properties": {"local_users_restored": {"type": "integer", "minimum": 0}, "old_sessions_restored": {"const": 0}, "audit_chain_valid": {"const": true}, "backup_ciphertext_sha256": {"pattern": "^[a-f0-9]{64}$"}, "wrong_key_rejected": {"const": true}, "runtime_schema_version": {"type": "integer", "minimum": 1}, "restored_schema_version": {"type": "integer", "minimum": 1}, "credential_material_in_audit": {"const": false}, "operator_key_fingerprint": {"pattern": "^[a-f0-9]{16}$"}}},
+    "upgrade_rollback": {"type": "object", "additionalProperties": false, "required": ["from_version", "target_version", "network_inputs", "cutover_verified", "rollback_exact", "source_wheel_sha256", "target_wheel_sha256", "target_content_sha256", "rollback_sha256"], "properties": {"from_version": {"const": "0.7.0"}, "target_version": {"const": "0.7.1"}, "network_inputs": {"const": 0}, "cutover_verified": {"const": true}, "rollback_exact": {"const": true}, "source_wheel_sha256": {"pattern": "^[a-f0-9]{64}$"}, "target_wheel_sha256": {"pattern": "^[a-f0-9]{64}$"}, "target_content_sha256": {"pattern": "^[a-f0-9]{64}$"}, "rollback_sha256": {"pattern": "^[a-f0-9]{64}$"}}},
+    "scope_status": {"const": "verified-no-network-install-identity-recovery-and-exact-rollback"},
+    "limitations": {"type": "array", "minItems": 6, "uniqueItems": true, "items": {"type": "string"}}
+  }
+}

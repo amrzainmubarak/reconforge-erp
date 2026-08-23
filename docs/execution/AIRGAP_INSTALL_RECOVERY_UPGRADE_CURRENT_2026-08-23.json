@@ -1,0 +1,52 @@
+{
+  "schema": "reconforge-airgap-install-recovery-upgrade-current-v1",
+  "executed_at": "2026-08-23",
+  "application_version": "0.7.1",
+  "runtime": {
+    "container_image": "python:3.14.1-slim",
+    "container_image_digest": "sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e",
+    "network_mode": "none",
+    "root_filesystem": "read-only",
+    "bundle_mount": "read-only",
+    "writable_state": "bounded-tmpfs-only"
+  },
+  "installation": {
+    "entry_count": 68,
+    "total_bytes": 100627876,
+    "bundle_manifest_sha256": "0820ac2b59d62907d8632f9354c02e074160deec52427413796dbda199f7a2b9",
+    "offline_install": true,
+    "doctor_exit_zero": true,
+    "cleanup_complete": true
+  },
+  "identity_recovery": {
+    "local_users_restored": 2,
+    "old_sessions_restored": 0,
+    "audit_chain_valid": true,
+    "backup_ciphertext_sha256": "8a2c4e63d25aecc46ca31ac6852fd3f05e02a406e385900690f9b1cda5f8dd4b",
+    "wrong_key_rejected": true,
+    "runtime_schema_version": 43,
+    "restored_schema_version": 43,
+    "credential_material_in_audit": false,
+    "operator_key_fingerprint": "4fa869a050871c5c"
+  },
+  "upgrade_rollback": {
+    "from_version": "0.7.0",
+    "target_version": "0.7.1",
+    "network_inputs": 0,
+    "cutover_verified": true,
+    "rollback_exact": true,
+    "source_wheel_sha256": "b85871f240f8ee5be6b99748783ea734d711ac08d3723886e46050b931d05e22",
+    "target_wheel_sha256": "20858e50cd4cf0c38a1ab4e1f5fab55897590c6564759959fc4d991f5b5330e7",
+    "target_content_sha256": "e8b7bf6bc6f07a23e640456a20056088bfc212a539767ca0131c7c02ff946616",
+    "rollback_sha256": "6da8f2112ec7caac9d77161b8cbe8e3c3b1c4b7a9ae0e97d87ab11a42f873877"
+  },
+  "scope_status": "verified-no-network-install-identity-recovery-and-exact-rollback",
+  "limitations": [
+    "single-linux-runtime-single-run",
+    "no-signature-trust",
+    "no-physical-airgap-custody",
+    "no-hardware-backed-key-custody",
+    "no-oci-offline-verification",
+    "no-production-readiness-claim"
+  ]
+}

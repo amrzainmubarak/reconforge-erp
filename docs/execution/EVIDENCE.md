@@ -18404,3 +18404,16 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   - Boundary: base install only; offline signature trust, identity recovery,
     backup/restore, upgrade/rollback, physical air-gap isolation, and
     production readiness remain unverified.
+
+- E-871 current air-gapped recovery and upgrade rollback (2026-08-23; ADR 0580):
+  - Command: `python .github/scripts/verify_airgap_install.py`.
+  - The same digest-pinned `python:3.14.1-slim` / `network=none` / read-only
+    runtime restored two local users, restored zero old sessions, rejected a
+    wrong encryption key, preserved a valid audit chain, and kept credential
+    material out of audit evidence.
+  - Tagged `0.7.0 -> 0.7.1` cutover and exact rollback passed with zero network
+    inputs. Source wheel digest, target wheel digest, target content digest,
+    and rollback digest are retained in the current artifact; cleanup passed.
+  - Boundary: one Linux runtime and one synthetic recovery run; signature
+    trust, hardware/physical air-gap custody, OCI verification, multi-node
+    recovery, and production readiness remain open.

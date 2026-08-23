@@ -2,6 +2,18 @@
 
 Updated: 2026-08-23
 
+## E-871 — Refresh current air-gapped recovery and upgrade rollback (2026-08-23)
+
+- The full `verify_airgap_install.py` run completed in the digest-pinned
+  network-none/read-only container.
+- Identity recovery restored two local users, restored zero old sessions,
+  rejected the wrong key, and preserved a valid audit chain at schema version
+  43.
+- The tagged `0.7.0 -> 0.7.1` cutover and exact rollback passed with zero
+  network inputs; cleanup completed.
+- Offline signature trust, hardware/physical air-gap custody, OCI verification,
+  multi-node recovery, and production readiness remain unverified.
+
 ## E-870 — Refresh current offline base-install drill evidence (2026-08-23)
 
 - `verify_airgap_install.py --base-install-only` completed successfully using

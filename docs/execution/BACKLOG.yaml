@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-871
+    priority: P0
+    area: sovereign-deployment
+    title: Refresh current air-gapped identity recovery and upgrade rollback
+    status: completed
+    depends_on: [E-870]
+    exit_evidence: >-
+      The full airgap installer completed with network none and read-only root,
+      restored two local users with zero old sessions, rejected a wrong key,
+      preserved a valid audit chain, and verified exact 0.7.0 to 0.7.1 cutover
+      plus rollback with zero network inputs. This is one Linux synthetic run.
+  - id: E-870
   - id: E-870
     priority: P0
     area: sovereign-deployment

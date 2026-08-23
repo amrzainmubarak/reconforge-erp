@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-887 — Hardened container smoke required in CI (2026-08-23)
+
+- The required `docker-parity` job now executes `reconforge doctor` with a
+  read-only root filesystem, all Linux capabilities dropped, and
+  `no-new-privileges`, in addition to the ordinary container checks.
+- This transfers the local hardening boundary into hosted CI when the workflow
+  runs. It does not prove host isolation, seccomp completeness, multi-arch
+  parity, registry provenance, or production orchestration.
+
 ## E-886 — Local Docker Scout CycloneDX SBOM (2026-08-23)
 
 - `docker scout sbom local://reconforge:current --format cyclonedx

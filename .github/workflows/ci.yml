@@ -204,6 +204,9 @@ jobs:
           docker run --rm reconforge:ci-baseline reconforge doctor
           docker run --rm reconforge:ci-baseline reconforge validate examples/sample_data
           docker run --rm reconforge:ci-baseline reconforge rules validate --pack control-packs/audit-basic
+          docker run --rm --read-only --cap-drop=ALL \
+            --security-opt=no-new-privileges \
+            reconforge:ci-baseline reconforge doctor
 
   server-boundaries:
     runs-on: ubuntu-latest

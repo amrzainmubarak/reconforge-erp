@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-887
+    priority: P1
+    area: deployment
+    title: Enforce hardened container smoke in CI
+    status: completed
+    depends_on: [E-882, E-879]
+    exit_evidence: >-
+      The required docker-parity job now runs reconforge doctor under a
+      read-only root filesystem with all Linux capabilities dropped and
+      no-new-privileges, matching the local hardening evidence. This remains
+      a GitHub-runner smoke and does not prove host, multi-architecture,
+      registry, or production orchestration assurance.
   - id: E-886
     priority: P1
     area: supply_chain

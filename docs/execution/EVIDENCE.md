@@ -2,6 +2,15 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-887: Hardened container smoke required in CI (2026-08-23)
+
+- `.github/workflows/ci.yml` now requires the `docker-parity` job to run:
+  `docker run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges
+  reconforge:ci-baseline reconforge doctor`.
+- The workflow syntax and command contract are locally reviewable; a fresh
+  hosted run is still required for CI evidence. The boundary excludes host,
+  seccomp, multi-arch, registry, and production assurance.
+
 ## E-886: Local Docker Scout CycloneDX SBOM (2026-08-23)
 
 - `docker scout sbom local://reconforge:current --format cyclonedx

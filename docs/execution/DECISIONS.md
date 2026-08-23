@@ -5,6 +5,12 @@
 
 ## Decisions
 
+### D-947: Expose worker manifest verification through a read-only CLI
+
+E-847 adds `deployment verify-worker-manifest` as a strict, network-free,
+digest-producing inspection command. It never provisions or mutates IAM;
+hosted enforcement remains a separate runtime responsibility.
+
 ### D-946: Verify worker permission manifests offline and digest-bound
 
 - **Date**: 2026-08-23

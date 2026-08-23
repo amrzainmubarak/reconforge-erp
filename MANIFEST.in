@@ -938,3 +938,4 @@ include docs/adr/0557-propagate-reconciliation-exposure-to-worker-policy.md
 include docs/adr/0558-separate-reconciliation-discovery-execution-permission.md
 include docs/adr/0559-hosted-profile-worker-discovery-separation.md
 include docs/adr/0560-offline-worker-permission-manifest-verifier.md
+include docs/adr/0561-cli-worker-permission-manifest-verification.md

@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-847
+    priority: P0
+    area: deployment-governance
+    title: Expose worker permission manifest verification through the CLI
+    status: completed
+    depends_on: [E-846]
+    exit_evidence: >-
+      The CLI verifies a local closed JSON worker permission manifest, prints
+      its canonical digest, and returns a non-zero safe error for malformed or
+      closed-contract input. Focused CLI/manifest/profile/inventory tests pass
+      18/18, with Ruff and Mypy passing. The command performs no network or IAM
+      mutation and does not prove production enforcement.
   - id: E-846
     priority: P0
     area: deployment-governance

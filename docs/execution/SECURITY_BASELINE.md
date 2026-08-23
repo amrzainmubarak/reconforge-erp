@@ -9,6 +9,13 @@ Measured through 2026-08-22 against the current local snapshot in `STATE.md`. Th
 - Focused tests pass 15/15. No IAM mutation or production identity evidence is
   inferred. Full `python -m pytest -q` exits 0 over the 3,119-test collection.
 
+## E-847 worker manifest verification CLI (2026-08-23)
+
+- Verification remains local, strict, digest-bound, and free of network or IAM
+  mutation paths.
+- Direct JSON parsing is recorded in FI-041 and enforced by the exact AST gate.
+- Production identity-provider enforcement and hosted admission remain open.
+
 ## E-845 hosted worker permission separation gate (2026-08-23)
 
 - Team, Enterprise, and Regulated profile validation fails closed when worker

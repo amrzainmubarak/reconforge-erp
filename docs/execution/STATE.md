@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-847 — Expose worker manifest verification through the CLI (2026-08-23)
+
+- Added `reconforge deployment verify-worker-manifest` for deterministic,
+  network-free verification and digest display of a closed worker permission
+  manifest. Invalid JSON/contracts fail closed; no IAM mutation occurs.
+- Focused CLI/manifest/profile/inventory gates pass 18/18, Ruff and Mypy pass.
+  Full `python -m pytest -q` exits 0 on the resulting tree. Hosted IAM
+  enforcement remains unproven.
+
 ## E-846 — Add offline digest-bound worker permission manifest verifier (2026-08-23)
 
 - A pure verifier validates the hosted worker permission manifest and emits a

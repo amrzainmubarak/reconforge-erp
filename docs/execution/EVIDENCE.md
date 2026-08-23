@@ -2,6 +2,13 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-847: Worker manifest verification CLI (2026-08-23)
+
+- The CLI verifies a closed local worker permission manifest and prints its
+  deterministic digest; invalid input exits non-zero without side effects.
+- Focused CLI/manifest/profile/inventory suite: 18 passed; Ruff and Mypy pass.
+- This is local evidence only and does not establish hosted IAM enforcement.
+
 ## E-846: Add offline digest-bound worker permission manifest verifier (2026-08-23)
 
 - `verify_worker_permission_manifest` accepts only the closed manifest fields,

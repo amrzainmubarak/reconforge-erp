@@ -91,7 +91,13 @@ from reconforge.db.importers import (
     import_control_tests,
     import_review_state,
 )
-from reconforge.deployment import DeploymentProfileError, deployment_profile, list_deployment_profiles
+from reconforge.deployment import (
+    DeploymentProfileError,
+    WorkerPermissionManifestError,
+    deployment_profile,
+    list_deployment_profiles,
+    verify_worker_permission_manifest,
+)
 from reconforge.domain.consolidation import ConsolidationError
 from reconforge.domain.consolidation_acquisition import (
     AcquisitionFairValueBridgeRequest,
@@ -5874,6 +5880,27 @@ def deployment_profiles_command(
                 "digest": profile.digest,
             },
         )
+
+
+@deployment_app.command("verify-worker-manifest")
+def deployment_verify_worker_manifest_command(
+    manifest_path: Annotated[Path, typer.Argument(help="Closed JSON worker permission manifest to verify.")],
+) -> None:
+    """Verify a hosted worker permission manifest without network or IAM mutation."""
+
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest = verify_worker_permission_manifest(payload)
+    except (OSError, UnicodeError, json.JSONDecodeError, WorkerPermissionManifestError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail(
+        "Worker Permission Manifest",
+        {
+            **manifest.to_dict(),
+            "digest": manifest.digest,
+            "discovery_execution_separated": True,
+        },
+    )
 
 
 @deployment_app.command("release-check")

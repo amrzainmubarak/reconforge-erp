@@ -1,5 +1,11 @@
 # Quality Baseline
 
+## E-847 worker manifest verification CLI (2026-08-23)
+
+Focused CLI/manifest/profile/inventory tests pass 18/18; Ruff, Mypy, and
+whitespace checks pass. Full `python -m pytest -q` exits 0 on the resulting
+tree.
+
 ## E-846 worker permission manifest verifier (2026-08-23)
 
 The new strict offline manifest verifier produces deterministic permission

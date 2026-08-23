@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from typer.testing import CliRunner
 
@@ -148,3 +150,36 @@ def test_cli_rejects_unknown_edition() -> None:
 
     assert result.exit_code == 1
     assert "deployment edition is unsupported" in result.stdout
+
+
+def test_cli_verifies_worker_permission_manifest(tmp_path: Path) -> None:
+    import json
+
+    manifest_path = tmp_path / "worker-permissions.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "worker_id": "reconciliation-worker-a",
+                "principal_id": "svc-reconciliation-a",
+                "discovery_permission": "match.discover",
+                "execution_permission": "match.run",
+                "granted_permissions": ["match.discover", "match.run"],
+                "scope": "tenant:tenant-a/workspace:workspace-a",
+            }
+        ),
+        encoding="utf-8",
+    )
+    result = CliRunner().invoke(app, ["deployment", "verify-worker-manifest", str(manifest_path)])
+    assert result.exit_code == 0
+    assert "discovery_execution_separated" in result.stdout
+    assert "match.discover" in result.stdout
+
+
+def test_cli_rejects_invalid_worker_permission_manifest(tmp_path: Path) -> None:
+    import json
+
+    manifest_path = tmp_path / "invalid-worker-permissions.json"
+    manifest_path.write_text(json.dumps({"worker_id": "bad"}), encoding="utf-8")
+    result = CliRunner().invoke(app, ["deployment", "verify-worker-manifest", str(manifest_path)])
+    assert result.exit_code == 1
+    assert "closed contract" in result.stdout

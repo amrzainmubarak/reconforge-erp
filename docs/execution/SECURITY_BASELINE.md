@@ -2,6 +2,14 @@
 
 Measured through 2026-08-22 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
 
+## E-844 reconciliation discovery/execution permission split (2026-08-23)
+
+- Queue discovery can be bound to a separate permission so discovery does not
+  implicitly grant financial execution; claim checks remain tied to `match.run`.
+- Focused tests pass 33/33 with one declared live PostgreSQL skip. Deployment
+  migration and production IAM enforcement remain outside the evidence. Full
+  `python -m pytest -q` on commit `7f44db68` exits 0 over 3,119 tests.
+
 ## E-843 reconciliation worker amount-policy propagation (2026-08-23)
 
 - Worker claim authorization reuses the immutable submission exposure and fails

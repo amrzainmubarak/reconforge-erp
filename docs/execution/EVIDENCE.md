@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-844: Separate reconciliation discovery and execution permissions (2026-08-23)
+
+- `PostgresReconciliationWorkerSettings.discovery_policy_permission` optionally
+  authorizes tenant-wide queue enumeration separately; claim and pre-claim
+  execution checks continue to use `policy_permission` (`match.run` by default).
+- Focused command: `python -m pytest tests/test_postgres_reconciliation.py
+  tests/test_api_server_reconciliation.py tests/test_governed_worker_policy.py
+  -ra` -> 33 passed, 1 skipped (live PostgreSQL unavailable). Ruff, Mypy, and
+  `git diff --check` pass.
+- Full `python -m pytest -q` on commit `7f44db68` completed with exit code 0
+  over the 3,119-test collection; skips and warnings remain explicitly
+  disclosed.
+- Boundary: the secure split is an explicit deployment option; existing workers
+  retain compatibility fallback until service-account permissions are migrated.
+
 ## E-843: Propagate reconciliation exposure into worker policy rechecks (2026-08-23)
 
 - The API stores `policy_amount` as an exact decimal string in the durable rule

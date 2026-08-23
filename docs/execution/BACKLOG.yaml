@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-844
+    priority: P0
+    area: identity-governance
+    title: Separate reconciliation discovery and execution permissions
+    status: completed
+    depends_on: [E-843]
+    exit_evidence: >-
+      Worker settings support an explicit discovery_policy_permission so queue
+      enumeration can use a least-privileged permission while claim and
+      execution retain match.run; compatibility falls back to the existing
+      permission. Focused API/worker/policy tests pass 33/33 with one live
+      PostgreSQL skip; universal deployment configuration remains open.
   - id: E-843
     priority: P0
     area: identity-governance

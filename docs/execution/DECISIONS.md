@@ -5,6 +5,20 @@
 
 ## Decisions
 
+### D-944: Separate reconciliation discovery from execution permission
+
+- **Date**: 2026-08-23
+- **Context**: A worker using `match.run` for tenant-wide queue discovery can
+  be forced to evaluate a bounded execution policy without a run amount.
+- **Decision**: Adopt ADR 0558. Add optional `discovery_policy_permission` for
+  queue enumeration; claim and execution continue using `policy_permission`.
+  When unset, preserve the existing permission for compatibility.
+- **Rationale**: Discovery should be least privilege and distinct from a
+  financial execution grant. The opt-in field avoids silently breaking existing
+  service-account deployments while making the secure topology explicit.
+- **Reversibility**: Additive settings-only change; source revert restores the
+  legacy single-permission behavior.
+
 ### D-943: Persist and recheck reconciliation exposure in the worker
 
 - **Date**: 2026-08-23

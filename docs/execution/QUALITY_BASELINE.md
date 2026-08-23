@@ -1,5 +1,13 @@
 # Quality Baseline
 
+## E-844 reconciliation discovery/execution permission split (2026-08-23)
+
+Workers can now use a dedicated least-privilege discovery permission while
+retaining `match.run` for claim/execution; the legacy fallback remains explicit.
+Focused tests pass 33/33 with one live-PostgreSQL skip; Ruff, Mypy, and
+whitespace checks pass. Full `python -m pytest -q` on commit `7f44db68` exits 0
+over the 3,119-test collection.
+
 ## E-843 reconciliation worker amount-policy propagation (2026-08-23)
 
 The worker now receives the persisted exact exposure from run rule metadata and

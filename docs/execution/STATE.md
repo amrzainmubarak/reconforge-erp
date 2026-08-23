@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-844 — Separate reconciliation discovery and execution permissions (2026-08-23)
+
+- Optional `discovery_policy_permission` enables least-privilege queue
+  enumeration; claim/execution retain `policy_permission`, with explicit legacy
+  fallback when unset.
+- Focused tests pass 33/33 with one declared live PostgreSQL skip. Fleet
+  rollout and production IAM enforcement remain unproven. Full
+  `python -m pytest -q` on commit `7f44db68` exits 0 over 3,119 tests.
+
 ## E-843 — Propagate reconciliation exposure into worker policy rechecks (2026-08-23)
 
 - The API persists exact `policy_amount` rule metadata; worker tenant and

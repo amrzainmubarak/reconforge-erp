@@ -593,6 +593,38 @@ def test_postgres_reconciliation_worker_passes_persisted_policy_amount_to_claim_
     assert policy_amounts[1:] == [Decimal("20.00"), Decimal("20.00")]
 
 
+def test_postgres_reconciliation_worker_can_separate_discovery_and_execution_permissions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import reconforge.workers.postgres_reconciliation as worker_module
+
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+    _create_run(repository)
+    calls: list[str] = []
+    monkeypatch.setattr(
+        worker_module,
+        "require_service_worker_policy",
+        lambda **values: calls.append(str(values["policy_permission"])),
+    )
+
+    worker = PostgresReconciliationWorker(
+        _ConnectionFactory(connection),
+        tenant_supplier=lambda: ["tenant_a"],
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="split-permission-worker",
+            poll_interval_seconds=0,
+            discovery_policy_permission="match.discover",
+        ),
+    )
+
+    summary = worker.process_once()
+
+    assert summary.completed == 1
+    assert calls == ["match.discover", "match.run", "match.run"]
+
+
 def test_postgres_reconciliation_worker_rechecks_policy_before_claim() -> None:
     connection = _ReconciliationConnection()
     repository = PostgresReconciliationRepository(connection)

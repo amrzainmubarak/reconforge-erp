@@ -494,6 +494,7 @@ class PostgresReconciliationWorkerSettings:
     policy_context_supplier: Callable[[str], PolicyEvaluationContext] | None = None
     policy_context_scope_supplier: WorkerPolicyContextSupplier | None = None
     policy_permission: str = "match.run"
+    discovery_policy_permission: str | None = None
 
     def __post_init__(self) -> None:
         if not self.worker_id.strip() or len(self.worker_id.strip()) > 160:
@@ -506,12 +507,20 @@ class PostgresReconciliationWorkerSettings:
             raise PostgresReconciliationWorkerError("lease_seconds is outside its supported range.")
         if not self.policy_permission.strip():
             raise PostgresReconciliationWorkerError("policy_permission must be non-empty when configured.")
+        if self.discovery_policy_permission is not None and not self.discovery_policy_permission.strip():
+            raise PostgresReconciliationWorkerError("discovery_policy_permission must be non-empty when configured.")
 
     @property
     def audit_actor_id(self) -> str:
         """Return the non-empty service actor used for audit events."""
 
         return self.actor_id.strip() or self.worker_id.strip()
+
+    @property
+    def discovery_authorization_permission(self) -> str:
+        """Return the least-privileged permission used to enumerate runs."""
+
+        return self.discovery_policy_permission or self.policy_permission
 
 
 @dataclass(frozen=True)
@@ -766,6 +775,7 @@ class PostgresReconciliationWorker:
         entity_id: str | None = None,
         request_id: str = "",
         amount: Decimal | None = None,
+        policy_permission: str | None = None,
         error_factory: Callable[[str], Exception] = PostgresReconciliationWorkerError,
     ) -> None:
         """Require a central service-account decision for one exact lane."""
@@ -778,7 +788,7 @@ class PostgresReconciliationWorker:
             policy_context_scope_supplier=self.settings.policy_context_scope_supplier,
             workspace_id=workspace_id,
             entity_id=entity_id,
-            policy_permission=self.settings.policy_permission,
+            policy_permission=policy_permission or self.settings.policy_permission,
             surface="postgres-reconciliation.worker.claim",
             error_factory=error_factory,
             request_id=request_id,
@@ -786,11 +796,21 @@ class PostgresReconciliationWorker:
         )
 
     def _authorize_tenant(
-        self, tenant_id: str, *, request_id: str = "", amount: Decimal | None = None
+        self,
+        tenant_id: str,
+        *,
+        request_id: str = "",
+        amount: Decimal | None = None,
+        policy_permission: str | None = None,
     ) -> None:
         """Backward-compatible tenant-lane policy entry point."""
 
-        self._authorize_scope(tenant_id, request_id=request_id, amount=amount)
+        self._authorize_scope(
+            tenant_id,
+            request_id=request_id,
+            amount=amount,
+            policy_permission=policy_permission,
+        )
 
     @staticmethod
     def _policy_amount_from_run(run: Mapping[str, Any]) -> Decimal | None:
@@ -1232,7 +1252,11 @@ class PostgresReconciliationWorker:
         skipped = 0
         discovered = 0
         for tenant_id in tenants:
-            self._authorize_tenant(tenant_id, request_id=request_id)
+            self._authorize_tenant(
+                tenant_id,
+                request_id=request_id,
+                policy_permission=self.settings.discovery_authorization_permission,
+            )
             with self._transaction().transaction(tenant_id) as connection:
                 runs = PostgresReconciliationRepository(connection).list_runs(
                     tenant_id=tenant_id,

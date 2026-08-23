@@ -18350,3 +18350,15 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   - Boundary: one synthetic single-host failure domain and a manual controller;
     host/zone loss, quorum/witness behavior, automatic failover, cross-host
     networking, production RPO/RTO SLOs, and enterprise readiness remain open.
+
+- E-867 current PostgreSQL consolidation-close runtime (2026-08-23; ADR 0576):
+  - Command: `RECONFORGE_TEST_POSTGRES_DSN=... RECONFORGE_TEST_POSTGRES_ADMIN_DSN=... RECONFORGE_TEST_POSTGRES_APP_USER=reconforge_app python -m pytest tests/test_postgres_consolidation_close.py tests/test_postgres_close_application.py tests/test_api_server_consolidation_close.py -q -rs`.
+  - Result: 32 tests passed against PostgreSQL 16.14. The observed role was
+    `reconforge_app` with `rolsuper=false` and `rolbypassrls=false`.
+  - The run covered replay-identical close preparation, tenant/RLS isolation,
+    maker-checker certification and period reopen, reversal controls,
+    digest-bound impairment/deferred-tax/PPA/ownership/intercompany evidence,
+    and authenticated server HTTP route scope.
+  - Boundary: synthetic data and one local host only. Statutory accounting,
+    external posting, hosted parity, HA/DR, production approval, and
+    independent assurance remain unverified.

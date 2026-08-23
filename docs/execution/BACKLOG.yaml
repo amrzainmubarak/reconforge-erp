@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-867
+    priority: P0
+    area: finance-close
+    title: Refresh current PostgreSQL consolidation-close runtime evidence
+    status: completed
+    depends_on: [E-866, E-1002]
+    exit_evidence: >-
+      The PostgreSQL close, consolidation-close, and server HTTP lifecycle
+      suites pass 32 tests against PostgreSQL 16.14 using reconforge_app with
+      rolsuper=false and rolbypassrls=false. The runtime covers replay identity,
+      tenant/RLS isolation, maker-checker certification and period reopen,
+      reversal controls, digest-bound close evidence, and server route scope.
+      It remains synthetic single-host evidence and makes no statutory,
+      production, hosted-parity, or HA/DR claim.
   - id: E-866
     priority: P0
     area: reliability

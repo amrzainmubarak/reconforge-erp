@@ -963,3 +963,4 @@ include docs/adr/0572-current-postgres-writeback-history-runtime.md
 include docs/adr/0573-current-postgres-receiver-idempotency-runtime.md
 include docs/adr/0574-current-postgres-security-governance-runtime.md
 include docs/adr/0575-current-postgres-ha-dr-drill.md
+include docs/adr/0576-current-postgres-consolidation-close-runtime.md

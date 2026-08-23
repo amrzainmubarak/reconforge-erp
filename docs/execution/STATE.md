@@ -2,6 +2,19 @@
 
 Updated: 2026-08-23
 
+## E-867 — Refresh current PostgreSQL consolidation-close runtime evidence (2026-08-23)
+
+- The focused close/consolidation/server suite passed 32 tests against the
+  current PostgreSQL 16.14 service.
+- The application identity was `reconforge_app` with `rolsuper=false` and
+  `rolbypassrls=false`.
+- Runtime coverage includes replay identity, tenant/RLS isolation,
+  maker-checker certification, period lock/reopen, reversal controls,
+  digest-bound close evidence, and server HTTP scope checks.
+- This is synthetic, single-host runtime evidence only; statutory posting,
+  hosted parity, HA/DR, production approval, and independent assurance remain
+  open.
+
 ## E-866 — Refresh current bounded PostgreSQL HA/DR drill evidence (2026-08-23)
 
 - `.github/scripts/verify_postgres_ha_dr.py` completed one clean disposable

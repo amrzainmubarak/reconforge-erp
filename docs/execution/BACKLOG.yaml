@@ -641,7 +641,7 @@ tasks:
     priority: P1
     area: global-expansion
     title: Produce mode-specific deployment-readiness evidence for Community/Team/Enterprise/Regulated
-    status: planned
+    status: in_progress
     depends_on:
       - E-1005
       - E-806
@@ -661,6 +661,12 @@ tasks:
       - E-819 bounds the hosted live server-boundary job so hung dependency
         processes fail closed and release the runner; a fresh successful run
         remains required as evidence.
+      - E-849 consolidates all four editions and eight readiness gates into a
+        schema/path-validated matrix that preserves partial/open boundaries.
+      - E-850 exposes that matrix through a bounded safe-YAML CLI with digest
+        and edition selection; it performs no external probes or mutation.
+      - E-851 binds runtime evidence to the exact immutable profile digest,
+        preventing stale or retargeted local facts from being reused.
   - id: E-1007
     priority: P1
     area: global-expansion

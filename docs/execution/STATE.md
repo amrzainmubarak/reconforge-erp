@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-1006 progress audit (2026-08-23)
+
+- E-1006 is now explicitly `in_progress` rather than `planned`; E-849 through
+  E-851 provide the matrix, safe CLI reader, and profile-digest binding.
+- Closure is still blocked by the declared scope: mode-specific operational
+  runbooks and independent runtime drills must be current for every edition,
+  and regulated key custody/independent failure-domain evidence remains open.
+
 ## E-851 — Bind runtime evidence to the immutable profile digest (2026-08-23)
 
 - Runtime evidence now requires the exact selected edition profile digest and

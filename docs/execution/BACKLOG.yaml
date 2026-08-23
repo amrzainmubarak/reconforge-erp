@@ -9,6 +9,16 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-901
+    priority: P1
+    area: release_operations
+    title: Rebuild package after matching manifest contract hardening
+    status: completed
+    depends_on: [E-900]
+    exit_evidence: >-
+      python -m build --no-isolation produced the existing 0.7.1 sdist and
+      wheel successfully. Local package evidence only; signing and hosted
+      provenance remain separate gates.
   - id: E-900
     priority: P0
     area: reconciliation

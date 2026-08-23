@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-901 — Package build after manifest contract hardening (2026-08-23)
+
+- `python -m build --no-isolation` completed successfully after E-900 and
+  produced the existing 0.7.1 sdist and wheel. Build warnings are the existing
+  setuptools metadata override warnings; no build failure occurred.
+- This is local package evidence only; hosted release/provenance/signing is
+  not inferred.
+
 ## E-900 — Semantic versions for matching manifests (2026-08-23)
 
 - Matching strategy manifests now reject versions outside strict

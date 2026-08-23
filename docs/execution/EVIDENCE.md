@@ -2,6 +2,14 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-901: Package build after manifest contract hardening (2026-08-23)
+
+- `python -m build --no-isolation`: passed; sdist and wheel were built for the
+  existing package version `0.7.1`.
+- Existing setuptools warnings report pyproject metadata override behavior;
+  they did not fail the build. This is local package evidence, not a signed or
+  hosted release/provenance claim.
+
 ## E-900: Semantic versions for matching manifests (2026-08-23)
 
 - `MatchingStrategyManifest` rejects malformed versions and leading-zero

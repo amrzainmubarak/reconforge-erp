@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-892
+    priority: P0
+    area: release_operations
+    title: Fetch complete history for retained evidence CI contracts
+    status: completed
+    depends_on: [E-891]
+    exit_evidence: >-
+      The Python test matrix now uses checkout fetch-depth 0, allowing
+      retained digest-bound artifacts to verify their exact historical source
+      and migration commits in hosted CI. A focused workflow contract test
+      enforces the setting.
   - id: E-891
     priority: P0
     area: security_supply_chain
@@ -22,7 +33,6 @@ tasks:
       are recorded, and local Gitleaks 8.30.1 history/tree scans plus policy
       validation pass with zero findings. No live credential was identified.
   - id: E-890
-  - id: E-890
     priority: P1
     area: security
     title: Add offline boundary to hardened container smoke
@@ -33,7 +43,6 @@ tasks:
       network=none in addition to read-only root, dropped capabilities, and
       no-new-privileges. The current image passes the full local command with
       zero network access; workflow contract tests require the flag.
-  - id: E-889
   - id: E-889
     priority: P1
     area: release_operations

@@ -2,6 +2,15 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-892: Full history for retained evidence CI contracts (2026-08-23)
+
+- Hosted CI run `32643148675` reached 3043 passing tests but failed retained
+  evidence checks because the test job used a shallow checkout; exact source
+  and migration commits were unavailable.
+- The Python test matrix now uses `fetch-depth: 0`, and the focused workflow
+  contract test enforces it. This addresses commit availability without
+  weakening report/source digest checks.
+
 ## E-891: Hosted synthetic Gitleaks finding closed (2026-08-23)
 
 - Hosted run `32642926377` failed the full-history scan with eight findings,

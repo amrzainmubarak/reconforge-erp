@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-892 — Full history for retained evidence CI contracts (2026-08-23)
+
+- Hosted CI revealed that shallow checkout made exact source/migration commit
+  verification fail for retained writeback evidence, even though the source
+  and report digests were otherwise valid.
+- The Python `test` matrix now checks out with `fetch-depth: 0`; the workflow
+  contract test requires this. Full-history checkout supports evidence
+  verification but is not hosted provenance or release approval.
+
 ## E-891 — Hosted synthetic Gitleaks finding closed (2026-08-23)
 
 - Hosted security run `32642926377` reported eight `generic-api-key` findings

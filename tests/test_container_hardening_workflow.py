@@ -50,3 +50,19 @@ def test_release_candidate_hardening_precedes_registry_login_and_push() -> None:
     login = text.index("- name: Log in to the candidate image registry")
     push = text.index("- name: Push and verify the scanned image subject")
     assert smoke < login < push
+
+
+def test_python_test_matrix_fetches_history_for_retained_evidence() -> None:
+    workflow = _workflow(".github/workflows/ci.yml")
+    jobs = workflow["jobs"]
+    assert isinstance(jobs, dict)
+    job = jobs["test"]
+    assert isinstance(job, dict)
+    steps = job["steps"]
+    assert isinstance(steps, list)
+    checkout = next(
+        step for step in steps if isinstance(step, dict) and step.get("name") == "Check out repository"
+    )
+    with_values = checkout["with"]
+    assert isinstance(with_values, dict)
+    assert with_values["fetch-depth"] == 0

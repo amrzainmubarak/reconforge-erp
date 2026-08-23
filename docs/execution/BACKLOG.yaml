@@ -9,6 +9,16 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-897
+    priority: P0
+    area: reconciliation
+    title: Align indexed mode declaration with runtime behavior
+    status: completed
+    depends_on: [E-896]
+    exit_evidence: >-
+      Indexed one-to-one runtime, architecture manifest, digest, and tests now
+      all declare one-to-one consistently. Focused matching tests, Ruff, and
+      diff checks pass; advanced family completeness remains open.
   - id: E-896
     priority: P0
     area: reconciliation

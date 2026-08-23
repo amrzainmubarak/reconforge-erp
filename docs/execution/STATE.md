@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-897 — Indexed one-to-one mode declaration aligned (2026-08-23)
+
+- The indexed adapter already accepted only `request.mode == "one-to-one"`,
+  but its manifest omitted that mode. The runtime manifest, architecture JSON,
+  pinned digest, and contract tests now agree.
+- Focused matching suites pass (39 tests), with Ruff and diff checks. This
+  closes declaration drift; advanced strategy-family coverage remains open.
+
 ## E-896 — Fail-closed matching mode inputs (2026-08-23)
 
 - Manifest supported modes and registry coverage requirements now reject blank

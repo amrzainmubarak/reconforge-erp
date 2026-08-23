@@ -5,6 +5,12 @@
 
 ## Decisions
 
+### D-957: Keep indexed mode declarations aligned with runtime guards
+
+E-897 corrects the omitted `one-to-one` declaration and binds the architecture
+manifest and digest to the existing runtime behavior. It does not expand the
+strategy-family claim boundary.
+
 ### D-956: Reject malformed matching mode metadata
 
 E-896 keeps mode declarations and coverage inputs typed and non-empty at their

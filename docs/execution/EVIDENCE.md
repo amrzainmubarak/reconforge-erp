@@ -2,6 +2,15 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-897: Indexed one-to-one mode declaration aligned (2026-08-23)
+
+- The indexed adapter's runtime guard accepts only `one-to-one`; its manifest
+  now declares that mode, and `docs/architecture/matching-strategies.v1.json`
+  plus the pinned digest are updated in lockstep.
+- Focused matching suites: 39 passed. Ruff and `git diff --check` passed.
+- This is declaration-drift evidence only, not complete advanced matching or
+  production evidence.
+
 ## E-896: Fail-closed matching mode inputs (2026-08-23)
 
 - `MatchingStrategyManifest` rejects blank/non-text supported modes and

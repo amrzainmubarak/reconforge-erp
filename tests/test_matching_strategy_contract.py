@@ -113,7 +113,7 @@ def test_indexed_strategy_manifest_is_versioned_bounded_and_registry_addressable
         assert manifest.version == "1.0.0"
         assert manifest.maturity == "beta"
         assert len(manifest.digest) == 64
-        assert manifest.digest == "e3760bb991ea1edef3dbb2448e8e2b92063147b8dd9261433cac7cfa7fda5da3"
+        assert manifest.digest == "0dd28d4477a8cb29347ded48b96038467c14103f5b057fcfc7c31de0d23c9b85"
         assert manifest.limits.max_left_records == 250_000
         assert manifest.limits.max_candidates_per_record == 10_000
         registry = MatchingStrategyRegistry((strategy,))
@@ -457,7 +457,7 @@ def test_registry_mode_coverage_is_explicit_and_deterministic(tmp_path: Path) ->
             "one-to-one",
             "unimplemented-mode",
         )
-        assert report.missing_modes == ("one-to-one", "unimplemented-mode")
+        assert report.missing_modes == ("unimplemented-mode",)
         assert not report.complete
         assert report.mode_strategies == tuple(sorted(report.mode_strategies))
         assert report.mode_strategies[0][0] == "amount-tolerance"

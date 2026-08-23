@@ -19,6 +19,7 @@
         "amount-tolerance",
         "date-window",
         "exact-fields",
+        "one-to-one",
         "reference-normalized"
       ],
       "version": "1.0.0"
